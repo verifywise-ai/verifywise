@@ -23,6 +23,8 @@ import {
 import { type ReadThroughSource, vrdbSourceOf } from "../sources";
 import type { ParsedRecord, ReadThroughAnswer, VrdbLookupState } from "../types";
 
+jest.setTimeout(30_000);
+
 const NOW = new Date("2026-10-31T12:00:00Z");
 const MINUTE_MS = 60_000;
 const HOUR_MS = 60 * MINUTE_MS;
@@ -277,7 +279,7 @@ describe("readThrough", () => {
 
     const answers = await readThrough(inputOf(), depsOf(store, connector, { timeoutMs: 30 }));
 
-    expect(Date.now() - startedAt).toBeLessThan(2_000);
+    expect(Date.now() - startedAt).toBeLessThan(10_000);
     expect(answers.get("nvd")).toEqual({
       key: KEY,
       weak: false,

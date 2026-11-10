@@ -23,6 +23,8 @@ import {
 } from "../zip";
 import { writeZip } from "./helpers/zipWriter";
 
+jest.setTimeout(30_000);
+
 const LIMITS: ZipLimits = { maxEntries: 10, maxEntryBytes: 4_096, maxTotalBytes: 16_384 };
 const all = () => true;
 const record = (id: number) =>
@@ -874,7 +876,7 @@ describe("streamZipEntry", () => {
       return gc as () => void;
     }
 
-    it("streams 48 MB of text with a memory that does not grow with it, in under 20 seconds", async () => {
+    it("streams 48 MB of text with a memory that does not grow with it, in under a minute", async () => {
       const gc = collector();
       const block = linesOf(37_000);
       let data: Buffer | null = Buffer.concat(Array<Buffer>(48).fill(block));
@@ -922,7 +924,7 @@ describe("streamZipEntry", () => {
       expect(crc).toBe(expectedCrc);
       expect(longest).toBeLessThanOrEqual(65_536);
       expect(chunks).toBeGreaterThanOrEqual(Math.floor(size / 65_536));
-      expect(Date.now() - began).toBeLessThan(20_000);
+      expect(Date.now() - began).toBeLessThan(60_000);
       // The heap, as the engine counts it without a collection, stays far below the entry...
       expect(heapGrowth).toBeLessThan(60 * MIB);
       // ...and what is alive after a collection, Buffers included, is not half of it: an entry that

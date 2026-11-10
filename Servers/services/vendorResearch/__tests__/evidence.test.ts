@@ -1,5 +1,7 @@
 import {
   EvidenceSource,
+  RECORD_SOURCE_IDS,
+  RecordSourceId,
   ResearchCategory,
 } from "../../../domain.layer/interfaces/i.vendorResearch";
 import { MAX_EXCERPT_CHARS, MAX_PAGE_CONTENT_CHARS } from "../../webResearch/pageText";
@@ -14,6 +16,7 @@ import {
   isBlockedEntry,
   provenanceOf,
 } from "../evidence";
+import { CONTEXT_ONLY_RECORD_SOURCES, MAX_RECORDS, RECORD_CATEGORY } from "../records/types";
 
 type Entry = LedgerEntry<ResearchCategory>;
 
@@ -64,6 +67,54 @@ describe("constants", () => {
     expect(MAX_TITLE_CHARS).toBe(300);
     expect(MAX_URL_CHARS).toBe(2048);
     expect(MAX_PUBLISHED_AT_CHARS).toBe(64);
+  });
+});
+
+// The lists whose records never raise a risk (prompt vr-15): the pack gives them up first, and they
+// never support a credibility label.
+describe("CONTEXT_ONLY_RECORD_SOURCES", () => {
+  it("holds the ten registers and status lists, and no other list", () => {
+    expect([...CONTEXT_ONLY_RECORD_SOURCES].sort()).toEqual(
+      [
+        "canada_ai_register",
+        "omb_ai_inventory",
+        "nl_algoritmeregister",
+        "uk_atrs",
+        "epoch_ai",
+        "fmti",
+        "c2pa_conforming",
+        "fedramp",
+        "disclose_io",
+        "gleif",
+      ].sort(),
+    );
+    expect(CONTEXT_ONLY_RECORD_SOURCES.size).toBe(10);
+  });
+
+  it("holds registered ids only: each is a record source with a category and a limit", () => {
+    for (const id of CONTEXT_ONLY_RECORD_SOURCES) {
+      expect(RECORD_SOURCE_IDS).toContain(id);
+      expect(RECORD_CATEGORY[id]).toBeDefined();
+      expect(MAX_RECORDS[id]).toBeGreaterThan(0);
+    }
+  });
+
+  it("leaves out the lists that can raise a risk, and fda_ai_devices, which raises none but keeps its shipped behaviour", () => {
+    const notContextOnly: RecordSourceId[] = [
+      "kev",
+      "ofac",
+      "csl",
+      "aiid",
+      "atlas",
+      "fda_ai_devices",
+      "canada_sema",
+      "uk_ofsi",
+      "charlotin",
+      "piperoll",
+      "california_breaches",
+      "nhtsa_odi",
+    ];
+    for (const id of notContextOnly) expect(CONTEXT_ONLY_RECORD_SOURCES.has(id)).toBe(false);
   });
 });
 
@@ -689,6 +740,179 @@ describe("buildEvidencePack", () => {
       // A page source with its extra parts, in three-byte characters, takes most of the room but
       // never all of it.
       expect(bytes(pack)).toBeLessThan(MAX_EVIDENCE_BYTES);
+    });
+
+    // Prompt vr-15: a record of a register never raises a risk, so it is what the pack gives up
+    // first, before the news article that shows a real incident and before the records of the
+    // lists that can raise a risk.
+    describe("the records of the registers", () => {
+      /** A record of a list as the ledger keeps it: a page that was read, with 1,300 characters. */
+      const recordEntry = (
+        category: ResearchCategory,
+        record: string,
+        url: string,
+        title: string,
+        letter: string,
+      ): Entry =>
+        pageEntry(url, {
+          category,
+          title,
+          content: letter.repeat(1300),
+          publishedAt: "2026-11-01",
+          record,
+        });
+      const recordUrl = (id: string) => `https://example.org/${id}?vendor=a`;
+      const OFAC_URL = "https://example.org/ofac/1";
+      const OFSI_URL = "https://example.org/ofsi/1";
+      const CHARLOTIN_URL = "https://example.org/charlotin?tool=a";
+      const REGISTERS = ["epoch_ai", "omb_ai_inventory", "fmti"] as const;
+      const articleUrl = (index: number) => `https://news.example/a/${index}`;
+      /** The addresses of the articles /a/1 to /a/last. */
+      const articles = (last: number) =>
+        Array.from({ length: last }, (_, index) => articleUrl(index + 1));
+      /**
+       * Two records of a list that can raise a risk, one of an AI vendor's records and the three
+       * entries of the registers, and 60 articles of 1,500 characters. `ofRegisters` says which
+       * database each of the three entries is a record of; their addresses stay.
+       */
+      const ledgerOf = (ofRegisters: readonly string[]): Entry[] => [
+        recordEntry("legal_regulatory", "ofac", OFAC_URL, "OFAC entry", "o"),
+        recordEntry("legal_regulatory", "uk_ofsi", OFSI_URL, "OFSI notice", "f"),
+        recordEntry("ai_specific", "charlotin", CHARLOTIN_URL, "Charlotin", "c"),
+        ...REGISTERS.map((id, index) =>
+          recordEntry("ai_specific", ofRegisters[index], recordUrl(id), id, "r"),
+        ),
+        ...Array.from({ length: 60 }, (_, index) =>
+          entry(articleUrl(index + 1), {
+            category: "ai_specific",
+            title: `Article ${index + 1}`,
+            content: "w".repeat(1500),
+            publishedAt: "2026-10-01",
+          }),
+        ),
+      ];
+      /** The pack the entries would make if nothing were given up: S1..Sn, in the order given. */
+      const untrimmed = (entries: Entry[]): EvidenceSource[] =>
+        entries.map((item, index) => ({
+          id: `S${index + 1}`,
+          category: item.category,
+          kind: item.kind,
+          onVendorSite: item.onVendorSite,
+          url: item.url,
+          title: item.title,
+          content: item.content,
+          publishedAt: item.publishedAt,
+        }));
+      const urlsOf = (pack: EvidenceSource[]) => pack.map((source) => source.url);
+      const resultsOf = (pack: EvidenceSource[]) =>
+        pack.filter((source) => source.kind === "result").map((source) => source.url);
+
+      // With the sizing of the pack, all 66 sources take 109,043 bytes, and with the change the pack
+      // takes 99,591 and keeps 57 of the 60 articles.
+      it("gives up the records of the registers before any other source, and keeps the records that can raise a risk", () => {
+        const entries = ledgerOf(REGISTERS);
+        // The test means something only if the limit bites.
+        expect(bytes(untrimmed(entries))).toBeGreaterThan(MAX_EVIDENCE_BYTES);
+
+        const pack = buildEvidencePack(entries);
+
+        expect(bytes(pack)).toBeLessThanOrEqual(MAX_EVIDENCE_BYTES);
+        for (const id of REGISTERS) expect(urlsOf(pack)).not.toContain(recordUrl(id));
+        expect(urlsOf(pack)).toEqual(expect.arrayContaining([OFAC_URL, OFSI_URL, CHARLOTIN_URL]));
+        expect(resultsOf(pack)).toEqual(articles(57));
+      });
+
+      // The shipped behaviour, when no register is involved: the last articles go, and the records
+      // stay in front of them (99,023 bytes, 54 articles).
+      it("keeps all six records and exactly /a/1 to /a/54 when none of the three entries is a register's", () => {
+        const pack = buildEvidencePack(ledgerOf(["aiid", "atlas", "nhtsa_sgo"]));
+
+        expect(bytes(pack)).toBeLessThanOrEqual(MAX_EVIDENCE_BYTES);
+        expect(urlsOf(pack)).toEqual(
+          expect.arrayContaining([
+            OFAC_URL,
+            OFSI_URL,
+            CHARLOTIN_URL,
+            ...REGISTERS.map((id) => recordUrl(id)),
+          ]),
+        );
+        expect(resultsOf(pack)).toEqual(articles(54));
+      });
+
+      it("takes the last record of a register first, as soon as that is enough, and before the last source of a larger category", () => {
+        // legal_regulatory holds the most bytes and has no register. ai_specific holds two registers
+        // between two records of lists that can raise a risk. The last page of legal_regulatory is
+        // tuned, byte by byte, so that the pack is exactly at the limit and then one byte over it.
+        const law = (index: number, length: number) =>
+          pageEntry(`https://law.example/${index}`, {
+            category: "legal_regulatory",
+            content: "l".repeat(length),
+          });
+        const around = ["aiid", "epoch_ai", "fmti", "atlas"].map((id) =>
+          recordEntry("ai_specific", id, recordUrl(id), id, "r"),
+        );
+        const ledgerWith = (tail: number): Entry[] => [
+          ...Array.from({ length: 10 }, (_, index) => law(index, MAX_EXCERPT_CHARS)),
+          law(10, tail),
+          ...around,
+        ];
+        const free = MAX_EVIDENCE_BYTES - bytes(untrimmed(ledgerWith(0)));
+        expect(free).toBeGreaterThan(0);
+        expect(free).toBeLessThan(MAX_PAGE_CONTENT_CHARS);
+        expect(buildEvidencePack(ledgerWith(free))).toEqual(untrimmed(ledgerWith(free)));
+        expect(bytes(untrimmed(ledgerWith(free)))).toBe(MAX_EVIDENCE_BYTES);
+
+        const pack = buildEvidencePack(ledgerWith(free + 1));
+
+        expect(urlsOf(pack)).toEqual(
+          urlsOf(untrimmed(ledgerWith(free + 1))).filter((url) => url !== recordUrl("fmti")),
+        );
+        expect(bytes(pack)).toBeLessThanOrEqual(MAX_EVIDENCE_BYTES);
+      });
+
+      it("gives up the later records of a category of registers but keeps its first, and trims the rest as before", () => {
+        const pages = Array.from({ length: 14 }, (_, index) =>
+          pageEntry(`https://a.test/${index}`, { content: "a".repeat(MAX_EXCERPT_CHARS) }),
+        );
+        const certifications = [
+          recordEntry("certifications", "fedramp", recordUrl("fedramp"), "FedRAMP", "r"),
+          recordEntry("certifications", "fedramp", `${recordUrl("fedramp")}&b=1`, "FedRAMP", "r"),
+          recordEntry(
+            "certifications",
+            "c2pa_conforming",
+            recordUrl("c2pa_conforming"),
+            "C2PA",
+            "r",
+          ),
+        ];
+        expect(bytes(untrimmed([...pages, ...certifications]))).toBeGreaterThan(MAX_EVIDENCE_BYTES);
+
+        const pack = buildEvidencePack([...pages, ...certifications]);
+
+        expect(bytes(pack)).toBeLessThanOrEqual(MAX_EVIDENCE_BYTES);
+        // A category that has sources always keeps one: the second and the third go, the first stays.
+        expect(
+          pack.filter((source) => source.category === "certifications").map((source) => source.url),
+        ).toEqual([certifications[0].url]);
+        expect(
+          pack.filter((source) => source.category === "security_incidents").length,
+        ).toBeLessThan(pages.length);
+      });
+
+      it("never gives up the only source of a category, the record of a register included", () => {
+        const pages = Array.from({ length: 14 }, (_, index) =>
+          pageEntry(`https://a.test/${index}`, { content: "a".repeat(MAX_EXCERPT_CHARS) }),
+        );
+        const only = recordEntry("certifications", "fedramp", recordUrl("fedramp"), "FedRAMP", "r");
+
+        const pack = buildEvidencePack([...pages, only]);
+
+        expect(bytes(pack)).toBeLessThanOrEqual(MAX_EVIDENCE_BYTES);
+        expect(urlsOf(pack)).toContain(only.url);
+        expect(
+          pack.filter((source) => source.category === "security_incidents").length,
+        ).toBeLessThan(pages.length);
+      });
     });
   });
 

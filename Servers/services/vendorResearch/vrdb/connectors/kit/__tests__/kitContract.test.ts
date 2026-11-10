@@ -13,6 +13,8 @@ import {
 import type { Connector, ConnectorFetch, Snapshot } from "../../types";
 import { type RecordDraft, recordOf } from "../record";
 
+jest.setTimeout(30_000);
+
 const cp = (...codes: number[]): string => String.fromCodePoint(...codes);
 
 const MARK = "Example list (example.org)";

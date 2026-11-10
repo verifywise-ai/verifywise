@@ -41,11 +41,63 @@ import {
 import { activeMirrors } from "../sources";
 import type { VrdbSourceState } from "../types";
 
+/** The 22 lists added on 2026-11-10 that are copied (GLEIF is read through), in the order of the registry. */
+const NEW_MIRRORS = [
+  "canada_sema",
+  "california_breaches",
+  "uk_ofsi",
+  "charlotin",
+  "ftc_penalties",
+  "piperoll",
+  "eu_dg_comp",
+  "disclose_io",
+  "uk_cma",
+  "canada_ai_register",
+  "ftc_competition",
+  "omb_ai_inventory",
+  "co_sic_penalties",
+  "uk_atrs",
+  "nhtsa_recalls",
+  "fmti",
+  "uk_mhra",
+  "nl_algoritmeregister",
+  "nhtsa_odi",
+  "fedramp",
+  "epoch_ai",
+  "c2pa_conforming",
+] as const;
+
+/** The schedule of each, in UTC. */
+const NEW_SCHEDULES = [
+  ["canada_sema", "2 1 * * *"],
+  ["california_breaches", "12 7 * * *"],
+  ["uk_ofsi", "18 10 * * 3"],
+  ["charlotin", "25 15 * * *"],
+  ["ftc_penalties", "55 4 * * 2"],
+  ["piperoll", "21 11 * * *"],
+  ["eu_dg_comp", "51 17 * * 1"],
+  ["disclose_io", "8 20 * * 6"],
+  ["uk_cma", "16 8 * * 2"],
+  ["canada_ai_register", "31 20 * * 1"],
+  ["ftc_competition", "57 4 * * 4"],
+  ["omb_ai_inventory", "33 21 * * 2"],
+  ["co_sic_penalties", "4 3 * * 3"],
+  ["uk_atrs", "14 5 * * 1"],
+  ["nhtsa_recalls", "3 9 * * *"],
+  ["fmti", "45 21 * * 5"],
+  ["uk_mhra", "22 22 * * 4"],
+  ["nl_algoritmeregister", "37 22 * * 3"],
+  ["nhtsa_odi", "1 10 * * *"],
+  ["fedramp", "6 19 * * *"],
+  ["epoch_ai", "39 23 * * 4"],
+  ["c2pa_conforming", "49 16 * * *"],
+] as const;
+
 /**
- * The mirrored lists whose gates are open by default (the CVE records, Q7, the screening list and
- * the four AI lists with no gate are; the UN list, Q6, and the AI Incident Database, Q29, are not),
- * those of them that are copied whole, and every mirrored list, in the order of the table of
- * sources.
+ * The mirrored lists whose gates are open by default (the CVE records, Q7, the screening list, the
+ * four AI lists with no gate and the 22 lists of 2026-11-10 are; the UN list, Q6, and the AI
+ * Incident Database, Q29, are not), those of them that are copied whole, and every mirrored list,
+ * in the order of the table of sources. GLEIF is read through, so it is in none of them.
  */
 const ACTIVE = [
   "kev",
@@ -58,6 +110,7 @@ const ACTIVE = [
   "nhtsa_sgo",
   "fda_ai_devices",
   "fda_device_recalls",
+  ...NEW_MIRRORS,
 ] as const;
 const WHOLE = [
   "kev",
@@ -69,6 +122,7 @@ const WHOLE = [
   "nhtsa_sgo",
   "fda_ai_devices",
   "fda_device_recalls",
+  ...NEW_MIRRORS,
 ] as const;
 const GATED = ["un_sanctions", "aiid"] as const;
 const MIRRORS = [
@@ -84,6 +138,7 @@ const MIRRORS = [
   "nhtsa_sgo",
   "fda_ai_devices",
   "fda_device_recalls",
+  ...NEW_MIRRORS,
 ] as const;
 
 const config = (overrides: Partial<VendorResearchConfig> = {}): VendorResearchConfig => ({
@@ -146,7 +201,13 @@ describe("the queue of the vendor risk database", () => {
       "vrdb_sync_nhtsa_sgo",
       "vrdb_sync_fda_ai_devices",
       "vrdb_sync_fda_device_recalls",
+      ...NEW_MIRRORS.map((id) => `vrdb_sync_${id}`),
     ]);
+    // 34 lists are copied, so there are 34 schedulers to name: GLEIF, read through, has none.
+    expect(MIRRORS).toHaveLength(34);
+    expect(vrdbSchedulerId("canada_sema")).toBe("vrdb_sync_canada_sema");
+    expect(vrdbSchedulerId("nl_algoritmeregister")).toBe("vrdb_sync_nl_algoritmeregister");
+    for (const id of MIRRORS) expect(vrdbSchedulerId(id)).not.toContain(":");
   });
 });
 
@@ -267,8 +328,9 @@ describe("scheduleVendorRiskDatabaseSync", () => {
     await scheduleVendorRiskDatabaseSync(config(), queue, states);
 
     expect(states).toHaveBeenCalledWith([...ACTIVE]);
-    // The screening list and the open AI lists have no row either, so they are queued too; the gated
-    // ones are not.
+    // The screening list, the open AI lists and the 22 lists of 2026-11-10 have no row either, so
+    // they are queued too, after the lists above and in the order of the registry; the gated ones
+    // are not.
     expect(queue.add.mock.calls).toEqual(
       (
         [
@@ -280,6 +342,7 @@ describe("scheduleVendorRiskDatabaseSync", () => {
           "nhtsa_sgo",
           "fda_ai_devices",
           "fda_device_recalls",
+          ...NEW_MIRRORS,
         ] as const
       ).map((id) => [
         "vrdb_sync",
@@ -384,6 +447,7 @@ describe("the AI-specific lists in the schedule (spec D2.14 to D2.17)", () => {
       "nhtsa_sgo",
       "fda_ai_devices",
       "fda_device_recalls",
+      ...NEW_MIRRORS,
     ]);
     expect(opened.add.mock.calls.map(([, , opts]) => opts.jobId)).toContain("vrdb_sync_first_aiid");
   });
@@ -474,5 +538,117 @@ describe("the screening list and the device recalls in the schedule (spec D2.19,
     expect(queue.upsertJobScheduler).not.toHaveBeenCalled();
     expect(states).not.toHaveBeenCalled();
     expect(queue.add).not.toHaveBeenCalled();
+  });
+});
+
+describe("the lists added on 2026-11-10 in the schedule", () => {
+  // None of the 22 that are copied waits behind a gate, so each has its scheduler and, while it was
+  // never copied, its first sync, as the open AI lists have. GLEIF is read through: it is asked at
+  // run time, and it has neither.
+
+  it.each(NEW_SCHEDULES)(
+    "schedules %s at %s, in UTC, and removes the scheduler of none of them",
+    async (id, pattern) => {
+      const queue = fakeQueue();
+
+      await scheduleVendorRiskDatabaseSync(config(), queue);
+
+      expect(queue.upsertJobScheduler).toHaveBeenCalledWith(
+        `vrdb_sync_${id}`,
+        { pattern, tz: "UTC" },
+        { name: "vrdb_sync", data: { sourceId: id }, opts: VRDB_SYNC_JOB_OPTIONS },
+      );
+      expect(queue.removeJobScheduler).not.toHaveBeenCalledWith(`vrdb_sync_${id}`);
+    },
+  );
+
+  it("upserts 32 schedulers in all, the 22 last and in the order of the registry, and removes the two of the gated lists", async () => {
+    const queue = fakeQueue();
+
+    await scheduleVendorRiskDatabaseSync(config(), queue);
+
+    expect(queue.upsertJobScheduler).toHaveBeenCalledTimes(32);
+    expect(
+      queue.upsertJobScheduler.mock.calls.slice(-22).map(([id, repeat]) => [id, repeat.pattern]),
+    ).toEqual(NEW_SCHEDULES.map(([id, pattern]) => [`vrdb_sync_${id}`, pattern]));
+    expect(queue.removeJobScheduler.mock.calls).toEqual([
+      ["vrdb_sync_un_sanctions"],
+      ["vrdb_sync_aiid"],
+    ]);
+  });
+
+  it("queues a first sync of each while it was never copied, one job id per list", async () => {
+    const queue = fakeQueue();
+    // None has a row: no sync of any ever ran.
+    const states = jest.fn(async () => [] as VrdbSourceState[]);
+
+    await scheduleVendorRiskDatabaseSync(config(), queue, states);
+
+    // All 22 are among the lists whose states are read, and all are copied whole: unlike the CVE
+    // records they have no baseline to wait for.
+    expect(states).toHaveBeenCalledWith(expect.arrayContaining([...NEW_MIRRORS]));
+    for (const id of NEW_MIRRORS) {
+      expect(queue.add).toHaveBeenCalledWith(
+        "vrdb_sync",
+        { sourceId: id },
+        { ...VRDB_SYNC_JOB_OPTIONS, jobId: `vrdb_sync_first_${id}` },
+      );
+    }
+    // Nine of the lists before them are copied whole as well, and none is queued twice.
+    const jobIds = queue.add.mock.calls.map(([, , opts]) => opts.jobId);
+    expect(jobIds).toHaveLength(31);
+    expect(new Set(jobIds).size).toBe(31);
+  });
+
+  it("queues a first sync of a list whose row has no success, and none of a list that was copied", async () => {
+    const queue = fakeQueue();
+    const states = jest.fn(async () => [
+      // A row of syncs that all failed is still a list that was never copied.
+      state("canada_sema", null),
+      state("nhtsa_recalls", new Date("2026-11-10T09:03:00Z")),
+      state("uk_cma", new Date("2026-11-04T08:16:00Z")),
+    ]);
+
+    await scheduleVendorRiskDatabaseSync(config(), queue, states);
+
+    const first = queue.add.mock.calls.map(([, data]) => data.sourceId);
+    expect(first).toContain("canada_sema");
+    expect(first).not.toContain("nhtsa_recalls");
+    expect(first).not.toContain("uk_cma");
+    expect(
+      first.filter((id: string) => (NEW_MIRRORS as readonly string[]).includes(id)),
+    ).toHaveLength(20);
+  });
+
+  it("removes the scheduler of each when the records are off, and queues no first sync", async () => {
+    const queue = fakeQueue();
+    const states = jest.fn(async () => [] as VrdbSourceState[]);
+
+    await scheduleVendorRiskDatabaseSync(config({ records: false }), queue, states);
+
+    for (const id of NEW_MIRRORS) {
+      expect(queue.removeJobScheduler).toHaveBeenCalledWith(`vrdb_sync_${id}`);
+    }
+    expect(queue.upsertJobScheduler).not.toHaveBeenCalled();
+    expect(states).not.toHaveBeenCalled();
+    expect(queue.add).not.toHaveBeenCalled();
+  });
+
+  it("gives GLEIF, which is read through, no scheduler and no first sync, whether the records are on or off", async () => {
+    for (const records of [true, false]) {
+      const queue = fakeQueue();
+      const states = jest.fn(async () => [] as VrdbSourceState[]);
+
+      await scheduleVendorRiskDatabaseSync(config({ records }), queue, states);
+
+      const touched = [
+        ...queue.upsertJobScheduler.mock.calls.map(([id]) => id),
+        ...queue.removeJobScheduler.mock.calls.map(([id]) => id),
+        ...queue.add.mock.calls.map(([, data]) => data.sourceId),
+        ...queue.add.mock.calls.map(([, , opts]) => opts.jobId),
+      ];
+      expect(touched.filter((id: string) => id.includes("gleif"))).toEqual([]);
+      expect(states).not.toHaveBeenCalledWith(expect.arrayContaining(["gleif"]));
+    }
   });
 });

@@ -1,9 +1,11 @@
 /**
- * The pause of a connector between two requests to one host: the four hosts that the round of
+ * The pause of a connector between two requests to one host: the five hosts that the round of
  * 2026-11-10 pauses for, the pause each asks for, and a sleep that a test can inject so that no
  * test waits.
  */
 import { HOST_PAUSE_MS, type PausedHost, type Sleep, pauseFor, realSleep } from "../pause";
+
+jest.setTimeout(30_000);
 
 describe("HOST_PAUSE_MS", () => {
   it("holds the pause of each host that asks for one", () => {
@@ -12,6 +14,7 @@ describe("HOST_PAUSE_MS", () => {
       "www.ftc.gov": 5_000,
       "www.datos.gov.co": 1_000,
       "www.gov.uk": 400,
+      "compcases-open-data-portal-files-prod.s3.eu-west-1.amazonaws.com": 1_000,
     });
   });
 

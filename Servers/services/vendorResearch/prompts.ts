@@ -29,12 +29,35 @@ import { MAX_TOPIC_WORDS, suggestedQueries } from "./queries";
 import { OFAC_RECORD_MARK } from "./records/ofac";
 import { AIID_RECORD_MARK } from "./vrdb/connectors/aiid";
 import { ATLAS_RECORD_MARK } from "./vrdb/connectors/atlas";
+import { C2PA_CONFORMING_RECORD_MARK } from "./vrdb/connectors/c2paConforming";
+import { CALIFORNIA_BREACHES_RECORD_MARK } from "./vrdb/connectors/californiaBreaches";
+import { CANADA_AI_REGISTER_RECORD_MARK } from "./vrdb/connectors/canadaAiRegister";
+import { CANADA_SEMA_RECORD_MARK } from "./vrdb/connectors/canadaSema";
+import { CHARLOTIN_RECORD_MARK } from "./vrdb/connectors/charlotin";
+import { CO_SIC_PENALTIES_RECORD_MARK } from "./vrdb/connectors/coSicPenalties";
 import { CSL_RECORD_MARK } from "./vrdb/connectors/csl";
+import { DISCLOSE_IO_RECORD_MARK } from "./vrdb/connectors/discloseIo";
+import { EPOCH_AI_RECORD_MARK } from "./vrdb/connectors/epochAi";
 import { EU_RECORD_MARK } from "./vrdb/connectors/eu";
+import { EU_DG_COMP_RECORD_MARK } from "./vrdb/connectors/euDgComp";
 import { FDA_RECORD_MARK } from "./vrdb/connectors/fda";
 import { FDA_RECALL_RECORD_MARK } from "./vrdb/connectors/fdaRecalls";
+import { FEDRAMP_RECORD_MARK } from "./vrdb/connectors/fedramp";
+import { FMTI_RECORD_MARK } from "./vrdb/connectors/fmti";
+import { FTC_COMPETITION_RECORD_MARK } from "./vrdb/connectors/ftcCompetition";
+import { FTC_PENALTIES_RECORD_MARK } from "./vrdb/connectors/ftcPenalties";
+import { GLEIF_RECORD_MARK } from "./vrdb/connectors/gleif";
 import { NHTSA_RECORD_MARK } from "./vrdb/connectors/nhtsa";
+import { NHTSA_ODI_RECORD_MARK } from "./vrdb/connectors/nhtsaOdi";
+import { NHTSA_RECALLS_RECORD_MARK } from "./vrdb/connectors/nhtsaRecalls";
+import { NL_ALGORITMEREGISTER_RECORD_MARK } from "./vrdb/connectors/nlAlgoritmeregister";
+import { OMB_AI_INVENTORY_RECORD_MARK } from "./vrdb/connectors/ombAiInventory";
+import { PIPEROLL_RECORD_MARK } from "./vrdb/connectors/piperoll";
 import { UK_RECORD_MARK } from "./vrdb/connectors/uk";
+import { UK_ATRS_RECORD_MARK } from "./vrdb/connectors/ukAtrs";
+import { UK_CMA_RECORD_MARK } from "./vrdb/connectors/ukCma";
+import { UK_MHRA_RECORD_MARK } from "./vrdb/connectors/ukMhra";
+import { UK_OFSI_RECORD_MARK } from "./vrdb/connectors/ukOfsi";
 import { UN_RECORD_MARK } from "./vrdb/connectors/un";
 import {
   MAX_CATEGORY_NOTES,
@@ -102,8 +125,17 @@ export { escapeForPrompt, unescapeFromPrompt };
  * is a licence requirement and not a sanction, and a recall is a firm's correction of a device, not
  * a finding that its AI failed. That is `vr-14`. Like `vr-13` it was not run against the golden set;
  * the new wording reaches only a source whose text begins with one of the two new marks.
+ *
+ * The next version words the lists of the vendor risk database added on 2026-11-10 by their class:
+ * Canada's autonomous sanctions list joins the sanctions paragraph, and new paragraphs word the AI
+ * incident lists, the enforcement and case lists, the product safety lists, the data breach notice
+ * list and the register or status lists. An entry of a list that can raise a risk raises at most
+ * one, written as an entry of the list and never as a finding against the vendor; an entry of a
+ * register raises none and is never evidence that the vendor is safe or approved. That is `vr-15`.
+ * Like `vr-13` and `vr-14` it was not run against the golden set; the new wording reaches only a
+ * source whose text begins with one of the new marks.
  */
-export const CREDIBILITY_PROMPT_VERSION = "vr-14";
+export const CREDIBILITY_PROMPT_VERSION = "vr-15";
 
 const UNKNOWN_DOMAIN = "unknown";
 
@@ -147,7 +179,9 @@ function inWords(count: number): string {
  * The system prompt of the analysis call. It names today's date and the lookback window of each
  * category, so it is built for the moment of the run. The model gives no confidence: the label of
  * a finding is computed by code from its sources (credibility.ts). The paragraph of the sanctions
- * lists is the one of the vendor risk database: OFAC's list beside the UK, EU and UN lists.
+ * lists is the one of the vendor risk database: OFAC's list beside the UK, EU, UN and Canadian lists
+ * and the US screening list. The paragraphs after the one of the AI databases word the other lists
+ * of the database by their class.
  */
 export function buildSystemPrompt(now: Date): string {
   // The numbers of the prose come from the schema, so that the two cannot disagree. Counts are
@@ -264,7 +298,8 @@ export function buildSystemPrompt(now: Date): string {
     "- A source whose text begins with the name of a sanctions list is an entry of that list:",
     `  ${OFAC_RECORD_MARK} (the United States Treasury),`,
     `  ${UK_RECORD_MARK} (the United Kingdom), ${EU_RECORD_MARK} (the European`,
-    `  Union), ${UN_RECORD_MARK} (the United Nations Security Council) or`,
+    `  Union), ${UN_RECORD_MARK} (the United Nations Security Council),`,
+    `  ${CANADA_SEMA_RECORD_MARK} (Canada) or`,
     `  ${CSL_RECORD_MARK} (the consolidated list of the export control and sanctions lists of the`,
     "  United States Departments of Commerce, State and Treasury: its List line names the list, and",
     "  a listing on the Entity List or the Military End User List means that an export licence is",
@@ -296,6 +331,74 @@ export function buildSystemPrompt(now: Date): string {
     "  rate its likelihood Possible at most, and make the action plan a check of who the vendor is",
     `  against the entry. An entry of ${FDA_RECORD_MARK} raises no risk: use it only to say, in the`,
     "  description of another risk, that the vendor's AI is part of a regulated medical device.",
+    "- A source whose text begins with the name of an AI incident list is an entry of that list,",
+    "  counted for one company or product:",
+    `  ${CHARLOTIN_RECORD_MARK} (court decisions on fabricated or false content in a filing, which`,
+    "  name the AI tool that was used: naming the tool does not show that the tool caused the error)",
+    `  or ${PIPEROLL_RECORD_MARK} (incidents of AI agents that one editor records: reports that`,
+    "  nobody else has checked). The vendor was matched to it by name only, so its text has the",
+    "  Lookup note: it may be another company, or a product of another company. It shows that the list",
+    "  holds an entry of that name, never that the vendor did what the entry records. From each entry",
+    '  raise at most one risk, in ai_specific: write it as "An entity named <the name of the entry>',
+    '  appears in <the list>", rate its likelihood Possible at most, and make the action plan a check',
+    "  of who the vendor is against the entry.",
+    "- A source whose text begins with the name of an enforcement or case list is an entry of that",
+    "  list, summarised for one party:",
+    `  ${EU_DG_COMP_RECORD_MARK} (antitrust, cartel and Digital Markets Act cases of the European`,
+    `  Commission; mergers are not in it), ${FTC_PENALTIES_RECORD_MARK} (civil penalty orders of`,
+    `  the US Federal Trade Commission), ${FTC_COMPETITION_RECORD_MARK} (antitrust actions of the US`,
+    "  Federal Trade Commission, whose parties are read from the titles of the matters),",
+    `  ${UK_CMA_RECORD_MARK} (cases of the UK Competition and Markets Authority that can end in an`,
+    `  intervention or an enforcement outcome), ${UK_OFSI_RECORD_MARK} (notices of the UK Office of`,
+    "  Financial Sanctions Implementation of a penalty or a disclosure for a breach of financial",
+    "  sanctions: a notice is not a designation, and the party is not on a sanctions list because of",
+    `  it) or ${CO_SIC_PENALTIES_RECORD_MARK} (consumer protection sanctions of Colombia's`,
+    "  Superintendencia de Industria y Comercio, which may later be annulled). The vendor was matched",
+    "  to it by name only, so its text has the Lookup note: it may be another company. It shows that",
+    "  the list names a party of that name, never that the vendor broke a rule or is guilty of",
+    "  anything: a case, an investigation or a notice is not a finding or a ruling, and a decision or",
+    "  a penalty that the entry names is about the party of the entry. From each entry raise at most",
+    '  one risk, in legal_regulatory: write it as "An entity named <the name of the entry> appears in',
+    '  <the list>", rate its likelihood Possible at most, and make the action plan a check of who the',
+    "  vendor is against the entry.",
+    "- A source whose text begins with the name of a product safety list is an entry of that list,",
+    "  summarised for one maker or filer:",
+    `  ${NHTSA_RECALLS_RECORD_MARK} (vehicle and equipment recall campaigns that the filer reported`,
+    `  to NHTSA since 2010), ${NHTSA_ODI_RECORD_MARK} (investigations of vehicle and equipment`,
+    `  defects by NHTSA's Office of Defects Investigation) or ${UK_MHRA_RECORD_MARK} (field safety`,
+    "  notices of medical device manufacturers that the UK MHRA lists). A recall or a field safety",
+    "  notice is the maker's own correction of a product, and an investigation is not a finding that a",
+    "  defect exists. The vendor was matched to it by name only, so its text has the Lookup note: it",
+    "  may be another company. From each entry raise at most one risk, in legal_regulatory: write it",
+    '  as "An entity named <the name of the entry> appears in <the list>", rate its likelihood',
+    "  Possible at most, and make the action plan a check of who the vendor is against the entry.",
+    `- A source whose text begins with ${CALIFORNIA_BREACHES_RECORD_MARK} is an entry of the list of`,
+    "  data breach notices filed with the California Attorney General, summarised for one",
+    "  organisation: the organisation itself reported a breach of personal data, and the entry says",
+    "  nothing about its cause or its harm. The vendor was matched to it by name only, so its text has",
+    "  the Lookup note: it may be another company. From each entry raise at most one risk, in",
+    '  security_incidents: write it as "An entity named <the name of the entry> reported a data breach',
+    '  to the California Attorney General", rate its likelihood Possible at most, and make the action',
+    "  plan a check of who the vendor is against the entry and of the dates it lists.",
+    "- An entry of the AI incident, enforcement, product safety and data breach lists above is dated",
+    "  by its newest matter, and the lookback window of its category applies to that date. A source",
+    "  whose text begins with the name of a register or status list is an entry of that register,",
+    "  a state as of the day of the copy that its text names:",
+    `  ${CANADA_AI_REGISTER_RECORD_MARK}, ${OMB_AI_INVENTORY_RECORD_MARK},`,
+    `  ${NL_ALGORITMEREGISTER_RECORD_MARK} and ${UK_ATRS_RECORD_MARK} (public bodies' own`,
+    "  statements that an AI system or an algorithm they use names the vendor as its supplier),",
+    `  ${EPOCH_AI_RECORD_MARK} (AI models that a research organisation lists by developer),`,
+    `  ${FMTI_RECORD_MARK} (how much a developer of foundation models disclosed, as a research team`,
+    `  scored it), ${C2PA_CONFORMING_RECORD_MARK} (products that the C2PA accepted as conformant to`,
+    `  its content provenance specification), ${FEDRAMP_RECORD_MARK} (the authorisation status of`,
+    `  cloud offerings with the US government), ${DISCLOSE_IO_RECORD_MARK} (vulnerability disclosure`,
+    `  policies that contributors report) or ${GLEIF_RECORD_MARK} (the reference data of a legal`,
+    "  entity identifier, which the entity reports and its issuer validates). Such an entry raises no",
+    "  risk, whatever it says, and a vendor that is missing from a register is no risk either. Use it",
+    "  only as context in the description of another risk that other sources show, and write what it",
+    "  says as the register's statement: the register lists the vendor, never more. A register entry",
+    "  is never evidence that the vendor or its product is safe, compliant or approved, and a supplier",
+    "  named by a public body or a developer named in an index is context, never an accusation.",
     "",
     "How to rate a risk:",
     "- Rate what the sources show for this vendor, not the worst case of its kind. The two ratings",
@@ -818,8 +921,9 @@ export function buildVerifierSystemPrompt(now: Date): string {
 }
 
 /**
- * The public database that a record is an entry of, as the verifier is told it. The sanctions lists
- * go by the marks their records start with.
+ * The public database that a record is an entry of, as the verifier is told it. The sanctions lists,
+ * the AI databases and the lists added on 2026-11-10 go by the marks their records start with, each
+ * the `..._RECORD_MARK` of its connector.
  */
 export const VERIFIER_DATABASE_NAMES: Readonly<Record<RecordSourceId, string>> = {
   kev: "CISA Known Exploited Vulnerabilities Catalog",
@@ -838,6 +942,29 @@ export const VERIFIER_DATABASE_NAMES: Readonly<Record<RecordSourceId, string>> =
   nhtsa_sgo: NHTSA_RECORD_MARK,
   fda_ai_devices: FDA_RECORD_MARK,
   fda_device_recalls: FDA_RECALL_RECORD_MARK,
+  canada_sema: CANADA_SEMA_RECORD_MARK,
+  california_breaches: CALIFORNIA_BREACHES_RECORD_MARK,
+  uk_ofsi: UK_OFSI_RECORD_MARK,
+  charlotin: CHARLOTIN_RECORD_MARK,
+  ftc_penalties: FTC_PENALTIES_RECORD_MARK,
+  piperoll: PIPEROLL_RECORD_MARK,
+  eu_dg_comp: EU_DG_COMP_RECORD_MARK,
+  disclose_io: DISCLOSE_IO_RECORD_MARK,
+  uk_cma: UK_CMA_RECORD_MARK,
+  canada_ai_register: CANADA_AI_REGISTER_RECORD_MARK,
+  ftc_competition: FTC_COMPETITION_RECORD_MARK,
+  omb_ai_inventory: OMB_AI_INVENTORY_RECORD_MARK,
+  co_sic_penalties: CO_SIC_PENALTIES_RECORD_MARK,
+  uk_atrs: UK_ATRS_RECORD_MARK,
+  nhtsa_recalls: NHTSA_RECALLS_RECORD_MARK,
+  fmti: FMTI_RECORD_MARK,
+  uk_mhra: UK_MHRA_RECORD_MARK,
+  nl_algoritmeregister: NL_ALGORITMEREGISTER_RECORD_MARK,
+  nhtsa_odi: NHTSA_ODI_RECORD_MARK,
+  fedramp: FEDRAMP_RECORD_MARK,
+  epoch_ai: EPOCH_AI_RECORD_MARK,
+  c2pa_conforming: C2PA_CONFORMING_RECORD_MARK,
+  gleif: GLEIF_RECORD_MARK,
 };
 
 /** ` database="…"` for a source whose address has a record, and nothing for any other. */

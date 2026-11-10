@@ -4,10 +4,14 @@
  * its worked case.
  */
 import type {
+  CredibilitySource,
   EvidenceSource,
+  RecordSourceId,
   ResearchCategory,
 } from "../../../domain.layer/interfaces/i.vendorResearch";
+import { CREDIBILITY_RULES } from "../../../domain.layer/interfaces/i.vendorResearch";
 import { credibilityOf, decideCredibility, describeSources } from "../credibility";
+import { CONTEXT_ONLY_RECORD_SOURCES } from "../records/types";
 import { REGISTRY_VERSION } from "../sourceRegistry/entries";
 import type { SourceProvenance } from "../evidence";
 import type { ResearchTarget } from "../target";
@@ -102,6 +106,40 @@ const CSL_BY_WEBSITE = cslVrdb({
   strength: "strong",
   method: "domain",
   matchedKey: "domain:acme-analytics.example",
+});
+
+const FEDRAMP_PAGE = "https://marketplace.fedramp.gov/products/FR2026000001";
+const GLEIF_PAGE = "https://search.gleif.org/#/record/5493ACME00000000TE01";
+
+/**
+ * What the lookup keeps of a FedRAMP offering it offered: strong, because the offering's website is
+ * the vendor's verified domain (an official list, weak by its class).
+ */
+const fedrampVrdb = (over: Partial<VrdbRecordMeta> = {}): VrdbRecordMeta => ({
+  recordId: 21,
+  sourceId: "fedramp",
+  sourceRecordId: "FR2026000001",
+  strength: "strong",
+  method: "domain",
+  matchedKey: "domain:acme-analytics.example",
+  status: "active",
+  asOf: "2026-11-10",
+  stale: false,
+  ...over,
+});
+
+/** What it keeps of a GLEIF record read through for the LEI stored on the vendor (trusted press, strong). */
+const gleifVrdb = (over: Partial<VrdbRecordMeta> = {}): VrdbRecordMeta => ({
+  recordId: 22,
+  sourceId: "gleif",
+  sourceRecordId: "5493ACME00000000TE01",
+  strength: "strong",
+  method: "identifier",
+  matchedKey: "lei:5493ACME00000000TE01",
+  status: "active",
+  asOf: "2026-11-10",
+  stale: false,
+  ...over,
 });
 
 describe("credibilityOf", () => {
@@ -630,6 +668,221 @@ describe("credibilityOf", () => {
     });
   });
 
+  // Prompt vr-15: a record of a register or status list is context for a finding, never what
+  // supports it. FedRAMP (official, strong on a verified website) and GLEIF (trusted press, strong
+  // on a stored LEI) are the first of them that can match strongly, so without the rule a finding
+  // that only cites them as context would read High or Medium.
+  describe("the registers and status lists: a record of them supports no finding (prompt vr-15)", () => {
+    const fedrampRecord = (extra: EvidenceSource[] = [], meta = fedrampVrdb()) =>
+      rate("certifications", [source(FEDRAMP_PAGE), ...extra], {
+        provenance: { [FEDRAMP_PAGE]: { record: "fedramp", vrdb: meta } },
+      });
+    const gleifRecord = (extra: EvidenceSource[] = [], meta = gleifVrdb()) =>
+      rate("financial_health", [source(GLEIF_PAGE), ...extra], {
+        provenance: { [GLEIF_PAGE]: { record: "gleif", vrdb: meta } },
+      });
+
+    it("a finding whose only source is a strong FedRAMP record is Low, not High", () => {
+      const rated = fedrampRecord();
+
+      expect(rated).toMatchObject({
+        label: "low",
+        basis: { rule: "unverified", name_only: false },
+      });
+      // The basis still describes the record: official by its class, strong by its match.
+      expect(rated.basis.sources).toEqual([
+        {
+          url: FEDRAMP_PAGE,
+          category: "official",
+          publisher: "fedramp",
+          entry: null,
+          reviewed: true,
+          reading: "read",
+          record: {
+            source: "fedramp",
+            match: "strong",
+            status: "active",
+            source_record_id: "FR2026000001",
+            as_of: "2026-11-10",
+          },
+        },
+      ]);
+    });
+
+    it("a strong FedRAMP record beside an official page that was read is High by official_page", () => {
+      expect(fedrampRecord([source(ICO)])).toMatchObject({
+        label: "high",
+        basis: { rule: "official_page", name_only: false },
+      });
+    });
+
+    it("a strong FedRAMP record beside a KEV record is High by official_record, from the KEV record", () => {
+      const rated = rate("security_incidents", [source(FEDRAMP_PAGE), source(NVD_PAGE)], {
+        provenance: {
+          [FEDRAMP_PAGE]: { record: "fedramp", vrdb: fedrampVrdb() },
+          [NVD_PAGE]: { record: "kev" },
+        },
+      });
+
+      expect(rated).toMatchObject({ label: "high", basis: { rule: "official_record" } });
+    });
+
+    it("a finding whose only source is a strong GLEIF record is Low, not Medium", () => {
+      expect(gleifRecord()).toMatchObject({
+        label: "low",
+        basis: { rule: "unverified", name_only: false },
+      });
+    });
+
+    it("a GLEIF record is no second trusted publisher: beside Reuters it is Medium by trusted_press_one, not High", () => {
+      expect(gleifRecord([source(REUTERS)])).toMatchObject({
+        label: "medium",
+        basis: { rule: "trusted_press_one", name_only: false },
+      });
+      expect(gleifRecord([source(REUTERS), source(BBC_UK)])).toMatchObject({
+        label: "high",
+        basis: { rule: "trusted_press_two", name_only: false },
+      });
+    });
+
+    it("a record of a register matched by name keeps the note, and is Low as the only source", () => {
+      const rated = fedrampRecord([], fedrampVrdb({ strength: "weak", method: "name_exact" }));
+
+      expect(rated).toMatchObject({ label: "low", basis: { rule: "unverified", name_only: true } });
+    });
+
+    describe.each([...CONTEXT_ONLY_RECORD_SOURCES])("%s", (id) => {
+      const described = (
+        category: CredibilitySource["category"],
+        over: Partial<CredibilitySource> = {},
+      ): CredibilitySource => ({
+        url: `https://example.org/${id}`,
+        category,
+        publisher: id,
+        entry: null,
+        reviewed: true,
+        reading: "read",
+        record: { source: id as RecordSourceId, match: "strong", status: "active" },
+        ...over,
+      });
+
+      it("is never what supports a finding, whatever its class", () => {
+        for (const category of ["official", "trusted_press", "unverified"] as const) {
+          expect(decideCredibility([described(category)], { contradicted: false })).toEqual({
+            label: "low",
+            rule: "unverified",
+            nameOnly: false,
+          });
+        }
+      });
+
+      it("leaves the label of the other sources as it is", () => {
+        const official: CredibilitySource = {
+          url: "https://www.cisa.gov/known-exploited-vulnerabilities-catalog",
+          category: "official",
+          publisher: "kev",
+          entry: null,
+          reviewed: true,
+          reading: "read",
+          record: { source: "kev", match: "strong", status: "active" },
+        };
+
+        expect(
+          decideCredibility([described("official"), official], { contradicted: false }),
+        ).toEqual({ label: "high", rule: "official_record", nameOnly: false });
+      });
+
+      // A register that withdrew its own record is no reason for the inactive rule.
+      it("is no reason for the inactive rule when its list withdrew it: Low by unverified", () => {
+        const withdrawn = described("official", {
+          record: { source: id as RecordSourceId, match: "strong", status: "withdrawn" },
+        });
+
+        expect(decideCredibility([withdrawn], { contradicted: false })).toEqual({
+          label: "low",
+          rule: "unverified",
+          nameOnly: false,
+        });
+      });
+    });
+
+    // A register never decides a rule, and a record of it that was withdrawn is no exception: the
+    // `inactive` rule looks at the other sources only. The label stays Low, and no rule is added to
+    // the rules of a label.
+    describe("a withdrawn or stale record of a register", () => {
+      it("a withdrawn FedRAMP record alone is Low by unverified, not by inactive", () => {
+        const rated = fedrampRecord([], fedrampVrdb({ status: "withdrawn" }));
+
+        expect(rated).toMatchObject({
+          label: "low",
+          basis: { rule: "unverified", name_only: false },
+        });
+        // The basis still says what the record is: withdrawn.
+        expect(rated.basis.sources[0].record).toMatchObject({
+          source: "fedramp",
+          status: "withdrawn",
+        });
+      });
+
+      it("the same record matched by name only: Low by unverified, and the note stays", () => {
+        const rated = fedrampRecord(
+          [],
+          fedrampVrdb({ status: "withdrawn", strength: "weak", method: "name_exact" }),
+        );
+
+        expect(rated).toMatchObject({
+          label: "low",
+          basis: { rule: "unverified", name_only: true },
+        });
+      });
+
+      it("a copy of the list that is out of date, still active, alone is Low by unverified", () => {
+        expect(fedrampRecord([], fedrampVrdb({ stale: true, asOf: "2026-09-01" }))).toMatchObject({
+          label: "low",
+          basis: { rule: "unverified", name_only: false },
+        });
+      });
+
+      it("a withdrawn FedRAMP record beside a withdrawn record of another list is still Low by inactive", () => {
+        const rated = rate("security_incidents", [source(FEDRAMP_PAGE), source(NVD_PAGE)], {
+          provenance: {
+            [FEDRAMP_PAGE]: { record: "fedramp", vrdb: fedrampVrdb({ status: "withdrawn" }) },
+            [NVD_PAGE]: { record: "kev", status: "withdrawn" },
+          },
+        });
+
+        expect(rated).toMatchObject({ label: "low", basis: { rule: "inactive" } });
+      });
+
+      it("a withdrawn FedRAMP record beside a KEV record leaves the KEV record to decide: High", () => {
+        const rated = rate("security_incidents", [source(FEDRAMP_PAGE), source(NVD_PAGE)], {
+          provenance: {
+            [FEDRAMP_PAGE]: { record: "fedramp", vrdb: fedrampVrdb({ status: "withdrawn" }) },
+            [NVD_PAGE]: { record: "kev" },
+          },
+        });
+
+        expect(rated).toMatchObject({ label: "high", basis: { rule: "official_record" } });
+      });
+
+      it("adds no rule: the rules of a label are the eleven there were", () => {
+        expect([...CREDIBILITY_RULES]).toEqual([
+          "official_record",
+          "official_page",
+          "vendor_statement",
+          "trusted_press_two",
+          "capped_unconfirmed",
+          "trusted_press_one",
+          "contradicted",
+          "name_only",
+          "unverified",
+          "self_claim",
+          "inactive",
+        ]);
+      });
+    });
+  });
+
   describe("the review focus", () => {
     it("a SEC record of a stored CIK is High with no note", () => {
       // The per-run lookup asks the SEC by the CIK a person stored, not by the name (Ruling 14).
@@ -1090,6 +1343,47 @@ describe("decideCredibility", () => {
       "a device recall found by name and Reuters",
       rate("ai_specific", [source(FDA_RECALL_PAGE), source(REUTERS)], {
         provenance: { [FDA_RECALL_PAGE]: { record: "fda_device_recalls" as const } },
+      }),
+    ],
+    [
+      "a FedRAMP record alone",
+      rate("certifications", [source(FEDRAMP_PAGE)], {
+        provenance: { [FEDRAMP_PAGE]: { record: "fedramp" as const, vrdb: fedrampVrdb() } },
+      }),
+    ],
+    [
+      "a FedRAMP record and an official page",
+      rate("certifications", [source(FEDRAMP_PAGE), source(ICO)], {
+        provenance: { [FEDRAMP_PAGE]: { record: "fedramp" as const, vrdb: fedrampVrdb() } },
+      }),
+    ],
+    [
+      "a GLEIF record and Reuters",
+      rate("financial_health", [source(GLEIF_PAGE), source(REUTERS)], {
+        provenance: { [GLEIF_PAGE]: { record: "gleif" as const, vrdb: gleifVrdb() } },
+      }),
+    ],
+    [
+      "a FedRAMP record that its list withdrew, alone",
+      rate("certifications", [source(FEDRAMP_PAGE)], {
+        provenance: {
+          [FEDRAMP_PAGE]: {
+            record: "fedramp" as const,
+            vrdb: fedrampVrdb({ status: "withdrawn" }),
+          },
+        },
+      }),
+    ],
+    [
+      "a FedRAMP record that its list withdrew, and a withdrawn KEV record",
+      rate("security_incidents", [source(FEDRAMP_PAGE), source(NVD_PAGE)], {
+        provenance: {
+          [FEDRAMP_PAGE]: {
+            record: "fedramp" as const,
+            vrdb: fedrampVrdb({ status: "withdrawn" }),
+          },
+          [NVD_PAGE]: { record: "kev" as const, status: "withdrawn" as const },
+        },
       }),
     ],
     ["no sources", rate("security_incidents", [])],

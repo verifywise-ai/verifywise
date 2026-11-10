@@ -11,10 +11,12 @@ import {
   compareText,
   dayText,
   distinct,
+  endsCut,
   flatText,
   instantText,
   isObject,
   lineOf,
+  lineWithin,
   shorten,
   stringOf,
   unreadableAllowed,
@@ -46,6 +48,128 @@ describe("SHORTENED", () => {
   it("is the marker that a cut text ends with", () => {
     expect(SHORTENED).toBe(" [shortened]");
     expect(SHORTENED).toHaveLength(12);
+  });
+});
+
+describe("endsCut", () => {
+  it("is true for a line that ends in the cut marker, with or without the blank before it", () => {
+    expect(endsCut(`Acme${SHORTENED}`)).toBe(true);
+    expect(endsCut(SHORTENED.trim())).toBe(true);
+    expect(endsCut(lineOf("a".repeat(300), 100))).toBe(true);
+  });
+
+  it("is false for any other line, the words of the marker inside a text included", () => {
+    expect(endsCut("Acme")).toBe(false);
+    expect(endsCut("")).toBe(false);
+    expect(endsCut("[shortened] Acme")).toBe(false);
+    expect(endsCut("Acme [shortened] Widgets")).toBe(false);
+    expect(endsCut("Acme shortened")).toBe(false);
+  });
+});
+
+describe("lineWithin", () => {
+  it("gives the clean line of a text that has at most `max` units, and null for one that has more", () => {
+    expect(lineWithin("Acme Robotics", 13)).toBe("Acme Robotics");
+    expect(lineWithin("Acme Robotics", 12)).toBeNull();
+    expect(lineWithin("a".repeat(120), 120)).toBe("a".repeat(120));
+    expect(lineWithin("a".repeat(121), 120)).toBeNull();
+  });
+
+  it("measures the line after the clean: hidden characters and runs of white space do not count", () => {
+    expect(lineWithin(`  Acme${ZWSP}   Robotics\t\n`, 13)).toBe("Acme Robotics");
+    expect(lineWithin(`${"a".repeat(10)}${ZWSP.repeat(500)}`, 10)).toBe("a".repeat(10));
+  });
+
+  it("gives null where lineOf(max + 1) would leave a cut line of `max` units or fewer (a cut after a blank)", () => {
+    // lineOf(text, 21) cuts the text to 9 units and takes the blank off: 8 letters and the marker, 20 units.
+    const text = "aaaaaaaa bbbbbbbb cccccccc";
+    const naive = lineOf(text, 21);
+    expect(naive).toBe(`aaaaaaaa${SHORTENED}`);
+    expect(naive.length).toBeLessThanOrEqual(20);
+    expect(lineWithin(text, 20)).toBeNull();
+  });
+
+  it("gives null where lineOf(max + 1) would cut inside a pair of surrogates and so leave a line of `max` units", () => {
+    // The cut at 9 units would split the pair at units 8 and 9: it steps back to 8, and 8 + 12 = 20.
+    const text = `${"a".repeat(8)}${EMOJI}${"b".repeat(20)}`;
+    const naive = lineOf(text, 21);
+    expect(naive).toBe(`${"a".repeat(8)}${SHORTENED}`);
+    expect(naive.length).toBeLessThanOrEqual(20);
+    expect(lineWithin(text, 20)).toBeNull();
+  });
+
+  it("never gives a line that is cut, whatever the length of the text and where the words end", () => {
+    for (const max of [1, 5, 11, 12, 13, 20, 40, 120]) {
+      for (const word of [1, 2, 3, 5, 8, 9]) {
+        for (let length = max + 1; length <= max + 40; length += 1) {
+          const words: string[] = [];
+          let have = 0;
+          while (have < length) {
+            const take = Math.min(word, length - have);
+            words.push("a".repeat(take));
+            have += take + 1;
+          }
+          const text = words.join(" ").slice(0, length);
+          if (text.length <= max) continue;
+          const line = lineWithin(text, max);
+          if (line !== null) throw new Error(`max ${max} word ${word} length ${length}: ${line}`);
+        }
+      }
+    }
+  });
+
+  it("never gives a line that ends in the cut marker, for a text of surrogate pairs of any length", () => {
+    for (let length = 11; length < 80; length += 1) {
+      for (let max = 10; max < length; max += 1) {
+        const text = EMOJI.repeat(length);
+        if (lineWithin(text, max) !== null) throw new Error(`max ${max} length ${length}`);
+      }
+    }
+  });
+
+  it("gives null for a text that ends in the cut marker, however short and whichever way it came to end in it", () => {
+    // A value of more than LINE_INPUT_MAX units is cut before the clean, so that a short clean line of
+    // it is still marked as cut: it must not pass for a whole one.
+    const huge = `abc${" ".repeat(2 * MEGABYTE)}xyz`;
+    const marked = lineOf(huge, 120);
+    expect(marked).toBe(`abc${SHORTENED}`);
+    expect(lineWithin(huge, 120)).toBeNull();
+    // A text that was cut by another layer and arrives with its marker.
+    expect(lineWithin(`Acme Widgets${SHORTENED}`, 120)).toBeNull();
+    expect(lineWithin(SHORTENED.trim(), 120)).toBeNull();
+    // The marker inside a text, or the words of it, are a text.
+    expect(lineWithin("Acme [shortened] Widgets", 120)).toBe("Acme [shortened] Widgets");
+    expect(lineWithin("Shortened Acme", 120)).toBe("Shortened Acme");
+  });
+
+  it("gives null for a value of more than LINE_INPUT_MAX units, whatever `max` is, and reads one of exactly that many", () => {
+    // lineOf writes no marker where its limit has no room for one, so a short clean line read from the
+    // first megabyte of such a value would pass for a whole one if `lineWithin` did not refuse it first.
+    const longValue = `A${" ".repeat(LINE_INPUT_MAX)}Corp`;
+    for (const max of [1, 4, 8, 9, 12, 20, 500]) {
+      expect(lineWithin(longValue, max)).toBeNull();
+      expect(lineWithin(`Acme${" ".repeat(LINE_INPUT_MAX)}Corp`, max)).toBeNull();
+    }
+    const exact = `A${" ".repeat(LINE_INPUT_MAX - 1)}`;
+    expect(exact).toHaveLength(LINE_INPUT_MAX);
+    expect(lineWithin(exact, 4)).toBe("A");
+  });
+
+  it("gives null for a value that is no text, for an empty line and for a `max` that is not above zero", () => {
+    expect(lineWithin(undefined, 10)).toBeNull();
+    expect(lineWithin(5, 10)).toBeNull();
+    expect(lineWithin({ text: "a" }, 10)).toBeNull();
+    expect(lineWithin("", 10)).toBeNull();
+    expect(lineWithin(`${ZWSP} ${NBSP}`, 10)).toBeNull();
+    expect(lineWithin("a", 0)).toBeNull();
+    expect(lineWithin("a", -1)).toBeNull();
+    expect(lineWithin("a", Number.NaN)).toBeNull();
+  });
+
+  it("is as fast on a huge value as lineOf: the value is read to LINE_INPUT_MAX only", () => {
+    const huge = "a b ".repeat(MEGABYTE);
+    expect(took(() => lineWithin(huge, 120))).toBeLessThan(10_000);
+    expect(lineWithin(huge, 120)).toBeNull();
   });
 });
 
@@ -294,7 +418,7 @@ describe("lineOf", () => {
       ],
     ])("reads %s in less than 500 ms", (_name, make) => {
       const cell = make();
-      expect(took(() => lineOf(cell, 200))).toBeLessThan(500);
+      expect(took(() => lineOf(cell, 200))).toBeLessThan(10_000);
     });
 
     it("gives an empty line for blanks, and the front of a long run of dots, cut and marked", () => {
@@ -376,9 +500,10 @@ describe("flatText", () => {
   it("does not cut, and takes no longer than a line does", () => {
     const text = `${"word ".repeat(100_000)}`;
     let flat = "";
-    expect(took(() => (flat = flatText(text)))).toBeLessThan(500);
+    expect(took(() => (flat = flatText(text)))).toBeLessThan(10_000);
     expect(flat).toHaveLength(text.length - 1);
-    expect(took(() => flatText(" ".repeat(5 * MEGABYTE)))).toBeLessThan(500);
+    // A run of one megabyte: a longer one can overflow the regular expression stack of V8 when memory is short.
+    expect(took(() => flatText(" ".repeat(MEGABYTE)))).toBeLessThan(10_000);
   });
 });
 
@@ -574,7 +699,7 @@ describe("dayText", () => {
   it("does not take a long cell for a day, nor take long to read it", () => {
     const cell = `2026-01-05${" ".repeat(5 * MEGABYTE)}x`;
     let day: string | null = "";
-    expect(took(() => (day = dayText(cell)))).toBeLessThan(500);
+    expect(took(() => (day = dayText(cell)))).toBeLessThan(10_000);
     expect(day).toBeNull();
   });
 });

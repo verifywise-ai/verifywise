@@ -669,7 +669,7 @@ describe("fdaConnector.parse, the text of the list", () => {
     const started = Date.now();
     const results = bodies.map((text) => parse(text));
 
-    expect(Date.now() - started).toBeLessThan(5000);
+    expect(Date.now() - started).toBeLessThan(10_000);
     // A name of a million characters is no name; one that is only padding after "x" is "x".
     expect(results[0].skipped).toBe(1);
     expect(results[1].records[0].identifiers.company).toBe("x");

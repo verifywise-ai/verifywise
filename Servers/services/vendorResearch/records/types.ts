@@ -33,6 +33,29 @@ export const RECORD_CATEGORY: Readonly<Record<RecordSourceId, ResearchCategory>>
   nhtsa_sgo: "ai_specific",
   fda_ai_devices: "ai_specific",
   fda_device_recalls: "ai_specific",
+  canada_sema: "legal_regulatory",
+  california_breaches: "security_incidents",
+  uk_ofsi: "legal_regulatory",
+  charlotin: "ai_specific",
+  ftc_penalties: "legal_regulatory",
+  piperoll: "ai_specific",
+  eu_dg_comp: "legal_regulatory",
+  disclose_io: "security_incidents",
+  uk_cma: "legal_regulatory",
+  canada_ai_register: "ai_specific",
+  ftc_competition: "legal_regulatory",
+  omb_ai_inventory: "ai_specific",
+  co_sic_penalties: "legal_regulatory",
+  uk_atrs: "ai_specific",
+  nhtsa_recalls: "legal_regulatory",
+  fmti: "ai_specific",
+  uk_mhra: "legal_regulatory",
+  nl_algoritmeregister: "ai_specific",
+  nhtsa_odi: "legal_regulatory",
+  fedramp: "certifications",
+  epoch_ai: "ai_specific",
+  c2pa_conforming: "certifications",
+  gleif: "financial_health",
 };
 
 /** One record of a database, written out as a source. */
@@ -125,4 +148,78 @@ export const MAX_RECORDS = {
   nhtsa_sgo: 3,
   fda_ai_devices: 2,
   fda_device_recalls: 3,
+  canada_sema: 2,
+  california_breaches: 2,
+  uk_ofsi: 1,
+  charlotin: 2,
+  ftc_penalties: 2,
+  piperoll: 1,
+  eu_dg_comp: 2,
+  disclose_io: 1,
+  uk_cma: 1,
+  canada_ai_register: 1,
+  ftc_competition: 2,
+  omb_ai_inventory: 1,
+  co_sic_penalties: 2,
+  uk_atrs: 1,
+  nhtsa_recalls: 2,
+  fmti: 1,
+  uk_mhra: 1,
+  nl_algoritmeregister: 1,
+  nhtsa_odi: 2,
+  fedramp: 2,
+  epoch_ai: 1,
+  c2pa_conforming: 1,
+  gleif: 1,
 } as const satisfies Record<RecordSourceId, number>;
+
+/**
+ * The lists whose records never raise a risk (prompt vr-15, the register or status lists): context
+ * for another risk. The pack gives them up first, and they never support a credibility label.
+ * fda_ai_devices raises no risk either, but keeps its shipped behaviour.
+ */
+export const CONTEXT_ONLY_RECORD_SOURCES: ReadonlySet<RecordSourceId> = new Set<RecordSourceId>([
+  "canada_ai_register",
+  "omb_ai_inventory",
+  "nl_algoritmeregister",
+  "uk_atrs",
+  "epoch_ai",
+  "fmti",
+  "c2pa_conforming",
+  "fedramp",
+  "disclose_io",
+  "gleif",
+]);
+
+/**
+ * The lists added on 2026-11-10, but Canada's sanctions list: the briefing of the loop names one of
+ * them only when it gave records or failed, and counts the others in one line (`describeGathered`,
+ * gather.ts), because one line for each list on every step of the loop costs about 5 KB a step. The
+ * lists shipped before, and the sanctions lists, keep their lines. It is the server twin of
+ * `LISTS_SHOWN_WHEN_FOUND` of the client (Clients/src/application/utils/vendorResearchText.ts), which
+ * does the same for the coverage a person reads: the two hold the same 22 ids.
+ */
+export const LISTS_NAMED_WHEN_FOUND: ReadonlySet<RecordSourceId> = new Set<RecordSourceId>([
+  "uk_ofsi",
+  "ftc_penalties",
+  "eu_dg_comp",
+  "uk_cma",
+  "ftc_competition",
+  "co_sic_penalties",
+  "nhtsa_recalls",
+  "uk_mhra",
+  "nhtsa_odi",
+  "california_breaches",
+  "charlotin",
+  "piperoll",
+  "canada_ai_register",
+  "omb_ai_inventory",
+  "uk_atrs",
+  "nl_algoritmeregister",
+  "epoch_ai",
+  "fmti",
+  "fedramp",
+  "c2pa_conforming",
+  "disclose_io",
+  "gleif",
+]);

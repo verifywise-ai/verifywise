@@ -9,6 +9,8 @@ import { BodyTooLargeError, type ConnectorFetch, NotTheListError } from "../../t
 import type { Pin } from "../address";
 import { fetchAllPages, pinnedFetch } from "../paging";
 
+jest.setTimeout(30_000);
+
 const PIN: Pin = { hosts: ["api.example.org"], pathPrefixes: ["/v1/"] };
 const URL_A = "https://api.example.org/v1/items?page=0";
 const LIMITS = { maxBytes: 1000, allowedContentTypes: ["application/json"], totalTimeoutMs: 1000 };

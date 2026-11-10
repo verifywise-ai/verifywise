@@ -1,6 +1,7 @@
 import {
   type CoverageOutcome,
   type CoverageSource,
+  RECORD_SOURCE_IDS,
   RESEARCH_CATEGORIES,
   ResearchCategory,
   type VrdbSourceId,
@@ -32,6 +33,11 @@ import {
 import { createVendorMatcher } from "../identity";
 import type { WebsiteCheck } from "../preflight";
 import type { RecordsLookup, RecordsOutcome } from "../records";
+import {
+  CONTEXT_ONLY_RECORD_SOURCES,
+  LISTS_NAMED_WHEN_FOUND,
+  RECORD_CATEGORY,
+} from "../records/types";
 import { ResearchTarget, buildTarget } from "../target";
 import { vrdbSourceOf } from "../vrdb/sources";
 import type { VrdbOutcome, VrdbRecordMeta } from "../vrdb/types";
@@ -635,6 +641,59 @@ describe("planNewsReads", () => {
   });
 });
 
+// The server twin of the client's LISTS_SHOWN_WHEN_FOUND (prompt vr-15, coverage): the lists added
+// on 2026-11-10 but Canada's sanctions list, which is named like the lists shipped before.
+describe("LISTS_NAMED_WHEN_FOUND", () => {
+  const NAMED_WHEN_FOUND = [
+    "uk_ofsi",
+    "ftc_penalties",
+    "eu_dg_comp",
+    "uk_cma",
+    "ftc_competition",
+    "co_sic_penalties",
+    "nhtsa_recalls",
+    "uk_mhra",
+    "nhtsa_odi",
+    "california_breaches",
+    "charlotin",
+    "piperoll",
+    "canada_ai_register",
+    "omb_ai_inventory",
+    "uk_atrs",
+    "nl_algoritmeregister",
+    "epoch_ai",
+    "fmti",
+    "fedramp",
+    "c2pa_conforming",
+    "disclose_io",
+    "gleif",
+  ];
+
+  it("holds the 22 lists added on 2026-11-10 but Canada's sanctions list, and no other", () => {
+    expect([...LISTS_NAMED_WHEN_FOUND].sort()).toEqual([...NAMED_WHEN_FOUND].sort());
+    expect(LISTS_NAMED_WHEN_FOUND.size).toBe(22);
+    expect(LISTS_NAMED_WHEN_FOUND.has("canada_sema")).toBe(false);
+  });
+
+  it("holds registered ids only: each is a record source with a category", () => {
+    for (const id of LISTS_NAMED_WHEN_FOUND) {
+      expect(RECORD_SOURCE_IDS).toContain(id);
+      expect(RECORD_CATEGORY[id]).toBeDefined();
+    }
+  });
+
+  it("holds none of the lists shipped before 2026-11-10", () => {
+    const shipped = RECORD_SOURCE_IDS.slice(0, RECORD_SOURCE_IDS.indexOf("fda_device_recalls") + 1);
+
+    expect(shipped).toHaveLength(16);
+    for (const id of shipped) expect(LISTS_NAMED_WHEN_FOUND.has(id)).toBe(false);
+  });
+
+  it("holds every list whose records never raise a risk", () => {
+    for (const id of CONTEXT_ONLY_RECORD_SOURCES) expect(LISTS_NAMED_WHEN_FOUND.has(id)).toBe(true);
+  });
+});
+
 describe("describeGathered", () => {
   const search = (
     query: string,
@@ -827,6 +886,182 @@ describe("describeGathered", () => {
 
     it("says nothing when there are no records and nothing was done", () => {
       expect(describeGathered([], [], undefined, [])).toBeNull();
+    });
+
+    // Prompt vr-15 (2026-11-10): the briefing is written again on every step of the loop, and one
+    // line for each of 37 lists costs about 5 KB a step. A list added that day (but Canada's
+    // sanctions list, which is what a reader looks for by name) is named only when it found a
+    // record or failed; the others are counted in one line after the per-list lines.
+    describe("the lists that are named only when they found a record or failed", () => {
+      const lines = (text: string | null) => (text ?? "").split("\n");
+      const HEADER =
+        "Records of public databases (looked up by the code with the name and the domain of the vendor):";
+      const OTHER_ONE = "- 1 other list of the vendor risk database: no records";
+      const otherMany = (count: number) =>
+        `- ${count} other lists of the vendor risk database: no records`;
+      /** The line a list gets in the briefing, without its count: "- {gather name}". */
+      const nameOf = (id: RecordsOutcome["source"]): string => {
+        const line = lines(describeGathered([], [], undefined, [outcome(id, 2)])).find((one) =>
+          one.endsWith(": 2 records"),
+        );
+        expect(line).toBeDefined();
+        return (line ?? "").slice(0, -": 2 records".length);
+      };
+      // The 16 lists and lookups shipped before 2026-11-10, and Canada's sanctions list.
+      const SHIPPED_AND_SANCTIONS = [
+        "kev",
+        "nvd",
+        "hibp",
+        "sec",
+        "statuspage",
+        "ofac",
+        "uk_sanctions",
+        "eu_fsf",
+        "cve",
+        "un_sanctions",
+        "csl",
+        "aiid",
+        "atlas",
+        "nhtsa_sgo",
+        "fda_ai_devices",
+        "fda_device_recalls",
+        "canada_sema",
+      ] as const;
+
+      it("names a list that gave records, with how many", () => {
+        const text = lines(
+          describeGathered([], [], undefined, [outcome("uk_ofsi", 1), outcome("ftc_penalties", 2)]),
+        );
+
+        expect(text).toContain(
+          "- UK OFSI financial sanctions enforcement notices (monetary penalties and breach disclosures whose party has the name of the vendor): 1 record",
+        );
+        expect(text).toContain(
+          "- FTC civil penalty cases (consumer protection civil penalty orders of the US Federal Trade Commission, summarised by the defendant company that has the name of the vendor): 2 records",
+        );
+        expect(text.join("\n")).not.toContain("other list");
+      });
+
+      it("names a list that could not be reached, with the records of its last answer when it kept any", () => {
+        const text = lines(
+          describeGathered([], [], undefined, [
+            outcome("gleif", 0, true),
+            outcome("uk_ofsi", 1, true),
+          ]),
+        );
+
+        expect(text).toContain(`${nameOf("gleif")}: the database could not be reached`);
+        expect(text).toContain(
+          `${nameOf("uk_ofsi")}: the database could not be reached; 1 record from its last answer`,
+        );
+        expect(text.join("\n")).not.toContain("other list");
+      });
+
+      it("counts the lists that found nothing in one line after the per-list lines, and does not name them", () => {
+        const text = lines(
+          describeGathered([], [], undefined, [
+            outcome("kev", 1),
+            outcome("uk_ofsi", 0),
+            outcome("charlotin", 0),
+            outcome("nvd", 0),
+            outcome("gleif", 0),
+          ]),
+        );
+
+        expect(text).toContain("- CISA Known Exploited Vulnerabilities catalog: 1 record");
+        const nvdLine = text.indexOf(
+          "- National Vulnerability Database (critical vulnerabilities, each with its date): no records",
+        );
+        expect(nvdLine).toBeGreaterThan(-1);
+        expect(text.indexOf(otherMany(3))).toBe(nvdLine + 1);
+        for (const id of ["uk_ofsi", "charlotin", "gleif"] as const) {
+          expect(text.join("\n")).not.toContain(nameOf(id));
+        }
+      });
+
+      it("says '1 other list' for one, and never '1 other lists'", () => {
+        const text = lines(
+          describeGathered([], [], undefined, [outcome("kev", 1), outcome("epoch_ai", 0)]),
+        );
+
+        expect(text).toContain(OTHER_ONE);
+        expect(text.join("\n")).not.toContain("1 other lists");
+        expect(text.join("\n")).not.toContain(nameOf("epoch_ai"));
+      });
+
+      it("counts them in the same line when no list is named", () => {
+        const text = lines(
+          describeGathered([], [], undefined, [outcome("uk_ofsi", 0), outcome("charlotin", 0)]),
+        );
+
+        expect(text.slice(-2)).toEqual([HEADER, otherMany(2)]);
+      });
+
+      it("writes no counting line when every list is named", () => {
+        const text = describeGathered([], [], undefined, [
+          outcome("kev", 0),
+          outcome("uk_ofsi", 1),
+        ]);
+
+        expect(text).not.toContain("other list");
+      });
+
+      it.each([...LISTS_NAMED_WHEN_FOUND])(
+        "%s is named when it found records or failed, and counted when it found nothing",
+        (id) => {
+          const name = nameOf(id);
+
+          expect(lines(describeGathered([], [], undefined, [outcome(id, 1)]))).toContain(
+            `${name}: 1 record`,
+          );
+          expect(lines(describeGathered([], [], undefined, [outcome(id, 0, true)]))).toContain(
+            `${name}: the database could not be reached`,
+          );
+          const none = lines(describeGathered([], [], undefined, [outcome(id, 0)]));
+          expect(none).toContain(OTHER_ONE);
+          expect(none.join("\n")).not.toContain(name);
+        },
+      );
+
+      it.each(SHIPPED_AND_SANCTIONS)(
+        "%s keeps its line when it found nothing: the shipped lists and Canada's sanctions list are named as before",
+        (id) => {
+          const name = nameOf(id);
+
+          const none = lines(describeGathered([], [], undefined, [outcome(id, 0)]));
+
+          expect(none).toContain(`${name}: no records`);
+          expect(none.join("\n")).not.toContain("other list");
+        },
+      );
+
+      it("names the lists of the categories of the loop only: one of another category is neither named nor counted", () => {
+        const found = describeGathered(
+          [],
+          [],
+          ["legal_regulatory"],
+          [outcome("uk_ofsi", 1), outcome("charlotin", 1)],
+        );
+
+        expect(found).toContain(
+          "- UK OFSI financial sanctions enforcement notices (monetary penalties and breach disclosures whose party has the name of the vendor): 1 record",
+        );
+        expect(found).not.toContain("AI Hallucination Cases database");
+        expect(found).not.toContain("other list");
+
+        const quiet = describeGathered(
+          [],
+          [],
+          ["legal_regulatory"],
+          [outcome("uk_ofsi", 0), outcome("charlotin", 0)],
+        );
+
+        expect(quiet).toContain(OTHER_ONE);
+        expect(quiet).not.toContain("2 other lists");
+        expect(
+          describeGathered([], [], ["legal_regulatory"], [outcome("charlotin", 0)]),
+        ).toBeNull();
+      });
     });
   });
 

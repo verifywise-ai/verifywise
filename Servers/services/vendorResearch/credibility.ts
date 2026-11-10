@@ -30,8 +30,11 @@
  * Then the label, the first step that applies:
  *
  * 0. The snippet check found the quote missing from a page: low, `contradicted`, for the whole
- *    finding. Otherwise the supporting sources are the ones that are not contradicted and not an
- *    inactive record, and a record found by name only supports low at most.
+ *    finding. Otherwise the supporting sources are the ones that are not contradicted, not an
+ *    inactive record and not a record of a register or status list (`CONTEXT_ONLY_RECORD_SOURCES`,
+ *    prompt vr-15: context for a finding, never what supports it), and a record found by name only
+ *    supports low at most. A finding that cites nothing but such records, withdrawn or not, gets
+ *    the last rule, `unverified`: the `inactive` rule looks at the other sources only.
  * 1. High, by the first of these rules that holds with a source that was read:
  *    `official_record` (an official record matched strongly), `official_page` (an official source
  *    that is not a record), `vendor_statement`, and `trusted_press_two` (trusted press of two or
@@ -41,8 +44,9 @@
  * 3. Medium, `capped_unconfirmed`, when one of the rules of high holds only with search results
  *    nobody could confirm.
  * 4. Medium, `trusted_press_one`, for trusted press of exactly one publisher that nobody read.
- * 5. Low: `name_only` (a record found by name), `unverified`, `self_claim`, `inactive`, and
- *    `unverified` when nothing else applies.
+ * 5. Low: `name_only` (a record found by name), `unverified`, `self_claim`, `inactive` (a cited
+ *    record its list no longer stands by, a record of a register apart), and `unverified` when
+ *    nothing else applies.
  *
  * The note `name_only` is set whenever a cited record matched by name only, whatever the label: a
  * weak record limits what it adds, not what the other sources earn (Q24).
@@ -60,6 +64,7 @@ import {
   CREDIBILITY_RULES,
 } from "../../domain.layer/interfaces/i.vendorResearch";
 import type { SourceProvenance } from "./evidence";
+import { CONTEXT_ONLY_RECORD_SOURCES } from "./records/types";
 import {
   classifyRecord,
   classifySource,
@@ -176,6 +181,10 @@ function describeSource(
 const isActive = (source: CredibilitySource): boolean =>
   source.record === undefined || source.record.status === "active";
 
+/** A record of a register is context for a finding (prompt vr-15), never what supports it. */
+const isContextOnly = (source: CredibilitySource): boolean =>
+  source.record !== undefined && CONTEXT_ONLY_RECORD_SOURCES.has(source.record.source);
+
 /** The independent publishers of trusted press sources: one registry entry is one publisher. */
 const publishersOf = (sources: readonly CredibilitySource[]): number =>
   new Set(sources.map((source) => source.entry ?? source.publisher)).size;
@@ -236,7 +245,7 @@ export function decideCredibility(
 
   if (options.contradicted) return decide("low", "contradicted");
   const supporting = sources.filter(
-    (source) => source.reading !== "contradicted" && isActive(source),
+    (source) => source.reading !== "contradicted" && isActive(source) && !isContextOnly(source),
   );
   const strong = supporting.filter((source) => source.record?.match !== "weak");
 
@@ -263,7 +272,11 @@ export function decideCredibility(
   if (supporting.some((source) => source.vendor_kind === "self_claim")) {
     return decide("low", "self_claim");
   }
-  if (sources.some((source) => !isActive(source))) return decide("low", "inactive");
+  // A record of a register that was withdrawn is no reason for this rule either: the rule
+  // looks at the other sources only, so a finding that cites only registers is `unverified`.
+  if (sources.some((source) => !isActive(source) && !isContextOnly(source))) {
+    return decide("low", "inactive");
+  }
   return decide("low", "unverified");
 }
 

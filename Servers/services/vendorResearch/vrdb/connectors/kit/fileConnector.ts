@@ -55,8 +55,23 @@
  * that the reader could not read: up to ten, or a hundredth of them when that is more, and never
  * more than a tenth, they are `skipped` and the sync applies the rest; more is a new format, and
  * they are `errors`, which fail the sync. A reader that groups rows into entities counts in
- * entities: its `rows` are the entities, its `unreadable` the groups it could not make, and `total`
- * may be the raw rows. A body that is not the one the download makes has no root.
+ * entities: its `rows` are the entities, its `unreadable` the groups it could not make, and its
+ * `total` is the larger of the raw rows it saw and `rows.length + unreadable`, since one raw row can
+ * name several entities and the body is refused when `total` is below that sum. A reader that groups
+ * rows and counts its unreadable ones in raw rows (the lines of a file of 150,000 lines that make 600
+ * entities) says so with `allowanceBasis`, the raw rows, and the two kinds of loss are then
+ * measured apart. The reader's own (`unreadable`, in raw rows) are measured over the larger of the
+ * basis and the rows and unreadable rows above (a hundredth of them, at least ten, at most a tenth,
+ * as before), which the entities alone would make ten for a list of that size. What this parse finds
+ * (a row that the record builder refuses, a record lost to an id) is entities, not raw rows, and
+ * stays measured over the rows and unreadable rows above alone, as it was before the basis: the basis
+ * in raw rows does not widen it (the reader's own bad lines do, by a hundredth of themselves at most,
+ * as they always did, and the sync refuses an empty list and a shrink beyond its guard). Either kind
+ * over its allowance is `errors`, and the count is the sum of the two, as it is for a reader with
+ * no basis, whose losses are all measured together over those rows. The basis is a count of at most
+ * `total`, it is kept in the body next to `total` only when the reader gives one (so that the bodies
+ * of every other list are what they were), and a body whose basis is anything else is not the list.
+ * A body that is not the one the download makes has no root.
  *
  * It logs nothing and keeps no address and no message in an error: an error of the file can carry
  * the address of a list that has a token in it, and the sync stores a fixed code.
@@ -107,9 +122,25 @@ export interface ReadResult<P> {
   rows: P[];
   /**
    * The rows that the reader saw, those that could not be read included: at least `rows.length +
-   * unreadable`, which the body is refused without. A reader that groups may count the raw rows.
+   * unreadable`, which the body is refused without (a body that is refused fails the sync as "not
+   * the list" for good, so a number that is too small is a failure of the list, not of the run). A
+   * reader that groups rows into entities must not give the raw rows alone: one raw row can name
+   * several entities (a row of two companies), so it gives `Math.max(rawRows, rows.length +
+   * unreadable)`.
    */
   total: number;
+  /**
+   * The raw rows that the allowance for the reader's own `unreadable` is measured over, for a reader
+   * that groups rows into entities and counts its `unreadable` in raw rows (the lines of a file): the
+   * allowance is `unreadableAllowed` of the larger of this and `rows.length + unreadable`. The losses
+   * that the parse itself finds (a row that the record builder refuses, a record lost to an id) are
+   * entities and keep `unreadableAllowed(rows.length + unreadable)`, whatever the basis, and the
+   * parse fails when either is over its allowance. A reader that gives none has one allowance, over
+   * that sum, for all its losses. A count, not above `total` (no more rows can be measured over than
+   * the reader saw); anything else makes the body no list. It is stored in the body next to `total`,
+   * and only when it is given.
+   */
+  allowanceBasis?: number;
   /** The rows that it saw and could not read: the groups that it could not make, for a grouping reader. */
   unreadable: number;
   /**
@@ -283,6 +314,10 @@ function downloadFailureOf(error: unknown): Error {
 const isCount = (value: unknown): value is number =>
   typeof value === "number" && Number.isInteger(value) && value >= 0;
 
+/** The basis of the allowance: none, or a count of raw rows that is not above the total that counts them. */
+const isBasis = (value: unknown, total: number): value is number | undefined =>
+  value === undefined || (isCount(value) && value <= total);
+
 /**
  * What the spec's reader makes of the files, or the failure of a download. Its own errors are the
  * file's fault (it is hostile input), and they are deterministic: the sync does not retry
@@ -306,16 +341,19 @@ function readOf<P>(spec: ListSpec<P>, fetched: Fetched): ReadResult<P> {
   }
   if (!isObject(result)) throw new NotTheListError();
   if (result.complete !== true) throw new BodyTooLargeError();
-  const { rows, total, unreadable } = result;
+  const { rows, total, unreadable, allowanceBasis } = result;
   if (
     !Array.isArray(rows) ||
     !isCount(total) ||
     !isCount(unreadable) ||
-    total < rows.length + unreadable
+    total < rows.length + unreadable ||
+    !isBasis(allowanceBasis, total)
   ) {
     throw new NotTheListError();
   }
-  return { rows, total, unreadable, complete: true };
+  return allowanceBasis === undefined
+    ? { rows, total, unreadable, complete: true }
+    : { rows, total, unreadable, allowanceBasis, complete: true };
 }
 
 /**
@@ -342,11 +380,19 @@ function bodyOf<P>(result: ReadResult<P>, sortKey: (row: P) => string): string {
   });
   keyed.sort((a, b) => compareText(a.key, b.key) || compareText(a.json, b.json));
   const rows = keyed.map(({ json }) => json).join(",");
-  return `{"v":${BODY_VERSION},"rows":[${rows}],"total":${result.total},"unreadable":${result.unreadable}}`;
+  // The basis is written only when the reader gave one: no other list's body has it.
+  const basis =
+    result.allowanceBasis === undefined ? "" : `,"allowanceBasis":${result.allowanceBasis}`;
+  return `{"v":${BODY_VERSION},"rows":[${rows}],"total":${result.total}${basis},"unreadable":${result.unreadable}}`;
 }
 
 /** The parts of a body, or null when the text is not one that `bodyOf` made. */
-function partsOf(text: string): { rows: unknown[]; total: number; unreadable: number } | null {
+function partsOf(text: string): {
+  rows: unknown[];
+  total: number;
+  unreadable: number;
+  allowanceBasis: number | undefined;
+} | null {
   let body: unknown;
   try {
     body = JSON.parse(text);
@@ -354,11 +400,12 @@ function partsOf(text: string): { rows: unknown[]; total: number; unreadable: nu
     return null;
   }
   if (!isObject(body) || body.v !== BODY_VERSION) return null;
-  const { rows, total, unreadable } = body;
+  const { rows, total, unreadable, allowanceBasis } = body;
   if (!Array.isArray(rows) || !isCount(total) || !isCount(unreadable)) return null;
   // The reader's total counts the rows it saw, those it could not read included.
   if (total < rows.length + unreadable) return null;
-  return { rows, total, unreadable };
+  if (!isBasis(allowanceBasis, total)) return null;
+  return { rows, total, unreadable, allowanceBasis };
 }
 
 const notTheList = (): ParseResult => ({ records: [], errors: 1, sourceVersion: null, root: null });
@@ -398,14 +445,16 @@ export function createFileConnector<P>(spec: ListSpec<P>): Connector {
 
       const records: ParsedRecord[] = [];
       const kept = new Map<string, ParsedRecord>();
-      let unreadable = parts.unreadable;
+      // What this parse finds, apart from what the reader could not read: the rows that the record
+      // builder refuses, and the records that are lost to an id.
+      let found = 0;
       for (const row of rows) {
         let made: ParsedRecord[];
         try {
           made = spec.toRecords([row]);
         } catch (error) {
           if (!(error instanceof UnreadableEntry)) throw error;
-          unreadable += 1;
+          found += 1;
           continue;
         }
         for (const record of made) {
@@ -416,12 +465,25 @@ export function createFileConnector<P>(spec: ListSpec<P>): Connector {
             records.push(record);
           } else if (!isDeepStrictEqual(first, record)) {
             // A record that is lost, and not a copy of the one kept: data that the copy lacks.
-            unreadable += 1;
+            found += 1;
           }
         }
       }
 
-      const refused = unreadable > unreadableAllowed(rows.length + parts.unreadable);
+      // The rows of the body and those the reader could not read.
+      const rowsSeen = rows.length + parts.unreadable;
+      const unreadable = parts.unreadable + found;
+      // One allowance for the sum, as it always was. A reader that gives a basis counts its own losses
+      // in raw rows, so those are measured over the raw rows, if they are more than the rows above; the
+      // losses that this parse finds are entities, and stay measured over the rows above, so that the
+      // basis in raw rows does not widen what a parse may refuse of its entities (the reader's bad lines
+      // widen it by a hundredth of themselves, as before; the sync refuses an empty list and a shrink).
+      // Either one over its allowance refuses the parse, and the count is the sum of the two.
+      const refused =
+        parts.allowanceBasis === undefined
+          ? unreadable > unreadableAllowed(rowsSeen)
+          : parts.unreadable > unreadableAllowed(Math.max(rowsSeen, parts.allowanceBasis)) ||
+            found > unreadableAllowed(rowsSeen);
       return {
         records,
         errors: refused ? unreadable : 0,

@@ -153,7 +153,27 @@ describe("the SEC in the lookup, once Q4 is open", () => {
   it("asks no SEC without a contact", () => {
     const deps = runReadThrough(null);
 
-    expect(Object.keys(deps.connectors)).toEqual(["nvd"]);
-    expect(Object.keys(deps.spacers)).toEqual(["nvd"]);
+    expect(Object.keys(deps.connectors)).toEqual(["nvd", "gleif"]);
+    expect(Object.keys(deps.spacers)).toEqual(["nvd", "gleif"]);
+  });
+
+  it("asks GLEIF in the read-through of every run, on a window of its own", async () => {
+    for (const deps of [runReadThrough(), runReadThrough(null)]) {
+      expect(deps.connectors.gleif?.id).toBe("gleif");
+      expect(deps.spacers.gleif).toEqual(expect.any(Function));
+    }
+
+    // A turn of GLEIF is taken in its own window in Redis, with its own limit: 50 in 60 seconds.
+    mockRedis.eval.mockClear();
+    await runReadThrough(null).spacers.gleif?.(new AbortController().signal);
+    expect(mockRedis.eval).toHaveBeenCalledWith(
+      expect.any(String),
+      2,
+      "vrdb:spacer:gleif",
+      "vrdb:spacer:gleif:seq",
+      50,
+      60_000,
+      1_500,
+    );
   });
 });

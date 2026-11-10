@@ -35,12 +35,35 @@ import { CHANGE_MARK } from "../policySnapshots";
 import { NAME_ONLY_LOOKUP_NOTE, OFAC_RECORD_MARK } from "../records/ofac";
 import { AIID_RECORD_MARK } from "../vrdb/connectors/aiid";
 import { ATLAS_RECORD_MARK } from "../vrdb/connectors/atlas";
+import { C2PA_CONFORMING_RECORD_MARK } from "../vrdb/connectors/c2paConforming";
+import { CALIFORNIA_BREACHES_RECORD_MARK } from "../vrdb/connectors/californiaBreaches";
+import { CANADA_AI_REGISTER_RECORD_MARK } from "../vrdb/connectors/canadaAiRegister";
+import { CANADA_SEMA_RECORD_MARK } from "../vrdb/connectors/canadaSema";
+import { CHARLOTIN_RECORD_MARK } from "../vrdb/connectors/charlotin";
+import { CO_SIC_PENALTIES_RECORD_MARK } from "../vrdb/connectors/coSicPenalties";
 import { CSL_RECORD_MARK } from "../vrdb/connectors/csl";
+import { DISCLOSE_IO_RECORD_MARK } from "../vrdb/connectors/discloseIo";
+import { EPOCH_AI_RECORD_MARK } from "../vrdb/connectors/epochAi";
 import { EU_RECORD_MARK } from "../vrdb/connectors/eu";
+import { EU_DG_COMP_RECORD_MARK } from "../vrdb/connectors/euDgComp";
 import { FDA_RECORD_MARK } from "../vrdb/connectors/fda";
 import { FDA_RECALL_RECORD_MARK } from "../vrdb/connectors/fdaRecalls";
+import { FEDRAMP_RECORD_MARK } from "../vrdb/connectors/fedramp";
+import { FMTI_RECORD_MARK } from "../vrdb/connectors/fmti";
+import { FTC_COMPETITION_RECORD_MARK } from "../vrdb/connectors/ftcCompetition";
+import { FTC_PENALTIES_RECORD_MARK } from "../vrdb/connectors/ftcPenalties";
+import { GLEIF_RECORD_MARK } from "../vrdb/connectors/gleif";
 import { NHTSA_RECORD_MARK } from "../vrdb/connectors/nhtsa";
+import { NHTSA_ODI_RECORD_MARK } from "../vrdb/connectors/nhtsaOdi";
+import { NHTSA_RECALLS_RECORD_MARK } from "../vrdb/connectors/nhtsaRecalls";
+import { NL_ALGORITMEREGISTER_RECORD_MARK } from "../vrdb/connectors/nlAlgoritmeregister";
+import { OMB_AI_INVENTORY_RECORD_MARK } from "../vrdb/connectors/ombAiInventory";
+import { PIPEROLL_RECORD_MARK } from "../vrdb/connectors/piperoll";
 import { UK_RECORD_MARK } from "../vrdb/connectors/uk";
+import { UK_ATRS_RECORD_MARK } from "../vrdb/connectors/ukAtrs";
+import { UK_CMA_RECORD_MARK } from "../vrdb/connectors/ukCma";
+import { UK_MHRA_RECORD_MARK } from "../vrdb/connectors/ukMhra";
+import { UK_OFSI_RECORD_MARK } from "../vrdb/connectors/ukOfsi";
 import { UN_RECORD_MARK } from "../vrdb/connectors/un";
 import { MAX_TOPIC_WORDS } from "../queries";
 import { MAX_FINDING_TEXT_CHARS, MAX_PER_CATEGORY, credibilityOutputSchema } from "../schema";
@@ -103,17 +126,19 @@ function expectIntactStructure(prompt: string, sources: number) {
 describe("the versions of the prompts", () => {
   // The loop prompt names the search engine and its kinds: that change moved the version from vr-10
   // to vr-11; the verifier prompt naming the database of a record moved it to vr-12; the analysis
-  // prompt naming the AI databases moved it to vr-13, and naming the US Consolidated Screening List
-  // and the FDA recalls of AI-enabled devices to vr-14. A stored run says which prompt it asked with.
+  // prompt naming the AI databases moved it to vr-13, naming the US Consolidated Screening List
+  // and the FDA recalls of AI-enabled devices to vr-14, and wording the lists of 2026-11-10 by their
+  // class to vr-15. A stored run says which prompt it asked with.
   it("names the version of the analysis prompt that every run asks with", () => {
-    expect(CREDIBILITY_PROMPT_VERSION).toBe("vr-14");
+    expect(CREDIBILITY_PROMPT_VERSION).toBe("vr-15");
   });
 
-  it("changes only the sanctions bullet and the AI bullet from vr-13: the rest of the prompt is its text, character for character", () => {
-    // vr-14 added the screening list to the sanctions bullet and the device recalls to the AI bullet,
-    // which stand one after the other, and nothing else. The digest is of the prompt with the two
-    // bullets cut out, taken from the vr-13 text: a change anywhere else is a new version, and moves
-    // the version and this digest together.
+  it("changes only the bullets of the lists from vr-14: the rest of the prompt is its text, character for character", () => {
+    // vr-15 added Canada's list to the sanctions bullet and, after the AI bullet, the bullets of the
+    // AI incident lists, the enforcement and case lists, the product safety lists, the data breach
+    // list and the registers, and nothing else. They all stand one after the other. The digest is of
+    // the prompt with these bullets cut out, taken from the vr-14 text: a change anywhere else is a
+    // new version, and moves the version and this digest together.
     const text = buildSystemPrompt(NOW);
     const first = text.indexOf(
       "- A source whose text begins with the name of a sanctions list is an entry of that list:",
@@ -121,11 +146,19 @@ describe("the versions of the prompts", () => {
     const last = text.indexOf("\nHow to rate a risk:");
     expect(first).toBeGreaterThan(0);
     expect(last).toBeGreaterThan(first);
-    // The two bullets are the only lines of the cut, and they are the two that this version names.
+    // The seven bullets are the only lines of the cut: the sanctions bullet, the AI database bullet
+    // and the five that this version adds (AI incident, enforcement, product safety, data breach,
+    // register), and the cut names the lists of the two versions before and of this one.
     const cut = text.slice(first, last);
-    expect(cut.split("\n- ")).toHaveLength(2);
+    expect(cut.split("\n- ")).toHaveLength(7);
     expect(cut).toContain(CSL_RECORD_MARK);
     expect(cut).toContain(FDA_RECALL_RECORD_MARK);
+    expect(cut).toContain(CANADA_SEMA_RECORD_MARK);
+    expect(cut).toContain(CHARLOTIN_RECORD_MARK);
+    expect(cut).toContain(EU_DG_COMP_RECORD_MARK);
+    expect(cut).toContain(NHTSA_RECALLS_RECORD_MARK);
+    expect(cut).toContain(CALIFORNIA_BREACHES_RECORD_MARK);
+    expect(cut).toContain(GLEIF_RECORD_MARK);
 
     const rest = text.slice(0, first) + text.slice(last);
 
@@ -263,7 +296,7 @@ describe("buildSystemPrompt", () => {
 
   it("tells the model what a record of a sanctions list is: a match by name only, at most one risk, and a check of who the vendor is", () => {
     expect(prompt).toContain(
-      `A source whose text begins with the name of a sanctions list is an entry of that list: ${OFAC_RECORD_MARK} (the United States Treasury), ${UK_RECORD_MARK} (the United Kingdom), ${EU_RECORD_MARK} (the European Union), ${UN_RECORD_MARK} (the United Nations Security Council) or ${CSL_RECORD_MARK} (the consolidated list of the export control and sanctions lists of the United States Departments of Commerce, State and Treasury: its List line names the list, and a listing on the Entity List or the Military End User List means that an export licence is required, not that the entity is sanctioned). When its text has a Lookup note, the vendor was matched to the entry by its name only: it may be another company. It shows that an entity of that name is on the list, never that the vendor is: write the risk as "An entity named <the name of the entry> is on <the list>". Raise at most one risk from it, in legal_regulatory, rate its likelihood Possible at most, and make the action plan a check of who the vendor is against the entry: its address, its country, its owners and the identifiers it lists.`,
+      `A source whose text begins with the name of a sanctions list is an entry of that list: ${OFAC_RECORD_MARK} (the United States Treasury), ${UK_RECORD_MARK} (the United Kingdom), ${EU_RECORD_MARK} (the European Union), ${UN_RECORD_MARK} (the United Nations Security Council), ${CANADA_SEMA_RECORD_MARK} (Canada) or ${CSL_RECORD_MARK} (the consolidated list of the export control and sanctions lists of the United States Departments of Commerce, State and Treasury: its List line names the list, and a listing on the Entity List or the Military End User List means that an export licence is required, not that the entity is sanctioned). When its text has a Lookup note, the vendor was matched to the entry by its name only: it may be another company. It shows that an entity of that name is on the list, never that the vendor is: write the risk as "An entity named <the name of the entry> is on <the list>". Raise at most one risk from it, in legal_regulatory, rate its likelihood Possible at most, and make the action plan a check of who the vendor is against the entry: its address, its country, its owners and the identifiers it lists.`,
     );
   });
 
@@ -273,17 +306,21 @@ describe("buildSystemPrompt", () => {
       prompt.indexOf("- A source whose text begins with the name of an AI database"),
     );
 
-    // The five lists in the bullet, each by the mark its records begin with, in this order.
+    // The six lists in the bullet, each by the mark its records begin with, in this order: Canada's
+    // list stands between the UN list and the screening list.
     const marks = [
       OFAC_RECORD_MARK,
       UK_RECORD_MARK,
       EU_RECORD_MARK,
       UN_RECORD_MARK,
+      CANADA_SEMA_RECORD_MARK,
       CSL_RECORD_MARK,
     ];
     const places = marks.map((mark) => sanctions.indexOf(mark));
     expect(places.every((place) => place > -1)).toBe(true);
     expect([...places].sort((a, b) => a - b)).toEqual(places);
+    // The notices of the OFSI are a list of enforcement, not a sanctions list: they are not in this bullet.
+    expect(sanctions).not.toContain(UK_OFSI_RECORD_MARK);
     expect(CSL_RECORD_MARK).toBe("US Consolidated Screening List");
     // The screening list holds the export control lists of Commerce and State beside Treasury's: a
     // listing on two of them is a requirement of a licence, which a model must not write as a sanction.
@@ -674,13 +711,13 @@ describe("the bounds that the system prompt states", () => {
   });
 
   // The analysis text of the prompt version "vr-2" has these lines, with counts as words and limits
-  // as digits; "vr-3" to "vr-14" left these lines as they were. Writing their numbers from the
+  // as digits; "vr-3" to "vr-15" left these lines as they were. Writing their numbers from the
   // constants must not change a character of them, line breaks included, or the stored version
   // would no longer describe the prompt.
   it("writes the lines that hold a number exactly as the vr-2 text has them", () => {
     const lines = buildSystemPrompt(NOW).split("\n");
 
-    expect(CREDIBILITY_PROMPT_VERSION).toBe("vr-14");
+    expect(CREDIBILITY_PROMPT_VERSION).toBe("vr-15");
     for (const line of [
       "- Every risk cites at least one source and at most five. Each citation is a source id and a",
       "  at most 300 characters. Do not quote the title, the URL or the vendor block.",
@@ -1921,7 +1958,7 @@ describe("the prompts of the verifier", () => {
   });
 
   describe("VERIFIER_DATABASE_NAMES", () => {
-    it("names every database of a record, the five sanctions lists and the five AI databases by their marks", () => {
+    it("names every database of a record by its mark: the five sanctions lists, the five AI databases and the 23 lists of 2026-11-10", () => {
       expect(VERIFIER_DATABASE_NAMES).toEqual({
         kev: "CISA Known Exploited Vulnerabilities Catalog",
         nvd: "National Vulnerability Database",
@@ -1939,6 +1976,29 @@ describe("the prompts of the verifier", () => {
         nhtsa_sgo: NHTSA_RECORD_MARK,
         fda_ai_devices: FDA_RECORD_MARK,
         fda_device_recalls: FDA_RECALL_RECORD_MARK,
+        canada_sema: CANADA_SEMA_RECORD_MARK,
+        california_breaches: CALIFORNIA_BREACHES_RECORD_MARK,
+        uk_ofsi: UK_OFSI_RECORD_MARK,
+        charlotin: CHARLOTIN_RECORD_MARK,
+        ftc_penalties: FTC_PENALTIES_RECORD_MARK,
+        piperoll: PIPEROLL_RECORD_MARK,
+        eu_dg_comp: EU_DG_COMP_RECORD_MARK,
+        disclose_io: DISCLOSE_IO_RECORD_MARK,
+        uk_cma: UK_CMA_RECORD_MARK,
+        canada_ai_register: CANADA_AI_REGISTER_RECORD_MARK,
+        ftc_competition: FTC_COMPETITION_RECORD_MARK,
+        omb_ai_inventory: OMB_AI_INVENTORY_RECORD_MARK,
+        co_sic_penalties: CO_SIC_PENALTIES_RECORD_MARK,
+        uk_atrs: UK_ATRS_RECORD_MARK,
+        nhtsa_recalls: NHTSA_RECALLS_RECORD_MARK,
+        fmti: FMTI_RECORD_MARK,
+        uk_mhra: UK_MHRA_RECORD_MARK,
+        nl_algoritmeregister: NL_ALGORITMEREGISTER_RECORD_MARK,
+        nhtsa_odi: NHTSA_ODI_RECORD_MARK,
+        fedramp: FEDRAMP_RECORD_MARK,
+        epoch_ai: EPOCH_AI_RECORD_MARK,
+        c2pa_conforming: C2PA_CONFORMING_RECORD_MARK,
+        gleif: GLEIF_RECORD_MARK,
       });
       expect(Object.keys(VERIFIER_DATABASE_NAMES).sort()).toEqual([...RECORD_SOURCE_IDS].sort());
     });
@@ -2206,7 +2266,7 @@ describe("the prompt of the credibility rules", () => {
 
   it("names the UN list among the sanctions lists, and the CVE Program among the databases", () => {
     expect(prompt).toContain(
-      `- A source whose text begins with the name of a sanctions list is an entry of that list: ${OFAC_RECORD_MARK} (the United States Treasury), ${UK_RECORD_MARK} (the United Kingdom), ${EU_RECORD_MARK} (the European Union), ${UN_RECORD_MARK} (the United Nations Security Council) or ${CSL_RECORD_MARK} (the consolidated list of the export control and sanctions lists of the United States Departments of Commerce, State and Treasury:`,
+      `- A source whose text begins with the name of a sanctions list is an entry of that list: ${OFAC_RECORD_MARK} (the United States Treasury), ${UK_RECORD_MARK} (the United Kingdom), ${EU_RECORD_MARK} (the European Union), ${UN_RECORD_MARK} (the United Nations Security Council), ${CANADA_SEMA_RECORD_MARK} (Canada) or ${CSL_RECORD_MARK} (the consolidated list of the export control and sanctions lists of the United States Departments of Commerce, State and Treasury:`,
     );
     expect(prompt).toContain(
       "- A source whose text begins with the name of a public database (the CISA Known Exploited Vulnerabilities Catalog, the National Vulnerability Database, the CVE Program, Have I Been Pwned or SEC EDGAR) is a record of that database, matched to the vendor by its name or domain.",
@@ -2214,5 +2274,326 @@ describe("the prompt of the credibility rules", () => {
     expect(prompt).toContain(
       "The CISA catalog lists only vulnerabilities that are exploited in the wild, and the NVD and the CVE Program list flaws, most of which are not.",
     );
+  });
+});
+
+describe("the prompt of the lists of 2026-11-10 (vr-15)", () => {
+  // The words are compared, not the line breaks that the source happens to have. The raw text is for
+  // the checks of where a bullet stands.
+  const text = buildSystemPrompt(NOW);
+  const prompt = text.replace(/\s+/g, " ");
+
+  // The 23 lists added on 2026-11-10 and the mark that the text of each of its records begins with,
+  // as a table of the id, the constant of its connector and its value, written out here so that a
+  // change of a constant in a connector moves this test and not only the prompt.
+  const NEW_LISTS = [
+    ["canada_sema", CANADA_SEMA_RECORD_MARK, "Consolidated Canadian Autonomous Sanctions List"],
+    ["charlotin", CHARLOTIN_RECORD_MARK, "AI Hallucination Cases database"],
+    ["piperoll", PIPEROLL_RECORD_MARK, "PipeRoll Agent Incident Registry"],
+    ["eu_dg_comp", EU_DG_COMP_RECORD_MARK, "European Commission competition cases"],
+    ["ftc_penalties", FTC_PENALTIES_RECORD_MARK, "FTC civil penalty cases"],
+    ["ftc_competition", FTC_COMPETITION_RECORD_MARK, "FTC nonmerger enforcement actions"],
+    ["uk_cma", UK_CMA_RECORD_MARK, "UK Competition and Markets Authority cases"],
+    ["uk_ofsi", UK_OFSI_RECORD_MARK, "UK OFSI financial sanctions enforcement notices"],
+    [
+      "co_sic_penalties",
+      CO_SIC_PENALTIES_RECORD_MARK,
+      "Colombia SIC consumer protection sanctions",
+    ],
+    ["nhtsa_recalls", NHTSA_RECALLS_RECORD_MARK, "NHTSA vehicle and equipment recalls"],
+    ["nhtsa_odi", NHTSA_ODI_RECORD_MARK, "NHTSA defect investigations"],
+    ["uk_mhra", UK_MHRA_RECORD_MARK, "UK MHRA field safety notice lists"],
+    [
+      "california_breaches",
+      CALIFORNIA_BREACHES_RECORD_MARK,
+      "California Attorney General data breach list",
+    ],
+    ["canada_ai_register", CANADA_AI_REGISTER_RECORD_MARK, "Government of Canada AI Register"],
+    ["omb_ai_inventory", OMB_AI_INVENTORY_RECORD_MARK, "US federal AI use case inventory"],
+    ["nl_algoritmeregister", NL_ALGORITMEREGISTER_RECORD_MARK, "Dutch Algorithm Register"],
+    ["uk_atrs", UK_ATRS_RECORD_MARK, "UK Algorithmic Transparency Records"],
+    ["epoch_ai", EPOCH_AI_RECORD_MARK, "Epoch AI Data on AI Models"],
+    ["fmti", FMTI_RECORD_MARK, "Foundation Model Transparency Index"],
+    ["c2pa_conforming", C2PA_CONFORMING_RECORD_MARK, "C2PA Conforming Products List"],
+    ["fedramp", FEDRAMP_RECORD_MARK, "FedRAMP Marketplace"],
+    ["disclose_io", DISCLOSE_IO_RECORD_MARK, "disclose.io program list"],
+    ["gleif", GLEIF_RECORD_MARK, "GLEIF LEI records"],
+  ] as const;
+
+  // The bullets of the lists, by the words each begins with, in the order they stand in the prompt:
+  // the sanctions bullet and the AI database bullet are the ones of before, the other five are new.
+  const BULLETS = [
+    ["sanctions", "- A source whose text begins with the name of a sanctions list"],
+    ["AI database", "- A source whose text begins with the name of an AI database"],
+    ["AI incident", "- A source whose text begins with the name of an AI incident list"],
+    ["enforcement", "- A source whose text begins with the name of an enforcement or case list"],
+    ["product safety", "- A source whose text begins with the name of a product safety list"],
+    ["data breach", `- A source whose text begins with ${CALIFORNIA_BREACHES_RECORD_MARK}`],
+    [
+      "register",
+      "- An entry of the AI incident, enforcement, product safety and data breach lists above is dated",
+    ],
+  ] as const;
+  const AFTER_BULLETS = " How to rate a risk:";
+
+  /** The words of one bullet, up to where the next bullet or the rules of the rating begin. */
+  function bulletOf(name: (typeof BULLETS)[number][0]): string {
+    const at = BULLETS.findIndex(([label]) => label === name);
+    const start = prompt.indexOf(BULLETS[at][1]);
+    const end =
+      at + 1 < BULLETS.length ? prompt.indexOf(BULLETS[at + 1][1]) : prompt.indexOf(AFTER_BULLETS);
+    return prompt.slice(start, end);
+  }
+
+  describe("the five bullets that this version adds", () => {
+    it("words the AI incident lists: an entry counted for one company or product, matched by name only, at most one risk in ai_specific", () => {
+      expect(prompt).toContain(
+        `- A source whose text begins with the name of an AI incident list is an entry of that list, counted for one company or product: ${CHARLOTIN_RECORD_MARK} (court decisions on fabricated or false content in a filing, which name the AI tool that was used: naming the tool does not show that the tool caused the error) or ${PIPEROLL_RECORD_MARK} (incidents of AI agents that one editor records: reports that nobody else has checked). The vendor was matched to it by name only, so its text has the Lookup note: it may be another company, or a product of another company. It shows that the list holds an entry of that name, never that the vendor did what the entry records. From each entry raise at most one risk, in ai_specific: write it as "An entity named <the name of the entry> appears in <the list>", rate its likelihood Possible at most, and make the action plan a check of who the vendor is against the entry.`,
+      );
+    });
+
+    it("words the enforcement and case lists: an entry summarised for one party, no finding or ruling, at most one risk in legal_regulatory", () => {
+      expect(prompt).toContain(
+        `- A source whose text begins with the name of an enforcement or case list is an entry of that list, summarised for one party: ${EU_DG_COMP_RECORD_MARK} (antitrust, cartel and Digital Markets Act cases of the European Commission; mergers are not in it), ${FTC_PENALTIES_RECORD_MARK} (civil penalty orders of the US Federal Trade Commission), ${FTC_COMPETITION_RECORD_MARK} (antitrust actions of the US Federal Trade Commission, whose parties are read from the titles of the matters), ${UK_CMA_RECORD_MARK} (cases of the UK Competition and Markets Authority that can end in an intervention or an enforcement outcome), ${UK_OFSI_RECORD_MARK} (notices of the UK Office of Financial Sanctions Implementation of a penalty or a disclosure for a breach of financial sanctions: a notice is not a designation, and the party is not on a sanctions list because of it) or ${CO_SIC_PENALTIES_RECORD_MARK} (consumer protection sanctions of Colombia's Superintendencia de Industria y Comercio, which may later be annulled). The vendor was matched to it by name only, so its text has the Lookup note: it may be another company. It shows that the list names a party of that name, never that the vendor broke a rule or is guilty of anything: a case, an investigation or a notice is not a finding or a ruling, and a decision or a penalty that the entry names is about the party of the entry. From each entry raise at most one risk, in legal_regulatory: write it as "An entity named <the name of the entry> appears in <the list>", rate its likelihood Possible at most, and make the action plan a check of who the vendor is against the entry.`,
+      );
+    });
+
+    it("words the product safety lists: an entry summarised for one maker or filer, no finding of a defect, at most one risk in legal_regulatory", () => {
+      expect(prompt).toContain(
+        `- A source whose text begins with the name of a product safety list is an entry of that list, summarised for one maker or filer: ${NHTSA_RECALLS_RECORD_MARK} (vehicle and equipment recall campaigns that the filer reported to NHTSA since 2010), ${NHTSA_ODI_RECORD_MARK} (investigations of vehicle and equipment defects by NHTSA's Office of Defects Investigation) or ${UK_MHRA_RECORD_MARK} (field safety notices of medical device manufacturers that the UK MHRA lists). A recall or a field safety notice is the maker's own correction of a product, and an investigation is not a finding that a defect exists. The vendor was matched to it by name only, so its text has the Lookup note: it may be another company. From each entry raise at most one risk, in legal_regulatory: write it as "An entity named <the name of the entry> appears in <the list>", rate its likelihood Possible at most, and make the action plan a check of who the vendor is against the entry.`,
+      );
+    });
+
+    it("words the data breach list: the organisation's own report, at most one risk in security_incidents", () => {
+      expect(prompt).toContain(
+        `- A source whose text begins with ${CALIFORNIA_BREACHES_RECORD_MARK} is an entry of the list of data breach notices filed with the California Attorney General, summarised for one organisation: the organisation itself reported a breach of personal data, and the entry says nothing about its cause or its harm. The vendor was matched to it by name only, so its text has the Lookup note: it may be another company. From each entry raise at most one risk, in security_incidents: write it as "An entity named <the name of the entry> reported a data breach to the California Attorney General", rate its likelihood Possible at most, and make the action plan a check of who the vendor is against the entry and of the dates it lists.`,
+      );
+    });
+
+    it("words the registers and status lists: the register's own statement, no risk and no evidence of safety, and the date of an entry of the lists above", () => {
+      expect(prompt).toContain(
+        `- An entry of the AI incident, enforcement, product safety and data breach lists above is dated by its newest matter, and the lookback window of its category applies to that date. A source whose text begins with the name of a register or status list is an entry of that register, a state as of the day of the copy that its text names: ${CANADA_AI_REGISTER_RECORD_MARK}, ${OMB_AI_INVENTORY_RECORD_MARK}, ${NL_ALGORITMEREGISTER_RECORD_MARK} and ${UK_ATRS_RECORD_MARK} (public bodies' own statements that an AI system or an algorithm they use names the vendor as its supplier), ${EPOCH_AI_RECORD_MARK} (AI models that a research organisation lists by developer), ${FMTI_RECORD_MARK} (how much a developer of foundation models disclosed, as a research team scored it), ${C2PA_CONFORMING_RECORD_MARK} (products that the C2PA accepted as conformant to its content provenance specification), ${FEDRAMP_RECORD_MARK} (the authorisation status of cloud offerings with the US government), ${DISCLOSE_IO_RECORD_MARK} (vulnerability disclosure policies that contributors report) or ${GLEIF_RECORD_MARK} (the reference data of a legal entity identifier, which the entity reports and its issuer validates). Such an entry raises no risk, whatever it says, and a vendor that is missing from a register is no risk either. Use it only as context in the description of another risk that other sources show, and write what it says as the register's statement: the register lists the vendor, never more. A register entry is never evidence that the vendor or its product is safe, compliant or approved, and a supplier named by a public body or a developer named in an index is context, never an accusation.`,
+      );
+    });
+  });
+
+  it("has the bullets of the lists once each, in this order, before the rules of the rating", () => {
+    const places = [...BULLETS.map(([, start]) => start), AFTER_BULLETS].map((words) =>
+      prompt.indexOf(words),
+    );
+
+    expect(places.every((place) => place > -1)).toBe(true);
+    expect([...places].sort((a, b) => a - b)).toEqual(places);
+    for (const [, start] of BULLETS) expect(count(prompt, start)).toBe(1);
+    expect(count(prompt, AFTER_BULLETS)).toBe(1);
+  });
+
+  describe("the marks", () => {
+    it.each(NEW_LISTS)(
+      "%s: its mark occurs once in the prompt, among the bullets of the lists",
+      (_id, _constant, mark) => {
+        const first = text.indexOf(
+          "- A source whose text begins with the name of a sanctions list",
+        );
+        const last = text.indexOf("\nHow to rate a risk:");
+        const at = text.indexOf(mark);
+
+        expect(first).toBeGreaterThan(0);
+        expect(last).toBeGreaterThan(first);
+        expect(text.split(mark)).toHaveLength(2);
+        expect(at).toBeGreaterThan(first);
+        expect(at).toBeLessThan(last);
+      },
+    );
+
+    it.each(NEW_LISTS)(
+      "%s: the constant of its connector is the mark of the table, which the verifier is told too",
+      (id, constant, mark) => {
+        expect(constant).toBe(mark);
+        expect(VERIFIER_DATABASE_NAMES[id]).toBe(mark);
+      },
+    );
+
+    it("tells the verifier the name of 39 databases: the 16 of before and the 23 of this version", () => {
+      expect(Object.keys(VERIFIER_DATABASE_NAMES)).toHaveLength(39);
+      expect(Object.keys(VERIFIER_DATABASE_NAMES).sort()).toEqual([...RECORD_SOURCE_IDS].sort());
+      expect(NEW_LISTS).toHaveLength(23);
+      for (const [id] of NEW_LISTS) expect(RECORD_SOURCE_IDS).toContain(id);
+    });
+
+    it("gives a record of the OFSI list the mark of its list in the prompt of the verifier", () => {
+      const url = "https://records.example/uk_ofsi?record=1";
+      const verifierPrompt = buildVerifierUserPrompt(
+        target,
+        [
+          {
+            category: "legal_regulatory" as ResearchCategory,
+            risk_description: "An entity named Acme appears in a list of notices.",
+            impact_description: "The notice may concern another company.",
+            sources: [{ url, title: "t", quote: "q", published_at: "2031-03-02" }],
+          },
+        ],
+        () => "uk_ofsi",
+      );
+
+      expect(verifierPrompt).toContain(
+        'database="UK OFSI financial sanctions enforcement notices"',
+      );
+      expect(verifierPrompt).toContain(
+        `<source url="${url}" date="2031-03-02" database="UK OFSI financial sanctions enforcement notices">`,
+      );
+    });
+  });
+
+  describe("the class of each list", () => {
+    const PLACED = [
+      ["sanctions", [CANADA_SEMA_RECORD_MARK]],
+      ["AI incident", [CHARLOTIN_RECORD_MARK, PIPEROLL_RECORD_MARK]],
+      [
+        "enforcement",
+        [
+          EU_DG_COMP_RECORD_MARK,
+          FTC_PENALTIES_RECORD_MARK,
+          FTC_COMPETITION_RECORD_MARK,
+          UK_CMA_RECORD_MARK,
+          UK_OFSI_RECORD_MARK,
+          CO_SIC_PENALTIES_RECORD_MARK,
+        ],
+      ],
+      ["product safety", [NHTSA_RECALLS_RECORD_MARK, NHTSA_ODI_RECORD_MARK, UK_MHRA_RECORD_MARK]],
+      ["data breach", [CALIFORNIA_BREACHES_RECORD_MARK]],
+      [
+        "register",
+        [
+          CANADA_AI_REGISTER_RECORD_MARK,
+          OMB_AI_INVENTORY_RECORD_MARK,
+          NL_ALGORITMEREGISTER_RECORD_MARK,
+          UK_ATRS_RECORD_MARK,
+          EPOCH_AI_RECORD_MARK,
+          FMTI_RECORD_MARK,
+          C2PA_CONFORMING_RECORD_MARK,
+          FEDRAMP_RECORD_MARK,
+          DISCLOSE_IO_RECORD_MARK,
+          GLEIF_RECORD_MARK,
+        ],
+      ],
+    ] as const;
+
+    it.each(PLACED)("the %s bullet holds the marks of its class", (name, marks) => {
+      const bullet = bulletOf(name);
+
+      expect(bullet).not.toBe("");
+      for (const mark of marks) expect(bullet).toContain(mark);
+    });
+
+    it("places every one of the 23 marks in a class, once", () => {
+      const placed = PLACED.flatMap(([, marks]) => [...marks]).sort();
+
+      expect(placed).toEqual(NEW_LISTS.map(([, , mark]) => mark as string).sort());
+    });
+
+    it.each([
+      ["AI incident", "in ai_specific"],
+      ["enforcement", "in legal_regulatory"],
+      ["product safety", "in legal_regulatory"],
+      ["data breach", "in security_incidents"],
+    ] as const)(
+      "the %s bullet raises at most one risk from an entry, %s, rated Possible at most",
+      (name, category) => {
+        const bullet = bulletOf(name);
+
+        expect(bullet).toContain("raise at most one risk");
+        expect(bullet).toContain("Possible at most");
+        expect(bullet).toContain(category);
+      },
+    );
+
+    it("says of the enforcement and case lists that a case, an investigation or a notice is no finding or ruling, and that the list never shows that the vendor broke a rule", () => {
+      const bullet = bulletOf("enforcement");
+
+      expect(bullet).toContain("is not a finding or a ruling");
+      expect(bullet).toContain("never that the vendor broke a rule or is guilty of anything");
+    });
+
+    it("says that a notice of the OFSI is not a designation, in the words about that list", () => {
+      const bullet = bulletOf("enforcement");
+      const from = bullet.indexOf(`${UK_OFSI_RECORD_MARK} (`);
+      const parenthesis = bullet.slice(from, bullet.indexOf(") or ", from));
+
+      expect(from).toBeGreaterThan(-1);
+      expect(parenthesis).toContain("a notice is not a designation");
+    });
+
+    it("says of the product safety lists that an investigation is no finding that a defect exists", () => {
+      expect(bulletOf("product safety")).toContain(
+        "an investigation is not a finding that a defect exists",
+      );
+    });
+
+    it("says of the registers that an entry raises no risk, that a missing vendor is no risk, and that an entry is never evidence of safety, compliance or approval", () => {
+      const bullet = bulletOf("register");
+
+      for (const words of [
+        "Such an entry raises no risk, whatever it says",
+        "a vendor that is missing from a register is no risk either",
+        "is never evidence that the vendor or its product is safe, compliant or approved",
+        "is context, never an accusation",
+        "a state as of the day of the copy",
+      ]) {
+        expect(bullet).toContain(words);
+      }
+      expect(bullet).not.toContain("raise at most one risk");
+    });
+  });
+
+  describe("the words that the prompt does not use", () => {
+    // The lists say that an entry is listed, never that the operator vouches for it: no word of
+    // certification, endorsement, confirmation or guarantee.
+    const FORBIDDEN = /\b(certif(?:y|ies|ied)|endors\w*|confirm\w*|guarant\w*|vouch\w*)\b/i;
+
+    it("has none of them", () => {
+      expect(text).not.toMatch(FORBIDDEN);
+    });
+
+    it.each(["certified", "certifies", "endorsed", "confirmed", "guarantee", "vouches"])(
+      "would find %s",
+      (word) => {
+        expect(`The operator ${word} it.`).toMatch(FORBIDDEN);
+      },
+    );
+  });
+
+  describe("the user prompt of a run that researched legal and regulatory matters", () => {
+    it("names none of the 23 marks when its evidence is a news source: the text of a record reaches the model only through the pack", () => {
+      const userPrompt = buildUserPrompt(target, [
+        source({
+          id: "S1",
+          category: "legal_regulatory",
+          kind: "result",
+          url: "https://news.example.com/acme-fine",
+          title: "Acme fined by a regulator",
+          content: "A regulator fined Acme for a breach of its rules.",
+          publishedAt: "2031-03-02",
+        }),
+      ]);
+
+      for (const [, , mark] of NEW_LISTS) expect(userPrompt).not.toContain(mark);
+    });
+
+    it("names the mark of a list when its evidence is a record of that list", () => {
+      const userPrompt = buildUserPrompt(target, [
+        source({
+          id: "S1",
+          category: "legal_regulatory",
+          kind: "page",
+          url: "https://records.example/uk_ofsi?record=1",
+          title: "Entry of a list",
+          content: `${UK_OFSI_RECORD_MARK} (gov.uk), an enforcement list. The list has a notice for an entity named Acme.`,
+          publishedAt: "2031-03-02",
+        }),
+      ]);
+
+      expect(userPrompt).toContain(UK_OFSI_RECORD_MARK);
+    });
   });
 });

@@ -18,6 +18,7 @@ import {
 } from "../../domain.layer/interfaces/i.vendorResearch";
 import { MAX_PAGE_CONTENT_CHARS } from "../webResearch/pageText";
 import { LedgerEntry } from "../webResearch/webSession";
+import { CONTEXT_ONLY_RECORD_SOURCES } from "./records/types";
 import { type EdgarFiler, classifySource } from "./sourceRegistry/classify";
 import type { ResearchTarget } from "./target";
 import { MAX_SNIPPET_CHARS, cleanText, cutAtCodePoint } from "./text";
@@ -70,10 +71,14 @@ function cleanPublishedAt(publishedAt: string | null): string | null {
   return cleaned === "" || cleaned.length > MAX_PUBLISHED_AT_CHARS ? null : cleaned;
 }
 
-/** A source that has no id yet, and the bytes it takes in the pack, its comma included. */
+/**
+ * A source that has no id yet, and the bytes it takes in the pack, its comma included. `contextOnly`
+ * is true for a record of a list whose records never raise a risk (CONTEXT_ONLY_RECORD_SOURCES).
+ */
 interface SizedSource {
   source: Omit<EvidenceSource, "id">;
   bytes: number;
+  contextOnly: boolean;
 }
 
 /**
@@ -82,9 +87,10 @@ interface SizedSource {
  */
 const MEASURED_ID = "S0";
 
-const sizeOf = (source: SizedSource["source"]): SizedSource => ({
+const sizeOf = (source: SizedSource["source"], contextOnly = false): SizedSource => ({
   source,
   bytes: Buffer.byteLength(JSON.stringify({ id: MEASURED_ID, ...source })) + 1,
+  contextOnly,
 });
 
 const bytesOf = (sources: SizedSource[]): number =>
@@ -133,15 +139,27 @@ function largestOf(groups: SizedSource[][]): SizedSource[] | undefined {
 
 /**
  * Takes one step toward the limit, when the pack is `excess` bytes over it. The groups are in the
- * order of RESEARCH_CATEGORIES. A category with two or more sources gives up its last one, that of
- * the category that holds the most bytes among them. A category with one source keeps it: a page in
- * a script of three bytes a character takes about a quarter of the pack, so the largest category
- * can be that single source, and removing it would leave a category nobody analysed. When every
- * category is down to one source, the content of the largest source is cut instead (the start of
- * the excerpt stays, whole characters) by the excess, or to nothing if that is not enough, and the
- * next step takes the next largest.
+ * order of RESEARCH_CATEGORIES. A record of a list whose records never raise a risk
+ * (CONTEXT_ONLY_RECORD_SOURCES) goes before any other source: the last one of the category that
+ * holds the most bytes among those that have one and two or more sources. When there is none, a
+ * category with two or more sources gives up its last one, that of the category that holds the most
+ * bytes among them. A category with one source keeps it: a page in a script of three bytes a
+ * character takes about a quarter of the pack, so the largest category can be that single source,
+ * and removing it would leave a category nobody analysed. When every category is down to one
+ * source, the content of the largest source is cut instead (the start of the excerpt stays, whole
+ * characters) by the excess, or to nothing if that is not enough, and the next step takes the next
+ * largest.
  */
 function trimLargest(groups: SizedSource[][], excess: number): void {
+  // A record of a register never raises a risk: it goes before any other source (vr-15).
+  const withContext = largestOf(
+    groups.filter((group) => group.length > 1 && group.some((sized) => sized.contextOnly)),
+  );
+  if (withContext) {
+    const last = withContext.map((sized) => sized.contextOnly).lastIndexOf(true);
+    withContext.splice(last, 1);
+    return;
+  }
   const several = largestOf(groups.filter((group) => group.length > 1));
   if (several) {
     several.pop();
@@ -158,7 +176,10 @@ function trimLargest(groups: SizedSource[][], excess: number): void {
   }
   const { source } = cuttable[0];
   const budget = Math.max(jsonBytes(source.content) - excess, jsonBytes(""));
-  cuttable[0] = sizeOf({ ...source, content: cutToJsonBytes(source.content, budget) });
+  cuttable[0] = sizeOf(
+    { ...source, content: cutToJsonBytes(source.content, budget) },
+    cuttable[0].contextOnly,
+  );
 }
 
 /** A vendor without a domain: whether a host is blocked does not depend on the vendor. */
@@ -190,12 +211,15 @@ const numbered = (groups: SizedSource[][]): EvidenceSource[] =>
  * 3. The title is cut to MAX_TITLE_CHARS, and the content of a page to MAX_PAGE_CONTENT_CHARS and of a
  *    result to MAX_SNIPPET_CHARS. A publication date that is empty or longer than
  *    MAX_PUBLISHED_AT_CHARS becomes null.
- * 4. Until the serialized pack is at most MAX_EVIDENCE_BYTES, the last source of the category that
- *    holds the most bytes among those with two or more sources is removed; a tie goes to the later
- *    category. A category with one source keeps it. When every category is down to one source, the
- *    content of the largest source is cut instead, to the bytes the pack is over (the next largest
- *    if that is not enough). So a category that has sources always keeps one, and the summary cannot
- *    read a category the model never saw as "nothing found".
+ * 4. A record of a list whose records never raise a risk (`CONTEXT_ONLY_RECORD_SOURCES`) is removed
+ *    first: the last one of the category with the most bytes among those that have one and two or
+ *    more sources. Then the last source of the category that holds the most bytes among those with
+ *    two or more sources is removed; a tie goes to the later category. A category with one source
+ *    keeps it. This goes on, one source at a time, until the serialized pack is at most
+ *    MAX_EVIDENCE_BYTES. When every category is down to one source, the content of the largest
+ *    source is cut instead, to the bytes the pack is over (the next largest if that is not enough).
+ *    So a category that has sources always keeps one, and the summary cannot read a category the
+ *    model never saw as "nothing found".
  * 5. The sources are numbered S1, S2, ... without gaps, after the trimming. Step 4 measured them
  *    with the id of S1 to S9, so the numbered pack is measured once more, and if the longer ids
  *    of S10 and up made it too big, step 4 goes on.
@@ -227,7 +251,11 @@ export function buildEvidencePack(
         content: cutAtCodePoint(cleanText(entry.content), maxContentChars),
         publishedAt: cleanPublishedAt(entry.publishedAt),
       };
-      sized.push(sizeOf(source));
+      // A record of a register never raises a risk: the pack gives it up first (vr-15).
+      const contextOnly =
+        entry.record !== undefined &&
+        CONTEXT_ONLY_RECORD_SOURCES.has(entry.record as RecordSourceId);
+      sized.push(sizeOf(source, contextOnly));
     }
     return sized;
   });

@@ -30,15 +30,37 @@ import logger from "../../../../utils/logger/fileLogger";
 import type { VendorResearchConfig } from "../../config";
 import { aiidConnector } from "../connectors/aiid";
 import { atlasConnector } from "../connectors/atlas";
+import { c2paConformingConnector } from "../connectors/c2paConforming";
+import { californiaBreachesConnector } from "../connectors/californiaBreaches";
+import { canadaAiRegisterConnector } from "../connectors/canadaAiRegister";
+import { canadaSemaConnector } from "../connectors/canadaSema";
+import { charlotinConnector } from "../connectors/charlotin";
+import { coSicPenaltiesConnector } from "../connectors/coSicPenalties";
 import { cslConnector } from "../connectors/csl";
 import { cveConnector } from "../connectors/cve";
+import { discloseIoConnector } from "../connectors/discloseIo";
+import { epochAiConnector } from "../connectors/epochAi";
 import { euConnector } from "../connectors/eu";
+import { euDgCompConnector } from "../connectors/euDgComp";
 import { fdaConnector } from "../connectors/fda";
 import { fdaRecallsConnector } from "../connectors/fdaRecalls";
+import { fedrampConnector } from "../connectors/fedramp";
+import { fmtiConnector } from "../connectors/fmti";
+import { ftcCompetitionConnector } from "../connectors/ftcCompetition";
+import { ftcPenaltiesConnector } from "../connectors/ftcPenalties";
 import { kevConnector } from "../connectors/kev";
 import { nhtsaConnector } from "../connectors/nhtsa";
+import { nhtsaOdiConnector } from "../connectors/nhtsaOdi";
+import { nhtsaRecallsConnector } from "../connectors/nhtsaRecalls";
+import { nlAlgoritmeregisterConnector } from "../connectors/nlAlgoritmeregister";
 import { ofacConnector } from "../connectors/ofac";
+import { ombAiInventoryConnector } from "../connectors/ombAiInventory";
+import { piperollConnector } from "../connectors/piperoll";
 import { ukConnector } from "../connectors/uk";
+import { ukAtrsConnector } from "../connectors/ukAtrs";
+import { ukCmaConnector } from "../connectors/ukCma";
+import { ukMhraConnector } from "../connectors/ukMhra";
+import { ukOfsiConnector } from "../connectors/ukOfsi";
 import { unConnector } from "../connectors/un";
 import { VRDB_GATES, type VrdbGate } from "../gates";
 import { VRDB_SOURCES, isMirror } from "../sources";
@@ -64,6 +86,32 @@ const config = (overrides: Partial<VendorResearchConfig> = {}): VendorResearchCo
 const syncJob = (data: unknown = { sourceId: "kev" }, name = "vrdb_sync") => ({ name, data });
 
 const syncOf = (result: SyncResult) => jest.fn().mockResolvedValue(result);
+
+/** The connector of each of the 22 lists added on 2026-11-10 that are copied, in the order of the registry. */
+const NEW_CONNECTORS = [
+  ["canada_sema", canadaSemaConnector],
+  ["california_breaches", californiaBreachesConnector],
+  ["uk_ofsi", ukOfsiConnector],
+  ["charlotin", charlotinConnector],
+  ["ftc_penalties", ftcPenaltiesConnector],
+  ["piperoll", piperollConnector],
+  ["eu_dg_comp", euDgCompConnector],
+  ["disclose_io", discloseIoConnector],
+  ["uk_cma", ukCmaConnector],
+  ["canada_ai_register", canadaAiRegisterConnector],
+  ["ftc_competition", ftcCompetitionConnector],
+  ["omb_ai_inventory", ombAiInventoryConnector],
+  ["co_sic_penalties", coSicPenaltiesConnector],
+  ["uk_atrs", ukAtrsConnector],
+  ["nhtsa_recalls", nhtsaRecallsConnector],
+  ["fmti", fmtiConnector],
+  ["uk_mhra", ukMhraConnector],
+  ["nl_algoritmeregister", nlAlgoritmeregisterConnector],
+  ["nhtsa_odi", nhtsaOdiConnector],
+  ["fedramp", fedrampConnector],
+  ["epoch_ai", epochAiConnector],
+  ["c2pa_conforming", c2paConformingConnector],
+] as const;
 
 beforeEach(() => jest.clearAllMocks());
 
@@ -272,11 +320,35 @@ describe("the connector of each list", () => {
       nhtsa_sgo: nhtsaConnector,
       fda_ai_devices: fdaConnector,
       fda_device_recalls: fdaRecallsConnector,
+      canada_sema: canadaSemaConnector,
+      california_breaches: californiaBreachesConnector,
+      uk_ofsi: ukOfsiConnector,
+      charlotin: charlotinConnector,
+      ftc_penalties: ftcPenaltiesConnector,
+      piperoll: piperollConnector,
+      eu_dg_comp: euDgCompConnector,
+      disclose_io: discloseIoConnector,
+      uk_cma: ukCmaConnector,
+      canada_ai_register: canadaAiRegisterConnector,
+      ftc_competition: ftcCompetitionConnector,
+      omb_ai_inventory: ombAiInventoryConnector,
+      co_sic_penalties: coSicPenaltiesConnector,
+      uk_atrs: ukAtrsConnector,
+      nhtsa_recalls: nhtsaRecallsConnector,
+      fmti: fmtiConnector,
+      uk_mhra: ukMhraConnector,
+      nl_algoritmeregister: nlAlgoritmeregisterConnector,
+      nhtsa_odi: nhtsaOdiConnector,
+      fedramp: fedrampConnector,
+      epoch_ai: epochAiConnector,
+      c2pa_conforming: c2paConformingConnector,
     };
     const mirrors = VRDB_SOURCES.filter(isMirror).map(({ id }) => id);
 
     // The screening list and the device recalls are in the map beside the four AI lists and the six
-    // that were there.
+    // that were there, and the 22 lists of 2026-11-10 after them: 34 lists are copied, and GLEIF,
+    // which is read through, has no connector in the map.
+    expect(mirrors).toHaveLength(34);
     expect([...mirrors].sort()).toEqual(Object.keys(connectors).sort());
     for (const [id, connector] of Object.entries(connectors)) {
       mockSyncSource.mockClear().mockResolvedValue({ outcome: "ok" });
@@ -287,7 +359,112 @@ describe("the connector of each list", () => {
       expect(mockSyncSource.mock.calls[0][0]).toBe(id);
       expect(mockSyncSource.mock.calls[0][1].connector).toBe(connector);
       expect(connector.id).toBe(id);
+      // The version that the sync hashes with the download: a positive whole number.
+      expect([id, Number.isInteger(connector.version) && connector.version > 0]).toEqual([
+        id,
+        true,
+      ]);
     }
+  });
+
+  it.each(NEW_CONNECTORS)(
+    "the job of %s, a list with no gate, syncs it with its own connector, through the page guard",
+    async (sourceId, connector) => {
+      mockSyncSource.mockResolvedValue({ outcome: "ok" });
+
+      await expect(processVrdbJob(syncJob({ sourceId }), { config: config() })).resolves.toEqual({
+        outcome: "ok",
+      });
+
+      expect(mockSyncSource).toHaveBeenCalledTimes(1);
+      const [id, deps] = mockSyncSource.mock.calls[0];
+      expect(id).toBe(sourceId);
+      expect(deps.connector).toBe(connector);
+      expect(connector.id).toBe(sourceId);
+      expect(deps.fetch).toBe(connectorFetch);
+    },
+  );
+
+  it("every connector of the 22 copies its list whole, under the id of its list, with a version that is a positive whole number", () => {
+    expect(NEW_CONNECTORS).toHaveLength(22);
+    for (const [id, connector] of NEW_CONNECTORS) {
+      expect([id, connector.id]).toEqual([id, id]);
+      expect([id, Number.isInteger(connector.version) && connector.version > 0]).toEqual([
+        id,
+        true,
+      ]);
+      // None is read by its changes, as the CVE records are.
+      expect([id, connector.kind ?? "snapshot"]).toEqual([id, "snapshot"]);
+    }
+  });
+
+  it.each([["nvd"], ["sec"], ["gleif"]])(
+    "the sync job of %s, a database read through, does nothing and reaches no connector",
+    async (sourceId) => {
+      mockSyncSource.mockResolvedValue({ outcome: "ok" });
+
+      await expect(processVrdbJob(syncJob({ sourceId }), { config: config() })).resolves.toBeNull();
+      expect(mockSyncSource).not.toHaveBeenCalled();
+    },
+  );
+});
+
+describe("the jobs of the 22 lists added on 2026-11-10", () => {
+  // None waits behind a gate, so the job of each is carried out as the job of any open list is.
+  const NEW_IDS = NEW_CONNECTORS.map(([id]) => id);
+
+  it.each(NEW_IDS)(
+    "the job of %s syncs it, with no gate to open, and does nothing while the records are off",
+    async (sourceId) => {
+      const result: SyncResult = {
+        outcome: "ok",
+        counts: { seen: 120, inserted: 4, updated: 1, statusChanged: 0 },
+      };
+      const sync = syncOf(result);
+      const whileOff = syncOf({ outcome: "ok" });
+
+      await expect(
+        processVrdbJob(syncJob({ sourceId }), { config: config(), sync }),
+      ).resolves.toEqual(result);
+      await expect(
+        processVrdbJob(syncJob({ sourceId }), {
+          config: config({ records: false }),
+          sync: whileOff,
+        }),
+      ).resolves.toBeNull();
+
+      expect(sync).toHaveBeenCalledWith(sourceId);
+      expect(whileOff).not.toHaveBeenCalled();
+    },
+  );
+
+  it("a sync of one of them that failed on the way throws so that BullMQ retries it, and one the list refused is not retried", async () => {
+    for (const sourceId of NEW_IDS) {
+      const onTheWay = processVrdbJob(syncJob({ sourceId }), {
+        config: config(),
+        sync: syncOf({ outcome: "failed", errorCode: "fetch_failed" }),
+      });
+      await expect(onTheWay).rejects.toThrow(`The sync of ${sourceId} failed (fetch_failed)`);
+      await expect(onTheWay).rejects.not.toBeInstanceOf(UnrecoverableError);
+
+      const refused = processVrdbJob(syncJob({ sourceId }), {
+        config: config(),
+        sync: syncOf({ outcome: "failed", errorCode: "wrong_root" }),
+      });
+      await expect(refused).rejects.toBeInstanceOf(UnrecoverableError);
+      await expect(refused).rejects.toThrow(`The sync of ${sourceId} failed (wrong_root)`);
+    }
+  });
+
+  it("the status job of GLEIF, a database read through, relabels as the status job of any list does", async () => {
+    // A read-through answer that changes a status adds it (lookup.ts), so the worker takes it for
+    // GLEIF as it takes it for the NVD.
+    const relabel = jest.fn().mockResolvedValue({ relabeled: 1 });
+
+    await expect(
+      processVrdbJob(syncJob({ sourceId: "gleif" }, "vrdb_relabel"), { config: config(), relabel }),
+    ).resolves.toEqual({ relabeled: 1 });
+    expect(relabel).toHaveBeenCalledWith("gleif");
   });
 });
 

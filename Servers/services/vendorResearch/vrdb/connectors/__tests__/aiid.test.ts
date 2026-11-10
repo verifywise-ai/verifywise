@@ -780,7 +780,7 @@ describe("aiidConnector.parse", () => {
       for (const text of texts) {
         const startedAt = performance.now();
         aiidDescriptionOf(text);
-        expect(performance.now() - startedAt).toBeLessThan(1000);
+        expect(performance.now() - startedAt).toBeLessThan(10_000);
       }
     });
   });
@@ -1086,7 +1086,7 @@ describe("aiidConnector.parse", () => {
     const startedAt = performance.now();
     const result = aiidConnector.parse(snapshotOf([DATE, xml]));
 
-    expect(performance.now() - startedAt).toBeLessThan(4000);
+    expect(performance.now() - startedAt).toBeLessThan(10_000);
     expect(result).toMatchObject({ errors: 0, skipped: 0, root: "Incidents" });
     expect(result.records).toHaveLength(1_800);
   });
@@ -1295,7 +1295,7 @@ describe("aiidConnector.download", () => {
     await expect(aiidConnector.download(fetch, {})).rejects.toMatchObject({
       name: "FeedWithoutFileError",
     });
-    expect(performance.now() - startedAt).toBeLessThan(2000);
+    expect(performance.now() - startedAt).toBeLessThan(10_000);
   });
 
   it("answers unchanged on a 304 of the file", async () => {

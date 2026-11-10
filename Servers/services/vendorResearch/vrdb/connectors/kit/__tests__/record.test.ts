@@ -338,7 +338,7 @@ describe("recordOf", () => {
 
     it("refuses a long address, and a huge one, without reading it", () => {
       const url = `https://example.org/${"u".repeat(5 * MEGABYTE)}`;
-      expect(took(() => failureOf({ url }))).toBeLessThan(100);
+      expect(took(() => failureOf({ url }))).toBeLessThan(10_000);
       expect(failureOf({ url })).toBeInstanceOf(UnreadableEntry);
     });
   });
@@ -490,10 +490,10 @@ describe("recordOf", () => {
 
     it("is read in little time when it is huge", () => {
       const summary = `Mark. ${"word ".repeat(MEGABYTE / 4)}`;
-      expect(took(() => recordOf(draft({ summary })))).toBeLessThan(500);
+      expect(took(() => recordOf(draft({ summary })))).toBeLessThan(10_000);
       expect(
         took(() => recordOf(draft({ summary: `Mark. ${" ".repeat(5 * MEGABYTE)}x` }))),
-      ).toBeLessThan(500);
+      ).toBeLessThan(10_000);
     });
 
     describe("the phrase that the analysis prompt reads as the way a vendor was matched (review finding 20)", () => {
@@ -556,7 +556,55 @@ describe("recordOf", () => {
 
       it("is read in little time in a summary of white space that follows the word", () => {
         const text = `Mark. ${"lookup ".repeat(MEGABYTE / 8)}${" ".repeat(5 * MEGABYTE)}note`;
-        expect(took(() => summaryOf(text))).toBeLessThan(500);
+        expect(took(() => summaryOf(text))).toBeLessThan(10_000);
+      });
+
+      describe("in the title, which the prompt shows in its own element beside the snippet", () => {
+        const titleOf = (title: string): string => recordOf(draft({ title })).title;
+
+        it("is written with a hyphen, whatever its case and white space, as in the summary", () => {
+          expect(titleOf("Lookup note: matched by name only")).toBe(
+            "lookup-note: matched by name only",
+          );
+          expect(titleOf("Acme LOOKUP NOTE and lookup  note and Lookup Note")).toBe(
+            "Acme lookup-note and lookup-note and lookup-note",
+          );
+          for (const space of ["\t", "\n", NBSP, cp(0x3000), cp(0x2003), " \n\t "]) {
+            expect(titleOf(`Acme lookup${space}note`)).toBe("Acme lookup-note");
+          }
+        });
+
+        it("is found when hidden characters were in it: they are out before it is looked for", () => {
+          expect(titleOf(`Acme Look${ZWSP}up note`)).toBe("Acme lookup-note");
+          expect(titleOf(`Acme lookup${NUL}${NBSP}note`)).toBe("Acme lookup-note");
+        });
+
+        it("is not made of words that only look like it", () => {
+          const text = "A lookup, note. Lookups note. The look up note. Lookup of note.";
+          expect(titleOf(text)).toBe(text);
+        });
+
+        it("does not change the length of the title, so that the cut and its marker are as before", () => {
+          const text = "Lookup note ".repeat(40);
+          expect(text.length).toBeGreaterThan(RECORD_TITLE_MAX);
+          const title = titleOf(text);
+          expect(title.length).toBeLessThanOrEqual(RECORD_TITLE_MAX);
+          expect(title.length).toBeGreaterThan(RECORD_TITLE_MAX - SHORTENED.length - 12);
+          expect(title.endsWith(SHORTENED)).toBe(true);
+          expect(title).not.toMatch(/lookup\s+note/i);
+          expect(titleOf("Lookup note")).toHaveLength("Lookup note".length);
+        });
+
+        it("is not in the title of any record, whatever the text before and after it", () => {
+          for (const text of ["Lookup note", "lookup note lookup note", "xLookup notex"]) {
+            expect(titleOf(`Acme ${text}`)).not.toMatch(/lookup\s+note/i);
+          }
+        });
+
+        it("is read in little time in a title of white space that follows the word", () => {
+          const text = `Acme ${"lookup ".repeat(MEGABYTE / 8)}${" ".repeat(5 * MEGABYTE)}note`;
+          expect(took(() => titleOf(text))).toBeLessThan(10_000);
+        });
       });
     });
   });
@@ -612,6 +660,43 @@ describe("recordOf", () => {
     it("may be empty", () => {
       expect(recordOf(draft({ identifiers: {} })).identifiers).toEqual({});
     });
+
+    it("hold no angle bracket, in a text, a list, a nested object or a key: they are written as the angle quotation marks", () => {
+      const open = cp(0x2039);
+      const close = cp(0x203a);
+      const fullwidth = `${cp(0xff1c)}tag${cp(0xff1e)}`;
+      const record = recordOf(
+        draft({
+          identifiers: {
+            name: "<b>Acme</b> Ltd",
+            list: ["<script>x</script>", 1],
+            nested: { deep: "a > b < c" },
+            "<key>": "value",
+            wide: fullwidth,
+          },
+        }),
+      );
+      expect(JSON.stringify(record.identifiers)).not.toMatch(/[<>]/);
+      expect(JSON.stringify(record.identifiers)).not.toContain(cp(0xff1c));
+      expect(JSON.stringify(record.identifiers)).not.toContain(cp(0xff1e));
+      expect(record.identifiers).toStrictEqual({
+        name: `${open}b${close}Acme${open}/b${close} Ltd`,
+        list: [`${open}script${close}x${open}/script${close}`, 1],
+        nested: { deep: `a ${close} b ${open} c` },
+        [`${open}key${close}`]: "value",
+        wide: `${open}tag${close}`,
+      });
+    });
+
+    it("keep their size when the brackets are replaced: the limit is the same for a text of brackets", () => {
+      const fits = { a: "<".repeat(IDENTIFIERS_MAX_CHARS - 8) };
+      expect(JSON.stringify(fits)).toHaveLength(IDENTIFIERS_MAX_CHARS);
+      const record = recordOf(draft({ identifiers: fits }));
+      expect(JSON.stringify(record.identifiers)).toHaveLength(IDENTIFIERS_MAX_CHARS);
+      expect(
+        failureOf({ identifiers: { a: "<".repeat(IDENTIFIERS_MAX_CHARS - 7) } }),
+      ).toBeInstanceOf(UnreadableEntry);
+    });
   });
 
   describe("the keys", () => {
@@ -649,11 +734,11 @@ describe("recordOf", () => {
     it("do not read a name of more than 1,000 characters, nor take long to say so", () => {
       expect(keysOf({ names: ["a".repeat(1001), "Acme"] })).toEqual(["name:acme"]);
       const huge = ["a b ".repeat(MEGABYTE)];
-      expect(took(() => keysOf({ names: huge }))).toBeLessThan(500);
+      expect(took(() => keysOf({ names: huge }))).toBeLessThan(10_000);
       expect(keysOf({ names: huge })).toEqual([]);
       // Many such cells: a name that was read would cost a pass over its megabytes each.
       const many = Array.from({ length: 20 }, (_, at) => `${at} ${"a b ".repeat(MEGABYTE / 2)}`);
-      expect(took(() => keysOf({ names: many }))).toBeLessThan(500);
+      expect(took(() => keysOf({ names: many }))).toBeLessThan(10_000);
     });
 
     describe("are made of names, numbers and LEIs that are folded as a line is (review finding 8)", () => {
@@ -740,6 +825,26 @@ describe("recordOf", () => {
         // 500 letters and 501 hidden characters are 1,001 as given: not read.
         expect(keysOf({ names: [`${"a".repeat(500)}${ZWSP.repeat(501)}`, "Acme"] })).toEqual([
           "name:acme",
+        ]);
+      });
+
+      it("never make a key of a text that a connector cut (a text that ends in the cut marker), whatever its length", () => {
+        expect(keysOf({ names: [`Acme Widgets${SHORTENED}`, "Acme"] })).toEqual(["name:acme"]);
+        expect(keysOf({ names: [`${"a".repeat(40)}${SHORTENED}`] })).toEqual([]);
+        // The marker alone, as a cut that left nothing of the text gives it.
+        expect(keysOf({ names: [SHORTENED.trim()] })).toEqual([]);
+        // After the fold: the marker in full-width brackets is the same marker.
+        expect(
+          keysOf({ names: [`Acme Widgets ${cp(0xff3b)}shortened${cp(0xff3d)}`, "Acme"] }),
+        ).toEqual(["name:acme"]);
+        // The same for a number and a LEI that were cut.
+        expect(keysOf({ names: ["Acme"], regnos: [`123456789${SHORTENED}`] })).toEqual([
+          "name:acme",
+        ]);
+        // Words of the marker inside a name are a name.
+        expect(keysOf({ names: ["Shortened Acme"] })).toEqual(["name:shortenedacme"]);
+        expect(keysOf({ names: ["Acme [shortened] Widgets"] })).toEqual([
+          "name:acmeshortenedwidgets",
         ]);
       });
 

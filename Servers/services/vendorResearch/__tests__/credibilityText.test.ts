@@ -8,6 +8,7 @@ import type {
   CredibilityRule,
   CredibilitySource,
 } from "../../../domain.layer/interfaces/i.vendorResearch";
+import { decideCredibility } from "../credibility";
 import { NAME_ONLY_NOTE, credibilityRationale, dayOf } from "../credibilityText";
 
 const source = (overrides: Partial<CredibilitySource> & Pick<CredibilitySource, "url">) =>
@@ -115,6 +116,35 @@ const RECALL_BY_NAME = source({
     status: "active",
     source_record_id: "90001",
     as_of: "2026-11-07",
+  },
+});
+// A FedRAMP offering whose website is the vendor's verified domain (official, strong) and a GLEIF
+// record read for the LEI stored on the vendor (trusted press, strong): the lists of a register are
+// context for a finding (prompt vr-15), so the sentence of a rule never names one of their records.
+const FEDRAMP_STRONG = source({
+  url: "https://marketplace.fedramp.gov/products/FR2026000001",
+  category: "official",
+  publisher: "fedramp",
+  reviewed: true,
+  record: {
+    source: "fedramp",
+    match: "strong",
+    status: "active",
+    source_record_id: "FR2026000001",
+    as_of: "2026-11-10",
+  },
+});
+const GLEIF_STRONG = source({
+  url: "https://search.gleif.org/#/record/5493ACME00000000TE01",
+  category: "trusted_press",
+  publisher: "gleif",
+  reviewed: true,
+  record: {
+    source: "gleif",
+    match: "strong",
+    status: "active",
+    source_record_id: "5493ACME00000000TE01",
+    as_of: "2026-11-10",
   },
 });
 
@@ -280,6 +310,173 @@ describe("credibilityRationale", () => {
       );
     },
   );
+
+  describe("a record of a register is context: the sentence never names it (prompt vr-15)", () => {
+    it("a FedRAMP record (official, strong, read) cited before a KEV record: the line names CISA Known Exploited Vulnerabilities, never FedRAMP Marketplace", () => {
+      for (const sources of [
+        [FEDRAMP_STRONG, KEV_RECORD],
+        [KEV_RECORD, FEDRAMP_STRONG],
+      ]) {
+        const line = credibilityRationale(basis("official_record", sources));
+
+        expect(line).toBe(
+          "High: CISA Known Exploited Vulnerabilities lists it (CVE-2026-31337), as of 28 Oct 2026.",
+        );
+        expect(line).not.toContain("FedRAMP");
+      }
+    });
+
+    it("an official record that only a register could give is no sentence at all", () => {
+      expect(credibilityRationale(basis("official_record", [FEDRAMP_STRONG]))).toBe("");
+    });
+
+    it("a GLEIF record is no trusted publisher: two publishers and a GLEIF record are two, one and a GLEIF record are one", () => {
+      expect(credibilityRationale(basis("trusted_press_two", [GLEIF_STRONG, REUTERS, BBC]))).toBe(
+        "High: 2 independent trusted publishers report it (Reuters, BBC).",
+      );
+      expect(credibilityRationale(basis("trusted_press_one", [GLEIF_STRONG, REUTERS]))).toBe(
+        "Medium: one trusted publisher reports it (Reuters); no official source and no second independent publisher.",
+      );
+    });
+  });
+
+  // A finding that cites only registers has a line of its own, and a register never speaks in the
+  // line of a label: no stale day of its copy, no withdrawal named.
+  describe("a finding that cites only registers, and a register that is stale or withdrawn", () => {
+    const REGISTER_ONLY =
+      "Low: only registers that list the vendor are cited, and a register entry is not evidence of a risk.";
+    /** The FedRAMP record in another state: by name only, withdrawn, a copy that is out of date. */
+    const fedramp = (over: Partial<NonNullable<CredibilitySource["record"]>> = {}) =>
+      ({ ...FEDRAMP_STRONG, record: { ...FEDRAMP_STRONG.record!, ...over } }) as CredibilitySource;
+    /** What the rule decides for the sources, and the line it gets: the label and its sentence. */
+    const decided = (sources: CredibilitySource[]) => {
+      const { label, rule, nameOnly } = decideCredibility(sources, { contradicted: false });
+      return { label, rule, line: credibilityRationale(basis(rule, sources, nameOnly)) };
+    };
+    const KEV_WITHDRAWN = {
+      ...KEV_RECORD,
+      record: { ...KEV_RECORD.record!, status: "withdrawn" },
+    } as CredibilitySource;
+    // A strong record of another list, whose copy is out of date.
+    const NVD_STALE = source({
+      url: "https://nvd.nist.gov/vuln/detail/CVE-2026-1001",
+      category: "official",
+      publisher: "nvd",
+      reviewed: true,
+      record: {
+        source: "nvd",
+        match: "strong",
+        status: "active",
+        source_record_id: "CVE-2026-1001",
+        as_of: "2026-09-01",
+        stale: true,
+      },
+    });
+    const FTC_PAGE = source({
+      url: "https://www.ftc.gov/news-events/news/press-releases/acme",
+      category: "official",
+      entry: "ftc",
+    });
+    const BLOG = source({ url: "https://medium.com/@someone/acme-leak" });
+
+    it("one register record alone (official, strong, read) is Low by unverified, and the line says only registers are cited", () => {
+      expect(decided([FEDRAMP_STRONG])).toEqual({
+        label: "low",
+        rule: "unverified",
+        line: REGISTER_ONLY,
+      });
+      // A register of the trusted press class (GLEIF) reads the same, and so do two registers.
+      expect(decided([GLEIF_STRONG])).toEqual({
+        label: "low",
+        rule: "unverified",
+        line: REGISTER_ONLY,
+      });
+      expect(decided([FEDRAMP_STRONG, GLEIF_STRONG]).line).toBe(REGISTER_ONLY);
+    });
+
+    it("the same record matched by name only keeps the note the code adds after the sentence of a rule", () => {
+      expect(decided([fedramp({ match: "weak" })])).toEqual({
+        label: "low",
+        rule: "unverified",
+        line: `${REGISTER_ONLY} ${NAME_ONLY_NOTE}`,
+      });
+    });
+
+    it("a record its list withdrew, alone, is Low by unverified and not by inactive: the line names no register and no withdrawal", () => {
+      const withdrawn = decided([fedramp({ status: "withdrawn", as_of: "2026-11-01" })]);
+
+      expect(withdrawn).toEqual({ label: "low", rule: "unverified", line: REGISTER_ONLY });
+      expect(withdrawn.line).not.toMatch(/FedRAMP|withdrew|removed|rejected/);
+    });
+
+    it("a copy of the register that is out of date, alone, gets the register line and no stale sentence", () => {
+      const stale = decided([fedramp({ stale: true, as_of: "2026-09-01" })]);
+
+      expect(stale.line).toBe(REGISTER_ONLY);
+      expect(stale.line).not.toContain("has not been updated");
+    });
+
+    it("a stale copy of a register cited with a KEV record leaves no stale sentence: the source it speaks of would read as the KEV's", () => {
+      const sources = [KEV_RECORD, fedramp({ stale: true, as_of: "2026-09-01" })];
+
+      expect(credibilityRationale(basis("official_record", sources))).toBe(
+        "High: CISA Known Exploited Vulnerabilities lists it (CVE-2026-31337), as of 28 Oct 2026.",
+      );
+      expect(decided(sources).line).toBe(
+        "High: CISA Known Exploited Vulnerabilities lists it (CVE-2026-31337), as of 28 Oct 2026.",
+      );
+    });
+
+    it("a stale copy of a record that is not a register's still speaks, with the oldest day of those, and not the register's older day", () => {
+      const sources = [KEV_RECORD, NVD_STALE, fedramp({ stale: true, as_of: "2026-08-01" })];
+
+      expect(decided(sources).line).toBe(
+        "High: CISA Known Exploited Vulnerabilities lists it (CVE-2026-31337), as of 28 Oct 2026. " +
+          "The source has not been updated since 1 Sep 2026.",
+      );
+    });
+
+    it("a withdrawn record of a register cited before a withdrawn KEV record: the inactive line names the KEV record, never the register", () => {
+      const sources = [fedramp({ status: "withdrawn", as_of: "2026-11-01" }), KEV_WITHDRAWN];
+
+      expect(decided(sources)).toEqual({
+        label: "low",
+        rule: "inactive",
+        line: "Low: CISA Known Exploited Vulnerabilities withdrew the record on 28 Oct 2026.",
+      });
+    });
+
+    it("a register beside an official page: the label and the line are the page's, as without the register", () => {
+      expect(decided([FEDRAMP_STRONG, FTC_PAGE])).toEqual({
+        label: "high",
+        rule: "official_page",
+        line: "High: an official source reports it (ftc.gov).",
+      });
+      expect(decided([FEDRAMP_STRONG, FTC_PAGE])).toEqual(decided([FTC_PAGE]));
+    });
+
+    it("a withdrawn register beside a KEV record changes neither its label nor its line", () => {
+      expect(decided([fedramp({ status: "withdrawn", as_of: "2026-11-01" }), KEV_RECORD])).toEqual(
+        decided([KEV_RECORD]),
+      );
+    });
+
+    it("keeps the line of the unverified sources when one supports the finding, a register beside it or not", () => {
+      expect(decided([BLOG, FEDRAMP_STRONG])).toEqual({
+        label: "low",
+        rule: "unverified",
+        line: "Low: only unverified sources report it (medium.com).",
+      });
+    });
+
+    it("keeps the old line when nothing supports the finding and no register is cited", () => {
+      expect(decided([{ ...REUTERS, reading: "contradicted" }])).toEqual({
+        label: "low",
+        rule: "unverified",
+        line: "Low: only unverified sources report it.",
+      });
+    });
+  });
 
   it("a contradicted quote", () => {
     expect(

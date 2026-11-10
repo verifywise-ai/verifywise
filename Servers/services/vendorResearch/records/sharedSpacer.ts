@@ -20,6 +20,13 @@ export const NVD_SPACER_KEY = "vrdb:spacer:nvd";
 export const SEC_SPACER_KEY = "vrdb:spacer:sec";
 /** Five requests a second, half of what the SEC allows, and a wait of two seconds at most. */
 export const SEC_LIMITS: SpacerLimits = { limit: 5, windowMs: 1_000, maxWaitMs: 2_000 };
+/** The window of the requests to GLEIF's API (api.gleif.org), which every worker shares. */
+export const GLEIF_SPACER_KEY = "vrdb:spacer:gleif";
+/**
+ * Fifty requests a minute, a sixth below the 60 a minute that GLEIF allows each client, and a wait of
+ * a second and a half at most: a run that cannot have a turn in that time says the source is busy.
+ */
+export const GLEIF_LIMITS: SpacerLimits = { limit: 50, windowMs: 60_000, maxWaitMs: 1_500 };
 
 /**
  * Takes a turn in the window of KEYS[1], a sorted set of the starts in milliseconds of the clock of

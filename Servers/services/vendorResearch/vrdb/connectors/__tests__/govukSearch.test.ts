@@ -31,6 +31,15 @@ const cp = (...codes: number[]): string => String.fromCodePoint(...codes);
 
 const JSON_TYPE = "application/json";
 const PAGE_SIZE = 3;
+/**
+ * The wall-clock limit of the tests that guard against a blow-up of the time (a pager or a reader
+ * that goes quadratic or worse): the work of each takes 11 to 42 ms (measured on three runs), so
+ * ten seconds is a margin of two hundred times, and a starved runner does not fail a test with no
+ * change of code. The jest timeout of the asynchronous one is set above the limit (30 s).
+ */
+const SLOW_MS = 10_000;
+/** No test of this file waits for a clock, but a starved runner can take more than jest's default five seconds. */
+jest.setTimeout(30_000);
 
 type Row = Record<string, unknown>;
 
@@ -858,7 +867,7 @@ describe("govukSearchPages", () => {
   });
 
   describe("a page of 5 MB", () => {
-    it("is read in well under a second, by the pager and by the reader of the rows", async () => {
+    it("is read in no time, by the pager and by the reader of the rows", async () => {
       // 1,000 results of about 5 KB each: the size of a page of the real lists that carry prose.
       const description = "x".repeat(4_900);
       const results = rowsBetween(0, 1_000).map((row) => ({ ...row, description }));
@@ -879,9 +888,9 @@ describe("govukSearchPages", () => {
       const readerMs = performance.now() - readerStarted;
 
       expect(found?.rows).toHaveLength(1_000);
-      expect(pagerMs).toBeLessThan(1_000);
-      expect(readerMs).toBeLessThan(1_000);
-    });
+      expect(pagerMs).toBeLessThan(SLOW_MS);
+      expect(readerMs).toBeLessThan(SLOW_MS);
+    }, 30_000);
   });
 });
 
@@ -1296,14 +1305,14 @@ describe("govukRowsOf", () => {
       const started = performance.now();
       const found = rowsOf([pageText(many, 20_000, 0)], 20_000);
       expect(found?.rows).toHaveLength(20_000);
-      expect(performance.now() - started).toBeLessThan(1_000);
+      expect(performance.now() - started).toBeLessThan(SLOW_MS);
     });
 
     it("are none for a page that holds far more distinct links than its total says, and quickly", () => {
       const many = Array.from({ length: 200_000 }, (_, n) => ({ link: `/government/${n}` }));
       const started = performance.now();
       expect(rowsOf([pageText(many, 5, 0)], 1_000_000)).toBeNull();
-      expect(performance.now() - started).toBeLessThan(1_000);
+      expect(performance.now() - started).toBeLessThan(SLOW_MS);
     });
 
     it("never throw, whatever the pages are", () => {

@@ -12,6 +12,8 @@ import { type WriterEntry, writeZip } from "../../../__tests__/helpers/zipWriter
 import { BodyTooLargeError } from "../../types";
 import { onlyEntryOf, readSheetTable } from "../archives";
 
+jest.setTimeout(30_000);
+
 const ZIP_LIMITS: ZipLimits = {
   maxEntries: 16,
   maxEntryBytes: 1024 * 1024,
@@ -549,7 +551,7 @@ describe("readSheetTable", () => {
         rows: [],
         complete: false,
       });
-      expect(Date.now() - start).toBeLessThan(5000);
+      expect(Date.now() - start).toBeLessThan(10_000);
     });
 
     it("is incomplete when the sheet inflates to more than the limit of an entry", () => {

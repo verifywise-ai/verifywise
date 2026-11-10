@@ -24,11 +24,22 @@ jest.mock("../queue", () => ({
   enqueueRelabel: (...args: unknown[]) => mockEnqueueRelabel(...args),
 }));
 
-import type { ResearchCategory } from "../../../../domain.layer/interfaces/i.vendorResearch";
-import { LOOKBACK_MONTHS, monthsBefore } from "../../categories";
+import {
+  RESEARCH_CATEGORIES,
+  type ResearchCategory,
+  type VrdbSourceId,
+} from "../../../../domain.layer/interfaces/i.vendorResearch";
+import {
+  LOOKBACK_MONTHS,
+  SITE_CATEGORIES,
+  monthsBefore,
+  researchableCategories,
+} from "../../categories";
 import type { VendorResearchConfig } from "../../config";
 import { NAME_ONLY_LOOKUP_NOTE } from "../../records/ofac";
+import { CONTEXT_ONLY_RECORD_SOURCES, type FetchJson } from "../../records/types";
 import type { ResearchTarget } from "../../target";
+import { gleifConnector } from "../connectors/gleif";
 import type { ReadThroughConnector } from "../connectors/types";
 import { VRDB_GATES } from "../gates";
 import logger from "../../../../utils/logger/fileLogger";
@@ -41,7 +52,14 @@ import {
 } from "../lookup";
 import type { ReadThroughDeps } from "../readThrough";
 import { type ReadThroughSource, activeReadThroughs, vrdbSourceOf } from "../sources";
-import type { ReadThroughAnswer, ReadThroughOutcome, VrdbRow, VrdbSourceState } from "../types";
+import type {
+  ReadThroughAnswer,
+  ReadThroughOutcome,
+  VrdbLookupState,
+  VrdbRow,
+  VrdbSourceState,
+} from "../types";
+import { ACME_LEI } from "./helpers/lei";
 
 const NOW = new Date("2026-10-30T12:00:00Z");
 const HOUR_MS = 60 * 60 * 1000;
@@ -53,6 +71,286 @@ const ACME: ResearchTarget = {
   provides: "Analytics software",
 };
 const BOTH: readonly ResearchCategory[] = ["security_incidents", "legal_regulatory"];
+
+/**
+ * What the lookup needs to know of each of the 23 lists added on 2026-11-10,
+ * in the order of the registry: the category it serves (a run is asked for a list only when it researches
+ * that category), the type of its records, whether a record is an event (the lookback applies, the record
+ * keeps its day) or a state (offered whatever its age, as of the copy), the most records a run is given,
+ * and whether its records only describe (context only) or can raise a risk.
+ */
+interface NewList {
+  id: VrdbSourceId;
+  category: ResearchCategory;
+  recordType: string;
+  temporal: "event" | "state";
+  maxRecords: number;
+  contextOnly: boolean;
+}
+const NEW_LISTS: readonly NewList[] = [
+  {
+    id: "canada_sema",
+    category: "legal_regulatory",
+    recordType: "sanctions_entity",
+    temporal: "state",
+    maxRecords: 2,
+    contextOnly: false,
+  },
+  {
+    id: "california_breaches",
+    category: "security_incidents",
+    recordType: "breach_notice_summary",
+    temporal: "event",
+    maxRecords: 2,
+    contextOnly: false,
+  },
+  {
+    id: "uk_ofsi",
+    category: "legal_regulatory",
+    recordType: "sanctions_penalty_notice",
+    temporal: "event",
+    maxRecords: 1,
+    contextOnly: false,
+  },
+  {
+    id: "charlotin",
+    category: "ai_specific",
+    recordType: "hallucination_cases",
+    temporal: "event",
+    maxRecords: 2,
+    contextOnly: false,
+  },
+  {
+    id: "ftc_penalties",
+    category: "legal_regulatory",
+    recordType: "civil_penalty_summary",
+    temporal: "event",
+    maxRecords: 2,
+    contextOnly: false,
+  },
+  {
+    id: "piperoll",
+    category: "ai_specific",
+    recordType: "agent_incidents",
+    temporal: "event",
+    maxRecords: 1,
+    contextOnly: false,
+  },
+  {
+    id: "eu_dg_comp",
+    category: "legal_regulatory",
+    recordType: "eu_competition_cases",
+    temporal: "event",
+    maxRecords: 2,
+    contextOnly: false,
+  },
+  {
+    id: "disclose_io",
+    category: "security_incidents",
+    recordType: "disclosure_program",
+    temporal: "state",
+    maxRecords: 1,
+    contextOnly: true,
+  },
+  {
+    id: "uk_cma",
+    category: "legal_regulatory",
+    recordType: "competition_case_summary",
+    temporal: "event",
+    maxRecords: 1,
+    contextOnly: false,
+  },
+  {
+    id: "canada_ai_register",
+    category: "ai_specific",
+    recordType: "algorithm_register_supplier",
+    temporal: "state",
+    maxRecords: 1,
+    contextOnly: true,
+  },
+  {
+    id: "ftc_competition",
+    category: "legal_regulatory",
+    recordType: "competition_action_summary",
+    temporal: "event",
+    maxRecords: 2,
+    contextOnly: false,
+  },
+  {
+    id: "omb_ai_inventory",
+    category: "ai_specific",
+    recordType: "algorithm_register_supplier",
+    temporal: "state",
+    maxRecords: 1,
+    contextOnly: true,
+  },
+  {
+    id: "co_sic_penalties",
+    category: "legal_regulatory",
+    recordType: "consumer_sanction_summary",
+    temporal: "event",
+    maxRecords: 2,
+    contextOnly: false,
+  },
+  {
+    id: "uk_atrs",
+    category: "ai_specific",
+    recordType: "algorithm_register_supplier",
+    temporal: "state",
+    maxRecords: 1,
+    contextOnly: true,
+  },
+  {
+    id: "nhtsa_recalls",
+    category: "legal_regulatory",
+    recordType: "vehicle_recall_summary",
+    temporal: "event",
+    maxRecords: 2,
+    contextOnly: false,
+  },
+  {
+    id: "fmti",
+    category: "ai_specific",
+    recordType: "transparency_index_score",
+    temporal: "state",
+    maxRecords: 1,
+    contextOnly: true,
+  },
+  {
+    id: "uk_mhra",
+    category: "legal_regulatory",
+    recordType: "field_safety_notice_summary",
+    temporal: "event",
+    maxRecords: 1,
+    contextOnly: false,
+  },
+  {
+    id: "nl_algoritmeregister",
+    category: "ai_specific",
+    recordType: "algorithm_register_supplier",
+    temporal: "state",
+    maxRecords: 1,
+    contextOnly: true,
+  },
+  {
+    id: "nhtsa_odi",
+    category: "legal_regulatory",
+    recordType: "defect_investigations",
+    temporal: "event",
+    maxRecords: 2,
+    contextOnly: false,
+  },
+  {
+    id: "fedramp",
+    category: "certifications",
+    recordType: "cloud_authorization_status",
+    temporal: "state",
+    maxRecords: 2,
+    contextOnly: true,
+  },
+  {
+    id: "epoch_ai",
+    category: "ai_specific",
+    recordType: "ai_model_developer",
+    temporal: "state",
+    maxRecords: 1,
+    contextOnly: true,
+  },
+  {
+    id: "c2pa_conforming",
+    category: "certifications",
+    recordType: "c2pa_conformance",
+    temporal: "state",
+    maxRecords: 1,
+    contextOnly: true,
+  },
+  {
+    id: "gleif",
+    category: "financial_health",
+    recordType: "lei_record",
+    temporal: "state",
+    maxRecords: 1,
+    contextOnly: true,
+  },
+];
+
+/** Every list that is active by default (the UN list and the AI Incident Database wait), in the order of the registry. */
+const ACTIVE_IDS = [
+  "kev",
+  "nvd",
+  "sec",
+  "ofac",
+  "uk_sanctions",
+  "eu_fsf",
+  "cve",
+  "csl",
+  "atlas",
+  "nhtsa_sgo",
+  "fda_ai_devices",
+  "fda_device_recalls",
+  "canada_sema",
+  "california_breaches",
+  "uk_ofsi",
+  "charlotin",
+  "ftc_penalties",
+  "piperoll",
+  "eu_dg_comp",
+  "disclose_io",
+  "uk_cma",
+  "canada_ai_register",
+  "ftc_competition",
+  "omb_ai_inventory",
+  "co_sic_penalties",
+  "uk_atrs",
+  "nhtsa_recalls",
+  "fmti",
+  "uk_mhra",
+  "nl_algoritmeregister",
+  "nhtsa_odi",
+  "fedramp",
+  "epoch_ai",
+  "c2pa_conforming",
+  "gleif",
+] as const;
+/** The same with the AI Incident Database, once Q29 is open: it stands after the screening list. */
+const ACTIVE_IDS_WITH_AIID = [
+  "kev",
+  "nvd",
+  "sec",
+  "ofac",
+  "uk_sanctions",
+  "eu_fsf",
+  "cve",
+  "csl",
+  "aiid",
+  "atlas",
+  "nhtsa_sgo",
+  "fda_ai_devices",
+  "fda_device_recalls",
+  "canada_sema",
+  "california_breaches",
+  "uk_ofsi",
+  "charlotin",
+  "ftc_penalties",
+  "piperoll",
+  "eu_dg_comp",
+  "disclose_io",
+  "uk_cma",
+  "canada_ai_register",
+  "ftc_competition",
+  "omb_ai_inventory",
+  "co_sic_penalties",
+  "uk_atrs",
+  "nhtsa_recalls",
+  "fmti",
+  "uk_mhra",
+  "nl_algoritmeregister",
+  "nhtsa_odi",
+  "fedramp",
+  "epoch_ai",
+  "c2pa_conforming",
+  "gleif",
+] as const;
 
 let nextId = 1;
 const row = (overrides: Partial<VrdbRow> & Pick<VrdbRow, "sourceId">): VrdbRow => {
@@ -475,6 +773,194 @@ describe("offerRecords", () => {
         outcome: "not_researched",
         last_success_at: null,
       }),
+      // The 23 lists of 2026-11-10 follow, in the order of the registry. The twelve that serve
+      // legal_regulatory or security_incidents, which this run researches, were never copied: failed.
+      // The other eleven serve ai_specific, certifications and financial_health (GLEIF's, a list
+      // read through), which this run does not research: not researched.
+      expect.objectContaining({
+        id: "canada_sema",
+        mode: "mirror",
+        checked: false,
+        outcome: "failed",
+        last_success_at: null,
+        stale: false,
+      }),
+      expect.objectContaining({
+        id: "california_breaches",
+        mode: "mirror",
+        checked: false,
+        outcome: "failed",
+        last_success_at: null,
+        stale: false,
+      }),
+      expect.objectContaining({
+        id: "uk_ofsi",
+        mode: "mirror",
+        checked: false,
+        outcome: "failed",
+        last_success_at: null,
+        stale: false,
+      }),
+      expect.objectContaining({
+        id: "charlotin",
+        mode: "mirror",
+        checked: false,
+        outcome: "not_researched",
+        last_success_at: null,
+        stale: false,
+      }),
+      expect.objectContaining({
+        id: "ftc_penalties",
+        mode: "mirror",
+        checked: false,
+        outcome: "failed",
+        last_success_at: null,
+        stale: false,
+      }),
+      expect.objectContaining({
+        id: "piperoll",
+        mode: "mirror",
+        checked: false,
+        outcome: "not_researched",
+        last_success_at: null,
+        stale: false,
+      }),
+      expect.objectContaining({
+        id: "eu_dg_comp",
+        mode: "mirror",
+        checked: false,
+        outcome: "failed",
+        last_success_at: null,
+        stale: false,
+      }),
+      expect.objectContaining({
+        id: "disclose_io",
+        mode: "mirror",
+        checked: false,
+        outcome: "failed",
+        last_success_at: null,
+        stale: false,
+      }),
+      expect.objectContaining({
+        id: "uk_cma",
+        mode: "mirror",
+        checked: false,
+        outcome: "failed",
+        last_success_at: null,
+        stale: false,
+      }),
+      expect.objectContaining({
+        id: "canada_ai_register",
+        mode: "mirror",
+        checked: false,
+        outcome: "not_researched",
+        last_success_at: null,
+        stale: false,
+      }),
+      expect.objectContaining({
+        id: "ftc_competition",
+        mode: "mirror",
+        checked: false,
+        outcome: "failed",
+        last_success_at: null,
+        stale: false,
+      }),
+      expect.objectContaining({
+        id: "omb_ai_inventory",
+        mode: "mirror",
+        checked: false,
+        outcome: "not_researched",
+        last_success_at: null,
+        stale: false,
+      }),
+      expect.objectContaining({
+        id: "co_sic_penalties",
+        mode: "mirror",
+        checked: false,
+        outcome: "failed",
+        last_success_at: null,
+        stale: false,
+      }),
+      expect.objectContaining({
+        id: "uk_atrs",
+        mode: "mirror",
+        checked: false,
+        outcome: "not_researched",
+        last_success_at: null,
+        stale: false,
+      }),
+      expect.objectContaining({
+        id: "nhtsa_recalls",
+        mode: "mirror",
+        checked: false,
+        outcome: "failed",
+        last_success_at: null,
+        stale: false,
+      }),
+      expect.objectContaining({
+        id: "fmti",
+        mode: "mirror",
+        checked: false,
+        outcome: "not_researched",
+        last_success_at: null,
+        stale: false,
+      }),
+      expect.objectContaining({
+        id: "uk_mhra",
+        mode: "mirror",
+        checked: false,
+        outcome: "failed",
+        last_success_at: null,
+        stale: false,
+      }),
+      expect.objectContaining({
+        id: "nl_algoritmeregister",
+        mode: "mirror",
+        checked: false,
+        outcome: "not_researched",
+        last_success_at: null,
+        stale: false,
+      }),
+      expect.objectContaining({
+        id: "nhtsa_odi",
+        mode: "mirror",
+        checked: false,
+        outcome: "failed",
+        last_success_at: null,
+        stale: false,
+      }),
+      expect.objectContaining({
+        id: "fedramp",
+        mode: "mirror",
+        checked: false,
+        outcome: "not_researched",
+        last_success_at: null,
+        stale: false,
+      }),
+      expect.objectContaining({
+        id: "epoch_ai",
+        mode: "mirror",
+        checked: false,
+        outcome: "not_researched",
+        last_success_at: null,
+        stale: false,
+      }),
+      expect.objectContaining({
+        id: "c2pa_conforming",
+        mode: "mirror",
+        checked: false,
+        outcome: "not_researched",
+        last_success_at: null,
+        stale: false,
+      }),
+      expect.objectContaining({
+        id: "gleif",
+        mode: "read_through",
+        checked: false,
+        outcome: "not_researched",
+        last_success_at: null,
+        stale: false,
+      }),
     ]);
     expect(both.outcome.records.map((entry) => entry.source)).toEqual([
       "kev",
@@ -494,6 +980,30 @@ describe("offerRecords", () => {
       ["nhtsa_sgo", "not_researched"],
       ["fda_ai_devices", "not_researched"],
       ["fda_device_recalls", "not_researched"],
+      // The two new lists of security_incidents were never copied: failed; the rest are not researched.
+      ["canada_sema", "not_researched"],
+      ["california_breaches", "failed"],
+      ["uk_ofsi", "not_researched"],
+      ["charlotin", "not_researched"],
+      ["ftc_penalties", "not_researched"],
+      ["piperoll", "not_researched"],
+      ["eu_dg_comp", "not_researched"],
+      ["disclose_io", "failed"],
+      ["uk_cma", "not_researched"],
+      ["canada_ai_register", "not_researched"],
+      ["ftc_competition", "not_researched"],
+      ["omb_ai_inventory", "not_researched"],
+      ["co_sic_penalties", "not_researched"],
+      ["uk_atrs", "not_researched"],
+      ["nhtsa_recalls", "not_researched"],
+      ["fmti", "not_researched"],
+      ["uk_mhra", "not_researched"],
+      ["nl_algoritmeregister", "not_researched"],
+      ["nhtsa_odi", "not_researched"],
+      ["fedramp", "not_researched"],
+      ["epoch_ai", "not_researched"],
+      ["c2pa_conforming", "not_researched"],
+      ["gleif", "not_researched"],
     ]);
     expect(securityOnly.outcome.records.map((entry) => entry.source)).toEqual(["kev"]);
   });
@@ -543,21 +1053,11 @@ describe("offerRecords", () => {
     );
 
     // The UN list and the AI Incident Database have a copy and a match, and are not covered; the CVE
-    // records are, after the EU list, then the screening list, and the four open AI lists after them.
-    expect(result.outcome.coverage.map((entry) => entry.id)).toEqual([
-      "kev",
-      "nvd",
-      "sec",
-      "ofac",
-      "uk_sanctions",
-      "eu_fsf",
-      "cve",
-      "csl",
-      "atlas",
-      "nhtsa_sgo",
-      "fda_ai_devices",
-      "fda_device_recalls",
-    ]);
+    // records are, after the EU list, then the screening list, the four open AI lists after them, and
+    // the 23 lists of 2026-11-10 last. Those have no copy here: the ones of the three categories this
+    // run researches are failed and offer nothing, and certifications and financial_health are not
+    // researched.
+    expect(result.outcome.coverage.map((entry) => entry.id)).toEqual([...ACTIVE_IDS]);
     expect(result.outcome.records.map((entry) => entry.source)).toEqual([
       "kev",
       "ofac",
@@ -590,22 +1090,10 @@ describe("offerRecords", () => {
       researchable: ["security_incidents"],
     });
 
+    // Every list that is active says off, the 23 of 2026-11-10 and read-through GLEIF with them.
     expect(
       result.outcome.coverage.map((entry) => [entry.id, entry.outcome, entry.checked]),
-    ).toEqual([
-      ["kev", "off", false],
-      ["nvd", "off", false],
-      ["sec", "off", false],
-      ["ofac", "off", false],
-      ["uk_sanctions", "off", false],
-      ["eu_fsf", "off", false],
-      ["cve", "off", false],
-      ["csl", "off", false],
-      ["atlas", "off", false],
-      ["nhtsa_sgo", "off", false],
-      ["fda_ai_devices", "off", false],
-      ["fda_device_recalls", "off", false],
-    ]);
+    ).toEqual(ACTIVE_IDS.map((id) => [id, "off", false]));
     expect(result.outcome.records).toEqual([]);
     expect(result.matches).toEqual([]);
   });
@@ -1025,6 +1513,31 @@ describe("offerRecords: the AI-specific lists (spec D2.14 to D2.17, D2.20)", () 
       ["nhtsa_sgo", "none"],
       ["fda_ai_devices", "none"],
       ["fda_device_recalls", "none"],
+      // The eight new lists of ai_specific were never copied here: failed; the others of the 23
+      // serve other categories.
+      ["canada_sema", "not_researched"],
+      ["california_breaches", "not_researched"],
+      ["uk_ofsi", "not_researched"],
+      ["charlotin", "failed"],
+      ["ftc_penalties", "not_researched"],
+      ["piperoll", "failed"],
+      ["eu_dg_comp", "not_researched"],
+      ["disclose_io", "not_researched"],
+      ["uk_cma", "not_researched"],
+      ["canada_ai_register", "failed"],
+      ["ftc_competition", "not_researched"],
+      ["omb_ai_inventory", "failed"],
+      ["co_sic_penalties", "not_researched"],
+      ["uk_atrs", "failed"],
+      ["nhtsa_recalls", "not_researched"],
+      ["fmti", "failed"],
+      ["uk_mhra", "not_researched"],
+      ["nl_algoritmeregister", "failed"],
+      ["nhtsa_odi", "not_researched"],
+      ["fedramp", "not_researched"],
+      ["epoch_ai", "failed"],
+      ["c2pa_conforming", "not_researched"],
+      ["gleif", "not_researched"],
     ]);
     expect(result.outcome.records.map((entry) => entry.source)).toEqual([...AI_OPEN]);
   });
@@ -1093,17 +1606,7 @@ describe("offerRecords: the AI-specific lists (spec D2.14 to D2.17, D2.20)", () 
       const result = offerAi([incident("9101", "2026-08-03")], { states: STATES });
 
       expect(coverageOf(result, "aiid")).toBeUndefined();
-      expect(result.outcome.coverage.map((entry) => entry.id)).toEqual([
-        "kev",
-        "nvd",
-        "sec",
-        "ofac",
-        "uk_sanctions",
-        "eu_fsf",
-        "cve",
-        "csl",
-        ...AI_OPEN,
-      ]);
+      expect(result.outcome.coverage.map((entry) => entry.id)).toEqual([...ACTIVE_IDS]);
       expect(result.outcome.records.map((entry) => entry.source)).not.toContain("aiid");
       expect(result.matches).toEqual([]);
     });
@@ -1117,18 +1620,7 @@ describe("offerRecords: the AI-specific lists (spec D2.14 to D2.17, D2.20)", () 
         cutoffs,
       });
 
-      expect(result.outcome.coverage.map((entry) => entry.id)).toEqual([
-        "kev",
-        "nvd",
-        "sec",
-        "ofac",
-        "uk_sanctions",
-        "eu_fsf",
-        "cve",
-        "csl",
-        "aiid",
-        ...AI_OPEN,
-      ]);
+      expect(result.outcome.coverage.map((entry) => entry.id)).toEqual([...ACTIVE_IDS_WITH_AIID]);
       const [offered] = recordsOf(result, "aiid");
       expect(recordsOf(result, "aiid")).toHaveLength(1);
       expect(offered.vrdb).toMatchObject({
@@ -1477,6 +1969,543 @@ describe("offerRecords: the FDA device recalls (spec D2.20)", () => {
   });
 });
 
+describe("offerRecords: the 23 lists added on 2026-11-10", () => {
+  /** The morning of the day before NOW: when each list of these tests was last copied. */
+  const COPIED = new Date("2026-10-29T09:30:00Z");
+  const COPY_DAY = "2026-10-29";
+  const MIRROR_LISTS = NEW_LISTS.filter((list) => list.id !== "gleif");
+  const EVENT_LISTS = MIRROR_LISTS.filter((list) => list.temporal === "event");
+  const STATE_LISTS = MIRROR_LISTS.filter((list) => list.temporal === "state");
+
+  const listOf = (id: VrdbSourceId): NewList => {
+    const list = NEW_LISTS.find((entry) => entry.id === id);
+    if (list === undefined) throw new Error(`${id} is no list of 2026-11-10`);
+    return list;
+  };
+  const listRow = (
+    list: NewList,
+    sourceRecordId: string,
+    day: string | null,
+    overrides: Partial<VrdbRow> = {},
+  ) =>
+    row({
+      sourceId: list.id,
+      sourceRecordId,
+      recordType: list.recordType,
+      publishedAt: day,
+      ...overrides,
+    });
+  /** A run that researches the category of the list, which was copied on COPIED. */
+  const offerList = (
+    list: NewList,
+    rows: VrdbRow[],
+    overrides: Partial<Parameters<typeof offerRecords>[0]> = {},
+  ) =>
+    offer(rows, {
+      researchable: [list.category],
+      states: [...ALL_SYNCED, state(list.id, COPIED)],
+      ...overrides,
+    });
+  const cutoffOf = (category: ResearchCategory, day: string) => ({ [category]: day });
+
+  describe("a record that matched by the vendor's name alone", () => {
+    it("of an enforcement list is offered as weak with the lookup note, on the day of the action and as of the copy", () => {
+      // OFSI's monetary penalties: an event, dated by the day the penalty was imposed.
+      const list = listOf("uk_ofsi");
+      const result = offerList(list, [listRow(list, "OFSI-2025-07", "2025-07-14")]);
+
+      expect(recordsOf(result, "uk_ofsi")).toEqual([
+        {
+          url: "https://list.example/?uid=R1",
+          title: "Record 1",
+          text: `The text of record 1. ${NAME_ONLY_LOOKUP_NOTE} As of ${COPY_DAY}.`,
+          publishedAt: "2025-07-14",
+          vrdb: {
+            recordId: 1,
+            sourceId: "uk_ofsi",
+            sourceRecordId: "OFSI-2025-07",
+            strength: "weak",
+            method: "name_exact",
+            matchedKey: "name:acmeanalytics",
+            status: "active",
+            asOf: COPY_DAY,
+            stale: false,
+          },
+        },
+      ]);
+      expect(coverageOf(result, "uk_ofsi")).toMatchObject({
+        mode: "mirror",
+        checked: true,
+        outcome: "found",
+        strong: 0,
+        weak: 1,
+        last_success_at: COPIED.toISOString(),
+        stale: false,
+      });
+      // The match row keeps a method that the table of matches already has: no new one.
+      expect(result.matches).toEqual([
+        { recordId: 1, method: "name_exact", strength: "weak", matchedKey: "name:acmeanalytics" },
+      ]);
+    });
+
+    it.each(EVENT_LISTS)(
+      "$id offers an event on its own day: weak, with the lookup note, as of the copy",
+      (list) => {
+        const result = offerList(list, [listRow(list, "E-1", "2026-08-15")]);
+
+        const [record] = recordsOf(result, list.id);
+        expect(record.vrdb).toMatchObject({
+          sourceId: list.id,
+          sourceRecordId: "E-1",
+          strength: "weak",
+          method: "name_exact",
+          matchedKey: "name:acmeanalytics",
+          asOf: COPY_DAY,
+        });
+        // The day of the event, which is the day that the model reads: not the copy's.
+        expect(record.publishedAt).toBe("2026-08-15");
+        expect(record.text).toContain(NAME_ONLY_LOOKUP_NOTE);
+        expect(record.text).toMatch(/ As of 2026-10-29\.$/);
+        expect(coverageOf(result, list.id)).toMatchObject({
+          mode: "mirror",
+          checked: true,
+          outcome: "found",
+          strong: 0,
+          weak: 1,
+          last_success_at: COPIED.toISOString(),
+        });
+      },
+    );
+
+    it.each(STATE_LISTS)(
+      "$id offers a state as of the copy, whatever day its row holds: weak, with the lookup note",
+      (list) => {
+        const result = offerList(list, [listRow(list, "S-1", "2012-03-01")]);
+
+        const [record] = recordsOf(result, list.id);
+        expect(record.vrdb).toMatchObject({
+          sourceId: list.id,
+          sourceRecordId: "S-1",
+          strength: "weak",
+          method: "name_exact",
+          matchedKey: "name:acmeanalytics",
+          asOf: COPY_DAY,
+        });
+        // A state is as of the copy: the day its row holds is not the day it is shown by.
+        expect(record.publishedAt).toBe(COPY_DAY);
+        expect(record.text).toContain(NAME_ONLY_LOOKUP_NOTE);
+        expect(record.text).toMatch(/ As of 2026-10-29\.$/);
+        expect(coverageOf(result, list.id)).toMatchObject({
+          mode: "mirror",
+          checked: true,
+          outcome: "found",
+          strong: 0,
+          weak: 1,
+          last_success_at: COPIED.toISOString(),
+        });
+      },
+    );
+  });
+
+  describe("the lookback", () => {
+    /**
+     * The first day inside the lookback of each category that a new event list serves, and the day
+     * before it, on 2026-10-30: 24 months back for security_incidents and ai_specific, 36 for
+     * legal_regulatory.
+     */
+    const WINDOWS: Partial<Record<ResearchCategory, { first: string; before: string }>> = {
+      security_incidents: { first: "2024-10-30", before: "2024-10-29" },
+      legal_regulatory: { first: "2023-10-30", before: "2023-10-29" },
+      ai_specific: { first: "2024-10-30", before: "2024-10-29" },
+    };
+    const windowOf = (category: ResearchCategory) => {
+      const window = WINDOWS[category];
+      if (window === undefined) throw new Error(`no window of ${category}`);
+      return window;
+    };
+
+    it("opens the window of each category on the day its lookback says", () => {
+      for (const category of ["security_incidents", "legal_regulatory", "ai_specific"] as const) {
+        const { first, before } = windowOf(category);
+        expect(first).toBe(monthsBefore(NOW, LOOKBACK_MONTHS[category]));
+        expect(new Date(Date.parse(`${first}T00:00:00Z`) - 24 * HOUR_MS).toISOString()).toBe(
+          `${before}T00:00:00.000Z`,
+        );
+      }
+      expect([
+        LOOKBACK_MONTHS.security_incidents,
+        LOOKBACK_MONTHS.legal_regulatory,
+        LOOKBACK_MONTHS.ai_specific,
+      ]).toEqual([24, 36, 24]);
+    });
+
+    it.each(EVENT_LISTS)(
+      "$id counts an event of the day before the window as old and offers one of its first day",
+      (list) => {
+        const { first, before } = windowOf(list.category);
+        const result = offerList(
+          list,
+          [listRow(list, "E-OLD", before), listRow(list, "E-EDGE", first)],
+          { cutoffs: cutoffOf(list.category, first) },
+        );
+
+        expect(recordsOf(result, list.id).map((record) => record.vrdb.sourceRecordId)).toEqual([
+          "E-EDGE",
+        ]);
+        expect(omittedOf(result, list.id)).toEqual({ old: 1 });
+        // An old record is no match of the vendor.
+        expect(result.matches.map((match) => match.recordId)).toEqual([2]);
+        expect(coverageOf(result, list.id)).toMatchObject({ outcome: "found", weak: 1 });
+      },
+    );
+
+    it.each(EVENT_LISTS)(
+      "$id keeps an event that has no day: it is not shown to be old, and it is dated by the copy",
+      (list) => {
+        const { first } = windowOf(list.category);
+        const result = offerList(list, [listRow(list, "E-NODAY", null)], {
+          cutoffs: cutoffOf(list.category, first),
+        });
+
+        const [record] = recordsOf(result, list.id);
+        expect(record.vrdb.sourceRecordId).toBe("E-NODAY");
+        expect(record.publishedAt).toBe(COPY_DAY);
+        expect(omittedOf(result, list.id)).toEqual({});
+      },
+    );
+
+    it.each(STATE_LISTS)(
+      "$id offers a state whatever its age: no lookback leaves it out",
+      (list) => {
+        const result = offerList(list, [listRow(list, "S-OLD", "2009-05-04")], {
+          cutoffs: cutoffOf(list.category, "2025-10-30"),
+        });
+
+        expect(recordsOf(result, list.id).map((record) => record.vrdb.sourceRecordId)).toEqual([
+          "S-OLD",
+        ]);
+        expect(recordsOf(result, list.id)[0].publishedAt).toBe(COPY_DAY);
+        expect(omittedOf(result, list.id)).toEqual({});
+      },
+    );
+
+    it("a register is a state: an entry of Canada's sanctions list that stands since 2009 is offered, as the 36 months of legal_regulatory do not reach it", () => {
+      // Canada's sanctions list keeps the record type of the other sanctions lists, so it is a state
+      // as they are; OFSI's penalties of the same category are events and fall out of the same window.
+      const sema = listOf("canada_sema");
+      const ofsi = listOf("uk_ofsi");
+      const { first, before } = windowOf("legal_regulatory");
+      const result = offer(
+        [
+          listRow(sema, "sema:acmeanalytics", "2009-05-04"),
+          listRow(ofsi, "ofsi-2009", before),
+          listRow(ofsi, "ofsi-2024", first),
+        ],
+        {
+          researchable: ["legal_regulatory"],
+          states: [...ALL_SYNCED, state("canada_sema", COPIED), state("uk_ofsi", COPIED)],
+          cutoffs: { legal_regulatory: first },
+        },
+      );
+
+      expect(recordsOf(result, "canada_sema").map((record) => record.vrdb.sourceRecordId)).toEqual([
+        "sema:acmeanalytics",
+      ]);
+      expect(recordsOf(result, "canada_sema")[0].publishedAt).toBe(COPY_DAY);
+      expect(omittedOf(result, "canada_sema")).toEqual({});
+      expect(recordsOf(result, "uk_ofsi").map((record) => record.vrdb.sourceRecordId)).toEqual([
+        "ofsi-2024",
+      ]);
+      expect(omittedOf(result, "uk_ofsi")).toEqual({ old: 1 });
+    });
+  });
+
+  describe("the most records a run is given of a list", () => {
+    /**
+     * Rows dated in order, one more than the cap: the newest come first, and the oldest that does not fit
+     * is counted as more. By the cap of the list: the ids it gives and the rows that are matches.
+     */
+    const NEWEST_FIRST: Record<number, { ids: string[]; matches: number[] }> = {
+      1: { ids: ["N-2"], matches: [2] },
+      2: { ids: ["N-3", "N-2"], matches: [3, 2] },
+    };
+
+    it.each(MIRROR_LISTS)(
+      "$id gives $maxRecords at most, the newest first, and counts the rest as more",
+      (list) => {
+        const rows = Array.from({ length: list.maxRecords + 1 }, (_, index) =>
+          listRow(list, `N-${index + 1}`, `2026-0${index + 1}-01`),
+        );
+
+        const result = offerList(list, rows);
+
+        const expected = NEWEST_FIRST[list.maxRecords];
+        expect(recordsOf(result, list.id).map((record) => record.vrdb.sourceRecordId)).toEqual(
+          expected.ids,
+        );
+        expect(omittedOf(result, list.id)).toEqual({ more: 1 });
+        expect(result.matches.map((match) => match.recordId)).toEqual(expected.matches);
+      },
+    );
+  });
+
+  describe("a list whose records only describe (context only)", () => {
+    it.each(MIRROR_LISTS)(
+      "$id: its records are offered like any other, and its list is marked context only: $contextOnly",
+      (list) => {
+        const result = offerList(list, [listRow(list, "C-1", "2026-08-15")]);
+
+        // Offered whole, never held back for being context only.
+        const [record] = recordsOf(result, list.id);
+        expect(record.vrdb).toMatchObject({ sourceId: list.id, strength: "weak" });
+        expect(record.text).toContain(NAME_ONLY_LOOKUP_NOTE);
+        expect(coverageOf(result, list.id)).toMatchObject({ outcome: "found", weak: 1 });
+        // What marks them is their list: the evidence pack and the credibility rules read the
+        // source of a record against CONTEXT_ONLY_RECORD_SOURCES.
+        expect(CONTEXT_ONLY_RECORD_SOURCES.has(list.id)).toBe(list.contextOnly);
+      },
+    );
+
+    it("puts no mark on the record itself: it is the same shape for a list that raises a risk and one that does not", () => {
+      const raising = listOf("uk_ofsi");
+      const describing = listOf("fedramp");
+      const result = offer(
+        [listRow(raising, "R-1", "2026-08-15"), listRow(describing, "D-1", "2026-08-15")],
+        {
+          researchable: ["legal_regulatory", "certifications"],
+          states: [...ALL_SYNCED, state("uk_ofsi", COPIED), state("fedramp", COPIED)],
+        },
+      );
+
+      const [raisingRecord] = recordsOf(result, "uk_ofsi");
+      const [describingRecord] = recordsOf(result, "fedramp");
+      expect(Object.keys(raisingRecord).sort()).toEqual([
+        "publishedAt",
+        "text",
+        "title",
+        "url",
+        "vrdb",
+      ]);
+      expect(Object.keys(describingRecord).sort()).toEqual(Object.keys(raisingRecord).sort());
+      expect(Object.keys(describingRecord.vrdb).sort()).toEqual(
+        Object.keys(raisingRecord.vrdb).sort(),
+      );
+      expect(CONTEXT_ONLY_RECORD_SOURCES.has("uk_ofsi")).toBe(false);
+      expect(CONTEXT_ONLY_RECORD_SOURCES.has("fedramp")).toBe(true);
+    });
+  });
+
+  it("gives the records and the coverage of the 23 lists after those of the shipped lists, in the order of the registry", () => {
+    const rows = [
+      ...MIRROR_LISTS.map((list) => listRow(list, "O-1", "2026-08-15")),
+      row({
+        sourceId: "gleif",
+        sourceRecordId: `gleif:${ACME_LEI}`,
+        recordType: "lei_record",
+        matchKeys: [`lei:${ACME_LEI}`],
+      }),
+    ];
+    const gleifAnswer: ReadThroughOutcome = {
+      key: `lei:${ACME_LEI}`,
+      weak: false,
+      outcome: "fetched",
+      fetchedAt: COPIED,
+    };
+    const result = offer(rows, {
+      researchable: RESEARCH_CATEGORIES,
+      // Only the new lists were copied here: the shipped ones have no copy and offer nothing.
+      states: MIRROR_LISTS.map((list) => state(list.id, COPIED)),
+      readThrough: new Map<VrdbSourceId, ReadThroughOutcome>([["gleif", gleifAnswer]]),
+    });
+
+    expect(result.outcome.records.map((entry) => entry.source)).toEqual(
+      NEW_LISTS.map((list) => list.id),
+    );
+    expect(
+      result.outcome.coverage.slice(-NEW_LISTS.length).map((entry) => [entry.id, entry.outcome]),
+    ).toEqual(NEW_LISTS.map((list) => [list.id, "found"]));
+    expect(result.matches).toHaveLength(23);
+  });
+
+  describe("a vendor with no website", () => {
+    const NO_SITE: ResearchTarget = { ...ACME, domain: null };
+    /** The new lists of the two categories that read the vendor's own pages (certifications and ai_specific). */
+    const SITE_LIST_IDS = [
+      "charlotin",
+      "piperoll",
+      "canada_ai_register",
+      "omb_ai_inventory",
+      "uk_atrs",
+      "fmti",
+      "nl_algoritmeregister",
+      "fedramp",
+      "epoch_ai",
+      "c2pa_conforming",
+    ] as const;
+    const readsSite = (list: NewList) =>
+      list.category === "certifications" || list.category === "ai_specific";
+    const SITE_LISTS = MIRROR_LISTS.filter(readsSite);
+    const OTHER_LISTS = MIRROR_LISTS.filter((list) => !readsSite(list));
+
+    it("is researched in the four categories that search the news, not in the two that read the vendor's own pages", () => {
+      expect([...SITE_CATEGORIES]).toEqual(["certifications", "ai_specific"]);
+      expect(researchableCategories(NO_SITE)).toEqual([
+        "security_incidents",
+        "legal_regulatory",
+        "availability",
+        "financial_health",
+      ]);
+      expect(researchableCategories(ACME)).toEqual([...RESEARCH_CATEGORIES]);
+      // The eight AI lists and the two of certifications; the other twelve copied lists are asked.
+      expect(SITE_LISTS.map((list) => list.id)).toEqual([...SITE_LIST_IDS]);
+      expect(SITE_LISTS).toHaveLength(10);
+      expect(OTHER_LISTS).toHaveLength(12);
+    });
+
+    it("is not researched in the lists of those two categories, whatever the store holds, and is in the others", () => {
+      const rows = MIRROR_LISTS.map((list) => listRow(list, "W-1", "2026-08-15"));
+      const states = MIRROR_LISTS.map((list) => state(list.id, COPIED));
+
+      const without = offer(rows, {
+        target: NO_SITE,
+        verifiedDomains: [],
+        researchable: researchableCategories(NO_SITE),
+        states,
+      });
+      const withSite = offer(rows, { researchable: researchableCategories(ACME), states });
+
+      for (const list of SITE_LISTS) {
+        expect(coverageOf(without, list.id)).toMatchObject({
+          checked: false,
+          outcome: "not_researched",
+          strong: 0,
+          weak: 0,
+        });
+        expect(recordsOf(without, list.id)).toEqual([]);
+        expect(coverageOf(withSite, list.id)).toMatchObject({ checked: true, outcome: "found" });
+      }
+      for (const list of OTHER_LISTS) {
+        expect(coverageOf(without, list.id)).toMatchObject({ checked: true, outcome: "found" });
+        expect(coverageOf(withSite, list.id)).toMatchObject({ checked: true, outcome: "found" });
+      }
+      // Only the lists of the four categories offered a record, and only they are matches.
+      expect(without.outcome.records.map((entry) => entry.source)).toEqual(
+        OTHER_LISTS.map((list) => list.id),
+      );
+      expect(without.matches).toHaveLength(OTHER_LISTS.length);
+      expect(withSite.matches).toHaveLength(MIRROR_LISTS.length);
+    });
+  });
+});
+
+describe("offerRecords: GLEIF, the one list of the 23 that is read through", () => {
+  const LEI_KEY = `lei:${ACME_LEI}`;
+  const WITH_LEI: ResearchTarget = { ...ACME, identifiers: { lei: ACME_LEI } };
+  const gleifRow = (overrides: Partial<VrdbRow> = {}) =>
+    row({
+      sourceId: "gleif",
+      sourceRecordId: `gleif:${ACME_LEI}`,
+      recordType: "lei_record",
+      matchKeys: [LEI_KEY],
+      publishedAt: "2026-09-12",
+      ...overrides,
+    });
+  const answered = (
+    outcome: ReadThroughOutcome["outcome"],
+    fetchedAt: Date | null,
+    key: string | null = LEI_KEY,
+  ) => new Map([["gleif" as const, { key, weak: false, outcome, fetchedAt }]]);
+  const offerGleif = (
+    rows: VrdbRow[],
+    readThrough: ReturnType<typeof answered>,
+    overrides: Partial<Parameters<typeof offerRecords>[0]> = {},
+  ) =>
+    offer(rows, {
+      target: WITH_LEI,
+      researchable: ["financial_health"],
+      readThrough,
+      ...overrides,
+    });
+
+  it("offers the record of the vendor's stored LEI as a strong match by that LEI, with no lookup note, as of the answer", () => {
+    const result = offerGleif([gleifRow()], answered("fetched", NOW));
+
+    const [record] = recordsOf(result, "gleif");
+    expect(record.vrdb).toMatchObject({
+      sourceId: "gleif",
+      sourceRecordId: `gleif:${ACME_LEI}`,
+      strength: "strong",
+      method: "identifier",
+      matchedKey: LEI_KEY,
+      asOf: "2026-10-30",
+    });
+    // A state: the day of the answer, not the day the registration was last updated.
+    expect(record.publishedAt).toBe("2026-10-30");
+    expect(record.text).not.toContain(NAME_ONLY_LOOKUP_NOTE);
+    expect(record.text).toMatch(/ As of 2026-10-30\.$/);
+    expect(coverageOf(result, "gleif")).toMatchObject({
+      mode: "read_through",
+      checked: true,
+      outcome: "found",
+      strong: 1,
+      weak: 0,
+      last_success_at: NOW.toISOString(),
+      stale: false,
+    });
+    expect(result.matches).toEqual([
+      { recordId: 1, method: "identifier", strength: "strong", matchedKey: LEI_KEY },
+    ]);
+  });
+
+  it("is not researched for a vendor with no stored LEI, whatever record the store holds", () => {
+    const result = offerGleif([gleifRow()], answered("no_key", null, null), { target: ACME });
+
+    expect(recordsOf(result, "gleif")).toEqual([]);
+    expect(result.outcome.records).toEqual([]);
+    expect(coverageOf(result, "gleif")).toMatchObject({
+      mode: "read_through",
+      checked: false,
+      outcome: "not_researched",
+      last_success_at: null,
+    });
+    expect(result.matches).toEqual([]);
+  });
+
+  it("is not researched either when the run asked nothing of it", () => {
+    const result = offerGleif([gleifRow()], new Map());
+
+    expect(coverageOf(result, "gleif")).toMatchObject({
+      checked: false,
+      outcome: "not_researched",
+    });
+    expect(result.outcome.records).toEqual([]);
+  });
+
+  it("marks an answer stale after 48 hours, as it does a list", () => {
+    const fresh = offerGleif([gleifRow()], answered("fresh", hoursAgo(47)));
+    const stale = offerGleif([gleifRow()], answered("fresh", hoursAgo(49)));
+
+    expect(coverageOf(fresh, "gleif")).toMatchObject({ outcome: "found", stale: false });
+    expect(coverageOf(stale, "gleif")).toMatchObject({ outcome: "found", stale: true });
+    expect(recordsOf(stale, "gleif")[0].vrdb.stale).toBe(true);
+  });
+
+  it("gives one record at most and counts the other as more", () => {
+    const result = offerGleif(
+      [
+        gleifRow({ sourceRecordId: "gleif:A", publishedAt: "2026-01-01" }),
+        gleifRow({ sourceRecordId: "gleif:B", publishedAt: "2026-02-01" }),
+      ],
+      answered("fetched", NOW),
+    );
+
+    expect(recordsOf(result, "gleif").map((record) => record.vrdb.sourceRecordId)).toEqual([
+      "gleif:B",
+    ]);
+    expect(omittedOf(result, "gleif")).toEqual({ more: 1 });
+  });
+});
+
 /** A store in memory that answers with the given rows and states, and keeps what it was asked. */
 function fakeStore(rows: VrdbRow[] = [], states: VrdbSourceState[] = ALL_SYNCED) {
   const store: jest.Mocked<LookupStore> = {
@@ -1507,18 +2536,51 @@ describe("createVrdbLookup", () => {
 
     // The records of the NVD and the SEC are stored too; their state is the answer of their key, not
     // a sync.
-    expect(store.sourceStates).toHaveBeenCalledWith(["kev", "cve"]);
-    expect(store.findRecords).toHaveBeenCalledWith(expect.any(Array), ["kev", "nvd", "sec", "cve"]);
+    expect(store.sourceStates).toHaveBeenCalledWith([
+      "kev",
+      "cve",
+      // The two lists of 2026-11-10 that serve security_incidents.
+      "california_breaches",
+      "disclose_io",
+    ]);
+    expect(store.findRecords).toHaveBeenCalledWith(expect.any(Array), [
+      "kev",
+      "nvd",
+      "sec",
+      "cve",
+      "california_breaches",
+      "disclose_io",
+    ]);
   });
 
-  it("reads the states and records of the four open AI lists for ai_specific, and never the AI Incident Database while Q29 is closed", async () => {
+  it("reads the states and records of the four open AI lists and the eight of 2026-11-10 for ai_specific, and never the AI Incident Database while Q29 is closed", async () => {
     const store = fakeStore();
     const lookup = createVrdbLookup({ store, organizationId: 1, vendorId: 2, enabled: true });
 
     await lookup({ ...lookupInput(), researchable: ["ai_specific"] });
 
-    expect(store.sourceStates).toHaveBeenCalledWith([...AI_OPEN]);
-    expect(store.findRecords).toHaveBeenCalledWith(expect.any(Array), [...AI_OPEN]);
+    expect(store.sourceStates).toHaveBeenCalledWith([
+      ...AI_OPEN,
+      "charlotin",
+      "piperoll",
+      "canada_ai_register",
+      "omb_ai_inventory",
+      "uk_atrs",
+      "fmti",
+      "nl_algoritmeregister",
+      "epoch_ai",
+    ]);
+    expect(store.findRecords).toHaveBeenCalledWith(expect.any(Array), [
+      ...AI_OPEN,
+      "charlotin",
+      "piperoll",
+      "canada_ai_register",
+      "omb_ai_inventory",
+      "uk_atrs",
+      "fmti",
+      "nl_algoritmeregister",
+      "epoch_ai",
+    ]);
   });
 
   it("writes one weak match row per AI record it offers, and none for the AI Incident Database", async () => {
@@ -1557,12 +2619,38 @@ describe("createVrdbLookup", () => {
 
     await lookup({ ...lookupInput(), researchable: ["legal_regulatory"] });
 
-    expect(store.sourceStates).toHaveBeenCalledWith(["ofac", "uk_sanctions", "eu_fsf", "csl"]);
+    expect(store.sourceStates).toHaveBeenCalledWith([
+      "ofac",
+      "uk_sanctions",
+      "eu_fsf",
+      "csl",
+      // The ten lists of 2026-11-10 that serve legal_regulatory.
+      "canada_sema",
+      "uk_ofsi",
+      "ftc_penalties",
+      "eu_dg_comp",
+      "uk_cma",
+      "ftc_competition",
+      "co_sic_penalties",
+      "nhtsa_recalls",
+      "uk_mhra",
+      "nhtsa_odi",
+    ]);
     expect(store.findRecords).toHaveBeenCalledWith(expect.any(Array), [
       "ofac",
       "uk_sanctions",
       "eu_fsf",
       "csl",
+      "canada_sema",
+      "uk_ofsi",
+      "ftc_penalties",
+      "eu_dg_comp",
+      "uk_cma",
+      "ftc_competition",
+      "co_sic_penalties",
+      "nhtsa_recalls",
+      "uk_mhra",
+      "nhtsa_odi",
     ]);
   });
 
@@ -1684,6 +2772,30 @@ describe("createVrdbLookup", () => {
       ["nhtsa_sgo", "not_researched"],
       ["fda_ai_devices", "not_researched"],
       ["fda_device_recalls", "not_researched"],
+      // The ten new lists of legal_regulatory fail with the store; the others are not researched.
+      ["canada_sema", "failed"],
+      ["california_breaches", "not_researched"],
+      ["uk_ofsi", "failed"],
+      ["charlotin", "not_researched"],
+      ["ftc_penalties", "failed"],
+      ["piperoll", "not_researched"],
+      ["eu_dg_comp", "failed"],
+      ["disclose_io", "not_researched"],
+      ["uk_cma", "failed"],
+      ["canada_ai_register", "not_researched"],
+      ["ftc_competition", "failed"],
+      ["omb_ai_inventory", "not_researched"],
+      ["co_sic_penalties", "failed"],
+      ["uk_atrs", "not_researched"],
+      ["nhtsa_recalls", "failed"],
+      ["fmti", "not_researched"],
+      ["uk_mhra", "failed"],
+      ["nl_algoritmeregister", "not_researched"],
+      ["nhtsa_odi", "failed"],
+      ["fedramp", "not_researched"],
+      ["epoch_ai", "not_researched"],
+      ["c2pa_conforming", "not_researched"],
+      ["gleif", "not_researched"],
     ]);
     expect(store.recordMatches).not.toHaveBeenCalled();
   });
@@ -1788,6 +2900,30 @@ describe("createVrdbLookup", () => {
       ["nhtsa_sgo", "not_researched"],
       ["fda_ai_devices", "not_researched"],
       ["fda_device_recalls", "not_researched"],
+      // The two new lists of security_incidents fail with the store; the others are not researched.
+      ["canada_sema", "not_researched"],
+      ["california_breaches", "failed"],
+      ["uk_ofsi", "not_researched"],
+      ["charlotin", "not_researched"],
+      ["ftc_penalties", "not_researched"],
+      ["piperoll", "not_researched"],
+      ["eu_dg_comp", "not_researched"],
+      ["disclose_io", "failed"],
+      ["uk_cma", "not_researched"],
+      ["canada_ai_register", "not_researched"],
+      ["ftc_competition", "not_researched"],
+      ["omb_ai_inventory", "not_researched"],
+      ["co_sic_penalties", "not_researched"],
+      ["uk_atrs", "not_researched"],
+      ["nhtsa_recalls", "not_researched"],
+      ["fmti", "not_researched"],
+      ["uk_mhra", "not_researched"],
+      ["nl_algoritmeregister", "not_researched"],
+      ["nhtsa_odi", "not_researched"],
+      ["fedramp", "not_researched"],
+      ["epoch_ai", "not_researched"],
+      ["c2pa_conforming", "not_researched"],
+      ["gleif", "not_researched"],
     ]);
   });
 
@@ -1800,6 +2936,233 @@ describe("createVrdbLookup", () => {
     expect(outcome.coverage.every((entry) => entry.outcome === "off")).toBe(true);
     expect(store.sourceStates).not.toHaveBeenCalled();
     expect(store.findRecords).not.toHaveBeenCalled();
+  });
+});
+
+describe("createVrdbLookup: the 23 lists added on 2026-11-10", () => {
+  describe("GLEIF, asked only for a vendor with a stored LEI", () => {
+    const LEI_KEY = `lei:${ACME_LEI}`;
+    const WITH_LEI: ResearchTarget = { ...ACME, identifiers: { lei: ACME_LEI } };
+    /** An LEI whose check digits are wrong: its last digit is changed. */
+    const WRONG_CHECK_DIGITS = `${ACME_LEI.slice(0, -1)}${ACME_LEI.endsWith("0") ? "1" : "0"}`;
+    /** GLEIF's answer to a filter by an LEI it does not know: 200, a total of 0 and no entry. */
+    const UNKNOWN_LEI_ANSWER = { data: [], meta: { pagination: { total: 0 } } };
+
+    const gleifRow = () =>
+      row({
+        sourceId: "gleif",
+        sourceRecordId: `gleif:${ACME_LEI}`,
+        recordType: "lei_record",
+        matchKeys: [LEI_KEY],
+        publishedAt: "2026-09-12",
+      });
+    /** The read-through of a run with GLEIF's own connector, and the stored answer for the key, if any. */
+    const gleifRead = (stored: VrdbLookupState | null = null) => {
+      const fetchJson = jest.fn<ReturnType<FetchJson>, Parameters<FetchJson>>(
+        async () => UNKNOWN_LEI_ANSWER,
+      );
+      const lookupOf = jest.fn(async (_source: VrdbSourceId, _key: string) => stored);
+      const saveAnswer = jest.fn(async () => ({ statusChanged: 0 }));
+      const deps: ReadThroughDeps = {
+        store: { lookupOf, saveAnswer },
+        connectors: { gleif: gleifConnector },
+        fetchJson,
+        spacers: {},
+      };
+      return { deps, fetchJson, lookupOf, saveAnswer };
+    };
+    /** A run that researches financial_health, the category of GLEIF, for the target. */
+    const researchFinancialHealth = async (
+      target: ResearchTarget,
+      deps: ReadThroughDeps,
+      rows: VrdbRow[] = [],
+    ) => {
+      const store = fakeStore(rows, []);
+      const lookup = createVrdbLookup({
+        store,
+        organizationId: 1,
+        vendorId: 2,
+        enabled: true,
+        readThrough: deps,
+      });
+      const outcome = await lookup({ ...lookupInput(target), researchable: ["financial_health"] });
+      return { store, outcome };
+    };
+
+    it("asks GLEIF once, by the stored LEI of the vendor, and keeps the answer for 24 hours", async () => {
+      const { deps, fetchJson, lookupOf, saveAnswer } = gleifRead();
+
+      await researchFinancialHealth(WITH_LEI, deps);
+
+      expect(lookupOf).toHaveBeenCalledTimes(1);
+      expect(lookupOf).toHaveBeenCalledWith("gleif", LEI_KEY);
+      expect(fetchJson).toHaveBeenCalledTimes(1);
+      expect(fetchJson).toHaveBeenCalledWith(
+        `https://api.gleif.org/api/v1/lei-records?filter[lei]=${ACME_LEI}`,
+        expect.objectContaining({ maxBytes: 131072 }),
+      );
+      expect(saveAnswer).toHaveBeenCalledTimes(1);
+      expect(saveAnswer).toHaveBeenCalledWith(
+        expect.objectContaining({
+          definition: expect.objectContaining({ id: "gleif", ttlHours: 24 }),
+          key: LEI_KEY,
+          records: [],
+          outcome: "empty",
+          at: NOW,
+          expiresAt: new Date(NOW.getTime() + 24 * HOUR_MS),
+        }),
+      );
+    });
+
+    it("offers the stored record of the LEI as a strong match, without a request while the answer is fresh", async () => {
+      const stored: VrdbLookupState = {
+        fetchedAt: hoursAgo(5),
+        expiresAt: new Date(NOW.getTime() + 19 * HOUR_MS),
+        outcome: "ok",
+      };
+      const { deps, fetchJson, saveAnswer } = gleifRead(stored);
+
+      const { store, outcome } = await researchFinancialHealth(WITH_LEI, deps, [gleifRow()]);
+
+      expect(fetchJson).not.toHaveBeenCalled();
+      expect(saveAnswer).not.toHaveBeenCalled();
+      // The records of the list are looked up by the vendor's keys, the LEI among them.
+      expect(store.sourceStates).toHaveBeenCalledWith([]);
+      expect(store.findRecords.mock.calls[0][0]).toContain(LEI_KEY);
+      expect(store.findRecords.mock.calls[0][1]).toEqual(["gleif"]);
+      expect(outcome.records).toEqual([
+        {
+          source: "gleif",
+          records: [
+            expect.objectContaining({
+              vrdb: expect.objectContaining({
+                sourceId: "gleif",
+                strength: "strong",
+                method: "identifier",
+                matchedKey: LEI_KEY,
+              }),
+            }),
+          ],
+          omitted: {},
+        },
+      ]);
+      expect(outcome.coverage.find((entry) => entry.id === "gleif")).toMatchObject({
+        mode: "read_through",
+        checked: true,
+        outcome: "found",
+        strong: 1,
+        weak: 0,
+        last_success_at: hoursAgo(5).toISOString(),
+        stale: false,
+      });
+    });
+
+    it.each([
+      ["has no identifier", ACME],
+      [
+        "has a registration number and no LEI",
+        { ...ACME, identifiers: { registrationNumber: "HRB 12345 B" } },
+      ],
+      [
+        "has an LEI that fails its check digits",
+        { ...ACME, identifiers: { lei: WRONG_CHECK_DIGITS } },
+      ],
+    ])(
+      "does not ask for a vendor that %s: GLEIF is not researched, and nothing is read, fetched or stored for it",
+      async (_name, target: ResearchTarget) => {
+        const { deps, fetchJson, lookupOf, saveAnswer } = gleifRead();
+
+        // The store holds the LEI record of another entity, which must not be offered to this vendor.
+        const { store, outcome } = await researchFinancialHealth(target, deps, [gleifRow()]);
+
+        expect(lookupOf).not.toHaveBeenCalled();
+        expect(fetchJson).not.toHaveBeenCalled();
+        expect(saveAnswer).not.toHaveBeenCalled();
+        expect(outcome.records).toEqual([]);
+        expect(outcome.coverage.find((entry) => entry.id === "gleif")).toMatchObject({
+          mode: "read_through",
+          checked: false,
+          outcome: "not_researched",
+          last_success_at: null,
+        });
+        expect(store.recordMatches).not.toHaveBeenCalled();
+      },
+    );
+
+    it("does not ask for the lists of financial_health when the run does not research it", async () => {
+      const { deps, fetchJson, lookupOf } = gleifRead();
+      const store = fakeStore();
+      const lookup = createVrdbLookup({
+        store,
+        organizationId: 1,
+        vendorId: 2,
+        enabled: true,
+        readThrough: deps,
+      });
+
+      const outcome = await lookup({ ...lookupInput(WITH_LEI), researchable: BOTH });
+
+      expect(lookupOf).not.toHaveBeenCalled();
+      expect(fetchJson).not.toHaveBeenCalled();
+      expect(outcome.coverage.find((entry) => entry.id === "gleif")).toMatchObject({
+        checked: false,
+        outcome: "not_researched",
+      });
+    });
+  });
+
+  describe("a vendor with no website", () => {
+    it("reads the states and records of the lists of the four categories that search the news, and none of the ten lists of certifications and ai_specific", async () => {
+      const NO_SITE: ResearchTarget = { ...ACME, domain: null };
+      const store = fakeStore();
+      const lookup = createVrdbLookup({ store, organizationId: 1, vendorId: 2, enabled: true });
+
+      await lookup({ ...lookupInput(NO_SITE), researchable: researchableCategories(NO_SITE) });
+
+      expect(store.sourceStates).toHaveBeenCalledWith([
+        "kev",
+        "ofac",
+        "uk_sanctions",
+        "eu_fsf",
+        "cve",
+        "csl",
+        "canada_sema",
+        "california_breaches",
+        "uk_ofsi",
+        "ftc_penalties",
+        "eu_dg_comp",
+        "disclose_io",
+        "uk_cma",
+        "ftc_competition",
+        "co_sic_penalties",
+        "nhtsa_recalls",
+        "uk_mhra",
+        "nhtsa_odi",
+      ]);
+      expect(store.findRecords).toHaveBeenCalledWith(expect.any(Array), [
+        "kev",
+        "nvd",
+        "sec",
+        "ofac",
+        "uk_sanctions",
+        "eu_fsf",
+        "cve",
+        "csl",
+        "canada_sema",
+        "california_breaches",
+        "uk_ofsi",
+        "ftc_penalties",
+        "eu_dg_comp",
+        "disclose_io",
+        "uk_cma",
+        "ftc_competition",
+        "co_sic_penalties",
+        "nhtsa_recalls",
+        "uk_mhra",
+        "nhtsa_odi",
+        "gleif",
+      ]);
+    });
   });
 });
 

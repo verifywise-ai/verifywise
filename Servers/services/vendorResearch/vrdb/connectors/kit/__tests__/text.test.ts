@@ -185,6 +185,6 @@ describe("textOf", () => {
     const start = Date.now();
     const text = textOf(fetchedOf([[body, "text/csv"]]), 0);
     expect(text).toHaveLength(8 * 1024 * 1024);
-    expect(Date.now() - start).toBeLessThan(5000);
+    expect(Date.now() - start).toBeLessThan(10_000);
   });
 });

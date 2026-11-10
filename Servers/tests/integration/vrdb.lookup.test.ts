@@ -240,6 +240,32 @@ describe("the lookup of a vendor, in the database", () => {
       ["nhtsa_sgo", "not_researched"],
       ["fda_ai_devices", "not_researched"],
       ["fda_device_recalls", "not_researched"],
+      // The 23 lists of 2026-11-10 follow, in the order of the registry: the ones that serve
+      // security_incidents or legal_regulatory were never copied here, so failed; the others serve
+      // categories this run does not research, and GLEIF, read through, has no connector here.
+      ["canada_sema", "failed"],
+      ["california_breaches", "failed"],
+      ["uk_ofsi", "failed"],
+      ["charlotin", "not_researched"],
+      ["ftc_penalties", "failed"],
+      ["piperoll", "not_researched"],
+      ["eu_dg_comp", "failed"],
+      ["disclose_io", "failed"],
+      ["uk_cma", "failed"],
+      ["canada_ai_register", "not_researched"],
+      ["ftc_competition", "failed"],
+      ["omb_ai_inventory", "not_researched"],
+      ["co_sic_penalties", "failed"],
+      ["uk_atrs", "not_researched"],
+      ["nhtsa_recalls", "failed"],
+      ["fmti", "not_researched"],
+      ["uk_mhra", "failed"],
+      ["nl_algoritmeregister", "not_researched"],
+      ["nhtsa_odi", "failed"],
+      ["fedramp", "not_researched"],
+      ["epoch_ai", "not_researched"],
+      ["c2pa_conforming", "not_researched"],
+      ["gleif", "not_researched"],
     ]);
     expect(await matchRows()).toEqual([
       expect.objectContaining({

@@ -1,12 +1,13 @@
 /**
  * The FDA recalls connector (spec D2.20, Q34): the recalls of the devices on the FDA list of
  * AI-enabled medical devices, as one record of the vendor risk database for each recall event.
- * Nothing here reaches a network: a stub `ConnectorFetch` plays openFDA (the probe, the search by
- * `k_numbers` and `pma_numbers` with its paging, a 404 for a search that finds nothing) and the
- * FDA's list. The fixtures are written from the schema of the real answers, with fictional firms,
- * devices and numbers. Every field that must stay out of a record carries the marker ZZPRIVATE, so
- * that a test can prove that none of them reaches one. The wait between requests goes through an
- * injected `sleep`, so that no test waits.
+ * Nothing here reaches a network: a stub `ConnectorFetch` plays openFDA (the probe of the recalls
+ * and the probe of the enforcement reports, the search by `k_numbers` and `pma_numbers` with its
+ * paging, the search of the enforcement reports by `recall_number` that gives the class of a
+ * recall, a 404 for a search that finds nothing) and the FDA's list. The fixtures are written from
+ * the schema of the real answers, with fictional firms, devices and numbers. Every field that must
+ * stay out of a record carries the marker ZZPRIVATE, so that a test can prove that none of them
+ * reaches one. The wait between requests goes through an injected `sleep`, so that no test waits.
  */
 import { createHash } from "crypto";
 import fs from "fs";
@@ -38,11 +39,17 @@ const LIST_CSV = readFixture("fda-ai-devices.csv");
 const API = "https://api.fda.gov/device/recall.json";
 const PROBE_URL = `${API}?limit=1`;
 const LAST_UPDATED = "2026-11-05";
+/** The enforcement reports: the one place the FDA's class of a recall is, and their own day of update. */
+const ENFORCEMENT_API = "https://api.fda.gov/device/enforcement.json";
+const ENFORCEMENT_PROBE_URL = `${ENFORCEMENT_API}?limit=1`;
+const ENFORCEMENT_UPDATED = "2026-10-28";
 const MIB = 1024 * 1024;
 const NOT_THE_LIST_MESSAGE = "The file is not the list.";
 
 const CLOSING =
   "A recall is a firm's correction or removal of a device, classified by the FDA; it is not a finding that the device's AI caused the problem. openFDA says its results are unvalidated and are not to be relied on for decisions about medical care.";
+/** What a record says when no product of its event has a class: the page of the event shows it. */
+const CLASS_NOTE = "The FDA's recall page shows the recall's class.";
 const EVENT_PAGE =
   "https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfRES/res.cfm?start_search=1&event_id=";
 
@@ -65,6 +72,15 @@ const HIDDEN_CHARACTERS = [ZWSP, ZWJ, RLO, LRI, SHY, BOM, NUL, VS16, VS_SUPPLEME
 /** The URL of one search, as the connector writes it: the terms joined by `+OR+`, one page of 1,000. */
 const searchUrl = (field: string, terms: readonly string[], skip = 0): string =>
   `${API}?search=${field}:(${terms.join("+OR+")})&limit=1000${skip === 0 ? "" : `&skip=${skip}`}`;
+
+/**
+ * The URL of one class search, as the connector writes it: each recall number between quotes (%22),
+ * the terms joined by `+OR+`, one page of 1,000.
+ */
+const classUrl = (numbers: readonly string[]): string =>
+  `${ENFORCEMENT_API}?search=recall_number:(${numbers
+    .map((number) => `%22${number}%22`)
+    .join("+OR+")})&limit=1000`;
 
 // ---- the FDA list ------------------------------------------------------------------------------
 
@@ -132,12 +148,79 @@ const rawProduct = (index: number, over: Raw = {}): Raw => ({
   ...over,
 });
 
+/**
+ * The fields of an enforcement report that nothing of a download or of a record may carry: the
+ * report of a recall says where the firm is, to whom it sold, which lots, and what its status is.
+ * Each holds the marker ZZPRIVATE and its own name, so that a leak names the field.
+ */
+const EXCLUDED_REPORT_FIELDS = [
+  "address_1",
+  "address_2",
+  "city",
+  "state",
+  "postal_code",
+  "country",
+  "code_info",
+  "more_code_info",
+  "distribution_pattern",
+  "event_id",
+  "initial_firm_notification",
+  "product_description",
+  "product_quantity",
+  "product_type",
+  "reason_for_recall",
+  "recalling_firm",
+  "status",
+  "voluntary_mandated",
+] as const;
+/** The days of a report that stay out, as the reports write them (YYYYMMDD): none may show in any form. */
+const EXCLUDED_REPORT_DAYS = {
+  recall_initiation_date: "20190211",
+  report_date: "20190613",
+  termination_date: "20210917",
+};
+
+/**
+ * A report of the enforcement endpoint as openFDA writes it: the recall number, the class and the
+ * day of the classification, which are all a download takes, and every other field, which it must
+ * leave. All values are invented.
+ */
+const rawEnforcement = (number: string, over: Raw = {}): Raw => ({
+  recall_number: number,
+  classification: "Class II",
+  center_classification_date: "20240305",
+  ...Object.fromEntries(EXCLUDED_REPORT_FIELDS.map((field) => [field, `ZZPRIVATE-${field}`])),
+  ...EXCLUDED_REPORT_DAYS,
+  openfda: { device_name: ["ZZPRIVATE-openfda"], k_number: ["K900999"] },
+  ...over,
+});
+
+/** The recall number of `rawProduct(index)`: Z-1001-2026 for 1. */
+const numberOf = (index: number): string => `Z-${String(1000 + index).padStart(4, "0")}-2026`;
+
+/** `count` recalled products, K900001 on, each its own event: the numbers of `numberOf(1)` on. */
+const recalled = (count: number, first = 1): Raw[] =>
+  Array.from({ length: count }, (_, index) => rawProduct(first + index));
+
+/** The report of each of those products, as the stub holds it. */
+const reportsOf = (count: number, first = 1, over: Raw = {}): Raw[] =>
+  Array.from({ length: count }, (_, index) => rawEnforcement(numberOf(first + index), over));
+
+/** The recall numbers of the four products that the fixture's answer joins to the list. */
+const ANSWER_NUMBERS = ["Z-1101-2026", "Z-1102-2026", "Z-1103-2025", "Z-1104-2026"];
+
+/** The report of each of those four products. */
+const answerReports = (over: Raw = {}): Raw[] =>
+  ANSWER_NUMBERS.map((number) => rawEnforcement(number, over));
+
 interface Call {
-  kind: "probe" | "list" | "join";
+  kind: "probe" | "enforcement_probe" | "list" | "join" | "class";
   url: string;
   /** The place of the request in the download, from 1. */
   number: number;
+  /** For a join: the field searched. Null for every other request. */
   field: "k_numbers" | "pma_numbers" | null;
+  /** The numbers of a join, or the recall numbers of a class search with their quotes taken off. */
   terms: string[];
   skip: number;
   validators: unknown;
@@ -145,21 +228,33 @@ interface Call {
 }
 
 const SEARCH = /^(k_numbers|pma_numbers):\((.*)\)$/;
+const CLASS_SEARCH = /^recall_number:\((.*)\)$/;
 
 function callOf(url: string, number: number, validators: unknown, limits: Limits): Call {
   const base = { url, number, field: null, terms: [], skip: 0, validators, limits };
   if (url === PROBE_URL) return { ...base, kind: "probe" };
+  if (url === ENFORCEMENT_PROBE_URL) return { ...base, kind: "enforcement_probe" };
   if (url === FDA_URL) return { ...base, kind: "list" };
-  // The `+` of the address is a blank to the server, as it is here.
-  const query = new URL(url).searchParams;
-  const found = SEARCH.exec(query.get("search") ?? "");
+  // The `+` of the address is a blank to the server, as it is here, and `%22` is a quote.
+  const address = new URL(url);
+  const query = address.searchParams;
+  const search = query.get("search") ?? "";
+  const skip = Number(query.get("skip") ?? 0);
+  const endpoint = `${address.origin}${address.pathname}`;
+  if (endpoint === ENFORCEMENT_API) {
+    const found = CLASS_SEARCH.exec(search);
+    if (found === null) throw new Error("The stub was asked for a request it does not know.");
+    const terms = found[1].split(" OR ").map((term) => term.replace(/^"|"$/g, ""));
+    return { ...base, kind: "class", terms, skip };
+  }
+  const found = endpoint === API ? SEARCH.exec(search) : null;
   if (found === null) throw new Error("The stub was asked for a request it does not know.");
   return {
     ...base,
     kind: "join",
     field: found[1] as Call["field"],
     terms: found[2].split(" OR "),
-    skip: Number(query.get("skip") ?? 0),
+    skip,
   };
 }
 
@@ -203,9 +298,18 @@ interface Options {
   products?: readonly Raw[];
   lastUpdated?: string;
   total?: unknown;
+  /**
+   * The enforcement reports the endpoint holds: none by default, so that every class search is a
+   * 404, "none of these is classified".
+   */
+  enforcement?: readonly Raw[];
+  enforcementUpdated?: string;
+  enforcementTotal?: unknown;
   /** Answers every search with every product, as a server that matches loosely would. */
   loose?: boolean;
-  /** Answers every search with its products in reverse order. */
+  /** Answers every class search with every report, as a server that matches loosely would. */
+  looseEnforcement?: boolean;
+  /** Answers every search with its products or reports in reverse order. */
   reversed?: boolean;
   /** Decides the answer of a request: `answer()` is what the stub would give. */
   intercept?: (call: Call, answer: () => ConditionalResponse) => ConditionalResponse;
@@ -222,13 +326,26 @@ interface Server {
 }
 
 function serve(options: Options = {}): Server {
-  const { csv = LIST_CSV, products = [], lastUpdated = LAST_UPDATED, total = 60_000 } = options;
+  const {
+    csv = LIST_CSV,
+    products = [],
+    lastUpdated = LAST_UPDATED,
+    total = 60_000,
+    enforcement = [],
+    enforcementUpdated = ENFORCEMENT_UPDATED,
+    enforcementTotal = 40_450,
+  } = options;
   const calls: Call[] = [];
   const events: string[] = [];
   let bytes = 0;
   const meta = (skip: number, limit: number, count: unknown) => ({
     ...META.meta,
     last_updated: lastUpdated,
+    results: { skip, limit, total: count },
+  });
+  const enforcementMeta = (skip: number, limit: number, count: unknown) => ({
+    ...META.meta,
+    last_updated: enforcementUpdated,
     results: { skip, limit, total: count },
   });
   const fetch: ConnectorFetch = async (url, validators, limits) => {
@@ -239,7 +356,27 @@ function serve(options: Options = {}): Server {
       if (call.kind === "probe") {
         return json(url, { meta: meta(0, 1, total), results: META.results });
       }
+      if (call.kind === "enforcement_probe") {
+        // The report of the probe holds the markers too: nothing of it may be read.
+        return json(url, {
+          meta: enforcementMeta(0, 1, enforcementTotal),
+          results: [rawEnforcement("Z-0001-2004")],
+        });
+      }
       if (call.kind === "list") return answer(url, "text/csv; charset=UTF-8", Buffer.from(csv));
+      if (call.kind === "class") {
+        const reports = enforcement.filter(
+          (report) =>
+            options.looseEnforcement === true ||
+            call.terms.includes(report.recall_number as string),
+        );
+        if (reports.length === 0) throw notFound();
+        const ordered = options.reversed === true ? [...reports].reverse() : reports;
+        return json(url, {
+          meta: enforcementMeta(call.skip, 1000, reports.length),
+          results: ordered.slice(call.skip, call.skip + 1000),
+        });
+      }
       const found = products.filter(
         (product) =>
           options.loose === true ||
@@ -293,6 +430,10 @@ interface ProjectedProduct {
   reason_for_recall: string;
   product_description: string;
   matched: string[];
+  /** The FDA's class of the recall, from the enforcement reports; null when they give none. */
+  class: "Class I" | "Class II" | "Class III" | null;
+  /** The day of the classification, YYYY-MM-DD; null without a class or a readable day. */
+  classDay: string | null;
 }
 
 interface AiRow {
@@ -303,16 +444,39 @@ interface AiRow {
 
 interface Projection {
   lastUpdated: string;
+  /** The products that carried a number of the list and were left out. */
   skipped: number;
+  /** The reports of joined products whose class is none of the three: their products are kept. */
+  classSkipped: number;
   products: ProjectedProduct[];
   aiRows: AiRow[];
 }
 
 const projectionOf = (snapshot: Snapshot): Projection => JSON.parse(snapshot.bodies[0]);
 
-/** The composite validator, as the ruling spells it. */
-const validatorOf = (csv: string, lastUpdated: string = LAST_UPDATED): string =>
-  `recalls:${lastUpdated};list:${createHash("sha256").update(csv).digest("hex").slice(0, 16)}`;
+/** What the products of a snapshot carry of the class: the recall number, the class and the day. */
+const classesOf = (snapshot: Snapshot): Array<[string, string | null, string | null]> =>
+  projectionOf(snapshot).products.map((product) => [
+    product.product_res_number,
+    product.class,
+    product.classDay,
+  ]);
+
+const hashOf = (csv: string): string => createHash("sha256").update(csv).digest("hex").slice(0, 16);
+
+/**
+ * The composite validator, as the ruling spells it: the day of the last update of the recalls, the
+ * day of the last update of the enforcement reports, and the list.
+ */
+const validatorOf = (
+  csv: string,
+  lastUpdated: string = LAST_UPDATED,
+  enforcementUpdated: string = ENFORCEMENT_UPDATED,
+): string => `recalls:${lastUpdated};enforcement:${enforcementUpdated};list:${hashOf(csv)}`;
+
+/** The composite validator of version 1, before the enforcement reports: no download gives it now. */
+const validatorV1Of = (csv: string, lastUpdated: string = LAST_UPDATED): string =>
+  `recalls:${lastUpdated};list:${hashOf(csv)}`;
 
 // ---- a projection written by hand, for the tests of `parse` -----------------------------------
 
@@ -328,6 +492,8 @@ const projected = (over: Partial<ProjectedProduct> = {}): ProjectedProduct => ({
   reason_for_recall: "Fictional reason.",
   product_description: "Fictional device",
   matched: ["K900001"],
+  class: null,
+  classDay: null,
   ...over,
 });
 
@@ -369,23 +535,38 @@ function sentenceOf(summary: string, label: string): string {
 const NOT_THE_LIST = { records: [], errors: 1, sourceVersion: null, root: null };
 
 describe("fdaRecallsConnector", () => {
-  it("is the connector of fda_device_recalls, at version 1, with the mark its texts begin with", () => {
+  it("is the connector of fda_device_recalls, at version 2, with the mark its texts begin with", () => {
     expect(fdaRecallsConnector.id).toBe("fda_device_recalls");
-    expect(fdaRecallsConnector.version).toBe(1);
+    expect(fdaRecallsConnector.version).toBe(2);
     expect(FDA_RECALL_RECORD_MARK).toBe("FDA medical device recalls (openFDA)");
     expect(createFdaRecallsConnector().id).toBe("fda_device_recalls");
   });
+
+  it("is at a version of its own since the class: the stored copy of version 1 is parsed again", () => {
+    // The sync hashes the version with the download (Ruling 7 of the M2 plan): a copy made by version
+    // 1 holds no class, and only a new number makes the sync read the same file again.
+    expect(fdaRecallsConnector.version).toBeGreaterThan(1);
+    expect(createFdaRecallsConnector().version).toBe(fdaRecallsConnector.version);
+  });
 });
 
-describe("fdaRecallsConnector.download, the six steps", () => {
-  it("asks the probe, the list of the FDA, then the K batch and the PMA batch, each without validators and with its limits", async () => {
+describe("fdaRecallsConnector.download, the steps", () => {
+  it("asks the two probes, the list of the FDA, the K batch, the PMA batch and the class batch, each without validators and with its limits", async () => {
     const server = serve({ products: ANSWER.results });
 
     await fetched(server, { etag: '"stored"', lastModified: "stored" });
 
-    expect(server.calls.map((call) => call.kind)).toEqual(["probe", "list", "join", "join"]);
+    expect(server.calls.map((call) => call.kind)).toEqual([
+      "probe",
+      "enforcement_probe",
+      "list",
+      "join",
+      "join",
+      "class",
+    ]);
     expect(server.calls.map((call) => call.url)).toEqual([
       PROBE_URL,
+      ENFORCEMENT_PROBE_URL,
       FDA_URL,
       searchUrl("k_numbers", [
         "K900103",
@@ -400,21 +581,29 @@ describe("fdaRecallsConnector.download, the six steps", () => {
         "K900600",
       ]),
       searchUrl("pma_numbers", ["P900201S004"]),
+      classUrl(["Z-1101-2026", "Z-1102-2026", "Z-1103-2025", "Z-1104-2026"]),
     ]);
     // Neither the stored ETag nor the stored composite value goes out as a header.
-    expect(server.calls.map((call) => call.validators)).toEqual([{}, {}, {}, {}]);
+    expect(server.calls.map((call) => call.validators)).toEqual([{}, {}, {}, {}, {}, {}]);
     const json_ = {
       maxBytes: 16 * MIB,
       allowedContentTypes: ["application/json"],
       totalTimeoutMs: 60_000,
     };
+    const probe = {
+      maxBytes: 16 * MIB,
+      allowedContentTypes: ["application/json"],
+      totalTimeoutMs: 30_000,
+    };
     expect(server.calls.map((call) => call.limits)).toEqual([
-      { maxBytes: 16 * MIB, allowedContentTypes: ["application/json"], totalTimeoutMs: 30_000 },
+      probe,
+      probe,
       {
         maxBytes: 2 * MIB,
         allowedContentTypes: ["text/csv", "application/octet-stream"],
         totalTimeoutMs: 60_000,
       },
+      json_,
       json_,
       json_,
     ]);
@@ -433,6 +622,10 @@ describe("fdaRecallsConnector.download, the six steps", () => {
       "request",
       "sleep:500",
       "request",
+      "sleep:500",
+      "request",
+      "sleep:500",
+      "request",
     ]);
   });
 
@@ -443,18 +636,15 @@ describe("fdaRecallsConnector.download, the six steps", () => {
 
       const pending = createFdaRecallsConnector().download(server.fetch, {});
 
+      // The six requests: the two probes, the list, the K batch, the PMA batch, the class batch.
       await jest.advanceTimersByTimeAsync(0);
       expect(server.calls).toHaveLength(1);
-      await jest.advanceTimersByTimeAsync(499);
-      expect(server.calls).toHaveLength(1);
-      await jest.advanceTimersByTimeAsync(1);
-      expect(server.calls).toHaveLength(2);
-      await jest.advanceTimersByTimeAsync(499);
-      expect(server.calls).toHaveLength(2);
-      await jest.advanceTimersByTimeAsync(1);
-      expect(server.calls).toHaveLength(3);
-      await jest.advanceTimersByTimeAsync(500);
-      expect(server.calls).toHaveLength(4);
+      for (let made = 2; made <= 6; made += 1) {
+        await jest.advanceTimersByTimeAsync(499);
+        expect(server.calls).toHaveLength(made - 1);
+        await jest.advanceTimersByTimeAsync(1);
+        expect(server.calls).toHaveLength(made);
+      }
       await expect(pending).resolves.toMatchObject({ etag: null });
     } finally {
       jest.useRealTimers();
@@ -481,7 +671,9 @@ describe("fdaRecallsConnector.download, the six steps", () => {
 
     expect(snapshot.etag).toBeNull();
     expect(snapshot.lastModified).toBe(validatorOf(LIST_CSV));
-    expect(snapshot.lastModified).toMatch(/^recalls:2026-11-05;list:[0-9a-f]{16}$/);
+    expect(snapshot.lastModified).toMatch(
+      /^recalls:2026-11-05;enforcement:2026-10-28;list:[0-9a-f]{16}$/,
+    );
     expect(snapshot.bytes).toBe(server.bytes());
     expect(snapshot.bodies).toHaveLength(1);
   });
@@ -492,6 +684,7 @@ describe("fdaRecallsConnector.download, the six steps", () => {
     expect(projectionOf(snapshot)).toEqual({
       lastUpdated: "2026-11-05",
       skipped: 0,
+      classSkipped: 0,
       products: [
         {
           product_res_number: "Z-1101-2026",
@@ -507,6 +700,8 @@ describe("fdaRecallsConnector.download, the six steps", () => {
           product_description:
             "Zorblat Chest Triage workstation, model ZCT-100, software release 4.2",
           matched: ["K900105", "K900106"],
+          class: null,
+          classDay: null,
         },
         {
           product_res_number: "Z-1102-2026",
@@ -520,6 +715,8 @@ describe("fdaRecallsConnector.download, the six steps", () => {
           reason_for_recall: "A second fictional reason that the text must not show.",
           product_description: "Zorblat Bone Age Reader, model ZBA-200",
           matched: ["K900104"],
+          class: null,
+          classDay: null,
         },
         {
           product_res_number: "Z-1103-2025",
@@ -534,6 +731,8 @@ describe("fdaRecallsConnector.download, the six steps", () => {
             "The sizing report could print the wrong unit for the annulus diameter.",
           product_description: "Plimsoll Valve Sizer, model PVS-3",
           matched: ["K900302"],
+          class: null,
+          classDay: null,
         },
         {
           product_res_number: "Z-1104-2026",
@@ -548,6 +747,8 @@ describe("fdaRecallsConnector.download, the six steps", () => {
             "Firmware 2.1 could stop sending alerts to the paired phone after a restart.",
           product_description: "Quillfeather Seizure Predictor, model QSP-1, firmware 2.1",
           matched: ["P900201S004"],
+          class: null,
+          classDay: null,
         },
       ],
       aiRows: [
@@ -580,7 +781,13 @@ describe("fdaRecallsConnector.download, the six steps", () => {
     const snapshot = await fetched(serve({ products: ANSWER.results }));
     const projection = projectionOf(snapshot);
 
-    expect(Object.keys(projection)).toEqual(["lastUpdated", "skipped", "products", "aiRows"]);
+    expect(Object.keys(projection)).toEqual([
+      "lastUpdated",
+      "skipped",
+      "classSkipped",
+      "products",
+      "aiRows",
+    ]);
     expect(Object.keys(projection.products[0])).toEqual([
       "product_res_number",
       "res_event_number",
@@ -593,6 +800,8 @@ describe("fdaRecallsConnector.download, the six steps", () => {
       "reason_for_recall",
       "product_description",
       "matched",
+      "class",
+      "classDay",
     ]);
     expect(Object.keys(projection.aiRows[0])).toEqual(["submission", "device", "company"]);
     expect(snapshot.bodies[0]).toBe(JSON.stringify(projection));
@@ -612,16 +821,17 @@ describe("fdaRecallsConnector.download, the six steps", () => {
     ]);
   });
 
-  it("gives a snapshot with no product, and no request for a join, when no number of the list is searchable", async () => {
+  it("gives a snapshot with no product, and no request for a join or for a class, when no number of the list is searchable", async () => {
     const csv = csvOf([{ submission: "DEN900401" }, { submission: "DEN900402" }]);
     const server = serve({ csv, products: ANSWER.results });
 
     const snapshot = await fetched(server);
 
-    expect(server.calls.map((call) => call.kind)).toEqual(["probe", "list"]);
+    expect(server.calls.map((call) => call.kind)).toEqual(["probe", "enforcement_probe", "list"]);
     expect(projectionOf(snapshot)).toEqual({
       lastUpdated: LAST_UPDATED,
       skipped: 0,
+      classSkipped: 0,
       products: [],
       aiRows: [],
     });
@@ -636,14 +846,14 @@ describe("fdaRecallsConnector.download, the six steps", () => {
 });
 
 describe("fdaRecallsConnector.download, the composite validator", () => {
-  it("answers unchanged, after the probe and the list and before any join, when the stored value is the new one", async () => {
-    const server = serve({ products: ANSWER.results });
+  it("answers unchanged, after the two probes and the list and before any join or class batch, when the stored value is the new one", async () => {
+    const server = serve({ products: ANSWER.results, enforcement: answerReports() });
 
     const result = await download(server, { etag: null, lastModified: validatorOf(LIST_CSV) });
 
     expect(result).toBe("unchanged");
-    expect(server.calls.map((call) => call.kind)).toEqual(["probe", "list"]);
-    expect(server.events).toEqual(["request", "sleep:500", "request"]);
+    expect(server.calls.map((call) => call.kind)).toEqual(["probe", "enforcement_probe", "list"]);
+    expect(server.events).toEqual(["request", "sleep:500", "request", "sleep:500", "request"]);
   });
 
   it("answers unchanged whatever ETag is stored, since it keeps none", async () => {
@@ -655,7 +865,27 @@ describe("fdaRecallsConnector.download, the composite validator", () => {
     expect(result).toBe("unchanged");
   });
 
-  it("joins when the day of the last update of the dataset changed, and gives the new value", async () => {
+  it("is made of the day of the recalls, the day of the enforcement reports and the hash of the list, in that order", async () => {
+    const snapshot = await fetched(
+      serve({
+        products: ANSWER.results,
+        lastUpdated: "2026-11-12",
+        enforcementUpdated: "2026-11-09",
+      }),
+    );
+
+    expect(snapshot.lastModified).toBe(
+      `recalls:2026-11-12;enforcement:2026-11-09;list:${createHash("sha256")
+        .update(LIST_CSV)
+        .digest("hex")
+        .slice(0, 16)}`,
+    );
+    expect(snapshot.lastModified).toMatch(
+      /^recalls:\d{4}-\d{2}-\d{2};enforcement:\d{4}-\d{2}-\d{2};list:[0-9a-f]{16}$/,
+    );
+  });
+
+  it("joins when the day of the last update of the recalls changed, and gives the new value", async () => {
     const server = serve({ products: ANSWER.results, lastUpdated: "2026-11-12" });
 
     const snapshot = await fetched(server, { lastModified: validatorOf(LIST_CSV, LAST_UPDATED) });
@@ -663,6 +893,38 @@ describe("fdaRecallsConnector.download, the composite validator", () => {
     expect(server.calls.filter((call) => call.kind === "join")).toHaveLength(2);
     expect(snapshot.lastModified).toBe(validatorOf(LIST_CSV, "2026-11-12"));
     expect(parse(snapshot).sourceVersion).toBe("2026-11-12");
+  });
+
+  it("joins, and asks for the classes, when the day of the last update of the enforcement reports changed alone", async () => {
+    const server = serve({
+      products: ANSWER.results,
+      enforcement: answerReports({ classification: "Class III" }),
+      enforcementUpdated: "2026-11-04",
+    });
+
+    const snapshot = await fetched(server, {
+      lastModified: validatorOf(LIST_CSV, LAST_UPDATED, ENFORCEMENT_UPDATED),
+    });
+
+    expect(server.calls.map((call) => call.kind)).toEqual([
+      "probe",
+      "enforcement_probe",
+      "list",
+      "join",
+      "join",
+      "class",
+    ]);
+    expect(snapshot.lastModified).toBe(validatorOf(LIST_CSV, LAST_UPDATED, "2026-11-04"));
+    expect(snapshot.lastModified).not.toBe(validatorOf(LIST_CSV));
+    // The version of the list is still the day of the recalls: the enforcement day is only compared.
+    expect(parse(snapshot).sourceVersion).toBe(LAST_UPDATED);
+    expect(projectionOf(snapshot).lastUpdated).toBe(LAST_UPDATED);
+    expect(classesOf(snapshot).map(([, recallClass]) => recallClass)).toEqual([
+      "Class III",
+      "Class III",
+      "Class III",
+      "Class III",
+    ]);
   });
 
   it("joins when the list of the FDA changed, and gives the new value", async () => {
@@ -684,12 +946,50 @@ describe("fdaRecallsConnector.download, the composite validator", () => {
       { lastModified: "Fri, 04 Sep 2026 11:54:10 GMT" },
     ],
     ["the value of the dataset alone", { lastModified: "recalls:2026-11-05" }],
+    ["the value of version 1: the recalls and the list", { lastModified: validatorV1Of(LIST_CSV) }],
+    [
+      "the value of version 1, with the day of the enforcement reports in its place",
+      { lastModified: validatorV1Of(LIST_CSV, ENFORCEMENT_UPDATED) },
+    ],
+    [
+      "the parts of the new value in another order",
+      {
+        lastModified: `enforcement:${ENFORCEMENT_UPDATED};recalls:${LAST_UPDATED};list:${hashOf(LIST_CSV)}`,
+      },
+    ],
+    [
+      "the new value without its list",
+      { lastModified: `recalls:${LAST_UPDATED};enforcement:${ENFORCEMENT_UPDATED}` },
+    ],
+    [
+      "the new value with the list of another file",
+      { lastModified: validatorOf("<html>another list</html>") },
+    ],
+    [
+      "the days of the two datasets swapped",
+      { lastModified: validatorOf(LIST_CSV, ENFORCEMENT_UPDATED, LAST_UPDATED) },
+    ],
   ])("joins when the stored validators are %s", async (_label, validators) => {
     const server = serve({ products: ANSWER.results });
 
     await fetched(server, validators);
 
     expect(server.calls.filter((call) => call.kind === "join")).toHaveLength(2);
+  });
+
+  it("never takes a stored value of version 1 for the new one: the join runs once, and its value is then unchanged", async () => {
+    const first = serve({ products: ANSWER.results, enforcement: answerReports() });
+
+    const snapshot = await fetched(first, { lastModified: validatorV1Of(LIST_CSV) });
+    const second = serve({ products: ANSWER.results, enforcement: answerReports() });
+    const again = await download(second, { lastModified: snapshot.lastModified });
+
+    expect(first.calls.filter((call) => call.kind === "join")).toHaveLength(2);
+    expect(first.calls.filter((call) => call.kind === "class")).toHaveLength(1);
+    expect(snapshot.lastModified).toBe(validatorOf(LIST_CSV));
+    expect(snapshot.lastModified).not.toBe(validatorV1Of(LIST_CSV));
+    expect(again).toBe("unchanged");
+    expect(second.calls.map((call) => call.kind)).toEqual(["probe", "enforcement_probe", "list"]);
   });
 
   it("compares the value after the list was read as the list, so a page that is none is refused first", async () => {
@@ -896,9 +1196,11 @@ describe("fdaRecallsConnector.download, the numbers searched", () => {
     await fetched(forward);
     await fetched(backward);
 
-    expect(backward.calls.slice(2).map((call) => call.url)).toEqual(
-      forward.calls.slice(2).map((call) => call.url),
+    // After the two probes and the list: the same batches, one after the other.
+    expect(backward.calls.slice(3).map((call) => call.url)).toEqual(
+      forward.calls.slice(3).map((call) => call.url),
     );
+    expect(forward.calls.slice(3).every((call) => call.kind === "join")).toBe(true);
   });
 
   it("matches a product only by its own k_numbers and pma_numbers, never by its openfda block or another field", async () => {
@@ -982,12 +1284,15 @@ describe("fdaRecallsConnector.download, paging", () => {
   it("reads five pages and no more", async () => {
     const server = serve({ csv: csvOf(kRows(1)), products: manyRaw(5000) });
 
-    const snapshot = await fetched(server);
+    // 5,000 products are 100 class requests of 50, and a download makes 80 at most: the five pages
+    // are read, and the class stage then stops at the cap, so that no part of the join is returned.
+    await expect(download(server)).rejects.toBeInstanceOf(BodyTooLargeError);
 
     expect(server.calls.filter((call) => call.kind === "join").map((call) => call.skip)).toEqual([
       0, 1000, 2000, 3000, 4000,
     ]);
-    expect(projectionOf(snapshot).products).toHaveLength(5000);
+    expect(server.calls).toHaveLength(80);
+    expect(server.calls.filter((call) => call.kind === "class")).toHaveLength(72);
   });
 
   it("refuses a search of more than five pages as not the list, after its first page", async () => {
@@ -1241,7 +1546,9 @@ describe("fdaRecallsConnector.download, a search that finds nothing", () => {
 
     await expect(download(server)).rejects.toBeInstanceOf(NotTheListError);
 
-    expect(server.calls.map((call) => call.skip)).toEqual([0, 0, 0, 1000]);
+    // The two probes, the list, and the two pages of the join: no class is asked for.
+    expect(server.calls.map((call) => call.skip)).toEqual([0, 0, 0, 0, 1000]);
+    expect(server.calls.some((call) => call.kind === "class")).toBe(false);
   });
 
   it("never reads a 404 of the probe as no recalls: it fails, and no join is made", async () => {
@@ -1271,7 +1578,7 @@ describe("fdaRecallsConnector.download, a search that finds nothing", () => {
     const error = await rejection(download(server));
 
     expect(error).toMatchObject({ name: "FetchError", reason: "not_found" });
-    expect(server.calls.map((call) => call.kind)).toEqual(["probe", "list"]);
+    expect(server.calls.map((call) => call.kind)).toEqual(["probe", "enforcement_probe", "list"]);
   });
 
   it("takes only a 404 for no match: any other failure of a batch is thrown as it is", async () => {
@@ -1285,7 +1592,8 @@ describe("fdaRecallsConnector.download, a search that finds nothing", () => {
       const server = serve({
         csv: csvOf(kRows(120)),
         intercept: (call, natural) => {
-          if (call.kind === "join" && call.number === 4) throw new FetchError(reason);
+          // The second batch of the join: the first has answered.
+          if (call.kind === "join" && call.number === 5) throw new FetchError(reason);
           return natural();
         },
       });
@@ -1293,7 +1601,7 @@ describe("fdaRecallsConnector.download, a search that finds nothing", () => {
       const error = await rejection(download(server));
 
       expect(error).toMatchObject({ name: "FetchError", reason });
-      expect(server.calls).toHaveLength(4);
+      expect(server.calls).toHaveLength(5);
     }
   });
 });
@@ -1304,7 +1612,8 @@ describe("fdaRecallsConnector.download, a failure leaves nothing", () => {
       csv: csvOf(kRows(1251)),
       products: [rawProduct(1), rawProduct(60), rawProduct(1250)],
       intercept: (call, natural) => {
-        if (call.kind === "join" && call.number === 2 + 7) throw new FetchError("unreachable");
+        // The two probes and the list come first.
+        if (call.kind === "join" && call.number === 3 + 7) throw new FetchError("unreachable");
         return natural();
       },
     });
@@ -1318,8 +1627,9 @@ describe("fdaRecallsConnector.download, a failure leaves nothing", () => {
 
     expect(error).toMatchObject({ name: "FetchError", reason: "unreachable" });
     expect(snapshot).toBeUndefined();
-    expect(server.calls).toHaveLength(2 + 7);
+    expect(server.calls).toHaveLength(3 + 7);
     expect(server.calls.filter((call) => call.kind === "join")).toHaveLength(7);
+    expect(server.calls.some((call) => call.kind === "class")).toBe(false);
   });
 
   it("lets a 429 through with its Retry-After untouched", async () => {
@@ -1330,7 +1640,8 @@ describe("fdaRecallsConnector.download, a failure leaves nothing", () => {
     const server = serve({
       csv: csvOf(kRows(120)),
       intercept: (call, natural) => {
-        if (call.kind === "join" && call.number === 4) throw limited;
+        // The second batch of the join: the first has answered.
+        if (call.kind === "join" && call.number === 5) throw limited;
         return natural();
       },
     });
@@ -1366,9 +1677,9 @@ describe("fdaRecallsConnector.download, a failure leaves nothing", () => {
 });
 
 describe("fdaRecallsConnector.download, the caps of a download", () => {
-  it("makes 80 requests, the probe and the list included, and no more", async () => {
-    // 78 batches of K numbers: 3,900 numbers.
-    const server = serve({ csv: csvOf(kRows(3900)) });
+  it("makes 80 requests, the two probes and the list included, and no more", async () => {
+    // 77 batches of K numbers: 3,850 numbers.
+    const server = serve({ csv: csvOf(kRows(3850)) });
 
     await fetched(server);
 
@@ -1377,7 +1688,7 @@ describe("fdaRecallsConnector.download, the caps of a download", () => {
   });
 
   it("fails as too large at the 81st request, which is never made", async () => {
-    const server = serve({ csv: csvOf(kRows(3901)) });
+    const server = serve({ csv: csvOf(kRows(3851)) });
 
     const error = await rejection(download(server));
 
@@ -1412,12 +1723,12 @@ describe("fdaRecallsConnector.download, the caps of a download", () => {
         intercept: (call, natural) =>
           withLength(
             natural(),
-            call.kind === "probe"
+            call.kind === "probe" || call.kind === "enforcement_probe"
               ? MIB
               : call.kind === "list"
                 ? 2 * MIB
-                : call.number === 3
-                  ? 46 * MIB
+                : call.number === 4
+                  ? 45 * MIB
                   : secondJoin,
           ),
       });
@@ -1429,7 +1740,7 @@ describe("fdaRecallsConnector.download, the caps of a download", () => {
 
     expect(snapshot.bytes).toBe(96 * MIB);
     expect(error).toBeInstanceOf(BodyTooLargeError);
-    expect(over.calls).toHaveLength(4);
+    expect(over.calls).toHaveLength(5);
   });
 
   it("fails as too large at the answer that passes 96 MiB, before it asks for another", async () => {
@@ -1445,17 +1756,17 @@ describe("fdaRecallsConnector.download, the caps of a download", () => {
     const error = await rejection(download(server));
 
     expect(error).toBeInstanceOf(BodyTooLargeError);
-    expect(server.calls).toHaveLength(2 + 7);
+    expect(server.calls).toHaveLength(3 + 7);
   });
 
-  it("fails as too large when the probe or the list is cut at its limit", async () => {
-    for (const kind of ["probe", "list"] as const) {
+  it("fails as too large when a probe or the list is cut at its limit", async () => {
+    for (const kind of ["probe", "enforcement_probe", "list"] as const) {
       const server = serve({
         intercept: (call, natural) =>
           call.kind === kind
             ? answer(
                 call.url,
-                kind === "probe" ? "application/json" : "text/csv",
+                kind === "list" ? "text/csv" : "application/json",
                 Buffer.from("{"),
                 {
                   truncated: true,
@@ -1489,12 +1800,13 @@ describe("fdaRecallsConnector.download, where the answers come from", () => {
     ["no address", "not an address"],
     ["no text", ""],
   ])(
-    "refuses a probe and a search that %s answered, with an error that holds no address",
+    "refuses a probe of either endpoint, a search and a class search that %s answered, with an error that holds no address",
     async (_label, url) => {
-      for (const kind of ["probe", "join"] as const) {
+      for (const kind of ["probe", "enforcement_probe", "join", "class"] as const) {
         const server = serve({
           csv: csvOf(kRows(1)),
           products: [rawProduct(1)],
+          enforcement: reportsOf(1),
           intercept: (call, natural) => (call.kind === kind ? { ...natural(), url } : natural()),
         });
 
@@ -1502,21 +1814,29 @@ describe("fdaRecallsConnector.download, where the answers come from", () => {
 
         expect(error).toBeInstanceOf(NotTheListError);
         expect((error as Error).message).toBe(NOT_THE_LIST_MESSAGE);
+        // The request of that kind was the last one made: nothing is asked after a foreign answer.
+        expect(server.calls[server.calls.length - 1].kind).toBe(kind);
       }
     },
   );
 
   it("takes an answer from another path of api.fda.gov", async () => {
-    const server = serve({
-      csv: csvOf(kRows(1)),
-      products: [rawProduct(1)],
-      intercept: (call, natural) =>
-        call.kind === "probe"
-          ? { ...natural(), url: "https://api.fda.gov/device/recall.json?limit=1&skip=0" }
-          : natural(),
-    });
+    const elsewhere: Record<string, string> = {
+      probe: "https://api.fda.gov/device/recall.json?limit=1&skip=0",
+      enforcement_probe: "https://api.fda.gov/device/enforcement.json?limit=1&skip=0",
+      class: "https://api.fda.gov/device/enforcement.json?search=recall_number:Z-1001-2026",
+    };
+    for (const kind of Object.keys(elsewhere)) {
+      const server = serve({
+        csv: csvOf(kRows(1)),
+        products: [rawProduct(1)],
+        enforcement: reportsOf(1),
+        intercept: (call, natural) =>
+          call.kind === kind ? { ...natural(), url: elsewhere[kind] } : natural(),
+      });
 
-    await expect(download(server)).resolves.toMatchObject({ etag: null });
+      await expect(download(server)).resolves.toMatchObject({ etag: null });
+    }
   });
 
   it.each([
@@ -1540,7 +1860,7 @@ describe("fdaRecallsConnector.download, where the answers come from", () => {
 
     expect(error).toBeInstanceOf(NotTheListError);
     expect((error as Error).message).toBe(NOT_THE_LIST_MESSAGE);
-    expect(server.calls.map((call) => call.kind)).toEqual(["probe", "list"]);
+    expect(server.calls.map((call) => call.kind)).toEqual(["probe", "enforcement_probe", "list"]);
   });
 
   it("takes the list of the FDA from another path of www.fda.gov", async () => {
@@ -1556,9 +1876,10 @@ describe("fdaRecallsConnector.download, where the answers come from", () => {
   });
 
   it("fails an answer that says nothing changed, since no request sent anything to compare", async () => {
-    for (const kind of ["probe", "list", "join"] as const) {
+    for (const kind of ["probe", "enforcement_probe", "list", "join", "class"] as const) {
       const server = serve({
         products: ANSWER.results,
+        enforcement: answerReports(),
         intercept: (call, natural) =>
           call.kind === kind ? { notModified: true, url: call.url } : natural(),
       });
@@ -1640,6 +1961,1281 @@ describe("fdaRecallsConnector.download, the probe", () => {
   });
 });
 
+describe("fdaRecallsConnector.download, the probe of the enforcement reports", () => {
+  const probing = (meta: unknown): Server =>
+    serve({
+      products: ANSWER.results,
+      intercept: (call, natural) =>
+        call.kind === "enforcement_probe" ? json(call.url, { meta, results: [] }) : natural(),
+    });
+  const good = { last_updated: "2026-10-28", results: { total: 40450 } };
+
+  it("asks for one report right after the probe of the recalls, with no validator and the limits of that probe", async () => {
+    const server = serve({ products: ANSWER.results });
+
+    await fetched(server, { etag: '"stored"', lastModified: "stored" });
+
+    expect(server.calls.slice(0, 3).map((call) => call.kind)).toEqual([
+      "probe",
+      "enforcement_probe",
+      "list",
+    ]);
+    const probe = server.calls[1];
+    expect(probe.url).toBe("https://api.fda.gov/device/enforcement.json?limit=1");
+    expect(probe.validators).toEqual({});
+    expect(probe.limits).toEqual({
+      maxBytes: 16 * MIB,
+      allowedContentTypes: ["application/json"],
+      totalTimeoutMs: 30_000,
+    });
+  });
+
+  it("is asked once in a download, whether the download joins or answers unchanged", async () => {
+    const joined = serve({ products: ANSWER.results });
+    const unchanged = serve({ products: ANSWER.results });
+
+    await fetched(joined);
+    await download(unchanged, { lastModified: validatorOf(LIST_CSV) });
+
+    for (const server of [joined, unchanged]) {
+      expect(server.calls.filter((call) => call.kind === "enforcement_probe")).toHaveLength(1);
+    }
+  });
+
+  it("takes the dataset's own metadata: a day, and a total of more than 10,000, and puts the day in the validator", async () => {
+    await expect(fetched(probing(good))).resolves.toMatchObject({
+      lastModified: validatorOf(LIST_CSV, LAST_UPDATED, "2026-10-28"),
+    });
+    await expect(
+      fetched(probing({ last_updated: "2026-11-02", results: { total: 10_001 } })),
+    ).resolves.toMatchObject({
+      lastModified: validatorOf(LIST_CSV, LAST_UPDATED, "2026-11-02"),
+    });
+  });
+
+  it.each([
+    ["no last update", { results: { total: 40450 } }],
+    ["a last update that is a number", { last_updated: 20261028, results: { total: 40450 } }],
+    ["a last update in words", { last_updated: "yesterday", results: { total: 40450 } }],
+    ["a day without its zero", { last_updated: "2026-10-8", results: { total: 40450 } }],
+    ["a day that does not exist", { last_updated: "2026-02-30", results: { total: 40450 } }],
+    ["a day with a time", { last_updated: "2026-10-28T10:00:00Z", results: { total: 40450 } }],
+    [
+      "a day written as the FDA's reports write it",
+      { last_updated: "20261028", results: { total: 40450 } },
+    ],
+    ["a day with blanks around it", { last_updated: " 2026-10-28 ", results: { total: 40450 } }],
+    ["a total of exactly 10,000", { last_updated: "2026-10-28", results: { total: 10_000 } }],
+    ["a total of 9,999", { last_updated: "2026-10-28", results: { total: 9_999 } }],
+    ["a small total", { last_updated: "2026-10-28", results: { total: 59 } }],
+    ["a total of 0", { last_updated: "2026-10-28", results: { total: 0 } }],
+    ["a total that is text", { last_updated: "2026-10-28", results: { total: "40450" } }],
+    ["a total that is null", { last_updated: "2026-10-28", results: { total: null } }],
+    ["no total", { last_updated: "2026-10-28", results: {} }],
+    ["no results block", { last_updated: "2026-10-28" }],
+    ["meta that is a list", [good]],
+    ["meta that is text", "meta"],
+    ["no meta", undefined],
+  ])(
+    "refuses a probe with %s as not the list, before it asks for the list of the FDA",
+    async (_label, meta) => {
+      const server = probing(meta);
+
+      const error = await rejection(download(server));
+
+      expect(error).toBeInstanceOf(NotTheListError);
+      expect((error as Error).message).toBe(NOT_THE_LIST_MESSAGE);
+      expect(server.calls.map((call) => call.kind)).toEqual(["probe", "enforcement_probe"]);
+    },
+  );
+
+  it.each([
+    ["a page of HTML", "<html><body>Maintenance</body></html>"],
+    ["an empty answer", ""],
+    ["a list", "[]"],
+    ["null", "null"],
+    ["text", '"meta"'],
+    [
+      "the error of an endpoint that wants a key",
+      '{"error":{"code":"API_KEY_MISSING","message":"Invented message: this request carried no key."}}',
+    ],
+  ])("refuses %s as the probe's answer", async (_label, body) => {
+    const server = serve({
+      intercept: (call, natural) =>
+        call.kind === "enforcement_probe"
+          ? answer(call.url, "application/json", Buffer.from(body))
+          : natural(),
+    });
+
+    await expect(download(server)).rejects.toBeInstanceOf(NotTheListError);
+    expect(server.calls.map((call) => call.kind)).toEqual(["probe", "enforcement_probe"]);
+  });
+
+  it("fails, with nothing returned and no request after it, when the probe itself is a 404, a 403, a 429 or a 5xx", async () => {
+    const failures = [
+      notFound(),
+      new FetchError("blocked_by_site", undefined, { status: 403 }),
+      new FetchError("blocked_by_site", undefined, { status: 429, retryAfterMs: 30_000 }),
+      new FetchError("unreachable", undefined, { status: 503 }),
+      new FetchError("unreachable"),
+    ];
+    for (const failure of failures) {
+      const server = serve({
+        products: ANSWER.results,
+        intercept: (call, natural) => {
+          if (call.kind === "enforcement_probe") throw failure;
+          return natural();
+        },
+      });
+      let snapshot: unknown;
+
+      const error = await rejection(
+        download(server).then((result) => {
+          snapshot = result;
+        }),
+      );
+
+      // The endpoint that does not answer is not read as an endpoint with nothing to say.
+      expect(error).toBe(failure);
+      expect(snapshot).toBeUndefined();
+      expect(server.calls.map((call) => call.kind)).toEqual(["probe", "enforcement_probe"]);
+    }
+  });
+
+  it("never reads the report that the probe gives: it carries no class and no field of a record", async () => {
+    const server = serve({ csv: csvOf(kRows(1)), products: recalled(1) });
+
+    const snapshot = await fetched(server);
+
+    const probeAnswer = await server.fetch(ENFORCEMENT_PROBE_URL, {}, server.calls[1].limits);
+    expect(probeAnswer.notModified ? "" : probeAnswer.body.toString()).toContain("ZZPRIVATE");
+    expect(snapshot.bodies.join("")).not.toContain("ZZPRIVATE");
+    expect(classesOf(snapshot)).toEqual([["Z-1001-2026", null, null]]);
+  });
+});
+
+describe("fdaRecallsConnector.download, the class stage: what it asks", () => {
+  /** A K batch of one number and `count` products, all of one number of the list: pages of 1,000. */
+  const sameK = (count: number): Raw[] =>
+    Array.from({ length: count }, (_, index) =>
+      rawProduct(index + 1, { k_numbers: ["K900001"], res_event_number: "90001" }),
+    );
+  const classCalls = (server: Server): Call[] =>
+    server.calls.filter((call) => call.kind === "class");
+
+  it("asks for the recall numbers of the joined products after the K and the PMA batches: each between quotes, joined by +OR+, in one page of 1,000", async () => {
+    const server = serve({ csv: csvOf(kRows(3)), products: recalled(3) });
+
+    await fetched(server);
+
+    expect(server.calls.map((call) => call.kind)).toEqual([
+      "probe",
+      "enforcement_probe",
+      "list",
+      "join",
+      "class",
+    ]);
+    // The address as it is sent, not as a server reads it: the quotes are %22, the blanks +OR+.
+    expect(server.calls[4].url).toBe(
+      "https://api.fda.gov/device/enforcement.json?search=recall_number:(%22Z-1001-2026%22+OR+%22Z-1002-2026%22+OR+%22Z-1003-2026%22)&limit=1000",
+    );
+    expect(server.calls[4].url).toBe(classUrl(["Z-1001-2026", "Z-1002-2026", "Z-1003-2026"]));
+    expect(server.calls[4].skip).toBe(0);
+    // No validator goes out, and the limits are those of every search of the download.
+    expect(server.calls[4].validators).toEqual({});
+    expect(server.calls[4].limits).toEqual({
+      maxBytes: 16 * MIB,
+      allowedContentTypes: ["application/json"],
+      totalTimeoutMs: 60_000,
+    });
+  });
+
+  it("asks for the class after the batches of PMA numbers too, and not before the last of them", async () => {
+    const csv = csvOf([...kRows(1), ...pmaRows(1)]);
+    const products = [
+      rawProduct(1),
+      rawProduct(2, { k_numbers: undefined, pma_numbers: ["P900001"] }),
+    ];
+
+    const server = serve({ csv, products });
+    await fetched(server);
+
+    expect(server.calls.map((call) => call.kind)).toEqual([
+      "probe",
+      "enforcement_probe",
+      "list",
+      "join",
+      "join",
+      "class",
+    ]);
+    expect(classCalls(server)[0].terms).toEqual(["Z-1001-2026", "Z-1002-2026"]);
+  });
+
+  it("asks 50 recall numbers in a request, in the order of the numbers: 120 products are three requests of 50, 50 and 20", async () => {
+    // The dataset holds the products in the reverse of the order of their numbers.
+    const server = serve({ csv: csvOf(kRows(120)), products: recalled(120).reverse() });
+
+    await fetched(server);
+
+    const numbers = Array.from({ length: 120 }, (_, index) => numberOf(index + 1));
+    expect(classCalls(server).map((call) => call.terms.length)).toEqual([50, 50, 20]);
+    expect(classCalls(server).map((call) => call.url)).toEqual([
+      classUrl(numbers.slice(0, 50)),
+      classUrl(numbers.slice(50, 100)),
+      classUrl(numbers.slice(100)),
+    ]);
+    expect(classCalls(server).every((call) => call.url.endsWith("&limit=1000"))).toBe(true);
+  });
+
+  it("asks 50 recall numbers in one request, and 51 in two", async () => {
+    const fifty = serve({ csv: csvOf(kRows(50)), products: recalled(50) });
+    const fiftyOne = serve({ csv: csvOf(kRows(51)), products: recalled(51) });
+
+    await fetched(fifty);
+    await fetched(fiftyOne);
+
+    expect(classCalls(fifty).map((call) => call.terms.length)).toEqual([50]);
+    expect(classCalls(fiftyOne).map((call) => call.terms.length)).toEqual([50, 1]);
+  });
+
+  it("waits 500 ms before each class request, as before every other, through the injected sleep", async () => {
+    const server = serve({ csv: csvOf(kRows(120)), products: recalled(120) });
+
+    await fetched(server);
+
+    // Two probes, the list, three batches of the join and three class batches: nine requests.
+    expect(server.calls).toHaveLength(9);
+    expect(server.events).toEqual([
+      "request",
+      ...Array.from({ length: 8 }, () => ["sleep:500", "request"]).flat(),
+    ]);
+    expect(server.calls.slice(-3).every((call) => call.kind === "class")).toBe(true);
+  });
+
+  it("asks for each recall number once, though a product carries two numbers of the list and two batches return it", async () => {
+    const product = rawProduct(1, { k_numbers: ["K900001", "K900051"] });
+    const server = serve({ csv: csvOf(kRows(60)), products: [product] });
+
+    await fetched(server);
+
+    expect(classCalls(server).map((call) => call.terms)).toEqual([["Z-1001-2026"]]);
+  });
+
+  it("asks for the joined products and for no other: not for one it could not read, nor for one that carries no number of the list", async () => {
+    const products = [
+      rawProduct(1),
+      rawProduct(2, { event_date_initiated: undefined }),
+      rawProduct(3, { k_numbers: ["K900888"] }),
+    ];
+    const server = serve({ csv: csvOf(kRows(3)), products, loose: true });
+
+    const snapshot = await fetched(server);
+
+    expect(classCalls(server).map((call) => call.terms)).toEqual([["Z-1001-2026"]]);
+    expect(projectionOf(snapshot).skipped).toBe(1);
+  });
+
+  it("asks for no class when the join found no product", async () => {
+    const server = serve({ csv: csvOf(kRows(3)), products: [] });
+
+    const snapshot = await fetched(server);
+
+    expect(classCalls(server)).toHaveLength(0);
+    expect(server.calls.map((call) => call.kind)).toEqual([
+      "probe",
+      "enforcement_probe",
+      "list",
+      "join",
+    ]);
+    expect(projectionOf(snapshot).products).toEqual([]);
+  });
+
+  it("counts the class requests toward the 80 of a download: 3,650 products make exactly 80, and 3,651 fail at the 81st, which is never made", async () => {
+    // The two probes, the list, four pages of the join and 73 class requests of 50 are 80.
+    const exact = serve({ csv: csvOf(kRows(1)), products: sameK(3650) });
+    const over = serve({ csv: csvOf(kRows(1)), products: sameK(3651) });
+
+    const snapshot = await fetched(exact);
+    const error = await rejection(download(over));
+
+    expect(exact.calls).toHaveLength(80);
+    expect(classCalls(exact)).toHaveLength(73);
+    expect(projectionOf(snapshot).products).toHaveLength(3650);
+    expect(error).toBeInstanceOf(BodyTooLargeError);
+    expect((error as Error).message).toBe("The file is larger than its limit.");
+    expect(over.calls).toHaveLength(80);
+    expect(classCalls(over)).toHaveLength(73);
+  });
+
+  it("counts the requests of a split class batch toward the cap", async () => {
+    // 75 batches of the join and the three requests before them are 78; the class batch of 50 is cut,
+    // and so is its first half: the 81st request, for the half of that, is never made.
+    const server = serve({
+      csv: csvOf(kRows(3750)),
+      products: recalled(50),
+      intercept: (call, natural) =>
+        call.kind === "class"
+          ? answer(call.url, "application/json", Buffer.from("{"), { truncated: true })
+          : natural(),
+    });
+
+    const error = await rejection(download(server));
+
+    expect(error).toBeInstanceOf(BodyTooLargeError);
+    expect(server.calls).toHaveLength(80);
+    expect(classCalls(server).map((call) => call.terms.length)).toEqual([50, 25]);
+  });
+
+  it("counts the bytes of the class answers toward the 96 MiB of a download: it takes 96 MiB in all, and fails at one byte more", async () => {
+    // 51 products are two class requests: 50 numbers and 1.
+    const sizes = (second: number) =>
+      serve({
+        csv: csvOf(kRows(51)),
+        products: recalled(51),
+        enforcement: reportsOf(51),
+        intercept: (call, natural) =>
+          withLength(
+            natural(),
+            call.kind === "probe" || call.kind === "enforcement_probe" || call.kind === "join"
+              ? MIB
+              : call.kind === "list"
+                ? 2 * MIB
+                : call.number === 6
+                  ? 45 * MIB
+                  : second,
+          ),
+      });
+    const exact = sizes(45 * MIB);
+    const over = sizes(45 * MIB + 1);
+
+    const snapshot = await fetched(exact);
+    const error = await rejection(download(over));
+
+    expect(snapshot.bytes).toBe(96 * MIB);
+    expect(error).toBeInstanceOf(BodyTooLargeError);
+    expect(over.calls).toHaveLength(7);
+  });
+});
+
+describe("fdaRecallsConnector.download, the class stage: what the answers give", () => {
+  const classCalls = (server: Server): Call[] =>
+    server.calls.filter((call) => call.kind === "class");
+  /** The download of `count` products with the reports given, and what its products carry. */
+  const classed = async (
+    reports: readonly Raw[],
+    count = 3,
+    options: Options = {},
+  ): Promise<{ server: Server; snapshot: Snapshot }> => {
+    const server = serve({
+      csv: csvOf(kRows(count)),
+      products: recalled(count),
+      enforcement: reports,
+      ...options,
+    });
+    return { server, snapshot: await fetched(server) };
+  };
+  /** A body of the enforcement endpoint for the class searches of a download. */
+  const classAnswer =
+    (body: string): Options["intercept"] =>
+    (call, natural) =>
+      call.kind === "class" ? answer(call.url, "application/json", Buffer.from(body)) : natural();
+
+  it("gives each product the class and the day of the classification of its recall number, the day as YYYY-MM-DD", async () => {
+    const reports = [
+      rawEnforcement(numberOf(1), {
+        classification: "Class II",
+        center_classification_date: "20240305",
+      }),
+      rawEnforcement(numberOf(2), {
+        classification: "Class I",
+        center_classification_date: "20231120",
+      }),
+      rawEnforcement(numberOf(3), {
+        classification: "Class III",
+        center_classification_date: "20250214",
+      }),
+    ];
+
+    const { snapshot } = await classed(reports);
+
+    expect(classesOf(snapshot)).toEqual([
+      ["Z-1001-2026", "Class II", "2024-03-05"],
+      ["Z-1002-2026", "Class I", "2023-11-20"],
+      ["Z-1003-2026", "Class III", "2025-02-14"],
+    ]);
+    expect(projectionOf(snapshot).skipped).toBe(0);
+    expect(parse(snapshot)).toMatchObject({ errors: 0, skipped: 0 });
+  });
+
+  it("gives a class to every product of a batch in which every term is found, 50 of 50", async () => {
+    const { server, snapshot } = await classed(reportsOf(50), 50);
+
+    expect(classCalls(server)).toHaveLength(1);
+    expect(classesOf(snapshot)).toHaveLength(50);
+    expect(classesOf(snapshot).every(([, recallClass]) => recallClass === "Class II")).toBe(true);
+    expect(projectionOf(snapshot).skipped).toBe(0);
+  });
+
+  it("gives no class to the product whose term the batch does not find, and keeps the classes of the others", async () => {
+    const reports = reportsOf(50).filter((report) => report.recall_number !== numberOf(17));
+
+    const { snapshot } = await classed(reports, 50);
+
+    const read = classesOf(snapshot);
+    expect(read).toHaveLength(50);
+    expect(read[16]).toEqual(["Z-1017-2026", null, null]);
+    expect(read.filter(([, recallClass]) => recallClass === "Class II")).toHaveLength(49);
+    // A report that is missing is no row that cannot be read.
+    expect(projectionOf(snapshot).skipped).toBe(0);
+    expect(parse(snapshot)).toMatchObject({ errors: 0, skipped: 0 });
+  });
+
+  it("takes the 404 of the first page of a batch as no class for its products, once the probes have answered, and asks the other batches", async () => {
+    // Three class batches; the dataset holds no report of the products 51 to 100.
+    const reports = [...reportsOf(50, 1), ...reportsOf(20, 101)];
+
+    const { server, snapshot } = await classed(reports, 120);
+
+    expect(classCalls(server)).toHaveLength(3);
+    const read = classesOf(snapshot);
+    expect(read).toHaveLength(120);
+    expect(read.slice(0, 50).every(([, recallClass]) => recallClass === "Class II")).toBe(true);
+    expect(
+      read.slice(50, 100).every(([, recallClass, day]) => recallClass === null && day === null),
+    ).toBe(true);
+    expect(read.slice(100).every(([, recallClass]) => recallClass === "Class II")).toBe(true);
+    expect(parse(snapshot)).toMatchObject({ errors: 0, skipped: 0 });
+  });
+
+  it("succeeds with no class at all when the dataset holds no report of any of the products", async () => {
+    const { snapshot } = await classed([], 120);
+
+    expect(
+      classesOf(snapshot).every(([, recallClass, day]) => recallClass === null && day === null),
+    ).toBe(true);
+    expect(projectionOf(snapshot).products).toHaveLength(120);
+    expect(parse(snapshot).records).toHaveLength(120);
+    expect(parse(snapshot).records.every((record) => record.summary.includes(CLASS_NOTE))).toBe(
+      true,
+    );
+  });
+
+  it("takes an answer of no result and a total of 0 as no class", async () => {
+    const { snapshot } = await classed([], 2, {
+      intercept: (call, natural) =>
+        call.kind === "class"
+          ? json(call.url, { meta: { results: { skip: 0, limit: 1000, total: 0 } }, results: [] })
+          : natural(),
+    });
+
+    expect(classesOf(snapshot)).toEqual([
+      ["Z-1001-2026", null, null],
+      ["Z-1002-2026", null, null],
+    ]);
+    expect(projectionOf(snapshot).skipped).toBe(0);
+  });
+
+  it("fails the whole download when a class request is refused with a 403 and returns nothing, though a class batch answered before it", async () => {
+    // The guard reads a 403 as a failure of the request, whatever its body: openFDA's own is
+    // {"error":{"code":"API_KEY_MISSING", ...}} with the type application/json and no charset.
+    // (The wording of the message in these fixtures is invented.)
+    const refused = new FetchError("blocked_by_site", undefined, { status: 403 });
+    const server = serve({
+      csv: csvOf(kRows(120)),
+      products: recalled(120),
+      enforcement: reportsOf(120),
+      intercept: (call, natural) => {
+        if (call.kind === "class" && call.terms[0] === numberOf(51)) throw refused;
+        return natural();
+      },
+    });
+    let snapshot: unknown;
+
+    const error = await rejection(
+      download(server).then((result) => {
+        snapshot = result;
+      }),
+    );
+
+    expect(error).toBe(refused);
+    expect(error).toMatchObject({ name: "FetchError", reason: "blocked_by_site", status: 403 });
+    expect(snapshot).toBeUndefined();
+    // The first class request answered, the second was refused, and no third was asked.
+    expect(classCalls(server)).toHaveLength(2);
+    expect(server.calls[server.calls.length - 1].kind).toBe("class");
+  });
+
+  it("fails the whole download as not the list when the body of that 403 comes as an answer", async () => {
+    const body =
+      '{"error":{"code":"API_KEY_MISSING","message":"Invented message: this request carried no key. Ask for one at https://keys.example.test/signup/"}}';
+    const server = serve({
+      csv: csvOf(kRows(120)),
+      products: recalled(120),
+      enforcement: reportsOf(120),
+      intercept: (call, natural) =>
+        call.kind === "class" && call.terms[0] === numberOf(51)
+          ? answer(call.url, "application/json", Buffer.from(body))
+          : natural(),
+    });
+
+    const error = await rejection(download(server));
+
+    expect(error).toBeInstanceOf(NotTheListError);
+    // Fixed words only: nothing of the body, no address.
+    expect((error as Error).message).toBe(NOT_THE_LIST_MESSAGE);
+    expect(classCalls(server)).toHaveLength(2);
+  });
+
+  it("takes only a 404 of the first page for no class: any other failure of a class request is thrown as it is, with nothing returned", async () => {
+    for (const reason of [
+      "blocked_by_site",
+      "unreachable",
+      "not_allowed",
+      "unsupported_type",
+      "blocked_by_robots",
+    ] as const) {
+      const server = serve({
+        csv: csvOf(kRows(120)),
+        products: recalled(120),
+        intercept: (call, natural) => {
+          // The second class request: the first has answered.
+          if (call.kind === "class" && call.terms[0] === numberOf(51)) throw new FetchError(reason);
+          return natural();
+        },
+      });
+      let snapshot: unknown;
+
+      const error = await rejection(
+        download(server).then((result) => {
+          snapshot = result;
+        }),
+      );
+
+      expect(error).toMatchObject({ name: "FetchError", reason });
+      expect(snapshot).toBeUndefined();
+      expect(classCalls(server)).toHaveLength(2);
+    }
+  });
+
+  it("lets a 429 and a 5xx of a class request through as they are, with the Retry-After untouched", async () => {
+    const limited = new FetchError("blocked_by_site", undefined, {
+      status: 429,
+      retryAfterMs: 45_000,
+    });
+    const unavailable = new FetchError("unreachable", undefined, { status: 503 });
+    for (const failure of [limited, unavailable]) {
+      const server = serve({
+        csv: csvOf(kRows(3)),
+        products: recalled(3),
+        intercept: (call, natural) => {
+          if (call.kind === "class") throw failure;
+          return natural();
+        },
+      });
+
+      const error = await rejection(download(server));
+
+      expect(error).toBe(failure);
+    }
+    expect(limited).toMatchObject({ status: 429, retryAfterMs: 45_000 });
+  });
+
+  it("fails an answer that is no JSON, or lacks its results or its total, as not the list", async () => {
+    for (const body of [
+      "<html>Service unavailable</html>",
+      "[]",
+      "null",
+      '{"results":[]}',
+      '{"meta":{"results":{"total":2}}}',
+      '{"meta":{"results":{"total":"2"}},"results":[]}',
+      '{"meta":{"results":{"total":-1}},"results":[]}',
+      '{"meta":{"results":{"total":1.5}},"results":[]}',
+      '{"meta":{"results":{"total":null}},"results":[]}',
+      '{"meta":{"results":{}},"results":[]}',
+      '{"meta":{},"results":[]}',
+      '{"meta":{"results":{"total":0}},"results":"none"}',
+    ]) {
+      const server = serve({
+        csv: csvOf(kRows(2)),
+        products: recalled(2),
+        intercept: classAnswer(body),
+      });
+
+      const error = await rejection(download(server));
+
+      expect(error).toBeInstanceOf(NotTheListError);
+      expect((error as Error).message).toBe(NOT_THE_LIST_MESSAGE);
+    }
+  });
+
+  it("fails an answer of more than 1,000 results as not the list, and asks for no later page", async () => {
+    // As an endpoint that did not search by the recall numbers would answer: a full page and a total
+    // of more, or more than a page whose total says so.
+    for (const [total, length] of [
+      [1001, 1000],
+      [5000, 1000],
+      [40450, 1000],
+      [1001, 1001],
+      [2000, 2000],
+    ]) {
+      const page = Array.from({ length }, (_, index) => rawEnforcement(numberOf(index + 1)));
+      const server = serve({
+        csv: csvOf(kRows(3)),
+        products: recalled(3),
+        intercept: (call, natural) =>
+          call.kind === "class"
+            ? json(call.url, { meta: { results: { skip: 0, limit: 1000, total } }, results: page })
+            : natural(),
+      });
+
+      const error = await rejection(download(server));
+
+      expect(error).toBeInstanceOf(NotTheListError);
+      expect(classCalls(server).map((call) => call.skip)).toEqual([0]);
+    }
+  });
+
+  it("takes an answer of exactly 1,000 results as the page it is, and drops the reports that are for no recall number it asked for", async () => {
+    const page = Array.from({ length: 1000 }, (_, index) => rawEnforcement(numberOf(index + 5001)));
+    const server = serve({
+      csv: csvOf(kRows(2)),
+      products: recalled(2),
+      intercept: (call, natural) =>
+        call.kind === "class"
+          ? json(call.url, {
+              meta: { results: { skip: 0, limit: 1000, total: 1000 } },
+              results: page,
+            })
+          : natural(),
+    });
+
+    const snapshot = await fetched(server);
+
+    expect(classesOf(snapshot).every(([, recallClass]) => recallClass === null)).toBe(true);
+    expect(projectionOf(snapshot).skipped).toBe(0);
+  });
+
+  it("fails an answer that holds fewer or more results than its total says as not the list", async () => {
+    const two = [rawEnforcement(numberOf(1)), rawEnforcement(numberOf(2))];
+    for (const [total, results] of [
+      [3, two],
+      [1, two],
+      [2, [two[0]]],
+      [1, []],
+    ] as const) {
+      const server = serve({
+        csv: csvOf(kRows(2)),
+        products: recalled(2),
+        intercept: (call, natural) =>
+          call.kind === "class"
+            ? json(call.url, { meta: { results: { skip: 0, limit: 1000, total } }, results })
+            : natural(),
+      });
+
+      await expect(download(server)).rejects.toBeInstanceOf(NotTheListError);
+    }
+  });
+
+  it("fails an answer in which a result is not an object as not the list, with an error that holds nothing of the result", async () => {
+    for (const odd of [null, "ZZPRIVATE row text", 42, true, ["Z-1001-2026"]]) {
+      const server = serve({
+        csv: csvOf(kRows(2)),
+        products: recalled(2),
+        intercept: (call, natural) =>
+          call.kind === "class"
+            ? json(call.url, {
+                meta: { results: { skip: 0, limit: 1000, total: 2 } },
+                results: [rawEnforcement(numberOf(1)), odd],
+              })
+            : natural(),
+      });
+
+      const error = await rejection(download(server));
+
+      expect(error).toBeInstanceOf(NotTheListError);
+      expect((error as Error).message).toBe(NOT_THE_LIST_MESSAGE);
+    }
+  });
+
+  it("drops a report whose recall number is not one of the numbers it asked for: counted nowhere, and nothing of it stored", async () => {
+    // A server that answers beyond the request: a number nobody asked for, and numbers that look like
+    // an asked one in another case, with blanks, longer, or not as text.
+    const reports = [
+      rawEnforcement("Z-9999-2026", {
+        classification: "Class I",
+        center_classification_date: "20250101",
+      }),
+      rawEnforcement("z-1001-2026", { classification: "Class I" }),
+      rawEnforcement(" Z-1001-2026", { classification: "Class I" }),
+      rawEnforcement("Z-1001-2026 ", { classification: "Class I" }),
+      rawEnforcement("Z-1001-20260", { classification: "Class I" }),
+      rawEnforcement("Z-1001-2026-1", { classification: "Class I" }),
+      rawEnforcement("Z-1001-2026", {}),
+      rawEnforcement(null as unknown as string, { classification: "Class I" }),
+      { classification: "Class I", center_classification_date: "20250101" },
+      rawEnforcement(1001 as unknown as string, { classification: "Class I" }),
+      // A report of a number nobody asked for whose class or day cannot be read: it is not read.
+      rawEnforcement("Z-9998-2026", { classification: "Class IV" }),
+      rawEnforcement("Z-9997-2026", { center_classification_date: "not a day" }),
+    ];
+    const server = serve({
+      csv: csvOf(kRows(2)),
+      products: recalled(2),
+      enforcement: reports,
+      looseEnforcement: true,
+    });
+
+    const snapshot = await fetched(server);
+
+    expect(classesOf(snapshot)).toEqual([
+      ["Z-1001-2026", "Class II", "2024-03-05"],
+      ["Z-1002-2026", null, null],
+    ]);
+    expect(projectionOf(snapshot).skipped).toBe(0);
+    expect(snapshot.bodies.join("")).not.toContain("Z-9999-2026");
+    expect(snapshot.bodies.join("")).not.toContain('"Class I"');
+    expect(snapshot.bodies.join("")).not.toContain("2025-01-01");
+    expect(parse(snapshot)).toMatchObject({ errors: 0, skipped: 0 });
+  });
+
+  it("takes no report that an answer holds for the number of another request: the class of a product comes from the answer to its own batch", async () => {
+    // 120 products are three class batches. The first answer holds a report of product 60 as well,
+    // which belongs to the second batch, and the second answer is a 404: product 60 has no class.
+    const server = serve({
+      csv: csvOf(kRows(120)),
+      products: recalled(120),
+      enforcement: [...reportsOf(50, 1), ...reportsOf(20, 101)],
+      intercept: (call, natural) => {
+        const response = natural();
+        if (call.kind !== "class" || call.terms[0] !== numberOf(1) || response.notModified) {
+          return response;
+        }
+        const value = JSON.parse(response.body.toString("utf8"));
+        value.results.push(
+          rawEnforcement(numberOf(60), {
+            classification: "Class I",
+            center_classification_date: "20250101",
+          }),
+        );
+        value.meta.results.total += 1;
+        return json(call.url, value);
+      },
+    });
+
+    const snapshot = await fetched(server);
+
+    expect(classesOf(snapshot)[59]).toEqual([numberOf(60), null, null]);
+    expect(classesOf(snapshot).filter(([, recallClass]) => recallClass === "Class I")).toEqual([]);
+    expect(projectionOf(snapshot).skipped).toBe(0);
+  });
+
+  /** A report of the product 1, with the class and the day (YYYYMMDD) it is given. */
+  const reportOf = (classification: unknown, day?: unknown): Raw =>
+    rawEnforcement(numberOf(1), { classification, center_classification_date: day });
+
+  type Pair = [string, Raw, Raw, [string, string | null]];
+  const PAIRS: Pair[] = [
+    [
+      "the more serious class, whatever its day",
+      reportOf("Class III", "20240101"),
+      reportOf("Class I", "20250101"),
+      ["Class I", "2025-01-01"],
+    ],
+    [
+      "the more serious class, though it has no day",
+      reportOf("Class I"),
+      reportOf("Class II", "20240301"),
+      ["Class I", null],
+    ],
+    [
+      "the earlier day, of one class",
+      reportOf("Class II", "20240501"),
+      reportOf("Class II", "20240301"),
+      ["Class II", "2024-03-01"],
+    ],
+    [
+      "the report with a day, of one class, over the one with none",
+      reportOf("Class II"),
+      reportOf("Class II", "20240301"),
+      ["Class II", "2024-03-01"],
+    ],
+    [
+      "the report with a day that is a day, of one class, over the one whose day is none",
+      reportOf("Class III", "20240230"),
+      reportOf("Class III", "20260101"),
+      ["Class III", "2026-01-01"],
+    ],
+    [
+      "the report with a class, over one whose class is none of the three",
+      reportOf("Class IV", "20240301"),
+      reportOf("Class III", "20250101"),
+      ["Class III", "2025-01-01"],
+    ],
+    [
+      "the one value, when both reports say the same",
+      reportOf("Class II", "20240301"),
+      reportOf("Class II", "20240301"),
+      ["Class II", "2024-03-01"],
+    ],
+  ];
+
+  it.each(PAIRS)(
+    "keeps of two reports of one recall number %s, in whatever order the answer lists them",
+    async (_label, a, b, [recallClass, day]) => {
+      const forward = await classed([a, b], 1);
+      const backward = await classed([b, a], 1);
+      const reversed = await classed([a, b], 1, { reversed: true });
+
+      for (const { snapshot } of [forward, backward, reversed]) {
+        expect(classesOf(snapshot)).toEqual([["Z-1001-2026", recallClass, day]]);
+      }
+      expect(backward.snapshot.bodies).toEqual(forward.snapshot.bodies);
+      expect(reversed.snapshot.bodies).toEqual(forward.snapshot.bodies);
+    },
+  );
+
+  it("keeps the same class and day of three reports of one recall number in all six orders, and the same body", async () => {
+    const reports = [
+      reportOf("Class II", "20240501"),
+      reportOf("Class I", "20250101"),
+      reportOf("Class I", "20240301"),
+    ];
+    const orders = [
+      [0, 1, 2],
+      [0, 2, 1],
+      [1, 0, 2],
+      [1, 2, 0],
+      [2, 0, 1],
+      [2, 1, 0],
+    ];
+    const bodies = new Set<string>();
+
+    for (const order of orders) {
+      const { snapshot } = await classed(
+        order.map((index) => reports[index]),
+        1,
+      );
+      expect(classesOf(snapshot)).toEqual([["Z-1001-2026", "Class I", "2024-03-01"]]);
+      bodies.add(snapshot.bodies[0]);
+    }
+
+    expect(bodies.size).toBe(1);
+  });
+
+  it("keeps the same class of a duplicated number among the reports of other numbers, in whatever order the answer lists them", async () => {
+    const reports = [
+      reportOf("Class III", "20250101"),
+      rawEnforcement(numberOf(2), {
+        classification: "Class I",
+        center_classification_date: "20230101",
+      }),
+      reportOf("Class II", "20240301"),
+      rawEnforcement(numberOf(3)),
+    ];
+
+    const forward = await classed(reports, 3);
+    const backward = await classed([...reports].reverse(), 3);
+    const reversed = await classed(reports, 3, { reversed: true });
+
+    expect(classesOf(forward.snapshot)).toEqual([
+      ["Z-1001-2026", "Class II", "2024-03-01"],
+      ["Z-1002-2026", "Class I", "2023-01-01"],
+      ["Z-1003-2026", "Class II", "2024-03-05"],
+    ]);
+    expect(backward.snapshot.bodies).toEqual(forward.snapshot.bodies);
+    expect(reversed.snapshot.bodies).toEqual(forward.snapshot.bodies);
+  });
+
+  it("counts a recall number whose reports all give no class once, and one that has a report with a class not at all", async () => {
+    const none = reportOf("Class IV", "20240301");
+    const alsoNone = reportOf("", "20250101");
+    const good = reportOf("Class III", "20250101");
+
+    const allNone = await classed([none, alsoNone], 1);
+    const noneFirst = await classed([none, good], 1);
+    const goodFirst = await classed([good, none], 1);
+
+    expect(classesOf(allNone.snapshot)).toEqual([["Z-1001-2026", null, null]]);
+    expect(projectionOf(allNone.snapshot)).toMatchObject({ skipped: 0, classSkipped: 1 });
+    expect(classesOf(noneFirst.snapshot)).toEqual([["Z-1001-2026", "Class III", "2025-01-01"]]);
+    expect(projectionOf(noneFirst.snapshot)).toMatchObject({ skipped: 0, classSkipped: 0 });
+    expect(goodFirst.snapshot.bodies).toEqual(noneFirst.snapshot.bodies);
+  });
+
+  it.each([
+    ["Class IV", "Class IV"],
+    ["an empty class", ""],
+    ["a class in lower case", "class i"],
+    ["a class in upper case", "CLASS I"],
+    ["a class with a blank before it", " Class I"],
+    ["a class with a blank after it", "Class I "],
+    ["a class with a full stop", "Class I."],
+    ["a class without its blank", "ClassI"],
+    ["a class in digits", "Class 1"],
+    ["a numeral alone", "II"],
+    ["a class that is a number", 1],
+    ["a class that is null", null],
+    ["a class that is a list", ["Class I"]],
+    ["no class", undefined],
+  ])(
+    "gives no class and no day to a product whose report has %s, and counts one report that cannot be read, apart from the products it left out",
+    async (_label, classification) => {
+      const reports = [
+        rawEnforcement(numberOf(1), { classification }),
+        rawEnforcement(numberOf(2)),
+      ];
+
+      const { snapshot } = await classed(reports, 2);
+
+      expect(classesOf(snapshot)).toEqual([
+        ["Z-1001-2026", null, null],
+        ["Z-1002-2026", "Class II", "2024-03-05"],
+      ]);
+      // The product is kept, so it is no product left out: the report is counted of its own.
+      expect(projectionOf(snapshot)).toMatchObject({ skipped: 0, classSkipped: 1 });
+      expect(parse(snapshot)).toMatchObject({ errors: 0, skipped: 1 });
+    },
+  );
+
+  it.each([
+    ["no day", undefined],
+    ["an empty day", ""],
+    ["a day with dashes", "2024-03-05"],
+    ["a day with slashes", "03/05/2024"],
+    ["a day of seven digits", "2024035"],
+    ["a day of nine digits", "202403055"],
+    ["a day that does not exist", "20240230"],
+    ["a month that does not exist", "20241305"],
+    ["a month of zero", "20240005"],
+    ["a day of zero", "20240300"],
+    ["a day with a blank before it", " 20240305"],
+    ["a day with a time", "20240305T0000"],
+    ["a day in words", "yesterday"],
+    ["a day that is a number", 20240305],
+    ["a day that is null", null],
+    [
+      "a day written with full-width digits",
+      String.fromCharCode(0xff12, 0xff10, 0xff12, 0xff14, 0xff10, 0xff13, 0xff10, 0xff15),
+    ],
+  ])(
+    "keeps the class and gives no day when the day of the classification is %s, and counts nothing: the day is not stated",
+    async (_label, day) => {
+      const reports = [
+        rawEnforcement(numberOf(1), { classification: "Class I", center_classification_date: day }),
+        rawEnforcement(numberOf(2)),
+      ];
+
+      const { snapshot } = await classed(reports, 2);
+
+      expect(classesOf(snapshot)).toEqual([
+        ["Z-1001-2026", "Class I", null],
+        ["Z-1002-2026", "Class II", "2024-03-05"],
+      ]);
+      expect(projectionOf(snapshot)).toMatchObject({ skipped: 0, classSkipped: 0 });
+      const parsed = parse(snapshot);
+      expect(parsed).toMatchObject({ errors: 0, skipped: 0 });
+      expect(
+        sentenceOf(parsed.records[0].summary, "FDA classification, from its enforcement reports"),
+      ).toBe(
+        "FDA classification, from its enforcement reports: Class I, classification day not stated.",
+      );
+      expect(parsed.records[0].identifiers.class).toBe("Class I");
+    },
+  );
+
+  it("does not refuse a list for reports whose day cannot be read, however many there are", async () => {
+    // 40 classed reports, each with a day that is missing or none: far more than ten, and the list is
+    // still read, every product with its class.
+    const days = [undefined, "", "not a day", "20240230", "2024-03-05", null];
+    const reports = Array.from({ length: 40 }, (_, index) =>
+      rawEnforcement(numberOf(index + 1), {
+        classification: "Class I",
+        center_classification_date: days[index % days.length],
+      }),
+    );
+
+    const { snapshot } = await classed(reports, 40);
+
+    expect(
+      classesOf(snapshot).every(
+        ([, recallClass, day]) => recallClass === "Class I" && day === null,
+      ),
+    ).toBe(true);
+    expect(projectionOf(snapshot)).toMatchObject({ skipped: 0, classSkipped: 0 });
+    const parsed = parse(snapshot);
+    expect(parsed).toMatchObject({ errors: 0, skipped: 0, root: "device/recall.json" });
+    expect(parsed.records).toHaveLength(40);
+    expect(parsed.records.every((record) => record.identifiers.class === "Class I")).toBe(true);
+  });
+
+  it("counts a report with a class that is none and a day that is none as one report, not two", async () => {
+    const report = rawEnforcement(numberOf(1), {
+      classification: "Class IV",
+      center_classification_date: "not a day",
+    });
+
+    const { snapshot } = await classed([report], 1);
+
+    expect(classesOf(snapshot)).toEqual([["Z-1001-2026", null, null]]);
+    expect(projectionOf(snapshot)).toMatchObject({ skipped: 0, classSkipped: 1 });
+  });
+
+  it("counts the reports it cannot read apart from the products it left out, and the parse refuses their sum above the allowance", async () => {
+    // Ten rows that cannot be read are tolerated, whatever kind they are; the eleventh is a new format.
+    const bad = (count: number) =>
+      reportsOf(count, 1, { classification: "Class IV" }).concat(reportsOf(11 - count, count + 1));
+    const tolerated = await classed(bad(10), 11);
+    const refused = await classed(bad(11), 11);
+    const mixed = await fetched(
+      serve({
+        csv: csvOf(kRows(11)),
+        products: [rawProduct(1, { event_date_initiated: undefined }), ...recalled(10, 2)],
+        enforcement: reportsOf(10, 2, { classification: "Class IV" }),
+      }),
+    );
+
+    expect(projectionOf(tolerated.snapshot)).toMatchObject({ skipped: 0, classSkipped: 10 });
+    expect(parse(tolerated.snapshot)).toMatchObject({ skipped: 10, errors: 0 });
+    expect(projectionOf(refused.snapshot)).toMatchObject({ skipped: 0, classSkipped: 11 });
+    expect(parse(refused.snapshot)).toMatchObject({
+      skipped: 0,
+      errors: 11,
+      root: "device/recall.json",
+    });
+    // One product left out of the join and ten reports that cannot be read are eleven.
+    expect(projectionOf(mixed)).toMatchObject({ skipped: 1, classSkipped: 10 });
+    expect(parse(mixed)).toMatchObject({ skipped: 0, errors: 11 });
+  });
+
+  it("splits a batch whose answer is too large in half, down to batches of at most 5 numbers, as the join does", async () => {
+    const cutAbove =
+      (limit: number): Options["intercept"] =>
+      (call, natural) =>
+        call.kind === "class" && call.terms.length > limit
+          ? answer(call.url, "application/json", Buffer.from('{"meta":{"results":{"to'), {
+              truncated: true,
+            })
+          : natural();
+
+    const { server, snapshot } = await classed(reportsOf(50), 50, { intercept: cutAbove(12) });
+
+    // 50, 25 and 13 are too large; each half is asked in turn, the first before the second.
+    expect(classCalls(server).map((call) => call.terms.length)).toEqual([
+      50, 25, 13, 7, 6, 12, 25, 13, 7, 6, 12,
+    ]);
+    const numbers = Array.from({ length: 50 }, (_, index) => numberOf(index + 1));
+    const calls = classCalls(server);
+    expect(calls[1].terms).toEqual(numbers.slice(0, 25));
+    expect(calls[2].terms).toEqual(numbers.slice(0, 13));
+    expect(calls[3].terms).toEqual(numbers.slice(0, 7));
+    expect(calls[4].terms).toEqual(numbers.slice(7, 13));
+    expect(calls[5].terms).toEqual(numbers.slice(13, 25));
+    expect(calls[6].terms).toEqual(numbers.slice(25, 50));
+    expect(calls[1].url).toBe(classUrl(numbers.slice(0, 25)));
+    expect(classesOf(snapshot)).toHaveLength(50);
+    expect(classesOf(snapshot).every(([, recallClass]) => recallClass === "Class II")).toBe(true);
+  });
+
+  it("splits a batch of 6 and fails one of 5 that is still too large", async () => {
+    const cut =
+      (limit: number): Options["intercept"] =>
+      (call, natural) =>
+        call.kind === "class" && call.terms.length > limit
+          ? answer(call.url, "application/json", Buffer.from("{"), { truncated: true })
+          : natural();
+
+    const six = await classed(reportsOf(6), 6, { intercept: cut(3) });
+    const five = serve({
+      csv: csvOf(kRows(5)),
+      products: recalled(5),
+      enforcement: reportsOf(5),
+      intercept: cut(0),
+    });
+    const error = await rejection(download(five));
+
+    expect(classCalls(six.server).map((call) => call.terms.length)).toEqual([6, 3, 3]);
+    expect(error).toBeInstanceOf(BodyTooLargeError);
+    expect(classCalls(five)).toHaveLength(1);
+  });
+
+  it("lets the failure stand when even the smallest batches are too large, after one request per level", async () => {
+    const server = serve({
+      csv: csvOf(kRows(50)),
+      products: recalled(50),
+      enforcement: reportsOf(50),
+      intercept: (call, natural) =>
+        call.kind === "class"
+          ? answer(call.url, "application/json", Buffer.from("{"), { truncated: true })
+          : natural(),
+    });
+
+    const error = await rejection(download(server));
+
+    expect(error).toBeInstanceOf(BodyTooLargeError);
+    expect((error as Error).message).toBe("The file is larger than its limit.");
+    expect(classCalls(server).map((call) => call.terms.length)).toEqual([50, 25, 13, 7, 4]);
+  });
+
+  it("counts a report it cannot read once, though a split asks for its batch again", async () => {
+    const reports = [
+      ...reportsOf(2),
+      rawEnforcement(numberOf(3), { classification: "Class IV" }),
+      ...reportsOf(9, 4),
+    ];
+    const cutAbove6: Options["intercept"] = (call, natural) =>
+      call.kind === "class" && call.terms.length > 6
+        ? answer(call.url, "application/json", Buffer.from("{"), { truncated: true })
+        : natural();
+
+    const { server, snapshot } = await classed(reports, 12, { intercept: cutAbove6 });
+
+    // The 12 numbers were asked as 12, then as 6 and 6; the answer to the first was never read.
+    expect(classCalls(server).map((call) => call.terms.length)).toEqual([12, 6, 6]);
+    expect(projectionOf(snapshot)).toMatchObject({ skipped: 0, classSkipped: 1 });
+    expect(classesOf(snapshot)[2]).toEqual(["Z-1003-2026", null, null]);
+  });
+
+  it("does not read the body of an answer cut at its limit", async () => {
+    const server = serve({
+      csv: csvOf(kRows(8)),
+      products: recalled(8),
+      enforcement: reportsOf(8),
+      intercept: (call, natural) =>
+        call.kind === "class" && call.terms.length > 4
+          ? answer(call.url, "application/json", Buffer.from("not json at all"), {
+              truncated: true,
+            })
+          : natural(),
+    });
+
+    const snapshot = await fetched(server);
+
+    expect(classesOf(snapshot).every(([, recallClass]) => recallClass === "Class II")).toBe(true);
+  });
+});
+
+describe("fdaRecallsConnector.download, the class stage: what never crosses", () => {
+  const withReports = async (reports: readonly Raw[] = reportsOf(3)) => {
+    const snapshot = await fetched(
+      serve({ csv: csvOf(kRows(3)), products: recalled(3), enforcement: reports }),
+    );
+    return { snapshot, records: parse(snapshot).records };
+  };
+
+  it("carries into the snapshot and into every record the class and the day of a report, and no other field of it", async () => {
+    const { snapshot, records } = await withReports();
+
+    const everything = `${snapshot.bodies.join("")}${JSON.stringify(records)}`;
+    expect(everything).not.toContain("ZZPRIVATE");
+    for (const field of EXCLUDED_REPORT_FIELDS) {
+      expect(everything).not.toContain(`ZZPRIVATE-${field}`);
+    }
+    // The openfda block, whose numbers and terms are never read.
+    expect(everything).not.toContain("ZZPRIVATE-openfda");
+    expect(everything).not.toContain("K900999");
+    // The days of the report that are no part of the class: in neither of the two forms.
+    for (const day of Object.values(EXCLUDED_REPORT_DAYS)) {
+      expect(everything).not.toContain(day);
+      expect(everything).not.toContain(`${day.slice(0, 4)}-${day.slice(4, 6)}-${day.slice(6)}`);
+    }
+    // Nor the names of the report's fields as keys.
+    for (const key of [
+      "recall_number",
+      "classification",
+      "center_classification_date",
+      "status",
+      "more_code_info",
+      "voluntary_mandated",
+      "event_id",
+      "product_type",
+      "report_date",
+      "termination_date",
+      "recall_initiation_date",
+      "address_2",
+      "country",
+      "openfda",
+    ]) {
+      expect(snapshot.bodies.join("")).not.toContain(`"${key}"`);
+    }
+  });
+
+  it("adds two fields to the product of the recall and no more: its class and the day it was classified", async () => {
+    const { snapshot } = await withReports();
+
+    for (const product of projectionOf(snapshot).products) {
+      expect(Object.keys(product)).toEqual([
+        "product_res_number",
+        "res_event_number",
+        "recalling_firm",
+        "event_date_initiated",
+        "event_date_posted",
+        "event_date_terminated",
+        "recall_status",
+        "root_cause_description",
+        "reason_for_recall",
+        "product_description",
+        "matched",
+        "class",
+        "classDay",
+      ]);
+    }
+    // The stored body adds one count of its own, no field of a report: how many reports gave no class.
+    expect(Object.keys(projectionOf(snapshot))).toEqual([
+      "lastUpdated",
+      "skipped",
+      "classSkipped",
+      "products",
+      "aiRows",
+    ]);
+  });
+
+  it("takes the text of the firm, the reason and the description from the recalls, not from the report of the same recall", async () => {
+    const { snapshot, records } = await withReports();
+
+    const [first] = projectionOf(snapshot).products;
+    expect(first.recalling_firm).toBe("Fictional Firm 1 Ltd");
+    expect(first.reason_for_recall).toBe("Fictional reason 1.");
+    expect(first.product_description).toBe("Fictional device 1");
+    expect(first.recall_status).toBe("Open, Classified");
+    expect(records[0].summary).toContain("Recalling firm: Fictional Firm 1 Ltd.");
+    expect(records[0].summary).toContain("Status: Open, Classified.");
+    expect(records[0].title).toContain("Fictional Firm 1 Ltd");
+  });
+
+  it("gives the same snapshot for a report with every field and for one that holds only the three it reads", async () => {
+    const full = await withReports(reportsOf(3));
+    const bare = await withReports(
+      Array.from({ length: 3 }, (_, index) => ({
+        recall_number: numberOf(index + 1),
+        classification: "Class II",
+        center_classification_date: "20240305",
+      })),
+    );
+
+    expect(bare.snapshot.bodies).toEqual(full.snapshot.bodies);
+    expect(bare.records).toEqual(full.records);
+  });
+
+  it("gives the same records whatever status the report has: the status of an enforcement report is never read", async () => {
+    const records: Array<ReturnType<typeof parse>["records"]> = [];
+    for (const status of ["Ongoing", "Completed", "Terminated", "Open", "", undefined]) {
+      const reports = reportsOf(3, 1, {
+        status,
+        termination_date: status === "Terminated" ? "20250601" : undefined,
+      });
+      records.push((await withReports(reports)).records);
+    }
+
+    for (const other of records) expect(other).toEqual(records[0]);
+    // The status the record shows is the recall's own, and no day of termination appears.
+    for (const record of records[0]) {
+      expect(record.summary).toContain("Status: Open, Classified.");
+      expect(record.summary).not.toContain("Terminated");
+      expect(record.identifiers.status).toBe("Open, Classified");
+    }
+  });
+});
+
 describe("fdaRecallsConnector.download, the list of the FDA", () => {
   it.each([
     ["a page of the site that is not the file", "<html><body>Access Denied</body></html>"],
@@ -1664,7 +3260,7 @@ describe("fdaRecallsConnector.download, the list of the FDA", () => {
     const error = await rejection(download(server));
 
     expect(error).toBeInstanceOf(NotTheListError);
-    expect(server.calls.map((call) => call.kind)).toEqual(["probe", "list"]);
+    expect(server.calls.map((call) => call.kind)).toEqual(["probe", "enforcement_probe", "list"]);
   });
 
   it("refuses a list in which more rows cannot be read than the other connector tolerates", async () => {
@@ -1699,7 +3295,7 @@ describe("fdaRecallsConnector.download, the list of the FDA", () => {
     ]);
   });
 
-  it("needs 35 requests for a list of the size of the real one: 1,553 K numbers, 21 PMA numbers and 40 De Novo numbers", async () => {
+  it("needs 36 requests for a list of the size of the real one before any class: 1,553 K numbers, 21 PMA numbers and 40 De Novo numbers", async () => {
     const supplements = [1, 2, 3, 4].map((index) => ({ submission: `P98001${index}/S00${index}` }));
     const denovo = Array.from({ length: 40 }, (_, index) => ({
       submission: `DEN9004${String(index).padStart(2, "0")}`,
@@ -1716,7 +3312,8 @@ describe("fdaRecallsConnector.download, the list of the FDA", () => {
     expect(
       joins.filter((call) => call.field === "pma_numbers").map((call) => call.terms.length),
     ).toEqual([21]);
-    expect(server.calls).toHaveLength(2 + 32 + 1);
+    // The two probes, the list, 32 batches of K numbers and the one of PMA numbers.
+    expect(server.calls).toHaveLength(3 + 32 + 1);
     expect(server.calls.map((call) => call.url).join("\n")).not.toContain("DEN");
   });
 });
@@ -1768,6 +3365,8 @@ describe("fdaRecallsConnector.download, the projection of the answers", () => {
           "reason_for_recall",
           "product_description",
           "matched",
+          "class",
+          "classDay",
         ].sort(),
       );
     }
@@ -1806,7 +3405,8 @@ describe("fdaRecallsConnector.download, the projection of the answers", () => {
       products: [product],
       intercept: (call, natural) => {
         const response = natural();
-        if (response.notModified || call.kind !== "join" || call.number !== 4) return response;
+        // The second batch of the join: the two probes and the list come first.
+        if (response.notModified || call.kind !== "join" || call.number !== 5) return response;
         const value = JSON.parse(response.body.toString("utf8"));
         value.results[0].recalling_firm = "Later Firm Ltd";
         return json(call.url, value);
@@ -2623,6 +4223,590 @@ describe("fdaRecallsConnector.parse, the record of an event", () => {
   });
 });
 
+describe("fdaRecallsConnector.parse, the class of an event", () => {
+  const LABEL = "FDA classification, from its enforcement reports";
+  /** The products of one event, numbered Z-1001-2026 on, with the class and the day each is given. */
+  const eventOf = (...classes: Array<[ProjectedProduct["class"], string | null]>) =>
+    classes.map(([recallClass, classDay], index) =>
+      projected({ product_res_number: `Z-${1001 + index}-2026`, class: recallClass, classDay }),
+    );
+  const recordOf = (products: readonly ProjectedProduct[]) =>
+    parseBody(bodyOf(products)).records[0];
+  const classSentence = (products: readonly ProjectedProduct[]): string =>
+    sentenceOf(recordOf(products).summary, LABEL);
+
+  it("says the class and the day, in place of the sentence about the recall page, when every product of the event has the class", () => {
+    const record = recordOf(eventOf(["Class II", "2024-03-11"], ["Class II", "2024-03-05"]));
+
+    expect(sentenceOf(record.summary, LABEL)).toBe(
+      "FDA classification, from its enforcement reports: Class II, classified 2024-03-05.",
+    );
+    expect(record.summary).not.toContain(CLASS_NOTE);
+    expect(record.summary).not.toContain("recall page");
+  });
+
+  it("says how many of the products of the event have the class when not all of them have it", () => {
+    const record = recordOf(
+      eventOf(["Class II", "2024-03-05"], ["Class II", "2024-04-01"], [null, null]),
+    );
+
+    expect(sentenceOf(record.summary, LABEL)).toBe(
+      "FDA classification, from its enforcement reports: Class II for 2 of the event's 3 products, classified 2024-03-05.",
+    );
+  });
+
+  it("leaves 'for k of the event's m products' out when k is m, and says it when k is one less", () => {
+    expect(classSentence(eventOf(["Class III", "2025-02-14"]))).toBe(
+      "FDA classification, from its enforcement reports: Class III, classified 2025-02-14.",
+    );
+    expect(classSentence(eventOf(["Class III", "2025-02-14"], [null, null]))).toBe(
+      "FDA classification, from its enforcement reports: Class III for 1 of the event's 2 products, classified 2025-02-14.",
+    );
+  });
+
+  it("puts the products of the most serious class first: Class I wins over Class II, and Class II over Class III", () => {
+    expect(
+      classSentence(
+        eventOf(
+          ["Class II", "2024-01-10"],
+          ["Class I", "2024-05-02"],
+          ["Class II", "2024-01-11"],
+          [null, null],
+        ),
+      ),
+    ).toBe(
+      "FDA classification, from its enforcement reports: Class I for 1 of the event's 4 products, classified 2024-05-02.",
+    );
+    expect(classSentence(eventOf(["Class III", "2024-01-10"], ["Class II", "2024-05-02"]))).toBe(
+      "FDA classification, from its enforcement reports: Class II for 1 of the event's 2 products, classified 2024-05-02.",
+    );
+    expect(
+      classSentence(
+        eventOf(["Class III", "2024-01-10"], ["Class II", "2024-02-02"], ["Class I", "2024-03-03"]),
+      ),
+    ).toBe(
+      "FDA classification, from its enforcement reports: Class I for 1 of the event's 3 products, classified 2024-03-03.",
+    );
+    // However the products are ordered.
+    expect(
+      classSentence(
+        eventOf(["Class I", "2024-03-03"], ["Class III", "2024-01-10"], ["Class II", "2024-02-02"]),
+      ),
+    ).toBe(
+      "FDA classification, from its enforcement reports: Class I for 1 of the event's 3 products, classified 2024-03-03.",
+    );
+  });
+
+  it("takes the earliest day among the products that have the most serious class, not among all the products", () => {
+    const record = recordOf(
+      eventOf(
+        ["Class I", "2024-05-02"],
+        ["Class II", "2023-01-01"],
+        ["Class I", "2024-03-09"],
+        ["Class III", "2022-01-01"],
+      ),
+    );
+
+    expect(sentenceOf(record.summary, LABEL)).toBe(
+      "FDA classification, from its enforcement reports: Class I for 2 of the event's 4 products, classified 2024-03-09.",
+    );
+  });
+
+  it("takes the earliest day of the products that have one, and says the classification day is not stated when none of them has a day", () => {
+    expect(
+      classSentence(
+        eventOf(["Class I", null], ["Class I", "2024-05-02"], ["Class I", "2024-04-01"]),
+      ),
+    ).toBe("FDA classification, from its enforcement reports: Class I, classified 2024-04-01.");
+    expect(classSentence(eventOf(["Class I", null], ["Class I", null], [null, null]))).toBe(
+      "FDA classification, from its enforcement reports: Class I for 2 of the event's 3 products, classification day not stated.",
+    );
+    expect(classSentence(eventOf(["Class II", null]))).toBe(
+      "FDA classification, from its enforcement reports: Class II, classification day not stated.",
+    );
+    // A day of a product of a less serious class is not the day of the class that is said.
+    expect(classSentence(eventOf(["Class I", null], ["Class II", "2024-01-01"]))).toBe(
+      "FDA classification, from its enforcement reports: Class I for 1 of the event's 2 products, classification day not stated.",
+    );
+  });
+
+  it("words a classification day that is not stated in plain words, once, and never when a day is stated", () => {
+    const withoutDay = recordOf(eventOf(["Class III", null], ["Class III", null]));
+    const withDay = recordOf(eventOf(["Class III", null], ["Class III", "2025-06-01"]));
+    const unclassed = recordOf(eventOf([null, null]));
+
+    // The sentence is the last before the closing one, and the rest of the text is the same.
+    expect(withoutDay.summary).toContain(
+      "Recall numbers: Z-1001-2026; Z-1002-2026. FDA classification, from its enforcement reports: Class III, classification day not stated. A recall is a firm's correction",
+    );
+    expect(withoutDay.summary.endsWith(CLOSING)).toBe(true);
+    expect(withoutDay.summary.match(/not stated/g)).toHaveLength(1);
+    expect(withDay.summary).not.toContain("not stated");
+    expect(unclassed.summary).not.toContain("not stated");
+    // Plain words: nothing of the machinery shows.
+    expect(sentenceOf(withoutDay.summary, LABEL)).not.toMatch(
+      /null|undefined|unreadable|missing|error|invalid|\?|\bNaN\b/i,
+    );
+    expect(withoutDay.summary).not.toContain("..");
+    expect(withoutDay.identifiers.class).toBe("Class III");
+  });
+
+  it("keeps the sentence about the recall page when no product of the event has a class", () => {
+    const record = recordOf(eventOf([null, null], [null, null]));
+
+    expect(record.summary).toContain(CLASS_NOTE);
+    expect(record.summary).not.toContain(LABEL);
+    expect(record.summary).not.toMatch(/classified \d{4}-\d{2}-\d{2}/);
+  });
+
+  it("puts the sentence where the sentence about the recall page was: after the recall numbers, and before the closing one", () => {
+    const record = recordOf(eventOf(["Class II", "2024-03-05"], ["Class II", "2024-03-11"]));
+
+    expect(record.summary).toContain(
+      "Recall numbers: Z-1001-2026; Z-1002-2026. FDA classification, from its enforcement reports: Class II, classified 2024-03-05. A recall is a firm's correction",
+    );
+    expect(record.summary.endsWith(CLOSING)).toBe(true);
+    expect(record.summary.startsWith(`${FDA_RECALL_RECORD_MARK}, joined to the FDA list`)).toBe(
+      true,
+    );
+    expect(record.summary).not.toContain("..");
+  });
+
+  it("never shows a status in the sentence, and the status of the record is the recall's own", () => {
+    const record = recordOf([
+      projected({
+        recall_status: "Terminated",
+        class: "Class II",
+        classDay: "2024-03-05",
+        event_date_terminated: "2025-01-01",
+      }),
+    ]);
+
+    expect(sentenceOf(record.summary, LABEL)).not.toMatch(
+      /status|terminated|ongoing|completed|open/i,
+    );
+    expect(record.summary).toContain("Status: Terminated.");
+    expect(record.identifiers.status).toBe("Terminated");
+  });
+
+  it("gives the most serious class as an identifier, and no identifier when no product has a class", () => {
+    const classed = recordOf(
+      eventOf(["Class III", null], ["Class II", "2024-03-05"], [null, null]),
+    );
+    const plain = recordOf(eventOf([null, null]));
+
+    expect(classed.identifiers.class).toBe("Class II");
+    expect(Object.keys(classed.identifiers)).toEqual([
+      "eventNumber",
+      "recallingFirms",
+      "productResNumbers",
+      "submissionNumbers",
+      "status",
+      "class",
+    ]);
+    // Absent, not undefined or null.
+    expect(Object.keys(plain.identifiers)).toEqual([
+      "eventNumber",
+      "recallingFirms",
+      "productResNumbers",
+      "submissionNumbers",
+      "status",
+    ]);
+    expect("class" in plain.identifiers).toBe(false);
+  });
+
+  it("changes nothing of a record but the sentence and the identifier: the title, the address, the keys and the dates stay", () => {
+    const plain = recordOf(eventOf([null, null], [null, null]));
+    const classed = recordOf(eventOf(["Class I", "2024-03-05"], ["Class II", "2024-03-11"]));
+
+    expect(classed.summary).toBe(
+      plain.summary.replace(
+        CLASS_NOTE,
+        "FDA classification, from its enforcement reports: Class I for 1 of the event's 2 products, classified 2024-03-05.",
+      ),
+    );
+    expect({ ...classed, summary: "", identifiers: {} }).toEqual({
+      ...plain,
+      summary: "",
+      identifiers: {},
+    });
+    expect({ ...classed.identifiers, class: undefined }).toEqual({
+      ...plain.identifiers,
+      class: undefined,
+    });
+  });
+
+  it("gives the same record whatever the order of the products in the projection", () => {
+    const products = eventOf(
+      ["Class II", "2024-03-05"],
+      ["Class I", "2024-05-02"],
+      [null, null],
+      ["Class I", "2024-03-09"],
+    );
+
+    const forward = parseBody(bodyOf(products));
+    const backward = parseBody(bodyOf([...products].reverse()));
+
+    expect(backward).toEqual(forward);
+    expect(sentenceOf(forward.records[0].summary, LABEL)).toBe(
+      "FDA classification, from its enforcement reports: Class I for 2 of the event's 4 products, classified 2024-03-09.",
+    );
+  });
+
+  it("counts the products of an event, not of the projection, and says the class of each event of its own", () => {
+    const products = [
+      projected({
+        product_res_number: "Z-1001-2026",
+        res_event_number: "1",
+        class: "Class I",
+        classDay: "2024-01-01",
+      }),
+      projected({ product_res_number: "Z-1002-2026", res_event_number: "1", class: null }),
+      projected({
+        product_res_number: "Z-1003-2026",
+        res_event_number: "2",
+        class: "Class III",
+        classDay: "2025-01-01",
+      }),
+      projected({ product_res_number: "Z-1004-2026", res_event_number: "3", class: null }),
+    ];
+
+    const [first, second, third] = parseBody(bodyOf(products)).records;
+
+    expect(sentenceOf(first.summary, LABEL)).toBe(
+      "FDA classification, from its enforcement reports: Class I for 1 of the event's 2 products, classified 2024-01-01.",
+    );
+    expect(sentenceOf(second.summary, LABEL)).toBe(
+      "FDA classification, from its enforcement reports: Class III, classified 2025-01-01.",
+    );
+    expect(third.summary).toContain(CLASS_NOTE);
+    expect(first.identifiers.class).toBe("Class I");
+    expect(second.identifiers.class).toBe("Class III");
+    expect("class" in third.identifiers).toBe(false);
+  });
+
+  it("reads a stored copy of version 1, which holds no class, as a copy in which nothing is classified", () => {
+    const old = Object.fromEntries(
+      Object.entries(projected()).filter(([key]) => key !== "class" && key !== "classDay"),
+    );
+
+    const result = parseBody(bodyOf([old]));
+
+    expect(result).toMatchObject({ errors: 0, skipped: 0, root: "device/recall.json" });
+    expect(result.records).toHaveLength(1);
+    expect(result.records[0].summary).toContain(CLASS_NOTE);
+    expect("class" in result.records[0].identifiers).toBe(false);
+  });
+
+  it.each([
+    ["a class that is none of the three", "Class IV"],
+    ["a class in lower case", "class i"],
+    ["a class with a blank around it", " Class I "],
+    ["a class that is a number", 1],
+    ["a class that is a list", ["Class I"]],
+    ["a class that is null", null],
+  ])("reads %s in a stored product as no class, and counts nothing", (_label, value) => {
+    const result = parseBody(bodyOf([{ ...projected(), class: value, classDay: "2024-03-05" }]));
+
+    expect(result).toMatchObject({ errors: 0, skipped: 0 });
+    expect(result.records[0].summary).toContain(CLASS_NOTE);
+    expect(result.records[0].summary).not.toMatch(/classified \d{4}-\d{2}-\d{2}/);
+    expect("class" in result.records[0].identifiers).toBe(false);
+  });
+
+  it.each([
+    ["no day", undefined],
+    ["a day that is null", null],
+    ["a day that does not exist", "2024-02-30"],
+    ["a day in the form of the reports", "20240305"],
+    ["a day that is a number", 20240305],
+    ["a day in words", "last week"],
+  ])("reads %s in a stored product as a class with no day", (_label, day) => {
+    const result = parseBody(bodyOf([{ ...projected(), class: "Class I", classDay: day }]));
+
+    expect(result).toMatchObject({ errors: 0, skipped: 0 });
+    expect(sentenceOf(result.records[0].summary, LABEL)).toBe(
+      "FDA classification, from its enforcement reports: Class I, classification day not stated.",
+    );
+  });
+
+  it("keeps a classed text within 4,000 characters, whole when it fits, with the closing sentence last", () => {
+    // 5,000 products of one event, 4,999 of them in Class III: the longest sentence there is.
+    const products = Array.from({ length: 5000 }, (_, index) =>
+      projected({
+        product_res_number: `Z-${String(1000 + (index % 9000)).padStart(4, "0")}-${2000 + Math.floor(index / 9000)}`,
+        class: index === 0 ? null : "Class III",
+        classDay: index === 0 ? null : "2026-06-10",
+      }),
+    );
+
+    const [record] = parseBody(bodyOf(products)).records;
+
+    expect(sentenceOf(record.summary, LABEL)).toBe(
+      "FDA classification, from its enforcement reports: Class III for 4999 of the event's 5000 products, classified 2026-06-10.",
+    );
+    expect(record.summary.length).toBeLessThanOrEqual(4000);
+    expect(record.summary.endsWith(CLOSING)).toBe(true);
+    expect(record.summary).not.toContain("[shortened]");
+  });
+
+  it("keeps a classed text that is too long within 4,000 characters, cuts the sentences before the closing one, and never the closing one", () => {
+    // The longest cells there are, a reason one character longer each time, and a class: the class
+    // sentence is the last before the closing one, so it is the first the cut takes.
+    const rows = [1, 2, 3, 4].map((index) => ({
+      submission: `P90000${index}/S${"1".repeat(40)}`,
+      device: "d".repeat(150),
+      company: `${"C".repeat(199)}${index}`,
+    }));
+    const textWith = (reason: number): string =>
+      parseBody(
+        bodyOf(
+          [1, 2, 3, 4].map((index) =>
+            projected({
+              product_res_number: `Z-${1000 + index}-2026`,
+              recalling_firm: `${"F".repeat(199)}${index}`,
+              root_cause_description: `${"R".repeat(99)}${index}`,
+              product_description: `${"P".repeat(199)}${index}`,
+              reason_for_recall: "w".repeat(reason),
+              matched: [rows[index - 1].submission.replace("/", "")],
+              class: index === 1 ? null : "Class III",
+              classDay: index === 1 ? null : "2026-06-10",
+            }),
+          ),
+          rows,
+        ),
+      ).records[0].summary;
+    let whole = 0;
+    for (let reason = 1; reason <= 600; reason += 1) {
+      if (textWith(reason).includes("[shortened]")) break;
+      whole = reason;
+    }
+
+    expect(whole).toBeGreaterThan(0);
+    expect(whole).toBeLessThan(600);
+    const fits = textWith(whole);
+    expect(fits).toHaveLength(4000);
+    expect(fits).toContain(
+      "FDA classification, from its enforcement reports: Class III for 3 of the event's 4 products, classified 2026-06-10.",
+    );
+    expect(fits.endsWith(CLOSING)).toBe(true);
+    for (let reason = whole + 1; reason <= 600; reason += 37) {
+      const cut = textWith(reason);
+      expect(cut).toContain("[shortened]");
+      expect(cut.length).toBeLessThanOrEqual(4000);
+      expect(cut.endsWith(CLOSING)).toBe(true);
+      expect(cut).toContain(` [shortened] ${CLOSING.slice(0, 30)}`);
+      expect(cut.startsWith(`${FDA_RECALL_RECORD_MARK}, joined to the FDA list`)).toBe(true);
+    }
+  });
+
+  it("keeps the class in the identifiers of a text that was cut, whole or not", () => {
+    const rows = [1, 2, 3, 4].map((index) => ({
+      submission: `P90000${index}/S${"1".repeat(40)}`,
+      device: "d".repeat(150),
+      company: `${"C".repeat(199)}${index}`,
+    }));
+    const products = [1, 2, 3, 4].map((index) =>
+      projected({
+        product_res_number: `Z-${1000 + index}-2026`,
+        recalling_firm: `${"F".repeat(199)}${index}`,
+        root_cause_description: `${"R".repeat(99)}${index}`,
+        product_description: `${"P".repeat(199)}${index}`,
+        reason_for_recall: "w ".repeat(300),
+        matched: [rows[index - 1].submission.replace("/", "")],
+        class: "Class I",
+        classDay: "2026-06-10",
+      }),
+    );
+
+    const [record] = parseBody(bodyOf(products, rows)).records;
+
+    expect(record.summary.length).toBeLessThanOrEqual(4000);
+    expect(record.summary).toContain("[shortened]");
+    expect(record.summary.endsWith(CLOSING)).toBe(true);
+    expect(record.identifiers.class).toBe("Class I");
+  });
+});
+
+describe("fdaRecallsConnector, the class of the records a download gives", () => {
+  /** The reports of the four recalls of the fixture's answer, in the form the dataset holds them. */
+  const REPORTS = [
+    rawEnforcement("Z-1101-2026", {
+      classification: "Class II",
+      center_classification_date: "20240305",
+    }),
+    rawEnforcement("Z-1102-2026", {
+      classification: "Class II",
+      center_classification_date: "20240311",
+    }),
+    rawEnforcement("Z-1103-2025", {
+      classification: "Class I",
+      center_classification_date: "20250102",
+    }),
+    rawEnforcement("Z-1104-2026", {
+      classification: "Class III",
+      center_classification_date: "20260610",
+    }),
+  ];
+
+  it("writes an event of two products with a class as one record: the sentence of the class where the sentence about the recall page was", async () => {
+    const snapshot = await fetched(serve({ products: ANSWER.results, enforcement: REPORTS }));
+
+    const record = parse(snapshot).records.find((item) => item.sourceRecordId === "90101");
+
+    expect(record).toEqual({
+      sourceRecordId: "90101",
+      recordType: "ai_device_recall",
+      title: "FDA recall of an AI-enabled device: Zorblat Imaging Distribution, LLC (event 90101)",
+      summary:
+        "FDA medical device recalls (openFDA), joined to the FDA list of AI-enabled medical devices. " +
+        "Recall event: 90101. " +
+        "Recalling firm: Zorblat Imaging Distribution, LLC. " +
+        "Initiated: 2026-08-07. " +
+        "Posted: 2026-09-18. " +
+        "Status: Open, Classified. " +
+        "Root cause, as the FDA records it: Software Design Change; Other. " +
+        "Reason for the recall: The triage software can list studies in the wrong order after an upgrade to release 4.2, which may delay the reading of urgent studies. " +
+        "Products recalled: 2; Zorblat Chest Triage workstation, model ZCT-100, software release 4.2; Zorblat Bone Age Reader, model ZBA-200. " +
+        "Devices on the FDA AI list that the recall covers: Zorblat Bone Age, Reader (K900104, Zorblat Imaging, Inc.); Zorblat Chest Triage (K900105, Zorblat Imaging, Inc.); Zorblat Lung Nodule Assist (K900106, Zorblat Imaging, Inc.). " +
+        "Recall numbers: Z-1101-2026; Z-1102-2026. " +
+        "FDA classification, from its enforcement reports: Class II, classified 2024-03-05. " +
+        CLOSING,
+      url: `${EVENT_PAGE}90101`,
+      identifiers: {
+        eventNumber: "90101",
+        recallingFirms: ["Zorblat Imaging Distribution, LLC"],
+        productResNumbers: ["Z-1101-2026", "Z-1102-2026"],
+        submissionNumbers: ["K900104", "K900105", "K900106"],
+        status: "Open, Classified",
+        class: "Class II",
+      },
+      matchKeys: [
+        "name:zorblatimagingdistributionllc",
+        "name:zorblatimagingdistribution",
+        "name:zorblatimaginginc",
+        "name:zorblatimaging",
+      ],
+      publishedAt: "2026-08-07",
+      sourceUpdatedAt: null,
+    });
+  });
+
+  it("says the class of each event of the fixture, and changes nothing else of a record", async () => {
+    const plain = parse(await fetched(serve({ products: ANSWER.results }))).records;
+    const classed = parse(
+      await fetched(serve({ products: ANSWER.results, enforcement: REPORTS })),
+    ).records;
+
+    expect(
+      classed.map((record) =>
+        sentenceOf(record.summary, "FDA classification, from its enforcement reports"),
+      ),
+    ).toEqual([
+      "FDA classification, from its enforcement reports: Class II, classified 2024-03-05.",
+      "FDA classification, from its enforcement reports: Class I, classified 2025-01-02.",
+      "FDA classification, from its enforcement reports: Class III, classified 2026-06-10.",
+    ]);
+    expect(classed.map((record) => record.identifiers.class)).toEqual([
+      "Class II",
+      "Class I",
+      "Class III",
+    ]);
+    expect(plain.every((record) => record.summary.includes(CLASS_NOTE))).toBe(true);
+    expect(plain.every((record) => !("class" in record.identifiers))).toBe(true);
+    classed.forEach((record, index) => {
+      const before = plain[index];
+      expect(
+        record.summary.replace(
+          / FDA classification, from its enforcement reports: [^.]*\. /,
+          ` ${CLASS_NOTE} `,
+        ),
+      ).toBe(before.summary);
+      expect(record.sourceRecordId).toBe(before.sourceRecordId);
+      expect(record.title).toBe(before.title);
+      expect(record.url).toBe(before.url);
+      expect(record.matchKeys).toEqual(before.matchKeys);
+      expect(record.publishedAt).toBe(before.publishedAt);
+      expect(record.sourceUpdatedAt).toBe(before.sourceUpdatedAt);
+      expect({ ...record.identifiers, class: undefined }).toEqual({
+        ...before.identifiers,
+        class: undefined,
+      });
+    });
+  });
+
+  it("says how many of the products of an event have the class when the reports hold only some of them", async () => {
+    // The reports of the two products of event 90101: one of them is not in the dataset.
+    const snapshot = await fetched(
+      serve({
+        products: ANSWER.results,
+        enforcement: [
+          rawEnforcement("Z-1101-2026", {
+            classification: "Class II",
+            center_classification_date: "20240305",
+          }),
+        ],
+      }),
+    );
+
+    const byId = new Map(parse(snapshot).records.map((record) => [record.sourceRecordId, record]));
+
+    expect(
+      sentenceOf(
+        byId.get("90101")?.summary ?? "",
+        "FDA classification, from its enforcement reports",
+      ),
+    ).toBe(
+      "FDA classification, from its enforcement reports: Class II for 1 of the event's 2 products, classified 2024-03-05.",
+    );
+    expect(byId.get("90102")?.summary).toContain(CLASS_NOTE);
+    expect(byId.get("90103")?.summary).toContain(CLASS_NOTE);
+  });
+
+  it("gives the same snapshot and the same records whatever the order of the answers and of the rows of the list", async () => {
+    const csvRows = LIST_CSV.split("\r\n");
+    const reversedList = [csvRows[0], ...csvRows.slice(1, -1).reverse(), ""].join("\r\n");
+
+    const forward = serve({ products: [...ANSWER.results], enforcement: [...REPORTS] });
+    // The stub holds the products and the reports in their order and answers each search, of the
+    // recalls and of the reports, in the reverse of it.
+    const backward = serve({
+      products: [...ANSWER.results],
+      enforcement: [...REPORTS],
+      reversed: true,
+      csv: reversedList,
+    });
+    const first = await fetched(forward);
+    const second = await fetched(backward);
+
+    expect(second.bodies).toEqual(first.bodies);
+    expect(parse(second)).toEqual(parse(first));
+    // The requests for the classes are the same: the numbers go sorted.
+    expect(backward.calls.filter((call) => call.kind === "class").map((call) => call.url)).toEqual(
+      forward.calls.filter((call) => call.kind === "class").map((call) => call.url),
+    );
+    expect(classesOf(first)).toEqual([
+      ["Z-1101-2026", "Class II", "2024-03-05"],
+      ["Z-1102-2026", "Class II", "2024-03-11"],
+      ["Z-1103-2025", "Class I", "2025-01-02"],
+      ["Z-1104-2026", "Class III", "2026-06-10"],
+    ]);
+  });
+
+  it("puts no address and no text of an enforcement report in a record or in the snapshot", async () => {
+    const snapshot = await fetched(serve({ products: ANSWER.results, enforcement: REPORTS }));
+
+    const everything = `${snapshot.bodies.join("")}${JSON.stringify(parse(snapshot).records)}`;
+
+    expect(everything).not.toContain("api.fda.gov");
+    expect(everything).not.toContain("enforcement.json");
+    expect(everything).not.toContain("ZZPRIVATE");
+    expect(
+      everything.match(/https?:\/\/[^"\s]+/g)?.every((address) => address.startsWith(EVENT_PAGE)),
+    ).toBe(true);
+  });
+});
+
 describe("fdaRecallsConnector.parse, the keys of a record", () => {
   it("keys an event by the names of its recalling firms and of the companies of the list, each as written and without its legal form", async () => {
     const snapshot = await fetched(serve({ products: ANSWER.results }));
@@ -2773,6 +4957,53 @@ describe("fdaRecallsConnector.parse, the rows it cannot read", () => {
     });
   });
 
+  it("counts the reports that gave no class as rows that cannot be read, and not as rows: their products are rows already", () => {
+    // 1,099 products and one row of the list are 1,100 rows: a hundredth is 11. The 11 reports that
+    // gave no class are of products among those 1,099, so they are not 11 rows more.
+    expect(parseBody(bodyOf(good(1099), [AI_ROW], { classSkipped: 11 }))).toMatchObject({
+      skipped: 11,
+      errors: 0,
+    });
+    // 1,098 products and one row are 1,099 rows: a hundredth is 10, and 11 is more.
+    const refused = parseBody(bodyOf(good(1098), [AI_ROW], { classSkipped: 11 }));
+    expect(refused).toMatchObject({ skipped: 0, errors: 11, root: "device/recall.json" });
+    expect(refused.records).toHaveLength(1098);
+  });
+
+  it("counts a product left out as a row and as a row that cannot be read, and a report that gave no class as the second only", () => {
+    // 5 left out and 6 reports without a class are 11 rows that cannot be read. The rows are the 5, the
+    // products and the row of the list: 1,100 for 1,094 products, and a hundredth of that is 11.
+    expect(parseBody(bodyOf(good(1094), [AI_ROW], { skipped: 5, classSkipped: 6 }))).toMatchObject({
+      skipped: 11,
+      errors: 0,
+    });
+    expect(parseBody(bodyOf(good(1093), [AI_ROW], { skipped: 5, classSkipped: 6 }))).toMatchObject({
+      skipped: 0,
+      errors: 11,
+    });
+  });
+
+  it("counts the three kinds toward the same ten: products left out, reports without a class, and products it cannot read", () => {
+    expect(
+      parseBody(bodyOf([...good(100), ...bad(3)], [AI_ROW], { skipped: 4, classSkipped: 3 })),
+    ).toMatchObject({ skipped: 10, errors: 0 });
+    expect(
+      parseBody(bodyOf([...good(100), ...bad(3)], [AI_ROW], { skipped: 4, classSkipped: 4 })),
+    ).toMatchObject({ skipped: 0, errors: 11 });
+  });
+
+  it("reads a stored copy that holds no count of reports without a class as one in which none gave no class", () => {
+    // A body written before the count existed: nothing was counted apart, and nothing is made up.
+    const body = bodyOf(good(5));
+
+    expect(JSON.parse(body)).not.toHaveProperty("classSkipped");
+    expect(parseBody(body)).toMatchObject({ skipped: 0, errors: 0, root: "device/recall.json" });
+    expect(parseBody(bodyOf(good(100), [AI_ROW], { skipped: 10 }))).toMatchObject({
+      skipped: 10,
+      errors: 0,
+    });
+  });
+
   it.each([
     ["a product that is not an object", "text"],
     ["a product without a number", projected({ product_res_number: undefined })],
@@ -2854,6 +5085,22 @@ describe("fdaRecallsConnector.parse, a body that is not the projection", () => {
     ["a projection with a count that is negative", JSON.stringify({ ...valid, skipped: -1 })],
     ["a projection with a count that is not whole", JSON.stringify({ ...valid, skipped: 1.5 })],
     ["a projection with a count that is text", JSON.stringify({ ...valid, skipped: "0" })],
+    [
+      "a projection with a count of reports without a class that is negative",
+      JSON.stringify({ ...valid, classSkipped: -1 }),
+    ],
+    [
+      "a projection with a count of reports without a class that is not whole",
+      JSON.stringify({ ...valid, classSkipped: 0.5 }),
+    ],
+    [
+      "a projection with a count of reports without a class that is text",
+      JSON.stringify({ ...valid, classSkipped: "0" }),
+    ],
+    [
+      "a projection with a count of reports without a class that is null",
+      JSON.stringify({ ...valid, classSkipped: null }),
+    ],
   ])("gives no root for %s", (_label, body) => {
     expect(parseBody(body)).toEqual(NOT_THE_LIST);
   });

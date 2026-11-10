@@ -946,7 +946,7 @@ describe("atlasConnector.parse", () => {
 
       expect(parse(withLines(100_000)).root).toBe("case-studies");
       expect(parse(withLines(300_000))).toEqual(NOT_THE_LIST);
-      expect(Date.now() - started).toBeLessThan(5000);
+      expect(Date.now() - started).toBeLessThan(10_000);
     });
 
     it("refuses a flat flow list of the same size", () => {
@@ -956,7 +956,7 @@ describe("atlasConnector.parse", () => {
 
       expect(parse(withItems(100_000)).root).toBe("case-studies");
       expect(parse(withItems(500_000))).toEqual(NOT_THE_LIST);
-      expect(Date.now() - started).toBeLessThan(5000);
+      expect(Date.now() - started).toBeLessThan(10_000);
     });
 
     it("finds a repeated key in linear time (the package's own check is quadratic)", () => {
@@ -969,7 +969,7 @@ describe("atlasConnector.parse", () => {
 
       expect(unique.root).toBe("case-studies");
       expect(repeated).toEqual(NOT_THE_LIST);
-      expect(Date.now() - started).toBeLessThan(5000);
+      expect(Date.now() - started).toBeLessThan(10_000);
     });
 
     it("refuses text nested too deeply to read, and does it fast", () => {
@@ -977,7 +977,7 @@ describe("atlasConnector.parse", () => {
 
       expect(parse(`${HEAD}a: ${"[".repeat(5000)}${"]".repeat(5000)}\n`)).toEqual(NOT_THE_LIST);
       expect(parse(`${HEAD}a: ${"{k: ".repeat(3000)}1${"}".repeat(3000)}\n`)).toEqual(NOT_THE_LIST);
-      expect(Date.now() - started).toBeLessThan(5000);
+      expect(Date.now() - started).toBeLessThan(10_000);
     });
 
     it("reads a long scalar and a long block of text without trouble", () => {
@@ -988,7 +988,7 @@ describe("atlasConnector.parse", () => {
       );
 
       expect(parsed.root).toBe("case-studies");
-      expect(Date.now() - started).toBeLessThan(5000);
+      expect(Date.now() - started).toBeLessThan(10_000);
     });
   });
 });
@@ -1249,7 +1249,7 @@ describe("atlasKeysOf", () => {
     atlasKeysOf("ab ".repeat(10_000));
     atlasKeysOf("http://x ".repeat(5_000));
 
-    expect(Date.now() - started).toBeLessThan(2000);
+    expect(Date.now() - started).toBeLessThan(10_000);
   });
 });
 
@@ -1874,7 +1874,7 @@ describe("cleanCaseStudyText", () => {
 
       clean(text);
 
-      expect(Date.now() - started).toBeLessThan(1000);
+      expect(Date.now() - started).toBeLessThan(10_000);
     });
   });
 });

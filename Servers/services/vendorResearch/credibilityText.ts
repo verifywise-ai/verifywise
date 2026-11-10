@@ -1,12 +1,17 @@
 /**
  * The English line of a credibility label (spec D5.5): the sentence of the rule that decided it,
  * written from the stored basis; then, when a cited copy of the vendor risk database was out of
- * date, the day of the oldest one; then the name-only note, when a record matched the vendor by
- * name only and the rule is not already that one. The API adds the line to every finding for the
- * clients that do not translate it; the client writes the same basis in the person's language.
+ * date, the day of the oldest one that is not a register's; then the name-only note, when a record
+ * matched the vendor by name only and the rule is not already that one. The API adds the line to
+ * every finding for the clients that do not translate it; the client writes the same basis in the
+ * person's language.
  *
  * The sentence names what its rule held with, as credibility.ts chose it: the sources that are
- * neither contradicted nor an inactive record, and the first of them that was read.
+ * neither contradicted, nor an inactive record, nor a record of a register or status list (context
+ * for a finding, never what supports it: prompt vr-15), and the first of them that was read. A
+ * register never shapes the line of a label: a finding that cites nothing else reads the sentence
+ * of its own, and the age of a register's copy and its withdrawal are not said (the name-only note
+ * still counts a register's record, as it does any other).
  *
  * A label the backfill wrote (spec D4.6) says so: a pending finding's, decided again by the rule,
  * reads the rule's line and then that it was rated again; a decided finding's, carried over from
@@ -23,6 +28,7 @@ import {
 } from "../../domain.layer/interfaces/i.vendorResearch";
 import { isCredibilityRule } from "./credibility";
 import { joinSentences } from "./records/sentence";
+import { CONTEXT_ONLY_RECORD_SOURCES } from "./records/types";
 import { VRDB_SOURCES } from "./vrdb/sources";
 
 /** What a label says when a cited record matched the vendor by name only (D5.3, step 5). */
@@ -33,6 +39,13 @@ export const BACKFILL_NOTE = "Rated again with the current rule.";
 
 /** What a decided finding's label carried over from its confidence says (D4.6). */
 export const LEGACY_NOTE = "Rated with the earlier confidence rule.";
+
+/**
+ * The sentence of a finding that cites only records of registers: nothing supports it, and an
+ * entry of a register is context, never evidence of a risk (prompt vr-15). The client says the same.
+ */
+const REGISTER_ONLY_SENTENCE =
+  "Low: only registers that list the vendor are cited, and a register entry is not evidence of a risk.";
 
 const BACKFILL_PREFIX = "backfill_";
 
@@ -102,6 +115,10 @@ const firstRead = (sources: readonly CredibilitySource[]): CredibilitySource | u
 const isActive = (source: CredibilitySource): boolean =>
   source.record === undefined || source.record.status === "active";
 
+/** A record of a register is context for a finding (prompt vr-15), never what supports it. */
+const isContextOnly = (source: CredibilitySource): boolean =>
+  source.record !== undefined && CONTEXT_ONLY_RECORD_SOURCES.has(source.record.source);
+
 /** The trusted publishers, each once by its registry entry, named by the registry or the host. */
 function publishersOf(sources: readonly CredibilitySource[]): Array<string | null> {
   const names = new Map<string, string | null>();
@@ -117,7 +134,7 @@ function publishersOf(sources: readonly CredibilitySource[]): Array<string | nul
 function ruleSentence(basis: CredibilityBasis): string {
   const sources = Array.isArray(basis.sources) ? basis.sources : [];
   const supporting = sources.filter(
-    (source) => source.reading !== "contradicted" && isActive(source),
+    (source) => source.reading !== "contradicted" && isActive(source) && !isContextOnly(source),
   );
   const strong = supporting.filter((source) => source.record?.match !== "weak");
 
@@ -171,6 +188,8 @@ function ruleSentence(basis: CredibilityBasis): string {
         : `Low: the ${listOf(record.source)} entry matches the vendor by name only.`;
     }
     case "unverified": {
+      // Nothing supports the finding and a register is cited: it says so, not "unverified".
+      if (supporting.length === 0 && sources.some(isContextOnly)) return REGISTER_ONLY_SENTENCE;
       const hosts = supporting
         .filter((source) => source.category === "unverified")
         .map((source) => hostOf(source.url));
@@ -179,7 +198,8 @@ function ruleSentence(basis: CredibilityBasis): string {
     case "self_claim":
       return "Low: only the vendor's own claims support it.";
     case "inactive": {
-      const record = sources.find((source) => !isActive(source))?.record;
+      // A register never names itself in the line of a label, withdrawn or not.
+      const record = sources.find((source) => !isActive(source) && !isContextOnly(source))?.record;
       if (record === undefined || record.status === "active") return "";
       const day = record.as_of === undefined ? null : dayOf(record.as_of);
       // A CVE another list rejected is rejected by that list (Ruling 9 of the M2 plan).
@@ -192,11 +212,15 @@ function ruleSentence(basis: CredibilityBasis): string {
   }
 }
 
-/** "The source has not been updated since {day}." for the oldest out-of-date copy cited. */
+/**
+ * "The source has not been updated since {day}." for the oldest out-of-date copy cited. A register's
+ * copy is not counted: the line is about what the label rests on, and "the source" would read
+ * as the record the sentence of the rule names.
+ */
 function staleSentence(sources: readonly CredibilitySource[]): string {
   const days = sources
     .flatMap((source) =>
-      source.record?.stale === true && source.record.as_of !== undefined
+      !isContextOnly(source) && source.record?.stale === true && source.record.as_of !== undefined
         ? [source.record.as_of]
         : [],
     )

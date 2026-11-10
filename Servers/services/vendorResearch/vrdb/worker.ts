@@ -20,16 +20,38 @@ import { guardedConditionalFetch } from "../../webResearch/guardedFetch";
 import { type VendorResearchConfig, getVendorResearchConfig } from "../config";
 import { aiidConnector } from "./connectors/aiid";
 import { atlasConnector } from "./connectors/atlas";
+import { c2paConformingConnector } from "./connectors/c2paConforming";
+import { californiaBreachesConnector } from "./connectors/californiaBreaches";
+import { canadaAiRegisterConnector } from "./connectors/canadaAiRegister";
+import { canadaSemaConnector } from "./connectors/canadaSema";
+import { charlotinConnector } from "./connectors/charlotin";
+import { coSicPenaltiesConnector } from "./connectors/coSicPenalties";
 import { cslConnector } from "./connectors/csl";
 import { cveConnector } from "./connectors/cve";
+import { discloseIoConnector } from "./connectors/discloseIo";
+import { epochAiConnector } from "./connectors/epochAi";
 import { euConnector } from "./connectors/eu";
+import { euDgCompConnector } from "./connectors/euDgComp";
 import { fdaConnector } from "./connectors/fda";
 import { fdaRecallsConnector } from "./connectors/fdaRecalls";
+import { fedrampConnector } from "./connectors/fedramp";
+import { fmtiConnector } from "./connectors/fmti";
+import { ftcCompetitionConnector } from "./connectors/ftcCompetition";
+import { ftcPenaltiesConnector } from "./connectors/ftcPenalties";
 import { kevConnector } from "./connectors/kev";
 import { nhtsaConnector } from "./connectors/nhtsa";
+import { nhtsaOdiConnector } from "./connectors/nhtsaOdi";
+import { nhtsaRecallsConnector } from "./connectors/nhtsaRecalls";
+import { nlAlgoritmeregisterConnector } from "./connectors/nlAlgoritmeregister";
 import { ofacConnector } from "./connectors/ofac";
+import { ombAiInventoryConnector } from "./connectors/ombAiInventory";
+import { piperollConnector } from "./connectors/piperoll";
 import type { Connector, ConnectorFetch, IncrementalConnector } from "./connectors/types";
 import { ukConnector } from "./connectors/uk";
+import { ukAtrsConnector } from "./connectors/ukAtrs";
+import { ukCmaConnector } from "./connectors/ukCma";
+import { ukMhraConnector } from "./connectors/ukMhra";
+import { ukOfsiConnector } from "./connectors/ukOfsi";
 import { unConnector } from "./connectors/un";
 import { VRDB_QUEUE, VRDB_RELABEL_JOB, VRDB_SYNC_JOB, enqueueRelabel, vrdbSyncsOn } from "./queue";
 import { relabelSource } from "./relabel";
@@ -56,6 +78,28 @@ const CONNECTORS: Partial<Record<VrdbSourceId, Connector | IncrementalConnector>
   nhtsa_sgo: nhtsaConnector,
   fda_ai_devices: fdaConnector,
   fda_device_recalls: fdaRecallsConnector,
+  canada_sema: canadaSemaConnector,
+  california_breaches: californiaBreachesConnector,
+  uk_ofsi: ukOfsiConnector,
+  charlotin: charlotinConnector,
+  ftc_penalties: ftcPenaltiesConnector,
+  piperoll: piperollConnector,
+  eu_dg_comp: euDgCompConnector,
+  disclose_io: discloseIoConnector,
+  uk_cma: ukCmaConnector,
+  canada_ai_register: canadaAiRegisterConnector,
+  ftc_competition: ftcCompetitionConnector,
+  omb_ai_inventory: ombAiInventoryConnector,
+  co_sic_penalties: coSicPenaltiesConnector,
+  uk_atrs: ukAtrsConnector,
+  nhtsa_recalls: nhtsaRecallsConnector,
+  fmti: fmtiConnector,
+  uk_mhra: ukMhraConnector,
+  nl_algoritmeregister: nlAlgoritmeregisterConnector,
+  nhtsa_odi: nhtsaOdiConnector,
+  fedramp: fedrampConnector,
+  epoch_ai: epochAiConnector,
+  c2pa_conforming: c2paConformingConnector,
 };
 
 /**

@@ -67,7 +67,7 @@ import {
   mergeSameAddress,
   sourcesBesideVrdb,
 } from "./records";
-import { RECORD_CATEGORY } from "./records/types";
+import { LISTS_NAMED_WHEN_FOUND, RECORD_CATEGORY } from "./records/types";
 import { suggestedQueries } from "./queries";
 import { classifySource } from "./sourceRegistry/classify";
 import { publisherKey } from "./sourceRegistry/publisher";
@@ -623,6 +623,51 @@ const RECORD_SOURCE_NAMES: Record<RecordSourceId, string> = {
     "FDA list of AI-enabled medical devices (the company that has the name of the vendor)",
   fda_device_recalls:
     "FDA recalls of AI-enabled medical devices (recall events whose firm or AI-list company has the name of the vendor)",
+  canada_sema:
+    "Consolidated Canadian Autonomous Sanctions List (entities Canada lists under its autonomous sanctions regulations; individuals and ships are not copied)",
+  california_breaches:
+    "California Attorney General data breach list (data breach notices filed with the California Attorney General, summarised by the organisation that has the name of the vendor)",
+  uk_ofsi:
+    "UK OFSI financial sanctions enforcement notices (monetary penalties and breach disclosures whose party has the name of the vendor)",
+  charlotin:
+    "AI Hallucination Cases database (court decisions on fabricated content in filings, counted by the AI tool named, which has the name of the vendor or of one of its products)",
+  ftc_penalties:
+    "FTC civil penalty cases (consumer protection civil penalty orders of the US Federal Trade Commission, summarised by the defendant company that has the name of the vendor)",
+  piperoll:
+    "PipeRoll Agent Incident Registry (incidents of AI agents kept by one editor, summarised by the company named as the agent's operator or written as a brand in an entry's title)",
+  eu_dg_comp:
+    "European Commission competition cases (antitrust, cartel and Digital Markets Act cases of DG Competition that name an undertaking with the name of the vendor as a party; mergers are not included)",
+  disclose_io:
+    "disclose.io program list (a community-maintained list of organisations that publish a vulnerability disclosure policy; an entry is a contributor's claim, and a missing entry says nothing)",
+  uk_cma:
+    "UK Competition and Markets Authority cases (merger interventions and competition, consumer protection and digital markets cases whose party has the name of the vendor)",
+  canada_ai_register:
+    "Government of Canada AI Register (federal AI systems whose vendor information has the name of the vendor; the departments' own statement, as of its release)",
+  ftc_competition:
+    "FTC nonmerger enforcement actions (antitrust enforcement actions of the US Federal Trade Commission whose matter title names a party with the name of the vendor)",
+  omb_ai_inventory:
+    "US federal AI use case inventory (federal AI use cases whose vendor has the name of the vendor; the agencies' own statement, 2025 edition)",
+  co_sic_penalties:
+    "Colombia SIC consumer protection sanctions (fines that Colombia's Superintendencia de Industria y Comercio imposed, summarised by the company that has the name of the vendor)",
+  uk_atrs:
+    "UK Algorithmic Transparency Records (UK public bodies' records of algorithmic tools whose supplier has the name of the vendor)",
+  nhtsa_recalls:
+    "NHTSA vehicle and equipment recalls (recall campaigns reported since 2010, summarised by the filer that has the name of the vendor)",
+  fmti: "Foundation Model Transparency Index (the transparency indicators met by the developer that has the name of the vendor, December 2025 edition)",
+  uk_mhra:
+    "UK MHRA field safety notice lists (medical device field safety notices whose manufacturer has the name of the vendor)",
+  nl_algoritmeregister:
+    "Dutch Algorithm Register (algorithms of Dutch public bodies whose provider has the name of the vendor; the bodies' own statement)",
+  nhtsa_odi:
+    "NHTSA defect investigations (investigations of vehicle and equipment defects, summarised by the manufacturer that has the name of the vendor)",
+  fedramp:
+    "FedRAMP Marketplace (the US government's list of cloud offerings that are FedRAMP Authorized, Ready or In Process, summarised by the provider that has the name or the website of the vendor)",
+  epoch_ai:
+    "Epoch AI Data on AI Models (AI models whose developing organisation has the name of the vendor, as Epoch classifies them)",
+  c2pa_conforming:
+    "C2PA Conforming Products List (products of the applicant that has the name of the vendor, accepted as conformant by the C2PA)",
+  gleif:
+    "GLEIF LEI records (the reference data of the legal entity identifier stored on the vendor)",
 };
 
 /** An address as the session keeps it, so that a record can be found among the sources. */
@@ -638,7 +683,10 @@ const canonicalUrl = (url: string): string => {
  * What was collected, as text for the briefing: the searches that were made and what they found,
  * and the sources of each category. The titles and the addresses are third parties' words, so the
  * loop escapes the briefing like a result. `categories` limits it to what was collected for those
- * categories, for a loop that researches only them; null when the code did nothing for them.
+ * categories, for a loop that researches only them; null when the code did nothing for them. The
+ * briefing is written again on every step of the loop, so it does not grow with every list: a list
+ * of LISTS_NAMED_WHEN_FOUND is named only when it gave records or failed, and the others are counted
+ * in one line after the lines of the lists.
  */
 export function describeGathered(
   allActions: readonly GatheredAction[],
@@ -676,7 +724,13 @@ export function describeGathered(
       "",
       "Records of public databases (looked up by the code with the name and the domain of the vendor):",
     );
+    let counted = 0;
     for (const { source, outcome, records: found } of ofRecords) {
+      // A list that found nothing and did not fail is counted below, not named (prompt vr-15).
+      if (LISTS_NAMED_WHEN_FOUND.has(source) && found.length === 0 && outcome !== "failed") {
+        counted += 1;
+        continue;
+      }
       const count =
         found.length === 1
           ? "1 record"
@@ -689,6 +743,13 @@ export function describeGathered(
           ? "the database could not be reached"
           : `the database could not be reached; ${count} from its last answer`;
       lines.push(`- ${RECORD_SOURCE_NAMES[source]}: ${outcome === "failed" ? failed : count}`);
+    }
+    if (counted > 0) {
+      lines.push(
+        counted === 1
+          ? "- 1 other list of the vendor risk database: no records"
+          : `- ${counted} other lists of the vendor risk database: no records`,
+      );
     }
   }
   const recordUrls = new Set(
@@ -932,7 +993,8 @@ export async function gatherSources(input: GatherInput, deps: GatherDeps): Promi
   }
 
   // The records go into the ledger first, so that they come first among the sources of their
-  // category and are the last the pack gives up when it is too big. They cost nothing. Those of the
+  // category and are the last the pack gives up when it is too big, except the records of the
+  // registers, which the pack gives up first (evidence.ts). They cost nothing. Those of the
   // vendor risk database come first of all, and a CVE that both its catalog and the NVD have is
   // one source, with the words of both.
   const [found, fromVrdb] = await Promise.all([lookedUp, listed]);

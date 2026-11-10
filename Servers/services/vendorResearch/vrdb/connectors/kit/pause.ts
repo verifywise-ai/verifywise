@@ -20,6 +20,8 @@ export const HOST_PAUSE_MS = {
   "www.ftc.gov": 5_000,
   "www.datos.gov.co": 1_000,
   "www.gov.uk": 400,
+  // The Commission's open data bucket (S3): no Crawl-delay, so the house pause of one second.
+  "compcases-open-data-portal-files-prod.s3.eu-west-1.amazonaws.com": 1_000,
 } as const;
 
 export type PausedHost = keyof typeof HOST_PAUSE_MS;

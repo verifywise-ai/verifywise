@@ -34,7 +34,26 @@ export interface ParsedRecord {
     | "crash_report_summary"
     | "ai_device_authorizations"
     | "restricted_party"
-    | "ai_device_recall";
+    | "ai_device_recall"
+    | "breach_notice_summary"
+    | "sanctions_penalty_notice"
+    | "hallucination_cases"
+    | "civil_penalty_summary"
+    | "agent_incidents"
+    | "eu_competition_cases"
+    | "disclosure_program"
+    | "competition_case_summary"
+    | "algorithm_register_supplier"
+    | "competition_action_summary"
+    | "consumer_sanction_summary"
+    | "vehicle_recall_summary"
+    | "transparency_index_score"
+    | "field_safety_notice_summary"
+    | "defect_investigations"
+    | "cloud_authorization_status"
+    | "ai_model_developer"
+    | "c2pa_conformance"
+    | "lei_record";
   title: string;
   /** The record as plain text, word for word the list's: what the model reads and quotes. */
   summary: string;

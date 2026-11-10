@@ -100,8 +100,12 @@ const flatLineOf = (text: string): string =>
  * value that is no string gives an empty line, and so does a `max` that is not above zero.
  *
  * Linear in the length of the value, which is read to LINE_INPUT_MAX units: what lies beyond is
- * never seen, and a line that is left short by that says that it was cut. A real `<` stays: taking
- * the angle brackets out of a record's text is the record builder's job (`withoutAngles`).
+ * never seen, and a line that is left short by that says that it was cut (with a `max` of 12 or
+ * fewer there is no room for the marker). The one exception: a value whose first LINE_INPUT_MAX
+ * units clean to nothing gives an empty line, which no test of emptiness can tell from an empty
+ * cell, so a decision on emptiness refuses a value over LINE_INPUT_MAX first (`lineWithin` does).
+ * A real `<` stays: taking the angle brackets out of a record's text is the record builder's job
+ * (`withoutAngles`).
  */
 export function lineOf(value: unknown, max: number): string {
   if (typeof value !== "string" || !(max > 0)) return "";
@@ -109,6 +113,40 @@ export function lineOf(value: unknown, max: number): string {
   const line = flatLineOf(over ? cutAtCodePoint(value, LINE_INPUT_MAX) : value);
   if (line === "") return "";
   return over ? markedCut(line, max) : shorten(line, max);
+}
+
+/**
+ * Whether a clean line ends in the cut marker: it was cut by `lineOf` or `shorten` (a cut after a
+ * word has a blank before the marker, a cut that left nothing of the text has none), or it arrived
+ * from a layer that cut it. Such a text is never a whole name, number or title.
+ */
+export const endsCut = (line: string): boolean => line.endsWith(SHORTENED.trimStart());
+
+/**
+ * How many units beyond `max` `lineWithin` asks of `lineOf`. A cut line is the kept text and the
+ * marker; when the ask is `max`, the kept text loses a blank before the cut and one unit when the
+ * cut would split a pair of surrogates, so a cut line has at least `max - 2` units. An ask of
+ * `max + 4` leaves every cut line above `max`.
+ */
+const WITHIN_ROOM = 4;
+
+/**
+ * A value as ONE clean line (`lineOf`) of at most `max` UTF-16 units, or null when the clean line is
+ * longer than that, or empty: a text that does not fit is never cut here. `lineOf(value, max + 1)`
+ * cannot tell a text of `max + 1` units from a longer one that a cut left at `max` units or fewer
+ * (the cut takes a blank before it off and never splits a pair of surrogates), so a cut line would
+ * pass for a whole one and end in the marker. Use this wherever a name, a title or a cell that
+ * does not fit must be left out and never used cut, as a key or as an id.
+ */
+export function lineWithin(value: unknown, max: number): string | null {
+  if (!(max > 0)) return null;
+  // A value of more than LINE_INPUT_MAX units is read to there only, so it cannot be known whole and
+  // does not fit. `lineOf` marks the cut of such a value, but writes no marker where its limit has no
+  // room for one (a `max` of 8 or less), and then a short part of the first megabyte would pass.
+  if (typeof value === "string" && value.length > LINE_INPUT_MAX) return null;
+  const line = lineOf(value, max + WITHIN_ROOM);
+  // A text that arrives with the marker was cut by another layer: it is not whole either.
+  return line !== "" && line.length <= max && !endsCut(line) ? line : null;
 }
 
 /**

@@ -36,6 +36,8 @@ import { NVD_LIMITS, fetchJson } from "../records";
 import { NAME_ONLY_LOOKUP_NOTE } from "../records/ofac";
 import { joinSentences } from "../records/sentence";
 import {
+  GLEIF_LIMITS,
+  GLEIF_SPACER_KEY,
   NVD_SPACER_KEY,
   SEC_LIMITS,
   SEC_SPACER_KEY,
@@ -44,6 +46,7 @@ import {
 } from "../records/sharedSpacer";
 import { MAX_RECORDS } from "../records/types";
 import type { ResearchTarget } from "../target";
+import { gleifConnector } from "./connectors/gleif";
 import { nvdConnector } from "./connectors/nvd";
 import { secConnector } from "./connectors/sec";
 import type { ReadThroughConnector } from "./connectors/types";
@@ -129,6 +132,18 @@ const EVENT_RECORD_TYPES: ReadonlySet<string> = new Set([
   "ai_case_study",
   "crash_report_summary",
   "ai_device_recall",
+  "breach_notice_summary",
+  "sanctions_penalty_notice",
+  "hallucination_cases",
+  "civil_penalty_summary",
+  "agent_incidents",
+  "eu_competition_cases",
+  "competition_case_summary",
+  "competition_action_summary",
+  "consumer_sanction_summary",
+  "vehicle_recall_summary",
+  "field_safety_notice_summary",
+  "defect_investigations",
 ]);
 
 const isEvent = (row: VrdbRow) => EVENT_RECORD_TYPES.has(row.recordType);
@@ -383,35 +398,24 @@ export const databaseReadThroughStore: ReadThroughStore = {
 let processSec: { contact: string; connector: ReadThroughConnector } | undefined;
 
 /**
- * The read-through of a run: the NVD, and the SEC once Q4 gives the address its requests name,
- * asked through the guarded fetch on the turns that every worker shares (records/sharedSpacer.ts).
- * `contact` is for the tests.
+ * The read-through of a run: the NVD, GLEIF's LEI records, and the SEC once Q4 gives the address
+ * its requests name, asked through the guarded fetch on the turns that every worker shares
+ * (records/sharedSpacer.ts). `contact` is for the tests.
  */
 export function runReadThrough(contact: string | null = SEC_CONTACT): ReadThroughDeps {
-  const nvdSpacer = createSharedSpacer(NVD_LIMITS, {
-    redis: applicationRedis,
-    key: NVD_SPACER_KEY,
-  });
-  if (contact === null) {
-    return {
-      store: databaseReadThroughStore,
-      connectors: { nvd: nvdConnector },
-      fetchJson,
-      spacers: { nvd: nvdSpacer },
-    };
-  }
-  if (processSec?.contact !== contact) {
-    processSec = { contact, connector: secConnector(contact) };
-  }
-  return {
-    store: databaseReadThroughStore,
-    connectors: { nvd: nvdConnector, sec: processSec.connector },
-    fetchJson,
-    spacers: {
-      nvd: nvdSpacer,
-      sec: createSharedSpacer(SEC_LIMITS, { redis: applicationRedis, key: SEC_SPACER_KEY }),
-    },
+  const connectors: ReadThroughDeps["connectors"] = { nvd: nvdConnector, gleif: gleifConnector };
+  const spacers: ReadThroughDeps["spacers"] = {
+    nvd: createSharedSpacer(NVD_LIMITS, { redis: applicationRedis, key: NVD_SPACER_KEY }),
+    gleif: createSharedSpacer(GLEIF_LIMITS, { redis: applicationRedis, key: GLEIF_SPACER_KEY }),
   };
+  if (contact !== null) {
+    if (processSec?.contact !== contact) {
+      processSec = { contact, connector: secConnector(contact) };
+    }
+    connectors.sec = processSec.connector;
+    spacers.sec = createSharedSpacer(SEC_LIMITS, { redis: applicationRedis, key: SEC_SPACER_KEY });
+  }
+  return { store: databaseReadThroughStore, connectors, fetchJson, spacers };
 }
 
 /**

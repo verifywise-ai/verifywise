@@ -27,10 +27,12 @@ import { domainKey, identifierKeysOf, isLei, leiKey, nameKeysOf } from "../../ke
 import type { ParsedRecord } from "../../types";
 import {
   dayText,
+  endsCut,
   flatText,
   instantText,
   isObject,
   lineOf,
+  lineWithin,
   shorten,
   stringOf,
   withoutAngles,
@@ -171,7 +173,13 @@ function urlOf(value: unknown): string {
  */
 const LOOKUP_NOTE = /lookup\s+note/gi;
 
-/** The identifiers as JSON makes them: a copy, with no undefined, no date and no function. */
+/**
+ * The identifiers as JSON makes them: a copy, with no undefined, no date and no function, and with
+ * no `<` or `>` in any text or key (`withoutAngles`, as the title and the summary have none): a
+ * connector need not remember it for each cell. JSON syntax holds no angle bracket, so those of the
+ * text are in the strings and the keys only, and the quotation marks that replace them are one unit
+ * each, so the size of the identifiers does not change.
+ */
 function identifiersOf(value: unknown): Record<string, unknown> {
   let json: string | undefined;
   try {
@@ -180,7 +188,7 @@ function identifiersOf(value: unknown): Record<string, unknown> {
     throw new UnreadableEntry();
   }
   if (json === undefined || json.length > IDENTIFIERS_MAX_CHARS) throw new UnreadableEntry();
-  const copy: unknown = JSON.parse(json);
+  const copy: unknown = JSON.parse(withoutAngles(json));
   if (!isObject(copy)) throw new UnreadableEntry();
   return copy;
 }
@@ -193,16 +201,16 @@ const fits = (key: string): boolean => key.length <= MATCH_KEY_MAX_CHARS;
  * nobody sees out, one blank for white space), so that the same name in two forms of Unicode, or
  * in full-width letters, is one key. A text longer than KEY_SOURCE_MAX_CHARS as it is given is no
  * name or number and is not read, which keeps a huge cell from costing a pass over it; one that
- * the fold makes longer than that is none either (the line is asked one unit more than it may
- * have, so that a cut line is seen as too long and never used). Nothing is left of a text that was
- * all hidden characters.
+ * the fold makes longer than that is none either (`lineWithin`: a cut line is never taken for a
+ * whole one). A text that ends in the cut marker was cut by its connector: a cut name, number or
+ * LEI is no key, whatever its length. Nothing is left of a text that was all hidden characters.
  */
 function foldedTexts(texts: readonly string[]): string[] {
   const folded: string[] = [];
   for (const text of texts) {
     if (typeof text !== "string" || text.length > KEY_SOURCE_MAX_CHARS) continue;
-    const line = lineOf(text, KEY_SOURCE_MAX_CHARS + 1);
-    if (line !== "" && line.length <= KEY_SOURCE_MAX_CHARS) folded.push(line);
+    const line = lineWithin(text, KEY_SOURCE_MAX_CHARS);
+    if (line !== null && !endsCut(line)) folded.push(line);
   }
   return folded;
 }
@@ -253,9 +261,9 @@ function matchKeysOf(draft: RecordDraft): string[] {
  * controls, the characters nobody sees and the extra blanks (`flatText`: nothing is folded or
  * changed in them, and a cut is at the end only), and neither holds `<` or `>`: they are written as
  * the angle quotation marks (`withoutAngles`), which no markup is made of. The phrase "lookup
- * note", in any case and with any white space in it, is written "lookup-note" in the summary: the
- * analysis prompt reads it as the way the vendor was matched, and only the lookup says that.
- * The address is stored as `new URL` writes it.
+ * note", in any case and with any white space in it, is written "lookup-note" in the title and in
+ * the summary: the analysis prompt reads it as the way the vendor was matched, and only the lookup
+ * says that. The address is stored as `new URL` writes it.
  */
 export function recordOf(draft: RecordDraft): ParsedRecord {
   const { id } = draft;
@@ -274,8 +282,12 @@ export function recordOf(draft: RecordDraft): ParsedRecord {
     throw new UnreadableEntry();
   }
 
-  const title = withoutAngles(lineOf(draft.title, RECORD_TITLE_MAX));
-  // The cut comes before the rewrite of the phrase, which is as long as the phrase it replaces.
+  // The cut comes before the rewrite of the phrase, which is as long as the phrase it replaces
+  // (title and summary are flat lines, so the white space in the phrase is one blank).
+  const title = withoutAngles(lineOf(draft.title, RECORD_TITLE_MAX)).replace(
+    LOOKUP_NOTE,
+    "lookup-note",
+  );
   const summary = withoutAngles(
     shorten(flatText(stringOf(draft.summary)), RECORD_SUMMARY_MAX).replace(
       LOOKUP_NOTE,

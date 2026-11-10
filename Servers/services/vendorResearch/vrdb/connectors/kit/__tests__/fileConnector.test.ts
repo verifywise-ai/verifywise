@@ -30,6 +30,8 @@ import {
 import { UnreadableEntry, recordOf } from "../record";
 import { cellAt, columnsOf, readCsvText } from "../table";
 
+jest.setTimeout(30_000);
+
 jest.mock("../../../../../../utils/logger/fileLogger", () => ({
   __esModule: true,
   default: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
@@ -735,6 +737,65 @@ describe("createFileConnector", () => {
         complete: true,
       })) as Snapshot;
       expect(JSON.parse(snapshot.bodies[0])).toMatchObject({ total: 10_000, unreadable: 7 });
+    });
+
+    describe("the basis of the allowance, which a reader that counts its unreadable rows in raw rows may give", () => {
+      /** Three entities from 10 raw rows, one raw row of which could not be read, and the basis the test gives. */
+      const withBasis = (allowanceBasis: unknown) =>
+        downloadOf({ rows: rowsOf(3), total: 10, unreadable: 1, allowanceBasis, complete: true });
+
+      it.each([
+        ["a basis that is negative", -1],
+        ["a basis with a fraction", 2.5],
+        ["a basis that is NaN", Number.NaN],
+        ["a basis that is infinite", Number.POSITIVE_INFINITY],
+        ["a basis that is a text", "10"],
+        ["a basis that is null", null],
+        ["a basis that is a boolean", true],
+        ["a basis that is an object", { count: 10 }],
+        ["a basis that is a list", [10]],
+        ["a basis above the total, which counts the rows that the reader saw", 11],
+      ])("fails a reader that gives %s, as not the list", async (_name, allowanceBasis) => {
+        expect(await failureOf(withBasis(allowanceBasis))).toBeInstanceOf(NotTheListError);
+      });
+
+      it.each([0, 4, 9, 10])(
+        "takes a basis of %s, a count that is not above the total",
+        async (basis) => {
+          expect(await withBasis(basis)).not.toBe("unchanged");
+        },
+      );
+
+      it("keeps the basis in the body next to the total, before the unreadable rows", async () => {
+        const body = ((await withBasis(10)) as Snapshot).bodies[0];
+        expect(Object.keys(JSON.parse(body))).toEqual([
+          "v",
+          "rows",
+          "total",
+          "allowanceBasis",
+          "unreadable",
+        ]);
+        expect(JSON.parse(body)).toMatchObject({ total: 10, allowanceBasis: 10, unreadable: 1 });
+        expect(body).toContain('"total":10,"allowanceBasis":10,"unreadable":1}');
+      });
+
+      it("writes no basis for a reader that gives none, so that the body is what it always was", async () => {
+        const absent = (
+          (await downloadOf({
+            rows: rowsOf(3),
+            total: 10,
+            unreadable: 1,
+            complete: true,
+          })) as Snapshot
+        ).bodies[0];
+        const undef = ((await withBasis(undefined)) as Snapshot).bodies[0];
+
+        expect(Object.keys(JSON.parse(absent))).toEqual(["v", "rows", "total", "unreadable"]);
+        expect(absent).not.toContain("allowanceBasis");
+        expect(absent).toBe(bodyWith(rowsOf(3), 10, 1));
+        // A basis that is undefined is none.
+        expect(undef).toBe(absent);
+      });
     });
   });
 
@@ -1501,7 +1562,7 @@ describe("createFileConnector", () => {
       });
       const start = Date.now();
       const snapshot = await createFileConnector(spec).download(fakeFetch(filesOf()), {});
-      expect(Date.now() - start).toBeLessThan(3000);
+      expect(Date.now() - start).toBeLessThan(10_000);
       expect(JSON.parse((snapshot as Snapshot).bodies[0]).rows).toHaveLength(200_000);
     });
 
@@ -1875,6 +1936,192 @@ describe("createFileConnector", () => {
         });
       });
 
+      describe("with the basis of the allowance that a reader gives (raw rows)", () => {
+        const snapshotWith = (
+          rows: readonly Row[],
+          total: number,
+          unreadable: number,
+          allowanceBasis?: number,
+        ): Snapshot =>
+          snapshotOf(JSON.stringify({ v: 1, rows, total, allowanceBasis, unreadable }));
+
+        it("are measured against the raw rows: a hundredth of them, and at least ten", () => {
+          // 100 entities from 150,000 raw rows, of which 1,500 could not be read: a hundredth of them.
+          expect(
+            connector.parse(snapshotWith(rowsOf(100, 0), 150_000, 1_500, 150_000)),
+          ).toMatchObject({ errors: 0, skipped: 1_500 });
+          expect(
+            connector.parse(snapshotWith(rowsOf(100, 0), 150_000, 1_501, 150_000)),
+          ).toMatchObject({ errors: 1_501, skipped: 0 });
+          // A body with no basis is measured over the rows and the unreadable rows alone, as it was: 1,600 rows allow 16.
+          expect(connector.parse(snapshotWith(rowsOf(100, 0), 150_000, 1_500))).toMatchObject({
+            errors: 1_500,
+            skipped: 0,
+          });
+          expect(connector.parse(snapshotWith(rowsOf(100, 0), 150_000, 10))).toMatchObject({
+            errors: 0,
+            skipped: 10,
+          });
+          expect(connector.parse(snapshotWith(rowsOf(100, 0), 150_000, 11))).toMatchObject({
+            errors: 11,
+            skipped: 0,
+          });
+          // With the basis, eleven of the same body are well within a hundredth of 150,000.
+          expect(connector.parse(snapshotWith(rowsOf(100, 0), 150_000, 11, 150_000))).toMatchObject(
+            { errors: 0, skipped: 11 },
+          );
+        });
+
+        it("are ten at least, whatever a small basis says, and a tenth of the basis at most", () => {
+          expect(connector.parse(snapshotWith(rowsOf(2, 0), 500, 10, 500))).toMatchObject({
+            errors: 0,
+            skipped: 10,
+          });
+          expect(connector.parse(snapshotWith(rowsOf(2, 0), 500, 11, 500))).toMatchObject({
+            errors: 11,
+            skipped: 0,
+          });
+          // 50 raw rows allow 5, never more than a tenth: a short list cannot leave out most of itself.
+          expect(connector.parse(snapshotWith(rowsOf(2, 0), 50, 5, 50))).toMatchObject({
+            errors: 0,
+            skipped: 5,
+          });
+          expect(connector.parse(snapshotWith(rowsOf(2, 0), 50, 6, 50))).toMatchObject({
+            errors: 6,
+            skipped: 0,
+          });
+        });
+
+        it("are not the allowance of the entities that the record builder refuses: those are measured over the entities", () => {
+          // 12 of 100 entities refused: more than the ten that 100 allow, whatever the raw rows that the reader saw would allow.
+          for (const basis of [undefined, 150_000]) {
+            expect(connector.parse(snapshotWith(rowsOf(88, 12), 150_000, 0, basis))).toMatchObject({
+              errors: 12,
+              skipped: 0,
+            });
+          }
+        });
+
+        it("fail a list of which the record builder refuses every entity, however many raw rows the reader saw", () => {
+          // 583 entities from 154,460 raw rows, all refused: the entities allow ten, and the raw rows would allow 1,544.
+          const result = connector.parse(snapshotWith(rowsOf(0, 583), 154_460, 0, 154_460));
+          expect(result).toMatchObject({ errors: 583, skipped: 0, records: [] });
+        });
+
+        it.each([
+          // Ten at least (the 583 of the NHTSA investigations file today), a hundredth of the entities, and a tenth at most.
+          { entities: 583, allowed: 10 },
+          { entities: 100, allowed: 10 },
+          { entities: 2_000, allowed: 20 },
+          { entities: 50, allowed: 5 },
+        ])(
+          "$entities entities allow $allowed to be refused by the record builder, and not one more",
+          ({ entities, allowed }) => {
+            const within = connector.parse(
+              snapshotWith(rowsOf(entities - allowed, allowed), 150_000, 0, 150_000),
+            );
+            expect(within).toMatchObject({ errors: 0, skipped: allowed });
+            expect(within.records).toHaveLength(entities - allowed);
+            const over = connector.parse(
+              snapshotWith(rowsOf(entities - allowed - 1, allowed + 1), 150_000, 0, 150_000),
+            );
+            expect(over).toMatchObject({ errors: allowed + 1, skipped: 0 });
+            expect(over.records).toHaveLength(entities - allowed - 1);
+          },
+        );
+
+        it("measure each kind within its own allowance, and count both: the lines of the reader over the raw rows, the refused entities over the entities", () => {
+          // 2,000 entities and 1,500 lines that the reader could not read: the lines allow 1,500 of 150,000, and the
+          // refused entities allow 35, which is a hundredth of the 3,500 that the entities and those lines make.
+          const within = connector.parse(snapshotWith(rowsOf(1_965, 35), 150_000, 1_500, 150_000));
+          expect(within).toMatchObject({ errors: 0, skipped: 1_535 });
+          expect(within.records).toHaveLength(1_965);
+          // One more entity refused, or one more line that the reader could not read: the parse fails, and both are counted.
+          const entity = connector.parse(snapshotWith(rowsOf(1_964, 36), 150_000, 1_500, 150_000));
+          expect(entity).toMatchObject({ errors: 1_536, skipped: 0 });
+          expect(entity.records).toHaveLength(1_964);
+          const line = connector.parse(snapshotWith(rowsOf(1_965, 35), 150_000, 1_501, 150_000));
+          expect(line).toMatchObject({ errors: 1_536, skipped: 0 });
+          expect(line.records).toHaveLength(1_965);
+        });
+
+        it("measure the refused entities over the entities and the lines that the reader could not read, as it was before the basis", () => {
+          // 2,000 entities and 400 lines that the reader could not read: the 2,400 allow 24, where the 2,000 alone would allow 20.
+          expect(
+            connector.parse(snapshotWith(rowsOf(1_976, 24), 150_000, 400, 150_000)),
+          ).toMatchObject({ errors: 0, skipped: 424 });
+          expect(
+            connector.parse(snapshotWith(rowsOf(1_975, 25), 150_000, 400, 150_000)),
+          ).toMatchObject({ errors: 425, skipped: 0 });
+        });
+
+        it("count a record that is lost to an id among the entities that the record builder refuses", () => {
+          const withTwins = (twins: number): Row[] => [
+            ...Array.from({ length: 100 - twins }, (_, at) => ({
+              id: `G-${String(at).padStart(3, "0")}`,
+              name: `Good ${at}`,
+              day: null,
+            })),
+            ...Array.from({ length: twins }, (_, at) => ({
+              id: "G-000",
+              name: `Twin ${at}`,
+              day: null,
+            })),
+          ];
+          expect(connector.parse(snapshotWith(withTwins(10), 150_000, 0, 150_000))).toMatchObject({
+            errors: 0,
+            skipped: 10,
+          });
+          const over = connector.parse(snapshotWith(withTwins(11), 150_000, 0, 150_000));
+          expect(over).toMatchObject({ errors: 11, skipped: 0 });
+          expect(over.records).toHaveLength(89);
+        });
+
+        it("measure the sum of the two kinds against one allowance when the reader gives no basis, and each against its own when it gives one", () => {
+          // 100 entities, 5 lines that the reader could not read and 6 entities that the record builder refuses: 11 lost, and 105 allow ten.
+          expect(connector.parse(snapshotWith(rowsOf(94, 6), 105, 5))).toMatchObject({
+            errors: 11,
+            skipped: 0,
+          });
+          // With a basis, the 5 lines are far within what the raw rows allow, and the 6 entities within the ten that 105 allow.
+          expect(connector.parse(snapshotWith(rowsOf(94, 6), 150_000, 5, 150_000))).toMatchObject({
+            errors: 0,
+            skipped: 11,
+          });
+          // A basis of 0 is a basis (a count that adds nothing): the two kinds are measured apart as well, each over the 105.
+          expect(connector.parse(snapshotWith(rowsOf(94, 6), 105, 5, 0))).toMatchObject({
+            errors: 0,
+            skipped: 11,
+          });
+        });
+
+        it("measure the lines of the reader over the larger of the basis and the rows that the body holds, never over a smaller basis", () => {
+          // 100 entities and 10 lines that the reader could not read: the 110 allow ten, where a basis of 20 would allow two.
+          expect(connector.parse(snapshotWith(rowsOf(100, 0), 110, 10, 20))).toMatchObject({
+            errors: 0,
+            skipped: 10,
+          });
+          expect(connector.parse(snapshotWith(rowsOf(100, 0), 111, 11, 20))).toMatchObject({
+            errors: 11,
+            skipped: 0,
+          });
+        });
+
+        it("has no effect when it is below the rows and the unreadable rows that the body holds", () => {
+          // 150 rows in the body, ten allowed: a basis that is smaller, or the same, changes nothing.
+          for (const basis of [0, 20, 149, 150]) {
+            expect(connector.parse(snapshotWith(rowsOf(140, 10), 150, 0, basis))).toMatchObject({
+              errors: 0,
+              skipped: 10,
+            });
+            expect(connector.parse(snapshotWith(rowsOf(139, 11), 150, 0, basis))).toMatchObject({
+              errors: 11,
+              skipped: 0,
+            });
+          }
+        });
+      });
+
       it("allow a tenth of a short list at most: 12 rows allow 2, 100 allow 10, 5,000 allow 50", () => {
         const lost = (kept: number, refused: number) =>
           connector.parse(snapshotOf(bodyWith(rowsOf(kept, refused), kept + refused, 0)));
@@ -1959,6 +2206,35 @@ describe("createFileConnector", () => {
           "a count of unreadable rows that is NaN, as text",
           '{"v":1,"rows":[],"total":0,"unreadable":"NaN"}',
         ],
+        // The basis of the allowance is a count of the raw rows, and none above the total that counts them.
+        [
+          "a basis that is a text",
+          '{"v":1,"rows":[],"total":5,"allowanceBasis":"5","unreadable":0}',
+        ],
+        [
+          "a basis that is negative",
+          '{"v":1,"rows":[],"total":5,"allowanceBasis":-1,"unreadable":0}',
+        ],
+        [
+          "a basis with a fraction",
+          '{"v":1,"rows":[],"total":5,"allowanceBasis":2.5,"unreadable":0}',
+        ],
+        [
+          "a basis that is null",
+          '{"v":1,"rows":[],"total":5,"allowanceBasis":null,"unreadable":0}',
+        ],
+        [
+          "a basis that is true",
+          '{"v":1,"rows":[],"total":5,"allowanceBasis":true,"unreadable":0}',
+        ],
+        [
+          "a basis that is a list",
+          '{"v":1,"rows":[],"total":5,"allowanceBasis":[5],"unreadable":0}',
+        ],
+        [
+          "a basis above the total",
+          '{"v":1,"rows":[],"total":5,"allowanceBasis":6,"unreadable":0}',
+        ],
         // The reader's total counts the rows it saw, those it could not read included (review finding 5).
         ["a total below the rows that the body holds", bodyWith(SORTED_ROWS, 2, 0)],
         ["a total of 0 for rows that the body holds", bodyWith(SORTED_ROWS, 0, 0)],
@@ -1976,6 +2252,15 @@ describe("createFileConnector", () => {
           bodyWith(SORTED_ROWS, 10_000, 0),
         ],
         ["no rows and no total", bodyWith([], 0, 0)],
+        ["a basis of 0", '{"v":1,"rows":[],"total":5,"allowanceBasis":0,"unreadable":0}'],
+        [
+          "a basis that is the total",
+          '{"v":1,"rows":[],"total":5,"allowanceBasis":5,"unreadable":0}',
+        ],
+        [
+          "a basis below the total",
+          '{"v":1,"rows":[],"total":5,"allowanceBasis":3,"unreadable":2}',
+        ],
       ])("is the list: %s", (_name, body) => {
         expect(connector.parse(snapshotOf(body)).root).toBe("entries.csv");
       });

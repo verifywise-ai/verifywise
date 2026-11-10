@@ -3,18 +3,21 @@
  * device recall dataset (openFDA) holds for the devices on the FDA list of AI-enabled medical
  * devices (connectors/fda.ts). A recall is a firm's correction or removal of a device, so it is the
  * one keyless, official adverse-event signal that is specific to AI. openFDA's device recall data
- * is CC0 1.0 (credit requested, not required). The GMDN content of a product (its `openfda` block)
- * is licensed separately: the block is never read, stored or used for the join. openFDA says its
- * results are unvalidated and not for decisions about medical care, and every record says so.
+ * is CC0 1.0 (credit requested, not required), and so are its device enforcement reports, which
+ * are read for the class of a recall and the day it was classified, and for nothing else (Q37). The
+ * GMDN content of a product (its `openfda` block) is licensed separately: the block is never read,
+ * stored or used, in either dataset. openFDA says its results are unvalidated and not for decisions
+ * about medical care, and every record says so.
  *
  * There is no file to copy: the dataset holds tens of thousands of products and the list names some
  * sixteen hundred devices. A download joins them. It reads the AI list (unconditionally, 141 KB),
  * asks openFDA for the K numbers of the list (`k_numbers`, in batches of 50) and for its PMA
  * numbers (`pma_numbers`, in batches of 30), and keeps the products that carry one of them. The
- * real list is 32 batches and one, so a download is 35 requests with the probe and the list
- * itself, 500 ms apart (about 120 a minute, half of what openFDA allows without a key). A download
- * is at most 80 requests and 96 MiB. Nothing is returned before every request has succeeded, so a
- * part of a join never reaches the copy.
+ * real list is 32 batches and one, so a download is 36 requests with the two probes and the list
+ * itself, and one more for each 50 of the products it keeps (7 of them, 43 in all, on 2026-11-07),
+ * 500 ms apart (about 120 a minute, half of what openFDA allows without a key). A download is at
+ * most 80 requests and 96 MiB. Nothing is returned before every request has succeeded, so a part of
+ * a join, or of the classes, never reaches the copy.
  *
  * What is searched, and what a product must say to be joined. A K number is searched as the list
  * writes it. A PMA number is searched as written (`P123456`), and a supplement (`P123456/S001`)
@@ -25,47 +28,85 @@
  * equals the row's term exactly, so a recall that cites only the base number of an AI-listed
  * supplement is not joined (a known limit), and whatever else openFDA's search returns is dropped.
  *
- * The probe. openFDA answers 404 when a search finds nothing, so a 404 is "no match" for a batch.
- * That is safe only because the same download first asked the endpoint for one product and got the
- * dataset's own metadata back (a day of the last update, and a total of more than 10,000): without
- * the probe, an endpoint that had moved would read as "no recalls", and only the sync's shrink
- * check would notice. A 404 of the probe itself, and any other failure of any request, is thrown as
- * it is (a 429 with its Retry-After), and the sync fails. A 404 of a page after the first of a
- * search is not a "no match" either: the first page said there were more, so the search did not
- * page as it was asked, and the download fails as not the list.
+ * The class. The recall endpoint has no class; the enforcement endpoint (`device/enforcement.json`)
+ * has, and finds a report by its `recall_number`, which is the `product_res_number` of a recall.
+ * After the join, the distinct recall numbers of the joined products are asked of it, in order,
+ * 50 a request, each between quotes (`recall_number:(%22Z-1234-2020%22+OR+...)`), one page of at
+ * most 1,000: a recall has one report, so an answer of more than a page, or one that holds other
+ * than its total or a result that is no object, is not what was asked for and fails as not the
+ * list. The request is paced, counted and pinned to the host like every other, and an answer too
+ * large is split in half as in the join. Of a report the connector reads three fields and keeps
+ * two: the class, which must be exactly `Class I`, `Class II` or `Class III`, and the day it was
+ * classified (`center_classification_date`: eight digits, `YYYYMMDD`, that form a day). It never
+ * reads the status (the FDA does not update it after the classification, and openFDA says the data
+ * is no way to follow a recall), the firm, the address, the distribution, the lots, the reason, the
+ * description or the `openfda` block. A report of a number the request did not hold is dropped and
+ * counted nowhere. A report with another class gives no class and counts as a row that cannot be
+ * read; a report with a class whose day is missing, or is no day, keeps its class and has no day,
+ * and counts as nothing (the record then says the classification day is not stated). Of two
+ * reports of one number the one kept is decided by their values and never by their place in the
+ * answer: the more serious class (a report with no class is the least), of one class the earlier
+ * day (none is the latest), so that the same reports give the same class and day whatever order
+ * openFDA lists them in. A number counts as one row that cannot be read only when none of its
+ * reports has a class.
+ *
+ * The probes. openFDA answers 404 when a search finds nothing, so a 404 is "no match" for a batch
+ * of the join and "no report" for a batch of the class stage. That is safe only because the same
+ * download first asked each endpoint for one record and got the dataset's own metadata back (a day
+ * of the last update, and a total of more than 10,000): without the probes, an endpoint that had
+ * moved would read as "no recalls", or as "no class", and only the sync's shrink check would
+ * notice. A 404 of a probe itself, and any other failure of any request (a 403 for a missing key,
+ * a 429 with its Retry-After, a connection that fails), is thrown as it is, and the sync fails. A
+ * 404 of a page after the first of a search is not a "no match" either: the first page said there
+ * were more, so the search did not page as it was asked, and the download fails as not the list.
  *
  * Validators. A snapshot holds one pair, and neither source's own tells whether the join would
- * change; the day of the dataset's last update and the text of the AI list together do. So
- * `lastModified` carries `recalls:{last_updated};list:{16 hex of the list's sha256}` (the column is
- * text: it is kept as it is and never sent as a header, since every request here is unconditional),
- * and `etag` is null. When the stored value equals the new one, the download answers `unchanged`
- * before the join, so the join's requests are made only when openFDA or the list changed.
+ * change; the day of each dataset's last update and the text of the AI list together do. So
+ * `lastModified` carries `recalls:{last_updated};enforcement:{last_updated};list:{16 hex of the
+ * list's sha256}` (the column is text: it is kept as it is and never sent as a header, since every
+ * request here is unconditional), and `etag` is null. When the stored value equals the new one, the
+ * download answers `unchanged` before the join, so the requests of the join and of the class stage
+ * are made only when openFDA or the list changed. A value stored in the form of version 1, which
+ * has no enforcement day, never equals the new one: the join runs again once.
  *
  * Projection. Each answer is cut down to what a record uses at once, before the next request is
  * made: the recall number, the event number, the recalling firm, the three days, the status, the
- * root cause, the reason, the product description and the AI-list numbers it matched. The lot and
- * serial numbers (`code_info`), every address and contact field, the distribution and the
- * quantity, the instructions to consignees (`action`), the firm's FEI number, the page id and the
- * `openfda` block are never carried, nor is a number of the product that is not on the list. Text
- * is cleaned (control characters, zero-width and bidirectional characters out, white space
- * collapsed) and capped, and a cut says so (` [shortened]`): the reason of a recall is free text
- * that a firm wrote, and it ends up in a model's prompt. The bodies are one canonical JSON
- * (products and joined rows sorted), so that they do not depend on the order of the answers and
- * the sync's hash tells an unchanged join.
+ * root cause, the reason, the product description and the AI-list numbers it matched, and, from
+ * the class stage, the class and the day of the classification. The lot and serial numbers
+ * (`code_info`), every address and contact field, the distribution and the quantity, the
+ * instructions to consignees (`action`), the firm's FEI number, the page id and the `openfda`
+ * block are never carried, nor is a number of the product that is not on the list, nor any other
+ * field of an enforcement report. Text is cleaned (control characters, zero-width and bidirectional
+ * characters out, white space collapsed) and capped, and a cut says so (` [shortened]`): the reason
+ * of a recall is free text that a firm wrote, and it ends up in a model's prompt. The bodies are
+ * one canonical JSON (products and joined rows sorted), so that they do not depend on the order of
+ * the answers and the sync's hash tells an unchanged join. Besides the products it carries two
+ * counts: the products that were left out (`skipped`) and the reports that gave no class
+ * (`classSkipped`). The second is apart from the first because the product of such a report is
+ * kept: it is one row that cannot be read, and the product is one row, not two.
  *
  * Records. One record per recall event (`res_event_number`): an event is one firm's recall and may
  * cover many products (one firm has 67 recalled products on the list), so a record per product
  * would let one firm flood a run. The text names the recalling firm and the company of the AI
- * list, who may be different (a subsidiary or a distributor recalls the device of a maker). It says
- * that the recall page shows the class, which the API does not carry, and that a recall is not a
- * finding that the AI caused the problem. A vendor is matched by those names alone, so a match is
- * weak. A recall is an event, dated by the earliest day of initiation of its products.
+ * list, who may be different (a subsidiary or a distributor recalls the device of a maker). It
+ * says the FDA's class of the event and the day it was classified, from the enforcement reports:
+ * the most serious class that any of its products has (Class I before II before III), how many of
+ * its products have it, and the earliest day any of those was classified (or that the
+ * classification day is not stated, when none of them has one). When no product of the event has a
+ * class, it says that the recall page shows the class. It never says a status of the
+ * enforcement report, and says that a recall is not a finding that the AI caused the problem. The
+ * class is also an identifier of the record. A vendor is matched by those names alone, so a match
+ * is weak. A recall is an event, dated by the earliest day of initiation of its products.
  *
  * A product that cannot be read (a recall number or an event number of another form, no readable
- * day of initiation) is left out and counted (`skipped`), up to ten or a hundredth of the rows
- * when that is more, as the CVE records are (connectors/cve.ts); more is a new format, and they
- * are reported as `errors`. No address enters an error; the only address in a record is the page
- * of its event.
+ * day of initiation) is left out, and a report whose class cannot be read leaves its product
+ * without one; each is counted (the first in `skipped`, the second in `classSkipped`), up to ten or
+ * a hundredth of the rows when that is more, as the CVE records are (connectors/cve.ts); more is a
+ * new format, and they are reported as `errors`. The rows that a hundredth is taken of are the
+ * products left out, the products and the rows of the AI list, each once: a report without a class
+ * is a row that cannot be read and no row more, since its product is one already. A day of a
+ * report that cannot be read is counted as nothing. No address enters an error; the only address in
+ * a record is the page of its event.
  */
 import { createHash } from "crypto";
 import { FetchError } from "../../../webResearch/guardedFetch";
@@ -98,7 +139,14 @@ export const FDA_RECALL_RECORD_MARK = "FDA medical device recalls (openFDA)";
 const API_HOST = "api.fda.gov";
 const RECALL_ENDPOINT = `https://${API_HOST}/device/recall.json`;
 const PROBE_URL = `${RECALL_ENDPOINT}?limit=1`;
-/** The page of a recall event, which shows the recall's class (the API has no class field). */
+/**
+ * The device enforcement reports: the endpoint that holds the class of a recall (the recall
+ * endpoint has no class field). A report is found by its `recall_number`, which is the
+ * `product_res_number` of the recall endpoint.
+ */
+const ENFORCEMENT_ENDPOINT = `https://${API_HOST}/device/enforcement.json`;
+const ENFORCEMENT_PROBE_URL = `${ENFORCEMENT_ENDPOINT}?limit=1`;
+/** The page of a recall event, which shows the recall's class as the FDA's own site words it. */
 const EVENT_PAGE =
   "https://www.accessdata.fda.gov/scripts/cdrh/cfdocs/cfRES/res.cfm?start_search=1&event_id=";
 /** The root of the document: the endpoint. */
@@ -126,9 +174,13 @@ const LIST_LIMITS: Limits = {
 
 /** The dataset holds some 59,000 products: a probe that reports no more than this is not it. */
 const MIN_DATASET_TOTAL = 10_000;
+/** The enforcement reports hold some 40,000: a probe that reports no more than this is not them. */
+const MIN_ENFORCEMENT_TOTAL = 10_000;
 /** The numbers of one search: 50 K numbers, or 30 PMA numbers (a PMA number is longer). */
 const K_BATCH = 50;
 const PMA_BATCH = 30;
+/** The recall numbers of one class search: a report is about 11 KB, so 50 are some 570 KB. */
+const CLASS_BATCH = 50;
 /** A batch whose answer is too large is split in half while it holds more numbers than this. */
 const MIN_SPLIT = 5;
 /** openFDA's page: the `limit` and the step of `skip`. A search of more pages is not the list. */
@@ -175,6 +227,8 @@ const MAX_UNREADABLE = 10;
 const CLOSING =
   "A recall is a firm's correction or removal of a device, classified by the FDA; it is not a finding that the device's AI caused the problem. openFDA says its results are unvalidated and are not to be relied on for decisions about medical care.";
 const CLASS_NOTE = "The FDA's recall page shows the recall's class.";
+/** Said in place of the day, when the class is known and no report gives the day it was classified. */
+const CLASS_DAY_NOT_STATED = "classification day not stated";
 
 const DAY = /^\d{4}-\d{2}-\d{2}$/;
 /** `Z-1234-2026`, or `Z-1234-04` as the recalls of 2002 to 2006 are numbered. */
@@ -225,6 +279,55 @@ function dayText(value: unknown): string | null {
 const unreadableAllowed = (rows: number): number =>
   Math.max(MAX_UNREADABLE, Math.floor(rows / 100));
 
+/** The classes the FDA gives a recall, the most serious first. */
+const RECALL_CLASSES = ["Class I", "Class II", "Class III"] as const;
+type RecallClass = (typeof RECALL_CLASSES)[number];
+
+/** Whether a value is exactly the name of one of the three classes: no case or blank is forgiven. */
+const isRecallClass = (value: unknown): value is RecallClass =>
+  RECALL_CLASSES.some((name) => name === value);
+
+/** How serious a class is: 0 for the most serious. */
+const seriousnessOf = (recallClass: RecallClass): number => RECALL_CLASSES.indexOf(recallClass);
+
+/** The day of a classification as the reports write it: eight digits, `YYYYMMDD`. */
+const CLASSIFICATION_DAY = /^(\d{4})(\d{2})(\d{2})$/;
+
+/**
+ * The day of a classification as `YYYY-MM-DD`: exactly eight digits that form a day that exists;
+ * null for anything else, which is no day.
+ */
+function classificationDayOf(value: unknown): string | null {
+  const found = typeof value === "string" ? CLASSIFICATION_DAY.exec(value) : null;
+  if (found === null) return null;
+  const day = `${found[1]}-${found[2]}-${found[3]}`;
+  return dayOf(day) === day ? day : null;
+}
+
+/** What the enforcement reports say of one recall: its class, and the day the FDA classified it. */
+interface Classification {
+  class: RecallClass | null;
+  /** `YYYY-MM-DD`. Null without a class, and when the report's day is not one. */
+  classDay: string | null;
+}
+
+/** How a report ranks among the reports of one recall number: 0 for the most serious class, the last for none. */
+const rankOfReport = (report: Classification): number =>
+  report.class === null ? RECALL_CLASSES.length : seriousnessOf(report.class);
+
+/**
+ * Whether the report `a` is the one to keep rather than the report `b` of the same recall number:
+ * the one with the more serious class (a report with no class is the least), of one class the one
+ * with the earlier day (none is the latest). The two values decide, never the place of a report in
+ * the answer, so the same reports give the same class and day in whatever order they are listed.
+ */
+function isKeptOver(a: Classification, b: Classification): boolean {
+  const byClass = rankOfReport(a) - rankOfReport(b);
+  if (byClass !== 0) return byClass < 0;
+  if (a.classDay === null || b.classDay === null) return a.classDay !== null && b.classDay === null;
+  return a.classDay < b.classDay;
+}
+
 /** A number of the AI list as the dataset is searched for it: the field and the exact term. */
 interface Term {
   field: "k_numbers" | "pma_numbers";
@@ -258,7 +361,8 @@ function searchedOf(rows: readonly FdaListRow[]): { k: string[]; pma: string[] }
 
 /**
  * A recall product as the connector keeps it: the fields a record uses, under the names the dataset
- * gives them, cleaned and capped, and the terms of the AI list that the product carries.
+ * gives them, cleaned and capped, the terms of the AI list that the product carries, and, from the
+ * enforcement reports, its class and the day it was classified.
  */
 interface Product {
   product_res_number: string;
@@ -272,12 +376,17 @@ interface Product {
   reason_for_recall: string;
   product_description: string;
   matched: string[];
+  /** The FDA's class of the recall; null until the class stage gives one, and when no report does. */
+  class: RecallClass | null;
+  /** The day of the classification, `YYYY-MM-DD`; null without a class or without a readable day. */
+  classDay: string | null;
 }
 
 /**
  * A product of an answer, or of the projection, as a `Product`; null when it cannot be read: the
  * recall number or the event number is not of its form, or the day of initiation is none. Only
- * these fields are read: nothing else of the product is looked at.
+ * these fields are read: nothing else of the product is looked at. The class and its day are none
+ * here: the recall endpoint has none, and the class stage gives them.
  */
 function productOf(raw: Record<string, unknown>, matched: readonly string[]): Product | null {
   const number = lineOf(stringOf(raw.product_res_number));
@@ -296,6 +405,8 @@ function productOf(raw: Record<string, unknown>, matched: readonly string[]): Pr
     reason_for_recall: cellOf(raw.reason_for_recall, MAX_REASON_CHARS),
     product_description: cellOf(raw.product_description, MAX_PRODUCT_CHARS),
     matched: [...matched],
+    class: null,
+    classDay: null,
   };
 }
 
@@ -332,8 +443,14 @@ const byRow = (a: AiRow, b: AiRow): number =>
 /** What a download keeps and `parse` reads, as one canonical JSON. */
 interface Projection {
   lastUpdated: string;
-  /** The products of the answers that carried a term of the list and could not be read. */
+  /** The rows of the answers that could not be read: the products that carried a term of the list. */
   skipped: number;
+  /**
+   * The enforcement reports of joined products whose class is none of the three, one for each
+   * recall number that no report gives a class. Their products are in `products`: `parse` counts
+   * them as rows that cannot be read, and not as rows, since a product is one row.
+   */
+  classSkipped: number;
   /** Sorted by recall number. */
   products: Product[];
   /** The rows of the AI list whose term a product carries, sorted. */
@@ -356,7 +473,12 @@ function joinedRowsOf(rows: readonly FdaListRow[], matched: ReadonlySet<string>)
   return [...joined.values()].sort(byRow);
 }
 
-/** The product of the projection as `productOf` reads it; null when it is not one. */
+/**
+ * The product of the projection as `productOf` reads it; null when it is not one. Its class is read
+ * as a stored value: one of the three, or none (a copy of version 1 holds no class, and a class
+ * that is none of the three is no class); its day is kept only with a class, and only when it is a
+ * day.
+ */
 function readProduct(value: unknown): Product | null {
   if (!isObject(value) || !Array.isArray(value.matched)) return null;
   const matched = value.matched.filter(
@@ -364,7 +486,9 @@ function readProduct(value: unknown): Product | null {
   );
   // A product that carries no term of the list was never joined, and a term that is none is not one.
   if (matched.length === 0 || matched.length !== value.matched.length) return null;
-  return productOf(value, matched);
+  const product = productOf(value, matched);
+  if (product === null || !isRecallClass(value.class)) return product;
+  return { ...product, class: value.class, classDay: dayText(value.classDay) };
 }
 
 /**
@@ -383,10 +507,21 @@ function readAiRow(value: unknown): { row: AiRow; term: string } | null {
   };
 }
 
-/** The parts of a projection, or null when the text is not one. */
-function shapeOf(
-  text: string,
-): { lastUpdated: string; skipped: number; products: unknown[]; aiRows: unknown[] } | null {
+/** Whether a stored count is a whole number that is not negative. */
+const isCount = (value: unknown): value is number =>
+  typeof value === "number" && Number.isInteger(value) && value >= 0;
+
+/**
+ * The parts of a projection, or null when the text is not one. A copy stored before the count of
+ * the reports without a class existed holds none: it is read as one in which none was counted.
+ */
+function shapeOf(text: string): {
+  lastUpdated: string;
+  skipped: number;
+  classSkipped: number;
+  products: unknown[];
+  aiRows: unknown[];
+} | null {
   let root: unknown;
   try {
     root = JSON.parse(text);
@@ -395,19 +530,19 @@ function shapeOf(
   }
   if (!isObject(root)) return null;
   const { lastUpdated, skipped, products, aiRows } = root;
+  const classSkipped = root.classSkipped === undefined ? 0 : root.classSkipped;
   if (
     typeof lastUpdated !== "string" ||
     !DAY.test(lastUpdated) ||
     dayOf(lastUpdated) !== lastUpdated ||
-    typeof skipped !== "number" ||
-    !Number.isInteger(skipped) ||
-    skipped < 0 ||
+    !isCount(skipped) ||
+    !isCount(classSkipped) ||
     !Array.isArray(products) ||
     !Array.isArray(aiRows)
   ) {
     return null;
   }
-  return { lastUpdated, skipped, products, aiRows };
+  return { lastUpdated, skipped, classSkipped, products, aiRows };
 }
 
 /**
@@ -462,12 +597,50 @@ function summaryOf(sentences: readonly string[]): string {
   return `${kept} ${CLOSING}`;
 }
 
+/** What the sentence about the class of an event begins with: where the class comes from. */
+const CLASS_LABEL = "FDA classification, from its enforcement reports";
+
+/**
+ * The class of an event, from its products: the most serious class that any of them has (Class I
+ * before Class II before Class III), and the sentence that says it. The sentence says how many of
+ * the event's products have that class, unless all of them do, and the earliest day any of those
+ * was classified; when none of them has a day it says that the classification day is not stated.
+ * It says nothing of a status: the status of an enforcement report is not updated after the
+ * classification, and is never read. Null when no product of the event has a class.
+ */
+function classOfEvent(
+  products: readonly Product[],
+): { class: RecallClass; sentence: string } | null {
+  let best: RecallClass | null = null;
+  for (const { class: recallClass } of products) {
+    if (
+      recallClass !== null &&
+      (best === null || seriousnessOf(recallClass) < seriousnessOf(best))
+    ) {
+      best = recallClass;
+    }
+  }
+  if (best === null) return null;
+  const withBest = products.filter((product) => product.class === best);
+  const classified = withBest.reduce<string | null>(
+    (first, { classDay: day }) => (day !== null && (first === null || day < first) ? day : first),
+    null,
+  );
+  const count =
+    withBest.length === products.length
+      ? ""
+      : ` for ${withBest.length} of the event's ${products.length} products`;
+  const day = classified === null ? `, ${CLASS_DAY_NOT_STATED}` : `, classified ${classified}`;
+  return { class: best, sentence: sentence(CLASS_LABEL, `${best}${count}${day}`) };
+}
+
 /** The record of one event: its products (sorted by recall number) and the rows of the AI list by term. */
 function recordOf(
   eventNumber: string,
   products: readonly Product[],
   rowsByTerm: ReadonlyMap<string, readonly AiRow[]>,
 ): ParsedRecord {
+  const classification = classOfEvent(products);
   const firms = distinct(products.map((product) => product.recalling_firm));
   const status = openestStatus(products.map((product) => product.recall_status));
   const initiated = products
@@ -531,7 +704,8 @@ function recordOf(
         listOf(devices.map(deviceText), DEVICES_SHOWN),
       ),
       sentence("Recall numbers", listOf(numbers, NUMBERS_SHOWN)),
-      CLASS_NOTE,
+      // The class from the enforcement reports, or, when they give none, where to see it.
+      classification?.sentence ?? CLASS_NOTE,
     ]),
     url: `${EVENT_PAGE}${eventNumber}`,
     identifiers: {
@@ -540,6 +714,7 @@ function recordOf(
       productResNumbers: numbers.slice(0, IDENTIFIERS_SHOWN),
       submissionNumbers: submissions.slice(0, IDENTIFIERS_SHOWN),
       status,
+      ...(classification === null ? {} : { class: classification.class }),
     },
     // The names of the recalling firms and of the companies of the AI list, and nothing else: no
     // address and no FEI number is a key.
@@ -558,7 +733,8 @@ const parse: Connector["parse"] = (snapshot) => {
   const shape = snapshot.bodies.length === 1 ? shapeOf(snapshot.bodies[0]) : null;
   if (shape === null) return NOT_THE_LIST;
 
-  let unreadable = shape.skipped;
+  // The products that were left out, and the reports that gave no class: rows that cannot be read.
+  let unreadable = shape.skipped + shape.classSkipped;
   const products = new Map<string, Product>();
   for (const value of shape.products) {
     const product = readProduct(value);
@@ -590,6 +766,9 @@ const parse: Connector["parse"] = (snapshot) => {
   // More events than the dataset has recalls of the AI-listed devices, by far: it is not the list.
   if (events.size > MAX_EVENTS) return NOT_THE_LIST;
 
+  // The rows are the products left out, the products and the rows of the AI list, each once. A report
+  // that gave no class is of a product that is among `shape.products`: it adds to what cannot be
+  // read, and not to the rows.
   const rows = shape.skipped + shape.products.length + shape.aiRows.length;
   const refused = unreadable > unreadableAllowed(rows);
   return {
@@ -634,10 +813,11 @@ function jsonOf(text: string): unknown {
 }
 
 /**
- * The day of the dataset's last update, from the probe's answer. The answer is the dataset's when
- * it has that day (`YYYY-MM-DD`) and says that the dataset holds more than 10,000 products.
+ * The day of a dataset's last update, from the probe's answer. The answer is the dataset's when it
+ * has that day (`YYYY-MM-DD`) and says that the dataset holds more than `minimum` records: 10,000
+ * for the recalls (MIN_DATASET_TOTAL) and for the enforcement reports (MIN_ENFORCEMENT_TOTAL).
  */
-function lastUpdatedOf(text: string): string {
+function lastUpdatedOf(text: string, minimum: number): string {
   const root = jsonOf(text);
   const meta = isObject(root) ? root.meta : undefined;
   const lastUpdated = isObject(meta) ? meta.last_updated : undefined;
@@ -648,7 +828,7 @@ function lastUpdatedOf(text: string): string {
     !DAY.test(lastUpdated) ||
     dayOf(lastUpdated) !== lastUpdated ||
     typeof total !== "number" ||
-    !(total > MIN_DATASET_TOTAL)
+    !(total > minimum)
   ) {
     throw new NotTheListError();
   }
@@ -673,10 +853,83 @@ function answerOf(text: string): { results: unknown[]; total: number } {
   return { results, total };
 }
 
-const searchUrl = (field: Term["field"], terms: readonly string[], skip: number): string =>
-  `${RECALL_ENDPOINT}?search=${field}:(${terms.join("+OR+")})&limit=${PAGE_SIZE}${
+/**
+ * What the enforcement reports of one answer say of the recall numbers of its request: for each
+ * number the answer holds a report of, the class and the day the FDA classified it. A report of a
+ * number that was not asked for is dropped, and counted nowhere. The class must be exactly one of
+ * the three, and the day exactly eight digits that form a day. A report with another class has no
+ * class and no day. A report with a class and a day that is missing or is none keeps its class and
+ * has no day, and counts as nothing: the day is not stated. Of two reports of one number the one
+ * kept is the better by `isKeptOver`, whatever their place in the answer, and the number counts as
+ * one row that cannot be read (`unreadable`) only when none of its reports has a class. A result
+ * that is no object is not the list. Nothing else of a report is looked at: not its status, its
+ * firm, its address, its lots or its `openfda` block.
+ */
+function readClasses(
+  results: readonly unknown[],
+  asked: ReadonlySet<string>,
+): { classes: Map<string, Classification>; unreadable: number } {
+  const classes = new Map<string, Classification>();
+  for (const raw of results) {
+    if (!isObject(raw)) throw new NotTheListError();
+    const number = raw.recall_number;
+    if (typeof number !== "string" || !asked.has(number)) continue;
+    const recallClass = isRecallClass(raw.classification) ? raw.classification : null;
+    const found: Classification = {
+      class: recallClass,
+      classDay: recallClass === null ? null : classificationDayOf(raw.center_classification_date),
+    };
+    const kept = classes.get(number);
+    if (kept === undefined || isKeptOver(found, kept)) classes.set(number, found);
+  }
+  let unreadable = 0;
+  for (const { class: recallClass } of classes.values()) {
+    if (recallClass === null) unreadable += 1;
+  }
+  return { classes, unreadable };
+}
+
+/**
+ * The address of one search: the terms joined by `+OR+` (the parentheses mean AND without it), one
+ * page of PAGE_SIZE. The terms are written as they are to be sent: a number of the AI list needs
+ * no escape, and a recall number needs only its quotes (`classTerm`).
+ */
+const searchUrl = (
+  endpoint: string,
+  field: string,
+  terms: readonly string[],
+  skip: number,
+): string =>
+  `${endpoint}?search=${field}:(${terms.join("+OR+")})&limit=${PAGE_SIZE}${
     skip === 0 ? "" : `&skip=${skip}`
   }`;
+
+/**
+ * A recall number as a search term: between quotes, so that the search is for the whole number
+ * and not for the words a hyphen would split it into. A recall number is `Z-` and digits
+ * (RECALL_NUMBER): the quotes are the one character that needs an escape.
+ */
+const classTerm = (recallNumber: string): string => encodeURIComponent(`"${recallNumber}"`);
+
+/** The address of one class search: the enforcement reports of these recall numbers, one page. */
+const classUrl = (recallNumbers: readonly string[]): string =>
+  searchUrl(ENFORCEMENT_ENDPOINT, "recall_number", recallNumbers.map(classTerm), 0);
+
+/**
+ * A batch asked as one search, and, when its answer is too large, split in half and asked again,
+ * down to MIN_SPLIT terms: the halves are asked in turn, the first before the second. A batch of
+ * MIN_SPLIT terms or fewer that is still too large fails the download.
+ */
+async function splitting(
+  terms: readonly string[],
+  run: (terms: readonly string[]) => Promise<"done" | "too_large">,
+): Promise<void> {
+  if ((await run(terms)) === "done") return;
+  if (terms.length <= MIN_SPLIT) throw new BodyTooLargeError();
+  const half = Math.ceil(terms.length / 2);
+  await splitting(terms.slice(0, half), run);
+  await splitting(terms.slice(half), run);
+}
 
 /** Waits `ms` milliseconds. */
 export type Sleep = (ms: number) => Promise<void>;
@@ -689,7 +942,9 @@ const wait: Sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
 export function createFdaRecallsConnector({ sleep = wait }: { sleep?: Sleep } = {}): Connector {
   return {
     id: "fda_device_recalls",
-    version: 1,
+    // 2: a product carries its class and the day it was classified (the enforcement reports), and
+    // the validator carries the day of their last update: a copy of version 1 is read again.
+    version: 2,
     async download(fetch, validators) {
       let requests = 0;
       let bytes = 0;
@@ -712,18 +967,26 @@ export function createFdaRecallsConnector({ sleep = wait }: { sleep?: Sleep } = 
       };
 
       // 1. The probe: the endpoint is the dataset. Every 404 below is read in this light.
-      const lastUpdated = lastUpdatedOf(bodyText(await ask(PROBE_URL, PROBE_LIMITS, isApiAddress)));
+      const lastUpdated = lastUpdatedOf(
+        bodyText(await ask(PROBE_URL, PROBE_LIMITS, isApiAddress)),
+        MIN_DATASET_TOTAL,
+      );
+
+      // 1b. The same for the enforcement reports, which the class stage asks: a 404 of one of its
+      // searches is "none of these is classified" only when the endpoint has shown that it is them.
+      const enforcementUpdated = lastUpdatedOf(
+        bodyText(await ask(ENFORCEMENT_PROBE_URL, PROBE_LIMITS, isApiAddress)),
+        MIN_ENFORCEMENT_TOTAL,
+      );
 
       // 2. The AI list, whole and unconditionally.
       const csv = bodyText(await ask(FDA_URL, LIST_LIMITS, isFdaAddress));
       const rows = readFdaListRows(csv);
       if (rows === null) throw new NotTheListError();
 
-      // 3. The composite validator: nothing is joined when neither source changed.
-      const validator = `recalls:${lastUpdated};list:${createHash("sha256")
-        .update(csv)
-        .digest("hex")
-        .slice(0, 16)}`;
+      // 3. The composite validator: nothing is joined when none of the three sources changed.
+      const listHash = createHash("sha256").update(csv).digest("hex").slice(0, 16);
+      const validator = `recalls:${lastUpdated};enforcement:${enforcementUpdated};list:${listHash}`;
       if (validators.lastModified === validator) return "unchanged";
 
       // 4. The join, and 5. the projection of each answer as it comes.
@@ -731,6 +994,7 @@ export function createFdaRecallsConnector({ sleep = wait }: { sleep?: Sleep } = 
       const wanted = { k: new Set(searched.k), pma: new Set(searched.pma) };
       const products = new Map<string, Product>();
       let skipped = 0;
+      let classSkipped = 0;
 
       /**
        * The products of one answer that carry a term of the list, cut down at once to what a record
@@ -767,7 +1031,7 @@ export function createFdaRecallsConnector({ sleep = wait }: { sleep?: Sleep } = 
           let response: Awaited<ReturnType<typeof ask>>;
           try {
             response = await ask(
-              searchUrl(field, terms, page * PAGE_SIZE),
+              searchUrl(RECALL_ENDPOINT, field, terms, page * PAGE_SIZE),
               JOIN_LIMITS,
               isApiAddress,
             );
@@ -805,23 +1069,55 @@ export function createFdaRecallsConnector({ sleep = wait }: { sleep?: Sleep } = 
       };
 
       /** A batch, split in half when its answer is too large, down to MIN_SPLIT numbers. */
-      const join = async (field: Term["field"], terms: readonly string[]): Promise<void> => {
-        if ((await search(field, terms)) === "done") return;
-        if (terms.length <= MIN_SPLIT) throw new BodyTooLargeError();
-        const half = Math.ceil(terms.length / 2);
-        await join(field, terms.slice(0, half));
-        await join(field, terms.slice(half));
-      };
+      const join = (field: Term["field"], terms: readonly string[]): Promise<void> =>
+        splitting(terms, (part) => search(field, part));
 
       for (const batch of chunksOf(searched.k, K_BATCH)) await join("k_numbers", batch);
       for (const batch of chunksOf(searched.pma, PMA_BATCH)) await join("pma_numbers", batch);
 
-      const joined = [...products.values()].sort((a, b) =>
+      // 6. The class of each joined product, from the enforcement reports: the recall endpoint has
+      // none. The recall numbers go in order, so that the requests do not depend on the answers.
+      const sorted = [...products.values()].sort((a, b) =>
         compareText(a.product_res_number, b.product_res_number),
       );
+      const classes = new Map<string, Classification>();
+
+      /**
+       * One class search: the reports of these recall numbers, in one page; "too_large" when the
+       * answer was cut at its limit. A 404 of the page says that the dataset holds a report of none
+       * of them (the probe has shown that the endpoint is the reports): they have no class. There is
+       * no later page: a recall has one report, so an answer of more than a page, or of other than
+       * its total, is not what was asked for. What it found joins only when it was read whole: a
+       * batch that is split is asked again, and its rows are not counted twice.
+       */
+      const classify = async (numbers: readonly string[]): Promise<"done" | "too_large"> => {
+        let response: Awaited<ReturnType<typeof ask>>;
+        try {
+          response = await ask(classUrl(numbers), JOIN_LIMITS, isApiAddress);
+        } catch (error) {
+          if (error instanceof FetchError && error.reason === "not_found") return "done";
+          throw error;
+        }
+        if (response.truncated) return "too_large";
+        const { results, total } = answerOf(bodyText(response));
+        if (total > PAGE_SIZE || results.length !== total) throw new NotTheListError();
+        const read = readClasses(results, new Set(numbers));
+        for (const [number, classification] of read.classes) classes.set(number, classification);
+        classSkipped += read.unreadable;
+        return "done";
+      };
+
+      const recallNumbers = sorted.map((product) => product.product_res_number);
+      for (const batch of chunksOf(recallNumbers, CLASS_BATCH)) await splitting(batch, classify);
+
+      const joined = sorted.map((product) => {
+        const classification = classes.get(product.product_res_number);
+        return classification === undefined ? product : { ...product, ...classification };
+      });
       const projection: Projection = {
         lastUpdated,
         skipped,
+        classSkipped,
         products: joined,
         aiRows: joinedRowsOf(rows, new Set(joined.flatMap((product) => product.matched))),
       };

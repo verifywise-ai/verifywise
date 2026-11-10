@@ -9,6 +9,8 @@ jest.mock("../../../../database/redis", () => ({
 }));
 
 import {
+  GLEIF_LIMITS,
+  GLEIF_SPACER_KEY,
   NVD_SPACER_KEY,
   SEC_LIMITS,
   SEC_SPACER_KEY,
@@ -154,12 +156,19 @@ describe("applicationRedis", () => {
 });
 
 describe("the windows", () => {
-  it("are one key for the NVD and one for the SEC, under the vendor risk database", () => {
+  it("are one key for the NVD, one for the SEC and one for GLEIF, under the vendor risk database", () => {
     expect(NVD_SPACER_KEY).toBe("vrdb:spacer:nvd");
     expect(SEC_SPACER_KEY).toBe("vrdb:spacer:sec");
+    expect(GLEIF_SPACER_KEY).toBe("vrdb:spacer:gleif");
+    expect(new Set([NVD_SPACER_KEY, SEC_SPACER_KEY, GLEIF_SPACER_KEY]).size).toBe(3);
   });
 
   it("let the SEC have five requests a second, half of the ten it allows, and a wait of two seconds", () => {
     expect(SEC_LIMITS).toEqual({ limit: 5, windowMs: 1_000, maxWaitMs: 2_000 });
+  });
+
+  it("let GLEIF have fifty requests a minute, under the sixty it allows, and a wait of a second and a half", () => {
+    expect(GLEIF_LIMITS).toEqual({ limit: 50, windowMs: 60_000, maxWaitMs: 1_500 });
+    expect(GLEIF_LIMITS.limit).toBeLessThan(60);
   });
 });
