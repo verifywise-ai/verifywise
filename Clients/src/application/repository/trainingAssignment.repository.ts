@@ -19,9 +19,9 @@ export interface TrainingAssignment {
 
 export interface MyTrainingAssignment extends TrainingAssignment {
   training_name: string;
-  training_duration: string;
-  training_provider: string;
-  training_description: string;
+  training_duration: string | null;
+  training_provider: string | null;
+  training_description: string | null;
 }
 
 export interface TrainingAssignmentSummary {

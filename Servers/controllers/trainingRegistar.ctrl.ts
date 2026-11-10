@@ -13,7 +13,8 @@ import { TrainingRegistarModel } from "../domain.layer/models/trainingRegistar/t
 import { sequelize } from "../database/db";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 import logger from "../utils/logger/fileLogger";
-import { notifyTrainingAssigned } from "../services/inAppNotification.service";
+import { buildEntityUrl, notifyTrainingAssigned } from "../services/inAppNotification.service";
+import { NotificationEntityType } from "../domain.layer/interfaces/i.notification";
 import { getAllUsersQuery } from "../utils/user.utils";
 import { translateError } from "../utils/i18n.utils";
 import {
@@ -202,7 +203,7 @@ export async function createNewTrainingRegistar(req: Request, res: Response): Pr
               description: newTrainingRegistar.description,
               duration: newTrainingRegistar.duration,
               // These recipients are admins hearing about a new record, not trainees.
-              actionPath: `/training?trainingId=${trainingId}`,
+              actionPath: buildEntityUrl(NotificationEntityType.TRAINING, trainingId),
             },
             creatorName,
             baseUrl,

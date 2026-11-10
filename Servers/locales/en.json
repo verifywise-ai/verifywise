@@ -1013,6 +1013,7 @@
   "Due date must be today or later": "Due date must be today or later",
   "Training not found": "Training not found",
   "Training assignment not found": "Training assignment not found",
+  "Reopen this assignment before changing its due date": "Reopen this assignment before changing its due date",
   "Every person must be a member of this organization": "Every person must be a member of this organization",
   "Only the assignee or someone who can edit training can do this": "Only the assignee or someone who can edit training can do this",
   "Failed to load training assignments": "Failed to load training assignments",

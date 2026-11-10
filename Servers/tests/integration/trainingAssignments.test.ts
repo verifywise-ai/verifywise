@@ -397,7 +397,10 @@ describe("Training assignments", () => {
       await admin.post(`${BASE}/${id}/reopen`);
       await admin.post(`${BASE}/${id}/reopen`);
       await admin.post(`${BASE}/complete-all`).send({ training_id: trainingId });
+      // A completed assignment keeps its due date, so this records nothing.
+      expect((await admin.patch(`${BASE}/${id}`).send({ due_date: dateIn(50) })).status).toBe(409);
       await admin.delete(`${BASE}/${id}`);
+      expect((await admin.delete(`${BASE}/${id}`)).status).toBe(404);
 
       const [rows] = await sequelize.query(
         `SELECT field_name, old_value, new_value, changed_by_user_id
@@ -556,6 +559,19 @@ describe("Training assignments", () => {
 
       expect(res.status).toBe(400);
       expect((await storedRow(created[0].id)).due_date).toBe(dueDate);
+    });
+
+    it("refuses to change the date of a completed assignment", async () => {
+      const { traineeId, trainingId, admin } = await setup();
+      const dueDate = dateIn(30);
+      const { created } = await assign(admin, trainingId, [traineeId], dueDate);
+      const id = created[0].id;
+      await admin.post(`${BASE}/${id}/complete`);
+
+      const res = await admin.patch(`${BASE}/${id}`).send({ due_date: dateIn(10) });
+
+      expect(res.status).toBe(409);
+      expect((await storedRow(id)).due_date).toBe(dueDate);
     });
 
     it("removes an assignment", async () => {

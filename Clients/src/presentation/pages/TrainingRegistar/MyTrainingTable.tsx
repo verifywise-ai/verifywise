@@ -100,8 +100,8 @@ const MyTrainingTable: FC = () => {
                 .map((assignment) => (
                   <TableRow key={assignment.id} data-testid={`my-training-row-${assignment.id}`}>
                     <TableCell sx={CELL_SX}>{assignment.training_name}</TableCell>
-                    <TableCell sx={CELL_SX}>{assignment.training_provider}</TableCell>
-                    <TableCell sx={CELL_SX}>{assignment.training_duration}</TableCell>
+                    <TableCell sx={CELL_SX}>{assignment.training_provider || "-"}</TableCell>
+                    <TableCell sx={CELL_SX}>{assignment.training_duration || "-"}</TableCell>
                     <TableCell sx={CELL_SX}>{formatDate(assignment.due_date)}</TableCell>
                     <TableCell sx={CELL_SX}>
                       <AssignmentStatusChip status={assignment.status} />

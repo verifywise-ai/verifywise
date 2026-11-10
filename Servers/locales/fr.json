@@ -1013,6 +1013,7 @@
   "Due date must be today or later": "La date d'échéance doit être aujourd'hui ou une date ultérieure",
   "Training not found": "Formation introuvable",
   "Training assignment not found": "Affectation de formation introuvable",
+  "Reopen this assignment before changing its due date": "Rouvrez cette affectation avant de modifier sa date d'échéance",
   "Every person must be a member of this organization": "Chaque personne doit être membre de cette organisation",
   "Only the assignee or someone who can edit training can do this": "Seule la personne affectée ou une personne autorisée à modifier les formations peut effectuer cette action",
   "Failed to load training assignments": "Impossible de charger les affectations de formation",

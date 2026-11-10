@@ -35,7 +35,7 @@ const FILE = "trainingAssignment.ctrl.ts";
 
 type Outcome =
   | { status: 200 | 201; data: unknown }
-  | { status: 400 | 403 | 404; message: string; vars?: Record<string, string | number> };
+  | { status: 400 | 403 | 404 | 409; message: string; vars?: Record<string, string | number> };
 
 type LogEvent = "Read" | "Create" | "Update" | "Delete";
 
@@ -353,13 +353,20 @@ export async function updateTrainingAssignment(req: Request, res: Response) {
 
       const existing = await getTrainingAssignmentByIdQuery(id.value, req.organizationId!);
       if (!existing) return notFound("Training assignment not found");
+      if (existing.completed_at) {
+        return { status: 409, message: "Reopen this assignment before changing its due date" };
+      }
 
-      await updateTrainingAssignmentDueDateQuery(id.value, dueDate.value, req.organizationId!);
-      if (dueDate.value !== existing.due_date) {
+      const previousDueDate = await updateTrainingAssignmentDueDateQuery(
+        id.value,
+        dueDate.value,
+        req.organizationId!,
+      );
+      if (previousDueDate) {
         await recordAssignmentHistory(req, existing.training_id, [
           {
             person: personName(existing.user_name, existing.user_surname),
-            oldValue: `Due ${existing.due_date}`,
+            oldValue: `Due ${previousDueDate}`,
             newValue: `Due ${dueDate.value}`,
           },
         ]);
@@ -439,7 +446,8 @@ export async function deleteTrainingAssignment(req: Request, res: Response) {
       if (!id.ok) return invalid(id);
       const existing = await getTrainingAssignmentByIdQuery(id.value, req.organizationId!);
       if (!existing) return notFound("Training assignment not found");
-      await deleteTrainingAssignmentQuery(id.value, req.organizationId!);
+      const removed = await deleteTrainingAssignmentQuery(id.value, req.organizationId!);
+      if (!removed) return notFound("Training assignment not found");
       await recordAssignmentHistory(req, existing.training_id, [
         {
           person: personName(existing.user_name, existing.user_surname),

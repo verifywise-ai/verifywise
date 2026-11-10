@@ -1013,6 +1013,7 @@
   "Due date must be today or later": "Das Fälligkeitsdatum muss heute oder später sein",
   "Training not found": "Schulung nicht gefunden",
   "Training assignment not found": "Schulungszuweisung nicht gefunden",
+  "Reopen this assignment before changing its due date": "Öffnen Sie diese Zuweisung erneut, bevor Sie das Fälligkeitsdatum ändern",
   "Every person must be a member of this organization": "Jede Person muss Mitglied dieser Organisation sein",
   "Only the assignee or someone who can edit training can do this": "Nur die zugewiesene Person oder jemand mit Bearbeitungsrechten für Schulungen kann dies tun",
   "Failed to load training assignments": "Schulungszuweisungen konnten nicht geladen werden",

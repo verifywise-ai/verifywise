@@ -36,6 +36,8 @@ export enum NotificationType {
   // Training notifications
   TRAINING_ASSIGNED = "training_assigned",
   TRAINING_COMPLETED = "training_completed",
+  TRAINING_DUE_SOON = "training_due_soon",
+  TRAINING_OVERDUE = "training_overdue",
 
   // Vendor notifications
   VENDOR_REVIEW_DUE = "vendor_review_due",

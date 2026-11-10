@@ -24,7 +24,7 @@ import { deadlineNoticeKey } from "../utils/deadline.utils";
  * The frontend routes don't all follow a single `/:entityType/:id` pattern,
  * so each entity type is mapped to the actual route that exists.
  */
-const buildEntityUrl = (entityType: NotificationEntityType, entityId: number): string => {
+export const buildEntityUrl = (entityType: NotificationEntityType, entityId: number): string => {
   switch (entityType) {
     case NotificationEntityType.TASK:
       return `/tasks?taskId=${entityId}`;
@@ -1633,7 +1633,7 @@ export const notifyTrainingReminder = async (
 
   await sendInAppNotification(organizationId, {
     user_id: userId,
-    type: NotificationType.TRAINING_ASSIGNED,
+    type: overdue ? NotificationType.TRAINING_OVERDUE : NotificationType.TRAINING_DUE_SOON,
     title,
     message: `${training.name}: ${message}`,
     entity_type: NotificationEntityType.TRAINING,

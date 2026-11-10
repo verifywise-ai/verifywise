@@ -257,30 +257,40 @@ export async function getTrainingAssignmentByIdQuery(
 }
 
 /**
- * Change a due date. A real change restarts the reminders: the old notices were
- * about a date that no longer applies, and nothing else tells the assignee.
+ * Change an open assignment's due date. A real change restarts the reminders:
+ * the old notices were about a date that no longer applies, and nothing else
+ * tells the assignee.
+ *
+ * Returns the previous date when this call changed it, or null when nothing
+ * changed (same date, completed meanwhile, or removed). The row lock makes a
+ * concurrent call with the same date see the new value and change nothing, so
+ * only one of them records history.
  */
 export async function updateTrainingAssignmentDueDateQuery(
   id: number,
   dueDate: string,
   organizationId: number,
-): Promise<void> {
-  const newDate = "CAST(:dueDate AS DATE)";
-  await sequelize.query(
-    `UPDATE training_assignments
-        SET due_soon_reminded_at = CASE
-              WHEN due_date = ${newDate} THEN due_soon_reminded_at
-              ELSE NULL
-            END,
-            overdue_reminded_at = CASE
-              WHEN due_date = ${newDate} THEN overdue_reminded_at
-              ELSE NULL
-            END,
-            due_date = ${newDate},
+): Promise<string | null> {
+  const rows = await writeReturningIds<{ previous_due_date: string }>(
+    `WITH previous AS (
+       SELECT id, to_char(due_date, 'YYYY-MM-DD') AS due_date
+         FROM training_assignments
+        WHERE organization_id = :organizationId AND id = :id
+        FOR UPDATE
+     )
+     UPDATE training_assignments ta
+        SET due_date = CAST(:dueDate AS DATE),
+            due_soon_reminded_at = NULL,
+            overdue_reminded_at = NULL,
             updated_at = now()
-      WHERE organization_id = :organizationId AND id = :id`,
-    { replacements: { organizationId, id, dueDate } },
+       FROM previous
+      WHERE ta.id = previous.id
+        AND ta.completed_at IS NULL
+        AND ta.due_date <> CAST(:dueDate AS DATE)
+      RETURNING previous.due_date AS previous_due_date`,
+    { organizationId, id, dueDate },
   );
+  return rows[0]?.previous_due_date ?? null;
 }
 
 /**
@@ -341,14 +351,18 @@ export async function reopenTrainingAssignmentQuery(
   return rows.length > 0;
 }
 
+/** Returns whether this call removed it, so a concurrent call records nothing. */
 export async function deleteTrainingAssignmentQuery(
   id: number,
   organizationId: number,
-): Promise<void> {
-  await sequelize.query(
-    `DELETE FROM training_assignments WHERE organization_id = :organizationId AND id = :id`,
-    { replacements: { organizationId, id } },
+): Promise<boolean> {
+  const rows = await writeReturningIds<{ id: number }>(
+    `DELETE FROM training_assignments
+      WHERE organization_id = :organizationId AND id = :id
+      RETURNING id`,
+    { organizationId, id },
   );
+  return rows.length > 0;
 }
 
 export async function getUserFullNameQuery(userId: number): Promise<string | null> {

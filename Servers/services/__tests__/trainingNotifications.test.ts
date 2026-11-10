@@ -85,13 +85,13 @@ describe("training notifications", () => {
     const training = { id: 7, name: "AI literacy", dueDate: "2026-12-01" };
 
     it.each([
-      ["due_soon", "Training due soon"],
-      ["overdue", "Training overdue"],
-    ] as const)("sends the %s notice as %s", async (kind, title) => {
+      ["due_soon", "Training due soon", "training_due_soon"],
+      ["overdue", "Training overdue", "training_overdue"],
+    ] as const)("sends the %s notice as %s", async (kind, title, type) => {
       await notifyTrainingReminder(3, 11, training, kind, BASE_URL);
 
       expect(createRow.mock.calls[0][0]).toMatchObject({
-        type: "training_assigned",
+        type,
         title,
         action_url: "/training/my-training",
       });
