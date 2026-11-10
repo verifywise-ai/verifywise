@@ -18,7 +18,9 @@
  * developer id (handles that may be personal), the abstract, the reference, the links, the notes
  * (free text of third parties and editors, with e-mail addresses) and the technical columns. The
  * `Organization` cell names organisations: the 1,030 tokens of the real file were read in full and
- * none was a person. So no rule tells persons apart: none is ever a key.
+ * none was a person. No rule tells persons apart, so a person that a later file names in that cell
+ * would be a key: that is a residual, which the weak match and the use of the list as context only
+ * limit.
  *
  * Rule O (the organisation cells). `Organization` and `Organization categorization` are two comma
  * joined lists whose items line up by position (95.3 % of the rows with an organisation today).

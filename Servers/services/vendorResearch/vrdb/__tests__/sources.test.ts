@@ -202,7 +202,7 @@ const NEW_SHEETS = [
     documentationUrl:
       "https://competition-policy.ec.europa.eu/about/news/dg-competitions-case-data-available-open-data-2025-03-18_en",
     licence:
-      "Commission reuse notice (Decision 2011/833/EU); CC BY 4.0 per the Commission's legal notice (https://commission.europa.eu/legal-notice_en): the antitrust, cartel and DMA case files of DG Competition's open data only (no merger, state-aid or foreign-subsidy file, no attachment, press release or timeline text); natural-person names dropped; accepted on delegation on 2026-11-10 (Q45)",
+      "Commission reuse notice (Decision 2011/833/EU); CC BY 4.0 per the Commission's legal notice (https://commission.europa.eu/legal-notice_en): the antitrust, cartel and DMA case files of DG Competition's open data only (no merger, state-aid or foreign-subsidy file, no attachment, press release or timeline text); person-shaped names of non-cartel antitrust cases dropped; accepted on delegation on 2026-11-10 (Q45)",
     attribution:
       "Source: European Commission, DG Competition case data (open data), (c) European Union, reused under the Commission reuse notice (CC BY 4.0). Changes made by VerifyWise.",
   },

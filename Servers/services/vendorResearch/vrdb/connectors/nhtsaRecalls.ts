@@ -69,7 +69,7 @@
  * that is shown) are made by text.
  *
  * A vendor is matched by the filer's name alone, as written and without its legal form, and, for a
- * name such as "Chrysler (FCA US, LLC)", by the text before the parenthesis and the text inside it (as
+ * name such as "Zorbex (Quillon US, LLC)", by the text before the parenthesis and the text inside it (as
  * the crash list does, nhtsa.ts): never by the make, and never by the maker's text (MFGTXT), which
  * names the maker of the recalled product and not the filer. Natural persons: every one of the 1,947
  * names of the real file was read, and none is a person, and rules by the shape of a name had no

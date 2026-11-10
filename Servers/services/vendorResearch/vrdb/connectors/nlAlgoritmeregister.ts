@@ -75,7 +75,9 @@
  * title after other words ("Acme B.V., Beta Works dr. Voorbeeld") is no title piece and takes no
  * piece before it. Residuals: a title glued to initials ("J.P.dr."), a name with a particle or of
  * two capitalised words ("Van Dijk, J. dr."), a surname in lower case, and an initial in lower case
- * ("Voorbeeld, j. dr." keeps "Voorbeeld"; a capital with no full stop, "J dr.", is an initial).
+ * ("Voorbeeld, j. dr." keeps "Voorbeeld"; a capital with no full stop, "J dr.", is an initial), a
+ * hyphenated initial, the title `mw.` and `t.a.v.` before a person, and the post-nominals BSc, MA,
+ * MD, RC, RE and EMIA, which the rule does not read.
  *
  * A row whose provider cell holds the sign © or the word "auteursrecht" is left out and is not
  * unreadable: the register's copyright page excludes an item that states a restriction.
@@ -141,6 +143,10 @@ const MAX_COLUMNS = 100;
 const MAX_PROVIDERS = 5000;
 const LINE_FEED = 0x0a;
 
+/**
+ * A provider cell is read to this many characters. A cell of more than NAME_MAX_CHARS gives no
+ * name, so the cut loses none.
+ */
 const PROVIDER_CELL_MAX = 200;
 const ORGANIZATION_CELL_MAX = 80;
 const ORG_ID_CELL_MAX = 20;

@@ -28,7 +28,8 @@
  * words ` and ` and ` or `; in each part the parentheticals are cut (an unclosed `(` to the end),
  * double quotes become blanks, a leading `and`, `or` or `with` goes, a possessive `'s` goes, blanks
  * are collapsed and blanks and dots trimmed at the ends. A generic phrase (AI, Gen AI, Internet
- * searches, Google Search, Other generative AI platforms and tools, Premium Westlaw subscription)
+ * searches, Google Search, Other generative AI platforms, Other generative AI tools, Premium
+ * Westlaw subscription)
  * and a token that has fewer than four letters and digits once its legal form is off gives no key.
  * The key is `compactName(shortName(token))`, which is also the id of the record: a changed
  * spelling in the source is a new key, one withdrawal and one insert. A row counts once for each

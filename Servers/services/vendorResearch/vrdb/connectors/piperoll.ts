@@ -32,12 +32,13 @@
  *   reader keeps TITLE_READ_CHARS units) is read without its last word, which may be a fragment,
  *   and no fragment is a separator.
  *
- * A natural person is never a key: the individual operators are out by category, a case caption's
- * first party is out by the caption rule, the person shapes of a title word are out by shape, and a
- * name is a token of letters and digits, never a full name with a space. The names of persons in
- * titles cannot be separated by a rule, so the shapes are all that is done:
- * another intercapped given name stays a residual of rule B. An entry that gives no name is "no
- * entity": neither a record nor unreadable.
+ * A natural person is kept out of the keys as far as the rules can tell: the individual operators
+ * are out by category, a case caption's first party is out by the caption rule, the person shapes of
+ * a title word are out by shape, and a name is a token of letters and digits, never a full name with
+ * a space. The names of persons in titles cannot be separated by a rule, so the shapes are all that
+ * is done: another intercapped given name stays a residual of rule B, and it is a key (a lower-case
+ * letter or two capitals glued in front of a surname: `jMcZorb`, `XYMcZorb`). An entry that gives no
+ * name is "no entity": neither a record nor unreadable.
  *
  * Nor is a person a fragment of the text of a record. The title of each of the newest entries is
  * quoted in the text and kept in the stored row by one function (`quoteOf`): the text

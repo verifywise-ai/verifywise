@@ -120,7 +120,12 @@
  * with its front cut off; with a bare word after the person's group (`Zorbex Lee, Quillon, and
  * Tallow, Inc.`) the whole is lost instead (see the bullet above). A name that holds several
  * parentheses of nicknames in a list of groups can lose a company that stands beside them (the groups
- * are judged cut, and a cut group is a bare word). No name, id or key is made of what the rule drops.
+ * are judged cut, and a cut group is a bare word). Four more shapes, which no case name of the real
+ * file has, are stored with their person, as a probe shows: a bracket or a brace that holds a name
+ * after a company or an alias mark (stored whole); a nickname inside a company name (`Casey (Robin)
+ * Sample LLC` stores `Casey`); a colon, a vertical bar, a tilde, a bullet, a middle dot and the CJK
+ * corner brackets, which join nothing; and `Estates of` and `Estate for`, which are kept. No name, id
+ * or key is made of what the rule drops.
  *
  * The id of an entity is the compact name of the party without its legal form, as it is up to 100
  * units; a longer name gives its first 83 units, a tilde and 16 hex digits of the SHA-256 of the whole

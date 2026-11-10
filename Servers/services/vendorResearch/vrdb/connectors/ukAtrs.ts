@@ -46,6 +46,11 @@
  * digits, as a word), that number is a key of the supplier. A record with several suppliers or
  * several numbers gives none, and a number is strong only beside the name (keys.ts).
  *
+ * Natural persons. No rule here tells a person's name from an organization's: the section of the
+ * supplier is free text of a public body, and a supplier that a record names by a person's name (a
+ * sole trader) is kept as written, like any name that Rule S accepts. That is a residual, which the
+ * use of the list as context only limits: a record of it is never a finding.
+ *
  * What the file is. The download is one search, `count=1000`, whose answer must say a `total` that
  * is the number of its distinct results (the pager, govukSearch.ts, refuses it when it does not, and
  * refuses a search of more than 1,000 results as no longer this list). The server sends no ETag and
@@ -96,7 +101,7 @@ const NAME_MAX = 120;
 const MIN_KEY_CHARS = 4;
 /** The longest key (and so id) of an entity: the compact part of an id. */
 const KEY_MAX = 120;
-/** The suppliers of the list today are 133; a list of thousands is no list of this kind. */
+/** The entities of the list today are 125; a list of thousands is no list of this kind. */
 const MAX_ENTITIES = 5_000;
 const SPELLINGS_MAX = 10;
 const REGNOS_MAX = 3;

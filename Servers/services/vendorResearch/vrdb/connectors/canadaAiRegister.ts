@@ -158,7 +158,7 @@ const MIN_ROWS = 200;
 const MAX_ROWS = 5000;
 /** The register has 24 columns; a row of more than this many is no row of it. */
 const MAX_COLUMNS = 100;
-/** The most vendors of a list (121 today): more is a file that names a thousand vendors in a row. */
+/** The most vendors of a list (120 today): more is a file that names a thousand vendors in a row. */
 const MAX_VENDORS = 5000;
 
 /** The longest vendor cell that is read: a longer cell is cut, and the name that the cut ended is no name. */
