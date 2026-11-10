@@ -40,10 +40,14 @@ export const getAllFrameworkByIdQuery = async (
   id: number,
   organizationId: number,
 ): Promise<FrameworkModel | null> => {
+  // Bundled rows (organization_id IS NULL) are visible to every org;
+  // imported rows are tenant-private and must belong to the caller (#5254).
   const result = await sequelize.query(
-    `SELECT * FROM frameworks WHERE id = :id ORDER BY created_at DESC, id ASC`,
+    `SELECT * FROM frameworks
+      WHERE id = :id AND (organization_id IS NULL OR organization_id = :organizationId)
+      ORDER BY created_at DESC, id ASC`,
     {
-      replacements: { id },
+      replacements: { id, organizationId },
       mapToModel: true,
       model: FrameworkModel,
     },
