@@ -300,6 +300,59 @@ validateTrainingRegisterData(): void
 | `pages/TrainingRegistar/trainingTable.tsx` | Table |
 | `components/Modals/NewTraining/index.tsx` | Modal |
 
+## Training Assignments
+
+A training can be assigned to named people with a due date (#5260). Assignments are separate from the `people` headcount on the training record, which they do not change.
+
+### Table: `training_assignments`
+
+One row per person per training, `UNIQUE (training_id, user_id)`, with row-level security on `organization_id`.
+
+| Column | Notes |
+|--------|-------|
+| `training_id` | Cascades when the training is deleted |
+| `user_id` | Cascades when the user is deleted |
+| `due_date` | `DATE`, required |
+| `completed_at`, `completed_by` | `completed_at` is null while the assignment is open |
+| `assigned_by` | Set to null when that user is deleted |
+| `due_soon_reminded_at`, `overdue_reminded_at` | Reminder dedupe |
+
+Status is derived, never stored: `completed` when `completed_at` is set, `overdue` when `due_date` is before today and the assignment is open, otherwise `pending`.
+
+Groups (#5253) do not exist yet. When they do, a group should expand to one row per member, because completion is tracked per person.
+
+### Endpoints
+
+All under `/api/v1/training`, authenticated.
+
+| Method | Endpoint | Who | Description |
+|--------|----------|-----|-------------|
+| GET | `/assignments?training_id=N` | Any org user | Assignments of one training |
+| GET | `/assignments/mine` | Any org user | The caller's assignments |
+| GET | `/assignments/summary` | Any org user | Total, completed and overdue per training |
+| POST | `/assignments` | `training.edit` | Assign `user_ids` with a `due_date`. Already-assigned users are skipped and returned in `skipped_user_ids` |
+| POST | `/assignments/complete-all` | `training.edit` | Complete every open assignment of a training |
+| PATCH | `/assignments/:id` | `training.edit` | Change the due date |
+| POST | `/assignments/:id/complete` | Assignee or `training.edit` | Mark complete. Keeps the first completion |
+| POST | `/assignments/:id/reopen` | Assignee or `training.edit` | Clear the completion |
+| DELETE | `/assignments/:id` | `training.edit` | Remove the assignment |
+
+Assignees are checked against the organization's current members, since a user can belong to several organizations. A request naming a non-member is rejected whole. Lists and reminders leave out people who have left the organization.
+
+Changing a training's status to Completed does not complete its assignments. A finished training record does not show that each person took it, so completing everyone is an explicit action.
+
+### Change history
+
+Assign, due date change, complete, reopen and remove each write a row to `training_change_history` with the field name `Assignment: <person>`, and so to the audit ledger. They appear in the Activity tab of the training record. The person's name, the old state and the actor are stored on the row, so reopening or removing an assignment keeps the record of what it was. Completion is self-reported and needs no proof; certificates belong in the training's evidence.
+
+### Notifications and reminders
+
+- On assignment each new assignee gets an in-app notice and the `training-assigned` email. A failed email does not fail the save.
+- A daily job at 08:30 server time (`trainingAssignmentReminderSweep`) sends the `training-reminder` email once when an open assignment is due within 7 days, and once when it is overdue. A failed send is not stamped and retries the next day.
+- An assignment created with a due date within 7 days skips the due-soon reminder, since the assignment notice covers it. Changing the due date or reopening an assignment restarts the reminders.
+- The server accepts a due date one day before today in UTC, because in the evening west of UTC the user's today is already yesterday in UTC.
+- Overdue and the reminder sweep use the UTC date. West of UTC an assignment shows as overdue from the evening of its due date, and an assignment created that evening for "today" is overdue at once. There is no organization time zone to use instead.
+
 ## Related Documentation
 
 - [Reporting](./reporting.md)

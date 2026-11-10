@@ -492,7 +492,7 @@ export const collections: Collection[] = [
         id: 'training-tracking',
         title: 'Training registry',
         description: 'Track AI training programs and team competency development.',
-        keywords: ['training', 'track', 'completion', 'team', 'program', 'competency', 'registry'],
+        keywords: ['training', 'track', 'completion', 'team', 'program', 'competency', 'registry', 'assign', 'assignment', 'due date', 'overdue', 'reminder', 'my training'],
       },
     ],
   },

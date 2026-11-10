@@ -45,6 +45,12 @@ export interface DatePickerCoreProps {
   disabled?: boolean;
   id?: string;
   onBlur?: () => void;
+  /** Earliest date that can be picked. */
+  minDate?: Dayjs;
+  /** Fires when a date is confirmed in the calendar, not on each typed character. */
+  onAccept?: (date: Dayjs | null) => void;
+  /** Blocks typing in the field, leaving the calendar as the only way to change the date. */
+  isFieldReadOnly?: boolean;
 }
 
 export interface DropDownsProps {

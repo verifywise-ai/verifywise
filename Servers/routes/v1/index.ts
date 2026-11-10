@@ -30,6 +30,7 @@ import aiAppsRoutes from "./aiApps.route";
 import aiAppLifecycleRoutes from "./aiAppLifecycle.route";
 import projectsRoutes from "./projects.route";
 import dashboardPreferencesRoutes from "./dashboardPreferences.route";
+import trainingRoutes from "./training.route";
 
 const router = express.Router();
 
@@ -71,5 +72,8 @@ router.use("/projects", projectsRoutes);
 
 // Per-user dashboard layout (#5257).
 router.use("/dashboard", dashboardPreferencesRoutes);
+
+// Training assignments (#5260); the legacy /api/training contracts are frozen.
+router.use("/training", trainingRoutes);
 
 export default router;

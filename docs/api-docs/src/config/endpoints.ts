@@ -12820,6 +12820,109 @@ export const v1V1projectsEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Training endpoints
+export const v1V1trainingEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/training/assignments/mine',
+    summary: "List My Training Assignments",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Training",
+  },
+  {
+    method: 'GET',
+    path: '/v1/training/assignments/summary',
+    summary: "Get Training Assignment Summary",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Training",
+  },
+  {
+    method: 'GET',
+    path: '/v1/training/assignments',
+    summary: "List Training Assignments",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Training",
+  },
+  {
+    method: 'POST',
+    path: '/v1/training/assignments',
+    summary: "Create Training Assignments",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Training",
+  },
+  {
+    method: 'POST',
+    path: '/v1/training/assignments/complete-all',
+    summary: "Complete All Training Assignments",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Training",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/training/assignments/{id}',
+    summary: "Update Training Assignment",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Training",
+  },
+  {
+    method: 'DELETE',
+    path: '/v1/training/assignments/{id}',
+    summary: "Delete Training Assignment",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Training",
+  },
+  {
+    method: 'POST',
+    path: '/v1/training/assignments/{id}/complete',
+    summary: "Complete Training Assignment",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Training",
+  },
+  {
+    method: 'POST',
+    path: '/v1/training/assignments/{id}/reopen',
+    summary: "Reopen Training Assignment",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Training",
+  },
+];
+
 // v1: V1/Use Case Lifecycle endpoints
 export const v1V1useCaseLifecycleEndpoints: Endpoint[] = [
   {
@@ -13255,6 +13358,7 @@ export const allEndpoints = {
   v1V1intakeFormReviewTime: v1V1intakeFormReviewTimeEndpoints,
   v1V1lifecycleSettings: v1V1lifecycleSettingsEndpoints,
   v1V1projects: v1V1projectsEndpoints,
+  v1V1training: v1V1trainingEndpoints,
   v1V1useCaseLifecycle: v1V1useCaseLifecycleEndpoints,
   vendor: vendorEndpoints,
   vendorRisk: vendorRiskEndpoints,
