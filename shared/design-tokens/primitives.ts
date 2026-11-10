@@ -49,6 +49,13 @@ export const red = {
 
 export type RedStep = keyof typeof red;
 
+/** Yellow scale */
+export const yellow = {
+  600: "#FBBF24",
+} as const;
+
+export type YellowStep = keyof typeof yellow;
+
 /** Warning / medium — amber surfaces with brown-toned text */
 export const amber = {
   100: "#FFF8E1",

@@ -54,6 +54,7 @@ export const accent = {
   teal: { bg: teal[50], text: teal[800], border: teal[100] },
   blue: { bg: blue[50], text: blue[800], border: blue[100] },
   pink: { bg: pink[50], text: pink[800], border: pink[100] },
+  red: { bg: red[50], text: red[500], border: red[200] },
   amber: { bg: amber[100], text: amber[700], border: amber[200] },
 } as const;
 
@@ -74,7 +75,7 @@ export const text = {
   tertiary: grey[600],
   accent: grey[400],
   disabled: grey[350],
-  onPrimary: grey[50],
+  inverse: grey[50],
   black: grey[950],
   icon: grey[450],
   muted: grey[600],
