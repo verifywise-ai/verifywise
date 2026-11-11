@@ -26,6 +26,11 @@ import type { StandardColumn } from "../../../domain/types/standardTable";
 import { SearchBox } from "../../components/Search";
 import { handleAlert } from "../../../application/tools/alertUtils";
 import Alert from "../../components/Alert";
+import {
+  getApiErrorReason,
+  getClientErrorReason,
+  isClientError,
+} from "../../../application/utils/apiErrorReason";
 import { AlertProps } from "../../types/alert.types";
 import { PolicyManagerModel } from "../../../domain/models/Common/policy/policyManager.model";
 import { PolicyManagerProps } from "../../types/interfaces/i.policy";
@@ -209,17 +214,22 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
   const [templateCategory, setTemplateCategory] = useState<string>(
     PolicyTemplateCategory.Core_AI_Governance,
   );
+  // Shown inside the modal (not as a page toast) so it is announced and the
+  // user can fix the name without losing what they typed.
+  const [templateError, setTemplateError] = useState<string | null>(null);
   const createTemplateMutation = useCreatePolicyTemplateFromPolicy();
 
   const handleSaveAsTemplate = (id: number) => {
     const policy = policies.find((p) => Number(p.id) === id);
     setTemplateName(policy ? `${policy.title} (template)` : "");
     setTemplateCategory(PolicyTemplateCategory.Core_AI_Governance);
+    setTemplateError(null);
     setTemplateSourceId(id);
   };
 
   const handleConfirmSaveAsTemplate = async () => {
     if (templateSourceId === null) return;
+    setTemplateError(null);
     try {
       await createTemplateMutation.mutateAsync({
         policy_id: templateSourceId,
@@ -233,21 +243,17 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
         setAlert,
         alertTimeout: 4000,
       });
-    } catch (err: any) {
-      // Show the server's reason (for example a name that is already taken),
-      // so the user can change the name in the still-open modal.
-      // apiServices throws a CustomException: `status`, and `response` is the
-      // body, where STATUS_CODE puts the reason ({ message: "Conflict", data: "..." }).
-      const reason = err?.status === 409 ? err?.response?.data : undefined;
-      handleAlert({
-        variant: "error",
-        body:
-          typeof reason === "string" && reason
-            ? reason.charAt(0).toUpperCase() + reason.slice(1)
-            : "Could not save the template. Please try again.",
-        setAlert,
-        alertTimeout: 4000,
-      });
+    } catch (err) {
+      // For a rejected request (4xx: name taken, invalid name, policy gone)
+      // show the server's reason; 5xx reasons are never shown.
+      const reason = isClientError(err)
+        ? (getApiErrorReason(err) ?? getClientErrorReason(err))
+        : null;
+      setTemplateError(
+        reason
+          ? reason.charAt(0).toUpperCase() + reason.slice(1)
+          : "Could not save the template. Please try again.",
+      );
     }
   };
 
@@ -867,6 +873,9 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
                 onChange={(e) => setTemplateCategory(String(e.target.value))}
                 isRequired
               />
+              {templateError && (
+                <Alert variant="error" body={templateError} hasIcon={false} inline />
+              )}
             </Stack>
           </StandardModal>
         )}
