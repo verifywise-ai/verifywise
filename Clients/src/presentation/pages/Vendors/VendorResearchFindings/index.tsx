@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useId, useMemo, useRef, useState } from "react";
 import {
   Accordion,
   AccordionDetails,
@@ -31,15 +31,27 @@ import {
   useAcceptFinding,
   useDismissFinding,
   useFollowedResearchVendor,
+  useLatestVendorResearch,
   useVendorResearchConfig,
   useVendorRiskFindings,
 } from "../../../../application/hooks/useVendorResearch";
 import { readVendorResearchError } from "../../../../application/repository/vendorResearch.repository";
 import type { ResearchAlert } from "../../../../application/utils/vendorResearchAlerts";
 import {
+  groupFindings,
+  summarizeFindings,
+  type FindingGroup,
+} from "../../../../application/utils/vendorResearchList";
+import {
+  earlierLegend,
+  pendingSentence,
+  topicsSentence,
+} from "../../../../application/utils/vendorResearchPlainText";
+import {
   defaultActionOwner,
   toAcceptBody,
 } from "../../../../application/utils/vendorResearchPreview";
+import { categoryLabel } from "../../../../application/utils/vendorResearchText";
 import type {
   VendorRiskFormDetails,
   VendorRiskPreview,
@@ -50,6 +62,7 @@ import DismissFindingModal, { type DismissalBody } from "./DismissFindingModal";
 import FindingRow, { type RowAction } from "./FindingRow";
 import InlineError from "./InlineError";
 import { parseVendorId } from "./parseVendorId";
+import ResearchCredits from "./ResearchCredits";
 import ResearchSettingsModal from "./ResearchSettingsModal";
 import RunSummary from "./RunSummary";
 import { controlHeightSx, iconControlSx } from "./styles";
@@ -60,6 +73,8 @@ const VENDOR_PARAM = "findingsVendorId";
 const FINDINGS_LIMIT = 200;
 /** The value of the filter option that stands for every vendor. */
 const ALL_VENDORS = "all";
+/** The rows while the list has not been read: one array, so that what is computed from it holds. */
+const NO_ROWS: VendorRiskFinding[] = [];
 
 interface VendorResearchFindingsProps {
   /** The vendor's assignee is the owner a preview starts on, when that user is in the organization. */
@@ -73,6 +88,13 @@ interface VendorResearchFindingsProps {
 /**
  * The risks the research agent suggested for the vendors, waiting to be added to the register
  * or dismissed, and (for one vendor) what its latest research run did.
+ *
+ * It is laid out for a person who does not know how the research works. A short summary says how
+ * much is pending and what it is about, counted here from the rows on screen, so it cannot say
+ * anything the list does not show. The findings follow in groups, the most severe first, each on
+ * one line that opens: one vendor's by category, every vendor's by vendor. What the run found and
+ * checked is behind one button of the summary; what it could not check, the cautions of a finding
+ * and the credits of the sources stay on screen.
  *
  * A finding is added through the vendor risk form: Preview opens the form on the finding, and
  * saving there accepts it with what is on screen, in one request. Closing the form changes
@@ -117,6 +139,8 @@ export default function VendorResearchFindings({
   // The rows on screen, by finding, and the heading of the section: the places focus is sent to.
   const rowElements = useRef(new Map<number, HTMLLIElement>());
   const headingElement = useRef<HTMLElement | null>(null);
+  // The headings of the groups of findings are named after this, so that each list is labelled.
+  const headingsId = useId();
 
   if (urlVendorId !== seenUrlVendorId) {
     setSeenUrlVendorId(urlVendorId);
@@ -139,12 +163,22 @@ export default function VendorResearchFindings({
   const { userId } = useAuth();
   const { users } = useUsers();
 
-  const rows = findings.data?.rows ?? [];
+  const rows = findings.data?.rows ?? NO_ROWS;
   const total = findings.data?.total ?? 0;
+  // The rows as they are on screen: in groups, the most severe first.
+  const groups = useMemo(
+    () => groupFindings(rows, vendorId === null ? "vendor" : "category"),
+    [rows, vendorId],
+  );
+  const shown = useMemo(() => groups.flatMap((group) => group.rows), [groups]);
+  const summary = useMemo(() => summarizeFindings(rows, total), [rows, total]);
   // Once something is pending the section stays open by default, also when the user then picks
   // a vendor that has nothing: it must not fold up under their hands.
   if (!openByDefault && total > 0) setOpenByDefault(true);
   const expanded = openChoice ?? openByDefault;
+  // The latest run of the chosen vendor, read here once for the summary above the findings and the
+  // credits under them. Nothing of it is on screen while the section is closed, so it is not read.
+  const latest = useLatestVendorResearch(expanded ? vendorId : null);
 
   const notConfigured = config.data !== undefined && !config.data.hasLlmKey;
   // Only an Admin chooses the keys (the server refuses everyone else), and there is nothing to
@@ -179,11 +213,14 @@ export default function VendorResearchFindings({
       return next;
     });
 
-  /** The rows next to a finding, nearest first: the ones after it, then the ones before it. */
+  /**
+   * The rows next to a finding on screen, nearest first: the ones after it, then the ones before
+   * it. In the order of the screen, which is not the order the server sent them in.
+   */
   const rowsAround = (id: number): number[] => {
-    const index = rows.findIndex((row) => row.id === id);
+    const index = shown.findIndex((row) => row.id === id);
     if (index === -1) return [];
-    return [...rows.slice(index + 1), ...rows.slice(0, index).reverse()].map((row) => row.id);
+    return [...shown.slice(index + 1), ...shown.slice(0, index).reverse()].map((row) => row.id);
   };
 
   /**
@@ -326,6 +363,21 @@ export default function VendorResearchFindings({
     (target ?? headingElement.current)?.focus();
   }, [answered, findings.isFetching, rows, dismissing, previewing, busy]);
 
+  /**
+   * What a group of findings stands under: the category for the findings of one vendor, the vendor
+   * for the findings of all of them (by its number when its rows carry no name).
+   */
+  const headingOf = (group: FindingGroup): string => {
+    if (group.category !== null) return categoryLabel(group.category, t);
+    return group.vendorName ?? fill(t("Vendor {id}"), { id: group.vendorId ?? "" });
+  };
+
+  // The summary describes the rows on screen: not while they cannot be read, and not when there
+  // are none.
+  const summarized = !findings.isError && rows.length > 0;
+  const topics = topicsSentence(summary, t);
+  const legend = summarized ? earlierLegend(summary.earlier, t) : null;
+
   const renderFindings = () => {
     if (findings.isError) {
       return (
@@ -349,22 +401,49 @@ export default function VendorResearchFindings({
         <Stack
           component="ul"
           aria-label="Pending research findings"
-          sx={{ gap: "12px", m: 0, p: 0, listStyle: "none" }}
+          sx={{ gap: "16px", m: 0, p: 0, listStyle: "none" }}
         >
-          {rows.map((finding) => (
-            <FindingRow
-              key={finding.id}
-              finding={finding}
-              canDecide={canEdit}
-              busy={busy[finding.id] ?? null}
-              onPreview={setPreviewing}
-              onDismiss={setDismissing}
-              rowRef={(element) => {
-                if (element) rowElements.current.set(finding.id, element);
-                else rowElements.current.delete(finding.id);
-              }}
-            />
-          ))}
+          {groups.map((group) => {
+            const headingId = `${headingsId}-${group.key}`;
+            return (
+              <Box component="li" key={group.key} sx={{ listStyle: "none" }}>
+                <Stack direction="row" sx={{ alignItems: "baseline", gap: "8px", mb: "8px" }}>
+                  {/* A vendor's name is the user's own text, and is never translated. */}
+                  <Typography
+                    id={headingId}
+                    data-vw-no-translate="true"
+                    sx={{ ...textStyles.body, fontWeight: 500, color: "text.primary" }}
+                  >
+                    {headingOf(group)}
+                  </Typography>
+                  <Typography sx={{ ...textStyles.bodySmall, color: "text.tertiary" }}>
+                    {group.rows.length}
+                  </Typography>
+                </Stack>
+                <Stack
+                  component="ul"
+                  aria-labelledby={headingId}
+                  sx={{ gap: "8px", m: 0, p: 0, listStyle: "none" }}
+                >
+                  {group.rows.map((finding) => (
+                    <FindingRow
+                      key={finding.id}
+                      finding={finding}
+                      canDecide={canEdit}
+                      busy={busy[finding.id] ?? null}
+                      showCategory={vendorId === null}
+                      onPreview={setPreviewing}
+                      onDismiss={setDismissing}
+                      rowRef={(element) => {
+                        if (element) rowElements.current.set(finding.id, element);
+                        else rowElements.current.delete(finding.id);
+                      }}
+                    />
+                  ))}
+                </Stack>
+              </Box>
+            );
+          })}
         </Stack>
       );
     }
@@ -478,15 +557,46 @@ export default function VendorResearchFindings({
                 )}
               </Stack>
 
-              {vendorId !== null && (
-                <RunSummary
-                  key={vendorId}
-                  vendorId={vendorId}
-                  vendorName={vendorName}
-                  canStart={canEdit}
-                  notConfigured={notConfigured}
-                  onNotify={onNotify}
-                />
+              {/* What is pending, in two sentences, and where the research of the chosen vendor
+                  stands. The run is there for a vendor with nothing pending too: it must stay
+                  researchable. */}
+              {(summarized || vendorId !== null) && (
+                <Stack
+                  sx={{
+                    gap: "12px",
+                    p: "16px",
+                    border: "1px solid",
+                    borderColor: "border.dark",
+                    borderRadius: "4px",
+                    backgroundColor: "background.accent",
+                  }}
+                >
+                  {summarized && (
+                    <Stack sx={{ gap: "4px" }}>
+                      <Typography
+                        sx={{ ...textStyles.bodyLarge, fontWeight: 500, color: "text.primary" }}
+                      >
+                        {pendingSentence(summary, t)}
+                      </Typography>
+                      {topics !== null && (
+                        <Typography sx={{ ...textStyles.body, color: "text.secondary" }}>
+                          {topics}
+                        </Typography>
+                      )}
+                    </Stack>
+                  )}
+                  {vendorId !== null && (
+                    <RunSummary
+                      key={vendorId}
+                      latest={latest}
+                      vendorId={vendorId}
+                      vendorName={vendorName}
+                      canStart={canEdit}
+                      notConfigured={notConfigured}
+                      onNotify={onNotify}
+                    />
+                  )}
+                </Stack>
               )}
 
               {!findings.isError && total > rows.length && (
@@ -503,7 +613,16 @@ export default function VendorResearchFindings({
                 </Box>
               )}
 
+              {/* Said once for all the rows it is about, where each of them used to say it. */}
+              {legend !== null && (
+                <Typography sx={{ ...textStyles.bodySmall, color: "text.tertiary" }}>
+                  {legend}
+                </Typography>
+              )}
+
               {renderFindings()}
+
+              {vendorId !== null && <ResearchCredits run={latest.data} />}
             </Stack>
           ) : null}
         </AccordionDetails>

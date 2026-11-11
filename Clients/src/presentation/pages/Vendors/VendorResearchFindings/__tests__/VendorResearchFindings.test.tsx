@@ -4,7 +4,6 @@ import userEvent from "@testing-library/user-event";
 import { QueryClient } from "@tanstack/react-query";
 import { useNavigate } from "react-router";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
-import { text as textColor } from "../../../../themes/palette";
 import {
   acceptedRisk,
   ATTRIBUTIONS,
@@ -118,7 +117,35 @@ const newQueryClient = () =>
   new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
 
 const header = () => screen.getByRole("button", { name: /^Research findings/ });
-const rowOf = (text: string) => screen.getByText(text).closest("li") as HTMLElement;
+/**
+ * The row of the finding with this text, with its details open. A row shows its details on a click
+ * of the risk, and most cases here are about what the details hold; what a row shows before the
+ * click has its own cases in PlainLayout.test.tsx.
+ */
+const rowOf = (text: string) => {
+  const risk = screen.getByText(text);
+  const toggle = risk.closest("button");
+  if (toggle?.getAttribute("aria-expanded") === "false") fireEvent.click(toggle);
+  return risk.closest("li") as HTMLElement;
+};
+/** Opens what the latest run found and checked, which is behind one button of the summary. */
+const openRunDetails = async () =>
+  userEvent.click(await screen.findByRole("button", { name: "How it was researched" }));
+/**
+ * The line of the source with this host in an open row: the host, the date and the tags of the
+ * source. Its quote is under the line.
+ */
+const sourceLineOf = (row: HTMLElement, host: string) => {
+  const link = within(row).getByRole("link", { name: host });
+  return { link, line: link.closest("[data-vw-no-translate]")?.parentElement as HTMLElement };
+};
+/** Says that the source carries this tag, on the line of its host and after it. */
+const expectTag = (row: HTMLElement, host: string, tag: string) => {
+  const { link, line } = sourceLineOf(row, host);
+  expect(
+    link.compareDocumentPosition(within(line).getByText(tag)) & Node.DOCUMENT_POSITION_FOLLOWING,
+  ).toBeTruthy();
+};
 const noticeOf = (text: HTMLElement) => text.closest("[role='status']") as HTMLElement;
 /** The options of the open select, by name. The shared Select writes a space after each name. */
 const optionNames = async () =>
@@ -362,21 +389,22 @@ describe("opening and closing the section", () => {
 });
 
 describe("a finding", () => {
-  it("shows its category, vendor, texts, level, severity, likelihood and credibility", async () => {
+  it("shows its category, texts, level, scales and credibility, under the name of its vendor", async () => {
     renderSection();
     await screen.findByText(FIRST);
 
     const row = within(rowOf(FIRST));
     expect(row.getByText("Security incidents")).toBeInTheDocument();
-    expect(row.getByText("Acme Cloud")).toBeInTheDocument();
     expect(row.getByText("Personal data of our customers could be exposed")).toBeInTheDocument();
     expect(row.getByText("High Risk")).toBeInTheDocument();
-    expect(row.getByText("Major")).toBeInTheDocument();
-    expect(row.getByText("Likely")).toBeInTheDocument();
+    // The two scales the level is computed from are one quiet line, not a chip and a caption each.
+    expect(row.getByText("Severity: Major · Likelihood: Likely")).toBeInTheDocument();
+    expect(row.queryByText("Risk level")).not.toBeInTheDocument();
+    expect(row.getByText("Credibility")).toBeInTheDocument();
     expect(row.getByText("Medium")).toBeInTheDocument();
-    for (const caption of ["Risk level", "Severity", "Likelihood", "Credibility"]) {
-      expect(row.getByText(caption)).toBeInTheDocument();
-    }
+    // The vendor heads its findings, so a row does not say it again.
+    expect(screen.getByRole("list", { name: "Acme Cloud" })).toContainElement(rowOf(FIRST));
+    expect(row.queryByText("Acme Cloud")).not.toBeInTheDocument();
     // A finding has no confidence: its label says how well the sources establish it.
     expect(row.queryByText("Confidence")).not.toBeInTheDocument();
   });
@@ -477,8 +505,9 @@ describe("a finding", () => {
     });
     const { container } = renderSection();
 
-    expect(await screen.findByText(quote)).toBeInTheDocument();
-    expect(screen.getByText("<b>Bold claim</b>")).toBeInTheDocument();
+    // The quote, the plan and the reason are in the details of the row, which a click opens.
+    await screen.findByText("<b>Bold claim</b>");
+    expect(within(rowOf("<b>Bold claim</b>")).getByText(quote)).toBeInTheDocument();
     expect(screen.getByText(plan)).toBeInTheDocument();
     expect(screen.getByText(why)).toBeInTheDocument();
     expect(container.querySelector("img")).toBeNull();
@@ -501,7 +530,7 @@ describe("a finding", () => {
     await screen.findByText(FIRST);
 
     const first = within(rowOf(FIRST));
-    const caption = first.getByText("Action plan");
+    const caption = first.getByText("What to do");
     const plan = first.getByText("Ask the vendor for its incident report");
     const follows = (a: HTMLElement, b: HTMLElement) =>
       Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
@@ -512,7 +541,7 @@ describe("a finding", () => {
     ).toBe(true);
     // Each row has its own.
     const second = within(rowOf(SECOND));
-    expect(second.getByText("Action plan")).toBeInTheDocument();
+    expect(second.getByText("What to do")).toBeInTheDocument();
     expect(second.getByText("Ask for the renewed certificate")).toBeInTheDocument();
   });
 
@@ -521,39 +550,49 @@ describe("a finding", () => {
     renderSection();
     await screen.findByText(FIRST);
 
-    expect(screen.queryByText("Action plan")).not.toBeInTheDocument();
+    const row = within(rowOf(FIRST));
+    // The row is open, with its other captions, and has none for a plan.
+    expect(row.getByText("Why it matters to you")).toBeInTheDocument();
+    expect(row.queryByText("What to do")).not.toBeInTheDocument();
   });
 
-  it("shows why the finding was rated as it was, under the ratings and before the sources", async () => {
+  it("shows why the finding has its risk level, after its credibility and before the sources", async () => {
     mocks.list.mockResolvedValue({ rows: [finding(), secondFinding()], total: 2 });
     renderSection();
     await screen.findByText(FIRST);
 
     const first = within(rowOf(FIRST));
-    const caption = first.getByText("Why this rating");
+    const caption = first.getByText("Why this risk level");
     const why = first.getByText("The vendor confirmed the breach, and customer data was involved.");
+    const scales = first.getByText("Severity: Major · Likelihood: Likely");
     const follows = (a: HTMLElement, b: HTMLElement) =>
       Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
-    // The ratings come first, then the reason for them, then where the finding comes from.
+    // How well it is established comes first, then the reason for the level with the two scales it
+    // is computed from, then where the finding comes from.
     expect(follows(first.getByText("Credibility"), caption)).toBe(true);
     expect(follows(caption, why)).toBe(true);
-    expect(follows(why, first.getByText("Sources"))).toBe(true);
+    expect(follows(why, scales)).toBe(true);
+    expect(follows(scales, first.getByText("Sources"))).toBe(true);
     // Each row has its own.
     const second = within(rowOf(SECOND));
-    expect(second.getByText("Why this rating")).toBeInTheDocument();
+    expect(second.getByText("Why this risk level")).toBeInTheDocument();
     expect(
       second.getByText("A lapsed certificate is a gap in the audits, not an incident."),
     ).toBeInTheDocument();
+    expect(second.getByText("Severity: Moderate · Likelihood: Possible")).toBeInTheDocument();
   });
 
   it.each([null, "", "   "])(
-    "shows no caption for a finding whose rationale is %j",
+    "shows the two scales, and no empty sentence above them, for a finding whose rationale is %j",
     async (rationale) => {
       mocks.list.mockResolvedValue({ rows: [finding({ rationale })], total: 1 });
       renderSection();
       await screen.findByText(FIRST);
 
-      expect(screen.queryByText("Why this rating")).not.toBeInTheDocument();
+      const caption = within(rowOf(FIRST)).getByText("Why this risk level");
+      // The line of the scales is all that stands under the caption.
+      expect(caption.parentElement?.children).toHaveLength(2);
+      expect(caption.nextElementSibling).toHaveTextContent("Severity: Major · Likelihood: Likely");
     },
   );
 
@@ -564,13 +603,16 @@ describe("a finding", () => {
     renderSection();
 
     expect(await screen.findByText(FIRST)).toBeInTheDocument();
-    expect(screen.queryByText("Why this rating")).not.toBeInTheDocument();
+    // Its level still says what it is computed from, with no sentence of the model above it.
+    const caption = within(rowOf(FIRST)).getByText("Why this risk level");
+    expect(caption.parentElement?.children).toHaveLength(2);
+    expect(caption.nextElementSibling).toHaveTextContent("Severity: Major · Likelihood: Likely");
   });
 
   describe("a finding whose quotes no page confirmed", () => {
-    const NOTICE = "Not confirmed on the page. The quotes come from search results.";
+    const NOTICE = "Based on search results only: it could not be confirmed on the source pages.";
 
-    it("says that the quotes come from search results, under the caption of the sources and before them", async () => {
+    it("says that it rests on search results only, under its credibility and before its sources", async () => {
       mocks.list.mockResolvedValue({
         rows: [finding({ snippet_only: true }), secondFinding()],
         total: 2,
@@ -581,10 +623,8 @@ describe("a finding", () => {
       const first = within(rowOf(FIRST));
       const follows = (a: HTMLElement, b: HTMLElement) =>
         Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
-      expect(follows(first.getByText("Sources"), first.getByText(NOTICE))).toBe(true);
-      expect(
-        follows(first.getByText(NOTICE), first.getByText("The vendor confirmed the incident.")),
-      ).toBe(true);
+      expect(follows(first.getByText("Credibility"), first.getByText(NOTICE))).toBe(true);
+      expect(follows(first.getByText(NOTICE), first.getByText("Sources"))).toBe(true);
       // The other finding rests on a page, or was not checked: it says nothing.
       expect(within(rowOf(SECOND)).queryByText(NOTICE)).not.toBeInTheDocument();
     });
@@ -660,24 +700,24 @@ describe("the credibility of a finding", () => {
         }),
   });
 
-  it("shows the credibility chip, its rationale and no confidence chip", async () => {
+  it("shows the credibility as one line that starts with its label, and no confidence", async () => {
     mocks.list.mockResolvedValue({ rows: [credibleFinding(), secondFinding()], total: 2 });
     renderSection();
     await screen.findByText(FIRST);
 
     const row = within(rowOf(FIRST));
     const caption = row.getByText("Credibility");
-    const chip = row.getByText("High");
     const line = row.getByText(KEV_LINE);
-    expect(follows(caption, chip)).toBe(true);
-    expect(follows(chip, line)).toBe(true);
+    expect(follows(caption, line)).toBe(true);
+    // The line starts with the label, so no chip says it a second time.
+    expect(row.queryByText("High")).not.toBeInTheDocument();
     // The line comes before the model's reason for the likelihood and the severity.
-    expect(follows(line, row.getByText("Why this rating"))).toBe(true);
+    expect(follows(line, row.getByText("Why this risk level"))).toBe(true);
     expect(row.queryByText("Confidence")).not.toBeInTheDocument();
     expect(row.queryByText("Medium")).not.toBeInTheDocument();
     // The screen words the line itself, in the person's language: the server's line is not shown.
     expect(row.queryByText("The server's own English line.")).not.toBeInTheDocument();
-    // Every finding has its label, and none a confidence.
+    // Every finding has its label, and none a confidence. A label with no basis stands alone.
     const second = within(rowOf(SECOND));
     expect(second.getByText("Credibility")).toBeInTheDocument();
     expect(second.getByText("High")).toBeInTheDocument();
@@ -749,7 +789,6 @@ describe("the credibility of a finding", () => {
     await screen.findByText(FIRST);
 
     const row = within(rowOf(FIRST));
-    expect(row.getByText("Low")).toBeInTheDocument();
     const line = row.getByText("Low: the OFAC SDN list entry matches the vendor by name only.");
     const note = row.getByText(NOTE);
     expect(follows(line, note)).toBe(true);
@@ -785,7 +824,6 @@ describe("the credibility of a finding", () => {
     await screen.findByText(FIRST);
 
     const row = within(rowOf(FIRST));
-    expect(row.getByText("Low")).toBeInTheDocument();
     expect(
       row.getByText("Low: the CVE Program rejected the record on 31 Oct 2026."),
     ).toBeInTheDocument();
@@ -824,7 +862,6 @@ describe("the credibility of a finding", () => {
     await screen.findByText(FIRST);
 
     const row = within(rowOf(FIRST));
-    expect(row.getByText("High")).toBeInTheDocument();
     expect(
       row.getByText(
         "High: UN Security Council Consolidated List lists it (EXe.012), as of 10 Oct 2026.",
@@ -844,7 +881,7 @@ describe("the credibility of a finding", () => {
         id: "aiid",
         name: "AI Incident Database",
         category: "unverified",
-        badge: "Unverified",
+        tag: "Unverified source",
         url: "https://incidentdatabase.ai/cite/9001",
         host: "incidentdatabase.ai",
         recordId: "9001",
@@ -853,7 +890,7 @@ describe("the credibility of a finding", () => {
         id: "atlas",
         name: "MITRE ATLAS case studies",
         category: "trusted_press",
-        badge: "Trusted press",
+        tag: "Trusted publisher",
         url: "https://atlas.mitre.org/studies/AML.CS9001",
         host: "atlas.mitre.org",
         recordId: "AML.CS9001",
@@ -862,7 +899,7 @@ describe("the credibility of a finding", () => {
         id: "nhtsa_sgo",
         name: "NHTSA Standing General Order crash reports",
         category: "official",
-        badge: "Official",
+        tag: "Official source",
         url: "https://www.nhtsa.gov/laws-regulations/standing-general-order-crash-reporting?reportingEntity=acmecars&automation=ads",
         host: "www.nhtsa.gov",
         recordId: "acmecars:ads",
@@ -871,7 +908,7 @@ describe("the credibility of a finding", () => {
         id: "fda_ai_devices",
         name: "FDA list of AI-enabled medical devices",
         category: "official",
-        badge: "Official",
+        tag: "Official source",
         url: "https://www.fda.gov/medical-devices/software-medical-device-samd/artificial-intelligence-enabled-medical-devices?company=acmecloud",
         host: "www.fda.gov",
         recordId: "acmecloud",
@@ -914,7 +951,7 @@ describe("the credibility of a finding", () => {
     });
 
     it.each(AI_RECORDS)(
-      "a record of the $name matched by name shows the name-only line, the note and the badge of its class",
+      "a record of the $name matched by name shows the name-only line, the note and the tag of its class",
       async (list) => {
         const { citation, seen } = citedRecord(list);
         mocks.list.mockResolvedValue({
@@ -936,13 +973,10 @@ describe("the credibility of a finding", () => {
         await screen.findByText(FIRST);
 
         const row = within(rowOf(FIRST));
-        expect(row.getByText("Low")).toBeInTheDocument();
         const line = row.getByText(`Low: the ${list.name} entry matches the vendor by name only.`);
         expect(follows(line, row.getByText(NOTE))).toBe(true);
-        // The badge is the class of the list, in front of the host of the record.
-        expect(row.getByText(list.badge).nextElementSibling).toContainElement(
-          row.getByRole("link", { name: list.host }),
-        );
+        // The tag is the class of the list, on the line of the record's host.
+        expectTag(rowOf(FIRST), list.host, list.tag);
       },
     );
 
@@ -972,9 +1006,7 @@ describe("the credibility of a finding", () => {
         const line = row.getByText(`Low: ${list.name} withdrew the record on 9 Oct 2026.`);
         // A record matched by name carries the note, whatever the rule that decided the label.
         expect(follows(line, row.getByText(NOTE))).toBe(true);
-        expect(
-          follows(row.getByRole("link", { name: list.host }), row.getByText("Withdrawn")),
-        ).toBe(true);
+        expectTag(rowOf(FIRST), list.host, "Record withdrawn");
       },
     );
 
@@ -1022,7 +1054,6 @@ describe("the credibility of a finding", () => {
       await screen.findByText(FIRST);
 
       const row = within(rowOf(FIRST));
-      expect(row.getByText("Medium")).toBeInTheDocument();
       // The whole text of the element is the sentence: no second publisher in its brackets.
       expect(
         row.getByText(
@@ -1051,7 +1082,7 @@ describe("the credibility of a finding", () => {
         recordId: "el:acmetradingco",
         dropped: "delisted",
         droppedLine: "Low: US Consolidated Screening List removed the record on 9 Oct 2026.",
-        droppedTag: "Delisted",
+        droppedTag: "Removed from the list",
       },
       {
         id: "fda_device_recalls",
@@ -1064,7 +1095,7 @@ describe("the credibility of a finding", () => {
         dropped: "withdrawn",
         droppedLine:
           "Low: FDA recalls of AI-enabled medical devices withdrew the record on 9 Oct 2026.",
-        droppedTag: "Withdrawn",
+        droppedTag: "Record withdrawn",
       },
     ] as const;
     type ListUnderTest = (typeof LISTS)[number];
@@ -1108,7 +1139,7 @@ describe("the credibility of a finding", () => {
     };
 
     it.each(LISTS)(
-      "a record of the $name matched by name shows the name-only line, the note and the official badge",
+      "a record of the $name matched by name shows the name-only line, the note and the official tag",
       async (list) => {
         const { citation, seen } = citedRecord(list);
         mocks.list.mockResolvedValue({
@@ -1130,18 +1161,15 @@ describe("the credibility of a finding", () => {
         await screen.findByText(FIRST);
 
         const row = within(rowOf(FIRST));
-        expect(row.getByText("Low")).toBeInTheDocument();
         const line = row.getByText(`Low: the ${list.list} entry matches the vendor by name only.`);
         expect(follows(line, row.getByText(NOTE))).toBe(true);
-        // The badge is the class of the list, in front of the host of the record.
-        expect(row.getByText("Official").nextElementSibling).toContainElement(
-          row.getByRole("link", { name: list.host }),
-        );
+        // The tag is the class of the list, on the line of the record's host.
+        expectTag(rowOf(FIRST), list.host, "Official source");
       },
     );
 
     it.each(LISTS)(
-      "a record the $name dropped reads as $droppedTag, with the day of the copy",
+      "a record the $name dropped is tagged $droppedTag, with the day of the copy in its line",
       async (list) => {
         const { citation, seen } = citedRecord(list, { status: list.dropped });
         mocks.list.mockResolvedValue({
@@ -1166,9 +1194,7 @@ describe("the credibility of a finding", () => {
         const line = row.getByText(list.droppedLine);
         // A record matched by name carries the note, whatever the rule that decided the label.
         expect(follows(line, row.getByText(NOTE))).toBe(true);
-        expect(
-          follows(row.getByRole("link", { name: list.host }), row.getByText(list.droppedTag)),
-        ).toBe(true);
+        expectTag(rowOf(FIRST), list.host, list.droppedTag);
       },
     );
 
@@ -1194,20 +1220,17 @@ describe("the credibility of a finding", () => {
       await screen.findByText(FIRST);
 
       const row = within(rowOf(FIRST));
-      expect(row.getByText("High")).toBeInTheDocument();
       expect(
         row.getByText(
           "High: US Consolidated Screening List lists it (el:acmetradingco), as of 9 Oct 2026.",
         ),
       ).toBeInTheDocument();
       expect(row.queryByText(NOTE)).not.toBeInTheDocument();
-      expect(row.getByText("Official").nextElementSibling).toContainElement(
-        row.getByRole("link", { name: CSL.host }),
-      );
+      expectTag(rowOf(FIRST), CSL.host, "Official source");
     });
   });
 
-  it("puts a badge before each source's host", async () => {
+  it("tags each source with what kind of source it is, after its host", async () => {
     mocks.list.mockResolvedValue({
       rows: [
         credibleFinding({
@@ -1227,21 +1250,19 @@ describe("the credibility of a finding", () => {
     renderSection();
     await screen.findByText(FIRST);
 
-    const row = within(rowOf(FIRST));
-    for (const [badge, host] of [
-      ["Official", "sec.gov"],
-      ["Trusted press", "reuters.com"],
-      ["Vendor", "status.acme.example"],
-      ["Unverified", "forum.example"],
+    const row = rowOf(FIRST);
+    for (const [tag, host] of [
+      ["Official source", "sec.gov"],
+      ["Trusted publisher", "reuters.com"],
+      ["Vendor's own page", "status.acme.example"],
+      ["Unverified source", "forum.example"],
     ]) {
-      // The badge is the element just before the host's link, in the line of the source.
-      expect(row.getByText(badge).nextElementSibling).toContainElement(
-        row.getByRole("link", { name: host }),
-      );
+      expectTag(row, host, tag);
     }
+    // A source the rule did not see, or put in a class this screen does not know, has its host
+    // alone on its line.
     for (const host of ["news.example.com", "odd.example"]) {
-      const link = row.getByRole("link", { name: host });
-      expect(link.closest("[data-vw-no-translate]")?.previousElementSibling ?? null).toBeNull();
+      expect(sourceLineOf(row, host).line.children).toHaveLength(1);
     }
   });
 
@@ -1263,16 +1284,21 @@ describe("the credibility of a finding", () => {
     renderSection();
     await screen.findByText(FIRST);
 
-    const row = within(rowOf(FIRST));
+    const row = rowOf(FIRST);
     for (const [status, host] of [
-      ["Withdrawn", "a.example"],
-      ["Rejected", "b.example"],
-      ["Delisted", "c.example"],
+      ["Record withdrawn", "a.example"],
+      ["Record rejected", "b.example"],
+      ["Removed from the list", "c.example"],
     ]) {
-      expect(follows(row.getByRole("link", { name: host }), row.getByText(status))).toBe(true);
+      expectTag(row, host, status);
     }
-    expect(row.queryByText("Active")).not.toBeInTheDocument();
-    expect(row.queryByText("revoked")).not.toBeInTheDocument();
+    // A record its source still stands by, and one in a state this screen does not know, say
+    // nothing more than what kind of source it is.
+    for (const host of ["d.example", "e.example"]) {
+      expect(sourceLineOf(row, host).line.children).toHaveLength(2);
+    }
+    expect(within(row).queryByText("Active")).not.toBeInTheDocument();
+    expect(within(row).queryByText("revoked")).not.toBeInTheDocument();
   });
 
   it("a finding without a label shows no credibility, and no confidence in its place", async () => {
@@ -1287,12 +1313,15 @@ describe("the credibility of a finding", () => {
     renderSection();
     await screen.findByText(FIRST);
 
-    for (const text of [FIRST, SECOND]) {
+    for (const [text, scales] of [
+      [FIRST, "Severity: Major · Likelihood: Likely"],
+      [SECOND, "Severity: Moderate · Likelihood: Possible"],
+    ]) {
       const row = within(rowOf(text));
       expect(row.queryByText("Credibility")).not.toBeInTheDocument();
       expect(row.queryByText("Confidence")).not.toBeInTheDocument();
-      // The ratings of the register are still there.
-      expect(row.getByText("Likelihood")).toBeInTheDocument();
+      // The scales of the register are still there.
+      expect(row.getByText(scales)).toBeInTheDocument();
     }
   });
 
@@ -1310,7 +1339,7 @@ describe("the credibility of a finding", () => {
     expect(row.queryByText(KEV_LINE)).not.toBeInTheDocument();
   });
 
-  it("shows the chip and no line for a rule it does not know", async () => {
+  it("shows the label alone, with no sentence, for a rule it does not know", async () => {
     mocks.list.mockResolvedValue({
       rows: [
         credibleFinding({
@@ -1338,10 +1367,13 @@ describe("a label the backfill wrote (M3)", () => {
   /** What the server says of a label that is the earlier confidence of a finding. */
   const EARLIER_LINE =
     "Rated before the source rules; this is the earlier confidence level until the label is recomputed.";
+  /** What the screen says of it: once, above the list, for every row that carries the asterisk. */
+  const LEGEND =
+    "* Earlier estimate: 1 of these findings was rated before the current rules for rating sources.";
   const follows = (a: HTMLElement, b: HTMLElement) =>
     Boolean(a.compareDocumentPosition(b) & Node.DOCUMENT_POSITION_FOLLOWING);
 
-  it("a finding rated by its earlier confidence shows its label, the server's line and a muted note, and no source badge", async () => {
+  it("a finding rated by its earlier confidence shows its label with an asterisk and its sources, the legend once above the list, and no source tag", async () => {
     mocks.list.mockResolvedValue({
       rows: [
         finding({
@@ -1356,23 +1388,28 @@ describe("a label the backfill wrote (M3)", () => {
     await screen.findByText(FIRST);
 
     const row = within(rowOf(FIRST));
-    const caption = row.getByText("Credibility");
-    const chip = row.getByText("Medium");
-    const note = row.getByText("Earlier rating");
-    const line = row.getByText(EARLIER_LINE);
-    // The label, then the note that it is an earlier rating, then the line under the ratings.
-    expect(follows(caption, chip)).toBe(true);
-    expect(follows(chip, note)).toBe(true);
-    expect(follows(note, line)).toBe(true);
-    expect(follows(line, row.getByText("Why this rating"))).toBe(true);
-    // The note is quiet: the colour of secondary text, and no icon of its own.
-    expect(note).toHaveStyle({ color: textColor.tertiary });
-    expect(note.querySelector("svg")).toBeNull();
+    const line = row.getByText("Medium*: one source reports it (news.example.com).");
+    // The label and what it rests on, then the reason for the level.
+    expect(follows(row.getByText("Credibility"), line)).toBe(true);
+    expect(follows(line, row.getByText("Why this risk level"))).toBe(true);
+    // What the asterisk stands for is said once, above the list, and not in the row.
+    const legend = screen.getByText(LEGEND);
+    expect(follows(legend, screen.getByRole("list", { name: "Pending research findings" }))).toBe(
+      true,
+    );
+    expect(rowOf(FIRST)).not.toContainElement(legend);
+    // The screen words the line itself: the server's line is not shown.
+    expect(screen.queryByText(EARLIER_LINE)).not.toBeInTheDocument();
     // It is the label that was shown, and no confidence.
     expect(row.queryByText("Confidence")).not.toBeInTheDocument();
-    // Its sources are those of a run before the rule: none has a category.
-    for (const badge of ["Official", "Trusted press", "Vendor", "Unverified"]) {
-      expect(row.queryByText(badge)).not.toBeInTheDocument();
+    // Its sources are those of a run before the rule: none has a category, so none has a tag.
+    for (const tag of [
+      "Official source",
+      "Trusted publisher",
+      "Vendor's own page",
+      "Unverified source",
+    ]) {
+      expect(row.queryByText(tag)).not.toBeInTheDocument();
     }
   });
 
@@ -1386,18 +1423,23 @@ describe("a label the backfill wrote (M3)", () => {
       renderSection();
       await screen.findByText(FIRST);
 
-      const row = within(rowOf(FIRST));
-      expect(row.getByText(level[0].toUpperCase() + level.slice(1))).toBeInTheDocument();
-      expect(row.getByText("Earlier rating")).toBeInTheDocument();
+      const label = level[0].toUpperCase() + level.slice(1);
+      expect(
+        within(rowOf(FIRST)).getByText(`${label}*: one source reports it (news.example.com).`),
+      ).toBeInTheDocument();
+      expect(screen.getByText(LEGEND)).toBeInTheDocument();
     },
   );
 
-  it("a finding with a label a rule decided has no note of an earlier rating", async () => {
+  it("a finding with a label a rule decided has no asterisk, and the list no legend", async () => {
     mocks.list.mockResolvedValue({ rows: [credibleFinding(), secondFinding()], total: 2 });
     renderSection();
     await screen.findByText(FIRST);
 
-    expect(screen.queryByText("Earlier rating")).not.toBeInTheDocument();
+    for (const text of [FIRST, SECOND]) {
+      expect(within(rowOf(text)).queryByText(/\*/)).not.toBeInTheDocument();
+    }
+    expect(screen.queryByText(/^\* Earlier estimate/)).not.toBeInTheDocument();
     expect(screen.queryByText(EARLIER_LINE)).not.toBeInTheDocument();
   });
 
@@ -1423,11 +1465,12 @@ describe("a label the backfill wrote (M3)", () => {
         "High: CISA Known Exploited Vulnerabilities lists it (CVE-2026-28001), as of 7 Oct 2026. Rated again with the current rule.",
       ),
     ).toBeInTheDocument();
-    // It was rated by a rule, only again: it is not an earlier rating.
-    expect(within(rowOf(FIRST)).queryByText("Earlier rating")).not.toBeInTheDocument();
+    // It was rated by a rule, only again: it is no earlier estimate, so it has no asterisk.
+    expect(within(rowOf(FIRST)).queryByText(/\*/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^\* Earlier estimate/)).not.toBeInTheDocument();
   });
 
-  it("a finding the backfill rated again shows each source's badge from its basis", async () => {
+  it("a finding the backfill rated again shows each source's tag from its basis", async () => {
     const NEWS = "https://www.reuters.com/technology/acme-breach";
     mocks.list.mockResolvedValue({
       rows: [
@@ -1465,7 +1508,7 @@ describe("a label the backfill wrote (M3)", () => {
               published_at: "2026-09-02",
             },
             { url: NEWS, title: "Acme breach", quote: "Acme was breached.", published_at: null },
-            // The basis holds another address at this place: no badge.
+            // The basis holds another address at this place: no tag.
             {
               url: "https://forum.example/thread",
               title: "A thread",
@@ -1480,17 +1523,14 @@ describe("a label the backfill wrote (M3)", () => {
     renderSection();
     await screen.findByText(FIRST);
 
-    const row = within(rowOf(FIRST));
-    for (const [badge, host] of [
-      ["Official", "www.cisa.gov"],
-      ["Trusted press", "www.reuters.com"],
+    const row = rowOf(FIRST);
+    for (const [tag, host] of [
+      ["Official source", "www.cisa.gov"],
+      ["Trusted publisher", "www.reuters.com"],
     ]) {
-      expect(row.getByText(badge).nextElementSibling).toContainElement(
-        row.getByRole("link", { name: host }),
-      );
+      expectTag(row, host, tag);
     }
-    const forum = row.getByRole("link", { name: "forum.example" });
-    expect(forum.closest("[data-vw-no-translate]")?.previousElementSibling ?? null).toBeNull();
+    expect(sourceLineOf(row, "forum.example").line.children).toHaveLength(1);
   });
 });
 
@@ -1500,7 +1540,8 @@ describe("a role that cannot edit vendors", () => {
     renderSection({ route: WITH_VENDOR_7 });
 
     expect(await screen.findByText(FIRST)).toBeInTheDocument();
-    expect(await screen.findByText("Security incidents: risks found")).toBeInTheDocument();
+    await openRunDetails();
+    expect(screen.getByText("Security incidents: risks found")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Preview" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Dismiss" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Research again" })).not.toBeInTheDocument();
@@ -2675,7 +2716,9 @@ describe("the vendor filter", () => {
     await screen.findByText(FIRST);
 
     expect(screen.getByRole("combobox")).toHaveTextContent("All vendors");
-    expect(screen.queryByText("Latest research")).not.toBeInTheDocument();
+    // The research of one vendor has no place among the findings of all of them.
+    expect(screen.queryByText(/^Last researched:/)).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Research again" })).not.toBeInTheDocument();
   });
 
   it("preselects the vendor named in the URL and asks for that vendor's findings", async () => {
@@ -2713,14 +2756,14 @@ describe("the vendor filter", () => {
     await waitFor(() =>
       expect(mocks.list).toHaveBeenLastCalledWith({ status: "pending", vendorId: 8, limit: 200 }),
     );
-    expect(await screen.findByText("Latest research")).toBeInTheDocument();
+    expect(await screen.findByText("Last researched: 10 Oct 2026")).toBeInTheDocument();
 
     await userEvent.click(screen.getByRole("combobox"));
     await userEvent.click(await screen.findByRole("option", { name: "All vendors" }));
     await waitFor(() =>
       expect(mocks.list).toHaveBeenLastCalledWith({ status: "pending", limit: 200 }),
     );
-    await waitFor(() => expect(screen.queryByText("Latest research")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText(/^Last researched:/)).not.toBeInTheDocument());
   });
 });
 
@@ -2829,7 +2872,7 @@ describe("a run started on the vendors table", () => {
     await advance(3_000);
     await advance(10);
 
-    expect(screen.getByText("Security incidents: risks found")).toBeInTheDocument();
+    expect(screen.getByText("Last researched: 10 Oct 2026")).toBeInTheDocument();
     expect(screen.getByText(FIRST)).toBeInTheDocument();
     expect(screen.getByText("Pending: 1")).toBeInTheDocument();
   });
@@ -2892,6 +2935,7 @@ describe("a run started on the vendors table", () => {
 describe("the latest run of the chosen vendor", () => {
   it("lists what happened in each of the four categories", async () => {
     renderSection({ route: WITH_VENDOR_7 });
+    await openRunDetails();
 
     for (const line of [
       "Security incidents: risks found",
@@ -2907,7 +2951,7 @@ describe("the latest run of the chosen vendor", () => {
     expect(
       screen.getByText("The vendor website is missing or is not a valid domain."),
     ).toBeInTheDocument();
-    expect(screen.getByText("Last run: 10 Oct 2026")).toBeInTheDocument();
+    expect(screen.getByText("Last researched: 10 Oct 2026")).toBeInTheDocument();
   });
 
   it("shows a note the model wrote as plain text under an unverified label", async () => {
@@ -2918,8 +2962,9 @@ describe("the latest run of the chosen vendor", () => {
       }),
     );
     const { container } = renderSection({ route: WITH_VENDOR_7 });
+    await openRunDetails();
 
-    expect(await screen.findByText("AI note (unverified)")).toBeInTheDocument();
+    expect(screen.getByText("AI note (unverified)")).toBeInTheDocument();
     expect(screen.getByText(note)).toBeInTheDocument();
     expect(container.querySelector("script")).toBeNull();
   });
@@ -2937,8 +2982,9 @@ describe("the latest run of the chosen vendor", () => {
       }),
     );
     renderSection({ route: WITH_VENDOR_7 });
+    await openRunDetails();
 
-    expect(await screen.findByText("Certifications: risks found")).toBeInTheDocument();
+    expect(screen.getByText("Certifications: risks found")).toBeInTheDocument();
     expect(screen.queryByText(/Wire the money/)).not.toBeInTheDocument();
     expect(screen.queryByText("AI note (unverified)")).not.toBeInTheDocument();
   });
@@ -2965,6 +3011,8 @@ describe("the latest run of the chosen vendor", () => {
     renderSection({ route: WITH_VENDOR_7 });
 
     expect(await screen.findByText("The model call timed out.")).toBeInTheDocument();
+    // A run that found and checked nothing has nothing to open either.
+    expect(screen.queryByRole("button", { name: "How it was researched" })).not.toBeInTheDocument();
     expect(
       screen.queryByText(/risks found|nothing found|could not be researched|skipped/),
     ).not.toBeInTheDocument();
@@ -3000,6 +3048,7 @@ describe("the latest run of the chosen vendor", () => {
     expect(
       await screen.findByText("The web could not be reached from the server."),
     ).toBeInTheDocument();
+    await openRunDetails();
     expect(screen.getByText("Security incidents: could not be researched")).toBeInTheDocument();
     expect(screen.getByText("The search was not available.")).toBeInTheDocument();
   });
@@ -3038,8 +3087,9 @@ describe("the latest run of the chosen vendor", () => {
       run({ category_summary: FOUR_OUTCOMES, searches_used: 6, pages_read: 4 }),
     );
     renderSection({ route: WITH_VENDOR_7 });
+    await openRunDetails();
 
-    expect(await screen.findByText("Searches: 6, pages read: 4")).toBeInTheDocument();
+    expect(screen.getByText("Searches: 6, pages read: 4")).toBeInTheDocument();
   });
 
   it("says what a failed run did before it stopped", async () => {
@@ -3052,8 +3102,9 @@ describe("the latest run of the chosen vendor", () => {
       }),
     );
     renderSection({ route: WITH_VENDOR_7 });
+    await openRunDetails();
 
-    expect(await screen.findByText("Searches: 3, pages read: 0")).toBeInTheDocument();
+    expect(screen.getByText("Searches: 3, pages read: 0")).toBeInTheDocument();
   });
 
   it("shows no such line for a run that did nothing, and none while it is active", async () => {
@@ -3061,8 +3112,9 @@ describe("the latest run of the chosen vendor", () => {
       run({ category_summary: FOUR_OUTCOMES, searches_used: 0, pages_read: 0 }),
     );
     const { unmount } = renderSection({ route: WITH_VENDOR_7 });
+    await openRunDetails();
 
-    expect(await screen.findByText("Security incidents: risks found")).toBeInTheDocument();
+    expect(screen.getByText("Security incidents: risks found")).toBeInTheDocument();
     expect(screen.queryByText(/Searches:/)).not.toBeInTheDocument();
     unmount();
 
@@ -3092,7 +3144,7 @@ describe("the latest run of the chosen vendor", () => {
       within(message.closest("[role=alert]") as HTMLElement).getByRole("button", { name: "Retry" }),
     );
 
-    expect(await screen.findByText("Security incidents: risks found")).toBeInTheDocument();
+    expect(await screen.findByText("Last researched: 10 Oct 2026")).toBeInTheDocument();
     expect(screen.queryByText("Could not load the latest research run.")).not.toBeInTheDocument();
   });
 });
@@ -3108,12 +3160,13 @@ describe("the coverage of the latest run", () => {
       run({ category_summary: FOUR_OUTCOMES, coverage: coverage(), searches_used: 3 }),
     );
     renderSection({ route: WITH_VENDOR_7 });
+    await openRunDetails();
 
-    const checked = await screen.findByText(CHECKED);
+    const checked = screen.getByText(CHECKED);
     const cited = screen.getByText(
       "Sources cited: 1 official, 0 trusted press, 0 vendor, 0 unverified",
     );
-    // After the categories, before what the run did and when.
+    // After the categories, before what the run did.
     expect(follows(screen.getByText("AI-specific risks: skipped"), checked)).toBe(true);
     expect(follows(checked, cited)).toBe(true);
     expect(follows(cited, screen.getByText("Searches: 3, pages read: 0"))).toBe(true);
@@ -3124,9 +3177,10 @@ describe("the coverage of the latest run", () => {
   it("says No records in … as of …", async () => {
     mocks.latest.mockResolvedValue(run({ coverage: coverage() }));
     renderSection({ route: WITH_VENDOR_7 });
+    await openRunDetails();
 
     expect(
-      await screen.findByText(
+      screen.getByText(
         "No records in OFAC Specially Designated Nationals list, UK Sanctions List, EU consolidated list of financial sanctions as of 10 Oct 2026",
       ),
     ).toBeInTheDocument();
@@ -3173,8 +3227,9 @@ describe("the coverage of the latest run", () => {
       }),
     );
     renderSection({ route: WITH_VENDOR_7 });
+    await openRunDetails();
 
-    const notChecked = await screen.findByText(
+    const notChecked = screen.getByText(
       "Not checked: OFAC Specially Designated Nationals list, the vendor's status page",
     );
     expect(follows(screen.getByText(/^Checked:/), notChecked)).toBe(true);
@@ -3195,6 +3250,7 @@ describe("the coverage of the latest run", () => {
     renderSection({ route: WITH_VENDOR_7 });
 
     expect(await screen.findByText("Public databases turned off")).toBeInTheDocument();
+    await openRunDetails();
     expect(screen.queryByText(/^Checked:/)).not.toBeInTheDocument();
     expect(screen.queryByText(/^Data sources:/)).not.toBeInTheDocument();
   });
@@ -3236,9 +3292,10 @@ describe("the coverage of the latest run", () => {
       }),
     );
     renderSection({ route: WITH_VENDOR_7 });
+    await openRunDetails();
 
     expect(
-      await screen.findByText(
+      screen.getByText(
         "Checked: CISA Known Exploited Vulnerabilities (1), the National Vulnerability Database (2), OFAC Specially Designated Nationals list (0), UK Sanctions List (0), EU consolidated list of financial sanctions (0)",
       ),
     ).toBeInTheDocument();
@@ -3270,9 +3327,10 @@ describe("the coverage of the latest run", () => {
       }),
     );
     renderSection({ route: WITH_VENDOR_7 });
+    await openRunDetails();
 
     expect(
-      await screen.findByText(
+      screen.getByText(
         "Checked: AI Incident Database (2), MITRE ATLAS case studies (1), NHTSA Standing General Order crash reports (0), FDA list of AI-enabled medical devices (0)",
       ),
     ).toBeInTheDocument();
@@ -3315,8 +3373,9 @@ describe("the coverage of the latest run", () => {
       }),
     );
     renderSection({ route: WITH_VENDOR_7 });
+    await openRunDetails();
 
-    expect(await screen.findByText("Not checked: MITRE ATLAS case studies")).toBeInTheDocument();
+    expect(screen.getByText("Not checked: MITRE ATLAS case studies")).toBeInTheDocument();
     expect(
       screen.getByText("Checked: FDA list of AI-enabled medical devices (3)"),
     ).toBeInTheDocument();
@@ -3349,9 +3408,10 @@ describe("the coverage of the latest run", () => {
         }),
       );
       renderSection({ route: WITH_VENDOR_7 });
+      await openRunDetails();
 
       expect(
-        await screen.findByText(
+        screen.getByText(
           "Checked: US Consolidated Screening List (2), FDA recalls of AI-enabled medical devices (0)",
         ),
       ).toBeInTheDocument();
@@ -3393,10 +3453,9 @@ describe("the coverage of the latest run", () => {
         }),
       );
       renderSection({ route: WITH_VENDOR_7 });
+      await openRunDetails();
 
-      expect(
-        await screen.findByText("Not checked: US Consolidated Screening List"),
-      ).toBeInTheDocument();
+      expect(screen.getByText("Not checked: US Consolidated Screening List")).toBeInTheDocument();
       expect(
         screen.getByText("Checked: CISA Known Exploited Vulnerabilities (1)"),
       ).toBeInTheDocument();
@@ -3421,6 +3480,7 @@ describe("the coverage of the latest run", () => {
       renderSection({ route: WITH_VENDOR_7 });
 
       expect(await screen.findByText("Public databases turned off")).toBeInTheDocument();
+      await openRunDetails();
       expect(screen.queryByText(/^Checked:/)).not.toBeInTheDocument();
       expect(screen.queryByText(/^Data sources:/)).not.toBeInTheDocument();
     });
@@ -3452,6 +3512,7 @@ describe("the coverage of the latest run", () => {
         }),
       );
       renderSection({ route: WITH_VENDOR_7 });
+      await openRunDetails();
 
       expect(
         await screen.findByText(
@@ -3459,6 +3520,12 @@ describe("the coverage of the latest run", () => {
         ),
       ).toBeInTheDocument();
       // A list that could not be checked is always named: a silent gap would read as a clean check.
+      // The summary says so without a click, and the line is behind the button with the others.
+      expect(
+        screen.getByText(
+          "One source could not be checked, so results may be incomplete: GLEIF LEI records.",
+        ),
+      ).toBeInTheDocument();
       expect(screen.getByText("Not checked: GLEIF LEI records")).toBeInTheDocument();
       // The lists that held nothing are counted, never named, and owe no credit.
       expect(screen.queryByText(/AI Hallucination Cases/)).toBeNull();
@@ -3481,6 +3548,7 @@ describe("the coverage of the latest run", () => {
         }),
       );
       renderSection({ route: WITH_VENDOR_7 });
+      await openRunDetails();
 
       expect(await screen.findByText("Checked: 3 lists with no records")).toBeInTheDocument();
       expect(screen.queryByText(/^Data sources:/)).not.toBeInTheDocument();
@@ -3492,7 +3560,12 @@ describe("the coverage of the latest run", () => {
     for (const latest of [run({ category_summary: FOUR_OUTCOMES }), run({ coverage: null })]) {
       mocks.latest.mockResolvedValue(latest);
       const view = renderSection({ route: WITH_VENDOR_7 });
-      expect(await screen.findByText("Last run: 10 Oct 2026")).toBeInTheDocument();
+      expect(await screen.findByText("Last researched: 10 Oct 2026")).toBeInTheDocument();
+      // A run with categories keeps them behind its button; a run with nothing has no button.
+      // Either way, nothing on screen or behind the button says what was checked.
+      const details = screen.queryByRole("button", { name: "How it was researched" });
+      if (details !== null) await userEvent.click(details);
+      expect(screen.queryByText("What it checked")).not.toBeInTheDocument();
       for (const start of [
         /^Checked:/,
         /^Not checked:/,
@@ -3602,7 +3675,7 @@ describe("a run that is still active after the polling window", () => {
     await advance(10);
     await advance(10);
 
-    expect(screen.getByText("Security incidents: risks found")).toBeInTheDocument();
+    expect(screen.getByText("Last researched: 10 Oct 2026")).toBeInTheDocument();
     expect(screen.getByText(FIRST)).toBeInTheDocument();
     expect(screen.getByText("Pending: 1")).toBeInTheDocument();
     expect(screen.queryByText("Still running. Check back later.")).not.toBeInTheDocument();
@@ -3717,7 +3790,7 @@ describe("a run that is going", () => {
     await advance(3_000);
     expect(screen.queryByText("Researching…")).not.toBeInTheDocument();
     expect(screen.queryByText(/Searching the web|Researched so far/)).not.toBeInTheDocument();
-    expect(screen.getByText("Security incidents: risks found")).toBeInTheDocument();
+    expect(screen.getByText("Last researched: 10 Oct 2026")).toBeInTheDocument();
   });
 
   it("is followed to its end for as long as it moves, beyond the two minutes of a quiet run", async () => {

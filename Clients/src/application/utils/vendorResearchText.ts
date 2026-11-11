@@ -1050,6 +1050,10 @@ export interface CoverageText {
   none: string | null;
   /** A line for each list the run asked whose copy is out of date. */
   stale: string[];
+  /**
+   * The names `notChecked` lists, one by one, for a sentence of the screen's own; empty for none.
+   */
+  unchecked: string[];
   /** The sources the findings cite, counted by category. */
   cited: string;
   /** True when every list of the vendor risk database was turned off. */
@@ -1135,6 +1139,7 @@ export function coverageLines(coverage: RunCoverage, t: Translate, lang: string)
       failed.length === 0
         ? null
         : fill(t("Not checked: {sources}"), { sources: failed.join(", ") }),
+    unchecked: failed,
     none:
       empty.length === 0
         ? null
