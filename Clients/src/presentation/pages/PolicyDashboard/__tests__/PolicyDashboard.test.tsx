@@ -12,6 +12,11 @@ vi.mock("../../../../application/repository/policy.repository", () => ({
   getAllTags: vi.fn().mockResolvedValue([]),
 }));
 
+// Template count now comes from the API (#5261).
+vi.mock("../../../../application/hooks/usePolicyTemplates", () => ({
+  usePolicyTemplates: () => ({ data: [], isLoading: false }),
+}));
+
 // Mock child components
 vi.mock("../PolicyManager", () => ({
   default: () => <div data-testid="policy-manager" />,

@@ -42,6 +42,11 @@ import { logEngine } from "../../../../application/tools/log.engine";
 import { useNavigate, useSearchParams } from "react-router";
 import useProjectData from "../../../../application/hooks/useProjectData";
 import useUsers from "../../../../application/hooks/useUsers";
+import {
+  useGroups,
+  useProjectGroups,
+  useSetProjectGroups,
+} from "../../../../application/hooks/useGroups";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import { border, text } from "../../../themes/palette";
 import { Save as SaveIcon, Trash2 as DeleteIcon } from "lucide-react";
@@ -55,6 +60,7 @@ import { useRequiredCustomFieldsGate } from "../../../components/CustomFieldsSec
 import useFrameworks from "../../../../application/hooks/useFrameworks";
 import { Framework } from "../../../../domain/types/Framework";
 import allowedRoles from "../../../../application/constants/permissions";
+import { useHasPermission } from "../../../../application/hooks/useMyPermissions";
 import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
 import {
   deleteProject,
@@ -319,6 +325,14 @@ const ProjectSettings = React.memo(
     }, [project]);
 
     const { users } = useUsers();
+
+    // Groups attached to this use case (#5253).
+    const { data: groups } = useGroups();
+    const { data: projectGroups } = useProjectGroups(Number(projectId));
+    const setProjectGroupsMutation = useSetProjectGroups(Number(projectId));
+    // The groups route checks useCase.edit, so the picker does too.
+    const canEditProjectGroups = useHasPermission("useCase.edit", { fallbackToAdmin: true });
+    const selectedGroupIds = (projectGroups ?? []).map((g) => g.id);
 
     const { filteredFrameworks: monitoredFrameworks, allFrameworks } = useFrameworks({
       listOfFrameworks: project?.framework || [],
@@ -1501,6 +1515,92 @@ const ProjectSettings = React.memo(
                             paddingRight: "9px",
                           },
                         },
+                      },
+                    }}
+                  />
+
+                  {/* Groups Row (#5253): attaching a group grants every member access. */}
+                  <Box>
+                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Groups</Typography>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, whiteSpace: "nowrap" }}>
+                      Add a whole group to the use case in one step.
+                      <br />
+                      Every group member can see and work on the use case.
+                    </Typography>
+                  </Box>
+                  <Autocomplete
+                    multiple
+                    readOnly={!canEditProjectGroups}
+                    id="groups-input"
+                    size="small"
+                    value={(projectGroups ?? []).filter((g) => selectedGroupIds.includes(g.id))}
+                    options={(groups ?? []).filter((g) => !selectedGroupIds.includes(g.id))}
+                    getOptionLabel={(group) => group.name}
+                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                    noOptionsText={
+                      (groups ?? []).length === 0
+                        ? "No groups yet — create them under Groups"
+                        : "All groups selected"
+                    }
+                    onChange={(_event, selected) => {
+                      setProjectGroupsMutation.mutate(
+                        selected.map((g) => g.id),
+                        {
+                          onError: () => {
+                            setAlert({
+                              variant: "error",
+                              body: "Could not update the use case's groups. Please try again.",
+                              isToast: true,
+                              visible: true,
+                            });
+                            setTimeout(() => setAlert(null), 3000);
+                          },
+                        },
+                      );
+                    }}
+                    popupIcon={<ChevronDown size={16} color={theme.palette.text.tertiary} />}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        placeholder="Select groups"
+                        sx={{
+                          "& .MuiOutlinedInput-root": {
+                            height: "34px",
+                            padding: "0 10px",
+                            display: "flex",
+                            alignItems: "center",
+                          },
+                          "& .MuiInputBase-root": {
+                            height: "34px !important",
+                            padding: "0 10px !important",
+                            display: "flex !important",
+                            alignItems: "center !important",
+                            justifyContent: "flex-start !important",
+                          },
+                          "& .MuiInputBase-input": {
+                            padding: "0 !important",
+                            margin: "0 !important",
+                            fontSize: "13px",
+                            lineHeight: "1 !important",
+                          },
+                          "& ::placeholder": {
+                            fontSize: "13px",
+                          },
+                        }}
+                      />
+                    )}
+                    sx={{
+                      ...getAutocompleteStyles(theme, { hasError: false }),
+                      "width": "400px",
+                      "backgroundColor": theme.palette.background.main,
+                      "& .MuiOutlinedInput-root": {
+                        ...getAutocompleteStyles(theme, { hasError: false })[
+                          "& .MuiOutlinedInput-root"
+                        ],
+                        borderRadius: "4px",
+                      },
+                      "& .MuiChip-root": {
+                        borderRadius: "4px",
                       },
                     }}
                   />

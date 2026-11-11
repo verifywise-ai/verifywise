@@ -1,6 +1,7 @@
-import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor, within } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import { PolicyManagerModel } from "../../../../domain/models/Common/policy/policyManager.model";
+import CustomException from "../../../../infrastructure/exceptions/customeException";
 
 const mockNavigate = vi.fn();
 vi.mock("react-router", async () => {
@@ -22,6 +23,19 @@ let mockPolicies: PolicyManagerModel[] = [];
 let mockPoliciesLoading = false;
 let mockPoliciesError: Error | null = null;
 const mockUsePolicies = vi.fn();
+const mockCreateFromPolicy = vi.fn();
+vi.mock("../../../../application/hooks/usePolicyTemplates", () => ({
+  useCreatePolicyTemplateFromPolicy: () => ({
+    mutateAsync: mockCreateFromPolicy,
+    isPending: false,
+  }),
+}));
+
+let mockCanManageTemplates = true;
+vi.mock("../../../../application/hooks/useMyPermissions", () => ({
+  useHasPermission: (key: string) => key === "policyTemplate.edit" && mockCanManageTemplates,
+}));
+
 vi.mock("../../../../application/hooks/usePolicies", () => ({
   usePolicies: (...args: unknown[]) => {
     mockUsePolicies(...args);
@@ -73,6 +87,7 @@ vi.mock("../../../components/Policies/PolicyTable", () => ({
     onLinkedObjects,
     onAssignToFolder,
     onBulkActionSuccess,
+    onSaveAsTemplate,
   }: any) => (
     <div data-testid="policy-table">
       <span data-testid="policy-row-count">{data.length}</span>
@@ -100,6 +115,11 @@ vi.mock("../../../components/Policies/PolicyTable", () => ({
       <button data-testid="bulk-archive" onClick={() => onBulkActionSuccess?.("archive", 2)}>
         bulk archive
       </button>
+      {onSaveAsTemplate && (
+        <button data-testid="save-template-first" onClick={() => onSaveAsTemplate(data[0].id)}>
+          save as template
+        </button>
+      )}
     </div>
   ),
 }));
@@ -148,6 +168,7 @@ describe("PolicyManager", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUserRoleName = "Admin";
+    mockCanManageTemplates = true;
     mockUsers = [{ id: 1, name: "Jane", surname: "Doe", email: "jane@test.com" }];
     mockPolicies = [
       buildPolicy({ id: 1, title: "AI Ethics Policy", status: "Draft" }),
@@ -158,6 +179,69 @@ describe("PolicyManager", () => {
     mockGetPolicyFolders.mockResolvedValue([]);
     mockGetPolicyIdsInFolder.mockResolvedValue([]);
     mockUpdatePolicyFolders.mockResolvedValue(undefined);
+  });
+
+  it("offers Save as template only with policyTemplate.edit", () => {
+    mockCanManageTemplates = false;
+    renderWithProviders(<PolicyManager tags={[]} />, { route: "/policies" });
+    expect(screen.queryByTestId("save-template-first")).not.toBeInTheDocument();
+  });
+
+  const openAndSubmitSaveAsTemplate = async () => {
+    renderWithProviders(<PolicyManager tags={[]} />, { route: "/policies" });
+    fireEvent.click(screen.getByTestId("save-template-first"));
+    fireEvent.click(await screen.findByRole("button", { name: /save template/i }));
+  };
+
+  it("shows a taken template name inside the still-open modal", async () => {
+    mockCreateFromPolicy.mockRejectedValue(
+      new CustomException("Conflict", 409, {
+        message: "Conflict",
+        data: "a template with this name already exists",
+      }),
+    );
+    await openAndSubmitSaveAsTemplate();
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      await within(dialog).findByText("A template with this name already exists"),
+    ).toBeVisible();
+    // The name stays editable so the user can change it.
+    expect(within(dialog).getByDisplayValue("AI Ethics Policy (template)")).toBeInTheDocument();
+  });
+
+  it("shows the server reason for a rejected name", async () => {
+    mockCreateFromPolicy.mockRejectedValue(
+      new CustomException("Bad Request", 400, {
+        message: "Bad Request",
+        data: "name must be a string between 2 and 255 characters",
+      }),
+    );
+    await openAndSubmitSaveAsTemplate();
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      await within(dialog).findByText("Name must be a string between 2 and 255 characters"),
+    ).toBeVisible();
+  });
+
+  it("never shows a server error's internals", async () => {
+    mockCreateFromPolicy.mockRejectedValue(
+      new CustomException("relation does not exist", 500, { error: "relation does not exist" }),
+    );
+    await openAndSubmitSaveAsTemplate();
+    const dialog = await screen.findByRole("dialog");
+    expect(
+      await within(dialog).findByText("Could not save the template. Please try again."),
+    ).toBeVisible();
+    expect(screen.queryByText(/relation does not exist/)).not.toBeInTheDocument();
+  });
+
+  it("closes the modal and shows a visible success toast", async () => {
+    mockCreateFromPolicy.mockResolvedValue({ id: 9 });
+    await openAndSubmitSaveAsTemplate();
+    expect(
+      await screen.findByText("The policy was saved as an organization template."),
+    ).toBeVisible();
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
   it("renders the status cards and the policy table with data", () => {

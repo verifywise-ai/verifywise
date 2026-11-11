@@ -324,12 +324,15 @@ export async function updateGenericImplStatus({
   implId,
   newStatus,
   userId = 1,
+  implBaseUrl,
 }: {
   frameworkId: number;
   level: "l2" | "l3";
   implId: number;
   newStatus: string;
   userId?: number;
+  /** Impl endpoint prefix up to `/impl`; imported frameworks (#5254) pass their own. */
+  implBaseUrl?: string;
 }): Promise<boolean> {
   try {
     const formData = new FormData();
@@ -337,7 +340,7 @@ export async function updateGenericImplStatus({
     formData.append("user_id", userId.toString());
 
     const response = await updateEntityById({
-      routeUrl: `/frameworks/${frameworkId}/impl/${level}/${implId}`,
+      routeUrl: `${implBaseUrl ?? `/frameworks/${frameworkId}/impl`}/${level}/${implId}`,
       body: formData,
       headers: {
         "Content-Type": "multipart/form-data",

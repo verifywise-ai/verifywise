@@ -58,12 +58,16 @@ const PolicyDashboard = lazyRoute(
 const PolicyEditorPage = lazyRoute(
   () => import("../../presentation/pages/PolicyDashboard/PolicyEditorPage"),
 );
+const PolicyTemplateEditorPage = lazyRoute(
+  () => import("../../presentation/pages/PolicyDashboard/PolicyTemplateEditorPage"),
+);
 const WatchTower = lazyRoute(() => import("../../presentation/pages/WatchTower"));
 const RiskManagement = lazyRoute(() => import("../../presentation/pages/RiskManagement"));
 const RiskInheritanceGraph = lazyRoute(
   () => import("../../presentation/pages/RiskInheritanceGraph"),
 );
 const Tasks = lazyRoute(() => import("../../presentation/pages/Tasks"));
+const Groups = lazyRoute(() => import("../../presentation/pages/Groups"));
 const AutomationsPage = lazyRoute(() => import("../../presentation/pages/Automations"));
 const ApprovalWorkflows = lazyRoute(() => import("../../presentation/pages/ApprovalWorkflows"));
 const IncidentManagement = lazyRoute(() => import("../../presentation/pages/IncidentManagement"));
@@ -228,7 +232,7 @@ const isDev = import.meta.env.DEV;
 
 export const createRoutes = (
   triggerSidebar: boolean,
-  // eslint-disable-next-line @typescript-eslint/no-unused-vars
+
   _triggerSidebarReload: () => void,
 ) => [
   // ReactFlow Demo - Development only (must be before dashboard route)
@@ -562,6 +566,14 @@ export const createRoutes = (
       }
     />
     <Route
+      path="/policies/templates/:templateId/edit"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <PolicyTemplateEditorPage />
+        </Suspense>
+      }
+    />
+    <Route
       path="/policies"
       element={
         <Suspense fallback={<LazyFallback />}>
@@ -725,6 +737,14 @@ export const createRoutes = (
       element={
         <Suspense fallback={<LazyFallback />}>
           <Tasks />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/groups"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <Groups />
         </Suspense>
       }
     />

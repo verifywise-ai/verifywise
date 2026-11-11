@@ -35,6 +35,12 @@ vi.mock("../../../../application/hooks/usePolicyChangeHistory", () => ({
   usePolicyChangeHistory: () => ({}),
 }));
 
+// Template resolution goes through the API now (#5261); keep it inert here and
+// let the static-JSON fallback drive the templateId test below.
+vi.mock("../../../../application/hooks/usePolicyTemplates", () => ({
+  usePolicyTemplate: () => ({ data: undefined, isLoading: false }),
+}));
+
 vi.mock("../../../components/CustomFieldsSection/RequiredCustomFieldsGate", () => ({
   useRequiredCustomFieldsGate: () => ({
     blocked: false,

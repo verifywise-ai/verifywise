@@ -1,7 +1,18 @@
 import React, { useCallback, useEffect, useMemo, useState, useRef } from "react";
 import { useSearchParams, useNavigate } from "react-router";
-import { Box, Stack, TableRow, TableCell } from "@mui/material";
-import { FileText, Copy, Filter, BookOpen } from "lucide-react";
+import {
+  Box,
+  Chip,
+  IconButton,
+  Stack,
+  TableRow,
+  TableCell,
+  Tooltip,
+  Typography,
+} from "@mui/material";
+import TabContext from "@mui/lab/TabContext";
+import { Copy, FileText, FilePen, Filter, BookOpen, Pencil, Trash2 } from "lucide-react";
+import TabBar from "../../components/TabBar";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { EmptyState } from "../../components/EmptyState";
 import { PolicyTemplatesProps } from "../../types/interfaces/i.policy";
@@ -17,9 +28,24 @@ import { useTableGrouping, useGroupByState } from "../../../application/hooks/us
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import CustomizableSkeleton from "../../components/Skeletons";
 import CustomizablePolicyTable from "../../components/Table/PolicyTable";
+import StandardModal from "../../components/Modals/StandardModal";
+import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
+import Field from "../../components/Inputs/Field";
+import Select from "../../components/Inputs/Select";
 import singleTheme from "../../themes/v1SingleTheme";
 import { useAuth } from "../../../application/hooks/useAuth";
 import allowedRoles from "../../../application/constants/permissions";
+import { useHasPermission } from "../../../application/hooks/useMyPermissions";
+import {
+  useCreatePolicyTemplate,
+  useDeletePolicyTemplate,
+  usePolicyTemplates,
+  useUpdatePolicyTemplate,
+} from "../../../application/hooks/usePolicyTemplates";
+import type {
+  PolicyTemplate,
+  PolicyTemplateOrigin,
+} from "../../../domain/interfaces/i.policyTemplate";
 
 // Define table headers in the format expected by CustomizablePolicyTable
 const tableHeaders = [
@@ -44,56 +70,124 @@ const POLICY_TEMPLATE_TABLE_COLUMNS: ColumnConfig<PolicyTemplateColumnKey>[] = [
   } as ColumnConfig<"actions">, // Add actions column config
 ];
 
+const CATEGORY_ITEMS = [...Object.values(PolicyTemplateCategory)].map((value) => ({
+  _id: value,
+  name: value,
+}));
+
+/** Row shape the table machinery works with: API row + origin + title alias. */
+type TemplateRow = PolicyTemplate & { origin: PolicyTemplateOrigin; title: string };
+
+const toRow = (template: PolicyTemplate): TemplateRow => ({
+  ...template,
+  origin: template.is_system_template ? "system" : "organization",
+  title: template.name,
+});
+
+function extractErrorMessage(err: any): string {
+  return (
+    err?.response?.data?.error || err?.response?.data?.message || err?.message || "Operation failed"
+  );
+}
+
 const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
   tags: _tags,
   fetchAll: _fetchAll,
-  isLoading = false,
+  isLoading: isLoadingProp = false,
 }) => {
   const navigate = useNavigate();
   const { userRoleName } = useAuth();
   const canCreatePolicy = !!userRoleName && allowedRoles.policies.create.includes(userRoleName);
+  // The template routes authorize on this key, so a custom role granted it
+  // can manage templates too (Admin and Editor by default).
+  const canManageTemplates = useHasPermission("policyTemplate.edit", { fallbackToAdmin: true });
   const [searchParams, setSearchParams] = useSearchParams();
   const hasProcessedUrlParam = useRef(false);
   const [searchTerm, setSearchTerm] = useState("");
-  const [policyTemplates, setPolicyTemplates] = useState<
-    {
-      id: number;
-      title: string;
-      description: string;
-      tags: string[];
-      category: string;
-      content: string;
-    }[]
-  >([]);
+  // Section toggle: system templates vs. the organization's own (#5261).
+  const [section, setSection] = useState<PolicyTemplateOrigin>("system");
+  const [editing, setEditing] = useState<TemplateRow | null>(null);
+  const [editForm, setEditForm] = useState({ name: "", description: "", category: "" });
+  const [confirmDelete, setConfirmDelete] = useState<TemplateRow | null>(null);
+  const [serverError, setServerError] = useState<string | null>(null);
 
-  useEffect(() => {
-    fetch("/data/PolicyTemplates.json")
-      .then((res) => res.json())
-      .then(setPolicyTemplates)
-      .catch(() => {});
-  }, []);
+  const { data: templates = [], isLoading: isLoadingQuery } = usePolicyTemplates();
+  const createMutation = useCreatePolicyTemplate();
+  const updateMutation = useUpdatePolicyTemplate();
+  const deleteMutation = useDeletePolicyTemplate();
+  const isLoading = isLoadingProp || isLoadingQuery;
 
   // GroupBy state
   const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
 
-  // Handle templateId URL param to redirect to editor from Wise Search
+  // Handle templateId URL param to redirect to editor from Wise Search. Ids
+  // are composite `${origin}-${id}` because system and org template ids can
+  // collide (#5261); a bare numeric id is a legacy link the editor still
+  // resolves. Anything else is dropped rather than forwarded.
   useEffect(() => {
     const templateId = searchParams.get("templateId");
     if (templateId && !hasProcessedUrlParam.current) {
       hasProcessedUrlParam.current = true;
       setSearchParams({}, { replace: true });
-      navigate(`/policies/new?templateId=${templateId}`);
+      if (/^((system|organization)-)?\d+$/.test(templateId)) {
+        navigate(`/policies/new?templateId=${templateId}`);
+      }
     }
   }, [searchParams, setSearchParams, navigate]);
 
-  const handleSelectPolicyTemplate = (id: number) => {
-    if (id && canCreatePolicy) {
-      navigate(`/policies/new?templateId=${id}`);
+  const handleSelectPolicyTemplate = (row: TemplateRow) => {
+    if (row && canCreatePolicy) {
+      navigate(`/policies/new?templateId=${row.origin}-${row.id}`);
     }
   };
 
-  // Define the type for policy template items
-  type PolicyTemplateItem = (typeof policyTemplates)[number];
+  const openEdit = (row: TemplateRow) => {
+    setEditing(row);
+    setEditForm({
+      name: row.name,
+      description: row.description ?? "",
+      category: row.category,
+    });
+    setServerError(null);
+  };
+
+  const handleDuplicate = async (row: TemplateRow) => {
+    setServerError(null);
+    try {
+      // Template names are unique per organization, so pick the first free
+      // "(copy)", "(copy 2)", ... instead of failing on a second duplicate.
+      const taken = new Set(templates.filter((t) => !t.is_system_template).map((t) => t.name));
+      let name = `${row.name} (copy)`;
+      for (let n = 2; taken.has(name); n += 1) name = `${row.name} (copy ${n})`;
+      await createMutation.mutateAsync({
+        name,
+        category: row.category,
+        description: row.description,
+        content: row.content,
+        tags: row.tags,
+      });
+    } catch (err) {
+      setServerError(extractErrorMessage(err));
+    }
+  };
+
+  const handleSaveEdit = async () => {
+    if (!editing) return;
+    setServerError(null);
+    try {
+      await updateMutation.mutateAsync({
+        id: editing.id,
+        body: {
+          name: editForm.name,
+          description: editForm.description || null,
+          category: editForm.category,
+        },
+      });
+      setEditing(null);
+    } catch (err) {
+      setServerError(extractErrorMessage(err));
+    }
+  };
 
   // FilterBy - Filter columns configuration
   const policyTemplateFilterColumns: FilterColumn[] = useMemo(
@@ -118,7 +212,7 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
 
   // FilterBy - Field value getter
   const getPolicyTemplateFieldValue = useCallback(
-    (item: PolicyTemplateItem, fieldId: string): string | number | Date | null | undefined => {
+    (item: TemplateRow, fieldId: string): string | number | Date | null | undefined => {
       switch (fieldId) {
         case "title":
           return item.title;
@@ -135,23 +229,23 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
   const {
     filterData: filterPolicyTemplateData,
     handleFilterChange: handlePolicyTemplateFilterChange,
-  } = useFilterBy<PolicyTemplateItem>(getPolicyTemplateFieldValue);
+  } = useFilterBy<TemplateRow>(getPolicyTemplateFieldValue);
 
-  // Filter + search using FilterBy
+  // Section + filter + search
   const filteredPolicyTemplates = useMemo(() => {
-    let result = filterPolicyTemplateData(policyTemplates);
+    const rows = templates.map(toRow).filter((row) => row.origin === section);
+    let result = filterPolicyTemplateData(rows);
 
-    // Apply search filter
     if (searchTerm.trim()) {
       const query = searchTerm.toLowerCase();
       result = result.filter((p) => p.title.toLowerCase().includes(query));
     }
 
     return result;
-  }, [filterPolicyTemplateData, policyTemplates, searchTerm]);
+  }, [filterPolicyTemplateData, templates, searchTerm, section]);
 
   // Define how to get the group key for each policy template
-  const getTemplateGroupKey = useCallback((template: PolicyTemplateItem, field: string): string => {
+  const getTemplateGroupKey = useCallback((template: TemplateRow, field: string): string => {
     switch (field) {
       case "category":
         return template.category || "Unknown";
@@ -190,7 +284,21 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
 
   return (
     <Stack>
-      <Stack direction="row" spacing={2} alignItems="center" mb={8}>
+      {/* System / Our templates switch (#5261) */}
+      <TabContext value={section}>
+        <Box sx={{ mb: "16px" }}>
+          <TabBar
+            tabs={[
+              { label: "System templates", value: "system" },
+              { label: "Our templates", value: "organization" },
+            ]}
+            activeTab={section}
+            onChange={(_e, value) => setSection(value as PolicyTemplateOrigin)}
+          />
+        </Box>
+      </TabContext>
+
+      <Stack direction="row" alignItems="center" flexWrap="wrap" sx={{ gap: "8px", mb: "16px" }}>
         {/* FilterBy */}
         <div data-joyride-id="policy-status-filter">
           <FilterBy
@@ -225,6 +333,10 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
         </Box>
       </Stack>
 
+      {serverError && (
+        <Typography sx={{ fontSize: 12, color: "error.main", mb: "8px" }}>{serverError}</Typography>
+      )}
+
       {/* Table */}
       {isLoading ? (
         <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
@@ -243,7 +355,11 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
           <EmptyStateTip
             icon={BookOpen}
             title="Build your own"
-            description="If no template fits, create a policy from scratch in the policies tab. You can always come back here for reference."
+            description={
+              section === "organization"
+                ? "Save any policy as a reusable template from the policies tab, or duplicate a system template into this section."
+                : "If no template fits, create a policy from scratch in the policies tab. You can always come back here for reference."
+            }
           />
         </EmptyState>
       ) : (
@@ -252,19 +368,22 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
           ungroupedData={filteredPolicyTemplates}
           renderTable={(data, options) => (
             <CustomizablePolicyTable
-              data={{ rows: data.map((p) => ({ ...p, id: p.id })), cols: visibleTableHeaders }}
+              data={{ rows: data, cols: visibleTableHeaders }}
               paginated
               setSelectedRow={() => {}}
               setAnchorEl={() => {}}
-              onRowClick={(id: string) => handleSelectPolicyTemplate(Number(id))}
+              onRowClick={(id: string) => {
+                const row = data.find((r) => String(r.id) === String(id));
+                if (row) handleSelectPolicyTemplate(row);
+              }}
               hidePagination={options?.hidePagination}
-              renderRow={(policy, sortConfig) => (
+              renderRow={(policy: TemplateRow, sortConfig) => (
                 <TableRow
-                  key={policy.id}
+                  key={`${policy.origin}-${policy.id}`}
                   tabIndex={0}
                   aria-label={`Policy template: ${policy.title}`}
                   sx={{ ...singleTheme.tableStyles.primary.body.row }}
-                  onClick={() => handleSelectPolicyTemplate(policy.id)}
+                  onClick={() => handleSelectPolicyTemplate(policy)}
                 >
                   {isVisible("id") && (
                     <TableCell
@@ -276,7 +395,15 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
                           : "inherit",
                       }}
                     >
-                      {policy.id}
+                      {policy.origin === "system" ? (
+                        <Chip
+                          label="System"
+                          size="small"
+                          sx={{ fontSize: "11px", height: "20px", borderRadius: "4px" }}
+                        />
+                      ) : (
+                        policy.id
+                      )}
                     </TableCell>
                   )}
                   <TableCell
@@ -301,7 +428,7 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
                           : "inherit",
                       }}
                     >
-                      <Stack direction="row" gap={1} flexWrap="wrap">
+                      <Stack direction="row" flexWrap="wrap" sx={{ gap: "2px" }}>
                         {policy.tags.map((tag: string, index: number) => (
                           <TagChip key={`${tag}-${index}`} tag={tag} />
                         ))}
@@ -323,10 +450,127 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
                       {policy.description}
                     </TableCell>
                   )}
+                  <TableCell sx={{ ...cellStyle }} align="right">
+                    <Stack
+                      direction="row"
+                      justifyContent="flex-end"
+                      sx={{ gap: "2px" }}
+                      onClick={(e) => e.stopPropagation()}
+                    >
+                      {policy.origin === "system"
+                        ? canManageTemplates && (
+                            <Tooltip title="Duplicate into our templates">
+                              <IconButton
+                                size="small"
+                                disableRipple
+                                aria-label={`Duplicate ${policy.title}`}
+                                onClick={() => handleDuplicate(policy)}
+                                disabled={createMutation.isPending}
+                              >
+                                <Copy size={16} />
+                              </IconButton>
+                            </Tooltip>
+                          )
+                        : canManageTemplates && (
+                            <>
+                              <Tooltip title="Edit content">
+                                <IconButton
+                                  size="small"
+                                  disableRipple
+                                  aria-label={`Edit content of ${policy.title}`}
+                                  onClick={() => navigate(`/policies/templates/${policy.id}/edit`)}
+                                >
+                                  <FilePen size={16} />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Edit details">
+                                <IconButton
+                                  size="small"
+                                  disableRipple
+                                  aria-label={`Edit ${policy.title}`}
+                                  onClick={() => openEdit(policy)}
+                                >
+                                  <Pencil size={16} />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Delete template">
+                                <IconButton
+                                  size="small"
+                                  disableRipple
+                                  aria-label={`Delete ${policy.title}`}
+                                  onClick={() => setConfirmDelete(policy)}
+                                >
+                                  <Trash2 size={16} />
+                                </IconButton>
+                              </Tooltip>
+                            </>
+                          )}
+                    </Stack>
+                  </TableCell>
                 </TableRow>
               )}
             />
           )}
+        />
+      )}
+
+      {editing && (
+        <StandardModal
+          isOpen
+          onClose={() => setEditing(null)}
+          title="Edit template details"
+          description="Update the name, description and category of this organization template. To change its content, use Edit content."
+          onSubmit={handleSaveEdit}
+          submitButtonText="Save"
+          isSubmitting={updateMutation.isPending}
+          maxWidth="560px"
+        >
+          <Stack sx={{ gap: "16px" }}>
+            <Field
+              label="Name"
+              value={editForm.name}
+              onChange={(e) => setEditForm({ ...editForm, name: e.target.value })}
+              isRequired
+            />
+            <Field
+              label="Description"
+              value={editForm.description}
+              onChange={(e) => setEditForm({ ...editForm, description: e.target.value })}
+            />
+            <Select
+              id="template-category"
+              label="Category"
+              value={editForm.category}
+              items={CATEGORY_ITEMS}
+              onChange={(e) => setEditForm({ ...editForm, category: String(e.target.value) })}
+            />
+            {serverError && (
+              <Typography sx={{ fontSize: 12, color: "error.main" }}>{serverError}</Typography>
+            )}
+          </Stack>
+        </StandardModal>
+      )}
+
+      {confirmDelete && (
+        <ConfirmationModal
+          isOpen
+          title="Delete this template?"
+          body={`When you delete "${confirmDelete.title}", it is removed from your organization's template library. Policies already created from it are not affected.`}
+          cancelText="Cancel"
+          proceedText="Delete"
+          proceedButtonColor="error"
+          proceedButtonVariant="contained"
+          onCancel={() => setConfirmDelete(null)}
+          onProceed={async () => {
+            try {
+              await deleteMutation.mutateAsync(confirmDelete.id);
+              setConfirmDelete(null);
+            } catch (err) {
+              setServerError(extractErrorMessage(err));
+              setConfirmDelete(null);
+            }
+          }}
+          isLoading={deleteMutation.isPending}
         />
       )}
     </Stack>

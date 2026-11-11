@@ -12,6 +12,11 @@ import {
 import PolicyTable from "../../components/Policies/PolicyTable";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { useDeletePolicy } from "../../../application/hooks/usePolicyMutations";
+import { useCreatePolicyTemplateFromPolicy } from "../../../application/hooks/usePolicyTemplates";
+import StandardModal from "../../components/Modals/StandardModal";
+import Field from "../../components/Inputs/Field";
+import Select from "../../components/Inputs/Select";
+import { PolicyTemplateCategory } from "../../../domain/enums/policy.enum";
 import { EmptyState } from "../../components/EmptyState";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import StandardTableHead from "../../components/Table/StandardTableHead";
@@ -21,6 +26,11 @@ import type { StandardColumn } from "../../../domain/types/standardTable";
 import { SearchBox } from "../../components/Search";
 import { handleAlert } from "../../../application/tools/alertUtils";
 import Alert from "../../components/Alert";
+import {
+  getApiErrorReason,
+  getClientErrorReason,
+  isClientError,
+} from "../../../application/utils/apiErrorReason";
 import { AlertProps } from "../../types/alert.types";
 import { PolicyManagerModel } from "../../../domain/models/Common/policy/policyManager.model";
 import { PolicyManagerProps } from "../../types/interfaces/i.policy";
@@ -30,6 +40,7 @@ import { ExportMenu } from "../../components/Table/ExportMenu";
 import useUsers from "../../../application/hooks/useUsers";
 import { useAuth } from "../../../application/hooks/useAuth";
 import allowedRoles from "../../../application/constants/permissions";
+import { useHasPermission } from "../../../application/hooks/useMyPermissions";
 import { GroupBy } from "../../components/Table/GroupBy";
 import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
@@ -83,6 +94,8 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
   const [flashRowId, setFlashRowId] = useState<number | null>(null);
   const { userRoleName } = useAuth();
   const canRunBulkActions = !!userRoleName && allowedRoles.policies.edit.includes(userRoleName);
+  // "Save as template" writes a template, so it follows the template routes' key.
+  const canManageTemplates = useHasPermission("policyTemplate.edit", { fallbackToAdmin: true });
 
   const [showLinkedObjectModal, setLinkedObjectsModalOpen] = useState(false);
   const [policyId, setSelectedPolicyId] = useState<number | null>(null);
@@ -192,6 +205,58 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
     handleOpen();
   };
 
+  // Save-as-template state (#5261): which policy is being templated and the
+  // name the user wants for the new organization template.
+  const [templateSourceId, setTemplateSourceId] = useState<number | null>(null);
+  const [templateName, setTemplateName] = useState("");
+  // policy_manager has no category, so the user picks one; the default is the
+  // same curated category the backend falls back to.
+  const [templateCategory, setTemplateCategory] = useState<string>(
+    PolicyTemplateCategory.Core_AI_Governance,
+  );
+  // Shown inside the modal (not as a page toast) so it is announced and the
+  // user can fix the name without losing what they typed.
+  const [templateError, setTemplateError] = useState<string | null>(null);
+  const createTemplateMutation = useCreatePolicyTemplateFromPolicy();
+
+  const handleSaveAsTemplate = (id: number) => {
+    const policy = policies.find((p) => Number(p.id) === id);
+    setTemplateName(policy ? `${policy.title} (template)` : "");
+    setTemplateCategory(PolicyTemplateCategory.Core_AI_Governance);
+    setTemplateError(null);
+    setTemplateSourceId(id);
+  };
+
+  const handleConfirmSaveAsTemplate = async () => {
+    if (templateSourceId === null) return;
+    setTemplateError(null);
+    try {
+      await createTemplateMutation.mutateAsync({
+        policy_id: templateSourceId,
+        name: templateName.trim() || undefined,
+        category: templateCategory,
+      });
+      setTemplateSourceId(null);
+      handleAlert({
+        variant: "success",
+        body: "The policy was saved as an organization template.",
+        setAlert,
+        alertTimeout: 4000,
+      });
+    } catch (err) {
+      // For a rejected request (4xx: name taken, invalid name, policy gone)
+      // show the server's reason; 5xx reasons are never shown.
+      const reason = isClientError(err)
+        ? (getApiErrorReason(err) ?? getClientErrorReason(err))
+        : null;
+      setTemplateError(
+        reason
+          ? reason.charAt(0).toUpperCase() + reason.slice(1)
+          : "Could not save the template. Please try again.",
+      );
+    }
+  };
+
   const handleDelete = async (id: number) => {
     try {
       await deletePolicyMutation.mutateAsync(id);
@@ -299,10 +364,11 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
     }
   }, []);
 
-  // Auto-dismiss info alert after 3 seconds with fade animation
+  // Show every alert; success and error alerts already clear themselves via
+  // handleAlert's timeout. Info alerts auto-dismiss after 3 seconds with a fade.
   useEffect(() => {
+    if (alert) setShowAlert(true);
     if (alert && alert.variant === "info") {
-      setShowAlert(true);
       const timer = setTimeout(() => {
         setShowAlert(false);
         setTimeout(() => setAlert(null), 300);
@@ -742,6 +808,7 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
                     onDelete={handleDelete}
                     onLinkedObjects={handleLinkedObject}
                     onAssignToFolder={handleAssignToFolder}
+                    onSaveAsTemplate={canManageTemplates ? handleSaveAsTemplate : undefined}
                     hidePagination={options?.hidePagination}
                     flashRowId={flashRowId}
                     visibleColumns={visibleColumns}
@@ -773,6 +840,44 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
             policyId={policyId}
             isOpen={showLinkedObjectModal}
           />
+        )}
+
+        {/* Save as template modal (#5261) */}
+        {templateSourceId !== null && (
+          <StandardModal
+            isOpen
+            onClose={() => setTemplateSourceId(null)}
+            title="Save as template"
+            description="Save this policy as a reusable template for your organization. It will appear under Policy templates → Our templates."
+            onSubmit={handleConfirmSaveAsTemplate}
+            submitButtonText="Save template"
+            isSubmitting={createTemplateMutation.isPending}
+            maxWidth="560px"
+          >
+            <Stack sx={{ gap: "16px" }}>
+              <Field
+                label="Template name"
+                placeholder="e.g. AI Accountability and Roles Policy"
+                value={templateName}
+                onChange={(e) => setTemplateName(e.target.value)}
+                isRequired
+              />
+              <Select
+                id="save-as-template-category"
+                label="Category"
+                value={templateCategory}
+                items={Object.values(PolicyTemplateCategory).map((value) => ({
+                  _id: value,
+                  name: value,
+                }))}
+                onChange={(e) => setTemplateCategory(String(e.target.value))}
+                isRequired
+              />
+              {templateError && (
+                <Alert variant="error" body={templateError} hasIcon={false} inline />
+              )}
+            </Stack>
+          </StandardModal>
         )}
 
         {/* Assign to Folder Modal */}

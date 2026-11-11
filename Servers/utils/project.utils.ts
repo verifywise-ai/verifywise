@@ -12,6 +12,10 @@ import { RiskModel } from "../domain.layer/models/risks/risk.model";
 import { FileModel } from "../domain.layer/models/file/file.model";
 import { ProjectFrameworksModel } from "../domain.layer/models/projectFrameworks/projectFrameworks.model";
 import { frameworkDeletionMap } from "../types/framework.type";
+import {
+  deleteProjectImportedFrameworksQuery,
+  getImportedFrameworksForProjectsQuery,
+} from "../extensions/framework-import/importedAssessment.service";
 import { IProjectAttributes } from "../domain.layer/interfaces/i.project";
 import { IRoleAttributes } from "../domain.layer/interfaces/i.role";
 import { TenantAutomationActionModel } from "../domain.layer/models/tenantAutomationAction/tenantAutomationAction.model";
@@ -302,6 +306,7 @@ export const getAllProjectsQuery = async (
     projectIds,
     organizationId,
   );
+  const importedByProject = await getImportedFrameworksForProjectsQuery(projectIds, organizationId);
 
   for (let project of projects) {
     const projectFramework = (await sequelize.query(
@@ -320,6 +325,7 @@ export const getAllProjectsQuery = async (
     for (let pf of projectFramework[0]) {
       (project.dataValues as any)["framework"].push(pf);
     }
+    (project.dataValues as any)["imported_frameworks"] = importedByProject.get(project.id!) ?? [];
 
     const members = await sequelize.query(
       `SELECT user_id FROM projects_members WHERE organization_id = :organizationId AND project_id = :project_id`,
@@ -366,6 +372,12 @@ export const getProjectByIdQuery = async (
   for (let pf of projectFramework[0]) {
     (project.dataValues as any)["framework"].push(pf);
   }
+  // Imported frameworks live outside projects_frameworks (#5254).
+  const importedByProject = await getImportedFrameworksForProjectsQuery(
+    [project.id!],
+    organizationId,
+  );
+  (project.dataValues as any)["imported_frameworks"] = importedByProject.get(project.id!) ?? [];
 
   (project.dataValues as any)["owner_name"] = await resolveProjectOwnerName(project, "Unassigned");
 
@@ -1041,6 +1053,9 @@ export const deleteProjectByIdQuery = async (
       return deleteFunction(id, organizationId, transaction);
     }),
   );
+  // Imported framework links are not in projects_frameworks (#5254): remove
+  // them and their evidence links here.
+  await deleteProjectImportedFrameworksQuery(id, organizationId, transaction);
 
   await deleteAllCustomFieldValuesForEntityQuery("project", id, organizationId, transaction);
 

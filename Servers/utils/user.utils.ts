@@ -376,7 +376,9 @@ export const isLastAdminQuery = async (
 /**
  * Clears one organization's references to a user: assignment columns go to
  * NULL, agents they primarily own move to their next owner, and their project
- * memberships in that organization are deleted. Audit columns are kept.
+ * and group memberships in that organization are deleted (a group row left
+ * behind would still grant use case access through project_groups if they
+ * rejoined). Audit columns are kept.
  */
 const clearOrganizationReferencesToUser = async (
   id: number,
@@ -439,6 +441,15 @@ const clearOrganizationReferencesToUser = async (
 
   await sequelize.query(
     `DELETE FROM projects_members WHERE organization_id = :organizationId AND user_id = :user_id`,
+    {
+      replacements: { user_id: id, organizationId },
+      type: QueryTypes.DELETE,
+      transaction,
+    },
+  );
+
+  await sequelize.query(
+    `DELETE FROM group_members WHERE organization_id = :organizationId AND user_id = :user_id`,
     {
       replacements: { user_id: id, organizationId },
       type: QueryTypes.DELETE,

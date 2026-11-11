@@ -18,6 +18,7 @@ import {
   Network,
   Database,
   Rocket,
+  Users,
 } from "lucide-react";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import useMultipleOnScreen from "../../../application/hooks/useMultipleOnScreen";
@@ -187,6 +188,12 @@ const Sidebar: React.FC<SidebarProps> = ({
     {
       name: "GOVERNANCE",
       items: [
+        {
+          id: "groups",
+          label: "Groups",
+          icon: <Users size={16} strokeWidth={1.5} />,
+          path: "/groups",
+        },
         {
           id: "vendors",
           label: "Vendors",

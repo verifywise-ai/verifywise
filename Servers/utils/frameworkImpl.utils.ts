@@ -16,7 +16,8 @@ import logger from "./logger/fileLogger";
 
 export type ImplLevel = "l2" | "l3";
 
-const IMPL_STATUSES = new Set([
+/** Every status an impl row can hold. Imported framework impl rows use the same list. */
+export const IMPL_STATUSES: ReadonlySet<string> = new Set([
   "Not started",
   "Draft",
   "In progress",
@@ -542,7 +543,7 @@ export interface FrameworkDashboardCounts {
   };
 }
 
-const emptyDashboardCounts = (entityType: string): FrameworkDashboardCounts => ({
+export const emptyDashboardCounts = (entityType: string): FrameworkDashboardCounts => ({
   entity_type: entityType,
   progress: { total: 0, done: 0 },
   assignments: { total: 0, assigned: 0 },
@@ -556,6 +557,51 @@ const emptyDashboardCounts = (entityType: string): FrameworkDashboardCounts => (
     needsRework: 0,
   },
 });
+
+/** Impl rows grouped by status: how many, and how many of those have an owner. */
+export interface StatusCountRow {
+  status: string | null;
+  total: number;
+  assigned: number;
+}
+
+/** Add grouped status rows to dashboard counts (shared with imported frameworks). */
+export function addStatusCounts(counts: FrameworkDashboardCounts, rows: StatusCountRow[]): void {
+  for (const row of rows) {
+    counts.progress.total += row.total;
+    counts.assignments.total += row.total;
+    counts.assignments.assigned += row.assigned;
+    switch (row.status) {
+      // "Audited" is a completed state one step past "Implemented" — count it
+      // as done so auditing an item does not regress its completion.
+      case "Audited":
+      case "Implemented":
+        counts.progress.done += row.total;
+        counts.statusBreakdown.implemented += row.total;
+        break;
+      case "Draft":
+        counts.statusBreakdown.draft += row.total;
+        break;
+      case "In progress":
+        counts.statusBreakdown.inProgress += row.total;
+        break;
+      case "Awaiting review":
+        counts.statusBreakdown.awaitingReview += row.total;
+        break;
+      case "Awaiting approval":
+        counts.statusBreakdown.awaitingApproval += row.total;
+        break;
+      case "Needs rework":
+        counts.statusBreakdown.needsRework += row.total;
+        break;
+      case "Not started":
+      case null:
+      default:
+        counts.statusBreakdown.notStarted += row.total;
+        break;
+    }
+  }
+}
 
 export async function getFrameworkDashboardQuery(
   frameworkId: number,
@@ -580,42 +626,9 @@ export async function getFrameworkDashboardQuery(
         replacements: { organizationId, projectFrameworkId },
         type: QueryTypes.SELECT,
       },
-    )) as Array<{ status: string | null; total: number; assigned: number }>;
+    )) as StatusCountRow[];
 
-    for (const row of rows) {
-      counts.progress.total += row.total;
-      counts.assignments.total += row.total;
-      counts.assignments.assigned += row.assigned;
-      switch (row.status) {
-        // "Audited" is a completed state one step past "Implemented" — count it
-        // as done so auditing an item does not regress its completion.
-        case "Audited":
-        case "Implemented":
-          counts.progress.done += row.total;
-          counts.statusBreakdown.implemented += row.total;
-          break;
-        case "Draft":
-          counts.statusBreakdown.draft += row.total;
-          break;
-        case "In progress":
-          counts.statusBreakdown.inProgress += row.total;
-          break;
-        case "Awaiting review":
-          counts.statusBreakdown.awaitingReview += row.total;
-          break;
-        case "Awaiting approval":
-          counts.statusBreakdown.awaitingApproval += row.total;
-          break;
-        case "Needs rework":
-          counts.statusBreakdown.needsRework += row.total;
-          break;
-        case "Not started":
-        case null:
-        default:
-          counts.statusBreakdown.notStarted += row.total;
-          break;
-      }
-    }
+    addStatusCounts(counts, rows);
   };
 
   await aggregate(tables.l2_impl);

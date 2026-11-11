@@ -7,6 +7,7 @@ import { ClauseStructISOModel } from "../domain.layer/frameworks/ISO-42001/claus
 import { ISO27001AnnexStructModel } from "../domain.layer/frameworks/ISO-27001/ISO27001AnnexStruct.model";
 import { ISO27001ClauseStructModel } from "../domain.layer/frameworks/ISO-27001/ISO27001ClauseStruct.model";
 import { IProjectsMembers } from "../domain.layer/interfaces/i.projectMember";
+import { projectVisibilitySql } from "./projectVisibility.utils";
 
 /**
  * Retrieves all project risk data from the `projectrisks` table,
@@ -95,7 +96,8 @@ export const getGeneratedReportsQuery = async (
   { userId, role, transaction }: GetGeneratedReportsOptions,
   organizationId: number,
 ) => {
-  const isAdmin = role === "Admin" || role === "SuperAdmin";
+  // Owner, member or group member (#5253); empty for Admins.
+  const visibility = projectVisibilitySql("p", { userId, role });
 
   const baseQueryParts = [
     `SELECT
@@ -116,19 +118,15 @@ export const getGeneratedReportsQuery = async (
     `report.organization_id = :organizationId`,
     `report.source IN (:sources)`,
   ];
-  const replacements: any = { sources: REPORT_FILE_SOURCES, organizationId };
-
-  if (!isAdmin) {
-    baseQueryParts.push(
-      `LEFT JOIN projects_members pm ON pm.project_id = p.id AND pm.organization_id = :organizationId`,
-    );
-    whereConditions.push(`(p.owner = :userId OR pm.user_id = :userId)`);
-    replacements.userId = userId;
-  }
+  const replacements: any = {
+    sources: REPORT_FILE_SOURCES,
+    organizationId,
+    ...visibility.replacements,
+  };
 
   const finalQuery = `
     ${baseQueryParts.join("\n")}
-    WHERE ${whereConditions.join(" AND ")}
+    WHERE ${whereConditions.join(" AND ")}${visibility.sql}
     ORDER BY report.uploaded_time DESC, report.id ASC
   `;
 

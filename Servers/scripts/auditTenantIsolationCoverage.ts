@@ -44,7 +44,8 @@ const sharedTables: SharedTableEntry[] = [
   },
   {
     name: "frameworks",
-    justification: "Global framework catalog; per-tenant linkage is projects_frameworks.",
+    justification:
+      "Global framework catalog; per-tenant linkage is projects_frameworks. Org-owned frameworks from the framework-import extension (#5254) are not stored here but in the registered imported_frameworks / imported_framework_* tables.",
   },
   {
     name: "subscription_history",
