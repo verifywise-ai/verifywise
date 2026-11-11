@@ -36,7 +36,8 @@ export type CustomFieldEntityType =
   | "vendor_risk"
   | "model_inventory"
   | "task"
-  | "model_risk";
+  | "model_risk"
+  | "ai_app";
 // NOTE: Scope is intentionally limited to the core governance entities listed
 // above. Other entities (dataset, ai_incident, training, fria, pmm_config,
 // evidence, assessment, file, approval_workflow, automation, intake_form,
@@ -103,6 +104,7 @@ export const ENTITY_TYPE_TO_TABLE: Record<CustomFieldEntityType, string> = {
   model_inventory: "model_inventories",
   task: "tasks",
   model_risk: "model_risks",
+  ai_app: "ai_apps",
 };
 
 // ---------- Internal validators ----------
@@ -337,6 +339,7 @@ const assertEntityBelongsToOrg = async (
   entityType: CustomFieldEntityType,
   entityId: number,
   organizationId: number,
+  transaction?: Transaction,
 ): Promise<void> => {
   const table = ENTITY_TYPE_TO_TABLE[entityType];
   // Safe: `table` resolved from a static allowlist, never user-controlled.
@@ -347,6 +350,7 @@ const assertEntityBelongsToOrg = async (
     {
       replacements: { entityId, organizationId },
       type: QueryTypes.SELECT,
+      transaction,
     },
   );
   if (rows.length === 0) {
@@ -857,7 +861,7 @@ export const setCustomFieldValueQuery = async (
     );
   }
 
-  await assertEntityBelongsToOrg(definition.entity_type, entityId, organizationId);
+  await assertEntityBelongsToOrg(definition.entity_type, entityId, organizationId, transaction);
 
   const validated = await validateValueForDefinition(definition, args.value, organizationId);
 
