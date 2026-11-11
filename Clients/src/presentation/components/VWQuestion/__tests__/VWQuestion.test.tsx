@@ -90,10 +90,6 @@ vi.mock("../../Inputs/Select", () => ({
   },
 }));
 
-vi.mock("../../../../application/constants/permissions", () => ({
-  default: { frameworks: { edit: ["Admin", "Editor"] } },
-}));
-
 vi.mock("../../LinkedRisks", () => ({
   LinkedRisksPopup: ({ onClose }: any) => (
     <div data-testid="linked-risks-popup">

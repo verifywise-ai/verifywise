@@ -18,7 +18,6 @@ The MitigationSection component is a crucial part of the AddNewRiskForm componen
 - `mitigationValues`: `MitigationFormValues` - Current form values containing all mitigation data
 - `setMitigationValues`: `Dispatch<SetStateAction<MitigationFormValues>>` - State setter function for updating form values
 - `mitigationErrors`: `MitigationFormErrors` (optional) - Form validation errors object, defaults to empty object
-- `userRoleName`: `string` - Current user's role name for permission-based editing restrictions
 
 ## Usage
 
@@ -51,7 +50,6 @@ return (
     mitigationValues={mitigationValues}
     setMitigationValues={setMitigationValues}
     mitigationErrors={mitigationErrors}
-    userRoleName="project_manager"
   />
 );
 ```
@@ -78,7 +76,7 @@ The component is organized into several logical sections:
 
 ### Permission System
 
-- Uses `allowedRoles.projectRisks.edit` to determine editing permissions
+- Uses the `risks.edit` permission (`useCan`) to determine editing permissions
 - Disables form fields when user lacks appropriate role
 
 ### Performance Optimizations
@@ -123,7 +121,7 @@ The component is organized into several logical sections:
 ### Hooks and Utilities
 
 - `useUsers` - Hook for fetching user data
-- `allowedRoles` - Permission constants
+- `useCanCheck` - Permission checks (application/hooks/useCan)
 - `alertState` - Alert state interface
 - Form value and error interfaces from parent component
 

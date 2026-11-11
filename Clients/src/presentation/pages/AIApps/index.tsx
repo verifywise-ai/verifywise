@@ -1,4 +1,5 @@
 import { useState, useMemo, useCallback, useEffect, useRef } from "react";
+import { useCan } from "../../../application/hooks/useCan";
 import { useNavigate, useParams } from "react-router";
 import { Stack, Box, Typography } from "@mui/material";
 import CustomizableSkeleton from "../../components/Skeletons";
@@ -12,7 +13,6 @@ import { EmptyState } from "../../components/EmptyState";
 import { useAiApps, useDeleteAiApp } from "../../../application/hooks/useAiApps";
 import { AiAppStatus } from "../../../domain/enums/aiApp.enum";
 import { IAIApp } from "../../../domain/interfaces/i.aiApp";
-import { useAuth } from "../../../application/hooks/useAuth";
 import Alert from "../../components/Alert";
 import NewAIApp from "../../components/Modals/NewAIApp";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
@@ -22,7 +22,6 @@ import AIAppImportModal from "./AIAppImportModal";
 import AIAppBulkAssessModal from "./AIAppBulkAssessModal";
 import BulkActionsToolbar, { type BulkAction } from "../../components/Table/BulkActionsToolbar";
 import { useBulkSelection } from "../../../application/hooks/useBulkSelection";
-import { useCanEditAiApps } from "../../../application/hooks/useCanEditAiApps";
 import { useFetchAiAppIds } from "../../../application/hooks/useAiAppBulk";
 import { useTranslation } from "../../../application/hooks/useTranslation";
 import { fill } from "../../../i18n/fill";
@@ -63,9 +62,8 @@ const getAppId = (app: IAIApp) => app.id as number;
 export default function AIApps() {
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
-  const { userRoleName } = useAuth();
-  const isCreatingDisabled = !userRoleName || !["Admin", "Editor"].includes(userRoleName);
-  const canEdit = useCanEditAiApps();
+  const isCreatingDisabled = !useCan("aiApp.edit");
+  const canEdit = useCan("aiApp.edit");
   const { t } = useTranslation();
 
   const [searchTerm, setSearchTerm] = useState("");

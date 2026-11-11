@@ -5,10 +5,16 @@ import { BUILTIN_ROLE_PERMISSIONS } from "../../config/rolePermissions.config";
 
 // Back the route guard with the real static built-in matrix (no DB) so these
 // tests assert the actual RBAC semantics for built-in roles.
-jest.mock("../../utils/rolePermissions.utils", () => ({
-  roleHasPermission: async (_orgId: number | null, role: string, key: string) =>
-    BUILTIN_ROLE_PERMISSIONS[role]?.has(key as never) ?? false,
-}));
+jest.mock("../../utils/rolePermissions.utils", () => {
+  const roleHasPermission = async (_orgId: number | null, role: string, key: string) =>
+    BUILTIN_ROLE_PERMISSIONS[role]?.has(key as never) ?? false;
+  return {
+    roleHasPermission,
+    // authorize() resolves through the request (#5314); same answer here.
+    requestHasPermission: async (req: any, key: string) =>
+      roleHasPermission(req.organizationId ?? null, req.role, key),
+  };
+});
 
 // x-test-role sets req.role. x-test-super marks an elected SuperAdmin (an org
 // member with the SuperAdmin overlay). x-test-pure-super models a pure

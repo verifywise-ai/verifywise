@@ -15,10 +15,9 @@ import Alert from "../../components/Alert";
 import { deleteEntityById, getEntityById } from "../../../application/repository/entity.repository";
 import CustomizableToast from "../../components/Toast";
 import CustomizableSkeleton from "../../components/Skeletons";
-import allowedRoles from "../../../application/constants/permissions";
+import { useCanCheck, useCan } from "../../../application/hooks/useCan";
 import RiskCatalogModal from "../../components/RiskCatalogModal";
 import { getAllProjectRisks } from "../../../application/repository/projectRisk.repository";
-import { useAuth } from "../../../application/hooks/useAuth";
 import useUsers from "../../../application/hooks/useUsers";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import PageTour from "../../components/PageTour";
@@ -74,7 +73,10 @@ const RiskManagement = () => {
   const navigate = useNavigate();
   const [searchParams, setSearchParams] = useSearchParams();
   const hasProcessedUrlParam = useRef(false);
-  const { userRoleName } = useAuth();
+  const canEditRisks = useCan("risks.edit");
+  // The graph and its reports authorize on riskLinks.admin.
+  const canViewRiskGraph = useCan("riskLinks.admin");
+  const can = useCanCheck();
   const { users, loading: usersLoading } = useUsers();
   const { isEnabled } = useExtensions();
   const [refreshKey, setRefreshKey] = useState(0); // Add refreshKey state
@@ -811,7 +813,7 @@ const RiskManagement = () => {
               filename="risk-management"
               title="Risk Management"
             />
-            {userRoleName === "Admin" && (
+            {canViewRiskGraph && (
               <Tooltip title="Risk inheritance graph" arrow>
                 <IconButton
                   onClick={() => navigate("/risk-inheritance")}
@@ -838,7 +840,7 @@ const RiskManagement = () => {
                 sx={addNewRiskButtonStyle}
                 onClick={handleInsertFromMenuOpen as (event: unknown) => void}
                 icon={<ChevronDown size={16} />}
-                isDisabled={!allowedRoles.projectRisks.create.includes(userRoleName)}
+                isDisabled={!can("risks.edit")}
               />
               <Popover
                 id="insert-risk-mega-dropdown"
@@ -986,7 +988,7 @@ const RiskManagement = () => {
                 flashRow={currentRow}
                 hidePagination={options?.hidePagination}
                 visibleColumns={visibleColumns}
-                canRunBulkActions={!!userRoleName && ["Admin", "Editor"].includes(userRoleName)}
+                canRunBulkActions={canEditRisks}
                 onBulkActionSuccess={() => setRefreshKey((k) => k + 1)}
               />
             )}

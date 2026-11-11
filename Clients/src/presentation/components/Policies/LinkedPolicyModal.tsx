@@ -26,8 +26,7 @@ import { FileModel } from "../../../domain/models/Common/file/file.model";
 import LinkEvidenceSelectorModal from "./LinkEvidenceSelectorModal";
 
 import Alert from "../../components/Alert";
-import { useAuth } from "../../../application/hooks/useAuth";
-import allowedRoles from "../../../application/constants/permissions";
+import { useCanCheck } from "../../../application/hooks/useCan";
 
 interface LinkedPolicyModalProps {
   onClose: () => void;
@@ -36,8 +35,8 @@ interface LinkedPolicyModalProps {
 }
 
 const LinkedPolicyModal: React.FC<LinkedPolicyModalProps> = ({ onClose, policyId, isOpen }) => {
-  const { userRoleName } = useAuth();
-  const canEditPolicies = !!userRoleName && allowedRoles.policies.edit.includes(userRoleName);
+  const can = useCanCheck();
+  const canEditPolicies = can("policy.edit");
   const [activeTab, setActiveTab] = useState("risks");
 
   const [risks, setRisks] = useState<any[]>([]);

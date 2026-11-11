@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback, useRef } from "react";
+import { useCan } from "../../../application/hooks/useCan";
 import { useNavigate, useLocation, useSearchParams } from "react-router";
 import {
   Box,
@@ -61,7 +62,6 @@ import {
   type LaneFilter,
 } from "./routing/laneFilter";
 import { useAuth } from "../../../application/hooks/useAuth";
-import { useHasPermission } from "../../../application/hooks/useMyPermissions";
 import { OversightTab } from "./oversight/OversightTab";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import StandardModal from "../../components/Modals/StandardModal";
@@ -145,7 +145,7 @@ export function IntakeFormsListPage() {
   const { userId } = useAuth();
 
   // Main tab derived from URL path
-  const canSeeOversight = useHasPermission("intakeForm.edit");
+  const canSeeOversight = useCan("intakeForm.edit");
   const mainTab = location.pathname.includes("/intake-forms/submissions")
     ? "submissions"
     : location.pathname.includes("/intake-forms/oversight") && canSeeOversight

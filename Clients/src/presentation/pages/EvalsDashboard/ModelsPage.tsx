@@ -22,8 +22,7 @@ import TipBox from "../../components/TipBox";
 import Field from "../../components/Inputs/Field";
 import ModelPicker from "../../components/Inputs/ModelPicker";
 import { useProviderModels } from "../../../application/hooks/useProviderModels";
-import { useAuth } from "../../../application/hooks/useAuth";
-import allowedRoles from "../../../application/constants/permissions";
+import { useCanCheck } from "../../../application/hooks/useCan";
 import { PROVIDERS } from "../../utils/providers";
 import { palette } from "../../themes/palette";
 
@@ -94,9 +93,9 @@ export default function ModelsPage({ orgId, openAddModal, onAddModalConsumed }: 
   const [alert, setAlert] = useState<AlertState | null>(null);
 
   // RBAC permissions
-  const { userRoleName } = useAuth();
-  const canDeleteModel = allowedRoles.evals.deleteScorer?.includes(userRoleName) ?? true;
-  const canCreateModel = allowedRoles.evals.createScorer?.includes(userRoleName) ?? true;
+  const can = useCanCheck();
+  const canDeleteModel = can("evals.edit");
+  const canCreateModel = can("evals.edit");
 
   // Delete confirmation modal state
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);

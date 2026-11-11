@@ -13,7 +13,6 @@ import {
   getEntityById,
   updateEntityById,
 } from "../../../application/repository/entity.repository";
-import { useAuth } from "../../../application/hooks/useAuth";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import { addNewIncidentButton, incidentFilterRow } from "./style";
 import IncidentTable from "./IncidentTable";
@@ -48,6 +47,7 @@ import {
   getApiValidationMessage,
   UserFacingFieldErrors,
 } from "../../../application/utils/apiErrorReason";
+import { useCan } from "../../../application/hooks/useCan";
 
 type IncidentColumnKey =
   | "incident_id"
@@ -154,8 +154,6 @@ const IncidentManagement: React.FC = () => {
   const [, setShowAlert] = useState(false);
   const [tableKey, setTableKey] = useState(0);
 
-  const { userRoleName } = useAuth();
-
   const [archiveId, setArchiveId] = useState<string | null>(null);
 
   // Search state
@@ -189,7 +187,7 @@ const IncidentManagement: React.FC = () => {
     columns: INCIDENT_TABLE_COLUMNS,
   });
 
-  const isCreatingDisabled = !userRoleName || !["Admin", "Editor"].includes(userRoleName);
+  const isCreatingDisabled = !useCan("incident.create");
 
   // FilterBy - Dynamic options generators
   const getUniqueProjects = useCallback(() => {

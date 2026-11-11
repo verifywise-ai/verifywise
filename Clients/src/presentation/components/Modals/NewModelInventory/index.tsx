@@ -49,8 +49,7 @@ import { useQueryClient } from "@tanstack/react-query";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
 import { focusFormFieldById } from "../../../../application/utils/formValidationFocus";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
-import { useAuth } from "../../../../application/hooks/useAuth";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../application/hooks/useCan";
 import ReadOnlyFieldset from "../../ReadOnlyFieldset";
 
 dayjs.extend(utc);
@@ -178,8 +177,8 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
   const [users, setUsers] = useState<User[]>([]);
   const [isLoadingUsers, setIsLoadingUsers] = useState(false);
   // Roles without edit rights can open an existing record but not change it.
-  const { userRoleName } = useAuth();
-  const isReadOnly = isEdit && !allowedRoles.modelInventory.edit.includes(userRoleName);
+  const can = useCanCheck();
+  const isReadOnly = isEdit && !can("model.edit");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [isUploadModalOpen, setIsUploadModalOpen] = useState(false);
   const [activeTab, setActiveTab] = useState("details");

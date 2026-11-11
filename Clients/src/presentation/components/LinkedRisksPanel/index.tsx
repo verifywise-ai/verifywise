@@ -12,7 +12,6 @@ import {
   useSuggestRiskHierarchy,
   useUpdateRiskLinkStatus,
 } from "../../../application/hooks/useRiskLinks";
-import { useIsAdmin } from "../../../application/hooks/useIsAdmin";
 import { useTranslation } from "../../../application/hooks/useTranslation";
 import { DismissReason, RiskLink, RiskLinkStatus } from "../../../domain/interfaces/i.riskLink";
 import LinkRiskForm from "./LinkRiskForm";
@@ -22,6 +21,7 @@ import { useWatchedLinks } from "./useWatchedLinks";
 import { useFormFocus } from "./useFormFocus";
 import { groupingNotice } from "./groupingNotice";
 import { fill } from "../../../i18n/fill";
+import { useCan } from "../../../application/hooks/useCan";
 
 // Moved to LinkRow with the row that uses it; re-exported for existing callers.
 export { translateDetail } from "./LinkRow";
@@ -49,7 +49,8 @@ export default function LinkedRisksPanel({ riskId }: LinkedRisksPanelProps) {
   const [showForm, setShowForm] = useState(false);
   const [notice, setNotice] = useState<string | null>(null);
   const [dismissing, setDismissing] = useState<RiskLink | null>(null);
-  const isAdmin = useIsAdmin();
+  // Scans, suggestions and the graph authorize on riskLinks.admin.
+  const isAdmin = useCan("riskLinks.admin");
   const { t } = useTranslation();
   const { formRef, openerRef } = useFormFocus(showForm ? "link" : null);
 

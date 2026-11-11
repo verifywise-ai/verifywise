@@ -12,10 +12,10 @@ import { deleteEntityById } from "../../../application/repository/entity.reposit
 import CustomizableToast from "../Toast";
 import CustomizableSkeleton from "../Skeletons";
 import useUsers from "../../../application/hooks/useUsers";
-import { useAuth } from "../../../application/hooks/useAuth";
 import { RiskModel } from "../../../domain/models/Common/risks/risk.model";
 import { IFilterState } from "../../types/interfaces/i.filter";
 import { IRiskLoadingStatus, IRisksViewProps } from "../../types/interfaces/i.risk";
+import { useCan } from "../../../application/hooks/useCan";
 
 const initialLoadingState: IRiskLoadingStatus = {
   loading: false,
@@ -33,9 +33,7 @@ const RisksView = ({
   showEmptyTips = false,
 }: IRisksViewProps) => {
   const { users, loading: usersLoading } = useUsers();
-  const { userRoleName } = useAuth();
-  const canRunBulkActions =
-    !readOnly && !!userRoleName && ["Admin", "Editor"].includes(userRoleName);
+  const canRunBulkActions = useCan("risks.edit") && !readOnly;
   const [refreshKey, setRefreshKey] = useState(0);
   const [projectRisks, setProjectRisks] = useState<RiskModel[]>([]);
   const [selectedRow, setSelectedRow] = useState<RiskModel[]>([]);

@@ -13,8 +13,17 @@ vi.mock("../../../../application/hooks/useAuth", () => ({
 
 const mockHasPermission = vi.fn((_key: string) => true);
 vi.mock("../../../../application/hooks/useMyPermissions", () => ({
-  useHasPermission: (key: string) => mockHasPermission(key),
+  // Not loaded: useCan falls back to the mocked built-in role.
+  useMyPermissions: () => ({ permissions: undefined, isLoading: true, error: null }),
 }));
+vi.mock("../../../../application/hooks/useCan", () => {
+  const useCan = (key: string) => mockHasPermission(key);
+  return {
+    useCan,
+    useCanCheck: () => useCan,
+    usePermissionsSettled: () => true,
+  };
+});
 
 const mockCreate = vi.fn();
 const mockUpdate = vi.fn();

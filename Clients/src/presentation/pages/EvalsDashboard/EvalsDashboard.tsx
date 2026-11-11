@@ -34,7 +34,6 @@ import { PageBreadcrumbs } from "../../components/breadcrumbs/PageBreadcrumbs";
 import { PageHeader } from "../../components/Layout/PageHeader";
 import { useEvalsSidebarContext } from "../../../application/contexts/EvalsSidebar.context";
 import { useAuth } from "../../../application/hooks/useAuth";
-import allowedRoles from "../../../application/constants/permissions";
 import ModalStandard from "../../components/Modals/StandardModal";
 import Field from "../../components/Inputs/Field";
 import Alert from "../../components/Alert";
@@ -202,8 +201,10 @@ export default function EvalsDashboard() {
   const location = useLocation();
   const { userRoleName } = useAuth();
 
-  // Helper to check if user can perform write operations
-  const canManageApiKeys = allowedRoles.evals.manageApiKeys.includes(userRoleName);
+  // Admin-only by role name on purpose: these keys live in the AI Gateway,
+  // whose routes check the role name (require_admin), so a custom role would
+  // only get controls the gateway refuses.
+  const canManageApiKeys = userRoleName === "Admin";
 
   // Determine tab from URL hash or default
   const [openModelsAddModal, setOpenModelsAddModal] = useState(false);

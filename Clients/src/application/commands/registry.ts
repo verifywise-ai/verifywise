@@ -1,5 +1,5 @@
 import { Command, CommandGroup, CommandContext, CommandRegistry } from "./types";
-import allowedRoles from "../constants/permissions";
+import { canWithPermissions, isUiPermissionKey } from "../constants/permissions";
 import {
   Home,
   Building2,
@@ -188,8 +188,9 @@ const ADMIN_COMMANDS: Command[] = [
     group: COMMAND_GROUPS[4],
     icon: Users,
     action: { type: "function", payload: { name: "navigateToSettingsTab", params: "team" } },
+    // By role name, like the Settings > Team tab it opens: the server's user
+    // edits check the role name too.
     requiredRole: ["Admin"],
-    scope: "projects.editTeamMembers",
   },
 ];
 
@@ -223,40 +224,13 @@ class CommandRegistryImpl implements CommandRegistry {
           return false;
         }
 
-        // Check specific scope permissions
+        // Check the permission key the command is scoped to
         if (command.scope) {
-          const scopeParts = command.scope.split(".");
-          if (scopeParts.length !== 2) {
-            console.error(
-              `Invalid command scope format: ${command.scope}. Expected format: 'resource.action'`,
-            );
+          if (!isUiPermissionKey(command.scope)) {
+            console.error(`Unknown permission in command scope: ${command.scope}`);
             return false;
           }
-
-          const [resource, action] = scopeParts;
-
-          try {
-            const resourcePermissions = allowedRoles[resource as keyof typeof allowedRoles];
-
-            if (!resourcePermissions) {
-              console.error(`Unknown resource in scope: ${resource}`);
-              return false;
-            }
-
-            const actionPermissions = resourcePermissions[
-              action as keyof typeof resourcePermissions
-            ] as string[] | undefined;
-            if (!actionPermissions) {
-              console.error(`Unknown action in scope: ${action}`);
-              return false;
-            }
-
-            const hasPermission =
-              Array.isArray(actionPermissions) &&
-              (actionPermissions as string[]).includes(context.userRole);
-            if (!hasPermission) return false;
-          } catch (error) {
-            console.error(`Error checking permissions for scope: ${command.scope}`, error);
+          if (!canWithPermissions(command.scope, context.permissions, context.userRole)) {
             return false;
           }
         }

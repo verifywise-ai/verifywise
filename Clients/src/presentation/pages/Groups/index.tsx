@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useCan } from "../../../application/hooks/useCan";
 import {
   Autocomplete,
   Box,
@@ -25,7 +26,6 @@ import StandardModal from "../../components/Modals/StandardModal";
 import Field from "../../components/Inputs/Field";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import useUsers from "../../../application/hooks/useUsers";
-import { useHasPermission } from "../../../application/hooks/useMyPermissions";
 import {
   useCreateGroup,
   useDeleteGroup,
@@ -65,7 +65,7 @@ function extractErrorMessage(err: any): string {
 
 const GroupsPage: React.FC = () => {
   const theme = useTheme();
-  const canManageGroups = useHasPermission("groups.manage", { fallbackToAdmin: true });
+  const canManageGroups = useCan("groups.manage");
 
   const { data: groups, isLoading, isError } = useGroups();
   const { users } = useUsers();

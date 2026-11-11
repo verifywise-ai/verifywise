@@ -16,7 +16,7 @@ import {
   UpdateMyOrganization,
 } from "../../../../application/repository/organization.repository";
 import Alert from "../../../components/Alert";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../application/hooks/useCan";
 import ConfirmationModal from "../../../components/Dialogs/ConfirmationModal";
 import {
   uploadAITrustCentreLogo,
@@ -39,10 +39,11 @@ interface AlertState {
 }
 
 const Organization = () => {
-  const { userRoleName, organizationId } = useAuth();
+  const { organizationId } = useAuth();
+  const can = useCanCheck();
   const { fetchLogoAsBlobUrl } = useLogoFetch();
-  const isEditingDisabled = !allowedRoles.organizations.edit.includes(userRoleName);
-  const isCreatingDisabled = !allowedRoles.organizations.create.includes(userRoleName);
+  const isEditingDisabled = !can("organization.admin");
+  const isCreatingDisabled = !can("organization.admin");
 
   // Organization states
   const [isSaveDisabled, setIsSaveDisabled] = useState(true);

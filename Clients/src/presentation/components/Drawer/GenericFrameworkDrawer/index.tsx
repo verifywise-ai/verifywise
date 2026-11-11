@@ -43,7 +43,7 @@ import {
   updateEntityById,
 } from "../../../../application/repository/entity.repository";
 import { attachFilesToEntity } from "../../../../application/repository/file.repository";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../application/hooks/useCan";
 
 // Default 8-value status enum shared by every generic impl table.
 const DEFAULT_STATUS_OPTIONS: StatusOption[] = [
@@ -118,7 +118,8 @@ const GenericFrameworkDrawer: React.FC<GenericFrameworkDrawerProps> = ({
   drawerClassName,
   onSaveSuccess,
 }) => {
-  const { userRoleName, userId } = useAuth();
+  const { userId } = useAuth();
+  const can = useCanCheck();
   const { users } = useUsers();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -164,8 +165,8 @@ const GenericFrameworkDrawer: React.FC<GenericFrameworkDrawerProps> = ({
     [users],
   );
 
-  const isEditingDisabled = !allowedRoles.frameworks.edit.includes(userRoleName);
-  const isAuditingDisabled = !allowedRoles.frameworks.audit.includes(userRoleName);
+  const isEditingDisabled = !can("framework.edit");
+  const isAuditingDisabled = !can("framework.audit");
 
   const baseUrl = `${implBaseUrl ?? `/frameworks/${frameworkId}/impl`}/${level}/${entityId}`;
 

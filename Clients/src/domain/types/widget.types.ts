@@ -113,8 +113,8 @@ export interface IStatusDropdownProps {
   onStatusChange: (newStatus: string) => Promise<boolean>;
   disabled?: boolean;
   size?: "small" | "medium";
-  allowedRoles?: string[];
-  userRole?: string;
+  /** Whether the user may change the status (their permission). Defaults to true. */
+  canEdit?: boolean;
   statusOptions?: string[];
 }
 

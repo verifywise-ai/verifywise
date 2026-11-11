@@ -1,4 +1,5 @@
 import { useState } from "react";
+import { useCan } from "../../../../application/hooks/useCan";
 import { Box, Typography } from "@mui/material";
 import SelectComponent from "../../../components/Inputs/Select";
 import { CustomizableButton } from "../../../components/button/customizable-button";
@@ -6,7 +7,6 @@ import {
   useLifecycleSettings,
   useUpdateLifecycleSettings,
 } from "../../../../application/hooks/useUseCaseLifecycle";
-import { useHasPermission } from "../../../../application/hooks/useMyPermissions";
 import {
   CONFIRMATION_INTERVAL_OPTIONS,
   ConfirmationIntervalDays,
@@ -29,7 +29,7 @@ const INTERVAL_ITEMS = CONFIRMATION_INTERVAL_OPTIONS.map((days) => ({
  */
 const LifecycleCheckSection = ({ onError, onSuccess }: LifecycleCheckSectionProps) => {
   // The permission the PATCH route checks, from the per-org matrix.
-  const canEdit = useHasPermission("organization.admin", { fallbackToAdmin: true });
+  const canEdit = useCan("organization.admin");
   const isDisabled = !canEdit;
   const { data: settings } = useLifecycleSettings();
   const update = useUpdateLifecycleSettings();

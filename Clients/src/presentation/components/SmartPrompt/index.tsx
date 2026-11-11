@@ -14,20 +14,20 @@ import {
 import { X as CloseIcon } from "lucide-react";
 import { useSmartPromptContext } from "../../../application/contexts/SmartPrompt.context";
 import { palette } from "../../themes/palette";
-import { useAuth } from "../../../application/hooks/useAuth";
 import "./index.css";
+import { useCan } from "../../../application/hooks/useCan";
 
 const AUTO_DISMISS_MS = 10000;
 
 const SmartPrompt: React.FC = () => {
   const { activePrompt, dismissPrompt, setDontAskAgain } = useSmartPromptContext();
-  const { userRoleName } = useAuth();
   const [checkedDontAsk, setCheckedDontAsk] = useState(false);
   const [progress, setProgress] = useState(100);
   const [visible, setVisible] = useState(false);
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  const isAdmin = userRoleName === "Admin";
+  // Enabling Governance Intelligence saves preferences (governanceOs.admin).
+  const isAdmin = useCan("governanceOs.admin");
 
   const clearTimers = useCallback(() => {
     if (timerRef.current) {

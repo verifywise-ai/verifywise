@@ -16,10 +16,6 @@ vi.mock("../../../../application/hooks/useAuth", () => ({
 }));
 let mockHasRolesManage = false;
 vi.mock("../../../../application/hooks/useMyPermissions", () => ({
-  useHasPermission: (key: string) =>
-    !mockPermissionsLoading &&
-    ((key === "organization.admin" && mockHasOrganizationAdmin) ||
-      (key === "roles.manage" && mockHasRolesManage)),
   // While loading (or disabled, before a user is known) React Query has no
   // data; v5 reports a disabled query as not loading.
   useMyPermissions: () => ({
@@ -33,6 +29,17 @@ vi.mock("../../../../application/hooks/useMyPermissions", () => ({
     error: null,
   }),
 }));
+vi.mock("../../../../application/hooks/useCan", () => {
+  const useCan = (key: string) =>
+    !mockPermissionsLoading &&
+    ((key === "organization.admin" && mockHasOrganizationAdmin) ||
+      (key === "roles.manage" && mockHasRolesManage));
+  return {
+    useCan,
+    useCanCheck: () => useCan,
+    usePermissionsSettled: () => !mockPermissionsLoading,
+  };
+});
 
 // RolesTab mounts (hidden) whenever the tab is permitted — its hooks must not
 // throw or the whole settings page falls into the error boundary (#5253).

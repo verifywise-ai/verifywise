@@ -8,11 +8,11 @@
  * modal on the templates tab; this page only saves `content`.
  */
 import { useEffect, useMemo, useState } from "react";
+import { useCan } from "../../../application/hooks/useCan";
 import { useNavigate, useParams } from "react-router";
 import { Alert, Box, Skeleton, Snackbar, Stack, Typography } from "@mui/material";
 import { Check, Loader2, Save as SaveIcon } from "lucide-react";
 import { CustomizableButton } from "../../components/button/customizable-button";
-import { useHasPermission } from "../../../application/hooks/useMyPermissions";
 import {
   usePolicyTemplate,
   useUpdatePolicyTemplate,
@@ -37,7 +37,7 @@ export default function PolicyTemplateEditorPage() {
   const templateId = parseTemplateId(rawId);
   const navigate = useNavigate();
   // Same gate as the templates tab and the template routes.
-  const canManageTemplates = useHasPermission("policyTemplate.edit", { fallbackToAdmin: true });
+  const canManageTemplates = useCan("policyTemplate.edit");
 
   const { data: template, isLoading, isError } = usePolicyTemplate(templateId);
   const updateMutation = useUpdatePolicyTemplate();

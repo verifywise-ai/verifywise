@@ -53,12 +53,6 @@ vi.mock("../../../../infrastructure/api/networkServices", () => ({
 }));
 
 // Mock constants
-vi.mock("../../../../application/constants/permissions", () => ({
-  default: {
-    projects: { edit: ["Admin"] },
-  },
-}));
-
 // Mock child components
 vi.mock("../V1.0ProjectView/Overview", () => ({
   default: () => <div data-testid="project-overview" />,

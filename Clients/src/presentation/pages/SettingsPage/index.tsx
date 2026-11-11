@@ -8,9 +8,8 @@ import TeamManagement from "./Team/index";
 import Organization from "./Organization";
 import Preferences from "./Preferences/index";
 import Features from "./Features/index";
-import allowedRoles from "../../../application/constants/permissions";
 import { useAuth } from "../../../application/hooks/useAuth";
-import { useHasPermission, useMyPermissions } from "../../../application/hooks/useMyPermissions";
+import { useCan, usePermissionsSettled } from "../../../application/hooks/useCan";
 import ApiKeys from "./ApiKeys";
 import McpConnect from "./McpConnect";
 import AuditLedger from "./AuditLedger";
@@ -53,21 +52,22 @@ export default function ProfilePage() {
   const ssoFeatureEnabled = useSsoFeatureEnabled();
   const location = useLocation();
   const navigate = useNavigate();
-  const isTeamManagementDisabled = !allowedRoles.projects.editTeamMembers.includes(userRoleName);
-  const isApiKeysDisabled = !allowedRoles.apiKeys?.view?.includes(userRoleName);
-  const isFeaturesDisabled = !allowedRoles.features?.manage?.includes(userRoleName);
-  const isAuditLedgerDisabled = userRoleName !== "Admin";
+  // Team and Features stay Admin-only by role name: their server checks are
+  // role-name checks too (updateUserById, featureSettings.ctrl), so a custom
+  // role would only get controls the server refuses.
+  const isTeamManagementDisabled = userRoleName !== "Admin";
+  const isApiKeysDisabled = !useCan("apiKeys.admin");
+  const isFeaturesDisabled = userRoleName !== "Admin";
+  const isAuditLedgerDisabled = !useCan("auditLedger.admin");
   // Data retention follows the organization.admin permission its routes
   // authorize on, so a custom role granted it gets the tab too.
-  const canManageRetention = useHasPermission("organization.admin", { fallbackToAdmin: true });
+  const canManageRetention = useCan("organization.admin");
   // Roles admin: the roles.manage permission its routes authorize on (#5253).
-  const canManageRoles = useHasPermission("roles.manage", { fallbackToAdmin: true });
-  // Resolved means the permissions arrived (or failed, when the Admin fallback
-  // applies). A disabled query (no user yet) is not resolved, even though
-  // React Query reports it as not loading.
-  const { permissions, error: permissionsError } = useMyPermissions();
-  const permissionsResolved = permissions !== undefined || Boolean(permissionsError);
-  const isCustomFieldsDisabled = userRoleName !== "Admin";
+  const canManageRoles = useCan("roles.manage");
+  // Settled: a built-in role at once, a custom role once its permissions
+  // arrived or failed. A disabled query (no user yet) is not settled.
+  const permissionsResolved = usePermissionsSettled();
+  const isCustomFieldsDisabled = !useCan("customField.admin");
   // The MCP server admits organization Admins only (Servers/routes/mcp.route.ts).
   const isMcpHidden = userRoleName !== "Admin";
 

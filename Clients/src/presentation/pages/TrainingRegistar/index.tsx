@@ -15,9 +15,8 @@ import {
 // Import the table and modal components specific to Training
 import TrainingTable from "./trainingTable";
 import NewTraining from "../../../presentation/components/Modals/NewTraining";
-import allowedRoles from "../../../application/constants/permissions";
+import { useCanCheck } from "../../../application/hooks/useCan";
 import { createTraining } from "../../../application/repository/trainingregistar.repository";
-import { useAuth } from "../../../application/hooks/useAuth";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import { SearchBox } from "../../components/Search";
 import PageTour from "../../components/PageTour";
@@ -158,8 +157,8 @@ const Training: React.FC = () => {
   const [selectedTraining, setSelectedTraining] = useState<TrainingRegistarModel | null>(null);
   const [showAlert, setShowAlert] = useState(false);
 
-  const { userRoleName } = useAuth();
-  const isCreatingDisabled = !userRoleName || !allowedRoles.training.create.includes(userRoleName);
+  const can = useCanCheck();
+  const isCreatingDisabled = !can("training.edit");
   const [alert, setAlert] = useState<{
     variant: "success" | "info" | "warning" | "error";
     title?: string;

@@ -18,7 +18,7 @@ import Alert from "../../../../components/Alert";
 import StatusDropdown from "../../../../components/StatusDropdown";
 import { updateISO42001AnnexStatus } from "../../../../components/StatusDropdown/statusUpdateApi";
 import { useAuth } from "../../../../../application/hooks/useAuth";
-import allowedRoles from "../../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../../application/hooks/useCan";
 import { Project } from "../../../../../domain/types/Project";
 import { useSearchParams } from "react-router";
 import { TabFilterBar } from "../../../../components/FrameworkFilter/TabFilterBar";
@@ -67,7 +67,8 @@ const ISO42001Annex = ({
   ownerOptions?: { label: string; value: string }[];
   reviewerOptions?: { label: string; value: string }[];
 }) => {
-  const { userId, userRoleName } = useAuth();
+  const { userId } = useAuth();
+  const can = useCanCheck();
   const [expanded, setExpanded] = useState<number | false>(false);
   const [annexesProgress, setAnnexesProgress] = useState<{
     totalAnnexcategories?: number;
@@ -320,8 +321,7 @@ const ISO42001Annex = ({
                 currentStatus={control.status || "Not started"}
                 onStatusChange={(newStatus) => handleStatusChange(control, newStatus)}
                 size="small"
-                allowedRoles={allowedRoles.frameworks.edit}
-                userRole={userRoleName}
+                canEdit={can("framework.edit")}
               />
             </Stack>
           ))

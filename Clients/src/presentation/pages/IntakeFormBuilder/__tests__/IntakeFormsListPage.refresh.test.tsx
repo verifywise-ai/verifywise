@@ -2,11 +2,19 @@ import { act, fireEvent, screen } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import { IntakeFormsListPage } from "../IntakeFormsListPage";
 import { getPendingSubmissions } from "../../../../application/repository/intakeForm.repository";
-import { useHasPermission } from "../../../../application/hooks/useMyPermissions";
+import { useCan } from "../../../../application/hooks/useCan";
 
 vi.mock("../../../../application/hooks/useMyPermissions", () => ({
-  useHasPermission: vi.fn(),
+  useMyPermissions: () => ({ permissions: undefined, isLoading: true, error: null }),
 }));
+vi.mock("../../../../application/hooks/useCan", () => {
+  const useCan = vi.fn();
+  return {
+    useCan,
+    useCanCheck: () => useCan,
+    usePermissionsSettled: () => true,
+  };
+});
 
 vi.mock("../../../components/Layout/PageHeaderExtended", () => ({
   PageHeaderExtended: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -53,7 +61,7 @@ describe("IntakeFormsListPage background refresh", () => {
     vi.useFakeTimers({ shouldAdvanceTime: true });
     visibility = "visible";
     vi.spyOn(document, "visibilityState", "get").mockImplementation(() => visibility);
-    vi.mocked(useHasPermission).mockReturnValue(true);
+    vi.mocked(useCan).mockReturnValue(true);
     vi.mocked(getPendingSubmissions).mockReset();
   });
 

@@ -16,8 +16,7 @@ import {
 import { useUpdatePolicy } from "../../../application/hooks/usePolicyMutations";
 import { usePolicyTemplate } from "../../../application/hooks/usePolicyTemplates";
 import useUsers from "../../../application/hooks/useUsers";
-import { useAuth } from "../../../application/hooks/useAuth";
-import allowedRoles from "../../../application/constants/permissions";
+import { useCanCheck } from "../../../application/hooks/useCan";
 import { User } from "../../../domain/types/User";
 import { PolicyFormData, PolicyInput } from "../../types/interfaces/i.policy";
 import { PolicyManagerModel } from "../../../domain/models/Common/policy/policyManager.model";
@@ -40,8 +39,8 @@ export default function PolicyEditorPage() {
   const navigate = useNavigate();
   const { users } = useUsers();
   const updatePolicyMutation = useUpdatePolicy();
-  const { userRoleName } = useAuth();
-  const readOnly = !userRoleName || !allowedRoles.policies.edit.includes(userRoleName);
+  const can = useCanCheck();
+  const readOnly = !can("policy.edit");
 
   const isNew = !id;
   const templateId = searchParams.get("templateId");

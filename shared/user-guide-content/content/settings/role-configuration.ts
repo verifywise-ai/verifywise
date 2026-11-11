@@ -291,9 +291,12 @@ export const roleConfigurationContent: ArticleContent = {
       ],
     },
     {
-      type: 'callout',
-      variant: 'warning',
-      text: 'Many screens still decide which buttons to show from the built-in role name (Admin, Editor, Reviewer, Auditor). People with a custom role may therefore see some screens as read-only, even where their permissions allow the action. The permissions you set are always enforced on the server, so they never get more access than the role allows. Groups, policy templates, framework import and custom roles already follow the permissions you set.',
+      type: 'paragraph',
+      text: 'These areas still need the built-in Admin role, whatever you allow: Settings > Team, Settings > Features, Settings > MCP, the LLM Evals API keys and evals settings, AI Trust Index settings, intake form routing and acting in any review lane, downloading files, the demo data menu and the "All tasks" view. Managing evidence folders needs the built-in Admin or Editor role.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Four permissions only change what the screens show. The server doesn\'t check them yet: "Choose a use case\'s team members", "Edit framework controls and answers, and add or remove frameworks", "Record audit results on framework controls" and "Create and change eval projects, experiments, scorers and datasets". Their descriptions in Settings > Roles say so.',
     },
     {
       type: 'heading',

@@ -2,8 +2,16 @@ import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
 vi.mock("../../../../application/hooks/useMyPermissions", () => ({
-  useHasPermission: () => true,
+  useMyPermissions: () => ({ permissions: undefined, isLoading: true, error: null }),
 }));
+vi.mock("../../../../application/hooks/useCan", () => {
+  const useCan = () => true;
+  return {
+    useCan,
+    useCanCheck: () => useCan,
+    usePermissionsSettled: () => true,
+  };
+});
 
 const mockUsers: { id: number; name: string; surname: string; email: string }[] = [];
 vi.mock("../../../../application/hooks/useUsers", () => ({

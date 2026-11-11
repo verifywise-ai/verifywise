@@ -10,8 +10,16 @@ vi.mock("react-router", async () => {
 
 let mockCanManage = true;
 vi.mock("../../../../application/hooks/useMyPermissions", () => ({
-  useHasPermission: (key: string) => key === "policyTemplate.edit" && mockCanManage,
+  useMyPermissions: () => ({ permissions: undefined, isLoading: true, error: null }),
 }));
+vi.mock("../../../../application/hooks/useCan", () => {
+  const useCan = (key: string) => key === "policyTemplate.edit" && mockCanManage;
+  return {
+    useCan,
+    useCanCheck: () => useCan,
+    usePermissionsSettled: () => true,
+  };
+});
 
 // A minimal editor stand-in: the page only needs getHTML/setEditable.
 const mockEditor = {

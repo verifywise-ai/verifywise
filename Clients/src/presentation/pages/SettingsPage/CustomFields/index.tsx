@@ -23,7 +23,6 @@ import StandardModal from "../../../components/Modals/StandardModal";
 import Field from "../../../components/Inputs/Field";
 import Select from "../../../components/Inputs/Select";
 import Toggle from "../../../components/Inputs/Toggle";
-import { useAuth } from "../../../../application/hooks/useAuth";
 import {
   CUSTOM_FIELD_ENTITY_LABELS,
   CUSTOM_FIELD_TYPE_LABELS,
@@ -52,6 +51,7 @@ import ScoredOptionsEditor, {
   ScoredOptionRow,
 } from "./ScoredOptionsEditor";
 import MoveOptionAnswersModal, { OptionInUse } from "./MoveOptionAnswersModal";
+import { useCan, usePermissionsSettled } from "../../../../application/hooks/useCan";
 
 const TABLE_COLUMNS = [
   { id: "label", label: "LABEL" },
@@ -74,8 +74,8 @@ const FIELD_TYPE_ITEMS = Object.entries(CUSTOM_FIELD_TYPE_LABELS).map(([value, l
 
 const CustomFieldsTab: React.FC = () => {
   const theme = useTheme();
-  const { userRoleName } = useAuth();
-  const isAdmin = userRoleName === "Admin";
+  const isAdmin = useCan("customField.admin");
+  const permissionsSettled = usePermissionsSettled();
 
   const [entityType, setEntityType] = useState<CustomFieldEntityType>("vendor");
   const [editing, setEditing] = useState<ICustomFieldDefinition | null>(null);
@@ -123,6 +123,7 @@ const CustomFieldsTab: React.FC = () => {
     setServerError(extractErrorMessage(err));
   };
 
+  if (!permissionsSettled) return null;
   if (!isAdmin) {
     return (
       <Stack sx={{ mt: 3, width: "100%" }}>

@@ -25,8 +25,7 @@ import StandardModal from "../../../components/Modals/StandardModal";
 import ConfirmationModal from "../../../components/Dialogs/ConfirmationModal";
 import Field from "../../../components/Inputs/Field";
 import Select from "../../../components/Inputs/Select";
-import allowedRoles from "../../../../application/constants/permissions";
-import { useAuth } from "../../../../application/hooks/useAuth";
+import { useCanCheck } from "../../../../application/hooks/useCan";
 import {
   LLMKeysFormData,
   LLMKeysModel,
@@ -74,8 +73,8 @@ const LLMKeys = () => {
   const theme = useTheme();
   const [searchParams, setSearchParams] = useSearchParams();
   const queryClient = useQueryClient();
-  const { userRoleName } = useAuth();
-  const isDisabled = !allowedRoles.llmKeys.manage.includes(userRoleName);
+  const can = useCanCheck();
+  const isDisabled = !can("llmKeys.admin");
 
   // The shared, cached key list that Start here and the Advisor also read.
   const {

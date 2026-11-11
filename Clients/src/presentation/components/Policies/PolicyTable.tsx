@@ -19,8 +19,7 @@ import { store } from "../../../application/redux/store";
 import { useCustomFieldDefinitions } from "../../../application/hooks/useCustomFields";
 import { formatCustomFieldValue } from "../CustomFieldsSection/formatCustomFieldValue";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
-import { useAuth } from "../../../application/hooks/useAuth";
-import allowedRoles from "../../../application/constants/permissions";
+import { useCanCheck } from "../../../application/hooks/useCan";
 
 const tableHeaders = [
   { id: "title", name: "Title" },
@@ -50,8 +49,8 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
   onBulkActionSuccess,
 }) => {
   const formatDate = useFormattedDate();
-  const { userRoleName } = useAuth();
-  const canModifyPolicies = !!userRoleName && allowedRoles.policies.edit.includes(userRoleName);
+  const can = useCanCheck();
+  const canModifyPolicies = can("policy.edit");
   const cellStyle = singleTheme.tableStyles.primary.body.cell;
 
   const isVisible = useCallback(

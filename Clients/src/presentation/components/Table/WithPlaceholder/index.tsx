@@ -31,8 +31,7 @@ import {
   AlertCircle,
 } from "lucide-react";
 import VendorRisksDialog from "../../VendorRisksDialog";
-import allowedRoles from "../../../../application/constants/permissions";
-import { useAuth } from "../../../../application/hooks/useAuth";
+import { useCanCheck } from "../../../../application/hooks/useCan";
 import { VendorModel } from "../../../../domain/models/Common/vendor/vendor.model";
 import { User } from "../../../../domain/types/User";
 import { ITableWithPlaceholderProps } from "../../../types/interfaces/i.table";
@@ -153,7 +152,7 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
 }) => {
   const formatDate = useFormattedDate();
   const theme = useTheme();
-  const { userRoleName } = useAuth();
+  const can = useCanCheck();
   const [page, setPage] = useState(0);
 
   // Initialize rowsPerPage from localStorage or default to 5
@@ -206,7 +205,7 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
 
   const cellStyle = singleTheme.tableStyles.primary.body.cell;
 
-  const isDeletingAllowed = allowedRoles.vendors.delete.includes(userRoleName);
+  const isDeletingAllowed = can("vendor.edit");
 
   const isVisible = useCallback(
     (key: string) => {

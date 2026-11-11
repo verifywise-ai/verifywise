@@ -3,8 +3,16 @@ import { renderWithProviders } from "../../../../test/renderWithProviders";
 import { IntakeFormsListPage } from "../IntakeFormsListPage";
 
 vi.mock("../../../../application/hooks/useMyPermissions", () => ({
-  useHasPermission: vi.fn().mockReturnValue(true),
+  useMyPermissions: () => ({ permissions: undefined, isLoading: true, error: null }),
 }));
+vi.mock("../../../../application/hooks/useCan", () => {
+  const useCan = vi.fn().mockReturnValue(true);
+  return {
+    useCan,
+    useCanCheck: () => useCan,
+    usePermissionsSettled: () => true,
+  };
+});
 
 vi.mock("../../../components/Layout/PageHeaderExtended", () => ({
   PageHeaderExtended: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,

@@ -37,7 +37,7 @@ import Alert from "../../../components/Alert";
 import { AlertProps } from "../../../types/alert.types";
 import { handleAlert } from "../../../../application/tools/alertUtils";
 import { useAuth } from "../../../../application/hooks/useAuth";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../application/hooks/useCan";
 import { StatsCard } from "../../../components/Cards/StatsCard";
 import { pluralizeEntityType } from "../../../tools/pluralizeEntityType";
 import { isCompletedStatus } from "../../../../domain/types/Status";
@@ -131,7 +131,8 @@ const GenericFramework = ({
   linkId,
 }: GenericFrameworkProps = {}) => {
   const params = useParams<{ frameworkId: string; projectId: string }>();
-  const { userId, userRoleName } = useAuth();
+  const { userId } = useAuth();
+  const can = useCanCheck();
 
   const fwIdNum = propFrameworkId ?? (params.frameworkId ? parseInt(params.frameworkId, 10) : NaN);
   const projectIdNum = propProjectId ?? (params.projectId ? parseInt(params.projectId, 10) : NaN);
@@ -424,8 +425,7 @@ const GenericFramework = ({
                   currentStatus={row.node.status ?? "Not started"}
                   onStatusChange={(newStatus) => handleStatusChange("l3", row.node, newStatus)}
                   size="small"
-                  allowedRoles={allowedRoles.frameworks.edit}
-                  userRole={userRoleName}
+                  canEdit={can("framework.edit")}
                 />
               </Stack>
             );
@@ -444,8 +444,7 @@ const GenericFramework = ({
                 currentStatus={row.node.status ?? "Not started"}
                 onStatusChange={(newStatus) => handleStatusChange("l2", row.node, newStatus)}
                 size="small"
-                allowedRoles={allowedRoles.frameworks.edit}
-                userRole={userRoleName}
+                canEdit={can("framework.edit")}
               />
             </Stack>
           );

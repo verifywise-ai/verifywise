@@ -7,8 +7,9 @@ import {
   updateUseCaseOrgSettingsHandler,
 } from "../../controllers/useCaseOrgSettings.ctrl";
 
-// Every member reads the defaults (the use case form applies them); only an Admin changes them.
+// Every member reads the defaults (the use case form applies them); changing
+// them is an organization setting (organization.admin, Admin by default).
 router.get("/", authenticateJWT, getUseCaseOrgSettingsHandler);
-router.put("/", authenticateJWT, authorize(["Admin"]), updateUseCaseOrgSettingsHandler);
+router.put("/", authenticateJWT, authorize("organization.admin"), updateUseCaseOrgSettingsHandler);
 
 export default router;
