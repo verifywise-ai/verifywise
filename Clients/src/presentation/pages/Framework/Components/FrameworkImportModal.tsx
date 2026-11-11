@@ -277,8 +277,9 @@ export default function FrameworkImportModal({
             Step 2: Upload the filled Excel file
           </Typography>
           <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-            All rows must describe the same framework. Re-uploading a framework name replaces its
-            previous structure. A file can have at most 5,000 rows.
+            All rows must describe the same framework. Re-uploading a framework name updates it and
+            keeps the topics and subtopics that have assessment data. A file can have at most 5,000
+            rows.
           </Typography>
           <Stack direction="row" sx={{ gap: "8px", alignItems: "center" }}>
             <CustomizableButton

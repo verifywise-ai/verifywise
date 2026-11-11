@@ -276,6 +276,8 @@ export class ProjectModel extends Model<ProjectModel> implements IProjectAttribu
       _source: (this as any)._source,
       // Include dynamically added properties from queries
       framework: dataValues?.framework,
+      // Organization-imported frameworks attached to the use case (#5254).
+      imported_frameworks: dataValues?.imported_frameworks,
       members: dataValues?.members,
       has_pending_approval: dataValues?.has_pending_approval,
       approval_status: dataValues?.approval_status,

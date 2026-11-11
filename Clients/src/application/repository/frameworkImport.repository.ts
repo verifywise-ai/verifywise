@@ -61,6 +61,8 @@ export async function updateImportedFramework({
   return response.data?.data;
 }
 
+// The delete dialog shows the refusal (409: still used by a use case) inline,
+// so the global error toast would repeat it.
 export async function deleteImportedFramework(id: number): Promise<void> {
-  await apiServices.delete(`${BASE}/imported/${id}`);
+  await apiServices.delete(`${BASE}/imported/${id}`, { suppressGlobalErrorToast: true });
 }
