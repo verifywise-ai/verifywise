@@ -104,6 +104,8 @@ export const dynamicKeys = {
   sorting: (storageKey: string) => `${NAMESPACE}${storageKey}_sorting`,
   columns: (tableId: string) => `${NAMESPACE}columns_${tableId}`,
   deadlineSnooze: (userId: number | string) => `${NAMESPACE}deadline_snooze_${userId}`,
+  /** Progress saved by the retired step-by-step onboarding modal; only ever removed now. */
+  legacyOnboarding: (userId: number | string) => `${NAMESPACE}onboarding_${userId}`,
   viewMode: (key: string) => `${NAMESPACE}view_mode_${key}`,
   deadlineCollapsedSections: () => `${NAMESPACE}deadline_collapsed_sections`,
   startHereDismissed: (suffix: string) => `${NAMESPACE}start_here_${suffix}_dismissed`,
