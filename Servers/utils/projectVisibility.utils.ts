@@ -24,6 +24,18 @@ export function projectVisibilitySql(
   if (seesAllProjects(viewer.role)) {
     return { sql: "", replacements: {} };
   }
+  return projectAccessSql(alias, viewer.userId);
+}
+
+/**
+ * The non-admin half of projectVisibilitySql, whatever the role: the use
+ * cases the user owns, is a member of, or reaches through a group. For
+ * callers that scope by access even for Admins (search).
+ */
+export function projectAccessSql(
+  alias: string,
+  userId: number,
+): { sql: string; replacements: { visibilityUserId: number } } {
   return {
     sql: ` AND (${alias}.owner = :visibilityUserId OR EXISTS (
              SELECT 1 FROM projects_members pm
@@ -38,6 +50,6 @@ export function projectVisibilitySql(
               WHERE pg.organization_id = :organizationId
                 AND pg.project_id = ${alias}.id
                 AND gm.user_id = :visibilityUserId))`,
-    replacements: { visibilityUserId: viewer.userId },
+    replacements: { visibilityUserId: userId },
   };
 }

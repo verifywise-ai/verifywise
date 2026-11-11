@@ -17,6 +17,7 @@ import {
   setProjectGroupsQuery,
   updateGroupByIdQuery,
 } from "../utils/group.utils";
+import { getProjectAccessQuery, getProjectReadAccessQuery } from "../utils/project.utils";
 
 const FILE_NAME = "group.ctrl.ts";
 
@@ -37,6 +38,39 @@ const respondWithError = (req: Request, res: Response, error: unknown): Response
     return res.status(statusCode).json(statusFn((error as Error).message));
   }
   return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+};
+
+/**
+ * The use case access rule for the project-group routes. useCase.edit alone
+ * would let an Editor attach a group they belong to to any use case in the
+ * organization and so reach it (the same reason updateProjectById checks
+ * canViewProjectQuery). Reads use the read rule of requireProjectAccess.
+ * Sends the 404/403 and returns false when the user may not proceed.
+ */
+const ensureProjectAccess = async (
+  req: Request,
+  res: Response,
+  projectId: number,
+  mode: "read" | "write",
+): Promise<boolean> => {
+  if (!Number.isInteger(projectId) || projectId <= 0) {
+    res.status(400).json(STATUS_CODE[400]("project id must be a positive integer"));
+    return false;
+  }
+  const viewer = { userId: req.userId!, role: req.role ?? "" };
+  const access =
+    mode === "write"
+      ? await getProjectAccessQuery(projectId, viewer, req.organizationId!)
+      : await getProjectReadAccessQuery(projectId, viewer, req.organizationId!);
+  if (access === "not_found") {
+    res.status(404).json(STATUS_CODE[404]({}));
+    return false;
+  }
+  if (access === "denied") {
+    res.status(403).json(STATUS_CODE[403](req.t ? req.t("Access denied") : "Access denied"));
+    return false;
+  }
+  return true;
 };
 
 // ---------- Groups ----------
@@ -371,6 +405,7 @@ export async function listProjectGroups(req: Request, res: Response): Promise<an
     organizationId: req.organizationId!,
   });
   try {
+    if (!(await ensureProjectAccess(req, res, projectId, "read"))) return;
     const groups = await listProjectGroupsQuery(projectId, req.organizationId!);
     await logSuccess({
       eventType: "Read",
@@ -405,6 +440,18 @@ export async function setProjectGroups(req: Request, res: Response): Promise<any
     organizationId: req.organizationId!,
   });
   try {
+    if (!(await ensureProjectAccess(req, res, projectId, "write"))) {
+      await logFailure({
+        eventType: "Update",
+        description: `Group set of use case ${projectId} refused, no access`,
+        functionName: "setProjectGroups",
+        fileName: FILE_NAME,
+        error: new Error("Access denied"),
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
+      return;
+    }
     await setProjectGroupsQuery(projectId, req.organizationId!, req.body?.groupIds);
     await logSuccess({
       eventType: "Update",

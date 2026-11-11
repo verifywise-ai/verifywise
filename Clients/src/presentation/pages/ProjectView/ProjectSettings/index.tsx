@@ -60,6 +60,7 @@ import { useRequiredCustomFieldsGate } from "../../../components/CustomFieldsSec
 import useFrameworks from "../../../../application/hooks/useFrameworks";
 import { Framework } from "../../../../domain/types/Framework";
 import allowedRoles from "../../../../application/constants/permissions";
+import { useHasPermission } from "../../../../application/hooks/useMyPermissions";
 import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
 import {
   deleteProject,
@@ -329,6 +330,8 @@ const ProjectSettings = React.memo(
     const { data: groups } = useGroups();
     const { data: projectGroups } = useProjectGroups(Number(projectId));
     const setProjectGroupsMutation = useSetProjectGroups(Number(projectId));
+    // The groups route checks useCase.edit, so the picker does too.
+    const canEditProjectGroups = useHasPermission("useCase.edit", { fallbackToAdmin: true });
     const selectedGroupIds = (projectGroups ?? []).map((g) => g.id);
 
     const { filteredFrameworks: monitoredFrameworks, allFrameworks } = useFrameworks({
@@ -1519,7 +1522,7 @@ const ProjectSettings = React.memo(
                   {/* Groups Row (#5253): attaching a group grants every member access. */}
                   <Box>
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Groups</Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, whiteSpace: "nowrap" }}>
                       Add a whole group to the use case in one step.
                       <br />
                       Every group member can see and work on the use case.
@@ -1527,7 +1530,7 @@ const ProjectSettings = React.memo(
                   </Box>
                   <Autocomplete
                     multiple
-                    readOnly={!allowedRoles.projects.editTeamMembers.includes(userRoleName)}
+                    readOnly={!canEditProjectGroups}
                     id="groups-input"
                     size="small"
                     value={(projectGroups ?? []).filter((g) => selectedGroupIds.includes(g.id))}
@@ -1540,7 +1543,20 @@ const ProjectSettings = React.memo(
                         : "All groups selected"
                     }
                     onChange={(_event, selected) => {
-                      setProjectGroupsMutation.mutate(selected.map((g) => g.id));
+                      setProjectGroupsMutation.mutate(
+                        selected.map((g) => g.id),
+                        {
+                          onError: () => {
+                            setAlert({
+                              variant: "error",
+                              body: "Could not update the use case's groups. Please try again.",
+                              isToast: true,
+                              visible: true,
+                            });
+                            setTimeout(() => setAlert(null), 3000);
+                          },
+                        },
+                      );
                     }}
                     popupIcon={<ChevronDown size={16} color={theme.palette.text.tertiary} />}
                     renderInput={(params) => (

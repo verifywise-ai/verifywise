@@ -1,5 +1,5 @@
 import { describe, it, expect } from "@jest/globals";
-import { projectVisibilitySql, seesAllProjects } from "./projectVisibility.utils";
+import { projectAccessSql, projectVisibilitySql, seesAllProjects } from "./projectVisibility.utils";
 
 const viewer = { userId: 9, role: "Editor" };
 
@@ -30,6 +30,13 @@ describe("projectVisibilitySql (#5253 group access)", () => {
     expect(sql).toContain("pg.project_id = p.id");
     expect(sql).toContain("gm.user_id = :visibilityUserId");
     expect(replacements).toEqual({ visibilityUserId: 9 });
+  });
+
+  it("projectAccessSql scopes by access even for Admins", () => {
+    const { sql, replacements } = projectAccessSql("p", 1);
+    expect(sql).toContain("project_groups pg");
+    expect(replacements).toEqual({ visibilityUserId: 1 });
+    expect(projectVisibilitySql("p", viewer).sql).toBe(projectAccessSql("p", 9).sql);
   });
 
   it("aliases tables through the alias argument", () => {

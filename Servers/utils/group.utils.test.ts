@@ -2,19 +2,20 @@ import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
 // Mock the sequelize instance before importing the module under test.
 const mockQuery = jest.fn<(sql: string, options?: unknown) => Promise<any>>();
+const mockTx = { id: "tx" };
+const mockTransaction = jest.fn(async (cb: (t: unknown) => Promise<unknown>) => cb(mockTx));
 
 jest.mock("../database/db", () => ({
   sequelize: {
     query: (sql: string, options?: unknown) => mockQuery(sql, options),
+    transaction: (cb: (t: unknown) => Promise<unknown>) => mockTransaction(cb),
   },
 }));
 
 import {
   addGroupMembersQuery,
   createGroupQuery,
-  getGroupMemberIdsQuery,
-  getEffectiveProjectMemberIdsQuery,
-  invalidateGroupMembersCache,
+  setGroupMembersQuery,
   setProjectGroupsQuery,
   updateGroupByIdQuery,
 } from "./group.utils";
@@ -27,8 +28,15 @@ const ORG = 7;
 
 beforeEach(() => {
   mockQuery.mockReset();
-  invalidateGroupMembersCache();
+  mockTransaction.mockClear();
 });
+
+/** Every query after the first `from` calls ran inside the transaction. */
+const expectAllInTransaction = (from = 0) => {
+  for (const call of mockQuery.mock.calls.slice(from)) {
+    expect((call[1] as any).transaction).toBe(mockTx);
+  }
+};
 
 describe("createGroupQuery", () => {
   it("creates a group with trimmed name", async () => {
@@ -82,22 +90,65 @@ describe("updateGroupByIdQuery", () => {
 describe("addGroupMembersQuery", () => {
   it("validates org membership of every user", async () => {
     mockQuery
-      .mockResolvedValueOnce([{ id: 1 }]) // group exists
+      .mockResolvedValueOnce([{ id: 1 }]) // group exists (locked)
       .mockResolvedValueOnce([]); // user 9 not an org member
     await expect(addGroupMembersQuery(1, ORG, [9])).rejects.toBeInstanceOf(ValidationException);
   });
 
-  it("dedups user ids and inserts with unnest", async () => {
+  it("dedups user ids and inserts with unnest, in one transaction", async () => {
     mockQuery
-      .mockResolvedValueOnce([{ id: 1 }]) // group exists
-      .mockResolvedValueOnce([{ ok: 1 }]) // user 5 is org member
-      .mockResolvedValueOnce([{ ok: 1 }]) // user 6 is org member
+      .mockResolvedValueOnce([{ id: 1 }]) // group exists (locked)
+      .mockResolvedValueOnce([{ user_id: 5 }, { user_id: 6 }]) // org members
+      .mockResolvedValueOnce([{ others: 0 }]) // existing members outside the request
       .mockResolvedValueOnce(undefined); // INSERT ... SELECT
     const result = await addGroupMembersQuery(1, ORG, [5, 6, 5]);
+    expect(mockQuery.mock.calls[0][0]).toContain("FOR UPDATE");
     const [sql, options] = mockQuery.mock.calls[3] as any[];
     expect(sql).toContain("ON CONFLICT (group_id, user_id) DO NOTHING");
     expect(options.replacements.userIds).toBe("{5,6}");
     expect(result.added).toBe(0);
+    expect(mockTransaction).toHaveBeenCalledTimes(1);
+    expectAllInTransaction();
+  });
+
+  it("caps the group's total members, not the request size", async () => {
+    mockQuery
+      .mockResolvedValueOnce([{ id: 1 }]) // group exists
+      .mockResolvedValueOnce([{ user_id: 5 }]) // org member
+      .mockResolvedValueOnce([{ others: 500 }]); // group is already full
+    await expect(addGroupMembersQuery(1, ORG, [5])).rejects.toThrow(/at most 500 members/);
+    expect(mockQuery).toHaveBeenCalledTimes(3); // nothing inserted
+  });
+});
+
+describe("setGroupMembersQuery", () => {
+  it("validates, deletes and inserts in one transaction", async () => {
+    mockQuery
+      .mockResolvedValueOnce([{ id: 1 }]) // group exists (locked)
+      .mockResolvedValueOnce([{ user_id: 5 }]) // org member
+      .mockResolvedValueOnce(undefined) // DELETE
+      .mockResolvedValueOnce(undefined); // INSERT
+    await setGroupMembersQuery(1, ORG, [5]);
+    expect(mockTransaction).toHaveBeenCalledTimes(1);
+    expect(mockQuery.mock.calls[2][0]).toContain("DELETE FROM group_members");
+    expect(mockQuery.mock.calls[3][0]).toContain("INSERT INTO group_members");
+    expectAllInTransaction();
+  });
+
+  it("propagates an insert failure so the transaction rolls the delete back", async () => {
+    mockQuery
+      .mockResolvedValueOnce([{ id: 1 }])
+      .mockResolvedValueOnce([{ user_id: 5 }])
+      .mockResolvedValueOnce(undefined) // DELETE
+      .mockRejectedValueOnce(new Error("insert failed"));
+    await expect(setGroupMembersQuery(1, ORG, [5])).rejects.toThrow("insert failed");
+    expectAllInTransaction();
+  });
+
+  it("rejects more than 500 distinct members before touching the database", async () => {
+    const ids = Array.from({ length: 501 }, (_, i) => i + 1);
+    await expect(setGroupMembersQuery(1, ORG, ids)).rejects.toBeInstanceOf(ValidationException);
+    expect(mockQuery).not.toHaveBeenCalled();
   });
 });
 
@@ -107,7 +158,7 @@ describe("setProjectGroupsQuery", () => {
     await expect(setProjectGroupsQuery(33, ORG, [1])).rejects.toBeInstanceOf(NotFoundException);
   });
 
-  it("replaces the group set transactionally", async () => {
+  it("replaces the group set in one transaction", async () => {
     mockQuery
       .mockResolvedValueOnce([{ id: 33 }]) // project
       .mockResolvedValueOnce([{ id: 1 }]) // group 1
@@ -119,30 +170,7 @@ describe("setProjectGroupsQuery", () => {
     expect(deleteSql).toContain("DELETE FROM project_groups");
     expect(insertSql).toContain("INSERT INTO project_groups");
     expect(insertOpts.replacements.groupIds).toBe("{1}");
-  });
-});
-
-describe("getGroupMemberIdsQuery cache", () => {
-  it("resolves through the cache and invalidates on demand", async () => {
-    mockQuery.mockResolvedValue([{ user_id: 5 }, { user_id: 6 }]);
-    const first = await getGroupMemberIdsQuery(1, ORG);
-    const second = await getGroupMemberIdsQuery(1, ORG);
-    expect(mockQuery).toHaveBeenCalledTimes(1);
-    expect([...first].sort()).toEqual([5, 6]);
-    expect(second).toBe(first);
-    invalidateGroupMembersCache(ORG, 1);
-    await getGroupMemberIdsQuery(1, ORG);
-    expect(mockQuery).toHaveBeenCalledTimes(2);
-  });
-});
-
-describe("getEffectiveProjectMemberIdsQuery", () => {
-  it("unions direct members and group members", async () => {
-    mockQuery.mockResolvedValue([{ user_id: 1 }, { user_id: 2 }, { user_id: 3 }]);
-    const ids = await getEffectiveProjectMemberIdsQuery(10, ORG);
-    const [sql] = mockQuery.mock.calls[0] as any[];
-    expect(sql).toContain("projects_members");
-    expect(sql).toContain("project_groups");
-    expect(ids).toEqual([1, 2, 3]);
+    expect(mockTransaction).toHaveBeenCalledTimes(1);
+    expectAllInTransaction();
   });
 });

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   Autocomplete,
   Box,
@@ -29,6 +29,7 @@ import { useHasPermission } from "../../../application/hooks/useMyPermissions";
 import {
   useCreateGroup,
   useDeleteGroup,
+  useGroupMembers,
   useGroups,
   useSetGroupMembers,
   useUpdateGroup,
@@ -50,6 +51,12 @@ interface GroupFormState {
 
 const emptyForm: GroupFormState = { name: "", description: "", memberIds: [] };
 
+const sameIds = (a: number[], b: number[]) => {
+  if (a.length !== b.length) return false;
+  const set = new Set(a);
+  return b.every((id) => set.has(id));
+};
+
 function extractErrorMessage(err: any): string {
   return (
     err?.response?.data?.error || err?.response?.data?.message || err?.message || "Operation failed"
@@ -68,6 +75,24 @@ const GroupsPage: React.FC = () => {
   const [confirmDelete, setConfirmDelete] = useState<IGroup | null>(null);
   const [form, setForm] = useState<GroupFormState>(emptyForm);
   const [serverError, setServerError] = useState<string | null>(null);
+  // Members of the group being edited as loaded from the server, or null
+  // until they arrive. Saving replaces the membership only when the selection
+  // differs from this, so an edit can never wipe members it did not load.
+  const [initialMemberIds, setInitialMemberIds] = useState<number[] | null>(null);
+
+  const editingId = editing?.id ?? null;
+  const {
+    data: currentMembers,
+    isLoading: membersLoading,
+    isError: membersError,
+  } = useGroupMembers(editingId);
+
+  useEffect(() => {
+    if (editingId === null || !currentMembers || initialMemberIds !== null) return;
+    const ids = currentMembers.map((member) => Number(member.user_id));
+    setInitialMemberIds(ids);
+    setForm((prev) => ({ ...prev, memberIds: ids }));
+  }, [editingId, currentMembers, initialMemberIds]);
 
   const createMutation = useCreateGroup();
   const updateMutation = useUpdateGroup();
@@ -83,14 +108,18 @@ const GroupsPage: React.FC = () => {
   const openEdit = (group: IGroup) => {
     setEditing(group);
     setServerError(null);
+    setInitialMemberIds(null);
     setForm({ name: group.name, description: group.description ?? "", memberIds: [] });
   };
 
   const closeModal = () => {
     setCreating(false);
     setEditing(null);
+    setInitialMemberIds(null);
     setServerError(null);
   };
+
+  const membersReady = !editing || initialMemberIds !== null;
 
   const handleSubmit = async () => {
     setServerError(null);
@@ -103,7 +132,7 @@ const GroupsPage: React.FC = () => {
             description: form.description || null,
           },
         });
-        if (form.memberIds.length > 0 || (editing.member_count ?? 0) > 0) {
+        if (initialMemberIds !== null && !sameIds(form.memberIds, initialMemberIds)) {
           await setMembersMutation.mutateAsync({ id: editing.id, userIds: form.memberIds });
         }
       } else {
@@ -121,7 +150,7 @@ const GroupsPage: React.FC = () => {
     }
   };
 
-  const busy = createMutation.isPending || updateMutation.isPending;
+  const busy = createMutation.isPending || updateMutation.isPending || setMembersMutation.isPending;
 
   return (
     <Stack className="vwhome" sx={{ gap: theme.spacing(8) }}>
@@ -274,9 +303,24 @@ const GroupsPage: React.FC = () => {
               onChange={(_event, selected) =>
                 setForm({ ...form, memberIds: selected.map((member) => member.id) })
               }
+              loading={!membersReady && !membersError}
               renderInput={(params) => <TextField {...params} placeholder="Select members" />}
-              disabled={!canManageGroups}
+              disabled={!canManageGroups || !membersReady}
             />
+            {editing && membersLoading && (
+              <Stack direction="row" sx={{ alignItems: "center", gap: "8px" }}>
+                <CircularProgress size={14} />
+                <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
+                  Loading members...
+                </Typography>
+              </Stack>
+            )}
+            {editing && membersError && (
+              <Typography sx={{ fontSize: 13, color: theme.palette.error.main }}>
+                Could not load this group's members. You can still save the name and description;
+                members stay as they are.
+              </Typography>
+            )}
             {serverError && (
               <Typography sx={{ fontSize: 12, color: theme.palette.error.main }}>
                 {serverError}

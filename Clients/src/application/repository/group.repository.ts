@@ -6,11 +6,13 @@ import type {
   IUpdateGroupInput,
 } from "../../domain/interfaces/i.group";
 
+// The groups router is mounted only at /api/v1/groups, and apiServices
+// base URL is `${URL}/api`, so every path starts with /v1.
 // Backend wraps every payload in STATUS_CODE[xxx](...) → { message, data }.
 type Envelope<T> = { data: T; message?: string };
 
 export async function listGroups({ signal }: { signal?: AbortSignal } = {}): Promise<IGroup[]> {
-  const response = await apiServices.get<Envelope<IGroup[]>>("/groups", { signal });
+  const response = await apiServices.get<Envelope<IGroup[]>>("/v1/groups", { signal });
   return response.data?.data ?? [];
 }
 
@@ -21,12 +23,12 @@ export async function getGroupById({
   id: number;
   signal?: AbortSignal;
 }): Promise<IGroup | null> {
-  const response = await apiServices.get<Envelope<IGroup>>(`/groups/${id}`, { signal });
+  const response = await apiServices.get<Envelope<IGroup>>(`/v1/groups/${id}`, { signal });
   return response.data?.data ?? null;
 }
 
 export async function createGroup(body: ICreateGroupInput): Promise<IGroup> {
-  const response = await apiServices.post<Envelope<IGroup>>("/groups", body);
+  const response = await apiServices.post<Envelope<IGroup>>("/v1/groups", body);
   return response.data.data;
 }
 
@@ -37,12 +39,12 @@ export async function updateGroup({
   id: number;
   body: IUpdateGroupInput;
 }): Promise<IGroup> {
-  const response = await apiServices.patch<Envelope<IGroup>>(`/groups/${id}`, body);
+  const response = await apiServices.patch<Envelope<IGroup>>(`/v1/groups/${id}`, body);
   return response.data.data;
 }
 
 export async function deleteGroup(id: number): Promise<void> {
-  await apiServices.delete(`/groups/${id}`);
+  await apiServices.delete(`/v1/groups/${id}`);
 }
 
 export async function listGroupMembers({
@@ -52,7 +54,7 @@ export async function listGroupMembers({
   id: number;
   signal?: AbortSignal;
 }): Promise<IGroupMember[]> {
-  const response = await apiServices.get<Envelope<IGroupMember[]>>(`/groups/${id}/members`, {
+  const response = await apiServices.get<Envelope<IGroupMember[]>>(`/v1/groups/${id}/members`, {
     signal,
   });
   return response.data?.data ?? [];
@@ -65,7 +67,7 @@ export async function addGroupMembers({
   id: number;
   userIds: number[];
 }): Promise<{ added: number }> {
-  const response = await apiServices.post<Envelope<{ added: number }>>(`/groups/${id}/members`, {
+  const response = await apiServices.post<Envelope<{ added: number }>>(`/v1/groups/${id}/members`, {
     userIds,
   });
   return response.data?.data ?? { added: 0 };
@@ -78,7 +80,7 @@ export async function setGroupMembers({
   id: number;
   userIds: number[];
 }): Promise<void> {
-  await apiServices.put(`/groups/${id}/members`, { userIds });
+  await apiServices.put(`/v1/groups/${id}/members`, { userIds });
 }
 
 export async function removeGroupMember({
@@ -88,7 +90,7 @@ export async function removeGroupMember({
   id: number;
   userId: number;
 }): Promise<void> {
-  await apiServices.delete(`/groups/${id}/members/${userId}`);
+  await apiServices.delete(`/v1/groups/${id}/members/${userId}`);
 }
 
 export async function listProjectGroups({
@@ -99,7 +101,7 @@ export async function listProjectGroups({
   signal?: AbortSignal;
 }): Promise<IGroup[]> {
   const response = await apiServices.get<Envelope<IGroup[]>>(
-    `/groups/projects/${projectId}/groups`,
+    `/v1/groups/projects/${projectId}/groups`,
     { signal },
   );
   return response.data?.data ?? [];
@@ -112,5 +114,5 @@ export async function setProjectGroups({
   projectId: number;
   groupIds: number[];
 }): Promise<void> {
-  await apiServices.put(`/groups/projects/${projectId}/groups`, { groupIds });
+  await apiServices.put(`/v1/groups/projects/${projectId}/groups`, { groupIds });
 }

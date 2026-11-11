@@ -65,6 +65,7 @@ const RolesTab: React.FC = () => {
   const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
   const { data: granted = [] } = useRolePermissions(selectedRoleId);
   const replaceMutation = useReplaceRolePermissions();
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   // Local editable copy of the matrix: permission key -> allowed.
   const [matrix, setMatrix] = useState<Record<string, boolean>>({});
@@ -97,13 +98,18 @@ const RolesTab: React.FC = () => {
 
   const handleSave = async () => {
     if (selectedRoleId === null) return;
-    await replaceMutation.mutateAsync({
-      id: selectedRoleId,
-      permissions: catalog.map((entry) => ({
-        permission_key: entry.key,
-        allowed: matrix[entry.key] ?? false,
-      })),
-    });
+    setSaveError(null);
+    try {
+      await replaceMutation.mutateAsync({
+        id: selectedRoleId,
+        permissions: catalog.map((entry) => ({
+          permission_key: entry.key,
+          allowed: matrix[entry.key] ?? false,
+        })),
+      });
+    } catch {
+      setSaveError("Could not save the permissions. Please try again.");
+    }
   };
 
   if (!canManageRoles) {
@@ -124,7 +130,7 @@ const RolesTab: React.FC = () => {
         <Typography sx={{ fontSize: 15, fontWeight: 600, color: "text.black" }}>
           Roles and permissions
         </Typography>
-        <Typography sx={{ fontSize: 13, color: "#666666", mt: 0.5 }}>
+        <Typography sx={{ fontSize: 13, color: "text.secondary", mt: "4px" }}>
           Custom roles start with no permissions. Toggle what a role can do, then save — users with
           that role get exactly these permissions.
         </Typography>
@@ -144,8 +150,9 @@ const RolesTab: React.FC = () => {
           }}
         >
           <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-            No custom roles yet. The API supports custom roles; create one to edit its permission
-            matrix here.
+            This organization has no custom roles yet. When one is added, you can choose what it
+            allows here. The built-in roles (Admin, Reviewer, Editor and Auditor) keep their fixed
+            permissions.
           </Typography>
         </Box>
       ) : (
@@ -154,7 +161,11 @@ const RolesTab: React.FC = () => {
             size="small"
             exclusive
             value={selectedRoleId}
-            onChange={(_e, value) => value !== null && setSelectedRoleId(value)}
+            onChange={(_e, value) => {
+              if (value === null) return;
+              setSaveError(null);
+              setSelectedRoleId(value);
+            }}
             aria-label="Custom role"
           >
             {customRoles.map((role) => (
@@ -242,7 +253,19 @@ const RolesTab: React.FC = () => {
                 </Table>
               </TableContainer>
 
-              <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
+              <Box
+                sx={{
+                  display: "flex",
+                  justifyContent: "flex-end",
+                  alignItems: "center",
+                  gap: "8px",
+                }}
+              >
+                {saveError && (
+                  <Typography role="alert" sx={{ fontSize: 13, color: theme.palette.error.main }}>
+                    {saveError}
+                  </Typography>
+                )}
                 <CustomizableButton
                   variant="contained"
                   text="Save permissions"
