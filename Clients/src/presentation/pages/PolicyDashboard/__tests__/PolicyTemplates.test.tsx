@@ -11,6 +11,11 @@ vi.mock("../../../../application/hooks/useAuth", () => ({
   useAuth: () => ({ userRoleName: "Admin" }),
 }));
 
+const mockHasPermission = vi.fn((_key: string) => true);
+vi.mock("../../../../application/hooks/useMyPermissions", () => ({
+  useHasPermission: (key: string) => mockHasPermission(key),
+}));
+
 const mockCreate = vi.fn();
 const mockUpdate = vi.fn();
 const mockDelete = vi.fn();
@@ -69,6 +74,7 @@ const mockUsePolicyTemplates = usePolicyTemplates as unknown as ReturnType<typeo
 describe("PolicyTemplates (#5261)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockHasPermission.mockImplementation(() => true);
     mockNavigate.mockClear();
     mockUsePolicyTemplates.mockReturnValue({
       data: [systemTemplate, secondSystemTemplate, orgTemplate],
@@ -162,6 +168,21 @@ describe("PolicyTemplates (#5261)", () => {
     });
     expect(screen.getByText("Fairness")).toBeInTheDocument();
     expect(screen.getByText("Data governance")).toBeInTheDocument();
+  });
+
+  it("hides template management without policyTemplate.edit, even for an Admin", async () => {
+    mockHasPermission.mockImplementation((key) => key !== "policyTemplate.edit");
+    renderWithProviders(<PolicyTemplates tags={[]} />, { route: "/policies/templates" });
+    await waitFor(() => {
+      expect(screen.getByText("AI Ethics Policy")).toBeInTheDocument();
+    });
+    expect(mockHasPermission).toHaveBeenCalledWith("policyTemplate.edit");
+    expect(screen.queryByLabelText("Duplicate AI Ethics Policy")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("tab", { name: /our templates/i }));
+    await waitFor(() => {
+      expect(screen.getByText("Internal AI Policy")).toBeInTheDocument();
+    });
+    expect(screen.queryByLabelText("Edit Internal AI Policy")).not.toBeInTheDocument();
   });
 
   it("duplicates a system template into our templates", async () => {

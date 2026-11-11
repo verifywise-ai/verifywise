@@ -35,6 +35,7 @@ import Select from "../../components/Inputs/Select";
 import singleTheme from "../../themes/v1SingleTheme";
 import { useAuth } from "../../../application/hooks/useAuth";
 import allowedRoles from "../../../application/constants/permissions";
+import { useHasPermission } from "../../../application/hooks/useMyPermissions";
 import {
   useCreatePolicyTemplate,
   useDeletePolicyTemplate,
@@ -97,9 +98,9 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
   const navigate = useNavigate();
   const { userRoleName } = useAuth();
   const canCreatePolicy = !!userRoleName && allowedRoles.policies.create.includes(userRoleName);
-  const canManageTemplates =
-    !!userRoleName &&
-    (allowedRoles.policies.create.includes(userRoleName) || userRoleName === "Admin");
+  // The template routes authorize on this key, so a custom role granted it
+  // can manage templates too (Admin and Editor by default).
+  const canManageTemplates = useHasPermission("policyTemplate.edit", { fallbackToAdmin: true });
   const [searchParams, setSearchParams] = useSearchParams();
   const hasProcessedUrlParam = useRef(false);
   const [searchTerm, setSearchTerm] = useState("");
