@@ -412,6 +412,8 @@ export async function updateRoleById(req: Request, res: Response): Promise<any> 
       return res.status(202).json(STATUS_CODE[202](role));
     }
 
+    await transaction.rollback();
+
     await logSuccess({
       eventType: "Update",
       description: `Role not found for update: ID ${roleId}`,
@@ -434,6 +436,10 @@ export async function updateRoleById(req: Request, res: Response): Promise<any> 
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
+
+    if (error instanceof ValidationException) {
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+    }
 
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
