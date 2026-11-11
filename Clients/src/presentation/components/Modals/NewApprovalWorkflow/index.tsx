@@ -26,6 +26,7 @@ import { entities, conditions, autoApproveRiskLevels } from "./arrays";
 import { ICreateApprovalWorkflowProps } from "src/domain/interfaces/i.approvalForkflow";
 import { getAllUsers } from "../../../../application/repository/user.repository";
 import { User } from "../../../../domain/types/User";
+import { text } from "../../../themes/palette";
 
 interface IApprovalWorkflowFlatValues {
   workflow_title: string;
@@ -306,7 +307,7 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
                         const { key, ...otherProps } = props;
                         return (
                           <Box component="li" key={key} {...otherProps}>
-                            <Typography sx={{ fontSize: "13px", color: "#1c2130" }}>
+                            <Typography sx={{ fontSize: "13px", color: text.primary }}>
                               {option.name}
                               {option.surname ? ` ${option.surname}` : ""}
                             </Typography>
@@ -386,7 +387,7 @@ const CreateNewApprovalWorkflow: FC<ICreateApprovalWorkflowProps> = ({
                           const { key, ...otherProps } = props;
                           return (
                             <Box component="li" key={key} {...otherProps}>
-                              <Typography sx={{ fontSize: "13px", color: "#1c2130" }}>
+                              <Typography sx={{ fontSize: "13px", color: text.primary }}>
                                 {option.name}
                                 {option.surname ? ` ${option.surname}` : ""}
                               </Typography>

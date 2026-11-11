@@ -108,37 +108,40 @@ function extractApprovalValidationErrors(error: unknown): ValidationFieldError[]
   )?.response?.data;
   return collect(axiosBody?.data?.errors ?? axiosBody?.errors);
 }
-import { background } from "../../../themes/palette";
+import { accent, background, status, text } from "../../../themes/palette";
 
 const getWorkflowChipProps = (value: string) => {
   const styles: Record<string, { bg: string; color: string }> = {
     [ApprovalStatus.APPROVED.toLowerCase()]: {
-      bg: "#E6F4EA",
-      color: "#2E7D32",
+      bg: status.success.bg,
+      color: accent.primary.text,
     },
     [ApprovalStatus.REJECTED.toLowerCase()]: {
-      bg: "#FDECEA",
-      color: "#C62828",
+      bg: status.error.bg,
+      color: status.error.text,
     },
     [ApprovalStatus.PENDING.toLowerCase()]: {
-      bg: "#FFF9E6",
-      color: "#F57C00",
+      bg: status.warning.bg,
+      color: status.warning.text,
     },
     overdue: {
-      bg: "#FDECEA",
-      color: "#C62828",
+      bg: status.error.bg,
+      color: status.error.text,
     },
     escalated: {
-      bg: "#F3E8FF",
-      color: "#7C3AED",
+      bg: accent.purple.bg,
+      color: accent.purple.text,
     },
     withdrawn: {
-      bg: `${background.surface}`,
-      color: "#616161",
+      bg: status.default.bg,
+      color: status.default.text,
     },
   };
 
-  const style = styles[value.toLowerCase()] || { bg: `${background.surface}`, color: "#616161" };
+  const style = styles[value.toLowerCase()] || {
+    bg: `${background.surface}`,
+    color: status.default.text,
+  };
 
   return {
     label: value.charAt(0).toUpperCase() + value.slice(1),
@@ -840,7 +843,7 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
                         padding: "16px",
                       }}
                     >
-                      <Typography fontWeight={600} fontSize={14} color="#374151" mb={2}>
+                      <Typography fontWeight={600} fontSize={14} color={text.primary} mb={2}>
                         Request Information
                       </Typography>
                       {requestDetails.requester && (
@@ -886,7 +889,7 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
                             {step.status === ApprovalStepStatus.Completed ? (
                               <Check size={12} color={background.main} />
                             ) : (
-                              <Check size={12} color="#CCCCCC" strokeWidth={3} />
+                              <Check size={12} color={text.secondary} strokeWidth={3} />
                             )}
                           </Box>
                           <Stack direction="column" sx={stepContainerStyle} flex={1}>
@@ -905,7 +908,7 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
                                 <Typography
                                   sx={{
                                     ...stepDateStyle,
-                                    ...(step.isOverdue && { color: "#C62828", fontWeight: 600 }),
+                                    ...(step.isOverdue && { color: text.error, fontWeight: 600 }),
                                   }}
                                 >
                                   Due {formatDate(step.dueAt, { includeTime: true })}

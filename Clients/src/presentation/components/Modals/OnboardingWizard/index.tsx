@@ -25,6 +25,9 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Box, Modal, Stack, Typography } from "@mui/material";
 import { LucideIcon, Shield, Check, X } from "lucide-react";
 import { CustomizableButton } from "../../button/customizable-button";
+import { border, icon, text } from "../../../themes/palette";
+import { textStyles, fontSize } from "../../../themes/typography";
+import grey from "@design-tokens/primitives";
 
 const useIsDarkMode = () => {
   const [isDark, setIsDark] = useState(() =>
@@ -199,10 +202,9 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
 
               <Typography
                 sx={{
-                  fontSize: 20,
-                  fontWeight: 600,
+                  ...textStyles.sectionTitle,
+
                   color: isDark ? "text.black" : "background.main",
-                  lineHeight: 1.3,
                 }}
               >
                 {title}
@@ -210,9 +212,8 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               {subtitle && (
                 <Typography
                   sx={{
-                    fontSize: 13,
-                    color: isDark ? "#6b5c47" : "#94A3B8",
-                    lineHeight: 1.5,
+                    ...textStyles.body,
+                    color: isDark ? "#6b5c47" : text.accent,
                     mt: 0.5,
                   }}
                 >
@@ -237,13 +238,13 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               }}
               sx={{
                 "cursor": "pointer",
-                "color": isDark ? "#9b8b74" : "#64748B",
+                "color": isDark ? "#9b8b74" : icon.default,
                 "display": "flex",
                 "alignItems": "center",
                 "padding": "4px",
                 "borderRadius": "4px",
                 "&:hover": {
-                  color: isDark ? "#6b5c47" : "#94A3B8",
+                  color: isDark ? "#6b5c47" : grey[300],
                   bgcolor: isDark ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.05)",
                 },
               }}
@@ -318,12 +319,12 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                         flexShrink: 0,
                       }}
                     >
-                      <Check size={10} color={isDark ? "#e0e0e0" : "#1a1f2e"} strokeWidth={3} />
+                      <Check size={10} color={isDark ? "#e0e0e0" : grey[900]} strokeWidth={3} />
                     </Box>
                   )}
                   <Typography
                     sx={{
-                      fontSize: 13,
+                      fontSize: fontSize.base,
                       fontWeight: isActive ? 600 : isDone ? 500 : 400,
                       color: isDone
                         ? isDark
@@ -335,7 +336,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                             : "background.main"
                           : isDark
                             ? "#6b5c47"
-                            : "#94A3B8",
+                            : text.accent,
                     }}
                   >
                     {s.label}
@@ -347,7 +348,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         </Box>
 
         {/* ── Light body — renders step content (any ReactNode) ── */}
-        <Box sx={{ bgcolor: "background.main", padding: "32px" }}>{steps[step]?.content}</Box>
+        <Box sx={{ bgcolor: "background.main", padding: 16 }}>{steps[step]?.content}</Box>
 
         {/* ── Footer ── */}
         <Stack
@@ -367,11 +368,11 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               "minWidth": "70px",
               "height": 34,
               "fontSize": 13,
-              "border": "1px solid #d0d5dd",
+              "border": `1px solid ${border.dark}`,
               "color": "text.secondary",
               "&:hover": {
                 bgcolor: "background.accent",
-                border: "1px solid #d0d5dd",
+                border: `1px solid ${border.dark}`,
               },
             }}
           />
