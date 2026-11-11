@@ -39,7 +39,22 @@ describe("useUsers", () => {
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.users).toHaveLength(1);
     expect(result.current.users[0].roleId).toBe(1);
+    expect(result.current.users[0].created_at).toEqual(new Date("2026-01-01T00:00:00Z"));
+    expect(result.current.users[0].last_login).toEqual(new Date("2026-06-10T00:00:00Z"));
     expect(result.current.error).toBeNull();
+  });
+
+  it("maps a missing last login to undefined", async () => {
+    mockGetAll.mockResolvedValue({
+      status: 200,
+      data: [buildUser({ last_login: null as unknown as Date })],
+    } as any);
+
+    const { result } = renderHook(() => useUsers(), { wrapper: createWrapper() });
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.users[0].last_login).toBeUndefined();
+    expect(result.current.users[0].created_at).toEqual(new Date("2026-01-01T00:00:00Z"));
   });
 
   it("handles error", async () => {
