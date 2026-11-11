@@ -22,6 +22,7 @@ import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.cont
 import useMultipleOnScreen from "../../../application/hooks/useMultipleOnScreen";
 import useFrameworks from "../../../application/hooks/useFrameworks";
 import useUsers from "../../../application/hooks/useUsers";
+import { useHasPermission } from "../../../application/hooks/useMyPermissions";
 import TabContext from "@mui/lab/TabContext";
 import TabList from "@mui/lab/TabList";
 import TabPanel from "@mui/lab/TabPanel";
@@ -132,6 +133,11 @@ const Framework = () => {
     countToTrigger: 1,
   });
   const { users } = useUsers();
+  // The framework-import routes authorize on this key, so a custom role
+  // granted it gets the import controls too (Admin and Editor by default).
+  const canImportFrameworks = useHasPermission("ext.frameworkImport.edit", {
+    fallbackToAdmin: true,
+  });
 
   // Framework import extension (#5254).
   const { isEnabled } = useExtensions();
@@ -890,7 +896,7 @@ const Framework = () => {
                         closeFrameworkMenu();
                         setIsImportModalOpen(true);
                       }}
-                      disabled={!allowedRoles.frameworks.manage.includes(userRoleName)}
+                      disabled={!canImportFrameworks}
                     >
                       <ListItemIcon sx={{ minWidth: 32 }}>
                         <FileUpIcon size={16} color={icon.default} />
@@ -969,7 +975,7 @@ const Framework = () => {
                     text="Import from Excel"
                     startIcon={<FileUpIcon size={16} />}
                     onClick={() => setIsImportModalOpen(true)}
-                    isDisabled={!allowedRoles.frameworks.manage.includes(userRoleName)}
+                    isDisabled={!canImportFrameworks}
                   />
                 </Stack>
                 <Typography sx={{ fontSize: 13, color: "text.secondary", marginBottom: "8px" }}>
@@ -1002,7 +1008,7 @@ const Framework = () => {
                             {fw.topics.reduce((acc, t) => acc + t.subtopics.length, 0)} subtopic(s)
                           </Typography>
                         </Box>
-                        {allowedRoles.frameworks.manage.includes(userRoleName) && (
+                        {canImportFrameworks && (
                           <CustomizableButton
                             variant="outlined"
                             text="Delete"

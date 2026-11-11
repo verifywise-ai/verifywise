@@ -177,6 +177,11 @@ vi.mock("react-router", async () => {
   };
 });
 
+const mockHasPermission = vi.fn((_key: string) => true);
+vi.mock("../../../../application/hooks/useMyPermissions", () => ({
+  useHasPermission: (key: string) => mockHasPermission(key),
+}));
+
 // Mock constants
 vi.mock("../../../../application/constants/permissions", () => ({
   default: {
@@ -631,6 +636,30 @@ describe("Framework", () => {
     afterEach(() => {
       mockIsEnabled.mockImplementation(() => false);
       mockImportedFrameworks.mockReturnValue([]);
+      mockHasPermission.mockImplementation(() => true);
+    });
+
+    it("gates import and delete on ext.frameworkImport.edit, not the role name", () => {
+      withImported();
+      // An Admin by role name, but without the import permission.
+      mockHasPermission.mockImplementation((key) => key !== "ext.frameworkImport.edit");
+      renderWithProviders(<Framework />, { route: "/framework" });
+      expect(screen.getByRole("button", { name: "Import from Excel" })).toBeDisabled();
+      expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
+    });
+
+    it("lets a custom role holding ext.frameworkImport.edit import and delete", () => {
+      withImported();
+      mockUseContext.mockReturnValue({
+        changeComponentVisibility: vi.fn(),
+        projects: [buildOrgProject([])],
+        userRoleName: "Compliance lead",
+        setProjects: vi.fn(),
+      });
+      renderWithProviders(<Framework />, { route: "/framework" });
+      expect(mockHasPermission).toHaveBeenCalledWith("ext.frameworkImport.edit");
+      expect(screen.getByRole("button", { name: "Import from Excel" })).not.toBeDisabled();
+      expect(screen.getByRole("button", { name: "Delete" })).toBeInTheDocument();
     });
 
     it("says imported frameworks are added from the use case's Frameworks tab", () => {
