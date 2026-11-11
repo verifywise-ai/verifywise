@@ -17,6 +17,7 @@ import { User } from "../../../../../domain/types/User";
 import { getEntityById } from "../../../../../application/repository/entity.repository";
 import useProjectRisks from "../../../../../application/hooks/useProjectRisks";
 import useUsers from "../../../../../application/hooks/useUsers";
+import { useImportedFrameworkDashboards } from "../../../../../application/hooks/useImportedFrameworkAssessment";
 import {
   User as UserIcon,
   Activity as ActivityIcon,
@@ -103,6 +104,14 @@ const VWProjectOverview = ({
       setProjectFrameworkId2(null);
     }
   }, [project]);
+
+  const importedLinks = useMemo(
+    () => project?.imported_frameworks ?? [],
+    [project?.imported_frameworks],
+  );
+  const importedDashboards = useImportedFrameworkDashboards(
+    importedLinks.map((link) => link.project_imported_framework_id),
+  );
 
   const { projectRisksSummary } = useProjectRisks({
     projectId: projectId ?? 0,
@@ -244,6 +253,20 @@ const VWProjectOverview = ({
   if (!project) {
     return <div>No project selected</div>;
   }
+
+  // Imported frameworks (#5254): one completion card per attached framework.
+  const importedFrameworkProgress = importedLinks.flatMap((link, index) => {
+    const data = importedDashboards[index]?.data;
+    if (!data) return [];
+    return [
+      {
+        linkId: link.project_imported_framework_id,
+        name: link.name,
+        done: data.progress?.done ?? 0,
+        total: data.progress?.total ?? 0,
+      },
+    ];
+  });
 
   const user: User = users.find((u: User) => u.id === project.last_updated_by) ?? ({} as User);
 
@@ -400,6 +423,17 @@ const VWProjectOverview = ({
                     completed={[fw.done]}
                     total={[fw.total]}
                     title={[fw.entity_label]}
+                    progressbarColor={brand.primary}
+                  />
+                </Stack>
+              ))}
+              {importedFrameworkProgress.map((fw) => (
+                <Stack key={`imported-${fw.linkId}`} sx={columnStyle}>
+                  <Typography sx={projectRiskSection}>{`${fw.name} completion status`}</Typography>
+                  <GroupStatsCard
+                    completed={[fw.done]}
+                    total={[fw.total]}
+                    title={["Topics and subtopics"]}
                     progressbarColor={brand.primary}
                   />
                 </Stack>

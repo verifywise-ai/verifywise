@@ -38,6 +38,9 @@ const TRACKER_TABS = [
 
 type TrackerTab = (typeof TRACKER_TABS)[number]["value"];
 
+/** Toggle values for imported frameworks; bundled ones keep their index ("0", "1", ...). */
+const IMPORTED_TOGGLE_PREFIX = "imp-";
+
 /**
  * Frameworks the readiness engine can score, keyed by framework name.
  * The backend silently falls back to EU AI Act controls for unknown types, so the
@@ -69,6 +72,9 @@ const ProjectFrameworks = ({
     initialFrameworkId,
   );
   const [selectedFramework, setSelectedFramework] = useState<number>(0);
+  // projects_imported_frameworks id of the imported framework on screen, or
+  // null while a bundled framework is selected.
+  const [selectedImportedLinkId, setSelectedImportedLinkId] = useState<number | null>(null);
   const [tracker, setTracker] = useState<TrackerTab>("compliance");
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [hasInitialized, setHasInitialized] = useState(false);
@@ -95,6 +101,15 @@ const ProjectFrameworks = ({
   }, [allVisible, tracker, changeComponentVisibility]);
 
   const associatedFrameworkIds = project.framework?.map((f) => f.framework_id) || [];
+
+  // Organization-imported frameworks attached to this use case (#5254).
+  const importedLinks = useMemo(
+    () => project.imported_frameworks ?? [],
+    [project.imported_frameworks],
+  );
+  const activeImportedLink = importedLinks.find(
+    (link) => link.project_imported_framework_id === selectedImportedLinkId,
+  );
 
   const projectFrameworks = useMemo(
     () =>
@@ -149,10 +164,48 @@ const ProjectFrameworks = ({
     searchParams.delete("topicId");
     searchParams.delete("questionId");
     setSearchParams(searchParams);
+    setSelectedImportedLinkId(null);
     setSelectedFramework(index);
     setSelectedFrameworkId(Number(projectFrameworks[index]?.id));
     setTracker("compliance");
   };
+
+  const handleToggleChange = (value: string) => {
+    if (value.startsWith(IMPORTED_TOGGLE_PREFIX)) {
+      searchParams.delete("framework");
+      searchParams.delete("topicId");
+      searchParams.delete("questionId");
+      setSearchParams(searchParams);
+      setSelectedImportedLinkId(Number(value.slice(IMPORTED_TOGGLE_PREFIX.length)));
+      return;
+    }
+    handleFrameworkSelect(parseInt(value));
+  };
+
+  // Keep the imported selection valid: show the first imported framework when
+  // the use case has no bundled one, and drop a selection whose link is gone.
+  useEffect(() => {
+    if (loading) return;
+    if (selectedImportedLinkId !== null && !activeImportedLink) {
+      setSelectedImportedLinkId(
+        projectFrameworks.length === 0 && importedLinks.length > 0
+          ? importedLinks[0].project_imported_framework_id
+          : null,
+      );
+    } else if (
+      selectedImportedLinkId === null &&
+      projectFrameworks.length === 0 &&
+      importedLinks.length > 0
+    ) {
+      setSelectedImportedLinkId(importedLinks[0].project_imported_framework_id);
+    }
+  }, [
+    loading,
+    selectedImportedLinkId,
+    activeImportedLink,
+    projectFrameworks.length,
+    importedLinks,
+  ]);
 
   const isEUAIAct = Number(selectedFrameworkId) === FRAMEWORK_IDS.EU_AI_ACT;
 
@@ -423,7 +476,7 @@ const ProjectFrameworks = ({
       <Box sx={headerContainerStyle}>
         {loading ? (
           <CustomizableSkeleton variant="rectangular" width={200} height={40} />
-        ) : projectFrameworks.length > 0 ? (
+        ) : projectFrameworks.length > 0 || importedLinks.length > 0 ? (
           <Box
             sx={{
               flex: 1,
@@ -434,12 +487,22 @@ const ProjectFrameworks = ({
             }}
           >
             <ButtonToggle
-              options={projectFrameworks.map((fw: Framework, index: number) => ({
-                value: index.toString(),
-                label: fw.name,
-              }))}
-              value={selectedFramework.toString()}
-              onChange={(value) => handleFrameworkSelect(parseInt(value))}
+              options={[
+                ...projectFrameworks.map((fw: Framework, index: number) => ({
+                  value: index.toString(),
+                  label: fw.name,
+                })),
+                ...importedLinks.map((link) => ({
+                  value: `${IMPORTED_TOGGLE_PREFIX}${link.project_imported_framework_id}`,
+                  label: link.name,
+                })),
+              ]}
+              value={
+                activeImportedLink
+                  ? `${IMPORTED_TOGGLE_PREFIX}${activeImportedLink.project_imported_framework_id}`
+                  : selectedFramework.toString()
+              }
+              onChange={handleToggleChange}
               height={34}
             />
           </Box>
@@ -455,7 +518,11 @@ const ProjectFrameworks = ({
         onFrameworksChanged={(action, frameworkId?: number) => {
           if (triggerRefresh) {
             if (action === "add") triggerRefresh(true, "Framework added successfully");
-            else if (action === "remove") {
+            else if (action === "removeImported") {
+              // The selection effect falls back once the refreshed project
+              // no longer lists the removed link.
+              triggerRefresh(true, "Framework removed successfully");
+            } else if (action === "remove") {
               triggerRefresh(true, "Framework removed successfully");
               // Find a framework whose id is not the removed one, and set its id as selected
               const nextFramework = project.framework?.find(
@@ -473,10 +540,20 @@ const ProjectFrameworks = ({
         }}
       />
 
-      {projectFrameworks.length > 0 && renderBuiltInContent()}
+      {activeImportedLink ? (
+        // Imported frameworks have no readiness or assessment tracker tabs.
+        <GenericFramework
+          key={activeImportedLink.project_imported_framework_id}
+          source="imported"
+          projectId={Number(project.id)}
+          linkId={activeImportedLink.project_imported_framework_id}
+        />
+      ) : (
+        projectFrameworks.length > 0 && renderBuiltInContent()
+      )}
 
       {/* Empty state when no frameworks installed */}
-      {projectFrameworks.length === 0 && !loading && (
+      {projectFrameworks.length === 0 && importedLinks.length === 0 && !loading && (
         <Box
           sx={{
             display: "flex",

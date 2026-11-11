@@ -175,4 +175,38 @@ describe("GenericFrameworkDrawer - framework-specific behavior", () => {
     expect(screen.getByTestId("select-status")).toBeInTheDocument();
     expect(screen.getByText("Custom status")).toBeInTheDocument();
   });
+
+  it("uses implBaseUrl instead of /frameworks/:id/impl for fetch and save", async () => {
+    const implSpy = vi.fn();
+    const patchSpy = vi.fn();
+    const base = "/api/v1/imported-framework-assessments/links/12/impl/l2/10";
+    server.use(
+      http.get(base, () => {
+        implSpy();
+        return HttpResponse.json({ data: { status: "Draft", risks: [] } });
+      }),
+      http.get(`${base}/risks`, () => HttpResponse.json({ data: [] })),
+      http.patch(base, () => {
+        patchSpy();
+        return HttpResponse.json({ data: {} });
+      }),
+    );
+    const onSaveSuccess = vi.fn();
+    renderWithProviders(
+      <GenericFrameworkDrawer
+        {...baseProps}
+        open={true}
+        implBaseUrl="/v1/imported-framework-assessments/links/12/impl"
+        onSaveSuccess={onSaveSuccess}
+      />,
+    );
+
+    await waitFor(() => expect(screen.getByText("Save")).not.toBeDisabled());
+    fireEvent.click(screen.getByText("Save"));
+
+    await waitFor(() => expect(onSaveSuccess).toHaveBeenCalledWith(true, "Saved", 10));
+    // Loaded on open and again after the save, both from the imported path.
+    expect(implSpy).toHaveBeenCalledTimes(2);
+    expect(patchSpy).toHaveBeenCalledTimes(1);
+  });
 });

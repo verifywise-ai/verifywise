@@ -24,6 +24,8 @@ import { AlertProps } from "../../../types/alert.types";
 import CustomizableToast from "../../../components/Toast";
 import ConfirmationModal from "../../../components/Dialogs/ConfirmationModal";
 import { useModalKeyHandling } from "../../../../application/hooks/useModalKeyHandling";
+import { useExtensions } from "../../../../application/contexts/Extensions.context";
+import ImportedFrameworksSection from "./ImportedFrameworksSection";
 // Governance OS prompt imports removed while the module is not broadly released.
 // The module remains reachable by direct URL for authorized users.
 
@@ -32,7 +34,8 @@ interface AddFrameworkModalProps {
   onClose: () => void;
   frameworks: Framework[];
   project: Project;
-  onFrameworksChanged?: (action: "add" | "remove", frameworkId?: number) => void;
+  /** "removeImported" carries no framework id: imported frameworks are not in the frameworks table. */
+  onFrameworksChanged?: (action: "add" | "remove" | "removeImported", frameworkId?: number) => void;
 }
 
 const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
@@ -46,6 +49,9 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
   const [alert, setAlert] = useState<AlertProps | null>(null);
   const [frameworkToRemove, setFrameworkToRemove] = useState<Framework | null>(null);
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
+  const { isEnabled } = useExtensions();
+  // Imported frameworks attach to use cases only, and only while the extension is on.
+  const showImported = open && isEnabled("framework-import") && !project.is_organizational;
 
   const showToast = (variant: AlertProps["variant"], body: string) => {
     handleAlert({ variant, body, setAlert, alertTimeout: 3000 });
@@ -243,6 +249,15 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
             );
           })}
         </Box>
+        {showImported && (
+          <ImportedFrameworksSection
+            project={project}
+            disabled={isLoading}
+            onBusyChange={setIsLoading}
+            onResult={showToast}
+            onChanged={(action) => onFrameworksChanged?.(action)}
+          />
+        )}
         {isRemoveModalOpen && frameworkToRemove && (
           <ConfirmationModal
             title="Confirm framework removal"

@@ -28,6 +28,15 @@ export interface FrameworkImportResult {
   failed: number;
   errors: FrameworkImportError[];
   importedAt: string;
+  /**
+   * Topics plus subtopics added, updated, retired (gone from the file but kept
+   * because they hold assessment data) and removed by this upload (#5254).
+   * A first import only has `added`.
+   */
+  added?: number;
+  updated?: number;
+  retired?: number;
+  removed?: number;
 }
 
 export interface ImportedSubtopic {

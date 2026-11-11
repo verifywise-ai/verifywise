@@ -44,14 +44,17 @@ vi.mock("react", async () => {
 });
 
 // Mock contexts
+const mockIsEnabled = vi.fn((_key: string) => false);
 vi.mock("../../../../application/contexts/Extensions.context", () => ({
-  useExtensions: () => ({ isEnabled: () => false }),
+  useExtensions: () => ({ isEnabled: mockIsEnabled }),
   ExtensionsProvider: ({ children }: any) => children,
 }));
 
+const mockImportedFrameworks = vi.fn(() => [] as unknown[]);
+const mockDeleteImported = vi.fn();
 vi.mock("../../../../application/hooks/useFrameworkImport", () => ({
-  useImportedFrameworks: () => ({ data: [] }),
-  useDeleteImportedFramework: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useImportedFrameworks: () => ({ data: mockImportedFrameworks() }),
+  useDeleteImportedFramework: () => ({ mutateAsync: mockDeleteImported, isPending: false }),
 }));
 
 // Mock repositories
@@ -98,9 +101,10 @@ vi.mock("../../ProjectView/AddNewFramework", () => ({
     ) : null,
 }));
 vi.mock("../../../components/Dialogs/ConfirmationModal", () => ({
-  default: ({ title, onCancel, onProceed, proceedText }: any) => (
+  default: ({ title, body, onCancel, onProceed, proceedText }: any) => (
     <div data-testid="confirmation-modal">
       <span>{title}</span>
+      {typeof body === "string" ? null : body}
       <button onClick={onCancel}>cancel-confirmation</button>
       <button onClick={onProceed}>{proceedText}</button>
     </div>
@@ -600,5 +604,62 @@ describe("Framework", () => {
     mockUseParams.mockReturnValue({ tab: "settings" });
     renderWithProviders(<Framework />, { route: "/framework/settings" });
     expect(screen.getByTestId("framework-settings")).toBeInTheDocument();
+  });
+
+  describe("imported frameworks (#5254)", () => {
+    const withImported = () => {
+      mockIsEnabled.mockImplementation((key: string) => key === "framework-import");
+      mockImportedFrameworks.mockReturnValue([
+        {
+          id: 9,
+          name: "Internal AI policy",
+          description: null,
+          is_active: true,
+          created_at: "",
+          updated_at: "",
+          topics: [],
+        },
+      ]);
+      mockUseContext.mockReturnValue({
+        changeComponentVisibility: vi.fn(),
+        projects: [buildOrgProject([])],
+        userRoleName: "Admin",
+        setProjects: vi.fn(),
+      });
+    };
+
+    afterEach(() => {
+      mockIsEnabled.mockImplementation(() => false);
+      mockImportedFrameworks.mockReturnValue([]);
+    });
+
+    it("says imported frameworks are added from the use case's Frameworks tab", () => {
+      withImported();
+      renderWithProviders(<Framework />, { route: "/framework" });
+      expect(screen.getByText(/Add one to a use case from that use case/)).toBeInTheDocument();
+      expect(screen.queryByText(/cannot be added to use cases/)).not.toBeInTheDocument();
+    });
+
+    it("keeps the delete dialog open with the server's reason when the framework is in use", async () => {
+      withImported();
+      mockDeleteImported.mockRejectedValue(
+        new Error("Used by these use cases: Credit scoring. Remove it from them first."),
+      );
+      renderWithProviders(<Framework />, { route: "/framework" });
+
+      fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+      expect(
+        screen.getByText(/cannot be deleted: remove it from those use cases first/),
+      ).toBeVisible();
+      const deleteButtons = screen.getAllByRole("button", { name: "Delete" });
+      fireEvent.click(deleteButtons[deleteButtons.length - 1]);
+
+      expect(
+        await screen.findByText(
+          "Used by these use cases: Credit scoring. Remove it from them first.",
+        ),
+      ).toBeInTheDocument();
+      expect(mockDeleteImported).toHaveBeenCalledWith(9);
+    });
   });
 });

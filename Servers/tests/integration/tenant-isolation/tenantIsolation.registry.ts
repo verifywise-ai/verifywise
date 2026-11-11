@@ -345,6 +345,21 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     baseRoute: "/api/v1/framework-import/imported",
     testFile: "framework-import.isolation.test.ts",
   },
+  {
+    // Imported frameworks attached to use cases and assessed (#5254). Impl
+    // rows and their risk links are only reachable through their link, so a
+    // hand-written file covers all five tables.
+    name: "imported_framework_assessments",
+    tables: [
+      "projects_imported_frameworks",
+      "imported_framework_topic_impl",
+      "imported_framework_subtopic_impl",
+      "imported_framework_topic_impl__risks",
+      "imported_framework_subtopic_impl__risks",
+    ],
+    baseRoute: "/api/v1/imported-framework-assessments",
+    testFile: "imported-framework-assessment.isolation.test.ts",
+  },
 ];
 
 /** Flat set of all tenant-scoped tables declared in the registry. */

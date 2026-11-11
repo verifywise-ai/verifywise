@@ -309,24 +309,160 @@ describe("importFramework", () => {
     expect(subInsert.replacements).toMatchObject({ p0: 1001, o0: 0, p1: 1001, o1: 1 });
   });
 
-  it("re-importing the same name (any case) replaces this org's structure only", async () => {
+  describe("re-importing an existing framework (any case)", () => {
+    /**
+     * Existing structure: topics 1 (id 900), 2 (id 901, assessed), 3 (id 902,
+     * not assessed); subtopics 1.1 (id 950 under 1), 2.1 (id 951 under 2,
+     * not assessed), 3.1 (id 952 under 3, assessed).
+     * The new sheet keeps topic 1 (renamed) with 1.1, adds topic 4 and 1.2.
+     */
+    function existingStructure(withData: { topics: number[]; subtopics: number[] }) {
+      mockQuery.mockImplementation(async (sql: string, options: any) => {
+        if (sql.includes("FROM imported_frameworks")) return [{ id: 55 }];
+        if (sql.startsWith("SELECT id, topic_number FROM imported_framework_topics")) {
+          return [
+            { id: 900, topic_number: "1" },
+            { id: 901, topic_number: "2" },
+            { id: 902, topic_number: "3" },
+          ];
+        }
+        if (sql.includes("SELECT s.id, s.topic_id, s.subtopic_number")) {
+          return [
+            { id: 950, topic_id: 900, subtopic_number: "1.1" },
+            { id: 951, topic_id: 901, subtopic_number: "2.1" },
+            { id: 952, topic_id: 902, subtopic_number: "3.1" },
+          ];
+        }
+        if (sql.startsWith("UPDATE imported_framework_topics AS s")) return [{ id: 900 }];
+        if (sql.startsWith("UPDATE imported_framework_subtopics AS s")) return [];
+        if (sql.includes("INSERT INTO imported_framework_topics")) {
+          return [{ id: 903, topic_number: "4" }];
+        }
+        if (sql.includes("SELECT DISTINCT i.topic_id")) {
+          return withData.topics
+            .filter((id) => options.replacements.structIds.includes(id))
+            .map((id) => ({ id }));
+        }
+        if (sql.includes("SELECT DISTINCT i.subtopic_id")) {
+          return withData.subtopics
+            .filter((id) => options.replacements.structIds.includes(id))
+            .map((id) => ({ id }));
+        }
+        if (sql.includes("SET is_retired = TRUE")) {
+          return options.replacements.ids.map((id: number) => ({ id }));
+        }
+        return [];
+      });
+    }
+
+    const sheet = () => [
+      validRow({ topic_name: "Governance v2", subtopic_number: "1.1", subtopic_name: "Acc" }),
+      validRow({ topic_name: "Governance v2", subtopic_number: "1.2", subtopic_name: "New" }),
+      validRow({ topic_number: "4", topic_name: "Monitoring" }),
+    ];
+
+    it("updates in place, retires assessed items, deletes the rest and seeds use cases", async () => {
+      spyOnTx();
+      existingStructure({ topics: [901], subtopics: [952] });
+
+      const result = await importFramework(sheet(), ORG_ID, USER_ID);
+
+      expect(result).toMatchObject({
+        success: true,
+        imported_framework_id: 55,
+        added: 2, // topic 4, subtopic 1.2
+        updated: 1, // topic 1 renamed
+        retired: 3, // subtopic 3.1 (data), topic 2 (data), topic 3 (keeps 3.1)
+        removed: 1, // subtopic 2.1
+      });
+      expect(committed()).toBe(true);
+      expectOrgScopedAndOffTheCatalog();
+
+      const all = statements();
+      expect(all[0].sql).toContain("lower(name) = lower(:frameworkName)");
+      expect(all[0].sql).toContain("FOR UPDATE");
+      expect(all.some((s) => s.sql.includes("INSERT INTO imported_frameworks"))).toBe(false);
+      // Nothing is wiped wholesale.
+      expect(
+        all.some(
+          (s) =>
+            s.sql.includes("DELETE FROM imported_framework_topics") && !s.sql.includes("IN (:ids)"),
+        ),
+      ).toBe(false);
+
+      const topicUpdate = all.find((s) =>
+        s.sql.startsWith("UPDATE imported_framework_topics AS s"),
+      )!;
+      expect(topicUpdate.sql).toContain("is_retired = FALSE");
+      expect(topicUpdate.replacements).toMatchObject({ i0: 900, n0: "Governance v2", o0: 0 });
+      const subInsert = all.find((s) =>
+        s.sql.includes("INSERT INTO imported_framework_subtopics"),
+      )!;
+      expect(subInsert.replacements).toMatchObject({ p0: 900, n0: "1.2", o0: 1 });
+
+      const retire = all.filter((s) => s.sql.includes("SET is_retired = TRUE"));
+      expect(retire.map((s) => s.replacements.ids)).toEqual([[952], [901, 902]]);
+      const subDelete = all.find((s) =>
+        s.sql.startsWith("DELETE FROM imported_framework_subtopics"),
+      )!;
+      expect(subDelete.replacements.ids).toEqual([951]);
+      // Empty assessment rows go before the subtopic they point at (RESTRICT FK).
+      const implDelete = all.findIndex((s) =>
+        s.sql.includes("DELETE FROM imported_framework_subtopic_impl"),
+      );
+      expect(implDelete).toBeGreaterThan(-1);
+      expect(implDelete).toBeLessThan(all.indexOf(subDelete));
+      expect(all.some((s) => s.sql.startsWith("DELETE FROM imported_framework_topics"))).toBe(
+        false,
+      );
+
+      // Every attached use case gets rows for the new items, in the same transaction.
+      const seeds = all.filter((s) =>
+        /INSERT INTO imported_framework_(sub)?topic_impl\b/.test(s.sql),
+      );
+      expect(seeds).toHaveLength(2);
+      for (const seed of seeds) {
+        expect(seed.sql).toContain("l.imported_framework_id = :scopeId");
+        expect(seed.replacements.scopeId).toBe(55);
+      }
+      for (const [, options] of mockQuery.mock.calls) expect(options.transaction).toBe(FAKE_TX);
+    });
+
+    it("deletes missing items nobody assessed", async () => {
+      spyOnTx();
+      existingStructure({ topics: [], subtopics: [] });
+
+      const result = await importFramework(sheet(), ORG_ID, USER_ID);
+
+      expect(result).toMatchObject({ added: 2, updated: 1, retired: 0, removed: 4 });
+      const all = statements();
+      expect(
+        all.find((s) => s.sql.startsWith("DELETE FROM imported_framework_subtopics"))!.replacements
+          .ids,
+      ).toEqual([951, 952]);
+      expect(
+        all.find((s) => s.sql.startsWith("DELETE FROM imported_framework_topics"))!.replacements
+          .ids,
+      ).toEqual([901, 902]);
+      expect(all.some((s) => s.sql.includes("SET is_retired = TRUE"))).toBe(false);
+    });
+  });
+
+  it("reports everything as added on a first import", async () => {
     spyOnTx();
     mockQuery
-      .mockResolvedValueOnce([{ id: 55 }]) // existing imported framework
-      .mockResolvedValueOnce([]) // UPDATE description
-      .mockResolvedValueOnce([]) // DELETE subtopics
-      .mockResolvedValueOnce([]) // DELETE topics
-      .mockResolvedValueOnce([{ id: 900, topic_number: "1" }]); // topics INSERT
-
-    const result = await importFramework([validRow()], ORG_ID, USER_ID);
-
-    expect(result.success).toBe(true);
-    expect(result.imported_framework_id).toBe(55);
-    expectOrgScopedAndOffTheCatalog();
-    const all = statements();
-    expect(all[0].sql).toContain("lower(name) = lower(:frameworkName)");
-    expect(all.some((s) => s.sql.includes("INSERT INTO imported_frameworks"))).toBe(false);
-    expect(committed()).toBe(true);
+      .mockResolvedValueOnce([]) // no existing imported framework
+      .mockResolvedValueOnce([{ id: 101 }]) // imported_frameworks INSERT
+      .mockResolvedValueOnce([{ id: 1001, topic_number: "1" }]) // topics INSERT
+      .mockResolvedValueOnce([]); // subtopics INSERT
+    const result = await importFramework(
+      [validRow({ subtopic_number: "1.1", subtopic_name: "Acc" })],
+      ORG_ID,
+      USER_ID,
+    );
+    expect(result).toMatchObject({ added: 2, updated: 0, retired: 0, removed: 0 });
+    // No use case can use a brand new framework, so nothing is seeded.
+    expect(statements().some((s) => s.sql.includes("_impl"))).toBe(false);
   });
 
   it("rolls back and maps a racing duplicate name to ConflictException", async () => {
@@ -414,6 +550,7 @@ describe("deleteImportedFrameworkQuery", () => {
     spyOnTx();
     mockQuery
       .mockResolvedValueOnce([{ id: 9 }]) // guard select
+      .mockResolvedValueOnce([]) // no use case uses it
       .mockResolvedValueOnce([]) // DELETE subtopics
       .mockResolvedValueOnce([]) // DELETE topics
       .mockResolvedValueOnce([]); // DELETE framework
@@ -422,8 +559,24 @@ describe("deleteImportedFrameworkQuery", () => {
     expect(committed()).toBe(true);
     expectOrgScopedAndOffTheCatalog();
     const sqls = statements().map((s) => s.sql);
+    expect(sqls[0]).toContain("FOR UPDATE");
     expect(sqls.some((s) => s.includes("DELETE FROM imported_framework_subtopics"))).toBe(true);
     expect(sqls.some((s) => s.includes("DELETE FROM imported_frameworks"))).toBe(true);
+  });
+
+  it("409s with the use case names while a use case uses it, deleting nothing", async () => {
+    spyOnTx();
+    mockQuery
+      .mockResolvedValueOnce([{ id: 9 }]) // guard select
+      .mockResolvedValueOnce([{ project_title: "Chatbot" }, { project_title: "Scoring" }]);
+
+    const error = await deleteImportedFrameworkQuery(9, ORG_ID).catch((e) => e);
+    expect(error).toBeInstanceOf(ConflictException);
+    expect(error.metadata.use_cases).toEqual(["Chatbot", "Scoring"]);
+    expect(error.i18nVars).toEqual({ names: "Chatbot, Scoring" });
+    expect(rolledBack()).toBe(true);
+    expect(statements().some((s) => s.sql.includes("DELETE"))).toBe(false);
+    expectOrgScopedAndOffTheCatalog();
   });
 
   it("404s when the framework is not an org-owned import", async () => {

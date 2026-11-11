@@ -231,8 +231,11 @@ export async function deleteImportedFramework(req: Request, res: Response): Prom
       organizationId,
       error: error as Error,
     });
-    return res
-      .status(statusOf(error))
-      .json((STATUS_CODE as any)[statusOf(error)](translateError(req, error)));
+    const body = (STATUS_CODE as any)[statusOf(error)](translateError(req, error));
+    // In use by use cases: name them so the client can list them.
+    const useCases =
+      error instanceof CustomException ? (error.metadata?.use_cases as unknown) : undefined;
+    if (Array.isArray(useCases)) body.use_cases = useCases;
+    return res.status(statusOf(error)).json(body);
   }
 }

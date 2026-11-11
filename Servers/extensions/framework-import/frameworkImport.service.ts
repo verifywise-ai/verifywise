@@ -6,6 +6,12 @@ import {
   NotFoundException,
   ValidationException,
 } from "../../domain.layer/exceptions/custom.exception";
+import {
+  deleteImplRowsForStructsQuery,
+  listUseCasesUsingFrameworkQuery,
+  seedImplRowsQuery,
+  structIdsWithDataQuery,
+} from "./importedAssessment.service";
 
 /**
  * Server-side framework-import extension logic (#5254). Two entry points:
@@ -14,13 +20,16 @@ import {
  *   - importFramework() → validates every row, then upserts an
  *     organization-scoped `imported_frameworks` row with its topics and
  *     subtopics in a single transaction. Re-uploading the same framework
- *     name replaces its structure, so the contract is idempotent. A batch
- *     with any validation error inserts nothing.
+ *     name updates its structure in place (a diff, see applyStructureDiff),
+ *     so assessments on use cases survive. A batch with any validation
+ *     error writes nothing.
  *
  * Imported frameworks are deliberately NOT rows in the global `frameworks`
  * catalog: that table is shared by every organization and feeds the use case
- * framework pickers, and an imported framework has no struct tables to
- * assess against. See migration 20261111092002-imported-framework-storage.js.
+ * framework pickers. Use cases attach them through their own tables
+ * (importedAssessment.service.ts). See migrations
+ * 20261111092002-imported-framework-storage.js and
+ * 20261111094001-imported-framework-assessment.js.
  */
 
 /** Upper bound on rows per upload; keeps one transaction and one request bounded. */
@@ -120,6 +129,14 @@ export interface FrameworkImportResult {
   failed: number;
   errors: FrameworkImportError[];
   importedAt: string;
+  /** Topics + subtopics created by this import. */
+  added: number;
+  /** Existing topics + subtopics whose name, description or order changed, or that came back. */
+  updated: number;
+  /** Topics + subtopics missing from the file but kept (retired) because a use case assessed them. */
+  retired: number;
+  /** Topics + subtopics missing from the file and deleted (no assessment data). */
+  removed: number;
 }
 
 export interface ImportedSubtopic {
@@ -196,6 +213,10 @@ function allFailed(errors: FrameworkImportError[], total: number): FrameworkImpo
     failed: total,
     errors,
     importedAt: new Date().toISOString(),
+    added: 0,
+    updated: 0,
+    retired: 0,
+    removed: 0,
   };
 }
 
@@ -356,6 +377,8 @@ interface ParsedTopic {
   topicNumber: string;
   name: string;
   description: string | null;
+  /** 0-based position among the topics of the sheet. */
+  order: number;
 }
 
 interface ParsedSubtopic {
@@ -363,6 +386,15 @@ interface ParsedSubtopic {
   subtopicNumber: string;
   name: string;
   description: string | null;
+  /** 0-based position among the subtopics of its topic. */
+  order: number;
+}
+
+interface StructureCounts {
+  added: number;
+  updated: number;
+  retired: number;
+  removed: number;
 }
 
 function isUniqueViolation(err: unknown): boolean {
@@ -394,6 +426,255 @@ async function deleteImportedStructure(
       WHERE organization_id = :organizationId AND framework_id = :frameworkId;`,
     { replacements: { frameworkId, organizationId }, transaction },
   );
+}
+
+/** Insert topics (one multi-row INSERT per chunk); returns topic_number → id. */
+async function insertTopics(
+  frameworkId: number,
+  organizationId: number,
+  topics: ParsedTopic[],
+  transaction: Transaction,
+): Promise<Map<string, number>> {
+  const ids = new Map<string, number>();
+  for (const part of chunk(topics, INSERT_CHUNK_SIZE)) {
+    const replacements: Record<string, unknown> = { organizationId, frameworkId };
+    const values = part.map((topic, i) => {
+      replacements[`n${i}`] = topic.topicNumber;
+      replacements[`t${i}`] = topic.name;
+      replacements[`d${i}`] = topic.description;
+      replacements[`o${i}`] = topic.order;
+      return `(:organizationId, :frameworkId, :n${i}, :t${i}, :d${i}, :o${i}, NOW(), NOW())`;
+    });
+    const inserted = (await sequelize.query(
+      `INSERT INTO imported_framework_topics
+         (organization_id, framework_id, topic_number, name, description, order_no, created_at, updated_at)
+       VALUES ${values.join(", ")}
+       RETURNING id, topic_number;`,
+      { replacements, transaction, type: QueryTypes.SELECT },
+    )) as Array<{ id: number; topic_number: string }>;
+    for (const row of inserted) ids.set(row.topic_number, row.id);
+  }
+  return ids;
+}
+
+/** Insert subtopics under known topic ids (one multi-row INSERT per chunk). */
+async function insertSubtopics(
+  organizationId: number,
+  subtopics: Array<ParsedSubtopic & { topicId: number }>,
+  transaction: Transaction,
+): Promise<void> {
+  for (const part of chunk(subtopics, INSERT_CHUNK_SIZE)) {
+    const replacements: Record<string, unknown> = { organizationId };
+    const values = part.map((sub, i) => {
+      replacements[`p${i}`] = sub.topicId;
+      replacements[`n${i}`] = sub.subtopicNumber;
+      replacements[`t${i}`] = sub.name;
+      replacements[`d${i}`] = sub.description;
+      replacements[`o${i}`] = sub.order;
+      return `(:organizationId, :p${i}, :n${i}, :t${i}, :d${i}, :o${i}, NOW(), NOW())`;
+    });
+    await sequelize.query(
+      `INSERT INTO imported_framework_subtopics
+         (organization_id, topic_id, subtopic_number, name, description, order_no, created_at, updated_at)
+       VALUES ${values.join(", ")};`,
+      { replacements, transaction },
+    );
+  }
+}
+
+type StructTable = "imported_framework_topics" | "imported_framework_subtopics";
+
+/**
+ * Bring matched topics or subtopics in line with the sheet (name,
+ * description, order) and un-retire them. Returns how many actually changed.
+ */
+async function updateStructRows(
+  table: StructTable,
+  organizationId: number,
+  rows: Array<{ id: number; name: string; description: string | null; order: number }>,
+  transaction: Transaction,
+): Promise<number> {
+  let changed = 0;
+  for (const part of chunk(rows, INSERT_CHUNK_SIZE)) {
+    const replacements: Record<string, unknown> = { organizationId };
+    const values = part.map((row, i) => {
+      replacements[`i${i}`] = row.id;
+      replacements[`n${i}`] = row.name;
+      replacements[`d${i}`] = row.description;
+      replacements[`o${i}`] = row.order;
+      return `(CAST(:i${i} AS INTEGER), CAST(:n${i} AS VARCHAR), CAST(:d${i} AS TEXT), CAST(:o${i} AS INTEGER))`;
+    });
+    const updated = (await sequelize.query(
+      `UPDATE ${table} AS s
+          SET name = v.name, description = v.description, order_no = v.order_no,
+              is_retired = FALSE, updated_at = NOW()
+         FROM (VALUES ${values.join(", ")}) AS v(id, name, description, order_no)
+        WHERE s.id = v.id AND s.organization_id = :organizationId
+          AND (s.name IS DISTINCT FROM v.name
+               OR s.description IS DISTINCT FROM v.description
+               OR s.order_no IS DISTINCT FROM v.order_no
+               OR s.is_retired)
+       RETURNING s.id;`,
+      { replacements, transaction, type: QueryTypes.SELECT },
+    )) as Array<{ id: number }>;
+    changed += updated.length;
+  }
+  return changed;
+}
+
+/**
+ * Topics or subtopics missing from the sheet: keep (retire) the ones in
+ * `keep`, delete the rest with their empty assessment rows. Returns
+ * { retired: newly retired, removed: deleted }.
+ */
+async function retireOrRemove(
+  table: StructTable,
+  level: "l2" | "l3",
+  missingIds: number[],
+  keep: Set<number>,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<{ retired: number; removed: number }> {
+  const retireIds = missingIds.filter((id) => keep.has(id));
+  const removeIds = missingIds.filter((id) => !keep.has(id));
+
+  let retired = 0;
+  if (retireIds.length > 0) {
+    const rows = (await sequelize.query(
+      `UPDATE ${table} SET is_retired = TRUE, updated_at = NOW()
+        WHERE organization_id = :organizationId AND id IN (:ids) AND is_retired = FALSE
+       RETURNING id;`,
+      { replacements: { organizationId, ids: retireIds }, transaction, type: QueryTypes.SELECT },
+    )) as Array<{ id: number }>;
+    retired = rows.length;
+  }
+  if (removeIds.length > 0) {
+    await deleteImplRowsForStructsQuery(level, removeIds, organizationId, transaction);
+    await sequelize.query(
+      `DELETE FROM ${table} WHERE organization_id = :organizationId AND id IN (:ids);`,
+      { replacements: { organizationId, ids: removeIds }, transaction },
+    );
+  }
+  return { retired, removed: removeIds.length };
+}
+
+/**
+ * Re-import of an existing framework, as a diff so use case assessments
+ * survive: topics match on topic_number, subtopics on (topic, subtopic_number).
+ * Matched rows are updated (and un-retired), new rows inserted, and rows
+ * missing from the sheet retired when any use case holds assessment data on
+ * them, deleted otherwise. A topic also stays (retired) while it still has a
+ * retired subtopic. Finally every attached use case gets assessment rows for
+ * the new and returning items.
+ */
+async function applyStructureDiff(
+  frameworkId: number,
+  organizationId: number,
+  topics: ParsedTopic[],
+  subtopics: ParsedSubtopic[],
+  transaction: Transaction,
+): Promise<StructureCounts> {
+  const counts: StructureCounts = { added: 0, updated: 0, retired: 0, removed: 0 };
+
+  const existingTopics = (await sequelize.query(
+    `SELECT id, topic_number FROM imported_framework_topics
+      WHERE organization_id = :organizationId AND framework_id = :frameworkId;`,
+    { replacements: { organizationId, frameworkId }, transaction, type: QueryTypes.SELECT },
+  )) as Array<{ id: number; topic_number: string }>;
+  const topicIds = new Map(existingTopics.map((t) => [t.topic_number, t.id]));
+
+  const matchedTopics = topics
+    .filter((t) => topicIds.has(t.topicNumber))
+    .map((t) => ({ ...t, id: topicIds.get(t.topicNumber)! }));
+  const newTopics = topics.filter((t) => !topicIds.has(t.topicNumber));
+  const presentTopicIds = new Set(matchedTopics.map((t) => t.id));
+
+  counts.updated += await updateStructRows(
+    "imported_framework_topics",
+    organizationId,
+    matchedTopics,
+    transaction,
+  );
+  const insertedTopicIds = await insertTopics(frameworkId, organizationId, newTopics, transaction);
+  counts.added += newTopics.length;
+  for (const [number, id] of insertedTopicIds) topicIds.set(number, id);
+
+  const existingSubtopics = (await sequelize.query(
+    `SELECT s.id, s.topic_id, s.subtopic_number
+       FROM imported_framework_subtopics s
+       JOIN imported_framework_topics t
+         ON t.id = s.topic_id AND t.organization_id = s.organization_id
+      WHERE s.organization_id = :organizationId AND t.framework_id = :frameworkId;`,
+    { replacements: { organizationId, frameworkId }, transaction, type: QueryTypes.SELECT },
+  )) as Array<{ id: number; topic_id: number; subtopic_number: string }>;
+  const subKey = (topicId: number, number: string) => `${topicId}\u0000${number}`;
+  const subtopicIds = new Map(
+    existingSubtopics.map((s) => [subKey(s.topic_id, s.subtopic_number), s.id]),
+  );
+
+  const matchedSubtopics: Array<{
+    id: number;
+    name: string;
+    description: string | null;
+    order: number;
+  }> = [];
+  const newSubtopics: Array<ParsedSubtopic & { topicId: number }> = [];
+  for (const sub of subtopics) {
+    const topicId = topicIds.get(sub.topicNumber)!;
+    const id = subtopicIds.get(subKey(topicId, sub.subtopicNumber));
+    if (id !== undefined) matchedSubtopics.push({ ...sub, id });
+    else newSubtopics.push({ ...sub, topicId });
+  }
+  const presentSubtopicIds = new Set(matchedSubtopics.map((s) => s.id));
+
+  counts.updated += await updateStructRows(
+    "imported_framework_subtopics",
+    organizationId,
+    matchedSubtopics,
+    transaction,
+  );
+  await insertSubtopics(organizationId, newSubtopics, transaction);
+  counts.added += newSubtopics.length;
+
+  // Subtopics first: a kept subtopic keeps its topic.
+  const missingSubtopics = existingSubtopics.filter((s) => !presentSubtopicIds.has(s.id));
+  const keptSubtopics = await structIdsWithDataQuery(
+    "l3",
+    missingSubtopics.map((s) => s.id),
+    organizationId,
+    transaction,
+  );
+  const subResult = await retireOrRemove(
+    "imported_framework_subtopics",
+    "l3",
+    missingSubtopics.map((s) => s.id),
+    keptSubtopics,
+    organizationId,
+    transaction,
+  );
+
+  const missingTopicIds = existingTopics.map((t) => t.id).filter((id) => !presentTopicIds.has(id));
+  const keptTopics = await structIdsWithDataQuery(
+    "l2",
+    missingTopicIds,
+    organizationId,
+    transaction,
+  );
+  for (const s of missingSubtopics) if (keptSubtopics.has(s.id)) keptTopics.add(s.topic_id);
+  const topicResult = await retireOrRemove(
+    "imported_framework_topics",
+    "l2",
+    missingTopicIds,
+    keptTopics,
+    organizationId,
+    transaction,
+  );
+
+  counts.retired += subResult.retired + topicResult.retired;
+  counts.removed += subResult.removed + topicResult.removed;
+
+  await seedImplRowsQuery(organizationId, transaction, { frameworkId });
+  return counts;
 }
 
 export async function importFramework(
@@ -434,6 +715,7 @@ export async function importFramework(
   // Parse + dedupe topics, preserving first-seen order.
   const topicMap = new Map<string, ParsedTopic>();
   const subtopics: ParsedSubtopic[] = [];
+  const subtopicOrder = new Map<string, number>();
   for (const row of rows) {
     const topicNumber = asText(row.topic_number)!;
     if (!topicMap.has(topicNumber)) {
@@ -441,33 +723,41 @@ export async function importFramework(
         topicNumber,
         name: asText(row.topic_name)!,
         description: asText(row.topic_description) ?? null,
+        order: topicMap.size,
       });
     }
     const subtopicNumber = asText(row.subtopic_number);
     const subtopicName = asText(row.subtopic_name);
     if (subtopicNumber && subtopicName) {
+      const order = subtopicOrder.get(topicNumber) ?? 0;
+      subtopicOrder.set(topicNumber, order + 1);
       subtopics.push({
         topicNumber,
         subtopicNumber,
         name: subtopicName,
         description: asText(row.subtopic_description) ?? null,
+        order,
       });
     }
   }
+  const topics = Array.from(topicMap.values());
 
   const transaction = await sequelize.transaction();
 
   try {
-    // Upsert on (organization, lower(name)): a re-upload replaces the
-    // previous structure instead of creating a duplicate.
+    // Upsert on (organization, lower(name)): a re-upload updates the existing
+    // framework instead of creating a duplicate. FOR UPDATE: an attach to a
+    // use case (FOR SHARE) waits for the re-import to finish.
     const existing = (await sequelize.query(
       `SELECT id FROM imported_frameworks
         WHERE organization_id = :organizationId AND lower(name) = lower(:frameworkName)
-        LIMIT 1;`,
+        LIMIT 1
+        FOR UPDATE;`,
       { replacements: { organizationId, frameworkName }, transaction, type: QueryTypes.SELECT },
     )) as Array<{ id: number }>;
 
     let frameworkId: number;
+    let counts: StructureCounts;
     if (existing.length > 0) {
       frameworkId = existing[0].id;
       await sequelize.query(
@@ -476,7 +766,13 @@ export async function importFramework(
           WHERE id = :frameworkId AND organization_id = :organizationId;`,
         { replacements: { frameworkId, organizationId, frameworkDescription }, transaction },
       );
-      await deleteImportedStructure(frameworkId, organizationId, transaction);
+      counts = await applyStructureDiff(
+        frameworkId,
+        organizationId,
+        topics,
+        subtopics,
+        transaction,
+      );
     } else {
       const inserted = (await sequelize.query(
         `INSERT INTO imported_frameworks
@@ -491,51 +787,14 @@ export async function importFramework(
         },
       )) as Array<{ id: number }>;
       frameworkId = inserted[0].id;
-    }
-
-    // Topics: one multi-row INSERT per chunk.
-    const topicIds = new Map<string, number>();
-    const topics = Array.from(topicMap.values());
-    let topicOrder = 0;
-    for (const part of chunk(topics, INSERT_CHUNK_SIZE)) {
-      const replacements: Record<string, unknown> = { organizationId, frameworkId };
-      const values = part.map((topic, i) => {
-        replacements[`n${i}`] = topic.topicNumber;
-        replacements[`t${i}`] = topic.name;
-        replacements[`d${i}`] = topic.description;
-        replacements[`o${i}`] = topicOrder++;
-        return `(:organizationId, :frameworkId, :n${i}, :t${i}, :d${i}, :o${i}, NOW(), NOW())`;
-      });
-      const inserted = (await sequelize.query(
-        `INSERT INTO imported_framework_topics
-           (organization_id, framework_id, topic_number, name, description, order_no, created_at, updated_at)
-         VALUES ${values.join(", ")}
-         RETURNING id, topic_number;`,
-        { replacements, transaction, type: QueryTypes.SELECT },
-      )) as Array<{ id: number; topic_number: string }>;
-      for (const row of inserted) topicIds.set(row.topic_number, row.id);
-    }
-
-    // Subtopics: ordered per topic, one multi-row INSERT per chunk.
-    const subtopicOrder = new Map<string, number>();
-    for (const part of chunk(subtopics, INSERT_CHUNK_SIZE)) {
-      const replacements: Record<string, unknown> = { organizationId };
-      const values = part.map((sub, i) => {
-        const order = subtopicOrder.get(sub.topicNumber) ?? 0;
-        subtopicOrder.set(sub.topicNumber, order + 1);
-        replacements[`p${i}`] = topicIds.get(sub.topicNumber)!;
-        replacements[`n${i}`] = sub.subtopicNumber;
-        replacements[`t${i}`] = sub.name;
-        replacements[`d${i}`] = sub.description;
-        replacements[`o${i}`] = order;
-        return `(:organizationId, :p${i}, :n${i}, :t${i}, :d${i}, :o${i}, NOW(), NOW())`;
-      });
-      await sequelize.query(
-        `INSERT INTO imported_framework_subtopics
-           (organization_id, topic_id, subtopic_number, name, description, order_no, created_at, updated_at)
-         VALUES ${values.join(", ")};`,
-        { replacements, transaction },
+      // A new framework has no use cases yet, so there is nothing to seed.
+      const topicIds = await insertTopics(frameworkId, organizationId, topics, transaction);
+      await insertSubtopics(
+        organizationId,
+        subtopics.map((sub) => ({ ...sub, topicId: topicIds.get(sub.topicNumber)! })),
+        transaction,
       );
+      counts = { added: topics.length + subtopics.length, updated: 0, retired: 0, removed: 0 };
     }
 
     await transaction.commit();
@@ -547,6 +806,7 @@ export async function importFramework(
       failed: 0,
       errors: [],
       importedAt: new Date().toISOString(),
+      ...counts,
     };
   } catch (err) {
     try {
@@ -626,7 +886,8 @@ async function findImportedFrameworkId(
   const rows = (await sequelize.query(
     `SELECT id FROM imported_frameworks
       WHERE id = :id AND organization_id = :organizationId
-      LIMIT 1;`,
+      LIMIT 1
+      FOR UPDATE;`,
     { replacements: { id, organizationId }, transaction, type: QueryTypes.SELECT },
   )) as Array<{ id: number }>;
   if (rows.length === 0) {
@@ -742,6 +1003,23 @@ export async function deleteImportedFrameworkQuery(
   const transaction = await sequelize.transaction();
   try {
     await findImportedFrameworkId(id, organizationId, transaction);
+    // Assessments on use cases would be lost: remove it from them first.
+    // (The row lock above makes a concurrent attach wait for this answer.)
+    const useCases = await listUseCasesUsingFrameworkQuery(id, organizationId, transaction);
+    if (useCases.length > 0) {
+      const names = useCases.join(", ");
+      throw new ConflictException(
+        `This framework is used by these use cases: ${names}. Remove it from them before deleting it`,
+        "Framework",
+        "id",
+        {
+          i18nKey:
+            "This framework is used by these use cases: {names}. Remove it from them before deleting it",
+          i18nVars: { names },
+          metadata: { use_cases: useCases },
+        },
+      );
+    }
     // Topics/subtopics cascade on framework delete via their FKs; delete
     // explicitly anyway so removal stays scoped to this org's rows.
     await deleteImportedStructure(id, organizationId, transaction);

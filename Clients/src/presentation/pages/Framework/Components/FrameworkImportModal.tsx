@@ -44,9 +44,22 @@ const tableSx = {
 } as const;
 
 /**
+ * A first import only adds rows; an upload that changed an existing framework
+ * reports what it added, updated, retired and removed.
+ */
+function importSuccessMessage(result: FrameworkImportResult): string {
+  const { added = 0, updated = 0, retired = 0, removed = 0 } = result;
+  if (updated + retired + removed > 0) {
+    return `Framework updated: ${added} added, ${updated} updated, ${retired} retired, ${removed} removed.`;
+  }
+  return `Framework imported: ${result.imported_topics} topic(s) and ${result.imported_subtopics} subtopic(s).`;
+}
+
+/**
  * Self-service framework import (#5254): download the template, upload a
  * filled sheet, and import it. A rejected import lists every failing row.
- * Re-importing the same framework name replaces its structure.
+ * Re-importing the same framework name updates its structure in place;
+ * topics and subtopics that already hold assessment data are retired, not deleted.
  */
 export default function FrameworkImportModal({
   open,
@@ -188,7 +201,7 @@ export default function FrameworkImportModal({
       isOpen={open}
       onClose={handleClose}
       title="Import a framework from Excel"
-      description="Store your own framework, such as an internal policy, as topics and subtopics. Imported frameworks are a reference list: they cannot be added to use cases yet."
+      description="Store your own framework, such as an internal policy, as topics and subtopics. Once imported, add it to a use case from that use case's Frameworks tab. Uploading a file with the same framework name again updates the existing framework."
       onSubmit={handleImport}
       submitButtonText={loading ? "Importing..." : "Import framework"}
       isSubmitting={loading}
@@ -203,7 +216,7 @@ export default function FrameworkImportModal({
             variant="success"
             inline
             hasIcon={false}
-            body={`Framework imported: ${importResult.imported_topics} topic(s) and ${importResult.imported_subtopics} subtopic(s).`}
+            body={importSuccessMessage(importResult)}
           />
         )}
 

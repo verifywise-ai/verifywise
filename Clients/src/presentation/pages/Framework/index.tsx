@@ -92,6 +92,16 @@ const tabListStyle = {
   },
 };
 
+/**
+ * Message for a failed imported-framework delete. On a 409 (still used by use
+ * cases) the server's translated message already names those use cases.
+ */
+function importedDeleteErrorMessage(error: unknown): string {
+  return error instanceof Error && error.message
+    ? error.message
+    : "Failed to delete the imported framework. Please try again.";
+}
+
 const Framework = () => {
   const [searchParams] = useSearchParams();
   const { tab } = useParams<{ tab?: string }>();
@@ -132,6 +142,11 @@ const Framework = () => {
   });
   const deleteImportedMutation = useDeleteImportedFramework();
   const [confirmDeleteImported, setConfirmDeleteImported] = useState<number | null>(null);
+  const [deleteImportedError, setDeleteImportedError] = useState<string | null>(null);
+  const closeDeleteImported = () => {
+    setConfirmDeleteImported(null);
+    setDeleteImportedError(null);
+  };
 
   // Check if there are any organizational projects
   const organizationalProject = useMemo(() => {
@@ -958,8 +973,8 @@ const Framework = () => {
                   />
                 </Stack>
                 <Typography sx={{ fontSize: 13, color: "text.secondary", marginBottom: "8px" }}>
-                  A reference list of your own frameworks. They cannot be added to use cases or
-                  assessed yet.
+                  Your own frameworks, imported from Excel. Add one to a use case from that use
+                  case's Frameworks tab to assess it.
                 </Typography>
                 {importedFrameworks.length === 0 ? (
                   <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
@@ -1014,15 +1029,32 @@ const Framework = () => {
               <ConfirmationModal
                 isOpen
                 title="Delete this imported framework?"
-                body="This removes the imported framework with all its topics and subtopics. You can import it again from your file later."
+                body={
+                  <Stack sx={{ gap: "8px" }}>
+                    <Typography fontSize={13}>
+                      This removes the imported framework with all its topics and subtopics. You can
+                      import it again from your file later. A framework used by a use case cannot be
+                      deleted: remove it from those use cases first.
+                    </Typography>
+                    {deleteImportedError && (
+                      <Typography fontSize={13} color="error" role="alert">
+                        {deleteImportedError}
+                      </Typography>
+                    )}
+                  </Stack>
+                }
                 cancelText="Cancel"
                 proceedText="Delete"
                 proceedButtonColor="error"
                 proceedButtonVariant="contained"
-                onCancel={() => setConfirmDeleteImported(null)}
+                onCancel={closeDeleteImported}
                 onProceed={async () => {
-                  await deleteImportedMutation.mutateAsync(confirmDeleteImported);
-                  setConfirmDeleteImported(null);
+                  try {
+                    await deleteImportedMutation.mutateAsync(confirmDeleteImported);
+                    closeDeleteImported();
+                  } catch (error) {
+                    setDeleteImportedError(importedDeleteErrorMessage(error));
+                  }
                 }}
                 isLoading={deleteImportedMutation.isPending}
               />

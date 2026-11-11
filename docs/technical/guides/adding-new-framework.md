@@ -7,9 +7,12 @@ controllers or UI. You declare its hierarchy in one TypeScript file, and the
 generic endpoints (`/api/frameworks/:frameworkId/...`) and the generic UI
 (`GenericFramework` + `GenericFrameworkDrawer`) handle the rest.
 
-> **Users cannot create frameworks.** There is no UI or API for creating,
-> importing, editing or exporting a framework structure. Every framework ships
-> in the codebase. A new framework means a code change and a migration.
+> **This guide is for frameworks that ship with VerifyWise.** A bundled
+> framework means a code change and a migration. An organization that needs
+> its own framework does not need one: with the `framework-import` extension it
+> imports the framework from Excel, then adds it to a use case and assesses it
+> there. Imported frameworks are stored per organization, outside the bundled
+> catalog. See [Imported frameworks](../domains/compliance-frameworks.md#imported-frameworks).
 
 ## Core frameworks vs registry frameworks
 
@@ -165,7 +168,8 @@ must not collide with existing tables.
 `verifywise.frameworks` holds bundled frameworks only. Frameworks that an
 organization imports from a spreadsheet (the `framework-import` extension,
 #5254) live in their own `imported_frameworks` table with its own id sequence,
-so they never take a bundled id and never reach this table.
+so they never take a bundled id and never reach this table. Use cases attach
+them through `projects_imported_frameworks`, not `projects_frameworks`.
 
 ### 2. Register it
 

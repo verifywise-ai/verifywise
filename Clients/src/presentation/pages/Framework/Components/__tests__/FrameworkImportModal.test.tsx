@@ -65,11 +65,12 @@ describe("FrameworkImportModal (#5254)", () => {
     vi.clearAllMocks();
   });
 
-  it("renders both steps and says imported frameworks cannot be added to use cases yet", () => {
+  it("renders both steps and says where to add the framework to a use case", () => {
     renderModal();
     expect(screen.getByText(/Step 1: Download the Excel template/i)).toBeInTheDocument();
     expect(screen.getByText(/Step 2: Upload the filled Excel file/i)).toBeInTheDocument();
-    expect(screen.getByText(/cannot be added to use cases yet/i)).toBeInTheDocument();
+    expect(screen.getByText(/use case's Frameworks tab/i)).toBeInTheDocument();
+    expect(screen.queryByText(/cannot be added to use cases yet/i)).not.toBeInTheDocument();
   });
 
   it("keeps the import button disabled until rows are parsed", () => {
@@ -119,5 +120,37 @@ describe("FrameworkImportModal (#5254)", () => {
     expect(table).toHaveTextContent("Subtopic 1.1 already appears under topic 1 on row 2");
     expect(table).toHaveTextContent("subtopic_number");
     expect(table).toHaveTextContent("A file can have at most 5000 rows");
+  });
+
+  const importSuccessfully = async (counts: Record<string, number>) => {
+    mockMutateAsync.mockResolvedValue({
+      success: true,
+      imported_topics: 1,
+      imported_subtopics: 2,
+      failed: 0,
+      errors: [],
+      importedAt: "2026-11-11T00:00:00Z",
+      ...counts,
+    });
+    renderModal();
+    uploadXlsx();
+    await screen.findByText(/Preview \(2 row\(s\) found\)/i);
+    const importButton = screen.getByRole("button", { name: /import framework/i });
+    await waitFor(() => expect(importButton).not.toBeDisabled());
+    fireEvent.click(importButton);
+  };
+
+  it("reports topic and subtopic counts after a first import", async () => {
+    await importSuccessfully({ added: 3, updated: 0, retired: 0, removed: 0 });
+    expect(
+      await screen.findByText("Framework imported: 1 topic(s) and 2 subtopic(s)."),
+    ).toBeInTheDocument();
+  });
+
+  it("reports added, updated, retired and removed after a re-import", async () => {
+    await importSuccessfully({ added: 1, updated: 4, retired: 2, removed: 3 });
+    expect(
+      await screen.findByText("Framework updated: 1 added, 4 updated, 2 retired, 3 removed."),
+    ).toBeInTheDocument();
   });
 });
