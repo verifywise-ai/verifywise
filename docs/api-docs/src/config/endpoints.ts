@@ -12871,6 +12871,109 @@ export const v1V1groupsEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Imported Framework Assessments endpoints
+export const v1V1importedFrameworkAssessmentsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/imported-framework-assessments/projects/{projectId}',
+    summary: "List Project Links",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Imported Framework Assessments",
+  },
+  {
+    method: 'POST',
+    path: '/v1/imported-framework-assessments/projects/{projectId}',
+    summary: "Attach To Project",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Imported Framework Assessments",
+  },
+  {
+    method: 'DELETE',
+    path: '/v1/imported-framework-assessments/projects/{projectId}/{linkId}',
+    summary: "Detach From Project",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Imported Framework Assessments",
+  },
+  {
+    method: 'GET',
+    path: '/v1/imported-framework-assessments/links/{linkId}/tree',
+    summary: "Get Link Tree",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Imported Framework Assessments",
+  },
+  {
+    method: 'GET',
+    path: '/v1/imported-framework-assessments/links/{linkId}/dashboard',
+    summary: "Get Link Dashboard",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Imported Framework Assessments",
+  },
+  {
+    method: 'GET',
+    path: '/v1/imported-framework-assessments/links/{linkId}/impl/{level}/{implId}',
+    summary: "Get Impl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Imported Framework Assessments",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/imported-framework-assessments/links/{linkId}/impl/{level}/{implId}',
+    summary: "Update Impl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Imported Framework Assessments",
+  },
+  {
+    method: 'GET',
+    path: '/v1/imported-framework-assessments/links/{linkId}/impl/{level}/{implId}/risks',
+    summary: "Get Impl Risks",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Imported Framework Assessments",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/imported-framework-assessments/links/{linkId}/impl/{level}/{implId}/risks',
+    summary: "Replace Impl Risks",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Imported Framework Assessments",
+  },
+];
+
 // v1: V1/Intake Form Review Time endpoints
 export const v1V1intakeFormReviewTimeEndpoints: Endpoint[] = [
   {
@@ -13611,6 +13714,7 @@ export const allEndpoints = {
   v1V1aiApps: v1V1aiAppsEndpoints,
   v1V1dashboard: v1V1dashboardEndpoints,
   v1V1groups: v1V1groupsEndpoints,
+  v1V1importedFrameworkAssessments: v1V1importedFrameworkAssessmentsEndpoints,
   v1V1intakeFormReviewTime: v1V1intakeFormReviewTimeEndpoints,
   v1V1lifecycleSettings: v1V1lifecycleSettingsEndpoints,
   v1V1policyTemplates: v1V1policyTemplatesEndpoints,

@@ -7932,6 +7932,8 @@ tags:
   -
     name: 'v1: V1/Groups'
   -
+    name: 'v1: V1/Imported Framework Assessments'
+  -
     name: 'v1: V1/Intake Form Review Time'
   -
     name: 'v1: V1/Lifecycle Settings'
@@ -28588,6 +28590,129 @@ paths:
       tags:
         - 'v1: Extensions'
       operationId: deleteImportedFramework
+      security:
+        -
+          bearerAuth: []
+  '/v1/imported-framework-assessments/projects/{projectId}':
+    get:
+      summary: 'List Project Links'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Imported Framework Assessments'
+      operationId: listProjectLinks
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Attach To Project'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Imported Framework Assessments'
+      operationId: attachToProject
+      security:
+        -
+          bearerAuth: []
+  '/v1/imported-framework-assessments/projects/{projectId}/{linkId}':
+    delete:
+      summary: 'Detach From Project'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Imported Framework Assessments'
+      operationId: detachFromProject
+      security:
+        -
+          bearerAuth: []
+  '/v1/imported-framework-assessments/links/{linkId}/tree':
+    get:
+      summary: 'Get Link Tree'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Imported Framework Assessments'
+      operationId: getLinkTree
+      security:
+        -
+          bearerAuth: []
+  '/v1/imported-framework-assessments/links/{linkId}/dashboard':
+    get:
+      summary: 'Get Link Dashboard'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Imported Framework Assessments'
+      operationId: getLinkDashboard
+      security:
+        -
+          bearerAuth: []
+  '/v1/imported-framework-assessments/links/{linkId}/impl/{level}/{implId}':
+    get:
+      summary: 'Get Impl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Imported Framework Assessments'
+      operationId: getImpl
+      security:
+        -
+          bearerAuth: []
+    patch:
+      summary: 'Update Impl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Imported Framework Assessments'
+      operationId: v1_imported_framework_assessments_updateImpl
+      security:
+        -
+          bearerAuth: []
+  '/v1/imported-framework-assessments/links/{linkId}/impl/{level}/{implId}/risks':
+    get:
+      summary: 'Get Impl Risks'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Imported Framework Assessments'
+      operationId: v1_imported_framework_assessments_getImplRisks
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Replace Impl Risks'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Imported Framework Assessments'
+      operationId: replaceImplRisks
       security:
         -
           bearerAuth: []
