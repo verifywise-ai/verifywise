@@ -259,7 +259,7 @@ const StandardModal: React.FC<StandardModalProps> = ({
                     "padding": "4px",
                     "borderRadius": "4px",
                     "&:hover": {
-                      backgroundColor: background.alt,
+                      backgroundColor: background.hover,
                     },
                   }}
                 >
