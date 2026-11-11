@@ -12,6 +12,7 @@ import {
   NotificationType,
   NotificationEntityType,
   IEmailNotificationConfig,
+  IInAppNotificationInput,
 } from "../domain.layer/interfaces/i.notification";
 import { notificationService } from "./notificationService";
 import { EMAIL_TEMPLATES } from "../constants/emailTemplates";
@@ -58,17 +59,62 @@ export const buildEntityUrl = (entityType: NotificationEntityType, entityId: num
   }
 };
 
+/** The email subject: fixed text, or its key translated into `lang`. */
+const emailSubject = (config: IEmailNotificationConfig, lang: string | undefined): string =>
+  config.subjectKey !== undefined
+    ? translate(lang, config.subjectKey, config.subjectVars)
+    : config.subject;
+
+/**
+ * Resolve the title/message keys of a notification into the recipient's
+ * language. The language is read at most once: from `input.lang` when the
+ * caller already has it, otherwise from the recipient's saved preference, and
+ * only when something is keyed.
+ */
+const localizeNotification = async (
+  input: IInAppNotificationInput,
+  emailConfig: IEmailNotificationConfig | undefined,
+): Promise<{ notification: ICreateNotification; lang: string | undefined }> => {
+  const {
+    lang: givenLang,
+    title,
+    titleKey,
+    titleVars,
+    message,
+    messageKey,
+    messageVars,
+    ...rest
+  } = input;
+  const keyed =
+    titleKey !== undefined || messageKey !== undefined || emailConfig?.subjectKey !== undefined;
+  const lang = givenLang ?? (keyed ? await getUserLanguage(input.user_id) : undefined);
+  return {
+    lang,
+    notification: {
+      ...rest,
+      title: titleKey !== undefined ? translate(lang, titleKey, titleVars) : title,
+      message: messageKey !== undefined ? translate(lang, messageKey, messageVars) : message,
+    },
+  };
+};
+
 /**
  * Send a notification to a user via both in-app storage and real-time SSE
- * Optionally also sends an email notification
+ * Optionally also sends an email notification. Keyed title, message and
+ * subject are translated into the recipient's saved language.
  */
 export const sendInAppNotification = async (
   organizationId: number,
-  notification: ICreateNotification,
+  input: IInAppNotificationInput,
   sendEmailNotification?: boolean,
   emailConfig?: IEmailNotificationConfig,
 ): Promise<INotificationJSON> => {
   try {
+    const { notification, lang } = await localizeNotification(
+      input,
+      sendEmailNotification ? emailConfig : undefined,
+    );
+
     // 1. Store notification in database
     const storedNotification = await createNotificationQuery(notification, organizationId);
 
@@ -95,7 +141,7 @@ export const sendInAppNotification = async (
         if (user?.email) {
           await notificationService.sendEmailWithTemplate(
             user.email,
-            emailConfig.subject,
+            emailSubject(emailConfig, lang),
             emailConfig.template,
             emailConfig.variables,
           );
@@ -151,9 +197,11 @@ export const sendBulkInAppNotifications = async (
       const users = await getUserEmails(bulk.user_ids);
       for (const user of users) {
         try {
+          const lang =
+            emailConfig.subjectKey !== undefined ? await getUserLanguage(user.id) : undefined;
           await notificationService.sendEmailWithTemplate(
             user.email,
-            emailConfig.subject,
+            emailSubject(emailConfig, lang),
             emailConfig.template,
             {
               ...emailConfig.variables,
@@ -925,24 +973,34 @@ export const notifyApprovalStepOverdueEscalation = async (
   baseUrl: string,
 ): Promise<void> => {
   const escalationUser = await getUserById(escalationUserId);
+  // The in-app row is in the recipient's language, dates included; the email
+  // body stays English.
   const lang = await getUserLanguage(escalationUserId);
-  const dueText = request.dueAt.toLocaleString("en-US", {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-    hour: "2-digit",
-    minute: "2-digit",
-    timeZone: "UTC",
-    timeZoneName: "short",
-  });
+  const dueTextIn = (locale: string) =>
+    request.dueAt.toLocaleString(locale, {
+      year: "numeric",
+      month: "long",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      timeZone: "UTC",
+      timeZoneName: "short",
+    });
+  const dueText = dueTextIn("en-US");
 
   await sendInAppNotification(
     organizationId,
     {
       user_id: escalationUserId,
+      lang,
       type: NotificationType.APPROVAL_STEP_OVERDUE_ESCALATION,
-      title: "Approval step overdue",
-      message: `Step "${request.stepName}" of "${request.name}" was due ${dueText} and has been escalated to you`,
+      titleKey: "Approval step overdue",
+      messageKey: 'Step "{stepName}" of "{name}" was due {due} and has been escalated to you',
+      messageVars: {
+        stepName: request.stepName,
+        name: request.name,
+        due: dueTextIn(DATE_LOCALES[lang]),
+      },
       entity_type: NotificationEntityType.USE_CASE,
       entity_id: request.id,
       entity_name: request.name,
@@ -955,7 +1013,8 @@ export const notifyApprovalStepOverdueEscalation = async (
     true,
     {
       template: EMAIL_TEMPLATES.APPROVAL_STEP_OVERDUE,
-      subject: translate(lang, "Overdue approval escalated: {name}", { name: request.name }),
+      subjectKey: "Overdue approval escalated: {name}",
+      subjectVars: { name: request.name },
       variables: {
         escalation_user_name: escalationUser ? `${escalationUser.name}` : "there",
         request_name: request.name,
@@ -1060,6 +1119,7 @@ export const notifyRiskDeadlineDueSoon = async (
     organizationId,
     {
       user_id: recipientId,
+      lang,
       type: NotificationType.RISK_DEADLINE_DUE_SOON,
       title: translate(lang, "Risk deadline approaching"),
       message: translate(lang, 'Risk "{name}" is due {distance} ({date}).', {
@@ -1077,7 +1137,8 @@ export const notifyRiskDeadlineDueSoon = async (
     sendEmail
       ? {
           template: EMAIL_TEMPLATES.RISK_DEADLINE_DUE,
-          subject: translate(lang, "Risk deadline approaching: {name}", { name: risk.name }),
+          subjectKey: "Risk deadline approaching: {name}",
+          subjectVars: { name: risk.name },
           variables: {
             recipient_name: recipient ? `${recipient.name}` : "there",
             entity_kind: "Risk",
@@ -1121,6 +1182,7 @@ export const notifyModelRiskDueSoon = async (
     organizationId,
     {
       user_id: recipientId,
+      lang,
       type: NotificationType.MODEL_RISK_DUE_SOON,
       title: translate(lang, "Model risk target date approaching"),
       message: translate(lang, 'Model risk "{name}" is due {distance} ({date}).', {
@@ -1141,9 +1203,8 @@ export const notifyModelRiskDueSoon = async (
     sendEmail
       ? {
           template: EMAIL_TEMPLATES.RISK_DEADLINE_DUE,
-          subject: translate(lang, "Model risk target date approaching: {name}", {
-            name: modelRisk.name,
-          }),
+          subjectKey: "Model risk target date approaching: {name}",
+          subjectVars: { name: modelRisk.name },
           variables: {
             recipient_name: recipient ? `${recipient.name}` : "there",
             entity_kind: "Model risk",
@@ -1408,22 +1469,29 @@ export const notifyFileExpiring = async (
   baseUrl: string,
 ): Promise<void> => {
   const recipient = await getUserById(recipientId);
+  // The label is worded for the in-app row's language; the email body stays English.
   const lang = await getUserLanguage(recipientId);
-
-  const daysRemainingLabel =
+  const daysRemainingIn = (l: string) =>
     file.daysRemaining <= 0
-      ? "expires today"
+      ? translate(l, "expires today")
       : file.daysRemaining === 1
-        ? "1 day"
-        : `${file.daysRemaining} days`;
+        ? translate(l, "1 day")
+        : translate(l, "{days} days", { days: file.daysRemaining });
+  const daysRemainingLabel = daysRemainingIn("en");
 
   await sendInAppNotification(
     organizationId,
     {
       user_id: recipientId,
+      lang,
       type: NotificationType.FILE_EXPIRING,
-      title: "File expiring soon",
-      message: `File "${file.name}" expires on ${file.expiryDate} (${daysRemainingLabel})`,
+      titleKey: "File expiring soon",
+      messageKey: 'File "{name}" expires on {expiryDate} ({daysRemaining})',
+      messageVars: {
+        name: file.name,
+        expiryDate: file.expiryDate,
+        daysRemaining: daysRemainingIn(lang),
+      },
       entity_type: NotificationEntityType.FILE,
       entity_id: file.id,
       entity_name: file.name,
@@ -1432,7 +1500,8 @@ export const notifyFileExpiring = async (
     true,
     {
       template: EMAIL_TEMPLATES.FILE_EXPIRING,
-      subject: translate(lang, "File expiring soon: {name}", { name: file.name }),
+      subjectKey: "File expiring soon: {name}",
+      subjectVars: { name: file.name },
       variables: {
         recipient_name: recipient ? `${recipient.name}` : "there",
         file_name: file.name,
@@ -1450,6 +1519,13 @@ export const notifyFileExpiring = async (
  * `noun` and `path` come from the entity's LifecycleEntityConfig, so AI apps
  * reuse this unchanged.
  */
+// One whole-sentence title per inventory noun: translating the noun on its own
+// would break gender agreement in German and French.
+const LIFECYCLE_TITLE_KEYS: Record<string, string> = {
+  "use case": "Is this use case still live?",
+  "AI app": "Is this AI app still live?",
+};
+
 export const notifyLifecycleConfirmationDue = async (
   organizationId: number,
   recipientId: number,
@@ -1465,15 +1541,17 @@ export const notifyLifecycleConfirmationDue = async (
   baseUrl: string,
 ): Promise<void> => {
   const recipient = await getUserById(recipientId);
-  const lang = await getUserLanguage(recipientId);
+  const titleKey = LIFECYCLE_TITLE_KEYS[entry.noun];
 
   await sendInAppNotification(
     organizationId,
     {
       user_id: recipientId,
       type: NotificationType.LIFECYCLE_CONFIRMATION_DUE,
-      title: `Is this ${entry.noun} still live?`,
-      message: `"${entry.title}" has not been confirmed as live since ${entry.since}. Confirm it, or retire it if it is no longer in use.`,
+      ...(titleKey ? { titleKey } : { title: `Is this ${entry.noun} still live?` }),
+      messageKey:
+        '"{title}" has not been confirmed as live since {since}. Confirm it, or retire it if it is no longer in use.',
+      messageVars: { title: entry.title, since: entry.since },
       entity_type: entry.entityType,
       entity_id: entry.id,
       entity_name: entry.title,
@@ -1482,7 +1560,8 @@ export const notifyLifecycleConfirmationDue = async (
     true,
     {
       template: EMAIL_TEMPLATES.LIFECYCLE_CONFIRMATION_DUE,
-      subject: translate(lang, 'Is "{title}" still live?', { title: entry.title }),
+      subjectKey: 'Is "{title}" still live?',
+      subjectVars: { title: entry.title },
       variables: {
         recipient_name: recipient ? `${recipient.name}` : "there",
         entry_noun: entry.noun,
