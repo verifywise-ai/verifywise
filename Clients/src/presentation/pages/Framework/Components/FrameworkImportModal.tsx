@@ -201,7 +201,7 @@ export default function FrameworkImportModal({
       isOpen={open}
       onClose={handleClose}
       title="Import a framework from Excel"
-      description="Store your own framework, such as an internal policy, as topics and subtopics. Once imported, add it to a use case from that use case's Frameworks tab. Uploading a file with the same framework name again updates the existing framework."
+      description="Store your own framework, such as an internal policy, as topics and subtopics. Once imported, add it to a use case from the Frameworks tab of that use case. Uploading a file with the same framework name again updates the existing framework."
       onSubmit={handleImport}
       submitButtonText={loading ? "Importing..." : "Import framework"}
       isSubmitting={loading}

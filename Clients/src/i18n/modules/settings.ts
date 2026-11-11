@@ -482,6 +482,14 @@ export const de: Record<string, string> = {
   "Select groups": "Gruppen auswählen",
   "Select members": "Mitglieder auswählen",
   "What is this group responsible for?": "Wofür ist diese Gruppe zuständig?",
+  "Create a role, choose what it can do, then assign it to people in the Team tab.":
+    "Erstellen Sie eine Rolle, legen Sie fest, was sie darf, und weisen Sie sie dann im Tab „Team“ Personen zu.",
+  "Delete role": "Rolle löschen",
+  "Loading permissions": "Berechtigungen werden geladen",
+  "Loading roles": "Rollen werden geladen",
+  "New role": "Neue Rolle",
+  "No custom roles yet": "Noch keine benutzerdefinierten Rollen",
+  "What this role is for": "Wofür diese Rolle gedacht ist",
 };
 
 export const fr: Record<string, string> = {
@@ -966,6 +974,14 @@ export const fr: Record<string, string> = {
   "Select groups": "Sélectionner des groupes",
   "Select members": "Sélectionner des membres",
   "What is this group responsible for?": "De quoi ce groupe est-il responsable ?",
+  "Create a role, choose what it can do, then assign it to people in the Team tab.":
+    "Créez un rôle, choisissez ce qu'il permet de faire, puis attribuez-le à des personnes dans l'onglet Équipe.",
+  "Delete role": "Supprimer le rôle",
+  "Loading permissions": "Chargement des autorisations",
+  "Loading roles": "Chargement des rôles",
+  "New role": "Nouveau rôle",
+  "No custom roles yet": "Aucun rôle personnalisé pour le moment",
+  "What this role is for": "À quoi sert ce rôle",
 };
 
 export const es: Record<string, string> = {
@@ -1446,4 +1462,12 @@ export const es: Record<string, string> = {
   "Select groups": "Seleccionar grupos",
   "Select members": "Seleccionar miembros",
   "What is this group responsible for?": "¿De qué es responsable este grupo?",
+  "Create a role, choose what it can do, then assign it to people in the Team tab.":
+    "Cree un rol, elija lo que puede hacer y asígnelo a personas en la pestaña Equipo.",
+  "Delete role": "Eliminar rol",
+  "Loading permissions": "Cargando permisos",
+  "Loading roles": "Cargando roles",
+  "New role": "Nuevo rol",
+  "No custom roles yet": "Aún no hay roles personalizados",
+  "What this role is for": "Para qué sirve este rol",
 };

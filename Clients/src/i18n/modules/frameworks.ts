@@ -455,6 +455,15 @@ export const de: Record<string, string> = {
   "This removes the imported framework with all its topics and subtopics. You can import it again from your file later.":
     "Dadurch wird das importierte Framework mit allen Themen und Unterthemen entfernt. Sie können es später erneut aus Ihrer Datei importieren.",
   "Topic": "Thema",
+  "Failed to delete the imported framework. Please try again.":
+    "Das importierte Rahmenwerk konnte nicht gelöscht werden. Bitte versuchen Sie es erneut.",
+  "No imported frameworks yet. Import one from the Frameworks page.":
+    "Noch keine importierten Rahmenwerke. Importieren Sie eines auf der Seite „Rahmenwerke“.",
+  "Remove imported framework": "Importiertes Rahmenwerk entfernen",
+  "Removed from the imported file. Kept because it has assessment data.":
+    "Aus der importierten Datei entfernt. Beibehalten, weil Bewertungsdaten vorhanden sind.",
+  "Store your own framework, such as an internal policy, as topics and subtopics. Once imported, add it to a use case from the Frameworks tab of that use case. Uploading a file with the same framework name again updates the existing framework.":
+    "Speichern Sie Ihr eigenes Rahmenwerk, etwa eine interne Richtlinie, als Themen und Unterthemen. Fügen Sie es nach dem Import einem Anwendungsfall über dessen Tab „Rahmenwerke“ hinzu. Wenn Sie erneut eine Datei mit demselben Rahmenwerknamen hochladen, wird das vorhandene Rahmenwerk aktualisiert.",
 };
 
 export const fr: Record<string, string> = {
@@ -915,6 +924,15 @@ export const fr: Record<string, string> = {
   "This removes the imported framework with all its topics and subtopics. You can import it again from your file later.":
     "Cette action supprime le référentiel importé avec tous ses thèmes et sous-thèmes. Vous pourrez le réimporter plus tard depuis votre fichier.",
   "Topic": "Thème",
+  "Failed to delete the imported framework. Please try again.":
+    "Impossible de supprimer le référentiel importé. Veuillez réessayer.",
+  "No imported frameworks yet. Import one from the Frameworks page.":
+    "Aucun référentiel importé pour le moment. Importez-en un depuis la page Référentiels.",
+  "Remove imported framework": "Retirer le référentiel importé",
+  "Removed from the imported file. Kept because it has assessment data.":
+    "Retiré du fichier importé. Conservé car il contient des données d'évaluation.",
+  "Store your own framework, such as an internal policy, as topics and subtopics. Once imported, add it to a use case from the Frameworks tab of that use case. Uploading a file with the same framework name again updates the existing framework.":
+    "Enregistrez votre propre référentiel, comme une politique interne, sous forme de thèmes et de sous-thèmes. Une fois importé, ajoutez-le à un cas d'usage depuis l'onglet Référentiels de ce cas d'usage. Importer à nouveau un fichier portant le même nom de référentiel met à jour le référentiel existant.",
 };
 
 export const es: Record<string, string> = {
@@ -1366,4 +1384,13 @@ export const es: Record<string, string> = {
   "This removes the imported framework with all its topics and subtopics. You can import it again from your file later.":
     "Esto elimina el marco importado con todos sus temas y subtemas. Puede volver a importarlo más tarde desde su archivo.",
   "Topic": "Tema",
+  "Failed to delete the imported framework. Please try again.":
+    "No se pudo eliminar el marco importado. Inténtelo de nuevo.",
+  "No imported frameworks yet. Import one from the Frameworks page.":
+    "Aún no hay marcos importados. Importe uno desde la página Marcos.",
+  "Remove imported framework": "Quitar marco importado",
+  "Removed from the imported file. Kept because it has assessment data.":
+    "Eliminado del archivo importado. Se conserva porque tiene datos de evaluación.",
+  "Store your own framework, such as an internal policy, as topics and subtopics. Once imported, add it to a use case from the Frameworks tab of that use case. Uploading a file with the same framework name again updates the existing framework.":
+    "Guarde su propio marco, como una política interna, en forma de temas y subtemas. Una vez importado, añádalo a un caso de uso desde la pestaña Marcos de ese caso de uso. Si vuelve a subir un archivo con el mismo nombre de marco, se actualiza el marco existente.",
 };
