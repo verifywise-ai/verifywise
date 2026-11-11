@@ -147,7 +147,7 @@ export const userGroupsContent: ArticleContent = {
         {
           collectionId: 'settings',
           articleId: 'role-configuration',
-          title: 'Role configuration',
+          title: 'Roles and permissions',
           description: 'Built-in roles, custom roles and permissions',
         },
       ],

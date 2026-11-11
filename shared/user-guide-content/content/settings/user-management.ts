@@ -325,7 +325,7 @@ export const userManagementContent: ArticleContent = {
         {
           collectionId: 'settings',
           articleId: 'role-configuration',
-          title: 'Role configuration',
+          title: 'Roles and permissions',
           description: 'Understand roles and permissions',
         },
         {

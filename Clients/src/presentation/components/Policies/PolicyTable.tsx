@@ -471,7 +471,8 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
               }}
             >
               <div onClick={(e) => e.stopPropagation()}>
-                {onSaveAsTemplate && canModifyPolicies && (
+                {/* The parent passes onSaveAsTemplate only with policyTemplate.edit. */}
+                {onSaveAsTemplate && (
                   <Tooltip title="Save as template" arrow>
                     <IconButton
                       size="small"

@@ -22,8 +22,17 @@ let mockPolicies: PolicyManagerModel[] = [];
 let mockPoliciesLoading = false;
 let mockPoliciesError: Error | null = null;
 const mockUsePolicies = vi.fn();
+const mockCreateFromPolicy = vi.fn();
 vi.mock("../../../../application/hooks/usePolicyTemplates", () => ({
-  useCreatePolicyTemplateFromPolicy: () => ({ mutateAsync: vi.fn(), isPending: false }),
+  useCreatePolicyTemplateFromPolicy: () => ({
+    mutateAsync: mockCreateFromPolicy,
+    isPending: false,
+  }),
+}));
+
+let mockCanManageTemplates = true;
+vi.mock("../../../../application/hooks/useMyPermissions", () => ({
+  useHasPermission: (key: string) => key === "policyTemplate.edit" && mockCanManageTemplates,
 }));
 
 vi.mock("../../../../application/hooks/usePolicies", () => ({
@@ -77,6 +86,7 @@ vi.mock("../../../components/Policies/PolicyTable", () => ({
     onLinkedObjects,
     onAssignToFolder,
     onBulkActionSuccess,
+    onSaveAsTemplate,
   }: any) => (
     <div data-testid="policy-table">
       <span data-testid="policy-row-count">{data.length}</span>
@@ -104,6 +114,11 @@ vi.mock("../../../components/Policies/PolicyTable", () => ({
       <button data-testid="bulk-archive" onClick={() => onBulkActionSuccess?.("archive", 2)}>
         bulk archive
       </button>
+      {onSaveAsTemplate && (
+        <button data-testid="save-template-first" onClick={() => onSaveAsTemplate(data[0].id)}>
+          save as template
+        </button>
+      )}
     </div>
   ),
 }));
@@ -152,6 +167,7 @@ describe("PolicyManager", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockUserRoleName = "Admin";
+    mockCanManageTemplates = true;
     mockUsers = [{ id: 1, name: "Jane", surname: "Doe", email: "jane@test.com" }];
     mockPolicies = [
       buildPolicy({ id: 1, title: "AI Ethics Policy", status: "Draft" }),
@@ -162,6 +178,27 @@ describe("PolicyManager", () => {
     mockGetPolicyFolders.mockResolvedValue([]);
     mockGetPolicyIdsInFolder.mockResolvedValue([]);
     mockUpdatePolicyFolders.mockResolvedValue(undefined);
+  });
+
+  it("offers Save as template only with policyTemplate.edit", () => {
+    mockCanManageTemplates = false;
+    renderWithProviders(<PolicyManager tags={[]} />, { route: "/policies" });
+    expect(screen.queryByTestId("save-template-first")).not.toBeInTheDocument();
+  });
+
+  it("shows the server reason when a template name is already taken", async () => {
+    mockCreateFromPolicy.mockRejectedValue({
+      response: {
+        status: 409,
+        data: { message: "Conflict", data: "a template with this name already exists" },
+      },
+    });
+    renderWithProviders(<PolicyManager tags={[]} />, { route: "/policies" });
+    fireEvent.click(screen.getByTestId("save-template-first"));
+    fireEvent.click(await screen.findByRole("button", { name: /save template/i }));
+    expect(await screen.findByText("A template with this name already exists")).toBeInTheDocument();
+    // The modal stays open so the name can be changed.
+    expect(screen.getByDisplayValue("AI Ethics Policy (template)")).toBeInTheDocument();
   });
 
   it("renders the status cards and the policy table with data", () => {

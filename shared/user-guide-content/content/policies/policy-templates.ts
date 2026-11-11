@@ -294,7 +294,7 @@ export const policyTemplatesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Everyone in the organization can browse both sections. Duplicating, editing and deleting templates needs the "Create, update and delete organization policy templates" permission (module **Policy templates**). By default **Admin** and **Editor** have it; Reviewer and Auditor do not. Without it, the action icons are hidden.',
+      text: 'Everyone in the organization can browse both sections. Duplicating, editing, deleting and saving a policy as a template all need the "Create, update and delete organization policy templates" permission (module **Policy templates**). By default **Admin** and **Editor** have it; Reviewer and Auditor do not. Without it, the action icons are hidden.',
     },
     {
       type: 'heading',
@@ -448,7 +448,7 @@ export const policyTemplatesContent: ArticleContent = {
         {
           collectionId: 'settings',
           articleId: 'role-configuration',
-          title: 'Role configuration',
+          title: 'Roles and permissions',
           description: 'See what each role is allowed to do',
         },
       ],

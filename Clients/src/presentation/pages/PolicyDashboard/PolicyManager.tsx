@@ -233,10 +233,17 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
         setAlert,
         alertTimeout: 4000,
       });
-    } catch {
+    } catch (err: any) {
+      // Show the server's reason (for example a name that is already taken),
+      // so the user can change the name in the still-open modal.
+      // STATUS_CODE responses carry the reason in `data` ({ message: "Conflict", data: "..." }).
+      const reason = err?.response?.status === 409 ? err?.response?.data?.data : undefined;
       handleAlert({
         variant: "error",
-        body: "Could not save the template. Please try again.",
+        body:
+          typeof reason === "string" && reason
+            ? reason.charAt(0).toUpperCase() + reason.slice(1)
+            : "Could not save the template. Please try again.",
         setAlert,
         alertTimeout: 4000,
       });
