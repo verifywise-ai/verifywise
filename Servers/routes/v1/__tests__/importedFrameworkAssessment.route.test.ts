@@ -25,7 +25,7 @@ jest.mock("../../../middleware/requireExtensionEnabled.middleware", () => ({
 }));
 // useCase.edit is an Admin + Editor permission.
 jest.mock("../../../utils/rolePermissions.utils", () => {
-  const roleHasPermission = jest.fn(async (_org: number, role: string) =>
+  const roleHasPermission = jest.fn(async (_org: number | null, role: string, _key?: string) =>
     ["Admin", "Editor"].includes(role),
   );
   return {
