@@ -1367,3 +1367,17 @@ describe("cveConnector.parse", () => {
     ).toEqual(["CVE-2026-1004"]);
   });
 });
+
+describe("readCveRecord with a field that holds a run of millions of units", () => {
+  it("reads a vendor of five million units of white space as the blanks it is", () => {
+    const reading = readCveRecord(
+      published({
+        id: "CVE-2026-2001",
+        metrics: [metric(9.8)],
+        affected: [{ vendor: `Example${" ".repeat(5 * 1024 * 1024)}Corp`, product: "Gateway" }],
+      }),
+      WINDOW,
+    );
+    expect(reading.kind).toBe("kept");
+  });
+});

@@ -1,4 +1,4 @@
-import { MAX_SNIPPET_CHARS, cleanText, cutAtCodePoint } from "../text";
+import { MAX_SNIPPET_CHARS, cleanText, collapseBlanks, cutAtCodePoint } from "../text";
 
 describe("MAX_SNIPPET_CHARS", () => {
   it("is 1,500", () => {
@@ -109,5 +109,51 @@ describe("cutAtCodePoint", () => {
 
   it("does not look inside the text: a surrogate before the boundary stays as it is", () => {
     expect(cutAtCodePoint("a\uD800bcd", 3)).toBe("a\uD800b");
+  });
+});
+
+describe("collapseBlanks", () => {
+  const MEGABYTE = 1024 * 1024;
+
+  it("writes every run of white space as one blank, as the unbounded regular expression does", () => {
+    expect(collapseBlanks("a  b\t\n c")).toBe("a b c");
+    expect(collapseBlanks("  a ")).toBe(" a ");
+    expect(collapseBlanks("")).toBe("");
+    expect(collapseBlanks("\n")).toBe(" ");
+    expect(collapseBlanks("no blanks")).toBe("no blanks");
+  });
+
+  // The runs round the size of a piece (1024) and the sizes at which one more pass is needed. A run of
+  // five million units overflows the backtrack stack of an unoptimised unbounded loop, which is what
+  // V8 compiles in a process that has compiled much regexp code.
+  it.each([1, 2, 1023, 1024, 1025, 2048, 2049, 1_048_576, 5 * MEGABYTE])(
+    "writes a run of %p units of white space as one blank, in little time",
+    (length) => {
+      const started = Date.now();
+      expect(collapseBlanks(`a${" ".repeat(length)}b`)).toBe("a b");
+      expect(Date.now() - started).toBeLessThan(10_000);
+    },
+  );
+
+  it("writes a run of mixed white space of five million units as one blank", () => {
+    const run = " \t\n\u00a0\u3000\r".repeat(Math.floor((5 * MEGABYTE) / 6));
+    expect(collapseBlanks(`a${run}b`)).toBe("a b");
+  });
+
+  it("gives the text that replace(/\\s+/g, ' ') gives, for runs of random length (seed 20261111)", () => {
+    let seed = 20261111;
+    const next = (): number => {
+      seed = (seed * 16807) % 2147483647;
+      return seed;
+    };
+    const pieces = ["a", "b", " ", "\t", "\n", "\u00a0", "x y"];
+    for (let round = 0; round < 40; round += 1) {
+      let text = "";
+      for (let part = 0; part < 12; part += 1) {
+        const piece = pieces[next() % pieces.length];
+        text += piece.repeat(1 + (next() % 2500));
+      }
+      expect(collapseBlanks(text)).toBe(text.replace(/\s+/g, " "));
+    }
   });
 });

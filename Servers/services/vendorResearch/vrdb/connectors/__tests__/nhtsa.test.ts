@@ -1241,3 +1241,13 @@ describe("nhtsaConnector.download", () => {
     expect(snapshot).not.toBe("unchanged");
   });
 });
+
+describe("a cell that holds a run of millions of units", () => {
+  it("reads a reporting entity with a run of white space of five million units as one blank", () => {
+    const result = parseAds([
+      { "Reporting Entity": `Alpha${" ".repeat(5 * 1024 * 1024)}Robotics LLC` },
+    ]);
+    expect(result.errors).toBe(0);
+    expect(result.records.length).toBeGreaterThan(0);
+  });
+});

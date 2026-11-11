@@ -23,7 +23,7 @@
  * (`require.resolve`) and given to the worker by path, as the worker has no module paths of its own.
  */
 import { Worker } from "node:worker_threads";
-import { cutAtCodePoint } from "../vendorResearch/text";
+import { collapseBlanks, cutAtCodePoint } from "../vendorResearch/text";
 import { createLimiter } from "./limiter";
 import { MAX_EXCERPT_CHARS, MAX_PAGE_PARTS, tidyText, toIsoDate } from "./pageText";
 
@@ -218,7 +218,7 @@ export function reflowPdfPage(page: string): string {
 const NOT_A_TITLE =
   /^(?:microsoft (?:word|excel|powerpoint) - .*|untitled(?:[\s_-]*\d+)?|document\s*\d*|powerpoint presentation|.*\.(?:docx?|xlsx?|pptx?|pdf|indd|tex|rtf|odt|txt))$/i;
 
-const oneLine = (text: string) => tidyText(text).replace(/\s+/g, " ");
+const oneLine = (text: string) => collapseBlanks(tidyText(text));
 
 /** The name of the file in the address, as words: `/legal/Acme_DPA-v3.pdf` is "Acme DPA v3". */
 function titleFromAddress(address: string | undefined): string {

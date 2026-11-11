@@ -62,7 +62,7 @@ const BREAK_PAIR = /[\s\p{Cc}]{2}/u;
  * (three for a run of five million) and the engine never passes more than BREAK_PIECE_MAX units of
  * a run in one loop. A pass with no run of two units left in the text is the last.
  */
-function collapseBreaks(text: string): string {
+export function collapseBreaks(text: string): string {
   let collapsed = text.replace(BREAK_PIECES, " ");
   while (BREAK_PAIR.test(collapsed)) collapsed = collapsed.replace(BREAK_PIECES, " ");
   return collapsed;

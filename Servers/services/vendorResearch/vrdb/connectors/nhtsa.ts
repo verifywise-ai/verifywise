@@ -41,7 +41,7 @@
 import { FetchError } from "../../../webResearch/guardedFetch";
 import { compactName } from "../../records/match";
 import { joinSentences, sentence } from "../../records/sentence";
-import { cleanText, cutAtCodePoint } from "../../text";
+import { cleanText, collapseBlanks, cutAtCodePoint } from "../../text";
 import { nameKeysOf } from "../keys";
 import { vrdbSourceOf } from "../sources";
 import type { ParsedRecord } from "../types";
@@ -222,7 +222,7 @@ interface Report {
 
 /** A cell as one line: without control characters, white space as single blanks, cut at `max`. */
 const lineOf = (cell: string, max: number): string =>
-  cutAtCodePoint(cleanText(cell).replace(/\s+/g, " ").trim(), max).trimEnd();
+  cutAtCodePoint(collapseBlanks(cleanText(cell)).trim(), max).trimEnd();
 
 /** The report a row holds; null when the row cannot be read. */
 function reportOf(

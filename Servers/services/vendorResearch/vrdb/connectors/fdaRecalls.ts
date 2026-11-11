@@ -112,6 +112,7 @@ import { createHash } from "crypto";
 import { FetchError } from "../../../webResearch/guardedFetch";
 import { joinSentences, sentence } from "../../records/sentence";
 import { cleanText, cutAtCodePoint } from "../../text";
+import { collapseBreaks } from "./kit/clean";
 import { nameKeysOf } from "../keys";
 import type { ParsedRecord } from "../types";
 import {
@@ -242,8 +243,6 @@ const TERM = /^(?:K\d{6}|P\d{6}(?:S\d+)?)$/;
 
 /** Characters no reader sees: zero-width, bidirectional, soft hyphen, byte order mark, tags, variation selectors. */
 const HIDDEN = /[\p{Cf}\p{Variation_Selector}]/gu;
-/** White space, and the controls that are left, as one blank. */
-const BREAKS = /[\s\p{Cc}]+/gu;
 
 const compareText = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 0);
 
@@ -253,7 +252,7 @@ const compareText = (a: string, b: string): number => (a < b ? -1 : a > b ? 1 : 
  * it. Every step is linear in the length of the text, whatever it holds.
  */
 const lineOf = (value: string): string =>
-  cleanText(value).replace(HIDDEN, "").replace(BREAKS, " ").trim();
+  collapseBreaks(cleanText(value).replace(HIDDEN, "")).trim();
 
 /** The text as it is when it has at most `max` characters, else cut so that it and the marker have. */
 function shorten(value: string, max: number): string {

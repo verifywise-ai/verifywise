@@ -39,3 +39,27 @@ const LONE_SURROGATES = /[\uD800-\uDFFF]/gu;
 export function cleanText(text: string): string {
   return text.replace(UNWANTED_CONTROL_CHARACTERS, "").replace(LONE_SURROGATES, "\uFFFD");
 }
+
+/**
+ * The most units of a run of white space that one match of `collapseBlanks` passes. A loop with no
+ * upper bound keeps an entry on the backtrack stack of the regular expression engine for every unit
+ * it passes, and V8 compiles the regular expressions of a process that has already compiled much
+ * regexp code without optimising them: one run of a few million units then overflows that stack
+ * (a RangeError, "Maximum call stack size exceeded"), in a long test run or a long-lived server and
+ * not in a short one.
+ */
+const BLANK_PIECE_MAX = 1024;
+const BLANK_PIECES = new RegExp(`\\s{1,${BLANK_PIECE_MAX}}`, "g");
+const BLANK_PAIR = /\s{2}/;
+
+/**
+ * The text with every run of white space written as one blank, as `text.replace(/\s+/g, " ")` writes
+ * it, whatever the length of the run. A run is written as one blank for each BLANK_PIECE_MAX units
+ * of it and the passes that follow join those blanks, so a run of n units takes about log(n) passes
+ * and the engine never passes more than BLANK_PIECE_MAX units of a run in one loop.
+ */
+export function collapseBlanks(text: string): string {
+  let collapsed = text.replace(BLANK_PIECES, " ");
+  while (BLANK_PAIR.test(collapsed)) collapsed = collapsed.replace(BLANK_PIECES, " ");
+  return collapsed;
+}

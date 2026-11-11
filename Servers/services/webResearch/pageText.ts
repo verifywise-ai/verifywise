@@ -136,16 +136,42 @@ export function decodeEntities(text: string): string {
 }
 
 /**
+ * The most units of a run that one match of the two collapses below passes: a loop with no upper
+ * bound keeps an entry on the backtrack stack of the regular expression engine for every unit it
+ * passes, and a process that has compiled much regexp code (a long test run, a long-lived server)
+ * has V8 compile later expressions without optimising them, so one run of a few million units (a PDF
+ * can hold one) overflows the stack. Each collapse writes a run piece by piece and goes on until no
+ * run longer than the result of one piece is left; the text it returns is the one the unbounded loop
+ * returns.
+ */
+const RUN_PIECE_MAX = 1024;
+const LINE_BLANK_PIECES = new RegExp(`[^\\S\\n]{1,${RUN_PIECE_MAX}}`, "g");
+const LINE_BLANK_PAIR = /[^\S\n]{2}/;
+const LINE_BREAK_PIECES = new RegExp(`\\n{3,${RUN_PIECE_MAX}}`, "g");
+const LINE_BREAK_TRIPLE = /\n{3}/;
+
+/** Every run of white space other than a line feed as one space. */
+function collapseBlanksOfLine(text: string): string {
+  let collapsed = text.replace(LINE_BLANK_PIECES, " ");
+  while (LINE_BLANK_PAIR.test(collapsed)) collapsed = collapsed.replace(LINE_BLANK_PIECES, " ");
+  return collapsed;
+}
+
+/** Every run of three or more line feeds as two. */
+function collapseLineBreaks(text: string): string {
+  let collapsed = text.replace(LINE_BREAK_PIECES, "\n\n");
+  while (LINE_BREAK_TRIPLE.test(collapsed))
+    collapsed = collapsed.replace(LINE_BREAK_PIECES, "\n\n");
+  return collapsed;
+}
+
+/**
  * Cleans text for reading: control characters out, every run of white space other than a line
  * break (a non-breaking space too) one space, no space beside a line break, no more than one
  * blank line in a row, and no white space at either end.
  */
 export function tidyText(text: string): string {
-  return cleanText(text)
-    .replace(/[^\S\n]+/g, " ")
-    .replace(/ ?\n ?/g, "\n")
-    .replace(/\n{3,}/g, "\n\n")
-    .trim();
+  return collapseLineBreaks(collapseBlanksOfLine(cleanText(text)).replace(/ ?\n ?/g, "\n")).trim();
 }
 
 /** Its content is not text of the page: `sanitize-html` drops these tags with what is inside. */

@@ -32,7 +32,7 @@
 import { FetchError } from "../../../webResearch/guardedFetch";
 import { compactName } from "../../records/match";
 import { joinSentences, sentence } from "../../records/sentence";
-import { cleanText, cutAtCodePoint } from "../../text";
+import { cleanText, collapseBlanks, cutAtCodePoint } from "../../text";
 import { nameKeysOf } from "../keys";
 import type { ParsedRecord } from "../types";
 import { decodeEntities } from "../xmlScan";
@@ -212,7 +212,7 @@ function isExportHost(address: string): boolean {
   }
 }
 
-const oneLine = (text: string): string => text.replace(/\s+/g, " ").trim();
+const oneLine = (text: string): string => collapseBlanks(text).trim();
 
 /** The characters that are no one's text: format characters (zero-width, soft hyphen, byte order mark, the tag characters that spell invisible ASCII) and variation selectors. */
 const HIDDEN = /[\p{Cf}\p{Variation_Selector}]/gu;

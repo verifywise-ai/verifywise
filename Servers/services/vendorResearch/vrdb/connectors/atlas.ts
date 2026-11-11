@@ -46,7 +46,7 @@ import {
 } from "yaml";
 import { FetchError } from "../../../webResearch/guardedFetch";
 import { joinSentences, sentence } from "../../records/sentence";
-import { cleanText, cutAtCodePoint } from "../../text";
+import { cleanText, collapseBlanks, cutAtCodePoint } from "../../text";
 import { nameKeysOf } from "../keys";
 import type { ParsedRecord } from "../types";
 import { decodeEntities } from "../xmlScan";
@@ -291,6 +291,12 @@ const MARKDOWN_LINK =
 const REFERENCE = /\[\[[^[\]]{0,100}\]\]/g;
 /** The tags that end a line in the text they stand in: removing them must not join two words. */
 const LINE_BREAKING_TAG = /^\/?(?:br|hr|p|div|li|ul|ol|table|tr|td|th|h[1-6])(?![A-Za-z0-9])/i;
+/**
+ * The most units of a target or of a description that are read. The text of a case study is a few
+ * hundred characters; a longer one is hostile or broken, and a loop with no upper bound over a run of
+ * a few million units overflows the backtrack stack of the regular expression engine.
+ */
+const READ_MAX_CHARS = 100_000;
 /** A blank line: a line feed, any white space but a line feed, a line feed. */
 const BLANK_LINE = /\n[^\S\n]*\n/;
 
@@ -444,8 +450,8 @@ function settledByPasses(text: string): string | null {
 
 /** The first paragraph (up to the first blank line) on one line, cut to `max` at a word boundary. */
 function shapeOf(text: string, max: number): string {
-  const paragraph = text.trim().split(BLANK_LINE, 1)[0] ?? "";
-  return cutAtWord(paragraph.replace(/\s+/g, " ").trim(), max);
+  const paragraph = cutAtCodePoint(text.trim(), READ_MAX_CHARS).split(BLANK_LINE, 1)[0] ?? "";
+  return cutAtWord(collapseBlanks(paragraph).trim(), max);
 }
 
 /**
@@ -545,8 +551,8 @@ const MAX_PREFIX_WORDS = 3;
 
 /** The words of a part of a target, without the leading words that are no name. */
 function nameWordsOf(part: string): string[] {
-  const words = part
-    .split(/\s+/)
+  const words = collapseBlanks(part)
+    .split(" ")
     .filter((word) => word !== "")
     .map((word) => word.replace(POSSESSIVE, ""));
   let from = 0;
@@ -573,7 +579,7 @@ function nameWordsOf(part: string): string[] {
  */
 export function atlasKeysOf(target: string): string[] {
   const names: string[] = [];
-  const text = target.replace(URL_IN_TEXT, " ").replace(/\s+/g, " ");
+  const text = collapseBlanks(cutAtCodePoint(target, READ_MAX_CHARS).replace(URL_IN_TEXT, " "));
   for (const part of text.split(TARGET_SEPARATORS)) {
     const words = nameWordsOf(part);
     for (let count = 1; count <= Math.min(MAX_PREFIX_WORDS, words.length); count += 1) {

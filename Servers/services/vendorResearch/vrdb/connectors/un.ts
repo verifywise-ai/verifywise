@@ -14,7 +14,7 @@
  * own (Ruling 13 of the M1 plan).
  */
 import { joinSentences, sentence } from "../../records/sentence";
-import { cleanText } from "../../text";
+import { cleanText, collapseBlanks } from "../../text";
 import { nameKeysOf } from "../keys";
 import { vrdbSourceOf } from "../sources";
 import type { ParsedRecord } from "../types";
@@ -34,10 +34,7 @@ const MAX_TEXT_CHARS = 1200;
 const LIST_PAGE = vrdbSourceOf("un_sanctions").documentationUrl;
 
 /** A field as one line of plain text. */
-const plain = (text: string | null): string =>
-  cleanText(text ?? "")
-    .replace(/\s+/g, " ")
-    .trim();
+const plain = (text: string | null): string => collapseBlanks(cleanText(text ?? "")).trim();
 
 /** The texts that are not empty, once each, in order. */
 const unique = (values: readonly string[]): string[] => [

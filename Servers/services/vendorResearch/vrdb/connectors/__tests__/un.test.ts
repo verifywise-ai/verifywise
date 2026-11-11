@@ -203,3 +203,15 @@ describe("unConnector.download", () => {
     });
   });
 });
+
+describe("a field that holds a run of millions of units", () => {
+  it("reads a name with a run of white space of five million units as one blank", () => {
+    const xml = XML.replace(
+      "Contoso Shipping Agency",
+      `Contoso${" ".repeat(5 * 1024 * 1024)}Shipping Agency`,
+    );
+    expect(parse(xml).records.map((record) => record.title)).toContain(
+      `${UN_RECORD_MARK}: Contoso Shipping Agency`,
+    );
+  });
+});

@@ -2515,3 +2515,14 @@ describe("cslConnector.parse", () => {
     expect(parsed.records).toHaveLength(100);
   });
 });
+
+describe("a field that holds a run of millions of units", () => {
+  it("reads a remark with a run of white space of five million units as one blank", async () => {
+    const { records, errors } = await runOf(
+      fileOf([elOf("Zorbex Holdings", { remarks: `Note${" ".repeat(5 * 1024 * 1024)}end` })]),
+    );
+    expect(errors).toBe(0);
+    expect(records).toHaveLength(1);
+    expect(records[0].summary).toContain("Note end");
+  });
+});

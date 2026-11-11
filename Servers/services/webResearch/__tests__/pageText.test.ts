@@ -11,6 +11,7 @@ import {
   pageParts,
   relevantLinks,
   selectExcerpt,
+  tidyText,
 } from "../pageText";
 import { MAX_URL_CHARS } from "../publicUrl";
 
@@ -902,5 +903,43 @@ describe("extractPageText on hostile input", () => {
   it("reads only the first 2 MB of a larger page", () => {
     const html = `<p>first</p>${"<!-- -->".repeat(MEGABYTE_2 / 8)}<p>last</p>`;
     expect(extractPageText(html, BASE).text).toBe("first");
+  });
+});
+
+describe("tidyText over runs of millions of units", () => {
+  const MEGABYTE = 1024 * 1024;
+  /** What tidyText wrote before its loops were bounded. */
+  const unbounded = (text: string): string =>
+    text
+      .replace(/[^\S\n]+/g, " ")
+      .replace(/ ?\n ?/g, "\n")
+      .replace(/\n{3,}/g, "\n\n")
+      .trim();
+
+  it.each([1, 2, 3, 1023, 1024, 1025, 1026, 2048, 2049, 5 * MEGABYTE])(
+    "writes a run of %p line feeds as two, and a run of that many blanks as one",
+    (length) => {
+      const lines = tidyText(`a${"\n".repeat(length)}b`);
+      expect(lines).toBe(length === 1 ? "a\nb" : "a\n\nb");
+      expect(tidyText(`a${" ".repeat(length)}b`)).toBe("a b");
+    },
+  );
+
+  it("gives what the unbounded loops gave, for runs of random length (seed 20261111)", () => {
+    let seed = 20261111;
+    const next = (): number => {
+      seed = (seed * 16807) % 2147483647;
+      return seed;
+    };
+    const pieces = ["a", " ", "\t", "\n", "\u00a0", "\r", "b c"];
+    for (let round = 0; round < 40; round += 1) {
+      let text = "";
+      for (let part = 0; part < 12; part += 1) {
+        text += pieces[next() % pieces.length].repeat(1 + (next() % 2500));
+      }
+      expect(tidyText(text)).toBe(
+        unbounded(text.replace(/[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, "")),
+      );
+    }
   });
 });

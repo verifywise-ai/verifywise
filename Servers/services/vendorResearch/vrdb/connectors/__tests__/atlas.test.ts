@@ -1878,3 +1878,17 @@ describe("cleanCaseStudyText", () => {
     });
   });
 });
+
+describe("text of a case study that holds a run of millions of units", () => {
+  const MEGABYTE = 1024 * 1024;
+
+  it("reads a target and a description with a run of white space of five million units", () => {
+    // A target is read to its first 100,000 units, so what follows the run is not read.
+    expect(atlasKeysOf(`Acme Corp${" ".repeat(5 * MEGABYTE)}Zed`)).toEqual(
+      atlasKeysOf("Acme Corp"),
+    );
+    expect(cleanCaseStudyText(`First${" ".repeat(5 * MEGABYTE)}paragraph`, 100)).toBe("First");
+    expect(cleanCaseStudyText(`First${" ".repeat(1000)}paragraph`, 100)).toBe("First paragraph");
+    expect(cleanCaseStudyText(`First\n${" ".repeat(5 * MEGABYTE)}\nSecond`, 100)).toBe("First");
+  });
+});

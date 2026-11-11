@@ -1686,3 +1686,9 @@ describe("aiidConnector in the sync", () => {
     expect(applied[0].records).toHaveLength(20);
   });
 });
+
+describe("description with a run of millions of units", () => {
+  it("reads a description with a run of white space of five million units", () => {
+    expect(aiidDescriptionOf(`First${" ".repeat(5 * 1024 * 1024)}second`)).toBe("First second");
+  });
+});

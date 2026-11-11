@@ -63,7 +63,7 @@
 import { compactName } from "../../records/match";
 import { joinSentences, sentence } from "../../records/sentence";
 import { isSharedHost } from "../../sharedHosts";
-import { cleanText, cutAtCodePoint } from "../../text";
+import { cleanText, collapseBlanks, cutAtCodePoint } from "../../text";
 import { domainKey, hostsOf, identifierKeysOf, nameKeysOf } from "../keys";
 import { vrdbSourceOf } from "../sources";
 import type { ParsedRecord } from "../types";
@@ -272,7 +272,6 @@ const WINDOWS_1252_C1 = [
   0x161, 0x203a, 0x153, 0x9d, 0x17e, 0x178,
 ];
 const C1_CONTROLS = /[\x80-\x9f]/g;
-const WHITE_SPACE = /\s+/g;
 /**
  * Characters a reader does not see (zero-width, the right-to-left overrides, the tag characters
  * that spell ASCII invisibly, the byte order mark, the variation selectors) and the control
@@ -298,10 +297,9 @@ function windows1252Of(control: string): string {
  * one blank, none around it.
  */
 function lineOf(text: string): string {
-  return cleanText(text.replace(C1_CONTROLS, windows1252Of).normalize("NFKC"))
-    .replace(UNSEEN, unseenAs)
-    .replace(WHITE_SPACE, " ")
-    .trim();
+  return collapseBlanks(
+    cleanText(text.replace(C1_CONTROLS, windows1252Of).normalize("NFKC")).replace(UNSEEN, unseenAs),
+  ).trim();
 }
 
 /**

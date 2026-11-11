@@ -43,7 +43,7 @@
 import { FetchError } from "../../../webResearch/guardedFetch";
 import { shortName } from "../../identity";
 import { joinSentences, sentence } from "../../records/sentence";
-import { cleanText, cutAtCodePoint } from "../../text";
+import { cleanText, collapseBlanks, cutAtCodePoint } from "../../text";
 import { cveVendorKey } from "../keys";
 import type { ParsedRecord } from "../types";
 import { type ZipLimits, forEachZipEntry } from "../zip";
@@ -140,7 +140,7 @@ const objectOf = (value: unknown): Fields | null =>
 const listOf = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
 const textOf = (value: unknown): string => (typeof value === "string" ? value : "");
 /** A field as one line of plain text. */
-const plain = (value: unknown): string => cleanText(textOf(value)).replace(/\s+/g, " ").trim();
+const plain = (value: unknown): string => collapseBlanks(cleanText(textOf(value))).trim();
 /** Whether a vendor or a product is a placeholder (n/a, unknown, unspecified) and so names none. */
 const isNa = (text: string): boolean => NO_VALUE.has(text.trim().toLowerCase());
 
