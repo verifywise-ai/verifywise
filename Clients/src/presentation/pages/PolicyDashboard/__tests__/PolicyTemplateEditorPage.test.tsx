@@ -8,9 +8,9 @@ vi.mock("react-router", async () => {
   return { ...actual, useNavigate: () => mockNavigate };
 });
 
-let mockRole = "Admin";
-vi.mock("../../../../application/hooks/useAuth", () => ({
-  useAuth: () => ({ userRoleName: mockRole }),
+let mockCanManage = true;
+vi.mock("../../../../application/hooks/useMyPermissions", () => ({
+  useHasPermission: (key: string) => key === "policyTemplate.edit" && mockCanManage,
 }));
 
 // A minimal editor stand-in: the page only needs getHTML/setEditable.
@@ -71,7 +71,7 @@ const renderAt = (route: string) =>
 describe("PolicyTemplateEditorPage (#5261)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockRole = "Admin";
+    mockCanManage = true;
     mockTemplateResult = { data: orgTemplate, isLoading: false, isError: false };
   });
 
@@ -101,8 +101,8 @@ describe("PolicyTemplateEditorPage (#5261)", () => {
     expect(screen.getByTestId("content-editor")).toHaveAttribute("data-readonly", "true");
   });
 
-  it("is read-only for roles that cannot manage templates", () => {
-    mockRole = "Auditor";
+  it("is read-only without the policyTemplate.edit permission", () => {
+    mockCanManage = false;
     renderAt("/policies/templates/2/edit");
     expect(screen.queryByRole("button", { name: /save template/i })).not.toBeInTheDocument();
   });

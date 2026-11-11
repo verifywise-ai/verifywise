@@ -12,8 +12,7 @@ import { useNavigate, useParams } from "react-router";
 import { Alert, Box, Skeleton, Snackbar, Stack, Typography } from "@mui/material";
 import { Check, Loader2, Save as SaveIcon } from "lucide-react";
 import { CustomizableButton } from "../../components/button/customizable-button";
-import { useAuth } from "../../../application/hooks/useAuth";
-import allowedRoles from "../../../application/constants/permissions";
+import { useHasPermission } from "../../../application/hooks/useMyPermissions";
 import {
   usePolicyTemplate,
   useUpdatePolicyTemplate,
@@ -37,11 +36,8 @@ export default function PolicyTemplateEditorPage() {
   const { templateId: rawId } = useParams<{ templateId: string }>();
   const templateId = parseTemplateId(rawId);
   const navigate = useNavigate();
-  const { userRoleName } = useAuth();
-  // Same gate as the templates tab (PolicyTemplates.tsx canManageTemplates).
-  const canManageTemplates =
-    !!userRoleName &&
-    (allowedRoles.policies.create.includes(userRoleName) || userRoleName === "Admin");
+  // Same gate as the templates tab and the template routes.
+  const canManageTemplates = useHasPermission("policyTemplate.edit", { fallbackToAdmin: true });
 
   const { data: template, isLoading, isError } = usePolicyTemplate(templateId);
   const updateMutation = useUpdatePolicyTemplate();

@@ -154,8 +154,13 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
   const handleDuplicate = async (row: TemplateRow) => {
     setServerError(null);
     try {
+      // Template names are unique per organization, so pick the first free
+      // "(copy)", "(copy 2)", ... instead of failing on a second duplicate.
+      const taken = new Set(templates.filter((t) => !t.is_system_template).map((t) => t.name));
+      let name = `${row.name} (copy)`;
+      for (let n = 2; taken.has(name); n += 1) name = `${row.name} (copy ${n})`;
       await createMutation.mutateAsync({
-        name: `${row.name} (copy)`,
+        name,
         category: row.category,
         description: row.description,
         content: row.content,

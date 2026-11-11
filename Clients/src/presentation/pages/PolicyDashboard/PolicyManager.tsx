@@ -35,6 +35,7 @@ import { ExportMenu } from "../../components/Table/ExportMenu";
 import useUsers from "../../../application/hooks/useUsers";
 import { useAuth } from "../../../application/hooks/useAuth";
 import allowedRoles from "../../../application/constants/permissions";
+import { useHasPermission } from "../../../application/hooks/useMyPermissions";
 import { GroupBy } from "../../components/Table/GroupBy";
 import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
@@ -88,6 +89,8 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
   const [flashRowId, setFlashRowId] = useState<number | null>(null);
   const { userRoleName } = useAuth();
   const canRunBulkActions = !!userRoleName && allowedRoles.policies.edit.includes(userRoleName);
+  // "Save as template" writes a template, so it follows the template routes' key.
+  const canManageTemplates = useHasPermission("policyTemplate.edit", { fallbackToAdmin: true });
 
   const [showLinkedObjectModal, setLinkedObjectsModalOpen] = useState(false);
   const [policyId, setSelectedPolicyId] = useState<number | null>(null);
@@ -790,7 +793,7 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
                     onDelete={handleDelete}
                     onLinkedObjects={handleLinkedObject}
                     onAssignToFolder={handleAssignToFolder}
-                    onSaveAsTemplate={handleSaveAsTemplate}
+                    onSaveAsTemplate={canManageTemplates ? handleSaveAsTemplate : undefined}
                     hidePagination={options?.hidePagination}
                     flashRowId={flashRowId}
                     visibleColumns={visibleColumns}

@@ -205,6 +205,29 @@ describe("PolicyTemplates (#5261)", () => {
     expect(mockNavigate).not.toHaveBeenCalled();
   });
 
+  it("names a repeat duplicate after the first free copy number", async () => {
+    mockUsePolicyTemplates.mockReturnValue({
+      data: [
+        systemTemplate,
+        orgTemplate,
+        { ...orgTemplate, id: 4, name: "AI Ethics Policy (copy)" },
+        { ...orgTemplate, id: 5, name: "AI Ethics Policy (copy 2)" },
+      ],
+      isLoading: false,
+    });
+    mockCreate.mockResolvedValue({ id: 9 });
+    renderWithProviders(<PolicyTemplates tags={[]} />, { route: "/policies/templates" });
+    await waitFor(() => {
+      expect(screen.getByText("AI Ethics Policy")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByLabelText("Duplicate AI Ethics Policy"));
+    await waitFor(() => {
+      expect(mockCreate).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "AI Ethics Policy (copy 3)" }),
+      );
+    });
+  });
+
   it("edits an org template's details", async () => {
     mockUpdate.mockResolvedValue({ ...orgTemplate, name: "Renamed policy" });
     renderWithProviders(<PolicyTemplates tags={[]} />, { route: "/policies/templates" });
