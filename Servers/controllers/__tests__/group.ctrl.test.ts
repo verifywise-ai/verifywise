@@ -25,12 +25,14 @@ jest.mock("../../utils/logger/logHelper", () => ({
   logFailure: jest.fn(async () => undefined),
 }));
 
-import { listProjectGroups, setProjectGroups } from "../group.ctrl";
+import { getGroupById, listProjectGroups, setProjectGroups } from "../group.ctrl";
+import { ValidationException } from "../../domain.layer/exceptions/custom.exception";
 import * as groupUtils from "../../utils/group.utils";
 import * as projectUtils from "../../utils/project.utils";
 
 const mockSet = groupUtils.setProjectGroupsQuery as jest.Mock<any>;
 const mockList = groupUtils.listProjectGroupsQuery as jest.Mock<any>;
+const mockGetById = groupUtils.getGroupByIdQuery as jest.Mock<any>;
 const mockWriteAccess = projectUtils.getProjectAccessQuery as jest.Mock<any>;
 const mockReadAccess = projectUtils.getProjectReadAccessQuery as jest.Mock<any>;
 
@@ -105,5 +107,17 @@ describe("listProjectGroups", () => {
     const res = makeRes();
     await listProjectGroups(makeReq(), res);
     expect(res.status).toHaveBeenCalledWith(200);
+  });
+});
+
+describe("getGroupById", () => {
+  it("answers 400, not 500, for a non-numeric id", async () => {
+    mockGetById.mockRejectedValueOnce(
+      new ValidationException("group id must be a positive integer", "group id", NaN),
+    );
+    const res = makeRes();
+    await getGroupById(makeReq({ params: { id: "abc" } as any }), res);
+    expect(mockGetById).toHaveBeenCalledWith(NaN, 7);
+    expect(res.status).toHaveBeenCalledWith(400);
   });
 });

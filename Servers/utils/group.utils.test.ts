@@ -15,6 +15,7 @@ jest.mock("../database/db", () => ({
 import {
   addGroupMembersQuery,
   createGroupQuery,
+  getGroupByIdQuery,
   setGroupMembersQuery,
   setProjectGroupsQuery,
   updateGroupByIdQuery,
@@ -161,7 +162,7 @@ describe("setProjectGroupsQuery", () => {
   it("replaces the group set in one transaction", async () => {
     mockQuery
       .mockResolvedValueOnce([{ id: 33 }]) // project
-      .mockResolvedValueOnce([{ id: 1 }]) // group 1
+      .mockResolvedValueOnce([{ id: 1 }]) // groups lookup
       .mockResolvedValueOnce(undefined) // DELETE
       .mockResolvedValueOnce(undefined); // INSERT
     await setProjectGroupsQuery(33, ORG, [1]);
@@ -172,5 +173,53 @@ describe("setProjectGroupsQuery", () => {
     expect(insertOpts.replacements.groupIds).toBe("{1}");
     expect(mockTransaction).toHaveBeenCalledTimes(1);
     expectAllInTransaction();
+  });
+
+  it("checks every group with one org-scoped query", async () => {
+    mockQuery
+      .mockResolvedValueOnce([{ id: 33 }]) // project
+      .mockResolvedValueOnce([{ id: 1 }, { id: 2 }, { id: 3 }]) // groups lookup
+      .mockResolvedValueOnce(undefined) // DELETE
+      .mockResolvedValueOnce(undefined); // INSERT
+    await setProjectGroupsQuery(33, ORG, [1, 2, 3, 2]);
+    expect(mockQuery).toHaveBeenCalledTimes(4);
+    const [lookupSql, lookupOpts] = mockQuery.mock.calls[1] as any[];
+    expect(lookupSql).toContain("FROM groups");
+    expect(lookupSql).toContain("organization_id = :organizationId");
+    expect(lookupSql).toContain("id IN (:ids)");
+    expect(lookupOpts.replacements).toEqual({ organizationId: ORG, ids: [1, 2, 3] });
+    expectAllInTransaction();
+  });
+
+  it("404s on a group outside the org and writes nothing", async () => {
+    mockQuery
+      .mockResolvedValueOnce([{ id: 33 }]) // project
+      .mockResolvedValueOnce([{ id: 1 }]); // only group 1 is in the org
+    await expect(setProjectGroupsQuery(33, ORG, [1, 9])).rejects.toThrow("Group 9 not found");
+    expect(mockQuery).toHaveBeenCalledTimes(2);
+  });
+
+  it("skips the groups lookup when clearing all groups", async () => {
+    mockQuery
+      .mockResolvedValueOnce([{ id: 33 }]) // project
+      .mockResolvedValueOnce(undefined); // DELETE
+    await setProjectGroupsQuery(33, ORG, []);
+    expect(mockQuery).toHaveBeenCalledTimes(2);
+    expect((mockQuery.mock.calls[1] as any[])[0]).toContain("DELETE FROM project_groups");
+  });
+});
+
+describe("getGroupByIdQuery", () => {
+  it.each([NaN, 0, -1, 1.5])("rejects %p as a ValidationException without querying", async (id) => {
+    await expect(getGroupByIdQuery(id, ORG)).rejects.toBeInstanceOf(ValidationException);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it("returns the org-scoped group", async () => {
+    mockQuery.mockResolvedValueOnce([{ id: 5, member_count: 2 }]);
+    const group = await getGroupByIdQuery(5, ORG);
+    expect(group).toEqual({ id: 5, member_count: 2 });
+    const [, options] = mockQuery.mock.calls[0] as any[];
+    expect(options.replacements).toEqual({ organizationId: ORG, groupId: 5 });
   });
 });

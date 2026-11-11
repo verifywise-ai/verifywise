@@ -143,6 +143,7 @@ export async function getGroupByIdQuery(
   groupId: number,
   organizationId: number,
 ): Promise<IGroup | null> {
+  const id = assertPositiveInt(groupId, "group id");
   const rows = await sequelize.query<IGroup>(
     `SELECT g.*, COUNT(gm.user_id)::int AS member_count
        FROM groups g
@@ -151,7 +152,7 @@ export async function getGroupByIdQuery(
       WHERE g.organization_id = :organizationId AND g.id = :groupId
       GROUP BY g.id`,
     {
-      replacements: { organizationId, groupId },
+      replacements: { organizationId, groupId: id },
       type: QueryTypes.SELECT,
     },
   );
@@ -432,8 +433,18 @@ export async function setProjectGroupsQuery(
     if (projectRows.length === 0) {
       throw new NotFoundException(`Use case ${id} not found`);
     }
-    for (const groupId of ids) {
-      await getGroupByIdOrThrowQuery(groupId, organizationId, transaction);
+    // One query for every group, not one per group, while the project row
+    // is locked. The first missing id gets the same 404 as before.
+    if (ids.length > 0) {
+      const found = await sequelize.query<{ id: number }>(
+        `SELECT id FROM groups WHERE organization_id = :organizationId AND id IN (:ids)`,
+        { replacements: { organizationId, ids }, type: QueryTypes.SELECT, transaction },
+      );
+      const foundIds = new Set(found.map((g) => Number(g.id)));
+      const missing = ids.find((g) => !foundIds.has(g));
+      if (missing !== undefined) {
+        throw new NotFoundException(`Group ${missing} not found`);
+      }
     }
     await sequelize.query(
       `DELETE FROM project_groups WHERE project_id = :id AND organization_id = :organizationId`,
