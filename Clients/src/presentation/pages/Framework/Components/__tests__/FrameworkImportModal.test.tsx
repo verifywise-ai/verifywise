@@ -69,7 +69,7 @@ describe("FrameworkImportModal (#5254)", () => {
     renderModal();
     expect(screen.getByText(/Step 1: Download the Excel template/i)).toBeInTheDocument();
     expect(screen.getByText(/Step 2: Upload the filled Excel file/i)).toBeInTheDocument();
-    expect(screen.getByText(/use case's Frameworks tab/i)).toBeInTheDocument();
+    expect(screen.getByText(/Frameworks tab of that use case/i)).toBeInTheDocument();
     expect(screen.queryByText(/cannot be added to use cases yet/i)).not.toBeInTheDocument();
   });
 

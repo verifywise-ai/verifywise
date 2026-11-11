@@ -113,7 +113,9 @@ describe("Test Role Repository", () => {
       const result = await createRole({ body });
 
       expect(apiServices.post).toHaveBeenCalledTimes(1);
-      expect(apiServices.post).toHaveBeenCalledWith("/roles", body);
+      expect(apiServices.post).toHaveBeenCalledWith("/roles", body, {
+        suppressGlobalErrorToast: undefined,
+      });
       expect(result).toEqual(mockResponse);
     });
 
@@ -146,7 +148,9 @@ describe("Test Role Repository", () => {
       const result = await updateRole({ id: 3, body });
 
       expect(apiServices.put).toHaveBeenCalledTimes(1);
-      expect(apiServices.put).toHaveBeenCalledWith("/roles/3", body);
+      expect(apiServices.put).toHaveBeenCalledWith("/roles/3", body, {
+        suppressGlobalErrorToast: undefined,
+      });
       expect(result).toEqual(mockResponse);
     });
 
@@ -176,7 +180,9 @@ describe("Test Role Repository", () => {
       const result = await deleteRole({ id: 4 });
 
       expect(apiServices.delete).toHaveBeenCalledTimes(1);
-      expect(apiServices.delete).toHaveBeenCalledWith("/roles/4");
+      expect(apiServices.delete).toHaveBeenCalledWith("/roles/4", {
+        suppressGlobalErrorToast: undefined,
+      });
       expect(result).toEqual(mockResponse);
     });
 
