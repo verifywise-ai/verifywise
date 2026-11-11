@@ -66,6 +66,8 @@ const TABLE_COLUMNS = [
   { id: "name", label: "NAME" },
   { id: "email", label: "EMAIL" },
   { id: "role", label: "ROLE" },
+  { id: "createdAt", label: "CREATED AT" },
+  { id: "lastLogin", label: "LAST LOGGED IN" },
   { id: "action", label: "ACTION" },
 ];
 
@@ -317,6 +319,21 @@ const TeamManagement: React.FC = (): JSX.Element => {
         const bRole = roles.find((r) => r.id.toString() === b.roleId?.toString());
         aValue = aRole?.name?.toLowerCase() || "";
         bValue = bRole?.name?.toLowerCase() || "";
+      } else if (sortKey.includes("created") || sortKey.includes("logged")) {
+        // Date columns: "created at" and "last logged in". Members without
+        // a value sort last in both directions.
+        const getTime = (member: any): number => {
+          const raw = sortKey.includes("created") ? member.created_at : member.last_login;
+          return raw ? new Date(raw).getTime() : 0;
+        };
+        const aTime = getTime(a);
+        const bTime = getTime(b);
+        if (aTime === 0 || bTime === 0) {
+          const nullsComparison = (aTime === 0 ? 1 : 0) - (bTime === 0 ? 1 : 0);
+          return sortConfig.direction === "asc" ? nullsComparison : -nullsComparison;
+        }
+        const comparison = aTime - bTime;
+        return sortConfig.direction === "asc" ? comparison : -comparison;
       } else {
         // Try to handle unknown columns by checking if they're properties of the member
         if (sortKey && sortKey in a && sortKey in b) {
@@ -669,6 +686,28 @@ const TeamManagement: React.FC = (): JSX.Element => {
                                   </MenuItem>
                                 ))}
                               </Select>
+                            </TableCell>
+                            <TableCell
+                              sx={{
+                                ...singleTheme.tableStyles.primary.body.cell,
+                                backgroundColor:
+                                  sortConfig.key && sortConfig.key.toLowerCase().includes("created")
+                                    ? "background.surface"
+                                    : "inherit",
+                              }}
+                            >
+                              {member.created_at ? formatRelativeDate(member.created_at) : "-"}
+                            </TableCell>
+                            <TableCell
+                              sx={{
+                                ...singleTheme.tableStyles.primary.body.cell,
+                                backgroundColor:
+                                  sortConfig.key && sortConfig.key.toLowerCase().includes("logged")
+                                    ? "background.surface"
+                                    : "inherit",
+                              }}
+                            >
+                              {member.last_login ? formatRelativeDate(member.last_login) : "Never"}
                             </TableCell>
                             <TableCell
                               sx={{

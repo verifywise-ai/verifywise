@@ -159,6 +159,40 @@ describe("TeamManagement", () => {
     });
   });
 
+  it("renders the created at and last logged in columns", () => {
+    mockUsers = [
+      buildUser({
+        created_at: new Date(Date.now() - 10 * 24 * 60 * 60 * 1000),
+        last_login: new Date(Date.now() - 2 * 60 * 60 * 1000),
+      }),
+      buildUser({ id: 3, name: "No", surname: "Login", last_login: undefined }),
+    ];
+    renderWithProviders(<TeamManagement />);
+    expect(screen.getByText("CREATED AT")).toBeInTheDocument();
+    expect(screen.getByText("LAST LOGGED IN")).toBeInTheDocument();
+    expect(screen.getByText(/10 days ago/)).toBeInTheDocument();
+    expect(screen.getByText(/2 hours ago/)).toBeInTheDocument();
+    expect(screen.getByText("Never")).toBeInTheDocument();
+  });
+
+  it("sorts by last logged in, with members who never logged in last", async () => {
+    mockUsers = [
+      buildUser({ id: 2, name: "Zed", last_login: new Date("2026-01-01T00:00:00Z") }),
+      buildUser({ id: 3, name: "Amy", last_login: undefined }),
+      buildUser({ id: 4, name: "Bob", last_login: new Date("2026-06-01T00:00:00Z") }),
+    ];
+    const user = userEvent.setup();
+    renderWithProviders(<TeamManagement />);
+    await user.click(screen.getAllByText("LAST LOGGED IN")[0]);
+    await waitFor(() => {
+      const cells = screen.getAllByRole("cell");
+      // Ascending: Zed (Jan), Bob (Jun), then Amy (never) always last.
+      expect(cells[0].textContent).toContain("Zed");
+      expect(cells[6].textContent).toContain("Bob");
+      expect(cells[12].textContent).toContain("Amy");
+    });
+  });
+
   it("updates a member's role", async () => {
     mockUpdateUserById.mockResolvedValue({ status: 202 });
     renderWithProviders(<TeamManagement />);
