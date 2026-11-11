@@ -285,8 +285,7 @@ async function scheduleDailyNotification(): Promise<void>;
 
 **Behavior:**
 
-1. Obliterates existing jobs (clears queue)
-2. Schedules new jobs with cron patterns
+Upserts the `slack-notification-policy` job scheduler. The upsert is idempotent by scheduler id, so every backend start (on every replica) can call it; the queue is never emptied, so a notification job another replica is running is left alone.
 
 **Scheduled Jobs:**
 
@@ -308,7 +307,7 @@ async function scheduleDailyNotification(): Promise<void>;
 
 **Configuration:**
 
-- `repeat`: Cron pattern
+- `upsertJobScheduler("slack-notification-policy", { pattern: "0 9 * * *" }, ...)`
 - `removeOnComplete`: true
 - `removeOnFail`: false
 

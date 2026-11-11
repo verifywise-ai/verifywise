@@ -32,6 +32,7 @@ jest.mock("../../../utils/logger/fileLogger", () => ({
   __esModule: true,
 }));
 
+import { Queue } from "bullmq";
 import {
   enqueueAutomationAction,
   enqueueExtensionSyncRun,
@@ -63,6 +64,8 @@ const mockObliterate = automationQueue.obliterate as jest.MockedFunction<
 const mockUpsertJobScheduler = automationQueue.upsertJobScheduler as jest.MockedFunction<
   typeof automationQueue.upsertJobScheduler
 >;
+// The queue is built when the module loads, before beforeEach clears the mocks.
+const automationQueueOptions = (Queue as unknown as jest.Mock).mock.calls[0];
 
 describe("automationProducer", () => {
   beforeEach(() => {
@@ -78,11 +81,26 @@ describe("automationProducer", () => {
         data,
         opts: expect.objectContaining({
           removeOnComplete: true,
-          removeOnFail: false,
+          removeOnFail: { age: 604_800, count: 5000 }, // a week, at most 5000
         }),
       }),
     );
   };
+
+  describe("automationQueue", () => {
+    it("keeps finished jobs that set no retention of their own for a day, failed ones for a week", () => {
+      expect(automationQueueOptions).toEqual([
+        "automation-actions",
+        {
+          connection: { url: "redis://localhost:6379" },
+          defaultJobOptions: {
+            removeOnComplete: { age: 86_400, count: 1000 },
+            removeOnFail: { age: 604_800, count: 5000 },
+          },
+        },
+      ]);
+    });
+  });
 
   describe("enqueueAutomationAction", () => {
     it("should add a job to the queue", async () => {
@@ -100,10 +118,10 @@ describe("automationProducer", () => {
   });
 
   describe("scheduleVendorReviewDateNotification", () => {
-    it("should obliterate queue and add a repeating job", async () => {
+    it("should add a repeating job at midnight without obliterating", async () => {
       await scheduleVendorReviewDateNotification();
 
-      expect(mockObliterate).toHaveBeenCalledWith({ force: true });
+      expect(mockObliterate).not.toHaveBeenCalled();
       expectSchedulerCall("send_vendor_notification", { type: "review_date" }, "0 0 * * *");
     });
   });
@@ -121,10 +139,10 @@ describe("automationProducer", () => {
   });
 
   describe("scheduleReportNotification", () => {
-    it("should obliterate queue and add a repeating job", async () => {
+    it("should add a repeating job at midnight without obliterating", async () => {
       await scheduleReportNotification();
 
-      expect(mockObliterate).toHaveBeenCalledWith({ force: true });
+      expect(mockObliterate).not.toHaveBeenCalled();
       expectSchedulerCall("send_report_notification", { type: "report_notification" }, "0 0 * * *");
     });
   });
