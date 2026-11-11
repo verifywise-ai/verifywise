@@ -11,7 +11,7 @@
  * 3. User is on the dashboard route
  */
 
-import React, { useState } from "react";
+import React, { useRef, useState } from "react";
 import { Box, Stack, Typography, CircularProgress, alpha } from "@mui/material";
 import { Database, LayoutDashboard } from "lucide-react";
 import { useDispatch } from "react-redux";
@@ -20,7 +20,10 @@ import { postAutoDrivers } from "../../../application/repository/entity.reposito
 import { updateOnboardingStatus } from "../../../application/repository/organization.repository";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { setOnboardingStatus } from "../../../application/redux/auth/authSlice";
-import { brand, text, background, border } from "../../themes/palette";
+import { brand, text, background, border, accent } from "../../themes/palette";
+
+const SETUP_ERROR_MESSAGE =
+  "Something went wrong while setting up your workspace. Try again, or skip for now.";
 
 interface SetupModalProps {
   /** Callback when setup is complete (either option selected) */
@@ -35,89 +38,86 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
   const [isLoading, setIsLoading] = useState(false);
   const [loadingOption, setLoadingOption] = useState<"demo" | "blank" | null>(null);
   const [isClosing, setIsClosing] = useState(false);
+  const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
+  // Set once the demo data call succeeds, so a retry after a failed status
+  // save does not send it again.
+  const demoInserted = useRef(false);
+
+  const finish = (onDone: () => void) => {
+    // Update Redux state so it persists after reload
+    dispatch(setOnboardingStatus("completed"));
+    setIsClosing(true);
+    setTimeout(onDone, 300);
+  };
+
+  /**
+   * Runs one setup choice, saves the onboarding status and closes the modal.
+   * If anything fails, the modal stays open and shows an error so the user can
+   * retry or skip.
+   */
+  const runChoice = async (
+    option: "demo" | "blank",
+    work: () => Promise<void>,
+    onDone: () => void,
+  ) => {
+    if (isLoading) return;
+
+    setIsLoading(true);
+    setLoadingOption(option);
+    setErrorMessage(null);
+
+    try {
+      await work();
+      if (organizationId) {
+        await updateOnboardingStatus(organizationId);
+      }
+      finish(onDone);
+    } catch (error) {
+      console.error("Error completing setup:", error);
+      setIsLoading(false);
+      setLoadingOption(null);
+      setErrorMessage(SETUP_ERROR_MESSAGE);
+    }
+  };
+
+  // "Skip for now" always closes, even when the status cannot be saved, so a
+  // failing save never traps the user behind the modal. The server then still
+  // says "pending", so the modal can come back on a later sign-in.
   const handleClose = async () => {
     if (isLoading) return;
 
     setIsLoading(true);
     setLoadingOption("blank");
+    setErrorMessage(null);
 
     try {
-      // Update onboarding status to completed (skip = start blank)
       if (organizationId) {
         await updateOnboardingStatus(organizationId);
       }
-
-      // Update Redux state so it persists after reload
-      dispatch(setOnboardingStatus("completed"));
-
-      setIsClosing(true);
-      setTimeout(() => {
-        onSkip();
-      }, 300);
     } catch (error) {
-      console.error("Error completing setup:", error);
-      setIsLoading(false);
-      setLoadingOption(null);
+      console.error("Could not save onboarding status on skip:", error);
     }
+    finish(onSkip);
   };
 
-  const handleSelectDemo = async () => {
-    if (isLoading) return;
-
-    setIsLoading(true);
-    setLoadingOption("demo");
-
-    try {
-      // Insert demo data
-      await postAutoDrivers();
-
-      // Update onboarding status to completed
-      if (organizationId) {
-        await updateOnboardingStatus(organizationId);
-      }
-
-      // Update Redux state so it persists after reload
-      dispatch(setOnboardingStatus("completed"));
-
-      setIsClosing(true);
-      setTimeout(() => {
+  const handleSelectDemo = () =>
+    runChoice(
+      "demo",
+      async () => {
+        if (!demoInserted.current) {
+          await postAutoDrivers();
+          demoInserted.current = true;
+        }
+      },
+      () => {
         onComplete();
         // Reload the page to show the newly created demo data
         window.location.reload();
-      }, 300);
-    } catch (error) {
-      console.error("Error setting up demo data:", error);
-      setIsLoading(false);
-      setLoadingOption(null);
-    }
-  };
+      },
+    );
 
-  const handleSelectBlank = async () => {
-    if (isLoading) return;
-
-    setIsLoading(true);
-    setLoadingOption("blank");
-
-    try {
-      // Update onboarding status to completed (no demo data)
-      if (organizationId) {
-        await updateOnboardingStatus(organizationId);
-      }
-
-      // Update Redux state so it persists after reload
-      dispatch(setOnboardingStatus("completed"));
-
-      setIsClosing(true);
-      setTimeout(() => {
-        onComplete();
-      }, 300);
-    } catch (error) {
-      console.error("Error completing setup:", error);
-      setIsLoading(false);
-      setLoadingOption(null);
-    }
-  };
+  const handleSelectBlank = () => runChoice("blank", async () => {}, onComplete);
 
   return (
     <Box
@@ -319,6 +319,23 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
             </Stack>
           </Box>
         </Stack>
+
+        {errorMessage && (
+          <Box
+            role="alert"
+            sx={{
+              margin: "-16px 32px 24px",
+              padding: "10px 12px",
+              borderRadius: "4px",
+              border: `1px solid ${accent.red.border}`,
+              backgroundColor: accent.red.bg,
+            }}
+          >
+            <Typography sx={{ fontSize: 13, color: accent.red.text, lineHeight: 1.5 }}>
+              {errorMessage}
+            </Typography>
+          </Box>
+        )}
 
         {/* Footer */}
         <Box

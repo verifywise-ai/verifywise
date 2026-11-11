@@ -4353,6 +4353,8 @@ export const de: Record<string, string> = {
   "Single line text input": "Einzeilige Texteingabe",
   "Single selection dropdown": "Einzelauswahl-Dropdown",
   "Slack workspace connected successfully!": "Slack-Workspace erfolgreich verbunden!",
+  "Something went wrong while setting up your workspace. Try again, or skip for now.":
+    "Beim Einrichten Ihres Arbeitsbereichs ist ein Fehler aufgetreten. Versuchen Sie es erneut oder überspringen Sie es vorerst.",
   "Something went wrong, please try again": "Etwas ist schiefgegangen, bitte erneut versuchen",
   "South America": "Südamerika",
   "Special category data (racial, political)": "Daten besonderer Kategorien (rassisch, politisch)",
@@ -9921,6 +9923,8 @@ export const fr: Record<string, string> = {
   "Single line text input": "Saisie de texte sur une ligne",
   "Single selection dropdown": "Liste déroulante à sélection unique",
   "Slack workspace connected successfully!": "Espace de travail Slack connecté avec succès !",
+  "Something went wrong while setting up your workspace. Try again, or skip for now.":
+    "Une erreur s'est produite lors de la configuration de votre espace de travail. Réessayez ou passez cette étape pour le moment.",
   "Something went wrong, please try again": "Quelque chose s'est mal passé, veuillez réessayer",
   "South America": "Amérique du Sud",
   "Special category data (racial, political)": "Données de catégorie spéciale (raciale, politique)",
@@ -13812,6 +13816,8 @@ export const es: Record<string, string> = {
   "Single selection dropdown": "Lista desplegable de selección única",
   "Slack workspace connected successfully!":
     "¡Espacio de trabajo de Slack conectado correctamente!",
+  "Something went wrong while setting up your workspace. Try again, or skip for now.":
+    "Se produjo un error al configurar su espacio de trabajo. Inténtelo de nuevo u omita este paso por ahora.",
   "Something went wrong, please try again": "Algo ha salido mal, inténtalo de nuevo",
   "South America": "Sudamérica",
   "Specific incident management information": "Información específica de gestión de incidentes",
