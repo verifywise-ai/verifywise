@@ -194,9 +194,11 @@ describe("RolesTab", () => {
     expect(alert).toHaveTextContent(
       "People still have this role. Move them to another role in the Team tab, then try again.",
     );
-    // The role is still listed.
+    // The role is still listed (behind the still-open dialog, hence hidden).
     expect(
-      within(screen.getByRole("group", { name: "Custom role" })).getByText("Validator"),
+      within(screen.getByRole("group", { name: "Custom role", hidden: true })).getByText(
+        "Validator",
+      ),
     ).toBeInTheDocument();
   });
 });

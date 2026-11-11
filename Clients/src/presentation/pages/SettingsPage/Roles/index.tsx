@@ -31,7 +31,10 @@ import {
   useUpdateRole,
   type RoleInput,
 } from "../../../../application/hooks/useRoleMutations";
-import type { PermissionCatalogEntry } from "../../../../application/repository/role.repository";
+import type {
+  PermissionCatalogEntry,
+  RolePermissionRow,
+} from "../../../../application/repository/role.repository";
 import RoleFormModal from "./RoleFormModal";
 
 interface RoleRow {
@@ -70,6 +73,11 @@ function roleErrorMessage(error: unknown, fallback: string): string {
 
 const ICON_PROPS = { size: 14, strokeWidth: 1.5 } as const;
 
+// Stable fallbacks: a fresh `[]` per render would retrigger the matrix effect
+// below forever while no role is selected (the query is disabled).
+const NO_CATALOG: PermissionCatalogEntry[] = [];
+const NO_GRANTS: RolePermissionRow[] = [];
+
 type FormState = { mode: "create" } | { mode: "edit"; role: RoleRow } | null;
 
 /**
@@ -83,7 +91,7 @@ const RolesTab: React.FC = () => {
   const canManageRoles = useHasPermission("roles.manage", { fallbackToAdmin: true });
 
   const { roles, loading: rolesLoading } = useRoles();
-  const { data: catalog = [], isLoading: catalogLoading } = usePermissionCatalog();
+  const { data: catalog = NO_CATALOG, isLoading: catalogLoading } = usePermissionCatalog();
 
   const allRoles = useMemo(() => (roles as RoleRow[]) ?? [], [roles]);
   const customRoles = useMemo(() => allRoles.filter(isCustomRole), [allRoles]);
@@ -93,7 +101,7 @@ const RolesTab: React.FC = () => {
   );
 
   const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
-  const { data: granted = [], isLoading: grantedLoading } = useRolePermissions(selectedRoleId);
+  const { data: granted = NO_GRANTS, isLoading: grantedLoading } = useRolePermissions(selectedRoleId);
   const replaceMutation = useReplaceRolePermissions();
   const createMutation = useCreateRole();
   const updateMutation = useUpdateRole();
