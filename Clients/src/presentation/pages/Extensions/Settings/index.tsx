@@ -4,7 +4,6 @@ import { Box, CircularProgress, Stack, Typography, useTheme } from "@mui/materia
 import { ChevronLeft } from "lucide-react";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
-import { useAuth } from "../../../../application/hooks/useAuth";
 import { useExtensions } from "../../../../application/contexts/Extensions.context";
 import {
   ExtensionConfigForm,
@@ -21,6 +20,7 @@ import SlackConfiguration from "../slack/SlackConfiguration";
 import ModelLifecycleConfig from "../model-lifecycle/ModelLifecycleConfig";
 import { JiraAssetsConfiguration } from "../jira-assets/JiraAssetsConfiguration";
 import { JiraIncidentsConfiguration } from "../jira-incidents/JiraIncidentsConfiguration";
+import { useCan, usePermissionsSettled } from "../../../../application/hooks/useCan";
 
 const CATEGORY_LABEL: Record<string, string> = {
   communication: "Communication",
@@ -46,7 +46,8 @@ export default function ExtensionSettingsPage() {
   const theme = useTheme();
   const { key } = useParams();
   const navigate = useNavigate();
-  const { userRoleName } = useAuth();
+  const canManageExtensions = useCan("extension.admin");
+  const permissionsSettled = usePermissionsSettled();
   const { enable, disable, updateConfiguration, getByKey } = useExtensions();
 
   const [extension, setExtension] = useState<Extension | null>(null);
@@ -170,7 +171,8 @@ export default function ExtensionSettingsPage() {
     }
   };
 
-  if (userRoleName !== "Admin") {
+  if (!permissionsSettled) return null;
+  if (!canManageExtensions) {
     return <Navigate to="/" replace />;
   }
 

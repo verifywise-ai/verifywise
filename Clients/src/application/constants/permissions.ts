@@ -9,14 +9,17 @@
  * (`legacyRoles` in Servers/config/rolePermissions.config.ts) for these keys,
  * and permissions.test.ts fails if the two drift.
  *
- * It replaced the old role-name `allowedRoles` table; every entry there maps
- * to one key here with exactly the same built-in roles.
+ * It replaced the old role-name `allowedRoles` table and the per-screen role
+ * checks; every one maps to a key here with exactly the same built-in roles.
  */
-type BuiltinRoleName = "Admin" | "Editor" | "Reviewer" | "Auditor";
+type BuiltinRoleName = "Admin" | "Editor" | "Reviewer" | "Auditor" | "SuperAdmin";
 
 const ADMIN: readonly BuiltinRoleName[] = ["Admin"];
 const EDITOR: readonly BuiltinRoleName[] = ["Admin", "Editor"];
 const AUDIT: readonly BuiltinRoleName[] = ["Admin", "Editor", "Auditor"];
+const CONTRIBUTOR: readonly BuiltinRoleName[] = ["Admin", "Editor", "Reviewer"];
+/** A pure super admin (no organization) holds these too. */
+const SUPER: readonly BuiltinRoleName[] = ["Admin", "SuperAdmin"];
 
 export const BUILTIN_UI_PERMISSIONS = {
   "useCase.edit": EDITOR,
@@ -35,9 +38,42 @@ export const BUILTIN_UI_PERMISSIONS = {
   "framework.audit": AUDIT,
   "postMarketMonitoring.edit": EDITOR,
   "evals.edit": EDITOR,
+  "riskLinks.admin": SUPER,
+  "aiApp.edit": EDITOR,
+  "aiApp.admin": ADMIN,
+  "task.edit": EDITOR,
+  "incident.create": EDITOR,
+  "ext.datasetBulkUpload.edit": EDITOR,
+  "ext.frameworkImport.edit": EDITOR,
+  "fileManager.contribute": CONTRIBUTOR,
+  "policyTemplate.edit": EDITOR,
+  "intakeForm.edit": EDITOR,
+  "agentDiscovery.admin": ADMIN,
+  "groups.manage": ADMIN,
+  "roles.manage": ADMIN,
+  "logs.admin": ADMIN,
+  "auditLedger.admin": ADMIN,
+  "customField.admin": ADMIN,
+  "extension.admin": ADMIN,
+  "governanceOs.admin": ADMIN,
+  "approvalWorkflow.admin": ADMIN,
+  "reporting.admin": ADMIN,
 } as const satisfies Record<string, readonly BuiltinRoleName[]>;
 
 export type UiPermissionKey = keyof typeof BUILTIN_UI_PERMISSIONS;
+
+const BUILTIN_ROLE_NAMES: ReadonlySet<string> = new Set<BuiltinRoleName>([
+  "Admin",
+  "Editor",
+  "Reviewer",
+  "Auditor",
+  "SuperAdmin",
+]);
+
+/** True for a built-in role name (custom roles cannot take one). */
+export function isBuiltinRoleName(roleName: string | null | undefined): boolean {
+  return !!roleName && BUILTIN_ROLE_NAMES.has(roleName);
+}
 
 /** Whether a built-in role holds `key`. False for any other role name. */
 export function builtinRoleHasPermission(roleName: string, key: UiPermissionKey): boolean {

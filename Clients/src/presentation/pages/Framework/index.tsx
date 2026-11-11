@@ -22,7 +22,6 @@ import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.cont
 import useMultipleOnScreen from "../../../application/hooks/useMultipleOnScreen";
 import useFrameworks from "../../../application/hooks/useFrameworks";
 import useUsers from "../../../application/hooks/useUsers";
-import { useHasPermission } from "../../../application/hooks/useMyPermissions";
 import TabContext from "@mui/lab/TabContext";
 import TabList from "@mui/lab/TabList";
 import TabPanel from "@mui/lab/TabPanel";
@@ -34,7 +33,7 @@ import ISO42001Annex from "./ISO42001/Annex";
 import { getAllEntities } from "../../../application/repository/entity.repository";
 import { ProjectForm } from "../../components/Forms/ProjectForm";
 import AddFrameworkModal from "../ProjectView/AddNewFramework";
-import { useCanCheck } from "../../../application/hooks/useCan";
+import { useCanCheck, useCan } from "../../../application/hooks/useCan";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import StandardModal from "../../components/Modals/StandardModal";
@@ -135,9 +134,7 @@ const Framework = () => {
   const { users } = useUsers();
   // The framework-import routes authorize on this key, so a custom role
   // granted it gets the import controls too (Admin and Editor by default).
-  const canImportFrameworks = useHasPermission("ext.frameworkImport.edit", {
-    fallbackToAdmin: true,
-  });
+  const canImportFrameworks = useCan("ext.frameworkImport.edit");
 
   // Framework import extension (#5254).
   const { isEnabled } = useExtensions();

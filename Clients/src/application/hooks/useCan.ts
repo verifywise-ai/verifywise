@@ -1,5 +1,9 @@
 import { useCallback } from "react";
-import { canWithPermissions, type UiPermissionKey } from "../constants/permissions";
+import {
+  canWithPermissions,
+  isBuiltinRoleName,
+  type UiPermissionKey,
+} from "../constants/permissions";
 import { useAuth } from "./useAuth";
 import { useMyPermissions } from "./useMyPermissions";
 
@@ -23,4 +27,15 @@ export function useCanCheck(): (key: UiPermissionKey) => boolean {
  */
 export function useCan(key: UiPermissionKey): boolean {
   return useCanCheck()(key);
+}
+
+/**
+ * False only while a custom role's permissions are still loading. A built-in
+ * role is settled at once (its stand-in answer is exact). Check it before
+ * redirecting away from, or refusing, a page the user may be allowed on.
+ */
+export function usePermissionsSettled(): boolean {
+  const { permissions, error } = useMyPermissions();
+  const { userRoleName } = useAuth();
+  return permissions !== undefined || Boolean(error) || isBuiltinRoleName(userRoleName);
 }

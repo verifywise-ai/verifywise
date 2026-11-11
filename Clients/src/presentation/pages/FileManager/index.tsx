@@ -58,10 +58,10 @@ import { FileVersionHistoryDrawer } from "./components/FileVersionHistoryDrawer"
 
 // Event subscription for cross-component communication
 import { onFileApprovalChanged } from "../../../application/events/fileEvents";
+import { useCan } from "../../../application/hooks/useCan";
 
 // Constants
 const FILE_MANAGER_CONTEXT = "FileManager";
-const AUDITOR_ROLE = "Auditor";
 const MANAGE_ROLES = ["Admin", "Editor"];
 
 /**
@@ -215,7 +215,8 @@ const FileManager: React.FC = (): JSX.Element => {
   const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
 
   // Permission checks
-  const isUploadAllowed = Boolean(userRoleName) && userRoleName !== AUDITOR_ROLE;
+  // Uploads authorize on fileManager.contribute (Admin, Editor, Reviewer).
+  const isUploadAllowed = useCan("fileManager.contribute");
   const canManageFolders = Boolean(userRoleName) && MANAGE_ROLES.includes(userRoleName);
 
   // Fetch files with enhanced metadata

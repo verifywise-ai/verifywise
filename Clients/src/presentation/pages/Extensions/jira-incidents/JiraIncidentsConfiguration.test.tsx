@@ -14,6 +14,12 @@ vi.mock("../../../components/ExtensionSyncPanel", () => ({
 vi.mock("../../../../application/hooks/useAuth", () => ({
   useAuth: () => ({ userRoleName: "Admin" }),
 }));
+// The signed-in Admin holds extension.admin.
+vi.mock("../../../../application/hooks/useCan", () => ({
+  useCan: () => true,
+  useCanCheck: () => () => true,
+  usePermissionsSettled: () => true,
+}));
 vi.mock("../../../../application/hooks/useFormattedDate", () => ({
   default: () => () => "14-10-2026",
 }));

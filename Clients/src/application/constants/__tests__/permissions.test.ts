@@ -78,6 +78,68 @@ const LEGACY_ALLOWED_ROLES: Array<{
   },
 ];
 
+/**
+ * Per-screen role-name checks converted in the #5314 review follow-up, with
+ * the built-in roles each one admitted. `superAdmin: true` marks the one key
+ * a pure super admin also holds: the server always admitted them on those
+ * routes, and the screens now say so too.
+ */
+const SCREEN_GATES: Array<{
+  gate: string;
+  roles: string[];
+  key: UiPermissionKey;
+  superAdmin?: boolean;
+}> = [
+  { gate: "RiskManagement bulk actions, RisksView", roles: ["Admin", "Editor"], key: "risks.edit" },
+  {
+    gate: "risk graph link and page, link scans and suggestions, vendor blast radius map",
+    roles: ["Admin"],
+    key: "riskLinks.admin",
+    superAdmin: true,
+  },
+  { gate: "ModelInventory and Datasets create", roles: ["Admin", "Editor"], key: "model.edit" },
+  { gate: "AIApps create", roles: ["Admin", "Editor"], key: "aiApp.edit" },
+  { gate: "IncidentManagement create", roles: ["Admin", "Editor"], key: "incident.create" },
+  { gate: "Tasks create", roles: ["Admin", "Editor"], key: "task.edit" },
+  {
+    gate: "dataset bulk upload button",
+    roles: ["Admin", "Editor"],
+    key: "ext.datasetBulkUpload.edit",
+  },
+  {
+    gate: "Extensions pages, Jira configuration, dashboard link",
+    roles: ["Admin"],
+    key: "extension.admin",
+  },
+  { gate: "dashboard approval workflows link", roles: ["Admin"], key: "approvalWorkflow.admin" },
+  {
+    gate: "Governance OS settings and enable prompts",
+    roles: ["Admin"],
+    key: "governanceOs.admin",
+  },
+  { gate: "Settings > Audit ledger tab", roles: ["Admin"], key: "auditLedger.admin" },
+  { gate: "Settings > Custom fields tab and page", roles: ["Admin"], key: "customField.admin" },
+  { gate: "Generate report", roles: ["Admin"], key: "reporting.admin" },
+  {
+    gate: "File manager upload (was: not Auditor)",
+    roles: ["Admin", "Editor", "Reviewer"],
+    key: "fileManager.contribute",
+  },
+];
+
+/** Keys that already gated through the old useHasPermission/useCanEditAiApps hooks. */
+const PERMISSION_HOOK_KEYS: UiPermissionKey[] = [
+  "agentDiscovery.admin",
+  "ext.frameworkImport.edit",
+  "groups.manage",
+  "roles.manage",
+  "logs.admin",
+  "policyTemplate.edit",
+  "intakeForm.edit",
+  "aiApp.edit",
+  "aiApp.admin",
+];
+
 describe("BUILTIN_UI_PERMISSIONS", () => {
   it.each(UI_KEYS)("%s is in the server catalog with the same built-in roles", (key) => {
     const meta = (ROLE_PERMISSIONS as Record<string, { legacyRoles: readonly string[] }>)[key];
@@ -97,8 +159,18 @@ describe("BUILTIN_UI_PERMISSIONS", () => {
     },
   );
 
+  it.each(SCREEN_GATES)("screen gate $gate -> $key keeps $roles", ({ roles, key, superAdmin }) => {
+    const orgRoles = BUILTIN_UI_PERMISSIONS[key].filter((role) => role !== "SuperAdmin");
+    expect(sorted(orgRoles)).toEqual(sorted(roles));
+    expect(BUILTIN_UI_PERMISSIONS[key].includes("SuperAdmin")).toBe(!!superAdmin);
+  });
+
   it("uses every key at least once", () => {
-    const used = new Set(LEGACY_ALLOWED_ROLES.map((e) => e.key));
+    const used = new Set<UiPermissionKey | null>([
+      ...LEGACY_ALLOWED_ROLES.map((e) => e.key),
+      ...SCREEN_GATES.map((e) => e.key),
+      ...PERMISSION_HOOK_KEYS,
+    ]);
     expect(UI_KEYS.filter((key) => !used.has(key))).toEqual([]);
   });
 

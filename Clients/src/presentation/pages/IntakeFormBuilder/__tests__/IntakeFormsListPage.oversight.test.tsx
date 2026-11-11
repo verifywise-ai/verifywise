@@ -5,11 +5,19 @@ import {
   getPendingSubmissions,
   getSubmissionPreview,
 } from "../../../../application/repository/intakeForm.repository";
-import { useHasPermission } from "../../../../application/hooks/useMyPermissions";
+import { useCan } from "../../../../application/hooks/useCan";
 
 vi.mock("../../../../application/hooks/useMyPermissions", () => ({
-  useHasPermission: vi.fn(),
+  useMyPermissions: () => ({ permissions: undefined, isLoading: true, error: null }),
 }));
+vi.mock("../../../../application/hooks/useCan", () => {
+  const useCan = vi.fn();
+  return {
+    useCan,
+    useCanCheck: () => useCan,
+    usePermissionsSettled: () => true,
+  };
+});
 
 vi.mock("../../../components/Layout/PageHeaderExtended", () => ({
   PageHeaderExtended: ({ children }: { children: React.ReactNode }) => <div>{children}</div>,
@@ -43,7 +51,7 @@ vi.mock("../../../../application/repository/intakeForm.repository", async (orig)
 
 describe("IntakeFormsListPage oversight tab", () => {
   it("hides the tab and the content without intakeForm.edit", async () => {
-    vi.mocked(useHasPermission).mockReturnValue(false);
+    vi.mocked(useCan).mockReturnValue(false);
     renderWithProviders(<IntakeFormsListPage />, { route: "/intake-forms/oversight" });
     expect(await screen.findByText("Forms")).toBeInTheDocument();
     expect(screen.queryByText("Oversight")).not.toBeInTheDocument();
@@ -51,14 +59,14 @@ describe("IntakeFormsListPage oversight tab", () => {
   });
 
   it("shows the tab and its content with intakeForm.edit", async () => {
-    vi.mocked(useHasPermission).mockReturnValue(true);
+    vi.mocked(useCan).mockReturnValue(true);
     renderWithProviders(<IntakeFormsListPage />, { route: "/intake-forms/oversight" });
     expect(await screen.findByText("Oversight")).toBeInTheDocument();
     expect(screen.getByTestId("oversight-tab")).toBeInTheDocument();
   });
 
   it("reloads the oversight figures after a decision in the modal", async () => {
-    vi.mocked(useHasPermission).mockReturnValue(true);
+    vi.mocked(useCan).mockReturnValue(true);
     renderWithProviders(<IntakeFormsListPage />, { route: "/intake-forms/oversight" });
     const tab = await screen.findByTestId("oversight-tab");
     expect(tab).toHaveAttribute("data-refresh", "0");
@@ -70,7 +78,7 @@ describe("IntakeFormsListPage oversight tab", () => {
 
 describe("IntakeFormsListPage second review", () => {
   beforeEach(() => {
-    vi.mocked(useHasPermission).mockReturnValue(true);
+    vi.mocked(useCan).mockReturnValue(true);
   });
 
   it("opens the submission named in the link and clears the param", async () => {

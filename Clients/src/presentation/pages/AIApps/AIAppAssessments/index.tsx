@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useCan } from "../../../../application/hooks/useCan";
 import { useNavigate, useSearchParams } from "react-router";
 import { Box, Stack, Tooltip, Typography } from "@mui/material";
 import { ArrowLeft, Ban, Download, ListChecks, Upload } from "lucide-react";
@@ -13,7 +14,6 @@ import { EmptyState } from "../../../components/EmptyState";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import BulkActionsToolbar, { type BulkAction } from "../../../components/Table/BulkActionsToolbar";
 import { useBulkSelection } from "../../../../application/hooks/useBulkSelection";
-import { useCanEditAiApps } from "../../../../application/hooks/useCanEditAiApps";
 import { useTranslation } from "../../../../application/hooks/useTranslation";
 import {
   useAiAppAssessments,
@@ -55,7 +55,7 @@ const getAssessmentId = (assessment: IAiAppAssessment) => assessment.id;
 export default function AIAppAssessments() {
   const navigate = useNavigate();
   const { t } = useTranslation();
-  const canEdit = useCanEditAiApps();
+  const canEdit = useCan("aiApp.edit");
   const [searchParams, setSearchParams] = useSearchParams();
 
   // The URL holds this filter, because notification links land on ?assigned=me.

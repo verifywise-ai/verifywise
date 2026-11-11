@@ -4,8 +4,16 @@ import CustomException from "../../../../../infrastructure/exceptions/customeExc
 
 vi.mock("../../../../../application/hooks/useMyPermissions", () => ({
   MY_PERMISSIONS_QUERY_KEY: ["my-permissions"],
-  useHasPermission: () => true,
+  useMyPermissions: () => ({ permissions: undefined, isLoading: true, error: null }),
 }));
+vi.mock("../../../../../application/hooks/useCan", () => {
+  const useCan = () => true;
+  return {
+    useCan,
+    useCanCheck: () => useCan,
+    usePermissionsSettled: () => true,
+  };
+});
 
 vi.mock("../../../../../application/repository/entity.repository", () => ({
   getEntityById: vi.fn(),

@@ -1,4 +1,5 @@
 import { useRef, useState } from "react";
+import { useCan } from "../../../../application/hooks/useCan";
 import { Box, IconButton, Stack, Tooltip, Typography } from "@mui/material";
 import { ArrowDown, ArrowUp, Plus, SquarePen, Trash2 } from "lucide-react";
 import StandardModal from "../../../components/Modals/StandardModal";
@@ -11,7 +12,6 @@ import { CustomizableButton } from "../../../components/button/customizable-butt
 import { palette } from "../../../themes/palette";
 import { fill } from "../../../../i18n/fill";
 import { useTranslation } from "../../../../application/hooks/useTranslation";
-import { useCanAdminAiApps } from "../../../../application/hooks/useCanEditAiApps";
 import {
   useAiAppQuestionnaires,
   useDeleteAiAppQuestionnaire,
@@ -51,7 +51,7 @@ function validateDraft(draft: Draft): string | null {
 
 export default function QuestionnaireManagerModal({ onClose }: { onClose: () => void }) {
   const { t } = useTranslation();
-  const canAdmin = useCanAdminAiApps();
+  const canAdmin = useCan("aiApp.admin");
   const nextDraftId = useRef(1);
   const { data: questionnaires = [] } = useAiAppQuestionnaires();
   const saveMutation = useSaveAiAppQuestionnaire();

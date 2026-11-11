@@ -10,7 +10,6 @@ import {
   useUpdateVendorRiskLinkStatus,
   useVendorRiskLinks,
 } from "../../../application/hooks/useRiskLinks";
-import { useIsAdmin } from "../../../application/hooks/useIsAdmin";
 import { useTranslation } from "../../../application/hooks/useTranslation";
 import { fill } from "../../../i18n/fill";
 import { DismissReason, RiskLink, RiskLinkStatus } from "../../../domain/interfaces/i.riskLink";
@@ -21,6 +20,7 @@ import { GROUPING_WINDOW_MS, SCAN_WINDOW_MS } from "./polling";
 import { useWatchedLinks } from "./useWatchedLinks";
 import { useFormFocus } from "./useFormFocus";
 import { groupingNotice } from "./groupingNotice";
+import { useCan } from "../../../application/hooks/useCan";
 
 interface VendorRiskLinksPanelProps {
   vendorRiskId: number;
@@ -51,7 +51,8 @@ export default function VendorRiskLinksPanel({ vendorRiskId }: VendorRiskLinksPa
   const [form, setForm] = useState<"child" | "related" | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
   const [dismissing, setDismissing] = useState<RiskLink | null>(null);
-  const isAdmin = useIsAdmin();
+  // Scans, suggestions and the graph authorize on riskLinks.admin.
+  const isAdmin = useCan("riskLinks.admin");
   const { t } = useTranslation();
   const { formRef, openerRef } = useFormFocus(form);
 

@@ -29,8 +29,16 @@ let mockUsers: { id: number; name: string; surname: string; email: string }[] = 
 // Edit needs the agentDiscovery.admin permission; tests default to granting it.
 const permissionState = vi.hoisted(() => ({ canManage: true }));
 vi.mock("../../../../application/hooks/useMyPermissions", () => ({
-  useHasPermission: (key: string) => key === "agentDiscovery.admin" && permissionState.canManage,
+  useMyPermissions: () => ({ permissions: undefined, isLoading: true, error: null }),
 }));
+vi.mock("../../../../application/hooks/useCan", () => {
+  const useCan = (key: string) => key === "agentDiscovery.admin" && permissionState.canManage;
+  return {
+    useCan,
+    useCanCheck: () => useCan,
+    usePermissionsSettled: () => true,
+  };
+});
 // refreshUsers is stable across renders, like the real hook's.
 const mockRefreshUsers = vi.hoisted(() => vi.fn(async () => {}));
 vi.mock("../../../../application/hooks/useUsers", () => ({

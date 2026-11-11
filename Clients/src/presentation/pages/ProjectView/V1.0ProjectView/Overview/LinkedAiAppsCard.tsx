@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useCan } from "../../../../../application/hooks/useCan";
 import { Link } from "react-router";
 import { Box, Stack, Typography } from "@mui/material";
 import { Bot, CirclePlus } from "lucide-react";
@@ -18,7 +19,6 @@ import {
   useCreateAiAppPreview,
   useProjectAiApps,
 } from "../../../../../application/hooks/useAiApps";
-import { useCanEditAiApps } from "../../../../../application/hooks/useCanEditAiApps";
 import { useTranslation } from "../../../../../application/hooks/useTranslation";
 import {
   getClientErrorReason,
@@ -32,7 +32,7 @@ const NAME_MAX_LENGTH = 255;
 /** Overview card: the AI apps a use case feeds, and creating one from it (#5259). */
 const LinkedAiAppsCard = ({ project }: { project: Project }) => {
   const { t } = useTranslation();
-  const canEdit = useCanEditAiApps();
+  const canEdit = useCan("aiApp.edit");
   const { data: aiApps = [] } = useProjectAiApps(project.id);
   const [isOpen, setIsOpen] = useState(false);
   const { data: preview } = useCreateAiAppPreview(project.id, isOpen);

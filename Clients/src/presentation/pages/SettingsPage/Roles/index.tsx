@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useCan } from "../../../../application/hooks/useCan";
 import {
   Box,
   CircularProgress,
@@ -18,7 +19,6 @@ import { Pencil, Plus, Trash2 } from "lucide-react";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import ConfirmationModal from "../../../components/Dialogs/ConfirmationModal";
-import { useHasPermission } from "../../../../application/hooks/useMyPermissions";
 import { useRoles } from "../../../../application/hooks/useRoles";
 import {
   usePermissionCatalog,
@@ -88,7 +88,7 @@ type FormState = { mode: "create" } | { mode: "edit"; role: RoleRow } | null;
  */
 const RolesTab: React.FC = () => {
   const theme = useTheme();
-  const canManageRoles = useHasPermission("roles.manage", { fallbackToAdmin: true });
+  const canManageRoles = useCan("roles.manage");
 
   const { roles, loading: rolesLoading } = useRoles();
   const { data: catalog = NO_CATALOG, isLoading: catalogLoading } = usePermissionCatalog();

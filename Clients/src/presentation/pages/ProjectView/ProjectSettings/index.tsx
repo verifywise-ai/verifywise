@@ -59,8 +59,7 @@ import CustomFieldsSection, {
 import { useRequiredCustomFieldsGate } from "../../../components/CustomFieldsSection/RequiredCustomFieldsGate";
 import useFrameworks from "../../../../application/hooks/useFrameworks";
 import { Framework } from "../../../../domain/types/Framework";
-import { useCanCheck } from "../../../../application/hooks/useCan";
-import { useHasPermission } from "../../../../application/hooks/useMyPermissions";
+import { useCanCheck, useCan } from "../../../../application/hooks/useCan";
 import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
 import {
   deleteProject,
@@ -332,7 +331,7 @@ const ProjectSettings = React.memo(
     const { data: projectGroups } = useProjectGroups(Number(projectId));
     const setProjectGroupsMutation = useSetProjectGroups(Number(projectId));
     // The groups route checks useCase.edit, so the picker does too.
-    const canEditProjectGroups = useHasPermission("useCase.edit", { fallbackToAdmin: true });
+    const canEditProjectGroups = useCan("useCase.edit");
     const selectedGroupIds = (projectGroups ?? []).map((g) => g.id);
 
     const { filteredFrameworks: monitoredFrameworks, allFrameworks } = useFrameworks({

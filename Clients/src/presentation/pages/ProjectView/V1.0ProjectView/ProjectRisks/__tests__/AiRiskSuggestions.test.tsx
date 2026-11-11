@@ -10,7 +10,6 @@ vi.mock("../../../../../../application/hooks/useAuth", () => ({
 // Permissions not loaded: the built-in role from useAuth decides (useCan).
 vi.mock("../../../../../../application/hooks/useMyPermissions", () => ({
   useMyPermissions: () => ({ permissions: undefined, isLoading: true, error: null }),
-  useHasPermission: () => false,
 }));
 
 vi.mock("../../../../../../application/hooks/useUsers", () => ({

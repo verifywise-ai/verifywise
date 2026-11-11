@@ -185,8 +185,15 @@ vi.mock("../../../../application/hooks/useMyPermissions", () => ({
     isLoading: false,
     error: null,
   }),
-  useHasPermission: (key: string) => mockHasPermission(key),
 }));
+vi.mock("../../../../application/hooks/useCan", () => {
+  const useCan = (key: string) => mockHasPermission(key);
+  return {
+    useCan,
+    useCanCheck: () => useCan,
+    usePermissionsSettled: () => true,
+  };
+});
 
 // Mock constants
 vi.mock("../../../components/Forms/ProjectForm/constants", () => ({

@@ -60,6 +60,7 @@ import {
   PRIORITY_DISPLAY_MAP,
   PRIORITY_COLOR_MAP,
 } from "../../constants/priorityOptions";
+import { useCan } from "../../../application/hooks/useCan";
 
 // Task status options for CustomSelect
 const TASK_STATUS_OPTIONS = [TaskStatus.OPEN, TaskStatus.IN_PROGRESS, TaskStatus.COMPLETED];
@@ -142,7 +143,7 @@ const Tasks: React.FC = () => {
 
   // Group by state management
   const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
-  const isCreatingDisabled = !userRoleName || !["Admin", "Editor"].includes(userRoleName);
+  const isCreatingDisabled = !useCan("task.edit");
 
   // Column visibility for the tasks table
   const {

@@ -35,8 +35,23 @@ let mockCanManageTemplates = true;
 vi.mock("../../../../application/hooks/useMyPermissions", () => ({
   // Not loaded: useCan falls back to the mocked built-in role.
   useMyPermissions: () => ({ permissions: undefined, isLoading: true, error: null }),
-  useHasPermission: (key: string) => key === "policyTemplate.edit" && mockCanManageTemplates,
 }));
+vi.mock("../../../../application/hooks/useCan", async () => {
+  // Policy templates are stubbed; every other key follows the mocked built-in
+  // role, as the real hook does while permissions load.
+  const { canWithPermissions } = await vi.importActual<
+    typeof import("../../../../application/constants/permissions")
+  >("../../../../application/constants/permissions");
+  const useCan = (key: string) =>
+    key === "policyTemplate.edit"
+      ? mockCanManageTemplates
+      : canWithPermissions(key as never, undefined, mockUserRoleName);
+  return {
+    useCan,
+    useCanCheck: () => useCan,
+    usePermissionsSettled: () => true,
+  };
+});
 
 vi.mock("../../../../application/hooks/usePolicies", () => ({
   usePolicies: (...args: unknown[]) => {

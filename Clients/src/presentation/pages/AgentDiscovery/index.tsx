@@ -1,4 +1,5 @@
 import React, { useState, useEffect, useCallback, useMemo } from "react";
+import { useCan } from "../../../application/hooks/useCan";
 import { useNavigate } from "react-router";
 import { Box, Stack, Fade } from "@mui/material";
 import { RefreshCw, CirclePlus } from "lucide-react";
@@ -21,7 +22,6 @@ import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { AgentPrimitiveRow } from "src/domain/interfaces/i.agentDiscovery";
 import AgentTable from "./AgentTable";
 import { getAgentSourceLabel, getReviewStatusDisplay, getSourceFilterOptions } from "./agentLabels";
-import { useHasPermission } from "../../../application/hooks/useMyPermissions";
 import { palette } from "../../themes/palette";
 
 import Alert from "../../components/Alert";
@@ -38,7 +38,7 @@ const AgentDiscovery: React.FC = () => {
   const navigate = useNavigate();
   // Changing agents (sync, add, edit, review, delete) needs the
   // agentDiscovery.admin permission (Admins by default).
-  const canManage = useHasPermission("agentDiscovery.admin", { fallbackToAdmin: true });
+  const canManage = useCan("agentDiscovery.admin");
   const [agents, setAgents] = useState<AgentPrimitiveRow[]>([]);
   const [stats, setStats] = useState<AgentStats>({
     total: 0,

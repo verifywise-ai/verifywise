@@ -29,7 +29,6 @@ vi.mock("../../../../application/hooks/useAuth", () => ({
 // Permissions not loaded: the built-in role from useAuth decides (useCan).
 vi.mock("../../../../application/hooks/useMyPermissions", () => ({
   useMyPermissions: () => ({ permissions: undefined, isLoading: true, error: null }),
-  useHasPermission: () => false,
 }));
 
 // renderWithProviders mounts <ExtensionsProvider>, so the mock re-exports it

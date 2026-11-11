@@ -38,8 +38,7 @@ import { usePolicies } from "../../../application/hooks/usePolicies";
 import PolicyStatusCard from "./PolicyStatusCard";
 import { ExportMenu } from "../../components/Table/ExportMenu";
 import useUsers from "../../../application/hooks/useUsers";
-import { useCanCheck } from "../../../application/hooks/useCan";
-import { useHasPermission } from "../../../application/hooks/useMyPermissions";
+import { useCanCheck, useCan } from "../../../application/hooks/useCan";
 import { GroupBy } from "../../components/Table/GroupBy";
 import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
@@ -94,7 +93,7 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
   const can = useCanCheck();
   const canRunBulkActions = can("policy.edit");
   // "Save as template" writes a template, so it follows the template routes' key.
-  const canManageTemplates = useHasPermission("policyTemplate.edit", { fallbackToAdmin: true });
+  const canManageTemplates = useCan("policyTemplate.edit");
 
   const [showLinkedObjectModal, setLinkedObjectsModalOpen] = useState(false);
   const [policyId, setSelectedPolicyId] = useState<number | null>(null);
