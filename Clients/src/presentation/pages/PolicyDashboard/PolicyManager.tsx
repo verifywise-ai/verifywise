@@ -15,6 +15,8 @@ import { useDeletePolicy } from "../../../application/hooks/usePolicyMutations";
 import { useCreatePolicyTemplateFromPolicy } from "../../../application/hooks/usePolicyTemplates";
 import StandardModal from "../../components/Modals/StandardModal";
 import Field from "../../components/Inputs/Field";
+import Select from "../../components/Inputs/Select";
+import { PolicyTemplateCategory } from "../../../domain/enums/policy.enum";
 import { EmptyState } from "../../components/EmptyState";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import StandardTableHead from "../../components/Table/StandardTableHead";
@@ -199,11 +201,17 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
   // name the user wants for the new organization template.
   const [templateSourceId, setTemplateSourceId] = useState<number | null>(null);
   const [templateName, setTemplateName] = useState("");
+  // policy_manager has no category, so the user picks one; the default is the
+  // same curated category the backend falls back to.
+  const [templateCategory, setTemplateCategory] = useState<string>(
+    PolicyTemplateCategory.Core_AI_Governance,
+  );
   const createTemplateMutation = useCreatePolicyTemplateFromPolicy();
 
   const handleSaveAsTemplate = (id: number) => {
     const policy = policies.find((p) => Number(p.id) === id);
     setTemplateName(policy ? `${policy.title} (template)` : "");
+    setTemplateCategory(PolicyTemplateCategory.Core_AI_Governance);
     setTemplateSourceId(id);
   };
 
@@ -213,6 +221,7 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
       await createTemplateMutation.mutateAsync({
         policy_id: templateSourceId,
         name: templateName.trim() || undefined,
+        category: templateCategory,
       });
       setTemplateSourceId(null);
       handleAlert({
@@ -827,12 +836,23 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
             isSubmitting={createTemplateMutation.isPending}
             maxWidth="560px"
           >
-            <Stack spacing={6}>
+            <Stack sx={{ gap: "16px" }}>
               <Field
                 label="Template name"
                 placeholder="e.g. AI Accountability and Roles Policy"
                 value={templateName}
                 onChange={(e) => setTemplateName(e.target.value)}
+                isRequired
+              />
+              <Select
+                id="save-as-template-category"
+                label="Category"
+                value={templateCategory}
+                items={Object.values(PolicyTemplateCategory).map((value) => ({
+                  _id: value,
+                  name: value,
+                }))}
+                onChange={(e) => setTemplateCategory(String(e.target.value))}
                 isRequired
               />
             </Stack>

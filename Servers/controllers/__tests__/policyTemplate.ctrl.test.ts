@@ -28,7 +28,10 @@ import {
   deletePolicyTemplateQuery,
   createPolicyTemplateFromPolicyQuery,
 } from "../../utils/policyTemplate.utils";
-import { ValidationException, NotFoundException } from "../../domain.layer/exceptions/custom.exception";
+import {
+  ValidationException,
+  NotFoundException,
+} from "../../domain.layer/exceptions/custom.exception";
 
 function mockRes() {
   const r: any = {};
@@ -81,11 +84,7 @@ describe("createPolicyTemplate", () => {
       mockReq({ body: { name: "Vendor AI Policy", category: "Legal and compliance" } }) as any,
       res,
     );
-    expect(createPolicyTemplateQuery).toHaveBeenCalledWith(
-      expect.any(Object),
-      42,
-      9,
-    );
+    expect(createPolicyTemplateQuery).toHaveBeenCalledWith(expect.any(Object), 42, 9);
     expect(res.status).toHaveBeenCalledWith(201);
   });
 
@@ -129,7 +128,10 @@ describe("updatePolicyTemplate", () => {
   it("200s with the updated template", async () => {
     (updatePolicyTemplateQuery as jest.Mock).mockResolvedValue({ id: 7 });
     const res = mockRes();
-    await updatePolicyTemplate(mockReq({ params: { id: "7" }, body: { name: "Renamed" } }) as any, res);
+    await updatePolicyTemplate(
+      mockReq({ params: { id: "7" }, body: { name: "Renamed" } }) as any,
+      res,
+    );
     expect(res.status).toHaveBeenCalledWith(200);
   });
 
@@ -174,7 +176,7 @@ describe("createPolicyTemplateFromPolicy", () => {
       mockReq({ body: { policy_id: 3, name: "Saved" } }) as any,
       res,
     );
-    expect(createPolicyTemplateFromPolicyQuery).toHaveBeenCalledWith(3, 42, 9, "Saved");
+    expect(createPolicyTemplateFromPolicyQuery).toHaveBeenCalledWith(3, 42, 9, "Saved", undefined);
     expect(res.status).toHaveBeenCalledWith(201);
   });
 
@@ -187,7 +189,24 @@ describe("createPolicyTemplateFromPolicy", () => {
     expect(res.status).toHaveBeenCalledWith(404);
   });
 
-  it("maps a unique-violation to 409", async () => {
+  it("passes the chosen category through", async () => {
+    (createPolicyTemplateFromPolicyQuery as jest.Mock).mockResolvedValue({ id: 12 });
+    const res = mockRes();
+    await createPolicyTemplateFromPolicy(
+      mockReq({ body: { policy_id: 3, category: "Legal and compliance" } }) as any,
+      res,
+    );
+    expect(createPolicyTemplateFromPolicyQuery).toHaveBeenCalledWith(
+      3,
+      42,
+      9,
+      undefined,
+      "Legal and compliance",
+    );
+    expect(res.status).toHaveBeenCalledWith(201);
+  });
+
+  it("maps a ValidationException (bad name) to 400", async () => {
     (createPolicyTemplateFromPolicyQuery as jest.Mock).mockRejectedValue(
       new ValidationException("name must be a string between 2 and 255 characters", "name", "x"),
     );
@@ -197,5 +216,30 @@ describe("createPolicyTemplateFromPolicy", () => {
       res,
     );
     expect(res.status).toHaveBeenCalledWith(400);
+  });
+});
+
+describe("non-numeric template ids", () => {
+  const badIds = ["abc", "1.5", "-3", "0", "9007199254740993", ""];
+
+  it.each(badIds)("getPolicyTemplate 400s for id %p without querying", async (id) => {
+    const res = mockRes();
+    await getPolicyTemplate(mockReq({ params: { id } }) as any, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(getPolicyTemplateByIdQuery).not.toHaveBeenCalled();
+  });
+
+  it.each(badIds)("updatePolicyTemplate 400s for id %p without querying", async (id) => {
+    const res = mockRes();
+    await updatePolicyTemplate(mockReq({ params: { id }, body: { name: "Renamed" } }) as any, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(updatePolicyTemplateQuery).not.toHaveBeenCalled();
+  });
+
+  it.each(badIds)("deletePolicyTemplate 400s for id %p without querying", async (id) => {
+    const res = mockRes();
+    await deletePolicyTemplate(mockReq({ params: { id } }) as any, res);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(deletePolicyTemplateQuery).not.toHaveBeenCalled();
   });
 });

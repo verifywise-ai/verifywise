@@ -53,4 +53,6 @@ export interface PolicyTemplateUpdateBody {
 export interface PolicyTemplateFromPolicyBody {
   policy_id: number;
   name?: string;
+  /** Defaults server-side to "Core AI governance policies" when omitted. */
+  category?: string;
 }

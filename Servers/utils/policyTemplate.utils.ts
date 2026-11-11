@@ -51,7 +51,46 @@ function validateCategory(category: unknown): string {
   if (typeof category !== "string" || !category.trim()) {
     throw new ValidationException("category is required", "category", category);
   }
+  // policy_templates.category is VARCHAR(100).
+  if (category.trim().length > 100) {
+    throw new ValidationException("category must be at most 100 characters", "category", category);
+  }
   return category.trim();
+}
+
+// Same caps for create and update. Tags are short labels; the column is
+// TEXT[] so the limits are ours, not the schema's.
+const MAX_TAGS = 50;
+const MAX_TAG_LENGTH = 100;
+
+function validateTags(tags: unknown): string[] {
+  if (!Array.isArray(tags) || tags.some((t) => typeof t !== "string")) {
+    throw new ValidationException("tags must be an array of strings", "tags", tags);
+  }
+  const cleaned = tags.map((t: string) => t.trim()).filter((t) => t.length > 0);
+  if (cleaned.length > MAX_TAGS || cleaned.some((t) => t.length > MAX_TAG_LENGTH)) {
+    throw new ValidationException(
+      `tags must hold at most ${MAX_TAGS} entries of at most ${MAX_TAG_LENGTH} characters`,
+      "tags",
+      tags,
+    );
+  }
+  return Array.from(new Set(cleaned));
+}
+
+// Sequelize expands an array replacement to a comma list ('a', 'b'), so a
+// bare `tags = :tags` is a syntax error. Wrap it in ARRAY[...]; an empty
+// array would render as ARRAY[] which Postgres cannot type without a cast,
+// and as nothing at all in a SET clause, so use the empty literal instead.
+function tagsSqlExpr(tags: string[], placeholder = ":tags"): string {
+  return tags.length ? `ARRAY[${placeholder}]::text[]` : "'{}'::text[]";
+}
+
+function validateIsActive(value: unknown): boolean {
+  if (typeof value !== "boolean") {
+    throw new ValidationException("is_active must be a boolean", "is_active", value);
+  }
+  return value;
 }
 
 function isUniqueViolation(error: unknown): boolean {
@@ -70,12 +109,13 @@ export async function createPolicyTemplateQuery(
 ): Promise<any> {
   const name = validateName(input?.name);
   const category = validateCategory(input?.category);
+  const tags = input?.tags === undefined || input?.tags === null ? [] : validateTags(input.tags);
   try {
     const rows: any = await sequelize.query(
       `INSERT INTO policy_templates
          (organization_id, name, category, description, content, tags,
           is_system_template, is_active, created_by)
-       VALUES (:organizationId, :name, :category, :description, :content, ARRAY[:tags]::text[],
+       VALUES (:organizationId, :name, :category, :description, :content, ${tagsSqlExpr(tags)},
           false, true, :createdBy)
        RETURNING *`,
       {
@@ -85,7 +125,7 @@ export async function createPolicyTemplateQuery(
           category,
           description: input?.description ?? null,
           content: sanitizeUserHtml(input?.content ?? "") ?? "",
-          tags: Array.isArray(input?.tags) ? input.tags : [],
+          tags,
           createdBy: userId,
         },
         type: QueryTypes.SELECT,
@@ -121,12 +161,23 @@ export async function updatePolicyTemplateQuery(
   const replacements: any = { id, organizationId };
   for (const field of allowed) {
     if (input[field] !== undefined) {
+      if (field === "tags") {
+        const tags = validateTags(input.tags);
+        replacements.tags = tags;
+        sets.push(`tags = ${tagsSqlExpr(tags)}`);
+        continue;
+      }
       if (field === "name") {
         replacements[field] = validateName(input[field]);
       } else if (field === "category") {
         replacements[field] = validateCategory(input[field]);
       } else if (field === "content") {
+        if (typeof input[field] !== "string") {
+          throw new ValidationException("content must be a string", "content", input[field]);
+        }
         replacements[field] = sanitizeUserHtml(input[field]) ?? "";
+      } else if (field === "is_active") {
+        replacements[field] = validateIsActive(input[field]);
       } else {
         replacements[field] = input[field];
       }
@@ -175,51 +226,63 @@ export async function deletePolicyTemplateQuery(id: number, organizationId: numb
 }
 
 // "Save as template" from a policy_manager row. policy_manager carries no
-// category, so copies land in a neutral bucket rather than pretending to be
-// one of the advisor's curated categories.
-export const POLICY_TEMPLATE_DEFAULT_CATEGORY = "General";
+// category, so the caller picks one; without one the copy lands in the first
+// of the curated categories the UI offers (PolicyTemplateCategory in
+// Clients/src/domain/enums/policy.enum.ts), so the edit form can show it.
+export const POLICY_TEMPLATE_DEFAULT_CATEGORY = "Core AI governance policies";
 
 export async function createPolicyTemplateFromPolicyQuery(
   policyId: number,
   organizationId: number,
   userId: number,
   name?: string,
+  category?: string,
   transaction?: Transaction,
 ): Promise<any> {
+  const validatedName = name ? validateName(name) : null;
+  const validatedCategory =
+    category === undefined || category === null || category === ""
+      ? POLICY_TEMPLATE_DEFAULT_CATEGORY
+      : validateCategory(category);
+  // Read first, then insert: policy_manager.content_html predates server-side
+  // sanitization on every write path (the advisor tools wrote it raw), so it
+  // goes through the same sanitizer as a template written directly. tags and
+  // content_html are nullable there but NOT NULL here.
+  const policies: any[] = await sequelize.query(
+    `SELECT title, COALESCE(content_html, '') AS content_html, COALESCE(tags, '{}') AS tags
+       FROM policy_manager
+      WHERE id = :policyId AND organization_id = :organizationId`,
+    { replacements: { policyId, organizationId }, type: QueryTypes.SELECT, transaction },
+  );
+  const policy = policies[0];
+  if (!policy) {
+    throw new NotFoundException("policy not found", "policy_manager", policyId);
+  }
+  const tags: string[] = Array.isArray(policy.tags)
+    ? policy.tags.filter((t: unknown): t is string => typeof t === "string" && t.trim() !== "")
+    : [];
   try {
     const rows: any = await sequelize.query(
       `INSERT INTO policy_templates
          (organization_id, name, category, description, content, tags,
           is_system_template, is_active, created_by)
-       SELECT :organizationId,
-              COALESCE(:name, title),
-              :category,
-              NULL,
-              content_html,
-              tags,
-              false,
-              true,
-              :createdBy
-         FROM policy_manager
-        WHERE id = :policyId AND organization_id = :organizationId
+       VALUES (:organizationId, :name, :category, NULL, :content, ${tagsSqlExpr(tags)},
+          false, true, :createdBy)
        RETURNING *`,
       {
         replacements: {
           organizationId,
-          name: name ? validateName(name) : null,
-          category: POLICY_TEMPLATE_DEFAULT_CATEGORY,
+          name: validatedName ?? validateName(policy.title),
+          category: validatedCategory,
+          content: sanitizeUserHtml(String(policy.content_html ?? "")) ?? "",
+          tags,
           createdBy: userId,
-          policyId,
         },
         type: QueryTypes.SELECT,
         transaction,
       },
     );
-    const row = rows[0];
-    if (!row) {
-      throw new NotFoundException("policy not found", "policy_manager", policyId);
-    }
-    return row;
+    return rows[0];
   } catch (error) {
     if (isUniqueViolation(error)) {
       throw new ConflictException(

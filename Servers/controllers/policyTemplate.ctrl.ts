@@ -31,6 +31,15 @@ const FILE_NAME = "policyTemplate.ctrl.ts";
 // reportTemplate.ctrl.ts. The utils layer already converts Postgres unique
 // violations (23505) to ConflictException (409); the pgErr check stays as a
 // backstop for any raw Sequelize error that slips past it.
+// Route ids arrive as strings; Number("abc") is NaN, which Postgres rejects
+// as an integer and would surface as a 500. Returns null for anything that is
+// not a positive safe integer.
+const parseId = (raw: unknown): number | null => {
+  if (typeof raw !== "string" || !/^\d+$/.test(raw)) return null;
+  const id = Number(raw);
+  return Number.isSafeInteger(id) && id > 0 ? id : null;
+};
+
 const respondWithError = (req: Request, res: Response, error: unknown): Response => {
   const pgErr = (error as any)?.parent ?? (error as any)?.original;
   if (pgErr?.code === "23505") {
@@ -58,8 +67,11 @@ export async function listPolicyTemplates(req: Request, res: Response): Promise<
 }
 
 export async function getPolicyTemplate(req: Request, res: Response): Promise<any> {
+  const id = parseId(req.params.id);
+  if (id === null)
+    return res.status(400).json(STATUS_CODE[400]("a numeric template id is required"));
   try {
-    const tpl = await getPolicyTemplateByIdQuery(Number(req.params.id), req.organizationId!);
+    const tpl = await getPolicyTemplateByIdQuery(id, req.organizationId!);
     if (!tpl) return res.status(404).json(STATUS_CODE[404]("not found"));
     return res.status(200).json(STATUS_CODE[200](tpl));
   } catch (e) {
@@ -101,7 +113,9 @@ export async function createPolicyTemplate(req: Request, res: Response): Promise
 }
 
 export async function updatePolicyTemplate(req: Request, res: Response): Promise<any> {
-  const id = Number(req.params.id);
+  const id = parseId(req.params.id);
+  if (id === null)
+    return res.status(400).json(STATUS_CODE[400]("a numeric template id is required"));
   logProcessing({
     description: `updatePolicyTemplate ${id}`,
     functionName: "updatePolicyTemplate",
@@ -150,7 +164,9 @@ export async function updatePolicyTemplate(req: Request, res: Response): Promise
 }
 
 export async function deletePolicyTemplate(req: Request, res: Response): Promise<any> {
-  const id = Number(req.params.id);
+  const id = parseId(req.params.id);
+  if (id === null)
+    return res.status(400).json(STATUS_CODE[400]("a numeric template id is required"));
   logProcessing({
     description: `deletePolicyTemplate ${id}`,
     functionName: "deletePolicyTemplate",
@@ -198,7 +214,7 @@ export async function createPolicyTemplateFromPolicy(req: Request, res: Response
   });
   try {
     const policyId = Number(req.body?.policy_id);
-    if (!Number.isInteger(policyId) || policyId <= 0) {
+    if (!Number.isSafeInteger(policyId) || policyId <= 0) {
       return res.status(400).json(STATUS_CODE[400]("a numeric policy_id is required"));
     }
     const tpl = await createPolicyTemplateFromPolicyQuery(
@@ -206,6 +222,7 @@ export async function createPolicyTemplateFromPolicy(req: Request, res: Response
       req.organizationId!,
       req.userId!,
       req.body?.name,
+      req.body?.category,
     );
     await logSuccess({
       eventType: "Create",

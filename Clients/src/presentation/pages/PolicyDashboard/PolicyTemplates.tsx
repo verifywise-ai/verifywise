@@ -7,12 +7,12 @@ import {
   Stack,
   TableRow,
   TableCell,
-  ToggleButton,
-  ToggleButtonGroup,
   Tooltip,
   Typography,
 } from "@mui/material";
-import { Copy, FileText, Filter, BookOpen, Pencil, Trash2 } from "lucide-react";
+import TabContext from "@mui/lab/TabContext";
+import { Copy, FileText, FilePen, Filter, BookOpen, Pencil, Trash2 } from "lucide-react";
+import TabBar from "../../components/TabBar";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { EmptyState } from "../../components/EmptyState";
 import { PolicyTemplatesProps } from "../../types/interfaces/i.policy";
@@ -121,13 +121,16 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
 
   // Handle templateId URL param to redirect to editor from Wise Search. Ids
   // are composite `${origin}-${id}` because system and org template ids can
-  // collide (#5261).
+  // collide (#5261); a bare numeric id is a legacy link the editor still
+  // resolves. Anything else is dropped rather than forwarded.
   useEffect(() => {
     const templateId = searchParams.get("templateId");
     if (templateId && !hasProcessedUrlParam.current) {
       hasProcessedUrlParam.current = true;
       setSearchParams({}, { replace: true });
-      navigate(`/policies/new?templateId=${templateId}`);
+      if (/^((system|organization)-)?\d+$/.test(templateId)) {
+        navigate(`/policies/new?templateId=${templateId}`);
+      }
     }
   }, [searchParams, setSearchParams, navigate]);
 
@@ -275,19 +278,21 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
 
   return (
     <Stack>
-      <Stack direction="row" spacing={2} alignItems="center" mb={8} flexWrap="wrap">
-        {/* System / Our templates toggle (#5261) */}
-        <ToggleButtonGroup
-          size="small"
-          exclusive
-          value={section}
-          onChange={(_e, value) => value && setSection(value)}
-          aria-label="Template source"
-        >
-          <ToggleButton value="system">System templates</ToggleButton>
-          <ToggleButton value="organization">Our templates</ToggleButton>
-        </ToggleButtonGroup>
+      {/* System / Our templates switch (#5261) */}
+      <TabContext value={section}>
+        <Box sx={{ mb: "16px" }}>
+          <TabBar
+            tabs={[
+              { label: "System templates", value: "system" },
+              { label: "Our templates", value: "organization" },
+            ]}
+            activeTab={section}
+            onChange={(_e, value) => setSection(value as PolicyTemplateOrigin)}
+          />
+        </Box>
+      </TabContext>
 
+      <Stack direction="row" alignItems="center" flexWrap="wrap" sx={{ gap: "8px", mb: "16px" }}>
         {/* FilterBy */}
         <div data-joyride-id="policy-status-filter">
           <FilterBy
@@ -323,7 +328,7 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
       </Stack>
 
       {serverError && (
-        <Typography sx={{ fontSize: 12, color: "error.main", mb: 4 }}>{serverError}</Typography>
+        <Typography sx={{ fontSize: 12, color: "error.main", mb: "8px" }}>{serverError}</Typography>
       )}
 
       {/* Table */}
@@ -417,7 +422,7 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
                           : "inherit",
                       }}
                     >
-                      <Stack direction="row" gap={1} flexWrap="wrap">
+                      <Stack direction="row" flexWrap="wrap" sx={{ gap: "2px" }}>
                         {policy.tags.map((tag: string, index: number) => (
                           <TagChip key={`${tag}-${index}`} tag={tag} />
                         ))}
@@ -442,8 +447,8 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
                   <TableCell sx={{ ...cellStyle }} align="right">
                     <Stack
                       direction="row"
-                      spacing={0.5}
                       justifyContent="flex-end"
+                      sx={{ gap: "2px" }}
                       onClick={(e) => e.stopPropagation()}
                     >
                       {policy.origin === "system"
@@ -462,7 +467,17 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
                           )
                         : canManageTemplates && (
                             <>
-                              <Tooltip title="Edit template">
+                              <Tooltip title="Edit content">
+                                <IconButton
+                                  size="small"
+                                  disableRipple
+                                  aria-label={`Edit content of ${policy.title}`}
+                                  onClick={() => navigate(`/policies/templates/${policy.id}/edit`)}
+                                >
+                                  <FilePen size={16} />
+                                </IconButton>
+                              </Tooltip>
+                              <Tooltip title="Edit details">
                                 <IconButton
                                   size="small"
                                   disableRipple
@@ -497,14 +512,14 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
         <StandardModal
           isOpen
           onClose={() => setEditing(null)}
-          title="Edit template"
-          description="Update the metadata of this organization template."
+          title="Edit template details"
+          description="Update the name, description and category of this organization template. To change its content, use Edit content."
           onSubmit={handleSaveEdit}
           submitButtonText="Save"
           isSubmitting={updateMutation.isPending}
           maxWidth="560px"
         >
-          <Stack spacing={6}>
+          <Stack sx={{ gap: "16px" }}>
             <Field
               label="Name"
               value={editForm.name}

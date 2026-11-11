@@ -58,6 +58,9 @@ const PolicyDashboard = lazyRoute(
 const PolicyEditorPage = lazyRoute(
   () => import("../../presentation/pages/PolicyDashboard/PolicyEditorPage"),
 );
+const PolicyTemplateEditorPage = lazyRoute(
+  () => import("../../presentation/pages/PolicyDashboard/PolicyTemplateEditorPage"),
+);
 const WatchTower = lazyRoute(() => import("../../presentation/pages/WatchTower"));
 const RiskManagement = lazyRoute(() => import("../../presentation/pages/RiskManagement"));
 const RiskInheritanceGraph = lazyRoute(
@@ -559,6 +562,14 @@ export const createRoutes = (
       element={
         <Suspense fallback={<LazyFallback />}>
           <PolicyEditorPage />
+        </Suspense>
+      }
+    />
+    <Route
+      path="/policies/templates/:templateId/edit"
+      element={
+        <Suspense fallback={<LazyFallback />}>
+          <PolicyTemplateEditorPage />
         </Suspense>
       }
     />

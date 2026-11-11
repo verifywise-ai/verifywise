@@ -596,6 +596,7 @@ const getTemplateRecommendations = async (
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { sequelize } from "../../database/db";
 import { QueryTypes } from "sequelize";
+import { sanitizeUserHtml } from "../../utils/sanitization.utils";
 
 const agentCreatePolicy = createWriteToolFn({
   toolName: "agent_create_policy",
@@ -616,7 +617,8 @@ const agentCreatePolicy = createWriteToolFn({
         replacements: {
           organization_id: organizationId,
           title: params.policy_name as string,
-          content_html: (params.description as string) || "",
+          // Same sanitizer policy.ctrl.ts applies: model output is user HTML.
+          content_html: sanitizeUserHtml((params.description as string) || "") ?? "",
           status: (params.status as string) || "Draft",
           tags,
           next_review_date: params.review_date ? new Date(params.review_date as string) : null,
@@ -662,7 +664,7 @@ const agentUpdatePolicy = createWriteToolFn({
     }
     if (params.description !== undefined) {
       updateFields.push("content_html = :content_html");
-      replacements.content_html = params.description;
+      replacements.content_html = sanitizeUserHtml(String(params.description ?? "")) ?? "";
     }
     if (params.status !== undefined) {
       updateFields.push("status = :status");

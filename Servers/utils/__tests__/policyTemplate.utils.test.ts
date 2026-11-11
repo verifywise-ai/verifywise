@@ -7,8 +7,12 @@ import {
   updatePolicyTemplateQuery,
   deletePolicyTemplateQuery,
   createPolicyTemplateFromPolicyQuery,
+  POLICY_TEMPLATE_DEFAULT_CATEGORY,
 } from "../policyTemplate.utils";
-import { ValidationException } from "../../domain.layer/exceptions/custom.exception";
+import {
+  NotFoundException,
+  ValidationException,
+} from "../../domain.layer/exceptions/custom.exception";
 
 const q = sequelize.query as jest.Mock;
 
@@ -138,25 +142,190 @@ describe("policyTemplate.utils", () => {
     expect(opts.replacements.organizationId).toBe(42);
   });
 
-  it("createPolicyTemplateFromPolicyQuery copies the policy row into the org", async () => {
-    q.mockResolvedValueOnce([{ id: 11 }]);
-    const row = await createPolicyTemplateFromPolicyQuery(3, 42, 9, "Saved policy");
-    expect(row.id).toBe(11);
-    const [sql, opts] = q.mock.calls[0];
-    expect(opts.replacements.policyId).toBe(3);
-    expect(opts.replacements.organizationId).toBe(42);
-    expect(opts.replacements.name).toBe("Saved policy");
-    expect(sql).toContain("FROM policy_manager");
-    expect(sql).toContain("content_html");
-    // The source row must belong to the same org.
-    expect(sql).toContain("organization_id = :organizationId");
+  describe("updatePolicyTemplateQuery tags and is_active", () => {
+    it("binds tags as a text[] array, not a bare comma list", async () => {
+      q.mockResolvedValueOnce([[{ id: 7 }], 1]);
+      await updatePolicyTemplateQuery(7, 42, { tags: [" Vendor ", "Privacy", "Vendor"] });
+      const [sql, opts] = q.mock.calls[0];
+      expect(sql).toContain("tags = ARRAY[:tags]::text[]");
+      expect(sql).not.toMatch(/tags = :tags/);
+      // Trimmed and de-duplicated.
+      expect(opts.replacements.tags).toEqual(["Vendor", "Privacy"]);
+    });
+
+    it("writes the empty-array literal for an empty tag list", async () => {
+      q.mockResolvedValueOnce([[{ id: 7 }], 1]);
+      await updatePolicyTemplateQuery(7, 42, { tags: [] });
+      const [sql] = q.mock.calls[0];
+      expect(sql).toContain("tags = '{}'::text[]");
+    });
+
+    it.each([["not-an-array"], [[1, 2]], [[{ a: 1 }]], [null]])(
+      "rejects tags %p with a ValidationException",
+      async (tags) => {
+        await expect(updatePolicyTemplateQuery(7, 42, { tags })).rejects.toThrow(
+          ValidationException,
+        );
+        expect(q).not.toHaveBeenCalled();
+      },
+    );
+
+    it("rejects an over-long tag", async () => {
+      await expect(updatePolicyTemplateQuery(7, 42, { tags: ["x".repeat(101)] })).rejects.toThrow(
+        ValidationException,
+      );
+      expect(q).not.toHaveBeenCalled();
+    });
+
+    it("rejects too many tags", async () => {
+      const tags = Array.from({ length: 51 }, (_, i) => `t${i}`);
+      await expect(updatePolicyTemplateQuery(7, 42, { tags })).rejects.toThrow(ValidationException);
+    });
+
+    it("accepts a boolean is_active", async () => {
+      q.mockResolvedValueOnce([[{ id: 7 }], 1]);
+      await updatePolicyTemplateQuery(7, 42, { is_active: false });
+      const [sql, opts] = q.mock.calls[0];
+      expect(sql).toContain("is_active = :is_active");
+      expect(opts.replacements.is_active).toBe(false);
+    });
+
+    it.each([["false"], [0], [null]])("rejects is_active %p", async (value) => {
+      await expect(updatePolicyTemplateQuery(7, 42, { is_active: value })).rejects.toThrow(
+        ValidationException,
+      );
+      expect(q).not.toHaveBeenCalled();
+    });
+
+    it("rejects non-string content", async () => {
+      await expect(updatePolicyTemplateQuery(7, 42, { content: 5 })).rejects.toThrow(
+        ValidationException,
+      );
+    });
+
+    it("sanitizes updated content", async () => {
+      q.mockResolvedValueOnce([[{ id: 7 }], 1]);
+      await updatePolicyTemplateQuery(7, 42, {
+        content: '<p>ok</p><script>alert(1)</script><img src="x" onerror="alert(1)">',
+      });
+      const [, opts] = q.mock.calls[0];
+      expect(opts.replacements.content).toContain("<p>ok</p>");
+      expect(opts.replacements.content).not.toContain("<script");
+      expect(opts.replacements.content).not.toContain("onerror");
+    });
   });
 
-  it("createPolicyTemplateFromPolicyQuery falls back to the policy title as the name", async () => {
-    q.mockResolvedValueOnce([{ id: 12 }]);
-    await createPolicyTemplateFromPolicyQuery(3, 42, 9);
-    const [sql, opts] = q.mock.calls[0];
-    expect(sql).toContain("COALESCE(:name, title)");
-    expect(opts.replacements.name).toBeNull();
+  it("createPolicyTemplateQuery validates tags the same way", async () => {
+    await expect(
+      createPolicyTemplateQuery(
+        { name: "Bad tags", category: "Legal and compliance", tags: "Vendor" },
+        42,
+        9,
+      ),
+    ).rejects.toThrow(ValidationException);
+    expect(q).not.toHaveBeenCalled();
+  });
+
+  it("createPolicyTemplateQuery writes the empty literal when there are no tags", async () => {
+    q.mockResolvedValueOnce([{ id: 7 }]);
+    await createPolicyTemplateQuery({ name: "No tags", category: "Legal and compliance" }, 42, 9);
+    const [sql] = q.mock.calls[0];
+    expect(sql).toContain("'{}'::text[]");
+  });
+
+  it("rejects a category longer than the column allows", async () => {
+    await expect(
+      createPolicyTemplateQuery({ name: "Long category", category: "c".repeat(101) }, 42, 9),
+    ).rejects.toThrow(ValidationException);
+  });
+
+  describe("createPolicyTemplateFromPolicyQuery", () => {
+    it("reads the policy in the caller's org, then inserts an org-owned copy", async () => {
+      q.mockResolvedValueOnce([{ title: "Source", content_html: "<p>x</p>", tags: ["Vendor"] }]);
+      q.mockResolvedValueOnce([{ id: 11 }]);
+      const row = await createPolicyTemplateFromPolicyQuery(3, 42, 9, "Saved policy");
+      expect(row.id).toBe(11);
+      const [selectSql, selectOpts] = q.mock.calls[0];
+      expect(selectSql).toContain("FROM policy_manager");
+      expect(selectSql).toContain("organization_id = :organizationId");
+      expect(selectOpts.replacements).toEqual({ policyId: 3, organizationId: 42 });
+      const [insertSql, insertOpts] = q.mock.calls[1];
+      expect(insertSql).toContain("INSERT INTO policy_templates");
+      expect(insertSql).toContain("ARRAY[:tags]::text[]");
+      expect(insertSql).toMatch(/VALUES[\s\S]*false, true/);
+      expect(insertOpts.replacements.name).toBe("Saved policy");
+      expect(insertOpts.replacements.organizationId).toBe(42);
+      expect(insertOpts.replacements.tags).toEqual(["Vendor"]);
+    });
+
+    it("falls back to the policy title as the name", async () => {
+      q.mockResolvedValueOnce([{ title: "Source title", content_html: "", tags: [] }]);
+      q.mockResolvedValueOnce([{ id: 12 }]);
+      await createPolicyTemplateFromPolicyQuery(3, 42, 9);
+      const [, opts] = q.mock.calls[1];
+      expect(opts.replacements.name).toBe("Source title");
+    });
+
+    it("uses the chosen category, or a curated default", async () => {
+      q.mockResolvedValueOnce([{ title: "A policy", content_html: "", tags: [] }]);
+      q.mockResolvedValueOnce([{ id: 13 }]);
+      await createPolicyTemplateFromPolicyQuery(3, 42, 9, undefined, "Legal and compliance");
+      expect(q.mock.calls[1][1].replacements.category).toBe("Legal and compliance");
+
+      q.mockResolvedValueOnce([{ title: "A policy", content_html: "", tags: [] }]);
+      q.mockResolvedValueOnce([{ id: 14 }]);
+      await createPolicyTemplateFromPolicyQuery(3, 42, 9);
+      expect(q.mock.calls[3][1].replacements.category).toBe(POLICY_TEMPLATE_DEFAULT_CATEGORY);
+      expect(POLICY_TEMPLATE_DEFAULT_CATEGORY).toBe("Core AI governance policies");
+    });
+
+    it("sanitizes the copied content_html", async () => {
+      q.mockResolvedValueOnce([
+        {
+          title: "Dirty",
+          content_html: '<p>keep</p><script>alert(1)</script><a href="javascript:alert(1)">x</a>',
+          tags: [],
+        },
+      ]);
+      q.mockResolvedValueOnce([{ id: 15 }]);
+      await createPolicyTemplateFromPolicyQuery(3, 42, 9);
+      const content = q.mock.calls[1][1].replacements.content;
+      expect(content).toContain("<p>keep</p>");
+      expect(content).not.toContain("<script");
+      expect(content).not.toContain("javascript:");
+    });
+
+    it("coalesces NULL tags and content_html so NOT NULL columns hold", async () => {
+      // The SELECT coalesces in SQL; also guard the JS side against a driver
+      // that hands back null anyway.
+      q.mockResolvedValueOnce([{ title: "Bare policy", content_html: null, tags: null }]);
+      q.mockResolvedValueOnce([{ id: 16 }]);
+      await createPolicyTemplateFromPolicyQuery(3, 42, 9);
+      const [selectSql] = q.mock.calls[0];
+      expect(selectSql).toContain("COALESCE(content_html, '')");
+      expect(selectSql).toContain("COALESCE(tags, '{}')");
+      const [insertSql, insertOpts] = q.mock.calls[1];
+      expect(insertSql).toContain("'{}'::text[]");
+      expect(insertOpts.replacements.content).toBe("");
+      expect(insertOpts.replacements.tags).toEqual([]);
+    });
+
+    it("throws NotFoundException when the policy is not in the org", async () => {
+      q.mockResolvedValueOnce([]);
+      await expect(createPolicyTemplateFromPolicyQuery(3, 42, 9)).rejects.toThrow(
+        NotFoundException,
+      );
+      expect(q).toHaveBeenCalledTimes(1);
+    });
+
+    it("maps a unique violation on insert to ConflictException", async () => {
+      const dup: any = new Error("duplicate key value violates unique constraint");
+      dup.parent = { code: "23505" };
+      q.mockResolvedValueOnce([{ title: "Dup", content_html: "", tags: [] }]);
+      q.mockRejectedValueOnce(dup);
+      await expect(createPolicyTemplateFromPolicyQuery(3, 42, 9)).rejects.toMatchObject({
+        statusCode: 409,
+      });
+    });
   });
 });

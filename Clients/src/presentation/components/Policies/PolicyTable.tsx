@@ -478,7 +478,7 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
                       disableRipple
                       aria-label={`Save policy ${policy.title} as template`}
                       onClick={() => onSaveAsTemplate(policy.id)}
-                      sx={{ mr: 0.5 }}
+                      sx={{ mr: "2px" }}
                     >
                       <BookmarkPlus size={16} />
                     </IconButton>
