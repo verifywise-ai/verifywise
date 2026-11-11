@@ -817,7 +817,7 @@ async function completeOrganizationLogin(
  * - Refresh token stored in HTTP-only cookie (Secure flag in production only)
  * - Cookie uses SameSite attribute and path restriction (/api/users)
  * - Access token returned in JSON response
- * - Last login timestamp updated in memory (not persisted immediately)
+ * - Last login timestamp persisted on successful authentication (failure is logged, login proceeds)
  * - Failed attempts logged for security monitoring
  *
  * @example
@@ -875,6 +875,13 @@ async function loginUser(req: Request, res: Response): Promise<any> {
 
       if (passwordIsMatched) {
         user.updateLastLogin();
+        // The team settings table surfaces last_login, so persist it. A
+        // failure here must not block the login itself.
+        try {
+          await updateUserByIdQuery(user.id!, { last_login: user.last_login ?? new Date() });
+        } catch (lastLoginError) {
+          logger.error("❌ Failed to persist last_login in loginUser:", lastLoginError);
+        }
 
         const organizations = await getUserOrganizationsQuery(user.id!);
 
@@ -1185,6 +1192,14 @@ async function loginUserWithMicrosoft(req: Request, res: Response): Promise<any>
     );
 
     await transaction.commit();
+
+    // Surface the sign-in in the team settings table. Outside the
+    // transaction and guarded, so a failure cannot roll the login back.
+    try {
+      await updateUserByIdQuery(user.id!, { last_login: new Date() });
+    } catch (lastLoginError) {
+      logger.error("❌ Failed to persist last_login in loginUserWithMicrosoft:", lastLoginError);
+    }
 
     if (joinedThroughInvitation) {
       await logEvent(

@@ -318,7 +318,7 @@ export const resetPasswordQuery = async (
 export const updateUserByIdQuery = async (
   id: number,
   user: Partial<UserModel>,
-  transaction: Transaction,
+  transaction?: Transaction,
 ): Promise<UserModel> => {
   const updateUser: Partial<Record<keyof UserModel, any>> = {};
   const setClause = ["name", "surname", "email", "last_login"]
