@@ -42,6 +42,50 @@ export const REQUIRED_ENTITY_FIELDS: Record<string, string[]> = {
   ai_app: ["name"],
 };
 
+/** An entityFieldMapping of `custom_field:<key>` targets an entity custom field. */
+export const CUSTOM_FIELD_MAPPING_PREFIX = "custom_field:";
+
+export function isCustomFieldMapping(mapping?: string | null): mapping is string {
+  return (
+    typeof mapping === "string" &&
+    mapping.startsWith(CUSTOM_FIELD_MAPPING_PREFIX) &&
+    mapping.length > CUSTOM_FIELD_MAPPING_PREFIX.length
+  );
+}
+
+export function customFieldKeyOf(mapping: string): string {
+  return mapping.slice(CUSTOM_FIELD_MAPPING_PREFIX.length);
+}
+
+export function customFieldMapping(key: string): string {
+  return `${CUSTOM_FIELD_MAPPING_PREFIX}${key}`;
+}
+
+/** Custom field types each intake question type can write to. */
+export const CUSTOM_FIELD_TYPES_BY_QUESTION: Readonly<Record<string, readonly string[]>> = {
+  text: ["text"],
+  number: ["number"],
+  date: ["date"],
+  checkbox: ["boolean"],
+  select: ["select", "scored_select"],
+  multiselect: ["multiselect"],
+};
+
+export function isCompatibleCustomFieldType(questionType: string, fieldType: string): boolean {
+  return (
+    Object.prototype.hasOwnProperty.call(CUSTOM_FIELD_TYPES_BY_QUESTION, questionType) &&
+    CUSTOM_FIELD_TYPES_BY_QUESTION[questionType].includes(fieldType)
+  );
+}
+
+/** Custom field entity type for each intake entity type. */
+export const INTAKE_CUSTOM_FIELD_ENTITY: Readonly<Record<"model" | "use_case" | "ai_app", string>> =
+  {
+    model: "model_inventory",
+    use_case: "project",
+    ai_app: "ai_app",
+  };
+
 export const CONDITION_OPERATORS = [
   "equals",
   "not_equals",
