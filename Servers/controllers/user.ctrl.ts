@@ -1854,11 +1854,11 @@ async function deleteUserById(req: Request, res: Response) {
 /**
  * Checks if any user exists in the database.
  *
- * @param {Request} _req - Express request object.
+ * @param {Request} req - Express request object.
  * @param {Response} res - Express response object.
  * @returns {Promise<Response>} A promise that resolves when the response is sent.
  */
-async function checkUserExists(_req: Request, res: Response): Promise<Response> {
+async function checkUserExists(req: Request, res: Response): Promise<Response> {
   logStructured("processing", "checking if any user exists", "checkUserExists", "user.ctrl.ts");
   logger.debug("🔍 Checking for existing users");
 
@@ -1876,7 +1876,7 @@ async function checkUserExists(_req: Request, res: Response): Promise<Response> 
   } catch (error) {
     logStructured("error", "failed to check user existence", "checkUserExists", "user.ctrl.ts");
     logger.error("❌ Error in checkUserExists:", error);
-    return res.status(500).json(STATUS_CODE[500](_req.t!("Internal server error")));
+    return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
 }
 

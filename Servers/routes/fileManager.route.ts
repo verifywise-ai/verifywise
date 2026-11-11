@@ -91,12 +91,12 @@ const upload = multer({
  * Catches file size limit errors and file type rejection errors
  * Note: No temp file cleanup needed with memory storage
  */
-const handleMulterError = (err: any, _req: Request, res: Response, next: NextFunction) => {
+const handleMulterError = (err: any, req: Request, res: Response, next: NextFunction) => {
   if (err instanceof multer.MulterError) {
     if (err.code === "LIMIT_FILE_SIZE") {
       return res
         .status(413)
-        .json(STATUS_CODE[413](_req.t!("File size exceeds maximum allowed size of 30MB")));
+        .json(STATUS_CODE[413](req.t!("File size exceeds maximum allowed size of 30MB")));
     }
     // Other multer errors
     return res.status(400).json(STATUS_CODE[400](err.message));
@@ -108,7 +108,7 @@ const handleMulterError = (err: any, _req: Request, res: Response, next: NextFun
       .status(415)
       .json(
         STATUS_CODE[415](
-          _req.t!(
+          req.t!(
             "Unsupported file type. Allowed types: Documents (PDF, DOC, DOCX, XLS, XLSX, CSV, MD), Images (JPEG, PNG, GIF, WEBP, SVG, BMP, TIFF), Videos (MP4, MPEG, MOV, AVI, WMV, WEBM, MKV)",
           ),
         ),

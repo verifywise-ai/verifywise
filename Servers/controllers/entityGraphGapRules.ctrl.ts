@@ -196,13 +196,13 @@ export async function resetGapRules(req: Request, res: Response): Promise<any> {
  * @param {Response} res - Express response object
  * @returns {Promise<any>} JSON response with default rules
  */
-export async function getDefaultGapRules(_req: Request, res: Response): Promise<any> {
+export async function getDefaultGapRules(req: Request, res: Response): Promise<any> {
   logProcessing({
     description: "Starting getDefaultGapRules",
     functionName: "getDefaultGapRules",
     fileName: "entityGraphGapRules.ctrl.ts",
-    userId: _req.userId!,
-    organizationId: _req.organizationId!,
+    userId: req.userId!,
+    organizationId: req.organizationId!,
   });
 
   try {
@@ -221,15 +221,15 @@ export async function getDefaultGapRules(_req: Request, res: Response): Promise<
       functionName: "getDefaultGapRules",
       fileName: "entityGraphGapRules.ctrl.ts",
       error: error as Error,
-      userId: _req.userId!,
-      organizationId: _req.organizationId!,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
     });
 
     return res
       .status(500)
       .json(
         STATUS_CODE[500](
-          sanitizeErrorMessage(error as Error, _req.t!("Failed to get default gap rules")),
+          sanitizeErrorMessage(error as Error, req.t!("Failed to get default gap rules")),
         ),
       );
   }

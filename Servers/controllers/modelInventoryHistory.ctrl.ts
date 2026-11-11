@@ -92,9 +92,6 @@ export async function getTimeseries(req: Request, res: Response) {
         return res
           .status(400)
           .json(STATUS_CODE[400](req.t!("Invalid date format. Use ISO date format.")));
-        return res
-          .status(400)
-          .json(STATUS_CODE[400](req.t!("Invalid date format. Use ISO date format.")));
       }
 
       if (startDate >= endDate) {
