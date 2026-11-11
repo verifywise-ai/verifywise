@@ -58,6 +58,25 @@ function validateCategory(category: unknown): string {
   return category.trim();
 }
 
+// policy_templates.description is TEXT; the cap is ours. A summary shown in
+// the templates table, so 2000 characters is plenty.
+const MAX_DESCRIPTION_LENGTH = 2000;
+
+function validateDescription(description: unknown): string | null {
+  if (description === undefined || description === null) return null;
+  if (typeof description !== "string") {
+    throw new ValidationException("description must be a string", "description", description);
+  }
+  if (description.length > MAX_DESCRIPTION_LENGTH) {
+    throw new ValidationException(
+      `description must be at most ${MAX_DESCRIPTION_LENGTH} characters`,
+      "description",
+      description,
+    );
+  }
+  return description;
+}
+
 // Same caps for create and update. Tags are short labels; the column is
 // TEXT[] so the limits are ours, not the schema's.
 const MAX_TAGS = 50;
@@ -109,6 +128,7 @@ export async function createPolicyTemplateQuery(
 ): Promise<any> {
   const name = validateName(input?.name);
   const category = validateCategory(input?.category);
+  const description = validateDescription(input?.description);
   const tags = input?.tags === undefined || input?.tags === null ? [] : validateTags(input.tags);
   try {
     const rows: any = await sequelize.query(
@@ -123,7 +143,7 @@ export async function createPolicyTemplateQuery(
           organizationId,
           name,
           category,
-          description: input?.description ?? null,
+          description,
           content: sanitizeUserHtml(input?.content ?? "") ?? "",
           tags,
           createdBy: userId,
@@ -171,6 +191,8 @@ export async function updatePolicyTemplateQuery(
         replacements[field] = validateName(input[field]);
       } else if (field === "category") {
         replacements[field] = validateCategory(input[field]);
+      } else if (field === "description") {
+        replacements[field] = validateDescription(input[field]);
       } else if (field === "content") {
         if (typeof input[field] !== "string") {
           throw new ValidationException("content must be a string", "content", input[field]);

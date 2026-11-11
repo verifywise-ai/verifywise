@@ -239,6 +239,54 @@ describe("policyTemplate.utils", () => {
     expect(sql).toContain("'{}'::text[]");
   });
 
+  describe("description validation", () => {
+    const base = { name: "Vendor AI Policy", category: "Legal and compliance" };
+
+    it.each([5, ["a", "b"], { x: 1 }, true])(
+      "createPolicyTemplateQuery rejects a non-string description (%p)",
+      async (description) => {
+        await expect(createPolicyTemplateQuery({ ...base, description }, 42, 9)).rejects.toThrow(
+          ValidationException,
+        );
+        expect(q).not.toHaveBeenCalled();
+      },
+    );
+
+    it("createPolicyTemplateQuery rejects an over-long description", async () => {
+      await expect(
+        createPolicyTemplateQuery({ ...base, description: "d".repeat(2001) }, 42, 9),
+      ).rejects.toThrow(ValidationException);
+      expect(q).not.toHaveBeenCalled();
+    });
+
+    it("createPolicyTemplateQuery stores a string description and null when absent", async () => {
+      q.mockResolvedValueOnce([{ id: 7 }]).mockResolvedValueOnce([{ id: 8 }]);
+      await createPolicyTemplateQuery({ ...base, description: "d".repeat(2000) }, 42, 9);
+      await createPolicyTemplateQuery(base, 42, 9);
+      expect(q.mock.calls[0][1].replacements.description).toBe("d".repeat(2000));
+      expect(q.mock.calls[1][1].replacements.description).toBeNull();
+    });
+
+    it.each([5, ["a"], { x: 1 }, "d".repeat(2001)])(
+      "updatePolicyTemplateQuery rejects an invalid description (%p)",
+      async (description) => {
+        await expect(updatePolicyTemplateQuery(7, 42, { description })).rejects.toThrow(
+          ValidationException,
+        );
+        expect(q).not.toHaveBeenCalled();
+      },
+    );
+
+    it("updatePolicyTemplateQuery accepts a string or null description", async () => {
+      q.mockResolvedValueOnce([[{ id: 7 }], 1]).mockResolvedValueOnce([[{ id: 7 }], 1]);
+      await updatePolicyTemplateQuery(7, 42, { description: "New summary" });
+      await updatePolicyTemplateQuery(7, 42, { description: null });
+      expect(q.mock.calls[0][1].replacements.description).toBe("New summary");
+      expect(q.mock.calls[0][0]).toContain("description = :description");
+      expect(q.mock.calls[1][1].replacements.description).toBeNull();
+    });
+  });
+
   it("rejects a category longer than the column allows", async () => {
     await expect(
       createPolicyTemplateQuery({ name: "Long category", category: "c".repeat(101) }, 42, 9),
