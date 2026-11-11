@@ -25,24 +25,42 @@ export async function getRoleById({
   return response.data;
 }
 
-export async function createRole({ body }: { body: Partial<RoleModel> }): Promise<any> {
-  const response = await apiServices.post("/roles", body);
+/**
+ * Role writes. Pass `suppressGlobalErrorToast` when the caller shows the
+ * server's error inline, so the user does not also get a duplicate toast.
+ */
+export async function createRole({
+  body,
+  suppressGlobalErrorToast,
+}: {
+  body: Partial<RoleModel>;
+  suppressGlobalErrorToast?: boolean;
+}): Promise<any> {
+  const response = await apiServices.post("/roles", body, { suppressGlobalErrorToast });
   return response;
 }
 
 export async function updateRole({
   id,
   body,
+  suppressGlobalErrorToast,
 }: {
   id: number;
   body: Partial<RoleModel>;
+  suppressGlobalErrorToast?: boolean;
 }): Promise<any> {
-  const response = await apiServices.put(`/roles/${id}`, body);
+  const response = await apiServices.put(`/roles/${id}`, body, { suppressGlobalErrorToast });
   return response;
 }
 
-export async function deleteRole({ id }: { id: number }): Promise<any> {
-  const response = await apiServices.delete(`/roles/${id}`);
+export async function deleteRole({
+  id,
+  suppressGlobalErrorToast,
+}: {
+  id: number;
+  suppressGlobalErrorToast?: boolean;
+}): Promise<any> {
+  const response = await apiServices.delete(`/roles/${id}`, { suppressGlobalErrorToast });
   return response;
 }
 
