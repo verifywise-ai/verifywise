@@ -367,6 +367,7 @@ const assertEntityBelongsToOrg = async (
 export const listCustomFieldDefinitionsQuery = async (
   organizationId: number,
   entityType: CustomFieldEntityType,
+  transaction?: Transaction,
 ): Promise<ICustomFieldDefinition[]> => {
   assertPositiveInt(organizationId, "organizationId");
   assertEntityType(entityType);
@@ -379,6 +380,7 @@ export const listCustomFieldDefinitionsQuery = async (
     {
       replacements: { organizationId, entityType },
       type: QueryTypes.SELECT,
+      transaction,
     },
   )) as ICustomFieldDefinition[];
 };
