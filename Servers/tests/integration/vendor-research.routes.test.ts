@@ -432,7 +432,7 @@ describe("POST /api/v1/vendors/:id/research", () => {
     expect(researchJobs()).toHaveLength(1);
   });
 
-  // Every API start empties the queue of waiting jobs, which leaves their runs `queued` for good:
+  // A lost job (Redis wiped, for example) leaves its run `queued` for good:
   // the stale sweep only runs for the vendor that is started or read. Such runs must not use up
   // the daily cap of the organization for a day.
   it("does not count runs whose jobs were lost against the daily cap once they are stale", async () => {

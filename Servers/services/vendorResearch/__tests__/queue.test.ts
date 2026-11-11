@@ -28,8 +28,8 @@ import {
 } from "../queue";
 
 describe("the queue of the research runs", () => {
-  // The queue of the automations has a worker with ten places for every kind of job, and the
-  // backend empties it each time it starts. A run of several minutes does not belong in it.
+  // The queue of the automations has a worker with ten places for every kind of job, all of them
+  // short. A run of several minutes does not belong in it.
   it("is a queue of its own, on the Redis of the application, and the only one that loading it opens", () => {
     expect(VENDOR_RESEARCH_QUEUE).toBe("vendor-research");
     expect((Queue as unknown as jest.Mock).mock.calls).toEqual([

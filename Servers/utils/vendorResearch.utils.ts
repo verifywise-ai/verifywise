@@ -374,8 +374,8 @@ export const finishRunQuery = async (
  *   while still queued. A start refused with 503 can therefore be tried again at once. Only
  *   `markRunRunningQuery` sets `started_at`, so a null one means the run never started.
  * - A run that is still queued after STALE_RUN_MINUTES, the limit of the sweep
- *   (`failStaleRunsQuery`): its job was lost, for example because every API start empties the
- *   queue of waiting jobs. The sweep only looks at the vendor that is started or whose latest run
+ *   (`failStaleRunsQuery`): its job was lost, for example because Redis was wiped while it
+ *   waited. The sweep only looks at the vendor that is started or whose latest run
  *   is read, so such a run can stay queued for as long as nobody opens its vendor, and would use
  *   up a slot of the daily cap for the whole 24 hours. When the sweep does reach it, it fails
  *   without having started, which is the first kind. A worker whose job for the run turns up late

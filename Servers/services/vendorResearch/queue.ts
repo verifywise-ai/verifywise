@@ -6,10 +6,10 @@
  * the analysis and half a minute for the checks after it), while every other job on that queue is
  * short, so on a shared queue a burst of runs kept the notifications, the recomputes and the
  * reports waiting, and a long line of other jobs could leave a run queued past the 15 minutes
- * after which it is not started. The automation queue is also emptied each time the backend starts
- * (`obliterate` in the schedulers of automationProducer.ts), which lost the runs that were waiting.
- * This queue is never emptied. A run lost another way (Redis wiped) is ended by the stale rule, as
- * before.
+ * after which it is not started. The backend also used to empty the automation queue each time it
+ * started (`obliterate` in the schedulers of automationProducer.ts), which lost the runs that were
+ * waiting; no start empties a queue any more. A run whose job is lost another way (Redis wiped) is
+ * ended by the stale rule, as before.
  *
  * The queue also carries the repeating job of the scheduled scan (see scan.ts): one job an hour that
  * starts the runs of the vendors that are due. It is a scheduler of BullMQ, which the backend

@@ -376,7 +376,7 @@ describe("vendor_research_runs tenant isolation", () => {
     expect(await getLastRunCreatedAtQuery(owner.orgId, vendorId)).toEqual(afterStart?.created_at);
   });
 
-  // The job of a queued run can be lost: every API start empties the queue of waiting jobs. Such a
+  // The job of a queued run can be lost, for example when Redis is wiped. Such a
   // run stays `queued`, and the sweep only looks at the vendor that is started or read, so without
   // this rule it would use up a slot of the daily cap for 24 hours although it searched nothing.
   describe("a queued run whose job was lost", () => {
