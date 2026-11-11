@@ -214,6 +214,8 @@ export async function updatePolicyTemplateQuery(
 // policy_templates, so no FK can block the DELETE. The org + system guards
 // still apply — a caller can only remove its own templates.
 export async function deletePolicyTemplateQuery(id: number, organizationId: number): Promise<any> {
+  // With QueryTypes.DELETE the Postgres dialect returns the RETURNING rows
+  // directly (not the raw [rows, metadata] pair), so the row is result[0].
   const result: any = await sequelize.query(
     `DELETE FROM policy_templates
       WHERE id = :id
@@ -222,7 +224,7 @@ export async function deletePolicyTemplateQuery(id: number, organizationId: numb
       RETURNING id`,
     { replacements: { id, organizationId }, type: QueryTypes.DELETE },
   );
-  return result[0]?.[0] ?? null;
+  return result?.[0] ?? null;
 }
 
 // "Save as template" from a policy_manager row. policy_manager carries no

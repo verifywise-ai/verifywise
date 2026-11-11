@@ -132,7 +132,8 @@ describe("policyTemplate.utils", () => {
   });
 
   it("deletePolicyTemplateQuery hard-deletes with the org + system guards", async () => {
-    q.mockResolvedValueOnce([[{ id: 7 }], 1]);
+    // QueryTypes.DELETE resolves to the RETURNING rows themselves.
+    q.mockResolvedValueOnce([{ id: 7 }]);
     const row = await deletePolicyTemplateQuery(7, 42);
     expect(row.id).toBe(7);
     const [sql, opts] = q.mock.calls[0];
@@ -140,6 +141,11 @@ describe("policyTemplate.utils", () => {
     expect(sql).toContain("is_system_template = false");
     expect(sql).not.toContain("organization_id IS NULL");
     expect(opts.replacements.organizationId).toBe(42);
+  });
+
+  it("deletePolicyTemplateQuery returns null when no row matched", async () => {
+    q.mockResolvedValueOnce([]);
+    expect(await deletePolicyTemplateQuery(7, 42)).toBeNull();
   });
 
   describe("updatePolicyTemplateQuery tags and is_active", () => {
