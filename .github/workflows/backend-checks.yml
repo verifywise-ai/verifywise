@@ -150,7 +150,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [isolation-matrix, regression-suites, smoke-and-audit]
+        suite: [isolation-matrix, regression-suites, risk-links, smoke-and-audit]
         # (#4680) The isolation pack must be proven with the RLS runtime flag
         # both off (current default) and on (RLS_ENFORCEMENT_ENABLED=true), so
         # the flag can be flipped in production without losing the guarantee.
@@ -158,6 +158,8 @@ jobs:
         rls: [off, on]
         exclude:
           - suite: regression-suites
+            rls: on
+          - suite: risk-links
             rls: on
           - suite: smoke-and-audit
             rls: on
@@ -240,6 +242,19 @@ jobs:
         if: matrix.suite == 'regression-suites'
         run: |
           npm run test:integration -- --testPathPatterns='tests/integration/(login|projects|tasks|vendors|workflow-audit-log|user-deletion-fks|reporting-rls-policies|report-run-visibility|framework-gap-workflow|report-scope-membership|report-scope-authorization|workflow-approval-gate|audit-ledger-retention|file-manager|approval-workflows|rate-limiting/limiter-wiring|governance-os\.cross-tenant)\.test\.ts'
+
+      # The risk link suites (tests/integration/riskLinks.*.test.ts) used to run
+      # only locally, so when c1047bb7c narrowed recompute to derived related_to
+      # rows, two of them (recomputeEngine, vendorRelated) broke without any
+      # check going red. They get a job of their own: they take nearly twice as
+      # long as the regression suites above, and folded into that job they
+      # would make it the slowest one in this matrix. A prefix rather than a
+      # list of names, so a new riskLinks suite runs without editing this file;
+      # anchored to `tests/integration/` like the regex above, so
+      # tenant-isolation/riskLinks.isolation stays in the isolation matrix.
+      - name: Run risk link integration suites
+        if: matrix.suite == 'risk-links'
+        run: npm run test:integration -- --testPathPatterns='tests/integration/riskLinks\.'
 
       - name: Run deadline-summary smoke test
         if: matrix.suite == 'smoke-and-audit'
