@@ -17,8 +17,11 @@ Each extension has:
 - a **catalog row** in `verifywise.extensions`, seeded by a migration
 - an optional **declarative config form** in `verifywise.extension_config_fields`
 - a **per-organization state row** in `verifywise.extension_enablements`
-- **server code** in `Servers/extensions/<key>/`, mounted at
-  `/api/extensions/<key>` behind the `requireExtensionEnabled("<key>")` gate
+- **server code** in `Servers/extensions/<key>/`, mounted behind the
+  `requireExtensionEnabled("<key>")` gate. Older extensions mount at
+  `/api/extensions/<key>`; new extension routers go under `/api/v1`
+  (for example `/api/v1/framework-import`, `routes/v1/frameworkImport.route.ts`),
+  because new contracts must not be added to unversioned paths
 - **client code** in `Clients/src/presentation/pages/Extensions/<key>/`, shown
   only when `useExtensions().isEnabled("<key>")` is true
 

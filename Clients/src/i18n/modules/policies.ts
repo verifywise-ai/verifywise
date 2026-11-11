@@ -61,6 +61,24 @@ export const de: Record<string, string> = {
     "Überwachen Sie Ihre Richtlinien auf einen Blick nach Status: Entwurf, In Überprüfung, Genehmigt, Veröffentlicht, Archiviert und Veraltet.",
   "Quickly filter policies by their current approval and lifecycle status to focus on what needs your attention.":
     "Filtern Sie Richtlinien schnell nach ihrem aktuellen Genehmigungs- und Lebenszyklusstatus, um sich auf das zu konzentrieren, was Ihre Aufmerksamkeit benötigt.",
+  // Organization policy templates (#5261)
+  "Back to policy templates": "Zurück zu den Richtlinienvorlagen",
+  "Could not save the template. Please try again.":
+    "Die Vorlage konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.",
+  "Delete this template?": "Diese Vorlage löschen?",
+  "Duplicate into our templates": "In unsere Vorlagen duplizieren",
+  "Edit content": "Inhalt bearbeiten",
+  "Edit details": "Details bearbeiten",
+  "Edit template details": "Vorlagendetails bearbeiten",
+  "Failed to load template. It may not exist.":
+    "Die Vorlage konnte nicht geladen werden. Möglicherweise existiert sie nicht.",
+  "Our templates": "Unsere Vorlagen",
+  "Save as template": "Als Vorlage speichern",
+  "Save template": "Vorlage speichern",
+  "The policy was saved as an organization template.":
+    "Die Richtlinie wurde als Organisationsvorlage gespeichert.",
+  "Update the name, description and category of this organization template. To change its content, use Edit content.":
+    "Aktualisieren Sie Name, Beschreibung und Kategorie dieser Organisationsvorlage. Um den Inhalt zu ändern, verwenden Sie „Inhalt bearbeiten“.",
 };
 
 export const fr: Record<string, string> = {
@@ -123,6 +141,24 @@ export const fr: Record<string, string> = {
     "Surveillez vos politiques en un coup d'œil par statut : Brouillon, En cours d'examen, Approuvé, Publié, Archivé et Obsolète.",
   "Quickly filter policies by their current approval and lifecycle status to focus on what needs your attention.":
     "Filtrez rapidement les politiques par leur statut actuel d'approbation et de cycle de vie pour vous concentrer sur ce qui nécessite votre attention.",
+  // Organization policy templates (#5261)
+  "Back to policy templates": "Retour aux modèles de politiques",
+  "Could not save the template. Please try again.":
+    "Impossible d'enregistrer le modèle. Veuillez réessayer.",
+  "Delete this template?": "Supprimer ce modèle ?",
+  "Duplicate into our templates": "Dupliquer dans nos modèles",
+  "Edit content": "Modifier le contenu",
+  "Edit details": "Modifier les détails",
+  "Edit template details": "Modifier les détails du modèle",
+  "Failed to load template. It may not exist.":
+    "Impossible de charger le modèle. Il n'existe peut-être pas.",
+  "Our templates": "Nos modèles",
+  "Save as template": "Enregistrer comme modèle",
+  "Save template": "Enregistrer le modèle",
+  "The policy was saved as an organization template.":
+    "La politique a été enregistrée comme modèle de l'organisation.",
+  "Update the name, description and category of this organization template. To change its content, use Edit content.":
+    "Modifiez le nom, la description et la catégorie de ce modèle de l'organisation. Pour modifier son contenu, utilisez « Modifier le contenu ».",
 };
 
 export const es: Record<string, string> = {
@@ -185,4 +221,22 @@ export const es: Record<string, string> = {
     "Supervise sus políticas de un vistazo por estado: Borrador, En revisión, Aprobada, Publicada, Archivada y Obsoleta.",
   "Quickly filter policies by their current approval and lifecycle status to focus on what needs your attention.":
     "Filtre rápidamente las políticas por su estado de aprobación y de ciclo de vida actual para centrarse en lo que requiere su atención.",
+  // Organization policy templates (#5261)
+  "Back to policy templates": "Volver a las plantillas de políticas",
+  "Could not save the template. Please try again.":
+    "No se pudo guardar la plantilla. Inténtelo de nuevo.",
+  "Delete this template?": "¿Eliminar esta plantilla?",
+  "Duplicate into our templates": "Duplicar en nuestras plantillas",
+  "Edit content": "Editar contenido",
+  "Edit details": "Editar detalles",
+  "Edit template details": "Editar detalles de la plantilla",
+  "Failed to load template. It may not exist.":
+    "No se pudo cargar la plantilla. Es posible que no exista.",
+  "Our templates": "Nuestras plantillas",
+  "Save as template": "Guardar como plantilla",
+  "Save template": "Guardar plantilla",
+  "The policy was saved as an organization template.":
+    "La política se guardó como plantilla de la organización.",
+  "Update the name, description and category of this organization template. To change its content, use Edit content.":
+    "Actualice el nombre, la descripción y la categoría de esta plantilla de la organización. Para cambiar su contenido, use Editar contenido.",
 };

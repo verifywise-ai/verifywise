@@ -4453,61 +4453,6 @@ export const extensionEndpoints: Endpoint[] = [
     ],
     tag: "Extensions",
   },
-  {
-    method: 'GET',
-    path: '/extensions/framework-import/template',
-    summary: "Download Excel Template",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Extensions",
-  },
-  {
-    method: 'POST',
-    path: '/extensions/framework-import/import',
-    summary: "Bulk Import Frameworks",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Extensions",
-  },
-  {
-    method: 'GET',
-    path: '/extensions/framework-import/imported',
-    summary: "List Imported Frameworks",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Extensions",
-  },
-  {
-    method: 'PATCH',
-    path: '/extensions/framework-import/imported/{id}',
-    summary: "Update Imported Framework",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Extensions",
-  },
-  {
-    method: 'DELETE',
-    path: '/extensions/framework-import/imported/{id}',
-    summary: "Delete Imported Framework",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Extensions",
-  },
 ];
 
 // Extensions/Jira Incidents endpoints
@@ -12325,6 +12270,65 @@ export const v1ChangeHistoryEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: Extensions endpoints
+export const v1ExtensionsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/framework-import/template',
+    summary: "Download Excel Template",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Extensions",
+  },
+  {
+    method: 'POST',
+    path: '/v1/framework-import/import',
+    summary: "Bulk Import Frameworks",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Extensions",
+  },
+  {
+    method: 'GET',
+    path: '/v1/framework-import/imported',
+    summary: "List Imported Frameworks",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Extensions",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/framework-import/imported/{id}',
+    summary: "Update Imported Framework",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Extensions",
+  },
+  {
+    method: 'DELETE',
+    path: '/v1/framework-import/imported/{id}',
+    summary: "Delete Imported Framework",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Extensions",
+  },
+];
+
 // v1: Intake Forms endpoints
 export const v1IntakeFormsEndpoints: Endpoint[] = [
   {
@@ -13600,6 +13604,7 @@ export const allEndpoints = {
   training: trainingEndpoints,
   user: userEndpoints,
   v1ChangeHistory: v1ChangeHistoryEndpoints,
+  v1Extensions: v1ExtensionsEndpoints,
   v1IntakeForms: v1IntakeFormsEndpoints,
   v1UseCaseSettings: v1UseCaseSettingsEndpoints,
   v1V1aiAppLifecycle: v1V1aiAppLifecycleEndpoints,

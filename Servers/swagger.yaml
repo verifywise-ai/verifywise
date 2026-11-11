@@ -7916,6 +7916,8 @@ tags:
   -
     name: 'v1: Change History'
   -
+    name: 'v1: Extensions'
+  -
     name: 'v1: Intake Forms'
   -
     name: 'v1: Shadow AI'
@@ -28520,7 +28522,7 @@ paths:
       security:
         -
           bearerAuth: []
-  /extensions/framework-import/template:
+  /v1/framework-import/template:
     get:
       summary: 'Download Excel Template'
       responses:
@@ -28529,12 +28531,12 @@ paths:
         '500':
           description: 'Internal server error'
       tags:
-        - Extensions
-      operationId: extensions_framework_import_downloadExcelTemplate
+        - 'v1: Extensions'
+      operationId: v1_framework_import_downloadExcelTemplate
       security:
         -
           bearerAuth: []
-  /extensions/framework-import/import:
+  /v1/framework-import/import:
     post:
       summary: 'Bulk Import Frameworks'
       responses:
@@ -28543,12 +28545,12 @@ paths:
         '500':
           description: 'Internal server error'
       tags:
-        - Extensions
+        - 'v1: Extensions'
       operationId: bulkImportFrameworks
       security:
         -
           bearerAuth: []
-  /extensions/framework-import/imported:
+  /v1/framework-import/imported:
     get:
       summary: 'List Imported Frameworks'
       responses:
@@ -28557,12 +28559,12 @@ paths:
         '500':
           description: 'Internal server error'
       tags:
-        - Extensions
+        - 'v1: Extensions'
       operationId: listImportedFrameworks
       security:
         -
           bearerAuth: []
-  '/extensions/framework-import/imported/{id}':
+  '/v1/framework-import/imported/{id}':
     patch:
       summary: 'Update Imported Framework'
       responses:
@@ -28571,7 +28573,7 @@ paths:
         '500':
           description: 'Internal server error'
       tags:
-        - Extensions
+        - 'v1: Extensions'
       operationId: updateImportedFramework
       security:
         -
@@ -28584,7 +28586,7 @@ paths:
         '500':
           description: 'Internal server error'
       tags:
-        - Extensions
+        - 'v1: Extensions'
       operationId: deleteImportedFramework
       security:
         -
