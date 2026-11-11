@@ -397,8 +397,12 @@ interface StructureCounts {
   removed: number;
 }
 
+// Sequelize wraps the driver error: a UniqueConstraintError carries the
+// Postgres code on .parent / .original, not on itself. Check all three.
 function isUniqueViolation(err: unknown): boolean {
-  return typeof err === "object" && err !== null && (err as { code?: string }).code === "23505";
+  if (typeof err !== "object" || err === null) return false;
+  const e = err as { code?: string; parent?: { code?: string }; original?: { code?: string } };
+  return e.code === "23505" || e.parent?.code === "23505" || e.original?.code === "23505";
 }
 
 function chunk<T>(items: T[], size: number): T[][] {

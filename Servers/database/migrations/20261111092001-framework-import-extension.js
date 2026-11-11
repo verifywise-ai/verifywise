@@ -56,8 +56,9 @@ module.exports = {
                 displayOrder: 2,
               },
               {
-                name: "Idempotent Re-import",
-                description: "Re-uploading the same framework name replaces its structure",
+                name: "Re-import",
+                description:
+                  "Re-uploading the same framework name updates its structure. Topics and subtopics with assessment data are kept as retired, others are removed",
                 displayOrder: 3,
               },
               {

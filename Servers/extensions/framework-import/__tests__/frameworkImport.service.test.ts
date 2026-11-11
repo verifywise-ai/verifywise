@@ -465,15 +465,24 @@ describe("importFramework", () => {
     expect(statements().some((s) => s.sql.includes("_impl"))).toBe(false);
   });
 
-  it("rolls back and maps a racing duplicate name to ConflictException", async () => {
-    spyOnTx();
-    mockQuery.mockRejectedValueOnce(Object.assign(new Error("duplicate key"), { code: "23505" }));
+  // Sequelize's UniqueConstraintError carries the Postgres code on
+  // .parent / .original; a bare driver error carries it on itself.
+  it.each([
+    ["Sequelize .original", { original: { code: "23505" } }],
+    ["Sequelize .parent", { parent: { code: "23505" } }],
+    ["bare driver .code", { code: "23505" }],
+  ])(
+    "rolls back and maps a racing duplicate name to ConflictException (%s)",
+    async (_label, shape) => {
+      spyOnTx();
+      mockQuery.mockRejectedValueOnce(Object.assign(new Error("duplicate key"), shape));
 
-    await expect(importFramework([validRow()], ORG_ID, USER_ID)).rejects.toBeInstanceOf(
-      ConflictException,
-    );
-    expect(rolledBack()).toBe(true);
-  });
+      await expect(importFramework([validRow()], ORG_ID, USER_ID)).rejects.toBeInstanceOf(
+        ConflictException,
+      );
+      expect(rolledBack()).toBe(true);
+    },
+  );
 });
 
 describe("listImportedFrameworksQuery", () => {
@@ -532,6 +541,24 @@ describe("updateImportedFrameworkQuery", () => {
     );
     expect(rolledBack()).toBe(true);
     expectOrgScopedAndOffTheCatalog();
+  });
+
+  it("maps a rename onto an existing name (Sequelize UniqueConstraintError) to 409", async () => {
+    spyOnTx();
+    mockQuery
+      .mockResolvedValueOnce([{ id: 9 }]) // guard select
+      .mockRejectedValueOnce(
+        Object.assign(new Error("Validation error"), {
+          name: "SequelizeUniqueConstraintError",
+          parent: { code: "23505" },
+          original: { code: "23505" },
+        }),
+      );
+
+    await expect(
+      updateImportedFrameworkQuery(9, ORG_ID, { name: "Taken name" }),
+    ).rejects.toBeInstanceOf(ConflictException);
+    expect(rolledBack()).toBe(true);
   });
 
   it("rejects invalid patches before touching the DB", async () => {
