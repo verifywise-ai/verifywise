@@ -288,8 +288,15 @@ export const roleConfigurationContent: ArticleContent = {
       items: [
         { text: 'Built-in roles keep their permissions. You can\'t edit, rename or delete them' },
         { text: 'Only Admins see every use case. People with a custom role see the use cases they own, are a team member of or reach through a group' },
-        { text: 'Some Admin areas still need the built-in Admin role, whatever you allow. Examples are Settings > Team, Settings > Features, the audit ledger, custom fields, extensions and the LLM Evals API keys' },
       ],
+    },
+    {
+      type: 'paragraph',
+      text: 'These areas still need the built-in Admin role, whatever you allow: Settings > Team, Settings > Features, Settings > MCP, the LLM Evals API keys and evals settings, AI Trust Index settings, intake form routing and acting in any review lane, downloading files, the demo data menu and the "All tasks" view. Managing evidence folders needs the built-in Admin or Editor role.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Four permissions only change what the screens show. The server doesn\'t check them yet: "Choose a use case\'s team members", "Edit framework controls and answers, and add or remove frameworks", "Record audit results on framework controls" and "Create and change eval projects, experiments, scorers and datasets". Their descriptions in Settings > Roles say so.',
     },
     {
       type: 'heading',
