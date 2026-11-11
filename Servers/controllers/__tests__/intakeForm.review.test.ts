@@ -66,6 +66,10 @@ jest.mock("../../utils/statusCode.utils", () => ({
 jest.mock("../../database/db", () => ({
   sequelize: { transaction: jest.fn() },
 }));
+jest.mock("../../utils/customField.utils", () => ({
+  ...(jest.requireActual("../../utils/customField.utils") as object),
+  listCustomFieldDefinitionsQuery: jest.fn<any>().mockResolvedValue([]),
+}));
 
 /* eslint-disable @typescript-eslint/no-require-imports */
 const ctrl = require("../intakeForm.ctrl") as typeof import("../intakeForm.ctrl");
@@ -73,6 +77,7 @@ const intake = require("../../utils/intakeForm.utils");
 const runs = require("../../utils/euAiActClassification.utils");
 const data = require("../../utils/intakeSubmissionData.utils");
 const { enqueueIntakeAssessment } = require("../../services/intakeScoring/enqueue");
+const customFields = require("../../utils/customField.utils");
 /* eslint-enable @typescript-eslint/no-require-imports */
 
 const ORG = 5;
@@ -567,5 +572,58 @@ describe("getSubmissionPreview", () => {
     expect(r.body.data.assessment).toBeNull();
     expect(r.body.data.assessedLevel).toBeNull();
     expect(r.body.data.ruleMinimumPreview).toBeNull();
+  });
+});
+
+describe("getSubmissionPreview custom fields (#5262)", () => {
+  it("lists the values the approval would write, in question order, marking skipped ones", async () => {
+    intake.getSubmissionByIdQuery.mockResolvedValue(
+      submission({ entityType: "model", data: { gone: "x", owner: "Alice", blank: "" } }),
+    );
+    intake.getIntakeFormByIdQuery.mockResolvedValue({
+      id: 1,
+      name: "F",
+      entityType: "model",
+      schema: {
+        fields: [
+          {
+            id: "gone",
+            type: "text",
+            label: "Old question",
+            entityFieldMapping: "custom_field:gone",
+          },
+          {
+            id: "owner",
+            type: "text",
+            label: "Who owns it?",
+            entityFieldMapping: "custom_field:owner",
+          },
+          { id: "blank", type: "text", label: "Notes", entityFieldMapping: "custom_field:notes" },
+        ],
+      },
+      riskTierSystem: "eu_ai_act",
+    });
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue(null);
+    customFields.listCustomFieldDefinitionsQuery.mockResolvedValue([
+      { id: 1, field_key: "owner", label: "Owner", field_type: "text", options: null },
+      { id: 2, field_key: "notes", label: "Notes", field_type: "text", options: null },
+    ]);
+    const r = await call(ctrl.getSubmissionPreview, req());
+    expect(r.status).toBe(200);
+    expect(customFields.listCustomFieldDefinitionsQuery).toHaveBeenCalledWith(
+      ORG,
+      "model_inventory",
+    );
+    expect(r.body.data.customFields).toEqual([
+      { label: "Old question", displayValue: "", skipped: "This custom field no longer exists" },
+      { label: "Owner", displayValue: "Alice" },
+    ]);
+    expect(Object.keys(r.body.data.entityPreview)).not.toContain("custom_field:owner");
+  });
+
+  it("is empty, with no definitions read, for a form without custom mappings", async () => {
+    const r = await call(ctrl.getSubmissionPreview, req());
+    expect(r.body.data.customFields).toEqual([]);
+    expect(customFields.listCustomFieldDefinitionsQuery).not.toHaveBeenCalled();
   });
 });

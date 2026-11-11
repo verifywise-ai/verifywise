@@ -79,9 +79,20 @@ import {
 import { recordMultipleFieldChanges } from "../utils/useCaseChangeHistory.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import {
+  ForbiddenException,
   NotFoundException,
   ValidationException,
 } from "../domain.layer/exceptions/custom.exception";
+import {
+  listCustomFieldDefinitionsQuery,
+  setCustomFieldValueQuery,
+  type CustomFieldEntityType,
+} from "../utils/customField.utils";
+import {
+  resolveIntakeCustomFieldValues,
+  validateFormCustomFieldMappings,
+  type CustomFieldSkip,
+} from "../utils/intakeCustomFields.utils";
 import { llmKeyExistsQuery } from "../utils/llmKey.utils";
 import { sanitizeUserHtml } from "../utils/sanitization.utils";
 import logger from "../utils/logger/fileLogger";
@@ -98,7 +109,15 @@ import {
   trySendSubmitterConfirmation,
 } from "../services/intakeConfirmation/confirmation";
 import { notificationAudience } from "../services/intakeScoring/assessmentJob";
-import { cleanSubmission, isEmptyAnswer, parseFormula } from "../services/intakeFormLogic";
+import {
+  cleanSubmission,
+  CUSTOM_FIELD_MAPPING_PREFIX,
+  customFieldKeyOf,
+  INTAKE_CUSTOM_FIELD_ENTITY,
+  isCustomFieldMapping,
+  isEmptyAnswer,
+  parseFormula,
+} from "../services/intakeFormLogic";
 import { generateSuggestedQuestions, generateFieldGuidance } from "../services/intakeLLM.service";
 import { getCompanyLogoQuery } from "../utils/aiTrustCentre.utils";
 
@@ -833,6 +852,137 @@ function prepareSubmissionData(
 // ENTITY DATA MAPPING (fixes hardcoded mapper bug)
 // ============================================================================
 
+// Answers mapped to entity custom fields (#5262). Skip reasons travel as
+// stable codes and are worded here, at the HTTP edge.
+const CUSTOM_FIELD_SKIP_REASONS: Record<string, string> = {
+  field_removed: "This custom field no longer exists",
+  type_changed: "This custom field's type no longer matches the question",
+  no_matching_option: "The answer matches no option of this custom field",
+  invalid_value: "The answer is not a valid value for this custom field",
+};
+
+const customFieldSkipReason = (req: Request, code: string): string =>
+  req.t!(CUSTOM_FIELD_SKIP_REASONS[code] ?? CUSTOM_FIELD_SKIP_REASONS.invalid_value);
+
+/** The custom field entity type for an intake entity type, or null for an unknown one. */
+const customFieldEntityOf = (intakeEntityType: string): CustomFieldEntityType | null =>
+  Object.prototype.hasOwnProperty.call(INTAKE_CUSTOM_FIELD_ENTITY, intakeEntityType)
+    ? (INTAKE_CUSTOM_FIELD_ENTITY[
+        intakeEntityType as keyof typeof INTAKE_CUSTOM_FIELD_ENTITY
+      ] as CustomFieldEntityType)
+    : null;
+
+const hasCustomFieldMappings = (schema: IIntakeFormSchema | undefined): boolean =>
+  Array.isArray(schema?.fields) &&
+  schema.fields.some((f) => isCustomFieldMapping(f.entityFieldMapping));
+
+/** Custom field values are written only from the answers, never from reviewer-sent data. */
+const withoutCustomFieldKeys = (data: Record<string, unknown>): Record<string, unknown> =>
+  Object.fromEntries(
+    Object.entries(data).filter(([key]) => !key.startsWith(CUSTOM_FIELD_MAPPING_PREFIX)),
+  );
+
+/** Why a form about to go live can't: a mapped custom field is gone or can't hold the answer. */
+async function customFieldMappingErrors(
+  req: Request,
+  schema: IIntakeFormSchema | undefined,
+  intakeEntityType: unknown,
+  transaction: Transaction,
+): Promise<string[]> {
+  if (!hasCustomFieldMappings(schema) || typeof intakeEntityType !== "string") return [];
+  const problems = await validateFormCustomFieldMappings(
+    schema!,
+    intakeEntityType,
+    req.organizationId!,
+    transaction,
+  );
+  return problems.map(({ label, fieldKey, problem }) =>
+    problem === "field_removed"
+      ? req.t!('Question "{label}": custom field "{key}" no longer exists', {
+          label,
+          key: fieldKey,
+        })
+      : req.t!('Question "{label}": custom field "{key}" cannot store this question type', {
+          label,
+          key: fieldKey,
+        }),
+  );
+}
+
+/**
+ * Writes the custom field values an approved submission's answers resolve to,
+ * each in its own savepoint. A value the write refuses (the field was removed,
+ * its options changed, the entity is not found) is skipped and reported; any
+ * other error fails the approval.
+ */
+async function writeIntakeCustomFields(
+  intakeEntityType: string,
+  answers: Record<string, unknown>,
+  schema: IIntakeFormSchema,
+  entityId: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<CustomFieldSkip[]> {
+  const target = customFieldEntityOf(intakeEntityType);
+  if (!target || !hasCustomFieldMappings(schema)) return [];
+  const definitions = await listCustomFieldDefinitionsQuery(organizationId, target, transaction);
+  const { values, skipped } = resolveIntakeCustomFieldValues(answers, schema, definitions);
+  const skips = [...skipped];
+  for (const value of values) {
+    const savepoint = await sequelize.transaction({ transaction });
+    try {
+      await setCustomFieldValueQuery(
+        { definition_id: value.definitionId, entity_id: entityId, value: value.value },
+        organizationId,
+        savepoint,
+      );
+      await savepoint.commit();
+    } catch (error) {
+      await savepoint.rollback();
+      if (error instanceof NotFoundException) {
+        skips.push({ fieldKey: value.fieldKey, label: value.label, reason: "field_removed" });
+      } else if (error instanceof ValidationException || error instanceof ForbiddenException) {
+        skips.push({ fieldKey: value.fieldKey, label: value.label, reason: "invalid_value" });
+      } else {
+        throw error;
+      }
+    }
+  }
+  return skips;
+}
+
+/** The custom field values an approval would write, in question order, skipped ones marked. */
+async function previewIntakeCustomFields(
+  req: Request,
+  intakeEntityType: string,
+  answers: Record<string, unknown>,
+  schema: IIntakeFormSchema,
+): Promise<Array<{ label: string; displayValue: string; skipped?: string }>> {
+  const target = customFieldEntityOf(intakeEntityType);
+  if (!target || !hasCustomFieldMappings(schema)) return [];
+  const definitions = await listCustomFieldDefinitionsQuery(req.organizationId!, target);
+  const { values, skipped } = resolveIntakeCustomFieldValues(answers, schema, definitions);
+  const rows: Array<{ label: string; displayValue: string; skipped?: string }> = [];
+  for (const field of schema.fields) {
+    if (!isCustomFieldMapping(field.entityFieldMapping)) continue;
+    const fieldKey = customFieldKeyOf(field.entityFieldMapping);
+    const value = values.find((v) => v.fieldKey === fieldKey);
+    if (value) {
+      rows.push({ label: value.label, displayValue: value.displayValue });
+      continue;
+    }
+    const skip = skipped.find((s) => s.fieldKey === fieldKey);
+    if (skip) {
+      rows.push({
+        label: skip.label,
+        displayValue: "",
+        skipped: customFieldSkipReason(req, skip.reason),
+      });
+    }
+  }
+  return rows;
+}
+
 // ============================================================================
 // INTAKE FORM CONTROLLERS (Admin - Authenticated)
 // ============================================================================
@@ -1115,9 +1265,14 @@ export async function createIntakeForm(req: Request, res: Response) {
 
     // Drafts may hold unfinished logic (a new calculated field starts with an
     // empty formula); only a form that will be live must be valid.
+    // A live form's custom-field mappings must also point at fields that exist
+    // and can hold the answer (#5262).
     const logicErrors =
       (status ?? IntakeFormStatus.DRAFT) === IntakeFormStatus.ACTIVE
-        ? validateIntakeFormSchemaLogic(schema, entityType)
+        ? [
+            ...validateIntakeFormSchemaLogic(schema, entityType),
+            ...(await customFieldMappingErrors(req, schema, entityType, transaction)),
+          ]
         : [];
     if (logicErrors.length > 0) {
       await transaction.rollback();
@@ -1283,10 +1438,18 @@ export async function updateIntakeForm(req: Request, res: Response) {
     const touchesLogic = schema !== undefined || entityType !== undefined || status !== undefined;
     const logicErrors =
       touchesLogic && (status ?? existingForm.status) === IntakeFormStatus.ACTIVE
-        ? validateIntakeFormSchemaLogic(
-            schema ?? existingForm.schema,
-            entityType ?? existingForm.entityType,
-          )
+        ? [
+            ...validateIntakeFormSchemaLogic(
+              schema ?? existingForm.schema,
+              entityType ?? existingForm.entityType,
+            ),
+            ...(await customFieldMappingErrors(
+              req,
+              schema ?? existingForm.schema,
+              entityType ?? existingForm.entityType,
+              transaction,
+            )),
+          ]
         : [];
     if (logicErrors.length > 0) {
       await transaction.rollback();
@@ -1759,6 +1922,12 @@ export async function getSubmissionPreview(req: Request, res: Response) {
       submission.data as Record<string, unknown>,
       form.schema,
     );
+    const customFields = await previewIntakeCustomFields(
+      req,
+      submission.entityType,
+      (submission.data ?? {}) as Record<string, unknown>,
+      form.schema,
+    );
 
     const storedRun = await getLatestRunForSubmissionQuery(submission.id!, req.organizationId!);
     // A run that can no longer be scored shows no panel rather than failing the
@@ -1824,6 +1993,7 @@ export async function getSubmissionPreview(req: Request, res: Response) {
         riskOverride: submission.riskOverride,
         liveChecks: submission.liveChecks ?? null,
         entityPreview: entityData,
+        customFields,
         euAiActClassification,
         assessment,
         suggestedRisks: submission.suggestedRisks,
@@ -2268,9 +2438,13 @@ export async function approveSubmission(req: Request, res: Response) {
 
     // Use confirmed entity data from admin if provided, otherwise build from mapping
     const { confirmedEntityData, riskOverride, euAiActOverride } = req.body;
+    // Custom field values come from the answers only (#5262), so any
+    // custom_field:* key the reviewer sent is dropped here.
     let entityData: Record<string, unknown> =
-      confirmedEntityData ||
-      buildEntityDataFromSubmission(submission.data as Record<string, unknown>, form.schema);
+      confirmedEntityData && typeof confirmedEntityData === "object"
+        ? withoutCustomFieldKeys(confirmedEntityData as Record<string, unknown>)
+        : confirmedEntityData ||
+          buildEntityDataFromSubmission(submission.data as Record<string, unknown>, form.schema);
 
     // The EU AI Act step owns the use case's level: score the stored answers
     // again and apply a justified reviewer change; the dialog's level is
@@ -2625,6 +2799,17 @@ export async function approveSubmission(req: Request, res: Response) {
       return res.status(400).json(STATUS_CODE[400](req.t!("Unsupported entity type")));
     }
 
+    // Answers mapped to custom fields are written on the new entity (#5262).
+    // One the write refuses is skipped and reported, not a failed approval.
+    const customFieldSkips = await writeIntakeCustomFields(
+      submission.entityType,
+      (submission.data ?? {}) as Record<string, unknown>,
+      form.schema,
+      entityId,
+      req.organizationId!,
+      transaction,
+    );
+
     // The suggested risks reviewers accepted become real risks on the new
     // entity, in this transaction: any failure rolls the approval back. The
     // submission row is locked above, so no suggestion changes underneath.
@@ -2687,6 +2872,19 @@ export async function approveSubmission(req: Request, res: Response) {
       userId: req.userId!,
       organizationId: req.organizationId!,
     });
+    for (const skip of customFieldSkips) {
+      logger.warn(
+        `Intake answer for custom field ${skip.fieldKey} was not written on submission ${submissionId}: ${skip.reason}`,
+      );
+      await logSuccess({
+        eventType: "Update",
+        description: `custom field ${skip.fieldKey} skipped on submission ${submissionId}: ${skip.reason}`,
+        functionName: "approveSubmission",
+        fileName: "intakeForm.ctrl.ts",
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
+    }
     await logIfOutsideLane(req, submissionId, decision.lane, routingCfg, "approveSubmission");
     if (pickedForSecondReview && routingCfg) {
       sendSecondReviewRequestEmail(
@@ -2705,7 +2903,19 @@ export async function approveSubmission(req: Request, res: Response) {
       });
     }
 
-    return res.status(200).json(STATUS_CODE[200](updatedSubmission));
+    const plainSubmission =
+      updatedSubmission && typeof (updatedSubmission as { toJSON?: unknown }).toJSON === "function"
+        ? (updatedSubmission as unknown as { toJSON: () => object }).toJSON()
+        : updatedSubmission;
+    return res.status(200).json(
+      STATUS_CODE[200]({
+        ...(plainSubmission ?? {}),
+        customFieldSkips: customFieldSkips.map((skip) => ({
+          label: skip.label,
+          reason: customFieldSkipReason(req, skip.reason),
+        })),
+      }),
+    );
   } catch (error) {
     await transaction.rollback();
     await logFailure({

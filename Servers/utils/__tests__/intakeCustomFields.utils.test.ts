@@ -170,7 +170,7 @@ describe("validateFormCustomFieldMappings", () => {
       "model",
       7,
     );
-    expect(errors).toEqual(['Question "Owner": custom field "owner" no longer exists']);
+    expect(errors).toEqual([{ label: "Owner", fieldKey: "owner", problem: "field_removed" }]);
     expect(listDefinitions).toHaveBeenCalledWith(7, "model_inventory", undefined);
   });
 
@@ -181,9 +181,7 @@ describe("validateFormCustomFieldMappings", () => {
       "model",
       7,
     );
-    expect(errors).toEqual([
-      'Question "Owner": custom field "owner" cannot store this question type',
-    ]);
+    expect(errors).toEqual([{ label: "Owner", fieldKey: "owner", problem: "type_changed" }]);
   });
 
   it("returns [] for valid mappings", async () => {

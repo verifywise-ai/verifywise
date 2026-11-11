@@ -24514,7 +24514,7 @@ paths:
       tags:
         - 'Intake Forms'
       summary: 'Get Submission Preview'
-      description: 'Also returns routing, routingEnabled, canDecide, decideBlockedReason, laneReviewers (id and name of the users who can decide) and isSeniorReviewer for the caller.'
+      description: 'Also returns routing, routingEnabled, canDecide, decideBlockedReason, laneReviewers (id and name of the users who can decide) and isSeniorReviewer for the caller. customFields lists, in question order, the entity custom field values approval would write from answers mapped to custom fields: { label, displayValue, skipped? }, where skipped is the translated reason a value would not be written.'
       operationId: getSubmissionPreview
       security:
         -
@@ -24726,7 +24726,7 @@ paths:
       tags:
         - 'Intake Forms'
       summary: 'Approve Submission'
-      description: 'With routing on, only a reviewer of the lane the approval would make true, or an Admin, can approve (403 otherwise). A standard-lane approval by a non-senior reviewer may be picked for a second review.'
+      description: 'With routing on, only a reviewer of the lane the approval would make true, or an Admin, can approve (403 otherwise). A standard-lane approval by a non-senior reviewer may be picked for a second review. Answers mapped to entity custom fields are written on the new entity in the approval transaction; custom_field:* keys in confirmedEntityData are ignored. The response data is the approved submission plus customFieldSkips: [{ label, reason }], the values not written and the translated reason (an empty array when none were skipped).'
       operationId: approveSubmission
       security:
         -

@@ -158,13 +158,20 @@ export function resolveIntakeCustomFieldValues(
   return { values, skipped };
 }
 
+/** A question whose custom-field mapping can't be published; the caller words it. */
+export interface CustomFieldMappingProblem {
+  label: string;
+  fieldKey: string;
+  problem: "field_removed" | "type_changed";
+}
+
 /** Checks each custom-field mapping against the org's current definitions. */
 export async function validateFormCustomFieldMappings(
   schema: IIntakeFormSchema,
   intakeEntityType: string,
   organizationId: number,
   transaction?: Transaction,
-): Promise<string[]> {
+): Promise<CustomFieldMappingProblem[]> {
   const mapped = schema.fields.filter((f) => isCustomFieldMapping(f.entityFieldMapping));
   if (mapped.length === 0) return [];
   if (!Object.prototype.hasOwnProperty.call(INTAKE_CUSTOM_FIELD_ENTITY, intakeEntityType))
@@ -176,15 +183,13 @@ export async function validateFormCustomFieldMappings(
     entityType as CustomFieldEntityType,
     transaction,
   );
-  const errors: string[] = [];
+  const problems: CustomFieldMappingProblem[] = [];
   for (const field of mapped) {
-    const key = customFieldKeyOf(field.entityFieldMapping as string);
-    const def = definitions.find((d) => d.field_key === key);
-    if (!def) errors.push(`Question "${field.label}": custom field "${key}" no longer exists`);
+    const fieldKey = customFieldKeyOf(field.entityFieldMapping as string);
+    const def = definitions.find((d) => d.field_key === fieldKey);
+    if (!def) problems.push({ label: field.label, fieldKey, problem: "field_removed" });
     else if (!isCompatibleCustomFieldType(field.type, def.field_type))
-      errors.push(
-        `Question "${field.label}": custom field "${key}" cannot store this question type`,
-      );
+      problems.push({ label: field.label, fieldKey, problem: "type_changed" });
   }
-  return errors;
+  return problems;
 }
