@@ -12,7 +12,7 @@ import {
   CircularProgress,
 } from "@mui/material";
 import { CustomizableButton } from "../../button/customizable-button";
-import Chip from "../../Chip";
+import StatusBadge from "../../StatusBadge";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { useMemo, useState } from "react";
 import TablePaginationActions from "../../TablePagination";
@@ -271,7 +271,7 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
                     sx={{ ...singleTheme.tableStyles.primary.body.cell, textAlign: "center" }}
                   >
                     {template.type ? (
-                      <Chip
+                      <StatusBadge
                         label={
                           template.type === "single-turn"
                             ? "Single-Turn"
@@ -293,7 +293,7 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
                   <TableCell
                     sx={{ ...singleTheme.tableStyles.primary.body.cell, textAlign: "center" }}
                   >
-                    <Chip
+                    <StatusBadge
                       label={
                         template.category === "rag"
                           ? "RAG"
@@ -319,7 +319,7 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
                   <TableCell
                     sx={{ ...singleTheme.tableStyles.primary.body.cell, textAlign: "center" }}
                   >
-                    <Chip
+                    <StatusBadge
                       label={difficultyLabel}
                       size="small"
                       uppercase={false}

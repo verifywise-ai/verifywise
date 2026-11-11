@@ -15,6 +15,7 @@ import { FileColumn } from "../../../application/hooks/useFileColumnVisibility";
 import { ApprovalWorkflowModel } from "src/domain/models/Common/approvalWorkflow/approvalWorkflow.model";
 import { TrainingRegistarModel } from "src/domain/models/Common/trainingRegistar/trainingRegistar.model";
 import { AIIncidentManagementModel } from "src/domain/models/Common/incidentManagement/incidentManagement.model";
+import type { TrainingAssignmentSummary } from "../../../application/repository/trainingAssignment.repository";
 
 export interface IAITrustCenterTableColumn {
   id: string;
@@ -306,6 +307,9 @@ export interface TrainingTableProps {
   paginated?: boolean;
   hidePagination?: boolean;
   visibleColumns?: Set<string>;
+  /** Assignment counts keyed by training id. */
+  assignmentSummaries?: Map<number, TrainingAssignmentSummary>;
+  onOpenAssignments?: (training: TrainingRegistarModel) => void;
 }
 
 export interface IncidentTableProps {

@@ -32,7 +32,7 @@ import EmptyStateTip from "../../EmptyState/EmptyStateTip";
 import { TableEmptyStateLayout } from "../TableEmptyStateLayout";
 import { IVWProjectRisksTable } from "../../../types/interfaces/i.risk";
 import { RiskModel } from "../../../../domain/models/Common/risks/risk.model";
-import { text } from "../../../themes/palette";
+import { text, border } from "../../../themes/palette";
 import Checkbox from "../../Inputs/Checkbox";
 import ConfirmationModal from "../../Dialogs/ConfirmationModal";
 import BulkActionsToolbar, { type BulkAction } from "../BulkActionsToolbar";
@@ -114,7 +114,7 @@ const SortableTableHead: React.FC<{
               minWidth: 40,
               maxWidth: 40,
               padding: 0,
-              borderBottom: "1px solid #d0d5dd",
+              borderBottom: `1px solid ${border.dark}`,
             }}
           >
             <Box

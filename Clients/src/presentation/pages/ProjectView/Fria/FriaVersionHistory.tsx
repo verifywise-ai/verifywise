@@ -17,7 +17,7 @@ import { History, ChevronDown, ChevronUp, ChevronRight } from "lucide-react";
 import Chip from "../../../components/Chip";
 import { friaRepository } from "../../../../application/repository/fria.repository";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
-import { brand } from "../../../themes/palette";
+import { brand, background, border, status, accent } from "../../../themes/palette";
 
 // The diff helpers below are pure, so the preference-aware formatter is passed
 // in rather than read from a hook they cannot call.
@@ -278,9 +278,9 @@ const FriaVersionHistory = ({
     }
 
     return (
-      <Table size="small" sx={{ "& td, & th": { borderColor: "#e0e4e9" } }}>
+      <Table size="small" sx={{ "& td, & th": { borderColor: border.light } }}>
         <TableHead>
-          <TableRow sx={{ backgroundColor: "#fff" }}>
+          <TableRow sx={{ backgroundColor: background.main }}>
             <TableCell
               sx={{
                 fontSize: 11,
@@ -340,8 +340,9 @@ const FriaVersionHistory = ({
                   sx={{
                     fontSize: 12,
                     padding: "6px 12px",
-                    color: diff.type === "removed" ? "#d32f2f" : theme.palette.text.secondary,
-                    backgroundColor: diff.type === "removed" ? "#fef2f2" : "transparent",
+                    color:
+                      diff.type === "removed" ? status.error.text : theme.palette.text.secondary,
+                    backgroundColor: diff.type === "removed" ? accent.red.bg : "transparent",
                     textDecoration: diff.type === "changed" ? "line-through" : "none",
                     verticalAlign: "top",
                     wordBreak: "break-word",
@@ -356,7 +357,7 @@ const FriaVersionHistory = ({
                   fontSize: 12,
                   padding: "6px 12px",
                   color: diff.type === "removed" ? theme.palette.text.secondary : brand.primary,
-                  backgroundColor: diff.type === "removed" ? "transparent" : "#f0fdf4",
+                  backgroundColor: diff.type === "removed" ? "transparent" : accent.primary.bg,
                   fontWeight: diff.type !== "removed" ? 500 : 400,
                   verticalAlign: "top",
                   wordBreak: "break-word",
@@ -399,8 +400,8 @@ const FriaVersionHistory = ({
           <TableHead>
             <TableRow
               sx={{
-                backgroundColor: "#f9fafb",
-                borderTop: inline ? "none" : "1px solid #d0d5dd",
+                backgroundColor: background.alt,
+                borderTop: inline ? "none" : `1px solid ${border.dark}`,
               }}
             >
               <TableCell
@@ -536,7 +537,7 @@ const FriaVersionHistory = ({
                       <TableCell colSpan={5} sx={{ padding: 0 }}>
                         <Box
                           sx={{
-                            backgroundColor: "#f9fafb",
+                            backgroundColor: background.alt,
                             padding: "12px 16px",
                           }}
                         >
@@ -568,8 +569,8 @@ const FriaVersionHistory = ({
                           </Box>
                           <Box
                             sx={{
-                              backgroundColor: "#fff",
-                              border: "1px solid #d0d5dd",
+                              backgroundColor: background.main,
+                              border: `1px solid ${border.dark}`,
                               borderRadius: "4px",
                               overflow: "hidden",
                               maxHeight: 320,
@@ -599,7 +600,7 @@ const FriaVersionHistory = ({
     <Card
       variant="outlined"
       sx={{
-        borderColor: "#d0d5dd",
+        borderColor: border.dark,
         borderRadius: "4px",
         boxShadow: "none",
         overflow: "hidden",

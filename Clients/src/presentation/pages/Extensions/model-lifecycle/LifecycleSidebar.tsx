@@ -93,7 +93,7 @@ export default function LifecycleSidebar({
                   alignItems: "center",
                   justifyContent: "center",
                   backgroundColor: isComplete || isActive ? brand.primary : background.surface,
-                  color: isComplete || isActive ? text.onPrimary : text.secondary,
+                  color: isComplete || isActive ? text.inverse : text.secondary,
                   ...textStyles.badge,
                 }}
               >

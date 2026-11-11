@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import {
+  canLinkTaskToEntityQuery,
   createTaskEntityLinkQuery,
   getTaskEntityLinksQuery,
   deleteTaskEntityLinkQuery,
@@ -77,6 +78,19 @@ export async function addTaskEntityLink(req: Request, res: Response): Promise<an
             req.t!("{type} with id {id} not found", { type: entity_type, id: entity_id }),
           ),
         );
+    }
+
+    const mayLink = await canLinkTaskToEntityQuery(
+      entity_id,
+      entity_type as EntityType,
+      { userId, role },
+      req.organizationId!,
+      transaction,
+    );
+
+    if (!mayLink) {
+      await transaction.rollback();
+      return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
     }
 
     // Check if link already exists

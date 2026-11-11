@@ -12,7 +12,7 @@
  */
 
 import React, { useState } from "react";
-import { Box, Stack, Typography, CircularProgress } from "@mui/material";
+import { Box, Stack, Typography, CircularProgress, alpha } from "@mui/material";
 import { Database, LayoutDashboard } from "lucide-react";
 import { useDispatch } from "react-redux";
 import { CustomizableButton } from "../button/customizable-button";
@@ -20,7 +20,7 @@ import { postAutoDrivers } from "../../../application/repository/entity.reposito
 import { updateOnboardingStatus } from "../../../application/repository/organization.repository";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { setOnboardingStatus } from "../../../application/redux/auth/authSlice";
-import { brand, text, background } from "../../themes/palette";
+import { brand, text, background, border } from "../../themes/palette";
 
 interface SetupModalProps {
   /** Callback when setup is complete (either option selected) */
@@ -156,7 +156,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
         role="dialog"
         aria-modal="true"
         sx={{
-          backgroundColor: "white",
+          backgroundColor: background.main,
           borderRadius: "12px",
           boxShadow: "0 20px 60px rgba(0, 0, 0, 0.2)",
           width: "100%",
@@ -175,7 +175,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
             sx={{
               fontSize: 22,
               fontWeight: 600,
-              color: "#101828",
+              color: text.primary,
               marginBottom: "8px",
             }}
           >
@@ -207,14 +207,14 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
             sx={{
               "flex": 1,
               "padding": "24px 20px",
-              "border": "1px solid #E0E4E9",
+              "border": `1px solid ${border.light}`,
               "borderRadius": "4px",
               "cursor": isLoading ? "not-allowed" : "pointer",
               "opacity": isLoading && loadingOption !== "demo" ? 0.5 : 1,
               "transition": "all 0.2s ease",
               "&:hover": {
-                borderColor: isLoading ? "#E0E4E9" : `${brand.primary}`,
-                backgroundColor: isLoading ? "transparent" : "#F8FDFB",
+                borderColor: isLoading ? border.light : `${brand.primary}`,
+                backgroundColor: isLoading ? "transparent" : alpha(brand.primary, 0.03),
               },
             }}
           >
@@ -224,7 +224,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
                   width: 48,
                   height: 48,
                   borderRadius: "8px",
-                  backgroundColor: "#E8F5F1",
+                  backgroundColor: background.fill,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -241,7 +241,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
                   sx={{
                     fontSize: 15,
                     fontWeight: 600,
-                    color: "#101828",
+                    color: text.primary,
                   }}
                 >
                   Add demo data
@@ -266,14 +266,14 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
             sx={{
               "flex": 1,
               "padding": "24px 20px",
-              "border": "1px solid #E0E4E9",
+              "border": `1px solid ${border.light}`,
               "borderRadius": "4px",
               "cursor": isLoading ? "not-allowed" : "pointer",
               "opacity": isLoading && loadingOption !== "blank" ? 0.5 : 1,
               "transition": "all 0.2s ease",
               "&:hover": {
-                borderColor: isLoading ? "#E0E4E9" : `${brand.primary}`,
-                backgroundColor: isLoading ? "transparent" : "#F8FDFB",
+                borderColor: isLoading ? border.light : `${brand.primary}`,
+                backgroundColor: isLoading ? "transparent" : alpha(brand.primary, 0.03),
               },
             }}
           >
@@ -283,7 +283,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
                   width: 48,
                   height: 48,
                   borderRadius: "8px",
-                  backgroundColor: "#F3F5F8",
+                  backgroundColor: background.surface,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -300,7 +300,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
                   sx={{
                     fontSize: 15,
                     fontWeight: 600,
-                    color: "#101828",
+                    color: text.primary,
                   }}
                 >
                   Start blank
@@ -324,7 +324,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
         <Box
           sx={{
             padding: "16px 32px",
-            borderTop: "1px solid #E0E4E9",
+            borderTop: `1px solid ${border.light}`,
             backgroundColor: `${background.accent}`,
           }}
         >
@@ -339,7 +339,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
                 "fontSize": 13,
                 "&:hover": {
                   backgroundColor: "transparent",
-                  color: "#101828",
+                  color: text.primary,
                 },
               }}
             />

@@ -31,6 +31,7 @@ import { ArenaRow } from "./index";
 import ConfirmationModal from "../../Dialogs/ConfirmationModal";
 import { CustomizableButton } from "../../button/customizable-button";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import { border, status, text } from "../../../themes/palette";
 
 interface ArenaTableBodyProps {
   rows: ArenaRow[];
@@ -200,7 +201,7 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
               textTransform: "none",
             }}
           >
-            <Typography sx={{ fontSize: 12, color: "#475569" }}>
+            <Typography sx={{ fontSize: 12, color: text.tertiary }}>
               {row.dataset
                 ? row.dataset.split("/").pop()?.replace(".json", "") || row.dataset
                 : "-"}
@@ -241,7 +242,7 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
                 </Typography>
               </Box>
             ) : row.status === "failed" ? (
-              <Typography sx={{ fontSize: 12, color: "#c62828" }}>—</Typography>
+              <Typography sx={{ fontSize: 12, color: text.error }}>—</Typography>
             ) : (
               <Typography sx={{ fontSize: 12, color: "text.disabled" }}>—</Typography>
             )}
@@ -297,7 +298,7 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
           "& .MuiPopover-paper": {
             minWidth: 140,
             borderRadius: "4px",
-            border: "1px solid #d0d5dd",
+            border: `1px solid ${border.dark}`,
             boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
             overflow: "hidden",
             mt: 0.5,
@@ -315,7 +316,7 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
                 "height": "34px",
                 "fontSize": "13px",
                 "fontWeight": 500,
-                "color": "#374151",
+                "color": text.secondary,
                 "borderColor": "border.dark",
                 "backgroundColor": "transparent",
                 "justifyContent": "flex-start",
@@ -338,7 +339,7 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
                 "height": "34px",
                 "fontSize": "13px",
                 "fontWeight": 500,
-                "color": "#374151",
+                "color": text.secondary,
                 "borderColor": "border.dark",
                 "backgroundColor": "transparent",
                 "justifyContent": "flex-start",
@@ -361,7 +362,7 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
                 "height": "34px",
                 "fontSize": "13px",
                 "fontWeight": 500,
-                "color": "#374151",
+                "color": text.secondary,
                 "borderColor": "border.dark",
                 "backgroundColor": "transparent",
                 "justifyContent": "flex-start",
@@ -384,13 +385,13 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
                 "height": "34px",
                 "fontSize": "13px",
                 "fontWeight": 500,
-                "color": "#DC2626",
+                "color": status.error.text,
                 "borderColor": "border.dark",
                 "backgroundColor": "transparent",
                 "justifyContent": "flex-start",
                 "&:hover": {
                   backgroundColor: "#FEF2F2",
-                  borderColor: "#DC2626",
+                  borderColor: status.error.text,
                 },
               }}
             >

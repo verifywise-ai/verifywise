@@ -136,6 +136,18 @@ export function sanitizeUserHtml(input: unknown): string | null | undefined {
 }
 
 /**
+ * sanitizeUserHtml for a server-side PDF render, which also keeps data: images.
+ * Policies saved before content was sanitized can hold base64 images. Only use
+ * this where the page runs with JavaScript off and its network blocked.
+ */
+export function sanitizeHtmlForPdf(input: string): string {
+  return sanitizeHtml(input, {
+    ...SANITIZE_OPTIONS,
+    allowedSchemesByTag: { img: [...USER_HTML_ALLOWED_SCHEMES, "data"] },
+  });
+}
+
+/**
  * Escape text for insertion into HTML, as element content or a quoted
  * attribute value. Use this for plain text; use sanitizeUserHtml for rich text
  * that should keep its formatting.

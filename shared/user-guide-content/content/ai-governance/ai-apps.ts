@@ -169,6 +169,16 @@ export const aiAppsContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'linked-use-cases',
+      level: 3,
+      text: 'Linked use cases',
+    },
+    {
+      type: 'paragraph',
+      text: 'List the use cases this app serves. Select **Add use case**, choose one and select **Add**, or select the X next to a use case to remove the link. You only see the names of use cases you have access to. Any others are shown as a count.',
+    },
+    {
+      type: 'heading',
       id: 'shadow-ai',
       level: 2,
       text: 'Promoting a shadow AI tool',
@@ -176,6 +186,80 @@ export const aiAppsContent: ArticleContent = {
     {
       type: 'paragraph',
       text: 'When shadow AI monitoring finds a tool in use, you can promote it into the AI apps inventory so it becomes a governed app. The promoted app keeps a link back to the shadow AI tool it came from, and its discovered source is recorded as shadow AI.',
+    },
+    {
+      type: 'heading',
+      id: 'importing',
+      level: 2,
+      text: 'Importing apps from a spreadsheet',
+    },
+    {
+      type: 'paragraph',
+      text: 'Select **Import** on the AI apps page, then **Download template**. Add one app per row, up to 1000 rows. Only the name is required. After you choose the file, the page checks it and shows a preview before it writes anything.',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Existing names', text: 'An app whose name is already in your inventory is skipped. Import does not change existing apps.' },
+        { bold: 'Errors', text: 'A row with an error blocks the whole file. The preview gives the row number, field and reason.' },
+        { bold: 'Vendors', text: 'A vendor name that is not in your records is added as a new vendor with only its name. The preview lists these vendors so you can complete their records later.' },
+        { bold: 'Owners', text: 'The owner email must belong to a user in your organization. A blank email leaves the app without an owner.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'When the preview shows no errors, select the import button. The apps are created together, so a failed import adds none of them.',
+    },
+    {
+      type: 'heading',
+      id: 'bulk-assessment',
+      level: 2,
+      text: 'Assessing many apps at once',
+    },
+    {
+      type: 'paragraph',
+      text: 'Tick the apps in the table, or use **Select all** for the apps that match your filters, up to 1000. Select **Assess**, then pick a questionnaire.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Each selected app gets a pending assessment, assigned to the app\'s current owner. An app with a pending assessment for that questionnaire keeps the one it has. Users who can edit AI apps can answer for any app, including apps with no owner.',
+    },
+    {
+      type: 'callout',
+      variant: 'info',
+      text: 'Tick **Notify app owners** to send each owner one summary of their new assessments, in the app and by email. There are no automatic reminders.',
+    },
+    {
+      type: 'heading',
+      id: 'answering-assessments',
+      level: 3,
+      text: 'Answering assessments',
+    },
+    {
+      type: 'paragraph',
+      text: 'Select **Assessments** on the AI apps page. Owners can turn on **Assigned to me** to see their own apps. Rate each question from 1 to 5, then select **Save** or **Save and next**.',
+    },
+    {
+      type: 'paragraph',
+      text: 'To answer many apps in one sitting, choose a questionnaire, select **Download worksheet**, fill in the ratings in Excel, then select **Upload answers**. A worksheet holds up to 1000 apps. A row left blank remains pending, so you can finish a worksheet over several uploads. A row with only some answers is an error, and any error stops the whole upload.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Completing an assessment saves the answers and sets the app\'s risk score. A completed assessment cannot be edited. To change a score, assess the app again. The app\'s detail page lists its assessments under **Risk assessment**.',
+    },
+    {
+      type: 'heading',
+      id: 'questionnaires',
+      level: 3,
+      text: 'Questionnaires',
+    },
+    {
+      type: 'paragraph',
+      text: 'Select **Questionnaires** on the assessments page to create or edit one. Each question has a label, an optional description and a weight from 1 to 5. Your organization starts with a default questionnaire built from the 6 manual risk criteria. You can edit the default, but you cannot delete it.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Editing a questionnaire changes its pending assessments. Completed assessments keep the questions they were answered with.',
     },
     {
       type: 'heading',
@@ -190,7 +274,7 @@ export const aiAppsContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'warning',
-      text: 'Deleting an app also removes its linked models, policy mappings, data exposure records and department records. This cannot be undone.',
+      text: 'Deleting an app also removes its linked models, policy mappings, data exposure records, department records and assessments. This cannot be undone.',
     },
   ],
 };

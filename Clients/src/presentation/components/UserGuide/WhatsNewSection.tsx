@@ -11,6 +11,20 @@ interface ChangelogEntry {
 
 const CHANGELOG: ChangelogEntry[] = [
   {
+    version: "v2.6.7",
+    date: "November 9, 2026",
+    title: "AI app bulk import and bulk assessment",
+    summary:
+      "You can now load AI apps from a spreadsheet and risk-assess many of them at once with a reusable questionnaire. App owners can answer for their own apps, on screen or through an Excel worksheet.",
+    items: [
+      "AI app import: upload up to 1000 apps from an Excel template and review a preview before anything is written. Apps already in your inventory are skipped",
+      "Bulk assessment: select apps across pages and request an assessment from a reusable questionnaire of weighted questions rated 1 to 5",
+      "App owners: owners can answer for their own apps without edit rights. Each owner can get one summary of new assessments, in the app and by email",
+      "Worksheets: answer up to 1000 assessments in Excel. Rows left blank remain pending, so you can finish over several uploads",
+      "Risk scores: a completed assessment sets the app's risk score and stays in its history with its answers",
+    ],
+  },
+  {
     version: "v2.6.6",
     date: "November 1, 2026",
     title: "Use case and AI app lifecycles, intake form logic and MCP server auth",

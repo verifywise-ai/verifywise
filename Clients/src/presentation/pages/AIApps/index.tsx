@@ -1,8 +1,8 @@
-import { useState, useMemo, useCallback, useEffect } from "react";
+import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import { useNavigate, useParams } from "react-router";
 import { Stack, Box, Typography } from "@mui/material";
 import CustomizableSkeleton from "../../components/Skeletons";
-import { Plus } from "lucide-react";
+import { ClipboardCheck, FileUp, Plus } from "lucide-react";
 
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import { CustomizableButton } from "../../components/button/customizable-button";
@@ -18,8 +18,24 @@ import NewAIApp from "../../components/Modals/NewAIApp";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import AIAppsTable from "./AIAppsTable";
 import AIAppDetail from "./AIAppDetail";
-import { mainStackStyle, toolbarStyle, filterRowStyle } from "./style";
+import AIAppImportModal from "./AIAppImportModal";
+import AIAppBulkAssessModal from "./AIAppBulkAssessModal";
+import BulkActionsToolbar, { type BulkAction } from "../../components/Table/BulkActionsToolbar";
+import { useBulkSelection } from "../../../application/hooks/useBulkSelection";
+import { useCanEditAiApps } from "../../../application/hooks/useCanEditAiApps";
+import { useFetchAiAppIds } from "../../../application/hooks/useAiAppBulk";
+import { useTranslation } from "../../../application/hooks/useTranslation";
+import { fill } from "../../../i18n/fill";
+import {
+  mainStackStyle,
+  toolbarStyle,
+  filterRowStyle,
+  controlButtonSx,
+  controlSearchSx,
+  controlSelectSx,
+} from "./style";
 import { STATUS_FILTER_OPTIONS } from "./utils";
+import { MAX_BULK_ROWS } from "./bulkUtils";
 import LifecycleTabs from "../../components/LifecycleTabs";
 import { useAiAppStageCounts } from "../../../application/hooks/useAiAppLifecycle";
 import PendingIntakeSubmissions from "../../components/LifecycleTabs/PendingIntakeSubmissions";
@@ -42,11 +58,15 @@ const STAGE_EMPTY: Record<LifecycleStage, string> = {
   [LifecycleStage.RETIRED]: "No retired AI apps.",
 };
 
+const getAppId = (app: IAIApp) => app.id as number;
+
 export default function AIApps() {
   const navigate = useNavigate();
   const { id } = useParams<{ id?: string }>();
   const { userRoleName } = useAuth();
   const isCreatingDisabled = !userRoleName || !["Admin", "Editor"].includes(userRoleName);
+  const canEdit = useCanEditAiApps();
+  const { t } = useTranslation();
 
   const [searchTerm, setSearchTerm] = useState("");
   const [statusFilter, setStatusFilter] = useState<AiAppStatus | "all">("all");
@@ -112,7 +132,80 @@ export default function AIApps() {
 
   const deleteAiAppMutation = useDeleteAiApp();
 
-  const apps = data?.ai_apps ?? [];
+  const apps = useMemo(() => data?.ai_apps ?? [], [data]);
+
+  const {
+    selectedIds,
+    isSelected,
+    toggle: toggleSelection,
+    toggleAll,
+    setAll: setAllSelected,
+    clear: clearSelection,
+    allSelected,
+    someSelected,
+    count: selectionCount,
+  } = useBulkSelection<IAIApp>({ rows: apps, getId: getAppId });
+
+  // Set when "Select all" matched more apps than one bulk action can take.
+  const [cappedTotal, setCappedTotal] = useState<number | null>(null);
+  const handleClearSelection = useCallback(() => {
+    clearSelection();
+    setCappedTotal(null);
+  }, [clearSelection]);
+
+  // A selection only means something under the filters it was made with. Sort
+  // and page are left out on purpose: they do not change which apps match.
+  const selectionKey = [stage, statusFilter, debouncedSearch].join("|");
+  const selectionKeyRef = useRef(selectionKey);
+  useEffect(() => {
+    selectionKeyRef.current = selectionKey;
+    handleClearSelection();
+  }, [selectionKey, handleClearSelection]);
+
+  const fetchAppIds = useFetchAiAppIds();
+  const handleSelectAll = useCallback(async () => {
+    const requestedFor = selectionKey;
+    try {
+      const { ids, total } = await fetchAppIds({
+        status: statusFilter === "all" ? undefined : statusFilter,
+        lifecycleStage: stage,
+        search: debouncedSearch || undefined,
+      });
+      // The filters moved on while this was loading.
+      if (selectionKeyRef.current !== requestedFor) return;
+      // Replaces the selection, so a row picked by hand can't push it past the limit.
+      clearSelection();
+      setAllSelected(ids);
+      setCappedTotal(total > MAX_BULK_ROWS ? total : null);
+    } catch {
+      setAlert({ variant: "error", body: t("Could not select all AI apps. Try again.") });
+    }
+  }, [
+    selectionKey,
+    fetchAppIds,
+    statusFilter,
+    stage,
+    debouncedSearch,
+    clearSelection,
+    setAllSelected,
+    t,
+  ]);
+
+  const [isImportOpen, setIsImportOpen] = useState(false);
+  const [isBulkAssessOpen, setIsBulkAssessOpen] = useState(false);
+  // Kept apart from the selection, which clears once the assessments are requested.
+  const [bulkAssessIds, setBulkAssessIds] = useState<number[]>([]);
+  const bulkActions: BulkAction[] = [
+    {
+      id: "assess",
+      label: t("Assess"),
+      icon: <ClipboardCheck size={14} strokeWidth={1.5} />,
+      onClick: () => {
+        setBulkAssessIds(selectedIds);
+        setIsBulkAssessOpen(true);
+      },
+    },
+  ];
 
   // Distinguish a genuinely empty inventory from a search/filter that matched nothing,
   // so the explanatory placeholder only shows when there is no data at all.
@@ -151,13 +244,14 @@ export default function AIApps() {
     if (!appPendingDelete?.id) return;
     try {
       await deleteAiAppMutation.mutateAsync(appPendingDelete.id);
+      if (isSelected(appPendingDelete.id)) toggleSelection(appPendingDelete.id);
       setAlert({ variant: "success", body: "AI app deleted successfully" });
     } catch {
       setAlert({ variant: "error", body: "Failed to delete AI app" });
     } finally {
       setAppPendingDelete(null);
     }
-  }, [appPendingDelete, deleteAiAppMutation]);
+  }, [appPendingDelete, deleteAiAppMutation, isSelected, toggleSelection]);
 
   const handleModalSuccess = useCallback(() => {
     const wasEditing = !!editingApp;
@@ -196,24 +290,57 @@ export default function AIApps() {
               placeholder="Search AI apps"
               value={searchTerm}
               onChange={(value) => setSearchTerm(value)}
-              sx={{ width: 260 }}
+              sx={{ ...controlSearchSx, width: 260 }}
             />
             <Select
               id="ai-apps-status-filter"
               value={statusFilter}
               onChange={(e) => setStatusFilter(e.target.value as AiAppStatus | "all")}
               items={[...STATUS_FILTER_OPTIONS]}
-              sx={{ width: 160 }}
+              sx={{ ...controlSelectSx, width: 160 }}
             />
           </Box>
-          <CustomizableButton
-            text="New AI app"
-            variant="contained"
-            startIcon={<Plus size={16} strokeWidth={1.5} />}
-            onClick={handleNewApp}
-            disabled={isCreatingDisabled}
-          />
+          <Box sx={filterRowStyle}>
+            <CustomizableButton
+              text="Assessments"
+              variant="outlined"
+              startIcon={<ClipboardCheck size={16} strokeWidth={1.5} />}
+              onClick={() => navigate("/ai-apps/assessments")}
+              testId="ai-apps-assessments-link"
+              sx={controlButtonSx}
+            />
+            <CustomizableButton
+              text="Import"
+              variant="outlined"
+              startIcon={<FileUp size={16} strokeWidth={1.5} />}
+              onClick={() => setIsImportOpen(true)}
+              disabled={!canEdit}
+              testId="ai-apps-import-button"
+              sx={controlButtonSx}
+            />
+            <CustomizableButton
+              text="New AI app"
+              variant="contained"
+              startIcon={<Plus size={16} strokeWidth={1.5} />}
+              onClick={handleNewApp}
+              disabled={isCreatingDisabled}
+              sx={controlButtonSx}
+            />
+          </Box>
         </Box>
+
+        {cappedTotal !== null && (
+          <Alert
+            variant="info"
+            body={fill(
+              t(
+                "Selected the first {max} of {total} AI apps. Bulk actions handle up to {max} at a time.",
+              ),
+              { max: MAX_BULK_ROWS, total: cappedTotal },
+            )}
+            inline
+          />
+        )}
 
         {showRequests && (
           <PendingIntakeSubmissions
@@ -245,6 +372,17 @@ export default function AIApps() {
             onViewApp={handleViewApp}
             onDeleteApp={handleRequestDelete}
             staleIds={staleIds}
+            selection={
+              canEdit
+                ? {
+                    isSelected,
+                    onToggle: toggleSelection,
+                    onToggleAll: toggleAll,
+                    allSelected,
+                    someSelected,
+                  }
+                : undefined
+            }
             emptyMessage={
               hasNoApps
                 ? undefined
@@ -264,6 +402,31 @@ export default function AIApps() {
           onSuccess={handleModalSuccess}
           app={editingApp}
         />
+
+        {canEdit && (
+          <BulkActionsToolbar
+            count={selectionCount}
+            onClear={handleClearSelection}
+            actions={bulkActions}
+            selectAll={{
+              totalCount: Math.min(data?.total ?? 0, MAX_BULK_ROWS),
+              onSelectAll: handleSelectAll,
+            }}
+          />
+        )}
+
+        {isImportOpen && <AIAppImportModal onClose={() => setIsImportOpen(false)} />}
+
+        {isBulkAssessOpen && (
+          <AIAppBulkAssessModal
+            appIds={bulkAssessIds}
+            onClose={() => setIsBulkAssessOpen(false)}
+            onAssessed={handleClearSelection}
+            onGoToAssessments={(questionnaireId) =>
+              navigate(`/ai-apps/assessments?questionnaire_id=${questionnaireId}`)
+            }
+          />
+        )}
 
         {appPendingDelete && (
           <ConfirmationModal

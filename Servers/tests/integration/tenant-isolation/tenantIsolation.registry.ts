@@ -165,6 +165,16 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     testFile: "use-case-org-settings.isolation.test.ts",
   },
   {
+    name: "raci_entries",
+    tables: ["raci_entries"],
+    baseRoute: "/api/v1/projects",
+  },
+  {
+    name: "training_assignments",
+    tables: ["training_assignments"],
+    baseRoute: "/api/v1/training/assignments",
+  },
+  {
     // One row per user per organization; the JWT alone picks the row.
     name: "dashboard_preferences",
     tables: ["dashboard_preferences"],
@@ -218,6 +228,25 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     name: "ai_app_change_history",
     tables: ["ai_app_change_history"],
     baseRoute: "/api/v1/ai-app-lifecycle",
+  },
+  {
+    // Links between AI apps and use cases (#5259); both sides are org-checked.
+    name: "ai_apps_projects",
+    tables: ["ai_apps_projects"],
+    baseRoute: "/api/v1/ai-apps",
+    testFile: "ai-apps-projects.isolation.test.ts",
+  },
+  {
+    // Bulk assessment questionnaires (#5258).
+    name: "ai_app_questionnaires",
+    tables: ["ai_app_questionnaires"],
+    baseRoute: "/api/v1/ai-apps/questionnaires",
+  },
+  {
+    // Bulk assessments (#5258); ids from another org behave as nonexistent.
+    name: "ai_app_assessments",
+    tables: ["ai_app_assessments"],
+    baseRoute: "/api/v1/ai-apps/assessments",
   },
   {
     name: "mrm_validations",

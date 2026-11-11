@@ -27,6 +27,7 @@ import {
   es as agentDiscoveryEs,
 } from "./modules/agentDiscovery";
 import { de as aiAppsDe, fr as aiAppsFr, es as aiAppsEs } from "./modules/aiApps";
+import { de as aiAppsBulkDe, fr as aiAppsBulkFr, es as aiAppsBulkEs } from "./modules/aiAppsBulk";
 import { de as aiAuditDe, fr as aiAuditFr, es as aiAuditEs } from "./modules/aiAudit";
 import {
   de as aiContentReviewDe,
@@ -126,6 +127,7 @@ export const translations: Record<string, Record<string, string>> = {
   de: {
     ...agentDiscoveryDe,
     ...aiAppsDe,
+    ...aiAppsBulkDe,
     ...aiAuditDe,
     ...aiContentReviewDe,
     ...aiDetectionDe,
@@ -167,6 +169,7 @@ export const translations: Record<string, Record<string, string>> = {
   fr: {
     ...agentDiscoveryFr,
     ...aiAppsFr,
+    ...aiAppsBulkFr,
     ...aiAuditFr,
     ...aiContentReviewFr,
     ...aiDetectionFr,
@@ -208,6 +211,7 @@ export const translations: Record<string, Record<string, string>> = {
   es: {
     ...agentDiscoveryEs,
     ...aiAppsEs,
+    ...aiAppsBulkEs,
     ...aiAuditEs,
     ...aiContentReviewEs,
     ...aiDetectionEs,

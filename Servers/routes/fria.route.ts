@@ -1,6 +1,7 @@
 import express from "express";
 import authenticateJWT from "../middleware/auth.middleware";
 import authorize from "../middleware/accessControl.middleware";
+import { requireProjectAccess } from "../middleware/projectAccess.middleware";
 import {
   getFria,
   updateFria,
@@ -51,6 +52,6 @@ router.get("/:friaId/versions/:version", getVersion);
 
 // Assessment CRUD — bare /:projectId registered LAST so it cannot shadow sub-resource routes
 router.get("/:projectId", getFria);
-router.put("/:projectId", authorize("fria.edit"), updateFria);
+router.put("/:projectId", authorize("fria.edit"), requireProjectAccess("projectId"), updateFria);
 
 export default router;

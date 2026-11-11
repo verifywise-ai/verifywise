@@ -9,6 +9,7 @@ import {
 } from "../controllers/framework.ctrl";
 
 import authenticateJWT from "../middleware/auth.middleware";
+import { requireProjectAccess } from "../middleware/projectAccess.middleware";
 import { validateId } from "../domain.layer/validations/id.valid";
 
 // GET requests
@@ -20,6 +21,7 @@ router.post(
   authenticateJWT,
   validateId("frameworkId"),
   validateId("projectId"),
+  requireProjectAccess("projectId", "query"),
   addFrameworkToProject,
 );
 
@@ -28,6 +30,7 @@ router.delete(
   authenticateJWT,
   validateId("frameworkId"),
   validateId("projectId"),
+  requireProjectAccess("projectId", "query"),
   deleteFrameworkFromProject,
 );
 

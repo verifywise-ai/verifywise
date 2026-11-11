@@ -1,4 +1,4 @@
-import { screen, within } from "@testing-library/react";
+import { screen, waitFor, within } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
 // Mock HelperIcon to avoid UserGuideSidebarProvider dependency
@@ -16,6 +16,11 @@ vi.mock("../../../../application/repository/entity.repository", () => ({
 
 vi.mock("../../../../application/repository/trainingregistar.repository", () => ({
   createTraining: vi.fn(),
+}));
+
+vi.mock("../../../../application/repository/trainingAssignment.repository", () => ({
+  getMyTrainingAssignments: vi.fn().mockResolvedValue([]),
+  getTrainingAssignmentSummary: vi.fn().mockResolvedValue([]),
 }));
 
 // Mock hooks
@@ -90,6 +95,10 @@ vi.mock("../trainingTable", () => ({
   default: () => <div data-testid="training-table" />,
 }));
 
+vi.mock("../MyTrainingTable", () => ({
+  default: () => <div data-testid="my-training-table" />,
+}));
+
 vi.mock("../../../components/Modals/NewTraining", () => ({
   default: () => null,
 }));
@@ -104,12 +113,38 @@ vi.mock("../TrainingSteps", () => ({
 
 import Training from "../index";
 import { getAllEntities } from "../../../../application/repository/entity.repository";
+import {
+  getMyTrainingAssignments,
+  getTrainingAssignmentSummary,
+} from "../../../../application/repository/trainingAssignment.repository";
 
 describe("TrainingRegistar", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     vi.mocked(getAllEntities).mockResolvedValue({ data: [] } as never);
+    vi.mocked(getMyTrainingAssignments).mockResolvedValue([]);
+    vi.mocked(getTrainingAssignmentSummary).mockResolvedValue([]);
     vi.spyOn(console, "error").mockImplementation(() => {});
+  });
+
+  it("shows my training on its own route", () => {
+    renderWithProviders(<Training />, { route: "/training/my-training" });
+
+    expect(screen.getByTestId("my-training-table")).toBeInTheDocument();
+    expect(screen.queryByTestId("grouped-table-view")).not.toBeInTheDocument();
+  });
+
+  it("counts only open assignments on the my training tab", async () => {
+    vi.mocked(getMyTrainingAssignments).mockResolvedValue([
+      { id: 1, completed_at: null },
+      { id: 2, completed_at: null },
+      { id: 3, completed_at: "2026-11-02T10:00:00.000Z" },
+    ] as never);
+
+    renderWithProviders(<Training />, { route: "/training" });
+
+    const tab = screen.getByRole("tab", { name: /My training/ });
+    await waitFor(() => expect(tab).toHaveTextContent("2"));
   });
 
   afterEach(() => {

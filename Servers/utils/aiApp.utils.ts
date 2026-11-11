@@ -91,18 +91,12 @@ function parseAiAppRow(row: any): IAIApp {
   };
 }
 
-export async function getAllAiAppsQuery(
-  organizationId: number,
-  options: GetAllAiAppsOptions = {},
-): Promise<{ ai_apps: IAIApp[]; total: number }> {
-  const page = options.page || 1;
-  const limit = options.limit || 20;
-  const offset = (page - 1) * limit;
-
+/** WHERE clause shared by the list and the id lookup behind "Select all". */
+function aiAppFilter(organizationId: number, options: GetAllAiAppsOptions) {
   // Columns are qualified with ai_apps.* because the list query LEFT JOINs vendors,
   // which also has organization_id (would be ambiguous unqualified).
   const whereConditions: string[] = ["ai_apps.organization_id = :organizationId"];
-  const replacements: Record<string, any> = { organizationId, limit, offset };
+  const replacements: Record<string, any> = { organizationId };
 
   if (options.status) {
     whereConditions.push("ai_apps.status = :status");
@@ -126,7 +120,41 @@ export async function getAllAiAppsQuery(
     replacements.vendorId = options.vendorId;
   }
 
-  const whereClause = `WHERE ${whereConditions.join(" AND ")}`;
+  return { whereClause: `WHERE ${whereConditions.join(" AND ")}`, replacements };
+}
+
+/** Ids matching the list filters, newest first, capped; `total` counts every match. */
+export async function getAiAppIdsQuery(
+  organizationId: number,
+  options: Pick<GetAllAiAppsOptions, "status" | "lifecycleStage" | "search">,
+  cap: number,
+): Promise<{ ids: number[]; total: number }> {
+  const { whereClause, replacements } = aiAppFilter(organizationId, options);
+  const [rows] = await sequelize.query(
+    `SELECT ai_apps.id FROM ai_apps ${whereClause}
+     ORDER BY ai_apps.created_at DESC NULLS LAST, ai_apps.id DESC
+     LIMIT :cap`,
+    { replacements: { ...replacements, cap } },
+  );
+  const [count] = await sequelize.query(`SELECT COUNT(*) AS total FROM ai_apps ${whereClause}`, {
+    replacements,
+  });
+  return {
+    ids: (rows as { id: number }[]).map((row) => row.id),
+    total: parseInt((count as { total: string }[])[0].total, 10),
+  };
+}
+
+export async function getAllAiAppsQuery(
+  organizationId: number,
+  options: GetAllAiAppsOptions = {},
+): Promise<{ ai_apps: IAIApp[]; total: number }> {
+  const page = options.page || 1;
+  const limit = options.limit || 20;
+  const offset = (page - 1) * limit;
+  const filter = aiAppFilter(organizationId, options);
+  const { whereClause } = filter;
+  const replacements = { ...filter.replacements, limit, offset };
 
   // Qualified with ai_apps. because the list query joins vendors (shared column names
   // like created_at/status/risk_score would otherwise be ambiguous in ORDER BY).

@@ -219,21 +219,34 @@ Read models: `GET /api/v1/use-case-lifecycle/summary` (stale ids and the interva
 
 A permission such as `useCase.edit` says what a role may do, not on which use case. `requireProjectAccess` (`middleware/projectAccess.middleware.ts`) adds the use case: the caller must be an Admin, its owner or a member, the rule that scopes the use case list (`projectVisibilitySql`). It runs after authentication and param validation.
 
-| Guarded route |
-|---------------|
-| `DELETE /api/projects/:id` |
-| `PATCH /api/projects/:id/status` |
-| `POST /api/projects/:id/eu-ai-act-classification` |
-| `GET /api/projects/stats/:id` |
-| `POST /api/v1/use-case-lifecycle/:id/go-live`, `/retire`, `/confirm` |
-| `PATCH /api/v1/use-case-lifecycle/:id/department` |
+**Reads also allow task assignees.** On a `GET`, the assignee of a non-deleted task linked to one of the use case's framework requirements passes too (`getProjectReadAccessQuery`, `taskAssigneeOfProjectSql` in `utils/taskEntityLink.utils.ts`). Tasks store no use case id; the link to a requirement (`eu_control`, `eu_subcontrol`, the ISO 42001 and 27001 and NIST types) reaches the use case through `projects_frameworks`. Vendor, model and policy links belong to the organization and give no access. Assignees are not added to the use case list and cannot use any guarded write. Because a link grants this, linking a task to a requirement takes access to its use case (`canLinkTaskToEntityQuery`): `POST /api/tasks/:id/entities` answers 403 without it, and `entity_links` on task create and update skips that link.
+
+**Reads also allow workflow approvers.** On a `GET`, anyone approving a step of the active workflow in `projects.approval_workflow_id` passes too, since the approval request email and notification link them to `/project-view`. Setting that workflow takes write access to the use case and editing a workflow takes `approvalWorkflow.admin`, so nobody can grant themselves this. Approvers are not added to the use case list and cannot use any guarded write.
+
+| Guarded route | Id read from |
+|---------------|--------------|
+| `GET` and `DELETE /api/projects/:id` | path |
+| `PATCH /api/projects/:id/status` | path |
+| `POST` and `GET /api/projects/:id/eu-ai-act-classification` | path |
+| `GET /api/projects/stats/:id` | path |
+| `GET /api/projects/calculateProjectRisks/:id`, `/calculateVendorRisks/:id` | path |
+| `GET /api/projects/compliance/progress/:id`, `/assessment/progress/:id` | path |
+| `GET /api/projects/complainces/:projid` | path |
+| `PUT /api/ce-marking/:projectId` | path |
+| `PUT /api/fria/:projectId` | path |
+| `POST /api/pmm/projects/:projectId/start-cycle` | path |
+| `POST /api/frameworks/toProject`, `DELETE /api/frameworks/fromProject` | `projectId` query field |
+| `POST /api/v1/use-case-lifecycle/:id/go-live`, `/retire`, `/confirm` | path |
+| `PATCH /api/v1/use-case-lifecycle/:id/department` | path |
+
+The guard reads the id from the same place the handler does: `requireProjectAccess("projectId", "query")` for the framework routes. A body value is never considered, and a repeated query field is a 400, so the id checked is the id acted on.
 
 - **No access:** 403 with "Access denied", logged with `logFailure`, nothing written. A refused write also reaches the event log; a refused `GET` only reaches the file log, because `logFailure` skips the event log for `Read`. Never use a detail listed in `SESSION_DENIED_DETAILS` (`customAxios.ts`): those end the user's session.
 - **Not found or another organization:** passed on, so the controller answers its 404.
 - **An error in the check:** 500, never allowed.
 - **Adds to route rules, does not replace them.** The lifecycle rule (`useCase.edit` or owner, Auditors never) and the `useCase.edit` / `useCase.classify` checks still apply.
 - **`PATCH /api/projects/:id` and `PATCH /api/v1/projects/:id`** keep their own check in `updateProjectById` (`canViewProjectQuery`), inside the update's transaction.
-- **`GET /api/projects/:id` is not guarded.** A task can be assigned to anyone in the organization and linked to an EU AI Act requirement; its email links to `/project-view`, which needs this read, and EU AI Act requirements have no page outside the use case. Scoping the read needs a decision on those users first. A refused or failed load shows the empty state in `ProjectView`.
+- **A refused or failed `GET /api/projects/:id`** shows the empty state in `ProjectView`.
 - **MCP tools** call services directly and are not behind this guard.
 
 ## Create Project
@@ -402,9 +415,12 @@ Project
 ├── Vendors ──────────────────────── M:N via vendors_projects
 ├── Models ───────────────────────── 1:N
 ├── Files ────────────────────────── 1:N
+├── AI Apps ──────────────────────── M:N via ai_apps_projects
 ├── Approval Workflow ────────────── N:1 (optional)
 └── Change History ───────────────── 1:N
 ```
+
+**Linked AI apps (#5259).** `ai_apps_projects` links use cases and AI apps (`utils/aiAppProject.utils.ts`). `GET /api/v1/projects/:id/ai-apps` lists a use case's AI apps; `GET /api/v1/ai-apps/:id/use-cases` lists an AI app's use cases the caller can see, plus `hidden_count` for the rest; `POST` to that path (`{ project_id }`, idempotent) and `DELETE .../:projectId` change the links. `POST /api/v1/projects/:id/create-ai-app` creates a draft AI app in one transaction, copying the title (or `{ name }`), description, `is_demo`, the models on its Linked models tab (`model_inventories_projects_frameworks` rows with no `framework_id`), and the owner when they belong to the organization, otherwise the caller (external owners leave `owner` null); `GET` on that path returns `model_count` and `caller_becomes_owner` (same owner rule as the create) for the confirmation modal. Writes need `aiApp.edit`. A use case the caller cannot see (`projectVisibilitySql`) answers 404, organizational use cases and ones whose approval is pending or rejected (`getApprovalStatusQuery`) cannot be linked (400), and a taken AI app name answers 409. Create, link and unlink are recorded in `ai_app_change_history` by `uc_id`, never title, because that history is readable by people who cannot see the use case.
 
 ## Change History
 
@@ -618,6 +634,34 @@ On intake approval the submission's run is copied to the new use case (a new row
 Permission key `useCase.classify` (module "Use cases") is granted to Admin and Editor; Reviewer and Auditor get 403.
 
 Public intake submissions send `euAiActRiskAnswers` with the form data. When the form has the step, the server validates and scores them; on failure it returns 400 with `step: "eu_ai_act_risk"`, and the public form returns to the risk step only for that response. The submission preview returns `euAiActClassification` (questionnaire, answers, role, current result, `changedSinceSubmission`). On approval the reviewer may send `euAiActOverride: { level, justification }`; the level must be one of the five questionnaire levels, and a level different from the computed one needs a justification of at least 10 characters. Submissions without a run approve as before.
+
+## RACI matrix
+
+Each regular use case has a RACI matrix (tab **RACI**, `V1.0ProjectView/Raci/`). Organizational use cases have none: the tab is hidden and the API answers 400.
+
+Roles are derived when the matrix is read, so they follow the data. `verifywise.raci_entries` only stores manual changes on top: effective roles = derived, plus `assigned`, minus `removed`. A removal therefore sticks, and a role that is added back deletes the override.
+
+| Role | Derived from | Source |
+| ---- | ------------ | ------ |
+| A | `projects.owner`, or a read-only row for `external_owner_name` when there is no owner | `owner` |
+| R | `projects_members`, except the owner | `member` |
+| C | Approvers of `projects.approval_workflow_id` while that workflow is active (`approval_workflow_steps` → `approval_step_approvers`) | `approver` |
+| R | Assignees of tasks linked to this use case, unless the task is Completed or Deleted | `task_assignee` |
+
+A person can hold several roles, and each role lists its sources (`manual` for an override). Only members of the organization appear, and leaving the organization deletes the person's overrides there.
+
+**Task links.** Tasks never store a use case id. The link picker's "Use-case" option leads to a framework requirement, so `task_entity_links` holds `eu_control`, `eu_subcontrol`, `iso42001_subclause`, `iso42001_annexcategory`, `iso27001_subclause`, `iso27001_annexcontrol` or `nist_subcategory`, which reach the use case through `projects_frameworks`. See `TASK_LINK_CONDITIONS` in `Servers/utils/raciData.utils.ts`, built from `TASK_ENTITY_TABLES` in `taskEntityLink.utils.ts`.
+
+**API** (`Servers/routes/v1/projects.route.ts`). Both endpoints answer 404 for a use case the caller cannot see, including one in another organization.
+
+| Endpoint | Access | Notes |
+| -------- | ------ | ----- |
+| `GET /api/v1/projects/:id/raci` | Authenticated, use case visible | Returns `{ rows, warnings }`, accountable people first, then by name |
+| `PUT /api/v1/projects/:id/raci/users/:userId` | `useCase.edit`, use case visible | Body `{ add, remove }` lists roles to change, applied to what the person holds at that moment so a stale page cannot undo a newer role. At least one entry, and no role in both lists. Returns the same shape as `GET` |
+
+`warnings` holds `no_accountable` or `multiple_accountable`, computed on effective roles. They never block a change. Effective role changes are recorded in the use case's change history with the field name `RACI: <person>`.
+
+The derivation and merge rules are pure functions in `Servers/utils/raci.utils.ts`. Groups (#5253) will add a nullable `group_id`; the API already uses `subject_type` and `subject_id` so its shape will not change.
 
 ## Key Files
 

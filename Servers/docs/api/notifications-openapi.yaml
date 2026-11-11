@@ -368,6 +368,8 @@ components:
         - policy_overdue
         - training_assigned
         - training_completed
+        - training_due_soon
+        - training_overdue
         - vendor_review_due
         - file_uploaded
         - comment_added

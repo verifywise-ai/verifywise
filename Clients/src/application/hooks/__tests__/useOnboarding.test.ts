@@ -6,27 +6,13 @@ vi.mock("../useAuth", () => ({
   useAuth: () => ({ userId: mockUserId() }),
 }));
 
-vi.mock("../../contexts/VerifyWise.context", () => ({
-  VerifyWiseContext: {
-    _currentValue: { users: [{ id: 1 }], organizationId: 1 },
-  },
-}));
-
-// Mock useContext to return our context values
-const mockContextValue = { users: [{ id: 1 }], organizationId: 1 };
-vi.mock("react", async () => {
-  const actual = await vi.importActual("react");
-  return {
-    ...actual,
-    useContext: () => mockContextValue,
-  };
-});
-
+const mockAuthState = { onboardingStatus: "pending", isOrgCreator: true };
+const mockDispatch = vi.fn();
 vi.mock("react-redux", () => ({
-  useSelector: vi.fn((fn: any) =>
-    fn({ auth: { onboardingStatus: "pending", isOrgCreator: true } }),
+  useSelector: vi.fn((fn: (s: { auth: typeof mockAuthState }) => unknown) =>
+    fn({ auth: mockAuthState }),
   ),
-  useDispatch: () => vi.fn(),
+  useDispatch: () => mockDispatch,
 }));
 
 vi.mock("../../redux/auth/authSlice", () => ({
@@ -42,81 +28,56 @@ describe("useOnboarding", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     localStorage.clear();
+    mockUserId.mockReturnValue(1);
+    mockAuthState.onboardingStatus = "pending";
+    mockAuthState.isOrgCreator = true;
   });
 
-  it("returns initial state", () => {
+  it("is incomplete for the org creator while the server says pending", () => {
     const { result } = renderHook(() => useOnboarding());
 
-    expect(result.current.state).toBeDefined();
-    expect(result.current.isLoading).toBe(false);
-    expect(typeof result.current.setCurrentStep).toBe("function");
-    expect(typeof result.current.completeStep).toBe("function");
-    expect(typeof result.current.skipStep).toBe("function");
+    expect(result.current.state.isComplete).toBe(false);
   });
 
-  it("shouldShowOnboarding returns false (temporarily disabled)", () => {
-    const { result } = renderHook(() => useOnboarding());
-    expect(result.current.shouldShowOnboarding()).toBe(false);
-  });
-
-  it("setCurrentStep updates step", () => {
+  it("is complete for anyone who did not create the org", () => {
+    mockAuthState.isOrgCreator = false;
     const { result } = renderHook(() => useOnboarding());
 
-    act(() => {
-      result.current.setCurrentStep(2);
-    });
-
-    expect(result.current.state.currentStep).toBe(2);
+    expect(result.current.state.isComplete).toBe(true);
   });
 
-  it("completeStep adds step to completedSteps", () => {
+  it("is complete once the server status is no longer pending", () => {
+    mockAuthState.onboardingStatus = "completed";
     const { result } = renderHook(() => useOnboarding());
 
-    act(() => {
-      result.current.completeStep(1);
-    });
-
-    expect(result.current.state.completedSteps).toContain(1);
+    expect(result.current.state.isComplete).toBe(true);
   });
 
-  it("skipStep adds step to skippedSteps", () => {
+  it("is complete when there is no signed-in user", () => {
+    mockUserId.mockReturnValue(undefined);
     const { result } = renderHook(() => useOnboarding());
 
-    act(() => {
-      result.current.skipStep(3);
-    });
-
-    expect(result.current.state.skippedSteps).toContain(3);
+    expect(result.current.state.isComplete).toBe(true);
   });
 
-  it("updatePreferences merges preferences", () => {
-    const { result } = renderHook(() => useOnboarding());
-
-    act(() => {
-      result.current.updatePreferences({ theme: "dark" } as any);
-    });
-
-    expect(result.current.state.preferences).toEqual({ theme: "dark" });
-  });
-
-  it("completeOnboarding sets isComplete to true", () => {
+  it("completeOnboarding marks onboarding completed in Redux", () => {
     const { result } = renderHook(() => useOnboarding());
 
     act(() => {
       result.current.completeOnboarding();
     });
 
-    expect(result.current.state.isComplete).toBe(true);
+    expect(mockDispatch).toHaveBeenCalledWith({
+      type: "auth/setOnboardingStatus",
+      payload: "completed",
+    });
   });
 
-  it("resetOnboarding clears state and localStorage", () => {
-    const { result } = renderHook(() => useOnboarding());
+  it("removes the retired modal's saved progress", () => {
+    localStorage.setItem("verifywise_onboarding_1", JSON.stringify({ currentStep: 3 }));
 
-    act(() => {
-      result.current.completeStep(1);
-      result.current.resetOnboarding();
-    });
+    renderHook(() => useOnboarding());
 
-    expect(result.current.state.completedSteps).toEqual([]);
+    expect(localStorage.getItem("verifywise_onboarding_1")).toBeNull();
   });
 });

@@ -11,7 +11,7 @@ import FriaEvidenceButton from "../FriaEvidenceButton";
 import FriaRiskImportModal from "../FriaRiskImportModal";
 import FriaSectionCard from "../FriaSectionCard";
 import { EU_ACT_LINK } from "../friaConstants";
-import { brand } from "../../../../themes/palette";
+import { brand, border } from "../../../../themes/palette";
 import { getAllProjectRisksByProjectId } from "../../../../../application/repository/projectRisk.repository";
 
 interface SpecificRisksSectionProps {
@@ -74,7 +74,7 @@ function RiskRow({
   return (
     <Box
       sx={{
-        border: "1px solid #d0d5dd",
+        border: `1px solid ${border.dark}`,
         borderRadius: "4px",
         padding: "16px",
         display: "flex",
@@ -321,7 +321,7 @@ function SpecificRisksSection({
         {riskItems.length === 0 ? (
           <Box
             sx={{
-              border: "1px solid #d0d5dd",
+              border: `1px solid ${border.dark}`,
               borderRadius: "4px",
               padding: "24px",
               textAlign: "center",

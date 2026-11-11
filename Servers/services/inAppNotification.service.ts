@@ -24,7 +24,7 @@ import { deadlineNoticeKey } from "../utils/deadline.utils";
  * The frontend routes don't all follow a single `/:entityType/:id` pattern,
  * so each entity type is mapped to the actual route that exists.
  */
-const buildEntityUrl = (entityType: NotificationEntityType, entityId: number): string => {
+export const buildEntityUrl = (entityType: NotificationEntityType, entityId: number): string => {
   switch (entityType) {
     case NotificationEntityType.TASK:
       return `/tasks?taskId=${entityId}`;
@@ -1491,7 +1491,56 @@ export const notifyLifecycleConfirmationDue = async (
 };
 
 /**
- * Notify training assigned
+ * One summary of the AI app assessments a bulk run left for this owner (#5258).
+ * Awaits the in-app row, which rejects if it can't be stored. The email joins
+ * the rate-limited queue un-awaited, at about 600ms each it would otherwise
+ * hold the request open, and its recipient is passed in so nothing touches the
+ * database once the response has gone.
+ */
+export const notifyAiAppAssessmentsAssigned = async (
+  organizationId: number,
+  owner: { id: number; name: string; email: string },
+  count: number,
+  requesterName: string,
+): Promise<void> => {
+  const title = `${count} AI app assessment${count === 1 ? "" : "s"} to complete`;
+  const actionUrl = "/ai-apps/assessments?assigned=me";
+
+  await sendInAppNotification(organizationId, {
+    user_id: owner.id,
+    type: NotificationType.ASSIGNMENT_OWNER,
+    title,
+    message: `${requesterName} asked you to complete the risk assessment for AI apps you own.`,
+    entity_type: NotificationEntityType.AI_APP,
+    action_url: actionUrl,
+  });
+
+  const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  notificationService
+    .sendEmailWithTemplate(owner.email, title, EMAIL_TEMPLATES.AI_APP_ASSESSMENTS_ASSIGNED, {
+      summary_title: title,
+      recipient_name: owner.name || "there",
+      requester_name: requesterName,
+      assessments_url: `${baseUrl}${actionUrl}`,
+    })
+    .catch((error: unknown) => {
+      logger.error(
+        `Failed to email owner ${owner.id} about AI app assessments: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    });
+};
+
+/** The page where a trainee sees and completes their assignments. */
+const MY_TRAINING_PATH = "/training/my-training";
+
+/**
+ * Notify someone that a training was assigned to them (#5260). The in-app row
+ * is awaited, because under RLS enforcement a query issued after the response
+ * would run on the request's finished transaction. The email joins the
+ * rate-limited queue un-awaited, so it cannot hold the request open or fail it.
+ * `actionPath` is for callers whose recipient is not the trainee.
  */
 export const notifyTrainingAssigned = async (
   organizationId: number,
@@ -1502,39 +1551,96 @@ export const notifyTrainingAssigned = async (
     description?: string;
     duration?: string;
     dueDate?: string;
+    actionPath?: string;
   },
   assignerName: string,
   baseUrl: string,
 ): Promise<void> => {
   const user = await getUserById(userId);
+  const actionPath = training.actionPath ?? MY_TRAINING_PATH;
 
-  await sendInAppNotification(
-    organizationId,
-    {
-      user_id: userId,
-      type: NotificationType.TRAINING_ASSIGNED,
-      title: "Training assigned",
-      message: `${assignerName} assigned you to training: ${training.name}`,
-      entity_type: NotificationEntityType.TRAINING,
-      entity_id: training.id,
-      entity_name: training.name,
-      action_url: buildEntityUrl(NotificationEntityType.TRAINING, training.id),
-    },
-    true,
-    {
-      template: EMAIL_TEMPLATES.TRAINING_ASSIGNED,
-      subject: `Training assigned: ${training.name}`,
-      variables: {
-        trainee_name: user ? `${user.name}` : "User",
+  await sendInAppNotification(organizationId, {
+    user_id: userId,
+    type: NotificationType.TRAINING_ASSIGNED,
+    title: "Training assigned",
+    message: `${assignerName} assigned you to training: ${training.name}`,
+    entity_type: NotificationEntityType.TRAINING,
+    entity_id: training.id,
+    entity_name: training.name,
+    action_url: actionPath,
+  });
+
+  if (!user?.email) return;
+  notificationService
+    .sendEmailWithTemplate(
+      user.email,
+      `Training assigned: ${training.name}`,
+      EMAIL_TEMPLATES.TRAINING_ASSIGNED,
+      {
+        trainee_name: user.name,
         assigner_name: assignerName,
         training_name: training.name,
         training_description: training.description || "No description provided",
         training_duration: training.duration || "Not specified",
         training_due_date: training.dueDate || "No due date",
-        training_url: `${baseUrl}${buildEntityUrl(NotificationEntityType.TRAINING, training.id)}`,
+        training_url: `${baseUrl}${actionPath}`,
       },
+    )
+    .catch((error: unknown) => {
+      logger.error(
+        `Failed to email user ${userId} about training ${training.id}: ${
+          error instanceof Error ? error.message : String(error)
+        }`,
+      );
+    });
+};
+
+/**
+ * Remind someone about an open training assignment (#5260). Rejects when the
+ * email fails, so the sweep leaves the assignment unstamped and retries it.
+ * sendInAppNotification swallows email errors, so the email is sent here, and
+ * first: a retry after a failed email then adds no second in-app notice.
+ */
+export const notifyTrainingReminder = async (
+  organizationId: number,
+  userId: number,
+  training: { id: number; name: string; dueDate: string },
+  kind: "due_soon" | "overdue",
+  baseUrl: string,
+): Promise<void> => {
+  const user = await getUserById(userId);
+  if (!user?.email) throw new Error(`User ${userId} has no email address`);
+
+  const overdue = kind === "overdue";
+  const title = overdue ? "Training overdue" : "Training due soon";
+  const message = overdue
+    ? `This training was due on ${training.dueDate}. Please complete it as soon as you can.`
+    : `This training is due on ${training.dueDate}.`;
+
+  await notificationService.sendEmailWithTemplate(
+    user.email,
+    `${title}: ${training.name}`,
+    EMAIL_TEMPLATES.TRAINING_REMINDER,
+    {
+      reminder_title: title,
+      reminder_message: message,
+      trainee_name: user.name,
+      training_name: training.name,
+      training_due_date: training.dueDate,
+      training_url: `${baseUrl}${MY_TRAINING_PATH}`,
     },
   );
+
+  await sendInAppNotification(organizationId, {
+    user_id: userId,
+    type: overdue ? NotificationType.TRAINING_OVERDUE : NotificationType.TRAINING_DUE_SOON,
+    title,
+    message: `${training.name}: ${message}`,
+    entity_type: NotificationEntityType.TRAINING,
+    entity_id: training.id,
+    entity_name: training.name,
+    action_url: MY_TRAINING_PATH,
+  });
 };
 
 // Helper functions

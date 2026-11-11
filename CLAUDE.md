@@ -1,6 +1,6 @@
 # VerifyWise - Development Guide
 
-> **Last Updated:** 2026-11-03
+> **Last Updated:** 2026-11-09
 
 This document contains cross-cutting rules for the VerifyWise codebase. Directory-scoped guides load automatically when working in each area:
 
@@ -223,6 +223,7 @@ Read the relevant file BEFORE implementing changes in that area:
 | Policies | `docs/technical/domains/policies.md` |
 | Use cases / projects | `docs/technical/domains/use-cases.md` |
 | Models / model inventory | `docs/technical/domains/models.md` |
+| AI Apps bulk import and bulk assessment (spreadsheet import, questionnaires, worksheets) | `docs/technical/domains/ai-apps-bulk.md` |
 | Datasets | `docs/technical/domains/datasets.md` |
 | Tasks | `docs/technical/domains/tasks.md` |
 | Incidents | `docs/technical/domains/incidents.md` |

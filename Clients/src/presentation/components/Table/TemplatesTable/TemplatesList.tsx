@@ -1,6 +1,6 @@
 import { Box, Typography, Chip, Stack, Divider } from "@mui/material";
 import { Check, FileText } from "lucide-react";
-import { brand, text, background, status } from "../../../themes/palette";
+import { brand, text, background, status, accent } from "../../../themes/palette";
 
 // Re-export TemplateRow from this file to avoid circular dependency
 export interface TemplateRow {
@@ -122,7 +122,7 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
               sx={{
                 fontSize: compact ? "12px" : "13px",
                 fontWeight: 500,
-                color: "#374151",
+                color: text.secondary,
                 whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -231,8 +231,8 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
                   sx={{
                     "height": "16px",
                     "fontSize": "10px",
-                    "backgroundColor": "#E3F2FD",
-                    "color": "#1565C0",
+                    "backgroundColor": accent.blue.bg,
+                    "color": accent.blue.text,
                     "& .MuiChip-label": { px: 0.75 },
                   }}
                 />
@@ -268,7 +268,7 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
                     "height": "16px",
                     "fontSize": "10px",
                     "backgroundColor": "#FEF3C7",
-                    "color": "#92400E",
+                    "color": accent.amber.text,
                     "& .MuiChip-label": { px: 0.75 },
                   }}
                 />
@@ -335,9 +335,9 @@ export { TemplatesList, getPredominantDifficultyLabel, getDifficultyStyles, getC
 export const getTypeStyles = (type?: string) => {
   switch (type) {
     case "single-turn":
-      return { backgroundColor: "#FEF3C7", color: "#92400E" };
+      return { backgroundColor: "#FEF3C7", color: accent.amber.text };
     case "multi-turn":
-      return { backgroundColor: "#E3F2FD", color: "#1565C0" };
+      return { backgroundColor: accent.blue.bg, color: accent.blue.text };
     case "simulated":
       return { backgroundColor: "#EDE9FE", color: "#6D28D9" };
     default:

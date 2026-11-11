@@ -49,6 +49,7 @@ export const EMAIL_TEMPLATES = {
 
   // Training templates
   TRAINING_ASSIGNED: "training-assigned.mjml",
+  TRAINING_REMINDER: "training-reminder.mjml",
 
   // Vendor templates
   VENDOR_REVIEW_DUE: "vendor-review-due.mjml",
@@ -88,6 +89,9 @@ export const EMAIL_TEMPLATES = {
 
   // Assignment notification template
   ASSIGNMENT_NOTIFICATION: "assignment-notification.mjml",
+
+  // AI app bulk assessment: one summary per owner per run
+  AI_APP_ASSESSMENTS_ASSIGNED: "ai-app-assessments-assigned.mjml",
 } as const;
 
 // Type-safe template keys

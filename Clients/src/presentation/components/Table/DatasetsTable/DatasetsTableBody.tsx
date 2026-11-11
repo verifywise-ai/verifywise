@@ -12,10 +12,10 @@ import {
 import { MoreVertical, Eye, Edit3, Download, Trash2 } from "lucide-react";
 import { CustomizableButton } from "../../button/customizable-button";
 import palette from "../../../themes/palette";
-import Chip from "../../Chip";
+import StatusBadge from "../../StatusBadge";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { DatasetRow } from "./index";
-import { text, background, status } from "../../../themes/palette";
+import { text, background, status, accent } from "../../../themes/palette";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 
 interface DatasetsTableBodyProps {
@@ -123,7 +123,7 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
               }}
             >
               {dataset.type ? (
-                <Chip
+                <StatusBadge
                   label={
                     dataset.type === "single-turn"
                       ? "Single-Turn"
@@ -137,14 +137,14 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
                     dataset.type === "single-turn"
                       ? "#FEF3C7"
                       : dataset.type === "multi-turn"
-                        ? "#E3F2FD"
+                        ? accent.blue.bg
                         : "#F3E8FF"
                   }
                   textColor={
                     dataset.type === "single-turn"
-                      ? "#92400E"
+                      ? accent.amber.text
                       : dataset.type === "multi-turn"
-                        ? "#1565C0"
+                        ? accent.blue.text
                         : "#7C3AED"
                   }
                 />
@@ -162,7 +162,7 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
               }}
             >
               {dataset.useCase ? (
-                <Chip
+                <StatusBadge
                   label={
                     dataset.useCase === "rag"
                       ? "RAG"
@@ -205,9 +205,9 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
               {metadata?.loading ? (
                 <CircularProgress size={14} sx={{ color: `${text.disabled}` }} />
               ) : metadata?.promptCount === 0 ? (
-                <Chip label="Empty" size="small" variant="error" />
+                <StatusBadge label="Empty" size="small" variant="error" />
               ) : (
-                <Typography sx={{ fontSize: "13px", color: "#374151" }}>
+                <Typography sx={{ fontSize: "13px", color: `${text.secondary}` }}>
                   {metadata?.promptCount ?? "-"}
                 </Typography>
               )}
@@ -224,7 +224,7 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
               {metadata?.loading ? (
                 <CircularProgress size={14} sx={{ color: `${text.disabled}` }} />
               ) : (
-                <Chip
+                <StatusBadge
                   label={metadata?.avgDifficulty ?? "Medium"}
                   size="small"
                   uppercase={false}

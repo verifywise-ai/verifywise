@@ -30,6 +30,7 @@ import aiAppsRoutes from "./aiApps.route";
 import aiAppLifecycleRoutes from "./aiAppLifecycle.route";
 import projectsRoutes from "./projects.route";
 import dashboardPreferencesRoutes from "./dashboardPreferences.route";
+import trainingRoutes from "./training.route";
 import groupsRoutes from "./groups.route";
 import policyTemplatesRoutes from "./policyTemplates.route";
 
@@ -74,6 +75,8 @@ router.use("/projects", projectsRoutes);
 // Per-user dashboard layout (#5257).
 router.use("/dashboard", dashboardPreferencesRoutes);
 
+// Training assignments (#5260); the legacy /api/training contracts are frozen.
+router.use("/training", trainingRoutes);
 // Groups / teams with RBAC and group-level use-case access (#5253).
 router.use("/groups", groupsRoutes);
 

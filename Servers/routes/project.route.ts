@@ -40,17 +40,17 @@ router.get(
   "/calculateProjectRisks/:id",
   authenticateJWT,
   validateProjectIdParam,
+  requireProjectAccess(),
   getProjectRisksCalculations,
 );
 router.get(
   "/calculateVendorRisks/:id",
   authenticateJWT,
   validateProjectIdParam,
+  requireProjectAccess(),
   getVendorRisksCalculations,
 );
-// Not behind requireProjectAccess: a task assignee who is not a member reaches
-// this from the emailed link to an EU AI Act requirement of the use case.
-router.get("/:id", authenticateJWT, validateProjectIdParam, getProjectById);
+router.get("/:id", authenticateJWT, validateProjectIdParam, requireProjectAccess(), getProjectById);
 router.get(
   "/stats/:id",
   authenticateJWT,
@@ -59,18 +59,26 @@ router.get(
   getProjectStatsById,
 );
 
-router.get("/complainces/:projid", authenticateJWT, validateProjectProjIdParam, getCompliances);
+router.get(
+  "/complainces/:projid",
+  authenticateJWT,
+  validateProjectProjIdParam,
+  requireProjectAccess("projid"),
+  getCompliances,
+);
 
 router.get(
   "/compliance/progress/:id",
   authenticateJWT,
   validateProjectIdParam,
+  requireProjectAccess(),
   projectComplianceProgress,
 );
 router.get(
   "/assessment/progress/:id",
   authenticateJWT,
   validateProjectIdParam,
+  requireProjectAccess(),
   projectAssessmentProgress,
 );
 
@@ -78,6 +86,7 @@ router.get(
   "/:id/eu-ai-act-classification",
   authenticateJWT,
   validateProjectIdParam,
+  requireProjectAccess(),
   getUseCaseClassification,
 );
 router.get("/all/compliance/progress", authenticateJWT, allProjectsComplianceProgress);
