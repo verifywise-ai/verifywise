@@ -111,3 +111,26 @@ describe("BUILTIN_ROLE_PERMISSIONS — legacy parity", () => {
     expect(BUILTIN_ROLE_PERMISSIONS["SuperAdmin"]).toEqual(new Set(expected));
   });
 });
+
+describe("keys added for issue #5314 — same built-in roles as the lists they replaced", () => {
+  // Server routes that used authorize([...role names]) and the client's
+  // role-name allowlists (Clients/src/application/constants/permissions.ts)
+  // moved to these keys. Each must be held by exactly the old roles.
+  it.each([
+    ["riskLinks.admin", ["Admin", "SuperAdmin"]],
+    ["riskLinks.edit", ["Admin", "Editor"]],
+    ["riskLinks.review", ["Admin", "Editor", "Reviewer"]],
+    ["evidence.admin", ["Admin"]],
+    ["useCase.members", ["Admin"]],
+    ["framework.edit", ["Admin", "Editor"]],
+    ["framework.audit", ["Admin", "Auditor", "Editor"]],
+    ["postMarketMonitoring.edit", ["Admin", "Editor"]],
+    ["evals.edit", ["Admin", "Editor"]],
+    ["apiKeys.admin", ["Admin"]],
+  ])("%s is held by %j", (key, roles) => {
+    const holders = BUILTIN_ROLES.filter((role) =>
+      BUILTIN_ROLE_PERMISSIONS[role].has(key as PermissionKey),
+    );
+    expect([...holders].sort()).toEqual([...roles].sort());
+  });
+});

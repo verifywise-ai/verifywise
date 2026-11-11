@@ -29,6 +29,7 @@ describe("accessControl.middleware (authorize)", () => {
 
   beforeEach(() => {
     next = jest.fn();
+    mockRoleHasPermission.mockReset();
     // Suppress expected console.error from "no role" test path
     jest.spyOn(console, "error").mockImplementation(() => {});
   });
@@ -37,30 +38,11 @@ describe("accessControl.middleware (authorize)", () => {
     jest.restoreAllMocks();
   });
 
-  it("should call next() when role is in allowedRoles", () => {
-    const req = createMockReq("Admin");
-    const res = createMockRes();
-
-    authorize(["Admin"])(req as Request, res as Response, next);
-
-    expect(next).toHaveBeenCalled();
-    expect(res.status).not.toHaveBeenCalled();
-  });
-
-  it("should allow when role is one of multiple allowed roles", () => {
-    const req = createMockReq("Editor");
-    const res = createMockRes();
-
-    authorize(["Admin", "Editor"])(req as Request, res as Response, next);
-
-    expect(next).toHaveBeenCalled();
-  });
-
-  it("should return 401 when no role is set on request", () => {
+  it("should return 401 when no role is set on request", async () => {
     const req = createMockReq(undefined);
     const res = createMockRes();
 
-    authorize(["Admin"])(req as Request, res as Response, next);
+    await authorize("risks.edit")(req as Request, res as Response, next);
 
     expect(res.status).toHaveBeenCalledWith(401);
     expect(res.json).toHaveBeenCalledWith({
@@ -68,33 +50,8 @@ describe("accessControl.middleware (authorize)", () => {
       data: "Authentication required",
     });
     expect(next).not.toHaveBeenCalled();
+    expect(mockRoleHasPermission).not.toHaveBeenCalled();
   });
-
-  it("should return 403 when role is not in allowed list", () => {
-    const req = createMockReq("Auditor");
-    const res = createMockRes();
-
-    authorize(["Admin", "Editor"])(req as Request, res as Response, next);
-
-    expect(res.status).toHaveBeenCalledWith(403);
-    expect(res.json).toHaveBeenCalledWith({
-      message: "Forbidden",
-      data: "Access denied",
-    });
-    expect(next).not.toHaveBeenCalled();
-  });
-
-  it.each(["Admin", "Reviewer", "Editor", "Auditor"])(
-    "should allow %s when all roles are permitted",
-    (role) => {
-      const req = createMockReq(role);
-      const res = createMockRes();
-
-      authorize(["Admin", "Reviewer", "Editor", "Auditor"])(req as Request, res as Response, next);
-
-      expect(next).toHaveBeenCalled();
-    },
-  );
 
   describe("permission keys (issue #4588)", () => {
     beforeEach(() => {
