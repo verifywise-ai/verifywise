@@ -2,6 +2,8 @@ import { describe, expect, it, jest, beforeEach } from "@jest/globals";
 
 const listDefinitions = jest.fn<(...args: unknown[]) => Promise<unknown[]>>();
 jest.mock("../customField.utils", () => ({
+  ISO_DATE_PATTERN: /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?)?$/,
+  MAX_CUSTOM_TEXT_LENGTH: 10_000,
   listCustomFieldDefinitionsQuery: (...args: unknown[]) => listDefinitions(...args),
 }));
 jest.mock("../../database/db", () => ({ sequelize: { query: jest.fn() } }));
@@ -119,6 +121,29 @@ describe("resolveIntakeCustomFieldValues", () => {
       [],
     );
     expect(out).toEqual({ values: [], skipped: [] });
+  });
+});
+
+describe("write-time constraints", () => {
+  it("skips dates the write would reject", () => {
+    const d = def({ field_type: "date" });
+    const dq = q({ type: "date" });
+    expect(run(dq, d, "11/11/2026").skipped[0].reason).toBe("invalid_value");
+    expect(run(dq, d, "2026-13-45").skipped[0].reason).toBe("invalid_value");
+    expect(run(dq, d, "2026-11-11").values[0].value).toBe("2026-11-11");
+  });
+
+  it("skips text over the length limit", () => {
+    expect(run(q({}), def({}), "x".repeat(10_001)).skipped[0].reason).toBe("invalid_value");
+    expect(run(q({}), def({}), "x".repeat(10_000)).values).toHaveLength(1);
+  });
+
+  it("never matches a non-string single select answer", () => {
+    const d = def({ field_type: "select", options: ["High"] });
+    expect(run(q({ type: "select" }), d, ["High"]).skipped[0].reason).toBe("no_matching_option");
+    expect(run(q({ type: "select" }), d, { toString: () => "High" }).skipped[0].reason).toBe(
+      "no_matching_option",
+    );
   });
 });
 

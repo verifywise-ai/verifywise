@@ -11,6 +11,8 @@ import {
 import {
   CustomFieldEntityType,
   ICustomFieldDefinition,
+  ISO_DATE_PATTERN,
+  MAX_CUSTOM_TEXT_LENGTH,
   listCustomFieldDefinitionsQuery,
 } from "./customField.utils";
 import type { IScoredOption } from "./customFieldScoredSelect.utils";
@@ -54,7 +56,8 @@ const matchOption = (
   candidates: Candidate[],
   questionOptions: QuestionOption[] = [],
 ): Candidate | undefined => {
-  const value = String(raw);
+  if (typeof raw !== "string") return undefined;
+  const value = raw;
   const texts = [value, questionOptions.find((o) => o.value === value)?.label].filter(
     (t): t is string => typeof t === "string",
   );
@@ -99,8 +102,20 @@ const resolveOne = (
         display: picked.map((p) => p.label).join(", "),
       };
     }
+    case "date": {
+      if (
+        typeof answer !== "string" ||
+        !ISO_DATE_PATTERN.test(answer) ||
+        Number.isNaN(Date.parse(answer))
+      ) {
+        return { ok: false, reason: "invalid_value" };
+      }
+      return { ok: true, value: answer, display: answer };
+    }
     default: {
-      if (typeof answer !== "string") return { ok: false, reason: "invalid_value" };
+      if (typeof answer !== "string" || answer.length > MAX_CUSTOM_TEXT_LENGTH) {
+        return { ok: false, reason: "invalid_value" };
+      }
       return { ok: true, value: answer, display: answer };
     }
   }

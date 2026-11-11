@@ -89,7 +89,9 @@ const FIELD_TYPES: ReadonlySet<CustomFieldType> = new Set([
 const FIELD_KEY_PATTERN = /^[a-z][a-z0-9_]{0,63}$/;
 const LABEL_MIN = 1;
 const LABEL_MAX = 255;
-const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?)?$/;
+export const MAX_CUSTOM_TEXT_LENGTH = 10_000;
+export const ISO_DATE_PATTERN =
+  /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?)?$/;
 
 // entity_type -> the SQL table that owns the entity. Used to verify the
 // parent row belongs to the calling org BEFORE writing a value. Keep this
@@ -253,8 +255,11 @@ const validateValueForDefinition = async (
       if (typeof raw !== "string") {
         throw new ValidationException("Expected string value", "value");
       }
-      if (raw.length > 10_000) {
-        throw new ValidationException("Text value exceeds 10000 characters", "value");
+      if (raw.length > MAX_CUSTOM_TEXT_LENGTH) {
+        throw new ValidationException(
+          `Text value exceeds ${MAX_CUSTOM_TEXT_LENGTH} characters`,
+          "value",
+        );
       }
       return raw;
     }
