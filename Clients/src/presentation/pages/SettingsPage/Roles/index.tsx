@@ -101,7 +101,8 @@ const RolesTab: React.FC = () => {
   );
 
   const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
-  const { data: granted = NO_GRANTS, isLoading: grantedLoading } = useRolePermissions(selectedRoleId);
+  const { data: granted = NO_GRANTS, isLoading: grantedLoading } =
+    useRolePermissions(selectedRoleId);
   const replaceMutation = useReplaceRolePermissions();
   const createMutation = useCreateRole();
   const updateMutation = useUpdateRole();
