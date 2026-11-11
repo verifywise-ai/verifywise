@@ -75,6 +75,11 @@ const GroupsPage: React.FC = () => {
   const [confirmDelete, setConfirmDelete] = useState<IGroup | null>(null);
   const [form, setForm] = useState<GroupFormState>(emptyForm);
   const [serverError, setServerError] = useState<string | null>(null);
+  // True when a create succeeded but saving its members failed. The modal is
+  // then switched to editing the new group, so a retry only re-sends members
+  // instead of creating the group a second time.
+  const [membersSaveFailed, setMembersSaveFailed] = useState(false);
+  const [deleteError, setDeleteError] = useState<string | null>(null);
   // Members of the group being edited as loaded from the server, or null
   // until they arrive. Saving replaces the membership only when the selection
   // differs from this, so an edit can never wipe members it did not load.
@@ -102,12 +107,14 @@ const GroupsPage: React.FC = () => {
   const openCreate = () => {
     setForm(emptyForm);
     setServerError(null);
+    setMembersSaveFailed(false);
     setCreating(true);
   };
 
   const openEdit = (group: IGroup) => {
     setEditing(group);
     setServerError(null);
+    setMembersSaveFailed(false);
     setInitialMemberIds(null);
     setForm({ name: group.name, description: group.description ?? "", memberIds: [] });
   };
@@ -117,12 +124,14 @@ const GroupsPage: React.FC = () => {
     setEditing(null);
     setInitialMemberIds(null);
     setServerError(null);
+    setMembersSaveFailed(false);
   };
 
   const membersReady = !editing || initialMemberIds !== null;
 
   const handleSubmit = async () => {
     setServerError(null);
+    setMembersSaveFailed(false);
     try {
       if (editing) {
         await updateMutation.mutateAsync({
@@ -141,7 +150,18 @@ const GroupsPage: React.FC = () => {
           description: form.description || null,
         });
         if (form.memberIds.length > 0) {
-          await setMembersMutation.mutateAsync({ id: created.id, userIds: form.memberIds });
+          try {
+            await setMembersMutation.mutateAsync({ id: created.id, userIds: form.memberIds });
+          } catch (err) {
+            // The group exists now. Edit it from here on so "Save" retries
+            // only the members (the server has none yet) and never re-POSTs.
+            setCreating(false);
+            setEditing(created);
+            setInitialMemberIds([]);
+            setMembersSaveFailed(true);
+            setServerError(extractErrorMessage(err));
+            return;
+          }
         }
       }
       closeModal();
@@ -246,7 +266,10 @@ const GroupsPage: React.FC = () => {
                           <IconButton
                             size="small"
                             disableRipple
-                            onClick={() => setConfirmDelete(group)}
+                            onClick={() => {
+                              setDeleteError(null);
+                              setConfirmDelete(group);
+                            }}
                             aria-label={`Delete ${group.name}`}
                           >
                             <Trash2 size={16} />
@@ -321,6 +344,11 @@ const GroupsPage: React.FC = () => {
                 members stay as they are.
               </Typography>
             )}
+            {membersSaveFailed && (
+              <Typography role="alert" sx={{ fontSize: 13, color: theme.palette.error.main }}>
+                The group was created, but its members were not saved. Select Save to try again.
+              </Typography>
+            )}
             {serverError && (
               <Typography sx={{ fontSize: 12, color: theme.palette.error.main }}>
                 {serverError}
@@ -334,19 +362,35 @@ const GroupsPage: React.FC = () => {
         <ConfirmationModal
           isOpen
           title="Delete this group?"
-          body={`When you delete "${confirmDelete.name}", its membership and use-case attachments are removed. Members keep any direct use-case access.`}
+          body={
+            <Stack sx={{ gap: "8px" }}>
+              <Typography sx={{ fontSize: 13 }}>
+                {`When you delete "${confirmDelete.name}", its membership and use-case attachments are removed. Members keep any direct use-case access.`}
+              </Typography>
+              {deleteError && (
+                <Typography role="alert" sx={{ fontSize: 13, color: theme.palette.error.main }}>
+                  {deleteError}
+                </Typography>
+              )}
+            </Stack>
+          }
           cancelText="Cancel"
           proceedText="Delete"
           proceedButtonColor="error"
           proceedButtonVariant="contained"
-          onCancel={() => setConfirmDelete(null)}
+          onCancel={() => {
+            setConfirmDelete(null);
+            setDeleteError(null);
+          }}
           onProceed={async () => {
+            setDeleteError(null);
             try {
               await deleteMutation.mutateAsync(confirmDelete.id);
               setConfirmDelete(null);
             } catch (err) {
-              setServerError(extractErrorMessage(err));
-              setConfirmDelete(null);
+              // Keep the dialog open and show why, instead of writing to the
+              // create/edit modal's error that is not on screen.
+              setDeleteError(extractErrorMessage(err));
             }
           }}
           isLoading={deleteMutation.isPending}

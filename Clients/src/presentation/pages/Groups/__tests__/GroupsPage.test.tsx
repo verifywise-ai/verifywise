@@ -5,8 +5,9 @@ vi.mock("../../../../application/hooks/useMyPermissions", () => ({
   useHasPermission: () => true,
 }));
 
+const mockUsers: { id: number; name: string; surname: string; email: string }[] = [];
 vi.mock("../../../../application/hooks/useUsers", () => ({
-  default: () => ({ users: [], loading: false, error: null, refreshUsers: vi.fn() }),
+  default: () => ({ users: mockUsers, loading: false, error: null, refreshUsers: vi.fn() }),
 }));
 
 const mockMutateAsync = vi.fn();
@@ -56,6 +57,7 @@ describe("GroupsPage (#5253)", () => {
     mockUseGroupMembers.mockReturnValue({ data: undefined, isLoading: false, isError: false });
     mockUpdateAsync.mockResolvedValue({});
     mockSetMembersAsync.mockResolvedValue(undefined);
+    mockUsers.length = 0;
   });
 
   it("renders the groups with their member counts", async () => {
@@ -116,5 +118,55 @@ describe("GroupsPage (#5253)", () => {
     fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
     await waitFor(() => expect(mockUpdateAsync).toHaveBeenCalled());
     expect(mockSetMembersAsync).not.toHaveBeenCalled();
+  });
+
+  it("retries only the members when they fail to save after a create", async () => {
+    mockUsers.push({ id: 11, name: "Ada", surname: "Lovelace", email: "ada@example.com" });
+    mockMutateAsync.mockResolvedValueOnce({ ...sampleGroups[0], id: 2, name: "Compliance team" });
+    mockSetMembersAsync.mockRejectedValueOnce({
+      response: { data: { message: "Members service unavailable" } },
+    });
+    renderWithProviders(<GroupsPage />, { route: "/groups" });
+    fireEvent.click(screen.getByRole("button", { name: /new group/i }));
+    fireEvent.change(screen.getByPlaceholderText("e.g. Model risk team"), {
+      target: { value: "Compliance team" },
+    });
+    const membersInput = screen.getByPlaceholderText("Select members");
+    fireEvent.mouseDown(membersInput);
+    fireEvent.click(await screen.findByText("Ada Lovelace"));
+    fireEvent.click(screen.getByRole("button", { name: /create/i }));
+
+    expect(await screen.findByText(/members were not saved/i)).toBeInTheDocument();
+    expect(screen.getByText("Members service unavailable")).toBeInTheDocument();
+    expect(screen.getByText("Edit group")).toBeInTheDocument();
+    expect(mockSetMembersAsync).toHaveBeenCalledWith({ id: 2, userIds: [11] });
+
+    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
+    await waitFor(() => expect(mockSetMembersAsync).toHaveBeenCalledTimes(2));
+    expect(mockSetMembersAsync).toHaveBeenLastCalledWith({ id: 2, userIds: [11] });
+    // The group was POSTed once; the retry updated it instead of re-creating.
+    expect(mockMutateAsync).toHaveBeenCalledTimes(1);
+    expect(mockUpdateAsync).toHaveBeenCalledWith({
+      id: 2,
+      body: { name: "Compliance team", description: null },
+    });
+  });
+
+  it("shows a failed delete inside the confirm dialog and keeps it open", async () => {
+    mockMutateAsync.mockRejectedValueOnce({
+      response: { data: { message: "Group is still in use" } },
+    });
+    renderWithProviders(<GroupsPage />, { route: "/groups" });
+    fireEvent.click(screen.getByRole("button", { name: /delete model risk team/i }));
+    fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
+
+    expect(await screen.findByText("Group is still in use")).toBeInTheDocument();
+    expect(screen.getByText("Delete this group?")).toBeInTheDocument();
+
+    // Cancelling clears it, so it never leaks into the next modal.
+    fireEvent.click(screen.getByRole("button", { name: /cancel/i }));
+    await waitFor(() => expect(screen.queryByText("Delete this group?")).not.toBeInTheDocument());
+    fireEvent.click(screen.getByRole("button", { name: /new group/i }));
+    expect(screen.queryByText("Group is still in use")).not.toBeInTheDocument();
   });
 });

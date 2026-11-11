@@ -469,6 +469,8 @@ export const de: Record<string, string> = {
   "Every group member can see and work on the use case.":
     "Jedes Gruppenmitglied kann den Anwendungsfall sehen und bearbeiten.",
   "Failed to load groups.": "Gruppen konnten nicht geladen werden.",
+  "The group was created, but its members were not saved. Select Save to try again.":
+    "Die Gruppe wurde erstellt, aber ihre Mitglieder wurden nicht gespeichert. Wählen Sie Speichern, um es erneut zu versuchen.",
   "Groups": "Gruppen",
   "Groups bundle users so you can add a whole team to a use case in one step.":
     "Gruppen fassen Benutzer zusammen, sodass Sie ein ganzes Team in einem Schritt zu einem Anwendungsfall hinzufügen können.",
@@ -961,6 +963,8 @@ export const fr: Record<string, string> = {
   "Every group member can see and work on the use case.":
     "Chaque membre du groupe peut voir le cas d'usage et y travailler.",
   "Failed to load groups.": "Impossible de charger les groupes.",
+  "The group was created, but its members were not saved. Select Save to try again.":
+    "Le groupe a été créé, mais ses membres n’ont pas été enregistrés. Sélectionnez Enregistrer pour réessayer.",
   "Groups": "Groupes",
   "Groups bundle users so you can add a whole team to a use case in one step.":
     "Les groupes rassemblent des utilisateurs pour que vous puissiez ajouter toute une équipe à un cas d'usage en une seule étape.",
@@ -1449,6 +1453,8 @@ export const es: Record<string, string> = {
   "Every group member can see and work on the use case.":
     "Cada miembro del grupo puede ver el caso de uso y trabajar en él.",
   "Failed to load groups.": "No se pudieron cargar los grupos.",
+  "The group was created, but its members were not saved. Select Save to try again.":
+    "El grupo se creó, pero sus miembros no se guardaron. Seleccione Guardar para intentarlo de nuevo.",
   "Groups": "Grupos",
   "Groups bundle users so you can add a whole team to a use case in one step.":
     "Los grupos reúnen usuarios para que pueda agregar un equipo completo a un caso de uso en un solo paso.",
