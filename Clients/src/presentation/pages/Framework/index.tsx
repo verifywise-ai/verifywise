@@ -34,7 +34,7 @@ import ISO42001Annex from "./ISO42001/Annex";
 import { getAllEntities } from "../../../application/repository/entity.repository";
 import { ProjectForm } from "../../components/Forms/ProjectForm";
 import AddFrameworkModal from "../ProjectView/AddNewFramework";
-import allowedRoles from "../../../application/constants/permissions";
+import { useCanCheck } from "../../../application/hooks/useCan";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import StandardModal from "../../components/Modals/StandardModal";
@@ -127,8 +127,8 @@ const Framework = () => {
   const categoryId = searchParams.get("categoryId");
   const subcategoryId = searchParams.get("subcategoryId");
 
-  const { changeComponentVisibility, projects, userRoleName, setProjects } =
-    useContext(VerifyWiseContext);
+  const { changeComponentVisibility, projects, setProjects } = useContext(VerifyWiseContext);
+  const can = useCanCheck();
   const { refs, allVisible } = useMultipleOnScreen<HTMLElement>({
     countToTrigger: 1,
   });
@@ -841,11 +841,7 @@ const Framework = () => {
                     setRotated((prev) => !prev);
                     handleManageProjectClick(event as React.MouseEvent<any>);
                   }}
-                  isDisabled={
-                    !allowedRoles.frameworks.manage.includes(userRoleName) &&
-                    !allowedRoles.projects.edit.includes(userRoleName) &&
-                    !allowedRoles.projects.delete.includes(userRoleName)
-                  }
+                  isDisabled={!can("framework.edit") && !can("useCase.edit")}
                   sx={{
                     backgroundColor: "brand.primary",
                     border: "1px solid brand.primary",
@@ -875,10 +871,7 @@ const Framework = () => {
                     },
                   }}
                 >
-                  <MenuItem
-                    onClick={handleManageFrameworksClick}
-                    disabled={!allowedRoles.frameworks.manage.includes(userRoleName)}
-                  >
+                  <MenuItem onClick={handleManageFrameworksClick} disabled={!can("framework.edit")}>
                     <ListItemIcon sx={{ minWidth: 32 }}>
                       <SettingsIcon size={16} color={icon.default} />
                     </ListItemIcon>
@@ -910,10 +903,7 @@ const Framework = () => {
                       />
                     </MenuItem>
                   )}
-                  <MenuItem
-                    onClick={handleEditProjectClick}
-                    disabled={!allowedRoles.projects.edit.includes(userRoleName)}
-                  >
+                  <MenuItem onClick={handleEditProjectClick} disabled={!can("useCase.edit")}>
                     <ListItemIcon sx={{ minWidth: 32 }}>
                       <EditIconGrey size={16} color={icon.default} />
                     </ListItemIcon>
@@ -926,10 +916,7 @@ const Framework = () => {
                     />
                   </MenuItem>
                   <Divider sx={{ my: 0.5 }} />
-                  <MenuItem
-                    onClick={handleDeleteProjectClick}
-                    disabled={!allowedRoles.projects.delete.includes(userRoleName)}
-                  >
+                  <MenuItem onClick={handleDeleteProjectClick} disabled={!can("useCase.edit")}>
                     <ListItemIcon sx={{ minWidth: 32 }}>
                       <DeleteIconRed size={16} color={icon.error} />
                     </ListItemIcon>
@@ -949,7 +936,7 @@ const Framework = () => {
                 text="New Project"
                 startIcon={<AddCircleOutlineIcon size={16} />}
                 onClick={() => setIsProjectFormModalOpen(true)}
-                isDisabled={!allowedRoles.projects.create.includes(userRoleName)}
+                isDisabled={!can("useCase.edit")}
               />
             )}
           </Box>

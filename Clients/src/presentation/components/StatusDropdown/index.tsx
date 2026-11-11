@@ -42,8 +42,7 @@ const StatusDropdown: React.FC<IStatusDropdownProps> = ({
   onStatusChange,
   disabled = false,
   size = "small",
-  allowedRoles = [],
-  userRole = "",
+  canEdit = true,
 }) => {
   const theme = useTheme();
   const [isUpdating, setIsUpdating] = useState(false);
@@ -52,8 +51,6 @@ const StatusDropdown: React.FC<IStatusDropdownProps> = ({
   const normalizedStatus = currentStatus || "Not started";
   const statusColor = getStatusColor(normalizedStatus);
 
-  // Check if user has permission to edit
-  const canEdit = allowedRoles.length === 0 || allowedRoles.includes(userRole);
   const isDisabled = disabled || !canEdit;
 
   const handleStatusChange = async (event: SelectChangeEvent<string>) => {

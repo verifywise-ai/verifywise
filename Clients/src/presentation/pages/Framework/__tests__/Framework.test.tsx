@@ -179,17 +179,16 @@ vi.mock("react-router", async () => {
 
 const mockHasPermission = vi.fn((_key: string) => true);
 vi.mock("../../../../application/hooks/useMyPermissions", () => ({
+  // The signed-in Admin's keys that this page gates on.
+  useMyPermissions: () => ({
+    permissions: ["framework.edit", "useCase.edit"],
+    isLoading: false,
+    error: null,
+  }),
   useHasPermission: (key: string) => mockHasPermission(key),
 }));
 
 // Mock constants
-vi.mock("../../../../application/constants/permissions", () => ({
-  default: {
-    frameworks: { manage: ["Admin"] },
-    projects: { create: ["Admin"], edit: ["Admin"], delete: ["Admin"] },
-  },
-}));
-
 vi.mock("../../../components/Forms/ProjectForm/constants", () => ({
   FrameworkTypeEnum: { OrganizationWide: "organization_wide" },
 }));

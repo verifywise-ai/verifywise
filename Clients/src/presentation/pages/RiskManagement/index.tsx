@@ -15,7 +15,7 @@ import Alert from "../../components/Alert";
 import { deleteEntityById, getEntityById } from "../../../application/repository/entity.repository";
 import CustomizableToast from "../../components/Toast";
 import CustomizableSkeleton from "../../components/Skeletons";
-import allowedRoles from "../../../application/constants/permissions";
+import { useCanCheck } from "../../../application/hooks/useCan";
 import RiskCatalogModal from "../../components/RiskCatalogModal";
 import { getAllProjectRisks } from "../../../application/repository/projectRisk.repository";
 import { useAuth } from "../../../application/hooks/useAuth";
@@ -75,6 +75,7 @@ const RiskManagement = () => {
   const [searchParams, setSearchParams] = useSearchParams();
   const hasProcessedUrlParam = useRef(false);
   const { userRoleName } = useAuth();
+  const can = useCanCheck();
   const { users, loading: usersLoading } = useUsers();
   const { isEnabled } = useExtensions();
   const [refreshKey, setRefreshKey] = useState(0); // Add refreshKey state
@@ -838,7 +839,7 @@ const RiskManagement = () => {
                 sx={addNewRiskButtonStyle}
                 onClick={handleInsertFromMenuOpen as (event: unknown) => void}
                 icon={<ChevronDown size={16} />}
-                isDisabled={!allowedRoles.projectRisks.create.includes(userRoleName)}
+                isDisabled={!can("risks.edit")}
               />
               <Popover
                 id="insert-risk-mega-dropdown"

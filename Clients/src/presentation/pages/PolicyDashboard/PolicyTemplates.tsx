@@ -33,8 +33,7 @@ import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import Field from "../../components/Inputs/Field";
 import Select from "../../components/Inputs/Select";
 import singleTheme from "../../themes/v1SingleTheme";
-import { useAuth } from "../../../application/hooks/useAuth";
-import allowedRoles from "../../../application/constants/permissions";
+import { useCanCheck } from "../../../application/hooks/useCan";
 import { useHasPermission } from "../../../application/hooks/useMyPermissions";
 import {
   useCreatePolicyTemplate,
@@ -96,8 +95,8 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
   isLoading: isLoadingProp = false,
 }) => {
   const navigate = useNavigate();
-  const { userRoleName } = useAuth();
-  const canCreatePolicy = !!userRoleName && allowedRoles.policies.create.includes(userRoleName);
+  const can = useCanCheck();
+  const canCreatePolicy = can("policy.edit");
   // The template routes authorize on this key, so a custom role granted it
   // can manage templates too (Admin and Editor by default).
   const canManageTemplates = useHasPermission("policyTemplate.edit", { fallbackToAdmin: true });

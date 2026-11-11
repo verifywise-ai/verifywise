@@ -8,9 +8,9 @@ import TeamManagement from "./Team/index";
 import Organization from "./Organization";
 import Preferences from "./Preferences/index";
 import Features from "./Features/index";
-import allowedRoles from "../../../application/constants/permissions";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { useHasPermission, useMyPermissions } from "../../../application/hooks/useMyPermissions";
+import { useCan } from "../../../application/hooks/useCan";
 import ApiKeys from "./ApiKeys";
 import McpConnect from "./McpConnect";
 import AuditLedger from "./AuditLedger";
@@ -53,9 +53,12 @@ export default function ProfilePage() {
   const ssoFeatureEnabled = useSsoFeatureEnabled();
   const location = useLocation();
   const navigate = useNavigate();
-  const isTeamManagementDisabled = !allowedRoles.projects.editTeamMembers.includes(userRoleName);
-  const isApiKeysDisabled = !allowedRoles.apiKeys?.view?.includes(userRoleName);
-  const isFeaturesDisabled = !allowedRoles.features?.manage?.includes(userRoleName);
+  // Team and Features stay Admin-only by role name: their server checks are
+  // role-name checks too (updateUserById, featureSettings.ctrl), so a custom
+  // role would only get controls the server refuses.
+  const isTeamManagementDisabled = userRoleName !== "Admin";
+  const isApiKeysDisabled = !useCan("apiKeys.admin");
+  const isFeaturesDisabled = userRoleName !== "Admin";
   const isAuditLedgerDisabled = userRoleName !== "Admin";
   // Data retention follows the organization.admin permission its routes
   // authorize on, so a custom role granted it gets the tab too.

@@ -33,6 +33,8 @@ vi.mock("../../../../application/hooks/usePolicyTemplates", () => ({
 
 let mockCanManageTemplates = true;
 vi.mock("../../../../application/hooks/useMyPermissions", () => ({
+  // Not loaded: useCan falls back to the mocked built-in role.
+  useMyPermissions: () => ({ permissions: undefined, isLoading: true, error: null }),
   useHasPermission: (key: string) => key === "policyTemplate.edit" && mockCanManageTemplates,
 }));
 

@@ -18,8 +18,7 @@ import CustomizableSkeleton from "../../components/Skeletons";
 import "../../components/Table/index.css";
 import singleTheme from "../../themes/v1SingleTheme";
 import CustomIconButton from "../../components/IconButton";
-import allowedRoles from "../../../application/constants/permissions";
-import { useAuth } from "../../../application/hooks/useAuth";
+import { useCanCheck } from "../../../application/hooks/useCan";
 import {
   ChevronsUpDown,
   ChevronUp,
@@ -132,7 +131,7 @@ const DatasetTable: React.FC<DatasetTableProps> = ({
 }) => {
   const formatDate = useFormattedDate();
   const theme = useTheme();
-  const { userRoleName } = useAuth();
+  const can = useCanCheck();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(() =>
     getPaginationRowCount("datasets", DEFAULT_ROWS_PER_PAGE),
@@ -230,14 +229,8 @@ const DatasetTable: React.FC<DatasetTableProps> = ({
     [sortConfig],
   );
 
-  const hasEditPermission = useMemo(
-    () => allowedRoles.modelInventory.edit?.includes(userRoleName || "") ?? false,
-    [userRoleName],
-  );
-  const hasDeletePermission = useMemo(
-    () => allowedRoles.modelInventory.delete?.includes(userRoleName || "") ?? false,
-    [userRoleName],
-  );
+  const hasEditPermission = can("model.edit");
+  const hasDeletePermission = can("model.edit");
 
   const isVisible = useCallback(
     (key: string) => {

@@ -59,7 +59,7 @@ import CustomFieldsSection, {
 import { useRequiredCustomFieldsGate } from "../../../components/CustomFieldsSection/RequiredCustomFieldsGate";
 import useFrameworks from "../../../../application/hooks/useFrameworks";
 import { Framework } from "../../../../domain/types/Framework";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../application/hooks/useCan";
 import { useHasPermission } from "../../../../application/hooks/useMyPermissions";
 import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
 import {
@@ -221,14 +221,15 @@ const OwnerPartyName = ({ party }: { party: OwnerParty }) =>
 const ProjectSettings = React.memo(
   ({ triggerRefresh = () => {} }: { triggerRefresh?: (isUpdate: boolean) => void }) => {
     const { setProjects } = useContext(VerifyWiseContext);
-    const { userRoleName, userId } = useAuth();
+    const { userId } = useAuth();
+    const can = useCanCheck();
     const [searchParams] = useSearchParams();
     const projectId = searchParams.get("projectId") ?? "1"; // default project ID is 2
     const theme = useTheme();
     const styles = useStyles();
     const [pendingOwnerChange, setPendingOwnerChange] = useState<PendingOwnerChange | null>(null);
     const [isRiskModalOpen, setIsRiskModalOpen] = useState(false);
-    const canClassify = allowedRoles.projects.classify.includes(userRoleName);
+    const canClassify = can("useCase.classify");
 
     const { project } = useProjectData({ projectId });
     const navigate = useNavigate();
@@ -1406,7 +1407,7 @@ const ProjectSettings = React.memo(
                   </Box>
                   <Autocomplete
                     multiple
-                    readOnly={!allowedRoles.projects.editTeamMembers.includes(userRoleName)}
+                    readOnly={!can("useCase.members")}
                     id="users-input"
                     size="small"
                     value={users.filter((user) => values.members.includes(Number(user.id)))}
@@ -1828,7 +1829,7 @@ const ProjectSettings = React.memo(
                   color="error"
                   onClick={handleOpenDeleteDialog}
                   text="Delete use case"
-                  isDisabled={!allowedRoles.projects.delete.includes(userRoleName)}
+                  isDisabled={!can("useCase.edit")}
                 />
               </Stack>
             </Stack>

@@ -18,13 +18,6 @@ vi.mock("../../../../application/hooks/useAuth", () => ({
 vi.mock("../../../../application/repository/project.repository", () => ({
   createProject: vi.fn().mockResolvedValue({}),
 }));
-vi.mock("../../../../application/constants/permissions", () => ({
-  default: {
-    canEdit: ["Admin"],
-    projects: { editTeamMembers: ["Admin"], editDetails: ["Admin"] },
-  },
-}));
-
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import { CreateProjectForm } from "../index";
 

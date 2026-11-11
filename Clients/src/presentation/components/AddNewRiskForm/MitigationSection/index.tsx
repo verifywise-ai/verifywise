@@ -22,7 +22,7 @@ import selectValidation from "../../../../application/validations/selectValidati
 import useUsers from "../../../../application/hooks/useUsers";
 import { mitigationStatusItems, riskLevelItems, approvalStatusItems } from "../projectRiskValue";
 import { alertState } from "../../../../domain/interfaces/i.alert";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../application/hooks/useCan";
 
 // Layout constants - matching RisksSection
 const LAYOUT = {
@@ -53,7 +53,6 @@ interface MitigationSectionProps {
   setMitigationValues: Dispatch<SetStateAction<MitigationFormValues>>;
   validateRef?: React.MutableRefObject<((values: MitigationFormValues) => boolean) | null>;
   firstInvalidFieldRef?: React.MutableRefObject<keyof MitigationFormValues | null>;
-  userRoleName: string;
   disableInternalScroll?: boolean;
   compactMode?: boolean;
   /** Backend validation errors to display inline (keyed by MitigationFormValues field). */
@@ -72,7 +71,6 @@ interface MitigationSectionProps {
  * @param {MitigationFormValues} props.mitigationValues - Current form values
  * @param {function} props.setMitigationValues - State setter for form values
  * @param {MitigationFormErrors} [props.mitigationErrors] - Form validation errors (optional)
- * @param {string} props.userRoleName - Current user's role for permission checks
  * @returns {JSX.Element} Rendered mitigation form section
  */
 const MitigationSection: FC<MitigationSectionProps> = ({
@@ -80,14 +78,14 @@ const MitigationSection: FC<MitigationSectionProps> = ({
   setMitigationValues,
   validateRef,
   firstInvalidFieldRef,
-  userRoleName,
   disableInternalScroll = false,
   compactMode = false,
   serverErrors,
   onValidityChange,
 }) => {
   const theme = useTheme();
-  const isEditingDisabled = !allowedRoles.projectRisks.edit.includes(userRoleName);
+  const can = useCanCheck();
+  const isEditingDisabled = !can("risks.edit");
 
   const [alert, setAlert] = useState<alertState | null>(null);
 

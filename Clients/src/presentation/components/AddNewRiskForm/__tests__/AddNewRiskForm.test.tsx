@@ -43,10 +43,6 @@ vi.mock("../../../application/contexts/VerifyWise.context", () => ({
   VerifyWiseContext: { _currentValue: null },
 }));
 
-vi.mock("../../../application/constants/permissions", () => ({
-  default: { canEdit: ["Admin", "Editor"] },
-}));
-
 vi.mock("../../tools/riskCalculator", () => ({
   RiskCalculator: { calculate: vi.fn().mockReturnValue(0) },
 }));

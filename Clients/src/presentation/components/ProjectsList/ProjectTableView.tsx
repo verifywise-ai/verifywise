@@ -40,8 +40,7 @@ import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { deleteProject } from "../../../application/repository/project.repository";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import Alert from "../Alert";
-import allowedRoles from "../../../application/constants/permissions";
-import { useAuth } from "../../../application/hooks/useAuth";
+import { useCanCheck } from "../../../application/hooks/useCan";
 import { text } from "../../themes/palette";
 import useUsers from "../../../application/hooks/useUsers";
 import { useCustomFieldDefinitions } from "../../../application/hooks/useCustomFields";
@@ -199,7 +198,7 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
   const theme = useTheme();
   const navigate = useNavigateSearch();
   const { setProjects } = useContext(VerifyWiseContext);
-  const { userRoleName } = useAuth();
+  const can = useCanCheck();
   const [page, setPage] = useState(0);
   const [alert, setAlert] = useState<{
     variant: "success" | "info" | "warning" | "error";
@@ -629,7 +628,7 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
                         entityType="useCase"
                         entityLabel={project.project_title}
                       />
-                      {allowedRoles.projects.delete.includes(userRoleName) && (
+                      {can("useCase.edit") && (
                         <IconButton
                           id={project.id}
                           type="use case"

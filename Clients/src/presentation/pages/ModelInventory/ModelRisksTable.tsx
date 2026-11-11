@@ -33,8 +33,7 @@ import { palette } from "../../themes/palette";
 import { useCustomFieldDefinitions } from "../../../application/hooks/useCustomFields";
 import { formatCustomFieldValue } from "../../components/CustomFieldsSection/formatCustomFieldValue";
 import { pageOfLabel } from "../../components/Table/pageOfLabel";
-import { useAuth } from "../../../application/hooks/useAuth";
-import allowedRoles from "../../../application/constants/permissions";
+import { useCanCheck } from "../../../application/hooks/useCan";
 
 // LocalStorage key for sorting
 const MODEL_RISKS_SORTING_KEY = "verifywise_model_risks_sorting";
@@ -67,8 +66,8 @@ const ModelRisksTable: React.FC<ModelRisksTableProps> = ({
   visibleColumns,
 }) => {
   const formatUserDate = useFormattedDate();
-  const { userRoleName } = useAuth();
-  const canDeleteRisks = allowedRoles.modelInventory.delete.includes(userRoleName);
+  const can = useCanCheck();
+  const canDeleteRisks = can("model.edit");
   const theme = useTheme();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(5);

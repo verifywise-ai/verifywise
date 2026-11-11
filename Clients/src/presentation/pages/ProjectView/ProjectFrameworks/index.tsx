@@ -19,10 +19,9 @@ import { ButtonToggle } from "../../../components/button-toggle";
 
 import { containerStyle, headerContainerStyle, tabListStyle } from "./styles";
 import { CustomizableButton } from "../../../components/button/customizable-button";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../application/hooks/useCan";
 import { TabFilterBar } from "../../../components/FrameworkFilter/TabFilterBar";
 import { useSearchParams } from "react-router";
-import { useAuth } from "../../../../application/hooks/useAuth";
 import useUsers from "../../../../application/hooks/useUsers";
 import { text } from "../../../themes/palette";
 
@@ -82,13 +81,13 @@ const ProjectFrameworks = ({
   const { users } = useUsers();
 
   const { changeComponentVisibility } = useContext(VerifyWiseContext);
-  const { userRoleName } = useAuth();
+  const can = useCanCheck();
 
   const { refs, allVisible } = useMultipleOnScreen<HTMLElement>({
     countToTrigger: 1,
   });
 
-  const isManagingFrameworksDisabled = !allowedRoles.frameworks.manage.includes(userRoleName);
+  const isManagingFrameworksDisabled = !can("framework.edit");
 
   // Filter out organizational frameworks
   const nonOrganizationalFrameworks = useMemo(() => {

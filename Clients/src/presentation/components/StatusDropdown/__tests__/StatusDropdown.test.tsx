@@ -29,18 +29,14 @@ describe("StatusDropdown", () => {
     expect(select).toHaveAttribute("aria-disabled", "true");
   });
 
-  it("is disabled when user role is not in allowedRoles", () => {
-    renderWithProviders(
-      <StatusDropdown {...defaultProps} allowedRoles={["Admin"]} userRole="Viewer" />,
-    );
+  it("is disabled when the user cannot edit", () => {
+    renderWithProviders(<StatusDropdown {...defaultProps} canEdit={false} />);
     const select = screen.getByRole("combobox");
     expect(select).toHaveAttribute("aria-disabled", "true");
   });
 
-  it("is enabled when user role is in allowedRoles", () => {
-    renderWithProviders(
-      <StatusDropdown {...defaultProps} allowedRoles={["Admin"]} userRole="Admin" />,
-    );
+  it("is enabled when the user can edit", () => {
+    renderWithProviders(<StatusDropdown {...defaultProps} canEdit />);
     const select = screen.getByRole("combobox");
     expect(select).not.toHaveAttribute("aria-disabled", "true");
   });

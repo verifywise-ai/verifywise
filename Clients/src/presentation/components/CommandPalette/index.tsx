@@ -27,6 +27,7 @@ import {
   LucideIcon,
 } from "lucide-react";
 import { useAuth } from "../../../application/hooks/useAuth";
+import { useMyPermissions } from "../../../application/hooks/useMyPermissions";
 import commandRegistry from "../../../application/commands/registry";
 import CommandActionHandler, {
   CommandActionHandlers,
@@ -191,6 +192,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
   const navigate = useNavigate();
   const location = useLocation();
   const { userRoleName } = useAuth();
+  const { permissions } = useMyPermissions();
 
   // Detect if user is on Mac for keyboard shortcuts
   const isMac = useMemo(() => {
@@ -316,10 +318,10 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
     () => ({
       currentPath: location.pathname,
       userRole: userRoleName || "Viewer",
-      permissions: [],
+      permissions,
       searchTerm: isSearchMode ? "" : search, // Only filter commands when not in search mode
     }),
-    [location.pathname, userRoleName, search, isSearchMode],
+    [location.pathname, userRoleName, permissions, search, isSearchMode],
   );
 
   // Get filtered commands

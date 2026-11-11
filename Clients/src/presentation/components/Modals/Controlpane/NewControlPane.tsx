@@ -43,7 +43,7 @@ import AddNewRiskForm from "../../AddNewRiskForm";
 import { AlertBox, styles } from "../../../pages/ComplianceTracker/1.0ComplianceTracker/styles";
 import { handleAlert } from "../../../../application/tools/alertUtils";
 import { AlertProps } from "../../../types/alert.types";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../application/hooks/useCan";
 import { updateControl } from "../../../../application/repository/control_eu_act.repository";
 import { useInvalidateEvidenceGaps } from "../../../../application/hooks/useEvidenceAi";
 import { useAuth } from "../../../../application/hooks/useAuth";
@@ -107,7 +107,8 @@ const NewControlPane = ({
   onComplianceUpdate?: () => void;
   projectId: number;
 }) => {
-  const { userRoleName, userId } = useAuth();
+  const { userId } = useAuth();
+  const can = useCanCheck();
   const { users } = useUsers();
 
   // ========================================================================
@@ -143,8 +144,8 @@ const NewControlPane = ({
   // PERMISSIONS
   // ========================================================================
 
-  const isEditingDisabled = !allowedRoles.frameworks.edit.includes(userRoleName);
-  const isAuditingDisabled = !allowedRoles.frameworks.audit.includes(userRoleName);
+  const isEditingDisabled = !can("framework.edit");
+  const isAuditingDisabled = !can("framework.audit");
 
   // ========================================================================
   // STATE - FORM DATA (Per-subcontrol map)

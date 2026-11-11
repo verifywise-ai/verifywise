@@ -37,8 +37,7 @@ import { useTableGrouping, useGroupByState } from "../../../application/hooks/us
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import HelperIcon from "../../components/HelperIcon";
 import TipBox from "../../components/TipBox";
-import { useAuth } from "../../../application/hooks/useAuth";
-import allowedRoles from "../../../application/constants/permissions";
+import { useCanCheck } from "../../../application/hooks/useCan";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { displayFormattedTime } from "../../tools/isoDateToString";
 import { experimentPromptCount } from "./experimentPromptCount";
@@ -101,9 +100,9 @@ export default function ProjectExperiments({
   const prevRunningIdsRef = useRef<Set<string>>(new Set());
 
   // RBAC permissions
-  const { userRoleName } = useAuth();
-  const canCreateExperiment = allowedRoles.evals.createExperiment.includes(userRoleName);
-  const canDeleteExperiment = allowedRoles.evals.deleteExperiment.includes(userRoleName);
+  const can = useCanCheck();
+  const canCreateExperiment = can("evals.edit");
+  const canDeleteExperiment = can("evals.edit");
 
   // GroupBy state
   const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();

@@ -20,7 +20,7 @@ import { alertState } from "../../../../domain/interfaces/i.alert";
 import useUsers from "../../../../application/hooks/useUsers";
 import { useProjects } from "../../../../application/hooks/useProjects";
 import useFrameworks from "../../../../application/hooks/useFrameworks";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../application/hooks/useCan";
 import AutoCompleteField from "../../Inputs/Autocomplete";
 import {
   useFormValidation,
@@ -65,7 +65,6 @@ interface RiskSectionProps {
   setRiskValues: Dispatch<SetStateAction<RiskFormValues>>;
   validateRef?: React.MutableRefObject<((values: RiskFormValues) => boolean) | null>;
   firstInvalidFieldRef?: React.MutableRefObject<keyof RiskFormValues | null>;
-  userRoleName: string;
   disableInternalScroll?: boolean;
   compactMode?: boolean;
   /** Backend validation errors to display inline (keyed by RiskFormValues field). */
@@ -84,7 +83,6 @@ interface RiskSectionProps {
  * @param {RiskSectionProps} props - The props for the RiskSection component
  * @param {RiskFormValues} props.riskValues - Current form values
  * @param {Dispatch<SetStateAction<RiskFormValues>>} props.setRiskValues - Function to update form values
- * @param {string} props.userRoleName - Current user's role name for permissions
  * @returns {JSX.Element} The rendered RiskSection component
  */
 const RiskSection: FC<RiskSectionProps> = ({
@@ -92,14 +90,14 @@ const RiskSection: FC<RiskSectionProps> = ({
   setRiskValues,
   validateRef,
   firstInvalidFieldRef,
-  userRoleName,
   disableInternalScroll = false,
   compactMode = false,
   serverErrors,
   onValidityChange,
 }) => {
   const theme = useTheme();
-  const isEditingDisabled = !allowedRoles.projectRisks.edit.includes(userRoleName);
+  const can = useCanCheck();
+  const isEditingDisabled = !can("risks.edit");
 
   // Dynamic layout based on compactMode - squeeze into 990px when sidebar is open
   const contentWidth = compactMode

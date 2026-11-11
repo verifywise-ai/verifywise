@@ -76,14 +76,6 @@ vi.mock("../../../../application/contexts/EvalsSidebar.context", () => ({
 }));
 
 // Mock permissions
-vi.mock("../../../../application/constants/permissions", () => ({
-  default: {
-    evals: {
-      manageApiKeys: ["Admin"],
-    },
-  },
-}));
-
 // Mock env vars
 vi.mock("../../../../../env.vars", () => ({
   ENV_VARs: {

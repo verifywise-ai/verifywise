@@ -11,13 +11,12 @@ import {
 import "../../components/Table/index.css";
 import singleTheme from "../../themes/v1SingleTheme";
 import CustomIconButton from "../../components/IconButton";
-import allowedRoles from "../../../application/constants/permissions";
+import { useCanCheck } from "../../../application/hooks/useCan";
 import { GraduationCap, Users, Calendar, Award } from "lucide-react";
 import { EmptyState } from "../../components/EmptyState";
 import CustomizableSkeleton from "../../components/Skeletons";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { TableEmptyStateLayout } from "../../components/Table/TableEmptyStateLayout";
-import { useAuth } from "../../../application/hooks/useAuth";
 import { TrainingRegistarModel } from "../../../domain/models/Common/trainingRegistar/trainingRegistar.model";
 import { TrainingStatus } from "../../../domain/enums/status.enum";
 import Chip from "../../components/Chip";
@@ -122,8 +121,8 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
   assignmentSummaries,
   onOpenAssignments,
 }) => {
-  const { userRoleName } = useAuth();
-  const canEditAssignments = allowedRoles.training.edit.includes(userRoleName);
+  const can = useCanCheck();
+  const canEditAssignments = can("training.edit");
 
   const isVisible = useCallback(
     (id: string) => !visibleColumns || visibleColumns.size === 0 || visibleColumns.has(id),
@@ -135,7 +134,7 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
     [isVisible],
   );
 
-  const isDeletingAllowed = allowedRoles.training?.delete?.includes(userRoleName);
+  const isDeletingAllowed = can("training.admin");
 
   const sortComparator = useCallback(
     (a: TrainingRegistarModel, b: TrainingRegistarModel, key: string): number => {
