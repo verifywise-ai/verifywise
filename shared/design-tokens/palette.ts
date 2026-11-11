@@ -71,7 +71,7 @@ export const chart = [
 
 export const text = {
   primary: grey[900],
-  secondary: grey[700],
+  secondary: grey[500],
   tertiary: grey[600],
   accent: grey[400],
   disabled: grey[350],

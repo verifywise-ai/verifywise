@@ -11,7 +11,7 @@ export const grey = {
   200: "#E5E7EB",
   300: "#D0D5DD",
   350: "#9CA3AF",
-  400: "#838C99",
+  400: "#929AA5",
   450: "#667085",
   500: "#6B7280",
   600: "#475467",
@@ -78,7 +78,7 @@ export type OrangeStep = keyof typeof orange;
 
 /** Blue scale */
 export const blue = {
-  50: "#E3F2FD",
+  50: "#F0F9FF",
   100: "#BBDEFB",
   800: "#1565C0",
 } as const;

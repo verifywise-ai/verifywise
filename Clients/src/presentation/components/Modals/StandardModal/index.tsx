@@ -78,7 +78,7 @@ import React, { useId } from "react";
 import { Modal, Stack, Box, Typography, IconButton } from "@mui/material";
 import { X as CloseIcon } from "lucide-react";
 import { CustomizableButton } from "../../button/customizable-button";
-import { brand } from "../../../themes/palette";
+import { background, border, brand, text } from "../../../themes/palette";
 
 interface StandardModalProps {
   /** Controls whether the modal is visible */
@@ -205,7 +205,7 @@ const StandardModal: React.FC<StandardModalProps> = ({
         <Stack
           sx={{
             background: "linear-gradient(180deg, #F8FAFB 0%, #F3F5F8 100%)",
-            borderBottom: children ? "1px solid #E0E4E9" : "none",
+            borderBottom: children ? `1px solid ${border.light}` : "none",
             padding: "16px 24px",
             paddingBottom: children ? "36px" : "16px",
             marginBottom: children ? "-20px" : 0,
@@ -220,7 +220,7 @@ const StandardModal: React.FC<StandardModalProps> = ({
                 sx={{
                   fontSize: 15,
                   fontWeight: 600,
-                  color: "#101828",
+                  color: text.primary,
                   lineHeight: "28px",
                   margin: 0,
                 }}
@@ -259,7 +259,7 @@ const StandardModal: React.FC<StandardModalProps> = ({
                     "padding": "4px",
                     "borderRadius": "4px",
                     "&:hover": {
-                      backgroundColor: "#F2F4F7",
+                      backgroundColor: background.alt,
                     },
                   }}
                 >
@@ -290,7 +290,7 @@ const StandardModal: React.FC<StandardModalProps> = ({
                 : expandedHeight
                   ? "min(740px, calc(90vh - 180px))"
                   : "calc(100vh - 240px)",
-              border: "1px solid #E0E4E9",
+              border: `1px solid ${border.light}`,
               borderRadius: "16px",
               backgroundColor: "background.main",
               zIndex: 1,
@@ -324,7 +324,7 @@ const StandardModal: React.FC<StandardModalProps> = ({
             spacing={6}
             sx={{
               background: "linear-gradient(180deg, #F3F5F8 0%, #F8FAFB 100%)",
-              borderTop: children ? "1px solid #E0E4E9" : "none",
+              borderTop: children ? `1px solid ${border.light}` : "none",
               padding: "12px 24px",
               paddingTop: children ? "32px" : "12px",
               marginTop: children ? "-20px" : 0,
@@ -343,11 +343,11 @@ const StandardModal: React.FC<StandardModalProps> = ({
                     sx={{
                       "minWidth": "80px",
                       "height": "34px",
-                      "border": "1px solid #d0d5dd",
+                      "border": `1px solid ${border.dark}`,
                       "color": "text.secondary",
                       "&:hover": {
                         backgroundColor: "background.accent",
-                        border: "1px solid #d0d5dd",
+                        border: `1px solid ${border.dark}`,
                       },
                     }}
                   />
