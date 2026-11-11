@@ -17,6 +17,9 @@
  * an interpolated template literal cannot match a dictionary key, so the
  * scanner reports it instead of inventing a key for it.
  *
+ * Keys of email subjects that are not translated yet are optional: kept when
+ * en.json already has them (their translations are ready), never added.
+ *
  * Keys are written in `localeCompare` order. de.json and fr.json mirror that
  * order; `npm run i18n:audit:strict` checks they have the same keys.
  */
@@ -31,10 +34,12 @@ const REPORT = args.has("--report");
 
 const OUT_PATH = localePath("en");
 const scan = scanServerMessages();
-const sorted = [...scan.keys.keys()].sort((a, b) => a.localeCompare(b));
 const current = readJson(OUT_PATH, {});
+const keptSubjects = [...scan.subjectKeys.keys()].filter((k) => k in current && !scan.keys.has(k));
+const sorted = [...scan.keys.keys(), ...keptSubjects].sort((a, b) => a.localeCompare(b));
+const wanted = new Set(sorted);
 const added = sorted.filter((k) => !(k in current));
-const removed = Object.keys(current).filter((k) => !scan.keys.has(k));
+const removed = Object.keys(current).filter((k) => !wanted.has(k));
 
 const bySink = {};
 for (const { sinks } of scan.keys.values()) {
@@ -43,7 +48,7 @@ for (const { sinks } of scan.keys.values()) {
 
 console.log("=== i18n key extraction ===");
 console.log(`Scanned ${scan.files} files under ${path.basename(SERVERS_ROOT)}/`);
-console.log({ ...bySink, totalUniqueKeys: sorted.length });
+console.log({ ...bySink, keptSubjectKeys: keptSubjects.length, totalUniqueKeys: sorted.length });
 console.log(`Compared with en.json: ${added.length} added, ${removed.length} removed`);
 for (const k of added) console.log(`  + ${k}`);
 for (const k of removed) console.log(`  - ${k}`);
@@ -55,7 +60,10 @@ if (scan.templates.length > 0) {
 if (REPORT) {
   console.log("\n--- keys ---");
   for (const k of sorted) {
-    const { sinks, locs } = scan.keys.get(k);
+    const { sinks, locs } = scan.keys.get(k) ?? {
+      sinks: ["untranslated subject"],
+      locs: scan.subjectKeys.get(k),
+    };
     console.log(`  ${k}\n      [${[...sinks].join(", ")}] ${[...locs].slice(0, 3).join(" ")}`);
   }
 }

@@ -108,7 +108,9 @@ jobs:
       # de/fr are checked against en.json above; this checks en.json against the
       # code: every server message needs a key, and no message may skip req.t.
       - name: i18n en.json check (catch server messages without a key)
-        run: npm run i18n:check-en
+        run: |
+          npm run test:i18n-scripts
+          npm run i18n:check-en
 
       - name: API documentation drift check
         run: npm run check:api-drift

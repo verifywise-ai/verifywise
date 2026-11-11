@@ -14,11 +14,13 @@
  *                which can never match a key (use a key with named
  *                placeholders: req.t!("Invalid email: {email}", { email }))
  *
- * Email subjects that are not translated yet are listed but do not fail.
+ * Email subjects that are not translated yet, and in-app titles sent as fixed
+ * English, are listed with --report but do not fail. An en.json key for such
+ * a subject may stay (its translation is ready) but is not required.
  *
  * Usage:
  *   node scripts/i18n-check-en.mjs            # summary, then each problem
- *   node scripts/i18n-check-en.mjs --report   # also list untranslated email subjects
+ *   node scripts/i18n-check-en.mjs --report   # also list untranslated subjects and titles
  *
  * Fix missing/unused keys with `npm run i18n:extract`, then add or remove the
  * same keys in de.json and fr.json (`npm run i18n:audit:strict` must pass).
@@ -33,7 +35,7 @@ const en = readJson(localePath("en"));
 
 const missing = [...scan.keys.keys()].filter((k) => !(k in en)).sort();
 const unused = Object.keys(en)
-  .filter((k) => !scan.keys.has(k))
+  .filter((k) => !scan.keys.has(k) && !scan.subjectKeys.has(k))
   .sort();
 
 console.log("=== i18n check: en.json against the code ===");
@@ -45,6 +47,7 @@ console.log(`Unused en.json keys:        ${unused.length}`);
 console.log(`Bare STATUS_CODE messages:  ${scan.bareStatus.length}`);
 console.log(`Template literal messages:  ${scan.templates.length}`);
 console.log(`Untranslated email subjects (not checked): ${scan.untranslatedSubjects.length}`);
+console.log(`Untranslated in-app titles (not checked):  ${scan.untranslatedTitles.length}`);
 
 const section = (title, rows) => {
   if (rows.length === 0) return;
@@ -73,6 +76,10 @@ if (REPORT) {
   section(
     "untranslated email subjects",
     scan.untranslatedSubjects.map((s) => `${s.loc}  ${JSON.stringify(s.key)}`),
+  );
+  section(
+    "in-app titles sent as fixed English (use titleKey)",
+    scan.untranslatedTitles.map((t) => `${t.loc}  ${t.text}`),
   );
 }
 

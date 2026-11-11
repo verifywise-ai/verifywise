@@ -4,13 +4,14 @@
  * and `i18n-check-en.mjs` (CI: en.json must match the code).
  *
  * A "sink" is a place where a string is translated or sent to a client:
- *   - req.t(key) / _req.t!(key) / request.t(key) / t(key)
+ *   - req.t(key) / request.t(key) / t(key) where t is a translator (below)
  *   - translate(lang, key) / translateRequest(req, key)
  *   - new XxxException(key)          (controllers translate error.message)
  *   - sanitizeErrorMessage(error, key)
- *   - i18nKey: key                   (CustomException option, result objects)
+ *   - i18nKey / titleKey / messageKey / subjectKey: key
+ *                                    (CustomException option, notifications)
  *   - STATUS_CODE[n](key)            (bare: sent untranslated, reported)
- *   - subject: key / getSubject: () => key   (email files only, see below)
+ *   - email subjects not translated yet (optional keys, see below)
  *
  * The key argument does not have to be a literal. It is resolved, within the
  * file and across relative imports, through:
@@ -23,10 +24,17 @@
  *   - conditionals, `??` and `||`
  *
  * A template literal can never match a dictionary key, so one that reaches a
- * translator or STATUS_CODE is reported, not turned into a key. Email subjects
- * are the exception: an untranslated `subject: \`Approved: ${x.name}\`` is
- * recorded as the named key "Approved: {name}" so its translation can be kept
- * ready, and listed as untranslated.
+ * translator or STATUS_CODE is reported, not turned into a key. An email
+ * subject that is not translated yet (`subject: \`Approved: ${x.name}\``, in an
+ * email config `{ template, subject, variables }` or a sendEmail call) gives
+ * the optional key "Approved: {name}": en.json may keep it, nothing requires
+ * it. In-app titles sent as fixed text are listed too (report only).
+ *
+ * Translators are recognised strictly: req.t / request.t, translate and
+ * translateRequest imported from utils/i18n.utils.ts, and a `t` that provably
+ * receives one of those (a parameter its callers pass req.t to, or
+ * `const t = input.t ?? identity`). Any other `t(...)` or `obj.t(...)` is not
+ * a sink.
  *
  * Strings are taken from the AST, so escapes are decoded (`'risk\'s'` is the
  * key "risk's").
@@ -70,11 +78,25 @@ export const NOISE_KEYS = new Set([
   "Mock data inserted",
 ]);
 
-const REQ_NAMES = /^_?(req|request)$/;
-const TRANSLATOR_FNS = new Set(["t", "translate", "translateRequest", "translateError"]);
+const REQ_NAMES = /^(req|request)$/;
+// The project's translation helpers, recognised only when imported from (or
+// declared in) utils/i18n.utils.ts. A same-named local function is not one.
+const I18N_MODULE = path.join("utils", "i18n.utils.ts");
+const KEY_ARG_FNS = new Set(["translate", "translateRequest"]); // key is the 2nd argument
+const TRANSLATOR_FNS = new Set(["translate", "translateRequest", "translateError"]);
+const TRANSLATOR_FACTORIES = new Set(["getTranslator"]);
+// Properties whose value is a dictionary key: CustomException options and the
+// keyed title/message/subject of notifications (see IInAppNotificationInput).
+const KEY_PROPS = new Set(["i18nKey", "titleKey", "messageKey", "subjectKey"]);
+// Senders whose notification argument may carry an untranslated title.
+const NOTIFICATION_SENDERS = {
+  sendInAppNotification: 1,
+  sendBulkInAppNotifications: 1,
+  dispatchAlerts: 2,
+};
 const MAX_DEPTH = 30;
 
-function listFiles() {
+function listFiles(root) {
   const out = [];
   const visit = (dir, depth) => {
     for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
@@ -91,7 +113,7 @@ function listFiles() {
       }
     }
   };
-  visit(SERVERS_ROOT, 0);
+  visit(root, 0);
   return out.sort();
 }
 
@@ -129,15 +151,6 @@ const propName = (nameNode) => {
   return null;
 };
 
-const isTranslatorCall = (n) => {
-  n = unwrap(n);
-  if (!n || !ts.isCallExpression(n)) return false;
-  const c = unwrap(n.expression);
-  if (ts.isIdentifier(c)) return TRANSLATOR_FNS.has(c.text);
-  if (ts.isPropertyAccessExpression(c)) return c.name.text === "t";
-  return false;
-};
-
 /**
  * Turn `Approved: ${entity.name}` into "Approved: {name}": the placeholder is
  * the last identifier of the expression, or the one before a trailing method
@@ -165,8 +178,12 @@ export function namedTemplateKey(tpl) {
   return out;
 }
 
-export function scanServerMessages() {
-  const files = listFiles();
+/**
+ * @param {{ root?: string }} [options] directory to scan (default: Servers/);
+ *   the scanner's own tests point it at a fixture tree.
+ */
+export function scanServerMessages({ root = SERVERS_ROOT } = {}) {
+  const files = listFiles(root);
   const sourceFiles = new Map(); // abs path -> SourceFile
   for (const f of files) {
     sourceFiles.set(
@@ -634,19 +651,141 @@ export function scanServerMessages() {
     return [{ kind: "unresolved", node: e }];
   }
 
+  // --- translators ----------------------------------------------------------
+  const isI18nModule = (node) => node.getSourceFile().fileName.endsWith(I18N_MODULE);
+
+  // `id` names one of `names` exported by utils/i18n.utils.ts.
+  function isI18nHelper(id, names) {
+    if (!names.has(id.text)) return false;
+    const d = findDecl(id);
+    if (!d) return false;
+    const declNode = d.type === "fn" ? d.fn : d.type === "var" ? d.decl : null;
+    return Boolean(declNode && isI18nModule(declNode));
+  }
+
+  const isReqT = (e) =>
+    ts.isPropertyAccessExpression(e) &&
+    e.name.text === "t" &&
+    ts.isIdentifier(unwrap(e.expression)) &&
+    REQ_NAMES.test(unwrap(e.expression).text);
+
+  /**
+   * Whether `expr` (followed into `pathIn`) is a translator function: req.t,
+   * getTranslator(...), or a variable or parameter that receives one (`const t = input.t ?? identity`, with
+   * `{ t: req.t }` passed by a caller).
+   */
+  function isTranslatorValue(expr, pathIn, ctx) {
+    const e = unwrap(expr);
+    if (!e || ctx.depth > MAX_DEPTH) return false;
+    const key = `${e.getSourceFile().fileName}:${e.pos}:${e.end}:${pathIn.join(".")}`;
+    if (ctx.seen.has(key)) return false;
+    ctx.seen.add(key);
+    const next = { ...ctx, depth: ctx.depth + 1 };
+
+    if (pathIn.length === 0) {
+      if (isReqT(e)) return true;
+      if (ts.isCallExpression(e)) {
+        const c = unwrap(e.expression);
+        return ts.isIdentifier(c) && isI18nHelper(c, TRANSLATOR_FACTORIES);
+      }
+    }
+    if (ts.isConditionalExpression(e)) {
+      return (
+        isTranslatorValue(e.whenTrue, pathIn, next) || isTranslatorValue(e.whenFalse, pathIn, next)
+      );
+    }
+    if (ts.isBinaryExpression(e)) {
+      const op = e.operatorToken.kind;
+      if (op === ts.SyntaxKind.QuestionQuestionToken || op === ts.SyntaxKind.BarBarToken) {
+        return isTranslatorValue(e.left, pathIn, next) || isTranslatorValue(e.right, pathIn, next);
+      }
+    }
+    if (ts.isPropertyAccessExpression(e)) {
+      return isTranslatorValue(e.expression, [e.name.text, ...pathIn], next);
+    }
+    if (ts.isObjectLiteralExpression(e) && pathIn.length > 0) {
+      const [head, ...rest] = pathIn;
+      return e.properties.some((p) => {
+        if (propName(p.name) !== head) return false;
+        if (ts.isPropertyAssignment(p)) return isTranslatorValue(p.initializer, rest, next);
+        if (ts.isShorthandPropertyAssignment(p)) return isTranslatorValue(p.name, rest, next);
+        return false;
+      });
+    }
+    if (ts.isIdentifier(e)) {
+      const d = findDecl(e);
+      if (!d) return false;
+      if (d.type === "var" && d.decl.initializer) {
+        return isTranslatorValue(d.decl.initializer, [...d.path, ...pathIn], next);
+      }
+      if (d.type === "param") {
+        const p = [...d.path, ...pathIn];
+        return callersOf(d.fn).some((call) => {
+          const arg = call.arguments?.[d.index];
+          return arg ? isTranslatorValue(arg, p, next) : false;
+        });
+      }
+    }
+    return false;
+  }
+
+  const translatorMemo = new Map();
+  function isTranslatorCall(n, ctx = { seen: new Set(), depth: 0 }) {
+    n = unwrap(n);
+    if (!n || !ts.isCallExpression(n)) return false;
+    if (translatorMemo.has(n)) return translatorMemo.get(n);
+    translatorMemo.set(n, false); // recursion guard
+    const c = unwrap(n.expression);
+    let yes = false;
+    if (isReqT(c)) yes = true;
+    else if (ts.isIdentifier(c) && TRANSLATOR_FNS.has(c.text))
+      yes = isI18nHelper(c, TRANSLATOR_FNS);
+    else if (ts.isIdentifier(c) || ts.isPropertyAccessExpression(c)) {
+      yes = isTranslatorValue(c, [], ctx);
+    }
+    translatorMemo.set(n, yes);
+    return yes;
+  }
+
+  // Values a subject can take within its own function: literals, templates and
+  // local consts (`const title = isHard ? \`Breach: ${m}\` : \`Warning: ${m}\``).
+  function localValues(expr, depth = 0) {
+    const e = unwrap(expr);
+    if (!e || depth > 5) return [];
+    if (
+      ts.isStringLiteral(e) ||
+      ts.isNoSubstitutionTemplateLiteral(e) ||
+      ts.isTemplateExpression(e)
+    ) {
+      return [e];
+    }
+    if (ts.isConditionalExpression(e)) {
+      return [...localValues(e.whenTrue, depth + 1), ...localValues(e.whenFalse, depth + 1)];
+    }
+    if (ts.isIdentifier(e)) {
+      const d = findDecl(e);
+      if (d?.type === "var" && d.path.length === 0 && d.decl.initializer) {
+        return localValues(d.decl.initializer, depth + 1);
+      }
+    }
+    return [];
+  }
+
   // --- sinks ----------------------------------------------------------------
   const result = {
     files: files.length,
     keys: new Map(), // key -> { sinks: Set, locs: Set }
     bareStatus: [], // literal sent through STATUS_CODE without translation
     templates: [], // template literal reaching a translator or STATUS_CODE
+    subjectKeys: new Map(), // optional keys of untranslated subjects -> locs
     untranslatedSubjects: [], // email subject literals/templates (not translated)
+    untranslatedTitles: [], // in-app notification titles sent as fixed English (report only)
     unresolved: 0,
   };
   const loc = (node) => {
     const sf = node.getSourceFile();
     const { line } = sf.getLineAndCharacterOfPosition(node.getStart());
-    return `${path.relative(SERVERS_ROOT, sf.fileName)}:${line + 1}`;
+    return `${path.relative(root, sf.fileName)}:${line + 1}`;
   };
   const addKey = (value, sink, node) => {
     if (!value.trim()) return;
@@ -674,17 +813,44 @@ export function scanServerMessages() {
     }
   };
 
+  // An email subject that is not translated yet. Its named key is optional:
+  // kept in en.json when already there (its translation is ready for when the
+  // subject is keyed), never required. Listed by `i18n:check-en --report`.
   const subjectSink = (arg, at) => {
     const e = unwrap(arg);
     if (!e || isTranslatorCall(e)) return;
-    let k = null;
-    if (ts.isStringLiteral(e) || ts.isNoSubstitutionTemplateLiteral(e)) k = e.text;
-    else if (ts.isTemplateExpression(e)) k = namedTemplateKey(e);
-    // `${title}: ${name}` has no words of its own to translate.
-    if (k === null || !/\p{L}/u.test(k.replace(/\{\w+\}/g, ""))) return;
-    addKey(k, "emailSubject", e);
-    result.untranslatedSubjects.push({ loc: loc(at), key: k });
+    for (const v of localValues(e)) {
+      const k = ts.isTemplateExpression(v) ? namedTemplateKey(v) : v.text;
+      // `${title}: ${name}` has no words of its own to translate.
+      if (!/\p{L}/u.test(k.replace(/\{\w+\}/g, ""))) continue;
+      if (!result.subjectKeys.has(k)) result.subjectKeys.set(k, new Set());
+      result.subjectKeys.get(k).add(loc(v));
+      result.untranslatedSubjects.push({ loc: loc(at), key: k });
+    }
   };
+
+  // An in-app title sent as fixed English text (report only, not a key).
+  const titleReport = (notification) => {
+    const obj = unwrap(notification);
+    if (!obj || !ts.isObjectLiteralExpression(obj)) return;
+    for (const p of obj.properties) {
+      if (propName(p.name) !== "title") continue;
+      const value = ts.isPropertyAssignment(p)
+        ? p.initializer
+        : ts.isShorthandPropertyAssignment(p)
+          ? p.name
+          : null;
+      for (const v of value ? localValues(value) : []) {
+        result.untranslatedTitles.push({ loc: loc(v), text: v.getText() });
+      }
+    }
+  };
+
+  // An email config object: `{ template, subject, variables }`.
+  const isEmailConfig = (obj) =>
+    ts.isObjectLiteralExpression(obj) &&
+    obj.properties.some((p) => propName(p.name) === "template") &&
+    obj.properties.some((p) => propName(p.name) === "subject");
 
   for (const [, sf] of sourceFiles) {
     const emailFile = EMAIL_FILE_HINT.test(sf.text);
@@ -693,17 +859,14 @@ export function scanServerMessages() {
         const c = unwrap(n.expression);
         const args = n.arguments;
         const name = calleeName(n);
-        if (emailFile && (name === "sendEmail" || name === "sendEmailWithTemplate") && args[1]) {
-          subjectSink(args[1], n);
+        if (name === "sendEmail" || name === "sendEmailWithTemplate") {
+          if (args[1]) subjectSink(args[1], n);
         }
-        if (ts.isPropertyAccessExpression(c) && c.name.text === "t") {
-          const recv = unwrap(c.expression);
-          if (ts.isIdentifier(recv) && REQ_NAMES.test(recv.text)) collect(args[0], "req.t", n);
-        } else if (ts.isIdentifier(c)) {
-          if (c.text === "t") collect(args[0], "t", n);
-          else if (c.text === "translate" || c.text === "translateRequest") {
-            collect(args[1], c.text, n);
-          } else if (c.text === "sanitizeErrorMessage") collect(args[1], "sanitize", n);
+        if (name in NOTIFICATION_SENDERS) titleReport(args[NOTIFICATION_SENDERS[name]]);
+        if (ts.isIdentifier(c) && isI18nHelper(c, KEY_ARG_FNS)) {
+          collect(args[1], c.text, n);
+        } else if (ts.isIdentifier(c) && c.text === "sanitizeErrorMessage") {
+          collect(args[1], "sanitize", n);
         } else if (
           ts.isElementAccessExpression(c) &&
           ts.isIdentifier(c.expression) &&
@@ -713,20 +876,31 @@ export function scanServerMessages() {
           // Only a literal written at the call is a bare message. A variable
           // passed to STATUS_CODE is usually data (`STATUS_CODE[200](rows)`).
           const a = unwrap(args[0]);
-          if (ts.isStringLiteral(a) || ts.isNoSubstitutionTemplateLiteral(a))
+          if (
+            ts.isStringLiteral(a) ||
+            ts.isNoSubstitutionTemplateLiteral(a) ||
+            ts.isTemplateExpression(a)
+          ) {
             collect(a, "status", n);
-          else if (ts.isTemplateExpression(a)) collect(a, "status", n);
+          }
+        } else if (!(ts.isIdentifier(c) && TRANSLATOR_FNS.has(c.text)) && isTranslatorCall(n)) {
+          collect(args[0], isReqT(c) ? "req.t" : "t", n);
         }
       } else if (ts.isNewExpression(n)) {
         const c = n.expression;
         if (ts.isIdentifier(c) && /Exception$/.test(c.text) && n.arguments?.[0]) {
           collect(n.arguments[0], "exception", n);
         }
+      } else if (ts.isObjectLiteralExpression(n) && isEmailConfig(n)) {
+        for (const p of n.properties) {
+          if (propName(p.name) !== "subject") continue;
+          subjectSink(ts.isPropertyAssignment(p) ? p.initializer : p.name, p);
+        }
       } else if (ts.isPropertyAssignment(n) || ts.isShorthandPropertyAssignment(n)) {
         const name = propName(n.name);
         const value = ts.isPropertyAssignment(n) ? n.initializer : n.name;
-        if (name === "i18nKey") collect(value, "i18nKey", n);
-        else if (emailFile && name === "subject") subjectSink(value, n);
+        if (KEY_PROPS.has(name)) collect(value, name, n);
+        else if (emailFile && name === "subject" && !isEmailConfig(n.parent)) subjectSink(value, n);
         else if (emailFile && name === "getSubject") {
           const fn = unwrap(value);
           if (fn && ts.isArrowFunction(fn) && !ts.isBlock(fn.body)) subjectSink(fn.body, n);
