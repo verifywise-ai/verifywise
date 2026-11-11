@@ -46,7 +46,7 @@ export class FrameworkModel extends Model<FrameworkModel> implements IFramework 
   /**
    * NULL = bundled/system catalog row (visible to every org); set = an
    * organization-scoped row created by the framework-import extension.
-   * See migration 20261109092002-imported-framework-storage.js.
+   * See migration 20261111092002-imported-framework-storage.js.
    */
   @Column({
     type: DataType.INTEGER,
