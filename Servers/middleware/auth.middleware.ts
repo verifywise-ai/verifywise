@@ -31,7 +31,7 @@
 import { NextFunction, Request, Response } from "express";
 import { getTokenPayload } from "../utils/jwt.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
-import { doesUserBelongsToOrganizationQuery, getUserByIdQuery } from "../utils/user.utils";
+import { getUserByIdQuery } from "../utils/user.utils";
 import { asyncLocalStorage } from "../utils/context/context";
 import { getTenantHash } from "../tools/getTenantHash";
 import { getRoleNameById } from "../utils/roleMap";
@@ -143,6 +143,13 @@ const authenticateJWT = async (
       return res.status(400).json(STATUS_CODE[400](req.t!("Invalid token")));
     }
 
+    // Session JWTs have no `type` claim. Any other typed token signed with
+    // the same secret (the organization-selection token issued between
+    // password check and org choice) is not an access token.
+    if (decoded.type !== undefined && decoded.type !== "api_token") {
+      return res.status(401).json(STATUS_CODE[401]({ message: req.t!("Unauthorized **") }));
+    }
+
     // API tokens carry a `type: "api_token"` claim and must additionally exist
     // as an active row in the api_tokens table. This is what makes them
     // revocable: a correctly-signed, unexpired JWT is still rejected once its
@@ -162,45 +169,46 @@ const authenticateJWT = async (
       apiTokenRowId = tokenRow.id;
     }
 
-    // Validate role hasn't changed since token was issued. The expected role
-    // name is sourced live from the roles table (cached, TTL 60s, invalidated
-    // on role CRUD) so adding/renaming a role doesn't need a code change.
-    const user = await getUserByIdQuery(decoded.id);
-    // A correctly-signed, unexpired token can still reference a user that no
-    // longer exists (deleted account, or a token minted against a different
-    // database). Treat that as an authentication failure with 401 rather than
-    // dereferencing `user.role_id` and throwing an unhandled 500.
+    // A token without an organization is a pure SuperAdmin's (no
+    // memberships). Everyone else's token names the organization chosen at
+    // login, and is valid only while they are still a member of it.
+    const isPureSuperAdminToken =
+      decoded.organizationId === null || decoded.organizationId === undefined;
+    const user = isPureSuperAdminToken
+      ? await getUserByIdQuery(decoded.id)
+      : await getUserByIdQuery(decoded.id, null, decoded.organizationId);
     if (!user) {
+      // A correctly-signed, unexpired token can still reference a user that no
+      // longer exists (deleted account, or a token minted against a different
+      // database): 401. An existing user removed from the organization: 403.
+      if (!isPureSuperAdminToken && (await getUserByIdQuery(decoded.id))) {
+        return res
+          .status(403)
+          .json(STATUS_CODE[403](req.t!("User does not belong to this organization")));
+      }
       return res.status(401).json(
         STATUS_CODE[401]({
           message: req.t!("Unauthorized **"),
         }),
       );
     }
-    // Pure SuperAdmin has no role and no org — everyone else has both, so
-    // role_name is validated against roles table. Skip that check when
-    // role_id is NULL.
-    if (user.role_id !== null && user.role_id !== undefined) {
-      const expectedRoleName = await getRoleNameById(user.role_id);
-      if (decoded.roleName !== expectedRoleName) {
+
+    if (isPureSuperAdminToken) {
+      // Superadmin is the super_admins row, never the missing organization.
+      if (!(await isUserSuperAdmin(decoded.id))) {
         return res.status(403).json(STATUS_CODE[403](req.t!("Not allowed to access")));
       }
-    }
-
-    if (user.organization_id === null || user.organization_id === undefined) {
-      // Pure SuperAdmin (no org, no role). Their identity is proven by the
-      // super_admins mapping — a users row without role/org must have one
-      // (enforced by DB trigger).
       req.userId = decoded.id;
-      req.role = decoded.roleName || "SuperAdmin";
+      req.role = decoded.roleName;
       req.isSuperAdmin = true;
     } else {
-      // Normal user: verify org membership
-      const belongs = await doesUserBelongsToOrganizationQuery(decoded.id, decoded.organizationId);
-      if (!belongs.belongs) {
-        return res
-          .status(403)
-          .json(STATUS_CODE[403](req.t!("User does not belong to this organization")));
+      // Validate the role in this organization hasn't changed since the token
+      // was issued. The expected role name is sourced live from the roles
+      // table (cached, TTL 60s, invalidated on role CRUD) so adding/renaming a
+      // role doesn't need a code change.
+      const expectedRoleName = await getRoleNameById(user.role_id!);
+      if (decoded.roleName !== expectedRoleName) {
+        return res.status(403).json(STATUS_CODE[403](req.t!("Not allowed to access")));
       }
 
       req.userId = decoded.id;

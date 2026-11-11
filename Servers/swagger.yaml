@@ -27769,3 +27769,68 @@ paths:
       security:
         -
           bearerAuth: []
+  /v1/shadow-ai-syslog/status:
+    get:
+      summary: 'Get Syslog Status'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Shadow AI'
+      operationId: getSyslogStatus
+      security:
+        -
+          bearerAuth: []
+  '/v1/shadow-ai-syslog/sources/{id}/regenerate-key':
+    post:
+      summary: 'Regenerate Syslog Key'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Shadow AI'
+      operationId: regenerateSyslogKey
+      security:
+        -
+          bearerAuth: []
+  /users/invitations/accept:
+    post:
+      summary: 'Accept Invitation As Existing User'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Users
+      operationId: acceptInvitationAsExistingUser
+  /users/login/select-organization:
+    post:
+      summary: 'Select Login Organization'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - Users
+      operationId: selectLoginOrganization
+  '/super-admin/organizations/{id}/users/{userId}':
+    delete:
+      summary: 'Remove Org User'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'Super Admin'
+      operationId: removeOrgUser
+      security:
+        -
+          bearerAuth: []
+      description: 'Requires role: Super Admin'

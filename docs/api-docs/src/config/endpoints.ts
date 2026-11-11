@@ -10917,6 +10917,28 @@ export const shadowAiEndpoints: Endpoint[] = [
     ],
     tag: "v1: Shadow AI",
   },
+  {
+    method: 'GET',
+    path: '/v1/shadow-ai-syslog/status',
+    summary: "Get Syslog Status",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Shadow AI",
+  },
+  {
+    method: 'POST',
+    path: '/v1/shadow-ai-syslog/sources/{id}/regenerate-key',
+    summary: "Regenerate Syslog Key",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Shadow AI",
+  },
 ];
 
 // Share Links endpoints
@@ -11419,6 +11441,18 @@ export const superAdminEndpoints: Endpoint[] = [
     method: 'DELETE',
     path: '/super-admin/super-admins/{user_id}',
     summary: "Revoke Super Admin",
+    description: "Requires role: Super Admin",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Super Admin",
+  },
+  {
+    method: 'DELETE',
+    path: '/super-admin/organizations/{id}/users/{userId}',
+    summary: "Remove Org User",
     description: "Requires role: Super Admin",
     requiresAuth: true,
     responses: [
@@ -12111,6 +12145,28 @@ export const userEndpoints: Endpoint[] = [
     responses: [
       { status: 201, description: "Created successfully" },
       { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Users",
+  },
+  {
+    method: 'POST',
+    path: '/users/invitations/accept',
+    summary: "Accept Invitation As Existing User",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Users",
+  },
+  {
+    method: 'POST',
+    path: '/users/login/select-organization',
+    summary: "Select Login Organization",
+    requiresAuth: false,
+    responses: [
+      { status: 200, description: "Success" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Users",

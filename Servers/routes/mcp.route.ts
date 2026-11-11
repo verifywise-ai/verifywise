@@ -1,17 +1,31 @@
-import express, { Request, Response } from "express";
+import express, { NextFunction, Request, Response } from "express";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import authenticateJWT from "../middleware/auth.middleware";
-import superAdminOnly from "../middleware/superAdminOnly.middleware";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { buildMcpServer } from "../mcp/server";
 import logger from "../utils/logger/fileLogger";
 
 const router = express.Router();
 
-// Same gate as the super-admin API these tools drive: the client sends its API
-// token as a bearer token, which authenticateJWT already accepts and resolves
-// to a user, and superAdminOnly re-checks super_admins membership per request.
-router.use(authenticateJWT, superAdminOnly);
+/**
+ * Super admins, and Admins of the organization their token names.
+ *
+ * authenticateJWT has already resolved the bearer token to a user, re-checked
+ * super_admins membership and confirmed the token's role is still the user's
+ * role in that organization, so both checks hold per request: a revoked super
+ * admin or a demoted Admin loses access without the token being revoked.
+ * Which tools each gets is decided in mcp/server.ts.
+ */
+function adminOrSuperAdmin(req: Request, res: Response, next: NextFunction) {
+  if (req.isSuperAdmin || (req.role === "Admin" && req.organizationId)) {
+    return next();
+  }
+  return res
+    .status(403)
+    .json(STATUS_CODE[403](req.t!("Access restricted to Admins and super admins")));
+}
+
+router.use(authenticateJWT, adminOrSuperAdmin);
 
 /**
  * One MCP request.
@@ -29,6 +43,8 @@ async function handleMcpRequest(req: Request, res: Response) {
   const server = buildMcpServer({
     userId: req.userId!,
     organizationId: req.organizationId ?? null,
+    role: req.role!,
+    isSuperAdmin: req.isSuperAdmin === true,
   });
 
   res.on("close", () => {

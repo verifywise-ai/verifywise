@@ -39,6 +39,7 @@
   },
   "overrides": {
     "dompurify": ">=3.4.13",
-    "undici@7": "^7.29.0"
+    "undici@7": "^7.29.0",
+    "minimatch": "^11.0.1"
   }
 }
