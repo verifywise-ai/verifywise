@@ -142,6 +142,7 @@ fine unasked; `gh pr create` is not.
 - **Minimum coverage:** 80%
 - **Frontend:** `cd Clients && npx vitest run` (Vitest — `npm run test` is `vitest watch` and never exits)
 - **Backend:** `cd Servers && npm run test` (Jest — this is `test:unit`; it *excludes* `tests/integration/`, which must be run separately)
+- **Integration guard:** `tests/integrationDatabaseSetup.js` (a `setupFilesAfterEnv` of `Servers/jest.config.js`) refuses any `tests/integration/` file whose database is the one `Servers/.env` names, and `cleanupDatabase` refuses to truncate a connection on it, so a plain `npx jest <pattern>` cannot wipe the development database; run integration files only with `npm run test:integration` and a dedicated `DB_NAME`
 
 ---
 

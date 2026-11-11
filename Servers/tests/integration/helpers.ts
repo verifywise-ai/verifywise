@@ -2,6 +2,8 @@ import { sequelize } from "../../database/db";
 import bcrypt from "bcrypt";
 import { execSync } from "child_process";
 import path from "path";
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const { assertConnectedDatabaseIsNotDev } = require("../testDatabaseGuard");
 
 /**
  * Run pending Sequelize migrations against the configured test database.
@@ -94,6 +96,8 @@ export async function seedFrameworks(): Promise<void> {
 }
 
 export async function cleanupDatabase(): Promise<void> {
+  // The statement below truncates every table: never on the database of Servers/.env.
+  assertConnectedDatabaseIsNotDev({ connectedDbName: sequelize.getDatabaseName() });
   for (let attempt = 0; attempt < 3; attempt++) {
     try {
       await sequelize.query(

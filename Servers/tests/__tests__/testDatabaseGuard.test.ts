@@ -10,9 +10,17 @@
  * one Servers/.env names, or when there is no target at all.
  */
 
-import { describe, expect, it } from "@jest/globals";
+import { afterAll, describe, expect, it } from "@jest/globals";
+import fs from "fs";
+import os from "os";
+import path from "path";
 
-const { assertSafeTestDatabase } = require("../testDatabaseGuard");
+const {
+  assertSafeTestDatabase,
+  assertSafeIntegrationRun,
+  assertConnectedDatabaseIsNotDev,
+  effectiveDatabaseName,
+} = require("../testDatabaseGuard");
 
 const envTestPath = "/repo/Servers/.env.test";
 
@@ -71,5 +79,99 @@ describe("assertSafeTestDatabase", () => {
         hasEnvTest: false,
       }),
     ).toThrow();
+  });
+});
+
+describe("the guard of a plain `npx jest <pattern>` run", () => {
+  const made: string[] = [];
+  /** A Servers directory with the given dotenv files, written with synthetic names. */
+  const serversWith = (files: Record<string, string>): string => {
+    const dir = fs.mkdtempSync(path.join(os.tmpdir(), "vw-guard-"));
+    made.push(dir);
+    for (const [name, text] of Object.entries(files)) fs.writeFileSync(path.join(dir, name), text);
+    return dir;
+  };
+  afterAll(() => {
+    for (const dir of made) fs.rmSync(dir, { recursive: true, force: true });
+  });
+
+  const integrationFile = path.join("/repo", "Servers", "tests", "integration", "login.test.ts");
+  const unitFile = path.join("/repo", "Servers", "services", "__tests__", "x.test.ts");
+
+  it("refuses an integration file whose database is the one Servers/.env names", () => {
+    const serversDir = serversWith({ ".env": "DB_NAME=zz_dev_database\nDB_HOST=db.example\n" });
+    // Nothing exported: database/db.ts loads Servers/.env, so the dev database is the target.
+    expect(() =>
+      assertSafeIntegrationRun({ testPath: integrationFile, env: {}, serversDir }),
+    ).toThrow(/same database/i);
+    expect(() =>
+      assertSafeIntegrationRun({
+        testPath: integrationFile,
+        env: { DB_NAME: "zz_dev_database" },
+        serversDir,
+      }),
+    ).toThrow(/same database/i);
+  });
+
+  it("allows an integration file on a dedicated database, however it is named", () => {
+    const serversDir = serversWith({ ".env": "DB_NAME=zz_dev_database\n" });
+    expect(() =>
+      assertSafeIntegrationRun({
+        testPath: integrationFile,
+        env: { DB_NAME: "zz_integration_test" },
+        serversDir,
+      }),
+    ).not.toThrow();
+  });
+
+  it("reads Servers/.env.test as database/db.ts does when NODE_ENV is test", () => {
+    const serversDir = serversWith({
+      ".env": "DB_NAME=zz_dev_database\n",
+      ".env.test": "DB_NAME=zz_dedicated\n",
+    });
+    expect(effectiveDatabaseName({ NODE_ENV: "test" }, serversDir)).toBe("zz_dedicated");
+    expect(effectiveDatabaseName({ NODE_ENV: "development" }, serversDir)).toBe("zz_dev_database");
+    expect(() =>
+      assertSafeIntegrationRun({
+        testPath: integrationFile,
+        env: { NODE_ENV: "test" },
+        serversDir,
+      }),
+    ).not.toThrow();
+  });
+
+  it("does not look at a test file outside tests/integration", () => {
+    const serversDir = serversWith({ ".env": "DB_NAME=zz_dev_database\n" });
+    expect(() =>
+      assertSafeIntegrationRun({ testPath: unitFile, env: {}, serversDir }),
+    ).not.toThrow();
+  });
+
+  it("allows CI, where no database is named in a file and the environment names one", () => {
+    const serversDir = serversWith({});
+    expect(() =>
+      assertSafeIntegrationRun({
+        testPath: integrationFile,
+        env: { DB_NAME: "verifywise_test" },
+        serversDir,
+      }),
+    ).not.toThrow();
+    // A file that reaches no database at all has nothing to protect.
+    expect(() =>
+      assertSafeIntegrationRun({ testPath: integrationFile, env: {}, serversDir }),
+    ).not.toThrow();
+  });
+
+  it("refuses to truncate a connection that is on the database of Servers/.env", () => {
+    const serversDir = serversWith({ ".env": "DB_NAME=zz_dev_database\n" });
+    expect(() =>
+      assertConnectedDatabaseIsNotDev({ connectedDbName: "zz_dev_database", serversDir }),
+    ).toThrow(/same database/i);
+    expect(() =>
+      assertConnectedDatabaseIsNotDev({ connectedDbName: undefined, serversDir }),
+    ).toThrow(/DB_NAME/);
+    expect(() =>
+      assertConnectedDatabaseIsNotDev({ connectedDbName: "zz_integration_test", serversDir }),
+    ).not.toThrow();
   });
 });

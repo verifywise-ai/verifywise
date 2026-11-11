@@ -9,6 +9,7 @@ module.exports = {
   testEnvironment: "node",
   globalSetup: "<rootDir>/tests/compileDesignTokens.js",
   setupFiles: ["<rootDir>/utils/localStoragePolyfill.ts"],
+  setupFilesAfterEnv: ["<rootDir>/tests/integrationDatabaseSetup.js"],
   transform: {
     ...tsJestTransformCfg,
     // ai >= 7 and its transitive deps ship ESM-only builds, so Jest must
