@@ -320,8 +320,17 @@ describe("the cascades", () => {
     });
     expect(await countAll()).toBe(1);
 
-    await sequelize.query(`DELETE FROM organizations WHERE id = :id`, {
-      replacements: { id: other.orgId },
+    // Its only member goes with it, as when the app deletes an organization:
+    // a user left with no organization is refused at commit.
+    await sequelize.transaction(async (transaction) => {
+      await sequelize.query(`DELETE FROM organizations WHERE id = :id`, {
+        replacements: { id: other.orgId },
+        transaction,
+      });
+      await sequelize.query(`DELETE FROM users WHERE id = :userId`, {
+        replacements: { userId: other.userId },
+        transaction,
+      });
     });
     expect(await countAll()).toBe(0);
   });

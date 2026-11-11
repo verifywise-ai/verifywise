@@ -392,8 +392,17 @@ describe("the table", () => {
     await owner.request.put(SETTINGS).send({ researchKeyId: key, analysisKeyId: null });
     expect(await rowOf(owner.orgId)).toBeDefined();
 
-    await sequelize.query(`DELETE FROM organizations WHERE id = :orgId`, {
-      replacements: { orgId: owner.orgId },
+    // Its only member goes with it, as when the app deletes an organization:
+    // a user left with no organization is refused at commit.
+    await sequelize.transaction(async (transaction) => {
+      await sequelize.query(`DELETE FROM organizations WHERE id = :orgId`, {
+        replacements: { orgId: owner.orgId },
+        transaction,
+      });
+      await sequelize.query(`DELETE FROM users WHERE id = :userId`, {
+        replacements: { userId: owner.userId },
+        transaction,
+      });
     });
 
     expect(await rowOf(owner.orgId)).toBeUndefined();
