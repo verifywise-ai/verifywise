@@ -13,13 +13,14 @@
 
 import { Request, Response, NextFunction } from "express";
 import { STATUS_CODE } from "../utils/statusCode.utils";
-import { roleHasPermission } from "../utils/rolePermissions.utils";
+import { requestHasPermission } from "../utils/rolePermissions.utils";
 import type { PermissionKey } from "../config/rolePermissions.config";
 
 interface AuthenticatedRequest extends Request {
   userId?: number;
   role?: string;
   organizationId?: number;
+  isSuperAdmin?: boolean;
 }
 
 /**
@@ -28,7 +29,9 @@ interface AuthenticatedRequest extends Request {
  * `authorize("risks.edit")` resolves the key through the permission matrix:
  * built-in roles against the static built-in matrix (parity with the old
  * role-name allowlists), custom organization roles against the
- * `role_permissions` table (missing row = deny). Routes must not authorize by
+ * `role_permissions` table (missing row = deny). A pure super admin (no
+ * organization) answers from the built-in SuperAdmin matrix; see
+ * isPureSuperAdmin. Routes must not authorize by
  * role name: a custom role can never match one.
  *
  * Returns 401 when authenticateJWT set no role, 403 when the role lacks the
@@ -47,7 +50,7 @@ const authorize =
     }
 
     try {
-      const allowed = await roleHasPermission(req.organizationId ?? null, req.role, permission);
+      const allowed = await requestHasPermission(req, permission);
       if (!allowed) {
         return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
       }

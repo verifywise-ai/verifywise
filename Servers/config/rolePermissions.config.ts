@@ -278,6 +278,11 @@ export const ROLE_PERMISSIONS = {
     description: "Create and update tasks",
     legacyRoles: EDITOR,
   },
+  "incident.create": {
+    module: "Incidents",
+    description: "Report new AI incidents",
+    legacyRoles: EDITOR,
+  },
   "riskLinks.edit": {
     module: "Risks",
     description: "Link related risks and acknowledge inherited risk level changes",
@@ -336,13 +341,16 @@ export const ROLE_PERMISSIONS = {
     legacyRoles: SUPER,
   },
 
-  // ── Screen-only keys (issue #5314) ───────────────────────────────────────
+  // ── Keys from the client's role-name gates (issue #5314) ─────────────────
   // These replace the client's role-name allowlists (the old
-  // Clients/src/application/constants/permissions.ts `allowedRoles`) for areas
-  // whose server routes need only a login, so there is no authorize() call to
-  // reuse. They decide which controls the app offers; `legacyRoles` is the
-  // client allowlist each one replaced, so built-in roles see exactly what
-  // they saw before. The server does not check them (yet).
+  // Clients/src/application/constants/permissions.ts `allowedRoles`);
+  // `legacyRoles` is the client allowlist each one replaced, so built-in roles
+  // see exactly what they saw before. postMarketMonitoring.edit (config and
+  // question writes) and apiKeys.admin (token create/revoke/delete, plus any
+  // super admin) are enforced by the server. The ones marked "screen only"
+  // are not: their routes are shared with flows other roles use (framework
+  // saves, members via the project form) or sit behind a catch-all proxy
+  // (evals), so they only decide what the app offers.
   "useCase.members": {
     module: "Use cases",
     description: "Choose a use case's team members (screen only, not checked by the server)",
@@ -362,7 +370,7 @@ export const ROLE_PERMISSIONS = {
   },
   "postMarketMonitoring.edit": {
     module: "Post-market monitoring",
-    description: "Configure post-market monitoring (screen only, not checked by the server)",
+    description: "Configure post-market monitoring and its questions",
     legacyRoles: EDITOR,
   },
   "evals.edit": {
@@ -373,8 +381,7 @@ export const ROLE_PERMISSIONS = {
   },
   "apiKeys.admin": {
     module: "API keys",
-    description:
-      "Open the API keys settings and manage keys (screen only, not checked by the server)",
+    description: "Create, revoke and delete API keys",
     legacyRoles: ADMIN,
   },
 } satisfies Record<string, PermissionMeta>;

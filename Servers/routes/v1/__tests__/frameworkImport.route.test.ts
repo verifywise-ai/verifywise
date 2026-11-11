@@ -24,11 +24,17 @@ jest.mock("../../../middleware/requireExtensionEnabled.middleware", () => ({
   ),
 }));
 // ext.frameworkImport.edit is an Admin + Editor permission (legacyRoles: EDITOR).
-jest.mock("../../../utils/rolePermissions.utils", () => ({
-  roleHasPermission: jest.fn(async (_org: number, role: string) =>
+jest.mock("../../../utils/rolePermissions.utils", () => {
+  const roleHasPermission = jest.fn(async (_org: number, role: string) =>
     ["Admin", "Editor"].includes(role),
-  ),
-}));
+  );
+  return {
+    roleHasPermission,
+    // authorize() resolves through the request (#5314); same answer here.
+    requestHasPermission: async (req: any, key: string) =>
+      roleHasPermission(req.organizationId ?? null, req.role, key),
+  };
+});
 jest.mock("../../../utils/logger/logHelper", () => ({
   logProcessing: jest.fn(),
   logSuccess: jest.fn(async () => undefined),

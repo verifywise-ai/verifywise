@@ -5,10 +5,16 @@ import { BUILTIN_ROLE_PERMISSIONS } from "../../../config/rolePermissions.config
 jest.mock("../../../database/db", () => ({
   sequelize: { query: jest.fn(), transaction: jest.fn() },
 }));
-jest.mock("../../../utils/rolePermissions.utils", () => ({
-  roleHasPermission: async (_orgId: number | null, role: string, key: string) =>
-    BUILTIN_ROLE_PERMISSIONS[role]?.has(key as never) ?? false,
-}));
+jest.mock("../../../utils/rolePermissions.utils", () => {
+  const roleHasPermission = async (_orgId: number | null, role: string, key: string) =>
+    BUILTIN_ROLE_PERMISSIONS[role]?.has(key as never) ?? false;
+  return {
+    roleHasPermission,
+    // authorize() resolves through the request (#5314); same answer here.
+    requestHasPermission: async (req: any, key: string) =>
+      roleHasPermission(req.organizationId ?? null, req.role, key),
+  };
+});
 jest.mock("../../../middleware/auth.middleware", () => ({
   __esModule: true,
   default: (req: any, _res: any, next: any) => {

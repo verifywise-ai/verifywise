@@ -1,13 +1,15 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 import { Request, Response } from "express";
 import authorize from "../accessControl.middleware";
-import { roleHasPermission } from "../../utils/rolePermissions.utils";
+import { requestHasPermission } from "../../utils/rolePermissions.utils";
 
 jest.mock("../../utils/rolePermissions.utils", () => ({
-  roleHasPermission: jest.fn(),
+  requestHasPermission: jest.fn(),
 }));
 
-const mockRoleHasPermission = roleHasPermission as jest.MockedFunction<typeof roleHasPermission>;
+const mockRoleHasPermission = requestHasPermission as jest.MockedFunction<
+  typeof requestHasPermission
+>;
 
 function createMockReq(role?: string): Partial<Request> {
   // The i18nMiddleware always runs before access-control middleware in the
@@ -65,7 +67,7 @@ describe("accessControl.middleware (authorize)", () => {
 
       await authorize("risks.edit")(req as Request, res as Response, next);
 
-      expect(mockRoleHasPermission).toHaveBeenCalledWith(1, "AI Engineer", "risks.edit");
+      expect(mockRoleHasPermission).toHaveBeenCalledWith(req, "risks.edit");
       expect(next).toHaveBeenCalled();
       expect(res.status).not.toHaveBeenCalled();
     });
@@ -82,14 +84,14 @@ describe("accessControl.middleware (authorize)", () => {
       expect(next).not.toHaveBeenCalled();
     });
 
-    it("should pass null organizationId when the request has none", async () => {
+    it("should hand the whole request to the resolver (role, org, super admin)", async () => {
       mockRoleHasPermission.mockResolvedValue(true);
-      const req = createMockReq("SuperAdmin") as any;
+      const req = { ...createMockReq("SuperAdmin"), isSuperAdmin: true } as any;
       const res = createMockRes();
 
       await authorize("auditLedger.super")(req as Request, res as Response, next);
 
-      expect(mockRoleHasPermission).toHaveBeenCalledWith(null, "SuperAdmin", "auditLedger.super");
+      expect(mockRoleHasPermission).toHaveBeenCalledWith(req, "auditLedger.super");
       expect(next).toHaveBeenCalled();
     });
 
