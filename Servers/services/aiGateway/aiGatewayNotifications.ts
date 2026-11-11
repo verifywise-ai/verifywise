@@ -14,6 +14,8 @@ import { EMAIL_TEMPLATES } from "../../constants/emailTemplates";
 import { sequelize } from "../../database/db";
 import { QueryTypes } from "sequelize";
 import logger from "../../utils/logger/fileLogger";
+import { translate } from "../../utils/i18n.utils";
+import { getUserLanguage } from "../../utils/userPreference.utils";
 
 const FRONTEND_URL = process.env.FRONTEND_URL || "http://localhost:5173";
 
@@ -343,7 +345,7 @@ export async function notifyConfigChange(
   await Promise.allSettled(
     admins
       .filter((admin) => admin.id !== changedByUserId)
-      .map((admin) =>
+      .map(async (admin) =>
         sendInAppNotification(
           organizationId,
           {
@@ -357,7 +359,11 @@ export async function notifyConfigChange(
           sendEmail,
           {
             template: EMAIL_TEMPLATES.AI_GATEWAY_CONFIG_CHANGE,
-            subject: `AI Gateway: ${entityLower} ${actionText}`,
+            subject: translate(
+              sendEmail ? await getUserLanguage(admin.id) : "en",
+              "AI Gateway: {entityLower} {actionText}",
+              { entityLower, actionText },
+            ),
             variables: {
               recipient_name: admin.name,
               change_description: changeDescription,

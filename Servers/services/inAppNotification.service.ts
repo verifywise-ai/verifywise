@@ -925,6 +925,7 @@ export const notifyApprovalStepOverdueEscalation = async (
   baseUrl: string,
 ): Promise<void> => {
   const escalationUser = await getUserById(escalationUserId);
+  const lang = await getUserLanguage(escalationUserId);
   const dueText = request.dueAt.toLocaleString("en-US", {
     year: "numeric",
     month: "long",
@@ -954,7 +955,7 @@ export const notifyApprovalStepOverdueEscalation = async (
     true,
     {
       template: EMAIL_TEMPLATES.APPROVAL_STEP_OVERDUE,
-      subject: `Overdue approval escalated: ${request.name}`,
+      subject: translate(lang, "Overdue approval escalated: {name}", { name: request.name }),
       variables: {
         escalation_user_name: escalationUser ? `${escalationUser.name}` : "there",
         request_name: request.name,
@@ -1076,7 +1077,7 @@ export const notifyRiskDeadlineDueSoon = async (
     sendEmail
       ? {
           template: EMAIL_TEMPLATES.RISK_DEADLINE_DUE,
-          subject: `Risk deadline approaching: ${risk.name}`,
+          subject: translate(lang, "Risk deadline approaching: {name}", { name: risk.name }),
           variables: {
             recipient_name: recipient ? `${recipient.name}` : "there",
             entity_kind: "Risk",
@@ -1140,7 +1141,9 @@ export const notifyModelRiskDueSoon = async (
     sendEmail
       ? {
           template: EMAIL_TEMPLATES.RISK_DEADLINE_DUE,
-          subject: `Model risk target date approaching: ${modelRisk.name}`,
+          subject: translate(lang, "Model risk target date approaching: {name}", {
+            name: modelRisk.name,
+          }),
           variables: {
             recipient_name: recipient ? `${recipient.name}` : "there",
             entity_kind: "Model risk",
@@ -1405,6 +1408,7 @@ export const notifyFileExpiring = async (
   baseUrl: string,
 ): Promise<void> => {
   const recipient = await getUserById(recipientId);
+  const lang = await getUserLanguage(recipientId);
 
   const daysRemainingLabel =
     file.daysRemaining <= 0
@@ -1428,7 +1432,7 @@ export const notifyFileExpiring = async (
     true,
     {
       template: EMAIL_TEMPLATES.FILE_EXPIRING,
-      subject: `File expiring soon: ${file.name}`,
+      subject: translate(lang, "File expiring soon: {name}", { name: file.name }),
       variables: {
         recipient_name: recipient ? `${recipient.name}` : "there",
         file_name: file.name,
@@ -1461,6 +1465,7 @@ export const notifyLifecycleConfirmationDue = async (
   baseUrl: string,
 ): Promise<void> => {
   const recipient = await getUserById(recipientId);
+  const lang = await getUserLanguage(recipientId);
 
   await sendInAppNotification(
     organizationId,
@@ -1477,7 +1482,7 @@ export const notifyLifecycleConfirmationDue = async (
     true,
     {
       template: EMAIL_TEMPLATES.LIFECYCLE_CONFIRMATION_DUE,
-      subject: `Is "${entry.title}" still live?`,
+      subject: translate(lang, 'Is "{title}" still live?', { title: entry.title }),
       variables: {
         recipient_name: recipient ? `${recipient.name}` : "there",
         entry_noun: entry.noun,

@@ -14,6 +14,8 @@ import {
   NotificationType,
 } from "../domain.layer/interfaces/i.notification";
 import logger from "./logger/fileLogger";
+import { translate, type SupportedLang } from "./i18n.utils";
+import { getUserLanguage } from "./userPreference.utils";
 
 /**
  * MRM alerts (gaps #2+#3): recipient resolution, breach auto-finding, and
@@ -225,21 +227,28 @@ export const maybeAutoOpenFindingForBreach = async (
  * point (in-app always; email when the org enabled it — sendInAppNotification
  * gates and swallows email failures itself). Per-recipient try/catch so one
  * failing recipient never blocks the rest; never throws.
+ *
+ * `email` can be a function of the recipient's saved language, for an email
+ * whose subject is translated; the language is only read when email is on.
  */
 export const dispatchAlerts = async (
   organizationId: number,
   recipients: number[],
   notification: Omit<ICreateNotification, "user_id">,
   emailEnabled: boolean,
-  email: IEmailNotificationConfig,
+  email: IEmailNotificationConfig | ((lang: SupportedLang) => IEmailNotificationConfig),
 ): Promise<void> => {
   for (const userId of recipients) {
     try {
+      const emailConfig =
+        typeof email === "function"
+          ? email(emailEnabled ? await getUserLanguage(userId) : "en")
+          : email;
       await sendInAppNotification(
         organizationId,
         { ...notification, user_id: userId },
         emailEnabled,
-        email,
+        emailConfig,
       );
     } catch (error) {
       logger.error("❌ Failed to dispatch MRM alert notification:", error);
@@ -310,14 +319,14 @@ export const notifyRevalidationDue = async (
       action_url: validationPath,
     },
     settings.alert_email_enabled,
-    {
+    (lang) => ({
       template: EMAIL_TEMPLATES.MRM_REVALIDATION_DUE,
-      subject: `Validation overdue: ${label}`,
+      subject: translate(lang, "Validation overdue: {label}", { label }),
       variables: {
         model_label: label,
         due_date: dueDate,
         validation_url: `${baseUrl}${validationPath}`,
       },
-    },
+    }),
   );
 };

@@ -2,6 +2,7 @@ import crypto from "crypto";
 import { NextFunction, Request, Response } from "express";
 import { THIRTY_DAYS_MS } from "../utils/jwt.utils";
 import { STATUS_CODE } from "../utils/statusCode.utils";
+import { translateRequest } from "../utils/i18n.utils";
 
 /**
  * Double-submit-cookie CSRF protection.
@@ -92,7 +93,7 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
     typeof headerToken !== "string" ||
     headerToken.length === 0
   ) {
-    res.status(403).json(STATUS_CODE[403]("CSRF token missing or invalid"));
+    res.status(403).json(STATUS_CODE[403](translateRequest(req, "CSRF token missing or invalid")));
     return;
   }
 
@@ -103,7 +104,7 @@ export function csrfProtection(req: Request, res: Response, next: NextFunction):
     cookieBuffer.length !== headerBuffer.length ||
     !crypto.timingSafeEqual(cookieBuffer, headerBuffer)
   ) {
-    res.status(403).json(STATUS_CODE[403]("CSRF token missing or invalid"));
+    res.status(403).json(STATUS_CODE[403](translateRequest(req, "CSRF token missing or invalid")));
     return;
   }
 

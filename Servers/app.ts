@@ -93,11 +93,11 @@ export function createApp(preRoutesMiddleware?: RequestHandler[]): express.Appli
     express.json({ limit: "10mb" })(req, res, next);
   });
   app.use(cookieParser());
+  // Before csrfProtection so its 403 message is translated too.
+  app.use(i18nMiddleware);
   // Double-submit-cookie CSRF protection for cookie-authenticated flows
   // (refresh-token / logout). Bearer-only API clients pass through.
   app.use(csrfProtection);
-
-  app.use(i18nMiddleware);
 
   type HealthCheck = { status: "ok" | "error"; error?: string };
 

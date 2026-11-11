@@ -430,7 +430,12 @@ export async function saveControls(req: RequestWithFile, res: Response): Promise
           .status(400)
           .json(
             STATUS_CODE[400](
-              `User${invalidIds.length === 1 ? "" : "s"} ${invalidIds.join(", ")} ${invalidIds.length === 1 ? "is" : "are"} not part of this organization and cannot be assigned.`,
+              req.t!(
+                invalidIds.length === 1
+                  ? "User {ids} is not part of this organization and cannot be assigned."
+                  : "Users {ids} are not part of this organization and cannot be assigned.",
+                { ids: invalidIds.join(", ") },
+              ),
             ),
           );
       }

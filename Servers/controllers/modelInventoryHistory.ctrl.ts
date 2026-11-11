@@ -61,11 +61,13 @@ export async function getTimeseries(req: Request, res: Response) {
             }),
           ),
         );
-        return res
-          .status(400)
-          .json(
-            STATUS_CODE[400](`Invalid timeframe. Must be one of: ${validTimeframes.join(", ")}`),
-          );
+        return res.status(400).json(
+          STATUS_CODE[400](
+            req.t!("Invalid timeframe. Must be one of: {options}", {
+              options: validTimeframes.join(", "),
+            }),
+          ),
+        );
       }
 
       timeseriesData = await getTimeseriesForTimeframe(
@@ -90,7 +92,9 @@ export async function getTimeseries(req: Request, res: Response) {
         return res
           .status(400)
           .json(STATUS_CODE[400](req.t!("Invalid date format. Use ISO date format.")));
-        return res.status(400).json(STATUS_CODE[400]("Invalid date format. Use ISO date format."));
+        return res
+          .status(400)
+          .json(STATUS_CODE[400](req.t!("Invalid date format. Use ISO date format.")));
       }
 
       if (startDate >= endDate) {

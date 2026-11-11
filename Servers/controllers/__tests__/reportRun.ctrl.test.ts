@@ -41,6 +41,7 @@ import {
 } from "../../utils/reportRun.utils";
 import { getFileById } from "../../utils/fileUpload.utils";
 import { getRunAnalysesQuery } from "../../utils/reportRunAnalysis.utils";
+import { getTranslator } from "../../utils/i18n.utils";
 
 const mockGetRun = getRunQuery as jest.MockedFunction<typeof getRunQuery>;
 const mockCanView = canViewRunQuery as jest.MockedFunction<typeof canViewRunQuery>;
@@ -55,6 +56,7 @@ function createMockReq(params: any = {}, role?: string): Partial<Request> {
     query: {},
     organizationId: 5,
     userId: 3,
+    t: getTranslator("en"),
     ...(role ? { role } : {}),
   } as Partial<Request>;
 }

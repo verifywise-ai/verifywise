@@ -53,7 +53,7 @@ function runViewer(req: Request): ReportRunViewer {
 async function denyUnlessVisible(req: Request, res: Response): Promise<boolean> {
   const visible = await canViewRunQuery(Number(req.params.id), req.organizationId!, runViewer(req));
   if (!visible) {
-    res.status(404).json(STATUS_CODE[404]("not found"));
+    res.status(404).json(STATUS_CODE[404](req.t!("not found")));
     return true;
   }
   return false;
@@ -103,7 +103,7 @@ export async function getRun(req: Request, res: Response): Promise<any> {
   try {
     if (await denyUnlessVisible(req, res)) return;
     const run = await getRunQuery(Number(req.params.id), req.organizationId!);
-    if (!run) return res.status(404).json(STATUS_CODE[404]("not found"));
+    if (!run) return res.status(404).json(STATUS_CODE[404](req.t!("not found")));
     return res.status(200).json(STATUS_CODE[200](run));
   } catch (e) {
     return res.status(500).json(STATUS_CODE[500]((e as Error).message));
@@ -114,11 +114,11 @@ export async function downloadRun(req: Request, res: Response): Promise<any> {
   try {
     if (await denyUnlessVisible(req, res)) return;
     const run = await getRunQuery(Number(req.params.id), req.organizationId!);
-    if (!run || !run.file_id) return res.status(404).json(STATUS_CODE[404]("not found"));
+    if (!run || !run.file_id) return res.status(404).json(STATUS_CODE[404](req.t!("not found")));
     // Org-scoped file fetch (WHERE organization_id = :org AND id = :id) returns
     // a FileModel whose `content` is the stored file buffer.
     const file: any = await getFileById(run.file_id, req.organizationId!);
-    if (!file) return res.status(404).json(STATUS_CODE[404]("file missing"));
+    if (!file) return res.status(404).json(STATUS_CODE[404](req.t!("file missing")));
     // Same shape as the file-manager download path (fileManager.ctrl.ts):
     // sanitize before the name reaches a header — a quote or CRLF in
     // output_filename would otherwise rewrite it — declare nosniff, and write
@@ -146,7 +146,7 @@ export async function getRunAnalyses(req: Request, res: Response): Promise<any> 
     if (await denyUnlessVisible(req, res)) return;
     const id = Number(req.params.id);
     const run = await getRunQuery(id, req.organizationId!);
-    if (!run) return res.status(404).json(STATUS_CODE[404]("not found"));
+    if (!run) return res.status(404).json(STATUS_CODE[404](req.t!("not found")));
     const analyses = await getRunAnalysesQuery(id, req.organizationId!);
     return res.status(200).json(STATUS_CODE[200](analyses));
   } catch (e) {
@@ -170,7 +170,7 @@ async function setArchived(req: Request, res: Response, archived: boolean): Prom
       archived,
       req.userId ?? null,
     );
-    if (!run) return res.status(404).json(STATUS_CODE[404]("not found"));
+    if (!run) return res.status(404).json(STATUS_CODE[404](req.t!("not found")));
     return res.status(200).json(STATUS_CODE[200](run));
   } catch (e) {
     return res.status(500).json(STATUS_CODE[500]((e as Error).message));
@@ -189,7 +189,7 @@ export async function deleteRun(req: Request, res: Response): Promise<any> {
   try {
     if (await denyUnlessVisible(req, res)) return;
     const deleted = await deleteRunQuery(Number(req.params.id), req.organizationId!);
-    if (!deleted) return res.status(404).json(STATUS_CODE[404]("not found"));
+    if (!deleted) return res.status(404).json(STATUS_CODE[404](req.t!("not found")));
     return res.status(200).json(STATUS_CODE[200]({ id: Number(req.params.id) }));
   } catch (e) {
     return res.status(500).json(STATUS_CODE[500]((e as Error).message));

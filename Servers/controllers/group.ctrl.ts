@@ -54,7 +54,7 @@ const ensureProjectAccess = async (
   mode: "read" | "write",
 ): Promise<boolean> => {
   if (!Number.isInteger(projectId) || projectId <= 0) {
-    res.status(400).json(STATUS_CODE[400]("project id must be a positive integer"));
+    res.status(400).json(STATUS_CODE[400](req.t!("project id must be a positive integer")));
     return false;
   }
   const viewer = { userId: req.userId!, role: req.role ?? "" };
