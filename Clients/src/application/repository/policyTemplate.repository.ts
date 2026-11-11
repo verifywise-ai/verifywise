@@ -49,5 +49,11 @@ export async function deletePolicyTemplate(id: number): Promise<{ ok: boolean }>
 export async function createPolicyTemplateFromPolicy(
   body: PolicyTemplateFromPolicyBody,
 ): Promise<PolicyTemplate> {
-  return extract(await apiServices.post("/v1/policy-templates/from-policy", body));
+  // The Save as template modal shows its own error (including the 409 reason),
+  // so the global toast would be a duplicate.
+  return extract(
+    await apiServices.post("/v1/policy-templates/from-policy", body, {
+      suppressGlobalErrorToast: true,
+    }),
+  );
 }

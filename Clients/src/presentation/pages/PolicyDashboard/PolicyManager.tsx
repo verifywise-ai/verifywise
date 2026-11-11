@@ -236,8 +236,9 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
     } catch (err: any) {
       // Show the server's reason (for example a name that is already taken),
       // so the user can change the name in the still-open modal.
-      // STATUS_CODE responses carry the reason in `data` ({ message: "Conflict", data: "..." }).
-      const reason = err?.response?.status === 409 ? err?.response?.data?.data : undefined;
+      // apiServices throws a CustomException: `status`, and `response` is the
+      // body, where STATUS_CODE puts the reason ({ message: "Conflict", data: "..." }).
+      const reason = err?.status === 409 ? err?.response?.data : undefined;
       handleAlert({
         variant: "error",
         body:
@@ -357,10 +358,11 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
     }
   }, []);
 
-  // Auto-dismiss info alert after 3 seconds with fade animation
+  // Show every alert; success and error alerts already clear themselves via
+  // handleAlert's timeout. Info alerts auto-dismiss after 3 seconds with a fade.
   useEffect(() => {
+    if (alert) setShowAlert(true);
     if (alert && alert.variant === "info") {
-      setShowAlert(true);
       const timer = setTimeout(() => {
         setShowAlert(false);
         setTimeout(() => setAlert(null), 300);

@@ -188,15 +188,15 @@ describe("PolicyManager", () => {
 
   it("shows the server reason when a template name is already taken", async () => {
     mockCreateFromPolicy.mockRejectedValue({
-      response: {
-        status: 409,
-        data: { message: "Conflict", data: "a template with this name already exists" },
-      },
+      // Shape of the CustomException that apiServices throws.
+      message: "Conflict",
+      status: 409,
+      response: { message: "Conflict", data: "a template with this name already exists" },
     });
     renderWithProviders(<PolicyManager tags={[]} />, { route: "/policies" });
     fireEvent.click(screen.getByTestId("save-template-first"));
     fireEvent.click(await screen.findByRole("button", { name: /save template/i }));
-    expect(await screen.findByText("A template with this name already exists")).toBeInTheDocument();
+    expect(await screen.findByText("A template with this name already exists")).toBeVisible();
     // The modal stays open so the name can be changed.
     expect(screen.getByDisplayValue("AI Ethics Policy (template)")).toBeInTheDocument();
   });
