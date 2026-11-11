@@ -12,11 +12,22 @@ import {
  *   - buildExcelTemplate() → an .xlsx buffer describing the framework,
  *     its topics, and their subtopics in one worksheet.
  *   - importFramework() → validates every row, then upserts an
- *     organization-scoped `frameworks` row (source='imported') with its
- *     topics/subtopics in a single transaction. Re-uploading the same
- *     framework name replaces its structure — the contract is idempotent.
- *     A batch with any validation error inserts nothing.
+ *     organization-scoped `imported_frameworks` row with its topics and
+ *     subtopics in a single transaction. Re-uploading the same framework
+ *     name replaces its structure, so the contract is idempotent. A batch
+ *     with any validation error inserts nothing.
+ *
+ * Imported frameworks are deliberately NOT rows in the global `frameworks`
+ * catalog: that table is shared by every organization and feeds the use case
+ * framework pickers, and an imported framework has no struct tables to
+ * assess against. See migration 20261111092002-imported-framework-storage.js.
  */
+
+/** Upper bound on rows per upload; keeps one transaction and one request bounded. */
+export const MAX_IMPORT_ROWS = 5000;
+
+/** Rows per multi-row INSERT (7 bind parameters each, far below Postgres' 65535 cap). */
+const INSERT_CHUNK_SIZE = 1000;
 
 // ---------------------------------------------------------------------------
 // EXCEL TEMPLATE
@@ -85,14 +96,14 @@ export async function buildExcelTemplate(
 // ---------------------------------------------------------------------------
 
 export interface FrameworkImportRow {
-  framework_name?: string;
-  framework_description?: string;
-  topic_number?: string | number;
-  topic_name?: string;
-  topic_description?: string;
-  subtopic_number?: string | number;
-  subtopic_name?: string;
-  subtopic_description?: string;
+  framework_name?: unknown;
+  framework_description?: unknown;
+  topic_number?: unknown;
+  topic_name?: unknown;
+  topic_description?: unknown;
+  subtopic_number?: unknown;
+  subtopic_name?: unknown;
+  subtopic_description?: unknown;
 }
 
 export interface FrameworkImportError {
@@ -139,25 +150,40 @@ export interface ImportedFramework {
 }
 
 export interface ImportedFrameworkPatch {
-  name?: string;
-  description?: string | null;
-  is_active?: boolean;
+  name?: unknown;
+  description?: unknown;
+  is_active?: unknown;
 }
 
-/** ExcelJS cells can arrive as rich-text objects — flatten to plain text. */
-function asText(value: unknown): string | undefined {
+/**
+ * Flatten an ExcelJS cell value to trimmed text. Cells arrive as primitives,
+ * Dates, rich text ({richText}), hyperlinks ({text}), formulas ({formula,
+ * result}) or errors ({error}); String() on the objects gives "[object Object]".
+ */
+export function asText(value: unknown): string | undefined {
   if (value === undefined || value === null) return undefined;
+  if (value instanceof Date) return value.toISOString().slice(0, 10);
   if (typeof value === "object") {
-    const rich = (value as { richText?: Array<{ text: string }> }).richText;
-    if (Array.isArray(rich))
-      return rich
-        .map((r) => r.text)
+    const cell = value as {
+      richText?: Array<{ text?: unknown }>;
+      text?: unknown;
+      formula?: unknown;
+      sharedFormula?: unknown;
+      result?: unknown;
+      error?: unknown;
+    };
+    if (Array.isArray(cell.richText)) {
+      return cell.richText
+        .map((r) => (r?.text === undefined || r?.text === null ? "" : String(r.text)))
         .join("")
         .trim();
-    if ((value as { text?: string }).text !== undefined) {
-      return String((value as { text: string }).text).trim();
     }
-    return String(value).trim();
+    if ("formula" in cell || "sharedFormula" in cell || "result" in cell) {
+      return asText(cell.result);
+    }
+    if (cell.text !== undefined) return asText(cell.text);
+    if (cell.error !== undefined) return undefined;
+    return undefined;
   }
   return String(value).trim();
 }
@@ -270,23 +296,83 @@ export function validateRow(row: FrameworkImportRow, rowIndex: number): Framewor
   return errors;
 }
 
+/**
+ * Cross-row checks that the per-row validation cannot see: one framework per
+ * sheet, a topic number always carrying the same topic name, and a subtopic
+ * number used at most once per topic (the storage's unique key — without this
+ * check a duplicate surfaced as a misleading name conflict).
+ */
+export function validateStructure(rows: FrameworkImportRow[]): FrameworkImportError[] {
+  const errors: FrameworkImportError[] = [];
+  const frameworkName = asText(rows[0]?.framework_name);
+  const topicNames = new Map<string, { name: string; row: number }>();
+  const subtopicRows = new Map<string, number>();
+
+  rows.forEach((row, i) => {
+    const rowIndex = i + 2; // header row is row 1
+    const name = asText(row.framework_name);
+    if (frameworkName && name && name !== frameworkName) {
+      errors.push({
+        row: rowIndex,
+        field: "framework_name",
+        message: "All rows must define the same framework",
+      });
+    }
+
+    const topicNumber = asText(row.topic_number);
+    const topicName = asText(row.topic_name);
+    if (!topicNumber || !topicName) return;
+
+    const seen = topicNames.get(topicNumber);
+    if (!seen) {
+      topicNames.set(topicNumber, { name: topicName, row: rowIndex });
+    } else if (seen.name !== topicName) {
+      errors.push({
+        row: rowIndex,
+        field: "topic_name",
+        message: `Topic ${topicNumber} is named "${seen.name}" on row ${seen.row}; every row of a topic must use the same name`,
+      });
+    }
+
+    const subtopicNumber = asText(row.subtopic_number);
+    if (!subtopicNumber) return;
+    const key = `${topicNumber}\u0000${subtopicNumber}`;
+    const firstRow = subtopicRows.get(key);
+    if (firstRow === undefined) {
+      subtopicRows.set(key, rowIndex);
+    } else {
+      errors.push({
+        row: rowIndex,
+        field: "subtopic_number",
+        message: `Subtopic ${subtopicNumber} already appears under topic ${topicNumber} on row ${firstRow}`,
+      });
+    }
+  });
+
+  return errors;
+}
+
 interface ParsedTopic {
   topicNumber: string;
   name: string;
   description: string | null;
 }
 
-interface ParsedRow {
-  topic: ParsedTopic;
-  subtopic: {
-    subtopicNumber: string;
-    name: string;
-    description: string | null;
-  } | null;
+interface ParsedSubtopic {
+  topicNumber: string;
+  subtopicNumber: string;
+  name: string;
+  description: string | null;
 }
 
 function isUniqueViolation(err: unknown): boolean {
   return typeof err === "object" && err !== null && (err as { code?: string }).code === "23505";
+}
+
+function chunk<T>(items: T[], size: number): T[][] {
+  const out: T[][] = [];
+  for (let i = 0; i < items.length; i += size) out.push(items.slice(i, i + size));
+  return out;
 }
 
 async function deleteImportedStructure(
@@ -315,72 +401,68 @@ export async function importFramework(
   organizationId: number,
   userId: number,
 ): Promise<FrameworkImportResult> {
-  void userId; // reserved for audit attribution, mirroring the risk-import signature
-  const errors: FrameworkImportError[] = [];
+  if (rows.length > MAX_IMPORT_ROWS) {
+    return allFailed(
+      [
+        {
+          row: 0,
+          field: "file",
+          message: `A file can have at most ${MAX_IMPORT_ROWS} rows; split the framework or remove empty rows`,
+        },
+      ],
+      rows.length,
+    );
+  }
 
+  const errors: FrameworkImportError[] = [];
   rows.forEach((row, i) => {
     // +2 accounts for the header row (row 1) plus 1-based indexing.
     errors.push(...validateRow(row, i + 2));
   });
-
-  // Every row belongs to the same framework — the sheet describes ONE
-  // framework's structure, so a name change mid-sheet is a data error.
-  const frameworkName = asText(rows[0]?.framework_name);
-  if (frameworkName) {
-    rows.forEach((row, i) => {
-      const name = asText(row.framework_name);
-      if (name && name !== frameworkName) {
-        errors.push({
-          row: i + 2,
-          field: "framework_name",
-          message: "All rows must define the same framework",
-        });
-      }
-    });
-  }
+  errors.push(...validateStructure(rows));
 
   if (errors.length > 0) {
-    return allFailed(errors, rows.length);
+    return allFailed(
+      errors.sort((a, b) => a.row - b.row),
+      rows.length,
+    );
   }
 
-  const frameworkDescription = asText(rows[0]?.framework_description) ?? null;
+  const frameworkName = asText(rows[0].framework_name)!;
+  const frameworkDescription = asText(rows[0].framework_description) ?? null;
 
   // Parse + dedupe topics, preserving first-seen order.
   const topicMap = new Map<string, ParsedTopic>();
-  const parsedRows: ParsedRow[] = [];
+  const subtopics: ParsedSubtopic[] = [];
   for (const row of rows) {
     const topicNumber = asText(row.topic_number)!;
-    const topic: ParsedTopic = {
-      topicNumber,
-      name: asText(row.topic_name)!,
-      description: asText(row.topic_description) ?? null,
-    };
     if (!topicMap.has(topicNumber)) {
-      topicMap.set(topicNumber, topic);
+      topicMap.set(topicNumber, {
+        topicNumber,
+        name: asText(row.topic_name)!,
+        description: asText(row.topic_description) ?? null,
+      });
     }
     const subtopicNumber = asText(row.subtopic_number);
     const subtopicName = asText(row.subtopic_name);
-    parsedRows.push({
-      topic,
-      subtopic:
-        subtopicNumber && subtopicName
-          ? {
-              subtopicNumber,
-              name: subtopicName,
-              description: asText(row.subtopic_description) ?? null,
-            }
-          : null,
-    });
+    if (subtopicNumber && subtopicName) {
+      subtopics.push({
+        topicNumber,
+        subtopicNumber,
+        name: subtopicName,
+        description: asText(row.subtopic_description) ?? null,
+      });
+    }
   }
 
   const transaction = await sequelize.transaction();
 
   try {
-    // Upsert on (organization, name) among imported frameworks — a re-upload
-    // replaces the previous structure instead of creating a duplicate.
+    // Upsert on (organization, lower(name)): a re-upload replaces the
+    // previous structure instead of creating a duplicate.
     const existing = (await sequelize.query(
-      `SELECT id FROM frameworks
-        WHERE organization_id = :organizationId AND name = :frameworkName AND source = 'imported'
+      `SELECT id FROM imported_frameworks
+        WHERE organization_id = :organizationId AND lower(name) = lower(:frameworkName)
         LIMIT 1;`,
       { replacements: { organizationId, frameworkName }, transaction, type: QueryTypes.SELECT },
     )) as Array<{ id: number }>;
@@ -389,23 +471,21 @@ export async function importFramework(
     if (existing.length > 0) {
       frameworkId = existing[0].id;
       await sequelize.query(
-        `UPDATE frameworks
+        `UPDATE imported_frameworks
             SET description = :frameworkDescription, updated_at = NOW()
-          WHERE id = :frameworkId;`,
-        { replacements: { frameworkId, frameworkDescription }, transaction },
+          WHERE id = :frameworkId AND organization_id = :organizationId;`,
+        { replacements: { frameworkId, organizationId, frameworkDescription }, transaction },
       );
       await deleteImportedStructure(frameworkId, organizationId, transaction);
     } else {
       const inserted = (await sequelize.query(
-        `INSERT INTO frameworks
-           (name, description, version, is_organizational, is_active, is_demo,
-            organization_id, source, created_at, updated_at)
+        `INSERT INTO imported_frameworks
+           (organization_id, name, description, is_active, created_by, created_at, updated_at)
          VALUES
-           (:frameworkName, :frameworkDescription, '1.0', FALSE, TRUE, FALSE,
-            :organizationId, 'imported', NOW(), NOW())
+           (:organizationId, :frameworkName, :frameworkDescription, TRUE, :userId, NOW(), NOW())
          RETURNING id;`,
         {
-          replacements: { organizationId, frameworkName, frameworkDescription },
+          replacements: { organizationId, frameworkName, frameworkDescription, userId },
           transaction,
           type: QueryTypes.SELECT,
         },
@@ -413,56 +493,49 @@ export async function importFramework(
       frameworkId = inserted[0].id;
     }
 
+    // Topics: one multi-row INSERT per chunk.
     const topicIds = new Map<string, number>();
-    let orderNo = 0;
-    for (const [topicNumber, topic] of topicMap) {
+    const topics = Array.from(topicMap.values());
+    let topicOrder = 0;
+    for (const part of chunk(topics, INSERT_CHUNK_SIZE)) {
+      const replacements: Record<string, unknown> = { organizationId, frameworkId };
+      const values = part.map((topic, i) => {
+        replacements[`n${i}`] = topic.topicNumber;
+        replacements[`t${i}`] = topic.name;
+        replacements[`d${i}`] = topic.description;
+        replacements[`o${i}`] = topicOrder++;
+        return `(:organizationId, :frameworkId, :n${i}, :t${i}, :d${i}, :o${i}, NOW(), NOW())`;
+      });
       const inserted = (await sequelize.query(
         `INSERT INTO imported_framework_topics
            (organization_id, framework_id, topic_number, name, description, order_no, created_at, updated_at)
-         VALUES
-           (:organizationId, :frameworkId, :topicNumber, :name, :description, :orderNo, NOW(), NOW())
-         RETURNING id;`,
-        {
-          replacements: {
-            organizationId,
-            frameworkId,
-            topicNumber,
-            name: topic.name,
-            description: topic.description,
-            orderNo: orderNo++,
-          },
-          transaction,
-          type: QueryTypes.SELECT,
-        },
-      )) as Array<{ id: number }>;
-      topicIds.set(topicNumber, inserted[0].id);
+         VALUES ${values.join(", ")}
+         RETURNING id, topic_number;`,
+        { replacements, transaction, type: QueryTypes.SELECT },
+      )) as Array<{ id: number; topic_number: string }>;
+      for (const row of inserted) topicIds.set(row.topic_number, row.id);
     }
 
-    const subtopicOrder = new Map<number, number>();
-    let importedSubtopics = 0;
-    for (const { topic, subtopic } of parsedRows) {
-      if (!subtopic) continue;
-      const topicId = topicIds.get(topic.topicNumber)!;
-      const order = subtopicOrder.get(topicId) ?? 0;
-      subtopicOrder.set(topicId, order + 1);
+    // Subtopics: ordered per topic, one multi-row INSERT per chunk.
+    const subtopicOrder = new Map<string, number>();
+    for (const part of chunk(subtopics, INSERT_CHUNK_SIZE)) {
+      const replacements: Record<string, unknown> = { organizationId };
+      const values = part.map((sub, i) => {
+        const order = subtopicOrder.get(sub.topicNumber) ?? 0;
+        subtopicOrder.set(sub.topicNumber, order + 1);
+        replacements[`p${i}`] = topicIds.get(sub.topicNumber)!;
+        replacements[`n${i}`] = sub.subtopicNumber;
+        replacements[`t${i}`] = sub.name;
+        replacements[`d${i}`] = sub.description;
+        replacements[`o${i}`] = order;
+        return `(:organizationId, :p${i}, :n${i}, :t${i}, :d${i}, :o${i}, NOW(), NOW())`;
+      });
       await sequelize.query(
         `INSERT INTO imported_framework_subtopics
            (organization_id, topic_id, subtopic_number, name, description, order_no, created_at, updated_at)
-         VALUES
-           (:organizationId, :topicId, :subtopicNumber, :name, :description, :orderNo, NOW(), NOW());`,
-        {
-          replacements: {
-            organizationId,
-            topicId,
-            subtopicNumber: subtopic.subtopicNumber,
-            name: subtopic.name,
-            description: subtopic.description,
-            orderNo: order,
-          },
-          transaction,
-        },
+         VALUES ${values.join(", ")};`,
+        { replacements, transaction },
       );
-      importedSubtopics++;
     }
 
     await transaction.commit();
@@ -470,7 +543,7 @@ export async function importFramework(
       success: true,
       imported_framework_id: frameworkId,
       imported_topics: topicMap.size,
-      imported_subtopics: importedSubtopics,
+      imported_subtopics: subtopics.length,
       failed: 0,
       errors: [],
       importedAt: new Date().toISOString(),
@@ -481,6 +554,8 @@ export async function importFramework(
     } catch {
       // rollback failure — swallow so the outer error propagates
     }
+    // Validation rules out duplicate topics/subtopics, so the only unique
+    // index left is the framework name: two uploads of the same new name racing.
     if (isUniqueViolation(err)) {
       throw new ConflictException(
         `A framework named "${frameworkName}" already exists for this organization`,
@@ -503,7 +578,7 @@ export async function listImportedFrameworksQuery(
     `
     SELECT f.id, f.name, f.description, f.is_active, f.created_at, f.updated_at,
            COALESCE(t.topics, '[]'::jsonb) AS topics
-      FROM frameworks f
+      FROM imported_frameworks f
       LEFT JOIN LATERAL (
         SELECT jsonb_agg(
                  jsonb_build_object(
@@ -527,11 +602,11 @@ export async function listImportedFrameworksQuery(
                      ) ORDER BY sub.order_no, sub.id
                    ) AS subtopics
               FROM imported_framework_subtopics sub
-             WHERE sub.topic_id = topic.id
+             WHERE sub.topic_id = topic.id AND sub.organization_id = :organizationId
           ) st ON TRUE
-         WHERE topic.framework_id = f.id
+         WHERE topic.framework_id = f.id AND topic.organization_id = :organizationId
       ) t ON TRUE
-     WHERE f.organization_id = :organizationId AND f.source = 'imported'
+     WHERE f.organization_id = :organizationId
      ORDER BY f.created_at DESC, f.id ASC;
     `,
     { replacements: { organizationId }, type: QueryTypes.SELECT },
@@ -539,9 +614,9 @@ export async function listImportedFrameworksQuery(
 }
 
 /**
- * Guarded write helper: only imported rows owned by this organization may be
- * mutated. Bundled catalog rows and other orgs' imports both miss the WHERE
- * clause and surface as 404 (they are not addressable in this org's tenant).
+ * Guarded write helper: only imported frameworks owned by this organization
+ * may be mutated. Another org's id misses the WHERE clause and surfaces as
+ * 404 (it is not addressable in this org's tenant).
  */
 async function findImportedFrameworkId(
   id: number,
@@ -549,8 +624,8 @@ async function findImportedFrameworkId(
   transaction: Transaction,
 ): Promise<number> {
   const rows = (await sequelize.query(
-    `SELECT id FROM frameworks
-      WHERE id = :id AND organization_id = :organizationId AND source = 'imported'
+    `SELECT id FROM imported_frameworks
+      WHERE id = :id AND organization_id = :organizationId
       LIMIT 1;`,
     { replacements: { id, organizationId }, transaction, type: QueryTypes.SELECT },
   )) as Array<{ id: number }>;
@@ -560,12 +635,19 @@ async function findImportedFrameworkId(
   return rows[0].id;
 }
 
-export async function updateImportedFrameworkQuery(
-  id: number,
-  organizationId: number,
-  patch: ImportedFrameworkPatch,
-): Promise<void> {
+interface NormalizedPatch {
+  name?: string;
+  description?: string | null;
+  is_active?: boolean;
+}
+
+/** Type-check a PATCH body; a wrong type is a 400, never a 500. */
+export function normalizePatch(patch: ImportedFrameworkPatch): NormalizedPatch {
+  const out: NormalizedPatch = {};
   if (patch.name !== undefined) {
+    if (typeof patch.name !== "string") {
+      throw new ValidationException("Framework name must be text", "name", patch.name);
+    }
     const name = patch.name.trim();
     if (name.length < 2 || name.length > 255) {
       throw new ValidationException(
@@ -574,22 +656,59 @@ export async function updateImportedFrameworkQuery(
         patch.name,
       );
     }
-    patch = { ...patch, name };
+    out.name = name;
   }
+  if (patch.description !== undefined) {
+    if (patch.description !== null && typeof patch.description !== "string") {
+      throw new ValidationException(
+        "Framework description must be text",
+        "description",
+        patch.description,
+      );
+    }
+    if (typeof patch.description === "string" && patch.description.length > 1000) {
+      throw new ValidationException(
+        "Framework description must not exceed 1000 characters",
+        "description",
+        patch.description,
+      );
+    }
+    out.description = patch.description;
+  }
+  if (patch.is_active !== undefined) {
+    if (typeof patch.is_active !== "boolean") {
+      throw new ValidationException(
+        "is_active must be true or false",
+        "is_active",
+        patch.is_active,
+      );
+    }
+    out.is_active = patch.is_active;
+  }
+  return out;
+}
+
+export async function updateImportedFrameworkQuery(
+  id: number,
+  organizationId: number,
+  rawPatch: ImportedFrameworkPatch,
+): Promise<void> {
+  const patch = normalizePatch(rawPatch);
 
   const transaction = await sequelize.transaction();
   try {
     await findImportedFrameworkId(id, organizationId, transaction);
     await sequelize.query(
-      `UPDATE frameworks
+      `UPDATE imported_frameworks
           SET name = COALESCE(:name, name),
               description = CASE WHEN :hasDescription THEN :description ELSE description END,
               is_active = COALESCE(:isActive, is_active),
               updated_at = NOW()
-        WHERE id = :id;`,
+        WHERE id = :id AND organization_id = :organizationId;`,
       {
         replacements: {
           id,
+          organizationId,
           name: patch.name ?? null,
           hasDescription: patch.description !== undefined,
           description: patch.description ?? null,
@@ -623,12 +742,12 @@ export async function deleteImportedFrameworkQuery(
   const transaction = await sequelize.transaction();
   try {
     await findImportedFrameworkId(id, organizationId, transaction);
-    // Subtopics/topics cascade on framework delete via the topic FK; delete
+    // Topics/subtopics cascade on framework delete via their FKs; delete
     // explicitly anyway so removal stays scoped to this org's rows.
     await deleteImportedStructure(id, organizationId, transaction);
     await sequelize.query(
-      `DELETE FROM frameworks
-        WHERE id = :id AND organization_id = :organizationId AND source = 'imported';`,
+      `DELETE FROM imported_frameworks
+        WHERE id = :id AND organization_id = :organizationId;`,
       { replacements: { id, organizationId }, transaction },
     );
     await transaction.commit();

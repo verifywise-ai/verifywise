@@ -54,8 +54,8 @@ export const taskFixture: EntityFixture = {
 /**
  * Groups / teams (#5253): seeded straight into the org-scoped tables — the
  * groups API only writes through verifywise.groups, so the fixture mirrors a
- * direct INSERT. Membership and project links are covered as part of the
- * `groups` registry entry's tables.
+ * direct INSERT. Membership and project links are covered by
+ * groups-sub-resources.isolation.test.ts.
  */
 export const groupFixture: EntityFixture = {
   seed: async (ctx) => {

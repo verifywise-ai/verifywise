@@ -162,6 +162,11 @@ Use the next unused id. Ids 1–25 are taken, so the next is **26**. Check the
 registry and `SELECT max(id) FROM verifywise.frameworks` first. Table names
 must not collide with existing tables.
 
+`verifywise.frameworks` holds bundled frameworks only. Frameworks that an
+organization imports from a spreadsheet (the `framework-import` extension,
+#5254) live in their own `imported_frameworks` table with its own id sequence,
+so they never take a bundled id and never reach this table.
+
 ### 2. Register it
 
 Add the import and the entry to `FRAMEWORK_STRUCTURES` in

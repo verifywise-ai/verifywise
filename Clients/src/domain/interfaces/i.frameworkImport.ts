@@ -1,6 +1,6 @@
 /**
  * Framework import DTOs (#5254) — exchanged with the
- * /api/extensions/framework-import endpoints.
+ * /api/v1/framework-import endpoints.
  */
 
 export interface FrameworkImportRow {

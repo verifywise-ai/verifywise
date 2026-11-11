@@ -91,14 +91,22 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
   crudEntity("tasks", "/api/tasks", ["tasks", "task_assignees"], taskFixture, {
     updateVerb: "PUT",
   }),
-  // Groups / teams with group-level use-case access (#5253): membership and
-  // project_groups rows are only reachable through the groups API.
-  crudEntity(
-    "groups",
-    "/api/v1/groups",
-    ["groups", "group_members", "project_groups"],
-    groupFixture,
-  ),
+  // Groups / teams with group-level use-case access (#5253). The group itself
+  // runs through the matrix; its members and its use case links are
+  // sub-resources with no read-by-id route, covered by a hand-written test.
+  crudEntity("groups", "/api/v1/groups", ["groups"], groupFixture),
+  {
+    name: "group_members",
+    tables: ["group_members"],
+    baseRoute: "/api/v1/groups/:id/members",
+    testFile: "groups-sub-resources.isolation.test.ts",
+  },
+  {
+    name: "project_groups",
+    tables: ["project_groups"],
+    baseRoute: "/api/v1/groups/projects/:projectId/groups",
+    testFile: "groups-sub-resources.isolation.test.ts",
+  },
   // Organisation-owned policy templates (#5261).
   crudEntity(
     "policy_templates",
@@ -327,6 +335,15 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     tables: ["risk_links"],
     baseRoute: "/api/riskLinks",
     testFile: "riskLinks.isolation.test.ts",
+  },
+  {
+    // Framework import extension (#5254). The list is keyed by the caller's
+    // organization and topics/subtopics are only reachable through their
+    // framework, so a hand-written file covers all three tables.
+    name: "imported_frameworks",
+    tables: ["imported_frameworks", "imported_framework_topics", "imported_framework_subtopics"],
+    baseRoute: "/api/v1/framework-import/imported",
+    testFile: "framework-import.isolation.test.ts",
   },
 ];
 

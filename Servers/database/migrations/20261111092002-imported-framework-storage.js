@@ -3,52 +3,46 @@
 /**
  * Imported framework storage (#5254, VW-CQ-02).
  *
- * verifywise.frameworks is the GLOBAL bundled catalog (EU AI Act, ISO 42001,
- * ...). This migration makes it multi-tenant-safe for self-service imports:
+ * Imported frameworks live in their own organization-scoped tables and never
+ * in verifywise.frameworks. That table is the GLOBAL bundled catalog (EU AI
+ * Act, ISO 42001, ... ids 1-25 plus the ids reserved for future bundled
+ * frameworks): every org reads it, use cases attach to it through
+ * projects_frameworks, and the per-framework struct tables reference it.
+ * Keeping imports out of it means:
+ *   - no generic framework reader can show one org's import to another org;
+ *   - an import can never take an id a future bundled framework needs;
+ *   - an import cannot be attached to a use case (it has no struct tables).
  *
- *   organization_id  NULL = bundled/system row (visible to every org),
- *                    set  = imported row owned by exactly one organization
- *   source           'bundled' (default) | 'imported'
- *
- * CHECK guarantees imported rows always carry an organization, and a partial
- * unique index makes (organization, name) unique among imported rows — the
- * upsert key the framework-import extension uses for idempotent re-uploads.
- *
- * Imported structure lives in two generic tables (the bundled frameworks keep
- * their per-framework struct/impl tables; those are untouched):
- *
- *   imported_framework_topics    — one row per topic per imported framework
+ *   imported_frameworks          — one row per imported framework per org
+ *   imported_framework_topics    — one row per topic
  *   imported_framework_subtopics — one row per subtopic under a topic
  *
- * Both carry organization_id and get the standard tenant_isolation RLS
+ * All three carry organization_id and get the standard tenant_isolation RLS
  * policy (mirrors 20261108165215-create-dashboard-preferences.js).
  */
+const TABLES = ["imported_frameworks", "imported_framework_topics", "imported_framework_subtopics"];
+
 module.exports = {
   async up(queryInterface) {
     const sql = queryInterface.sequelize;
 
     await sql.query(`
-      ALTER TABLE verifywise.frameworks
-        ADD COLUMN IF NOT EXISTS organization_id INTEGER
+      CREATE TABLE IF NOT EXISTS verifywise.imported_frameworks (
+        id              SERIAL PRIMARY KEY,
+        organization_id INTEGER NOT NULL
           REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
-        ADD COLUMN IF NOT EXISTS source VARCHAR(20) NOT NULL DEFAULT 'bundled';
+        name            VARCHAR(255) NOT NULL,
+        description     TEXT,
+        is_active       BOOLEAN NOT NULL DEFAULT TRUE,
+        created_by      INTEGER REFERENCES verifywise.users(id) ON DELETE SET NULL,
+        created_at      TIMESTAMP NOT NULL DEFAULT NOW(),
+        updated_at      TIMESTAMP NOT NULL DEFAULT NOW()
+      );
 
-      ALTER TABLE verifywise.frameworks
-        ADD CONSTRAINT frameworks_source_chk
-          CHECK (source IN ('bundled','imported')),
-        ADD CONSTRAINT frameworks_imported_has_org_chk
-          CHECK (source = 'bundled' OR organization_id IS NOT NULL);
-
-      -- Upsert key for the framework-import extension: one imported framework
-      -- name per organization. Bundled rows (organization_id IS NULL) stay
-      -- outside the index so their historical uniqueness is untouched.
-      CREATE UNIQUE INDEX IF NOT EXISTS idx_frameworks_imported_org_name
-        ON verifywise.frameworks(organization_id, name)
-        WHERE source = 'imported';
-
-      CREATE INDEX IF NOT EXISTS idx_frameworks_organization_id
-        ON verifywise.frameworks(organization_id)
-        WHERE organization_id IS NOT NULL;
+      -- Upsert key: one imported framework name per organization,
+      -- case-insensitive ("Acme policy" and "acme policy" are the same).
+      CREATE UNIQUE INDEX IF NOT EXISTS idx_imported_frameworks_org_name
+        ON verifywise.imported_frameworks(organization_id, lower(name));
     `);
 
     await sql.query(`
@@ -57,7 +51,7 @@ module.exports = {
         organization_id INTEGER NOT NULL
           REFERENCES verifywise.organizations(id) ON DELETE CASCADE,
         framework_id    INTEGER NOT NULL
-          REFERENCES verifywise.frameworks(id) ON DELETE CASCADE,
+          REFERENCES verifywise.imported_frameworks(id) ON DELETE CASCADE,
         topic_number    VARCHAR(50) NOT NULL,
         name            VARCHAR(500) NOT NULL,
         description     TEXT,
@@ -91,12 +85,7 @@ module.exports = {
         ON verifywise.imported_framework_subtopics(organization_id, topic_id);
     `);
 
-    // Tenant isolation on the imported-structure tables (the global
-    // frameworks catalog itself stays un-RLS'd — bundled rows are shared).
-    for (const table of [
-      "imported_framework_topics",
-      "imported_framework_subtopics",
-    ]) {
+    for (const table of TABLES) {
       await sql.query(`
         ALTER TABLE verifywise.${table} ENABLE ROW LEVEL SECURITY;
         DROP POLICY IF EXISTS tenant_isolation ON verifywise.${table};
@@ -109,28 +98,12 @@ module.exports = {
 
   async down(queryInterface) {
     const sql = queryInterface.sequelize;
-
-    for (const table of [
-      "imported_framework_subtopics",
-      "imported_framework_topics",
-    ]) {
+    // Children first so no FK blocks a drop.
+    for (const table of [...TABLES].reverse()) {
       await sql.query(`
         DROP POLICY IF EXISTS tenant_isolation ON verifywise.${table};
         DROP TABLE IF EXISTS verifywise.${table};
       `);
     }
-
-    await sql.query(`
-      DROP INDEX IF EXISTS verifywise.idx_frameworks_imported_org_name;
-      DROP INDEX IF EXISTS verifywise.idx_frameworks_organization_id;
-
-      ALTER TABLE verifywise.frameworks
-        DROP CONSTRAINT IF EXISTS frameworks_imported_has_org_chk,
-        DROP CONSTRAINT IF EXISTS frameworks_source_chk;
-
-      ALTER TABLE verifywise.frameworks
-        DROP COLUMN IF EXISTS organization_id,
-        DROP COLUMN IF EXISTS source;
-    `);
   },
 };

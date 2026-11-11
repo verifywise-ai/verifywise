@@ -33,6 +33,7 @@ import dashboardPreferencesRoutes from "./dashboardPreferences.route";
 import trainingRoutes from "./training.route";
 import groupsRoutes from "./groups.route";
 import policyTemplatesRoutes from "./policyTemplates.route";
+import frameworkImportRoutes from "./frameworkImport.route";
 
 const router = express.Router();
 
@@ -82,5 +83,9 @@ router.use("/groups", groupsRoutes);
 
 // Organisation-owned policy templates (#5261).
 router.use("/policy-templates", policyTemplatesRoutes);
+
+// Framework import extension (#5254): spreadsheet imports of org-owned
+// frameworks. Gated per org with requireExtensionEnabled inside the router.
+router.use("/framework-import", frameworkImportRoutes);
 
 export default router;

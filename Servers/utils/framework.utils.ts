@@ -9,15 +9,9 @@ import {
 } from "../types/framework.type";
 
 export const getAllFrameworksQuery = async (organizationId: number): Promise<FrameworkModel[]> => {
-  // Bundled catalog rows have organization_id IS NULL and are visible to
-  // every org; imported rows (source='imported') are tenant-private. Without
-  // the filter an org would leak every other org's imported frameworks.
   const frameworks = await sequelize.query(
-    `SELECT * FROM frameworks
-      WHERE organization_id IS NULL OR organization_id = :organizationId
-      ORDER BY created_at DESC, id ASC;`,
+    `SELECT * FROM frameworks ORDER BY created_at DESC, id ASC;`,
     {
-      replacements: { organizationId },
       mapToModel: true,
       model: FrameworkModel,
     },
@@ -40,14 +34,10 @@ export const getAllFrameworkByIdQuery = async (
   id: number,
   organizationId: number,
 ): Promise<FrameworkModel | null> => {
-  // Bundled rows (organization_id IS NULL) are visible to every org;
-  // imported rows are tenant-private and must belong to the caller (#5254).
   const result = await sequelize.query(
-    `SELECT * FROM frameworks
-      WHERE id = :id AND (organization_id IS NULL OR organization_id = :organizationId)
-      ORDER BY created_at DESC, id ASC`,
+    `SELECT * FROM frameworks WHERE id = :id ORDER BY created_at DESC, id ASC`,
     {
-      replacements: { id, organizationId },
+      replacements: { id },
       mapToModel: true,
       model: FrameworkModel,
     },

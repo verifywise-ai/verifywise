@@ -44,27 +44,6 @@ export class FrameworkModel extends Model<FrameworkModel> implements IFramework 
   is_organizational!: boolean;
 
   /**
-   * NULL = bundled/system catalog row (visible to every org); set = an
-   * organization-scoped row created by the framework-import extension.
-   * See migration 20261111092002-imported-framework-storage.js.
-   */
-  @Column({
-    type: DataType.INTEGER,
-    allowNull: true,
-  })
-  organization_id?: number | null;
-
-  /**
-   * 'bundled' (default) | 'imported'.
-   */
-  @Column({
-    type: DataType.STRING(20),
-    allowNull: false,
-    defaultValue: "bundled",
-  })
-  source?: string;
-
-  /**
    * Create a new framework with comprehensive validation
    */
   static async createNewFramework(name: string, description: string): Promise<FrameworkModel> {
@@ -282,8 +261,6 @@ export class FrameworkModel extends Model<FrameworkModel> implements IFramework 
       description: this.description,
       created_at: (this.createdAt ?? this.created_at)?.toISOString(),
       is_organizational: this.is_organizational,
-      organization_id: this.organization_id ?? null,
-      source: this.source ?? "bundled",
       ageInDays: this.getAgeInDays(),
       isActive: this.isActive(),
     };

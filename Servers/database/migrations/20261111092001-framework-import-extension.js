@@ -5,7 +5,7 @@
  *
  * Self-service import of custom compliance frameworks from a spreadsheet:
  * one worksheet defines the framework plus its topics and subtopics, and the
- * imported structure becomes an organization-scoped framework
+ * imported structure is stored as an organization-owned reference list
  * (see 20261111092002-imported-framework-storage.js).
  *
  * Idempotent: the catalog key is UNIQUE, so a re-run is a no-op.
@@ -26,8 +26,8 @@ module.exports = {
           ('framework-import',
            'Framework Import',
            'Framework Import',
-           'Import custom compliance frameworks from Excel files, including topics and subtopics.',
-           'Framework Import enables self-service creation of organization-scoped compliance frameworks from a spreadsheet. Download a pre-formatted Excel template, define the framework with its topics and subtopics, and upload to make the framework available to your organization. Re-uploading the same framework name replaces its structure, making repeated imports idempotent.',
+           'Import your own framework structure (topics and subtopics) from an Excel file as a reference list.',
+           'Framework Import stores your own framework structure, such as an internal AI policy, from a spreadsheet. Download the Excel template, list the framework with its topics and subtopics, and upload it. Imported frameworks are listed on the Organizational frameworks page and are visible only to your organization. They are a reference list for now: they cannot be added to use cases or assessed like the built-in frameworks. Re-uploading the same framework name replaces its structure.',
            '1.0.0',
            'VerifyWise',
            'data_management',

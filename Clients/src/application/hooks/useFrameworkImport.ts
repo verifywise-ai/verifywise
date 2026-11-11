@@ -16,10 +16,16 @@ export const frameworkImportKeys = {
   imported: () => [...frameworkImportKeys.all, "imported"] as const,
 };
 
-export function useImportedFrameworks() {
+/**
+ * The organization's imported frameworks. Pass `enabled: false` while the
+ * framework-import extension is off: the endpoint answers 403 then, and
+ * querying it would only produce failed requests and retries.
+ */
+export function useImportedFrameworks({ enabled = true }: { enabled?: boolean } = {}) {
   return useQuery({
     queryKey: frameworkImportKeys.imported(),
     queryFn: () => getImportedFrameworks(),
+    enabled,
   });
 }
 
@@ -29,7 +35,6 @@ export function useImportFramework() {
     mutationFn: (rows) => importFramework(rows),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: frameworkImportKeys.imported() });
-      qc.invalidateQueries({ queryKey: ["frameworks"] });
     },
   });
 }
@@ -41,7 +46,6 @@ export function useUpdateImportedFramework() {
       updateImportedFramework({ id, patch }),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: frameworkImportKeys.imported() });
-      qc.invalidateQueries({ queryKey: ["frameworks"] });
     },
   });
 }
@@ -52,7 +56,6 @@ export function useDeleteImportedFramework() {
     mutationFn: (id: number) => deleteImportedFramework(id),
     onSuccess: () => {
       qc.invalidateQueries({ queryKey: frameworkImportKeys.imported() });
-      qc.invalidateQueries({ queryKey: ["frameworks"] });
     },
   });
 }

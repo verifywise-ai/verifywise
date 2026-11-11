@@ -127,7 +127,9 @@ const Framework = () => {
   const { isEnabled } = useExtensions();
   const isFrameworkImportEnabled = isEnabled("framework-import");
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const { data: importedFrameworks = [] } = useImportedFrameworks();
+  const { data: importedFrameworks = [] } = useImportedFrameworks({
+    enabled: isFrameworkImportEnabled,
+  });
   const deleteImportedMutation = useDeleteImportedFramework();
   const [confirmDeleteImported, setConfirmDeleteImported] = useState<number | null>(null);
 
@@ -936,29 +938,36 @@ const Framework = () => {
         {organizationalProject && (
           <>
             {/* Imported frameworks (#5254): self-service spreadsheet imports live here. */}
-            {(isFrameworkImportEnabled || importedFrameworks.length > 0) && (
-              <Box sx={{ mb: 4 }}>
-                <Stack direction="row" justifyContent="space-between" alignItems="center" mb={2}>
+            {isFrameworkImportEnabled && (
+              <Box sx={{ marginBottom: "32px" }}>
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  sx={{ marginBottom: "8px" }}
+                >
                   <Typography variant="h6" sx={{ fontWeight: 600 }}>
                     Imported frameworks
                   </Typography>
-                  {isFrameworkImportEnabled && (
-                    <CustomizableButton
-                      variant="outlined"
-                      text="Import from Excel"
-                      startIcon={<FileUpIcon size={16} />}
-                      onClick={() => setIsImportModalOpen(true)}
-                      isDisabled={!allowedRoles.frameworks.manage.includes(userRoleName)}
-                    />
-                  )}
+                  <CustomizableButton
+                    variant="outlined"
+                    text="Import from Excel"
+                    startIcon={<FileUpIcon size={16} />}
+                    onClick={() => setIsImportModalOpen(true)}
+                    isDisabled={!allowedRoles.frameworks.manage.includes(userRoleName)}
+                  />
                 </Stack>
+                <Typography sx={{ fontSize: 13, color: "text.secondary", marginBottom: "8px" }}>
+                  A reference list of your own frameworks. They cannot be added to use cases or
+                  assessed yet.
+                </Typography>
                 {importedFrameworks.length === 0 ? (
                   <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-                    No imported frameworks yet. Import one from a spreadsheet to track your own
-                    compliance structure.
+                    No imported frameworks yet. Import one from a spreadsheet to keep its topics and
+                    subtopics here.
                   </Typography>
                 ) : (
-                  <Stack spacing={1}>
+                  <Stack sx={{ gap: "8px" }}>
                     {importedFrameworks.map((fw) => (
                       <Stack
                         key={fw.id}
@@ -968,7 +977,7 @@ const Framework = () => {
                         sx={{
                           border: `1px solid ${borderPalette.dark}`,
                           borderRadius: "4px",
-                          p: 2,
+                          padding: "16px",
                         }}
                       >
                         <Box>
@@ -1005,7 +1014,7 @@ const Framework = () => {
               <ConfirmationModal
                 isOpen
                 title="Delete this imported framework?"
-                body="When you delete an imported framework, its topics and subtopics are removed. Use cases already assessed against it are not affected."
+                body="This removes the imported framework with all its topics and subtopics. You can import it again from your file later."
                 cancelText="Cancel"
                 proceedText="Delete"
                 proceedButtonColor="error"

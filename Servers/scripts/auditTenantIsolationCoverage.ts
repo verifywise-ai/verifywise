@@ -45,7 +45,7 @@ const sharedTables: SharedTableEntry[] = [
   {
     name: "frameworks",
     justification:
-      "Global framework catalog; per-tenant linkage is projects_frameworks. Imported rows (source='imported', organization_id set, #5254) are tenant-private: the list and detail queries filter organization_id IS NULL OR = caller, and their structure lives in the RLS-protected imported_framework_* tables.",
+      "Global framework catalog; per-tenant linkage is projects_frameworks. Org-owned frameworks from the framework-import extension (#5254) are not stored here but in the registered imported_frameworks / imported_framework_* tables.",
   },
   {
     name: "subscription_history",
@@ -692,16 +692,6 @@ const deferredScopedTables: SharedTableEntry[] = [
     name: "custom_frameworks",
     justification:
       "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",
-  },
-  {
-    name: "imported_framework_topics",
-    justification:
-      "Framework-import extension storage (#5254). organization_id-scoped with the tenant_isolation RLS policy; every read/write goes through the extension endpoints, which additionally require per-org enablement — matrix coverage lands with the extension test wave. See runbook section 2.4.",
-  },
-  {
-    name: "imported_framework_subtopics",
-    justification:
-      "Framework-import extension storage (#5254). organization_id-scoped with the tenant_isolation RLS policy; every read/write goes through the extension endpoints, which additionally require per-org enablement — matrix coverage lands with the extension test wave. See runbook section 2.4.",
   },
   {
     name: "dataset_change_histories",

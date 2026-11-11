@@ -19,6 +19,14 @@ function statusOf(error: unknown): number {
   return error instanceof CustomException ? error.statusCode : 500;
 }
 
+/** A positive safe-integer route id, or null ("12abc", "-1", "1e3" are all rejected). */
+export function parseFrameworkId(raw: unknown): number | null {
+  const value = Array.isArray(raw) ? raw[0] : raw;
+  if (typeof value !== "string" || !/^[1-9][0-9]*$/.test(value)) return null;
+  const id = Number(value);
+  return Number.isSafeInteger(id) ? id : null;
+}
+
 export async function downloadExcelTemplate(req: Request, res: Response): Promise<void> {
   const organizationId = (req as any).organizationId as number;
   const userId = (req as any).userId as number;
@@ -64,6 +72,9 @@ export async function bulkImportFrameworks(req: Request, res: Response): Promise
   if (csvData.length === 0) {
     return res.status(400).json(STATUS_CODE[400](req.t!("No rows to import")));
   }
+  if (!csvData.every((row) => typeof row === "object" && row !== null && !Array.isArray(row))) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Every row must be an object")));
+  }
 
   logProcessing({
     description: `starting bulkImportFrameworks with ${csvData.length} rows`,
@@ -76,6 +87,8 @@ export async function bulkImportFrameworks(req: Request, res: Response): Promise
   try {
     const result = await importFramework(csvData, organizationId, userId);
     // Validation-only failure = 400 (client error), same contract as risk-import.
+    // The body still carries the full result (errors per row) under `data`;
+    // the client repository unwraps it so the modal can list them.
     const status = result.success ? 200 : 400;
     if (result.success) {
       await logSuccess({
@@ -136,8 +149,15 @@ export async function listImportedFrameworks(req: Request, res: Response): Promi
 export async function updateImportedFramework(req: Request, res: Response): Promise<any> {
   const organizationId = (req as any).organizationId as number;
   const userId = (req as any).userId as number;
-  const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
-  const patch = (req.body ?? {}) as ImportedFrameworkPatch;
+  const id = parseFrameworkId(req.params.id);
+  if (id === null) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid framework id")));
+  }
+  const body = req.body;
+  if (typeof body !== "object" || body === null || Array.isArray(body)) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Request body must be an object")));
+  }
+  const patch = body as ImportedFrameworkPatch;
 
   logProcessing({
     description: `starting updateImportedFramework for ID ${id}`,
@@ -177,7 +197,10 @@ export async function updateImportedFramework(req: Request, res: Response): Prom
 export async function deleteImportedFramework(req: Request, res: Response): Promise<any> {
   const organizationId = (req as any).organizationId as number;
   const userId = (req as any).userId as number;
-  const id = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id, 10);
+  const id = parseFrameworkId(req.params.id);
+  if (id === null) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid framework id")));
+  }
 
   logProcessing({
     description: `starting deleteImportedFramework for ID ${id}`,
