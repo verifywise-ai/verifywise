@@ -101,8 +101,10 @@ const RolesTab: React.FC = () => {
   );
 
   const [selectedRoleId, setSelectedRoleId] = useState<number | null>(null);
-  const { data: granted = NO_GRANTS, isLoading: grantedLoading } =
-    useRolePermissions(selectedRoleId);
+  // Only ask for the permissions of a role that is still listed: right after
+  // a delete the selection briefly points at a role that no longer exists.
+  const listedRoleId = customRoles.some((r) => r.id === selectedRoleId) ? selectedRoleId : null;
+  const { data: granted = NO_GRANTS, isLoading: grantedLoading } = useRolePermissions(listedRoleId);
   const replaceMutation = useReplaceRolePermissions();
   const createMutation = useCreateRole();
   const updateMutation = useUpdateRole();
@@ -310,7 +312,7 @@ const RolesTab: React.FC = () => {
               setSelectedRoleId(value);
             }}
             aria-label="Custom role"
-            sx={{ flexWrap: "wrap" }}
+            sx={{ "flexWrap": "wrap", "& .MuiToggleButton-root": { textTransform: "none" } }}
           >
             {customRoles.map((role) => (
               <ToggleButton key={role.id} value={role.id} sx={{ height: "30px" }}>
@@ -448,6 +450,12 @@ const RolesTab: React.FC = () => {
                                     }));
                                   }}
                                   aria-label={entry.key}
+                                  sx={{
+                                    "& .MuiToggleButton-root": {
+                                      textTransform: "none",
+                                      height: "30px",
+                                    },
+                                  }}
                                 >
                                   <ToggleButton value="yes">Allow</ToggleButton>
                                   <ToggleButton value="no">Deny</ToggleButton>

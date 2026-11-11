@@ -57,6 +57,14 @@ export function useDeleteRole() {
   const qc = useQueryClient();
   return useMutation({
     mutationFn: (id: number) => deleteRole({ id, suppressGlobalErrorToast: true }),
-    onSuccess: () => invalidateRoleQueries(qc),
+    onSuccess: (_data, id) => {
+      // Take the role out of the cached list straight away so the Roles tab
+      // stops asking for its permissions (it would 404) before the refetch.
+      qc.setQueryData<Array<{ id: number }>>(ROLES_QUERY_KEY, (old) =>
+        old?.filter((role) => role.id !== id),
+      );
+      qc.removeQueries({ queryKey: rolePermissionsKeys.forRole(id) });
+      return invalidateRoleQueries(qc);
+    },
   });
 }
