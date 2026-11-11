@@ -255,7 +255,7 @@ export async function updateScheduledReport(req: Request, res: Response): Promis
     }
 
     const row = await updateScheduledReportQuery(Number(req.params.id), req.organizationId!, input);
-    if (!row) return res.status(404).json(STATUS_CODE[404]("not found"));
+    if (!row) return res.status(404).json(STATUS_CODE[404](req.t!("not found")));
     return res.status(200).json(STATUS_CODE[200](row));
   } catch (error) {
     await logFailure({
@@ -274,7 +274,7 @@ export async function updateScheduledReport(req: Request, res: Response): Promis
 export async function runScheduledReportNow(req: Request, res: Response): Promise<any> {
   try {
     const sched = await getScheduledReportQuery(Number(req.params.id), req.organizationId!);
-    if (!sched) return res.status(404).json(STATUS_CODE[404]("not found"));
+    if (!sched) return res.status(404).json(STATUS_CODE[404](req.t!("not found")));
 
     const scopeErrors = await assertReportScopeAllowed({
       role: req.role ?? null,

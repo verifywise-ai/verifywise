@@ -43,7 +43,9 @@ const parseId = (raw: unknown): number | null => {
 const respondWithError = (req: Request, res: Response, error: unknown): Response => {
   const pgErr = (error as any)?.parent ?? (error as any)?.original;
   if (pgErr?.code === "23505") {
-    return res.status(409).json(STATUS_CODE[409]("a template with this name already exists"));
+    return res
+      .status(409)
+      .json(STATUS_CODE[409](req.t!("a template with this name already exists")));
   }
   const statusCode =
     error instanceof Error && "statusCode" in error
@@ -69,10 +71,10 @@ export async function listPolicyTemplates(req: Request, res: Response): Promise<
 export async function getPolicyTemplate(req: Request, res: Response): Promise<any> {
   const id = parseId(req.params.id);
   if (id === null)
-    return res.status(400).json(STATUS_CODE[400]("a numeric template id is required"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("a numeric template id is required")));
   try {
     const tpl = await getPolicyTemplateByIdQuery(id, req.organizationId!);
-    if (!tpl) return res.status(404).json(STATUS_CODE[404]("not found"));
+    if (!tpl) return res.status(404).json(STATUS_CODE[404](req.t!("not found")));
     return res.status(200).json(STATUS_CODE[200](tpl));
   } catch (e) {
     return res.status(500).json(STATUS_CODE[500]((e as Error).message));
@@ -115,7 +117,7 @@ export async function createPolicyTemplate(req: Request, res: Response): Promise
 export async function updatePolicyTemplate(req: Request, res: Response): Promise<any> {
   const id = parseId(req.params.id);
   if (id === null)
-    return res.status(400).json(STATUS_CODE[400]("a numeric template id is required"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("a numeric template id is required")));
   logProcessing({
     description: `updatePolicyTemplate ${id}`,
     functionName: "updatePolicyTemplate",
@@ -136,10 +138,10 @@ export async function updatePolicyTemplate(req: Request, res: Response): Promise
       "is_active",
     ].some((f) => req.body?.[f] !== undefined);
     if (!metadataChanged) {
-      return res.status(400).json(STATUS_CODE[400]("no updatable fields supplied"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("no updatable fields supplied")));
     }
     const tpl = await updatePolicyTemplateQuery(id, req.organizationId!, req.body);
-    if (!tpl) return res.status(404).json(STATUS_CODE[404]("not found"));
+    if (!tpl) return res.status(404).json(STATUS_CODE[404](req.t!("not found")));
     await logSuccess({
       eventType: "Update",
       description: `Updated policy template ${id}`,
@@ -166,7 +168,7 @@ export async function updatePolicyTemplate(req: Request, res: Response): Promise
 export async function deletePolicyTemplate(req: Request, res: Response): Promise<any> {
   const id = parseId(req.params.id);
   if (id === null)
-    return res.status(400).json(STATUS_CODE[400]("a numeric template id is required"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("a numeric template id is required")));
   logProcessing({
     description: `deletePolicyTemplate ${id}`,
     functionName: "deletePolicyTemplate",
@@ -176,7 +178,7 @@ export async function deletePolicyTemplate(req: Request, res: Response): Promise
   });
   try {
     const row = await deletePolicyTemplateQuery(id, req.organizationId!);
-    if (!row) return res.status(404).json(STATUS_CODE[404]("not found"));
+    if (!row) return res.status(404).json(STATUS_CODE[404](req.t!("not found")));
     await logSuccess({
       eventType: "Delete",
       description: `Deleted policy template ${id}`,
@@ -215,7 +217,7 @@ export async function createPolicyTemplateFromPolicy(req: Request, res: Response
   try {
     const policyId = Number(req.body?.policy_id);
     if (!Number.isSafeInteger(policyId) || policyId <= 0) {
-      return res.status(400).json(STATUS_CODE[400]("a numeric policy_id is required"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("a numeric policy_id is required")));
     }
     const tpl = await createPolicyTemplateFromPolicyQuery(
       policyId,

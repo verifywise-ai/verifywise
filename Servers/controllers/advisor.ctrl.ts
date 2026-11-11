@@ -256,7 +256,7 @@ export async function runAdvisor(req: Request, res: Response) {
       logger.debug(`No LLM keys found for organization: ${organizationId}`);
       return res
         .status(400)
-        .json(STATUS_CODE[400]("No LLM keys configured for this organization."));
+        .json(STATUS_CODE[400](req.t!("No LLM keys configured for this organization.")));
     }
 
     const llmKey = selectLLMKey(clients, llmKeyId);
@@ -927,7 +927,7 @@ export async function getMemorySummary(req: Request, res: Response) {
     const organizationId = req.organizationId!;
     const userId = req.userId ? Number(req.userId) : null;
     if (!organizationId || !userId) {
-      return res.status(400).json(STATUS_CODE[400]("Auth context required"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Auth context required")));
     }
     const summary = await getUserMemorySummary(organizationId, userId);
     logStructured(
@@ -960,7 +960,7 @@ export async function deleteMyMemory(req: Request, res: Response) {
     const organizationId = req.organizationId!;
     const userId = req.userId ? Number(req.userId) : null;
     if (!organizationId || !userId) {
-      return res.status(400).json(STATUS_CODE[400]("Auth context required"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Auth context required")));
     }
 
     const rawAgent = req.query.agentName;
@@ -1022,13 +1022,15 @@ export async function adminClearAgentMemory(req: Request, res: Response) {
           ? rawAgentName[0]
           : "";
     if (!organizationId) {
-      return res.status(400).json(STATUS_CODE[400]("Auth context required"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Auth context required")));
     }
     if (req.role !== "Admin") {
-      return res.status(403).json(STATUS_CODE[403]("Admin role required to clear agent memory"));
+      return res
+        .status(403)
+        .json(STATUS_CODE[403](req.t!("Admin role required to clear agent memory")));
     }
     if (!agentName || agentName.trim().length === 0) {
-      return res.status(400).json(STATUS_CODE[400]("agentName is required"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("agentName is required")));
     }
     await clearAgentMemory(organizationId, agentName);
     logStructured(
@@ -1068,13 +1070,13 @@ export async function adminListAgentMessages(req: Request, res: Response) {
         ? Math.min(500, Math.max(1, parseInt(req.query.limit, 10) || 50))
         : 50;
     if (!organizationId) {
-      return res.status(400).json(STATUS_CODE[400]("Auth context required"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Auth context required")));
     }
     if (req.role !== "Admin") {
-      return res.status(403).json(STATUS_CODE[403]("Admin role required"));
+      return res.status(403).json(STATUS_CODE[403](req.t!("Admin role required")));
     }
     if (!agentName || agentName.trim().length === 0) {
-      return res.status(400).json(STATUS_CODE[400]("agentName is required"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("agentName is required")));
     }
     const rows = await getAgentMessages(organizationId, agentName, limit);
     return res.status(200).json(STATUS_CODE[200](rows));

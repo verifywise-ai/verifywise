@@ -1,5 +1,6 @@
 import { describe, it, expect, jest, beforeEach, afterEach } from "@jest/globals";
 import { Request, Response } from "express";
+import { getTranslator } from "../../utils/i18n.utils";
 
 jest.mock("../../utils/logger/fileLogger", () => ({
   warn: jest.fn(),
@@ -90,7 +91,7 @@ describe("rls.middleware", () => {
 
     it("fails closed (500) when enabled and a non-super-admin request has no org context", async () => {
       process.env.RLS_ENFORCEMENT_ENABLED = "true";
-      const req = {} as unknown as Request;
+      const req = { t: getTranslator("en") } as unknown as Request;
       const res = buildRes();
 
       await rlsEnforcement(req, res, next as any);

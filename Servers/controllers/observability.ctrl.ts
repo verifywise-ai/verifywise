@@ -147,7 +147,7 @@ export async function getTraceDetail(req: Request, res: Response) {
     // belonging to another org (or carrying no org tag) are indistinguishable
     // from a non-existent id — return 404 rather than confirm existence.
     if (!trace || !traceBelongsToOrg(trace, organizationId)) {
-      return res.status(404).json(STATUS_CODE[404]("Trace not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Trace not found")));
     }
 
     const spans = trace?.observations ?? [];

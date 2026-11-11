@@ -1006,7 +1006,7 @@ const SSO_ROLE_MAP = new Map<string, number>([
 
 async function loginUserWithMicrosoft(req: Request, res: Response): Promise<any> {
   if (!isSSOFeatureEnabled()) {
-    return res.status(404).json(STATUS_CODE[404]("SSO feature is not enabled"));
+    return res.status(404).json(STATUS_CODE[404](req.t!("SSO feature is not enabled")));
   }
   const transaction = await sequelize.transaction();
   const { code, organizationId, redirectUri } = req.body as {
@@ -1025,15 +1025,15 @@ async function loginUserWithMicrosoft(req: Request, res: Response): Promise<any>
   try {
     if (!code) {
       await transaction.rollback();
-      return res.status(400).json(STATUS_CODE[400]("Authorization code is required"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("Authorization code is required")));
     }
     if (!organizationId || isNaN(Number(organizationId))) {
       await transaction.rollback();
-      return res.status(400).json(STATUS_CODE[400]("organizationId is required"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("organizationId is required")));
     }
     if (!redirectUri) {
       await transaction.rollback();
-      return res.status(400).json(STATUS_CODE[400]("redirectUri is required"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("redirectUri is required")));
     }
 
     const azureADConfig = await getAzureADConfigForLoginQuery(Number(organizationId), transaction);
@@ -1059,7 +1059,9 @@ async function loginUserWithMicrosoft(req: Request, res: Response): Promise<any>
         "loginUserWithMicrosoft",
         "user.ctrl.ts",
       );
-      return res.status(401).json(STATUS_CODE[401]("Failed to acquire token from Microsoft"));
+      return res
+        .status(401)
+        .json(STATUS_CODE[401](req.t!("Failed to acquire token from Microsoft")));
     }
 
     const userInfoResponse = await fetch("https://graph.microsoft.com/v1.0/me", {
@@ -1069,7 +1071,7 @@ async function loginUserWithMicrosoft(req: Request, res: Response): Promise<any>
       await transaction.rollback();
       return res
         .status(401)
-        .json(STATUS_CODE[401]("Failed to fetch user profile from Microsoft Graph"));
+        .json(STATUS_CODE[401](req.t!("Failed to fetch user profile from Microsoft Graph")));
     }
     const userInfo = (await userInfoResponse.json()) as {
       id: string;
@@ -1085,7 +1087,7 @@ async function loginUserWithMicrosoft(req: Request, res: Response): Promise<any>
       await transaction.rollback();
       return res
         .status(401)
-        .json(STATUS_CODE[401]("Microsoft account did not return an email address"));
+        .json(STATUS_CODE[401](req.t!("Microsoft account did not return an email address")));
     }
 
     const roleClaim = ((tokenResponse.idTokenClaims as Record<string, any>)?.roles ?? [])[0] as
@@ -1867,11 +1869,11 @@ async function deleteUserById(req: Request, res: Response) {
 /**
  * Checks if any user exists in the database.
  *
- * @param {Request} _req - Express request object.
+ * @param {Request} req - Express request object.
  * @param {Response} res - Express response object.
  * @returns {Promise<Response>} A promise that resolves when the response is sent.
  */
-async function checkUserExists(_req: Request, res: Response): Promise<Response> {
+async function checkUserExists(req: Request, res: Response): Promise<Response> {
   logStructured("processing", "checking if any user exists", "checkUserExists", "user.ctrl.ts");
   logger.debug("🔍 Checking for existing users");
 
@@ -1889,7 +1891,7 @@ async function checkUserExists(_req: Request, res: Response): Promise<Response> 
   } catch (error) {
     logStructured("error", "failed to check user existence", "checkUserExists", "user.ctrl.ts");
     logger.error("❌ Error in checkUserExists:", error);
-    return res.status(500).json(STATUS_CODE[500](_req.t!("Internal server error")));
+    return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
 }
 

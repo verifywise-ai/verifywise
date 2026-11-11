@@ -31,12 +31,14 @@ export function orderedIdsFrom(req: Request): number[] | undefined {
     : undefined;
 }
 
-function invalidOrderedIds(res: Response) {
-  return res
-    .status(400)
-    .json(
-      STATUS_CODE[400](`orderedIds must be an array of at most ${MAX_ORDERED_IDS} integer ids`),
-    );
+function invalidOrderedIds(req: Request, res: Response) {
+  return res.status(400).json(
+    STATUS_CODE[400](
+      req.t!("orderedIds must be an array of at most {max} integer ids", {
+        max: MAX_ORDERED_IDS,
+      }),
+    ),
+  );
 }
 
 function fail(res: Response, error: unknown, req: Request, where: string) {
@@ -90,7 +92,7 @@ export async function deletePhaseCtrl(req: Request, res: Response): Promise<any>
 export async function reorderPhasesCtrl(req: Request, res: Response): Promise<any> {
   try {
     const orderedIds = orderedIdsFrom(req);
-    if (!orderedIds) return invalidOrderedIds(res);
+    if (!orderedIds) return invalidOrderedIds(req, res);
     await svc.reorderPhases(orgId(req), orderedIds);
     return res.status(200).json(STATUS_CODE[200]({ success: true }));
   } catch (err) {
@@ -136,7 +138,7 @@ export async function deleteItemCtrl(req: Request, res: Response): Promise<any> 
 export async function reorderItemsCtrl(req: Request, res: Response): Promise<any> {
   try {
     const orderedIds = orderedIdsFrom(req);
-    if (!orderedIds) return invalidOrderedIds(res);
+    if (!orderedIds) return invalidOrderedIds(req, res);
     await svc.reorderItems(orgId(req), intParam(req, "phaseId"), orderedIds);
     return res.status(200).json(STATUS_CODE[200]({ success: true }));
   } catch (err) {
