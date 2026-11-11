@@ -292,7 +292,7 @@ export class RoleModel extends Model<RoleModel> implements IRole {
 
 ### Authorization Middleware
 
-`authorize()` (`Servers/middleware/accessControl.middleware.ts`) takes a permission key from the catalog in `Servers/config/rolePermissions.config.ts`. Built-in roles resolve against a static matrix; custom organization roles resolve against the `role_permissions` table, and a missing row denies. A legacy role-name array (`authorize(["Admin"])`) is still accepted while old call sites migrate; new code must use keys.
+`authorize()` (`Servers/middleware/accessControl.middleware.ts`) takes a permission key from the catalog in `Servers/config/rolePermissions.config.ts`. Built-in roles resolve against a static matrix; custom organization roles resolve against the `role_permissions` table, and a missing row denies. Role-name arrays (`authorize(["Admin"])`) are no longer accepted: a custom role can never match a built-in name, so every route authorizes on a key (#5314; `Servers/routes/__tests__/roleNameRoutes.permissions.test.ts` fails if one comes back).
 
 Each key sits in one tier, and the tier decides which built-in roles hold it:
 
@@ -300,9 +300,16 @@ Each key sits in one tier, and the tier decides which built-in roles hold it:
 |------|----------------|----------|
 | Admin | Admin | `organization.admin`, `llmKeys.admin`, `auditLedger.admin`, `logs.admin`, `training.admin` |
 | Editor | Admin, Editor | `useCase.edit`, `vendor.edit`, `model.edit`, `risks.edit`, `policy.edit`, `task.edit`, `training.edit`, `intakeForm.edit` |
-| Contributor | Admin, Reviewer, Editor | `file.contribute`, `fileManager.contribute` |
+| Contributor | Admin, Reviewer, Editor | `file.contribute`, `fileManager.contribute`, `riskLinks.review` |
+| Audit | Admin, Editor, Auditor | `framework.audit` (screen only) |
 | Reader | all four | `aiDetection.read` |
-| Super | Admin, SuperAdmin | `auditLedger.super`, `invitation.super`, `user.deleteSuper` |
+| Super | Admin, SuperAdmin | `auditLedger.super`, `invitation.super`, `user.deleteSuper`, `riskLinks.admin` |
+
+### Permission-based UI gating (#5314)
+
+The client decides which controls to show from the same keys, through `useCan(key)` / `useCanCheck()` in `Clients/src/application/hooks/useCan.ts`. Once `GET /roles/my-permissions` has loaded, the answer is that list. While it loads, or if it fails, a built-in role falls back to the static table in `Clients/src/application/constants/permissions.ts` (a copy of the server's built-in matrix for the keys the UI uses, parity-tested against `rolePermissions.config.ts`), and a custom role is denied. Built-in roles therefore never see a control flicker, and a custom role never sees a control before it is known to be allowed.
+
+A few keys (`useCase.members`, `framework.edit`, `framework.audit`, `postMarketMonitoring.edit`, `evals.edit`, `apiKeys.admin`) are screen only: the routes behind those screens need only a login, so the key decides what the app offers but the server does not check it. Some Admin-only screens still gate on the role name, because their server checks do too: Settings > Team (`updateUserById` checks `req.role === "Admin"`), Settings > Features (`featureSettings.ctrl.ts`), and the LLM Evals API keys (the AI Gateway's `require_admin`).
 
 ### Core governance writes
 

@@ -288,12 +288,8 @@ export const roleConfigurationContent: ArticleContent = {
       items: [
         { text: 'Built-in roles keep their permissions. You can\'t edit, rename or delete them' },
         { text: 'Only Admins see every use case. People with a custom role see the use cases they own, are a team member of or reach through a group' },
+        { text: 'Some Admin areas still need the built-in Admin role, whatever you allow. Examples are Settings > Team, Settings > Features, the audit ledger, custom fields, extensions and the LLM Evals API keys' },
       ],
-    },
-    {
-      type: 'callout',
-      variant: 'warning',
-      text: 'Many screens still decide which buttons to show from the built-in role name (Admin, Editor, Reviewer, Auditor). People with a custom role may therefore see some screens as read-only, even where their permissions allow the action. The permissions you set are always enforced on the server, so they never get more access than the role allows. Groups, policy templates, framework import and custom roles already follow the permissions you set.',
     },
     {
       type: 'heading',
