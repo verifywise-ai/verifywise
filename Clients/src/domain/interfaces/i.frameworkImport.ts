@@ -12,6 +12,8 @@ export interface FrameworkImportRow {
   subtopic_number?: string | number;
   subtopic_name?: string;
   subtopic_description?: string;
+  /** The row's line number in the sheet, so server errors match Excel even when blank rows are skipped. */
+  row_number?: number;
 }
 
 export interface FrameworkImportError {

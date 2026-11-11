@@ -9,6 +9,7 @@ import {
   buildExcelTemplate,
   MAX_IMPORT_ROWS,
   normalizePatch,
+  sheetRowNumber,
   validateStructure,
   deleteImportedFrameworkQuery,
   importFramework,
@@ -200,7 +201,48 @@ describe("validateStructure", () => {
   });
 });
 
+describe("sheetRowNumber", () => {
+  it("uses the row number the client sent", () => {
+    expect(sheetRowNumber(validRow({ row_number: 7 }), 0)).toBe(7);
+  });
+
+  it.each([
+    ["missing", undefined],
+    ["zero", 0],
+    ["negative", -3],
+    ["fractional", 4.5],
+    ["a string", "7"],
+    ["unsafe", Number.MAX_SAFE_INTEGER + 1],
+  ])("falls back to index + 2 when row_number is %s", (_label, value) => {
+    expect(sheetRowNumber(validRow({ row_number: value }), 3)).toBe(5);
+  });
+});
+
 describe("importFramework", () => {
+  it("reports Excel row numbers the client sent when blank rows were dropped", async () => {
+    // Sheet rows 2 and 5 hold data; rows 3-4 were blank and never sent.
+    const result = await importFramework(
+      [
+        validRow({ row_number: 2 }),
+        validRow({ topic_name: "Oversight", row_number: 5 }),
+        validRow({ topic_number: "2", topic_name: "", row_number: 6 }),
+      ],
+      ORG_ID,
+      USER_ID,
+    );
+    expect(result.success).toBe(false);
+    expect(result.errors).toEqual([
+      {
+        row: 5,
+        field: "topic_name",
+        message:
+          'Topic 1 is named "Governance" on row 2; every row of a topic must use the same name',
+      },
+      { row: 6, field: "topic_name", message: "Topic name is required" },
+    ]);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
   it("fails the whole batch when any row is invalid, without touching the DB", async () => {
     const result = await importFramework(
       [

@@ -17,10 +17,11 @@ vi.mock("../../../../../application/repository/frameworkImport.repository", () =
   deleteImportedFramework: vi.fn(),
 }));
 
-// A parsed sheet: header row plus two data rows, as ExcelJS would yield them.
+// A parsed sheet: header row, then two data rows around a blank row 3.
 const SHEET: unknown[][] = [
   ["Framework Name *", "Topic Number *", "Topic Name *", "Subtopic Number", "Subtopic Name"],
   ["Internal policy", "1", "Governance", "1.1", "Accountability"],
+  ["", "", "", "", ""],
   ["Internal policy", "1", "Governance", "1.1", "Accountability again"],
 ];
 vi.mock("exceljs", () => {
@@ -139,6 +140,14 @@ describe("FrameworkImportModal (#5254)", () => {
     await waitFor(() => expect(importButton).not.toBeDisabled());
     fireEvent.click(importButton);
   };
+
+  it("sends each row's sheet row number, skipping blank rows", async () => {
+    await importSuccessfully({ added: 3, updated: 0, retired: 0, removed: 0 });
+    await waitFor(() => expect(mockMutateAsync).toHaveBeenCalled());
+    const rows = mockMutateAsync.mock.calls[0][0];
+    expect(rows).toHaveLength(2);
+    expect(rows.map((row: { row_number?: number }) => row.row_number)).toEqual([2, 4]);
+  });
 
   it("reports topic and subtopic counts after a first import", async () => {
     await importSuccessfully({ added: 3, updated: 0, retired: 0, removed: 0 });

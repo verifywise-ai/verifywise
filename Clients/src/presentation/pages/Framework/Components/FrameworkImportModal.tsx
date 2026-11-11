@@ -146,7 +146,10 @@ export default function FrameworkImportModal({
             (val) => val !== null && val !== undefined && val !== "",
           );
           if (hasData) {
-            data.push(rowData);
+            // Blank rows are dropped, so the array index no longer matches
+            // the sheet. Send the real row number for the server's errors.
+            // Set last so a "Row number" column in the sheet cannot override it.
+            data.push({ ...rowData, row_number: rowNumber });
           }
         }
       });

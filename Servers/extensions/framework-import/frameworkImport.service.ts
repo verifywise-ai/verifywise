@@ -113,6 +113,11 @@ export interface FrameworkImportRow {
   subtopic_number?: unknown;
   subtopic_name?: unknown;
   subtopic_description?: unknown;
+  /**
+   * The row's line number in the uploaded sheet. The client drops blank rows
+   * before sending, so the array index alone no longer matches Excel.
+   */
+  row_number?: unknown;
 }
 
 export interface FrameworkImportError {
@@ -218,6 +223,16 @@ function allFailed(errors: FrameworkImportError[], total: number): FrameworkImpo
     retired: 0,
     removed: 0,
   };
+}
+
+/**
+ * The sheet row to report for `rows[index]`: the client-sent `row_number`
+ * when it is a positive safe integer, otherwise index + 2 (header is row 1,
+ * plus 1-based indexing).
+ */
+export function sheetRowNumber(row: FrameworkImportRow, index: number): number {
+  const sent = row.row_number;
+  return typeof sent === "number" && Number.isSafeInteger(sent) && sent > 0 ? sent : index + 2;
 }
 
 export function validateRow(row: FrameworkImportRow, rowIndex: number): FrameworkImportError[] {
@@ -330,7 +345,7 @@ export function validateStructure(rows: FrameworkImportRow[]): FrameworkImportEr
   const subtopicRows = new Map<string, number>();
 
   rows.forEach((row, i) => {
-    const rowIndex = i + 2; // header row is row 1
+    const rowIndex = sheetRowNumber(row, i);
     const name = asText(row.framework_name);
     if (frameworkName && name && name !== frameworkName) {
       errors.push({
@@ -701,8 +716,7 @@ export async function importFramework(
 
   const errors: FrameworkImportError[] = [];
   rows.forEach((row, i) => {
-    // +2 accounts for the header row (row 1) plus 1-based indexing.
-    errors.push(...validateRow(row, i + 2));
+    errors.push(...validateRow(row, sheetRowNumber(row, i)));
   });
   errors.push(...validateStructure(rows));
 
