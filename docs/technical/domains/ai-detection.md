@@ -53,13 +53,25 @@ ai_detection_scans
 └── updated_at (TIMESTAMPTZ)
 ```
 
+All AI Detection timestamps are `TIMESTAMPTZ`. Until migration
+`20261112143747-ai-detection-scan-fk-and-timestamptz` the scans, findings and risk
+scoring config tables used `TIMESTAMP` with mixed contents: columns set with `NOW()`
+held UTC wall time (Sequelize runs sessions at `+00:00`), while `started_at` and
+`completed_at`, bound from a JS `Date` in a raw query, held the Node server's local
+wall time. The UI therefore showed scans hours off. The migration recovers each
+row's offset (`started_at - created_at`, else `completed_at - updated_at`, rounded to
+15 minutes), shifts those two columns to UTC and converts every column with
+`AT TIME ZONE 'UTC'`. `updateScanProgressQuery` now binds `started_at` /
+`completed_at` as ISO strings, so the stored instant does not depend on the process
+or session time zone.
+
 ### Findings Table
 
 ```
 ai_detection_findings
 ├── id (PK, SERIAL)
 ├── organization_id (INTEGER NOT NULL)
-├── scan_id (FK → ai_detection_scans, CASCADE DELETE)
+├── scan_id (FK → ai_detection_scans, ON DELETE CASCADE, `fk_ai_detection_findings_scan`)
 ├── finding_type (VARCHAR(100) NOT NULL)
 ├── category (VARCHAR(100) NOT NULL)
 ├── name (VARCHAR(255) NOT NULL)
@@ -79,8 +91,23 @@ ai_detection_findings
 └── created_at (TIMESTAMPTZ)
 
 Constraints:
-└── UNIQUE(scan_id, name, provider)
+├── UNIQUE(scan_id, name, provider)
+└── FOREIGN KEY(scan_id) → ai_detection_scans(id) ON DELETE CASCADE
 ```
+
+The scan FK was added in `20261112143747`, which first deleted findings whose scan no
+longer existed (left behind by earlier scan deletes). `deleteScanQuery` also deletes
+the scan's findings explicitly before the scan. Vulnerability details cascade from
+findings (`finding_id` FK).
+
+Findings are merged before insert by `mergeDuplicateFindings`
+(`utils/aiDetectionFindingMerge.utils.ts`), keyed on scan, name and provider
+compared case-insensitively. Some libraries appear twice in the pattern catalogue
+(for example `qdrant` as a vector database library and `Qdrant` as a RAG component,
+`crewai` and `CrewAI`), and both entries match the same import. The merged finding
+keeps the capitalised display name and its description, unions the file lists (by
+path and line) and recomputes `file_count`, and keeps the higher confidence and risk
+level. A scan's `findings_count` is the number of rows stored after this merge.
 
 ### Vulnerability Details Table
 
@@ -142,7 +169,7 @@ ai_detection_repositories
 ├── schedule_minute (INTEGER)
 ├── next_scan_at (TIMESTAMPTZ)
 ├── last_scan_at (TIMESTAMPTZ)
-├── last_scan_id (INTEGER)
+├── last_scan_id (INTEGER, FK → ai_detection_scans, ON DELETE SET NULL)
 ├── github_token_id (INTEGER)
 ├── created_by (INTEGER NOT NULL)
 ├── created_at (TIMESTAMPTZ)
@@ -552,19 +579,21 @@ __pycache__, dist, build, target
    └── Store confirmed findings with vulnerability details
 
 7. Finding Aggregation
-   ├── Deduplicate by name + provider
+   ├── Deduplicate by name + provider (case-insensitive) + finding type
+   ├── Merge case variants of one library (see Findings Table)
    └── Aggregate file paths per finding
 
 8. Cross-referencing
    └── Link vulnerability findings to overlapping non-vulnerability findings
 
-9. Risk Score Calculation
-   ├── Calculate dimension scores from all findings
-   ├── Optional LLM enhancement
-   └── Store score, grade, and details on scan record
+9. Database Insert
+   └── Batch insert findings, then mark the scan completed
 
-10. Database Insert
-    └── Batch insert findings
+10. Risk Score Calculation (background, after completion)
+    ├── Calculate dimension scores from all findings
+    ├── Optional LLM enhancement
+    ├── Store score, grade, and details on scan record
+    └── Then report webhook-triggered scans to GitHub (see CI status checks)
 
 11. Cleanup
     └── Remove temp clone directory
@@ -635,6 +664,30 @@ useEffect(() => {
 ```
 
 ## GitHub Integration
+
+### CI status checks (`githubStatusReporter.ts`)
+
+Webhook-triggered scans report back to GitHub when the repository has
+`ci_status_checks` (commit status, context "VerifyWise AI Detection") and/or
+`ci_post_comments` (PR comment). `scoreAndReportScan` in `aiDetection.service.ts`
+stores the governance score first and only then reports, so the check always reads
+the stored score.
+
+`evaluateThresholds(scan, repo, criticalCount)`:
+
+| Result | When | Example description |
+|--------|------|---------------------|
+| `failure` | `risk_score < ci_min_score` (score is 0–100, higher is safer; equal passes) | `Governance score 62 is below the minimum of 70` |
+| `failure` | critical findings `> ci_max_critical` | `3 critical findings exceed the limit of 0` |
+| `success` | both thresholds pass | `Governance score 85 (minimum 70), 0 critical findings (limit 0)` |
+| `error` | scan not completed, no governance score (scoring failed), or the critical count could not be read | `Governance score is not available, so thresholds could not be evaluated` |
+
+A critical finding (`countCriticalFindingsQuery`) is one with `severity = 'critical'`
+(vulnerability and model security findings) or `finding_type = 'secret'` (hardcoded
+credentials carry no severity but always block). Findings that are suppressed, have
+governance status `suppressed` or `accepted_risk`, or are `fixed` in an incremental
+scan are not counted, matching what the governance score excludes. The total
+`findings_count` is not used for the gate.
 
 ### Token Management
 

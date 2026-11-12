@@ -139,6 +139,32 @@ interface ScanProgressEntry {
 const scanProgressMap = new Map<number, ScanProgressEntry>();
 
 /**
+ * Calculate and store the governance score, then report the scan to GitHub.
+ *
+ * The GitHub status check reads the stored score, so it must run after the
+ * score is written. Runs in the background; errors are logged, never thrown.
+ * If scoring fails the scan has no score and the status check reports
+ * "error" rather than passing.
+ */
+function scoreAndReportScan(scanId: number, repositoryName: string, ctx: IServiceContext): void {
+  void (async () => {
+    try {
+      await calculateAndStoreRiskScore(scanId, repositoryName, ctx);
+    } catch (err) {
+      logger.error(`Failed to calculate risk score for scan ${scanId}:`, err);
+    }
+    try {
+      const completedScan = await getScanByIdQuery(scanId, ctx.organizationId);
+      if (completedScan) {
+        await reportScanToGitHub(completedScan, ctx.organizationId);
+      }
+    } catch (err) {
+      logger.error(`Failed to report scan #${scanId} to GitHub:`, err);
+    }
+  })();
+}
+
+/**
  * Update the linked repository's last_scan fields after scan completion
  */
 async function updateLinkedRepositoryLastScan(
@@ -1552,14 +1578,15 @@ async function executeIncrementalScan(
   try {
     const allFindings = [...newFindingInputs, ...carriedForwardInputs];
 
+    // Count what is stored: the batch insert merges case-variant duplicates
+    let totalFindings = 0;
     if (allFindings.length > 0) {
       const suppressionRules = await getActiveSuppressionsQuery(ctx.organizationId);
       applySuppressions(allFindings, suppressionRules);
-      await createFindingsBatchQuery(allFindings, ctx.organizationId, transaction);
+      totalFindings = await createFindingsBatchQuery(allFindings, ctx.organizationId, transaction);
     }
 
     // Complete scan
-    const totalFindings = allFindings.length;
     const completedAt = new Date();
     const durationMs = progressState.startedAt
       ? completedAt.getTime() - progressState.startedAt.getTime()
@@ -1592,18 +1619,7 @@ async function executeIncrementalScan(
 
     const scan = await getScanByIdQuery(scanId, ctx.organizationId);
     if (scan) {
-      calculateAndStoreRiskScore(
-        scanId,
-        `${scan.repository_owner}/${scan.repository_name}`,
-        ctx,
-      ).catch((err) => {
-        logger.error(`Failed to calculate risk score for scan ${scanId}:`, err);
-      });
-
-      // Report to GitHub for webhook-triggered scans (fire-and-forget)
-      reportScanToGitHub(scan, ctx.organizationId).catch((err) => {
-        logger.error(`Failed to report scan #${scanId} to GitHub:`, err);
-      });
+      scoreAndReportScan(scanId, `${scan.repository_owner}/${scan.repository_name}`, ctx);
     }
   } catch (error) {
     await transaction.rollback();
@@ -2039,6 +2055,8 @@ async function executeScan(
       }
 
       const findingInputs = Array.from(deduplicatedFindingsMap.values());
+      // Rows actually stored; the batch insert merges case-variant duplicates
+      let storedFindingsCount = 0;
 
       // Fetch active suppression rules once for both insert paths below
       const suppressionRules =
@@ -2078,13 +2096,21 @@ async function executeScan(
         console.log(`[LICENSE] Total licenses found: ${licensesFound}/${findingInputs.length}`);
 
         applySuppressions(findingInputs, suppressionRules);
-        await createFindingsBatchQuery(findingInputs, ctx.organizationId, transaction);
+        storedFindingsCount += await createFindingsBatchQuery(
+          findingInputs,
+          ctx.organizationId,
+          transaction,
+        );
       }
 
       // Store vulnerability findings
       if (vulnerabilityFindings.length > 0) {
         applySuppressions(vulnerabilityFindings, suppressionRules);
-        await createFindingsBatchQuery(vulnerabilityFindings, ctx.organizationId, transaction);
+        storedFindingsCount += await createFindingsBatchQuery(
+          vulnerabilityFindings,
+          ctx.organizationId,
+          transaction,
+        );
       }
 
       // Store model security findings (deduplicate by name+provider to avoid ON CONFLICT errors)
@@ -2106,20 +2132,15 @@ async function executeScan(
           }
         }
         const deduplicatedSecurityFindings = Array.from(securityFindingsMap.values());
-        await createModelSecurityFindingsBatchQuery(
+        storedFindingsCount += await createModelSecurityFindingsBatchQuery(
           deduplicatedSecurityFindings,
           ctx.organizationId,
           transaction,
         );
       }
 
-      // Mark scan as completed (include both library and security findings)
-      const deduplicatedSecurityCount =
-        modelSecurityFindings.length > 0
-          ? new Set(modelSecurityFindings.map((f) => `${f.name}::${f.provider}`)).size
-          : 0;
-      const totalFindings =
-        findingsMap.size + deduplicatedSecurityCount + vulnerabilityFindings.length;
+      // Mark scan as completed (library, vulnerability and model security findings)
+      const totalFindings = storedFindingsCount;
       const completedAt = new Date();
       const durationMs = progressState.startedAt
         ? completedAt.getTime() - progressState.startedAt.getTime()
@@ -2158,18 +2179,8 @@ async function executeScan(
         // Silently ignore cache invalidation errors
       });
 
-      // Calculate risk score (fire-and-forget)
-      calculateAndStoreRiskScore(scanId, `${owner}/${repo}`, ctx).catch((err) => {
-        logger.error(`Failed to calculate risk score for scan ${scanId}:`, err);
-      });
-
-      // Report to GitHub for webhook-triggered scans (fire-and-forget)
-      const completedScan = await getScanByIdQuery(scanId, ctx.organizationId);
-      if (completedScan) {
-        reportScanToGitHub(completedScan, ctx.organizationId).catch((err) => {
-          logger.error(`Failed to report scan #${scanId} to GitHub:`, err);
-        });
-      }
+      // Calculate the governance score, then report to GitHub (fire-and-forget)
+      scoreAndReportScan(scanId, `${owner}/${repo}`, ctx);
     } catch (error) {
       await transaction.rollback();
       throw error;

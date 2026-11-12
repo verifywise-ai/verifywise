@@ -12,7 +12,7 @@ import { IScan } from "../../domain.layer/interfaces/i.aiDetection";
 import { IAIDetectionRepository } from "../../domain.layer/interfaces/i.aiDetectionRepository";
 import { getDecryptedGitHubToken } from "../../utils/githubToken.utils";
 import { getRepositoryByIdQuery } from "../../utils/aiDetectionRepository.utils";
-import { getFindingsSummaryQuery } from "../../utils/aiDetection.utils";
+import { countCriticalFindingsQuery, getFindingsSummaryQuery } from "../../utils/aiDetection.utils";
 import logger from "../../utils/logger/fileLogger";
 
 // ============================================================================
@@ -65,8 +65,18 @@ export async function reportScanToGitHub(scan: IScan, organizationId: number): P
   const owner = scan.repository_owner;
   const repoName = scan.repository_name;
 
+  // Count critical findings only for completed scans; other states never reach the gate.
+  let criticalCount: number | null = null;
+  if (scan.status === "completed" && scan.id) {
+    try {
+      criticalCount = await countCriticalFindingsQuery(scan.id, organizationId);
+    } catch (err) {
+      logger.error(`Failed to count critical findings for scan #${scan.id}:`, err);
+    }
+  }
+
   // Determine pass/fail based on thresholds
-  const { passed, description } = evaluateThresholds(scan, repo);
+  const evaluation = evaluateThresholds(scan, repo, criticalCount);
 
   // Post status check
   if (repo.ci_status_checks) {
@@ -75,8 +85,8 @@ export async function reportScanToGitHub(scan: IScan, organizationId: number): P
         owner,
         repo: repoName,
         sha: scan.commit_sha,
-        state: scan.status === "completed" ? (passed ? "success" : "failure") : "error",
-        description,
+        state: evaluation.state,
+        description: evaluation.description,
         context: "VerifyWise AI Detection",
       });
       logger.info(`Posted commit status for ${owner}/${repoName}@${scan.commit_sha.slice(0, 7)}`);
@@ -88,7 +98,7 @@ export async function reportScanToGitHub(scan: IScan, organizationId: number): P
   // Post PR comment
   if (repo.ci_post_comments && scan.pr_number) {
     try {
-      const summary = await buildPRCommentBody(scan, organizationId, passed);
+      const summary = await buildPRCommentBody(scan, organizationId, evaluation, criticalCount);
       await postPRComment(token, owner, repoName, scan.pr_number, summary);
       logger.info(`Posted PR comment on ${owner}/${repoName}#${scan.pr_number}`);
     } catch (err) {
@@ -101,38 +111,90 @@ export async function reportScanToGitHub(scan: IScan, organizationId: number): P
 // Threshold Evaluation
 // ============================================================================
 
-function evaluateThresholds(
+export interface ThresholdEvaluation {
+  /** Commit status state to post */
+  state: "success" | "failure" | "error";
+  /** True only when the scan completed and both thresholds pass */
+  passed: boolean;
+  description: string;
+}
+
+/**
+ * Evaluate a completed scan against the repository's CI thresholds.
+ *
+ * - The governance score (`risk_score`) is 0–100 where 100 is safest (AGRS).
+ *   The gate fails when the score is BELOW `ci_min_score`; a score equal to
+ *   the minimum passes.
+ * - `ci_max_critical` limits the number of critical findings, as counted by
+ *   `countCriticalFindingsQuery` (severity "critical" or a hardcoded secret,
+ *   excluding suppressed, accepted-risk and fixed findings). It is not the
+ *   total findings count.
+ * - A scan that did not complete, has no governance score, or whose critical
+ *   count could not be read reports "error" instead of passing silently.
+ */
+export function evaluateThresholds(
   scan: IScan,
-  repo: IAIDetectionRepository,
-): { passed: boolean; description: string } {
-  const riskScore = scan.risk_score ?? 0;
-  const findingsCount = scan.findings_count ?? 0;
-
-  const scoreExceeded = riskScore > repo.ci_min_score;
-  const criticalExceeded = findingsCount > repo.ci_max_critical;
-
-  if (scoreExceeded && criticalExceeded) {
+  repo: Pick<IAIDetectionRepository, "ci_min_score" | "ci_max_critical">,
+  criticalCount: number | null,
+): ThresholdEvaluation {
+  if (scan.status !== "completed") {
     return {
+      state: "error",
       passed: false,
-      description: `Risk score ${riskScore} exceeds ${repo.ci_min_score} and ${findingsCount} findings exceed ${repo.ci_max_critical}`,
+      description: `Scan ${scan.status ?? "did not complete"}; thresholds were not evaluated`,
     };
   }
-  if (scoreExceeded) {
+
+  const rawScore = scan.risk_score;
+  // NUMERIC columns come back from pg as strings ("62.00")
+  const score = rawScore === null || rawScore === undefined ? NaN : Number(rawScore);
+  if (Number.isNaN(score)) {
     return {
+      state: "error",
       passed: false,
-      description: `Risk score ${riskScore} exceeds threshold of ${repo.ci_min_score}`,
+      description: "Governance score is not available, so thresholds could not be evaluated",
+    };
+  }
+  if (criticalCount === null) {
+    return {
+      state: "error",
+      passed: false,
+      description: "Critical findings could not be counted, so thresholds could not be evaluated",
+    };
+  }
+
+  const displayScore = Math.round(score);
+  const scoreBelowMinimum = score < repo.ci_min_score;
+  const criticalExceeded = criticalCount > repo.ci_max_critical;
+  const criticalLabel = criticalCount === 1 ? "critical finding" : "critical findings";
+  const exceedVerb = criticalCount === 1 ? "exceeds" : "exceed";
+
+  if (scoreBelowMinimum && criticalExceeded) {
+    return {
+      state: "failure",
+      passed: false,
+      description: `Governance score ${displayScore} is below the minimum of ${repo.ci_min_score} and ${criticalCount} ${criticalLabel} ${exceedVerb} the limit of ${repo.ci_max_critical}`,
+    };
+  }
+  if (scoreBelowMinimum) {
+    return {
+      state: "failure",
+      passed: false,
+      description: `Governance score ${displayScore} is below the minimum of ${repo.ci_min_score}`,
     };
   }
   if (criticalExceeded) {
     return {
+      state: "failure",
       passed: false,
-      description: `${findingsCount} findings exceed threshold of ${repo.ci_max_critical}`,
+      description: `${criticalCount} ${criticalLabel} ${exceedVerb} the limit of ${repo.ci_max_critical}`,
     };
   }
 
   return {
+    state: "success",
     passed: true,
-    description: `Risk score: ${riskScore}, Findings: ${findingsCount}`,
+    description: `Governance score ${displayScore} (minimum ${repo.ci_min_score}), ${criticalCount} ${criticalLabel} (limit ${repo.ci_max_critical})`,
   };
 }
 
@@ -143,7 +205,8 @@ function evaluateThresholds(
 async function buildPRCommentBody(
   scan: IScan,
   organizationId: number,
-  passed: boolean,
+  evaluation: ThresholdEvaluation,
+  criticalCount: number | null,
 ): Promise<string> {
   let summaryDetails = "";
   try {
@@ -160,16 +223,24 @@ async function buildPRCommentBody(
     // Non-critical, continue without detailed summary
   }
 
-  const statusEmoji = passed ? "\u2705" : "\u274c";
-  const statusText = passed ? "Passed" : "Failed";
+  const statusEmoji = evaluation.passed ? "\u2705" : "\u274c";
+  const statusText =
+    evaluation.state === "success" ? "Passed" : evaluation.state === "failure" ? "Failed" : "Error";
   const grade = scan.risk_score_grade || "N/A";
+  const score =
+    scan.risk_score === null || scan.risk_score === undefined
+      ? "N/A"
+      : String(Math.round(Number(scan.risk_score)));
 
   return `## ${statusEmoji} VerifyWise AI Detection — ${statusText}
 
+${evaluation.description}
+
 | Metric | Value |
 |--------|-------|
-| **Risk Score** | ${scan.risk_score ?? "N/A"} |
+| **Governance score** | ${score} |
 | **Grade** | ${grade} |
+| **Critical findings** | ${criticalCount ?? "N/A"} |
 | **Findings** | ${scan.findings_count ?? 0} |
 | **Files Scanned** | ${scan.files_scanned ?? 0} |
 | **Scan Mode** | ${scan.scan_mode ?? "full"} |

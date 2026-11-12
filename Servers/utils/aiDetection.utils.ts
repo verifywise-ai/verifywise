@@ -20,6 +20,7 @@ import {
   GovernanceStatus,
 } from "../domain.layer/interfaces/i.aiDetection";
 import { ICreateModelSecurityFindingInput } from "../domain.layer/interfaces/i.modelSecurity";
+import { mergeDuplicateFindings } from "./aiDetectionFindingMerge.utils";
 
 // ============================================================================
 // Organization ID Validation
@@ -35,6 +36,11 @@ function validateOrganizationId(organizationId: number): void {
   if (!organizationId || !Number.isInteger(organizationId) || organizationId <= 0) {
     throw new Error(`Invalid organization identifier: ${organizationId}`);
   }
+}
+
+/** Serialise a timestamp with an explicit UTC offset; null stays null. */
+function toUtcIsoString(value: Date | null): string | null {
+  return value === null ? null : new Date(value).toISOString();
 }
 
 // ============================================================================
@@ -222,13 +228,15 @@ export async function updateScanProgressQuery(
     setClauses.push("findings_count = :findings_count");
     replacements.findings_count = input.findings_count;
   }
+  // Timestamps are TIMESTAMPTZ. Pass an ISO string (explicit UTC offset) so the
+  // stored instant never depends on the Node process or session time zone.
   if (input.started_at !== undefined) {
     setClauses.push("started_at = :started_at");
-    replacements.started_at = input.started_at;
+    replacements.started_at = toUtcIsoString(input.started_at);
   }
   if (input.completed_at !== undefined) {
     setClauses.push("completed_at = :completed_at");
-    replacements.completed_at = input.completed_at;
+    replacements.completed_at = toUtcIsoString(input.completed_at);
   }
   if (input.duration_ms !== undefined) {
     setClauses.push("duration_ms = :duration_ms");
@@ -343,17 +351,28 @@ export async function deleteScanQuery(
   transaction: Transaction,
 ): Promise<boolean> {
   validateOrganizationId(organizationId);
-  // Findings are deleted via CASCADE
-  const query = `
-    DELETE FROM ai_detection_scans
-    WHERE id = :scanId AND organization_id = :organizationId;
-  `;
+  // Findings also cascade from the scan (fk_ai_detection_findings_scan) and
+  // vulnerability details cascade from findings. Deleting them explicitly keeps
+  // this correct on a database where that FK is not in place yet.
+  await sequelize.query(
+    `DELETE FROM ai_detection_findings
+     WHERE scan_id = :scanId AND organization_id = :organizationId;`,
+    {
+      replacements: { scanId, organizationId },
+      type: QueryTypes.DELETE,
+      transaction,
+    },
+  );
 
-  await sequelize.query(query, {
-    replacements: { scanId, organizationId },
-    type: QueryTypes.DELETE,
-    transaction,
-  });
+  await sequelize.query(
+    `DELETE FROM ai_detection_scans
+     WHERE id = :scanId AND organization_id = :organizationId;`,
+    {
+      replacements: { scanId, organizationId },
+      type: QueryTypes.DELETE,
+      transaction,
+    },
+  );
 
   return true;
 }
@@ -479,25 +498,10 @@ export async function createFindingsBatchQuery(
   validateOrganizationId(organizationId);
   if (inputs.length === 0) return 0;
 
-  // Final deduplication safety check - PostgreSQL ON CONFLICT fails if same row appears twice in batch
-  // Key is (scan_id, name, provider) - must match the unique constraint
-  // Normalize provider to handle undefined/null/"" consistently
-  const deduplicatedMap = new Map<string, ICreateFindingInput>();
-  for (const input of inputs) {
-    const normalizedProvider = input.provider || "NULL";
-    const key = `${input.scan_id}::${input.name}::${normalizedProvider}`;
-    const existing = deduplicatedMap.get(key);
-    if (existing) {
-      // Merge file paths
-      const existingPaths = existing.file_paths || [];
-      const newPaths = input.file_paths || [];
-      existing.file_paths = [...existingPaths, ...newPaths];
-      existing.file_count = existing.file_paths.length;
-    } else {
-      deduplicatedMap.set(key, { ...input });
-    }
-  }
-  const deduplicatedInputs = Array.from(deduplicatedMap.values());
+  // Final deduplication - PostgreSQL ON CONFLICT fails if the same row appears twice
+  // in one batch. The key is (scan_id, name, provider) compared case-insensitively,
+  // so "qdrant"/"Qdrant" from two catalogue entries become one finding.
+  const deduplicatedInputs = mergeDuplicateFindings(inputs);
 
   // Use single INSERT with multiple VALUES
   const values = deduplicatedInputs.map((_input, index) => {
@@ -1042,6 +1046,44 @@ export async function getFindingsSummaryQuery(
     by_provider: byProvider,
     by_finding_type: byFindingType,
   };
+}
+
+/**
+ * Count critical findings for a scan (used by the CI status check).
+ *
+ * A finding is critical when its severity is "critical" (vulnerability and
+ * model security findings) or it is a hardcoded secret (finding_type
+ * "secret", which carries no severity but is always a release blocker).
+ * Findings that are suppressed, marked as accepted risk, or fixed in an
+ * incremental scan are not counted, matching what the governance score
+ * excludes.
+ *
+ * @param scanId - Scan ID
+ * @param organizationId - Organization ID for multi-tenancy
+ * @returns Number of critical findings
+ */
+export async function countCriticalFindingsQuery(
+  scanId: number,
+  organizationId: number,
+): Promise<number> {
+  validateOrganizationId(organizationId);
+  const query = `
+    SELECT COUNT(*) AS count
+    FROM ai_detection_findings
+    WHERE scan_id = :scanId
+      AND organization_id = :organizationId
+      AND (severity = 'critical' OR finding_type = 'secret')
+      AND COALESCE(suppressed, FALSE) = FALSE
+      AND COALESCE(governance_status, '') NOT IN ('suppressed', 'accepted_risk')
+      AND COALESCE(finding_status, '') <> 'fixed';
+  `;
+
+  const results = await sequelize.query(query, {
+    replacements: { scanId, organizationId },
+    type: QueryTypes.SELECT,
+  });
+
+  return parseInt((results[0] as { count: string }).count, 10);
 }
 
 /**
