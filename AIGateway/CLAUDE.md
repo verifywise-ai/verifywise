@@ -1,6 +1,6 @@
 # AIGateway — LLM Gateway Service
 
-> **Last Updated:** 2026-10-31
+> **Last Updated:** 2026-11-12
 
 ---
 
@@ -91,7 +91,7 @@ cd src && uvicorn app:app --host 0.0.0.0 --port 8100 --reload   # Development
 
 ## Express Proxy
 
-Express backend at `Servers/routes/aiGateway.route.ts` proxies `/api/ai-gateway/*` to `/internal/*` on the gateway (`http://ai_gateway:8100`) with JWT auth forwarding (`x-organization-id`, `x-user-id`, `x-role` headers). `Servers/routes/virtualKeyProxy.route.ts` forwards `/v1/*` to the gateway's `/v1/*`; virtual-key auth happens in the gateway. It is mounted at `/v1`, so it puts the prefix back with `pathRewrite`. `app.ts` skips the JSON body parser for `/v1/` so the raw body reaches the gateway (`fixRequestBody` stays as a guard if a parser ever runs first), and mounts the route before the global per-IP limiter with its own `virtualKeyProxyLimiter` (3000/min per IP; per-key RPM and budget are enforced by the gateway). Deployments must route `/v1/` to the backend (Ansible nginx template, `Clients/nginx.conf`, both Kubernetes ingresses) with buffering off for streamed responses.
+Express backend at `Servers/routes/aiGateway.route.ts` proxies `/api/ai-gateway/*` to `/internal/*` on the gateway (`http://ai_gateway:8100`) with JWT auth forwarding (`x-organization-id`, `x-user-id`, `x-role` headers). For writes under `/keys` it also sends `x-can-manage-llm-keys: true` when the caller holds the `llmKeys.admin` permission (resolved in `resolveLlmKeysPermission`; a client-supplied value is always stripped). The key routes accept that header as well as the built-in role names (`require_llm_keys_admin` / `require_llm_keys_writer` in `utils/auth.py`), so custom roles can manage provider keys. `Servers/routes/virtualKeyProxy.route.ts` forwards `/v1/*` to the gateway's `/v1/*`; virtual-key auth happens in the gateway. It is mounted at `/v1`, so it puts the prefix back with `pathRewrite`. `app.ts` skips the JSON body parser for `/v1/` so the raw body reaches the gateway (`fixRequestBody` stays as a guard if a parser ever runs first), and mounts the route before the global per-IP limiter with its own `virtualKeyProxyLimiter` (3000/min per IP; per-key RPM and budget are enforced by the gateway). Deployments must route `/v1/` to the backend (Ansible nginx template, `Clients/nginx.conf`, both Kubernetes ingresses) with buffering off for streamed responses.
 
 Endpoint models are stored as `<provider>/<model>` with the prefix once. LiteLLM lists many models with the prefix already, so the endpoint form and `utils/endpoint_model.normalize_endpoint_model` (applied on create and update) never add it twice.
 

@@ -53,3 +53,32 @@ def require_admin_or_editor(request: Request) -> None:
     role = get_role(request)
     if role not in ("Admin", "Editor"):
         raise HTTPException(status_code=403, detail="Admin or Editor access required")
+
+
+# Set only by the Express proxy, which strips any client-supplied value and
+# sends "true" when the caller holds the "llmKeys.admin" permission. Trusted
+# the same way as x-role (requests reach /internal only with x-internal-key).
+LLM_KEYS_ADMIN_HEADER = "x-can-manage-llm-keys"
+
+
+def has_llm_keys_admin(request: Request) -> bool:
+    """True when the proxy marked the caller as holding llmKeys.admin."""
+    return request.headers.get(LLM_KEYS_ADMIN_HEADER, "").lower() == "true"
+
+
+def require_llm_keys_admin(request: Request) -> None:
+    """Raise 403 unless the caller is an Admin or holds llmKeys.admin.
+
+    A custom role never matches the "Admin" role name, so the permission
+    is what lets it manage provider keys.
+    """
+    if get_role(request) == "Admin" or has_llm_keys_admin(request):
+        return
+    raise HTTPException(status_code=403, detail="Admin access required")
+
+
+def require_llm_keys_writer(request: Request) -> None:
+    """Raise 403 unless the caller is an Admin or Editor, or holds llmKeys.admin."""
+    if get_role(request) in ("Admin", "Editor") or has_llm_keys_admin(request):
+        return
+    raise HTTPException(status_code=403, detail="Admin or Editor access required")
