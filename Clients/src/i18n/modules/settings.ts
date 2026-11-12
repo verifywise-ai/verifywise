@@ -478,7 +478,8 @@ export const de: Record<string, string> = {
   "Members": "Mitglieder",
   "No groups yet.": "Noch keine Gruppen.",
   "No members found": "Keine Mitglieder gefunden",
-  "No groups yet. Groups are managed in Settings → Groups.": "Noch keine Gruppen. Gruppen werden unter Einstellungen → Gruppen verwaltet.",
+  "No groups yet. Groups are managed in Settings → Groups.":
+    "Noch keine Gruppen. Gruppen werden unter Einstellungen → Gruppen verwaltet.",
   "Groups bundle users so you can add a whole team to a use case in one step.":
     "Gruppen fassen Benutzer zusammen, sodass Sie ein ganzes Team in einem Schritt zu einem Anwendungsfall hinzufügen können.",
   "Loading members...": "Mitglieder werden geladen...",
@@ -979,7 +980,8 @@ export const fr: Record<string, string> = {
   "Members": "Membres",
   "No groups yet.": "Aucun groupe pour le moment.",
   "No members found": "Aucun membre trouvé",
-  "No groups yet. Groups are managed in Settings → Groups.": "Aucun groupe pour le moment. Les groupes se gèrent dans Paramètres → Groupes.",
+  "No groups yet. Groups are managed in Settings → Groups.":
+    "Aucun groupe pour le moment. Les groupes se gèrent dans Paramètres → Groupes.",
   "Groups bundle users so you can add a whole team to a use case in one step.":
     "Les groupes rassemblent des utilisateurs pour que vous puissiez ajouter toute une équipe à un cas d'usage en une seule étape.",
   "Loading members...": "Chargement des membres...",
@@ -1476,7 +1478,8 @@ export const es: Record<string, string> = {
   "Members": "Miembros",
   "No groups yet.": "Aún no hay grupos.",
   "No members found": "No se encontraron miembros",
-  "No groups yet. Groups are managed in Settings → Groups.": "Aún no hay grupos. Los grupos se gestionan en Configuración → Grupos.",
+  "No groups yet. Groups are managed in Settings → Groups.":
+    "Aún no hay grupos. Los grupos se gestionan en Configuración → Grupos.",
   "Groups bundle users so you can add a whole team to a use case in one step.":
     "Los grupos reúnen usuarios para que pueda agregar un equipo completo a un caso de uso en un solo paso.",
   "Loading members...": "Cargando miembros...",
