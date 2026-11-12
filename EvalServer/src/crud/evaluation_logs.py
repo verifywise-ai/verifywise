@@ -16,6 +16,7 @@ import uuid
 import json
 
 from utils.error_detection import redact_secrets
+from utils.secret_config import strip_secrets
 
 
 # ==================== LOGS ====================
@@ -363,7 +364,8 @@ async def create_experiment(
     print(f"   Project ID: {project_id}")
 
     try:
-        config_json = json.dumps(config) if config else '{}'
+        # Provider keys are for the run only; never store them (see utils/secret_config.py).
+        config_json = json.dumps(strip_secrets(config)) if config else '{}'
 
         result = await db.execute(
             text('''
@@ -432,7 +434,8 @@ async def get_experiment_by_id(
             "project_id": row["project_id"],
             "name": row["name"],
             "description": row["description"],
-            "config": row["config"],
+            # Also strips keys from rows stored before they were removed on write.
+            "config": strip_secrets(row["config"]),
             "baseline_experiment_id": row["baseline_experiment_id"],
             "status": row["status"],
             "results": _redact_scorer_errors(row["results"]),
@@ -490,7 +493,8 @@ async def get_experiments(
             "project_id": row["project_id"],
             "name": row["name"],
             "description": row["description"],
-            "config": row["config"],
+            # Also strips keys from rows stored before they were removed on write.
+            "config": strip_secrets(row["config"]),
             "status": row["status"],
             "results": _redact_scorer_errors(row["results"]),
             # Also redacts rows stored before redaction on write existed.

@@ -517,12 +517,13 @@ async def run_evaluation_task(experiment_id: str, config: Dict, organization_id:
         script_path = Path(__file__).parent.parent / "utils" / "run_evaluation_subprocess.py"
         python_executable = sys.executable
 
-        # Prepare arguments
-        eval_args = json.dumps({
+        # The config carries the run's provider keys: send it on stdin, never as a
+        # process argument (any local user can read arguments with ps).
+        eval_payload = json.dumps({
             "experiment_id": experiment_id,
             "config": config,
             "organization_id": organization_id,
-        })
+        }).encode()
 
         # Async subprocess with piped output (non-blocking)
         env = run_subprocess_env()
@@ -531,11 +532,25 @@ async def run_evaluation_task(experiment_id: str, config: Dict, organization_id:
             python_executable,
             "-u",
             str(script_path),
-            eval_args,
+            stdin=asyncio.subprocess.PIPE,
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.STDOUT,
             env=env,
         )
+
+        async def _send_payload() -> None:
+            # Written alongside the output loop, so a large inline dataset can't
+            # deadlock on full pipe buffers.
+            assert proc.stdin is not None
+            try:
+                proc.stdin.write(eval_payload)
+                await proc.stdin.drain()
+            except (BrokenPipeError, ConnectionResetError):
+                pass  # The child exited early; its exit code reports why.
+            finally:
+                proc.stdin.close()
+
+        send_task = asyncio.create_task(_send_payload())
 
         assert proc.stdout is not None
         while True:
@@ -545,6 +560,7 @@ async def run_evaluation_task(experiment_id: str, config: Dict, organization_id:
             print(f"[eval:{experiment_id}] {line.decode().rstrip()}")
 
         return_code = await proc.wait()
+        await send_task
 
         if return_code == 0:
             print("✅ Evaluation subprocess completed successfully")
