@@ -123,7 +123,7 @@ describe("ProjectDatasets", () => {
 
       expect(await screen.findByText("Alpha Dataset")).toBeInTheDocument();
       expect(screen.getByText("Beta Dataset")).toBeInTheDocument();
-      expect(screen.getAllByText("Single-Turn")).toHaveLength(2);
+      expect(screen.getAllByText("Single-turn")).toHaveLength(2);
       expect(screen.getAllByText("Chatbot")).toHaveLength(2);
       expect(screen.getAllByText("3")).toHaveLength(2);
 

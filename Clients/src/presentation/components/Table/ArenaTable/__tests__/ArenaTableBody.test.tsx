@@ -204,7 +204,7 @@ describe("ArenaTableBody", () => {
     const buttons = screen.getAllByRole("button");
     await user.click(buttons[0]);
     await user.click(screen.getByText("Delete"));
-    expect(screen.getByText("Delete Arena Battle")).toBeInTheDocument();
+    expect(screen.getByText("Delete arena battle")).toBeInTheDocument();
   });
 
   it("confirms delete from modal", async () => {

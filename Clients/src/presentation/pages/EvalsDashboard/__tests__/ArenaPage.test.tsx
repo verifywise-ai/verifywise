@@ -318,7 +318,7 @@ describe("ArenaPage", () => {
 
       let comboboxes = within(popover).getAllByRole("combobox");
       fireEvent.mouseDown(comboboxes[0]);
-      fireEvent.click(screen.getByRole("option", { name: "Battle Name" }));
+      fireEvent.click(screen.getByRole("option", { name: "Battle name" }));
 
       comboboxes = within(popover).getAllByRole("combobox");
       fireEvent.mouseDown(comboboxes[1]);
@@ -353,7 +353,7 @@ describe("ArenaPage", () => {
       popover = document.querySelector(".MuiPopover-paper") as HTMLElement;
       const allComboboxes = within(popover).getAllByRole("combobox");
       fireEvent.mouseDown(allComboboxes[3]);
-      fireEvent.click(screen.getByRole("option", { name: "Battle Name" }));
+      fireEvent.click(screen.getByRole("option", { name: "Battle name" }));
       fireEvent.change(within(popover).getByPlaceholderText("Enter text here..."), {
         target: { value: "Running battle" },
       });
@@ -613,7 +613,7 @@ describe("ArenaPage", () => {
       // criterion twice so nothing stays selected
       fireEvent.click(screen.getByText("Accuracy"));
       fireEvent.click(screen.getByText("Coherence"));
-      ["Conciseness", "Relevance", "Safety", "Creativity", "Instruction Following"].forEach(
+      ["Conciseness", "Relevance", "Safety", "Creativity", "Instruction following"].forEach(
         (name) => {
           fireEvent.click(screen.getByText(name));
           fireEvent.click(screen.getByText(name));
@@ -673,7 +673,8 @@ describe("ArenaPage", () => {
       let selectors = screen.getAllByTestId("contestant-model-selector");
       fireEvent.click(within(selectors[0]).getByText("set-model-gpt-4o"));
 
-      expect(screen.getByText("Gpt-4o")).toBeInTheDocument();
+      // badge + the selector's own value
+      expect(screen.getAllByText("gpt-4o")).toHaveLength(2);
 
       fireEvent.click(within(selectors[0]).getByText("set-provider-anthropic"));
 
@@ -682,7 +683,7 @@ describe("ArenaPage", () => {
       expect(within(selectors[0]).getByTestId("model-value")).toHaveTextContent("");
     });
 
-    it("formats contestant names from the selected model", async () => {
+    it("names contestants with the model ID exactly as stored", async () => {
       renderArena();
       await goToContestantsStep();
 
@@ -690,8 +691,11 @@ describe("ArenaPage", () => {
       fireEvent.click(within(selectors[0]).getByText("set-model-gpt-4o"));
       fireEvent.click(within(selectors[1]).getByText("set-model-claude-sonnet-4"));
 
-      expect(screen.getByText("Gpt-4o")).toBeInTheDocument();
-      expect(screen.getByText("Claude-Sonnet-4")).toBeInTheDocument();
+      // badge + the selector's own value; no title-casing of model IDs
+      expect(screen.getAllByText("gpt-4o")).toHaveLength(2);
+      expect(screen.getAllByText("claude-sonnet-4")).toHaveLength(2);
+      expect(screen.queryByText("Gpt-4o")).not.toBeInTheDocument();
+      expect(screen.queryByText("Claude-Sonnet-4")).not.toBeInTheDocument();
     });
 
     it("keeps Start battle disabled until every contestant has a model", async () => {
@@ -743,6 +747,8 @@ describe("ArenaPage", () => {
       expect(payload.contestants).toHaveLength(2);
       expect(payload.contestants[0].hyperparameters.model).toBe("gpt-4o");
       expect(payload.contestants[1].hyperparameters.model).toBe("claude-sonnet-4");
+      expect(payload.contestants[0].name).toBe("gpt-4o");
+      expect(payload.contestants[1].name).toBe("claude-sonnet-4");
 
       expect(await screen.findByText("Arena battle started!")).toBeInTheDocument();
       await waitFor(() => expect(screen.queryByTestId("stepper-modal")).not.toBeInTheDocument());
