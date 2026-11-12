@@ -5,6 +5,14 @@ import { AiAppStatus } from "../../../../domain/enums/aiApp.enum";
 // Mock the AI Apps repository/hooks dependencies
 const mockUseAiApps = vi.fn();
 
+vi.mock("../../../components/Alert", () => ({
+  default: ({ variant, body }: { variant: string; body: string }) => (
+    <div role="alert" data-variant={variant}>
+      {body}
+    </div>
+  ),
+}));
+
 vi.mock("../../../../application/hooks/useAiAppLifecycle", () => ({
   useAiAppStageCounts: () => ({
     summary: {
@@ -165,6 +173,8 @@ describe("AIApps page", () => {
       expect(screen.queryByText("AI app created successfully")).toBeNull();
 
       fireEvent.click(screen.getByText("finish with warning"));
+      // The record was saved, so this is a partial success: a warning, not an error.
+      expect(screen.getByRole("alert")).toHaveAttribute("data-variant", "warning");
       expect(screen.getByText(/custom field values were not saved/)).toBeInTheDocument();
       act(() => {
         vi.advanceTimersByTime(3100);

@@ -260,7 +260,7 @@ export default function AIApps() {
       setEditingApp(null);
       setAlert(
         result?.warning
-          ? { variant: "error", body: result.warning, persistent: true }
+          ? { variant: "warning", body: result.warning, persistent: true }
           : {
               variant: "success",
               body: wasEditing ? "AI app updated successfully" : "AI app created successfully",
