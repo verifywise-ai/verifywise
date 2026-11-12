@@ -630,6 +630,7 @@ async def update_experiment(
         # The updated row goes back to the caller like any read: redact it the
         # same way (rows stored before redaction on write existed).
         experiment["results"] = _redact_scorer_errors(experiment.get("results"))
+        experiment["config"] = strip_secrets(experiment.get("config"))
         if experiment.get("error_message"):
             experiment["error_message"] = redact_secrets(experiment["error_message"])
         return experiment

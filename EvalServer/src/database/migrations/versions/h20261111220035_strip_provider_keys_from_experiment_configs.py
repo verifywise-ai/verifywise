@@ -25,14 +25,24 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 _SECRET_KEYS = frozenset(
-    {"apikey", "api_key", "apikeys", "api_keys", "scorerapikeys", "scorer_api_keys"}
+    {
+        "apikey",
+        "api_key",
+        "apikeys",
+        "api_keys",
+        "scorerapikey",
+        "scorer_api_key",
+        "scorerapikeys",
+        "scorer_api_keys",
+    }
 )
+_USER_CONTENT_KEYS = frozenset({"dataset"})
 
 
 def _strip(value: Any) -> Any:
     if isinstance(value, dict):
         return {
-            k: _strip(v)
+            k: (v if isinstance(k, str) and k in _USER_CONTENT_KEYS else _strip(v))
             for k, v in value.items()
             if not (isinstance(k, str) and k.lower() in _SECRET_KEYS)
         }
@@ -43,13 +53,23 @@ def _strip(value: Any) -> Any:
 
 def upgrade() -> None:
     bind = op.get_bind()
-    rows = bind.execute(
+    # Ids first, then one config at a time: configs can hold whole inline datasets.
+    candidates = bind.execute(
         sa.text(
-            "SELECT id, organization_id, config FROM verifywise.llm_evals_experiments "
-            "WHERE config::text ~* '\"(api_?keys?|scorer_?api_?keys)\"\\s*:'"
+            "SELECT id, organization_id FROM verifywise.llm_evals_experiments "
+            "WHERE config::text ~* '\"(api_?keys?|scorer_?api_?keys?)\"\\s*:'"
         )
     ).mappings().all()
-    for row in rows:
+    for candidate in candidates:
+        row = bind.execute(
+            sa.text(
+                "SELECT id, organization_id, config FROM verifywise.llm_evals_experiments "
+                "WHERE id = :id AND organization_id = :organization_id"
+            ),
+            {"id": candidate["id"], "organization_id": candidate["organization_id"]},
+        ).mappings().first()
+        if row is None:
+            continue
         config = row["config"]
         if isinstance(config, str):
             config = json.loads(config)

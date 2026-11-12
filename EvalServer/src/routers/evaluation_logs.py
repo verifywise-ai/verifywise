@@ -552,15 +552,24 @@ async def run_evaluation_task(experiment_id: str, config: Dict, organization_id:
 
         send_task = asyncio.create_task(_send_payload())
 
-        assert proc.stdout is not None
-        while True:
-            line = await proc.stdout.readline()
-            if not line:
-                break
-            print(f"[eval:{experiment_id}] {line.decode().rstrip()}")
+        try:
+            assert proc.stdout is not None
+            while True:
+                line = await proc.stdout.readline()
+                if not line:
+                    break
+                print(f"[eval:{experiment_id}] {line.decode().rstrip()}")
 
-        return_code = await proc.wait()
-        await send_task
+            return_code = await proc.wait()
+            await send_task
+        finally:
+            # On cancellation or a read error, don't leave the child (and the keys
+            # it holds) running, or the sender task pending.
+            if not send_task.done():
+                send_task.cancel()
+            if proc.returncode is None:
+                proc.kill()
+                await proc.wait()
 
         if return_code == 0:
             print("✅ Evaluation subprocess completed successfully")

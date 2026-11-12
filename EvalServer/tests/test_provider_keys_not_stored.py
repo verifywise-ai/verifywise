@@ -23,8 +23,9 @@ def _config_with_keys() -> Dict[str, Any]:
         "model": {"name": "claude-haiku-4-5", "provider": "anthropic", "apiKey": KEY},
         "judgeLlm": {"provider": "anthropic", "model": "claude-sonnet-4-6", "apiKey": KEY},
         "scorerApiKeys": {"anthropic": KEY},
+        "scorerApiKey": KEY,
         "apiKeys": {"openai": KEY},
-        "dataset": {"name": "d", "prompts": [{"prompt": "q", "api_key": KEY}]},
+        "dataset": {"name": "d", "prompts": [{"prompt": "q", "api_key": "fixture value"}]},
         "metrics": {"faithfulness": True},
     }
 
@@ -39,7 +40,9 @@ def test_strip_secrets_removes_keys_at_any_depth_without_touching_the_input() ->
     assert cleaned["model"] == {"name": "claude-haiku-4-5", "provider": "anthropic"}
     assert cleaned["judgeLlm"] == {"provider": "anthropic", "model": "claude-sonnet-4-6"}
     assert "scorerApiKeys" not in cleaned and "apiKeys" not in cleaned
-    assert cleaned["dataset"]["prompts"] == [{"prompt": "q"}]
+    assert "scorerApiKey" not in cleaned
+    # Dataset content is the user's, and keys are never injected there.
+    assert cleaned["dataset"]["prompts"] == [{"prompt": "q", "api_key": "fixture value"}]
     assert cleaned["metrics"] == {"faithfulness": True}
     # The running evaluation still has the original.
     assert config["model"]["apiKey"] == KEY
@@ -172,3 +175,17 @@ def test_migration_strips_the_same_fields() -> None:
 
     config = _config_with_keys()
     assert module._strip(config) == strip_secrets(config)
+
+
+@pytest.mark.asyncio
+async def test_renaming_an_experiment_does_not_return_stored_keys(mock_db_session: AsyncMock) -> None:
+    from crud import evaluation_logs as crud
+
+    result = MagicMock()
+    result.mappings.return_value.first.return_value = _experiment_row(_config_with_keys())
+    mock_db_session.execute.return_value = result
+
+    updated = await crud.update_experiment(
+        db=mock_db_session, experiment_id="exp_1", organization_id=1, name="renamed"
+    )
+    assert KEY not in json.dumps(updated["config"])
