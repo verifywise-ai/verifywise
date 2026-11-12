@@ -157,6 +157,27 @@ describe("ExperimentDetailContent", () => {
       expect(await screen.findByTestId("experiment-failure-reason")).toHaveTextContent(reason);
       expect(screen.getByText("Failed")).toBeInTheDocument();
       expect(screen.getByText("A test run")).toBeInTheDocument();
+      // A missing model is not fixed in settings, so no settings link
+      expect(
+        screen.queryByRole("link", { name: "Check API keys in LLM Evals settings" }),
+      ).not.toBeInTheDocument();
+    });
+
+    it("links to settings only when the failure is a key, credit or quota problem", async () => {
+      deepEvalMocks.getExperiment.mockResolvedValue({
+        experiment: {
+          ...mockExperiment,
+          status: "failed",
+          error_message:
+            "Google Gemini: API credit balance is too low. Please add credits to your account.",
+        },
+      });
+
+      renderDetail();
+
+      expect(
+        await screen.findByRole("link", { name: "Check API keys in LLM Evals settings" }),
+      ).toBeInTheDocument();
     });
 
     it("falls back to the description for a failed experiment without a reason", async () => {
@@ -390,6 +411,41 @@ describe("ExperimentDetailContent", () => {
       expect(screen.queryByText("Conversational metrics")).not.toBeInTheDocument();
       expect(screen.getAllByText("Task completion").length).toBeGreaterThan(0);
       expect(screen.getByText("60.0%")).toBeInTheDocument();
+    });
+
+    it("gives names for the same metric one column and shows a scoreless fail as Failed", async () => {
+      mockLogs([
+        {
+          ...LOG,
+          metadata: {
+            metric_scores: {
+              Relevance: { score: 0.9, passed: true },
+              Bias: { score: null, passed: false },
+            },
+          },
+        },
+        {
+          ...LOG,
+          id: "log-2",
+          metadata: {
+            metric_scores: {
+              // A legacy entry point stored the same metric under its old name
+              "Answer Relevancy": { score: 0.8, passed: true },
+              "Bias": { score: 0.1, passed: true },
+            },
+          },
+        },
+      ]);
+
+      renderDetail();
+
+      expect(await screen.findByText("All samples")).toBeInTheDocument();
+      const headers = screen.getAllByRole("columnheader").map((th) => th.textContent);
+      expect(headers.filter((h) => h === "Answer relevancy")).toHaveLength(1);
+      expect(screen.getByText("Failed", { selector: "td" })).toHaveAttribute(
+        "title",
+        "The judge marked this metric as failed without a score",
+      );
     });
 
     it("shows how many prompts were scored when some got no score", async () => {

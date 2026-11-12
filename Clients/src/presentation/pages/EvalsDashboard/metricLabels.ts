@@ -98,10 +98,17 @@ export const METRIC_KEY_BY_DISPLAY_NAME: Record<string, string> = {
 export function metricLabel(key: string): string {
   const known = METRIC_LABELS[key];
   if (known) return known;
+  // Already a name someone wrote ("Brand voice", "LLM judge X"): keep it as written
+  if (/\s/.test(key.trim()) && !/_/.test(key)) return key.trim();
   const words = key
     .replace(/[_-]+/g, " ")
     .replace(/([a-z0-9])([A-Z])/g, "$1 $2")
     .trim()
     .toLowerCase();
   return words ? words.charAt(0).toUpperCase() + words.slice(1) : key;
+}
+
+/** "G-Eval (Coherence)" → "Coherence"; any other name is returned unchanged. */
+export function stripGEvalPrefix(name: string): string {
+  return name.replace(/^G-Eval\s*\((.+)\)$/i, "$1");
 }

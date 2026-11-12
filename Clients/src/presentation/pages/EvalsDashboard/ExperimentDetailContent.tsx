@@ -54,7 +54,12 @@ import {
   scoreBand,
   type MetricScoreEntry,
 } from "./metricScore";
-import { METRIC_KEY_BY_DISPLAY_NAME, METRIC_LABELS } from "./metricLabels";
+import {
+  METRIC_KEY_BY_DISPLAY_NAME,
+  METRIC_LABELS,
+  metricLabel,
+  stripGEvalPrefix,
+} from "./metricLabels";
 import { countLabel } from "../../tools/countLabel";
 import { Link as RouterLink } from "react-router";
 
@@ -67,37 +72,17 @@ const preprocessLatex = (text: string): string => {
   return processed;
 };
 
-// Convert camelCase or concatenated metric names to proper display format
-// e.g., "turnRelevancy" → "Turn Relevancy", "Knowledgeretention" → "Knowledge Retention"
-const formatMetricName = (name: string): string => {
-  if (!name) return name;
-
-  // First, insert spaces before capital letters (handles camelCase)
-  // Also handles concatenated words like "Turnrelevancy" → "Turn relevancy"
-  let formatted = name
-    // Insert space before uppercase letters that follow lowercase letters
-    .replace(/([a-z])([A-Z])/g, "$1 $2")
-    // Insert space before uppercase letters at the start of common words
-    .replace(/([A-Z]+)([A-Z][a-z])/g, "$1 $2");
-
-  // Sentence case: capitalize first letter only, lowercase the rest
-  formatted = formatted
-    .split(" ")
-    .map((word, i) =>
-      i === 0 ? word.charAt(0).toUpperCase() + word.slice(1).toLowerCase() : word.toLowerCase(),
-    )
-    .join(" ");
-
-  return formatted;
-};
-
 // A metric name stored on a log ("Relevance", "G-Eval (Coherence)") as the shared display
 // name, so the table, the cards and the sample view call a metric the same thing.
 const storedMetricLabel = (storedName: string): string => {
-  const name = storedName.replace(/^G-Eval\s*\((.+)\)$/i, "$1");
+  const name = stripGEvalPrefix(storedName);
   const key = METRIC_KEY_BY_DISPLAY_NAME[name] ?? (METRIC_LABELS[name] ? name : undefined);
-  return key ? METRIC_LABELS[key] : formatMetricName(name);
+  return key ? METRIC_LABELS[key] : metricLabel(name);
 };
+
+// Failures a user fixes in LLM Evals settings (keys, credits, quota, access)
+const SETTINGS_FIXABLE_FAILURE =
+  /api key|credit|quota|billing|budget|permission|unauthori[sz]ed|authentication/i;
 
 // Markdown renderer with LaTeX support
 const MarkdownRenderer = ({ content }: { content: string }) => {
@@ -783,8 +768,8 @@ export default function ExperimentDetailContent({
                   </Typography>
                 </VWTooltip>
               )}
-              {failureReason && (
-                // Most failures are a provider key, quota or credits problem fixed in settings
+              {failureReason && SETTINGS_FIXABLE_FAILURE.test(failureReason) && (
+                // Only for key, credit, quota and access failures, which are fixed in settings
                 <Box
                   component={RouterLink}
                   to={`/evals/${projectId}#settings`}
@@ -1015,8 +1000,6 @@ export default function ExperimentDetailContent({
       {/* Overall Stats Header */}
       {logs.length > 0 &&
         (() => {
-          const displayNameToKey = METRIC_KEY_BY_DISPLAY_NAME;
-
           // Calculate overall averages and per-sample scores for sparklines
           // threshold = the first one stored on the metric's entries (the run uses one).
           const metricsSum: Record<
@@ -1027,7 +1010,7 @@ export default function ExperimentDetailContent({
             if (log.metadata?.metric_scores) {
               Object.entries(log.metadata.metric_scores).forEach(([rawKey, value]) => {
                 // Normalize key: convert display names to camelCase, or keep if already camelCase
-                const key = displayNameToKey[rawKey] || rawKey;
+                const key = METRIC_KEY_BY_DISPLAY_NAME[rawKey] || rawKey;
                 const score = entryScore(value as MetricScoreEntry);
                 if (score !== null) {
                   if (!metricsSum[key])
@@ -1299,7 +1282,7 @@ export default function ExperimentDetailContent({
 
           // Find custom scorer metrics (those not in metricDefinitions but have data)
           const customScorerMetrics = Object.keys(metricsSum)
-            .filter((k) => !metricDefinitions[k] && !displayNameToKey[k])
+            .filter((k) => !metricDefinitions[k] && !METRIC_KEY_BY_DISPLAY_NAME[k])
             .map((k) => ({
               key: k,
               label: k
@@ -1576,24 +1559,35 @@ export default function ExperimentDetailContent({
       {/* Extract unique metric names from all logs */}
       {!hideSamples &&
         (() => {
-          const allMetricNames = new Set<string>();
+          // One column per metric: names that mean the same metric ("Relevance" and the
+          // legacy "Answer Relevancy") share a column instead of two with one header
+          const columnsByLabel = new Map<string, string[]>();
           logs.forEach((log) => {
             if (log.metadata?.metric_scores) {
-              Object.keys(log.metadata.metric_scores).forEach((name) => {
-                // Clean up metric name for display
-                const cleanName = name.replace(/^G-Eval\s*\((.+)\)$/i, "$1");
-                allMetricNames.add(cleanName);
+              Object.keys(log.metadata.metric_scores).forEach((rawName) => {
+                const name = stripGEvalPrefix(rawName);
+                const label = storedMetricLabel(name);
+                const names = columnsByLabel.get(label) ?? [];
+                if (!names.includes(name)) names.push(name);
+                columnsByLabel.set(label, names);
               });
             }
           });
-          const metricColumns = Array.from(allMetricNames);
+          const metricColumns = Array.from(columnsByLabel, ([label, names]) => ({ label, names }));
 
-          // Helper to get metric score from log
-          const getMetricEntry = (log: EvaluationLog, metricName: string): MetricScoreEntry =>
-            findMetricEntry(
-              log.metadata?.metric_scores as Record<string, MetricScoreEntry> | undefined,
-              metricName,
-            );
+          // A log's entry for a column: the first of the column's stored names it has
+          const getMetricEntry = (
+            log: EvaluationLog,
+            column: { names: string[] },
+          ): MetricScoreEntry => {
+            const scores = log.metadata?.metric_scores as
+              Record<string, MetricScoreEntry> | undefined;
+            for (const name of column.names) {
+              const entry = findMetricEntry(scores, name);
+              if (entry !== undefined) return entry;
+            }
+            return undefined;
+          };
 
           return (
             <>
@@ -1650,9 +1644,9 @@ export default function ExperimentDetailContent({
                             >
                               Input
                             </th>
-                            {metricColumns.map((metric) => (
+                            {metricColumns.map((column) => (
                               <th
-                                key={metric}
+                                key={column.label}
                                 style={{
                                   fontWeight: 600,
                                   fontSize: "12px",
@@ -1663,7 +1657,7 @@ export default function ExperimentDetailContent({
                                   borderRight: `1px solid ${palette.border.dark}`,
                                 }}
                               >
-                                {storedMetricLabel(metric)}
+                                {column.label}
                               </th>
                             ))}
                           </tr>
@@ -1722,20 +1716,26 @@ export default function ExperimentDetailContent({
                             >
                               {log.input_text || "-"}
                             </td>
-                            {metricColumns.map((metric) => {
-                              const entry = getMetricEntry(log, metric);
+                            {metricColumns.map((column) => {
+                              const entry = getMetricEntry(log, column);
                               const score = entryScore(entry);
-                              const status = metricStatus(metric, entry);
-                              // No score: an error counts as a failure (red, "Error"); a metric
-                              // that was skipped or never ran is neutral ("Not scored")
+                              const status = metricStatus(column.names[0], entry);
+                              // No score: an error reads "Error", a fail verdict without a score
+                              // reads "Failed" (both count as failures, so red); a metric that
+                              // was skipped or never ran is neutral ("Not scored")
                               const unscored = score === null;
-                              const errored = unscored && status === "failed";
+                              const errorText = entryError(entry);
+                              const failedWithoutScore = unscored && status === "failed";
                               return (
                                 <td
-                                  key={metric}
+                                  key={column.label}
                                   title={
-                                    entryError(entry) ||
-                                    (unscored ? "This metric returned no score" : undefined)
+                                    errorText ||
+                                    (failedWithoutScore
+                                      ? "The judge marked this metric as failed without a score"
+                                      : unscored
+                                        ? "This metric returned no score"
+                                        : undefined)
                                   }
                                   style={{
                                     textAlign: "center",
@@ -1743,23 +1743,25 @@ export default function ExperimentDetailContent({
                                     borderBottom: `1px solid ${palette.border.dark}`,
                                     borderRight: `1px solid ${palette.border.dark}`,
                                     backgroundColor:
-                                      unscored && !errored
+                                      unscored && !failedWithoutScore
                                         ? "transparent"
                                         : METRIC_STATUS_COLORS[status].bg,
                                     fontSize: "12px",
                                     fontWeight: 500,
-                                    color: errored
+                                    color: failedWithoutScore
                                       ? palette.status.error.text
                                       : unscored
                                         ? palette.text.tertiary
                                         : palette.text.secondary,
                                   }}
                                 >
-                                  {errored
-                                    ? "Error"
-                                    : unscored
-                                      ? "Not scored"
-                                      : `${(score * 100).toFixed(0)}%`}
+                                  {!unscored
+                                    ? `${(score * 100).toFixed(0)}%`
+                                    : errorText
+                                      ? "Error"
+                                      : failedWithoutScore
+                                        ? "Failed"
+                                        : "Not scored"}
                                 </td>
                               );
                             })}
@@ -2161,9 +2163,9 @@ export default function ExperimentDetailContent({
                                         sx={{
                                           height: 4,
                                           backgroundColor: palette.background.hover,
-                                          borderRadius: 2,
+                                          borderRadius: "2px",
                                           overflow: "hidden",
-                                          mb: reason ? 1.5 : 0,
+                                          mb: reason ? "8px" : 0,
                                         }}
                                       >
                                         <Box
@@ -2171,7 +2173,7 @@ export default function ExperimentDetailContent({
                                             height: "100%",
                                             width: `${(score ?? 0) * 100}%`,
                                             backgroundColor: statusColor,
-                                            borderRadius: 2,
+                                            borderRadius: "2px",
                                             transition: "width 0.3s ease",
                                           }}
                                         />

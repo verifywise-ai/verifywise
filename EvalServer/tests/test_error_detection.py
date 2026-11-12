@@ -162,7 +162,8 @@ def test_termination_reason_without_a_known_provider_is_unchanged() -> None:
     "message,provider",
     [
         ("litellm.AuthenticationError: AnthropicException - invalid x-api-key", "Anthropic"),
-        ("litellm.NotFoundError: OpenAIException - model not found", "OpenAI"),
+        # Raised for any OpenAI-compatible endpoint, so it names no provider
+        ("litellm.NotFoundError: OpenAIException - model not found", None),
         ("Gateway completion failed: 502 BaseException then MistralException", "Mistral"),
         ("plain error with no provider", None),
     ],

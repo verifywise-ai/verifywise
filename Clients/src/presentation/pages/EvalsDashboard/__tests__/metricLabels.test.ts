@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { METRIC_LABELS, metricLabel } from "../metricLabels";
+import { METRIC_LABELS, metricLabel, stripGEvalPrefix } from "../metricLabels";
 
 describe("metricLabel", () => {
   it("returns the sentence-case name for a known metric", () => {
@@ -18,5 +18,16 @@ describe("metricLabel", () => {
       expect(first.charAt(0)).toBe(first.charAt(0).toUpperCase());
       for (const word of rest) expect(word).toBe(word.toLowerCase());
     }
+  });
+
+  it("keeps a name someone already wrote", () => {
+    expect(metricLabel("LLM judge for tone")).toBe("LLM judge for tone");
+  });
+});
+
+describe("stripGEvalPrefix", () => {
+  it("removes the G-Eval wrapper and leaves other names alone", () => {
+    expect(stripGEvalPrefix("G-Eval (Coherence)")).toBe("Coherence");
+    expect(stripGEvalPrefix("Relevance")).toBe("Relevance");
   });
 });

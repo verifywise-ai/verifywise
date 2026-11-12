@@ -233,8 +233,9 @@ def detect_fatal_error(error_message: str) -> Tuple[bool, Optional[str], Optiona
 
 # LiteLLM names the provider in its exception class ("GeminiException", "AnthropicException").
 _PROVIDER_EXCEPTION = re.compile(r"\b([A-Za-z]+)Exception\b")
+# "openai" is left out on purpose: LiteLLM raises OpenAIException for every
+# OpenAI-compatible endpoint (self-hosted servers, proxies), so it doesn't say which one.
 _PROVIDER_NAMES = {
-    "openai": "OpenAI",
     "azure": "Azure OpenAI",
     "anthropic": "Anthropic",
     "gemini": "Google Gemini",

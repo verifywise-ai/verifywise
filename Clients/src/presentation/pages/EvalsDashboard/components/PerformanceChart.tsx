@@ -19,7 +19,7 @@ import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { displayFormattedTime } from "../../../tools/isoDateToString";
 import { lowerIsBetter } from "../metricScore";
 import { palette } from "../../../themes/palette";
-import { METRIC_LABELS, metricLabel as sharedMetricLabel } from "../metricLabels";
+import { metricLabel as sharedMetricLabel } from "../metricLabels";
 
 export type TimeRange = "7d" | "30d" | "100d" | "all";
 
@@ -53,32 +53,6 @@ const CHART_COLORS = [
   "#65A30D", // Lime
   "#0284C7", // Sky
 ];
-
-// Metric definitions - maps camelCase keys to labels
-const metricDefinitions: Record<string, { label: string }> = {
-  // Standard DeepEval metrics
-  answerRelevancy: { label: METRIC_LABELS.answerRelevancy },
-  faithfulness: { label: METRIC_LABELS.faithfulness },
-  contextualRelevancy: { label: METRIC_LABELS.contextualRelevancy },
-  contextualRecall: { label: METRIC_LABELS.contextualRecall },
-  contextualPrecision: { label: METRIC_LABELS.contextualPrecision },
-  bias: { label: METRIC_LABELS.bias },
-  toxicity: { label: METRIC_LABELS.toxicity },
-  hallucination: { label: METRIC_LABELS.hallucination },
-  // Chatbot-specific metrics
-  knowledgeRetention: { label: METRIC_LABELS.knowledgeRetention },
-  conversationCompleteness: { label: METRIC_LABELS.conversationCompleteness },
-  conversationRelevancy: { label: METRIC_LABELS.conversationRelevancy },
-  roleAdherence: { label: METRIC_LABELS.roleAdherence },
-  // Agent metrics
-  taskCompletion: { label: METRIC_LABELS.taskCompletion },
-  toolCorrectness: { label: METRIC_LABELS.toolCorrectness },
-  // G-Eval metrics (legacy support)
-  answerCorrectness: { label: METRIC_LABELS.answerCorrectness },
-  coherence: { label: METRIC_LABELS.coherence },
-  tonality: { label: METRIC_LABELS.tonality },
-  safety: { label: METRIC_LABELS.safety },
-};
 
 // Legend and tooltip label. Lower is better metrics (bias, toxicity, hallucination) share
 // the 0-100% axis with the rest, so say which way is good: 0% is the best score for them.
@@ -222,15 +196,15 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
   }
 
   // Get the metrics to display - only those that have data
-  const metricsToDisplay =
-    activeMetrics.length > 0 ? activeMetrics : Object.keys(metricDefinitions);
+  // Only metrics that have data; an empty series per known metric would just clutter the legend
+  const metricsToDisplay = activeMetrics;
 
   // Calculate dynamic height based on the legend's length against the measured chart
-  // width. Rough estimate: ~6.5px per character at 11px plus ~34px for each item's icon
+  // width. Rough estimate: ~7px per character at 12px plus ~34px for each item's icon
   // and gap; labels vary in length (e.g. "Hallucination (lower is better)").
   const legendLineHeight = 20;
   const legendWidth = metricsToDisplay.reduce(
-    (width, metricKey) => width + metricLabel(metricKey).length * 6.5 + 34,
+    (width, metricKey) => width + metricLabel(metricKey).length * 7 + 34,
     0,
   );
   const legendLines = Math.max(1, Math.ceil(legendWidth / Math.max(chartWidth - 40, 200)));
