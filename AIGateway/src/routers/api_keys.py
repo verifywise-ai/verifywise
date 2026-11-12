@@ -32,7 +32,8 @@ router = APIRouter(prefix="/keys", tags=["API Keys"])
 # accepted here.
 VALID_PROVIDERS = {"openai", "anthropic", "gemini", "xai", "mistral", "openrouter", "together_ai", "cohere"}
 
-# Provider verification endpoints (matches Express controller)
+# Provider verification endpoints. Each must reject a bad key (401/403); a public
+# endpoint that answers any key would report every key as valid.
 PROVIDER_VERIFY_ENDPOINTS: dict[str, dict] = {
     "openai": {
         "url": lambda _k: "https://api.openai.com/v1/models",

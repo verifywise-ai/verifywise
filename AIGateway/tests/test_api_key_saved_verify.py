@@ -183,6 +183,23 @@ async def test_openrouter_is_checked_against_an_endpoint_that_needs_the_key(monk
     assert [urlparse(u).path for u in seen] == ["/api/v1/key"]
 
 
+async def test_openrouter_check_sends_the_key(monkeypatch):
+    sent = []
+
+    def handler(req):
+        sent.append(req.headers.get("authorization"))
+        return httpx.Response(200, text="{}")
+
+    real_client = httpx.AsyncClient
+    monkeypatch.setattr(
+        router.httpx,
+        "AsyncClient",
+        lambda **kw: real_client(transport=httpx.MockTransport(handler), **kw),
+    )
+    await router._check_provider_key("openrouter", "sk-or-v1-good")
+    assert sent == ["Bearer sk-or-v1-good"]
+
+
 async def test_openrouter_401_is_a_rejected_key(monkeypatch):
     _provider_replies(monkeypatch, 401, '{"error": {"code": 401, "message": "No auth credentials found"}}')
     assert (await router._check_provider_key("openrouter", "vck_not-an-openrouter-key"))["valid"] is False
