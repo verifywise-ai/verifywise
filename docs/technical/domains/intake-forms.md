@@ -16,6 +16,7 @@ Design specs: `docs/superpowers/specs/2026-10-21-ai-intake-classification-design
 | Background job, enqueue, email | `Servers/services/intakeScoring/assessmentJob.ts`, `enqueue.ts` |
 | Retry stage selection | `Servers/services/intakeScoring/retry.ts` |
 | Approval risks, recompute | `Servers/services/intakeScoring/approvalRisks.ts` |
+| Keyword score (forms with no LLM key) | `keywordScoreFor` in `Servers/services/intakeRiskScoring.service.ts` |
 | Storage queries | `Servers/utils/intakeForm.utils.ts` |
 | Migration | `Servers/database/migrations/20261021120000-intake-ai-assessment.js` |
 | Review UI | `Clients/src/presentation/pages/IntakeFormBuilder/assessment/` |
@@ -41,7 +42,18 @@ The final score is the higher of the rule minimum and the AI median. The AI can 
 - The AI part is 5 parallel runs on the form's LLM key (temperature 0.7). A run is valid when it parses against the schema. At least 3 valid runs are needed for a median.
 - Each reason must quote the answer it cites. Reasons whose excerpt is not in that answer are dropped. Select answers are matched against the option label.
 - Bands: Low 0 to 25, Medium 26 to 50, High 51 to 75, Critical 76 to 100. `risk_tier` stores the band for v2 rows.
-- With no AI median the score is the rule minimum (`rulesOnly`), shown as "at least N (rules only)". With no AI median and a minimum of 0 there is no score (`finalScore: null`).
+- With no AI median the score is the rule minimum (`rulesOnly`), shown as "at least N (rules only)". With no AI median and a minimum of 0 there is no score (`finalScore: null`). Since a form with no LLM key gets a keyword score (below), this now applies to `ai_failed` and to no-key rows scored before the keyword score existed and not yet backfilled.
+
+### Keyword score (no LLM key)
+
+A form with no LLM key (stage status `ai_not_configured`) gets the basic keyword score in the AI median's place, so the score is `max(rule minimum, keyword score)`:
+
+- `keywordScoreFor(submissionData, schema)` runs the pre-v2.6.4 keyword scorer (`scoreSubmissionRuleBased`) over 6 dimensions and returns their weighted average (rounded) plus the dimensions without their signals. `calculateSubmissionRisk` shares the weighting.
+- `combineScore` takes an optional `keywordScore`, used only when there is no AI median. The source is `"keyword"` when the keyword score is at or above the rule minimum (a tie goes to the keyword score), `"rule_minimum"` otherwise. `rulesOnly` stays false.
+- It is the real score: it sets `finalScore`, `overallScore`, `tier` and `risk_tier`, so it drives routing, the risk tier column, the override band floor and the email ("40 (Medium, keyword score)").
+- `complete` and `ai_failed` are unchanged. A failed AI run never falls back to the keyword score: it keeps the rule minimum and the "AI scoring failed" note.
+- `recomputeAssessmentForLevel` (approve, level change) and the client `scoreViewFor` apply the same rule: the stored `keyword.overallScore` counts only when the status is `ai_not_configured`.
+- The review modal shows the score with its band, a "Basic keyword score" notice (no LLM key, add one for a more accurate score and suggested risks), the 6 dimension bars (`assessment/DimensionBars.tsx`, shared with the pre-v2 `RiskSection`) and a keyword score row in "How this score is built".
 
 ### Prompt safety
 
@@ -54,9 +66,12 @@ Submitter name, submitter email and schema fields of type `email` never reach th
 ```ts
 { version: 2, status, notRuleChecked, classificationLevel, ruleMinimum,
   ai: { runs, failedRuns, validRuns, median, min, max, reasons } | null,
-  finalScore, source: "rule_minimum" | "ai" | null, rulesOnly,
+  keyword?: { overallScore, dimensions: [{ key, label, weight, score }] } | null,
+  finalScore, source: "rule_minimum" | "ai" | "keyword" | null, rulesOnly,
   overallScore /* = finalScore */, tier /* band */, stageStartedAt, scoredAt, error? }
 ```
+
+`keyword` is stored only for `ai_not_configured` (null otherwise; absent on rows written before it existed). The dimension breakdown is not meant for the frozen legacy `/api/intake` preview contract.
 
 `intake_submissions.suggested_risks` (JSONB) holds `{ status, items, droppedCount, stageStartedAt, generatedAt, error? }`. `notification_sent_at` marks the one-time email.
 
@@ -73,6 +88,7 @@ Both public submit handlers call `startIntakeAssessment` after the transaction c
 - If the job can't be queued, the handler emails reviewers at once without results, after claiming the notification.
 - Forms opened through the legacy `/{tenantSlug}/{formSlug}` route email org admins when the form has no recipients (`adminFallback`). The public-id route skips them, as before.
 - On worker start, `backfillIntakeAssessments` queues the stages each pending submission still needs: legacy rows, missing blocks and stages pending for over 10 minutes. It never re-runs a settled stage. A submission whose email never went (`notification_sent_at` is NULL, so its job or cap was lost) is queued with `notify: true`, or emailed at once when both stages have settled. Only forms with recipients count, so a form without recipients (which never claims) isn't listed on every start. The direct send also waits until the submission is over 10 minutes old, so a live job keeps its own email and language. The submitter's language and the route's `adminFallback` aren't stored, so that email uses the default language and a form without recipients stays silent.
+- Before that, the backfill adds the keyword score to pending submissions whose v2 assessment is `ai_not_configured` with no `keyword` (`getSubmissionsMissingKeywordScoreQuery`, across organizations). It computes the score with no AI call, saves it through the pending-only assessment write and re-routes the submission as a fresh scoring run does. Decided submissions are left alone, a row with a keyword score is not listed again, and a failed listing never stops the rest of the backfill. No email is sent.
 
 ## Submitter confirmation and review time
 
@@ -225,7 +241,7 @@ The migration adds `suggested_risks` and `notification_sent_at` and sets the def
 
 ## Tests
 
-Server: `Servers/services/intakeScoring/__tests__/`, `Servers/utils/__tests__/intakeForm.assessment.utils.test.ts`, `Servers/controllers/__tests__/intakeForm.{assessmentEnqueue,review,approveRisks}.test.ts`. Client: `Clients/src/presentation/pages/IntakeFormBuilder/__tests__/{ScoreSection,SuggestedRisksSection,OverrideBandFloor,RiskTierChip}.test.tsx`.
+Server: `Servers/services/intakeScoring/__tests__/`, `Servers/utils/__tests__/intakeForm.assessment.utils.test.ts`, `Servers/controllers/__tests__/intakeForm.{assessmentEnqueue,review,approveRisks}.test.ts`. Keyword score: `Servers/services/tests/intakeKeywordScore.test.ts` and the keyword cases in `scoreMathCases.json`, `assessmentJob.test.ts` and `approvalRisks.test.ts`. Client: `Clients/src/presentation/pages/IntakeFormBuilder/__tests__/{ScoreSection,SuggestedRisksSection,OverrideBandFloor,RiskTierChip,DimensionBars}.test.tsx`, `scoreView.test.ts`.
 
 Routing and oversight: `Servers/services/intakeRouting/__tests__/` (`routingRules`, `routingService`, `decisionGate`, `oversight`). Client, in the same `__tests__` folder: `{RoutingSettingsSection,LaneSection,SecondReviewPanel,OversightTab,SubmissionPreviewModal.lane,laneFilter,IntakeFormsListPage.oversight}`.
 

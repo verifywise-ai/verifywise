@@ -428,7 +428,7 @@ export const intakeFormsContent: ArticleContent = {
       type: 'ordered-list',
       items: [
         { text: 'The EU AI Act level is Prohibited.' },
-        { text: 'There is no usable score, for example because the AI scoring failed or the form has no LLM key and the rules give no minimum.' },
+        { text: 'There is no usable score, for example because the AI scoring failed.' },
         { text: 'The score is within the close-call margin of the threshold.' },
         { text: 'The score is at or above the threshold.' },
       ],
@@ -455,7 +455,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Connect one of your organization\'s LLM keys to the form. VerifyWise uses it to score submissions and to suggest risks. Without a key, reviewers get the rule-based EU AI Act classification only. The score is then the rule minimum, shown as "at least 70 (rules only)", and no risks are suggested.',
+      text: 'Connect one of your organization\'s LLM keys to the form. VerifyWise uses it to score submissions and to suggest risks. Without a key, submissions get a basic keyword score instead of an AI score, and no risks are suggested (see **Basic keyword score** below).',
     },
     {
       type: 'heading',
@@ -697,7 +697,7 @@ export const intakeFormsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Without an AI score the dialog shows the rule minimum as "at least 70 (rules only)". This happens when the form has no LLM key or the AI scoring failed. With no AI score and a rule minimum of 0, it shows "No score yet". When a step failed, or has run for more than 10 minutes, the dialog offers **Retry**. Retry reruns only the steps that did not finish, so your decisions on suggested risks stay as they are.',
+      text: 'When the AI scoring failed, the dialog shows the rule minimum as "at least 70 (rules only)". With no AI score and a rule minimum of 0, it shows "No score yet". When a step failed, or has run for more than 10 minutes, the dialog offers **Retry**. Retry reruns only the steps that did not finish, so your decisions on suggested risks stay as they are.',
     },
     {
       type: 'paragraph',
@@ -719,11 +719,15 @@ export const intakeFormsContent: ArticleContent = {
       type: 'heading',
       id: 'keyword-scores',
       level: 3,
-      text: 'Submissions scored before AI scoring',
+      text: 'Basic keyword score',
     },
     {
       type: 'paragraph',
-      text: 'Submissions scored with the earlier keyword method keep that score. The dialog shows its 6 dimension scores:',
+      text: 'A form with no LLM key gets a basic keyword score. VerifyWise looks for risk keywords in the answers, scores 6 dimensions from 0 to 100 and takes their weighted average. That number takes the AI score\'s place: the final score is the higher of the rule minimum and the keyword score. The dialog says the score is a basic keyword score and shows the 6 dimension scores. Connect an LLM key to the form for a much more accurate score and suggested risks.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Submissions scored with the earlier keyword method, before AI scoring, keep that score and show the same dimensions:',
     },
     {
       type: 'table',
@@ -1066,7 +1070,7 @@ export const intakeFormsContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { text: 'Configure at least one notification recipient so submissions don\'t sit unreviewed.' },
-        { text: 'Connect an LLM key to get an AI score and suggested risks. Without one, reviewers see the rule-based classification only.' },
+        { text: 'Connect an LLM key to get an AI score and suggested risks. Without one, submissions get a basic keyword score.' },
         { text: 'When rejecting, be specific in the rejection reason. The submitter sees your text verbatim.' },
         { text: 'Review entity data before confirming approval. The field mapping builds a reasonable starting point, but a quick check prevents errors downstream.' },
       ],
