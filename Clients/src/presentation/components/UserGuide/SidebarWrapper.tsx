@@ -20,6 +20,7 @@ import {
   getDomainByPath,
 } from "../AdvisorChat/advisorConfig";
 import AdvisorHeader from "./AdvisorHeader";
+import { getGuideTargetForLocation } from "./guideRouteMap";
 import { useOverlayAccessibility } from "../../../application/hooks/useOverlayAccessibility";
 import "./SidebarWrapper.css";
 
@@ -410,6 +411,16 @@ const SidebarWrapper: React.FC<SidebarWrapperProps> = ({
     });
   }, [setContentWidth]);
 
+  // Open the guide on the page that documents where the user is. Pages with no
+  // mapped guide page keep whatever the guide last showed.
+  const showGuideForCurrentPage = () => {
+    const target = getGuideTargetForLocation(location.pathname, location.hash);
+    if (!target) return;
+    handleNavigate(target.collectionId, target.articleId);
+    setTargetSectionId(undefined);
+    handleClearSearch();
+  };
+
   // Guard against rapid open/close during CSS transition
   const tabClickLockRef = useRef(false);
 
@@ -421,10 +432,15 @@ const SidebarWrapper: React.FC<SidebarWrapperProps> = ({
       tabClickLockRef.current = false;
     }, 350);
 
+    const isClosing = isOpen && activeTab === tab;
+    if (tab === "user-guide" && !isClosing) {
+      showGuideForCurrentPage();
+    }
+
     if (!isOpen) {
       onOpen();
       setActiveTab(tab);
-    } else if (activeTab === tab) {
+    } else if (isClosing) {
       // Clicking the already-active tab closes the sidebar
       onClose();
     } else {
