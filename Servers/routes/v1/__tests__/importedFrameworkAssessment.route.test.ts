@@ -1,5 +1,6 @@
 import request from "supertest";
 import express from "express";
+import { BUILTIN_ROLE_PERMISSIONS } from "../../../config/rolePermissions.config";
 
 // The token decides who and which organization: x-role / x-org stand in for
 // its claims; no Authorization header is a 401, as with the real middleware.
@@ -23,11 +24,11 @@ jest.mock("../../../middleware/requireExtensionEnabled.middleware", () => ({
         : next(),
   ),
 }));
-// useCase.edit is an Admin + Editor permission.
+// Permissions resolve against the real built-in role matrix, so a route
+// guarded by the wrong key fails the role tests.
 jest.mock("../../../utils/rolePermissions.utils", () => {
-  const roleHasPermission = jest.fn(async (_org: number, role: string) =>
-    ["Admin", "Editor"].includes(role),
-  );
+  const roleHasPermission = async (_org: number | null, role: string, key: string) =>
+    BUILTIN_ROLE_PERMISSIONS[role]?.has(key as never) ?? false;
   return {
     roleHasPermission,
     // authorize() resolves through the request (#5314); same answer here.
