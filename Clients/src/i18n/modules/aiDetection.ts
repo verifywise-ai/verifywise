@@ -326,6 +326,48 @@ export const de: Record<string, string> = {
   "Token is valid": "Token ist gültig",
   "Vulnerabilities": "Schwachstellen",
   "Weighing risk dimensions": "Risikodimensionen abwägen",
+  "Add this webhook in GitHub so pull requests and pushes start scans.":
+    "Fügen Sie diesen Webhook in GitHub hinzu, damit Pull Requests und Pushes Scans starten.",
+  "CI/CD integration": "CI/CD-Integration",
+  "Connect GitHub": "GitHub verbinden",
+  "Copy the secret now. You can see it again, or replace it, by editing the repository.":
+    "Kopieren Sie das Geheimnis jetzt. Sie können es erneut ansehen oder ersetzen, indem Sie das Repository bearbeiten.",
+  "Minimum governance score": "Minimaler Governance-Score",
+  "PR checks fail when a scan has more critical findings than this":
+    "PR-Prüfungen schlagen fehl, wenn ein Scan mehr kritische Befunde als diesen Wert hat",
+  "PR checks fail when the score is below this":
+    "PR-Prüfungen schlagen fehl, wenn der Score unter diesem Wert liegt",
+  "Regenerate secret": "Geheimnis neu erzeugen",
+  "Scan pull requests and pushes to the default branch, then post the result to GitHub.":
+    "Pull Requests und Pushes auf den Standard-Branch scannen und das Ergebnis an GitHub senden.",
+  "Set up the webhook in GitHub": "Webhook in GitHub einrichten",
+  "Webhook secret": "Webhook-Geheimnis",
+  "Copy webhook URL": "Webhook-URL kopieren",
+  "Copy webhook secret": "Webhook-Geheimnis kopieren",
+  "Received": "Empfangen",
+  "Rejected: the secret in GitHub does not match":
+    "Abgelehnt: Das Geheimnis in GitHub stimmt nicht überein",
+  "Rejected: no secret was set": "Abgelehnt: Es war kein Geheimnis festgelegt",
+  "Received, but the scan could not start": "Empfangen, aber der Scan konnte nicht starten",
+  "In your GitHub repository, open Settings → Webhooks → Add webhook.":
+    "Öffnen Sie in Ihrem GitHub-Repository Settings → Webhooks → Add webhook.",
+  "Paste the webhook URL as the payload URL, set the content type to application/json and paste the secret.":
+    "Fügen Sie die Webhook-URL als Payload URL ein, setzen Sie den Content type auf application/json und fügen Sie das Geheimnis ein.",
+  "Choose Let me select individual events, tick Pull requests and Pushes, then click Add webhook.":
+    "Wählen Sie „Let me select individual events“, aktivieren Sie Pull requests und Pushes und klicken Sie dann auf Add webhook.",
+  "Pushes to the default branch start a full scan. Opened and updated pull requests start a scan of the changed files. Results are posted to GitHub with the token from AI Detection settings.":
+    "Pushes auf den Standard-Branch starten einen vollständigen Scan. Geöffnete und aktualisierte Pull Requests starten einen Scan der geänderten Dateien. Ergebnisse werden mit dem Token aus den KI-Erkennungseinstellungen an GitHub gesendet.",
+  "GitHub must be able to reach this address. Set FRONTEND_URL to this deployment's public URL if it is not reachable from the internet.":
+    "GitHub muss diese Adresse erreichen können. Setzen Sie FRONTEND_URL auf die öffentliche URL dieser Bereitstellung, wenn sie nicht aus dem Internet erreichbar ist.",
+  "Use this secret in the GitHub webhook. After regenerating, update it in GitHub too.":
+    "Verwenden Sie dieses Geheimnis im GitHub-Webhook. Aktualisieren Sie es nach dem Neuerzeugen auch in GitHub.",
+  "A webhook secret is created when you save. The next step shows how to add it in GitHub.":
+    "Beim Speichern wird ein Webhook-Geheimnis erstellt. Der nächste Schritt zeigt, wie Sie es in GitHub hinzufügen.",
+  "Last delivery: {time}. {status}": "Letzte Zustellung: {time}. {status}",
+  "No webhook deliveries received yet.": "Noch keine Webhook-Zustellungen empfangen.",
+  "{utc} UTC = {local} your time": "{utc} UTC = {local} Ihre Zeit",
+  "Enter a whole number from 0 to 100": "Geben Sie eine ganze Zahl von 0 bis 100 ein",
+  "Enter a whole number of 0 or more": "Geben Sie eine ganze Zahl von 0 oder mehr ein",
 };
 
 export const fr: Record<string, string> = {
@@ -654,6 +696,48 @@ export const fr: Record<string, string> = {
   "Token is valid": "Le jeton est valide",
   "Vulnerabilities": "Vulnérabilités",
   "Weighing risk dimensions": "Pondération des dimensions de risque",
+  "Add this webhook in GitHub so pull requests and pushes start scans.":
+    "Ajoutez ce webhook dans GitHub pour que les pull requests et les pushs lancent des analyses.",
+  "CI/CD integration": "Intégration CI/CD",
+  "Connect GitHub": "Connecter GitHub",
+  "Copy the secret now. You can see it again, or replace it, by editing the repository.":
+    "Copiez le secret maintenant. Vous pourrez le revoir ou le remplacer en modifiant le dépôt.",
+  "Minimum governance score": "Score de gouvernance minimal",
+  "PR checks fail when a scan has more critical findings than this":
+    "Les vérifications de PR échouent si une analyse a plus de résultats critiques que cette valeur",
+  "PR checks fail when the score is below this":
+    "Les vérifications de PR échouent si le score est inférieur à cette valeur",
+  "Regenerate secret": "Régénérer le secret",
+  "Scan pull requests and pushes to the default branch, then post the result to GitHub.":
+    "Analyser les pull requests et les pushs sur la branche par défaut, et publier le résultat dans GitHub.",
+  "Set up the webhook in GitHub": "Configurer le webhook dans GitHub",
+  "Webhook secret": "Secret du webhook",
+  "Copy webhook URL": "Copier l'URL du webhook",
+  "Copy webhook secret": "Copier le secret du webhook",
+  "Received": "Reçu",
+  "Rejected: the secret in GitHub does not match":
+    "Refusé : le secret dans GitHub ne correspond pas",
+  "Rejected: no secret was set": "Refusé : aucun secret n'était défini",
+  "Received, but the scan could not start": "Reçu, mais l'analyse n'a pas pu démarrer",
+  "In your GitHub repository, open Settings → Webhooks → Add webhook.":
+    "Dans votre dépôt GitHub, ouvrez Settings → Webhooks → Add webhook.",
+  "Paste the webhook URL as the payload URL, set the content type to application/json and paste the secret.":
+    "Collez l'URL du webhook comme Payload URL, définissez le Content type sur application/json et collez le secret.",
+  "Choose Let me select individual events, tick Pull requests and Pushes, then click Add webhook.":
+    "Choisissez « Let me select individual events », cochez Pull requests et Pushes, puis cliquez sur Add webhook.",
+  "Pushes to the default branch start a full scan. Opened and updated pull requests start a scan of the changed files. Results are posted to GitHub with the token from AI Detection settings.":
+    "Les pushs sur la branche par défaut lancent une analyse complète. Les pull requests ouvertes et mises à jour lancent une analyse des fichiers modifiés. Les résultats sont publiés dans GitHub avec le jeton des paramètres de détection IA.",
+  "GitHub must be able to reach this address. Set FRONTEND_URL to this deployment's public URL if it is not reachable from the internet.":
+    "GitHub doit pouvoir joindre cette adresse. Définissez FRONTEND_URL sur l'URL publique de ce déploiement si elle n'est pas accessible depuis Internet.",
+  "Use this secret in the GitHub webhook. After regenerating, update it in GitHub too.":
+    "Utilisez ce secret dans le webhook GitHub. Après l'avoir régénéré, mettez-le aussi à jour dans GitHub.",
+  "A webhook secret is created when you save. The next step shows how to add it in GitHub.":
+    "Un secret de webhook est créé à l'enregistrement. L'étape suivante explique comment l'ajouter dans GitHub.",
+  "Last delivery: {time}. {status}": "Dernière livraison : {time}. {status}",
+  "No webhook deliveries received yet.": "Aucune livraison de webhook reçue pour l'instant.",
+  "{utc} UTC = {local} your time": "{utc} UTC = {local} votre heure",
+  "Enter a whole number from 0 to 100": "Saisissez un nombre entier de 0 à 100",
+  "Enter a whole number of 0 or more": "Saisissez un nombre entier supérieur ou égal à 0",
 };
 
 export const es: Record<string, string> = {
@@ -986,4 +1070,45 @@ export const es: Record<string, string> = {
   "Token is valid": "El token es válido",
   "Vulnerabilities": "Vulnerabilidades",
   "Weighing risk dimensions": "Ponderación de las dimensiones de riesgo",
+  "Add this webhook in GitHub so pull requests and pushes start scans.":
+    "Añada este webhook en GitHub para que las pull requests y los pushes inicien escaneos.",
+  "CI/CD integration": "Integración CI/CD",
+  "Connect GitHub": "Conectar GitHub",
+  "Copy the secret now. You can see it again, or replace it, by editing the repository.":
+    "Copie el secreto ahora. Puede volver a verlo o sustituirlo editando el repositorio.",
+  "Minimum governance score": "Puntuación de gobernanza mínima",
+  "PR checks fail when a scan has more critical findings than this":
+    "Las comprobaciones de PR fallan si un escaneo tiene más hallazgos críticos que este valor",
+  "PR checks fail when the score is below this":
+    "Las comprobaciones de PR fallan si la puntuación está por debajo de este valor",
+  "Regenerate secret": "Regenerar secreto",
+  "Scan pull requests and pushes to the default branch, then post the result to GitHub.":
+    "Escanear las pull requests y los pushes a la rama predeterminada, y publicar el resultado en GitHub.",
+  "Set up the webhook in GitHub": "Configurar el webhook en GitHub",
+  "Webhook secret": "Secreto del webhook",
+  "Copy webhook URL": "Copiar URL del webhook",
+  "Copy webhook secret": "Copiar secreto del webhook",
+  "Received": "Recibido",
+  "Rejected: the secret in GitHub does not match": "Rechazado: el secreto en GitHub no coincide",
+  "Rejected: no secret was set": "Rechazado: no había ningún secreto definido",
+  "Received, but the scan could not start": "Recibido, pero el escaneo no pudo iniciarse",
+  "In your GitHub repository, open Settings → Webhooks → Add webhook.":
+    "En su repositorio de GitHub, abra Settings → Webhooks → Add webhook.",
+  "Paste the webhook URL as the payload URL, set the content type to application/json and paste the secret.":
+    "Pegue la URL del webhook como Payload URL, establezca el Content type en application/json y pegue el secreto.",
+  "Choose Let me select individual events, tick Pull requests and Pushes, then click Add webhook.":
+    "Elija «Let me select individual events», marque Pull requests y Pushes y, a continuación, haga clic en Add webhook.",
+  "Pushes to the default branch start a full scan. Opened and updated pull requests start a scan of the changed files. Results are posted to GitHub with the token from AI Detection settings.":
+    "Los pushes a la rama predeterminada inician un escaneo completo. Las pull requests abiertas y actualizadas inician un escaneo de los archivos modificados. Los resultados se publican en GitHub con el token de la configuración de detección de IA.",
+  "GitHub must be able to reach this address. Set FRONTEND_URL to this deployment's public URL if it is not reachable from the internet.":
+    "GitHub debe poder acceder a esta dirección. Establezca FRONTEND_URL en la URL pública de esta implementación si no es accesible desde Internet.",
+  "Use this secret in the GitHub webhook. After regenerating, update it in GitHub too.":
+    "Use este secreto en el webhook de GitHub. Después de regenerarlo, actualícelo también en GitHub.",
+  "A webhook secret is created when you save. The next step shows how to add it in GitHub.":
+    "Al guardar se crea un secreto de webhook. El siguiente paso muestra cómo añadirlo en GitHub.",
+  "Last delivery: {time}. {status}": "Última entrega: {time}. {status}",
+  "No webhook deliveries received yet.": "Aún no se ha recibido ninguna entrega de webhook.",
+  "{utc} UTC = {local} your time": "{utc} UTC = {local} su hora",
+  "Enter a whole number from 0 to 100": "Introduzca un número entero de 0 a 100",
+  "Enter a whole number of 0 or more": "Introduzca un número entero igual o superior a 0",
 };

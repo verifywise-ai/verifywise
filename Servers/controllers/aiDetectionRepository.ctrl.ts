@@ -23,7 +23,7 @@ import { getScansListQuery, getActiveScanForRepoQuery } from "../utils/aiDetecti
 import { startScan } from "../services/aiDetection.service";
 import { IServiceContext } from "../domain.layer/interfaces/i.aiDetection";
 import { ScheduleFrequency } from "../domain.layer/interfaces/i.aiDetectionRepository";
-import { generateWebhookSecret } from "../services/webhook.service";
+import { generateWebhookSecret, buildGitHubWebhookUrl } from "../services/webhook.service";
 
 import { translateError } from "../utils/i18n.utils";
 const GITHUB_SSH_PREFIX = "git@github.com:";
@@ -65,6 +65,37 @@ function parseGitHubUrl(url: string): { owner: string; name: string } | null {
   const [owner, name] = parts;
   if (!owner || !name) return null;
   return { owner, name };
+}
+
+/**
+ * Validate CI/CD threshold fields. Only fields that are present are checked,
+ * so partial updates keep working. Returns an error message or null.
+ */
+export function validateCiSettings(body: {
+  ci_enabled?: unknown;
+  ci_min_score?: unknown;
+  ci_max_critical?: unknown;
+  ci_post_comments?: unknown;
+  ci_status_checks?: unknown;
+}): string | null {
+  for (const key of ["ci_enabled", "ci_post_comments", "ci_status_checks"] as const) {
+    if (body[key] !== undefined && typeof body[key] !== "boolean") {
+      return "ci_enabled, ci_post_comments and ci_status_checks must be true or false";
+    }
+  }
+  if (body.ci_min_score !== undefined) {
+    const score = body.ci_min_score;
+    if (typeof score !== "number" || !Number.isInteger(score) || score < 0 || score > 100) {
+      return "ci_min_score must be a whole number from 0 to 100";
+    }
+  }
+  if (body.ci_max_critical !== undefined) {
+    const max = body.ci_max_critical;
+    if (typeof max !== "number" || !Number.isInteger(max) || max < 0) {
+      return "ci_max_critical must be a whole number of 0 or more";
+    }
+  }
+  return null;
 }
 
 // ============================================================================
@@ -175,6 +206,11 @@ export async function createRepository(req: Request, res: Response): Promise<any
       schedule_day_of_month,
       schedule_hour,
       schedule_minute,
+      ci_enabled,
+      ci_min_score,
+      ci_max_critical,
+      ci_post_comments,
+      ci_status_checks,
     } = req.body;
 
     if (!repository_url) {
@@ -251,6 +287,11 @@ export async function createRepository(req: Request, res: Response): Promise<any
       }
     }
 
+    const ciError = validateCiSettings(req.body);
+    if (ciError) {
+      return res.status(400).json(STATUS_CODE[400]({ message: req.t!(ciError) }));
+    }
+
     const repository = await createRepositoryQuery(
       {
         repository_url: `https://github.com/${parsed.owner}/${parsed.name}`,
@@ -265,6 +306,14 @@ export async function createRepository(req: Request, res: Response): Promise<any
         schedule_day_of_month: schedule_day_of_month ?? null,
         schedule_hour: schedule_hour ?? 2,
         schedule_minute: schedule_minute ?? 0,
+        ci_enabled: ci_enabled ?? false,
+        ci_min_score: ci_min_score ?? 70,
+        ci_max_critical: ci_max_critical ?? 0,
+        ci_post_comments: ci_post_comments ?? true,
+        ci_status_checks: ci_status_checks ?? true,
+        // The webhook endpoint rejects every delivery until a secret exists,
+        // so a repository saved with CI/CD on gets one straight away.
+        webhook_secret: ci_enabled ? generateWebhookSecret() : null,
         created_by: req.userId!,
       },
       req.organizationId!,
@@ -336,6 +385,11 @@ export async function updateRepository(req: Request, res: Response): Promise<any
       ci_status_checks,
     } = req.body;
 
+    const ciError = validateCiSettings(req.body);
+    if (ciError) {
+      return res.status(400).json(STATUS_CODE[400]({ message: req.t!(ciError) }));
+    }
+
     // Validate schedule fields if enabling
     const willBeEnabled =
       schedule_enabled !== undefined ? schedule_enabled : existing.schedule_enabled;
@@ -371,6 +425,11 @@ export async function updateRepository(req: Request, res: Response): Promise<any
         ci_max_critical,
         ci_post_comments,
         ci_status_checks,
+        // Turning CI/CD on for a repository that never had a secret creates one,
+        // so webhook deliveries are not rejected.
+        ...(ci_enabled === true && !existing.webhook_secret
+          ? { webhook_secret: generateWebhookSecret() }
+          : {}),
         is_enabled,
       },
       req.organizationId!,
@@ -666,7 +725,7 @@ export async function generateWebhookSecretController(req: Request, res: Respons
 
     const secret = generateWebhookSecret();
 
-    await updateRepositoryQuery(id, { webhook_secret: secret } as any, req.organizationId!);
+    await updateRepositoryQuery(id, { webhook_secret: secret }, req.organizationId!);
 
     await logSuccess({
       eventType: "Update",
@@ -683,6 +742,32 @@ export async function generateWebhookSecretController(req: Request, res: Respons
       eventType: "Update",
       description: "Failed to generate webhook secret",
       functionName: "generateWebhookSecretController",
+      fileName: "aiDetectionRepository.ctrl.ts",
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+  }
+}
+
+// ============================================================================
+// Webhook Config
+// ============================================================================
+
+/**
+ * The URL GitHub should send webhooks to, built from the deployment's public
+ * address (FRONTEND_URL). `is_public` is false when that address is missing or
+ * not reachable from the internet, so the UI can warn before setup.
+ */
+export async function getWebhookConfigController(req: Request, res: Response): Promise<any> {
+  try {
+    return res.status(200).json(STATUS_CODE[200](buildGitHubWebhookUrl(process.env.FRONTEND_URL)));
+  } catch (error) {
+    await logFailure({
+      eventType: "Read",
+      description: "Failed to build webhook config",
+      functionName: "getWebhookConfigController",
       fileName: "aiDetectionRepository.ctrl.ts",
       error: error as Error,
       userId: req.userId!,

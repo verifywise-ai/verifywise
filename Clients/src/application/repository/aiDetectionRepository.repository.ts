@@ -12,6 +12,7 @@ import {
   CreateRepositoryInput,
   UpdateRepositoryInput,
   RepositoriesResponse,
+  WebhookConfig,
 } from "../../domain/ai-detection/repositoryTypes";
 import { Scan, ScansResponse } from "../../domain/ai-detection/types";
 
@@ -73,6 +74,13 @@ export async function getRepositoryScans(
 export async function generateWebhookSecret(id: number): Promise<{ webhook_secret: string }> {
   const response = await apiServices.post<{ data: { webhook_secret: string } }>(
     `${BASE_URL}/${id}/webhook-secret`,
+  );
+  return response.data.data;
+}
+
+export async function getWebhookConfig(): Promise<WebhookConfig> {
+  const response = await apiServices.get<{ data: WebhookConfig }>(
+    "/v1/ai-detection-repositories/webhook-config",
   );
   return response.data.data;
 }

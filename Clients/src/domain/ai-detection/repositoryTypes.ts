@@ -31,6 +31,9 @@ export interface AIDetectionRepository {
   ci_max_critical: number;
   ci_post_comments: boolean;
   ci_status_checks: boolean;
+  /** When GitHub last delivered a webhook for this repository */
+  last_webhook_at?: string | null;
+  last_webhook_status?: WebhookDeliveryStatus | null;
 
   last_scan_id?: number | null;
   last_scan_status?: string | null;
@@ -89,4 +92,15 @@ export interface RepositoriesResponse {
     limit: number;
     total_pages: number;
   };
+}
+
+/** Outcome of the most recent GitHub webhook delivery */
+export type WebhookDeliveryStatus = "ok" | "invalid_signature" | "secret_missing" | "error";
+
+/** Where GitHub should send webhooks, from the deployment's public address */
+export interface WebhookConfig {
+  /** Null when the deployment has no public address configured */
+  webhook_url: string | null;
+  /** False when the address is missing or not reachable from the internet */
+  is_public: boolean;
 }

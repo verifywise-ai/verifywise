@@ -10,13 +10,36 @@
 
 import { Request, Response } from "express";
 import { STATUS_CODE } from "../utils/statusCode.utils";
-import { getRepositoryByOwnerNameForWebhook } from "../utils/aiDetectionRepository.utils";
+import {
+  getRepositoryByOwnerNameForWebhook,
+  recordWebhookDeliveryQuery,
+} from "../utils/aiDetectionRepository.utils";
+import { WebhookDeliveryStatus } from "../domain.layer/interfaces/i.aiDetectionRepository";
 import {
   verifyGitHubSignature,
   handlePushEvent,
   handlePullRequestEvent,
 } from "../services/webhook.service";
 import logger from "../utils/logger/fileLogger";
+
+/**
+ * Store the outcome of a delivery on the repository, for the "Last delivery"
+ * line in the repository settings. Never fails the webhook response.
+ */
+async function recordDelivery(
+  repo: { id?: number; organization_id: number },
+  status: WebhookDeliveryStatus,
+): Promise<void> {
+  if (!repo.id) return;
+  try {
+    await recordWebhookDeliveryQuery(repo.id, repo.organization_id, status);
+  } catch (error) {
+    logger.error(
+      "Failed to record webhook delivery:",
+      error instanceof Error ? error : new Error(String(error)),
+    );
+  }
+}
 
 /**
  * Handle GitHub webhook events
@@ -27,6 +50,8 @@ import logger from "../utils/logger/fileLogger";
  */
 export async function githubWebhookController(req: Request, res: Response): Promise<Response> {
   logger.info("Processing GitHub webhook");
+
+  let matchedRepo: Awaited<ReturnType<typeof getRepositoryByOwnerNameForWebhook>> = null;
 
   try {
     // 1. Extract headers
@@ -78,16 +103,21 @@ export async function githubWebhookController(req: Request, res: Response): Prom
 
     // 6. Verify HMAC signature
     if (!repo.webhook_secret) {
+      await recordDelivery(repo, "secret_missing");
       return res.status(200).json({ message: req.t!("Webhook secret not configured") });
     }
 
     if (!verifyGitHubSignature(rawBody, signature, repo.webhook_secret)) {
+      await recordDelivery(repo, "invalid_signature");
       return res.status(401).json(STATUS_CODE[401](req.t!("Invalid signature")));
     }
+
+    matchedRepo = repo;
 
     // 7. Handle ping event (sent when webhook is first configured)
     if (event === "ping") {
       logger.info(`Webhook ping received for ${owner}/${name} (delivery: ${deliveryId})`);
+      await recordDelivery(repo, "ok");
       return res.status(200).json({ message: req.t!("pong") });
     }
 
@@ -108,6 +138,7 @@ export async function githubWebhookController(req: Request, res: Response): Prom
     }
 
     logger.info(`GitHub webhook ${event}: ${result.reason}`);
+    await recordDelivery(repo, "ok");
 
     return res.status(200).json(result);
   } catch (error) {
@@ -115,6 +146,9 @@ export async function githubWebhookController(req: Request, res: Response): Prom
       "Failed to process GitHub webhook:",
       error instanceof Error ? error : new Error(String(error)),
     );
+    if (matchedRepo) {
+      await recordDelivery(matchedRepo, "error");
+    }
 
     // Always return 200 to prevent GitHub from retrying on internal errors
     // Log the error server-side but don't expose details

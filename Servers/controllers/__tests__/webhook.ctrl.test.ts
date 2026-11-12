@@ -3,6 +3,7 @@ import { Request, Response } from "express";
 
 jest.mock("../../utils/aiDetectionRepository.utils", () => ({
   getRepositoryByOwnerNameForWebhook: jest.fn(),
+  recordWebhookDeliveryQuery: jest.fn(),
 }));
 
 jest.mock("../../services/webhook.service", () => ({
@@ -25,7 +26,10 @@ jest.mock("../../utils/statusCode.utils", () => ({
 }));
 
 import { githubWebhookController } from "../webhook.ctrl";
-import { getRepositoryByOwnerNameForWebhook } from "../../utils/aiDetectionRepository.utils";
+import {
+  getRepositoryByOwnerNameForWebhook,
+  recordWebhookDeliveryQuery,
+} from "../../utils/aiDetectionRepository.utils";
 import {
   verifyGitHubSignature,
   handlePushEvent,
@@ -34,6 +38,9 @@ import {
 
 const mockGetRepo = getRepositoryByOwnerNameForWebhook as jest.MockedFunction<
   typeof getRepositoryByOwnerNameForWebhook
+>;
+const mockRecordDelivery = recordWebhookDeliveryQuery as jest.MockedFunction<
+  typeof recordWebhookDeliveryQuery
 >;
 const mockVerifySig = verifyGitHubSignature as jest.MockedFunction<typeof verifyGitHubSignature>;
 const mockHandlePush = handlePushEvent as jest.MockedFunction<typeof handlePushEvent>;
@@ -425,6 +432,85 @@ describe("githubWebhookController", () => {
         triggered: false,
         reason: "Internal processing error",
       },
+    });
+  });
+
+  describe("delivery tracking", () => {
+    const repo = { id: 9, organization_id: 4, webhook_secret: "secret" } as any;
+    const pushReq = (event = "push") =>
+      createReq({
+        headers: { "x-hub-signature-256": "sha256=abc", "x-github-event": event },
+        body: Buffer.from(
+          JSON.stringify({ repository: { owner: { login: "owner" }, name: "repo" } }),
+        ),
+      });
+
+    it("records an ok delivery for a verified ping", async () => {
+      mockGetRepo.mockResolvedValue(repo);
+      mockVerifySig.mockReturnValue(true);
+
+      await githubWebhookController(pushReq("ping") as Request, createRes() as Response);
+
+      expect(mockRecordDelivery).toHaveBeenCalledWith(9, 4, "ok");
+    });
+
+    it("records an ok delivery for a handled push", async () => {
+      mockGetRepo.mockResolvedValue(repo);
+      mockVerifySig.mockReturnValue(true);
+      mockHandlePush.mockResolvedValue({ triggered: true, reason: "ok" });
+
+      await githubWebhookController(pushReq() as Request, createRes() as Response);
+
+      expect(mockRecordDelivery).toHaveBeenCalledWith(9, 4, "ok");
+    });
+
+    it("records an invalid signature", async () => {
+      mockGetRepo.mockResolvedValue(repo);
+      mockVerifySig.mockReturnValue(false);
+
+      await githubWebhookController(pushReq() as Request, createRes() as Response);
+
+      expect(mockRecordDelivery).toHaveBeenCalledWith(9, 4, "invalid_signature");
+    });
+
+    it("records a missing secret", async () => {
+      mockGetRepo.mockResolvedValue({ ...repo, webhook_secret: null });
+
+      await githubWebhookController(pushReq() as Request, createRes() as Response);
+
+      expect(mockRecordDelivery).toHaveBeenCalledWith(9, 4, "secret_missing");
+    });
+
+    it("records an error when a verified delivery fails to process", async () => {
+      mockGetRepo.mockResolvedValue(repo);
+      mockVerifySig.mockReturnValue(true);
+      mockHandlePush.mockRejectedValue(new Error("boom"));
+      const res = createRes();
+
+      await githubWebhookController(pushReq() as Request, res as Response);
+
+      expect(mockRecordDelivery).toHaveBeenCalledWith(9, 4, "error");
+      expect(res.status).toHaveBeenCalledWith(200);
+    });
+
+    it("still answers GitHub when recording the delivery fails", async () => {
+      mockGetRepo.mockResolvedValue(repo);
+      mockVerifySig.mockReturnValue(true);
+      mockRecordDelivery.mockRejectedValueOnce(new Error("db down"));
+      const res = createRes();
+
+      await githubWebhookController(pushReq("ping") as Request, res as Response);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(res.json).toHaveBeenCalledWith({ message: "pong" });
+    });
+
+    it("does not record anything for an unregistered repository", async () => {
+      mockGetRepo.mockResolvedValue(null);
+
+      await githubWebhookController(pushReq() as Request, createRes() as Response);
+
+      expect(mockRecordDelivery).not.toHaveBeenCalled();
     });
   });
 });

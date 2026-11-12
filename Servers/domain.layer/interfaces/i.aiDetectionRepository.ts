@@ -20,6 +20,15 @@ export type ScheduleFrequency = "daily" | "weekly" | "monthly";
 
 export type TriggerType = "manual" | "scheduled" | "webhook";
 
+/**
+ * Outcome of the most recent GitHub webhook delivery for a repository.
+ * - ok: signature verified and the event was handled (or ignored on purpose)
+ * - invalid_signature: the signature did not match the stored secret
+ * - secret_missing: CI/CD is on but no secret has been generated yet
+ * - error: the delivery was verified but processing failed
+ */
+export type WebhookDeliveryStatus = "ok" | "invalid_signature" | "secret_missing" | "error";
+
 // ============================================================================
 // Repository Record
 // ============================================================================
@@ -48,6 +57,8 @@ export interface IAIDetectionRepository {
   ci_max_critical: number;
   ci_post_comments: boolean;
   ci_status_checks: boolean;
+  last_webhook_at?: Date | null;
+  last_webhook_status?: WebhookDeliveryStatus | null;
 
   // Denormalized tracking
   last_scan_id?: number | null;
@@ -86,6 +97,7 @@ export interface ICreateRepositoryInput {
   ci_max_critical?: number;
   ci_post_comments?: boolean;
   ci_status_checks?: boolean;
+  webhook_secret?: string | null;
 
   created_by: number;
 }
@@ -108,6 +120,7 @@ export interface IUpdateRepositoryInput {
   ci_max_critical?: number;
   ci_post_comments?: boolean;
   ci_status_checks?: boolean;
+  webhook_secret?: string | null;
 
   is_enabled?: boolean;
 }

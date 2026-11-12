@@ -7930,6 +7930,8 @@ tags:
   -
     name: 'v1: V1/Ai Apps'
   -
+    name: 'v1: V1/Ai Detection Repositories'
+  -
     name: 'v1: V1/Dashboard'
   -
     name: 'v1: V1/Groups'
@@ -28776,6 +28778,20 @@ paths:
       tags:
         - 'v1: Intake submissions'
       operationId: approveSubmissionV1
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-detection-repositories/webhook-config:
+    get:
+      summary: 'Get Webhook Config Controller'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Detection Repositories'
+      operationId: getWebhookConfigController
       security:
         -
           bearerAuth: []

@@ -20,6 +20,7 @@ import crypto from "crypto";
 import {
   verifyGitHubSignature,
   generateWebhookSecret,
+  buildGitHubWebhookUrl,
   handlePushEvent,
   handlePullRequestEvent,
 } from "../webhook.service";
@@ -72,6 +73,45 @@ describe("webhook.service", () => {
   // ==========================================================================
   // generateWebhookSecret
   // ==========================================================================
+
+  describe("buildGitHubWebhookUrl", () => {
+    it("builds the URL from the public base address", () => {
+      expect(buildGitHubWebhookUrl("https://vw.example.com")).toEqual({
+        webhook_url: "https://vw.example.com/api/webhooks/github",
+        is_public: true,
+      });
+    });
+
+    it("drops a trailing slash and keeps a sub-path", () => {
+      expect(buildGitHubWebhookUrl("https://example.com/verifywise/").webhook_url).toBe(
+        "https://example.com/verifywise/api/webhooks/github",
+      );
+    });
+
+    it("returns no URL when the public address is missing or invalid", () => {
+      expect(buildGitHubWebhookUrl(undefined)).toEqual({ webhook_url: null, is_public: false });
+      expect(buildGitHubWebhookUrl("  ")).toEqual({ webhook_url: null, is_public: false });
+      expect(buildGitHubWebhookUrl("not a url")).toEqual({ webhook_url: null, is_public: false });
+    });
+
+    it.each([
+      "http://localhost:5173",
+      "http://127.0.0.1:3000",
+      "http://[::1]:3000",
+      "http://10.0.0.5",
+      "http://192.168.1.20:8080",
+      "http://172.20.0.3",
+      "http://verifywise.local",
+    ])("flags %s as not reachable by GitHub", (base) => {
+      const result = buildGitHubWebhookUrl(base);
+      expect(result.is_public).toBe(false);
+      expect(result.webhook_url).toMatch(/\/api\/webhooks\/github$/);
+    });
+
+    it("treats a public IP outside the private ranges as public", () => {
+      expect(buildGitHubWebhookUrl("http://172.32.0.1").is_public).toBe(true);
+    });
+  });
 
   describe("generateWebhookSecret", () => {
     it("should return a 64-character hex string", () => {

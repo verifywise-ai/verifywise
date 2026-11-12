@@ -76,6 +76,50 @@ export function generateWebhookSecret(): string {
 }
 
 // ============================================================================
+// Webhook URL
+// ============================================================================
+
+/** Path the GitHub webhook router is mounted on (see app.ts). */
+export const GITHUB_WEBHOOK_PATH = "/api/webhooks/github";
+
+const LOCAL_HOSTNAME =
+  /^(localhost|127\.\d+\.\d+\.\d+|0\.0\.0\.0|\[::1\]|.+\.local|.+\.localhost)$/i;
+const PRIVATE_IPV4 = /^(10\.\d+\.\d+\.\d+|192\.168\.\d+\.\d+|172\.(1[6-9]|2\d|3[01])\.\d+\.\d+)$/;
+
+/**
+ * Build the URL GitHub should deliver webhooks to.
+ *
+ * Deployments serve the API under the app's public address (nginx proxies
+ * /api/ to the backend), and FRONTEND_URL is the setting that holds that public
+ * address — share links and email links use it too. When it is missing, or
+ * points at a host GitHub cannot reach (localhost, a private network), the
+ * caller is told so it can warn the user instead of handing out a dead URL.
+ */
+export function buildGitHubWebhookUrl(publicBaseUrl: string | undefined): {
+  webhook_url: string | null;
+  is_public: boolean;
+} {
+  const base = publicBaseUrl?.trim();
+  if (!base) {
+    return { webhook_url: null, is_public: false };
+  }
+
+  let parsed: URL;
+  try {
+    parsed = new URL(base);
+  } catch {
+    return { webhook_url: null, is_public: false };
+  }
+
+  const path = parsed.pathname.replace(/\/+$/, "");
+  const webhookUrl = `${parsed.origin}${path}${GITHUB_WEBHOOK_PATH}`;
+  const host = parsed.hostname;
+  const isPublic = !LOCAL_HOSTNAME.test(host) && !PRIVATE_IPV4.test(host);
+
+  return { webhook_url: webhookUrl, is_public: isPublic };
+}
+
+// ============================================================================
 // Event Handlers
 // ============================================================================
 

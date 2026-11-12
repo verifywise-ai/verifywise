@@ -14,6 +14,7 @@ import {
   ICreateRepositoryInput,
   IUpdateRepositoryInput,
   ScheduleFrequency,
+  WebhookDeliveryStatus,
 } from "../domain.layer/interfaces/i.aiDetectionRepository";
 
 // ============================================================================
@@ -54,7 +55,7 @@ export async function createRepositoryQuery(
       schedule_enabled, schedule_frequency, schedule_day_of_week,
       schedule_day_of_month, schedule_hour, schedule_minute,
       ci_enabled, ci_min_score, ci_max_critical, ci_post_comments, ci_status_checks,
-      next_scan_at, is_enabled, created_by,
+      webhook_secret, next_scan_at, is_enabled, created_by,
       created_at, updated_at
     ) VALUES (
       :organizationId, :repository_url, :repository_owner, :repository_name,
@@ -62,7 +63,7 @@ export async function createRepositoryQuery(
       :schedule_enabled, :schedule_frequency, :schedule_day_of_week,
       :schedule_day_of_month, :schedule_hour, :schedule_minute,
       :ci_enabled, :ci_min_score, :ci_max_critical, :ci_post_comments, :ci_status_checks,
-      :next_scan_at, TRUE, :created_by,
+      :webhook_secret, :next_scan_at, TRUE, :created_by,
       NOW(), NOW()
     )
     RETURNING *;
@@ -88,6 +89,7 @@ export async function createRepositoryQuery(
       ci_max_critical: input.ci_max_critical ?? 0,
       ci_post_comments: input.ci_post_comments ?? true,
       ci_status_checks: input.ci_status_checks ?? true,
+      webhook_secret: input.webhook_secret ?? null,
       next_scan_at: nextScanAt,
       created_by: input.created_by,
     },
@@ -151,6 +153,29 @@ export async function getRepositoryByOwnerNameForWebhook(
   });
 
   return (results as (IAIDetectionRepository & { organization_id: number })[])[0] || null;
+}
+
+/**
+ * Record the outcome of a GitHub webhook delivery on the repository row.
+ * Called from the public webhook endpoint, so it is scoped by both the
+ * repository id and the organization the repository belongs to.
+ */
+export async function recordWebhookDeliveryQuery(
+  repositoryId: number,
+  organizationId: number,
+  status: WebhookDeliveryStatus,
+): Promise<void> {
+  validateOrganizationId(organizationId);
+  const query = `
+    UPDATE ai_detection_repositories
+    SET last_webhook_at = NOW(), last_webhook_status = :status
+    WHERE id = :repositoryId AND organization_id = :organizationId;
+  `;
+
+  await sequelize.query(query, {
+    replacements: { repositoryId, organizationId, status },
+    type: QueryTypes.UPDATE,
+  });
 }
 
 export async function getRepositoriesListQuery(
@@ -236,9 +261,9 @@ export async function updateRepositoryQuery(
     setClauses.push("schedule_minute = :schedule_minute");
     replacements.schedule_minute = input.schedule_minute;
   }
-  if ((input as any).webhook_secret !== undefined) {
+  if (input.webhook_secret !== undefined) {
     setClauses.push("webhook_secret = :webhook_secret");
-    replacements.webhook_secret = (input as any).webhook_secret;
+    replacements.webhook_secret = input.webhook_secret;
   }
   if (input.ci_enabled !== undefined) {
     setClauses.push("ci_enabled = :ci_enabled");
