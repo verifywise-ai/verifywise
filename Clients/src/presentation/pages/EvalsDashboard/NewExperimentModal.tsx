@@ -74,6 +74,7 @@ import DatasetStep from "./NewExperiment/DatasetStep";
 import ModelStep from "./NewExperiment/ModelStep";
 import { countLabel } from "../../tools/countLabel";
 import { CustomizableButton } from "../../components/button/customizable-button";
+import { METRIC_LABELS } from "./metricLabels";
 
 /** Conversational G-Eval metrics built without evaluation_params; they fail on every sample. */
 const FAILING_CONVERSATIONAL_METRICS = [
@@ -1908,27 +1909,27 @@ export default function NewExperimentModal({
                   <Stack spacing="5px">
                     {Object.entries({
                       turnRelevancy: {
-                        label: "Turn relevancy",
+                        label: METRIC_LABELS.turnRelevancy,
                         desc: "Evaluates if each assistant response is relevant to the user's input in that turn.",
                       },
                       knowledgeRetention: {
-                        label: "Knowledge retention",
+                        label: METRIC_LABELS.knowledgeRetention,
                         desc: "Checks if the model retains context and information across conversation turns.",
                       },
                       conversationCoherence: {
-                        label: "Conversation coherence",
+                        label: METRIC_LABELS.conversationCoherence,
                         desc: "Evaluates overall coherence, correctness, and logical consistency across turns.",
                       },
                       conversationHelpfulness: {
-                        label: "Conversation helpfulness",
+                        label: METRIC_LABELS.conversationHelpfulness,
                         desc: "Measures how helpful the assistant is in addressing the user's needs throughout.",
                       },
                       taskCompletion: {
-                        label: "Task completion",
+                        label: METRIC_LABELS.taskCompletion,
                         desc: "Evaluates if the conversation successfully achieved the expected outcome.",
                       },
                       conversationSafety: {
-                        label: "Conversation safety",
+                        label: METRIC_LABELS.conversationSafety,
                         desc: "Checks for toxic, biased, or harmful content across all conversation turns.",
                       },
                     }).map(([key, meta]) => (
@@ -2074,31 +2075,31 @@ export default function NewExperimentModal({
                   <Stack spacing="5px">
                     {Object.entries({
                       answerRelevancy: {
-                        label: "Answer relevancy",
+                        label: METRIC_LABELS.answerRelevancy,
                         desc: "Measures how relevant the model's answer is to the input (GEval).",
                       },
                       correctness: {
-                        label: "Correctness",
+                        label: METRIC_LABELS.correctness,
                         desc: "Evaluates factual accuracy of the model's response (GEval).",
                       },
                       completeness: {
-                        label: "Completeness",
+                        label: METRIC_LABELS.completeness,
                         desc: "Checks if the response fully addresses all aspects of the query (GEval).",
                       },
                       hallucination: {
-                        label: "Hallucination",
+                        label: METRIC_LABELS.hallucination,
                         desc: "Detects fabricated or unsupported information in outputs (GEval).",
                       },
                       instructionFollowing: {
-                        label: "Instruction following",
+                        label: METRIC_LABELS.instructionFollowing,
                         desc: "Measures how well the model follows the given instructions.",
                       },
                       toxicity: {
-                        label: "Toxicity",
+                        label: METRIC_LABELS.toxicity,
                         desc: "Flags toxic or harmful language in outputs.",
                       },
                       bias: {
-                        label: "Bias",
+                        label: METRIC_LABELS.bias,
                         desc: "Detects biased or discriminatory content in responses.",
                       },
                     }).map(([key, meta]) => (
@@ -2162,19 +2163,19 @@ export default function NewExperimentModal({
                 </Typography>
                 {Object.entries({
                   contextRelevancy: {
-                    label: "Context relevancy",
+                    label: METRIC_LABELS.contextRelevancy,
                     desc: "Measures whether retrieved context is relevant to the query.",
                   },
                   contextPrecision: {
-                    label: "Context precision",
+                    label: METRIC_LABELS.contextPrecision,
                     desc: "Evaluates if the retrieved context contains only relevant information.",
                   },
                   contextRecall: {
-                    label: "Context recall",
+                    label: METRIC_LABELS.contextRecall,
                     desc: "Checks if all relevant information needed for the answer was retrieved.",
                   },
                   faithfulness: {
-                    label: "Faithfulness",
+                    label: METRIC_LABELS.faithfulness,
                     desc: "Checks if the answer is grounded in the provided retrieval context.",
                   },
                 }).map(([key, meta]) => (
@@ -2252,11 +2253,11 @@ export default function NewExperimentModal({
                 </Typography>
                 {Object.entries({
                   planQuality: {
-                    label: "Plan quality",
+                    label: METRIC_LABELS.planQuality,
                     desc: "Evaluates task understanding, decomposition, and planning coherence.",
                   },
                   planAdherence: {
-                    label: "Plan adherence",
+                    label: METRIC_LABELS.planAdherence,
                     desc: "Measures how well the agent follows its own plan during execution.",
                   },
                 }).map(([key, meta]) => (
@@ -2303,15 +2304,15 @@ export default function NewExperimentModal({
                 </Typography>
                 {Object.entries({
                   toolSelection: {
-                    label: "Tool selection",
+                    label: METRIC_LABELS.toolSelection,
                     desc: "Evaluates whether the agent selected the appropriate tool for the task.",
                   },
                   toolCorrectness: {
-                    label: "Tool correctness",
+                    label: METRIC_LABELS.toolCorrectness,
                     desc: "Measures whether the agent used tools with correct parameters and sequence.",
                   },
                   argumentCorrectness: {
-                    label: "Argument correctness",
+                    label: METRIC_LABELS.argumentCorrectness,
                     desc: "Evaluates if tool arguments are correctly typed, formatted, and extracted from context.",
                   },
                 }).map(([key, meta]) => (
@@ -2358,15 +2359,15 @@ export default function NewExperimentModal({
                 </Typography>
                 {Object.entries({
                   taskCompletion: {
-                    label: "Task completion",
+                    label: METRIC_LABELS.taskCompletion,
                     desc: "Measures whether the agent successfully completed the requested task.",
                   },
                   stepEfficiency: {
-                    label: "Step efficiency",
+                    label: METRIC_LABELS.stepEfficiency,
                     desc: "Evaluates if the agent completed the task with minimal unnecessary steps.",
                   },
                   actionRelevance: {
-                    label: "Action relevance",
+                    label: METRIC_LABELS.actionRelevance,
                     desc: "Checks if all agent actions directly contribute to the goal.",
                   },
                 }).map(([key, meta]) => (
