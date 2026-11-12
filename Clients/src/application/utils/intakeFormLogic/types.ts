@@ -78,6 +78,67 @@ export function isCompatibleCustomFieldType(questionType: string, fieldType: str
   );
 }
 
+/** Trimmed and lower-cased: how answers, option values and labels are compared. */
+export const normalizeText = (value: string): string => value.trim().toLowerCase();
+
+/** A custom field option as approval stores it: plain text, or a scored option's id and label. */
+export interface CustomFieldOptionText {
+  stored: string;
+  label: string;
+}
+
+/** A custom field definition's options as stored value and label pairs. */
+export function customFieldOptionTexts(
+  options: readonly unknown[] | null | undefined,
+): CustomFieldOptionText[] {
+  const texts: CustomFieldOptionText[] = [];
+  for (const option of options ?? []) {
+    if (typeof option === "string") {
+      texts.push({ stored: option, label: option });
+    } else if (option !== null && typeof option === "object") {
+      const { id, label } = option as { id?: unknown; label?: unknown };
+      if (typeof id === "string" && typeof label === "string") texts.push({ stored: id, label });
+    }
+  }
+  return texts;
+}
+
+/** The custom field option any of `texts` names by stored value or label, or undefined. */
+export function matchCustomFieldOption(
+  texts: readonly unknown[],
+  options: readonly CustomFieldOptionText[],
+): CustomFieldOptionText | undefined {
+  const wanted = texts
+    .filter((text): text is string => typeof text === "string")
+    .map(normalizeText);
+  return options.find(
+    (option) =>
+      wanted.includes(normalizeText(option.stored)) || wanted.includes(normalizeText(option.label)),
+  );
+}
+
+const OPTION_CUSTOM_FIELD_TYPES: readonly string[] = ["select", "multiselect", "scored_select"];
+
+/**
+ * The question's options that match no option of the custom field it maps
+ * to, by value or label. An answer with one of them could not be saved on
+ * approval. Empty unless a select or multiselect question maps to a field
+ * with options.
+ */
+export function unmatchedCustomFieldOptions<T extends { value: string; label: string }>(
+  questionType: string,
+  questionOptions: readonly T[] | undefined,
+  fieldType: string,
+  fieldOptions: readonly unknown[] | null | undefined,
+): T[] {
+  if (questionType !== "select" && questionType !== "multiselect") return [];
+  if (!OPTION_CUSTOM_FIELD_TYPES.includes(fieldType)) return [];
+  const candidates = customFieldOptionTexts(fieldOptions);
+  return (questionOptions ?? []).filter(
+    (option) => !matchCustomFieldOption([option.value, option.label], candidates),
+  );
+}
+
 /** Custom field entity type for each intake entity type. */
 export const INTAKE_CUSTOM_FIELD_ENTITY: Readonly<Record<"model" | "use_case" | "ai_app", string>> =
   {
