@@ -126,7 +126,8 @@ interface PreviewData {
   laneReviewers: Array<{ id: number; name: string }>;
   isSeniorReviewer: boolean;
   reviewedBy: number | null;
-  customFields: SubmissionCustomFieldPreview[];
+  /** Null when the server could not list them; custom-mapped answers then show with the others. */
+  customFields: SubmissionCustomFieldPreview[] | null;
 }
 
 /** How often, and for how long, the modal re-reads a running assessment. */
@@ -440,7 +441,9 @@ function SubmissionPreviewModal({
           laneReviewers: response.data.laneReviewers ?? [],
           isSeniorReviewer: response.data.isSeniorReviewer ?? false,
           reviewedBy: sub?.reviewedBy ?? null,
-          customFields: Array.isArray(response.data.customFields) ? response.data.customFields : [],
+          customFields: Array.isArray(response.data.customFields)
+            ? response.data.customFields
+            : null,
         });
         setEuAiActLevel(response.data.euAiActClassification?.current.level ?? "");
         // A band override saved earlier opens in the override panel, so a
@@ -674,8 +677,13 @@ function SubmissionPreviewModal({
   // Answers not mapped to the entity, including calculated values, so
   // reviewers see everything the submitter saw before approving.
   const submissionData = previewData?.submissionData ?? {};
+  // Without a custom field list, answers mapped to custom fields are shown here
+  // so the reviewer still sees them.
+  const customFieldList = previewData?.customFields ?? null;
   const otherAnswers = sortFields(previewData?.formSchema?.fields ?? []).filter((field) => {
-    if (field.entityFieldMapping) return false;
+    if (field.entityFieldMapping) {
+      if (!isCustomFieldMapping(field.entityFieldMapping) || customFieldList !== null) return false;
+    }
     if (!Object.prototype.hasOwnProperty.call(submissionData, field.id)) return false;
     const value = submissionData[field.id];
     return field.type === "calculated" || !isEmptyAnswer(value);
@@ -1111,7 +1119,7 @@ function SubmissionPreviewModal({
           )}
 
           {/* Read-only: values come from the answers and reviewers cannot change them */}
-          {isPending && (previewData?.customFields.length ?? 0) > 0 && (
+          {isPending && customFieldList !== null && customFieldList.length > 0 && (
             <Box
               sx={{
                 border: `1px solid ${theme.palette.border.dark}`,
@@ -1132,7 +1140,7 @@ function SubmissionPreviewModal({
               <Typography sx={{ fontSize: "13px", color: theme.palette.text.accent, mb: "8px" }}>
                 Filled from the answers when you approve.
               </Typography>
-              {previewData?.customFields.map((customField, index) => (
+              {customFieldList.map((customField, index) => (
                 <Box
                   key={`${customField.label}-${index}`}
                   sx={{

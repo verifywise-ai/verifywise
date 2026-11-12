@@ -1,7 +1,7 @@
 import { describe, it, expect, vi } from "vitest";
 import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
-import { FieldEditor } from "../FieldEditor";
+import { FieldEditor, defaultValueWithin, questionOptionsFrom } from "../FieldEditor";
 import { IntakeEntityType } from "../../../../domain/intake/enums";
 import type { FormField } from "../types";
 import type { ICustomFieldDefinition } from "../../../../domain/interfaces/i.customField";
@@ -88,6 +88,30 @@ describe("FieldEditor custom field mapping", () => {
     ]);
   });
 
+  it("keeps the value of an option that already matches, relabelled as the custom field", async () => {
+    const onChange = vi.fn();
+    renderEditor(
+      {
+        ...SELECT_QUESTION,
+        options: [
+          { label: "high ", value: "opt_high" },
+          { label: "Medium", value: "opt_medium" },
+        ],
+        defaultValue: "opt_medium",
+      },
+      { customFieldDefinitions: [TIER], onChange },
+    );
+    fireEvent.click(within(openMappingPicker()).getByRole("option", { name: "Tier" }));
+    await waitFor(() => expect(onChange).toHaveBeenCalled());
+    const saved = onChange.mock.calls[onChange.mock.calls.length - 1][0] as FormField;
+    expect(saved.options).toEqual([
+      { value: "opt_high", label: "High" },
+      { value: "Low", label: "Low" },
+    ]);
+    // The default named an option that is gone.
+    expect(saved.defaultValue).toBeUndefined();
+  });
+
   it("copies scored options by label", async () => {
     const onChange = vi.fn();
     const scored = definition({
@@ -159,8 +183,64 @@ describe("FieldEditor custom field mapping", () => {
     ).toBeInTheDocument();
   });
 
+  it("explains a mapping whose question options the custom field does not have", () => {
+    renderEditor(
+      { ...SELECT_QUESTION, entityFieldMapping: "custom_field:tier" },
+      { customFieldDefinitions: [TIER] },
+    );
+    expect(
+      screen.getByText("Some options of this question are not options of this custom field"),
+    ).toBeInTheDocument();
+  });
+
   it("does not flag a mapping while the custom fields are loading", () => {
     renderEditor({ ...SELECT_QUESTION, entityFieldMapping: "custom_field:gone" });
     expect(screen.queryByText("This custom field no longer exists")).not.toBeInTheDocument();
+  });
+});
+
+describe("questionOptionsFrom", () => {
+  it("matches existing options by value or label, trimmed and case-insensitive", () => {
+    expect(
+      questionOptionsFrom({ options: ["High", "Low", "None"] }, [
+        { value: "HIGH", label: "Top" },
+        { value: "o2", label: " low" },
+        { value: "o3", label: "Gone" },
+      ]),
+    ).toEqual([
+      { value: "HIGH", label: "High" },
+      { value: "o2", label: "Low" },
+      { value: "None", label: "None" },
+    ]);
+  });
+
+  it("matches scored options by id or label and uses an existing option once", () => {
+    expect(
+      questionOptionsFrom(
+        {
+          options: [
+            { id: "s1", label: "Minor", score: 1 },
+            { id: "s2", label: "minor ", score: 2 },
+          ],
+        },
+        [{ value: "s1", label: "x" }],
+      ),
+    ).toEqual([
+      { value: "s1", label: "Minor" },
+      { value: "minor ", label: "minor " },
+    ]);
+  });
+});
+
+describe("defaultValueWithin", () => {
+  const options = [
+    { value: "a", label: "A" },
+    { value: "b", label: "B" },
+  ];
+  it("keeps a default that is still an option and drops one that is not", () => {
+    expect(defaultValueWithin("a", options)).toBe("a");
+    expect(defaultValueWithin("z", options)).toBeUndefined();
+    expect(defaultValueWithin(["a", "z", "b"], options)).toEqual(["a", "b"]);
+    expect(defaultValueWithin("", options)).toBe("");
   });
 });

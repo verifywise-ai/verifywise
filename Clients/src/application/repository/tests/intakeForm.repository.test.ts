@@ -613,7 +613,7 @@ describe("Test Intake Form Repository", () => {
       await getSubmissionPreview(10);
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
-      expect(apiServices.get).toHaveBeenCalledWith(`${BASE_URL}/submissions/10/preview`, {
+      expect(apiServices.get).toHaveBeenCalledWith("/v1/intake-submissions/10/preview", {
         signal: undefined,
       });
     });
@@ -642,7 +642,7 @@ describe("Test Intake Form Repository", () => {
 
       await getSubmissionPreview(10, controller.signal);
 
-      expect(apiServices.get).toHaveBeenCalledWith(`${BASE_URL}/submissions/10/preview`, {
+      expect(apiServices.get).toHaveBeenCalledWith("/v1/intake-submissions/10/preview", {
         signal: controller.signal,
       });
     });
@@ -675,7 +675,7 @@ describe("Test Intake Form Repository", () => {
 
       expect(apiServices.post).toHaveBeenCalledTimes(1);
       expect(apiServices.post).toHaveBeenCalledWith(
-        `${BASE_URL}/submissions/10/approve`,
+        "/v1/intake-submissions/10/approve",
         {},
         { signal: undefined },
       );
@@ -696,7 +696,7 @@ describe("Test Intake Form Repository", () => {
       await approveSubmission(10, approveData);
 
       expect(apiServices.post).toHaveBeenCalledWith(
-        `${BASE_URL}/submissions/10/approve`,
+        "/v1/intake-submissions/10/approve",
         approveData,
         { signal: undefined },
       );
@@ -727,7 +727,7 @@ describe("Test Intake Form Repository", () => {
       await approveSubmission(10, undefined, controller.signal);
 
       expect(apiServices.post).toHaveBeenCalledWith(
-        `${BASE_URL}/submissions/10/approve`,
+        "/v1/intake-submissions/10/approve",
         {},
         { signal: controller.signal },
       );

@@ -133,6 +133,27 @@ describe("analyzeMappingCoverage with custom field mappings", () => {
     expect(customFieldProblems).toEqual([{ formField: field, reason: "incompatible" }]);
   });
 
+  it("reports a select question with options the custom field does not have", () => {
+    const field: FormField = {
+      ...mapped("select", "tier"),
+      options: [
+        { value: "low", label: "Low" },
+        { value: "medium", label: "Medium" },
+      ],
+    };
+    const tier = { ...definition("tier", "select"), options: ["low", " HIGH"] };
+    const { customFieldProblems } = analyzeMappingCoverage([field], IntakeEntityType.MODEL, {
+      customFields: [tier],
+    });
+    expect(customFieldProblems).toEqual([{ formField: field, reason: "options" }]);
+    const fixed = analyzeMappingCoverage(
+      [{ ...field, options: [{ value: "x", label: "high" }] }],
+      IntakeEntityType.MODEL,
+      { customFields: [tier] },
+    );
+    expect(fixed.customFieldProblems).toEqual([]);
+  });
+
   it("reports nothing for a valid mapping and keeps it out of the entity checks", () => {
     const field = mapped("number", "cost");
     const coverage = analyzeMappingCoverage([field], IntakeEntityType.MODEL, {

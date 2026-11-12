@@ -8,6 +8,7 @@ import {
   isCompatibleCustomFieldType,
   isCustomFieldMapping,
   sortFields,
+  unmatchedCustomFieldOptions,
   type RiskDimensionKey,
   type Visibility,
 } from "../../../application/utils/intakeFormLogic";
@@ -738,7 +739,8 @@ export interface MappingCoverage {
 /** Why a question's custom field mapping cannot be published. */
 export interface CustomFieldProblem {
   formField: FormField;
-  reason: "missing" | "incompatible";
+  /** `options`: some question options match no option of the custom field. */
+  reason: "missing" | "incompatible" | "options";
 }
 
 /**
@@ -747,14 +749,22 @@ export interface CustomFieldProblem {
  * nothing is reported yet.
  */
 export function customFieldProblemFor(
-  field: Pick<FormField, "type" | "entityFieldMapping">,
+  field: Pick<FormField, "type" | "entityFieldMapping" | "options">,
   customFields: ICustomFieldDefinition[] | undefined,
 ): CustomFieldProblem["reason"] | null {
   if (!customFields || !isCustomFieldMapping(field.entityFieldMapping)) return null;
   const key = customFieldKeyOf(field.entityFieldMapping);
   const definition = customFields.find((d) => d.field_key === key);
   if (!definition) return "missing";
-  return isCompatibleCustomFieldType(field.type, definition.field_type) ? null : "incompatible";
+  if (!isCompatibleCustomFieldType(field.type, definition.field_type)) return "incompatible";
+  return unmatchedCustomFieldOptions(
+    field.type,
+    field.options,
+    definition.field_type,
+    definition.options,
+  ).length > 0
+    ? "options"
+    : null;
 }
 
 /** Entity fields the EU AI Act risk step fills in, so the builder does not offer them. */

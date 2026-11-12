@@ -756,7 +756,7 @@ export function IntakeFormBuilder() {
       setSnackbar({
         open: true,
         message:
-          "Some questions map to custom fields that no longer exist or do not match their type. Fix them before publishing.",
+          "Some questions map to custom fields that no longer exist or no longer match them. Fix them before publishing.",
         severity: "error",
       });
       return;
@@ -1425,7 +1425,9 @@ export function IntakeFormBuilder() {
                                       <span>
                                         {problem.reason === "missing"
                                           ? "Custom field no longer exists"
-                                          : "Custom field type does not match"}
+                                          : problem.reason === "options"
+                                            ? "Custom field options do not match"
+                                            : "Custom field type does not match"}
                                       </span>
                                     </Typography>
                                   ))}

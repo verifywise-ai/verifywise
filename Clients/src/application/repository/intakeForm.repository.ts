@@ -450,6 +450,7 @@ export async function getPendingSubmissions(
 export interface SubmissionCustomFieldPreview {
   /** The custom field's label, or the question's when the field was deleted. */
   label: string;
+  /** The value to save, or the answer as submitted when it is skipped. */
   displayValue: string;
   /** Translated reason the value would not be saved. */
   skipped?: string;
@@ -494,8 +495,11 @@ export interface SubmissionPreview {
   /** Reviewers of the assigned lane. */
   laneReviewers?: Array<{ id: number; name: string }>;
   isSeniorReviewer?: boolean;
-  /** Values for questions mapped to custom fields. */
-  customFields?: SubmissionCustomFieldPreview[];
+  /**
+   * Values for questions mapped to custom fields, for a pending submission.
+   * Null when they could not be read; absent once the submission is decided.
+   */
+  customFields?: SubmissionCustomFieldPreview[] | null;
 }
 
 /**
@@ -505,7 +509,8 @@ export async function getSubmissionPreview(
   submissionId: number,
   signal?: AbortSignal,
 ): Promise<{ data: SubmissionPreview }> {
-  const response = await apiServices.get(`${BASE_URL}/submissions/${submissionId}/preview`, {
+  // The v1 preview adds the custom field values approval would write (#5262).
+  const response = await apiServices.get(`/v1/intake-submissions/${submissionId}/preview`, {
     signal,
   });
   return response.data as { data: SubmissionPreview };
@@ -567,8 +572,9 @@ export async function approveSubmission(
   },
   signal?: AbortSignal,
 ): Promise<{ data: ApprovedSubmission }> {
+  // The v1 approval also reports the custom field values it could not save (#5262).
   const response = await apiServices.post(
-    `${BASE_URL}/submissions/${submissionId}/approve`,
+    `/v1/intake-submissions/${submissionId}/approve`,
     data || {},
     { signal },
   );

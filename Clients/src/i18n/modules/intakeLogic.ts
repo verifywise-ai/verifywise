@@ -46,8 +46,11 @@ export const de: Record<string, string> = {
   "This custom field no longer exists": "Dieses benutzerdefinierte Feld existiert nicht mehr",
   "This custom field's type does not match this question":
     "Der Typ dieses benutzerdefinierten Felds passt nicht zu dieser Frage",
-  "Some questions map to custom fields that no longer exist or do not match their type. Fix them before publishing.":
-    "Einige Fragen sind benutzerdefinierten Feldern zugeordnet, die nicht mehr existieren oder deren Typ nicht passt. Beheben Sie das vor dem Veröffentlichen.",
+  "Some questions map to custom fields that no longer exist or no longer match them. Fix them before publishing.":
+    "Einige Fragen sind benutzerdefinierten Feldern zugeordnet, die nicht mehr existieren oder nicht mehr zu ihnen passen. Beheben Sie das vor dem Veröffentlichen.",
+  "Some options of this question are not options of this custom field":
+    "Einige Optionen dieser Frage sind keine Optionen dieses benutzerdefinierten Felds",
+  "Custom field options do not match": "Optionen des benutzerdefinierten Felds passen nicht",
   "Custom field problems (blocks publishing):":
     "Probleme mit benutzerdefinierten Feldern (blockiert die Veröffentlichung):",
   "Custom field no longer exists": "Benutzerdefiniertes Feld existiert nicht mehr",
@@ -107,8 +110,11 @@ export const fr: Record<string, string> = {
   "This custom field no longer exists": "Ce champ personnalisé n'existe plus",
   "This custom field's type does not match this question":
     "Le type de ce champ personnalisé ne correspond pas à cette question",
-  "Some questions map to custom fields that no longer exist or do not match their type. Fix them before publishing.":
-    "Certaines questions sont associées à des champs personnalisés qui n'existent plus ou dont le type ne correspond pas. Corrigez-les avant de publier.",
+  "Some questions map to custom fields that no longer exist or no longer match them. Fix them before publishing.":
+    "Certaines questions sont associées à des champs personnalisés qui n'existent plus ou qui ne leur correspondent plus. Corrigez-les avant de publier.",
+  "Some options of this question are not options of this custom field":
+    "Certaines options de cette question ne sont pas des options de ce champ personnalisé",
+  "Custom field options do not match": "Les options du champ personnalisé ne correspondent pas",
   "Custom field problems (blocks publishing):":
     "Problèmes de champs personnalisés (bloque la publication) :",
   "Custom field no longer exists": "Le champ personnalisé n'existe plus",
@@ -168,8 +174,11 @@ export const es: Record<string, string> = {
   "This custom field no longer exists": "Este campo personalizado ya no existe",
   "This custom field's type does not match this question":
     "El tipo de este campo personalizado no coincide con esta pregunta",
-  "Some questions map to custom fields that no longer exist or do not match their type. Fix them before publishing.":
-    "Algunas preguntas están asignadas a campos personalizados que ya no existen o cuyo tipo no coincide. Corríjalas antes de publicar.",
+  "Some questions map to custom fields that no longer exist or no longer match them. Fix them before publishing.":
+    "Algunas preguntas están asignadas a campos personalizados que ya no existen o que ya no coinciden con ellas. Corríjalas antes de publicar.",
+  "Some options of this question are not options of this custom field":
+    "Algunas opciones de esta pregunta no son opciones de este campo personalizado",
+  "Custom field options do not match": "Las opciones del campo personalizado no coinciden",
   "Custom field problems (blocks publishing):":
     "Problemas de campos personalizados (bloquea la publicación):",
   "Custom field no longer exists": "El campo personalizado ya no existe",

@@ -94,6 +94,23 @@ describe("SubmissionPreviewModal custom fields", () => {
     expect(screen.queryByText("Custom fields")).not.toBeInTheDocument();
   });
 
+  it("keeps custom-mapped answers out of the other answers when the list is there", async () => {
+    mockPreview([{ label: "Tier", displayValue: "High" }]);
+    renderModal();
+    await screen.findByText("Custom fields");
+    expect(screen.queryByText(/Other answers/)).not.toBeInTheDocument();
+  });
+
+  it("shows custom-mapped answers with the other answers when the list could not be read", async () => {
+    mockPreview(null);
+    renderModal();
+    await screen.findByText("Intake risk score");
+    expect(screen.queryByText("Custom fields")).not.toBeInTheDocument();
+    fireEvent.click(await screen.findByText(/Other answers/));
+    expect(await screen.findByText("Tier question")).toBeInTheDocument();
+    expect(screen.getByText("Owner question")).toBeInTheDocument();
+  });
+
   it("passes the skipped custom field values to onApproved", async () => {
     mockPreview();
     const skips = [{ label: "Tier", reason: "Value is not an option" }];

@@ -32,8 +32,10 @@ import {
   RISK_TAGGABLE_TYPES,
   customFieldKeyOf,
   customFieldMapping,
+  customFieldOptionTexts,
   isCompatibleCustomFieldType,
   isCustomFieldMapping,
+  matchCustomFieldOption,
   readersOf,
   sortFields,
   type SchemaLogicError,
@@ -68,18 +70,48 @@ const FIELD_TYPE_LABELS: Record<FieldType, string> = {
 const CUSTOM_FIELD_PROBLEM_TEXT = {
   missing: "This custom field no longer exists",
   incompatible: "This custom field's type does not match this question",
+  options: "Some options of this question are not options of this custom field",
 } as const;
 
 /**
- * A custom select's options as question options. Plain options keep their
- * text as both label and value; scored options use their label, which is what
- * approval matches answers against.
+ * A custom select's options as question options, labelled as the custom field
+ * labels them. A question option that already matches one (by value or label,
+ * trimmed and case-insensitive) keeps its value, so stored answers and rules
+ * that use it still hold; a new one takes the label as its value, which is
+ * what approval matches answers against.
  */
-function questionOptionsFrom(definition: ICustomFieldDefinition): FieldOption[] {
-  return (definition.options ?? []).map((option) => {
-    const text = typeof option === "string" ? option : option.label;
-    return { value: text, label: text };
-  });
+export function questionOptionsFrom(
+  definition: Pick<ICustomFieldDefinition, "options">,
+  existing: FieldOption[] = [],
+): FieldOption[] {
+  const kept = new Set<FieldOption>();
+  const values = new Set<string>();
+  const options: FieldOption[] = [];
+  for (const custom of customFieldOptionTexts(definition.options)) {
+    const match = existing.find(
+      (option) =>
+        !kept.has(option) && matchCustomFieldOption([option.value, option.label], [custom]),
+    );
+    if (match) kept.add(match);
+    const value = match && !values.has(match.value) ? match.value : custom.label;
+    if (values.has(value)) continue;
+    values.add(value);
+    options.push({ value, label: custom.label });
+  }
+  return options;
+}
+
+/** The default answer with any option that no longer exists taken out. */
+export function defaultValueWithin(
+  defaultValue: FormField["defaultValue"],
+  options: FieldOption[],
+): FormField["defaultValue"] {
+  const values = new Set(options.map((option) => option.value));
+  if (Array.isArray(defaultValue)) return defaultValue.filter((value) => values.has(value));
+  if (typeof defaultValue === "string" && defaultValue !== "" && !values.has(defaultValue)) {
+    return undefined;
+  }
+  return defaultValue;
 }
 
 interface OptionsEditorProps {
@@ -436,8 +468,14 @@ export function FieldEditor({
       const definition = customFieldDefinitions?.find(
         (d) => d.field_key === customFieldKeyOf(mapping),
       );
-      const options = definition ? questionOptionsFrom(definition) : [];
-      if (options.length > 0) patch.options = options;
+      const options = definition ? questionOptionsFrom(definition, localField.options ?? []) : [];
+      if (options.length > 0) {
+        patch.options = options;
+        if (localField.defaultValue !== undefined) {
+          const defaultValue = defaultValueWithin(localField.defaultValue, options);
+          if (defaultValue !== localField.defaultValue) patch.defaultValue = defaultValue;
+        }
+      }
     }
     setLocalField((current) => ({ ...current, ...patch }));
     queueEdit(patch);
