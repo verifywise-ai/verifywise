@@ -10,7 +10,7 @@ vi.mock("../../../infrastructure/api/evalModelsService", () => ({
 
 vi.mock("../../../infrastructure/api/evaluationLogsService", () => ({
   experimentsService: {
-    getAllExperiments: vi.fn(),
+    getExperiments: vi.fn(),
   },
 }));
 
@@ -37,19 +37,19 @@ import { DEFAULT_JUDGE } from "../../../presentation/utils/providers";
 
 const mockListModels = vi.mocked(evalModelsService.listModels);
 const mockCreateModel = vi.mocked(evalModelsService.createModel);
-const mockGetAllExperiments = vi.mocked(experimentsService.getAllExperiments);
+const mockGetExperiments = vi.mocked(experimentsService.getExperiments);
 
 describe("useModelPreferences", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    mockGetAllExperiments.mockResolvedValue({ experiments: [] });
+    mockGetExperiments.mockResolvedValue({ experiments: [] });
   });
 
-  it("takes the judge from the project's newest experiment that used one", async () => {
+  it("takes the judge from the newest completed experiment that used one", async () => {
     mockListModels.mockResolvedValue([
       { id: "m1", orgId: "org-1", name: "GPT-4", provider: "openai" },
     ] as any);
-    mockGetAllExperiments.mockResolvedValue({
+    mockGetExperiments.mockResolvedValue({
       experiments: [
         { created_at: "2026-11-02", config: { evaluationMode: "scorer" } },
         {
@@ -64,7 +64,7 @@ describe("useModelPreferences", () => {
 
     await waitFor(() => expect(result.current.loaded).toBe(true));
 
-    expect(mockGetAllExperiments).toHaveBeenCalledWith({ project_id: "p1" });
+    expect(mockGetExperiments).toHaveBeenCalledWith({ status: "completed", limit: 20 });
     expect(result.current.preferences!.model.name).toBe("GPT-4");
     expect(result.current.preferences!.judgeLlm).toEqual({
       provider: "anthropic",
@@ -100,7 +100,7 @@ describe("useModelPreferences", () => {
     mockListModels.mockResolvedValue([
       { id: "m1", orgId: "org-1", name: "GPT-4", provider: "openai" },
     ] as any);
-    mockGetAllExperiments.mockRejectedValue(new Error("fail"));
+    mockGetExperiments.mockRejectedValue(new Error("fail"));
 
     const { result } = renderHook(() => useModelPreferences("p1", "org-1"));
 
@@ -141,5 +141,28 @@ describe("useModelPreferences", () => {
     expect(deepEvalScorersService.create).not.toHaveBeenCalled();
     expect(deepEvalScorersService.update).not.toHaveBeenCalled();
     expect(deepEvalScorersService.list).not.toHaveBeenCalled();
+  });
+
+  it("keeps the last judge when a scorer-only run is saved", async () => {
+    mockListModels.mockResolvedValue([
+      { id: "m1", orgId: "org-1", name: "GPT-4", provider: "openai" },
+    ] as any);
+    mockGetExperiments.mockResolvedValue({
+      experiments: [
+        { config: { judgeLlm: { provider: "anthropic", model: "claude-sonnet-4-6" } } },
+      ],
+    });
+
+    const { result } = renderHook(() => useModelPreferences("p1", "org-1"));
+    await waitFor(() => expect(result.current.loaded).toBe(true));
+
+    await act(async () => {
+      await result.current.savePreferences({
+        model: { name: "GPT-4", accessMethod: "openai" },
+        judgeLlm: { provider: "", model: "" },
+      });
+    });
+
+    expect(result.current.preferences!.judgeLlm.model).toBe("claude-sonnet-4-6");
   });
 });

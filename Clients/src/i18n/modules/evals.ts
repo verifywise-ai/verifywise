@@ -613,6 +613,11 @@ export const de: Record<string, string> = {
     "Kohärenz, Hilfsbereitschaft, Aufgabenerfüllung und Sicherheit sind zunächst nicht ausgewählt: Bei mehrstufigen Läufen liefern sie noch keine Werte.",
   "Bias and toxicity are scored on each assistant turn, then combined into one score":
     "Voreingenommenheit und Toxizität werden für jede Antwort des Assistenten bewertet und dann zu einem Wert zusammengefasst",
+  "RAG metrics": "RAG-Metriken",
+  "Agent metrics": "Agenten-Metriken",
+  "Reasoning layer": "Schlussfolgerungsebene",
+  "Action layer": "Aktionsebene",
+  "Execution layer": "Ausführungsebene",
 };
 
 export const fr: Record<string, string> = {
@@ -1225,6 +1230,11 @@ export const fr: Record<string, string> = {
     "Cohérence, utilité, accomplissement de la tâche et sécurité sont décochés au départ : ils ne renvoient pas encore de score sur les exécutions multi-tours.",
   "Bias and toxicity are scored on each assistant turn, then combined into one score":
     "Les biais et la toxicité sont évalués à chaque tour de l'assistant, puis combinés en un seul score",
+  "RAG metrics": "Métriques RAG",
+  "Agent metrics": "Métriques d'agent",
+  "Reasoning layer": "Couche de raisonnement",
+  "Action layer": "Couche d'action",
+  "Execution layer": "Couche d'exécution",
 };
 
 export const es: Record<string, string> = {
@@ -1835,4 +1845,9 @@ export const es: Record<string, string> = {
     "Coherencia, utilidad, finalización de la tarea y seguridad empiezan sin marcar: todavía no devuelven puntuaciones en ejecuciones de varios turnos.",
   "Bias and toxicity are scored on each assistant turn, then combined into one score":
     "El sesgo y la toxicidad se puntúan en cada turno del asistente y luego se combinan en una sola puntuación",
+  "RAG metrics": "Métricas de RAG",
+  "Agent metrics": "Métricas del agente",
+  "Reasoning layer": "Capa de razonamiento",
+  "Action layer": "Capa de acción",
+  "Execution layer": "Capa de ejecución",
 };

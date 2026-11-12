@@ -317,22 +317,7 @@ export default function NewExperimentModal({
   // Track if selected dataset is multi-turn
   const isMultiTurnDataset =
     selectedUserDataset?.turnType === "multi-turn" ||
-    (selectedPresetPath && selectedPresetPath.includes("multiturn"));
-
-  // Off by default on multi-turn datasets until the conversational G-Eval metrics get
-  // evaluation_params: today they fail on every sample (LLM Evals demo findings spec #2b).
-  // Task completion also runs on single-turn, where it works, so it comes back on there.
-  useEffect(() => {
-    setConfig((prev) => ({
-      ...prev,
-      metrics: isMultiTurnDataset
-        ? {
-            ...prev.metrics,
-            ...Object.fromEntries(FAILING_CONVERSATIONAL_METRICS.map((key) => [key, false])),
-          }
-        : { ...prev.metrics, taskCompletion: true },
-    }));
-  }, [isMultiTurnDataset]);
+    Boolean(selectedPresetPath && selectedPresetPath.includes("multiturn"));
 
   // ── Auto-generated experiment name ────────────────────────────────────────
   // Mirrors the resolution logic in handleSubmit: a saved model selection
@@ -359,9 +344,10 @@ export default function NewExperimentModal({
     [resolvedModelName, datasetDisplayName, existingExperimentNames],
   );
 
-  // Update metric defaults when task type changes
+  // Metric defaults follow the task type and whether the dataset is multi-turn. Both are
+  // set here, in one place, so neither can undo the other.
   useEffect(() => {
-    setConfig((prev) => {
+    const withTaskDefaults = (prev: typeof config): typeof config => {
       // Universal Core - always runs for every use case (single-turn)
       const universalCore = {
         answerRelevancy: true,
@@ -456,8 +442,24 @@ export default function NewExperimentModal({
           },
         };
       }
+    };
+
+    setConfig((prev) => {
+      const next = withTaskDefaults(prev);
+      if (!isMultiTurnDataset) return next;
+      // Off by default on multi-turn datasets until the conversational G-Eval metrics get
+      // evaluation_params: today they fail on every sample (LLM Evals demo findings spec #2b).
+      // Task completion also runs on single-turn, where it works, so only multi-turn drops it.
+      return {
+        ...next,
+        metrics: {
+          ...next.metrics,
+          ...Object.fromEntries(FAILING_CONVERSATIONAL_METRICS.map((key) => [key, false])),
+        },
+      };
     });
-  }, [config.taskType]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [config.taskType, isMultiTurnDataset]);
 
   // Sync taskType with useCase prop when modal opens
   useEffect(() => {
@@ -1729,14 +1731,14 @@ export default function NewExperimentModal({
                         (hasApiKey(config.judgeLlm.provider) ? (
                           <Box
                             sx={{
-                              p: "3px",
+                              p: "8px 10px",
                               backgroundColor: palette.status.success.bg,
-                              borderRadius: "8px",
+                              borderRadius: "4px",
                               border: `1px solid ${palette.status.success.border}`,
                             }}
                           >
-                            <Stack direction="row" alignItems="center" spacing="2px">
-                              <Check size={16} color={palette.status.success.text} />
+                            <Stack direction="row" alignItems="center" spacing="6px">
+                              <Check size={14} color={palette.status.success.text} />
                               <Typography
                                 sx={{ fontSize: "12px", color: palette.status.success.text }}
                               >
@@ -1781,7 +1783,7 @@ export default function NewExperimentModal({
                   p: "8px",
                   textAlign: "center",
                   border: `1px solid ${palette.border.dark}`,
-                  borderRadius: "8px",
+                  borderRadius: "4px",
                   backgroundColor: palette.background.accent,
                 }}
               >
@@ -2149,7 +2151,7 @@ export default function NewExperimentModal({
                     mb: "3px",
                   }}
                 >
-                  RAG Metrics
+                  RAG metrics
                 </Typography>
                 <Typography
                   variant="caption"
@@ -2218,7 +2220,7 @@ export default function NewExperimentModal({
                     mb: "3px",
                   }}
                 >
-                  Agent Metrics
+                  Agent metrics
                 </Typography>
                 <Typography
                   variant="caption"
@@ -2246,7 +2248,7 @@ export default function NewExperimentModal({
                     mt: "4px",
                   }}
                 >
-                  🧠 Reasoning Layer
+                  Reasoning layer
                 </Typography>
                 {Object.entries({
                   planQuality: {
@@ -2297,7 +2299,7 @@ export default function NewExperimentModal({
                     mt: "4px",
                   }}
                 >
-                  🔧 Action Layer
+                  Action layer
                 </Typography>
                 {Object.entries({
                   toolSelection: {
@@ -2352,7 +2354,7 @@ export default function NewExperimentModal({
                     mt: "4px",
                   }}
                 >
-                  ✅ Execution Layer
+                  Execution layer
                 </Typography>
                 {Object.entries({
                   taskCompletion: {
@@ -2432,8 +2434,7 @@ export default function NewExperimentModal({
                     Estimated time: {getEstimatedTimeRange(datasetPrompts.length)}
                   </Typography>
                   <Typography sx={{ fontSize: "12px", color: palette.status.success.text }}>
-                    Based on {datasetPrompts.length} prompt{datasetPrompts.length !== 1 ? "s" : ""}{" "}
-                    in your dataset
+                    {`Based on ${countLabel(datasetPrompts.length, "prompt")} in your dataset`}
                   </Typography>
                 </Box>
               </Box>

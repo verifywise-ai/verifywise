@@ -2,8 +2,9 @@
  * Hook for auto-populating model settings in experiment forms
  *
  * The model comes from the most recently saved entry in the Models table.
- * The judge comes from the project's most recent experiment, so it is remembered
- * without adding anything to the Scorers list.
+ * The judge comes from the organization's most recent completed experiment that used
+ * one, so it is remembered without adding anything to the Scorers list, and a judge
+ * that made a run fail is not suggested again.
  */
 
 import { useCallback, useState, useEffect, useRef } from "react";
@@ -34,6 +35,9 @@ interface ExperimentJudgeSummary {
   config?: { judgeLlm?: { provider?: string; model?: string; endpointUrl?: string } };
 }
 
+/** Enough recent runs to find one that used a judge; scorer-only runs carry none. */
+const RECENT_EXPERIMENTS_TO_SCAN = 20;
+
 /** The judge of the newest experiment that used one (the list comes newest first). */
 function latestJudgeFrom(
   experiments: ExperimentJudgeSummary[],
@@ -55,6 +59,7 @@ function latestJudgeFrom(
  * Hook to get the most recently used model for auto-populating experiments
  */
 export function useModelPreferences(projectId: string, orgId?: string | null) {
+  void projectId; // Preferences are organization-wide, like the Models list
   const [preferences, setPreferences] = useState<ModelPreferences | null>(null);
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -75,11 +80,9 @@ export function useModelPreferences(projectId: string, orgId?: string | null) {
 
       const [models, experimentsRes] = await Promise.all([
         evalModelsService.listModels(currentOrgId || undefined),
-        projectId
-          ? experimentsService
-              .getAllExperiments({ project_id: projectId })
-              .catch(() => ({ experiments: [] }))
-          : Promise.resolve({ experiments: [] }),
+        experimentsService
+          .getExperiments({ status: "completed", limit: RECENT_EXPERIMENTS_TO_SCAN })
+          .catch(() => ({ experiments: [] })),
       ]);
       const experiments: ExperimentJudgeSummary[] = experimentsRes?.experiments ?? [];
       const latestJudge = latestJudgeFrom(experiments);
@@ -116,7 +119,7 @@ export function useModelPreferences(projectId: string, orgId?: string | null) {
       setLoading(false);
       setLoaded(true);
     }
-  }, [projectId]);
+  }, []);
 
   /**
    * Get preferences (from cache or fetch from API)
@@ -168,10 +171,18 @@ export function useModelPreferences(projectId: string, orgId?: string | null) {
           });
         }
 
-        setPreferences({
+        // A scorer-only run has no judge; keep the last one rather than blanking it
+        setPreferences((prev) => ({
           ...prefs,
+          judgeLlm:
+            prefs.judgeLlm?.provider && prefs.judgeLlm?.model
+              ? prefs.judgeLlm
+              : (prev?.judgeLlm ?? {
+                  provider: DEFAULT_JUDGE.provider,
+                  model: DEFAULT_JUDGE.model,
+                }),
           savedAt: new Date().toISOString(),
-        });
+        }));
         return true;
       } catch (err) {
         console.error("Failed to save model preferences:", err);
