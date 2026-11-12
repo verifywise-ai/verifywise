@@ -106,5 +106,20 @@ describe("useActiveModule", () => {
       });
       expect(mockNavigate).toHaveBeenCalledWith("/shadow-ai/insights");
     });
+
+    it("switches a super admin to the organization module", () => {
+      mockActive = "super-admin";
+      mockPathname = "/settings";
+      renderHook(() => useActiveModule());
+      expect(mockDispatch).toHaveBeenCalledWith(expect.objectContaining({ payload: "main" }));
+    });
+
+    it("does not pick up another tab's stored module on a later remount", () => {
+      storageService.setRaw("verifywise_active_module", "evals", { raw: true });
+      mockActive = "shadow-ai";
+      mockPathname = "/settings";
+      renderHook(() => useActiveModule());
+      expect(mockDispatch).not.toHaveBeenCalled();
+    });
   });
 });

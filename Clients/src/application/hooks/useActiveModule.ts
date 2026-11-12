@@ -39,8 +39,12 @@ export function useActiveModule() {
 
   // Sync module state with URL on navigation. Global pages belong to no module,
   // so the module the user came from (or, after a reload, the stored one) stays.
+  // Super admin is the exception: these pages render in the organization layout.
   useEffect(() => {
-    if (isGlobalPath(location.pathname)) return;
+    if (isGlobalPath(location.pathname)) {
+      if (activeModule === "super-admin") dispatch(setActiveModule("main"));
+      return;
+    }
     const detectedModule = getModuleFromPath(location.pathname);
     if (detectedModule !== activeModule) {
       dispatch(setActiveModule(detectedModule));
@@ -92,10 +96,11 @@ export function useActiveModule() {
     const stored = storageService.getRaw<AppModule | null>(STORAGE_KEY, null, { raw: true });
     if (!stored || !KNOWN_MODULES.includes(stored)) return;
 
-    // A reload on a global page restores the module the user was in. Super admin is
-    // excluded: /settings and /event-tracker render in the organization layout.
+    // A reload on a global page restores the module the user was in. Only while the
+    // module is still the initial default: a later remount must not pick up a value
+    // another tab wrote. Super admin is excluded: these pages use the organization layout.
     if (isGlobalPath(location.pathname)) {
-      if (stored !== "super-admin" && stored !== activeModule) {
+      if (activeModule === "main" && stored !== "super-admin" && stored !== "main") {
         dispatch(setActiveModule(stored));
       }
       return;
