@@ -6,12 +6,12 @@ const mockGetAllExperiments = vi.fn();
 const mockAxiosGet = vi.fn();
 
 vi.mock("../../../../application/repository/deepEval.repository", () => ({
-  getAllExperiments: (...args: any[]) => mockGetAllExperiments(...args),
+  getAllExperiments: (...args: unknown[]) => mockGetAllExperiments(...args),
 }));
 
 vi.mock("../../../../infrastructure/api/customAxios", () => ({
   default: {
-    get: (...args: any[]) => mockAxiosGet(...args),
+    get: (...args: unknown[]) => mockAxiosGet(...args),
     post: vi.fn(),
     delete: vi.fn(),
   },
@@ -20,7 +20,7 @@ vi.mock("../../../../infrastructure/api/customAxios", () => ({
 vi.mock("../ReportConfigModal", () => ({ default: () => null }));
 
 vi.mock("../../../components/Layout/PageHeader", () => ({
-  PageHeader: ({ title }: any) => <div data-testid="page-header">{title}</div>,
+  PageHeader: ({ title }: { title: string }) => <div data-testid="page-header">{title}</div>,
 }));
 
 vi.mock("../../../components/HelperIcon", () => ({
@@ -70,5 +70,28 @@ describe("ReportPage completed experiment count", () => {
     renderPage();
 
     expect(await screen.findByText("0 completed experiments available")).toBeInTheDocument();
+    expect(screen.queryByText("Generate your first report")).not.toBeInTheDocument();
+    expect(screen.queryByText(/^You have \d+ completed experiment/)).not.toBeInTheDocument();
+  });
+
+  it("shows only the number in the report history experiments column", async () => {
+    mockGetAllExperiments.mockResolvedValue(experiments(["completed"]));
+    mockAxiosGet.mockResolvedValue({
+      data: [
+        {
+          id: "rep_1",
+          title: "Quarterly report",
+          format: "pdf",
+          experiments: 3,
+          fileSize: 1024,
+          createdAt: "2026-11-12T10:00:00Z",
+        },
+      ],
+    });
+    renderPage();
+
+    expect(await screen.findByText("Quarterly report")).toBeInTheDocument();
+    expect(screen.getByText("3")).toBeInTheDocument();
+    expect(screen.queryByText("3 exps")).not.toBeInTheDocument();
   });
 });

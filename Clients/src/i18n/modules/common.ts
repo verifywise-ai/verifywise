@@ -1205,7 +1205,6 @@ export const de: Record<string, string> = {
   "Money saved by serving cached responses instead of calling the LLM":
     "Durch das Ausliefern gecachter Antworten statt LLM-Aufrufen eingesparte Kosten",
   "Most likely": "Wahrscheinlichstes",
-  "Multi-Turn": "Multi-Turn",
   "Multi-turn dataset detected": "Multi-Turn-Datensatz erkannt",
   "Multiple tags": "Mehrere Tags",
   "Name your organization": "Organisation benennen",
@@ -1307,7 +1306,6 @@ export const de: Record<string, string> = {
   "Shared specifications": "Geteilte Spezifikationen",
   "Simulated": "Simuliert",
   "Single tag": "Einzelnes Tag",
-  "Single-Turn": "Single-Turn",
   "Source identifier": "Quellkennung",
   "Source system": "Quellsystem",
   "Space between": "Abstand zwischen",
@@ -6898,7 +6896,6 @@ export const fr: Record<string, string> = {
 
   // Batch 04
   "Most likely": "Plus probable",
-  "Multi-Turn": "Multi-tours",
   "Multi-turn dataset detected": "Jeu de données multi-tours détecté",
   "Multiple tags": "Plusieurs étiquettes",
   "Name your organization": "Nommez votre organisation",
@@ -6996,7 +6993,6 @@ export const fr: Record<string, string> = {
   "Shared specifications": "Spécifications partagées",
   "Simulated": "Simulé",
   "Single tag": "Étiquette unique",
-  "Single-Turn": "Mono-tour",
   "Source identifier": "Identifiant de source",
   "Source system": "Système source",
   "Space between": "Espace entre",
@@ -12255,7 +12251,6 @@ export const es: Record<string, string> = {
   "Modal": "Modal",
   "Models covered": "Modelos cubiertos",
   "Most likely": "Más probable",
-  "Multi-Turn": "Multiturno",
   "Multi-turn dataset detected": "Conjunto de datos multiturno detectado",
   "Multiple tags": "Varias etiquetas",
   "Name your organization": "Asigna un nombre a tu organización",
@@ -12350,7 +12345,6 @@ export const es: Record<string, string> = {
   "Shared specifications": "Especificaciones compartidas",
   "Simulated": "Simulado",
   "Single tag": "Etiqueta única",
-  "Single-Turn": "Turno único",
   "Source identifier": "Identificador de origen",
   "Source system": "Sistema de origen",
   "Space between": "Espacio entre",
