@@ -21,6 +21,7 @@ import {
 } from "../AdvisorChat/advisorConfig";
 import AdvisorHeader from "./AdvisorHeader";
 import { getGuideTargetForLocation } from "./guideRouteMap";
+import { useLocation } from "react-router";
 import { useOverlayAccessibility } from "../../../application/hooks/useOverlayAccessibility";
 import "./SidebarWrapper.css";
 
@@ -51,6 +52,7 @@ const SidebarWrapper: React.FC<SidebarWrapperProps> = ({
     requestedTab,
     clearRequestedTab,
   } = useUserGuideSidebarContext();
+  const routerLocation = useLocation();
   const [activeTab, setActiveTab] = useState<Tab>("user-guide");
   const [collectionId, setCollectionId] = useState<string | undefined>();
   const [articleId, setArticleId] = useState<string | undefined>();
@@ -413,8 +415,14 @@ const SidebarWrapper: React.FC<SidebarWrapperProps> = ({
 
   // Open the guide on the page that documents where the user is. Pages with no
   // mapped guide page keep whatever the guide last showed.
+  // Only jump when the page changed since the last jump, so switching tabs or
+  // reopening on the same page keeps the reader's place.
+  const lastGuidePageRef = useRef<string | undefined>(undefined);
   const showGuideForCurrentPage = () => {
-    const target = getGuideTargetForLocation(location.pathname, location.hash);
+    const pageKey = `${routerLocation.pathname}${routerLocation.hash}`;
+    if (lastGuidePageRef.current === pageKey) return;
+    lastGuidePageRef.current = pageKey;
+    const target = getGuideTargetForLocation(routerLocation.pathname, routerLocation.hash);
     if (!target) return;
     handleNavigate(target.collectionId, target.articleId);
     setTargetSectionId(undefined);

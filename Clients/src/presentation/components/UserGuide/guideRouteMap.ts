@@ -15,8 +15,10 @@ export interface GuideTarget {
 
 interface GuideRouteRule {
   /** Pathname prefix, matched on whole segments ("/evals" matches "/evals/12", not "/evalsx"). */
-  prefix: string;
-  /** Target for this prefix. */
+  prefix?: string;
+  /** For paths with an id in the middle, which a prefix can't express. */
+  pattern?: RegExp;
+  /** Guide page for a matching path. */
   target: string;
   /** Targets keyed by URL hash, for modules that switch sections by hash (LLM Evals). */
   byHash?: Record<string, string>;
@@ -31,14 +33,16 @@ const LLM_EVALS_BY_HASH: Record<string, string> = {
   "models": "llm-evals/models",
   "arena": "llm-evals/llm-arena",
   "playground": "llm-evals/playground",
-  "leaderboard": "llm-evals/leaderboard",
   "reports": "llm-evals/reports",
   "settings": "llm-evals/settings",
+  // Legacy deep link; the dashboard redirects it to Settings
+  "configuration": "llm-evals/settings",
 };
 
 export const GUIDE_ROUTE_RULES: GuideRouteRule[] = [
   // LLM Evals
   { prefix: "/evals/settings", target: "llm-evals/settings" },
+  { pattern: /^\/evals\/[^/]+\/datasets(\/|$)/, target: "llm-evals/managing-datasets" },
   { prefix: "/evals", target: "llm-evals", byHash: LLM_EVALS_BY_HASH },
 
   // AI Detection
@@ -98,13 +102,14 @@ export const GUIDE_ROUTE_RULES: GuideRouteRule[] = [
   { prefix: "/ai-trust-center", target: "ai-governance/ai-trust-center" },
   { prefix: "/datasets", target: "ai-governance/datasets" },
   { prefix: "/approval-workflows", target: "ai-governance/approval-workflows" },
-  { prefix: "/governance-os", target: "ai-governance/governance-os" },
   { prefix: "/risk-management", target: "risk-management/risk-assessment" },
+  { prefix: "/vendors/risks", target: "risk-management/vendor-risks" },
   { prefix: "/vendors", target: "risk-management/vendor-management" },
   { prefix: "/framework", target: "compliance/assessments" },
   { prefix: "/projects", target: "compliance/assessments" },
   { prefix: "/monitoring", target: "compliance/post-market-monitoring" },
   { prefix: "/policies", target: "policies/policy-management" },
+  { prefix: "/training/evidence-hub", target: "ai-governance/evidence-collection" },
   { prefix: "/training", target: "training/training-tracking" },
   { prefix: "/reporting", target: "reporting/generating-reports" },
   { prefix: "/automations", target: "integrations/automations" },
@@ -120,8 +125,11 @@ export const GUIDE_ROUTE_RULES: GuideRouteRule[] = [
   { prefix: "/super-admin", target: "settings/super-admin" },
 ];
 
-const matchesPrefix = (pathname: string, prefix: string): boolean =>
-  pathname === prefix || pathname.startsWith(`${prefix}/`);
+const matches = (pathname: string, rule: GuideRouteRule): boolean => {
+  if (rule.pattern) return rule.pattern.test(pathname);
+  const { prefix } = rule;
+  return !!prefix && (pathname === prefix || pathname.startsWith(`${prefix}/`));
+};
 
 const toTarget = (value: string): GuideTarget => {
   const [collectionId, articleId] = value.split("/");
@@ -136,7 +144,7 @@ export function getGuideTargetForLocation(pathname: string, hash = ""): GuideTar
   // The dashboard is "/" exactly; a prefix match would swallow every route.
   if (pathname === "/") return toTarget("getting-started/dashboard");
 
-  const rule = GUIDE_ROUTE_RULES.find((r) => matchesPrefix(pathname, r.prefix));
+  const rule = GUIDE_ROUTE_RULES.find((r) => matches(pathname, r));
   if (!rule) return undefined;
 
   const section = hash.replace(/^#/, "");

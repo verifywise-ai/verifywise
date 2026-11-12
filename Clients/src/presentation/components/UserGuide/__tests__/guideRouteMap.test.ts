@@ -45,6 +45,25 @@ describe("getGuideTargetForLocation", () => {
     });
   });
 
+  it("maps sub-pages that have their own topic", () => {
+    expect(getGuideTargetForLocation("/vendors/risks")).toEqual({
+      collectionId: "risk-management",
+      articleId: "vendor-risks",
+    });
+    expect(getGuideTargetForLocation("/evals/12/datasets/editor")).toEqual({
+      collectionId: "llm-evals",
+      articleId: "managing-datasets",
+    });
+    expect(getGuideTargetForLocation("/evals/12", "#configuration")).toEqual({
+      collectionId: "llm-evals",
+      articleId: "settings",
+    });
+    expect(getGuideTargetForLocation("/training/evidence-hub")).toEqual({
+      collectionId: "ai-governance",
+      articleId: "evidence-collection",
+    });
+  });
+
   it("matches whole path segments only", () => {
     expect(getGuideTargetForLocation("/evalsx")).toBeUndefined();
   });
