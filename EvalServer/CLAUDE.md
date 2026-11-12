@@ -1,12 +1,14 @@
 # EvalServer — Python LLM Evaluation Service
 
-> **Last Updated:** 2026-10-20
+> **Last Updated:** 2026-11-11
 
 ---
 
 ## Multi-Tenancy
 
-Uses `search_path` for queries (unqualified `llm_evals_*` table names). FK references in DDL point to `public.organizations(id)` and `public.users(id)` — NOT `verifywise.*` — because EvalServer starts in parallel with the main server and can't depend on `verifywise` tables existing first.
+Uses `search_path` for queries (unqualified `llm_evals_*` table names). Alembic runs with `search_path` set to `verifywise` (`src/database/migrations/env.py`), so an unqualified `organizations(id)` / `users(id)` in DDL resolves to `verifywise.*`. Migration `e20260319200000` re-pointed the original `public.*` FKs to `verifywise.*`; new tables follow that (e.g. `llm_evals_reports`, `llm_evals_org_settings`).
+
+**Per-organization settings:** `llm_evals_org_settings` (one row per org). `arena_enabled` NULL means never set; the effective value is then "org has Arena comparisons", and the first read that finds it on saves `true`. Every `/deepeval/arena/*` route returns 403 while it is off (`controllers/org_settings.py`). `PUT /deepeval/settings/arena` needs `x-can-manage-org-settings: true`, which only the Node proxy sets, from the caller's `organization.admin` permission.
 
 ---
 

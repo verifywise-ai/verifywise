@@ -68,6 +68,20 @@ export const evalsSettingsContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'arena',
+      level: 2,
+      text: 'Arena',
+    },
+    {
+      type: 'paragraph',
+      text: 'The **Arena** section turns LLM Arena on or off for the whole organization. It is off by default. Organizations that already have Arena comparisons start with it on. Once an Admin saves the setting, the saved value applies.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Admins can change it, as can custom roles with the **Update organization settings** permission. Other users see the current value but can\'t change it.',
+    },
+    {
+      type: 'heading',
       id: 'permissions',
       level: 2,
       text: 'Who can manage keys',

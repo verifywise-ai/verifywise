@@ -14,7 +14,7 @@ restrict additional fields.
 
 from typing import Any, Dict, Optional
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, StrictBool
 
 
 class CreateScorerRequest(BaseModel):
@@ -81,3 +81,11 @@ class UpdateModelRequest(BaseModel):
     name: Optional[str] = None
     provider: Optional[str] = None
     endpointUrl: Optional[str] = None
+
+
+class UpdateArenaSettingRequest(BaseModel):
+    """Body for ``PUT /deepeval/settings/arena``."""
+
+    model_config = ConfigDict(extra="forbid")
+
+    enabled: StrictBool
