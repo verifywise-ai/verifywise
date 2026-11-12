@@ -139,3 +139,48 @@ def test_threshold_normalisation_drops_non_numeric_values():
         == {}
     )
     assert normalize_metric_thresholds(None) == {}
+
+
+class _CapturingRunner:
+    def __init__(self):
+        self.prompts = []
+
+    def generate(self, prompt, max_tokens=None, temperature=None):
+        self.prompts.append(prompt)
+        return json.dumps({"score": 1.0, "reason": "r"})
+
+
+def _judge_prompt(test_case):
+    from deepeval_engine.deepeval_evaluator import GEvalLikeMetric
+
+    metric = GEvalLikeMetric(threshold=0.5, model_name="judge", provider="anthropic")
+    runner = _CapturingRunner()
+    metric._runner = runner
+    metric.measure(test_case)
+    return runner.prompts[0]
+
+
+def test_judge_sees_the_retrieved_context():
+    # Faithfulness and the context metrics judge the answer against the passages;
+    # without them in the prompt the judge scores blind.
+    prompt = _judge_prompt(
+        SimpleNamespace(
+            input="How long do we keep audit logs?",
+            actual_output="7 years.",
+            expected_output="7 years.",
+            retrieval_context=["Audit logs are retained for 7 years."],
+        )
+    )
+    assert "Retrieved context:\n[1] Audit logs are retained for 7 years." in prompt
+
+
+def test_judge_reads_conversation_context_too():
+    prompt = _judge_prompt(
+        SimpleNamespace(input="q", actual_output="a", expected_output=None, context=["PTO: 15 days."])
+    )
+    assert "[1] PTO: 15 days." in prompt
+
+
+def test_judge_prompt_without_context_has_no_context_section():
+    prompt = _judge_prompt(SimpleNamespace(input="q", actual_output="a", expected_output=None))
+    assert "Retrieved context" not in prompt

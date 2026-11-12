@@ -45,6 +45,7 @@ jest.mock("../../database/db", () => ({
 
 import {
   getAllAiApps,
+  getAllAiAppsV1,
   getAiAppById,
   createAiApp,
   updateAiAppById,
@@ -113,8 +114,24 @@ describe("aiApp.ctrl", () => {
       await getAllAiApps(req, res);
 
       expect(mockGetAll).toHaveBeenCalledWith(1, expect.any(Object));
+      // The legacy list never carries custom field values (#5262).
+      expect(mockGetAll.mock.calls[0][1]).not.toHaveProperty("withCustomFields");
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({ message: "OK", data: result });
+    });
+
+    it("v1 asks for each app's custom field values", async () => {
+      const req = createReq();
+      const res = createRes();
+      mockGetAll.mockResolvedValue({ ai_apps: [], total: 0 });
+
+      await getAllAiAppsV1(req, res);
+
+      expect(mockGetAll).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ withLifecycle: true, withCustomFields: true }),
+      );
+      expect(res.status).toHaveBeenCalledWith(200);
     });
 
     it("should return 500 on error", async () => {

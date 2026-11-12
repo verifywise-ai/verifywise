@@ -1,4 +1,4 @@
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import {
   Box,
   Table,
@@ -27,6 +27,10 @@ import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import Checkbox from "../../components/Inputs/Checkbox";
 import { useTranslation } from "../../../application/hooks/useTranslation";
 import { fill } from "../../../i18n/fill";
+import { useCustomFieldDefinitions } from "../../../application/hooks/useCustomFields";
+import { formatCustomFieldValue } from "../../components/CustomFieldsSection/formatCustomFieldValue";
+import useFormattedDate from "../../../application/hooks/useFormattedDate";
+import useUsers from "../../../application/hooks/useUsers";
 
 interface AIAppsTableProps {
   apps: IAIApp[];
@@ -87,6 +91,9 @@ export default function AIAppsTable({
   selection,
 }: AIAppsTableProps) {
   const { t } = useTranslation();
+  const formatDate = useFormattedDate();
+  const { users } = useUsers();
+  const { data: customFieldDefs = [] } = useCustomFieldDefinitions("ai_app");
   const sortComparator = useCallback((a: IAIApp, b: IAIApp, key: string): number => {
     switch (key) {
       case "name":
@@ -126,9 +133,21 @@ export default function AIAppsTable({
     onServerSortChange?.(sortConfig.key, sortConfig.direction);
   }, [onServerSortChange, sortConfig.key, sortConfig.direction]);
 
-  const columns = serverPaging
-    ? TABLE_COLUMNS.map((c) => ({ ...c, sortable: c.sortable && SERVER_SORTABLE.has(c.id) }))
-    : TABLE_COLUMNS;
+  const isServerPaged = !!serverPaging;
+  const columns = useMemo(() => {
+    const baseColumns = isServerPaged
+      ? TABLE_COLUMNS.map((c) => ({ ...c, sortable: c.sortable && SERVER_SORTABLE.has(c.id) }))
+      : TABLE_COLUMNS;
+    // Custom field columns sit before the actions column.
+    const customCols: StandardColumn[] = customFieldDefs.map((d) => ({
+      id: `cf_${d.id}`,
+      label: d.label,
+      sortable: false,
+    }));
+    const actionsIdx = baseColumns.findIndex((c) => c.id === "actions");
+    if (actionsIdx === -1) return [...baseColumns, ...customCols];
+    return [...baseColumns.slice(0, actionsIdx), ...customCols, ...baseColumns.slice(actionsIdx)];
+  }, [isServerPaged, customFieldDefs]);
   const visibleRows = serverPaging
     ? sortedRows
     : sortedRows.slice(validPage * rowsPerPage, validPage * rowsPerPage + rowsPerPage);
@@ -252,6 +271,14 @@ export default function AIAppsTable({
                 <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                   {formatDiscoveredSource(app.discovered_source)}
                 </TableCell>
+                {customFieldDefs.map((def) => {
+                  const match = app.custom_fields?.find((cf) => cf.definition_id === def.id);
+                  return (
+                    <TableCell key={`cf_${def.id}`} sx={singleTheme.tableStyles.primary.body.cell}>
+                      {formatCustomFieldValue(def, match?.value, users, formatDate)}
+                    </TableCell>
+                  );
+                })}
                 <TableCell sx={singleTheme.tableStyles.primary.body.cell} align="right">
                   <Stack
                     direction="row"
@@ -311,7 +338,7 @@ export default function AIAppsTable({
             getRange={pagination.getRange}
             entityLabel="AI app"
             entityLabelPlural="AI apps"
-            colSpan={TABLE_COLUMNS.length + (selection ? 1 : 0)}
+            colSpan={columns.length + (selection ? 1 : 0)}
           />
         )}
       </Table>

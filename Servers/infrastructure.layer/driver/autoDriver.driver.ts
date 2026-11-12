@@ -1068,7 +1068,16 @@ export async function deleteMockData(organizationId: number) {
       { replacements: { organizationId }, transaction },
     );
 
-    // 2a. Delete demo AI apps (child tables cascade via ON DELETE CASCADE)
+    // 2a. Delete demo AI apps (child tables cascade via ON DELETE CASCADE).
+    // custom_field_values is polymorphic (no FK), so clear its rows first.
+    await sequelize.query(
+      `DELETE FROM custom_field_values
+         WHERE organization_id = :organizationId AND entity_type = 'ai_app'
+           AND entity_id IN (
+             SELECT id FROM ai_apps WHERE organization_id = :organizationId AND is_demo = true
+           )`,
+      { replacements: { organizationId }, transaction },
+    );
     await sequelize.query(
       `DELETE FROM ai_apps WHERE organization_id = :organizationId AND is_demo = true`,
       { replacements: { organizationId }, transaction },

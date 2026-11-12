@@ -200,6 +200,7 @@ export const de: Record<string, string> = {
     "Benutzersitzung nicht gefunden. Bitte erneut anmelden.",
   "Version control": "Versionskontrolle",
   "AI Approval Rules": "AI Approval Rules",
+  "AI approval rules": "KI-Genehmigungsregeln",
   "Add Rule": "Add Rule",
   "Auto-Approve": "Auto-Approve",
   "Auto-Reject": "Auto-Reject",
@@ -472,6 +473,15 @@ export const de: Record<string, string> = {
   "The group was created, but its members were not saved. Select Save to try again.":
     "Die Gruppe wurde erstellt, aber ihre Mitglieder wurden nicht gespeichert. Wählen Sie Speichern, um es erneut zu versuchen.",
   "Groups": "Gruppen",
+  "Bundle users into teams to give them use-case access together":
+    "Benutzer zu Teams bündeln, um ihnen gemeinsam Zugriff auf Anwendungsfälle zu geben",
+  "Loading groups": "Gruppen werden geladen",
+  "Members": "Mitglieder",
+  "You don't have access to this section.": "Sie haben keinen Zugriff auf diesen Bereich.",
+  "No groups yet.": "Noch keine Gruppen.",
+  "No members found": "Keine Mitglieder gefunden",
+  "No groups yet. Groups are managed in Settings → Groups.":
+    "Noch keine Gruppen. Gruppen werden unter Einstellungen → Gruppen verwaltet.",
   "Groups bundle users so you can add a whole team to a use case in one step.":
     "Gruppen fassen Benutzer zusammen, sodass Sie ein ganzes Team in einem Schritt zu einem Anwendungsfall hinzufügen können.",
   "Loading members...": "Mitglieder werden geladen...",
@@ -694,6 +704,7 @@ export const fr: Record<string, string> = {
     "Session utilisateur introuvable. Veuillez vous reconnecter.",
   "Version control": "Contrôle de version",
   "AI Approval Rules": "AI Approval Rules",
+  "AI approval rules": "Règles d'approbation IA",
   "Add Rule": "Add Rule",
   "Auto-Approve": "Auto-Approve",
   "Auto-Reject": "Auto-Reject",
@@ -966,6 +977,15 @@ export const fr: Record<string, string> = {
   "The group was created, but its members were not saved. Select Save to try again.":
     "Le groupe a été créé, mais ses membres n’ont pas été enregistrés. Sélectionnez Enregistrer pour réessayer.",
   "Groups": "Groupes",
+  "Bundle users into teams to give them use-case access together":
+    "Regrouper des utilisateurs en équipes pour leur donner ensemble accès aux cas d'usage",
+  "Loading groups": "Chargement des groupes",
+  "Members": "Membres",
+  "You don't have access to this section.": "Vous n'avez pas accès à cette section.",
+  "No groups yet.": "Aucun groupe pour le moment.",
+  "No members found": "Aucun membre trouvé",
+  "No groups yet. Groups are managed in Settings → Groups.":
+    "Aucun groupe pour le moment. Les groupes se gèrent dans Paramètres → Groupes.",
   "Groups bundle users so you can add a whole team to a use case in one step.":
     "Les groupes rassemblent des utilisateurs pour que vous puissiez ajouter toute une équipe à un cas d'usage en une seule étape.",
   "Loading members...": "Chargement des membres...",
@@ -1186,6 +1206,7 @@ export const es: Record<string, string> = {
     "No se encontró la sesión del usuario. Inicia sesión de nuevo.",
   "Version control": "Control de versiones",
   "AI Approval Rules": "Reglas de aprobación de IA",
+  "AI approval rules": "Reglas de aprobación de IA",
   "Add Rule": "Añadir regla",
   "Auto-Approve": "Aprobar automáticamente",
   "Auto-Reject": "Rechazar automáticamente",
@@ -1456,6 +1477,15 @@ export const es: Record<string, string> = {
   "The group was created, but its members were not saved. Select Save to try again.":
     "El grupo se creó, pero sus miembros no se guardaron. Seleccione Guardar para intentarlo de nuevo.",
   "Groups": "Grupos",
+  "Bundle users into teams to give them use-case access together":
+    "Agrupar usuarios en equipos para darles acceso conjunto a los casos de uso",
+  "Loading groups": "Cargando grupos",
+  "Members": "Miembros",
+  "You don't have access to this section.": "No tienes acceso a esta sección.",
+  "No groups yet.": "Aún no hay grupos.",
+  "No members found": "No se encontraron miembros",
+  "No groups yet. Groups are managed in Settings → Groups.":
+    "Aún no hay grupos. Los grupos se gestionan en Configuración → Grupos.",
   "Groups bundle users so you can add a whole team to a use case in one step.":
     "Los grupos reúnen usuarios para que pueda agregar un equipo completo a un caso de uso en un solo paso.",
   "Loading members...": "Cargando miembros...",

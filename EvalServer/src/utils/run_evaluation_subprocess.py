@@ -23,13 +23,19 @@ from database.db import get_db
 
 
 async def main():
-    """Main entry point for subprocess evaluation"""
-    if len(sys.argv) < 2:
-        print("Usage: run_evaluation_subprocess.py <json_args>")
+    """
+    Main entry point for subprocess evaluation.
+
+    Reads {"experiment_id", "config", "organization_id"} as JSON on stdin. The
+    config carries the run's provider keys, and process arguments are readable
+    by any local user (ps), so they never travel on the command line.
+    """
+    raw = sys.stdin.read()
+    if not raw.strip():
+        print("Usage: send {experiment_id, config, organization_id} as JSON on stdin")
         sys.exit(1)
-    
-    # Parse arguments
-    args = json.loads(sys.argv[1])
+
+    args = json.loads(raw)
     experiment_id = args["experiment_id"]
     config = args["config"]
     organization_id = args["organization_id"]

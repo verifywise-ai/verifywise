@@ -77,11 +77,13 @@ export default function AIApps() {
     variant: "success" | "info" | "warning" | "error";
     title?: string;
     body: string;
+    /** Asks the user to act: stays until closed or replaced. */
+    persistent?: boolean;
   } | null>(null);
 
   // Auto-dismiss toasts after 3s (matches the pattern used across other pages).
   useEffect(() => {
-    if (!alert) return;
+    if (!alert || alert.persistent) return;
     const timer = setTimeout(() => setAlert(null), 3000);
     return () => clearTimeout(timer);
   }, [alert]);
@@ -251,15 +253,22 @@ export default function AIApps() {
     }
   }, [appPendingDelete, deleteAiAppMutation, isSelected, toggleSelection]);
 
-  const handleModalSuccess = useCallback(() => {
-    const wasEditing = !!editingApp;
-    setIsModalOpen(false);
-    setEditingApp(null);
-    setAlert({
-      variant: "success",
-      body: wasEditing ? "AI app updated successfully" : "AI app created successfully",
-    });
-  }, [editingApp]);
+  const handleModalSuccess = useCallback(
+    (result?: { warning?: string }) => {
+      const wasEditing = !!editingApp;
+      setIsModalOpen(false);
+      setEditingApp(null);
+      setAlert(
+        result?.warning
+          ? { variant: "warning", body: result.warning, persistent: true }
+          : {
+              variant: "success",
+              body: wasEditing ? "AI app updated successfully" : "AI app created successfully",
+            },
+      );
+    },
+    [editingApp],
+  );
 
   const handleCloseAlert = () => setAlert(null);
 

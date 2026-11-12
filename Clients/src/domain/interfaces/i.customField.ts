@@ -9,7 +9,8 @@ export type CustomFieldEntityType =
   | "vendor_risk"
   | "model_inventory"
   | "task"
-  | "model_risk";
+  | "model_risk"
+  | "ai_app";
 
 /** A scored select option: the stored value is `id`; `score` is read from the definition. */
 export interface IScoredOption {
@@ -74,6 +75,7 @@ export const CUSTOM_FIELD_ENTITY_LABELS: Record<CustomFieldEntityType, string> =
   model_inventory: "Model Inventory",
   task: "Task",
   model_risk: "Model risk",
+  ai_app: "AI app",
 };
 
 export const CUSTOM_FIELD_TYPE_LABELS: Record<CustomFieldType, string> = {
@@ -121,6 +123,7 @@ const ENTITY_COUNT_NOUNS: Record<CustomFieldEntityType, [string, string]> = {
   model_inventory: ["model", "models"],
   task: ["task", "tasks"],
   model_risk: ["model risk", "model risks"],
+  ai_app: ["AI app", "AI apps"],
 };
 
 /** "use case" for 1, "use cases" otherwise. */

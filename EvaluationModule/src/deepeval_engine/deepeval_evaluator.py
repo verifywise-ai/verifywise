@@ -315,16 +315,30 @@ class GEvalLikeMetric:
         if self._runner is None:
             self._runner = judge_runner(self.model_name, self.provider)
 
-    def _build_prompt(self, *, input_text: str, actual_output: str, expected_output: str | None = None) -> str:
+    def _build_prompt(
+        self,
+        *,
+        input_text: str,
+        actual_output: str,
+        expected_output: str | None = None,
+        retrieval_context: list[str] | None = None,
+    ) -> str:
         rubric = self._custom_rubric or (
             "You are an impartial judge. Score the model's answer for overall quality, correctness, and usefulness."
         )
         expected_clause = (
             f"\nExpected (reference):\n{expected_output}\n" if expected_output else "\n(Reference expected output not provided)\n"
         )
+        # Context metrics (faithfulness, context precision/recall/relevancy) judge the
+        # answer against the passages, so the judge has to see them.
+        context_clause = ""
+        if retrieval_context:
+            numbered = "\n".join(f"[{i}] {p}" for i, p in enumerate(retrieval_context, 1))
+            context_clause = f"Retrieved context:\n{numbered}\n\n"
         return (
             f"You are an impartial judge. {rubric}\n\n"
             f"Input:\n{input_text}\n\n"
+            f"{context_clause}"
             f"Model Answer:\n{actual_output}\n"
             f"{expected_clause}\n"
             "Respond with ONLY a raw JSON object (no markdown, no code fences, no extra text).\n"
@@ -339,6 +353,8 @@ class GEvalLikeMetric:
                 input_text=getattr(test_case, "input", ""),
                 actual_output=getattr(test_case, "actual_output", ""),
                 expected_output=getattr(test_case, "expected_output", None),
+                retrieval_context=getattr(test_case, "retrieval_context", None)
+                or getattr(test_case, "context", None),
             )
             raw = self._runner.generate(prompt, max_tokens=self.max_tokens, temperature=self.temperature)
             

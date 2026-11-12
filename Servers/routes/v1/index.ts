@@ -35,6 +35,7 @@ import groupsRoutes from "./groups.route";
 import policyTemplatesRoutes from "./policyTemplates.route";
 import frameworkImportRoutes from "./frameworkImport.route";
 import importedFrameworkAssessmentRoutes from "./importedFrameworkAssessment.route";
+import intakeSubmissionsRoutes from "./intakeSubmissions.route";
 
 const router = express.Router();
 
@@ -90,5 +91,7 @@ router.use("/policy-templates", policyTemplatesRoutes);
 router.use("/framework-import", frameworkImportRoutes);
 // Imported frameworks attached to use cases and assessed there (#5254).
 router.use("/imported-framework-assessments", importedFrameworkAssessmentRoutes);
+// Intake submission preview and approval with custom field values (#5262).
+router.use("/intake-submissions", intakeSubmissionsRoutes);
 
 export default router;

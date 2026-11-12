@@ -41,3 +41,33 @@ describe("AIAppsTable with server paging (#5193)", () => {
     expect(onPageChange).toHaveBeenCalledWith(1);
   });
 });
+
+const mockDefs = [
+  { id: 11, label: "Business unit", field_type: "text", required: false, options: null },
+];
+vi.mock("../../../../application/hooks/useCustomFields", () => ({
+  useCustomFieldDefinitions: (entityType: string) => ({
+    data: entityType === "ai_app" ? mockDefs : [],
+  }),
+}));
+
+describe("AIAppsTable custom field columns (#5262)", () => {
+  it("shows a column per definition with the row value from custom_fields", () => {
+    renderWithProviders(
+      <AIAppsTable
+        apps={[
+          {
+            ...app(1),
+            custom_fields: [{ definition_id: 11, value: "Finance" }],
+          } as IAIApp,
+          app(2),
+        ]}
+        onEditApp={vi.fn()}
+        onViewApp={vi.fn()}
+        onDeleteApp={vi.fn()}
+      />,
+    );
+    expect(screen.getByText("Business unit")).toBeInTheDocument();
+    expect(screen.getByText("Finance")).toBeInTheDocument();
+  });
+});

@@ -22,6 +22,34 @@ SAFE_MODEL_NAME_PATTERN = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9._:/-]*$')
 evaluation_module_path = Path(__file__).parent.parent.parent.parent / "EvaluationModule"
 sys.path.insert(0, str((evaluation_module_path / "src").resolve()))
 
+
+def _resolve_relative_dataset_path(rel_path: Path) -> Path:
+    """
+    Resolve a relative dataset path the way the dataset read endpoint does.
+
+    Dataset records store paths relative to the built-in datasets folder
+    (e.g. "demo/knowledge_base_golden_set.json"): /app/datasets in Docker,
+    EvaluationModule/data/datasets locally. Older configs used paths relative to
+    EvaluationModule/ itself, so that base is still tried last. A path that
+    resolves outside every base is rejected.
+    """
+    bases = [Path("/app/datasets"), evaluation_module_path / "data" / "datasets", evaluation_module_path]
+    fallback: Optional[Path] = None
+    for base in bases:
+        base = base.resolve()
+        candidate = (base / rel_path).resolve()
+        try:
+            candidate.relative_to(base)
+        except ValueError:
+            continue
+        if candidate.exists():
+            return candidate
+        if fallback is None and base.exists():
+            fallback = candidate
+    if fallback is None:
+        raise ValueError(f"Invalid dataset path: {rel_path}")
+    return fallback
+
 from crud import evaluation_logs as crud
 from crud.deepeval_scorers import list_scorers, create_scorer, update_scorer, touch_scorer_updated_at
 from deepeval_engine.gatekeeper import evaluate_gate
@@ -81,6 +109,62 @@ METRIC_NAME_MAP = {
     "task_completion": "task_completion",
     "step_efficiency": "step_efficiency",
 }
+
+
+# RAG datasets carry the passages a retriever would have found: retrieval_context
+# on single-turn prompts, context on multi-turn conversations. The model under
+# test gets them in its prompt, and the test case keeps them so the context
+# metrics (faithfulness, context precision/recall/relevancy) can score.
+RAG_ANSWER_INSTRUCTION = (
+    "Answer using only the context below. If the context does not contain the answer, "
+    "say that you don't know."
+)
+
+
+def _normalize_passages(value: Any) -> List[str]:
+    """
+    Retrieved passages as a list of non-empty strings.
+
+    Accepts a single string, a list of strings, or a list of objects with a
+    "text" or "content" field (a common export shape). Anything else is dropped.
+    """
+    if isinstance(value, (str, dict)):
+        value = [value]
+    if not isinstance(value, list):
+        return []
+    passages: List[str] = []
+    for p in value:
+        if isinstance(p, dict):
+            p = p.get("text") or p.get("content")
+        if isinstance(p, str) and p.strip():
+            passages.append(p.strip())
+    return passages
+
+
+def _prompt_passages(prompt_data: Dict[str, Any]) -> List[str]:
+    """A single-turn prompt's passages: retrieval_context, or context as the evaluator also accepts."""
+    return _normalize_passages(prompt_data.get("retrieval_context")) or _normalize_passages(
+        prompt_data.get("context")
+    )
+
+
+def _context_block(passages: List[str]) -> str:
+    numbered = "\n".join(f"[{i}] {p}" for i, p in enumerate(passages, 1))
+    return f"Context:\n{numbered}"
+
+
+def _single_turn_generation_prompt(question: str, passages: List[str]) -> str:
+    """What the model under test is sent for one single-turn prompt."""
+    if not passages:
+        return question
+    return f"{RAG_ANSWER_INSTRUCTION}\n\n{_context_block(passages)}\n\nQuestion: {question}"
+
+
+def _conversation_preamble(passages: List[str]) -> str:
+    """Opening instruction for every turn of a multi-turn conversation."""
+    if not passages:
+        return "You are a helpful assistant."
+    return f"You are a helpful assistant. {RAG_ANSWER_INSTRUCTION}\n\n{_context_block(passages)}"
 
 
 def route_threshold_keys(thresholds: Optional[Dict[str, Any]]) -> Dict[str, Any]:
@@ -531,11 +615,15 @@ async def run_evaluation(
         # Custom dataset path if provided (only load if we don't have data yet)
         if not prompts and not conversations and dataset_config.get("path"):
             custom_path = Path(dataset_config["path"])
+            path_error: Optional[str] = None
             if not custom_path.is_absolute():
-                custom_path = (evaluation_module_path / custom_path).resolve()
+                try:
+                    custom_path = _resolve_relative_dataset_path(custom_path)
+                except ValueError as e:
+                    path_error = str(e)
             print(f"📄 Loading custom dataset from: {custom_path}")
-            if not custom_path.exists():
-                error_msg = f"Dataset file not found: {custom_path}"
+            if path_error or not custom_path.exists():
+                error_msg = path_error or f"Dataset file not found: {custom_path}"
                 print(f"❌ {error_msg}")
                 await crud.update_experiment_status(
                     db=db,
@@ -653,6 +741,8 @@ async def run_evaluation(
                 scenario = convo.get("scenario") or f"scenario_{s_idx}"
                 expected_outcome = convo.get("expected_outcome", "")
                 raw_turns = convo.get("turns") or []
+                convo_passages = _normalize_passages(convo.get("context"))
+                preamble = _conversation_preamble(convo_passages)
                 
                 print(f"  [{s_idx}/{len(conversations)}] Scenario: {scenario[:50]}...")
                 
@@ -688,14 +778,14 @@ async def run_evaluation(
                     # Build prompt with conversation context
                     if len(conversation_history) == 1:
                         # First turn - just the user message
-                        prompt = f"You are a helpful assistant. Respond to the user.\n\nUser: {user_msg}\n\nAssistant:"
+                        prompt = f"{preamble} Respond to the user.\n\nUser: {user_msg}\n\nAssistant:"
                     else:
                         # Build multi-turn prompt with history
                         history_str = ""
                         for h in conversation_history[:-1]:  # Exclude current turn
                             role_label = "User" if h["role"] == "user" else "Assistant"
                             history_str += f"{role_label}: {h['content']}\n"
-                        prompt = f"You are a helpful assistant. Continue this conversation.\n\n{history_str}User: {user_msg}\n\nAssistant:"
+                        prompt = f"{preamble} Continue this conversation.\n\n{history_str}User: {user_msg}\n\nAssistant:"
                     
                     # GENERATE assistant response using the model
                     try:
@@ -763,6 +853,7 @@ async def run_evaluation(
                 # Create ConversationalTestCase with MODEL-GENERATED responses
                 conv_test_case = ConversationalTestCase(
                     turns=turn_objects,
+                    context=convo_passages or None,
                 )
                 
                 # Build raw_turns for storage (with generated responses)
@@ -828,10 +919,12 @@ async def run_evaluation(
                 generated = False
                 try:
                     print(f"  [{idx}/{len(prompts)}] Processing: {prompt_data['prompt'][:50]}...")
+                    passages = _prompt_passages(prompt_data)
+                    generation_prompt = _single_turn_generation_prompt(prompt_data["prompt"], passages)
                     
                     # Generate response (first attempt)
                     response = model_runner.generate(
-                        prompt=prompt_data["prompt"],
+                        prompt=generation_prompt,
                         max_tokens=2048,
                         temperature=0.7,
                     )
@@ -843,7 +936,7 @@ async def run_evaluation(
                         print("     • Empty response, retrying with higher max_tokens/lower temperature...")
                         try:
                             response = model_runner.generate(
-                                prompt=prompt_data["prompt"],
+                                prompt=generation_prompt,
                                 max_tokens=2048,
                                 temperature=0.2,
                             )
@@ -884,6 +977,7 @@ async def run_evaluation(
                         input=prompt_data["prompt"],
                         actual_output=response,
                         expected_output=prompt_data.get("expected_output", ""),
+                        retrieval_context=passages or None,
                     )
                     
                     # Log the interaction

@@ -50,7 +50,7 @@ describe("aiApp.repository", () => {
       );
 
       expect(apiServices.get).toHaveBeenCalledWith(
-        "/ai-apps?status=approved&vendorId=3&page=1&limit=20&sortBy=name&order=asc",
+        "/v1/ai-apps?status=approved&vendorId=3&page=1&limit=20&sortBy=name&order=asc",
         { signal },
       );
     });
@@ -64,7 +64,7 @@ describe("aiApp.repository", () => {
 
       const result = await getAllAiApps();
 
-      expect(apiServices.get).toHaveBeenCalledWith("/ai-apps", { signal: undefined });
+      expect(apiServices.get).toHaveBeenCalledWith("/v1/ai-apps", { signal: undefined });
       expect(result).toEqual({ ai_apps: [], total: 0 });
     });
   });

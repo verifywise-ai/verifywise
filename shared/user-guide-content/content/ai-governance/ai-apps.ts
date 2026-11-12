@@ -263,6 +263,16 @@ export const aiAppsContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'custom-fields',
+      level: 2,
+      text: 'Custom fields',
+    },
+    {
+      type: 'paragraph',
+      text: 'AI apps support custom fields. Define them in **Settings** > **Custom fields**. They appear in the AI app form and as extra columns in the AI apps table.',
+    },
+    {
+      type: 'heading',
       id: 'editing-deleting',
       level: 2,
       text: 'Editing and deleting apps',
