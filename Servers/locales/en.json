@@ -35,6 +35,7 @@
   "{name} must be an array": "{name} must be an array",
   "{name} must contain positive integer user ids": "{name} must contain positive integer user ids",
   "{projectName} is created in VerifyWise": "{projectName} is created in VerifyWise",
+  "{score} ({band}, keyword score)": "{score} ({band}, keyword score)",
   "{score} ({band})": "{score} ({band})",
   "{type} with id {id} not found": "{type} with id {id} not found",
   "1 day": "1 day",

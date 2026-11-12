@@ -102,7 +102,7 @@ export function buildModelRiskFromSuggestion(
 /**
  * The stored score re-floored under the level the submission is approved at
  * (the reviewer may have changed it). The AI median only counts when scoring
- * completed.
+ * completed; the keyword score only when the form has no LLM key.
  */
 export function recomputeAssessmentForLevel(
   a: IRiskAssessmentV2,
@@ -110,7 +110,8 @@ export function recomputeAssessmentForLevel(
 ): IRiskAssessmentV2 {
   const ruleMinimum = ruleMinimumFor(level);
   const aiMedian = a.status === "complete" ? (a.ai?.median ?? null) : null;
-  const combined = combineScore({ ruleMinimum, aiMedian });
+  const keywordScore = a.status === "ai_not_configured" ? (a.keyword?.overallScore ?? null) : null;
+  const combined = combineScore({ ruleMinimum, aiMedian, keywordScore });
   return {
     ...a,
     classificationLevel: level,

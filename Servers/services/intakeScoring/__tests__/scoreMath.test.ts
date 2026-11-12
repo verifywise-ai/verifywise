@@ -17,15 +17,19 @@ const FIXTURE = join(__dirname, "../__fixtures__/scoreMathCases.json");
 const cases = JSON.parse(readFileSync(FIXTURE, "utf8")) as Array<{
   ruleMinimum: number | null;
   aiMedian: number | null;
+  keywordScore?: number | null;
   finalScore: number | null;
   source: string | null;
   rulesOnly: boolean;
 }>;
 
 describe("combineScore", () => {
-  it.each(cases)("min $ruleMinimum / ai $aiMedian", ({ ruleMinimum, aiMedian, ...expected }) => {
-    expect(combineScore({ ruleMinimum, aiMedian })).toEqual(expected);
-  });
+  it.each(cases)(
+    "min $ruleMinimum / ai $aiMedian / keyword $keywordScore",
+    ({ ruleMinimum, aiMedian, keywordScore, ...expected }) => {
+      expect(combineScore({ ruleMinimum, aiMedian, keywordScore })).toEqual(expected);
+    },
+  );
 });
 
 describe("ruleMinimumFor", () => {

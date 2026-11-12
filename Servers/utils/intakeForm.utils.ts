@@ -1163,6 +1163,31 @@ export const getSubmissionsNeedingAssessmentQuery = async (): Promise<
 };
 
 /**
+ * Pending submissions, across organizations, scored without an LLM key before
+ * the basic keyword score existed: a v2 assessment with status
+ * "ai_not_configured" and no stored keyword score. The intake backfill adds
+ * the keyword score to them; once stored, a submission is not listed again.
+ */
+export const getSubmissionsMissingKeywordScoreQuery = async (): Promise<
+  Array<{ id: number; organizationId: number }>
+> => {
+  const rows = await sequelize.query(
+    `SELECT id, organization_id AS "organizationId"
+    FROM intake_submissions
+    WHERE status = :status
+      AND risk_assessment->>'version' = '2'
+      AND risk_assessment->>'status' = 'ai_not_configured'
+      AND jsonb_typeof(risk_assessment->'keyword') IS DISTINCT FROM 'object'
+    ORDER BY id`,
+    {
+      replacements: { status: IntakeSubmissionStatus.PENDING },
+      type: QueryTypes.SELECT,
+    },
+  );
+  return rows as Array<{ id: number; organizationId: number }>;
+};
+
+/**
  * Update submission risk override
  */
 export const updateSubmissionRiskOverrideQuery = async (

@@ -5,7 +5,7 @@
 export type ClassificationLevel =
   "Prohibited" | "High risk" | "Limited risk" | "Minimal risk" | "Out of scope";
 export type ScoreBand = "Low" | "Medium" | "High" | "Critical";
-export type ScoreSource = "rule_minimum" | "ai";
+export type ScoreSource = "rule_minimum" | "ai" | "keyword";
 
 export const RULE_MINIMUMS: Record<ClassificationLevel, number> = {
   Prohibited: 90,
@@ -59,12 +59,25 @@ export function median(values: number[]): number {
   return sorted.length % 2 === 1 ? sorted[mid] : Math.round((sorted[mid - 1] + sorted[mid]) / 2);
 }
 
-export function combineScore(input: { ruleMinimum: number | null; aiMedian: number | null }): {
+// keywordScore is the basic keyword score of a form with no LLM key. It stands
+// in for the AI median and is ignored when there is one.
+export function combineScore(input: {
+  ruleMinimum: number | null;
+  aiMedian: number | null;
+  keywordScore?: number | null;
+}): {
   finalScore: number | null;
   source: ScoreSource | null;
   rulesOnly: boolean;
 } {
   const { ruleMinimum, aiMedian } = input;
+  const keywordScore = input.keywordScore ?? null;
+  if (aiMedian === null && keywordScore !== null) {
+    // A tie goes to the keyword score.
+    return keywordScore >= (ruleMinimum ?? 0)
+      ? { finalScore: keywordScore, source: "keyword", rulesOnly: false }
+      : { finalScore: ruleMinimum, source: "rule_minimum", rulesOnly: false };
+  }
   if (aiMedian === null) {
     if (ruleMinimum === null || ruleMinimum === 0) {
       return { finalScore: null, source: null, rulesOnly: false };

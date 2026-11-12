@@ -28,6 +28,7 @@ import type {
 import type { IIntakeForm } from "../../../domain.layer/interfaces/i.intakeForm";
 import type { ILiveChecks } from "../../../domain.layer/interfaces/i.intakeLiveChecks";
 import type { ClassificationContext } from "../aiScoring";
+import { keywordScoreFor, type FormSchema } from "../../intakeRiskScoring.service";
 
 const ORG = 7;
 const NOW = new Date("2026-10-21T12:00:00.000Z");
@@ -207,35 +208,72 @@ describe("runIntakeAssessment", () => {
     expect(finalAssessment(h).tier).toBe("Critical");
   });
 
-  it("without an LLM key: rules-only score, no suggestions", async () => {
+  it("without an LLM key: a keyword score below the rule minimum, no suggestions", async () => {
     const h = harness(submission(), { getForm: jest.fn(async () => form({ llmKeyId: null })) });
     await runIntakeAssessment(job(), h.deps);
     const a = finalAssessment(h);
     expect(a.status).toBe("ai_not_configured");
+    // No keyword matches: every dimension stays at the neutral 50.
+    expect(a.keyword?.overallScore).toBe(50);
+    expect(a.keyword?.dimensions).toHaveLength(6);
     expect(a.finalScore).toBe(70);
-    expect(a.rulesOnly).toBe(true);
+    expect(a.source).toBe("rule_minimum");
+    expect(a.rulesOnly).toBe(false);
+    expect(a.tier).toBe("High");
     expect(a.ai).toBeNull();
     expect(finalBlock(h)).toMatchObject({ status: "ai_not_configured", items: [] });
-    expect((h.deps.sendNotification as jest.Mock).mock.calls[0][7].scoreText).toBe(
-      "at least 70 (rules only)",
-    );
+    expect((h.deps.sendNotification as jest.Mock).mock.calls[0][7].scoreText).toBe("70 (High)");
     expect(h.deps.getModel).not.toHaveBeenCalled();
   });
 
-  it("without a key and with no rules check: no score yet", async () => {
-    const h = harness(submission(), {
+  it("without a key and with no rules check: the keyword score is the score", async () => {
+    const data = { q1: "Biometric and medical records of patients", q2: "jane@example.com" };
+    const expected = keywordScoreFor(data, form().schema as unknown as FormSchema);
+    const h = harness(submission({ data }), {
       getForm: jest.fn(async () => form({ llmKeyId: null, euAiActRiskStepEnabled: false })),
       getClassification: jest.fn(async () => null),
     });
     await runIntakeAssessment(job(), h.deps);
     const a = finalAssessment(h);
-    expect(a.finalScore).toBeNull();
-    expect(a.tier).toBeNull();
+    expect(expected.overallScore).toBeGreaterThan(50);
+    expect(a.keyword).toEqual(expected);
+    expect(a.finalScore).toBe(expected.overallScore);
+    expect(a.overallScore).toBe(expected.overallScore);
+    expect(a.source).toBe("keyword");
+    expect(a.rulesOnly).toBe(false);
     expect(a.notRuleChecked).toBe(true);
+    expect(a.tier).not.toBeNull();
+    // Dimensions are stored without their signals.
+    expect(a.keyword?.dimensions[0]).not.toHaveProperty("signals");
     expect((h.deps.sendNotification as jest.Mock).mock.calls[0][7]).toMatchObject({
       level: null,
-      scoreText: "No score yet",
+      scoreText: `${expected.overallScore} (${a.tier}, keyword score)`,
     });
+  });
+
+  it("without a key: a keyword score above the rule minimum wins", async () => {
+    const data = { q1: "Biometric and medical records of patients", q2: "jane@example.com" };
+    const expected = keywordScoreFor(data, form().schema as unknown as FormSchema);
+    const h = harness(submission({ data }), {
+      getForm: jest.fn(async () => form({ llmKeyId: null })),
+      getClassification: jest.fn(async () => ({ level: "Limited risk", reasons: [] })),
+    });
+    await runIntakeAssessment(job(), h.deps);
+    const a = finalAssessment(h);
+    expect(expected.overallScore).toBeGreaterThan(30);
+    expect(a.ruleMinimum).toBe(30);
+    expect(a.finalScore).toBe(expected.overallScore);
+    expect(a.source).toBe("keyword");
+  });
+
+  it("with a key, no keyword score is stored", async () => {
+    const h = harness(submission());
+    await runIntakeAssessment(job(), h.deps);
+    const a = finalAssessment(h);
+    expect(a.status).toBe("complete");
+    expect(a.keyword).toBeNull();
+    expect(a.finalScore).toBe(70);
+    expect(a.source).toBe("rule_minimum");
   });
 
   it("treats a deleted key as not configured and records why", async () => {
@@ -254,6 +292,8 @@ describe("runIntakeAssessment", () => {
     const a = finalAssessment(h);
     expect(a.status).toBe("ai_failed");
     expect(a.finalScore).toBe(70); // the floor still holds
+    expect(a.keyword ?? null).toBeNull();
+    expect(a.source).toBe("rule_minimum");
     expect(a.error).toBeDefined();
     expect(finalBlock(h).status).toBe("complete");
     expect(h.deps.sendNotification).toHaveBeenCalledTimes(1);
@@ -856,13 +896,22 @@ describe("scoreTextFor", () => {
     expect(scoreTextFor({ ...base, finalScore: 70, rulesOnly: true })).toBe(
       "at least 70 (rules only)",
     );
+    expect(scoreTextFor({ ...base, finalScore: 40, source: "keyword" })).toBe(
+      "40 (Medium, keyword score)",
+    );
+    expect(scoreTextFor({ ...base, source: "keyword" }, "de")).toBe(
+      "64 (Hoch, Stichwortbewertung)",
+    );
   });
 });
+
+const noKeywordRows = jest.fn(async () => []);
 
 describe("backfillIntakeAssessments", () => {
   it("queues only the stages each row needs, emailing only when it never went", async () => {
     const enqueue = jest.fn(async () => undefined);
     const queued = await backfillIntakeAssessments({
+      listMissingKeywordScore: noKeywordRows,
       listNeedingAssessment: jest.fn(async () => [
         {
           id: 1,
@@ -915,6 +964,7 @@ describe("backfillIntakeAssessments", () => {
   it("emails a settled submission whose email never went, without queueing", async () => {
     const enqueue = jest.fn(async () => undefined);
     const h = harness(settled(), {
+      listMissingKeywordScore: noKeywordRows,
       listNeedingAssessment: jest.fn(async () => [
         {
           id: 11,
@@ -936,6 +986,7 @@ describe("backfillIntakeAssessments", () => {
   it("a lost job under 10 minutes old is re-run with its email", async () => {
     const enqueue = jest.fn(async () => undefined);
     await backfillIntakeAssessments({
+      listMissingKeywordScore: noKeywordRows,
       listNeedingAssessment: jest.fn(async () => [
         {
           id: 1,
@@ -960,6 +1011,7 @@ describe("backfillIntakeAssessments", () => {
       emailUnclaimed: false,
     };
     const queued = await backfillIntakeAssessments({
+      listMissingKeywordScore: noKeywordRows,
       listNeedingAssessment: jest.fn(async () => [
         // live_checks null, or AI checks settled: the query says false
         { ...row, id: 1, organizationId: 2, needsScoring: true, needsLiveChecks: false },
@@ -984,6 +1036,7 @@ describe("backfillIntakeAssessments", () => {
       .mockRejectedValueOnce(new Error("redis down"))
       .mockResolvedValueOnce(undefined);
     const queued = await backfillIntakeAssessments({
+      listMissingKeywordScore: noKeywordRows,
       listNeedingAssessment: jest.fn(async () => [
         {
           id: 1,
@@ -1006,5 +1059,123 @@ describe("backfillIntakeAssessments", () => {
     });
     expect(queued).toBe(1);
     expect(enqueue).toHaveBeenCalledTimes(2);
+  });
+
+  describe("keyword scores for submissions scored without a key", () => {
+    const data = { q1: "Biometric and medical records of patients", q2: "jane@example.com" };
+    const keyword = keywordScoreFor(data, form().schema as unknown as FormSchema);
+    const noKey = (overrides: Partial<IRiskAssessmentV2> = {}): IRiskAssessmentV2 => ({
+      version: 2,
+      status: "ai_not_configured",
+      notRuleChecked: true,
+      classificationLevel: null,
+      ruleMinimum: null,
+      ai: null,
+      finalScore: null,
+      source: null,
+      rulesOnly: false,
+      overallScore: null,
+      tier: null,
+      stageStartedAt: "x",
+      scoredAt: "y",
+      ...overrides,
+    });
+    const run = (sub: IIntakeSubmission) => {
+      const routeSubmission = jest.fn(async () => null);
+      const enqueue = jest.fn(async () => undefined);
+      const h = harness(sub, {
+        listMissingKeywordScore: jest.fn(async () => [{ id: 11, organizationId: ORG }]),
+        listNeedingAssessment: jest.fn(async () => []),
+        routeSubmission: routeSubmission as any,
+        enqueue,
+      });
+      return { h, routeSubmission, enqueue };
+    };
+
+    it("stores the keyword score on a pending row and re-routes it, with no AI call", async () => {
+      const { h, routeSubmission, enqueue } = run(
+        submission({ data, riskAssessment: noKey(), suggestedRisks: null }),
+      );
+      expect(await backfillIntakeAssessments(h.deps)).toBe(0);
+      expect(h.assessments).toHaveLength(1);
+      const a = h.assessments[0];
+      expect(a.keyword).toEqual(keyword);
+      expect(a.finalScore).toBe(keyword.overallScore);
+      expect(a.source).toBe("keyword");
+      expect(a.status).toBe("ai_not_configured");
+      expect(routeSubmission).toHaveBeenCalledTimes(1);
+      expect((routeSubmission.mock.calls[0] as any[])[0].riskAssessment).toEqual(a);
+      expect(h.deps.getModel).not.toHaveBeenCalled();
+      expect(h.deps.generateImpl).not.toHaveBeenCalled();
+      expect(enqueue).not.toHaveBeenCalled();
+    });
+
+    it("keeps the stored rule minimum as the floor", async () => {
+      const { h } = run(
+        submission({
+          data,
+          riskAssessment: noKey({
+            notRuleChecked: false,
+            classificationLevel: "Prohibited",
+            ruleMinimum: 90,
+            finalScore: 90,
+            source: "rule_minimum",
+            rulesOnly: true,
+            overallScore: 90,
+            tier: "Critical",
+          }),
+        }),
+      );
+      await backfillIntakeAssessments(h.deps);
+      expect(h.assessments[0]).toMatchObject({
+        finalScore: 90,
+        source: "rule_minimum",
+        rulesOnly: false,
+        keyword,
+      });
+    });
+
+    it("leaves decided, AI-scored and already keyword-scored rows alone", async () => {
+      for (const sub of [
+        submission({ data, status: IntakeSubmissionStatus.APPROVED, riskAssessment: noKey() }),
+        submission({ data, riskAssessment: noKey({ status: "ai_failed" }) }),
+        submission({ data, riskAssessment: noKey({ keyword }) }),
+      ]) {
+        const { h, routeSubmission } = run(sub);
+        await backfillIntakeAssessments(h.deps);
+        expect(h.assessments).toHaveLength(0);
+        expect(routeSubmission).not.toHaveBeenCalled();
+      }
+    });
+
+    it("a second run changes nothing", async () => {
+      const { h, routeSubmission } = run(submission({ data, riskAssessment: noKey() }));
+      await backfillIntakeAssessments(h.deps);
+      await backfillIntakeAssessments(h.deps);
+      expect(h.assessments).toHaveLength(1);
+      expect(routeSubmission).toHaveBeenCalledTimes(1);
+    });
+
+    it("a failed listing never stops the rest of the backfill", async () => {
+      const enqueue = jest.fn(async () => undefined);
+      const queued = await backfillIntakeAssessments({
+        listMissingKeywordScore: jest.fn(async () => {
+          throw new Error("db down");
+        }),
+        listNeedingAssessment: jest.fn(async () => [
+          {
+            id: 1,
+            organizationId: 2,
+            needsScoring: true,
+            needsSuggestions: false,
+            needsLiveChecks: false,
+            needsNotification: false,
+            emailUnclaimed: false,
+          },
+        ]),
+        enqueue,
+      });
+      expect(queued).toBe(1);
+    });
   });
 });
