@@ -39,7 +39,7 @@ vi.mock("../oversight/OversightTab", () => ({
 
 vi.mock("../SubmissionPreviewModal", () => ({
   SubmissionPreviewModal: ({ isOpen, onApproved }: { isOpen: boolean; onApproved: () => void }) =>
-    isOpen ? <button onClick={onApproved}>decide</button> : null,
+    isOpen ? <button onClick={() => onApproved()}>decide</button> : null,
 }));
 
 vi.mock("../../../../application/repository/intakeForm.repository", async (orig) => ({

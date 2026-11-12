@@ -25,6 +25,8 @@ import {
   RiskOverride,
   SuggestedRisksBlock,
   FormSchema,
+  type CustomFieldSkip,
+  type SubmissionCustomFieldPreview,
 } from "../../../application/repository/intakeForm.repository";
 import useUsers from "../../../application/hooks/useUsers";
 import { useAuth } from "../../../application/hooks/useAuth";
@@ -46,7 +48,11 @@ import { AnswerLiveChecks, LiveChecksSection } from "./LiveChecksSection";
 import type { ILiveChecks } from "../../../domain/types/intakeLiveChecks";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { formatAnswer } from "../../../application/utils/intakeAnswerFormat";
-import { isEmptyAnswer, sortFields } from "../../../application/utils/intakeFormLogic";
+import {
+  isCustomFieldMapping,
+  isEmptyAnswer,
+  sortFields,
+} from "../../../application/utils/intakeFormLogic";
 import {
   classificationRoles,
   normalizeHighRiskRoles,
@@ -84,7 +90,8 @@ interface SubmissionPreviewModalProps {
   isOpen: boolean;
   onClose: () => void;
   submissionId: number | null;
-  onApproved: () => void;
+  /** Gets the custom field values approval could not save, if any. */
+  onApproved: (customFieldSkips?: CustomFieldSkip[]) => void;
   onRejected: () => void;
   // A change that is not a decision (escalation, second review): refresh only
   onChanged: () => void;
@@ -119,6 +126,7 @@ interface PreviewData {
   laneReviewers: Array<{ id: number; name: string }>;
   isSeniorReviewer: boolean;
   reviewedBy: number | null;
+  customFields: SubmissionCustomFieldPreview[];
 }
 
 /** How often, and for how long, the modal re-reads a running assessment. */
@@ -432,6 +440,7 @@ function SubmissionPreviewModal({
           laneReviewers: response.data.laneReviewers ?? [],
           isSeniorReviewer: response.data.isSeniorReviewer ?? false,
           reviewedBy: sub?.reviewedBy ?? null,
+          customFields: Array.isArray(response.data.customFields) ? response.data.customFields : [],
         });
         setEuAiActLevel(response.data.euAiActClassification?.current.level ?? "");
         // A band override saved earlier opens in the override panel, so a
@@ -605,8 +614,9 @@ function SubmissionPreviewModal({
         };
       }
 
-      await approveSubmission(submissionId, payload);
-      onApproved();
+      const response = await approveSubmission(submissionId, payload);
+      const skips = response?.data?.customFieldSkips;
+      onApproved(Array.isArray(skips) ? skips : undefined);
       onClose();
     } catch (err) {
       setApproveError(serverErrorMessage(err) ?? "Failed to approve submission. Please try again.");
@@ -648,6 +658,8 @@ function SubmissionPreviewModal({
   const mappedFields =
     previewData?.formSchema?.fields?.filter((field) => {
       if (!field.entityFieldMapping) return false;
+      // Custom field values are listed read-only in their own block
+      if (isCustomFieldMapping(field.entityFieldMapping)) return false;
       if (euAiAct && field.entityFieldMapping === "ai_risk_classification") return false;
       if (
         euAiAct &&
@@ -1095,6 +1107,71 @@ function SubmissionPreviewModal({
                   })}
                 </Box>
               )}
+            </Box>
+          )}
+
+          {/* Read-only: values come from the answers and reviewers cannot change them */}
+          {isPending && (previewData?.customFields.length ?? 0) > 0 && (
+            <Box
+              sx={{
+                border: `1px solid ${theme.palette.border.dark}`,
+                borderRadius: "4px",
+                p: "20px",
+              }}
+            >
+              <Typography
+                sx={{
+                  fontSize: "14px",
+                  fontWeight: 600,
+                  color: theme.palette.text.primary,
+                  mb: "4px",
+                }}
+              >
+                Custom fields
+              </Typography>
+              <Typography sx={{ fontSize: "13px", color: theme.palette.text.accent, mb: "8px" }}>
+                Filled from the answers when you approve.
+              </Typography>
+              {previewData?.customFields.map((customField, index) => (
+                <Box
+                  key={`${customField.label}-${index}`}
+                  sx={{
+                    display: "grid",
+                    gridTemplateColumns: "200px 1fr",
+                    columnGap: "16px",
+                    py: "8px",
+                    borderTop: index > 0 ? `1px solid ${theme.palette.border.light}` : "none",
+                  }}
+                >
+                  <Typography
+                    sx={{ fontSize: "13px", fontWeight: 500, color: theme.palette.text.secondary }}
+                  >
+                    {customField.label}
+                  </Typography>
+                  <Box>
+                    <Typography
+                      sx={{
+                        fontSize: "13px",
+                        color: theme.palette.text.primary,
+                        wordBreak: "break-word",
+                      }}
+                    >
+                      {customField.displayValue}
+                    </Typography>
+                    {customField.skipped && (
+                      <Typography
+                        sx={{
+                          fontSize: "12px",
+                          color: theme.palette.status.warning.text,
+                          mt: "2px",
+                        }}
+                      >
+                        <span>Will not be saved:</span> <span>{customField.skipped}</span>
+                      </Typography>
+                    )}
+                  </Box>
+                </Box>
+              ))}
             </Box>
           )}
 

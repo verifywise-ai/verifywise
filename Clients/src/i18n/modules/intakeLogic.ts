@@ -42,6 +42,23 @@ export const de: Record<string, string> = {
   "Risk scores run from 0 to 100": "Risikowerte reichen von 0 bis 100",
   "Prohibited practices always go to expert reviewers. So do submissions that have no score or whose AI scoring failed.":
     "Verbotene Praktiken gehen immer an Expertenprüfer. Das gilt auch für Einreichungen ohne Wert oder mit fehlgeschlagener KI-Bewertung.",
+  // Intake questions mapped to custom fields (#5262)
+  "This custom field no longer exists": "Dieses benutzerdefinierte Feld existiert nicht mehr",
+  "This custom field's type does not match this question":
+    "Der Typ dieses benutzerdefinierten Felds passt nicht zu dieser Frage",
+  "Some questions map to custom fields that no longer exist or do not match their type. Fix them before publishing.":
+    "Einige Fragen sind benutzerdefinierten Feldern zugeordnet, die nicht mehr existieren oder deren Typ nicht passt. Beheben Sie das vor dem Veröffentlichen.",
+  "Custom field problems (blocks publishing):":
+    "Probleme mit benutzerdefinierten Feldern (blockiert die Veröffentlichung):",
+  "Custom field no longer exists": "Benutzerdefiniertes Feld existiert nicht mehr",
+  "Custom field type does not match": "Typ des benutzerdefinierten Felds passt nicht",
+  "Filled from the answers when you approve.":
+    "Wird bei der Genehmigung aus den Antworten befüllt.",
+  "Will not be saved:": "Wird nicht gespeichert:",
+  "Approved. 1 custom field value was not saved: {fields}":
+    "Genehmigt. 1 Wert eines benutzerdefinierten Felds wurde nicht gespeichert: {fields}",
+  "Approved. {count} custom field values were not saved: {fields}":
+    "Genehmigt. {count} Werte benutzerdefinierter Felder wurden nicht gespeichert: {fields}",
 };
 
 export const fr: Record<string, string> = {
@@ -86,6 +103,23 @@ export const fr: Record<string, string> = {
   "Risk scores run from 0 to 100": "Les scores de risque vont de 0 à 100",
   "Prohibited practices always go to expert reviewers. So do submissions that have no score or whose AI scoring failed.":
     "Les pratiques interdites vont toujours aux réviseurs experts. Les soumissions sans score ou dont l'évaluation par IA a échoué aussi.",
+  // Intake questions mapped to custom fields (#5262)
+  "This custom field no longer exists": "Ce champ personnalisé n'existe plus",
+  "This custom field's type does not match this question":
+    "Le type de ce champ personnalisé ne correspond pas à cette question",
+  "Some questions map to custom fields that no longer exist or do not match their type. Fix them before publishing.":
+    "Certaines questions sont associées à des champs personnalisés qui n'existent plus ou dont le type ne correspond pas. Corrigez-les avant de publier.",
+  "Custom field problems (blocks publishing):":
+    "Problèmes de champs personnalisés (bloque la publication) :",
+  "Custom field no longer exists": "Le champ personnalisé n'existe plus",
+  "Custom field type does not match": "Le type du champ personnalisé ne correspond pas",
+  "Filled from the answers when you approve.":
+    "Rempli à partir des réponses lors de l'approbation.",
+  "Will not be saved:": "Ne sera pas enregistré :",
+  "Approved. 1 custom field value was not saved: {fields}":
+    "Approuvé. 1 valeur de champ personnalisé n'a pas été enregistrée : {fields}",
+  "Approved. {count} custom field values were not saved: {fields}":
+    "Approuvé. {count} valeurs de champs personnalisés n'ont pas été enregistrées : {fields}",
 };
 
 export const es: Record<string, string> = {
@@ -130,4 +164,20 @@ export const es: Record<string, string> = {
   "Risk scores run from 0 to 100": "Las puntuaciones de riesgo van de 0 a 100",
   "Prohibited practices always go to expert reviewers. So do submissions that have no score or whose AI scoring failed.":
     "Las prácticas prohibidas siempre pasan a los revisores expertos. También los envíos sin puntuación o cuya evaluación por IA falló.",
+  // Intake questions mapped to custom fields (#5262)
+  "This custom field no longer exists": "Este campo personalizado ya no existe",
+  "This custom field's type does not match this question":
+    "El tipo de este campo personalizado no coincide con esta pregunta",
+  "Some questions map to custom fields that no longer exist or do not match their type. Fix them before publishing.":
+    "Algunas preguntas están asignadas a campos personalizados que ya no existen o cuyo tipo no coincide. Corríjalas antes de publicar.",
+  "Custom field problems (blocks publishing):":
+    "Problemas de campos personalizados (bloquea la publicación):",
+  "Custom field no longer exists": "El campo personalizado ya no existe",
+  "Custom field type does not match": "El tipo del campo personalizado no coincide",
+  "Filled from the answers when you approve.": "Se rellena con las respuestas al aprobar.",
+  "Will not be saved:": "No se guardará:",
+  "Approved. 1 custom field value was not saved: {fields}":
+    "Aprobado. No se guardó 1 valor de campo personalizado: {fields}",
+  "Approved. {count} custom field values were not saved: {fields}":
+    "Aprobado. No se guardaron {count} valores de campos personalizados: {fields}",
 };
