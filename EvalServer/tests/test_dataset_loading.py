@@ -253,6 +253,7 @@ def _install_fake_simulator(monkeypatch: pytest.MonkeyPatch):
             return [
                 ConversationalTestCase(
                     scenario=golden.scenario,
+                    expected_outcome=golden.expected_outcome,
                     turns=[Turn(role="user", content="Hi, I need help"), reply],
                 )
                 for golden in conversational_goldens
@@ -383,6 +384,38 @@ async def test_each_scenario_keeps_its_own_turn_limit(
     assert "error" not in result
     by_limit = {c["max_user_simulations"]: [g.scenario for g in c["goldens"]] for c in calls}
     assert by_limit == {2: ["a", "c"], 3: ["b"], 20: ["d"]}
+
+
+@pytest.mark.asyncio
+async def test_simulated_cases_carry_scenario_and_expected_outcome(
+    mock_db_session: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+    stub_model_runner: MagicMock,
+) -> None:
+    """The evaluator builds Task Completion from expected_outcome and stores both fields."""
+    _install_fake_simulator(monkeypatch)
+    from deepeval_engine import deepeval_evaluator as evaluator_module
+    from utils.run_evaluation import run_evaluation
+
+    captured: List[Dict[str, Any]] = []
+    monkeypatch.setattr(
+        evaluator_module.DeepEvalEvaluator,
+        "run_evaluation",
+        lambda self, **kwargs: captured.extend(kwargs.get("test_cases_data") or []) or [],
+    )
+
+    config = _scenario_config(
+        {"prompts": [{"scenario": "Reset a password", "expected_outcome": "Steps are explained"}]}
+    )
+    result = await run_evaluation(
+        db=mock_db_session, experiment_id="exp-sim-4", config=config, organization_id=1
+    )
+
+    assert "error" not in result
+    assert len(captured) == 1
+    assert captured[0]["scenario"] == "Reset a password"
+    assert captured[0]["expected_outcome"] == "Steps are explained"
+    assert captured[0]["metadata"]["turn_count"] == 2
 
 
 @pytest.mark.asyncio

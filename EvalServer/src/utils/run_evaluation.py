@@ -679,14 +679,19 @@ async def run_evaluation(
                     )
                 )
             
-            # Convert simulated test cases to our format
+            # Convert simulated test cases to our format. The evaluator builds Task
+            # Completion from expected_outcome and stores both fields with the result,
+            # as it does for scripted conversations.
             for idx, conv_tc in enumerate(simulated_test_cases, 1):
                 test_cases_data.append({
                     "test_case": conv_tc,
                     "is_conversational": True,
+                    "scenario": conv_tc.scenario or "",
+                    "expected_outcome": conv_tc.expected_outcome or "",
                     "metadata": {
                         "sample_id": f"simulated_scenario_{idx}",
                         "protected_attributes": {"category": conv_tc.scenario or f"scenario_{idx}", "difficulty": "simulated"},
+                        "turn_count": len(conv_tc.turns or []),
                     }
                 })
             
