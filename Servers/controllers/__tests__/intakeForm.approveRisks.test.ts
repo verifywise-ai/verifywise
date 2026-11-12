@@ -181,11 +181,12 @@ const request = (body: object = {}) => ({
   params: { id: "11" },
   body: { confirmedEntityData: { project_title: "P", name: "M" }, ...body },
 });
-const approve = async (body: object = {}) => {
+const approve = async (body: object = {}, handler = ctrl.approveSubmission) => {
   const r = res();
-  await ctrl.approveSubmission(request(body) as any, r);
+  await handler(request(body) as any, r);
   return { status: r.status.mock.calls[0]?.[0], body: r.json.mock.calls[0]?.[0] };
 };
+const approveV1 = (body: object = {}) => approve(body, ctrl.approveSubmissionV1);
 
 beforeEach(() => {
   jest.clearAllMocks();
@@ -434,7 +435,7 @@ describe("approveSubmission writes mapped custom fields (#5262)", () => {
     customFields.setCustomFieldValueQuery.mockRejectedValueOnce(
       new ValidationException("Expected string value", "value"),
     );
-    const r = await approve();
+    const r = await approveV1();
     expect(r.status).toBe(200);
     expect(customFields.listCustomFieldDefinitionsQuery).toHaveBeenCalledWith(
       ORG,
@@ -466,7 +467,7 @@ describe("approveSubmission writes mapped custom fields (#5262)", () => {
 
   it("reports answers the resolver can't use, translated, without writing them", async () => {
     customFields.listCustomFieldDefinitionsQuery.mockResolvedValue([DEFS[1]]);
-    const r = await approve();
+    const r = await approveV1();
     expect(r.status).toBe(200);
     expect(customFields.setCustomFieldValueQuery).toHaveBeenCalledTimes(1);
     expect(r.body.data.customFieldSkips).toEqual([
@@ -476,7 +477,7 @@ describe("approveSubmission writes mapped custom fields (#5262)", () => {
 
   it("treats an array confirmedEntityData as data to keep, not as an object to filter", async () => {
     const filter = jest.spyOn(Object, "entries");
-    const r = await approve({ confirmedEntityData: ["a", "b"] });
+    const r = await approveV1({ confirmedEntityData: ["a", "b"] });
     const filteredAnArray = filter.mock.calls.some(
       ([arg]) => Array.isArray(arg) && arg.length === 2 && arg[0] === "a",
     );
@@ -487,7 +488,7 @@ describe("approveSubmission writes mapped custom fields (#5262)", () => {
 
   it("an unexpected write error rolls the approval back", async () => {
     customFields.setCustomFieldValueQuery.mockRejectedValueOnce(new Error("connection lost"));
-    const r = await approve();
+    const r = await approveV1();
     expect(r.status).toBe(500);
     expect(tx.rollback).toHaveBeenCalled();
     expect(tx.commit).not.toHaveBeenCalled();
@@ -495,7 +496,7 @@ describe("approveSubmission writes mapped custom fields (#5262)", () => {
   });
 
   it("takes custom values from the answers, never from confirmedEntityData", async () => {
-    const r = await approve({
+    const r = await approveV1({
       confirmedEntityData: { name: "x", "custom_field:owner": "y" },
     });
     expect(r.status).toBe(200);
@@ -509,13 +510,23 @@ describe("approveSubmission writes mapped custom fields (#5262)", () => {
     });
   });
 
+  it("the legacy route writes the values but answers the pre-v1 shape", async () => {
+    customFields.setCustomFieldValueQuery.mockRejectedValueOnce(
+      new ValidationException("Expected string value", "value"),
+    );
+    const r = await approve();
+    expect(r.status).toBe(200);
+    expect(customFields.setCustomFieldValueQuery).toHaveBeenCalledTimes(2);
+    expect(r.body.data).toEqual({ id: 11 });
+  });
+
   it("a form without custom mappings reads no definitions and skips nothing", async () => {
     intake.getIntakeFormByIdQuery.mockResolvedValue({
       id: 1,
       name: "F",
       schema: { version: "1.0", fields: [] },
     });
-    const r = await approve();
+    const r = await approveV1();
     expect(r.status).toBe(200);
     expect(customFields.listCustomFieldDefinitionsQuery).not.toHaveBeenCalled();
     expect(r.body.data.customFieldSkips).toEqual([]);

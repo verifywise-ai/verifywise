@@ -5,10 +5,16 @@ jest.mock("../customField.utils", () => ({
   ISO_DATE_PATTERN: /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?)?$/,
   MAX_CUSTOM_TEXT_LENGTH: 10_000,
   listCustomFieldDefinitionsQuery: (...args: unknown[]) => listDefinitions(...args),
+  setCustomFieldValueQuery: jest.fn(),
 }));
 jest.mock("../../database/db", () => ({ sequelize: { query: jest.fn() } }));
+jest.mock("../logger/fileLogger", () => ({
+  __esModule: true,
+  default: { error: jest.fn(), warn: jest.fn(), info: jest.fn(), debug: jest.fn() },
+}));
 
 import {
+  previewIntakeCustomFields,
   resolveIntakeCustomFieldValues,
   validateFormCustomFieldMappings,
 } from "../intakeCustomFields.utils";
@@ -53,7 +59,8 @@ describe("resolveIntakeCustomFieldValues", () => {
     ).toBe("2026-11-11");
     const bool = run(q({ type: "checkbox" }), def({ field_type: "boolean" }), true).values[0];
     expect(bool.value).toBe(true);
-    expect(bool.displayValue).toBe("Yes");
+    // The caller translates a boolean display into yes or no.
+    expect(bool.displayValue).toBe(true);
   });
 
   it("parses numbers and skips unparseable ones", () => {
@@ -61,12 +68,12 @@ describe("resolveIntakeCustomFieldValues", () => {
     const n = q({ type: "number" });
     expect(run(n, d, "12").values[0].value).toBe(12);
     expect(run(n, d, 12).values[0].value).toBe(12);
-    expect(run(n, d, "abc")).toEqual({
+    expect(run(n, d, "abc")).toMatchObject({
       values: [],
       skipped: [{ fieldKey: "k", label: "Field K", reason: "invalid_value" }],
     });
-    expect(run(n, d, "")).toEqual({ values: [], skipped: [] });
-    expect(run(n, d, undefined)).toEqual({ values: [], skipped: [] });
+    expect(run(n, d, "")).toEqual({ values: [], skipped: [], results: [] });
+    expect(run(n, d, undefined)).toEqual({ values: [], skipped: [], results: [] });
   });
 
   it("maps a select answer to the custom option text", () => {
@@ -102,7 +109,7 @@ describe("resolveIntakeCustomFieldValues", () => {
     expect(ok.value).toEqual(["A", "B"]);
     expect(ok.displayValue).toBe("A, B");
     expect(run(question, d, ["option1", "zzz"]).skipped[0].reason).toBe("no_matching_option");
-    expect(run(question, d, [])).toEqual({ values: [], skipped: [] });
+    expect(run(question, d, [])).toEqual({ values: [], skipped: [], results: [] });
   });
 
   it("skips removed and retyped definitions", () => {
@@ -135,7 +142,101 @@ describe("resolveIntakeCustomFieldValues", () => {
       schemaOf(q({ entityFieldMapping: "project_title" })),
       [],
     );
-    expect(out).toEqual({ values: [], skipped: [] });
+    expect(out).toEqual({ values: [], skipped: [], results: [] });
+  });
+
+  it("lists every outcome in question order, a skip carrying the answer as given", () => {
+    const out = resolveIntakeCustomFieldValues(
+      { a: "t2", b: "Alice", c: true },
+      schemaOf(
+        q({
+          id: "a",
+          type: "select",
+          entityFieldMapping: "custom_field:tier",
+          options: [{ value: "t2", label: "Tier two" }],
+        }),
+        q({ id: "b", entityFieldMapping: "custom_field:owner" }),
+        q({ id: "c", type: "checkbox", label: "OK?", entityFieldMapping: "custom_field:gone" }),
+      ),
+      [
+        def({ id: 1, field_key: "tier", label: "Tier", field_type: "select", options: ["Low"] }),
+        def({ id: 2, field_key: "owner", label: "Owner" }),
+      ],
+    );
+    expect(out.results).toEqual([
+      {
+        status: "skipped",
+        fieldKey: "tier",
+        label: "Tier",
+        reason: "no_matching_option",
+        answerDisplay: "Tier two",
+      },
+      {
+        status: "value",
+        definitionId: 2,
+        fieldKey: "owner",
+        label: "Owner",
+        value: "Alice",
+        displayValue: "Alice",
+      },
+      {
+        status: "skipped",
+        fieldKey: "gone",
+        label: "OK?",
+        reason: "field_removed",
+        answerDisplay: true,
+      },
+    ]);
+    expect(out.values.map((v) => v.fieldKey)).toEqual(["owner"]);
+    expect(out.skipped.map((v) => v.fieldKey)).toEqual(["tier", "gone"]);
+  });
+});
+
+describe("previewIntakeCustomFields", () => {
+  beforeEach(() => {
+    listDefinitions.mockReset();
+  });
+
+  it("returns rows in question order with skip codes", async () => {
+    listDefinitions.mockResolvedValue([def({ field_key: "owner", label: "Owner" })]);
+    const rows = await previewIntakeCustomFields(
+      "model",
+      { a: ["x", "y"], b: "Alice" },
+      schemaOf(
+        q({
+          id: "a",
+          type: "multiselect",
+          label: "Regions",
+          entityFieldMapping: "custom_field:regions",
+          options: [{ value: "x", label: "Europe" }],
+        }),
+        q({ id: "b", entityFieldMapping: "custom_field:owner" }),
+      ),
+      7,
+    );
+    expect(listDefinitions).toHaveBeenCalledWith(7, "model_inventory");
+    expect(rows).toEqual([
+      { label: "Regions", display: "Europe, y", skipReason: "field_removed" },
+      { label: "Owner", display: "Alice" },
+    ]);
+  });
+
+  it("returns null when the definitions cannot be read", async () => {
+    listDefinitions.mockRejectedValue(new Error("db down"));
+    expect(await previewIntakeCustomFields("model", { q1: "x" }, schemaOf(q({})), 7)).toBeNull();
+  });
+
+  it("returns [] without reading for an unknown entity or no custom mappings", async () => {
+    expect(await previewIntakeCustomFields("nope", { q1: "x" }, schemaOf(q({})), 7)).toEqual([]);
+    expect(
+      await previewIntakeCustomFields(
+        "model",
+        { q1: "x" },
+        schemaOf(q({ entityFieldMapping: "name" })),
+        7,
+      ),
+    ).toEqual([]);
+    expect(listDefinitions).not.toHaveBeenCalled();
   });
 });
 
@@ -210,11 +311,35 @@ describe("validateFormCustomFieldMappings", () => {
     ).toEqual([]);
   });
 
+  it("reports select options the custom field does not have", async () => {
+    listDefinitions.mockResolvedValue([
+      def({ field_key: "tier", field_type: "select", options: ["Low", "High"] }),
+    ]);
+    const question = q({
+      type: "select",
+      label: "Tier",
+      entityFieldMapping: "custom_field:tier",
+      options: [
+        { value: "low", label: "Low" },
+        { value: "medium", label: "Medium" },
+      ],
+    });
+    expect(await validateFormCustomFieldMappings(schemaOf(question), "model", 7)).toEqual([
+      { label: "Tier", fieldKey: "tier", problem: "options_mismatch" },
+    ]);
+    listDefinitions.mockResolvedValue([
+      def({ field_key: "tier", field_type: "select", options: [" LOW", "medium "] }),
+    ]);
+    expect(await validateFormCustomFieldMappings(schemaOf(question), "model", 7)).toEqual([]);
+  });
+
   it("issues no query without custom mappings or for an unknown entity type", async () => {
     expect(
       await validateFormCustomFieldMappings(schemaOf(q({ entityFieldMapping: "x" })), "model", 7),
     ).toEqual([]);
     expect(await validateFormCustomFieldMappings(schemaOf(q({})), "nonsense", 7)).toEqual([]);
+    expect(await validateFormCustomFieldMappings(schemaOf(q({})), undefined, 7)).toEqual([]);
+    expect(await validateFormCustomFieldMappings(undefined, "model", 7)).toEqual([]);
     expect(listDefinitions).not.toHaveBeenCalled();
   });
 });

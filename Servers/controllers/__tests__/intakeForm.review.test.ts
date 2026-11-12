@@ -608,20 +608,20 @@ describe("getSubmissionPreview custom fields (#5262)", () => {
       { id: 1, field_key: "owner", label: "Owner", field_type: "text", options: null },
       { id: 2, field_key: "notes", label: "Notes", field_type: "text", options: null },
     ]);
-    const r = await call(ctrl.getSubmissionPreview, req());
+    const r = await call(ctrl.getSubmissionPreviewV1, req());
     expect(r.status).toBe(200);
     expect(customFields.listCustomFieldDefinitionsQuery).toHaveBeenCalledWith(
       ORG,
       "model_inventory",
     );
     expect(r.body.data.customFields).toEqual([
-      { label: "Old question", displayValue: "", skipped: "This custom field no longer exists" },
+      { label: "Old question", displayValue: "x", skipped: "This custom field no longer exists" },
       { label: "Owner", displayValue: "Alice" },
     ]);
     expect(Object.keys(r.body.data.entityPreview)).not.toContain("custom_field:owner");
   });
 
-  it("degrades to an empty list, with a warning, when the definitions can't be read", async () => {
+  it("degrades to null, with a warning, when the definitions can't be read", async () => {
     intake.getSubmissionByIdQuery.mockResolvedValue(
       submission({ entityType: "model", data: { owner: "Alice" } }),
     );
@@ -643,17 +643,142 @@ describe("getSubmissionPreview custom fields (#5262)", () => {
     });
     runs.getLatestRunForSubmissionQuery.mockResolvedValue(null);
     customFields.listCustomFieldDefinitionsQuery.mockRejectedValueOnce(new Error("db down"));
-    const r = await call(ctrl.getSubmissionPreview, req());
+    const r = await call(ctrl.getSubmissionPreviewV1, req());
     expect(r.status).toBe(200);
-    expect(r.body.data.customFields).toEqual([]);
+    expect(r.body.data.customFields).toBeNull();
     expect(require("../../utils/logger/fileLogger").default.warn).toHaveBeenCalledWith(
       expect.stringContaining("db down"),
     );
   });
 
   it("is empty, with no definitions read, for a form without custom mappings", async () => {
-    const r = await call(ctrl.getSubmissionPreview, req());
+    const r = await call(ctrl.getSubmissionPreviewV1, req());
     expect(r.body.data.customFields).toEqual([]);
+    expect(customFields.listCustomFieldDefinitionsQuery).not.toHaveBeenCalled();
+  });
+
+  it("shows a skipped answer as given: option labels and a translated yes or no", async () => {
+    intake.getSubmissionByIdQuery.mockResolvedValue(
+      submission({
+        entityType: "ai_app",
+        data: { tier: "t2", regions: ["eu", "us"], ok: true },
+      }),
+    );
+    intake.getIntakeFormByIdQuery.mockResolvedValue({
+      id: 1,
+      name: "F",
+      entityType: "ai_app",
+      schema: {
+        fields: [
+          {
+            id: "tier",
+            type: "select",
+            label: "Tier",
+            options: [{ value: "t2", label: "Tier two" }],
+            entityFieldMapping: "custom_field:tier",
+          },
+          {
+            id: "regions",
+            type: "multiselect",
+            label: "Regions",
+            options: [
+              { value: "eu", label: "Europe" },
+              { value: "us", label: "United States" },
+            ],
+            entityFieldMapping: "custom_field:regions",
+          },
+          { id: "ok", type: "checkbox", label: "OK?", entityFieldMapping: "custom_field:ok" },
+        ],
+      },
+      riskTierSystem: "eu_ai_act",
+    });
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue(null);
+    customFields.listCustomFieldDefinitionsQuery.mockResolvedValue([
+      { id: 1, field_key: "tier", label: "Tier", field_type: "select", options: ["Low"] },
+      { id: 2, field_key: "regions", label: "Regions", field_type: "multiselect", options: ["X"] },
+    ]);
+    const t = jest.fn((k: string) => (k === "Yes" ? "Ja" : k === "No" ? "Nein" : k));
+    const r = await call(ctrl.getSubmissionPreviewV1, req({ t }));
+    expect(r.body.data.customFields).toEqual([
+      {
+        label: "Tier",
+        displayValue: "Tier two",
+        skipped: "The answer matches no option of this custom field",
+      },
+      {
+        label: "Regions",
+        displayValue: "Europe, United States",
+        skipped: "The answer matches no option of this custom field",
+      },
+      { label: "OK?", displayValue: "Ja", skipped: "This custom field no longer exists" },
+    ]);
+  });
+
+  it("translates a boolean value it would write", async () => {
+    intake.getSubmissionByIdQuery.mockResolvedValue(
+      submission({ entityType: "model", data: { ok: false } }),
+    );
+    intake.getIntakeFormByIdQuery.mockResolvedValue({
+      id: 1,
+      name: "F",
+      entityType: "model",
+      schema: {
+        fields: [
+          { id: "ok", type: "checkbox", label: "OK?", entityFieldMapping: "custom_field:ok" },
+        ],
+      },
+      riskTierSystem: "eu_ai_act",
+    });
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue(null);
+    customFields.listCustomFieldDefinitionsQuery.mockResolvedValue([
+      { id: 1, field_key: "ok", label: "Approved", field_type: "boolean", options: null },
+    ]);
+    const t = jest.fn((k: string) => (k === "No" ? "Nein" : k));
+    const r = await call(ctrl.getSubmissionPreviewV1, req({ t }));
+    expect(r.body.data.customFields).toEqual([{ label: "Approved", displayValue: "Nein" }]);
+  });
+
+  it("reads no definitions and returns no custom fields once the submission is decided", async () => {
+    intake.getSubmissionByIdQuery.mockResolvedValue(
+      submission({ status: "approved", entityType: "model", data: { owner: "Alice" } }),
+    );
+    intake.getIntakeFormByIdQuery.mockResolvedValue({
+      id: 1,
+      name: "F",
+      entityType: "model",
+      schema: {
+        fields: [
+          { id: "owner", type: "text", label: "Owner", entityFieldMapping: "custom_field:owner" },
+        ],
+      },
+      riskTierSystem: "eu_ai_act",
+    });
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue(null);
+    const r = await call(ctrl.getSubmissionPreviewV1, req());
+    expect(r.status).toBe(200);
+    expect(r.body.data).not.toHaveProperty("customFields");
+    expect(customFields.listCustomFieldDefinitionsQuery).not.toHaveBeenCalled();
+  });
+
+  it("the legacy route keeps its old shape and reads no definitions", async () => {
+    intake.getSubmissionByIdQuery.mockResolvedValue(
+      submission({ entityType: "model", data: { owner: "Alice" } }),
+    );
+    intake.getIntakeFormByIdQuery.mockResolvedValue({
+      id: 1,
+      name: "F",
+      entityType: "model",
+      schema: {
+        fields: [
+          { id: "owner", type: "text", label: "Owner", entityFieldMapping: "custom_field:owner" },
+        ],
+      },
+      riskTierSystem: "eu_ai_act",
+    });
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue(null);
+    const r = await call(ctrl.getSubmissionPreview, req());
+    expect(r.status).toBe(200);
+    expect(r.body.data).not.toHaveProperty("customFields");
     expect(customFields.listCustomFieldDefinitionsQuery).not.toHaveBeenCalled();
   });
 });

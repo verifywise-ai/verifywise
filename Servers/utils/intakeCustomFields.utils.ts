@@ -1,12 +1,24 @@
-// Resolves intake answers into custom field values and validates a form's
-// custom-field mappings. The resolver is pure: callers load the definitions.
+// Resolves intake answers into custom field values (#5262), writes them on
+// approval, previews them for review and validates a form's custom-field
+// mappings. The resolver is pure: callers load the definitions.
 import { Transaction } from "sequelize";
+import { sequelize } from "../database/db";
+import {
+  ForbiddenException,
+  NotFoundException,
+  ValidationException,
+} from "../domain.layer/exceptions/custom.exception";
 import { IIntakeFormSchema } from "../domain.layer/interfaces/i.intakeForm";
 import {
   INTAKE_CUSTOM_FIELD_ENTITY,
   customFieldKeyOf,
+  customFieldOptionTexts,
   isCompatibleCustomFieldType,
   isCustomFieldMapping,
+  isEmptyAnswer,
+  matchCustomFieldOption,
+  unmatchedCustomFieldOptions,
+  type CustomFieldOptionText,
 } from "../services/intakeFormLogic";
 import {
   CustomFieldEntityType,
@@ -14,15 +26,19 @@ import {
   ISO_DATE_PATTERN,
   MAX_CUSTOM_TEXT_LENGTH,
   listCustomFieldDefinitionsQuery,
+  setCustomFieldValueQuery,
 } from "./customField.utils";
-import type { IScoredOption } from "./customFieldScoredSelect.utils";
+import logger from "./logger/fileLogger";
+
+/** What a preview shows for a value: text as is, or a yes or no the caller translates. */
+export type CustomFieldDisplay = string | boolean;
 
 export interface ResolvedCustomFieldValue {
   definitionId: number;
   fieldKey: string;
   label: string;
   value: unknown;
-  displayValue: string;
+  displayValue: CustomFieldDisplay;
 }
 
 /** `reason` is a stable code: field_removed, type_changed, no_matching_option, invalid_value. */
@@ -32,38 +48,54 @@ export interface CustomFieldSkip {
   reason: string;
 }
 
+/** One mapped, answered question's outcome, in question order. */
+export type CustomFieldResult =
+  | ({ status: "value" } & ResolvedCustomFieldValue)
+  | ({ status: "skipped"; answerDisplay: CustomFieldDisplay } & CustomFieldSkip);
+
 type QuestionOption = { value: string; label: string };
-type Candidate = { stored: string; label: string };
-type Outcome = { ok: true; value: unknown; display: string } | { ok: false; reason: string };
+type Outcome =
+  { ok: true; value: unknown; display: CustomFieldDisplay } | { ok: false; reason: string };
 
-const norm = (text: string): string => text.trim().toLowerCase();
-const isBlank = (answer: unknown): boolean =>
-  answer === undefined ||
-  answer === null ||
-  (typeof answer === "string" && answer.trim() === "") ||
-  (Array.isArray(answer) && answer.length === 0);
+/** The custom field entity type for an intake entity type, or null for an unknown one. */
+export function customFieldEntityOf(intakeEntityType: string): CustomFieldEntityType | null {
+  return Object.prototype.hasOwnProperty.call(INTAKE_CUSTOM_FIELD_ENTITY, intakeEntityType)
+    ? (INTAKE_CUSTOM_FIELD_ENTITY[
+        intakeEntityType as keyof typeof INTAKE_CUSTOM_FIELD_ENTITY
+      ] as CustomFieldEntityType)
+    : null;
+}
 
-const candidatesOf = (def: ICustomFieldDefinition): Candidate[] =>
-  (def.options ?? []).map((option) =>
-    typeof option === "string"
-      ? { stored: option, label: option }
-      : { stored: (option as IScoredOption).id, label: (option as IScoredOption).label },
+export function hasCustomFieldMappings(schema: IIntakeFormSchema | undefined | null): boolean {
+  return (
+    Array.isArray(schema?.fields) &&
+    schema!.fields.some((f) => isCustomFieldMapping(f.entityFieldMapping))
   );
+}
 
-/** Matches one answer against the custom field's options by stored value or label. */
+/** Matches one answer, and the label of the question option it names, against the field's options. */
 const matchOption = (
   raw: unknown,
-  candidates: Candidate[],
+  candidates: CustomFieldOptionText[],
   questionOptions: QuestionOption[] = [],
-): Candidate | undefined => {
+): CustomFieldOptionText | undefined => {
   if (typeof raw !== "string") return undefined;
-  const value = raw;
-  const texts = [value, questionOptions.find((o) => o.value === value)?.label].filter(
-    (t): t is string => typeof t === "string",
+  return matchCustomFieldOption(
+    [raw, questionOptions.find((o) => o.value === raw)?.label],
+    candidates,
   );
-  return candidates.find((c) =>
-    texts.some((t) => norm(t) === norm(c.stored) || norm(t) === norm(c.label)),
-  );
+};
+
+/** The answer as the submitter gave it: option labels for choices, yes or no for a checkbox. */
+const answerDisplayOf = (
+  answer: unknown,
+  questionOptions: QuestionOption[] = [],
+): CustomFieldDisplay => {
+  const labelOf = (raw: unknown): string =>
+    questionOptions.find((o) => o.value === raw)?.label ?? String(raw);
+  if (typeof answer === "boolean") return answer;
+  if (Array.isArray(answer)) return answer.map(labelOf).join(", ");
+  return labelOf(answer);
 };
 
 const resolveOne = (
@@ -80,19 +112,20 @@ const resolveOne = (
     }
     case "boolean": {
       if (typeof answer !== "boolean") return { ok: false, reason: "invalid_value" };
-      return { ok: true, value: answer, display: answer ? "Yes" : "No" };
+      return { ok: true, value: answer, display: answer };
     }
     case "select":
     case "scored_select": {
-      const hit = matchOption(answer, candidatesOf(def), questionOptions);
+      const hit = matchOption(answer, customFieldOptionTexts(def.options), questionOptions);
       return hit
         ? { ok: true, value: hit.stored, display: hit.label }
         : { ok: false, reason: "no_matching_option" };
     }
     case "multiselect": {
-      const picked: Candidate[] = [];
+      const candidates = customFieldOptionTexts(def.options);
+      const picked: CustomFieldOptionText[] = [];
       for (const raw of Array.isArray(answer) ? answer : [answer]) {
-        const hit = matchOption(raw, candidatesOf(def), questionOptions);
+        const hit = matchOption(raw, candidates, questionOptions);
         if (!hit) return { ok: false, reason: "no_matching_option" };
         if (!picked.some((p) => p.stored === hit.stored)) picked.push(hit);
       }
@@ -121,32 +154,49 @@ const resolveOne = (
   }
 };
 
+/**
+ * The custom field value each mapped, answered question resolves to, or why
+ * it is skipped. `results` keeps question order; `values` and `skipped` are
+ * its two halves.
+ */
 export function resolveIntakeCustomFieldValues(
   submissionData: Record<string, unknown>,
   schema: IIntakeFormSchema,
   definitions: ICustomFieldDefinition[],
-): { values: ResolvedCustomFieldValue[]; skipped: CustomFieldSkip[] } {
-  const values: ResolvedCustomFieldValue[] = [];
-  const skipped: CustomFieldSkip[] = [];
+): {
+  values: ResolvedCustomFieldValue[];
+  skipped: CustomFieldSkip[];
+  results: CustomFieldResult[];
+} {
+  const results: CustomFieldResult[] = [];
   for (const field of schema.fields) {
     if (!isCustomFieldMapping(field.entityFieldMapping)) continue;
     const answer = submissionData[field.id];
-    if (isBlank(answer)) continue;
+    if (isEmptyAnswer(answer)) continue;
     const fieldKey = customFieldKeyOf(field.entityFieldMapping);
+    const skip = (label: string, reason: string) =>
+      results.push({
+        status: "skipped",
+        fieldKey,
+        label,
+        reason,
+        answerDisplay: answerDisplayOf(answer, field.options),
+      });
     const def = definitions.find((d) => d.field_key === fieldKey);
     if (!def) {
-      skipped.push({ fieldKey, label: field.label, reason: "field_removed" });
+      skip(field.label, "field_removed");
       continue;
     }
     if (!isCompatibleCustomFieldType(field.type, def.field_type)) {
-      skipped.push({ fieldKey, label: def.label, reason: "type_changed" });
+      skip(def.label, "type_changed");
       continue;
     }
     const outcome = resolveOne(answer, field.options, def);
     if (outcome.ok === false) {
-      skipped.push({ fieldKey, label: def.label, reason: outcome.reason });
+      skip(def.label, outcome.reason);
     } else {
-      values.push({
+      results.push({
+        status: "value",
         definitionId: def.id,
         fieldKey,
         label: def.label,
@@ -155,41 +205,137 @@ export function resolveIntakeCustomFieldValues(
       });
     }
   }
-  return { values, skipped };
+  const values: ResolvedCustomFieldValue[] = [];
+  const skipped: CustomFieldSkip[] = [];
+  for (const result of results) {
+    if (result.status === "value") {
+      const { status: _status, ...value } = result;
+      values.push(value);
+    } else {
+      skipped.push({ fieldKey: result.fieldKey, label: result.label, reason: result.reason });
+    }
+  }
+  return { values, skipped, results };
+}
+
+/**
+ * Writes the custom field values an approved submission's answers resolve to,
+ * each in its own savepoint. A value the write refuses (the field was removed,
+ * its options changed, the entity is not found) is skipped and reported; any
+ * other error fails the approval.
+ */
+export async function writeIntakeCustomFields(
+  intakeEntityType: string,
+  answers: Record<string, unknown>,
+  schema: IIntakeFormSchema,
+  entityId: number,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<CustomFieldSkip[]> {
+  const target = customFieldEntityOf(intakeEntityType);
+  if (!target || !hasCustomFieldMappings(schema)) return [];
+  const definitions = await listCustomFieldDefinitionsQuery(organizationId, target, transaction);
+  const { values, skipped } = resolveIntakeCustomFieldValues(answers, schema, definitions);
+  const skips = [...skipped];
+  for (const value of values) {
+    const savepoint = await sequelize.transaction({ transaction });
+    try {
+      await setCustomFieldValueQuery(
+        { definition_id: value.definitionId, entity_id: entityId, value: value.value },
+        organizationId,
+        savepoint,
+      );
+      await savepoint.commit();
+    } catch (error) {
+      await savepoint.rollback();
+      if (
+        error instanceof NotFoundException &&
+        error.metadata?.resource === "custom_field_definition"
+      ) {
+        skips.push({ fieldKey: value.fieldKey, label: value.label, reason: "field_removed" });
+      } else if (
+        error instanceof NotFoundException ||
+        error instanceof ValidationException ||
+        error instanceof ForbiddenException
+      ) {
+        skips.push({ fieldKey: value.fieldKey, label: value.label, reason: "invalid_value" });
+      } else {
+        throw error;
+      }
+    }
+  }
+  return skips;
+}
+
+/** A preview row: the value approval would save, or the answer as given and why it is skipped. */
+export interface CustomFieldPreviewRow {
+  label: string;
+  display: CustomFieldDisplay;
+  /** Skip reason code, as in CustomFieldSkip. */
+  skipReason?: string;
+}
+
+/**
+ * The custom field values an approval would write, in question order, skipped
+ * ones marked. Null when the definitions cannot be read: the preview is
+ * advisory and must not block review.
+ */
+export async function previewIntakeCustomFields(
+  intakeEntityType: string,
+  answers: Record<string, unknown>,
+  schema: IIntakeFormSchema,
+  organizationId: number,
+): Promise<CustomFieldPreviewRow[] | null> {
+  const target = customFieldEntityOf(intakeEntityType);
+  if (!target || !hasCustomFieldMappings(schema)) return [];
+  let definitions: ICustomFieldDefinition[];
+  try {
+    definitions = await listCustomFieldDefinitionsQuery(organizationId, target);
+  } catch (error) {
+    logger.warn(`Custom field preview unavailable: ${(error as Error).message}`);
+    return null;
+  }
+  return resolveIntakeCustomFieldValues(answers, schema, definitions).results.map((result) =>
+    result.status === "value"
+      ? { label: result.label, display: result.displayValue }
+      : { label: result.label, display: result.answerDisplay, skipReason: result.reason },
+  );
 }
 
 /** A question whose custom-field mapping can't be published; the caller words it. */
 export interface CustomFieldMappingProblem {
   label: string;
   fieldKey: string;
-  problem: "field_removed" | "type_changed";
+  problem: "field_removed" | "type_changed" | "options_mismatch";
 }
 
 /** Checks each custom-field mapping against the org's current definitions. */
 export async function validateFormCustomFieldMappings(
-  schema: IIntakeFormSchema,
-  intakeEntityType: string,
+  schema: IIntakeFormSchema | undefined | null,
+  intakeEntityType: unknown,
   organizationId: number,
   transaction?: Transaction,
 ): Promise<CustomFieldMappingProblem[]> {
-  const mapped = schema.fields.filter((f) => isCustomFieldMapping(f.entityFieldMapping));
-  if (mapped.length === 0) return [];
-  if (!Object.prototype.hasOwnProperty.call(INTAKE_CUSTOM_FIELD_ENTITY, intakeEntityType))
-    return [];
-  const entityType =
-    INTAKE_CUSTOM_FIELD_ENTITY[intakeEntityType as keyof typeof INTAKE_CUSTOM_FIELD_ENTITY];
+  if (!hasCustomFieldMappings(schema) || typeof intakeEntityType !== "string") return [];
+  const entityType = customFieldEntityOf(intakeEntityType);
+  if (!entityType) return [];
   const definitions = await listCustomFieldDefinitionsQuery(
     organizationId,
-    entityType as CustomFieldEntityType,
+    entityType,
     transaction,
   );
   const problems: CustomFieldMappingProblem[] = [];
-  for (const field of mapped) {
-    const fieldKey = customFieldKeyOf(field.entityFieldMapping as string);
+  for (const field of schema!.fields) {
+    if (!isCustomFieldMapping(field.entityFieldMapping)) continue;
+    const fieldKey = customFieldKeyOf(field.entityFieldMapping);
     const def = definitions.find((d) => d.field_key === fieldKey);
     if (!def) problems.push({ label: field.label, fieldKey, problem: "field_removed" });
     else if (!isCompatibleCustomFieldType(field.type, def.field_type))
       problems.push({ label: field.label, fieldKey, problem: "type_changed" });
+    else if (
+      unmatchedCustomFieldOptions(field.type, field.options, def.field_type, def.options).length > 0
+    )
+      problems.push({ label: field.label, fieldKey, problem: "options_mismatch" });
   }
   return problems;
 }
