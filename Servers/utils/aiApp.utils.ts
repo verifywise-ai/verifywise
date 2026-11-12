@@ -57,6 +57,8 @@ interface GetAllAiAppsOptions {
   withLifecycle?: boolean;
   /** v1 only (#5193): case-insensitive match on name or description. */
   search?: string;
+  /** v1 only (#5262): add each app's custom field values as `custom_fields`. */
+  withCustomFields?: boolean;
   vendorId?: number;
   page?: number;
   limit?: number;
@@ -192,19 +194,23 @@ export async function getAllAiAppsQuery(
     { replacements },
   );
 
-  const customFieldsByApp = await fetchCustomFieldsForEntities(
-    "ai_app",
-    (rows as any[]).map((row) => row.id as number),
-    organizationId,
-  );
+  const customFieldsByApp = options.withCustomFields
+    ? await fetchCustomFieldsForEntities(
+        "ai_app",
+        (rows as any[]).map((row) => row.id as number),
+        organizationId,
+      )
+    : null;
 
   return {
-    ai_apps: (rows as any[]).map((row) => ({
-      ...(options.withLifecycle
+    ai_apps: (rows as any[]).map((row) => {
+      const app = options.withLifecycle
         ? { ...parseAiAppRow(row), ...lifecycleFields(row) }
-        : parseAiAppRow(row)),
-      custom_fields: customFieldsByApp.get(row.id) ?? [],
-    })),
+        : parseAiAppRow(row);
+      return customFieldsByApp
+        ? { ...app, custom_fields: customFieldsByApp.get(row.id) ?? [] }
+        : app;
+    }),
     total: parseInt((countResult as any[])[0].total, 10),
   };
 }
