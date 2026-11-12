@@ -481,6 +481,46 @@ export const getTaskByIdQuery = async (
   return null;
 };
 
+// How a user relates to a task: creator, assignee (task_assignees) or admin.
+// Shared by the task update rules and the custom field write gate.
+const getTaskInvolvement = async (
+  task: TasksModel,
+  userId: number,
+  role: string,
+  organizationId: number,
+): Promise<{ isCreator: boolean; isAdmin: boolean; isAssignee: boolean }> => {
+  const assigneeCheck = await sequelize.query(
+    `SELECT 1 FROM task_assignees WHERE organization_id = :organizationId AND task_id = :taskId AND user_id = :userId`,
+    {
+      replacements: { organizationId, taskId: task.id, userId },
+      type: QueryTypes.SELECT,
+    },
+  );
+  return {
+    isCreator: task.creator_id === userId,
+    isAdmin: role === "Admin" || role === "SuperAdmin",
+    isAssignee: assigneeCheck.length > 0,
+  };
+};
+
+// True when the user could update the task through PUT /tasks/:id: the task is
+// visible to them and they are its creator, an assignee or an admin.
+export const canUserEditTaskQuery = async (
+  taskId: number,
+  { userId, role }: { userId: number; role: string },
+  organizationId: number,
+): Promise<boolean> => {
+  const task = await getTaskByIdQuery(taskId, { userId, role }, organizationId);
+  if (!task) return false;
+  const { isCreator, isAdmin, isAssignee } = await getTaskInvolvement(
+    task,
+    userId,
+    role,
+    organizationId,
+  );
+  return isCreator || isAdmin || isAssignee;
+};
+
 // Update task with permission checks
 export const updateTaskByIdQuery = async (
   {
@@ -507,18 +547,12 @@ export const updateTaskByIdQuery = async (
   }
 
   // Permission checks for specific fields
-  const isCreator = existingTask.creator_id === userId;
-  const isAdmin = role === "Admin" || role === "SuperAdmin";
-
-  // Check if user is assignee using task_assignees table
-  const assigneeCheck = await sequelize.query(
-    `SELECT 1 FROM task_assignees WHERE organization_id = :organizationId AND task_id = :taskId AND user_id = :userId`,
-    {
-      replacements: { organizationId, taskId: id, userId },
-      type: QueryTypes.SELECT,
-    },
+  const { isCreator, isAdmin, isAssignee } = await getTaskInvolvement(
+    existingTask,
+    userId,
+    role,
+    organizationId,
   );
-  const isAssignee = assigneeCheck.length > 0;
 
   // Restrict who can update certain fields - only admin and creator can edit due_date and priority
   if ((task.due_date !== undefined || task.priority !== undefined) && !isAdmin && !isCreator) {

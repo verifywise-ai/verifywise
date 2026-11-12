@@ -8,6 +8,7 @@ const mockSet = jest.fn(async (..._a: any[]): Promise<any> => ({
 }));
 const mockDelete = jest.fn(async (..._a: any[]): Promise<any> => true);
 const mockHasPermission = jest.fn(async (..._a: any[]): Promise<boolean> => true);
+const mockCanEditTask = jest.fn(async (..._a: any[]): Promise<boolean> => false);
 const mockTx = { commit: jest.fn(async () => undefined), rollback: jest.fn(async () => undefined) };
 
 jest.mock("../../utils/customField.utils", () => ({
@@ -15,6 +16,9 @@ jest.mock("../../utils/customField.utils", () => ({
   getCustomFieldDefinitionByIdQuery: (...a: any[]) => mockGetDef(...a),
   setCustomFieldValueQuery: (...a: any[]) => mockSet(...a),
   deleteCustomFieldValueQuery: (...a: any[]) => mockDelete(...a),
+}));
+jest.mock("../../utils/task.utils", () => ({
+  canUserEditTaskQuery: (...a: any[]) => mockCanEditTask(...a),
 }));
 jest.mock("../../utils/rolePermissions.utils", () => ({
   requestHasPermission: (...a: any[]) => mockHasPermission(...a),
@@ -31,6 +35,8 @@ jest.mock("../../utils/i18n.utils", () => ({
   translateError: (_r: unknown, e: Error) => e.message,
 }));
 
+import { logFailure } from "../../utils/logger/logHelper";
+import { ValidationException } from "../../domain.layer/exceptions/custom.exception";
 import { CUSTOM_FIELD_EDIT_PERMISSION, ENTITY_TYPE_TO_TABLE } from "../../utils/customField.utils";
 import { deleteCustomFieldValue, setCustomFieldValue } from "../customField.ctrl";
 
@@ -60,6 +66,7 @@ const delReq = () =>
 beforeEach(() => {
   jest.clearAllMocks();
   mockHasPermission.mockResolvedValue(true);
+  mockCanEditTask.mockResolvedValue(false);
 });
 
 describe("CUSTOM_FIELD_EDIT_PERMISSION", () => {
@@ -127,5 +134,99 @@ describe("deleteCustomFieldValue permission", () => {
     expect(r.status).toHaveBeenCalledWith(404);
     expect(mockHasPermission).not.toHaveBeenCalled();
     expect(mockDelete).not.toHaveBeenCalled();
+  });
+});
+
+describe("denial logging and malformed ids", () => {
+  it("logs a 403 denial", async () => {
+    mockGetDef.mockResolvedValueOnce({ id: 1, entity_type: "ai_app" });
+    mockHasPermission.mockResolvedValueOnce(false);
+    await setCustomFieldValue(putReq(), res());
+    expect(logFailure).toHaveBeenCalledWith(
+      expect.objectContaining({
+        eventType: "Update",
+        functionName: "setCustomFieldValue",
+        description: expect.stringContaining("Denied custom field value write"),
+      }),
+    );
+  });
+
+  it("answers 400 for a malformed definition id without logging a permission denial", async () => {
+    mockGetDef.mockRejectedValueOnce(
+      new ValidationException("id must be a positive integer", "id", "abc"),
+    );
+    const r = res();
+    await deleteCustomFieldValue(
+      { ...delReq(), params: { definitionId: "abc", entityId: "5" } },
+      r,
+    );
+    expect(r.status).toHaveBeenCalledWith(400);
+    expect(logFailure).not.toHaveBeenCalledWith(
+      expect.objectContaining({
+        description: expect.stringContaining("Denied custom field value write"),
+      }),
+    );
+    expect(mockDelete).not.toHaveBeenCalled();
+  });
+});
+
+describe("task custom fields follow the task edit rule", () => {
+  const taskReq = () => ({ ...putReq(), role: "Reviewer" });
+
+  beforeEach(() => {
+    mockGetDef.mockResolvedValue({ id: 1, entity_type: "task" });
+  });
+
+  it("allows a Reviewer who is the creator or an assignee", async () => {
+    mockHasPermission.mockResolvedValue(false);
+    mockCanEditTask.mockResolvedValue(true);
+    const r = res();
+    await setCustomFieldValue(taskReq(), r);
+    expect(mockCanEditTask).toHaveBeenCalledWith(5, { userId: 3, role: "Reviewer" }, 7);
+    expect(mockSet).toHaveBeenCalled();
+    expect(r.status).toHaveBeenCalledWith(200);
+  });
+
+  it("allows delete for the creator or an assignee", async () => {
+    mockHasPermission.mockResolvedValue(false);
+    mockCanEditTask.mockResolvedValue(true);
+    const r = res();
+    await deleteCustomFieldValue({ ...delReq(), role: "Reviewer" }, r);
+    expect(mockDelete).toHaveBeenCalled();
+    expect(r.status).toHaveBeenCalledWith(202);
+  });
+
+  it("returns 403 for a Reviewer who is not involved in the task", async () => {
+    mockHasPermission.mockResolvedValue(false);
+    const r = res();
+    await setCustomFieldValue(taskReq(), r);
+    expect(r.status).toHaveBeenCalledWith(403);
+    expect(mockSet).not.toHaveBeenCalled();
+  });
+
+  it("returns 403 for an Auditor who is not involved in the task", async () => {
+    mockHasPermission.mockResolvedValue(false);
+    const r = res();
+    await setCustomFieldValue({ ...taskReq(), role: "Auditor" }, r);
+    expect(r.status).toHaveBeenCalledWith(403);
+    expect(mockSet).not.toHaveBeenCalled();
+  });
+
+  it("allows an Editor with task.edit without looking at the assignment", async () => {
+    const r = res();
+    await setCustomFieldValue({ ...taskReq(), role: "Editor" }, r);
+    expect(mockHasPermission).toHaveBeenCalledWith(expect.anything(), "task.edit");
+    expect(mockCanEditTask).not.toHaveBeenCalled();
+    expect(r.status).toHaveBeenCalledWith(200);
+  });
+
+  it("does not apply the task rule to other entity types", async () => {
+    mockGetDef.mockResolvedValue({ id: 1, entity_type: "vendor" });
+    mockHasPermission.mockResolvedValue(false);
+    mockCanEditTask.mockResolvedValue(true);
+    const r = res();
+    await setCustomFieldValue(taskReq(), r);
+    expect(r.status).toHaveBeenCalledWith(403);
+    expect(mockCanEditTask).not.toHaveBeenCalled();
   });
 });
