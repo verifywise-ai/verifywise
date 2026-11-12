@@ -36,6 +36,7 @@ const ENTITY_PLURALS: Record<CustomFieldEntityType, string> = {
   model_inventory: "Models",
   task: "Tasks",
   model_risk: "Model risks",
+  ai_app: "AI apps",
 };
 
 const describeField = (def: ICustomFieldDefinition): string =>

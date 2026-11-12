@@ -20,6 +20,7 @@ import {
   ENTITY_FIELD_MAPPINGS,
   EntityFieldMapping,
   RISK_DIMENSION_OPTIONS,
+  customFieldProblemFor,
 } from "./types";
 import { VisibilityEditor, visibilitySummary } from "./VisibilityEditor";
 import { IntakeEntityType } from "../../../domain/intake/enums";
@@ -29,10 +30,17 @@ import {
   MAX_DECIMALS,
   REQUIRED_ENTITY_FIELDS,
   RISK_TAGGABLE_TYPES,
+  customFieldKeyOf,
+  customFieldMapping,
+  customFieldOptionTexts,
+  isCompatibleCustomFieldType,
+  isCustomFieldMapping,
+  matchCustomFieldOption,
   readersOf,
   sortFields,
   type SchemaLogicError,
 } from "../../../application/utils/intakeFormLogic";
+import type { ICustomFieldDefinition } from "../../../domain/interfaces/i.customField";
 import { FormulaEditor } from "./FormulaEditor";
 import { EditorSection } from "./EditorSection";
 
@@ -58,6 +66,53 @@ const FIELD_TYPE_LABELS: Record<FieldType, string> = {
   checkbox: "Checkbox",
   calculated: "Calculated",
 };
+
+const CUSTOM_FIELD_PROBLEM_TEXT = {
+  missing: "This custom field no longer exists",
+  incompatible: "This custom field's type does not match this question",
+  options: "Some options of this question are not options of this custom field",
+} as const;
+
+/**
+ * A custom select's options as question options, labelled as the custom field
+ * labels them. A question option that already matches one (by value or label,
+ * trimmed and case-insensitive) keeps its value, so stored answers and rules
+ * that use it still hold; a new one takes the label as its value, which is
+ * what approval matches answers against.
+ */
+export function questionOptionsFrom(
+  definition: Pick<ICustomFieldDefinition, "options">,
+  existing: FieldOption[] = [],
+): FieldOption[] {
+  const kept = new Set<FieldOption>();
+  const values = new Set<string>();
+  const options: FieldOption[] = [];
+  for (const custom of customFieldOptionTexts(definition.options)) {
+    const match = existing.find(
+      (option) =>
+        !kept.has(option) && matchCustomFieldOption([option.value, option.label], [custom]),
+    );
+    if (match) kept.add(match);
+    const value = match && !values.has(match.value) ? match.value : custom.label;
+    if (values.has(value)) continue;
+    values.add(value);
+    options.push({ value, label: custom.label });
+  }
+  return options;
+}
+
+/** The default answer with any option that no longer exists taken out. */
+export function defaultValueWithin(
+  defaultValue: FormField["defaultValue"],
+  options: FieldOption[],
+): FormField["defaultValue"] {
+  const values = new Set(options.map((option) => option.value));
+  if (Array.isArray(defaultValue)) return defaultValue.filter((value) => values.has(value));
+  if (typeof defaultValue === "string" && defaultValue !== "" && !values.has(defaultValue)) {
+    return undefined;
+  }
+  return defaultValue;
+}
 
 interface OptionsEditorProps {
   options: FieldOption[];
@@ -190,6 +245,8 @@ interface FieldEditorProps {
   onClose: () => void;
   /** Problems the schema checks found on this field. */
   logicErrors?: SchemaLogicError[];
+  /** The entity's custom field definitions; undefined while they load. */
+  customFieldDefinitions?: ICustomFieldDefinition[];
 }
 
 export function FieldEditor({
@@ -202,6 +259,7 @@ export function FieldEditor({
   onEdit,
   onClose,
   logicErrors = [],
+  customFieldDefinitions,
 }: FieldEditorProps) {
   const theme = useTheme();
   const [localField, setLocalField] = useState<FormField>(field);
@@ -365,7 +423,7 @@ export function FieldEditor({
     (candidate) => candidate.type === "number" || candidate.type === "calculated",
   );
 
-  const mappingItems = [
+  const standardMappingItems = [
     { _id: "", name: "None" },
     ...compatibleMappings
       .filter(
@@ -375,6 +433,53 @@ export function FieldEditor({
       )
       .map((m: EntityFieldMapping) => ({ _id: m.field, name: m.label })),
   ];
+
+  // Custom fields this question can fill, minus those other questions fill.
+  // The question's own mapping always shows, even when it is broken, so the
+  // picker never holds a value it cannot display.
+  const currentMapping = localField.entityFieldMapping;
+  const customMappingItems = (customFieldDefinitions ?? [])
+    .filter((definition) => {
+      const mapping = customFieldMapping(definition.field_key);
+      if (mapping === currentMapping) return true;
+      return (
+        isCompatibleCustomFieldType(localField.type, definition.field_type) &&
+        !usedEntityMappings.includes(mapping)
+      );
+    })
+    .map((definition) => ({
+      _id: customFieldMapping(definition.field_key),
+      name: definition.label,
+    }));
+  if (
+    isCustomFieldMapping(currentMapping) &&
+    !customMappingItems.some((item) => item._id === currentMapping)
+  ) {
+    customMappingItems.push({ _id: currentMapping, name: customFieldKeyOf(currentMapping) });
+  }
+  const mappingItems = [...standardMappingItems, ...customMappingItems];
+  const mappingProblem = customFieldProblemFor(localField, customFieldDefinitions);
+
+  const handleMappingChange = (mapping: string) => {
+    const patch: Partial<FormField> = { entityFieldMapping: mapping };
+    // A select question takes over the custom field's options, so every
+    // answer is one approval can store.
+    if (isCustomFieldMapping(mapping) && showOptions) {
+      const definition = customFieldDefinitions?.find(
+        (d) => d.field_key === customFieldKeyOf(mapping),
+      );
+      const options = definition ? questionOptionsFrom(definition, localField.options ?? []) : [];
+      if (options.length > 0) {
+        patch.options = options;
+        if (localField.defaultValue !== undefined) {
+          const defaultValue = defaultValueWithin(localField.defaultValue, options);
+          if (defaultValue !== localField.defaultValue) patch.defaultValue = defaultValue;
+        }
+      }
+    }
+    setLocalField((current) => ({ ...current, ...patch }));
+    queueEdit(patch);
+  };
 
   return (
     <Box
@@ -710,10 +815,15 @@ export function FieldEditor({
                   id="entity-mapping"
                   label="Map to entity field"
                   value={localField.entityFieldMapping || ""}
-                  onChange={(e) => handleChange("entityFieldMapping", String(e.target.value))}
+                  onChange={(e) => handleMappingChange(String(e.target.value))}
                   items={mappingItems}
+                  dividerAfterIndex={
+                    customMappingItems.length > 0 ? standardMappingItems.length : undefined
+                  }
+                  dividerLabel="Custom fields"
+                  error={mappingProblem ? CUSTOM_FIELD_PROBLEM_TEXT[mappingProblem] : undefined}
                 />
-                {compatibleMappings.length === 0 && (
+                {mappingItems.length <= 1 && (
                   <Typography
                     sx={{ color: theme.palette.text.accent, fontSize: "11px", mt: "4px" }}
                   >

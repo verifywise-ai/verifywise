@@ -6,6 +6,7 @@ import {
   type FormField,
 } from "../types";
 import { IntakeEntityType } from "../../../../domain/intake/enums";
+import type { ICustomFieldDefinition } from "../../../../domain/interfaces/i.customField";
 
 const RISK = "ai_risk_classification";
 const ROLE = "type_of_high_risk_role";
@@ -88,5 +89,87 @@ describe("isRiskStepSetField", () => {
   it("is false for other mappings and for no mapping", () => {
     expect(isRiskStepSetField("project_title")).toBe(false);
     expect(isRiskStepSetField(undefined)).toBe(false);
+  });
+});
+
+describe("analyzeMappingCoverage with custom field mappings", () => {
+  const definition = (
+    field_key: string,
+    field_type: ICustomFieldDefinition["field_type"],
+  ): ICustomFieldDefinition => ({
+    id: 1,
+    organization_id: 1,
+    entity_type: "model_inventory",
+    field_key,
+    label: field_key,
+    field_type,
+    options: null,
+    required: false,
+    created_by: null,
+    created_at: "",
+    updated_at: "",
+  });
+  const mapped = (type: FormField["type"], key: string): FormField => ({
+    id: `q-${key}`,
+    type,
+    label: `Question ${key}`,
+    entityFieldMapping: `custom_field:${key}`,
+    order: 0,
+  });
+
+  it("reports a mapping whose custom field no longer exists", () => {
+    const field = mapped("text", "gone");
+    const { customFieldProblems } = analyzeMappingCoverage([field], IntakeEntityType.MODEL, {
+      customFields: [],
+    });
+    expect(customFieldProblems).toEqual([{ formField: field, reason: "missing" }]);
+  });
+
+  it("reports a question whose type does not fit the custom field", () => {
+    const field = mapped("text", "cost");
+    const { customFieldProblems } = analyzeMappingCoverage([field], IntakeEntityType.MODEL, {
+      customFields: [definition("cost", "number")],
+    });
+    expect(customFieldProblems).toEqual([{ formField: field, reason: "incompatible" }]);
+  });
+
+  it("reports a select question with options the custom field does not have", () => {
+    const field: FormField = {
+      ...mapped("select", "tier"),
+      options: [
+        { value: "low", label: "Low" },
+        { value: "medium", label: "Medium" },
+      ],
+    };
+    const tier = { ...definition("tier", "select"), options: ["low", " HIGH"] };
+    const { customFieldProblems } = analyzeMappingCoverage([field], IntakeEntityType.MODEL, {
+      customFields: [tier],
+    });
+    expect(customFieldProblems).toEqual([{ formField: field, reason: "options" }]);
+    const fixed = analyzeMappingCoverage(
+      [{ ...field, options: [{ value: "x", label: "high" }] }],
+      IntakeEntityType.MODEL,
+      { customFields: [tier] },
+    );
+    expect(fixed.customFieldProblems).toEqual([]);
+  });
+
+  it("reports nothing for a valid mapping and keeps it out of the entity checks", () => {
+    const field = mapped("number", "cost");
+    const coverage = analyzeMappingCoverage([field], IntakeEntityType.MODEL, {
+      customFields: [definition("cost", "number")],
+    });
+    expect(coverage.customFieldProblems).toEqual([]);
+    expect(coverage.typeMismatches).toEqual([]);
+    const listed = [...coverage.missingRequired, ...coverage.missingOptional].map((m) => m.field);
+    expect(listed).not.toContain("custom_field:cost");
+  });
+
+  it("reports nothing while the custom fields are still loading", () => {
+    const { customFieldProblems } = analyzeMappingCoverage(
+      [mapped("text", "gone")],
+      IntakeEntityType.MODEL,
+    );
+    expect(customFieldProblems).toEqual([]);
   });
 });

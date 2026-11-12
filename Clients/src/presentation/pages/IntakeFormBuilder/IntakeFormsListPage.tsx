@@ -51,7 +51,10 @@ import {
   IntakeSubmission,
   IntakeFormStatus,
   IntakeEntityType,
+  type CustomFieldSkip,
 } from "../../../application/repository/intakeForm.repository";
+import { useTranslation } from "../../../application/hooks/useTranslation";
+import { fill } from "../../../i18n/fill";
 import { SubmissionPreviewModal } from "./SubmissionPreviewModal";
 import RiskTierChip from "./assessment/RiskTierChip";
 import { LaneChip } from "./routing/LaneSection";
@@ -142,6 +145,7 @@ export function IntakeFormsListPage() {
   const [searchParams, setSearchParams] = useSearchParams();
   const theme = useTheme();
   const formatDate = useFormattedDate();
+  const { t } = useTranslation();
   const { userId } = useAuth();
 
   // Main tab derived from URL path
@@ -172,7 +176,9 @@ export function IntakeFormsListPage() {
   const [snackbar, setSnackbar] = useState<{
     open: boolean;
     message: string;
-    severity: "success" | "error" | "info";
+    severity: "success" | "error" | "info" | "warning";
+    /** Milliseconds before it hides; null keeps it until dismissed. */
+    autoHide?: number | null;
   }>({ open: false, message: "", severity: "info" });
 
   // --- Create form dialog state ---
@@ -264,10 +270,35 @@ export function IntakeFormsListPage() {
     setOversightRefresh((n) => n + 1);
   };
 
-  const handleSubmissionDecided = (message: string) => {
+  // A warning stays until dismissed, so there is time to read it.
+  const handleSubmissionDecided = (
+    message: string,
+    severity: "success" | "warning" = "success",
+  ) => {
     if (selectedSubmissionId !== null) flashSubmissionRow(selectedSubmissionId);
     refreshAfterReview();
-    setSnackbar({ open: true, message, severity: "success" });
+    setSnackbar({
+      open: true,
+      message,
+      severity,
+      autoHide: severity === "warning" ? null : undefined,
+    });
+  };
+
+  // Approval still succeeds when some custom field values cannot be saved; the
+  // reviewer is told which ones and why.
+  const handleSubmissionApproved = (customFieldSkips?: CustomFieldSkip[]) => {
+    const skips = Array.isArray(customFieldSkips) ? customFieldSkips : [];
+    if (skips.length === 0) {
+      handleSubmissionDecided("Submission approved");
+      return;
+    }
+    const fields = skips.map((skip) => `${skip.label} (${skip.reason})`).join(", ");
+    const template =
+      skips.length === 1
+        ? t("Approved. 1 custom field value was not saved: {fields}")
+        : t("Approved. {count} custom field values were not saved: {fields}");
+    handleSubmissionDecided(fill(template, { count: skips.length, fields }), "warning");
   };
 
   // Deep link from the second-review email: /intake-forms/submissions?submission=<id>.
@@ -1136,7 +1167,7 @@ export function IntakeFormsListPage() {
           loadSubmissions({ quiet: true });
         }}
         submissionId={selectedSubmissionId}
-        onApproved={() => handleSubmissionDecided("Submission approved")}
+        onApproved={handleSubmissionApproved}
         onRejected={() => handleSubmissionDecided("Submission rejected")}
         onChanged={refreshAfterReview}
         simulatedRole={simulatedRole}
@@ -1147,8 +1178,12 @@ export function IntakeFormsListPage() {
       {/* Snackbar */}
       <Snackbar
         open={snackbar.open}
-        autoHideDuration={4000}
-        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+        autoHideDuration={snackbar.autoHide === undefined ? 4000 : snackbar.autoHide}
+        onClose={(_event, reason) => {
+          // A click elsewhere must not dismiss a warning the user has not read yet.
+          if (reason === "clickaway" && snackbar.severity === "warning") return;
+          setSnackbar((prev) => ({ ...prev, open: false }));
+        }}
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       >
         <Alert

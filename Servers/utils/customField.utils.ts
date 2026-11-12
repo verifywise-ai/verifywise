@@ -1,5 +1,6 @@
 import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../database/db";
+import type { PermissionKey } from "../config/rolePermissions.config";
 import {
   ValidationException,
   NotFoundException,
@@ -36,7 +37,8 @@ export type CustomFieldEntityType =
   | "vendor_risk"
   | "model_inventory"
   | "task"
-  | "model_risk";
+  | "model_risk"
+  | "ai_app";
 // NOTE: Scope is intentionally limited to the core governance entities listed
 // above. Other entities (dataset, ai_incident, training, fria, pmm_config,
 // evidence, assessment, file, approval_workflow, automation, intake_form,
@@ -88,7 +90,9 @@ const FIELD_TYPES: ReadonlySet<CustomFieldType> = new Set([
 const FIELD_KEY_PATTERN = /^[a-z][a-z0-9_]{0,63}$/;
 const LABEL_MIN = 1;
 const LABEL_MAX = 255;
-const ISO_DATE_PATTERN = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?)?$/;
+export const MAX_CUSTOM_TEXT_LENGTH = 10_000;
+export const ISO_DATE_PATTERN =
+  /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2}:\d{2}(\.\d+)?(Z|[+-]\d{2}:\d{2})?)?$/;
 
 // entity_type -> the SQL table that owns the entity. Used to verify the
 // parent row belongs to the calling org BEFORE writing a value. Keep this
@@ -103,7 +107,25 @@ export const ENTITY_TYPE_TO_TABLE: Record<CustomFieldEntityType, string> = {
   model_inventory: "model_inventories",
   task: "tasks",
   model_risk: "model_risks",
+  ai_app: "ai_apps",
 };
+
+// entity_type -> the permission needed to change that entity, and so its
+// custom field values. Checked by the value write routes (PUT/DELETE
+// /custom-fields/values). The intake approval path writes through
+// setCustomFieldValueQuery directly and is gated by its own approval.
+export const CUSTOM_FIELD_EDIT_PERMISSION: Readonly<Record<CustomFieldEntityType, PermissionKey>> =
+  {
+    vendor: "vendor.edit",
+    vendor_risk: "vendor.edit",
+    policy: "policy.edit",
+    project: "useCase.edit",
+    project_risk: "risks.edit",
+    model_inventory: "model.edit",
+    model_risk: "model.edit",
+    task: "task.edit",
+    ai_app: "aiApp.edit",
+  };
 
 // ---------- Internal validators ----------
 
@@ -251,8 +273,11 @@ const validateValueForDefinition = async (
       if (typeof raw !== "string") {
         throw new ValidationException("Expected string value", "value");
       }
-      if (raw.length > 10_000) {
-        throw new ValidationException("Text value exceeds 10000 characters", "value");
+      if (raw.length > MAX_CUSTOM_TEXT_LENGTH) {
+        throw new ValidationException(
+          `Text value exceeds ${MAX_CUSTOM_TEXT_LENGTH} characters`,
+          "value",
+        );
       }
       return raw;
     }
@@ -337,6 +362,7 @@ const assertEntityBelongsToOrg = async (
   entityType: CustomFieldEntityType,
   entityId: number,
   organizationId: number,
+  transaction?: Transaction,
 ): Promise<void> => {
   const table = ENTITY_TYPE_TO_TABLE[entityType];
   // Safe: `table` resolved from a static allowlist, never user-controlled.
@@ -347,6 +373,7 @@ const assertEntityBelongsToOrg = async (
     {
       replacements: { entityId, organizationId },
       type: QueryTypes.SELECT,
+      transaction,
     },
   );
   if (rows.length === 0) {
@@ -363,6 +390,7 @@ const assertEntityBelongsToOrg = async (
 export const listCustomFieldDefinitionsQuery = async (
   organizationId: number,
   entityType: CustomFieldEntityType,
+  transaction?: Transaction,
 ): Promise<ICustomFieldDefinition[]> => {
   assertPositiveInt(organizationId, "organizationId");
   assertEntityType(entityType);
@@ -375,6 +403,7 @@ export const listCustomFieldDefinitionsQuery = async (
     {
       replacements: { organizationId, entityType },
       type: QueryTypes.SELECT,
+      transaction,
     },
   )) as ICustomFieldDefinition[];
 };
@@ -857,7 +886,7 @@ export const setCustomFieldValueQuery = async (
     );
   }
 
-  await assertEntityBelongsToOrg(definition.entity_type, entityId, organizationId);
+  await assertEntityBelongsToOrg(definition.entity_type, entityId, organizationId, transaction);
 
   const validated = await validateValueForDefinition(definition, args.value, organizationId);
 

@@ -39,7 +39,12 @@ import {
 import CustomAxios from "../../../infrastructure/api/customAxios";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { invalidateLLMKeyQueries, useLLMKeys } from "../../../application/hooks/useLLMKeys";
-import { validateSchemaLogic } from "../../../application/utils/intakeFormLogic";
+import {
+  INTAKE_CUSTOM_FIELD_ENTITY,
+  validateSchemaLogic,
+} from "../../../application/utils/intakeFormLogic";
+import { useCustomFieldDefinitions } from "../../../application/hooks/useCustomFields";
+import type { CustomFieldEntityType } from "../../../domain/interfaces/i.customField";
 import { getClientErrorReason, isClientError } from "../../../application/utils/apiErrorReason";
 import {
   FieldPalette,
@@ -746,6 +751,17 @@ export function IntakeFormBuilder() {
       return;
     }
 
+    // Block publish if a question maps to a custom field that is gone or does not fit
+    if (mappingCoverage.customFieldProblems.length > 0) {
+      setSnackbar({
+        open: true,
+        message:
+          "Some questions map to custom fields that no longer exist or no longer match them. Fix them before publishing.",
+        severity: "error",
+      });
+      return;
+    }
+
     // Warn if optional entity fields are unmapped
     if (mappingCoverage.missingOptional.length > 0) {
       setPublishWarningOpen(true);
@@ -832,12 +848,18 @@ export function IntakeFormBuilder() {
     [logicErrors],
   );
 
+  // Custom fields of the entity this form creates, for the mapping picker and checks
+  const { data: customFieldDefinitions } = useCustomFieldDefinitions(
+    INTAKE_CUSTOM_FIELD_ENTITY[form.entityType] as CustomFieldEntityType,
+  );
+
   const mappingCoverage = useMemo(
     () =>
       analyzeMappingCoverage(form.schema.fields, form.entityType, {
         riskStepEnabled: form.euAiActRiskStepEnabled ?? false,
+        customFields: customFieldDefinitions,
       }),
-    [form.schema.fields, form.entityType, form.euAiActRiskStepEnabled],
+    [form.schema.fields, form.entityType, form.euAiActRiskStepEnabled, customFieldDefinitions],
   );
 
   const selectedField = form.schema.fields.find((f) => f.id === selectedFieldId);
@@ -1187,6 +1209,7 @@ export function IntakeFormBuilder() {
                       selectedField.id,
                       form.euAiActRiskStepEnabled,
                     )}
+                    customFieldDefinitions={customFieldDefinitions}
                     llmKeyId={activeLlmKeyId}
                     onChange={updateField}
                     onEdit={markEdited}
@@ -1252,12 +1275,17 @@ export function IntakeFormBuilder() {
                       >
                         {/* Entity field mapping coverage */}
                         {(() => {
-                          const { missingRequired, missingOptional, typeMismatches } =
-                            mappingCoverage;
+                          const {
+                            missingRequired,
+                            missingOptional,
+                            typeMismatches,
+                            customFieldProblems,
+                          } = mappingCoverage;
                           const allMapped =
                             missingRequired.length === 0 &&
                             missingOptional.length === 0 &&
-                            typeMismatches.length === 0;
+                            typeMismatches.length === 0 &&
+                            customFieldProblems.length === 0;
                           const entityLabel =
                             form.entityType === IntakeEntityType.USE_CASE
                               ? "use case"
@@ -1367,6 +1395,40 @@ export function IntakeFormBuilder() {
                                     >
                                       &quot;{m.formField.label}&quot; is {m.formField.type}, needs{" "}
                                       {m.entityMapping.requiredFieldType.join(" or ")}
+                                    </Typography>
+                                  ))}
+                                </Box>
+                              )}
+                              {customFieldProblems.length > 0 && (
+                                <Box sx={{ mb: "6px" }}>
+                                  <Typography
+                                    sx={{
+                                      fontSize: 11,
+                                      color: theme.palette.status.error.text,
+                                      fontWeight: 500,
+                                      mb: "2px",
+                                    }}
+                                  >
+                                    Custom field problems (blocks publishing):
+                                  </Typography>
+                                  {customFieldProblems.map((problem) => (
+                                    <Typography
+                                      key={problem.formField.id}
+                                      sx={{
+                                        fontSize: 12,
+                                        color: theme.palette.text.secondary,
+                                        py: "2px",
+                                      }}
+                                    >
+                                      {/* Separate text nodes so the DOM translator matches the reason */}
+                                      <span>{problem.formField.label}</span>:{" "}
+                                      <span>
+                                        {problem.reason === "missing"
+                                          ? "Custom field no longer exists"
+                                          : problem.reason === "options"
+                                            ? "Custom field options do not match"
+                                            : "Custom field type does not match"}
+                                      </span>
                                     </Typography>
                                   ))}
                                 </Box>

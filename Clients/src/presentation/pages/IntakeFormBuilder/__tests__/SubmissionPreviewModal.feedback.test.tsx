@@ -177,7 +177,7 @@ describe("SubmissionPreviewModal review feedback", () => {
     await screen.findByText("Intake risk score");
     clickApprove();
     clickApprove();
-    resolveApprove({ data: { submission: {} as never, createdEntity: null } });
+    resolveApprove({ data: { customFieldSkips: [] } as never });
     await waitFor(() => expect(approveSubmission).toHaveBeenCalledTimes(1));
   });
 });

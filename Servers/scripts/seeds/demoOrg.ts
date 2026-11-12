@@ -2038,6 +2038,13 @@ async function clearBackfills(ctx: Ctx) {
   });
 
   // Demo AI apps inventory (distinct feature/table from agent_primitives).
+  // custom_field_values is polymorphic (no FK), so clear its rows first.
+  await sequelize.query(
+    `DELETE FROM custom_field_values
+       WHERE organization_id = :orgId AND entity_type = 'ai_app'
+         AND entity_id IN (SELECT id FROM ai_apps WHERE organization_id = :orgId AND is_demo = true)`,
+    { replacements: { orgId: ctx.orgId } },
+  );
   await sequelize.query(`DELETE FROM ai_apps WHERE organization_id = :orgId AND is_demo = true`, {
     replacements: { orgId: ctx.orgId },
   });

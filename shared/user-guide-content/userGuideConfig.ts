@@ -96,7 +96,7 @@ export const collections: Collection[] = [
         id: 'intake-form-fields',
         title: 'Intake form fields',
         description: 'Every intake form field type, its settings and what is checked when a form is submitted.',
-        keywords: ['intake', 'field', 'field type', 'short text', 'long text', 'email', 'url', 'number', 'date', 'dropdown', 'multi-select', 'checkbox', 'calculated', 'validation', 'required', 'options', 'placeholder', 'help text', 'guidance', 'risk dimension'],
+        keywords: ['intake', 'field', 'field type', 'short text', 'long text', 'email', 'url', 'number', 'date', 'dropdown', 'multi-select', 'checkbox', 'calculated', 'validation', 'required', 'options', 'placeholder', 'help text', 'guidance', 'risk dimension', 'custom field', 'map to entity field'],
       },
       {
         id: 'intake-calculated-values',
@@ -126,7 +126,7 @@ export const collections: Collection[] = [
         id: 'ai-apps',
         title: 'Managing the AI apps inventory',
         description: 'Track the AI applications your teams use, with owners, approvals, policies, and risk.',
-        keywords: ['ai app', 'application', 'inventory', 'shadow ai', 'approval', 'governance'],
+        keywords: ['ai app', 'application', 'inventory', 'shadow ai', 'approval', 'governance', 'custom field'],
       },
       {
         id: 'model-lifecycle',
