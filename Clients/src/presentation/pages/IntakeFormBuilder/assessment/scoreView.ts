@@ -18,14 +18,19 @@ export interface ScoreView {
   rulesOnly: boolean;
 }
 
-/** The score under `level` (null: not rule-checked), from the stored AI median. */
+/**
+ * The score under `level` (null: not rule-checked), from the stored AI median,
+ * or the stored keyword score when the form has no LLM key.
+ */
 export function scoreViewFor(
   assessment: RiskAssessmentV2,
   level: ClassificationLevel | null,
 ): ScoreView {
   const ruleMinimum = ruleMinimumFor(level);
   const aiMedian = assessment.status === "complete" ? (assessment.ai?.median ?? null) : null;
-  const combined = combineScore({ ruleMinimum, aiMedian });
+  const keywordScore =
+    assessment.status === "ai_not_configured" ? (assessment.keyword?.overallScore ?? null) : null;
+  const combined = combineScore({ ruleMinimum, aiMedian, keywordScore });
   return {
     ruleMinimum,
     finalScore: combined.finalScore,

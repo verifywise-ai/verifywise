@@ -162,4 +162,94 @@ describe("ScoreSection", () => {
     expect(screen.getByText("Vulnerable users")).toBeInTheDocument();
     expect(screen.getAllByText("Elena Moreau", { exact: false }).length).toBeGreaterThan(0);
   });
+
+  describe("a form with no LLM key", () => {
+    const keyword = {
+      overallScore: 58,
+      dimensions: [
+        { key: "data_sensitivity", label: "Data sensitivity", weight: 0.2, score: 85 },
+        { key: "decision_impact", label: "Decision impact", weight: 0.2, score: 50 },
+        { key: "autonomy", label: "Autonomy", weight: 0.15, score: 50 },
+        { key: "affected_population", label: "Affected population", weight: 0.15, score: 50 },
+        { key: "model_complexity", label: "Model complexity", weight: 0.15, score: 50 },
+        { key: "regulatory_exposure", label: "Regulatory exposure", weight: 0.15, score: 50 },
+      ],
+    };
+    const noKey = (overrides: Partial<RiskAssessmentV2> = {}) =>
+      assessment({
+        status: "ai_not_configured",
+        ai: null,
+        keyword,
+        classificationLevel: "Limited risk",
+        ruleMinimum: 30,
+        finalScore: 58,
+        source: "keyword",
+        overallScore: 58,
+        tier: "High",
+        ...overrides,
+      });
+    const limited = {
+      selectedLevel: "Limited risk",
+      rulesLevel: "Limited risk",
+      assessedLevel: "Limited risk",
+    } as const;
+    const NOTICE =
+      "This form has no LLM key, so the score comes from matching keywords in the answers. Add an LLM key to the form for a much more accurate score and suggested risks.";
+
+    it("shows the keyword score, the notice and the six dimension bars", () => {
+      render({ assessment: noKey(), ...limited });
+      expect(screen.getByTestId("intake-score")).toHaveTextContent("58");
+      expect(screen.getByText("High")).toBeInTheDocument();
+      expect(screen.queryByText("(rules only)")).toBeNull();
+      expect(screen.queryByText("at least")).toBeNull();
+      expect(screen.getByText("The keyword score set this score.")).toBeInTheDocument();
+      expect(screen.getByText("Basic keyword score")).toBeInTheDocument();
+      expect(screen.getByText(NOTICE)).toBeInTheDocument();
+      expect(screen.queryByText("AI scoring isn't set up for this form.")).toBeNull();
+      expect(screen.getByTestId("intake-dimension-bars")).toBeInTheDocument();
+      expect(screen.getByText("Data sensitivity")).toBeInTheDocument();
+      expect(screen.getByText("85/100")).toBeInTheDocument();
+      expect(screen.getAllByRole("progressbar")).toHaveLength(6);
+    });
+
+    it("says when the rule minimum beat the keyword score", () => {
+      render({ assessment: noKey(), selectedLevel: "Prohibited" });
+      expect(screen.getByTestId("intake-score")).toHaveTextContent("90");
+      expect(
+        screen.getByText("The rule minimum set this score. The keyword score was lower."),
+      ).toBeInTheDocument();
+      expect(
+        screen.queryByText("The rule minimum set this score. The AI scored it lower."),
+      ).toBeNull();
+    });
+
+    it("lists the keyword score in how the score is built", () => {
+      render({ assessment: noKey(), ...limited });
+      fireEvent.click(screen.getByText("How this score is built"));
+      expect(screen.getByText("Keyword score")).toBeInTheDocument();
+      expect(
+        screen.getByText(
+          "The final score is the higher of the rule minimum and the keyword score.",
+        ),
+      ).toBeInTheDocument();
+      expect(screen.queryByText("No AI scores")).toBeNull();
+    });
+
+    it("keeps the old note for a no-key score stored before the keyword score", () => {
+      render({ assessment: noKey({ keyword: undefined }), ...limited });
+      expect(screen.getByText("AI scoring isn't set up for this form.")).toBeInTheDocument();
+      expect(screen.queryByText("Basic keyword score")).toBeNull();
+      expect(screen.queryByTestId("intake-dimension-bars")).toBeNull();
+    });
+
+    it("shows no notice or bars when AI scored or failed", () => {
+      for (const status of ["complete", "ai_failed"] as const) {
+        const { unmount } = render({ assessment: assessment({ status, keyword }) });
+        expect(screen.queryByText("Basic keyword score")).toBeNull();
+        expect(screen.queryByTestId("intake-dimension-bars")).toBeNull();
+        expect(screen.queryByText("The keyword score set this score.")).toBeNull();
+        unmount();
+      }
+    });
+  });
 });

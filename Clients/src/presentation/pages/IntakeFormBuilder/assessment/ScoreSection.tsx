@@ -2,9 +2,11 @@ import { useState } from "react";
 import { Box, CircularProgress, Typography, useTheme } from "@mui/material";
 import { RotateCw } from "lucide-react";
 import Chip from "../../../components/Chip";
+import Alert from "../../../components/Alert";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import type { RiskAssessmentV2 } from "../../../../application/repository/intakeForm.repository";
 import type { ClassificationLevel } from "../../../../application/utils/intakeScoring/scoreMath";
+import DimensionBars from "./DimensionBars";
 import ScoreExplainer from "./ScoreExplainer";
 import { scoreViewFor } from "./scoreView";
 
@@ -71,6 +73,8 @@ function ScoreSection({
   const levelChanged = !isModel && selectedLevel !== rulesLevel;
   const rulesUpdated = !isModel && !!assessedLevel && rulesLevel !== assessedLevel;
   const ai = assessment.ai;
+  // A form with no LLM key is scored from keywords in the answers.
+  const keyword = assessment.status === "ai_not_configured" ? (assessment.keyword ?? null) : null;
 
   return (
     <Box sx={{ display: "flex", flexDirection: "column", gap: "12px" }}>
@@ -112,7 +116,11 @@ function ScoreSection({
         <Typography sx={muted}>
           {view.source === "ai"
             ? "The AI median set this score."
-            : "The rule minimum set this score. The AI scored it lower."}
+            : view.source === "keyword"
+              ? "The keyword score set this score."
+              : keyword
+                ? "The rule minimum set this score. The keyword score was lower."
+                : "The rule minimum set this score. The AI scored it lower."}
         </Typography>
       )}
 
@@ -129,8 +137,17 @@ function ScoreSection({
       )}
 
       {/* Status notes */}
-      {assessment.status === "ai_not_configured" && (
-        <Typography sx={muted}>AI scoring isn't set up for this form.</Typography>
+      {keyword ? (
+        <Alert
+          variant="info"
+          inline
+          title="Basic keyword score"
+          body="This form has no LLM key, so the score comes from matching keywords in the answers. Add an LLM key to the form for a much more accurate score and suggested risks."
+        />
+      ) : (
+        assessment.status === "ai_not_configured" && (
+          <Typography sx={muted}>AI scoring isn't set up for this form.</Typography>
+        )
       )}
       {assessment.status === "ai_failed" && (
         <Typography sx={{ fontSize: "13px", color: theme.palette.status.error.text }}>
@@ -164,6 +181,8 @@ function ScoreSection({
           ))}
         </Box>
       )}
+
+      {keyword && <DimensionBars dimensions={keyword.dimensions} />}
 
       <ScoreExplainer
         assessment={assessment}
