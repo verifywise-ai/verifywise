@@ -21,6 +21,7 @@ was called the expected number of times.
 
 from __future__ import annotations
 
+import os
 from typing import Any, Dict, List
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -193,13 +194,15 @@ async def test_dataset_loading_custom_path(
     assert patched_dependencies.call_count == 3
 
 
-@pytest.mark.asyncio
-async def test_dataset_loading_simulated_mode(
-    simulated_config: Dict[str, Any],
-    mock_db_session: AsyncMock,
-    monkeypatch: pytest.MonkeyPatch,
-    stub_model_runner: MagicMock,
-) -> None:
+def _install_fake_simulator(monkeypatch: pytest.MonkeyPatch):
+    """
+    Stub the runner's dependencies and replace only the simulator class inside the
+    real deepeval.simulator module. Returns (calls, judge_sentinel).
+
+    The fake takes the real constructor and simulate() arguments, and drives the
+    callback through DeepEval's own generate_turn_from_callback, which passes
+    input/turns/thread_id by keyword: a misnamed callback parameter fails here.
+    """
     from crud import evaluation_logs as crud_module
     from deepeval_engine import deepeval_evaluator as evaluator_module
     from utils import run_evaluation as run_eval_module
@@ -216,12 +219,7 @@ async def test_dataset_loading_simulated_mode(
         lambda self, **kwargs: [],
     )
 
-    # Replace only the simulator class inside the real deepeval.simulator module.
-    # The fake takes the real constructor and simulate() arguments, and drives the
-    # callback through DeepEval's own generate_turn_from_callback, which passes
-    # input/turns/thread_id by keyword: a misnamed callback parameter fails here.
     import deepeval.simulator as simulator_module
-    from deepeval.dataset import ConversationalGolden
     from deepeval.test_case import ConversationalTestCase, Turn
 
     real_simulator = simulator_module.ConversationSimulator
@@ -256,12 +254,27 @@ async def test_dataset_loading_simulated_mode(
             return [
                 ConversationalTestCase(
                     scenario=golden.scenario,
+                    expected_outcome=golden.expected_outcome,
                     turns=[Turn(role="user", content="Hi, I need help"), reply],
                 )
                 for golden in conversational_goldens
             ]
 
     monkeypatch.setattr(simulator_module, "ConversationSimulator", FakeSimulator)
+    return fake_simulator_calls, judge_sentinel
+
+
+@pytest.mark.asyncio
+async def test_dataset_loading_simulated_mode(
+    simulated_config: Dict[str, Any],
+    mock_db_session: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+    stub_model_runner: MagicMock,
+) -> None:
+    from deepeval.dataset import ConversationalGolden
+    from deepeval.test_case import Turn
+
+    fake_simulator_calls, judge_sentinel = _install_fake_simulator(monkeypatch)
 
     from utils.run_evaluation import run_evaluation
 
@@ -285,6 +298,281 @@ async def test_dataset_loading_simulated_mode(
     prompt = stub_model_runner.call_args.kwargs["prompt"]
     assert "User: Earlier question" in prompt
     assert prompt.endswith("User: Hi, I need help\n\nAssistant:")
+
+
+def _scenario_config(dataset: Dict[str, Any]) -> Dict[str, Any]:
+    from tests.conftest import _base_config
+
+    cfg = _base_config(taskType="chatbot")
+    cfg["dataset"] = dataset
+    cfg["judgeLlm"] = {"provider": "openai", "model": "gpt-4o-mini"}
+    return cfg
+
+
+@pytest.mark.asyncio
+async def test_scenario_rows_run_simulated_without_wizard_flags(
+    mock_db_session: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+    stub_model_runner: MagicMock,
+) -> None:
+    """API/MCP callers send the dataset rows only; scenario rows still simulate."""
+    calls, _ = _install_fake_simulator(monkeypatch)
+    from utils.run_evaluation import run_evaluation
+
+    config = _scenario_config(
+        {"prompts": [{"scenario": "Book a flight", "expected_outcome": "Options are listed"}]}
+    )
+    result = await run_evaluation(
+        db=mock_db_session, experiment_id="exp-sim-1", config=config, organization_id=1
+    )
+
+    assert "error" not in result
+    assert len(calls) == 1
+    assert [g.scenario for g in calls[0]["goldens"]] == ["Book a flight"]
+    assert calls[0]["max_user_simulations"] == 6
+
+
+@pytest.mark.asyncio
+async def test_scenarios_alone_pass_the_empty_dataset_check(
+    mock_db_session: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+    stub_model_runner: MagicMock,
+) -> None:
+    """The wizard sends scenarios without duplicating them as prompts."""
+    calls, _ = _install_fake_simulator(monkeypatch)
+    from utils.run_evaluation import run_evaluation
+
+    config = _scenario_config(
+        {
+            "prompts": [],
+            "simulatedMode": True,
+            "scenarios": [{"scenario": "Cancel an order", "expected_outcome": "  "}],
+        }
+    )
+    result = await run_evaluation(
+        db=mock_db_session, experiment_id="exp-sim-2", config=config, organization_id=1
+    )
+
+    assert "error" not in result
+    # A blank outcome falls back to the default instead of an empty goal
+    assert calls[0]["goldens"][0].expected_outcome == "Helpful response"
+
+
+@pytest.mark.asyncio
+async def test_each_scenario_keeps_its_own_turn_limit(
+    mock_db_session: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+    stub_model_runner: MagicMock,
+) -> None:
+    calls, _ = _install_fake_simulator(monkeypatch)
+    from utils.run_evaluation import run_evaluation
+
+    config = _scenario_config(
+        {
+            "simulatedMode": True,
+            "maxTurns": 3,
+            "scenarios": [
+                {"scenario": "a", "expected_outcome": "x", "max_turns": 2},
+                {"scenario": "b", "expected_outcome": "x"},
+                {"scenario": "c", "expected_outcome": "x", "max_turns": 2},
+                {"scenario": "d", "expected_outcome": "x", "max_turns": 20},
+            ],
+        }
+    )
+    result = await run_evaluation(
+        db=mock_db_session, experiment_id="exp-sim-3", config=config, organization_id=1
+    )
+
+    assert "error" not in result
+    by_limit = {c["max_user_simulations"]: [g.scenario for g in c["goldens"]] for c in calls}
+    assert by_limit == {2: ["a", "c"], 3: ["b"], 20: ["d"]}
+
+
+@pytest.mark.asyncio
+async def test_simulated_cases_carry_scenario_and_expected_outcome(
+    mock_db_session: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+    stub_model_runner: MagicMock,
+) -> None:
+    """The evaluator builds Task Completion from expected_outcome and stores both fields."""
+    _install_fake_simulator(monkeypatch)
+    from deepeval_engine import deepeval_evaluator as evaluator_module
+    from utils.run_evaluation import run_evaluation
+
+    captured: List[Dict[str, Any]] = []
+    monkeypatch.setattr(
+        evaluator_module.DeepEvalEvaluator,
+        "run_evaluation",
+        lambda self, **kwargs: captured.extend(kwargs.get("test_cases_data") or []) or [],
+    )
+
+    config = _scenario_config(
+        {"prompts": [{"scenario": "Reset a password", "expected_outcome": "Steps are explained"}]}
+    )
+    result = await run_evaluation(
+        db=mock_db_session, experiment_id="exp-sim-4", config=config, organization_id=1
+    )
+
+    assert "error" not in result
+    assert len(captured) == 1
+    assert captured[0]["scenario"] == "Reset a password"
+    assert captured[0]["expected_outcome"] == "Steps are explained"
+    assert captured[0]["metadata"]["turn_count"] == 2
+
+
+@pytest.mark.asyncio
+async def test_simulated_conversations_keep_row_order_and_get_logs(
+    mock_db_session: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+    stub_model_runner: MagicMock,
+) -> None:
+    """Grouping by turn limit must not reorder results, and each conversation is logged."""
+    _install_fake_simulator(monkeypatch)
+    from crud import evaluation_logs as crud_module
+    from deepeval_engine import deepeval_evaluator as evaluator_module
+    from utils.run_evaluation import run_evaluation
+
+    captured: List[Dict[str, Any]] = []
+    monkeypatch.setattr(
+        evaluator_module.DeepEvalEvaluator,
+        "run_evaluation",
+        lambda self, **kwargs: captured.extend(kwargs.get("test_cases_data") or []) or [],
+    )
+    logs: List[Dict[str, Any]] = []
+
+    async def record_log(**kwargs: Any) -> Dict[str, Any]:
+        logs.append(kwargs)
+        return {"id": f"log-{len(logs)}"}
+
+    monkeypatch.setattr(crud_module, "create_log", record_log)
+
+    config = _scenario_config(
+        {
+            "prompts": [
+                {"scenario": "a", "expected_outcome": "x", "max_turns": 2},
+                {"scenario": "b", "expected_outcome": "x"},
+                {"scenario": "c", "expected_outcome": "x", "max_turns": 2},
+            ]
+        }
+    )
+    result = await run_evaluation(
+        db=mock_db_session, experiment_id="exp-sim-5", config=config, organization_id=1
+    )
+
+    assert "error" not in result
+    assert [c["scenario"] for c in captured] == ["a", "b", "c"]
+    assert [c["metadata"]["sample_id"] for c in captured] == [
+        "simulated_scenario_1",
+        "simulated_scenario_2",
+        "simulated_scenario_3",
+    ]
+    simulated_logs = [log for log in logs if log.get("metadata", {}).get("is_simulated")]
+    assert [log["metadata"]["scenario"] for log in simulated_logs] == ["a", "b", "c"]
+    assert simulated_logs[0]["metadata"]["turns"] == [
+        {"role": "user", "content": "Hi, I need help"},
+        {"role": "assistant", "content": "stub response"},
+    ]
+    assert simulated_logs[0]["input_text"] == "User: Hi, I need help"
+    assert simulated_logs[0]["output_text"] == "Assistant: stub response"
+    assert [c["metadata"]["log_id"] for c in captured] == ["log-1", "log-2", "log-3"]
+
+
+@pytest.mark.asyncio
+async def test_simulated_run_without_a_judge_fails(
+    mock_db_session: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+    stub_model_runner: MagicMock,
+) -> None:
+    """No judge in this run's config: fail rather than use another run's G_EVAL_* values."""
+    calls, _ = _install_fake_simulator(monkeypatch)
+    from utils.run_evaluation import run_evaluation
+
+    monkeypatch.setenv("G_EVAL_PROVIDER", "anthropic")
+    monkeypatch.setenv("G_EVAL_MODEL", "left-over-from-another-run")
+    config = _scenario_config({"prompts": [{"scenario": "a", "expected_outcome": "x"}]})
+    config["judgeLlm"] = {}
+    config["evaluationMode"] = "scorer"
+
+    result = await run_evaluation(
+        db=mock_db_session, experiment_id="exp-sim-6", config=config, organization_id=1
+    )
+
+    assert "judge model" in result["error"]
+    assert calls == []
+    assert "G_EVAL_MODEL" not in os.environ
+    assert "G_EVAL_PROVIDER" not in os.environ
+
+
+@pytest.mark.asyncio
+async def test_simulated_user_is_this_runs_judge_even_without_a_key_in_config(
+    mock_db_session: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+    stub_model_runner: MagicMock,
+) -> None:
+    """Cloud judges come without a key when the org has none for that provider; stale values must not win."""
+    _install_fake_simulator(monkeypatch)
+    from deepeval_engine import deepeval_evaluator as evaluator_module
+    from utils.run_evaluation import run_evaluation
+
+    judges: List[Dict[str, Any]] = []
+    monkeypatch.setattr(evaluator_module, "get_judge_llm", lambda **kwargs: judges.append(kwargs) or object())
+    monkeypatch.setenv("G_EVAL_PROVIDER", "openai")
+    monkeypatch.setenv("G_EVAL_MODEL", "left-over-from-another-run")
+    config = _scenario_config({"prompts": [{"scenario": "a", "expected_outcome": "x"}]})
+    config["judgeLlm"] = {"provider": "anthropic", "model": "claude-sonnet-4-6"}
+
+    result = await run_evaluation(
+        db=mock_db_session, experiment_id="exp-sim-8", config=config, organization_id=1
+    )
+
+    assert "error" not in result
+    assert judges[0] == {"provider": "anthropic", "model_name": "claude-sonnet-4-6"}
+
+
+@pytest.mark.asyncio
+async def test_mixed_rows_run_as_prompts_not_scenarios(
+    mock_db_session: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+    stub_model_runner: MagicMock,
+) -> None:
+    """A list with any non-scenario row is not a simulated dataset; no row is dropped."""
+    calls, _ = _install_fake_simulator(monkeypatch)
+    from utils.run_evaluation import run_evaluation
+
+    config = _scenario_config(
+        {"prompts": ["Plain prompt", {"scenario": "a", "expected_outcome": "x"}]}
+    )
+    await run_evaluation(
+        db=mock_db_session, experiment_id="exp-sim-7", config=config, organization_id=1
+    )
+
+    assert calls == []
+
+
+@pytest.mark.asyncio
+async def test_scenario_file_from_path_runs_simulated(
+    mock_db_session: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+    stub_model_runner: MagicMock,
+    tmp_path,
+) -> None:
+    """A rerun built from dataset.path reads the scenario file and simulates."""
+    import json
+
+    calls, _ = _install_fake_simulator(monkeypatch)
+    from utils.run_evaluation import run_evaluation
+
+    dataset_file = tmp_path / "scenarios.json"
+    dataset_file.write_text(
+        json.dumps([{"scenario": "Reset a password", "expected_outcome": "Steps given"}])
+    )
+    config = _scenario_config({"path": str(dataset_file)})
+    result = await run_evaluation(
+        db=mock_db_session, experiment_id="exp-sim-4", config=config, organization_id=1
+    )
+
+    assert "error" not in result
+    assert [g.scenario for g in calls[0]["goldens"]] == ["Reset a password"]
 
 
 @pytest.mark.asyncio

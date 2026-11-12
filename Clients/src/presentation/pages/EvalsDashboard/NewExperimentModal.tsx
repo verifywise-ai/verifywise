@@ -72,6 +72,7 @@ import {
 import { canProceedToNextStep, getMissingKeyProviders } from "./NewExperiment/stepValidation";
 import DatasetStep from "./NewExperiment/DatasetStep";
 import ModelStep from "./NewExperiment/ModelStep";
+import { toSimulatedScenarios } from "./NewExperiment/simulatedScenarios";
 import { countLabel } from "../../tools/countLabel";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { METRIC_LABELS } from "./metricLabels";
@@ -315,8 +316,21 @@ export default function NewExperimentModal({
     }
   }, [isOpen]);
 
+  // A simulated dataset holds scenarios; the runner turns them into conversations,
+  // so it is scored with the multi-turn metrics too.
+  const isSimulatedDataset = selectedUserDataset?.turnType === "simulated";
+
+  // What a run evaluates: scenarios for a simulated dataset, prompts otherwise
+  const simulatedScenarios = useMemo(
+    () => (isSimulatedDataset ? toSimulatedScenarios(datasetPrompts) : []),
+    [isSimulatedDataset, datasetPrompts],
+  );
+  const sampleCount = isSimulatedDataset ? simulatedScenarios.length : datasetPrompts.length;
+  const sampleNoun = isSimulatedDataset ? "scenario" : "prompt";
+
   // Track if selected dataset is multi-turn
   const isMultiTurnDataset =
+    isSimulatedDataset ||
     selectedUserDataset?.turnType === "multi-turn" ||
     Boolean(selectedPresetPath && selectedPresetPath.includes("multiturn"));
 
@@ -665,6 +679,29 @@ export default function NewExperimentModal({
         return;
       }
 
+      // A simulated dataset runs its scenarios; without any it would run as plain prompts
+      if (isSimulatedDataset && simulatedScenarios.length === 0) {
+        setAlert({
+          show: true,
+          variant: "error",
+          title: "No scenarios in dataset",
+          body: "This simulated dataset has no rows with a scenario. Add a scenario to each row, or pick another dataset.",
+        });
+        setLoading(false);
+        return;
+      }
+      // The judge plays the user in a simulated conversation; custom scorers alone send none
+      if (isSimulatedDataset && judgeMode === "scorer") {
+        setAlert({
+          show: true,
+          variant: "error",
+          title: "Simulated datasets need a judge",
+          body: "The judge model plays the user in each conversation. Choose an evaluation mode that includes the judge.",
+        });
+        setLoading(false);
+        return;
+      }
+
       // Resolve model name/provider for validation (saved model takes precedence)
       const savedModelForValidation = selectedSavedModelId
         ? (savedModels.find((m) => m.id === selectedSavedModelId) ?? null)
@@ -789,7 +826,7 @@ export default function NewExperimentModal({
       const experimentConfig = {
         project_id: projectId,
         name: resolvedExperimentName,
-        description: `Evaluating ${experimentModelName} with ${countLabel(datasetPrompts.length, "prompt")}`,
+        description: `Evaluating ${experimentModelName} with ${countLabel(sampleCount, isSimulatedDataset ? "scenario" : "prompt")}`,
         model_inventory_id: selectedModelInventoryId || undefined,
         config: {
           project_id: projectId, // Include in config for runner
@@ -892,8 +929,11 @@ export default function NewExperimentModal({
                 : undefined),
             path: selectedUserDataset?.path || selectedPresetPath || undefined,
             datasetId: selectedUserDataset?.id || undefined,
-            prompts: datasetPrompts,
-            count: datasetPrompts.length,
+            // A simulated dataset's rows go once, as scenarios; the runner applies
+            // each scenario's max_turns.
+            prompts: isSimulatedDataset ? [] : datasetPrompts,
+            count: sampleCount,
+            ...(isSimulatedDataset ? { simulatedMode: true, scenarios: simulatedScenarios } : {}),
           },
           metrics: config.metrics,
           thresholds: config.thresholds,
@@ -1818,7 +1858,7 @@ export default function NewExperimentModal({
               />
 
               {/* Estimated time display */}
-              {datasetPrompts.length > 0 && (
+              {sampleCount > 0 && (
                 <Box
                   sx={{
                     p: "8px",
@@ -1835,11 +1875,10 @@ export default function NewExperimentModal({
                     <Typography
                       sx={{ fontSize: "13px", fontWeight: 500, color: palette.brand.primary }}
                     >
-                      Estimated time: {getEstimatedTimeRange(datasetPrompts.length)}
+                      Estimated time: {getEstimatedTimeRange(sampleCount)}
                     </Typography>
                     <Typography sx={{ fontSize: "12px", color: palette.status.success.text }}>
-                      Based on {datasetPrompts.length} prompt
-                      {datasetPrompts.length !== 1 ? "s" : ""} in your dataset
+                      {`Based on ${countLabel(sampleCount, sampleNoun)} in your dataset`}
                     </Typography>
                   </Box>
                 </Box>
@@ -2414,7 +2453,7 @@ export default function NewExperimentModal({
             </Box>
 
             {/* Estimated time display */}
-            {datasetPrompts.length > 0 && (
+            {sampleCount > 0 && (
               <Box
                 sx={{
                   mt: "16px",
@@ -2432,10 +2471,10 @@ export default function NewExperimentModal({
                   <Typography
                     sx={{ fontSize: "13px", fontWeight: 500, color: palette.brand.primary }}
                   >
-                    Estimated time: {getEstimatedTimeRange(datasetPrompts.length)}
+                    Estimated time: {getEstimatedTimeRange(sampleCount)}
                   </Typography>
                   <Typography sx={{ fontSize: "12px", color: palette.status.success.text }}>
-                    {`Based on ${countLabel(datasetPrompts.length, "prompt")} in your dataset`}
+                    {`Based on ${countLabel(sampleCount, sampleNoun)} in your dataset`}
                   </Typography>
                 </Box>
               </Box>
