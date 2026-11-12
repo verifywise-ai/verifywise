@@ -94,12 +94,30 @@ RAG_ANSWER_INSTRUCTION = (
 
 
 def _normalize_passages(value: Any) -> List[str]:
-    """Retrieved passages as a list of non-empty strings (a single string counts as one)."""
-    if isinstance(value, str):
+    """
+    Retrieved passages as a list of non-empty strings.
+
+    Accepts a single string, a list of strings, or a list of objects with a
+    "text" or "content" field (a common export shape). Anything else is dropped.
+    """
+    if isinstance(value, (str, dict)):
         value = [value]
     if not isinstance(value, list):
         return []
-    return [p.strip() for p in value if isinstance(p, str) and p.strip()]
+    passages: List[str] = []
+    for p in value:
+        if isinstance(p, dict):
+            p = p.get("text") or p.get("content")
+        if isinstance(p, str) and p.strip():
+            passages.append(p.strip())
+    return passages
+
+
+def _prompt_passages(prompt_data: Dict[str, Any]) -> List[str]:
+    """A single-turn prompt's passages: retrieval_context, or context as the evaluator also accepts."""
+    return _normalize_passages(prompt_data.get("retrieval_context")) or _normalize_passages(
+        prompt_data.get("context")
+    )
 
 
 def _context_block(passages: List[str]) -> str:
@@ -691,7 +709,8 @@ async def run_evaluation(
                 scenario = convo.get("scenario") or f"scenario_{s_idx}"
                 expected_outcome = convo.get("expected_outcome", "")
                 raw_turns = convo.get("turns") or []
-                preamble = _conversation_preamble(_normalize_passages(convo.get("context")))
+                convo_passages = _normalize_passages(convo.get("context"))
+                preamble = _conversation_preamble(convo_passages)
                 
                 print(f"  [{s_idx}/{len(conversations)}] Scenario: {scenario[:50]}...")
                 
@@ -802,6 +821,7 @@ async def run_evaluation(
                 # Create ConversationalTestCase with MODEL-GENERATED responses
                 conv_test_case = ConversationalTestCase(
                     turns=turn_objects,
+                    context=convo_passages or None,
                 )
                 
                 # Build raw_turns for storage (with generated responses)
@@ -867,7 +887,7 @@ async def run_evaluation(
                 generated = False
                 try:
                     print(f"  [{idx}/{len(prompts)}] Processing: {prompt_data['prompt'][:50]}...")
-                    passages = _normalize_passages(prompt_data.get("retrieval_context"))
+                    passages = _prompt_passages(prompt_data)
                     generation_prompt = _single_turn_generation_prompt(prompt_data["prompt"], passages)
                     
                     # Generate response (first attempt)

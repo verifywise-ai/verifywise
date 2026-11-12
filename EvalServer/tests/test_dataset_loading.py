@@ -414,6 +414,7 @@ async def test_single_turn_rag_passages_reach_model_and_test_case(
 async def test_multi_turn_conversation_context_reaches_model(
     mock_db_session: AsyncMock,
     patched_dependencies: MagicMock,
+    captured_test_cases: List[Dict[str, Any]],
 ) -> None:
     from utils.run_evaluation import run_evaluation
 
@@ -447,3 +448,27 @@ async def test_multi_turn_conversation_context_reaches_model(
     assert len(prompts) == 2
     for p in prompts:
         assert "Context:\n[1] PTO: 15 days a year." in p
+    # The conversational test case keeps the passages for the judge.
+    assert captured_test_cases[0]["test_case"].context == ["PTO: 15 days a year."]
+
+
+def test_passages_accept_structured_entries_and_single_strings() -> None:
+    from utils import run_evaluation as run_eval_module
+
+    norm = run_eval_module._normalize_passages
+    assert norm("One passage.") == ["One passage."]
+    assert norm([{"text": "From text.", "source": "a.pdf"}, {"content": "From content."}, {"id": 1}]) == [
+        "From text.",
+        "From content.",
+    ]
+    assert norm(None) == []
+
+
+def test_single_turn_prompt_may_use_context_key() -> None:
+    from utils import run_evaluation as run_eval_module
+
+    assert run_eval_module._prompt_passages({"prompt": "q", "context": ["C."]}) == ["C."]
+    # retrieval_context wins when both are present.
+    assert run_eval_module._prompt_passages(
+        {"prompt": "q", "retrieval_context": ["R."], "context": ["C."]}
+    ) == ["R."]
