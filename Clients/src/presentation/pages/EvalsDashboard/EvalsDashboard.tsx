@@ -33,7 +33,7 @@ import {
 import { PageBreadcrumbs } from "../../components/breadcrumbs/PageBreadcrumbs";
 import { PageHeader } from "../../components/Layout/PageHeader";
 import { useEvalsSidebarContext } from "../../../application/contexts/EvalsSidebar.context";
-import { useAuth } from "../../../application/hooks/useAuth";
+import { useCan } from "../../../application/hooks/useCan";
 import { useArenaSetting } from "../../../application/hooks/useArenaSetting";
 import ModalStandard from "../../components/Modals/StandardModal";
 import Field from "../../components/Inputs/Field";
@@ -203,12 +203,9 @@ export default function EvalsDashboard() {
   const { projectId } = useParams<{ projectId?: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { userRoleName } = useAuth();
-
-  // Admin-only by role name on purpose: these keys live in the AI Gateway,
-  // whose routes check the role name (require_admin), so a custom role would
-  // only get controls the gateway refuses.
-  const canManageApiKeys = userRoleName === "Admin";
+  // These keys live in the AI Gateway, which accepts the Admin role name or a
+  // caller the proxy marked as holding llmKeys.admin.
+  const canManageApiKeys = useCan("llmKeys.admin");
 
   // Determine tab from URL hash or default
   const [openModelsAddModal, setOpenModelsAddModal] = useState(false);

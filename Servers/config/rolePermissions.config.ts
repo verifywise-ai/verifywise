@@ -118,7 +118,8 @@ export const ROLE_PERMISSIONS = {
   },
   "llmKeys.admin": {
     module: "LLM keys",
-    description: "Add, edit and delete LLM API keys",
+    description:
+      "Add, edit and delete LLM API keys, including the AI Gateway provider keys LLM Evals uses",
     legacyRoles: ADMIN,
   },
   "logs.admin": {

@@ -7,7 +7,7 @@ import {
 } from "../domain.layer/models/evaluationLlmApiKey/evaluationLlmApiKey.model";
 import { getDecryptedAiGatewayKeyForProviderQuery } from "../utils/aiGatewayEvalKey.utils";
 import { getGatewayInternalKey, getGatewayUrl } from "../utils/aiGatewayConfig";
-import { requestHasPermission } from "../utils/rolePermissions.utils";
+import { createPermissionFlagMiddleware } from "../utils/proxyPermissionFlag.utils";
 
 // JSON body parser for routes that need to inspect/modify the body before proxying
 const jsonParser = express.json({ limit: "50mb" });
@@ -52,25 +52,7 @@ interface ReportGenerateBody {
  */
 export const MANAGE_SETTINGS_HEADER = "x-can-manage-org-settings";
 
-const READ_ONLY_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
-
 type SettingsPermissionRequest = Request & { canManageEvalsSettings?: boolean };
-
-/**
- * Whether the request path (relative to /api/deepeval) is under /settings.
- * Decoded and lower-cased so the common spellings match; a spelling that
- * doesn't match only means the header is not set, and the EvalServer then
- * refuses the settings write (fail closed).
- */
-function isSettingsPath(path: string): boolean {
-  let decoded = path;
-  try {
-    decoded = decodeURIComponent(path);
-  } catch {
-    // Malformed escape: keep the raw path.
-  }
-  return decoded.toLowerCase().replace(/\/+/g, "/").startsWith("/settings");
-}
 
 /**
  * Resolve, for writes to the LLM Evals settings routes, whether the caller
@@ -78,22 +60,12 @@ function isSettingsPath(path: string): boolean {
  * header can only grant access, so other paths skip the lookup. Fails closed:
  * on a lookup error the flag stays unset and the EvalServer refuses the write.
  */
-export async function resolveEvalsSettingsPermission(
-  req: Request,
-  _res: Response,
-  next: NextFunction,
-): Promise<void> {
-  const r = req as SettingsPermissionRequest;
-  r.canManageEvalsSettings = false;
-  if (!READ_ONLY_METHODS.has(req.method) && isSettingsPath(req.path)) {
-    try {
-      r.canManageEvalsSettings = await requestHasPermission(req, "organization.admin");
-    } catch (error) {
-      console.error("[DeepEval Proxy] Permission lookup failed:", error);
-    }
-  }
-  next();
-}
+export const resolveEvalsSettingsPermission = createPermissionFlagMiddleware({
+  pathPrefix: "/settings",
+  permission: "organization.admin",
+  flag: "canManageEvalsSettings",
+  logLabel: "DeepEval Proxy",
+});
 
 /**
  * Build the LiteLLM model string from a (provider, model) pair.

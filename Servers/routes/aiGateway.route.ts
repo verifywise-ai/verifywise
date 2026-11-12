@@ -11,8 +11,34 @@ import authenticateJWT from "../middleware/auth.middleware";
 import express, { Request, Router } from "express";
 import { updateGuardrailSettings } from "../controllers/aiGatewaySettings.ctrl";
 import { getGatewayInternalKey, getGatewayUrl } from "../utils/aiGatewayConfig";
+import { createPermissionFlagMiddleware } from "../utils/proxyPermissionFlag.utils";
 
 const jsonParser = express.json({ limit: "50mb" });
+
+/**
+ * Header that tells the AI Gateway the caller holds "llmKeys.admin", so a
+ * custom role (which never matches the "Admin" role name the gateway also
+ * accepts) can manage provider keys. The proxy always strips a client-supplied
+ * value and sets it only from the permission, so the gateway can trust it the
+ * same way it trusts x-role.
+ */
+export const LLM_KEYS_ADMIN_HEADER = "x-can-manage-llm-keys";
+
+type KeysPermissionRequest = Request & { canManageLlmKeys?: boolean };
+
+/**
+ * For writes to the provider key routes, resolve whether the caller holds
+ * "llmKeys.admin". The gateway already accepts the "Admin" role name, so no
+ * lookup is needed for it. Fails closed: on a lookup error the flag stays
+ * unset and the gateway checks the role name only.
+ */
+export const resolveLlmKeysPermission = createPermissionFlagMiddleware({
+  pathPrefix: "/keys",
+  permission: "llmKeys.admin",
+  flag: "canManageLlmKeys",
+  skipLookupForRoles: ["Admin"],
+  logLabel: "AI Gateway Proxy",
+});
 
 function aiGatewayRoutes() {
   const router = Router();
@@ -44,6 +70,7 @@ function aiGatewayRoutes() {
         proxyReq.removeHeader("x-organization-id");
         proxyReq.removeHeader("x-user-id");
         proxyReq.removeHeader("x-role");
+        proxyReq.removeHeader(LLM_KEYS_ADMIN_HEADER);
 
         // Forward tenant context from JWT
         if (expressReq.organizationId) {
@@ -54,6 +81,9 @@ function aiGatewayRoutes() {
         }
         if (expressReq.role) {
           proxyReq.setHeader("x-role", expressReq.role);
+        }
+        if ((expressReq as KeysPermissionRequest).canManageLlmKeys) {
+          proxyReq.setHeader(LLM_KEYS_ADMIN_HEADER, "true");
         }
 
         // Re-stream parsed body to proxy target
@@ -93,7 +123,7 @@ function aiGatewayRoutes() {
   router.put("/guardrails/settings", authenticateJWT, jsonParser, updateGuardrailSettings);
 
   // All routes: authenticate JWT, parse body, forward to AIGateway
-  router.use("/", authenticateJWT, jsonParser, proxy);
+  router.use("/", authenticateJWT, jsonParser, resolveLlmKeysPermission, proxy);
 
   return router;
 }
