@@ -2600,7 +2600,7 @@ export const customFieldsEndpoints: Endpoint[] = [
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
-      { status: 403, description: "Forbidden - the user lacks edit permission on the record the custom field belongs to (for tasks, the creator, assignees and task editors may write)" },
+      { status: 403, description: "Forbidden - the user lacks edit permission on the record the custom field belongs to (for a task: the people who may change its status, that is its creator, an assignee, an admin, or anyone with task.edit)" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Custom Fields",
@@ -2612,7 +2612,7 @@ export const customFieldsEndpoints: Endpoint[] = [
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
-      { status: 403, description: "Forbidden - the user lacks edit permission on the record the custom field belongs to (for tasks, the creator, assignees and task editors may write)" },
+      { status: 403, description: "Forbidden - the user lacks edit permission on the record the custom field belongs to (for a task: the people who may change its status, that is its creator, an assignee, an admin, or anyone with task.edit)" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Custom Fields",
@@ -6070,7 +6070,7 @@ export const intakeFormEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/intake/submissions/{id}/preview',
     summary: "Get Submission Preview",
-    description: "Also returns routing, routingEnabled, canDecide, decideBlockedReason, laneReviewers (id and name of the users who can decide) and isSeniorReviewer for the caller. customFields lists, in question order, the entity custom field values approval would write from answers mapped to custom fields: { label, displayValue, skipped? }, where skipped is the translated reason a value would not be written.",
+    description: "Also returns routing, routingEnabled, canDecide, decideBlockedReason, laneReviewers (id and name of the users who can decide) and isSeniorReviewer for the caller.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -6188,7 +6188,7 @@ export const intakeFormEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/intake/submissions/{id}/approve',
     summary: "Approve Submission",
-    description: "With routing on, only a reviewer of the lane the approval would make true, or an Admin, can approve (403 otherwise). A standard-lane approval by a non-senior reviewer may be picked for a second review. Answers mapped to entity custom fields are written on the new entity in the approval transaction; custom_field:* keys in confirmedEntityData are ignored. The response data is the approved submission plus customFieldSkips: [{ label, reason }], the values not written and the translated reason (an empty array when none were skipped).",
+    description: "With routing on, only a reviewer of the lane the approval would make true, or an Admin, can approve (403 otherwise). A standard-lane approval by a non-senior reviewer may be picked for a second review. Answers mapped to entity custom fields are written on the new entity in the approval transaction; custom_field:* keys in confirmedEntityData are ignored. The response data is the approved submission; POST /api/v1/intake-submissions/{id}/approve also reports the custom field values it could not write.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -12412,6 +12412,46 @@ export const v1IntakeFormsEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: Intake submissions endpoints
+export const v1IntakeSubmissionsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/intake-submissions/{id}/preview',
+    summary: "Get Submission Preview V1",
+    description: "The legacy GET /api/intake/submissions/{id}/preview response plus customFields, for a pending submission: in question order, the entity custom field values approval would write from answers mapped to custom fields, as { label, displayValue, skipped? }. For a value that would not be written, displayValue is the answer as submitted and skipped is the translated reason. customFields is null when the custom field definitions could not be read, and absent once the submission is decided.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 400, description: "Invalid submission ID" },
+      { status: 404, description: "Submission or form not found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake submissions",
+  },
+  {
+    method: 'POST',
+    path: '/v1/intake-submissions/{id}/approve',
+    summary: "Approve Submission V1",
+    description: "Same request, checks and effects as the legacy POST /api/intake/submissions/{id}/approve. Answers mapped to entity custom fields are written on the new entity in the approval transaction; custom_field:* keys in confirmedEntityData are ignored. The response data is the approved submission plus customFieldSkips: [{ label, reason }], the values not written and the translated reason (an empty array when none were skipped).",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 400, description: "Invalid submission ID, a submission that is not pending, or invalid entity data" },
+      { status: 403, description: "Forbidden - the caller lacks intakeForm.edit, or routing is on and the caller may not decide this lane" },
+      { status: 404, description: "Submission or form not found" },
+      { status: 409, description: "Conflict - the submission changed while it was being approved, or an AI app with this name already exists" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake submissions",
+  },
+];
+
 // v1: Use Case Settings endpoints
 export const v1UseCaseSettingsEndpoints: Endpoint[] = [
   {
@@ -12526,6 +12566,7 @@ export const v1V1aiAppsEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/v1/ai-apps',
     summary: "Get All Ai Apps V1",
+    description: "The legacy GET /api/ai-apps list plus the lifecycle columns, an optional ?lifecycle_stage= filter, ?search= on name or description, and each app's custom_fields: [{ definition_id, field_key, label, field_type, value }].",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -13711,6 +13752,7 @@ export const allEndpoints = {
   v1ChangeHistory: v1ChangeHistoryEndpoints,
   v1Extensions: v1ExtensionsEndpoints,
   v1IntakeForms: v1IntakeFormsEndpoints,
+  v1IntakeSubmissions: v1IntakeSubmissionsEndpoints,
   v1UseCaseSettings: v1UseCaseSettingsEndpoints,
   v1V1aiAppLifecycle: v1V1aiAppLifecycleEndpoints,
   v1V1aiApps: v1V1aiAppsEndpoints,

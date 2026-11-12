@@ -7920,6 +7920,8 @@ tags:
   -
     name: 'v1: Intake Forms'
   -
+    name: 'v1: Intake submissions'
+  -
     name: 'v1: Shadow AI'
   -
     name: 'v1: Use Case Settings'
@@ -24514,7 +24516,7 @@ paths:
       tags:
         - 'Intake Forms'
       summary: 'Get Submission Preview'
-      description: 'Also returns routing, routingEnabled, canDecide, decideBlockedReason, laneReviewers (id and name of the users who can decide) and isSeniorReviewer for the caller. customFields lists, in question order, the entity custom field values approval would write from answers mapped to custom fields: { label, displayValue, skipped? }, where skipped is the translated reason a value would not be written.'
+      description: 'Also returns routing, routingEnabled, canDecide, decideBlockedReason, laneReviewers (id and name of the users who can decide) and isSeniorReviewer for the caller.'
       operationId: getSubmissionPreview
       security:
         -
@@ -24726,7 +24728,7 @@ paths:
       tags:
         - 'Intake Forms'
       summary: 'Approve Submission'
-      description: 'With routing on, only a reviewer of the lane the approval would make true, or an Admin, can approve (403 otherwise). A standard-lane approval by a non-senior reviewer may be picked for a second review. Answers mapped to entity custom fields are written on the new entity in the approval transaction; custom_field:* keys in confirmedEntityData are ignored. The response data is the approved submission plus customFieldSkips: [{ label, reason }], the values not written and the translated reason (an empty array when none were skipped).'
+      description: 'With routing on, only a reviewer of the lane the approval would make true, or an Admin, can approve (403 otherwise). A standard-lane approval by a non-senior reviewer may be picked for a second review. Answers mapped to entity custom fields are written on the new entity in the approval transaction; custom_field:* keys in confirmedEntityData are ignored. The response data is the approved submission; POST /api/v1/intake-submissions/{id}/approve also reports the custom field values it could not write.'
       operationId: approveSubmission
       security:
         -
@@ -26563,7 +26565,7 @@ paths:
         '200':
           description: Success
         '403':
-          description: 'Forbidden - the user lacks edit permission on the record the custom field belongs to (for tasks, the creator, assignees and task editors may write)'
+          description: 'Forbidden - the user lacks edit permission on the record the custom field belongs to (for a task: the people who may change its status, that is its creator, an assignee, an admin, or anyone with task.edit)'
         '500':
           description: 'Internal server error'
       tags:
@@ -26579,7 +26581,7 @@ paths:
         '200':
           description: Success
         '403':
-          description: 'Forbidden - the user lacks edit permission on the record the custom field belongs to (for tasks, the creator, assignees and task editors may write)'
+          description: 'Forbidden - the user lacks edit permission on the record the custom field belongs to (for a task: the people who may change its status, that is its creator, an assignee, an admin, or anyone with task.edit)'
         '500':
           description: 'Internal server error'
       tags:
@@ -27530,6 +27532,7 @@ paths:
   /v1/ai-apps:
     get:
       summary: 'Get All Ai Apps V1'
+      description: 'The legacy GET /api/ai-apps list plus the lifecycle columns, an optional ?lifecycle_stage= filter, ?search= on name or description, and each app''s custom_fields: [{ definition_id, field_key, label, field_type, value }].'
       responses:
         '200':
           description: Success
@@ -28717,6 +28720,62 @@ paths:
       tags:
         - 'v1: V1/Imported Framework Assessments'
       operationId: replaceImplRisks
+      security:
+        -
+          bearerAuth: []
+  '/v1/intake-submissions/{id}/preview':
+    get:
+      summary: 'Get Submission Preview V1'
+      description: 'The legacy GET /api/intake/submissions/{id}/preview response plus customFields, for a pending submission: in question order, the entity custom field values approval would write from answers mapped to custom fields, as { label, displayValue, skipped? }. For a value that would not be written, displayValue is the answer as submitted and skipped is the translated reason. customFields is null when the custom field definitions could not be read, and absent once the submission is decided.'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: 'Invalid submission ID'
+        '404':
+          description: 'Submission or form not found'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake submissions'
+      operationId: getSubmissionPreviewV1
+      security:
+        -
+          bearerAuth: []
+  '/v1/intake-submissions/{id}/approve':
+    post:
+      summary: 'Approve Submission V1'
+      description: 'Same request, checks and effects as the legacy POST /api/intake/submissions/{id}/approve. Answers mapped to entity custom fields are written on the new entity in the approval transaction; custom_field:* keys in confirmedEntityData are ignored. The response data is the approved submission plus customFieldSkips: [{ label, reason }], the values not written and the translated reason (an empty array when none were skipped).'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: 'Invalid submission ID, a submission that is not pending, or invalid entity data'
+        '403':
+          description: 'Forbidden - the caller lacks intakeForm.edit, or routing is on and the caller may not decide this lane'
+        '404':
+          description: 'Submission or form not found'
+        '409':
+          description: 'Conflict - the submission changed while it was being approved, or an AI app with this name already exists'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake submissions'
+      operationId: approveSubmissionV1
       security:
         -
           bearerAuth: []
