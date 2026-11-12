@@ -1,14 +1,5 @@
 import { useState, useEffect, useRef, useMemo, useCallback } from "react";
-import {
-  Box,
-  Card,
-  CardContent,
-  Typography,
-  Stack,
-  FormControl,
-  Select,
-  MenuItem,
-} from "@mui/material";
+import { Box, Card, CardContent, Typography, Stack } from "@mui/material";
 import { Play, Clock } from "lucide-react";
 import {
   getAllExperiments,
@@ -36,6 +27,9 @@ import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import HelperIcon from "../../components/HelperIcon";
+import Select from "../../components/Inputs/Select";
+import { palette } from "../../themes/palette";
+import { countLabel } from "../../tools/countLabel";
 import TipBox from "../../components/TipBox";
 import { useCanCheck } from "../../../application/hooks/useCan";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
@@ -642,7 +636,9 @@ export default function ProjectExperiments({
           title="Rerun experiment"
           body={
             <Box>
-              <Typography sx={{ fontSize: "14px", color: "#475467", lineHeight: 1.6, mb: 2 }}>
+              <Typography
+                sx={{ fontSize: "14px", color: palette.text.tertiary, lineHeight: 1.6, mb: "12px" }}
+              >
                 This will create a new experiment run using the same configuration as "
                 {rerunConfirm.experiment.name}".
               </Typography>
@@ -652,20 +648,21 @@ export default function ProjectExperiments({
                     display: "flex",
                     alignItems: "center",
                     gap: "8px",
-                    p: "8px",
+                    p: "8px 10px",
                     borderRadius: "4px",
-                    backgroundColor: "#F0FDF4",
-                    border: "1px solid #BBF7D0",
+                    backgroundColor: palette.status.success.bg,
+                    border: `1px solid ${palette.status.success.border}`,
                   }}
                 >
-                  <Clock size={16} color="#13715B" />
+                  <Clock size={16} color={palette.brand.primary} />
                   <Box>
-                    <Typography sx={{ fontSize: "13px", fontWeight: 500, color: "#13715B" }}>
+                    <Typography
+                      sx={{ fontSize: "13px", fontWeight: 500, color: palette.brand.primary }}
+                    >
                       Estimated time: {getEstimatedTimeRange(rerunConfirm.promptCount)}
                     </Typography>
-                    <Typography sx={{ fontSize: "11px", color: "#16A34A" }}>
-                      Based on {rerunConfirm.promptCount} prompt
-                      {rerunConfirm.promptCount !== 1 ? "s" : ""} from the original run
+                    <Typography sx={{ fontSize: "12px", color: palette.status.success.text }}>
+                      {`Based on ${countLabel(rerunConfirm.promptCount, "prompt")} from the original run`}
                     </Typography>
                   </Box>
                 </Box>
@@ -690,7 +687,7 @@ export default function ProjectExperiments({
         <ConfirmationModal
           title="API key may not be configured"
           body={
-            <Typography sx={{ fontSize: "14px", color: "#475467", lineHeight: 1.6 }}>
+            <Typography sx={{ fontSize: "14px", color: palette.text.tertiary, lineHeight: 1.6 }}>
               {apiKeyWarning.message}
               <br />
               <br />
@@ -711,9 +708,9 @@ export default function ProjectExperiments({
       )}
 
       {/* Header + description */}
-      <Stack spacing={1} mb={4}>
-        <Box display="flex" alignItems="center" gap={1}>
-          <Typography variant="h6" fontSize={15} fontWeight="600" color="#111827">
+      <Stack spacing="4px" mb="16px">
+        <Box display="flex" alignItems="center" gap="4px">
+          <Typography variant="h6" fontSize={15} fontWeight="600" color={palette.text.primary}>
             Experiments
           </Typography>
           <HelperIcon articlePath="llm-evals/running-experiments" />
@@ -733,43 +730,36 @@ export default function ProjectExperiments({
       <Card
         sx={{
           marginBottom: "16px",
-          border: "1px solid #d0d5dd",
+          border: `1px solid ${palette.border.dark}`,
           borderRadius: "4px",
           boxShadow: "none",
         }}
       >
-        <CardContent sx={{ py: 2 }}>
-          <Box mb={1}>
+        <CardContent sx={{ "p": "16px", "&:last-child": { pb: "16px" } }}>
+          <Box mb="4px">
             <Typography variant="h6" sx={{ fontSize: "14px", fontWeight: 600 }}>
               Performance tracking
             </Typography>
           </Box>
           <Box
-            sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: "12px",
+            }}
           >
             <Typography variant="body2" color="text.secondary" sx={{ fontSize: "13px" }}>
               Track metric scores across eval runs
             </Typography>
-            <FormControl size="small">
-              <Select
-                value={chartTimeRange}
-                onChange={(e) => setChartTimeRange(e.target.value as TimeRange)}
-                sx={{
-                  "fontSize": "12px",
-                  "height": "28px",
-                  "& .MuiSelect-select": { py: 0.5, px: 1.5 },
-                  "& .MuiOutlinedInput-notchedOutline": { borderColor: "#E5E7EB" },
-                  "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#D1D5DB" },
-                  "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#13715B" },
-                }}
-              >
-                {TIME_RANGE_OPTIONS.map((opt) => (
-                  <MenuItem key={opt.value} value={opt.value} sx={{ fontSize: "12px" }}>
-                    {opt.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
+            <Select
+              id="experiments-chart-time-range"
+              ariaLabel="Time range"
+              value={chartTimeRange}
+              onChange={(e) => setChartTimeRange(e.target.value as TimeRange)}
+              items={TIME_RANGE_OPTIONS.map((opt) => ({ _id: opt.value, name: opt.label }))}
+              sx={{ width: "150px" }}
+            />
           </Box>
 
           <Box sx={{ position: "relative" }}>
@@ -804,12 +794,12 @@ export default function ProjectExperiments({
                   sx={{
                     fontSize: "14px",
                     fontWeight: 500,
-                    color: "#374151",
+                    color: palette.text.secondary,
                     textAlign: "center",
-                    px: 3,
+                    px: "12px",
                   }}
                 >
-                  You can start tracking metrics once you define your experiments
+                  Run your first experiment to start tracking scores
                 </Typography>
               </Box>
             )}
@@ -823,9 +813,9 @@ export default function ProjectExperiments({
         justifyContent="space-between"
         alignItems="center"
         sx={{ marginBottom: "18px" }}
-        gap={2}
+        gap="4px"
       >
-        <Stack direction="row" alignItems="center" gap={2}>
+        <Stack direction="row" alignItems="center" gap="4px">
           <FilterBy columns={experimentFilterColumns} onFilterChange={handleFilterChange} />
           <GroupBy
             options={[
@@ -847,18 +837,14 @@ export default function ProjectExperiments({
           variant="contained"
           text="New experiment"
           icon={<Play size={16} />}
-          sx={{
-            backgroundColor: "#13715B",
-            border: "1px solid #13715B",
-            gap: 2,
-          }}
+          sx={{ gap: "4px" }}
           onClick={() => setNewEvalModalOpen(true)}
           isDisabled={!canCreateExperiment}
         />
       </Stack>
 
       {/* Experiments Table with Pagination */}
-      <Box mb={4}>
+      <Box mb="8px">
         <GroupedTableView
           groupedData={groupedRows}
           ungroupedData={tableRows}

@@ -1,4 +1,5 @@
 import { palette } from "../../themes/palette";
+import { stripGEvalPrefix } from "./metricLabels";
 
 // One metric's entry in an evaluation log's metadata.metric_scores.
 // Older logs store a bare number; current ones store an object.
@@ -21,7 +22,7 @@ export type MetricScoreEntry =
 const LOWER_IS_BETTER_METRICS = new Set(["bias", "toxicity", "hallucination"]);
 
 export const lowerIsBetter = (metricName: string): boolean => {
-  const name = metricName.replace(/^G-Eval\s*\((.+)\)$/i, "$1");
+  const name = stripGEvalPrefix(metricName);
   return LOWER_IS_BETTER_METRICS.has(name.toLowerCase().replace(/[\s_]/g, ""));
 };
 
@@ -36,9 +37,7 @@ export const findMetricEntry = (
   if (scores[gevalKey] !== undefined) return scores[gevalKey];
   const wanted = metricName.toLowerCase();
   const key = Object.keys(scores).find(
-    (k) =>
-      k.toLowerCase() === wanted ||
-      k.replace(/^G-Eval\s*\((.+)\)$/i, "$1").toLowerCase() === wanted,
+    (k) => k.toLowerCase() === wanted || stripGEvalPrefix(k).toLowerCase() === wanted,
   );
   return key ? scores[key] : undefined;
 };

@@ -76,7 +76,7 @@ describe("ExperimentTableBody", () => {
         <ExperimentTableBody {...defaultProps} />
       </table>,
     );
-    expect(screen.getAllByText("Running...").length).toBeGreaterThanOrEqual(1);
+    expect(screen.getAllByText("Running").length).toBeGreaterThanOrEqual(1);
   });
 
   it("renders Failed status", () => {

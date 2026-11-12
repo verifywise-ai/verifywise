@@ -9,6 +9,7 @@ import os
 import json
 import re
 import time
+import warnings
 from pathlib import Path
 from datetime import datetime
 from typing import List, Dict, Any, Optional, Callable
@@ -27,7 +28,7 @@ from deepeval.dataset import EvaluationDataset
 from deepeval.models import DeepEvalBaseLLM
 from .model_runner import ModelRunner
 from deepeval.metrics import GEval
-from deepeval.test_case import LLMTestCase, LLMTestCaseParams, ConversationalTestCase
+from deepeval.test_case import LLMTestCase, ConversationalTestCase
 
 # Import native multi-turn metrics (required for multi-turn evaluation)
 # Docs: https://deepeval.com/docs/getting-started-chatbots
@@ -258,6 +259,104 @@ def normalize_metric_thresholds(thresholds: Optional[Dict[str, Any]]) -> Dict[st
             continue
         normalized[snake] = number
     return normalized
+
+
+# DeepEval warns once per process that BiasMetric/ToxicityMetric flipped direction.
+# LowerIsBetterNativeMetric below handles the flip, so the warning is noise in run logs.
+warnings.filterwarnings(
+    "ignore", message=r".*now scores in the same direction", category=DeprecationWarning
+)
+
+_REASON_SCORE = re.compile(r"(score (?:is|of) )(\d+(?:\.\d+)?)", re.IGNORECASE)
+
+
+def _native_bias_scores_clean_share() -> bool:
+    """
+    True when the installed DeepEval scores BiasMetric/ToxicityMetric as the share of
+    clean verdicts (4.2.0 and later). Read from the installed package, not the
+    requirements file: an environment that pulled new code but kept DeepEval 4.1.3
+    must not invert scores that are already on VerifyWise's scale.
+    """
+    try:
+        from importlib.metadata import version as _installed_version
+
+        from packaging.version import Version
+
+        return Version(_installed_version("deepeval")) >= Version("4.2.0")
+    except Exception:
+        # No metadata to read: assume the pinned version (4.3.4).
+        return True
+
+
+NATIVE_BIAS_SCORES_CLEAN_SHARE = _native_bias_scores_clean_share()
+
+
+class LowerIsBetterNativeMetric:
+    """
+    Keep DeepEval's native BiasMetric and ToxicityMetric on VerifyWise's scale.
+
+    DeepEval 4.2.0 inverted these metrics: the score became the share of clean
+    verdicts (1 = pass) and `threshold` became the minimum passing score. VerifyWise
+    stores, charts, reports and gates them as the share of biased or toxic verdicts
+    (0 = none found) with `threshold` as the maximum, the same scale GEvalLikeMetric
+    uses with lower_is_better. On 4.2.0+ this wrapper hands DeepEval `1 - threshold`
+    and reports `1 - score`, so stored results, saved thresholds and the CI gate keep
+    their meaning. On an older DeepEval the scores are already on that scale and pass
+    through unchanged.
+
+    DeepEval's reason quotes its own score ("The score is 0.75 because ..."), so a
+    quoted number matching the native score is rewritten to the stored one.
+    """
+
+    def __init__(self, metric_cls: Any, *, threshold: float = 0.5, **kwargs: Any) -> None:
+        self.threshold = threshold
+        self._invert = NATIVE_BIAS_SCORES_CLEAN_SHARE
+        self._metric = metric_cls(threshold=1.0 - threshold if self._invert else threshold, **kwargs)
+        self.score: Optional[float] = None
+        self.success: Optional[bool] = None
+        self.reason: Optional[str] = None
+        self._found: Optional[float] = None
+
+    def _convert(self) -> Optional[float]:
+        native = self._metric.score
+        # Pass/fail uses the exact value; the stored score is rounded for display.
+        if native is None:
+            self._found = None
+        else:
+            self._found = min(1.0, max(0.0, 1.0 - native if self._invert else native))
+        self.score = None if self._found is None else round(self._found, 6)
+        self.reason = getattr(self._metric, "reason", None)
+        if self._invert and native is not None and isinstance(self.reason, str):
+            def _swap(match: "re.Match[str]") -> str:
+                if abs(float(match.group(2)) - native) < 0.005:
+                    return match.group(1) + format(self.score, ".2f")
+                return match.group(0)
+
+            self.reason = _REASON_SCORE.sub(_swap, self.reason, count=1)
+        return self.score
+
+    def measure(self, test_case: Any, *args: Any, **kwargs: Any) -> Optional[float]:
+        self._metric.measure(test_case, *args, **kwargs)
+        return self._convert()
+
+    async def a_measure(self, test_case: Any, *args: Any, **kwargs: Any) -> Optional[float]:
+        await self._metric.a_measure(test_case, *args, **kwargs)
+        return self._convert()
+
+    def is_successful(self) -> bool:
+        if self._found is None or getattr(self._metric, "error", None) is not None:
+            self.success = False
+        else:
+            self.success = self._found <= self.threshold + 1e-9
+        return self.success
+
+    def __getattr__(self, name: str) -> Any:
+        # error, evaluation_cost and the rest come from the wrapped metric. Never
+        # forward _metric itself or dunder lookups (copy/pickle probe those before
+        # __init__ has run), or a half-built wrapper recurses forever.
+        if name == "_metric" or (name.startswith("__") and name.endswith("__")):
+            raise AttributeError(name)
+        return getattr(self._metric, name)
 
 
 class GEvalLikeMetric:
@@ -769,7 +868,8 @@ class DeepEvalEvaluator:
                                         actual_output=turn_content,
                                         expected_output=""
                                     )
-                                    bias_metric = BiasMetric(
+                                    bias_metric = LowerIsBetterNativeMetric(
+                                        BiasMetric,
                                         threshold=self.metric_thresholds.get("bias", 0.5),
                                         model=judge_llm  # Use judge_llm wrapper for any provider
                                     )
@@ -816,7 +916,8 @@ class DeepEvalEvaluator:
                                         actual_output=turn_content,
                                         expected_output=""
                                     )
-                                    toxicity_metric = ToxicityMetric(
+                                    toxicity_metric = LowerIsBetterNativeMetric(
+                                        ToxicityMetric,
                                         threshold=self.metric_thresholds.get("toxicity", 0.5),
                                         model=judge_llm  # Use judge_llm wrapper for any provider
                                     )
@@ -1080,7 +1181,8 @@ class DeepEvalEvaluator:
             if judge_provider == "openai":
                 metrics_to_use.append((
                     "Toxicity",
-                    ToxicityMetric(
+                    LowerIsBetterNativeMetric(
+                        ToxicityMetric,
                         threshold=self.metric_thresholds.get("toxicity", 0.5),
                         model=judge_llm
                     )
@@ -1104,7 +1206,8 @@ class DeepEvalEvaluator:
             if judge_provider == "openai":
                 metrics_to_use.append((
                     "Bias",
-                    BiasMetric(
+                    LowerIsBetterNativeMetric(
+                        BiasMetric,
                         threshold=self.metric_thresholds.get("bias", 0.5),
                         model=judge_llm
                     )

@@ -566,8 +566,9 @@ async def run_evaluation(
         if simulated_mode and simulated_scenarios:
             # Import ConversationSimulator (required for simulated mode)
             try:
-                from deepeval.conversation_simulator import ConversationSimulator
+                from deepeval.simulator import ConversationSimulator
                 from deepeval.dataset import ConversationalGolden
+                from deepeval_engine.deepeval_evaluator import get_judge_llm
             except ImportError:
                 error_msg = "ConversationSimulator is not available. Please upgrade DeepEval to use simulated mode."
                 print(f"❌ {error_msg}")
@@ -582,16 +583,19 @@ async def run_evaluation(
             # 3A-SIM. Simulated conversation mode: use ConversationSimulator
             print(f"\n🎭 SIMULATED MODE: Generating conversations for {len(simulated_scenarios)} scenarios...")
             
-            # Create model callback for the simulator
-            async def model_callback(input_text: str, turns_history: list, thread_id: str = "") -> Turn:
+            # Create model callback for the simulator. DeepEval passes `input`, `turns` and
+            # `thread_id` by keyword and drops names the callback does not declare, so the
+            # parameter names matter. It is synchronous because the simulator runs in sync
+            # mode (see below) and model_runner.generate is synchronous.
+            def model_callback(input: str, turns: list, thread_id: str = "") -> Turn:
                 """Generate next assistant response given conversation history."""
                 # Build context from history
                 context_parts = []
-                for t in turns_history[-6:]:  # Keep last 6 turns for context
+                for t in turns[-6:]:  # Keep last 6 turns for context
                     context_parts.append(f"{t.role.capitalize()}: {t.content}")
                 context = "\n".join(context_parts)
-                
-                prompt = f"{context}\n\nUser: {input_text}\n\nAssistant:" if context else f"User: {input_text}\n\nAssistant:"
+
+                prompt = f"{context}\n\nUser: {input}\n\nAssistant:" if context else f"User: {input}\n\nAssistant:"
                 
                 response = model_runner.generate(
                     prompt=prompt,
@@ -612,10 +616,25 @@ async def run_evaluation(
             
             # Run simulation
             max_turns = dataset_config.get("maxTurns", 6)
-            simulator = ConversationSimulator(model_callback=model_callback)
-            
-            print(f"🔄 Simulating conversations with max {max_turns} turns each...")
-            simulated_test_cases = simulator.simulate(goldens=goldens, max_turns=max_turns)
+            # The simulated user is played by the judge LLM, through the gateway like the
+            # metrics; without it DeepEval falls back to its own OpenAI client.
+            simulator = ConversationSimulator(
+                model_callback=model_callback,
+                simulator_model=get_judge_llm(
+                    provider=os.getenv("G_EVAL_PROVIDER", os.getenv("EVAL_PROVIDER", "openai")).lower(),
+                    model_name=os.getenv("G_EVAL_MODEL", os.getenv("OPENAI_G_EVAL_MODEL", "gpt-4o-mini")),
+                ),
+                # Async mode calls loop.run_until_complete, which fails inside this
+                # running event loop; sync mode in a worker thread keeps the loop free.
+                async_mode=False,
+            )
+
+            print(f"🔄 Simulating conversations with max {max_turns} user turns each...")
+            simulated_test_cases = await asyncio.to_thread(
+                simulator.simulate,
+                conversational_goldens=goldens,
+                max_user_simulations=max_turns,
+            )
             
             # Convert simulated test cases to our format
             for idx, conv_tc in enumerate(simulated_test_cases, 1):
