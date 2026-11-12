@@ -26562,6 +26562,8 @@ paths:
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Forbidden - the user lacks edit permission on the record the custom field belongs to (for tasks, the creator, assignees and task editors may write)'
         '500':
           description: 'Internal server error'
       tags:
@@ -26576,6 +26578,8 @@ paths:
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Forbidden - the user lacks edit permission on the record the custom field belongs to (for tasks, the creator, assignees and task editors may write)'
         '500':
           description: 'Internal server error'
       tags:

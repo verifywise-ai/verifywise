@@ -2600,6 +2600,7 @@ export const customFieldsEndpoints: Endpoint[] = [
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
+      { status: 403, description: "Forbidden - the user lacks edit permission on the record the custom field belongs to (for tasks, the creator, assignees and task editors may write)" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Custom Fields",
@@ -2611,6 +2612,7 @@ export const customFieldsEndpoints: Endpoint[] = [
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
+      { status: 403, description: "Forbidden - the user lacks edit permission on the record the custom field belongs to (for tasks, the creator, assignees and task editors may write)" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Custom Fields",
