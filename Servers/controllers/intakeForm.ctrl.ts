@@ -960,7 +960,14 @@ async function previewIntakeCustomFields(
 ): Promise<Array<{ label: string; displayValue: string; skipped?: string }>> {
   const target = customFieldEntityOf(intakeEntityType);
   if (!target || !hasCustomFieldMappings(schema)) return [];
-  const definitions = await listCustomFieldDefinitionsQuery(req.organizationId!, target);
+  let definitions: Awaited<ReturnType<typeof listCustomFieldDefinitionsQuery>>;
+  try {
+    definitions = await listCustomFieldDefinitionsQuery(req.organizationId!, target);
+  } catch (error) {
+    // The preview is advisory; a failed definitions read must not block review.
+    logger.warn(`Custom field preview unavailable: ${(error as Error).message}`);
+    return [];
+  }
   const { values, skipped } = resolveIntakeCustomFieldValues(answers, schema, definitions);
   const rows: Array<{ label: string; displayValue: string; skipped?: string }> = [];
   for (const field of schema.fields) {
@@ -2441,7 +2448,9 @@ export async function approveSubmission(req: Request, res: Response) {
     // Custom field values come from the answers only (#5262), so any
     // custom_field:* key the reviewer sent is dropped here.
     let entityData: Record<string, unknown> =
-      confirmedEntityData && typeof confirmedEntityData === "object"
+      confirmedEntityData &&
+      typeof confirmedEntityData === "object" &&
+      !Array.isArray(confirmedEntityData)
         ? withoutCustomFieldKeys(confirmedEntityData as Record<string, unknown>)
         : confirmedEntityData ||
           buildEntityDataFromSubmission(submission.data as Record<string, unknown>, form.schema);

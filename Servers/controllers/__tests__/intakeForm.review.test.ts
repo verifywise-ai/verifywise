@@ -621,6 +621,36 @@ describe("getSubmissionPreview custom fields (#5262)", () => {
     expect(Object.keys(r.body.data.entityPreview)).not.toContain("custom_field:owner");
   });
 
+  it("degrades to an empty list, with a warning, when the definitions can't be read", async () => {
+    intake.getSubmissionByIdQuery.mockResolvedValue(
+      submission({ entityType: "model", data: { owner: "Alice" } }),
+    );
+    intake.getIntakeFormByIdQuery.mockResolvedValue({
+      id: 1,
+      name: "F",
+      entityType: "model",
+      schema: {
+        fields: [
+          {
+            id: "owner",
+            type: "text",
+            label: "Who owns it?",
+            entityFieldMapping: "custom_field:owner",
+          },
+        ],
+      },
+      riskTierSystem: "eu_ai_act",
+    });
+    runs.getLatestRunForSubmissionQuery.mockResolvedValue(null);
+    customFields.listCustomFieldDefinitionsQuery.mockRejectedValueOnce(new Error("db down"));
+    const r = await call(ctrl.getSubmissionPreview, req());
+    expect(r.status).toBe(200);
+    expect(r.body.data.customFields).toEqual([]);
+    expect(require("../../utils/logger/fileLogger").default.warn).toHaveBeenCalledWith(
+      expect.stringContaining("db down"),
+    );
+  });
+
   it("is empty, with no definitions read, for a form without custom mappings", async () => {
     const r = await call(ctrl.getSubmissionPreview, req());
     expect(r.body.data.customFields).toEqual([]);

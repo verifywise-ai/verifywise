@@ -1585,8 +1585,20 @@
       "name": "two questions mapped to the same custom field",
       "entityType": "model",
       "fields": [
-        { "id": "a", "type": "text", "label": "A", "order": 0, "entityFieldMapping": "custom_field:owner" },
-        { "id": "b", "type": "text", "label": "B", "order": 1, "entityFieldMapping": "custom_field:owner" }
+        {
+          "id": "a",
+          "type": "text",
+          "label": "A",
+          "order": 0,
+          "entityFieldMapping": "custom_field:owner"
+        },
+        {
+          "id": "b",
+          "type": "text",
+          "label": "B",
+          "order": 1,
+          "entityFieldMapping": "custom_field:owner"
+        }
       ],
       "errorFieldIds": ["b"],
       "messages": ["Field \"B\": two questions map to the same custom field"]
@@ -1595,8 +1607,20 @@
       "name": "two questions mapped to different custom fields",
       "entityType": "model",
       "fields": [
-        { "id": "a", "type": "text", "label": "A", "order": 0, "entityFieldMapping": "custom_field:owner" },
-        { "id": "b", "type": "text", "label": "B", "order": 1, "entityFieldMapping": "custom_field:region" }
+        {
+          "id": "a",
+          "type": "text",
+          "label": "A",
+          "order": 0,
+          "entityFieldMapping": "custom_field:owner"
+        },
+        {
+          "id": "b",
+          "type": "text",
+          "label": "B",
+          "order": 1,
+          "entityFieldMapping": "custom_field:region"
+        }
       ],
       "errorFieldIds": []
     }

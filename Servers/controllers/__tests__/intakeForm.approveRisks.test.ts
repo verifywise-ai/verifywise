@@ -474,6 +474,17 @@ describe("approveSubmission writes mapped custom fields (#5262)", () => {
     ]);
   });
 
+  it("treats an array confirmedEntityData as data to keep, not as an object to filter", async () => {
+    const filter = jest.spyOn(Object, "entries");
+    const r = await approve({ confirmedEntityData: ["a", "b"] });
+    const filteredAnArray = filter.mock.calls.some(
+      ([arg]) => Array.isArray(arg) && arg.length === 2 && arg[0] === "a",
+    );
+    filter.mockRestore();
+    expect(r.status).toBe(200);
+    expect(filteredAnArray).toBe(false);
+  });
+
   it("an unexpected write error rolls the approval back", async () => {
     customFields.setCustomFieldValueQuery.mockRejectedValueOnce(new Error("connection lost"));
     const r = await approve();

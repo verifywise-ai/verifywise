@@ -114,6 +114,21 @@ describe("resolveIntakeCustomFieldValues", () => {
     expect(retyped.skipped[0].reason).toBe("type_changed");
   });
 
+  it("names a skipped field by its definition label, except when the definition is gone", () => {
+    const question = q({ label: "Your question" });
+    expect(run(question, def({ field_type: "number" }), "abc").skipped).toEqual([
+      { fieldKey: "k", label: "Field K", reason: "type_changed" },
+    ]);
+    const select = q({ type: "select", label: "Your question" });
+    expect(
+      run(select, def({ field_type: "select", options: ["Low"] }), "High").skipped[0].label,
+    ).toBe("Field K");
+    expect(
+      run(q({ type: "number", label: "Your question" }), def({ field_type: "number" }), "x"),
+    ).toMatchObject({ skipped: [{ label: "Field K", reason: "invalid_value" }] });
+    expect(run(question, undefined, "abc").skipped[0].label).toBe("Your question");
+  });
+
   it("ignores fields without a custom mapping", () => {
     const out = resolveIntakeCustomFieldValues(
       { q1: "x" },
