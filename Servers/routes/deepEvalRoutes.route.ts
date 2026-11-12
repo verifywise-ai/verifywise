@@ -57,12 +57,26 @@ const READ_ONLY_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
 type SettingsPermissionRequest = Request & { canManageEvalsSettings?: boolean };
 
 /**
- * Resolve, for write requests, whether the caller holds "organization.admin",
- * the permission that gates LLM Evals organization settings. The EvalServer
- * decides which routes need it; resolving it here for every write (rather than
- * matching the settings path) means no path spelling can skip the check.
- * Fails closed: on a lookup error the flag stays unset and the EvalServer
- * refuses the settings write.
+ * Whether the request path (relative to /api/deepeval) is under /settings.
+ * Decoded and lower-cased so the common spellings match; a spelling that
+ * doesn't match only means the header is not set, and the EvalServer then
+ * refuses the settings write (fail closed).
+ */
+function isSettingsPath(path: string): boolean {
+  let decoded = path;
+  try {
+    decoded = decodeURIComponent(path);
+  } catch {
+    // Malformed escape: keep the raw path.
+  }
+  return decoded.toLowerCase().replace(/\/+/g, "/").startsWith("/settings");
+}
+
+/**
+ * Resolve, for writes to the LLM Evals settings routes, whether the caller
+ * holds "organization.admin", the permission that gates those settings. The
+ * header can only grant access, so other paths skip the lookup. Fails closed:
+ * on a lookup error the flag stays unset and the EvalServer refuses the write.
  */
 export async function resolveEvalsSettingsPermission(
   req: Request,
@@ -71,7 +85,7 @@ export async function resolveEvalsSettingsPermission(
 ): Promise<void> {
   const r = req as SettingsPermissionRequest;
   r.canManageEvalsSettings = false;
-  if (!READ_ONLY_METHODS.has(req.method)) {
+  if (!READ_ONLY_METHODS.has(req.method) && isSettingsPath(req.path)) {
     try {
       r.canManageEvalsSettings = await requestHasPermission(req, "organization.admin");
     } catch (error) {

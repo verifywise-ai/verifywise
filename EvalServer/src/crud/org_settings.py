@@ -58,3 +58,21 @@ async def upsert_arena_enabled(
         {"organization_id": organization_id, "enabled": enabled, "updated_by": updated_by},
     )
     await db.commit()
+
+
+async def insert_arena_enabled_if_unset(organization_id: int, enabled: bool, db: AsyncSession) -> None:
+    """
+    Store a derived Arena value when the organization has no row yet. Leaves an
+    existing row (an Admin's saved choice) untouched.
+    """
+    await db.execute(
+        text(
+            """
+            INSERT INTO llm_evals_org_settings (organization_id, arena_enabled)
+            VALUES (:organization_id, :enabled)
+            ON CONFLICT (organization_id) DO NOTHING
+            """
+        ),
+        {"organization_id": organization_id, "enabled": enabled},
+    )
+    await db.commit()

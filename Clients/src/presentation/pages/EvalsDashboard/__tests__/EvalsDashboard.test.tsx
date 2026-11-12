@@ -216,6 +216,16 @@ describe("EvalsDashboard", () => {
       expect(screen.queryByTestId("arena-page")).not.toBeInTheDocument();
     });
 
+    it("shows a load error, not the turned-off state, when the setting can't be loaded", async () => {
+      mockGetArenaSetting.mockRejectedValue(new Error("500"));
+      renderArenaTab();
+      expect(
+        await screen.findByText("Could not load the Arena setting.", undefined, { timeout: 5000 }),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/Arena is turned off/)).not.toBeInTheDocument();
+      expect(screen.queryByTestId("arena-page")).not.toBeInTheDocument();
+    });
+
     it("shows the Arena page when Arena is on", async () => {
       mockGetArenaSetting.mockResolvedValue({ enabled: true, configured: false });
       renderArenaTab();

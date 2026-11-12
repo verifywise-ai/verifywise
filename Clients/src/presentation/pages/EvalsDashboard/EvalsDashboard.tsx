@@ -105,6 +105,7 @@ const ArenaPage = lazyRoute(() => import("./ArenaPage"));
 const BiasAuditsList = lazyRoute(() => import("./BiasAuditsList"));
 const BiasAuditDetail = lazyRoute(() => import("./BiasAuditDetail"));
 const ReportPage = lazyRoute(() => import("./ReportPage"));
+import { EmptyState } from "../../components/EmptyState";
 import ArenaSettingSection from "./ArenaSettingSection";
 import ArenaDisabledState from "./ArenaDisabledState";
 import type { DeepEvalProject } from "./types";
@@ -251,7 +252,11 @@ export default function EvalsDashboard() {
   const [modelsCount, setModelsCount] = useState<number>(0);
   const [arenaCount, setArenaCount] = useState<number>(0);
   // Arena is an organization setting (off by default); undefined while loading.
-  const { data: arenaSetting, isLoading: arenaSettingLoading } = useArenaSetting();
+  const {
+    data: arenaSetting,
+    isLoading: arenaSettingLoading,
+    isError: arenaSettingError,
+  } = useArenaSetting();
   const arenaEnabled = arenaSetting?.enabled === true;
   // Skip initial loading state if we've loaded before AND we're on a specific project
   // If no projectId, we might redirect to last project, so keep loading to prevent flash
@@ -1953,6 +1958,12 @@ export default function EvalsDashboard() {
               {tab === "arena" &&
                 (arenaSettingLoading ? (
                   <LazyFallback />
+                ) : arenaSettingError ? (
+                  <EmptyState
+                    icon={Swords}
+                    message="Could not load the Arena setting."
+                    showBorder
+                  />
                 ) : arenaEnabled ? (
                   <ArenaPage orgId={orgId || currentProject?.orgId || ""} />
                 ) : (

@@ -49,36 +49,42 @@ def _patch_db(monkeypatch: pytest.MonkeyPatch, stored: Optional[bool], has_compa
 
     stored_mock = AsyncMock(return_value=stored)
     has_mock = AsyncMock(return_value=has_comparisons)
+    insert_mock = AsyncMock()
     monkeypatch.setattr(org_settings, "get_db", fake_get_db)
     monkeypatch.setattr(org_settings, "get_stored_arena_enabled", stored_mock)
     monkeypatch.setattr(org_settings, "org_has_arena_comparisons", has_mock)
-    return stored_mock, has_mock
+    monkeypatch.setattr(org_settings, "insert_arena_enabled_if_unset", insert_mock)
+    return stored_mock, has_mock, insert_mock
 
 
 @pytest.mark.asyncio
 async def test_no_stored_value_and_no_comparisons_is_off(monkeypatch):
     from controllers.org_settings import get_arena_setting
 
-    _patch_db(monkeypatch, stored=None, has_comparisons=False)
+    _, _, insert_mock = _patch_db(monkeypatch, stored=None, has_comparisons=False)
     assert await get_arena_setting(7) == {"enabled": False, "configured": False}
+    insert_mock.assert_not_awaited()  # nothing is saved for orgs that never used Arena
 
 
 @pytest.mark.asyncio
 async def test_no_stored_value_with_comparisons_is_on(monkeypatch):
     from controllers.org_settings import get_arena_setting
 
-    _, has_mock = _patch_db(monkeypatch, stored=None, has_comparisons=True)
-    assert await get_arena_setting(7) == {"enabled": True, "configured": False}
+    _, has_mock, insert_mock = _patch_db(monkeypatch, stored=None, has_comparisons=True)
+    assert await get_arena_setting(7) == {"enabled": True, "configured": True}
     assert has_mock.await_args.args[0] == 7
+    # Saved as on, so deleting the last comparison later can't turn Arena off.
+    assert insert_mock.await_args.args[:2] == (7, True)
 
 
 @pytest.mark.asyncio
 async def test_stored_off_wins_over_existing_comparisons(monkeypatch):
     from controllers.org_settings import get_arena_setting
 
-    _, has_mock = _patch_db(monkeypatch, stored=False, has_comparisons=True)
+    _, has_mock, insert_mock = _patch_db(monkeypatch, stored=False, has_comparisons=True)
     assert await get_arena_setting(7) == {"enabled": False, "configured": True}
     has_mock.assert_not_awaited()
+    insert_mock.assert_not_awaited()
 
 
 @pytest.mark.asyncio

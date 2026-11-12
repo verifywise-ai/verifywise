@@ -5,6 +5,9 @@ Arena is off by default. An organization that never saved the setting gets
 Arena on only if it already has Arena comparisons, so organizations that used
 Arena before the setting existed keep it. Once an Admin saves the setting, the
 stored value wins.
+
+The first time Arena is found on because of existing comparisons, that value is
+saved, so deleting those comparisons later does not turn Arena off.
 """
 
 import logging
@@ -14,6 +17,7 @@ from fastapi import HTTPException, Request
 
 from crud.org_settings import (
     get_stored_arena_enabled,
+    insert_arena_enabled_if_unset,
     org_has_arena_comparisons,
     upsert_arena_enabled,
 )
@@ -40,17 +44,18 @@ def resolve_arena_enabled(stored: Optional[bool], has_comparisons: bool) -> bool
 
 
 async def get_arena_setting(organization_id: int) -> Dict[str, Any]:
-    """The effective Arena value and whether an Admin has saved one."""
+    """The effective Arena value and whether a value is stored for the org."""
     async with get_db() as db:
         stored = await get_stored_arena_enabled(organization_id, db)
-        # Only look for comparisons when nothing is stored: the stored value wins.
-        has_comparisons = (
-            await org_has_arena_comparisons(organization_id, db) if stored is None else False
-        )
-    return {
-        "enabled": resolve_arena_enabled(stored, has_comparisons),
-        "configured": stored is not None,
-    }
+        if stored is not None:
+            return {"enabled": stored, "configured": True}
+        # Nothing stored: on only if the org already has comparisons.
+        has_comparisons = await org_has_arena_comparisons(organization_id, db)
+        if has_comparisons:
+            # Keep it on once found on, even if those comparisons are deleted.
+            await insert_arena_enabled_if_unset(organization_id, True, db)
+            return {"enabled": True, "configured": True}
+    return {"enabled": resolve_arena_enabled(None, False), "configured": False}
 
 
 async def is_arena_enabled(organization_id: int) -> bool:
