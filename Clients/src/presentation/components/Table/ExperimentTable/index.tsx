@@ -113,7 +113,8 @@ const ExperimentTable: React.FC<IExperimentTableProps> = ({
 
   return (
     <TableContainer>
-      <Table sx={{ ...singleTheme.tableStyles.primary.frame }}>
+      {/* Fixed layout keeps the columns at their widths; long names truncate instead */}
+      <Table sx={{ ...singleTheme.tableStyles.primary.frame, tableLayout: "fixed" }}>
         <StandardTableHead columns={columns} sortConfig={sortConfig} onSort={handleSort} />
         {loading ? (
           <TableBody>

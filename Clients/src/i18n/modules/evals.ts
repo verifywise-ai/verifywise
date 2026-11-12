@@ -631,6 +631,25 @@ export const de: Record<string, string> = {
   "Reasoning layer": "Schlussfolgerungsebene",
   "Action layer": "Aktionsebene",
   "Execution layer": "Ausführungsebene",
+  "Planning quality": "Planungsqualität",
+  "Answer correctness": "Antwortrichtigkeit",
+  "Contextual relevancy": "Kontextuelle Relevanz",
+  "Contextual recall": "Kontextuelles Recall",
+  "Contextual precision": "Kontextuelle Präzision",
+  "Conversation completeness": "Konversationsvollständigkeit",
+  "Conversation relevancy": "Konversationsrelevanz",
+  "Role adherence": "Rolleneinhaltung",
+  "Conversation quality": "Konversationsqualität",
+  "Copy results": "Ergebnisse kopieren",
+  "Not scored": "Nicht bewertet",
+  "This metric returned no score": "Diese Metrik hat keinen Wert geliefert",
+  "Check API keys in LLM Evals settings": "API-Schlüssel in den LLM-Evals-Einstellungen prüfen",
+  "The run failed before it finished.": "Der Lauf ist vor dem Ende fehlgeschlagen.",
+  "Run another experiment in this project to see how scores change over time.":
+    "Führen Sie ein weiteres Experiment in diesem Projekt aus, um zu sehen, wie sich die Werte entwickeln.",
+  "Run your first experiment to start tracking scores":
+    "Führen Sie Ihr erstes Experiment aus, um Werte zu verfolgen",
+  "Evaluation metrics": "Bewertungsmetriken",
 };
 
 export const fr: Record<string, string> = {
@@ -1262,6 +1281,25 @@ export const fr: Record<string, string> = {
   "Reasoning layer": "Couche de raisonnement",
   "Action layer": "Couche d'action",
   "Execution layer": "Couche d'exécution",
+  "Planning quality": "Qualité de la planification",
+  "Answer correctness": "Exactitude de la réponse",
+  "Contextual relevancy": "Pertinence contextuelle",
+  "Contextual recall": "Rappel contextuel",
+  "Contextual precision": "Précision contextuelle",
+  "Conversation completeness": "Exhaustivité de la conversation",
+  "Conversation relevancy": "Pertinence de la conversation",
+  "Role adherence": "Respect du rôle",
+  "Conversation quality": "Qualité de la conversation",
+  "Copy results": "Copier les résultats",
+  "Not scored": "Non noté",
+  "This metric returned no score": "Cette métrique n'a renvoyé aucun score",
+  "Check API keys in LLM Evals settings": "Vérifier les clés API dans les paramètres LLM Evals",
+  "The run failed before it finished.": "L'exécution a échoué avant la fin.",
+  "Run another experiment in this project to see how scores change over time.":
+    "Lancez une autre expérience dans ce projet pour voir l'évolution des scores.",
+  "Run your first experiment to start tracking scores":
+    "Lancez votre première expérience pour suivre les scores",
+  "Evaluation metrics": "Métriques d'évaluation",
 };
 
 export const es: Record<string, string> = {
@@ -1891,4 +1929,24 @@ export const es: Record<string, string> = {
   "Reasoning layer": "Capa de razonamiento",
   "Action layer": "Capa de acción",
   "Execution layer": "Capa de ejecución",
+  "Planning quality": "Calidad de la planificación",
+  "Answer correctness": "Corrección de la respuesta",
+  "Contextual relevancy": "Relevancia contextual",
+  "Contextual recall": "Exhaustividad contextual",
+  "Contextual precision": "Precisión contextual",
+  "Conversation completeness": "Exhaustividad de la conversación",
+  "Conversation relevancy": "Relevancia de la conversación",
+  "Role adherence": "Cumplimiento del rol",
+  "Conversation quality": "Calidad de la conversación",
+  "Copy results": "Copiar resultados",
+  "Not scored": "Sin puntuación",
+  "This metric returned no score": "Esta métrica no devolvió ninguna puntuación",
+  "Check API keys in LLM Evals settings":
+    "Revisar las claves de API en la configuración de LLM Evals",
+  "The run failed before it finished.": "La ejecución falló antes de terminar.",
+  "Run another experiment in this project to see how scores change over time.":
+    "Ejecuta otro experimento en este proyecto para ver cómo cambian las puntuaciones.",
+  "Run your first experiment to start tracking scores":
+    "Ejecuta tu primer experimento para empezar a seguir las puntuaciones",
+  "Evaluation metrics": "Métricas de evaluación",
 };

@@ -231,6 +231,37 @@ def detect_fatal_error(error_message: str) -> Tuple[bool, Optional[str], Optiona
     return False, None, None
 
 
+# LiteLLM names the provider in its exception class ("GeminiException", "AnthropicException").
+_PROVIDER_EXCEPTION = re.compile(r"\b([A-Za-z]+)Exception\b")
+_PROVIDER_NAMES = {
+    "openai": "OpenAI",
+    "azure": "Azure OpenAI",
+    "anthropic": "Anthropic",
+    "gemini": "Google Gemini",
+    "vertexai": "Google Vertex AI",
+    "mistral": "Mistral",
+    "xai": "xAI",
+    "openrouter": "OpenRouter",
+    "groq": "Groq",
+    "cohere": "Cohere",
+    "deepseek": "DeepSeek",
+    "bedrock": "AWS Bedrock",
+    "huggingface": "Hugging Face",
+    "ollama": "Ollama",
+}
+
+
+def provider_from_error(error_message: Optional[str]) -> Optional[str]:
+    """The provider a gateway error came from, as people name it, or None if unknown."""
+    if not error_message:
+        return None
+    for match in _PROVIDER_EXCEPTION.finditer(error_message):
+        name = _PROVIDER_NAMES.get(match.group(1).lower())
+        if name:
+            return name
+    return None
+
+
 def is_same_error_type(error_code1: Optional[str], error_code2: Optional[str]) -> bool:
     """
     Check if two error codes represent the same type of error.
@@ -311,7 +342,10 @@ class FatalErrorTracker:
             Human-readable termination reason
         """
         if self.last_user_message:
-            return f"{self.last_user_message} (failed {self.consecutive_count} times consecutively)"
+            # Name the provider so the user knows which key or account to fix
+            provider = provider_from_error(self.last_error_message)
+            prefix = f"{provider}: " if provider else ""
+            return f"{prefix}{self.last_user_message} (failed {self.consecutive_count} times consecutively)"
         elif self.last_error_message:
             return f"Fatal error: {self.last_error_message[:200]}"
         else:

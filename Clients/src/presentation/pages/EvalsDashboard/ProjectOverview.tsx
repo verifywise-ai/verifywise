@@ -32,6 +32,7 @@ import { useCanCheck } from "../../../application/hooks/useCan";
 import { palette } from "../../themes/palette";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { experimentPromptCount } from "./experimentPromptCount";
+import { countLabel } from "../../tools/countLabel";
 
 interface ProjectOverviewProps {
   projectId: string;
@@ -111,7 +112,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, Icon, subtitle }) => 
             variant="body2"
             sx={{
               color: palette.text.secondary,
-              fontSize: "11px",
+              fontSize: "12px",
               fontWeight: 500,
               textTransform: "uppercase",
               letterSpacing: "0.5px",
@@ -265,7 +266,7 @@ export default function ProjectOverview({
         : null;
   const avgLatency = avgLatencyValue ?? "No data";
   const avgLatencySubtitle = avgLatencyValue
-    ? `${logsWithLatency.length} logs`
+    ? countLabel(logsWithLatency.length, "log")
     : "Run a successful experiment";
 
   // Calculate avg score from experiment results (avg_scores contains metric averages)
@@ -294,7 +295,7 @@ export default function ProjectOverview({
         : null;
   const avgScore = avgScoreValue ?? "No data";
   const avgScoreSubtitle = avgScoreValue
-    ? `${allScores.length} experiments`
+    ? countLabel(allScores.length, "experiment")
     : "Run a successful experiment";
 
   // Calculate total tokens from evaluation logs
@@ -482,7 +483,7 @@ export default function ProjectOverview({
             }}
           >
             <Box sx={{ mb: "4px" }}>
-              <Beaker size={32} color={palette.text.disabled} strokeWidth={1} />
+              <Beaker size={32} color={palette.text.tertiary} strokeWidth={1} />
             </Box>
             <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: "2px", fontSize: "13px" }}>
               No experiments yet

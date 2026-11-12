@@ -19,13 +19,13 @@ import VWTooltip from "../../VWTooltip";
 import { EXPERIMENT_ACTION_TOOLTIPS } from "./actionTooltips";
 import type { IExperimentRow, IExperimentTableBodyProps } from "../../../types/interfaces/i.table";
 
-// Pulse animation for "Running..." text in the experiment name cell.
+// Pulse animation for the "Running" label next to the experiment name.
 const pulse = keyframes`
   0%, 100% { opacity: 1; }
   50% { opacity: 0.5; }
 `;
 
-// Spin animation for loader icon next to "Running..." text.
+// Spin animation for the loader icon next to the "Running" label.
 const spin = keyframes`
   from { transform: rotate(0deg); }
   to { transform: rotate(360deg); }
@@ -144,39 +144,63 @@ const ExperimentTableBody: React.FC<IExperimentTableBodyProps> = ({
                 textTransform: "none",
               }}
             >
-              {isRunning ? (
-                <Box sx={{ display: "flex", alignItems: "center", gap: "2px" }}>
+              {/* The name always shows; status sits beside it so runs stay identifiable */}
+              <Box sx={{ display: "flex", alignItems: "center", gap: "8px", minWidth: 0 }}>
+                <Typography
+                  sx={{
+                    fontSize: 13,
+                    fontWeight: 500,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    whiteSpace: "nowrap",
+                    minWidth: 0,
+                  }}
+                  title={row.name || String(row.id)}
+                >
+                  {row.name || row.id}
+                </Typography>
+                {isRunning ? (
                   <Box
-                    component={Loader2}
-                    size={14}
                     sx={{
+                      display: "inline-flex",
+                      alignItems: "center",
+                      gap: "4px",
+                      flexShrink: 0,
                       color: palette.status.warning.text,
-                      animation: `${spin} 1s linear infinite`,
-                    }}
-                  />
-                  <Typography
-                    sx={{
-                      fontSize: 13,
-                      color: palette.status.warning.text,
-                      fontWeight: 500,
-                      animation: `${pulse} 1.5s ease-in-out infinite`,
                     }}
                   >
-                    Running...
-                  </Typography>
-                </Box>
-              ) : row.status === "Failed" ? (
-                row.errorMessage?.trim() ? (
+                    <Box
+                      component={Loader2}
+                      size={14}
+                      sx={{ animation: `${spin} 1s linear infinite` }}
+                    />
+                    <Typography
+                      component="span"
+                      sx={{
+                        fontSize: 12,
+                        fontWeight: 500,
+                        animation: `${pulse} 1.5s ease-in-out infinite`,
+                      }}
+                    >
+                      Running
+                    </Typography>
+                  </Box>
+                ) : row.status === "Failed" ? (
                   <VWTooltip
-                    content={<Box sx={{ wordBreak: "break-word" }}>{row.errorMessage.trim()}</Box>}
+                    content={
+                      <Box sx={{ wordBreak: "break-word" }}>
+                        {row.errorMessage?.trim() || "The run failed before it finished."}
+                      </Box>
+                    }
                     placement="top-start"
                   >
                     <Typography
                       component="span"
                       sx={{
-                        fontSize: 13,
-                        color: palette.status.error.text,
+                        fontSize: 12,
                         fontWeight: 500,
+                        flexShrink: 0,
+                        color: palette.status.error.text,
                         textDecoration: "underline dotted",
                         textUnderlineOffset: "3px",
                       }}
@@ -184,16 +208,8 @@ const ExperimentTableBody: React.FC<IExperimentTableBodyProps> = ({
                       Failed
                     </Typography>
                   </VWTooltip>
-                ) : (
-                  <Typography
-                    sx={{ fontSize: 13, color: palette.status.error.text, fontWeight: 500 }}
-                  >
-                    Failed
-                  </Typography>
-                )
-              ) : (
-                <Typography sx={{ fontSize: 13, fontWeight: 500 }}>{row.name || row.id}</Typography>
-              )}
+                ) : null}
+              </Box>
             </TableCell>
 
             {/* MODEL */}
@@ -202,7 +218,11 @@ const ExperimentTableBody: React.FC<IExperimentTableBodyProps> = ({
                 ...singleTheme.tableStyles.primary.body.cell,
                 textAlign: "center",
                 textTransform: "none",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
               }}
+              title={row.model}
             >
               {row.model}
             </TableCell>
@@ -213,7 +233,11 @@ const ExperimentTableBody: React.FC<IExperimentTableBodyProps> = ({
                 ...singleTheme.tableStyles.primary.body.cell,
                 textAlign: "center",
                 textTransform: "none",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
               }}
+              title={row.judge || undefined}
             >
               {row.judge || "-"}
             </TableCell>
@@ -235,7 +259,11 @@ const ExperimentTableBody: React.FC<IExperimentTableBodyProps> = ({
                 ...singleTheme.tableStyles.primary.body.cell,
                 textAlign: "center",
                 textTransform: "none",
+                overflow: "hidden",
+                textOverflow: "ellipsis",
+                whiteSpace: "nowrap",
               }}
+              title={row.dataset}
             >
               {row.dataset}
             </TableCell>
@@ -259,14 +287,14 @@ const ExperimentTableBody: React.FC<IExperimentTableBodyProps> = ({
                       borderRadius: "4px",
                       backgroundColor: palette.status.success.bg,
                       color: palette.status.success.text,
-                      fontSize: "11px",
+                      fontSize: "12px",
                       fontWeight: 500,
                     }}
                   >
                     Linked
                   </Box>
                 ) : (
-                  <Typography sx={{ fontSize: "11px", color: palette.text.secondary }}>
+                  <Typography sx={{ fontSize: "12px", color: palette.text.secondary }}>
                     Unlinked
                   </Typography>
                 )}

@@ -132,7 +132,7 @@ describe("ExperimentDetailContent", () => {
       expect(screen.getAllByText("gpt-4o")).toHaveLength(2);
       expect(screen.getByRole("button", { name: "Rerun" })).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Download" })).toBeInTheDocument();
-      expect(screen.getByRole("button", { name: "Copy" })).toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Copy results" })).toBeInTheDocument();
     });
 
     it("falls back to a generated summary when there is no description", async () => {
@@ -211,7 +211,7 @@ describe("ExperimentDetailContent", () => {
       fireEvent.mouseOver(screen.getByRole("button", { name: "Download" }));
       expect(await screen.findByText(EXPERIMENT_ACTION_TOOLTIPS.downloadFull)).toBeInTheDocument();
 
-      fireEvent.mouseOver(screen.getByRole("button", { name: "Copy" }));
+      fireEvent.mouseOver(screen.getByRole("button", { name: "Copy results" }));
       expect(await screen.findByText(EXPERIMENT_ACTION_TOOLTIPS.copyFull)).toBeInTheDocument();
 
       const rerunButton = screen.getByRole("button", { name: "Rerun" });
@@ -327,7 +327,7 @@ describe("ExperimentDetailContent", () => {
       expect(screen.getByText("Safety metrics")).toBeInTheDocument();
       expect(screen.getByText("90.0%")).toBeInTheDocument();
       expect(screen.getByText("10.0%")).toBeInTheDocument();
-      expect(screen.getAllByText("Answer Relevancy").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Answer relevancy").length).toBeGreaterThan(0);
       expect(screen.getAllByText("Bias").length).toBeGreaterThan(0);
     });
 
@@ -388,7 +388,7 @@ describe("ExperimentDetailContent", () => {
       expect(await screen.findByText("Quality metrics")).toBeInTheDocument();
       expect(screen.queryByText("Custom scorers")).not.toBeInTheDocument();
       expect(screen.queryByText("Conversational metrics")).not.toBeInTheDocument();
-      expect(screen.getAllByText("Task Completion").length).toBeGreaterThan(0);
+      expect(screen.getAllByText("Task completion").length).toBeGreaterThan(0);
       expect(screen.getByText("60.0%")).toBeInTheDocument();
     });
 
@@ -458,7 +458,7 @@ describe("ExperimentDetailContent", () => {
       fireEvent.click(await screen.findByText("What is 2+2?"));
 
       expect(await screen.findByText("Sample 1")).toBeInTheDocument();
-      expect(screen.getByText("2/2 metrics passed")).toBeInTheDocument();
+      expect(screen.getByText("2 of 2 metrics passed")).toBeInTheDocument();
       expect(screen.getByText("Accurate answer")).toBeInTheDocument();
       expect(screen.getByText("log-1")).toBeInTheDocument();
       expect(getByTextContent("Model: gpt-4o")).toBeInTheDocument();
@@ -470,7 +470,7 @@ describe("ExperimentDetailContent", () => {
       fireEvent.click(screen.getByRole("button", { name: "Next" }));
 
       expect(screen.getByText("Sample 2")).toBeInTheDocument();
-      expect(screen.getByText("0/1 metrics passed")).toBeInTheDocument();
+      expect(screen.getByText("0 of 1 metric passed")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Previous" })).toBeEnabled();
       expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
     });
@@ -510,10 +510,13 @@ describe("ExperimentDetailContent", () => {
       // The samples table shows the errored cell as failed, with its error on hover.
       const erroredCell = await screen.findByTitle("Judge timeout");
       expect(erroredCell).toHaveStyle({ backgroundColor: palette.status.error.bg });
+      expect(erroredCell).toHaveTextContent("Error");
+      // A skipped metric has no score and no error: neutral, not a failure
+      expect(screen.getAllByText("Not scored").length).toBeGreaterThan(0);
 
       fireEvent.click(await screen.findByText("What is 2+2?"));
 
-      expect(await screen.findByText("2/3 metrics passed")).toBeInTheDocument();
+      expect(await screen.findByText("2 of 3 metrics passed")).toBeInTheDocument();
       expect(screen.getByText("Judge timeout")).toBeInTheDocument();
 
       fireEvent.click(screen.getByRole("button", { name: "Next" }));
@@ -691,7 +694,7 @@ describe("ExperimentDetailContent", () => {
       renderDetail();
       await screen.findByText("Test Experiment");
 
-      fireEvent.click(screen.getByRole("button", { name: "Copy" }));
+      fireEvent.click(screen.getByRole("button", { name: "Copy results" }));
 
       expect(await screen.findByText("Results copied to clipboard")).toBeInTheDocument();
       expect(navigator.clipboard.writeText).toHaveBeenCalledWith(

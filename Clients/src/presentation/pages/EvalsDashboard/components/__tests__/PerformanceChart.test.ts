@@ -8,10 +8,10 @@ describe("PerformanceChart metricLabel", () => {
     expect(metricLabel("hallucination")).toBe("Hallucination (lower is better)");
   });
 
-  it("leaves higher is better metrics and custom scorers as they are", () => {
-    expect(metricLabel("answerRelevancy")).toBe("Answer Relevancy");
-    expect(metricLabel("taskCompletion")).toBe("Task Completion");
-    expect(metricLabel("instructionFollowing")).toBe("Instruction Following");
-    expect(metricLabel("unbiased_tone")).toBe("Unbiased Tone");
+  it("names higher is better metrics and custom scorers in sentence case", () => {
+    expect(metricLabel("answerRelevancy")).toBe("Answer relevancy");
+    expect(metricLabel("taskCompletion")).toBe("Task completion");
+    expect(metricLabel("instructionFollowing")).toBe("Instruction following");
+    expect(metricLabel("unbiased_tone")).toBe("Unbiased tone");
   });
 });

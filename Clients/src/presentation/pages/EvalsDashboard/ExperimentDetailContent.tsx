@@ -54,6 +54,9 @@ import {
   scoreBand,
   type MetricScoreEntry,
 } from "./metricScore";
+import { METRIC_KEY_BY_DISPLAY_NAME, METRIC_LABELS } from "./metricLabels";
+import { countLabel } from "../../tools/countLabel";
+import { Link as RouterLink } from "react-router";
 
 // Preprocess LaTeX delimiters to work with remark-math
 const preprocessLatex = (text: string): string => {
@@ -86,6 +89,14 @@ const formatMetricName = (name: string): string => {
     .join(" ");
 
   return formatted;
+};
+
+// A metric name stored on a log ("Relevance", "G-Eval (Coherence)") as the shared display
+// name, so the table, the cards and the sample view call a metric the same thing.
+const storedMetricLabel = (storedName: string): string => {
+  const name = storedName.replace(/^G-Eval\s*\((.+)\)$/i, "$1");
+  const key = METRIC_KEY_BY_DISPLAY_NAME[name] ?? (METRIC_LABELS[name] ? name : undefined);
+  return key ? METRIC_LABELS[key] : formatMetricName(name);
 };
 
 // Markdown renderer with LaTeX support
@@ -137,7 +148,7 @@ const MarkdownRenderer = ({ content }: { content: string }) => {
           py: "0.5px",
           borderRadius: "4px",
           fontFamily: "'Fira Code', monospace",
-          fontSize: 11,
+          fontSize: 12,
           color: "#0f766e",
         },
         "& pre": {
@@ -159,14 +170,14 @@ const MarkdownRenderer = ({ content }: { content: string }) => {
           borderLeft: `3px solid ${palette.border.light}`,
           pl: "4px",
           ml: 0,
-          color: palette.text.disabled,
+          color: palette.text.tertiary,
           fontStyle: "italic",
         },
         "& table": {
           borderCollapse: "collapse",
           width: "100%",
           my: "2px",
-          fontSize: 11,
+          fontSize: 12,
         },
         "& th, & td": {
           border: `1px solid ${palette.border.light}`,
@@ -436,6 +447,7 @@ export default function ExperimentDetailContent({
   // Why a failed run failed; shown as the banner's main line when present
   const failureReason =
     experiment.status === "failed" ? experiment.error_message?.trim() || undefined : undefined;
+  const hideSamples = experiment.status === "failed" && logs.length === 0;
 
   const rerunDisabled = rerunLoading || experiment.status === "running";
   const rerunButton = (
@@ -567,7 +579,7 @@ export default function ExperimentDetailContent({
                 size="small"
                 onClick={handleCancelEditName}
                 disabled={saving}
-                sx={{ color: palette.text.disabled }}
+                sx={{ color: palette.text.tertiary }}
               >
                 <X size={18} />
               </IconButton>
@@ -584,7 +596,7 @@ export default function ExperimentDetailContent({
                 sx={{
                   "opacity": 0,
                   "transition": "opacity 0.2s",
-                  "color": palette.text.disabled,
+                  "color": palette.text.tertiary,
                   "&:hover": {
                     color: palette.brand.primary,
                     backgroundColor: "rgba(19, 113, 91, 0.1)",
@@ -668,7 +680,7 @@ export default function ExperimentDetailContent({
                 },
               }}
             >
-              Copy
+              Copy results
             </CustomizableButton>
           </VWTooltip>
           <Box
@@ -730,14 +742,14 @@ export default function ExperimentDetailContent({
             <Box sx={failureReason ? { minWidth: 0 } : undefined}>
               <Typography
                 sx={{
-                  fontSize: 10,
+                  fontSize: 12,
                   fontWeight: 600,
                   color:
                     experiment.status === "completed"
                       ? palette.status.success.text
                       : experiment.status === "failed"
                         ? palette.status.error.text
-                        : palette.text.disabled,
+                        : palette.text.tertiary,
                   textTransform: "uppercase",
                   letterSpacing: 0.5,
                 }}
@@ -770,6 +782,26 @@ export default function ExperimentDetailContent({
                     {failureReason}
                   </Typography>
                 </VWTooltip>
+              )}
+              {failureReason && (
+                // Most failures are a provider key, quota or credits problem fixed in settings
+                <Box
+                  component={RouterLink}
+                  to={`/evals/${projectId}#settings`}
+                  sx={{
+                    "display": "block",
+                    "width": "fit-content",
+                    "mt": "4px",
+                    "mb": "4px",
+                    "fontSize": 13,
+                    "fontWeight": 500,
+                    "color": palette.brand.primary,
+                    "textDecoration": "none",
+                    "&:hover": { textDecoration: "underline" },
+                  }}
+                >
+                  Check API keys in LLM Evals settings
+                </Box>
               )}
               <Box
                 sx={{
@@ -807,7 +839,7 @@ export default function ExperimentDetailContent({
                       size="small"
                       onClick={handleCancelEditDescription}
                       disabled={saving}
-                      sx={{ color: palette.text.disabled }}
+                      sx={{ color: palette.text.tertiary }}
                     >
                       <X size={14} />
                     </IconButton>
@@ -824,11 +856,11 @@ export default function ExperimentDetailContent({
                             ? palette.status.success.text
                             : experiment.status === "failed"
                               ? palette.status.error.text
-                              : palette.text.disabled,
+                              : palette.text.tertiary,
                       }}
                     >
                       {experiment.description ||
-                        `Evaluating ${config.model?.name || "model"} with ${logs.length} prompts`}
+                        `Evaluating ${config.model?.name || "model"} with ${countLabel(logs.length, "prompt")}`}
                     </Typography>
                     <IconButton
                       size="small"
@@ -837,7 +869,7 @@ export default function ExperimentDetailContent({
                       sx={{
                         "opacity": 0,
                         "transition": "opacity 0.2s",
-                        "color": palette.text.disabled,
+                        "color": palette.text.tertiary,
                         "padding": "2px",
                         "&:hover": { color: palette.brand.primary },
                       }}
@@ -855,11 +887,11 @@ export default function ExperimentDetailContent({
             <Box sx={{ textAlign: "center" }}>
               <Typography
                 sx={{
-                  fontSize: 9,
+                  fontSize: 12,
                   color:
                     experiment.status === "completed"
                       ? palette.status.success.text
-                      : palette.text.disabled,
+                      : palette.text.tertiary,
                   textTransform: "uppercase",
                 }}
               >
@@ -881,11 +913,11 @@ export default function ExperimentDetailContent({
             <Box sx={{ textAlign: "center" }}>
               <Typography
                 sx={{
-                  fontSize: 9,
+                  fontSize: 12,
                   color:
                     experiment.status === "completed"
                       ? palette.status.success.text
-                      : palette.text.disabled,
+                      : palette.text.tertiary,
                   textTransform: "uppercase",
                 }}
               >
@@ -907,11 +939,11 @@ export default function ExperimentDetailContent({
             <Box sx={{ textAlign: "center" }}>
               <Typography
                 sx={{
-                  fontSize: 9,
+                  fontSize: 12,
                   color:
                     experiment.status === "completed"
                       ? palette.status.success.text
-                      : palette.text.disabled,
+                      : palette.text.tertiary,
                   textTransform: "uppercase",
                 }}
               >
@@ -919,7 +951,7 @@ export default function ExperimentDetailContent({
               </Typography>
               {unscoredPrompts > 0 ? (
                 <VWTooltip
-                  content={`${unscoredPrompts} of ${logs.length} prompts got no score, usually because the model returned no response or an error. They are left out of the averages.`}
+                  content={`${unscoredPrompts} of ${countLabel(logs.length, "prompt")} got no score, usually because the model returned no response or an error. They are left out of the averages.`}
                   placement="bottom"
                   maxWidth={280}
                 >
@@ -953,11 +985,11 @@ export default function ExperimentDetailContent({
             <Box sx={{ textAlign: "center" }}>
               <Typography
                 sx={{
-                  fontSize: 9,
+                  fontSize: 12,
                   color:
                     experiment.status === "completed"
                       ? palette.status.success.text
-                      : palette.text.disabled,
+                      : palette.text.tertiary,
                   textTransform: "uppercase",
                 }}
               >
@@ -983,51 +1015,7 @@ export default function ExperimentDetailContent({
       {/* Overall Stats Header */}
       {logs.length > 0 &&
         (() => {
-          // Map display names to camelCase keys for backwards compatibility
-          const displayNameToKey: Record<string, string> = {
-            // Single-turn metrics
-            "Answer Relevancy": "answerRelevancy",
-            "Faithfulness": "faithfulness",
-            "Contextual Relevancy": "contextualRelevancy",
-            "Contextual Recall": "contextualRecall",
-            "Contextual Precision": "contextualPrecision",
-            "Bias": "bias",
-            "Toxicity": "toxicity",
-            "Hallucination": "hallucination",
-            "Tool Correctness": "toolCorrectness",
-            "Answer Correctness": "answerCorrectness",
-            "Coherence": "coherence",
-            "Tonality": "tonality",
-            "Safety": "safety",
-            // Names the evaluator stores today (EvaluationModule deepeval_evaluator.py)
-            "Relevance": "answerRelevancy",
-            "Correctness": "correctness",
-            "Completeness": "completeness",
-            "Instruction Following": "instructionFollowing",
-            // Same keys as results.avg_scores (run_evaluation metric_config_map)
-            "Context Relevancy": "contextRelevancy",
-            "Context Precision": "contextPrecision",
-            "Context Recall": "contextRecall",
-            "Tool Selection": "toolSelection",
-            "Action Relevance": "actionRelevance",
-            "Planning Quality": "planningQuality",
-            // Not enabled by run_evaluation, but other evaluator entry points emit it
-            "Plan Quality": "planQuality",
-            "Plan Adherence": "planAdherence",
-            "Argument Correctness": "argumentCorrectness",
-            "Step Efficiency": "stepEfficiency",
-            // Conversational metrics (multi-turn)
-            "Turn Relevancy": "turnRelevancy",
-            "Knowledge Retention": "knowledgeRetention",
-            "Conversation Coherence": "conversationCoherence",
-            "Conversation Helpfulness": "conversationHelpfulness",
-            "Task Completion": "taskCompletion",
-            "Conversation Safety": "conversationSafety",
-            "Conversation Completeness": "conversationCompleteness",
-            "Conversation Relevancy": "conversationRelevancy",
-            "Role Adherence": "roleAdherence",
-            "Conversation Quality": "conversationQuality",
-          };
+          const displayNameToKey = METRIC_KEY_BY_DISPLAY_NAME;
 
           // Calculate overall averages and per-sample scores for sparklines
           // threshold = the first one stored on the metric's entries (the run uses one).
@@ -1070,143 +1058,175 @@ export default function ExperimentDetailContent({
           > = {
             // Standard DeepEval metrics (single-turn ONLY)
             answerRelevancy: {
-              label: "Answer Relevancy",
+              label: METRIC_LABELS.answerRelevancy,
               category: "quality",
               singleTurnOnly: true,
             },
             // Universal core G-Eval metrics (single-turn)
-            correctness: { label: "Correctness", category: "quality", singleTurnOnly: true },
-            completeness: { label: "Completeness", category: "quality", singleTurnOnly: true },
-            instructionFollowing: {
-              label: "Instruction Following",
+            correctness: {
+              label: METRIC_LABELS.correctness,
               category: "quality",
               singleTurnOnly: true,
             },
-            faithfulness: { label: "Faithfulness", category: "quality", singleTurnOnly: true },
+            completeness: {
+              label: METRIC_LABELS.completeness,
+              category: "quality",
+              singleTurnOnly: true,
+            },
+            instructionFollowing: {
+              label: METRIC_LABELS.instructionFollowing,
+              category: "quality",
+              singleTurnOnly: true,
+            },
+            faithfulness: {
+              label: METRIC_LABELS.faithfulness,
+              category: "quality",
+              singleTurnOnly: true,
+            },
             contextualRelevancy: {
-              label: "Contextual Relevancy",
+              label: METRIC_LABELS.contextualRelevancy,
               category: "quality",
               singleTurnOnly: true,
             },
             contextualRecall: {
-              label: "Contextual Recall",
+              label: METRIC_LABELS.contextualRecall,
               category: "quality",
               singleTurnOnly: true,
             },
             contextualPrecision: {
-              label: "Contextual Precision",
+              label: METRIC_LABELS.contextualPrecision,
               category: "quality",
               singleTurnOnly: true,
             },
             // RAG metrics as the evaluator names them today
             contextRelevancy: {
-              label: "Context Relevancy",
+              label: METRIC_LABELS.contextRelevancy,
               category: "quality",
               singleTurnOnly: true,
             },
             contextPrecision: {
-              label: "Context Precision",
+              label: METRIC_LABELS.contextPrecision,
               category: "quality",
               singleTurnOnly: true,
             },
-            contextRecall: { label: "Context Recall", category: "quality", singleTurnOnly: true },
-            hallucination: { label: "Hallucination", category: "safety", singleTurnOnly: true },
+            contextRecall: {
+              label: METRIC_LABELS.contextRecall,
+              category: "quality",
+              singleTurnOnly: true,
+            },
+            hallucination: {
+              label: METRIC_LABELS.hallucination,
+              category: "safety",
+              singleTurnOnly: true,
+            },
             // Agent metrics (single-turn)
             toolCorrectness: {
-              label: "Tool Correctness",
+              label: METRIC_LABELS.toolCorrectness,
               category: "quality",
               singleTurnOnly: true,
             },
-            toolSelection: { label: "Tool Selection", category: "quality", singleTurnOnly: true },
+            toolSelection: {
+              label: METRIC_LABELS.toolSelection,
+              category: "quality",
+              singleTurnOnly: true,
+            },
             actionRelevance: {
-              label: "Action Relevance",
+              label: METRIC_LABELS.actionRelevance,
               category: "quality",
               singleTurnOnly: true,
             },
             planningQuality: {
-              label: "Planning Quality",
+              label: METRIC_LABELS.planningQuality,
               category: "quality",
               singleTurnOnly: true,
             },
-            planQuality: { label: "Plan Quality", category: "quality", singleTurnOnly: true },
+            planQuality: {
+              label: METRIC_LABELS.planQuality,
+              category: "quality",
+              singleTurnOnly: true,
+            },
             planAdherence: {
-              label: "Plan Adherence",
+              label: METRIC_LABELS.planAdherence,
               category: "quality",
               singleTurnOnly: true,
             },
             argumentCorrectness: {
-              label: "Argument Correctness",
+              label: METRIC_LABELS.argumentCorrectness,
               category: "quality",
               singleTurnOnly: true,
             },
             stepEfficiency: {
-              label: "Step Efficiency",
+              label: METRIC_LABELS.stepEfficiency,
               category: "quality",
               singleTurnOnly: true,
             },
             // G-Eval single-turn metrics
             answerCorrectness: {
-              label: "Answer Correctness",
+              label: METRIC_LABELS.answerCorrectness,
               category: "quality",
               singleTurnOnly: true,
             },
-            coherence: { label: "Coherence", category: "quality", singleTurnOnly: true },
-            tonality: { label: "Tonality", category: "quality", singleTurnOnly: true },
-            safety: { label: "Safety", category: "safety", singleTurnOnly: true },
+            coherence: {
+              label: METRIC_LABELS.coherence,
+              category: "quality",
+              singleTurnOnly: true,
+            },
+            tonality: { label: METRIC_LABELS.tonality, category: "quality", singleTurnOnly: true },
+            safety: { label: METRIC_LABELS.safety, category: "safety", singleTurnOnly: true },
 
             // Safety metrics (work for both single-turn and multi-turn)
-            bias: { label: "Bias", category: "safety" },
-            toxicity: { label: "Toxicity", category: "safety" },
+            bias: { label: METRIC_LABELS.bias, category: "safety" },
+            toxicity: { label: METRIC_LABELS.toxicity, category: "safety" },
 
             // === CONVERSATIONAL METRICS (multi-turn ONLY) ===
             turnRelevancy: {
-              label: "Turn Relevancy",
+              label: METRIC_LABELS.turnRelevancy,
               category: "conversational",
               multiTurnOnly: true,
             },
             knowledgeRetention: {
-              label: "Knowledge Retention",
+              label: METRIC_LABELS.knowledgeRetention,
               category: "conversational",
               multiTurnOnly: true,
             },
             conversationCoherence: {
-              label: "Conversation Coherence",
+              label: METRIC_LABELS.conversationCoherence,
               category: "conversational",
               multiTurnOnly: true,
             },
             conversationHelpfulness: {
-              label: "Conversation Helpfulness",
+              label: METRIC_LABELS.conversationHelpfulness,
               category: "conversational",
               multiTurnOnly: true,
             },
             // Scored for conversations and for single-turn (agent) runs alike.
             taskCompletion: {
-              label: "Task Completion",
+              label: METRIC_LABELS.taskCompletion,
               category: isMultiTurnExperiment ? "conversational" : "quality",
             },
             conversationSafety: {
-              label: "Conversation Safety",
+              label: METRIC_LABELS.conversationSafety,
               category: "conversational",
               multiTurnOnly: true,
             },
             // Legacy conversational names (for backwards compatibility)
             conversationCompleteness: {
-              label: "Conversation Completeness",
+              label: METRIC_LABELS.conversationCompleteness,
               category: "conversational",
               multiTurnOnly: true,
             },
             conversationRelevancy: {
-              label: "Conversation Relevancy",
+              label: METRIC_LABELS.conversationRelevancy,
               category: "conversational",
               multiTurnOnly: true,
             },
             roleAdherence: {
-              label: "Role Adherence",
+              label: METRIC_LABELS.roleAdherence,
               category: "conversational",
               multiTurnOnly: true,
             },
             conversationQuality: {
-              label: "Conversation Quality",
+              label: METRIC_LABELS.conversationQuality,
               category: "conversational",
               multiTurnOnly: true,
             },
@@ -1427,7 +1447,7 @@ export default function ExperimentDetailContent({
                   >
                     <Typography
                       variant="body2"
-                      sx={{ fontSize: "13px", fontWeight: 400, color: palette.text.disabled }}
+                      sx={{ fontSize: "13px", fontWeight: 400, color: palette.text.tertiary }}
                     >
                       {metric.label}
                     </Typography>
@@ -1446,7 +1466,7 @@ export default function ExperimentDetailContent({
                         fontWeight: 700,
                         color: colors.text,
                         lineHeight: 1.2,
-                        fontFamily: "'JetBrains Mono', 'Fira Code', 'Courier New', monospace",
+                        fontVariantNumeric: "tabular-nums",
                       }}
                     >
                       {avgValue === undefined ? "N/A" : `${(avgValue * 100).toFixed(1)}%`}
@@ -1488,7 +1508,7 @@ export default function ExperimentDetailContent({
                       sx={{
                         fontSize: "12px",
                         fontWeight: 400,
-                        color: palette.text.disabled,
+                        color: palette.text.tertiary,
                         ml: "2px",
                       }}
                     >
@@ -1547,702 +1567,731 @@ export default function ExperimentDetailContent({
         })()}
 
       {/* Split Panel Layout */}
-      <Typography variant="h6" sx={{ fontSize: "15px", fontWeight: 600, mb: "4px" }}>
-        All samples
-      </Typography>
+      {/* A run that failed before producing any sample has nothing to list */}
+      {!hideSamples && (
+        <Typography variant="h6" sx={{ fontSize: "15px", fontWeight: 600, mb: "8px" }}>
+          All samples
+        </Typography>
+      )}
       {/* Extract unique metric names from all logs */}
-      {(() => {
-        const allMetricNames = new Set<string>();
-        logs.forEach((log) => {
-          if (log.metadata?.metric_scores) {
-            Object.keys(log.metadata.metric_scores).forEach((name) => {
-              // Clean up metric name for display
-              const cleanName = name.replace(/^G-Eval\s*\((.+)\)$/i, "$1");
-              allMetricNames.add(cleanName);
-            });
-          }
-        });
-        const metricColumns = Array.from(allMetricNames);
+      {!hideSamples &&
+        (() => {
+          const allMetricNames = new Set<string>();
+          logs.forEach((log) => {
+            if (log.metadata?.metric_scores) {
+              Object.keys(log.metadata.metric_scores).forEach((name) => {
+                // Clean up metric name for display
+                const cleanName = name.replace(/^G-Eval\s*\((.+)\)$/i, "$1");
+                allMetricNames.add(cleanName);
+              });
+            }
+          });
+          const metricColumns = Array.from(allMetricNames);
 
-        // Helper to get metric score from log
-        const getMetricEntry = (log: EvaluationLog, metricName: string): MetricScoreEntry =>
-          findMetricEntry(
-            log.metadata?.metric_scores as Record<string, MetricScoreEntry> | undefined,
-            metricName,
-          );
+          // Helper to get metric score from log
+          const getMetricEntry = (log: EvaluationLog, metricName: string): MetricScoreEntry =>
+            findMetricEntry(
+              log.metadata?.metric_scores as Record<string, MetricScoreEntry> | undefined,
+              metricName,
+            );
 
-        return (
-          <>
-            <Box
-              sx={{
-                overflow: "hidden",
-                border: `1px solid ${palette.border.dark}`,
-                borderRadius: "4px",
-              }}
-            >
-              <Box sx={{ overflowX: "auto" }}>
-                {/* Native HTML table to bypass MUI styling conflicts */}
-                <table
-                  style={{
-                    width: "100%",
-                    tableLayout: "fixed",
-                    borderCollapse: "collapse",
-                    fontSize: "12px",
-                  }}
-                >
-                  <thead>
-                    {(() => {
-                      // Input column should be 3x the width of each metric column
-                      // Total proportional units: 3 (input) + metricColumns.length (1 each)
-                      // The # column is a fixed 50px
-                      const totalUnits = 3 + metricColumns.length;
-                      const metricColWidth = `${(100 / totalUnits).toFixed(2)}%`;
-                      const inputColWidth = `${((3 * 100) / totalUnits).toFixed(2)}%`;
-                      return (
-                        <tr style={{ backgroundColor: palette.background.accent }}>
-                          <th
-                            style={{
-                              fontWeight: 600,
-                              fontSize: "11px",
-                              width: 50,
-                              textAlign: "center",
-                              padding: "12px 16px",
-                              borderBottom: `2px solid ${palette.border.dark}`,
-                              borderRight: `1px solid ${palette.border.dark}`,
-                            }}
-                          >
-                            #
-                          </th>
-                          <th
-                            style={{
-                              fontWeight: 600,
-                              fontSize: "11px",
-                              width: inputColWidth,
-                              textAlign: "center",
-                              padding: "12px 16px",
-                              borderBottom: `2px solid ${palette.border.dark}`,
-                              borderRight: `1px solid ${palette.border.dark}`,
-                            }}
-                          >
-                            Input
-                          </th>
-                          {metricColumns.map((metric) => (
+          return (
+            <>
+              <Box
+                sx={{
+                  overflow: "hidden",
+                  border: `1px solid ${palette.border.dark}`,
+                  borderRadius: "4px",
+                }}
+              >
+                <Box sx={{ overflowX: "auto" }}>
+                  {/* Native HTML table to bypass MUI styling conflicts */}
+                  <table
+                    style={{
+                      width: "100%",
+                      tableLayout: "fixed",
+                      borderCollapse: "collapse",
+                      fontSize: "12px",
+                    }}
+                  >
+                    <thead>
+                      {(() => {
+                        // Input column should be 3x the width of each metric column
+                        // Total proportional units: 3 (input) + metricColumns.length (1 each)
+                        // The # column is a fixed 50px
+                        const totalUnits = 3 + metricColumns.length;
+                        const metricColWidth = `${(100 / totalUnits).toFixed(2)}%`;
+                        const inputColWidth = `${((3 * 100) / totalUnits).toFixed(2)}%`;
+                        return (
+                          <tr style={{ backgroundColor: palette.background.accent }}>
                             <th
-                              key={metric}
                               style={{
                                 fontWeight: 600,
-                                fontSize: "11px",
-                                width: metricColWidth,
+                                fontSize: "12px",
+                                width: 50,
                                 textAlign: "center",
-                                padding: "12px 8px",
+                                padding: "12px 16px",
                                 borderBottom: `2px solid ${palette.border.dark}`,
                                 borderRight: `1px solid ${palette.border.dark}`,
                               }}
                             >
-                              {formatMetricName(metric)}
+                              #
                             </th>
-                          ))}
-                        </tr>
-                      );
-                    })()}
-                  </thead>
-                  <tbody>
-                    {logs.length === 0 ? (
-                      <tr>
-                        <td
-                          colSpan={2 + metricColumns.length}
-                          style={{
-                            textAlign: "center",
-                            padding: "32px 16px",
-                            color: palette.text.disabled,
-                          }}
-                        >
-                          No samples found
-                        </td>
-                      </tr>
-                    ) : (
-                      logs.map((log, index) => (
-                        <tr
-                          key={log.id}
-                          onClick={() => setSelectedSampleIndex(index)}
-                          style={{ cursor: "pointer" }}
-                          onMouseEnter={(e) =>
-                            (e.currentTarget.style.backgroundColor = palette.background.accent)
-                          }
-                          onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "")}
-                        >
-                          <td
-                            style={{
-                              fontSize: "12px",
-                              color: palette.text.disabled,
-                              textAlign: "center",
-                              padding: "12px 16px",
-                              borderBottom: `1px solid ${palette.border.dark}`,
-                              borderRight: `1px solid ${palette.border.dark}`,
-                            }}
-                          >
-                            {index + 1}
-                          </td>
-                          <td
-                            style={{
-                              fontSize: "12px",
-                              textAlign: "center",
-                              padding: "12px 16px",
-                              borderBottom: `1px solid ${palette.border.dark}`,
-                              borderRight: `1px solid ${palette.border.dark}`,
-                              maxWidth: 400,
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                              whiteSpace: "nowrap",
-                            }}
-                          >
-                            {log.input_text || "-"}
-                          </td>
-                          {metricColumns.map((metric) => {
-                            const entry = getMetricEntry(log, metric);
-                            const score = entryScore(entry);
-                            const status = metricStatus(metric, entry);
-                            return (
-                              <td
+                            <th
+                              style={{
+                                fontWeight: 600,
+                                fontSize: "12px",
+                                width: inputColWidth,
+                                textAlign: "center",
+                                padding: "12px 16px",
+                                borderBottom: `2px solid ${palette.border.dark}`,
+                                borderRight: `1px solid ${palette.border.dark}`,
+                              }}
+                            >
+                              Input
+                            </th>
+                            {metricColumns.map((metric) => (
+                              <th
                                 key={metric}
-                                title={entryError(entry) || undefined}
                                 style={{
-                                  textAlign: "center",
-                                  padding: "12px 16px",
-                                  borderBottom: `1px solid ${palette.border.dark}`,
-                                  borderRight: `1px solid ${palette.border.dark}`,
-                                  backgroundColor: METRIC_STATUS_COLORS[status].bg,
+                                  fontWeight: 600,
                                   fontSize: "12px",
-                                  fontWeight: 500,
-                                  color:
-                                    score !== null ? palette.text.secondary : palette.text.disabled,
+                                  width: metricColWidth,
+                                  textAlign: "center",
+                                  padding: "12px 8px",
+                                  borderBottom: `2px solid ${palette.border.dark}`,
+                                  borderRight: `1px solid ${palette.border.dark}`,
                                 }}
                               >
-                                {score !== null ? `${(score * 100).toFixed(0)}%` : "-"}
-                              </td>
-                            );
-                          })}
+                                {storedMetricLabel(metric)}
+                              </th>
+                            ))}
+                          </tr>
+                        );
+                      })()}
+                    </thead>
+                    <tbody>
+                      {logs.length === 0 ? (
+                        <tr>
+                          <td
+                            colSpan={2 + metricColumns.length}
+                            style={{
+                              textAlign: "center",
+                              padding: "32px 16px",
+                              color: palette.text.tertiary,
+                            }}
+                          >
+                            No samples found
+                          </td>
                         </tr>
-                      ))
-                    )}
-                  </tbody>
-                </table>
+                      ) : (
+                        logs.map((log, index) => (
+                          <tr
+                            key={log.id}
+                            onClick={() => setSelectedSampleIndex(index)}
+                            style={{ cursor: "pointer" }}
+                            onMouseEnter={(e) =>
+                              (e.currentTarget.style.backgroundColor = palette.background.accent)
+                            }
+                            onMouseLeave={(e) => (e.currentTarget.style.backgroundColor = "")}
+                          >
+                            <td
+                              style={{
+                                fontSize: "12px",
+                                color: palette.text.tertiary,
+                                textAlign: "center",
+                                padding: "12px 16px",
+                                borderBottom: `1px solid ${palette.border.dark}`,
+                                borderRight: `1px solid ${palette.border.dark}`,
+                              }}
+                            >
+                              {index + 1}
+                            </td>
+                            <td
+                              style={{
+                                fontSize: "12px",
+                                textAlign: "center",
+                                padding: "12px 16px",
+                                borderBottom: `1px solid ${palette.border.dark}`,
+                                borderRight: `1px solid ${palette.border.dark}`,
+                                maxWidth: 400,
+                                overflow: "hidden",
+                                textOverflow: "ellipsis",
+                                whiteSpace: "nowrap",
+                              }}
+                            >
+                              {log.input_text || "-"}
+                            </td>
+                            {metricColumns.map((metric) => {
+                              const entry = getMetricEntry(log, metric);
+                              const score = entryScore(entry);
+                              const status = metricStatus(metric, entry);
+                              // No score: an error counts as a failure (red, "Error"); a metric
+                              // that was skipped or never ran is neutral ("Not scored")
+                              const unscored = score === null;
+                              const errored = unscored && status === "failed";
+                              return (
+                                <td
+                                  key={metric}
+                                  title={
+                                    entryError(entry) ||
+                                    (unscored ? "This metric returned no score" : undefined)
+                                  }
+                                  style={{
+                                    textAlign: "center",
+                                    padding: "12px 16px",
+                                    borderBottom: `1px solid ${palette.border.dark}`,
+                                    borderRight: `1px solid ${palette.border.dark}`,
+                                    backgroundColor:
+                                      unscored && !errored
+                                        ? "transparent"
+                                        : METRIC_STATUS_COLORS[status].bg,
+                                    fontSize: "12px",
+                                    fontWeight: 500,
+                                    color: errored
+                                      ? palette.status.error.text
+                                      : unscored
+                                        ? palette.text.tertiary
+                                        : palette.text.secondary,
+                                  }}
+                                >
+                                  {errored
+                                    ? "Error"
+                                    : unscored
+                                      ? "Not scored"
+                                      : `${(score * 100).toFixed(0)}%`}
+                                </td>
+                              );
+                            })}
+                          </tr>
+                        ))
+                      )}
+                    </tbody>
+                  </table>
+                </Box>
               </Box>
-            </Box>
 
-            {/* Sample Detail Modal */}
-            {selectedSampleIndex !== null &&
-              logs[selectedSampleIndex] &&
-              (() => {
-                const selectedLog = logs[selectedSampleIndex];
-                const totalSamples = logs.length;
-                const isFirstSample = selectedSampleIndex === 0;
-                const isLastSample = selectedSampleIndex === totalSamples - 1;
+              {/* Sample Detail Modal */}
+              {selectedSampleIndex !== null &&
+                logs[selectedSampleIndex] &&
+                (() => {
+                  const selectedLog = logs[selectedSampleIndex];
+                  const totalSamples = logs.length;
+                  const isFirstSample = selectedSampleIndex === 0;
+                  const isLastSample = selectedSampleIndex === totalSamples - 1;
 
-                const scrollToTop = () => {
-                  // Scroll modal content to top - target the form element which is the scrollable container in StandardModal
-                  setTimeout(() => {
-                    const modalContent = document.querySelector("[data-sample-modal-content]");
-                    // The scrollable container is the parent form element
-                    const scrollableForm = modalContent?.closest("form");
-                    if (scrollableForm) {
-                      scrollableForm.scrollTop = 0;
+                  const scrollToTop = () => {
+                    // Scroll modal content to top - target the form element which is the scrollable container in StandardModal
+                    setTimeout(() => {
+                      const modalContent = document.querySelector("[data-sample-modal-content]");
+                      // The scrollable container is the parent form element
+                      const scrollableForm = modalContent?.closest("form");
+                      if (scrollableForm) {
+                        scrollableForm.scrollTop = 0;
+                      }
+                    }, 10);
+                  };
+
+                  const handlePrevious = () => {
+                    if (!isFirstSample) {
+                      setSelectedSampleIndex(selectedSampleIndex - 1);
+                      scrollToTop();
                     }
-                  }, 10);
-                };
+                  };
 
-                const handlePrevious = () => {
-                  if (!isFirstSample) {
-                    setSelectedSampleIndex(selectedSampleIndex - 1);
-                    scrollToTop();
-                  }
-                };
-
-                const handleNext = () => {
-                  if (!isLastSample) {
-                    setSelectedSampleIndex(selectedSampleIndex + 1);
-                    scrollToTop();
-                  }
-                };
-
-                // Calculate overall pass/fail for this sample
-                const metricScores = (selectedLog.metadata?.metric_scores || {}) as Record<
-                  string,
-                  MetricScoreEntry
-                >;
-                const statuses = Object.entries(metricScores)
-                  .map(([name, data]) => metricStatus(name, data))
-                  .filter((status) => status !== "notEvaluated");
-                const passedCount = statuses.filter((status) => status === "passed").length;
-
-                return (
-                  <StandardModal
-                    isOpen={selectedSampleIndex !== null}
-                    onClose={() => setSelectedSampleIndex(null)}
-                    title={`Sample ${selectedSampleIndex + 1}`}
-                    description={
-                      statuses.length === 0
-                        ? "No metrics were evaluated"
-                        : `${passedCount}/${statuses.length} metrics passed`
+                  const handleNext = () => {
+                    if (!isLastSample) {
+                      setSelectedSampleIndex(selectedSampleIndex + 1);
+                      scrollToTop();
                     }
-                    maxWidth="1100px"
-                    fitContent
-                    customFooter={
-                      <Stack
-                        direction="row"
-                        spacing="8px"
-                        sx={{ width: "100%", justifyContent: "flex-end" }}
-                      >
-                        <CustomizableButton
-                          variant="outlined"
-                          text="Previous"
-                          onClick={handlePrevious}
-                          isDisabled={isFirstSample}
-                          icon={<ChevronLeft size={16} />}
-                          sx={{
-                            "minWidth": "100px",
-                            "height": "34px",
-                            "border": `1px solid ${palette.border.dark}`,
-                            "color": isFirstSample ? palette.text.disabled : palette.text.secondary,
-                            "&:hover:not(.Mui-disabled)": {
-                              backgroundColor: palette.background.accent,
-                              border: `1px solid ${palette.border.dark}`,
-                            },
-                          }}
-                        />
-                        <CustomizableButton
-                          variant="outlined"
-                          text="Next"
-                          onClick={handleNext}
-                          isDisabled={isLastSample}
-                          icon={<ChevronRight size={16} />}
-                          sx={{
-                            "minWidth": "100px",
-                            "height": "34px",
-                            "border": `1px solid ${palette.border.dark}`,
-                            "color": isLastSample ? palette.text.disabled : palette.text.secondary,
-                            "&:hover:not(.Mui-disabled)": {
-                              backgroundColor: palette.background.accent,
-                              border: `1px solid ${palette.border.dark}`,
-                            },
-                            "flexDirection": "row-reverse",
-                            "& .MuiButton-startIcon": {
-                              marginLeft: "8px",
-                              marginRight: "-4px",
-                            },
-                          }}
-                        />
-                      </Stack>
-                    }
-                  >
-                    {/* Side-by-side layout: Left = Input/Output, Right = Metrics */}
-                    <Box
-                      data-sample-modal-content
-                      sx={{
-                        display: "grid",
-                        gridTemplateColumns: "1fr 1fr",
-                        gap: "32px",
-                        minHeight: "400px",
-                      }}
+                  };
+
+                  // Calculate overall pass/fail for this sample
+                  const metricScores = (selectedLog.metadata?.metric_scores || {}) as Record<
+                    string,
+                    MetricScoreEntry
+                  >;
+                  const statuses = Object.entries(metricScores)
+                    .map(([name, data]) => metricStatus(name, data))
+                    .filter((status) => status !== "notEvaluated");
+                  const passedCount = statuses.filter((status) => status === "passed").length;
+
+                  return (
+                    <StandardModal
+                      isOpen={selectedSampleIndex !== null}
+                      onClose={() => setSelectedSampleIndex(null)}
+                      title={`Sample ${selectedSampleIndex + 1}`}
+                      description={
+                        statuses.length === 0
+                          ? "No metrics were evaluated"
+                          : `${passedCount} of ${countLabel(statuses.length, "metric")} passed`
+                      }
+                      maxWidth="1100px"
+                      fitContent
+                      customFooter={
+                        <Stack
+                          direction="row"
+                          spacing="8px"
+                          sx={{ width: "100%", justifyContent: "flex-end" }}
+                        >
+                          <CustomizableButton
+                            variant="outlined"
+                            text="Previous"
+                            onClick={handlePrevious}
+                            isDisabled={isFirstSample}
+                            icon={<ChevronLeft size={16} />}
+                            sx={{
+                              "minWidth": "100px",
+                              "height": "34px",
+                              "border": `1px solid ${palette.border.dark}`,
+                              "color": isFirstSample
+                                ? palette.text.disabled
+                                : palette.text.secondary,
+                              "&:hover:not(.Mui-disabled)": {
+                                backgroundColor: palette.background.accent,
+                                border: `1px solid ${palette.border.dark}`,
+                              },
+                            }}
+                          />
+                          <CustomizableButton
+                            variant="outlined"
+                            text="Next"
+                            onClick={handleNext}
+                            isDisabled={isLastSample}
+                            icon={<ChevronRight size={16} />}
+                            sx={{
+                              "minWidth": "100px",
+                              "height": "34px",
+                              "border": `1px solid ${palette.border.dark}`,
+                              "color": isLastSample
+                                ? palette.text.disabled
+                                : palette.text.secondary,
+                              "&:hover:not(.Mui-disabled)": {
+                                backgroundColor: palette.background.accent,
+                                border: `1px solid ${palette.border.dark}`,
+                              },
+                              "flexDirection": "row-reverse",
+                              "& .MuiButton-startIcon": {
+                                marginLeft: "8px",
+                                marginRight: "-4px",
+                              },
+                            }}
+                          />
+                        </Stack>
+                      }
                     >
-                      {/* Left Panel: Input/Output or Conversation */}
+                      {/* Side-by-side layout: Left = Input/Output, Right = Metrics */}
                       <Box
+                        data-sample-modal-content
                         sx={{
-                          display: "flex",
-                          flexDirection: "column",
-                          borderRight: `1px solid ${palette.border.light}`,
-                          pr: "8px",
+                          display: "grid",
+                          gridTemplateColumns: "1fr 1fr",
+                          gap: "32px",
+                          minHeight: "400px",
                         }}
                       >
-                        {/* Conversational Display (for multi-turn) */}
-                        {selectedLog.metadata?.is_conversational && selectedLog.metadata?.turns ? (
-                          <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
-                            <Typography
-                              sx={{
-                                fontSize: 14,
-                                fontWeight: 600,
-                                color: palette.text.primary,
-                                mb: "3px",
-                              }}
-                            >
-                              Conversation (
-                              {selectedLog.metadata.turn_count ||
-                                (selectedLog.metadata.turns as Array<unknown>).length}{" "}
-                              turns)
-                            </Typography>
-                            {selectedLog.metadata.scenario && (
-                              <Typography
-                                sx={{ fontSize: 12, color: palette.text.disabled, mb: "3px" }}
-                              >
-                                Scenario: {selectedLog.metadata.scenario}
-                              </Typography>
-                            )}
-                            <Box
-                              sx={{
-                                flex: 1,
-                                backgroundColor: palette.accent.purple.bg,
-                                border: `1px solid ${palette.accent.purple.border}`,
-                                borderRadius: "8px",
-                                p: "5px",
-                                overflowY: "auto",
-                              }}
-                            >
-                              <Stack spacing="4px">
-                                {(
-                                  selectedLog.metadata.turns as Array<{
-                                    role: string;
-                                    content: string;
-                                  }>
-                                ).map((turn, idx) => {
-                                  const isUser = turn.role?.toLowerCase() === "user";
-                                  return (
-                                    <Box
-                                      key={idx}
-                                      sx={{
-                                        display: "flex",
-                                        justifyContent: isUser ? "flex-end" : "flex-start",
-                                      }}
-                                    >
-                                      <Box
-                                        sx={{
-                                          maxWidth: "85%",
-                                          p: "3px",
-                                          borderRadius: "12px",
-                                          backgroundColor: isUser
-                                            ? palette.status.success.bg
-                                            : palette.status.info.bg,
-                                          border: isUser
-                                            ? `1px solid ${palette.status.success.border}`
-                                            : `1px solid ${palette.status.info.border}`,
-                                        }}
-                                      >
-                                        <Typography
-                                          sx={{
-                                            fontWeight: 600,
-                                            color: isUser
-                                              ? palette.status.success.text
-                                              : palette.status.info.text,
-                                            fontSize: "10px",
-                                            textTransform: "uppercase",
-                                            mb: "1px",
-                                          }}
-                                        >
-                                          {isUser ? "User" : "Assistant"}
-                                        </Typography>
-                                        <MarkdownRenderer content={turn.content || ""} />
-                                      </Box>
-                                    </Box>
-                                  );
-                                })}
-                              </Stack>
-                            </Box>
-                            {selectedLog.metadata.expected_outcome && (
-                              <Box
-                                sx={{
-                                  mt: "4px",
-                                  p: "3px",
-                                  backgroundColor: palette.status.warning.bg,
-                                  borderRadius: "6px",
-                                  border: `1px solid ${palette.status.warning.border}`,
-                                }}
-                              >
-                                <Typography
-                                  sx={{
-                                    fontSize: 11,
-                                    fontWeight: 600,
-                                    color: palette.status.warning.text,
-                                  }}
-                                >
-                                  Expected Outcome:
-                                </Typography>
-                                <Typography
-                                  sx={{
-                                    fontSize: 12,
-                                    color: palette.status.warning.text,
-                                    mt: "1px",
-                                  }}
-                                >
-                                  {selectedLog.metadata.expected_outcome}
-                                </Typography>
-                              </Box>
-                            )}
-                          </Box>
-                        ) : (
-                          <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
-                            {/* Input */}
-                            <Box sx={{ mb: "6px" }}>
-                              <Typography
-                                sx={{
-                                  fontSize: 14,
-                                  fontWeight: 600,
-                                  color: palette.text.primary,
-                                  mb: "2px",
-                                }}
-                              >
-                                Input
-                              </Typography>
-                              <Box
-                                sx={{
-                                  p: "5px",
-                                  pl: "8px",
-                                  backgroundColor: palette.background.accent,
-                                  border: `1px solid ${palette.border.light}`,
-                                  borderRadius: "8px",
-                                  maxHeight: "120px",
-                                  overflowY: "auto",
-                                }}
-                              >
-                                <Typography
-                                  sx={{
-                                    fontSize: 13,
-                                    color: palette.text.secondary,
-                                    lineHeight: 1.6,
-                                  }}
-                                >
-                                  {selectedLog.input_text || "No input"}
-                                </Typography>
-                              </Box>
-                            </Box>
-
-                            {/* Output */}
+                        {/* Left Panel: Input/Output or Conversation */}
+                        <Box
+                          sx={{
+                            display: "flex",
+                            flexDirection: "column",
+                            borderRight: `1px solid ${palette.border.light}`,
+                            pr: "8px",
+                          }}
+                        >
+                          {/* Conversational Display (for multi-turn) */}
+                          {selectedLog.metadata?.is_conversational &&
+                          selectedLog.metadata?.turns ? (
                             <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
                               <Typography
                                 sx={{
                                   fontSize: 14,
                                   fontWeight: 600,
                                   color: palette.text.primary,
-                                  mb: "2px",
+                                  mb: "3px",
                                 }}
                               >
-                                Output
+                                Conversation (
+                                {selectedLog.metadata.turn_count ||
+                                  (selectedLog.metadata.turns as Array<unknown>).length}{" "}
+                                turns)
                               </Typography>
+                              {selectedLog.metadata.scenario && (
+                                <Typography
+                                  sx={{ fontSize: 12, color: palette.text.tertiary, mb: "3px" }}
+                                >
+                                  Scenario: {selectedLog.metadata.scenario}
+                                </Typography>
+                              )}
                               <Box
                                 sx={{
                                   flex: 1,
-                                  p: "5px",
-                                  pl: "8px",
-                                  backgroundColor: palette.background.accent,
-                                  border: `1px solid ${palette.border.light}`,
+                                  backgroundColor: palette.accent.purple.bg,
+                                  border: `1px solid ${palette.accent.purple.border}`,
                                   borderRadius: "8px",
+                                  p: "5px",
                                   overflowY: "auto",
                                 }}
                               >
-                                <MarkdownRenderer
-                                  content={selectedLog.output_text || "No output"}
-                                />
+                                <Stack spacing="4px">
+                                  {(
+                                    selectedLog.metadata.turns as Array<{
+                                      role: string;
+                                      content: string;
+                                    }>
+                                  ).map((turn, idx) => {
+                                    const isUser = turn.role?.toLowerCase() === "user";
+                                    return (
+                                      <Box
+                                        key={idx}
+                                        sx={{
+                                          display: "flex",
+                                          justifyContent: isUser ? "flex-end" : "flex-start",
+                                        }}
+                                      >
+                                        <Box
+                                          sx={{
+                                            maxWidth: "85%",
+                                            p: "3px",
+                                            borderRadius: "12px",
+                                            backgroundColor: isUser
+                                              ? palette.status.success.bg
+                                              : palette.status.info.bg,
+                                            border: isUser
+                                              ? `1px solid ${palette.status.success.border}`
+                                              : `1px solid ${palette.status.info.border}`,
+                                          }}
+                                        >
+                                          <Typography
+                                            sx={{
+                                              fontWeight: 600,
+                                              color: isUser
+                                                ? palette.status.success.text
+                                                : palette.status.info.text,
+                                              fontSize: "12px",
+                                              textTransform: "uppercase",
+                                              mb: "1px",
+                                            }}
+                                          >
+                                            {isUser ? "User" : "Assistant"}
+                                          </Typography>
+                                          <MarkdownRenderer content={turn.content || ""} />
+                                        </Box>
+                                      </Box>
+                                    );
+                                  })}
+                                </Stack>
                               </Box>
-                            </Box>
-                          </Box>
-                        )}
-                      </Box>
-
-                      {/* Right Panel: Metric Scores with Full Reasoning */}
-                      <Box
-                        sx={{
-                          display: "flex",
-                          flexDirection: "column",
-                          overflowY: "auto",
-                          pl: "2px",
-                        }}
-                      >
-                        <Typography
-                          sx={{
-                            fontSize: 14,
-                            fontWeight: 600,
-                            color: palette.text.primary,
-                            mb: "3px",
-                          }}
-                        >
-                          Evaluation Metrics
-                        </Typography>
-
-                        {selectedLog.metadata?.metric_scores &&
-                        Object.keys(selectedLog.metadata.metric_scores).length > 0 ? (
-                          <Stack spacing="4px" sx={{ flex: 1, overflowY: "auto", pr: "2px" }}>
-                            {Object.entries(selectedLog.metadata.metric_scores).map(
-                              ([metricName, metricData]) => {
-                                const entry = metricData as MetricScoreEntry;
-                                const score = entryScore(entry);
-                                const status = metricStatus(metricName, entry);
-                                const statusColor = METRIC_STATUS_COLORS[status].text;
-                                // An error explains the failure, so it wins over the judge's
-                                // reason and is shown as written.
-                                const reason =
-                                  entryError(entry) || parseMetricReason(entryReason(entry));
-                                const friendlyMetric = formatMetricName(
-                                  metricName.replace(/^G-Eval\s*\((.+)\)$/i, "$1"),
-                                );
-
-                                return (
-                                  <Box
-                                    key={metricName}
+                              {selectedLog.metadata.expected_outcome && (
+                                <Box
+                                  sx={{
+                                    mt: "4px",
+                                    p: "3px",
+                                    backgroundColor: palette.status.warning.bg,
+                                    borderRadius: "6px",
+                                    border: `1px solid ${palette.status.warning.border}`,
+                                  }}
+                                >
+                                  <Typography
                                     sx={{
-                                      p: "4px",
-                                      borderRadius: "6px",
-                                      backgroundColor: palette.background.main,
-                                      border: `1px solid ${palette.border.light}`,
-                                      borderLeft: `3px solid ${statusColor}`,
+                                      fontSize: 12,
+                                      fontWeight: 600,
+                                      color: palette.status.warning.text,
                                     }}
                                   >
-                                    <Stack
-                                      direction="row"
-                                      justifyContent="space-between"
-                                      alignItems="center"
-                                      sx={{ mb: "1.5px" }}
-                                    >
-                                      <Typography
-                                        sx={{
-                                          fontSize: 13,
-                                          fontWeight: 600,
-                                          color: palette.text.primary,
-                                        }}
-                                      >
-                                        {friendlyMetric}
-                                      </Typography>
-                                      <Typography
-                                        sx={{
-                                          fontSize: 13,
-                                          fontWeight: 700,
-                                          color: statusColor,
-                                        }}
-                                      >
-                                        {typeof score === "number"
-                                          ? `${(score * 100).toFixed(0)}%`
-                                          : "N/A"}
-                                      </Typography>
-                                    </Stack>
+                                    Expected outcome:
+                                  </Typography>
+                                  <Typography
+                                    sx={{
+                                      fontSize: 12,
+                                      color: palette.status.warning.text,
+                                      mt: "1px",
+                                    }}
+                                  >
+                                    {selectedLog.metadata.expected_outcome}
+                                  </Typography>
+                                </Box>
+                              )}
+                            </Box>
+                          ) : (
+                            <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
+                              {/* Input */}
+                              <Box sx={{ mb: "6px" }}>
+                                <Typography
+                                  sx={{
+                                    fontSize: 14,
+                                    fontWeight: 600,
+                                    color: palette.text.primary,
+                                    mb: "2px",
+                                  }}
+                                >
+                                  Input
+                                </Typography>
+                                <Box
+                                  sx={{
+                                    p: "5px",
+                                    pl: "8px",
+                                    backgroundColor: palette.background.accent,
+                                    border: `1px solid ${palette.border.light}`,
+                                    borderRadius: "8px",
+                                    maxHeight: "120px",
+                                    overflowY: "auto",
+                                  }}
+                                >
+                                  <Typography
+                                    sx={{
+                                      fontSize: 13,
+                                      color: palette.text.secondary,
+                                      lineHeight: 1.6,
+                                    }}
+                                  >
+                                    {selectedLog.input_text || "No input"}
+                                  </Typography>
+                                </Box>
+                              </Box>
 
-                                    {/* Progress bar - subtle */}
-                                    <Box
-                                      sx={{
-                                        height: 4,
-                                        backgroundColor: palette.background.hover,
-                                        borderRadius: 2,
-                                        overflow: "hidden",
-                                        mb: reason ? 1.5 : 0,
-                                      }}
-                                    >
-                                      <Box
-                                        sx={{
-                                          height: "100%",
-                                          width: `${(score ?? 0) * 100}%`,
-                                          backgroundColor: statusColor,
-                                          borderRadius: 2,
-                                          transition: "width 0.3s ease",
-                                        }}
-                                      />
-                                    </Box>
+                              {/* Output */}
+                              <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
+                                <Typography
+                                  sx={{
+                                    fontSize: 14,
+                                    fontWeight: 600,
+                                    color: palette.text.primary,
+                                    mb: "2px",
+                                  }}
+                                >
+                                  Output
+                                </Typography>
+                                <Box
+                                  sx={{
+                                    flex: 1,
+                                    p: "5px",
+                                    pl: "8px",
+                                    backgroundColor: palette.background.accent,
+                                    border: `1px solid ${palette.border.light}`,
+                                    borderRadius: "8px",
+                                    overflowY: "auto",
+                                  }}
+                                >
+                                  <MarkdownRenderer
+                                    content={selectedLog.output_text || "No output"}
+                                  />
+                                </Box>
+                              </Box>
+                            </Box>
+                          )}
+                        </Box>
 
-                                    {/* Full reasoning - not truncated */}
-                                    {reason && (
-                                      <Typography
-                                        sx={{
-                                          fontSize: 12,
-                                          color: palette.text.disabled,
-                                          lineHeight: 1.6,
-                                        }}
-                                      >
-                                        {reason}
-                                      </Typography>
-                                    )}
-                                  </Box>
-                                );
-                              },
-                            )}
-                          </Stack>
-                        ) : (
-                          <Box
+                        {/* Right Panel: Metric Scores with Full Reasoning */}
+                        <Box
+                          sx={{
+                            display: "flex",
+                            flexDirection: "column",
+                            overflowY: "auto",
+                            pl: "2px",
+                          }}
+                        >
+                          <Typography
                             sx={{
-                              flex: 1,
-                              display: "flex",
-                              alignItems: "center",
-                              justifyContent: "center",
+                              fontSize: 14,
+                              fontWeight: 600,
+                              color: palette.text.primary,
+                              mb: "3px",
                             }}
                           >
-                            <Typography sx={{ fontSize: 13, color: palette.text.disabled }}>
-                              No metric scores available
-                            </Typography>
-                          </Box>
-                        )}
-                      </Box>
-                    </Box>
+                            Evaluation metrics
+                          </Typography>
 
-                    {/* Error message if failed */}
-                    {selectedLog.error_message && (
+                          {selectedLog.metadata?.metric_scores &&
+                          Object.keys(selectedLog.metadata.metric_scores).length > 0 ? (
+                            <Stack spacing="4px" sx={{ flex: 1, overflowY: "auto", pr: "2px" }}>
+                              {Object.entries(selectedLog.metadata.metric_scores).map(
+                                ([metricName, metricData]) => {
+                                  const entry = metricData as MetricScoreEntry;
+                                  const score = entryScore(entry);
+                                  const status = metricStatus(metricName, entry);
+                                  const statusColor = METRIC_STATUS_COLORS[status].text;
+                                  // An error explains the failure, so it wins over the judge's
+                                  // reason and is shown as written.
+                                  const reason =
+                                    entryError(entry) || parseMetricReason(entryReason(entry));
+                                  const friendlyMetric = storedMetricLabel(metricName);
+
+                                  return (
+                                    <Box
+                                      key={metricName}
+                                      sx={{
+                                        p: "4px",
+                                        borderRadius: "6px",
+                                        backgroundColor: palette.background.main,
+                                        border: `1px solid ${palette.border.light}`,
+                                        borderLeft: `3px solid ${statusColor}`,
+                                      }}
+                                    >
+                                      <Stack
+                                        direction="row"
+                                        justifyContent="space-between"
+                                        alignItems="center"
+                                        sx={{ mb: "1.5px" }}
+                                      >
+                                        <Typography
+                                          sx={{
+                                            fontSize: 13,
+                                            fontWeight: 600,
+                                            color: palette.text.primary,
+                                          }}
+                                        >
+                                          {friendlyMetric}
+                                        </Typography>
+                                        <Typography
+                                          sx={{
+                                            fontSize: 13,
+                                            fontWeight: 700,
+                                            color: statusColor,
+                                          }}
+                                        >
+                                          {typeof score === "number"
+                                            ? `${(score * 100).toFixed(0)}%`
+                                            : "N/A"}
+                                        </Typography>
+                                      </Stack>
+
+                                      {/* Progress bar - subtle */}
+                                      <Box
+                                        sx={{
+                                          height: 4,
+                                          backgroundColor: palette.background.hover,
+                                          borderRadius: 2,
+                                          overflow: "hidden",
+                                          mb: reason ? 1.5 : 0,
+                                        }}
+                                      >
+                                        <Box
+                                          sx={{
+                                            height: "100%",
+                                            width: `${(score ?? 0) * 100}%`,
+                                            backgroundColor: statusColor,
+                                            borderRadius: 2,
+                                            transition: "width 0.3s ease",
+                                          }}
+                                        />
+                                      </Box>
+
+                                      {/* Full reasoning - not truncated */}
+                                      {reason && (
+                                        <Typography
+                                          sx={{
+                                            fontSize: 13,
+                                            color: palette.text.secondary,
+                                            lineHeight: 1.6,
+                                          }}
+                                        >
+                                          {reason}
+                                        </Typography>
+                                      )}
+                                    </Box>
+                                  );
+                                },
+                              )}
+                            </Stack>
+                          ) : (
+                            <Box
+                              sx={{
+                                flex: 1,
+                                display: "flex",
+                                alignItems: "center",
+                                justifyContent: "center",
+                              }}
+                            >
+                              <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
+                                No metric scores available
+                              </Typography>
+                            </Box>
+                          )}
+                        </Box>
+                      </Box>
+
+                      {/* Error message if failed */}
+                      {selectedLog.error_message && (
+                        <Box
+                          sx={{
+                            mt: "4px",
+                            p: "4px",
+                            backgroundColor: palette.status.error.bg,
+                            borderRadius: "6px",
+                            border: `1px solid ${palette.status.error.border}`,
+                          }}
+                        >
+                          <Typography
+                            sx={{
+                              fontSize: 12,
+                              fontWeight: 600,
+                              color: palette.status.error.text,
+                              mb: "1px",
+                            }}
+                          >
+                            Error
+                          </Typography>
+                          <Typography
+                            sx={{
+                              fontSize: 12,
+                              color: palette.status.error.text,
+                              fontFamily: "monospace",
+                              whiteSpace: "pre-wrap",
+                            }}
+                          >
+                            {selectedLog.error_message}
+                          </Typography>
+                        </Box>
+                      )}
+
+                      {/* Footer: Metadata + Sample ID */}
                       <Box
                         sx={{
                           mt: "4px",
-                          p: "4px",
-                          backgroundColor: palette.status.error.bg,
-                          borderRadius: "6px",
-                          border: `1px solid ${palette.status.error.border}`,
+                          pt: "4px",
+                          borderTop: `1px solid ${palette.border.light}`,
+                          display: "flex",
+                          justifyContent: "space-between",
+                          alignItems: "center",
                         }}
                       >
+                        <Stack direction="row" spacing="6px">
+                          {selectedLog.model_name && (
+                            <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+                              <span style={{ fontWeight: 600 }}>Model:</span>{" "}
+                              {selectedLog.model_name}
+                            </Typography>
+                          )}
+                          {selectedLog.latency_ms && (
+                            <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+                              <span style={{ fontWeight: 600 }}>Latency:</span>{" "}
+                              {selectedLog.latency_ms}ms
+                            </Typography>
+                          )}
+                          {selectedLog.token_count && (
+                            <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+                              <span style={{ fontWeight: 600 }}>Tokens:</span>{" "}
+                              {selectedLog.token_count}
+                            </Typography>
+                          )}
+                        </Stack>
                         <Typography
                           sx={{
                             fontSize: 12,
-                            fontWeight: 600,
-                            color: palette.status.error.text,
-                            mb: "1px",
-                          }}
-                        >
-                          Error
-                        </Typography>
-                        <Typography
-                          sx={{
-                            fontSize: 12,
-                            color: palette.status.error.text,
+                            color: palette.text.tertiary,
                             fontFamily: "monospace",
-                            whiteSpace: "pre-wrap",
                           }}
                         >
-                          {selectedLog.error_message}
+                          {selectedLog.id}
                         </Typography>
                       </Box>
-                    )}
-
-                    {/* Footer: Metadata + Sample ID */}
-                    <Box
-                      sx={{
-                        mt: "4px",
-                        pt: "4px",
-                        borderTop: `1px solid ${palette.border.light}`,
-                        display: "flex",
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                      }}
-                    >
-                      <Stack direction="row" spacing="6px">
-                        {selectedLog.model_name && (
-                          <Typography sx={{ fontSize: 11, color: palette.text.disabled }}>
-                            <span style={{ fontWeight: 600 }}>Model:</span> {selectedLog.model_name}
-                          </Typography>
-                        )}
-                        {selectedLog.latency_ms && (
-                          <Typography sx={{ fontSize: 11, color: palette.text.disabled }}>
-                            <span style={{ fontWeight: 600 }}>Latency:</span>{" "}
-                            {selectedLog.latency_ms}ms
-                          </Typography>
-                        )}
-                        {selectedLog.token_count && (
-                          <Typography sx={{ fontSize: 11, color: palette.text.disabled }}>
-                            <span style={{ fontWeight: 600 }}>Tokens:</span>{" "}
-                            {selectedLog.token_count}
-                          </Typography>
-                        )}
-                      </Stack>
-                      <Typography
-                        sx={{ fontSize: 10, color: palette.text.disabled, fontFamily: "monospace" }}
-                      >
-                        {selectedLog.id}
-                      </Typography>
-                    </Box>
-                  </StandardModal>
-                );
-              })()}
-          </>
-        );
-      })()}
+                    </StandardModal>
+                  );
+                })()}
+            </>
+          );
+        })()}
     </Box>
   );
 }
