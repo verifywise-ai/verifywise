@@ -1976,6 +1976,8 @@ export default function EvalsDashboard() {
                   onNavigateToModels={() => {
                     setOpenModelsAddModal(true);
                     setTab("models");
+                    // Keep the hash in step so reload, back and the user guide see Models
+                    navigate(`${location.pathname}#models`);
                   }}
                 />
               )}

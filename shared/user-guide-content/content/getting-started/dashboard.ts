@@ -332,6 +332,10 @@ export const dashboardContent: ArticleContent = {
       text: "At the bottom of the sidebar you'll find Event tracker (audit log), Settings, and your user profile with logout.",
     },
     {
+      type: 'paragraph',
+      text: 'The "User guide" tab on the right edge of the screen opens this guide on the page that covers where you are. In LLM Evals, for example, it opens the topic for the section you have selected, such as Experiments or Datasets. Pages without their own topic open the guide for that module.',
+    },
+    {
       type: 'heading',
       id: 'quick-actions',
       level: 2,
