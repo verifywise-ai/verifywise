@@ -35,7 +35,6 @@ import { PageHeader } from "../../components/Layout/PageHeader";
 import { useEvalsSidebarContext } from "../../../application/contexts/EvalsSidebar.context";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { useArenaSetting } from "../../../application/hooks/useArenaSetting";
-import { useAutoCollapseSidebar } from "../../../application/hooks/useAutoCollapseSidebar";
 import ModalStandard from "../../components/Modals/StandardModal";
 import Field from "../../components/Inputs/Field";
 import Alert from "../../components/Alert";
@@ -200,7 +199,6 @@ interface LocalProvider {
 }
 
 export default function EvalsDashboard() {
-  useAutoCollapseSidebar(1024);
   const formatDate = useFormattedDate();
   const { projectId } = useParams<{ projectId?: string }>();
   const navigate = useNavigate();
@@ -1668,11 +1666,9 @@ export default function EvalsDashboard() {
                   <Typography sx={{ fontSize: 14, fontWeight: 500, color: palette.text.tertiary }}>
                     No local providers configured yet
                   </Typography>
-                  {!ENV_VARs.IS_DEMO_APP && (
-                    <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: "1px" }}>
-                      Click "Add provider" to get started
-                    </Typography>
-                  )}
+                  <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: "1px" }}>
+                    Click "Add provider" to get started
+                  </Typography>
                 </Box>
               ) : (
                 <Box sx={{ display: "flex", flexDirection: "column", gap: "8px" }}>

@@ -86,6 +86,9 @@ export default function ProjectExperiments({
   const [experiments, setExperiments] = useState<ExperimentWithMetrics[]>([]);
   const [, setLoading] = useState(true);
   const [hasLoaded, setHasLoaded] = useState(false);
+  // The project the latest load belongs to; a slower load (or a poll) for a
+  // previous project must not overwrite the current list.
+  const projectIdRef = useRef(projectId);
   const [newEvalModalOpen, setNewEvalModalOpen] = useState(false);
   const [alert, setAlert] = useState<AlertState | null>(null);
   const alertTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -148,6 +151,8 @@ export default function ProjectExperiments({
   }, []);
 
   useEffect(() => {
+    projectIdRef.current = projectId;
+    setHasLoaded(false);
     loadExperiments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
@@ -240,11 +245,13 @@ export default function ProjectExperiments({
   }, [hasLoaded, experiments.length, onExperimentsCountChange]);
 
   const loadExperiments = async () => {
+    const requestedProjectId = projectId;
     try {
       setLoading(true);
       const data = await getAllExperiments({
-        project_id: projectId,
+        project_id: requestedProjectId,
       });
+      if (projectIdRef.current !== requestedProjectId) return;
 
       // Use pre-computed avg_scores from experiment results (no need to fetch logs)
       const experimentsWithMetrics = (data.experiments || []).map((exp: Experiment) => {

@@ -16,6 +16,7 @@ import SidebarShell, {
   RecentSection,
   ProjectSelectorConfig,
 } from "../../components/Sidebar/SidebarShell";
+import { useAutoCollapseSidebar } from "../../../application/hooks/useAutoCollapseSidebar";
 import { useArenaSetting } from "../../../application/hooks/useArenaSetting";
 
 interface RecentExperiment {
@@ -70,6 +71,9 @@ export default function EvalsSidebar({
   allProjects = [],
   onProjectChange,
 }: EvalsSidebarProps) {
+  // Collapse on narrow windows on every Evals route.
+  useAutoCollapseSidebar(1024);
+
   // Arena is an organization setting; hide it unless it is on (also while loading).
   const { data: arenaSetting } = useArenaSetting();
   const arenaEnabled = arenaSetting?.enabled === true;

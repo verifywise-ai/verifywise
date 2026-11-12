@@ -82,4 +82,20 @@ describe("useAutoCollapseSidebar", () => {
     rerender();
     expect(isCollapsed(store)).toBe(false);
   });
+
+  it("keeps a manual collapse made after the user took the sidebar back", () => {
+    narrow = true;
+    const { store, rerender, unmount } = setup(false);
+    act(() => {
+      store.dispatch(toggleSidebar()); // user expands
+    });
+    act(() => {
+      store.dispatch(toggleSidebar()); // user collapses again
+    });
+    narrow = false;
+    rerender();
+    expect(isCollapsed(store)).toBe(true);
+    unmount();
+    expect(isCollapsed(store)).toBe(true);
+  });
 });

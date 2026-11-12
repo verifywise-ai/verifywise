@@ -138,10 +138,12 @@ export default function OrgSettings() {
     }
   }, [permissionsSettled, isAdmin, navigate]);
 
-  // Fetch saved keys on mount
+  const canView = permissionsSettled && isAdmin;
+
+  // Fetch saved keys once the user is known to be allowed here
   useEffect(() => {
-    fetchSavedKeys();
-  }, []);
+    if (canView) fetchSavedKeys();
+  }, [canView]);
 
   const getErrorMessage = (err: unknown): string => {
     if (err && typeof err === "object" && "response" in err) {
@@ -320,6 +322,9 @@ export default function OrgSettings() {
   const availableProviders = LLM_PROVIDERS.filter(
     (p) => !savedKeys.some((k) => k.provider === p._id),
   );
+
+  // Render nothing until permissions settle; non-admins are redirected above.
+  if (!canView) return null;
 
   return (
     <PageHeaderExtended
