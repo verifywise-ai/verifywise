@@ -364,7 +364,7 @@ export const de: Record<string, string> = {
   "Wins": "Siege",
   "You can start tracking metrics once you define your experiments":
     "Sie können mit der Verfolgung von Metriken beginnen, sobald Sie Ihre Experimente definieren",
-  "Your Scorers": "Ihre Bewerter",
+  "Your scorers": "Ihre Bewerter",
   "Your custom scorer will be used instead.":
     "Stattdessen wird Ihr benutzerdefinierter Bewerter verwendet.",
   "API key added successfully": "API-Schlüssel erfolgreich hinzugefügt",
@@ -926,7 +926,7 @@ export const fr: Record<string, string> = {
   "Wins": "Victoires",
   "You can start tracking metrics once you define your experiments":
     "Vous pouvez commencer à suivre les métriques une fois vos expériences définies",
-  "Your Scorers": "Vos évaluateurs",
+  "Your scorers": "Vos évaluateurs",
   "Your custom scorer will be used instead.":
     "Votre évaluateur personnalisé sera utilisé à la place.",
   "API key added successfully": "Clé API ajoutée avec succès",
@@ -1486,7 +1486,7 @@ export const es: Record<string, string> = {
   "Wins": "Victorias",
   "You can start tracking metrics once you define your experiments":
     "Puede empezar a hacer un seguimiento de las métricas una vez que defina sus experimentos",
-  "Your Scorers": "Tus evaluadores",
+  "Your scorers": "Tus evaluadores",
   "Your custom scorer will be used instead.": "En su lugar, se usará su evaluador personalizado.",
   "API key added successfully": "Clave de API añadida correctamente",
   "API key deleted successfully": "Clave de API eliminada correctamente",

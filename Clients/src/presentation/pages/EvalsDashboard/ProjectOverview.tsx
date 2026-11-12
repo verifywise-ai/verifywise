@@ -110,7 +110,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, Icon, subtitle }) => 
           <Typography
             variant="body2"
             sx={{
-              color: palette.text.disabled,
+              color: palette.text.secondary,
               fontSize: "11px",
               fontWeight: 500,
               textTransform: "uppercase",
@@ -133,9 +133,9 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, Icon, subtitle }) => 
           {subtitle && (
             <Typography
               sx={{
-                fontSize: "10px",
-                color: palette.text.disabled,
-                mt: 0.25,
+                fontSize: "12px",
+                color: palette.text.tertiary,
+                mt: "2px",
                 fontWeight: 400,
               }}
             >

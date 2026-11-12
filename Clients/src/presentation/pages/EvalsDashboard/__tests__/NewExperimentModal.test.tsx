@@ -112,8 +112,26 @@ describe("NewExperimentModal", () => {
       // EvalServer does not run local model files; there is no bare "Local" provider
       expect(screen.queryByText("Local")).not.toBeInTheDocument();
 
-      // No saved models in the org yet → the "Saved Models" section stays hidden.
-      expect(screen.queryByText("Saved Models")).not.toBeInTheDocument();
+      // No saved models in the org yet → the "Saved models" section stays hidden.
+      expect(screen.queryByText("Saved models")).not.toBeInTheDocument();
+    });
+
+    it("lists a model saved more than once only once", async () => {
+      const row = {
+        name: "claude-haiku",
+        provider: "anthropic",
+        updatedAt: "2025-01-01T00:00:00Z",
+      };
+      deepEvalMocks.listModels.mockResolvedValue([
+        { ...row, id: "mdl_a" },
+        { ...row, id: "mdl_b" },
+        { ...row, id: "mdl_c", name: "claude-sonnet" },
+      ]);
+      renderModal();
+
+      expect(await screen.findByText("Saved models")).toBeInTheDocument();
+      expect(screen.getAllByText("claude-haiku")).toHaveLength(1);
+      expect(screen.getByText("claude-sonnet")).toBeInTheDocument();
     });
   });
 
@@ -508,8 +526,15 @@ describe("NewExperimentModal", () => {
       );
       await goToScorerStep();
 
-      // Enabled scorer exists → mode auto-switches to scorer-only
-      expect(await screen.findByText("Your Scorers")).toBeInTheDocument();
+      // Standard judge stays the default even when an enabled scorer exists
+      await waitFor(() => expect(deepEvalMocks.listScorers).toHaveBeenCalled());
+      // Let the scorer list land in state first: an auto-switch would run only after that
+      await act(async () => {
+        await deepEvalMocks.listScorers.mock.results[0].value;
+      });
+      expect(screen.queryByText("Your scorers")).not.toBeInTheDocument();
+      fireEvent.click(screen.getByText("Custom scorer only"));
+      expect(await screen.findByText("Your scorers")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Next" })).toBeEnabled();
 
       await goToMetricsStep();

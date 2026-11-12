@@ -6,20 +6,10 @@
  * @module pages/EvalsDashboard/NewExperiment/ModelStep
  */
 
-import {
-  Box,
-  Card,
-  CardContent,
-  CircularProgress,
-  FormControl,
-  Grid,
-  MenuItem,
-  Select,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Box, Card, CardContent, CircularProgress, Grid, Stack, Typography } from "@mui/material";
 import { Check } from "lucide-react";
 import type { RefObject } from "react";
+import Select from "../../../components/Inputs/Select";
 import { palette } from "../../../themes/palette";
 import type { ModelInfo } from "../../../utils/providers";
 import type { SavedModel } from "../../../../infrastructure/api/evalModelsService";
@@ -86,6 +76,15 @@ export default function ModelStep({
   const selectedModelProvider = availableModelProviders.find(
     (p) => p.id === modelConfig.accessMethod,
   );
+  // Nothing stops the same model being saved twice (Models page, older seeds); identical
+  // rows can't be told apart, so list each name + provider + endpoint once
+  const seenSavedModels = new Set<string>();
+  const uniqueSavedModels = savedModels.filter((m) => {
+    const key = `${m.provider.toLowerCase()}|${m.name}|${m.endpointUrl ?? ""}`;
+    if (seenSavedModels.has(key)) return false;
+    seenSavedModels.add(key);
+    return true;
+  });
 
   return (
     <Stack spacing={4}>
@@ -201,7 +200,7 @@ export default function ModelStep({
         </Box>
       )}
 
-      {savedModels.length > 0 && (
+      {uniqueSavedModels.length > 0 && (
         <Box>
           <Typography
             sx={{
@@ -213,10 +212,10 @@ export default function ModelStep({
               mb: 1.5,
             }}
           >
-            Saved Models
+            Saved models
           </Typography>
           <Stack spacing={1}>
-            {savedModels.map((m) => {
+            {uniqueSavedModels.map((m) => {
               const providerKey = m.provider.toLowerCase();
               const providerEntry = availableModelProviders.find((p) => p.id === providerKey);
               const ProviderLogo = providerEntry?.Logo ?? null;
@@ -323,41 +322,23 @@ export default function ModelStep({
       )}
 
       <Box sx={{ mt: "16px" }}>
-        <Typography
-          variant="body2"
-          sx={{ mb: "4px", fontWeight: 500, fontSize: "13px", color: palette.text.secondary }}
-        >
-          Link to model inventory (optional)
-        </Typography>
-        <FormControl fullWidth size="small">
-          <Select
-            value={selectedModelInventoryId !== null ? selectedModelInventoryId : ""}
-            onChange={(e) => {
-              const val = String(e.target.value);
-              onModelInventoryChange(val === "" ? null : Number(val));
-            }}
-            displayEmpty
-            sx={{ height: "34px", fontSize: "13px", borderRadius: "4px" }}
-          >
-            <MenuItem value="">
-              <Typography sx={{ fontSize: "13px", color: palette.text.secondary }}>
-                None — don't link to inventory
-              </Typography>
-            </MenuItem>
-            {modelInventories.map((m) => (
-              <MenuItem key={m.id} value={m.id}>
-                <Stack direction="row" spacing={1} alignItems="center">
-                  <Typography sx={{ fontSize: "13px" }}>
-                    {m.provider} — {m.model}
-                  </Typography>
-                  <Typography sx={{ fontSize: "11px", color: palette.text.secondary }}>
-                    v{m.version}
-                  </Typography>
-                </Stack>
-              </MenuItem>
-            ))}
-          </Select>
-        </FormControl>
+        <Select
+          id="experiment-model-inventory-link"
+          label="Link to model inventory (optional)"
+          value={selectedModelInventoryId !== null ? String(selectedModelInventoryId) : ""}
+          onChange={(e) => {
+            const val = String(e.target.value);
+            onModelInventoryChange(val === "" ? null : Number(val));
+          }}
+          items={[
+            { _id: "", name: "None — don't link to inventory" },
+            ...modelInventories.map((m) => ({
+              _id: String(m.id),
+              name: `${m.provider} — ${m.model} (v${m.version})`,
+            })),
+          ]}
+          sx={{ width: "100%" }}
+        />
       </Box>
     </Stack>
   );
