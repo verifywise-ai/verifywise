@@ -32,7 +32,6 @@ import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.cont
 import VerifyWiseLogo from "../../assets/imgs/verifywise-logo.svg";
 import SidebarFooter from "./SidebarFooter";
 import { FlyingHearts } from "../FlyingHearts";
-import { SIDEBAR_TEXT_SECONDARY } from "./sidebarTokens";
 
 declare const __APP_VERSION__: string;
 
@@ -344,7 +343,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
                     ? theme.palette.text.disabled
                     : isActive
                       ? theme.palette.text.primary
-                      : SIDEBAR_TEXT_SECONDARY,
+                      : theme.palette.text.secondary,
                 },
               }}
             >
@@ -479,7 +478,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
                   ? theme.palette.text.disabled
                   : isActive
                     ? theme.palette.text.primary
-                    : SIDEBAR_TEXT_SECONDARY,
+                    : theme.palette.text.secondary,
               },
             }}
           >
@@ -745,7 +744,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
                   sx={{
                     fontSize: "13px",
                     fontWeight: 400,
-                    color: SIDEBAR_TEXT_SECONDARY,
+                    color: theme.palette.text.secondary,
                     whiteSpace: "nowrap",
                     overflow: "hidden",
                     textOverflow: "ellipsis",
@@ -790,7 +789,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
                     "px": 2,
                     "mx": 1,
                     "borderRadius": "6px",
-                    "color": SIDEBAR_TEXT_SECONDARY,
+                    "color": theme.palette.text.secondary,
                     "cursor": "pointer",
                     "transition": "all 0.15s ease",
                     "&:hover": {
@@ -1041,7 +1040,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
                       sx={{
                         "& .MuiListItemText-primary": {
                           fontSize: "12px",
-                          color: SIDEBAR_TEXT_SECONDARY,
+                          color: theme.palette.text.secondary,
                           whiteSpace: "nowrap",
                           overflow: "hidden",
                           textOverflow: "ellipsis",

@@ -1,7 +1,6 @@
 import { Box, List, ListItemButton, ListItemIcon, ListItemText, Tooltip } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { LucideIcon } from "lucide-react";
-import { SIDEBAR_TEXT_SECONDARY } from "../Sidebar/sidebarTokens";
 
 export interface SectionItem {
   id: string;
@@ -118,7 +117,7 @@ const SectionSidebar = ({
                   "& .MuiListItemText-primary": {
                     fontSize: "13px",
                     fontWeight: isActive ? 600 : 400,
-                    color: isActive ? theme.palette.text.primary : SIDEBAR_TEXT_SECONDARY,
+                    color: isActive ? theme.palette.text.primary : theme.palette.text.secondary,
                   },
                 }}
               />
