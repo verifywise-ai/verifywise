@@ -696,6 +696,18 @@ export const de: Record<string, string> = {
   "Arena comparison": "Arena-Vergleich",
   "Limitations & recommendations": "Einschränkungen & Empfehlungen",
   'Click "Add provider" to get started': 'Klicken Sie auf "Anbieter hinzufügen", um zu beginnen',
+  "Single-turn JSON format": "Einzelschritt-JSON-Format",
+  "Multi-turn JSON format": "Mehrstufiges JSON-Format",
+  "Simulated JSON format": "Simuliertes JSON-Format",
+  "Single-turn fields": "Einzelschritt-Felder",
+  "Multi-turn fields": "Mehrstufige Felder",
+  "Simulated fields": "Simulierte Felder",
+  "{count} completed experiment available": "{count} abgeschlossenes Experiment verfügbar",
+  "{count} completed experiments available": "{count} abgeschlossene Experimente verfügbar",
+  'You have {count} completed experiment. Click "Generate report" above to create a PDF or CSV report with AI-powered summaries.':
+    'Sie haben {count} abgeschlossenes Experiment. Klicken Sie oben auf "Bericht erstellen", um einen PDF- oder CSV-Bericht mit KI-gestützten Zusammenfassungen zu erstellen.',
+  'You have {count} completed experiments. Click "Generate report" above to create a PDF or CSV report with AI-powered summaries.':
+    'Sie haben {count} abgeschlossene Experimente. Klicken Sie oben auf "Bericht erstellen", um einen PDF- oder CSV-Bericht mit KI-gestützten Zusammenfassungen zu erstellen.',
 };
 
 export const fr: Record<string, string> = {
@@ -1393,6 +1405,18 @@ export const fr: Record<string, string> = {
   "Arena comparison": "Comparaison d'arène",
   "Limitations & recommendations": "Limitations et recommandations",
   'Click "Add provider" to get started': 'Cliquez sur "Ajouter un fournisseur" pour commencer',
+  "Single-turn JSON format": "Format JSON mono-tour",
+  "Multi-turn JSON format": "Format JSON multi-tours",
+  "Simulated JSON format": "Format JSON simulé",
+  "Single-turn fields": "Champs mono-tour",
+  "Multi-turn fields": "Champs multi-tours",
+  "Simulated fields": "Champs simulés",
+  "{count} completed experiment available": "{count} expérience terminée disponible",
+  "{count} completed experiments available": "{count} expériences terminées disponibles",
+  'You have {count} completed experiment. Click "Generate report" above to create a PDF or CSV report with AI-powered summaries.':
+    'Vous avez {count} expérience terminée. Cliquez sur "Générer un rapport" ci-dessus pour créer un rapport PDF ou CSV avec des résumés générés par l\'IA.',
+  'You have {count} completed experiments. Click "Generate report" above to create a PDF or CSV report with AI-powered summaries.':
+    'Vous avez {count} expériences terminées. Cliquez sur "Générer un rapport" ci-dessus pour créer un rapport PDF ou CSV avec des résumés générés par l\'IA.',
 };
 
 export const es: Record<string, string> = {
@@ -2090,4 +2114,16 @@ export const es: Record<string, string> = {
   "Arena comparison": "Comparación de arena",
   "Limitations & recommendations": "Limitaciones y recomendaciones",
   'Click "Add provider" to get started': "Haga clic en «Añadir proveedor» para empezar",
+  "Single-turn JSON format": "Formato JSON de turno único",
+  "Multi-turn JSON format": "Formato JSON multiturno",
+  "Simulated JSON format": "Formato JSON simulado",
+  "Single-turn fields": "Campos de turno único",
+  "Multi-turn fields": "Campos multiturno",
+  "Simulated fields": "Campos simulados",
+  "{count} completed experiment available": "{count} experimento completado disponible",
+  "{count} completed experiments available": "{count} experimentos completados disponibles",
+  'You have {count} completed experiment. Click "Generate report" above to create a PDF or CSV report with AI-powered summaries.':
+    "Tiene {count} experimento completado. Haga clic en «Generar informe» arriba para crear un informe PDF o CSV con resúmenes generados por IA.",
+  'You have {count} completed experiments. Click "Generate report" above to create a PDF or CSV report with AI-powered summaries.':
+    "Tiene {count} experimentos completados. Haga clic en «Generar informe» arriba para crear un informe PDF o CSV con resúmenes generados por IA.",
 };

@@ -274,9 +274,9 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
                       <StatusBadge
                         label={
                           template.type === "single-turn"
-                            ? "Single-Turn"
+                            ? "Single-turn"
                             : template.type === "multi-turn"
-                              ? "Multi-Turn"
+                              ? "Multi-turn"
                               : "Simulated"
                         }
                         size="small"

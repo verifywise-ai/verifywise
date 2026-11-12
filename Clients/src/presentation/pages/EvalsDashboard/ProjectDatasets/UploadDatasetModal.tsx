@@ -100,7 +100,7 @@ export default function UploadDatasetModal({
           <Stack direction="row" spacing={1}>
             <Box onClick={() => onTurnTypeChange("single-turn")} sx={{ cursor: "pointer" }}>
               <Chip
-                label="Single-Turn"
+                label="Single-turn"
                 uppercase={false}
                 backgroundColor={
                   turnType === "single-turn" ? palette.status.warning.bg : palette.background.hover
@@ -112,7 +112,7 @@ export default function UploadDatasetModal({
             </Box>
             <Box onClick={() => onTurnTypeChange("multi-turn")} sx={{ cursor: "pointer" }}>
               <Chip
-                label="Multi-Turn"
+                label="Multi-turn"
                 uppercase={false}
                 backgroundColor={
                   turnType === "multi-turn" || turnType === "simulated"
@@ -236,11 +236,10 @@ export default function UploadDatasetModal({
           >
             <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: "13px" }}>
               {turnType === "single-turn"
-                ? "Single-Turn"
+                ? "Single-turn JSON format"
                 : turnType === "multi-turn"
-                  ? "Multi-Turn"
-                  : "Simulated"}{" "}
-              JSON format
+                  ? "Multi-turn JSON format"
+                  : "Simulated JSON format"}
             </Typography>
             <CustomizableButton
               size="small"
@@ -361,11 +360,10 @@ export default function UploadDatasetModal({
         <Box>
           <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: "13px", mb: 1 }}>
             {turnType === "single-turn"
-              ? "Single-Turn"
+              ? "Single-turn fields"
               : turnType === "multi-turn"
-                ? "Multi-Turn"
-                : "Simulated"}{" "}
-            fields
+                ? "Multi-turn fields"
+                : "Simulated fields"}
           </Typography>
           <Stack spacing={0.75}>
             <Box>

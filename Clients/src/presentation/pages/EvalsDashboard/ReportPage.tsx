@@ -42,6 +42,8 @@ import { palette } from "../../themes/palette";
 import singleTheme from "../../themes/v1SingleTheme";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { countLabel } from "../../tools/countLabel";
+import { useTranslation } from "../../../application/hooks/useTranslation";
+import { fill } from "../../../i18n/fill";
 
 interface ReportPageProps {
   projectId: string;
@@ -70,6 +72,7 @@ export default function ReportPage({
 }: ReportPageProps) {
   const formatUserDate = useFormattedDate();
   const theme = useTheme();
+  const { t } = useTranslation();
   const [configModalOpen, setConfigModalOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [loadingReportId, setLoadingReportId] = useState<string | null>(null);
@@ -361,7 +364,14 @@ export default function ReportPage({
         gap="4px"
       >
         <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
-          {countLabel(completedCount, "completed experiment")} available
+          {fill(
+            t(
+              completedCount === 1
+                ? "{count} completed experiment available"
+                : "{count} completed experiments available",
+            ),
+            { count: completedCount },
+          )}
         </Typography>
         <CustomizableButton
           variant="contained"
@@ -488,7 +498,14 @@ export default function ReportPage({
             <EmptyStateTip
               icon={Download}
               title="Generate your first report"
-              description={`You have ${countLabel(completedCount, "completed experiment")}. Click "Generate report" above to create a PDF or CSV report with AI-powered summaries.`}
+              description={fill(
+                t(
+                  completedCount === 1
+                    ? 'You have {count} completed experiment. Click "Generate report" above to create a PDF or CSV report with AI-powered summaries.'
+                    : 'You have {count} completed experiments. Click "Generate report" above to create a PDF or CSV report with AI-powered summaries.',
+                ),
+                { count: completedCount },
+              )}
             />
           )}
         </EmptyState>
