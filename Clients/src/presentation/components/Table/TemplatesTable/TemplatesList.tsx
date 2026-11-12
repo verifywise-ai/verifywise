@@ -28,17 +28,26 @@ const getPredominantDifficultyLabel = (diff?: {
   return "Easy";
 };
 
-const getDifficultyStyles = (difficulty: string) => {
-  switch (difficulty) {
-    case "Easy":
-      return { backgroundColor: `${status.success.bg}`, color: `${status.success.text}` };
-    case "Medium":
-      return { backgroundColor: `${status.warning.bg}`, color: `${status.warning.text}` };
-    case "Hard":
-      return { backgroundColor: `${status.error.bg}`, color: `${status.error.text}` };
+// One difficulty-to-chip mapping for every dataset screen.
+export const getDifficultyVariant = (
+  difficulty?: string,
+): "success" | "warning" | "error" | "default" => {
+  switch (difficulty?.toLowerCase()) {
+    case "easy":
+      return "success";
+    case "medium":
+      return "warning";
+    case "hard":
+    case "very hard":
+      return "error";
     default:
-      return { backgroundColor: `${status.default.bg}`, color: `${status.default.text}` };
+      return "default";
   }
+};
+
+const getDifficultyStyles = (difficulty: string) => {
+  const tone = status[getDifficultyVariant(difficulty)];
+  return { backgroundColor: `${tone.bg}`, color: `${tone.text}` };
 };
 
 const getCategoryStyles = (category: string) => {
@@ -330,9 +339,7 @@ export { TemplatesList, getPredominantDifficultyLabel, getDifficultyStyles, getC
 
 // Type is a classification, not a status: every turn type uses the same
 // neutral chip so it never reads as a warning next to the difficulty chip.
-const TYPE_CHIP_STYLES = {
+export const TYPE_CHIP_STYLES = {
   backgroundColor: `${background.hover}`,
   color: `${text.secondary}`,
 };
-
-export const getTypeStyles = (_type?: string) => TYPE_CHIP_STYLES;

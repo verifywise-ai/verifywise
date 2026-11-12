@@ -31,19 +31,26 @@ import { PageBreadcrumbs } from "../../components/breadcrumbs/PageBreadcrumbs";
 import TabBar from "../../components/TabBar";
 import { TabContext } from "@mui/lab";
 import { palette } from "../../themes/palette";
+import { getDifficultyVariant } from "../../components/Table/TemplatesTable/TemplatesList";
 
-const PRIMARY_BUTTON_SX = {
-  "bgcolor": palette.brand.primary,
-  "&:hover": { bgcolor: palette.brand.primaryHover },
+const USE_CASE_LABELS: Record<"chatbot" | "rag" | "agent", string> = {
+  chatbot: "Chatbot",
+  rag: "RAG",
+  agent: "Agent",
 };
 
-const DIFFICULTY_CHIP_PROPS: Record<
-  string,
-  { variant?: "warning" | "error"; backgroundColor?: string; textColor?: string }
-> = {
-  "Medium": { variant: "warning" },
-  "Hard": { variant: "error" },
-  "Very hard": { backgroundColor: palette.accent.purple.bg, textColor: palette.accent.purple.text },
+const PROMPT_CATEGORY_CHIP_COLORS: Array<{ match: string; bg: string; text: string }> = [
+  { match: "coding", bg: palette.brand.primaryLight, text: palette.brand.primary },
+  { match: "math", bg: palette.accent.blue.bg, text: palette.accent.blue.text },
+  { match: "reason", bg: palette.accent.orange.bg, text: palette.accent.orange.text },
+];
+
+const getPromptCategoryChipColors = (category?: string) => {
+  const key = category?.toLowerCase() ?? "";
+  const hit = PROMPT_CATEGORY_CHIP_COLORS.find((c) => key.includes(c.match));
+  return hit
+    ? { backgroundColor: hit.bg, textColor: hit.text }
+    : { backgroundColor: palette.background.hover, textColor: palette.text.secondary };
 };
 
 type ListedDataset = {
@@ -554,7 +561,7 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
                   <VWChip
                     label={benchmark.difficulty}
                     uppercase={false}
-                    {...DIFFICULTY_CHIP_PROPS[benchmark.difficulty]}
+                    variant={getDifficultyVariant(benchmark.difficulty)}
                   />
                 </Stack>
 
@@ -628,7 +635,7 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
 
                 <CustomizableButton
                   variant="contained"
-                  sx={{ ...PRIMARY_BUTTON_SX, mt: "2px" }}
+                  sx={{ mt: "2px" }}
                   onClick={(e) => {
                     e.stopPropagation();
                     navigate(`/evals/${projectId}?benchmark=${benchmark.id}#experiments`);
@@ -652,12 +659,11 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
                     variant="subtitle2"
                     sx={{
                       fontWeight: 700,
-                      textTransform: "capitalize",
                       fontSize: "13px",
                       mb: "1px",
                     }}
                   >
-                    {uc}{" "}
+                    {USE_CASE_LABELS[uc]}{" "}
                     <VWChip
                       label={String((groups[uc] || []).length)}
                       size="small"
@@ -679,7 +685,9 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
                         onClick={() => setSelected(ds)}
                         sx={{
                           justifyContent: "flex-start",
-                          borderRadius: "4px",
+                          textAlign: "left",
+                          height: "auto",
+                          whiteSpace: "normal",
                           px: "2.5px",
                           py: "1.5px",
                           fontSize: "12px",
@@ -724,7 +732,6 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
                       </IconButton>
                       <CustomizableButton
                         variant="contained"
-                        sx={PRIMARY_BUTTON_SX}
                         onClick={() => openEditor(selected.path, selected.name)}
                         text="Open in editor"
                       />
@@ -748,15 +755,7 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
                               <VWChip
                                 label={stp.category}
                                 uppercase={false}
-                                backgroundColor={
-                                  stp.category?.toLowerCase().includes("coding")
-                                    ? palette.brand.primaryLight
-                                    : stp.category?.toLowerCase().includes("math")
-                                      ? palette.accent.blue.bg
-                                      : stp.category?.toLowerCase().includes("reason")
-                                        ? palette.accent.orange.bg
-                                        : palette.background.hover
-                                }
+                                {...getPromptCategoryChipColors(stp.category)}
                               />
                             </Stack>
                             <Typography
@@ -867,11 +866,10 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
                       sx={{
                         fontWeight: 700,
                         fontSize: "13px",
-                        textTransform: "capitalize",
                         mb: "2px",
                       }}
                     >
-                      {uc}
+                      {USE_CASE_LABELS[uc]}
                     </Typography>
                     <Stack direction="row" spacing="4px" sx={{ flexWrap: "wrap" }}>
                       {(groups[uc] || []).map((ds) => {
@@ -982,7 +980,6 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
                             <Stack direction="row" spacing="2px" sx={{ mt: "2px" }}>
                               <CustomizableButton
                                 variant="contained"
-                                sx={PRIMARY_BUTTON_SX}
                                 text="View prompts"
                                 onClick={() => {
                                   setSelected(ds);
@@ -996,7 +993,6 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
                               />
                               <CustomizableButton
                                 variant="contained"
-                                sx={PRIMARY_BUTTON_SX}
                                 onClick={() => openEditor(ds.path, ds.name)}
                                 text="Open in editor"
                               />

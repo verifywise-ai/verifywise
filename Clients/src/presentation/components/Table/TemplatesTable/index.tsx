@@ -30,7 +30,7 @@ import {
   getPredominantDifficultyLabel,
   getDifficultyStyles,
   getCategoryStyles,
-  getTypeStyles,
+  TYPE_CHIP_STYLES,
 } from "./TemplatesList";
 
 export type SortDirection = "asc" | "desc" | null;
@@ -281,8 +281,8 @@ const TemplatesTable: React.FC<TemplatesTableProps> = ({
                         }
                         size="small"
                         uppercase={false}
-                        backgroundColor={getTypeStyles(template.type).backgroundColor}
-                        textColor={getTypeStyles(template.type).color}
+                        backgroundColor={TYPE_CHIP_STYLES.backgroundColor}
+                        textColor={TYPE_CHIP_STYLES.color}
                       />
                     ) : (
                       <Typography sx={{ fontSize: "13px", color: `${text.disabled}` }}>
@@ -385,7 +385,7 @@ export default TemplatesTable;
 export {
   getPredominantDifficultyLabel,
   getDifficultyStyles,
-  getTypeStyles,
+  TYPE_CHIP_STYLES,
   getCategoryStyles,
 } from "./TemplatesList";
 export { default as TemplatesList } from "./TemplatesList";

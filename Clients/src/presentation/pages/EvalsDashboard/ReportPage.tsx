@@ -13,6 +13,7 @@ import {
   TableHead,
   TableRow,
   useTheme,
+  Link,
 } from "@mui/material";
 import {
   FileText,
@@ -333,7 +334,21 @@ export default function ReportPage({
 
       <PageHeader
         title="Reports"
-        description="Generate PDF or CSV reports from completed experiments. Reports follow the EvalCards standard for AI evaluation documentation."
+        description={
+          <>
+            Generate PDF or CSV reports from completed experiments. Reports follow the{" "}
+            <Link
+              href="https://arxiv.org/abs/2206.11249"
+              target="_blank"
+              rel="noopener noreferrer"
+              underline="hover"
+              sx={{ color: palette.brand.primary, fontWeight: 600 }}
+            >
+              EvalCards
+            </Link>{" "}
+            standard for AI evaluation documentation.
+          </>
+        }
         rightContent={<HelperIcon articlePath="llm-evals/reports" />}
       />
 
@@ -354,11 +369,7 @@ export default function ReportPage({
           icon={<Plus size={16} />}
           onClick={() => setConfigModalOpen(true)}
           isDisabled={completedCount === 0 || isGenerating}
-          sx={{
-            backgroundColor: palette.brand.primary,
-            border: `1px solid ${palette.brand.primary}`,
-            gap: "4px",
-          }}
+          sx={{ gap: "4px" }}
         />
       </Stack>
 
@@ -473,11 +484,13 @@ export default function ReportPage({
             title="About EvalCards"
             description="Reports are structured following the EvalCards standard — a structured documentation framework for AI evaluation results. Each report includes evaluation context, metric results, safety assessment, comparative analysis, and methodology."
           />
-          <EmptyStateTip
-            icon={Download}
-            title="Generate your first report"
-            description={`You have ${countLabel(completedCount, "completed experiment")}. Click "Generate report" above to create a PDF or CSV report with AI-powered summaries.`}
-          />
+          {completedCount > 0 && (
+            <EmptyStateTip
+              icon={Download}
+              title="Generate your first report"
+              description={`You have ${countLabel(completedCount, "completed experiment")}. Click "Generate report" above to create a PDF or CSV report with AI-powered summaries.`}
+            />
+          )}
         </EmptyState>
       )}
 

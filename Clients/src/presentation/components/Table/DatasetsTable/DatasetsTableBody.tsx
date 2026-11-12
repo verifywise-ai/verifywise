@@ -15,21 +15,9 @@ import palette from "../../../themes/palette";
 import StatusBadge from "../../StatusBadge";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { DatasetRow } from "./index";
-import { text, background, status, accent } from "../../../themes/palette";
+import { getCategoryStyles, getDifficultyVariant } from "../TemplatesTable/TemplatesList";
+import { text, background, status } from "../../../themes/palette";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
-
-// Use case keeps a hue per category; difficulty is the only status-coloured chip.
-const USE_CASE_CHIP_COLORS: Record<string, { bg: string; text: string }> = {
-  chatbot: { bg: `${accent.teal.bg}`, text: `${accent.teal.text}` },
-  rag: { bg: `${accent.purple.bg}`, text: `${accent.purple.text}` },
-  agent: { bg: `${accent.red.bg}`, text: `${accent.red.text}` },
-};
-
-const DIFFICULTY_CHIP_VARIANT: Record<string, "success" | "warning" | "error"> = {
-  Easy: "success",
-  Medium: "warning",
-  Hard: "error",
-};
 
 interface DatasetsTableBodyProps {
   rows: DatasetRow[];
@@ -171,12 +159,8 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
                   }
                   size="small"
                   uppercase={false}
-                  backgroundColor={
-                    USE_CASE_CHIP_COLORS[dataset.useCase]?.bg ?? `${status.default.bg}`
-                  }
-                  textColor={
-                    USE_CASE_CHIP_COLORS[dataset.useCase]?.text ?? `${status.default.text}`
-                  }
+                  backgroundColor={getCategoryStyles(dataset.useCase).backgroundColor}
+                  textColor={getCategoryStyles(dataset.useCase).color}
                 />
               ) : (
                 <Typography sx={{ fontSize: "13px", color: `${text.disabled}` }}>-</Typography>
@@ -217,9 +201,7 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
                   label={metadata?.avgDifficulty ?? "Medium"}
                   size="small"
                   uppercase={false}
-                  variant={
-                    DIFFICULTY_CHIP_VARIANT[metadata?.avgDifficulty ?? "Medium"] ?? "default"
-                  }
+                  variant={getDifficultyVariant(metadata?.avgDifficulty ?? "Medium")}
                 />
               )}
             </TableCell>
