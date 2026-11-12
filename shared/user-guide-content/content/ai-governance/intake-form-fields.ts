@@ -186,6 +186,53 @@ export const intakeFormFieldsContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'map-to-custom-field',
+      level: 2,
+      text: 'Mapping a question to a custom field',
+    },
+    {
+      type: 'paragraph',
+      text: 'A question can fill a custom field on the model, use case or AI app that approval creates. Define the custom field first in **Settings** > **Custom fields**, for the same kind of record the form creates.',
+    },
+    {
+      type: 'ordered-list',
+      items: [
+        { text: 'Click the question on the canvas to open its settings.' },
+        { text: 'Open **Map to entity field**. Below the standard fields, a **Custom fields** group lists the custom fields this question can fill.' },
+        { text: 'Choose one. If it is a select custom field, its options are copied into the question and replace the question\'s current options.' },
+        { text: 'Click **Save**.' },
+      ],
+    },
+    {
+      type: 'table',
+      columns: [
+        { key: 'question', label: 'Question type', width: '40%' },
+        { key: 'field', label: 'Can fill a custom field of type', width: '60%' },
+      ],
+      rows: [
+        { question: 'Short text', field: 'Text' },
+        { question: 'Number', field: 'Number' },
+        { question: 'Date', field: 'Date' },
+        { question: 'Checkbox', field: 'Yes/No' },
+        { question: 'Dropdown', field: 'Single select or Scored select' },
+        { question: 'Multi-select', field: 'Multi select' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Long text, email and URL questions can\'t be mapped to a custom field. Each custom field can be filled by one question.',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { text: '**Publishing:** a form can\'t be published if a mapped custom field was deleted or no longer fits the question type. Fix or clear the mapping first.' },
+        { text: '**Review:** the reviewer sees the values that will be saved in a read-only **Custom fields** block of the submission preview. They can\'t edit them there.' },
+        { text: '**Approval:** each answer is saved to the new model, use case or AI app. A value that no longer fits, such as an answer that matches none of the field\'s options, is skipped. The approval goes through and a warning lists what was not saved.' },
+        { text: '**Required custom fields:** they never block publishing or approval.' },
+      ],
+    },
+    {
+      type: 'heading',
       id: 'what-reviewers-see',
       level: 2,
       text: 'How answers appear to reviewers',
