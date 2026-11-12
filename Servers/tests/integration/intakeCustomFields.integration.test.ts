@@ -368,8 +368,10 @@ describe("Intake custom field mapping (#5262)", () => {
           entityType,
           allowed: false,
         });
-        // Editor holds every one of these except where the matrix says otherwise.
-        expect(typeof (await requestHasPermission(editor, permission))).toBe("boolean");
+        expect({ entityType, allowed: await requestHasPermission(editor, permission) }).toEqual({
+          entityType,
+          allowed: true,
+        });
       }
     });
 
@@ -379,6 +381,8 @@ describe("Intake custom field mapping (#5262)", () => {
       const api = await as(orgId, auditorId, "Auditor");
       for (const entityType of Object.keys(CUSTOM_FIELD_EDIT_PERMISSION)) {
         const definitionId = await defineField(orgId, entityType, "gate_field", "text");
+        // entity_id 1 need not exist: the permission gate runs before the
+        // entity existence check, so the answer must be 403 either way.
         const res = await api
           .put("/api/custom-fields/values")
           .send({ definition_id: definitionId, entity_id: 1, value: "x" });
