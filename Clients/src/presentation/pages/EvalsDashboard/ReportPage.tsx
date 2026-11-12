@@ -41,7 +41,8 @@ import { getAllExperiments } from "../../../application/repository/deepEval.repo
 import { palette } from "../../themes/palette";
 import singleTheme from "../../themes/v1SingleTheme";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
-import { countLabel } from "../../tools/countLabel";
+import { useTranslation } from "../../../application/hooks/useTranslation";
+import { fill, pluralKey } from "../../../i18n/fill";
 
 interface ReportPageProps {
   projectId: string;
@@ -70,6 +71,7 @@ export default function ReportPage({
 }: ReportPageProps) {
   const formatUserDate = useFormattedDate();
   const theme = useTheme();
+  const { t, lang } = useTranslation();
   const [configModalOpen, setConfigModalOpen] = useState(false);
   const [isGenerating, setIsGenerating] = useState(false);
   const [loadingReportId, setLoadingReportId] = useState<string | null>(null);
@@ -361,7 +363,17 @@ export default function ReportPage({
         gap="4px"
       >
         <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
-          {countLabel(completedCount, "completed experiment")} available
+          {fill(
+            t(
+              pluralKey(
+                lang,
+                completedCount,
+                "{count} completed experiment available",
+                "{count} completed experiments available",
+              ),
+            ),
+            { count: completedCount },
+          )}
         </Typography>
         <CustomizableButton
           variant="contained"
@@ -488,7 +500,17 @@ export default function ReportPage({
             <EmptyStateTip
               icon={Download}
               title="Generate your first report"
-              description={`You have ${countLabel(completedCount, "completed experiment")}. Click "Generate report" above to create a PDF or CSV report with AI-powered summaries.`}
+              description={fill(
+                t(
+                  pluralKey(
+                    lang,
+                    completedCount,
+                    'You have {count} completed experiment. Click "Generate report" above to create a PDF or CSV report with AI-powered summaries.',
+                    'You have {count} completed experiments. Click "Generate report" above to create a PDF or CSV report with AI-powered summaries.',
+                  ),
+                ),
+                { count: completedCount },
+              )}
             />
           )}
         </EmptyState>
@@ -559,7 +581,7 @@ export default function ReportPage({
                   </TableCell>
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                     <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary }}>
-                      {countLabel(report.experiments, "exp")}
+                      {report.experiments}
                     </Typography>
                   </TableCell>
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
