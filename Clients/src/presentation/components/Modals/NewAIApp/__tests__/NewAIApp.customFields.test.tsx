@@ -1,5 +1,6 @@
 import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { QueryClient } from "@tanstack/react-query";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import NewAIApp from "../index";
 
@@ -15,6 +16,7 @@ const mockSetCustomFieldValue = vi.fn().mockResolvedValue({});
 vi.mock("../../../../../application/hooks/useAiApps", () => ({
   useCreateAiApp: () => ({ mutateAsync: mockCreate }),
   useUpdateAiApp: () => ({ mutateAsync: mockUpdate }),
+  aiAppQueryKeys: { lists: () => ["aiApps", "list"] },
 }));
 vi.mock("../../../../../application/hooks/useVendors", () => ({
   useVendors: () => ({ data: [] }),
@@ -133,5 +135,24 @@ describe("NewAIApp custom fields (#5262)", () => {
       }),
     );
     expect(onSuccess).toHaveBeenCalledWith();
+  });
+
+  it.each([
+    ["succeeds", false],
+    ["fails", true],
+  ])("refreshes the AI apps list after the flush %s", async (_label, fails) => {
+    if (fails) mockSetCustomFieldValue.mockRejectedValueOnce(new Error("boom"));
+    const queryClient = new QueryClient();
+    const invalidate = vi.spyOn(queryClient, "invalidateQueries");
+    const onSuccess = vi.fn();
+    renderWithProviders(<NewAIApp isOpen onClose={vi.fn()} onSuccess={onSuccess} />, {
+      queryClient,
+    });
+    await userEvent.type(screen.getByPlaceholderText("e.g. ChatGPT Enterprise"), "Copilot");
+    await userEvent.type(screen.getByPlaceholderText("Enter business unit"), "Finance");
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
+    expect(mockSetCustomFieldValue).toHaveBeenCalled();
+    expect(invalidate).toHaveBeenCalledWith({ queryKey: ["aiApps", "list"] });
   });
 });

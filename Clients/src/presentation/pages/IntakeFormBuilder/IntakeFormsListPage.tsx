@@ -1181,7 +1181,7 @@ export function IntakeFormsListPage() {
         autoHideDuration={snackbar.autoHide === undefined ? 4000 : snackbar.autoHide}
         onClose={(_event, reason) => {
           // A click elsewhere must not dismiss a warning the user has not read yet.
-          if (reason === "clickaway") return;
+          if (reason === "clickaway" && snackbar.severity === "warning") return;
           setSnackbar((prev) => ({ ...prev, open: false }));
         }}
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}

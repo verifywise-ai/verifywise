@@ -77,4 +77,15 @@ describe("IntakeFormsListPage approval with skipped custom field values", () => 
     fireEvent.click(within(alert).getByRole("button", { name: /close/i }));
     await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
   });
+
+  it("still lets a click elsewhere dismiss a success message", async () => {
+    renderWithProviders(<IntakeFormsListPage />, {
+      route: "/intake-forms/submissions?submission=5",
+    });
+    fireEvent.click(await screen.findByText("approve-clean"));
+    await screen.findByRole("alert");
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    fireEvent.click(document.body);
+    await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
+  });
 });

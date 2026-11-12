@@ -1,9 +1,14 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Box, Stack } from "@mui/material";
+import { useQueryClient } from "@tanstack/react-query";
 import StandardModal from "../StandardModal";
 import Field from "../../Inputs/Field";
 import Select from "../../Inputs/Select";
-import { useCreateAiApp, useUpdateAiApp } from "../../../../application/hooks/useAiApps";
+import {
+  aiAppQueryKeys,
+  useCreateAiApp,
+  useUpdateAiApp,
+} from "../../../../application/hooks/useAiApps";
 import { useVendors } from "../../../../application/hooks/useVendors";
 import useUsers from "../../../../application/hooks/useUsers";
 import { useFormValidation } from "../../../../application/hooks/useFormValidation";
@@ -95,6 +100,7 @@ export default function NewAIApp({ isOpen, onClose, onSuccess, app }: NewAIAppPr
   const customFieldsRef = useRef<CustomFieldsSectionHandle | null>(null);
   const customFieldsGate = useRequiredCustomFieldsGate("ai_app", app?.id ?? null);
 
+  const queryClient = useQueryClient();
   const createAiAppMutation = useCreateAiApp();
   const updateAiAppMutation = useUpdateAiApp();
   const { data: vendorsData } = useVendors();
@@ -198,6 +204,10 @@ export default function NewAIApp({ isOpen, onClose, onSuccess, app }: NewAIAppPr
             ),
           });
           return;
+        } finally {
+          // The save mutation refreshed the list before these values were
+          // written, so the table's custom field columns need another read.
+          queryClient.invalidateQueries({ queryKey: aiAppQueryKeys.lists() });
         }
       }
       onSuccess();
