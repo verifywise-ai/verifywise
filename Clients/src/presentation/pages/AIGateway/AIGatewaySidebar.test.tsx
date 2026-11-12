@@ -2,6 +2,11 @@ import { screen, fireEvent } from "@testing-library/react";
 import { renderWithProviders } from "../../../test/renderWithProviders";
 import AIGatewaySidebar from "./AIGatewaySidebar";
 
+// The sidebar footer opens the right-hand helper panel; App.tsx provides it.
+vi.mock("../../components/UserGuide/UserGuideSidebarContext", () => ({
+  useUserGuideSidebarContext: () => ({ open: vi.fn(), openTab: vi.fn() }),
+}));
+
 describe("AIGatewaySidebar", () => {
   it("renders the core flat nav items", () => {
     renderWithProviders(<AIGatewaySidebar activeTab="dashboard" onTabChange={vi.fn()} />);

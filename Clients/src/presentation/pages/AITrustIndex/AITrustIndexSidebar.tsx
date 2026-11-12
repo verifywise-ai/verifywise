@@ -7,10 +7,8 @@
  * @module pages/AITrustIndex/AITrustIndexSidebar
  */
 
-import { useCallback } from "react";
 import { Compass, Star, Settings } from "lucide-react";
 import SidebarShell, { SidebarMenuItem } from "../../components/Sidebar/SidebarShell";
-import { useUserGuideSidebarContext } from "../../components/UserGuide/UserGuideSidebarContext";
 
 interface AITrustIndexSidebarProps {
   activeTab: string;
@@ -25,9 +23,6 @@ export default function AITrustIndexSidebar({
   trackedCount = 0,
   isAdmin = false,
 }: AITrustIndexSidebarProps) {
-  const { open: openUserGuide, openTab } = useUserGuideSidebarContext();
-  const openReleaseNotes = useCallback(() => openTab("whats-new"), [openTab]);
-
   const flatItems: SidebarMenuItem[] = [
     {
       id: "browse",
@@ -73,8 +68,6 @@ export default function AITrustIndexSidebar({
       isItemActive={isItemActive}
       onItemClick={handleItemClick}
       showReadyToSubscribe={false}
-      openUserGuide={openUserGuide}
-      openReleaseNotes={openReleaseNotes}
       enableFlyingHearts={false}
     />
   );

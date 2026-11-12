@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useState, useContext } from "react";
+import React, { useEffect, useState, useContext } from "react";
 import { useLocation, useNavigate } from "react-router";
 import {
   Home,
@@ -23,7 +23,6 @@ import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.cont
 import useMultipleOnScreen from "../../../application/hooks/useMultipleOnScreen";
 import { getAllTasks } from "../../../application/repository/task.repository";
 import { TaskStatus } from "../../../domain/enums/task.enum";
-import { useUserGuideSidebarContext } from "../UserGuide/UserGuideSidebarContext";
 import SidebarShell, { SidebarMenuItem, SidebarMenuGroup } from "./SidebarShell";
 
 import "./index.css";
@@ -48,8 +47,6 @@ const Sidebar: React.FC<SidebarProps> = ({
 }) => {
   const navigate = useNavigate();
   const location = useLocation();
-  const { open: openUserGuide, openTab } = useUserGuideSidebarContext();
-  const openReleaseNotes = useCallback(() => openTab("whats-new"), [openTab]);
   const { changeComponentVisibility } = useContext(VerifyWiseContext);
   const { refs: _refs, allVisible } = useMultipleOnScreen<HTMLElement>({
     countToTrigger: 1,
@@ -249,8 +246,6 @@ const Sidebar: React.FC<SidebarProps> = ({
       onDismissDemoDataButton={onDismissDemoDataButton}
       showDemoDataButton={showDemoDataButton}
       showReadyToSubscribe={true}
-      openUserGuide={openUserGuide}
-      openReleaseNotes={openReleaseNotes}
       isAdmin={isAdmin}
       enableFlyingHearts={true}
     />
