@@ -2,6 +2,19 @@
 // Spread into ../translations.ts. Other areas stay in that file for now.
 
 export const de: Record<string, string> = {
+  "Turn on Arena": "Arena aktivieren",
+  "Compare models side by side on the same prompts.":
+    "Modelle mit denselben Prompts direkt miteinander vergleichen.",
+  "Could not load the Arena setting.": "Die Arena-Einstellung konnte nicht geladen werden.",
+  "Only Admins can change this setting.": "Nur Admins können diese Einstellung ändern.",
+  "Loading Arena setting": "Arena-Einstellung wird geladen",
+  "Could not save the Arena setting. Try again.":
+    "Die Arena-Einstellung konnte nicht gespeichert werden. Versuchen Sie es erneut.",
+  "Arena is turned off for your organization. Turn it on in settings.":
+    "Arena ist für Ihre Organisation deaktiviert. Aktivieren Sie sie in den Einstellungen.",
+  "Arena is turned off for your organization. Ask an Admin to turn it on.":
+    "Arena ist für Ihre Organisation deaktiviert. Bitten Sie einen Admin, sie zu aktivieren.",
+  "Open settings": "Einstellungen öffnen",
   "New experiment": "Neues Experiment",
   "New battle": "Neuer Vergleich",
   "Loading datasets...": "Datensätze werden geladen...",
@@ -621,6 +634,20 @@ export const de: Record<string, string> = {
 };
 
 export const fr: Record<string, string> = {
+  "Turn on Arena": "Activer l'Arène",
+  "Compare models side by side on the same prompts.":
+    "Comparez des modèles côte à côte sur les mêmes prompts.",
+  "Could not load the Arena setting.": "Impossible de charger le paramètre Arène.",
+  "Only Admins can change this setting.":
+    "Seuls les administrateurs peuvent modifier ce paramètre.",
+  "Loading Arena setting": "Chargement du paramètre Arène",
+  "Could not save the Arena setting. Try again.":
+    "Impossible d'enregistrer le paramètre Arène. Réessayez.",
+  "Arena is turned off for your organization. Turn it on in settings.":
+    "L'Arène est désactivée pour votre organisation. Activez-la dans les paramètres.",
+  "Arena is turned off for your organization. Ask an Admin to turn it on.":
+    "L'Arène est désactivée pour votre organisation. Demandez à un administrateur de l'activer.",
+  "Open settings": "Ouvrir les paramètres",
   "New experiment": "Nouvelle expérience",
   "New battle": "Nouvelle comparaison",
   "Loading datasets...": "Chargement des jeux de données...",
@@ -1238,6 +1265,20 @@ export const fr: Record<string, string> = {
 };
 
 export const es: Record<string, string> = {
+  "Turn on Arena": "Activar Arena",
+  "Compare models side by side on the same prompts.":
+    "Compare modelos lado a lado con los mismos prompts.",
+  "Could not load the Arena setting.": "No se pudo cargar la configuración de Arena.",
+  "Only Admins can change this setting.":
+    "Solo los administradores pueden cambiar esta configuración.",
+  "Loading Arena setting": "Cargando la configuración de Arena",
+  "Could not save the Arena setting. Try again.":
+    "No se pudo guardar la configuración de Arena. Inténtelo de nuevo.",
+  "Arena is turned off for your organization. Turn it on in settings.":
+    "Arena está desactivada para su organización. Actívela en la configuración.",
+  "Arena is turned off for your organization. Ask an Admin to turn it on.":
+    "Arena está desactivada para su organización. Pida a un administrador que la active.",
+  "Open settings": "Abrir configuración",
   "New experiment": "Nuevo experimento",
   "New battle": "Nueva comparación",
   "Loading datasets...": "Cargando conjuntos de datos...",

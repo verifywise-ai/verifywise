@@ -91,6 +91,11 @@ export interface CreateMetricRequest {
   dimensions?: Record<string, unknown>;
 }
 
+/** PUT /deepeval/settings/arena — UpdateArenaSettingRequest (Admins only) */
+export interface UpdateArenaSettingRequest {
+  enabled: boolean;
+}
+
 export interface EvalServerRequestShape {
   /** Field names the OpenAPI schema must list as required. */
   required: string[];
@@ -169,5 +174,9 @@ export const EVAL_SERVER_REQUEST_SHAPES: Record<string, EvalServerRequestShape> 
       "experiment_id",
       "dimensions",
     ],
+  },
+  "PUT /deepeval/settings/arena": {
+    required: ["enabled"],
+    properties: ["enabled"],
   },
 };

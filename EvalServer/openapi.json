@@ -1327,6 +1327,60 @@
         }
       }
     },
+    "/deepeval/settings/arena": {
+      "get": {
+        "tags": ["DeepEval Settings"],
+        "summary": "Read Arena Setting",
+        "description": "Returns ``{\"enabled\": bool, \"configured\": bool}``. ``configured`` is false\nwhile no Admin has saved the setting; ``enabled`` is then true only if the\norganization already has Arena comparisons.",
+        "operationId": "read_arena_setting_deepeval_settings_arena_get",
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          }
+        }
+      },
+      "put": {
+        "tags": ["DeepEval Settings"],
+        "summary": "Update Arena Setting",
+        "description": "Turn Arena on or off for the organization. Admins only.",
+        "operationId": "update_arena_setting_deepeval_settings_arena_put",
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/UpdateArenaSettingRequest"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "Successful Response",
+            "content": {
+              "application/json": {
+                "schema": {}
+              }
+            }
+          },
+          "422": {
+            "description": "Validation Error",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HTTPValidationError"
+                }
+              }
+            }
+          }
+        }
+      }
+    },
     "/deepeval/bias-audits/presets": {
       "get": {
         "tags": ["Bias Audits"],
@@ -3261,6 +3315,19 @@
         "required": ["input", "output"],
         "title": "ScorerTestRequest",
         "description": "Body for ``POST /deepeval/scorers/{scorer_id}/test``."
+      },
+      "UpdateArenaSettingRequest": {
+        "properties": {
+          "enabled": {
+            "type": "boolean",
+            "title": "Enabled"
+          }
+        },
+        "additionalProperties": false,
+        "type": "object",
+        "required": ["enabled"],
+        "title": "UpdateArenaSettingRequest",
+        "description": "Body for ``PUT /deepeval/settings/arena``."
       },
       "UpdateAuditNameRequest": {
         "properties": {

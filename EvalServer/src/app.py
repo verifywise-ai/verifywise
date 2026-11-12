@@ -9,6 +9,7 @@ from routers.deepeval_projects import router as deepeval_projects
 from routers.evaluation_logs import router as evaluation_logs
 from routers.deepeval_orgs import router as deepeval_orgs
 from routers.deepeval_arena import router as deepeval_arena
+from routers.deepeval_settings import router as deepeval_settings
 from routers.bias_audits import router as bias_audits
 from routers.reports import router as reports
 from middlewares.middleware import TenantMiddleware
@@ -155,6 +156,7 @@ app.include_router(deepeval, prefix="/deepeval", tags=["DeepEval"], dependencies
 app.include_router(deepeval_projects, prefix="/deepeval", tags=["DeepEval Projects"], dependencies=[Depends(verify_internal_key_dependency)])
 app.include_router(deepeval_orgs, prefix="/deepeval", tags=["DeepEval Orgs"], dependencies=[Depends(verify_internal_key_dependency)])
 app.include_router(deepeval_arena, prefix="/deepeval", tags=["DeepEval Arena"], dependencies=[Depends(verify_internal_key_dependency)])
+app.include_router(deepeval_settings, prefix="/deepeval", tags=["DeepEval Settings"], dependencies=[Depends(verify_internal_key_dependency)])
 app.include_router(bias_audits, prefix="/deepeval", tags=["Bias Audits"], dependencies=[Depends(verify_internal_key_dependency)])
 app.include_router(evaluation_logs, tags=["Evaluation Logs & Monitoring"], dependencies=[Depends(verify_internal_key_dependency)])
 app.include_router(reports, tags=["Reports"], dependencies=[Depends(verify_internal_key_dependency)])
