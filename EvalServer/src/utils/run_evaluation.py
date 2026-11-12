@@ -55,6 +55,7 @@ from crud.deepeval_scorers import list_scorers, touch_scorer_updated_at
 from deepeval_engine.gatekeeper import evaluate_gate
 from utils.run_custom_scorer import run_custom_scorer, ScorerResult
 from utils.safe_outbound_url import checked_endpoint, openai_base_url
+from utils.scenario_rows import is_scenario_row as _is_scenario_row
 from utils.error_detection import (
     FatalErrorTracker,
     build_no_responses_message,
@@ -119,6 +120,21 @@ RAG_ANSWER_INSTRUCTION = (
     "Answer using only the context below. If the context does not contain the answer, "
     "say that you don't know."
 )
+
+# Turn limit for a simulated conversation when neither the scenario nor the
+# experiment sets one.
+DEFAULT_SIMULATED_MAX_TURNS = 6
+
+
+def _positive_int(value: Any) -> Optional[int]:
+    """value as a positive int, or None (bools and non-numbers are rejected)."""
+    if isinstance(value, bool):
+        return None
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        return None
+    return number if number > 0 else None
 
 
 def _normalize_passages(value: Any) -> List[str]:
@@ -351,9 +367,10 @@ async def run_evaluation(
         print(f"📝 Judge LLM config: provider={judge_config.get('provider')}, has_apiKey={bool(judge_config.get('apiKey'))}")
         has_judge_key = judge_config.get("apiKey") and judge_config["apiKey"] not in ["***", "", None]
         is_self_hosted_judge = judge_config.get("provider", "").lower() in ("self-hosted", "ollama")
-        # Set below only for a self-hosted judge; never inherit one from an earlier run
-        os.environ.pop("G_EVAL_BASE_URL", None)
-        os.environ.pop("G_EVAL_API_KEY", None)
+        # Set below from this run's judge only; never inherit one from an earlier run
+        # (the environment is process-wide and the worker runs many experiments)
+        for judge_env in ("G_EVAL_BASE_URL", "G_EVAL_API_KEY", "G_EVAL_PROVIDER", "G_EVAL_MODEL", "G_EVAL_MAX_TOKENS"):
+            os.environ.pop(judge_env, None)
 
         if has_judge_key or is_self_hosted_judge:
             provider = judge_config.get("provider", "").lower()
@@ -387,19 +404,23 @@ async def run_evaluation(
                 # gateway; many self-hosted servers need no key
                 if judge_config.get("apiKey") and judge_config["apiKey"] not in ["***", "", None]:
                     os.environ["G_EVAL_API_KEY"] = judge_config["apiKey"]
-                # DeepEval's native metrics are picked for provider "openai"
-                provider = "openai"
 
-            # Expose judge provider/model for evaluator (provider-agnostic G‑Eval)
-            if provider:
-                os.environ["G_EVAL_PROVIDER"] = provider
-            if judge_config.get("model"):
-                os.environ["G_EVAL_MODEL"] = str(judge_config["model"])
+        # Expose this run's judge provider/model to the evaluator and the simulator, with
+        # or without a key in the config (cloud judges are reached through the gateway)
+        judge_provider = (judge_config.get("provider") or "").lower()
+        if is_self_hosted_judge:
+            # DeepEval's native metrics are picked for provider "openai"
+            judge_provider = "openai"
+        if judge_provider:
+            os.environ["G_EVAL_PROVIDER"] = judge_provider
+        if judge_config.get("model"):
+            os.environ["G_EVAL_MODEL"] = str(judge_config["model"])
+        if judge_config:
             # Set max tokens for judge (default 512, but user can set higher)
             max_tokens = judge_config.get("maxTokens", 512)
             os.environ["G_EVAL_MAX_TOKENS"] = str(max_tokens)
             print(f"✅ G_EVAL_MAX_TOKENS set to {max_tokens}")
-        
+
         # Model API keys (for the model being tested)
         if model_config.get("apiKey") and model_config["apiKey"] != "***":
             provider = (model_config.get("provider") or model_config.get("accessMethod") or "").lower()
@@ -514,8 +535,16 @@ async def run_evaluation(
                     error_message=error_msg
                 )
                 return {"error": error_msg}
+        # Scenarios sent with the request (simulated mode). When present, the
+        # dataset file is not loaded again.
+        simulated_scenarios = (
+            [s for s in (dataset_config.get("scenarios") or []) if _is_scenario_row(s)]
+            if dataset_config.get("simulatedMode")
+            else []
+        )
+
         # Custom dataset path if provided (only load if we don't have data yet)
-        if not prompts and not conversations and dataset_config.get("path"):
+        if not prompts and not conversations and not simulated_scenarios and dataset_config.get("path"):
             custom_path = Path(dataset_config["path"])
             path_error: Optional[str] = None
             if not custom_path.is_absolute():
@@ -542,7 +571,15 @@ async def run_evaluation(
                 else:
                     prompts = loaded
             print(f"✓ Loaded dataset from {custom_path}")
-        if not prompts and not conversations:
+        # A simulated dataset holds scenario rows instead of prompts or turns. Recognise
+        # them here so every caller (wizard, API, MCP, reruns) gets simulated mode.
+        if not simulated_scenarios and prompts and isinstance(prompts, list):
+            # Every row must be a scenario: a mixed list runs as prompts, none dropped.
+            if all(_is_scenario_row(p) for p in prompts):
+                simulated_scenarios = list(prompts)
+                print(f"📝 Detected simulated dataset with {len(simulated_scenarios)} scenarios")
+                prompts = []
+        if not prompts and not conversations and not simulated_scenarios:
             error_msg = "No prompts or conversations in dataset"
             print(f"❌ {error_msg}")
             await crud.update_experiment_status(
@@ -559,11 +596,8 @@ async def run_evaluation(
         # the failure reason if no prompt succeeds
         generation_errors: Dict[int, str] = {}
 
-        # Check if this is a simulated conversation mode
-        simulated_mode = dataset_config.get("simulatedMode", False)
-        simulated_scenarios = dataset_config.get("scenarios", [])
-        
-        if simulated_mode and simulated_scenarios:
+        # Simulated conversation mode (scenarios found while loading the dataset)
+        if simulated_scenarios:
             # Import ConversationSimulator (required for simulated mode)
             try:
                 from deepeval.simulator import ConversationSimulator
@@ -582,7 +616,28 @@ async def run_evaluation(
                 return {"error": error_msg}
             # 3A-SIM. Simulated conversation mode: use ConversationSimulator
             print(f"\n🎭 SIMULATED MODE: Generating conversations for {len(simulated_scenarios)} scenarios...")
-            
+
+            # The judge plays the simulated user. G_EVAL_PROVIDER/G_EVAL_MODEL were cleared
+            # and set from this run's judge above; without one they would fall back to OpenAI.
+            if not ((judge_config or {}).get("model") and (judge_config or {}).get("provider")):
+                error_msg = (
+                    "Simulated datasets need a judge model, which plays the user. "
+                    "Pick a judge, or an evaluation mode that includes one."
+                )
+                print(f"❌ {error_msg}")
+                await crud.update_experiment_status(
+                    db=db,
+                    experiment_id=experiment_id,
+                    organization_id=organization_id,
+                    status="failed",
+                    error_message=error_msg
+                )
+                return {"error": error_msg}
+
+            # Tokens and cost per conversation, keyed by its first user message (DeepEval
+            # gives the finished test case no thread id to match on).
+            conversation_usage: Dict[str, Dict[str, Any]] = {}
+
             # Create model callback for the simulator. DeepEval passes `input`, `turns` and
             # `thread_id` by keyword and drops names the callback does not declare, so the
             # parameter names matter. It is synchronous because the simulator runs in sync
@@ -596,26 +651,33 @@ async def run_evaluation(
                 context = "\n".join(context_parts)
 
                 prompt = f"{context}\n\nUser: {input}\n\nAssistant:" if context else f"User: {input}\n\nAssistant:"
-                
+
                 response = model_runner.generate(
                     prompt=prompt,
                     max_tokens=1024,
                     temperature=0.7,
                 )
+                turn_tokens, turn_cost = _generation_usage(model_runner, input, response or "")
+                first_user = turns[0].content if turns else input
+                usage = conversation_usage.setdefault(first_user, {"tokens": 0, "cost": None})
+                usage["tokens"] += turn_tokens
+                usage["cost"] = _add_cost(usage["cost"], turn_cost)
                 return Turn(role="assistant", content=response or "")
-            
-            # Create ConversationalGoldens from scenarios
-            goldens = []
-            for scenario_data in simulated_scenarios:
+
+            # Create ConversationalGoldens from scenarios, grouped by their turn limit:
+            # the simulator takes one limit per call, and each scenario keeps its own.
+            # Each golden keeps its dataset position so results come back in row order.
+            default_max_turns = _positive_int(dataset_config.get("maxTurns")) or DEFAULT_SIMULATED_MAX_TURNS
+            goldens_by_turns: Dict[int, List[Tuple[int, Any]]] = {}
+            for position, scenario_data in enumerate(simulated_scenarios):
                 golden = ConversationalGolden(
-                    scenario=scenario_data.get("scenario", "General conversation"),
-                    expected_outcome=scenario_data.get("expected_outcome", "Helpful response"),
-                    user_description=scenario_data.get("user_description", "A typical user"),
+                    scenario=str(scenario_data.get("scenario") or "").strip() or "General conversation",
+                    expected_outcome=str(scenario_data.get("expected_outcome") or "").strip() or "Helpful response",
+                    user_description=str(scenario_data.get("user_description") or "").strip() or "A typical user",
                 )
-                goldens.append(golden)
-            
-            # Run simulation
-            max_turns = dataset_config.get("maxTurns", 6)
+                limit = _positive_int(scenario_data.get("max_turns")) or default_max_turns
+                goldens_by_turns.setdefault(limit, []).append((position, golden))
+
             # The simulated user is played by the judge LLM, through the gateway like the
             # metrics; without it DeepEval falls back to its own OpenAI client.
             simulator = ConversationSimulator(
@@ -629,24 +691,79 @@ async def run_evaluation(
                 async_mode=False,
             )
 
-            print(f"🔄 Simulating conversations with max {max_turns} user turns each...")
-            simulated_test_cases = await asyncio.to_thread(
-                simulator.simulate,
-                conversational_goldens=goldens,
-                max_user_simulations=max_turns,
-            )
-            
-            # Convert simulated test cases to our format
-            for idx, conv_tc in enumerate(simulated_test_cases, 1):
+            simulated_by_position: Dict[int, Any] = {}
+            for max_turns, entries in goldens_by_turns.items():
+                print(f"🔄 Simulating {len(entries)} conversations with max {max_turns} user turns each...")
+                started = datetime.now()
+                group_cases = await asyncio.to_thread(
+                    simulator.simulate,
+                    conversational_goldens=[golden for _, golden in entries],
+                    max_user_simulations=max_turns,
+                )
+                # Wall-clock time of the group, shared out evenly: the simulator does not
+                # time conversations one by one.
+                per_case_ms = int((datetime.now() - started).total_seconds() * 1000 / max(len(group_cases), 1))
+                # The simulator returns one test case per golden, in order.
+                for (position, _), conv_tc in zip(entries, group_cases):
+                    simulated_by_position[position] = (conv_tc, per_case_ms)
+
+            # Convert simulated test cases to our format, in dataset order. The evaluator
+            # builds Task Completion from expected_outcome and stores both fields with the
+            # result, as it does for scripted conversations. Each conversation gets a log,
+            # which holds its transcript and receives its metric scores.
+            for position in sorted(simulated_by_position):
+                conv_tc, latency_ms = simulated_by_position[position]
+                idx = position + 1
+                conv_turns = list(conv_tc.turns or [])
+                raw_turns = [{"role": t.role, "content": t.content} for t in conv_turns]
+                user_messages = [t.content for t in conv_turns if t.role == "user"]
+                usage = conversation_usage.get(user_messages[0], {}) if user_messages else {}
                 test_cases_data.append({
                     "test_case": conv_tc,
                     "is_conversational": True,
+                    "scenario": conv_tc.scenario or "",
+                    "expected_outcome": conv_tc.expected_outcome or "",
                     "metadata": {
                         "sample_id": f"simulated_scenario_{idx}",
                         "protected_attributes": {"category": conv_tc.scenario or f"scenario_{idx}", "difficulty": "simulated"},
+                        "turn_count": len(conv_turns),
                     }
                 })
-            
+                created_log = await crud.create_log(
+                    db=db,
+                    project_id=config.get("project_id"),
+                    organization_id=organization_id,
+                    experiment_id=experiment_id,
+                    input_text="\n".join(f"User: {m}" for m in user_messages) or conv_tc.scenario,
+                    output_text="\n".join(f"Assistant: {t.content}" for t in conv_turns if t.role == "assistant"),
+                    model_name=model_name,
+                    latency_ms=latency_ms,
+                    token_count=usage.get("tokens"),
+                    cost=usage.get("cost"),
+                    metadata={
+                        "is_conversational": True,
+                        "is_simulated": True,
+                        "scenario": conv_tc.scenario or "",
+                        "expected_outcome": conv_tc.expected_outcome or "",
+                        "turn_count": len(conv_turns),
+                        "turns": raw_turns,
+                    },
+                )
+                if created_log:
+                    test_cases_data[-1]["metadata"]["log_id"] = created_log.get("id")
+
+            if not test_cases_data:
+                error_msg = f"No conversations were simulated for {len(simulated_scenarios)} scenarios"
+                print(f"❌ {error_msg}")
+                await crud.update_experiment_status(
+                    db=db,
+                    experiment_id=experiment_id,
+                    organization_id=organization_id,
+                    status="failed",
+                    error_message=error_msg
+                )
+                return {"error": error_msg}
+
             print(f"✓ Generated {len(test_cases_data)} simulated conversations")
             
         elif conversations:
@@ -992,7 +1109,7 @@ async def run_evaluation(
         # - conversations: only those that produced a test case are logged (one with no
         #   user turns is skipped), so count those to match the experiment's logs;
         # - simulated: no logs are written; count the scenarios the run tried.
-        if simulated_mode and simulated_scenarios:
+        if simulated_scenarios:
             prompts_attempted = len(simulated_scenarios)
         elif conversations:
             prompts_attempted = len(test_cases_data)

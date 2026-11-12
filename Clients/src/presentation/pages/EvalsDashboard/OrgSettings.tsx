@@ -1,16 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router";
-import {
-  Box,
-  Stack,
-  Typography,
-  IconButton,
-  useTheme,
-  Dialog,
-  DialogTitle,
-  DialogContent,
-  DialogActions,
-} from "@mui/material";
+import { Box, Stack, Typography, IconButton, useTheme } from "@mui/material";
 import { Home, FlaskConical, Settings, Trash2, Plus } from "lucide-react";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import Field from "../../components/Inputs/Field";
@@ -22,8 +12,9 @@ import {
   addLlmApiKey,
   deleteLlmApiKey,
 } from "../../../application/repository/deepEval.repository";
-import { useIsAdmin } from "../../../application/hooks/useIsAdmin";
-import { status } from "../../themes/palette";
+import { useCan, usePermissionsSettled } from "../../../application/hooks/useCan";
+import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
+import { palette } from "../../themes/palette";
 import { LLM_PROVIDERS as ALL_LLM_PROVIDERS } from "./llmProviders";
 import ArenaSettingSection from "./ArenaSettingSection";
 
@@ -102,7 +93,8 @@ function validateApiKeyFormat(provider: string, apiKey: string): string | null {
 export default function OrgSettings() {
   const navigate = useNavigate();
   const theme = useTheme();
-  const isAdmin = useIsAdmin();
+  const isAdmin = useCan("organization.admin");
+  const permissionsSettled = usePermissionsSettled();
   const [saving, setSaving] = useState(false);
   const [gatewayDown, setGatewayDown] = useState(false);
   const [alert, setAlert] = useState<{
@@ -138,17 +130,20 @@ export default function OrgSettings() {
     { label: "Organization settings", icon: <Settings size={14} strokeWidth={1.5} /> },
   ];
 
-  // Redirect non-admin users to the evals dashboard
+  // Redirect users without organization admin rights to the evals dashboard,
+  // once a custom role's permissions have loaded.
   useEffect(() => {
-    if (!isAdmin) {
+    if (permissionsSettled && !isAdmin) {
       navigate("/evals", { replace: true });
     }
-  }, [isAdmin, navigate]);
+  }, [permissionsSettled, isAdmin, navigate]);
 
-  // Fetch saved keys on mount
+  const canView = permissionsSettled && isAdmin;
+
+  // Fetch saved keys once the user is known to be allowed here
   useEffect(() => {
-    fetchSavedKeys();
-  }, []);
+    if (canView) fetchSavedKeys();
+  }, [canView]);
 
   const getErrorMessage = (err: unknown): string => {
     if (err && typeof err === "object" && "response" in err) {
@@ -328,6 +323,9 @@ export default function OrgSettings() {
     (p) => !savedKeys.some((k) => k.provider === p._id),
   );
 
+  // Render nothing until permissions settle; non-admins are redirected above.
+  if (!canView) return null;
+
   return (
     <PageHeaderExtended
       title="Organization settings"
@@ -341,22 +339,21 @@ export default function OrgSettings() {
         {gatewayDown && (
           <Box
             sx={{
-              py: 4,
-              px: 6,
-              borderRadius: "6px",
-              backgroundColor: status.warning.bg ?? status.warning.bg,
-              border: `1px solid ${status.warning.border ?? status.warning.border}`,
+              p: "4px",
+              borderRadius: "4px",
+              backgroundColor: palette.status.warning.bg,
+              border: `1px solid ${palette.status.warning.border}`,
               display: "flex",
               flexDirection: "column",
-              gap: 1,
+              gap: "1px",
             }}
           >
-            <Typography sx={{ fontSize: 13, fontWeight: 600, color: status.warning.text }}>
+            <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.status.warning.text }}>
               AI Gateway is not running
             </Typography>
-            <Typography sx={{ fontSize: 12, color: status.warning.text }}>
+            <Typography sx={{ fontSize: 12, color: palette.status.warning.text }}>
               API key management requires the AI Gateway service (port 8100). Start it with:{" "}
-              <code style={{ fontSize: 11 }}>
+              <code style={{ fontSize: 12 }}>
                 cd AIGateway/src && uvicorn app:app --host 0.0.0.0 --port 8100 --reload
               </code>
             </Typography>
@@ -462,7 +459,7 @@ export default function OrgSettings() {
                 <Typography
                   sx={{
                     fontSize: 11,
-                    color: status.success.text,
+                    color: palette.status.success.text,
                     mt: 0.5,
                     ml: 0.5,
                   }}
@@ -513,34 +510,24 @@ export default function OrgSettings() {
         <ArenaSettingSection />
       </Stack>
 
-      {/* Confirmation Dialog */}
-      <Dialog open={confirmDelete.open} onClose={handleCancelRemove} maxWidth="xs" fullWidth>
-        <DialogTitle sx={{ fontSize: 16, fontWeight: 600 }}>Remove API key</DialogTitle>
-        <DialogContent>
-          <Typography sx={{ fontSize: 14, color: theme.palette.text.secondary }}>
+      <ConfirmationModal
+        isOpen={confirmDelete.open}
+        title="Remove API key"
+        body={
+          <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary }}>
             Are you sure you want to remove the API key for{" "}
             <strong>{confirmDelete.provider ? getProviderName(confirmDelete.provider) : ""}</strong>
             ? This action cannot be undone.
           </Typography>
-        </DialogContent>
-        <DialogActions sx={{ p: 2, gap: 1 }}>
-          <CustomizableButton
-            variant="text"
-            text="Cancel"
-            onClick={handleCancelRemove}
-            sx={{
-              color: theme.palette.text.secondary,
-            }}
-          />
-          <CustomizableButton
-            variant="contained"
-            color="error"
-            text="Remove"
-            onClick={handleConfirmRemove}
-            isDisabled={saving}
-          />
-        </DialogActions>
-      </Dialog>
+        }
+        cancelText="Cancel"
+        proceedText="Remove"
+        onCancel={handleCancelRemove}
+        onProceed={handleConfirmRemove}
+        proceedButtonColor="error"
+        proceedButtonVariant="contained"
+        isLoading={saving}
+      />
     </PageHeaderExtended>
   );
 }

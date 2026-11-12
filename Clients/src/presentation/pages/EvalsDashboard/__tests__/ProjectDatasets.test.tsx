@@ -149,7 +149,7 @@ describe("ProjectDatasets", () => {
       fireEvent.click(screen.getByRole("button", { name: "Upload dataset" }));
       expect(await screen.findByText("Conversation type")).toBeInTheDocument();
 
-      fireEvent.click(screen.getByText("Multi-Turn"));
+      fireEvent.click(screen.getByText("Multi-turn"));
       fireEvent.click(screen.getByText("Simulated"));
       fireEvent.click(screen.getByRole("button", { name: "Download example" }));
       fireEvent.click(screen.getByRole("button", { name: "Upload file" }));

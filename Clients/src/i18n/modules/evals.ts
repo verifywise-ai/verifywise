@@ -104,7 +104,7 @@ export const de: Record<string, string> = {
   "Keywords:": "Schlüsselwörter:",
   "LLM Arena": "LLM-Arena",
   "Model:": "Modell:",
-  "Multi-turn": "Multi-Turn",
+  "Multi-turn": "Mehrstufig",
   "New bias audit": "Neue Verzerrungsprüfung",
   "New model": "Neues Modell",
   "New scorer": "Neuer Scorer",
@@ -128,7 +128,7 @@ export const de: Record<string, string> = {
   "Search scorers...": "Scorer suchen...",
   "Search templates...": "Vorlagen suchen...",
   "Selection rate": "Auswahlrate",
-  "Single-turn": "Single-Turn",
+  "Single-turn": "Einzelschritt",
   "Slug": "Slug",
   "Standard judge only": "Nur Standard-Juror",
   "Success rate": "Erfolgsrate",
@@ -249,8 +249,6 @@ export const de: Record<string, string> = {
     "Bias und Toxizität werden bei jedem Assistenten-Schritt bewertet und aggregiert",
   "Choose the regulatory framework that applies to your bias audit":
     "Wählen Sie das regulatorische Rahmenwerk, das für Ihr Bias-Audit gilt",
-  'Click "Add local provider" to get started':
-    'Klicken Sie auf "Lokalen Anbieter hinzufügen", um zu beginnen',
   "Column mapping": "Spaltenzuordnung",
   "Comma-separated values with demographic columns":
     "Komma-getrennte Werte mit demografischen Spalten",
@@ -508,6 +506,12 @@ export const de: Record<string, string> = {
   "Name saved": "Name gespeichert",
   "New Dataset": "Neuer Datensatz",
   "No prompts in dataset": "Keine Prompts im Datensatz",
+  "No scenarios in dataset": "Keine Szenarien im Datensatz",
+  "This simulated dataset has no rows with a scenario. Add a scenario to each row, or pick another dataset.":
+    "Dieser simulierte Datensatz enthält keine Zeilen mit einem Szenario. Fügen Sie jeder Zeile ein Szenario hinzu oder wählen Sie einen anderen Datensatz.",
+  "Simulated datasets need a judge": "Simulierte Datensätze benötigen einen Judge",
+  "The judge model plays the user in each conversation. Choose an evaluation mode that includes the judge.":
+    "Das Judge-Modell übernimmt in jeder Unterhaltung die Rolle des Benutzers. Wählen Sie einen Bewertungsmodus, der den Judge einschließt.",
   "Overall scores, pass/fail verdict, key findings":
     "Gesamtbewertungen, Bestanden/Nicht bestanden-Verdikt, wichtige Befunde",
   "Per-metric scores grouped by Quality and Safety":
@@ -697,6 +701,19 @@ export const de: Record<string, string> = {
   "Sample-level details": "Details auf Stichprobenebene",
   "Arena comparison": "Arena-Vergleich",
   "Limitations & recommendations": "Einschränkungen & Empfehlungen",
+  'Click "Add provider" to get started': 'Klicken Sie auf "Anbieter hinzufügen", um zu beginnen',
+  "Single-turn JSON format": "Einzelschritt-JSON-Format",
+  "Multi-turn JSON format": "Mehrstufiges JSON-Format",
+  "Simulated JSON format": "Simuliertes JSON-Format",
+  "Single-turn fields": "Einzelschritt-Felder",
+  "Multi-turn fields": "Mehrstufige Felder",
+  "Simulated fields": "Simulierte Felder",
+  "{count} completed experiment available": "{count} abgeschlossenes Experiment verfügbar",
+  "{count} completed experiments available": "{count} abgeschlossene Experimente verfügbar",
+  'You have {count} completed experiment. Click "Generate report" above to create a PDF or CSV report with AI-powered summaries.':
+    'Sie haben {count} abgeschlossenes Experiment. Klicken Sie oben auf "Bericht erstellen", um einen PDF- oder CSV-Bericht mit KI-gestützten Zusammenfassungen zu erstellen.',
+  'You have {count} completed experiments. Click "Generate report" above to create a PDF or CSV report with AI-powered summaries.':
+    'Sie haben {count} abgeschlossene Experimente. Klicken Sie oben auf "Bericht erstellen", um einen PDF- oder CSV-Bericht mit KI-gestützten Zusammenfassungen zu erstellen.',
 };
 
 export const fr: Record<string, string> = {
@@ -946,8 +963,6 @@ export const fr: Record<string, string> = {
     "Le biais et la toxicité seront évalués à chaque tour d'assistant et agrégés",
   "Choose the regulatory framework that applies to your bias audit":
     "Choisissez le référentiel réglementaire qui s'applique à votre audit de biais",
-  'Click "Add local provider" to get started':
-    'Cliquez sur "Ajouter un fournisseur local" pour commencer',
   "Column mapping": "Mappage des colonnes",
   "Comma-separated values with demographic columns":
     "Valeurs séparées par des virgules avec colonnes démographiques",
@@ -1205,6 +1220,12 @@ export const fr: Record<string, string> = {
   "Name saved": "Nom enregistré",
   "New Dataset": "Nouveau jeu de données",
   "No prompts in dataset": "Aucune invite dans le jeu de données",
+  "No scenarios in dataset": "Aucun scénario dans le jeu de données",
+  "This simulated dataset has no rows with a scenario. Add a scenario to each row, or pick another dataset.":
+    "Ce jeu de données simulé ne contient aucune ligne avec un scénario. Ajoutez un scénario à chaque ligne ou choisissez un autre jeu de données.",
+  "Simulated datasets need a judge": "Les jeux de données simulés nécessitent un juge",
+  "The judge model plays the user in each conversation. Choose an evaluation mode that includes the judge.":
+    "Le modèle juge joue le rôle de l'utilisateur dans chaque conversation. Choisissez un mode d'évaluation qui inclut le juge.",
   "Overall scores, pass/fail verdict, key findings":
     "Scores globaux, verdict de réussite/échec, résultats clés",
   "Per-metric scores grouped by Quality and Safety":
@@ -1395,6 +1416,19 @@ export const fr: Record<string, string> = {
   "Sample-level details": "Détails par échantillon",
   "Arena comparison": "Comparaison d'arène",
   "Limitations & recommendations": "Limitations et recommandations",
+  'Click "Add provider" to get started': 'Cliquez sur "Ajouter un fournisseur" pour commencer',
+  "Single-turn JSON format": "Format JSON mono-tour",
+  "Multi-turn JSON format": "Format JSON multi-tours",
+  "Simulated JSON format": "Format JSON simulé",
+  "Single-turn fields": "Champs mono-tour",
+  "Multi-turn fields": "Champs multi-tours",
+  "Simulated fields": "Champs simulés",
+  "{count} completed experiment available": "{count} expérience terminée disponible",
+  "{count} completed experiments available": "{count} expériences terminées disponibles",
+  'You have {count} completed experiment. Click "Generate report" above to create a PDF or CSV report with AI-powered summaries.':
+    'Vous avez {count} expérience terminée. Cliquez sur "Générer un rapport" ci-dessus pour créer un rapport PDF ou CSV avec des résumés générés par l\'IA.',
+  'You have {count} completed experiments. Click "Generate report" above to create a PDF or CSV report with AI-powered summaries.':
+    'Vous avez {count} expériences terminées. Cliquez sur "Générer un rapport" ci-dessus pour créer un rapport PDF ou CSV avec des résumés générés par l\'IA.',
 };
 
 export const es: Record<string, string> = {
@@ -1644,7 +1678,6 @@ export const es: Record<string, string> = {
     "El sesgo y la toxicidad se evaluarán en cada turno del asistente y se agregarán",
   "Choose the regulatory framework that applies to your bias audit":
     "Elija el marco regulatorio que se aplica a su auditoría de sesgo",
-  'Click "Add local provider" to get started': "Haga clic en «Añadir proveedor local» para empezar",
   "Column mapping": "Asignación de columnas",
   "Comma-separated values with demographic columns":
     "Valores separados por comas con columnas demográficas",
@@ -1901,6 +1934,12 @@ export const es: Record<string, string> = {
   "Name saved": "Nombre guardado",
   "New Dataset": "Nuevo conjunto de datos",
   "No prompts in dataset": "No hay prompts en el conjunto de datos",
+  "No scenarios in dataset": "No hay escenarios en el conjunto de datos",
+  "This simulated dataset has no rows with a scenario. Add a scenario to each row, or pick another dataset.":
+    "Este conjunto de datos simulado no tiene filas con un escenario. Añada un escenario a cada fila o elija otro conjunto de datos.",
+  "Simulated datasets need a judge": "Los conjuntos de datos simulados necesitan un juez",
+  "The judge model plays the user in each conversation. Choose an evaluation mode that includes the judge.":
+    "El modelo juez interpreta al usuario en cada conversación. Elija un modo de evaluación que incluya el juez.",
   "Overall scores, pass/fail verdict, key findings":
     "Puntuaciones generales, veredicto de aprobado/no aprobado, hallazgos clave",
   "Per-metric scores grouped by Quality and Safety":
@@ -2092,4 +2131,17 @@ export const es: Record<string, string> = {
   "Sample-level details": "Detalles por muestra",
   "Arena comparison": "Comparación de arena",
   "Limitations & recommendations": "Limitaciones y recomendaciones",
+  'Click "Add provider" to get started': "Haga clic en «Añadir proveedor» para empezar",
+  "Single-turn JSON format": "Formato JSON de turno único",
+  "Multi-turn JSON format": "Formato JSON multiturno",
+  "Simulated JSON format": "Formato JSON simulado",
+  "Single-turn fields": "Campos de turno único",
+  "Multi-turn fields": "Campos multiturno",
+  "Simulated fields": "Campos simulados",
+  "{count} completed experiment available": "{count} experimento completado disponible",
+  "{count} completed experiments available": "{count} experimentos completados disponibles",
+  'You have {count} completed experiment. Click "Generate report" above to create a PDF or CSV report with AI-powered summaries.':
+    "Tiene {count} experimento completado. Haga clic en «Generar informe» arriba para crear un informe PDF o CSV con resúmenes generados por IA.",
+  'You have {count} completed experiments. Click "Generate report" above to create a PDF or CSV report with AI-powered summaries.':
+    "Tiene {count} experimentos completados. Haga clic en «Generar informe» arriba para crear un informe PDF o CSV con resúmenes generados por IA.",
 };

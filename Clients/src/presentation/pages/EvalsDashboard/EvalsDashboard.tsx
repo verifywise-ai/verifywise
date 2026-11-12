@@ -33,7 +33,7 @@ import {
 import { PageBreadcrumbs } from "../../components/breadcrumbs/PageBreadcrumbs";
 import { PageHeader } from "../../components/Layout/PageHeader";
 import { useEvalsSidebarContext } from "../../../application/contexts/EvalsSidebar.context";
-import { useAuth } from "../../../application/hooks/useAuth";
+import { useCan } from "../../../application/hooks/useCan";
 import { useArenaSetting } from "../../../application/hooks/useArenaSetting";
 import ModalStandard from "../../components/Modals/StandardModal";
 import Field from "../../components/Inputs/Field";
@@ -203,12 +203,9 @@ export default function EvalsDashboard() {
   const { projectId } = useParams<{ projectId?: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { userRoleName } = useAuth();
-
-  // Admin-only by role name on purpose: these keys live in the AI Gateway,
-  // whose routes check the role name (require_admin), so a custom role would
-  // only get controls the gateway refuses.
-  const canManageApiKeys = userRoleName === "Admin";
+  // These keys live in the AI Gateway, which accepts the Admin role name or a
+  // caller the proxy marked as holding llmKeys.admin.
+  const canManageApiKeys = useCan("llmKeys.admin");
 
   // Determine tab from URL hash or default
   const [openModelsAddModal, setOpenModelsAddModal] = useState(false);
@@ -1666,8 +1663,8 @@ export default function EvalsDashboard() {
                   <Typography sx={{ fontSize: 14, fontWeight: 500, color: palette.text.tertiary }}>
                     No local providers configured yet
                   </Typography>
-                  <Typography sx={{ fontSize: 13, color: palette.text.disabled, mt: 0.5 }}>
-                    Click "Add local provider" to get started
+                  <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: "1px" }}>
+                    Click "Add provider" to get started
                   </Typography>
                 </Box>
               ) : (
@@ -1930,6 +1927,7 @@ export default function EvalsDashboard() {
                     orgId={orgId}
                     onViewExperiment={(experimentId) => setSelectedExperimentId(experimentId)}
                     useCase={(currentProject.useCase || "chatbot") as "chatbot" | "rag" | "agent"}
+                    onExperimentsCountChange={setExperimentsCount}
                   />
                 ) : null)}
 
@@ -1978,6 +1976,8 @@ export default function EvalsDashboard() {
                   onNavigateToModels={() => {
                     setOpenModelsAddModal(true);
                     setTab("models");
+                    // Keep the hash in step so reload, back and the user guide see Models
+                    navigate(`${location.pathname}#models`);
                   }}
                 />
               )}

@@ -9,8 +9,9 @@ vi.mock("react-router", async () => {
 });
 
 let mockIsAdmin = true;
-vi.mock("../../../../application/hooks/useIsAdmin", () => ({
-  useIsAdmin: () => mockIsAdmin,
+vi.mock("../../../../application/hooks/useCan", () => ({
+  useCan: (key: string) => key === "organization.admin" && mockIsAdmin,
+  usePermissionsSettled: () => true,
 }));
 
 const mockGetAllLlmApiKeys = vi.fn();

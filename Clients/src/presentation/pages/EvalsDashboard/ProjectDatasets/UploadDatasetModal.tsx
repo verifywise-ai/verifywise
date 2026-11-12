@@ -27,6 +27,13 @@ export type UploadDatasetModalProps = {
   onUploadClick: () => void;
 };
 
+// Whole sentences per type, so the DOM translator can match each heading.
+const TURN_TYPE_HEADINGS: Record<ExampleTurnType, { format: string; fields: string }> = {
+  "single-turn": { format: "Single-turn JSON format", fields: "Single-turn fields" },
+  "multi-turn": { format: "Multi-turn JSON format", fields: "Multi-turn fields" },
+  "simulated": { format: "Simulated JSON format", fields: "Simulated fields" },
+};
+
 const handleDownloadExample = (turnType: ExampleTurnType, useCase: ExampleUseCase) => {
   const exampleData = getExampleDatasetPayload(turnType, useCase);
   const filename = `example_${turnType}_${useCase}_dataset.json`;
@@ -100,7 +107,7 @@ export default function UploadDatasetModal({
           <Stack direction="row" spacing={1}>
             <Box onClick={() => onTurnTypeChange("single-turn")} sx={{ cursor: "pointer" }}>
               <Chip
-                label="Single-Turn"
+                label="Single-turn"
                 uppercase={false}
                 backgroundColor={
                   turnType === "single-turn" ? palette.status.warning.bg : palette.background.hover
@@ -112,7 +119,7 @@ export default function UploadDatasetModal({
             </Box>
             <Box onClick={() => onTurnTypeChange("multi-turn")} sx={{ cursor: "pointer" }}>
               <Chip
-                label="Multi-Turn"
+                label="Multi-turn"
                 uppercase={false}
                 backgroundColor={
                   turnType === "multi-turn" || turnType === "simulated"
@@ -235,12 +242,7 @@ export default function UploadDatasetModal({
             sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1 }}
           >
             <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: "13px" }}>
-              {turnType === "single-turn"
-                ? "Single-Turn"
-                : turnType === "multi-turn"
-                  ? "Multi-Turn"
-                  : "Simulated"}{" "}
-              JSON format
+              {TURN_TYPE_HEADINGS[turnType].format}
             </Typography>
             <CustomizableButton
               size="small"
@@ -354,12 +356,7 @@ export default function UploadDatasetModal({
         {/* Field descriptions based on turn type */}
         <Box>
           <Typography variant="subtitle2" sx={{ fontWeight: 600, fontSize: "13px", mb: 1 }}>
-            {turnType === "single-turn"
-              ? "Single-Turn"
-              : turnType === "multi-turn"
-                ? "Multi-Turn"
-                : "Simulated"}{" "}
-            fields
+            {TURN_TYPE_HEADINGS[turnType].fields}
           </Typography>
           <Stack spacing={0.75}>
             <Box>

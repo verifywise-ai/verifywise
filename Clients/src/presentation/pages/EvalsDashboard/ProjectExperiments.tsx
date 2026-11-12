@@ -42,6 +42,8 @@ interface ProjectExperimentsProps {
   onViewExperiment?: (experimentId: string) => void;
   /** Project's use case for the experiment modal (required) */
   useCase: "chatbot" | "rag" | "agent";
+  /** Called with the number of experiments once loaded and whenever it changes. */
+  onExperimentsCountChange?: (count: number) => void;
 }
 
 interface ExperimentWithMetrics extends Experiment {
@@ -71,11 +73,16 @@ export default function ProjectExperiments({
   orgId,
   onViewExperiment,
   useCase,
+  onExperimentsCountChange,
 }: ProjectExperimentsProps) {
   const formatDate = useFormattedDate();
   const navigate = useNavigate();
   const [experiments, setExperiments] = useState<ExperimentWithMetrics[]>([]);
   const [, setLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
+  // The project the latest load belongs to; a slower load (or a poll) for a
+  // previous project must not overwrite the current list.
+  const projectIdRef = useRef(projectId);
   const [newEvalModalOpen, setNewEvalModalOpen] = useState(false);
   const [alert, setAlert] = useState<AlertState | null>(null);
   const alertTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -138,6 +145,8 @@ export default function ProjectExperiments({
   }, []);
 
   useEffect(() => {
+    projectIdRef.current = projectId;
+    setHasLoaded(false);
     loadExperiments();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [projectId]);
@@ -224,12 +233,19 @@ export default function ProjectExperiments({
     }
   }, [experiments]);
 
+  // Keep the sidebar count in step with the list (new runs, reruns, deletes).
+  useEffect(() => {
+    if (hasLoaded) onExperimentsCountChange?.(experiments.length);
+  }, [hasLoaded, experiments.length, onExperimentsCountChange]);
+
   const loadExperiments = async () => {
+    const requestedProjectId = projectId;
     try {
       setLoading(true);
       const data = await getAllExperiments({
-        project_id: projectId,
+        project_id: requestedProjectId,
       });
+      if (projectIdRef.current !== requestedProjectId) return;
 
       // Use pre-computed avg_scores from experiment results (no need to fetch logs)
       const experimentsWithMetrics = (data.experiments || []).map((exp: Experiment) => {
@@ -247,6 +263,7 @@ export default function ProjectExperiments({
       });
 
       setExperiments(experimentsWithMetrics);
+      setHasLoaded(true);
     } catch (err) {
       console.error("Failed to load experiments:", err);
     } finally {
