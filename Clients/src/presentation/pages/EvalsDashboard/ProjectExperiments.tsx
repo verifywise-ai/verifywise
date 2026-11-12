@@ -48,6 +48,8 @@ interface ProjectExperimentsProps {
   onViewExperiment?: (experimentId: string) => void;
   /** Project's use case for the experiment modal (required) */
   useCase: "chatbot" | "rag" | "agent";
+  /** Called with the number of experiments once loaded and whenever it changes. */
+  onExperimentsCountChange?: (count: number) => void;
 }
 
 interface ExperimentWithMetrics extends Experiment {
@@ -77,11 +79,13 @@ export default function ProjectExperiments({
   orgId,
   onViewExperiment,
   useCase,
+  onExperimentsCountChange,
 }: ProjectExperimentsProps) {
   const formatDate = useFormattedDate();
   const navigate = useNavigate();
   const [experiments, setExperiments] = useState<ExperimentWithMetrics[]>([]);
   const [, setLoading] = useState(true);
+  const [hasLoaded, setHasLoaded] = useState(false);
   const [newEvalModalOpen, setNewEvalModalOpen] = useState(false);
   const [alert, setAlert] = useState<AlertState | null>(null);
   const alertTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -230,6 +234,11 @@ export default function ProjectExperiments({
     }
   }, [experiments]);
 
+  // Keep the sidebar count in step with the list (new runs, reruns, deletes).
+  useEffect(() => {
+    if (hasLoaded) onExperimentsCountChange?.(experiments.length);
+  }, [hasLoaded, experiments.length, onExperimentsCountChange]);
+
   const loadExperiments = async () => {
     try {
       setLoading(true);
@@ -253,6 +262,7 @@ export default function ProjectExperiments({
       });
 
       setExperiments(experimentsWithMetrics);
+      setHasLoaded(true);
     } catch (err) {
       console.error("Failed to load experiments:", err);
     } finally {

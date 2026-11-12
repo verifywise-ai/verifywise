@@ -631,6 +631,7 @@ export const de: Record<string, string> = {
   "Reasoning layer": "Schlussfolgerungsebene",
   "Action layer": "Aktionsebene",
   "Execution layer": "Ausführungsebene",
+  'Click "Add provider" to get started': "Klicken Sie auf „Anbieter hinzufügen“, um zu beginnen",
 };
 
 export const fr: Record<string, string> = {
@@ -1262,6 +1263,7 @@ export const fr: Record<string, string> = {
   "Reasoning layer": "Couche de raisonnement",
   "Action layer": "Couche d'action",
   "Execution layer": "Couche d'exécution",
+  'Click "Add provider" to get started': "Cliquez sur « Ajouter un fournisseur » pour commencer",
 };
 
 export const es: Record<string, string> = {
@@ -1891,4 +1893,5 @@ export const es: Record<string, string> = {
   "Reasoning layer": "Capa de razonamiento",
   "Action layer": "Capa de acción",
   "Execution layer": "Capa de ejecución",
+  'Click "Add provider" to get started': 'Haga clic en "Añadir proveedor" para empezar',
 };
