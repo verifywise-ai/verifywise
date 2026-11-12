@@ -200,6 +200,7 @@ export const de: Record<string, string> = {
     "Benutzersitzung nicht gefunden. Bitte erneut anmelden.",
   "Version control": "Versionskontrolle",
   "AI Approval Rules": "AI Approval Rules",
+  "AI approval rules": "KI-Genehmigungsregeln",
   "Add Rule": "Add Rule",
   "Auto-Approve": "Auto-Approve",
   "Auto-Reject": "Auto-Reject",
@@ -476,6 +477,7 @@ export const de: Record<string, string> = {
     "Benutzer zu Teams bündeln, um ihnen gemeinsam Zugriff auf Anwendungsfälle zu geben",
   "Loading groups": "Gruppen werden geladen",
   "Members": "Mitglieder",
+  "You don't have access to this section.": "Sie haben keinen Zugriff auf diesen Bereich.",
   "No groups yet.": "Noch keine Gruppen.",
   "No members found": "Keine Mitglieder gefunden",
   "No groups yet. Groups are managed in Settings → Groups.":
@@ -702,6 +704,7 @@ export const fr: Record<string, string> = {
     "Session utilisateur introuvable. Veuillez vous reconnecter.",
   "Version control": "Contrôle de version",
   "AI Approval Rules": "AI Approval Rules",
+  "AI approval rules": "Règles d'approbation IA",
   "Add Rule": "Add Rule",
   "Auto-Approve": "Auto-Approve",
   "Auto-Reject": "Auto-Reject",
@@ -978,6 +981,7 @@ export const fr: Record<string, string> = {
     "Regrouper des utilisateurs en équipes pour leur donner ensemble accès aux cas d'usage",
   "Loading groups": "Chargement des groupes",
   "Members": "Membres",
+  "You don't have access to this section.": "Vous n'avez pas accès à cette section.",
   "No groups yet.": "Aucun groupe pour le moment.",
   "No members found": "Aucun membre trouvé",
   "No groups yet. Groups are managed in Settings → Groups.":
@@ -1202,6 +1206,7 @@ export const es: Record<string, string> = {
     "No se encontró la sesión del usuario. Inicia sesión de nuevo.",
   "Version control": "Control de versiones",
   "AI Approval Rules": "Reglas de aprobación de IA",
+  "AI approval rules": "Reglas de aprobación de IA",
   "Add Rule": "Añadir regla",
   "Auto-Approve": "Aprobar automáticamente",
   "Auto-Reject": "Rechazar automáticamente",
@@ -1476,6 +1481,7 @@ export const es: Record<string, string> = {
     "Agrupar usuarios en equipos para darles acceso conjunto a los casos de uso",
   "Loading groups": "Cargando grupos",
   "Members": "Miembros",
+  "You don't have access to this section.": "No tienes acceso a esta sección.",
   "No groups yet.": "Aún no hay grupos.",
   "No members found": "No se encontraron miembros",
   "No groups yet. Groups are managed in Settings → Groups.":

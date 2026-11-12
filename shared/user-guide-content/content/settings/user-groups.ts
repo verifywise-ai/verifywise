@@ -14,7 +14,7 @@ export const userGroupsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Open **Settings** and select the **Groups** tab. The tab lists each group with its name, description and number of members.',
+      text: 'Open **Settings** and select the **Groups** section. The section lists each group with its name, description and number of members.',
     },
     {
       type: 'heading',
@@ -24,7 +24,7 @@ export const userGroupsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Every signed-in user can open the Groups tab and see the list. Only Admins can create, edit or delete groups and change their members. A custom role can do this too if its "Create, update and delete groups and manage their membership" permission is set to Allow.',
+      text: 'Every signed-in user can open the Groups section and see the list. Only Admins can create, edit or delete groups and change their members. A custom role can do this too if its "Create, update and delete groups and manage their membership" permission is set to Allow.',
     },
     {
       type: 'heading',
@@ -56,7 +56,7 @@ export const userGroupsContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'On the Groups tab, click the pencil icon in the group\'s row' },
+        { text: 'On the Groups section, click the pencil icon in the group\'s row' },
         { text: 'Change the name, the description or the members' },
         { text: 'Click **Save**' },
       ],
@@ -110,7 +110,7 @@ export const userGroupsContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'On the Groups tab, click the trash icon in the group\'s row' },
+        { text: 'On the Groups section, click the trash icon in the group\'s row' },
         { text: 'Click **Delete** to confirm' },
       ],
     },

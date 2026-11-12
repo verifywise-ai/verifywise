@@ -60,7 +60,6 @@ import {
   Store,
   User,
   Users,
-  UsersRound,
   Wallet,
   Zap,
   type LucideIcon,
@@ -138,7 +137,6 @@ const lucideIconMap = {
   Store,
   User,
   Users,
-  UsersRound,
   Wallet,
   Zap,
 } satisfies Partial<Record<LucideIconName, LucideIcon>>;

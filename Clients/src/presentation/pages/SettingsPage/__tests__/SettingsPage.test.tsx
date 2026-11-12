@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { Route, Routes, useLocation } from "react-router";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
@@ -182,6 +182,27 @@ describe("SettingsPage", () => {
     expect(screen.queryByText("Data retention")).not.toBeInTheDocument();
   });
 
+  it("switches section from the sidebar and updates the URL", () => {
+    renderAt("/settings");
+    fireEvent.click(screen.getByRole("button", { name: "Groups" }));
+    expect(screen.getByTestId("path")).toHaveTextContent("/settings/groups");
+    expect(screen.getByTestId("groups-tab")).toBeInTheDocument();
+  });
+
+  it("shows Team as a disabled sidebar item to non-admins", () => {
+    mockRole = "Editor";
+    renderAt("/settings");
+    expect(screen.getByRole("button", { name: "Team" })).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("lets an Admin open Team from the sidebar", () => {
+    renderAt("/settings");
+    expect(screen.getByRole("button", { name: "Team" })).not.toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+  });
+
   it("opens the Groups tab from a direct link", () => {
     renderAt("/settings/groups");
     expect(screen.getByTestId("path")).toHaveTextContent("/settings/groups");
@@ -190,7 +211,7 @@ describe("SettingsPage", () => {
 
   it("opens the MCP tab for an Admin", () => {
     renderAt("/settings/mcp");
-    expect(screen.getByText("MCP")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "MCP" })).toBeInTheDocument();
     expect(screen.getByTestId("path")).toHaveTextContent("/settings/mcp");
     expect(screen.getByTestId("mcp-tab")).toBeInTheDocument();
   });
@@ -204,7 +225,7 @@ describe("SettingsPage", () => {
   it("shows the MCP tab disabled, with the reason, to an Admin who is also a super admin", () => {
     mockIsSuperAdmin = true;
     renderAt("/settings/mcp");
-    expect(screen.getByText("MCP")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "MCP" })).toBeInTheDocument();
     expect(screen.getByTestId("mcp-disabled")).toHaveTextContent(
       "set up MCP from Super Admin → Settings → MCP",
     );
