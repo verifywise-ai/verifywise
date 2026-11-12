@@ -29,26 +29,24 @@ branch_labels: Union[str, Sequence[str], None] = None
 depends_on: Union[str, Sequence[str], None] = None
 
 
-AUTO_SAVED_JUDGE_SCORERS = '''
-    name LIKE 'Judge: %'
-    AND metric_key LIKE 'judge\\_%'
-    AND type = 'llm'
-    AND (
-        description LIKE 'Auto-saved judge LLM: %'
-        OR description LIKE 'Standard LLM judge using %'
-    )
-    AND (
-        CASE
-            WHEN jsonb_typeof(config->'messages') = 'array'
-                THEN jsonb_array_length(config->'messages') = 0
-            ELSE config->'messages' IS NULL
-        END
-    )
-'''
-
-
 def upgrade() -> None:
-    op.execute(sa.text(f'DELETE FROM llm_evals_scorers WHERE {AUTO_SAVED_JUDGE_SCORERS};'))
+    op.execute(sa.text('''
+        DELETE FROM llm_evals_scorers
+        WHERE name LIKE 'Judge: %'
+          AND metric_key LIKE 'judge\\_%'
+          AND type = 'llm'
+          AND (
+              description LIKE 'Auto-saved judge LLM: %'
+              OR description LIKE 'Standard LLM judge using %'
+          )
+          AND (
+              CASE
+                  WHEN jsonb_typeof(config->'messages') = 'array'
+                      THEN jsonb_array_length(config->'messages') = 0
+                  ELSE config->'messages' IS NULL
+              END
+          );
+    '''))
 
 
 def downgrade() -> None:
