@@ -72,6 +72,7 @@ import {
 import { canProceedToNextStep, getMissingKeyProviders } from "./NewExperiment/stepValidation";
 import DatasetStep from "./NewExperiment/DatasetStep";
 import ModelStep from "./NewExperiment/ModelStep";
+import { simulatedMaxTurns, toSimulatedScenarios } from "./NewExperiment/simulatedScenarios";
 import { countLabel } from "../../tools/countLabel";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { METRIC_LABELS } from "./metricLabels";
@@ -315,8 +316,13 @@ export default function NewExperimentModal({
     }
   }, [isOpen]);
 
+  // A simulated dataset holds scenarios; the runner turns them into conversations,
+  // so it is scored with the multi-turn metrics too.
+  const isSimulatedDataset = selectedUserDataset?.turnType === "simulated";
+
   // Track if selected dataset is multi-turn
   const isMultiTurnDataset =
+    isSimulatedDataset ||
     selectedUserDataset?.turnType === "multi-turn" ||
     Boolean(selectedPresetPath && selectedPresetPath.includes("multiturn"));
 
@@ -786,6 +792,8 @@ export default function NewExperimentModal({
           existingExperimentNames,
         );
 
+      const simulatedScenarios = isSimulatedDataset ? toSimulatedScenarios(datasetPrompts) : [];
+
       const experimentConfig = {
         project_id: projectId,
         name: resolvedExperimentName,
@@ -894,6 +902,14 @@ export default function NewExperimentModal({
             datasetId: selectedUserDataset?.id || undefined,
             prompts: datasetPrompts,
             count: datasetPrompts.length,
+            // Without these the runner treats a simulated dataset as plain prompts
+            ...(simulatedScenarios.length > 0
+              ? {
+                  simulatedMode: true,
+                  scenarios: simulatedScenarios,
+                  maxTurns: simulatedMaxTurns(simulatedScenarios),
+                }
+              : {}),
           },
           metrics: config.metrics,
           thresholds: config.thresholds,

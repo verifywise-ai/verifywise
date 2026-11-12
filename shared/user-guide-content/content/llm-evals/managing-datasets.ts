@@ -212,6 +212,37 @@ export const managingDatasetsContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'simulated-datasets',
+      level: 3,
+      text: 'Simulated datasets',
+    },
+    {
+      type: 'paragraph',
+      text: 'A simulated dataset holds scenarios instead of written conversations. During the experiment, the judge model plays the user described in each scenario and talks to your model, and the resulting conversations are scored with the conversational metrics. To upload one, click **Upload dataset** in the **Datasets** tab, choose **Multi-turn**, then **Simulated**.',
+    },
+    {
+      type: 'code',
+      language: 'json',
+      code: `[
+  {
+    "scenario": "A customer asks how to reset their account password.",
+    "expected_outcome": "The assistant explains the reset steps clearly.",
+    "user_description": "A polite, non-technical customer",
+    "max_turns": 4
+  }
+]`,
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'scenario', text: '(required) What the simulated user wants to accomplish.' },
+        { bold: 'expected_outcome', text: '(required) What a successful conversation ends with.' },
+        { bold: 'user_description', text: '(optional) A persona for the simulated user.' },
+        { bold: 'max_turns', text: '(optional) The most turns to simulate. The experiment uses the largest value in the dataset, or 6 when none is set.' },
+      ],
+    },
+    {
+      type: 'heading',
       id: 'legacy-format',
       level: 3,
       text: 'Single-turn format for conversations',

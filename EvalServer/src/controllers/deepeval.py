@@ -228,7 +228,7 @@ async def upload_deepeval_dataset_controller(
             dataset_type = "chatbot"
         
         # Validate turn_type
-        valid_turn_types = ["single-turn", "multi-turn"]
+        valid_turn_types = ["single-turn", "multi-turn", "simulated"]
         if turn_type not in valid_turn_types:
             turn_type = "single-turn"
 
@@ -282,7 +282,10 @@ async def upload_deepeval_dataset_controller(
                         )
                         if has_content:
                             prompt_count += 1
-        
+                    # Simulated: a scenario the runner turns into a conversation
+                    elif turn_type == "simulated" and str(item.get("scenario") or "").strip():
+                        prompt_count += 1
+
         # Use original filename without timestamp prefix
         filename = f"{original_name}.json"
         full_path = uploads_dir / filename
