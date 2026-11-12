@@ -605,11 +605,9 @@ export default function NewExperimentModal({
         setLoadingScorers(true);
         const res = await listScorers({ org_id: orgId || undefined });
         const enabledScorers = (res.scorers || []).filter((s) => s.enabled);
+        // Mode stays on the standard judge; scorers are opt-in. Every run saves its judge as a
+        // scorer, so switching whenever one exists made "Custom scorer only" the default for all
         setUserScorers(enabledScorers);
-        // If user has scorers, default to scorer mode
-        if (enabledScorers.length > 0) {
-          setJudgeMode("scorer");
-        }
       } catch {
         /* ignore */
       } finally {

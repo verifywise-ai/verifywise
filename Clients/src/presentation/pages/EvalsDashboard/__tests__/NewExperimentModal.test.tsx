@@ -112,8 +112,8 @@ describe("NewExperimentModal", () => {
       // EvalServer does not run local model files; there is no bare "Local" provider
       expect(screen.queryByText("Local")).not.toBeInTheDocument();
 
-      // No saved models in the org yet → the "Saved Models" section stays hidden.
-      expect(screen.queryByText("Saved Models")).not.toBeInTheDocument();
+      // No saved models in the org yet → the "Saved models" section stays hidden.
+      expect(screen.queryByText("Saved models")).not.toBeInTheDocument();
     });
   });
 
@@ -508,7 +508,10 @@ describe("NewExperimentModal", () => {
       );
       await goToScorerStep();
 
-      // Enabled scorer exists → mode auto-switches to scorer-only
+      // Standard judge stays the default even when an enabled scorer exists
+      await waitFor(() => expect(deepEvalMocks.listScorers).toHaveBeenCalled());
+      expect(screen.queryByText("Your Scorers")).not.toBeInTheDocument();
+      fireEvent.click(screen.getByText("Custom scorer only"));
       expect(await screen.findByText("Your Scorers")).toBeInTheDocument();
       expect(screen.getByRole("button", { name: "Next" })).toBeEnabled();
 

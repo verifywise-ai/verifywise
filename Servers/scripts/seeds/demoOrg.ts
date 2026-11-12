@@ -1318,6 +1318,7 @@ async function seedLlmEvalsScaffold(
 ): Promise<{ projectIds: Record<string, string>; datasetIds: Record<string, number> }> {
   const projectIds: Record<string, string> = {};
   const datasetIds: Record<string, number> = {};
+  const seededModels = new Set<string>();
 
   for (const p of LLM_EVALS_PROJECTS) {
     const projectId = `proj_${p.key}`;
@@ -1363,23 +1364,28 @@ async function seedLlmEvalsScaffold(
     )) as any[];
     datasetIds[p.key] = dsRows[0].id;
 
-    await sequelize.query(
-      `INSERT INTO llm_evals_models
-         (id, name, provider, model_id, config, organization_id, created_at, updated_at, created_by)
-       VALUES
-         (:id, :name, 'openrouter', :modelId, CAST(:config AS jsonb), :orgId,
-          NOW() - interval '28 days', NOW() - interval '28 days', :createdBy)`,
-      {
-        replacements: {
-          id: `mdl_${p.key}`,
-          name: p.model,
-          modelId: p.model,
-          config: JSON.stringify({}),
-          orgId: ctx.orgId,
-          createdBy: String(ctx.userId),
+    // Saved models are org-wide, so projects sharing a model must not save it twice
+    // (the new-experiment modal listed the same model once per project)
+    if (!seededModels.has(p.model)) {
+      seededModels.add(p.model);
+      await sequelize.query(
+        `INSERT INTO llm_evals_models
+           (id, name, provider, model_id, config, organization_id, created_at, updated_at, created_by)
+         VALUES
+           (:id, :name, 'openrouter', :modelId, CAST(:config AS jsonb), :orgId,
+            NOW() - interval '28 days', NOW() - interval '28 days', :createdBy)`,
+        {
+          replacements: {
+            id: `mdl_${p.key}`,
+            name: p.model,
+            modelId: p.model,
+            config: JSON.stringify({}),
+            orgId: ctx.orgId,
+            createdBy: String(ctx.userId),
+          },
         },
-      },
-    );
+      );
+    }
 
     for (const metric of p.metrics) {
       const scorerConfig = {
