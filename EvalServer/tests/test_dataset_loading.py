@@ -472,3 +472,41 @@ def test_single_turn_prompt_may_use_context_key() -> None:
     assert run_eval_module._prompt_passages(
         {"prompt": "q", "retrieval_context": ["R."], "context": ["C."]}
     ) == ["R."]
+
+# --------------------------------------------------------------------------- #
+# Relative dataset paths resolve like the dataset read endpoint                #
+# --------------------------------------------------------------------------- #
+
+
+def test_relative_dataset_path_resolves_under_datasets_folder() -> None:
+    """A dataset record path ("demo/...") is relative to data/datasets, not EvaluationModule/."""
+    from utils import run_evaluation as run_eval_module
+
+    resolved = run_eval_module._resolve_relative_dataset_path(
+        __import__("pathlib").Path("demo/knowledge_base_golden_set.json")
+    )
+    assert resolved.exists()
+    assert resolved.parent.name == "demo"
+    assert resolved.parent.parent.name == "datasets"
+
+
+def test_relative_dataset_path_keeps_legacy_module_relative_paths() -> None:
+    """Older configs stored paths relative to EvaluationModule/; those still load."""
+    from pathlib import Path
+
+    from utils import run_evaluation as run_eval_module
+
+    resolved = run_eval_module._resolve_relative_dataset_path(
+        Path("data/datasets/chatbot/chatbot_customer_support.json")
+    )
+    assert resolved.exists()
+    assert resolved.name == "chatbot_customer_support.json"
+
+
+def test_relative_dataset_path_rejects_traversal() -> None:
+    from pathlib import Path
+
+    from utils import run_evaluation as run_eval_module
+
+    with pytest.raises(ValueError):
+        run_eval_module._resolve_relative_dataset_path(Path("../../../../../../etc/passwd"))

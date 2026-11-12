@@ -1,0 +1,72 @@
+[
+  {
+    "id": "support_001",
+    "category": "customer-support",
+    "prompt": "How do I reset my account password?",
+    "expected_output": "Go to Settings > Security > Reset Password and follow the emailed link. The link expires in 30 minutes.",
+    "difficulty": "medium"
+  },
+  {
+    "id": "support_002",
+    "category": "customer-support",
+    "prompt": "What's your refund policy on annual plans?",
+    "expected_output": "Annual plans can be refunded within 30 days of purchase, prorated for any months already used.",
+    "difficulty": "medium"
+  },
+  {
+    "id": "support_003",
+    "category": "customer-support",
+    "prompt": "My last invoice looks wrong, can you check it?",
+    "expected_output": "Explain the extra line item on the last invoice (a mid-cycle seat upgrade) without asking the customer to repeat details.",
+    "difficulty": "medium"
+  },
+  {
+    "id": "support_004",
+    "category": "customer-support",
+    "prompt": "How do I export my data before closing my account?",
+    "expected_output": "Use Settings > Data Export to create a CSV or JSON archive. It is emailed within a few minutes.",
+    "difficulty": "medium"
+  },
+  {
+    "id": "support_005",
+    "category": "customer-support",
+    "prompt": "Can I change my billing email address?",
+    "expected_output": "Yes. Update the billing email at any time under Billing > Contacts.",
+    "difficulty": "medium"
+  },
+  {
+    "id": "support_006",
+    "category": "customer-support",
+    "prompt": "How do I add a new user to my team workspace?",
+    "expected_output": "Go to Settings > Team > Invite member, enter their email and choose a role. They get an invitation email.",
+    "difficulty": "medium"
+  },
+  {
+    "id": "support_007",
+    "category": "customer-support",
+    "prompt": "Can I pay by bank transfer instead of card?",
+    "expected_output": "Yes, for annual plans. Choose bank transfer under Billing > Payment methods; invoices are due within 30 days.",
+    "difficulty": "medium"
+  },
+  {
+    "id": "support_008",
+    "category": "customer-support",
+    "prompt": "How do I turn on two-factor authentication?",
+    "expected_output": "Go to Settings > Security > Two-factor authentication, scan the QR code with an authenticator app and enter the code.",
+    "difficulty": "medium"
+  },
+  {
+    "id": "support_009",
+    "category": "customer-support",
+    "prompt": "Why was my card declined?",
+    "expected_output": "Common causes are an expired card, a wrong billing address or a bank block. Update the card under Billing > Payment methods or contact the bank.",
+    "difficulty": "medium"
+  },
+  {
+    "id": "support_010",
+    "category": "customer-support",
+    "prompt": "How do I cancel my subscription?",
+    "expected_output": "Go to Billing > Plan > Cancel subscription. Access continues until the end of the current billing period.",
+    "difficulty": "medium"
+  }
+]
