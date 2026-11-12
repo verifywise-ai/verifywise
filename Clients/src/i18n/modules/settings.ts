@@ -477,6 +477,7 @@ export const de: Record<string, string> = {
     "Benutzer zu Teams bündeln, um ihnen gemeinsam Zugriff auf Anwendungsfälle zu geben",
   "Loading groups": "Gruppen werden geladen",
   "Members": "Mitglieder",
+  "You don't have access to this section.": "Sie haben keinen Zugriff auf diesen Bereich.",
   "No groups yet.": "Noch keine Gruppen.",
   "No members found": "Keine Mitglieder gefunden",
   "No groups yet. Groups are managed in Settings → Groups.":
@@ -980,6 +981,7 @@ export const fr: Record<string, string> = {
     "Regrouper des utilisateurs en équipes pour leur donner ensemble accès aux cas d'usage",
   "Loading groups": "Chargement des groupes",
   "Members": "Membres",
+  "You don't have access to this section.": "Vous n'avez pas accès à cette section.",
   "No groups yet.": "Aucun groupe pour le moment.",
   "No members found": "Aucun membre trouvé",
   "No groups yet. Groups are managed in Settings → Groups.":
@@ -1479,6 +1481,7 @@ export const es: Record<string, string> = {
     "Agrupar usuarios en equipos para darles acceso conjunto a los casos de uso",
   "Loading groups": "Cargando grupos",
   "Members": "Miembros",
+  "You don't have access to this section.": "No tienes acceso a esta sección.",
   "No groups yet.": "Aún no hay grupos.",
   "No members found": "No se encontraron miembros",
   "No groups yet. Groups are managed in Settings → Groups.":

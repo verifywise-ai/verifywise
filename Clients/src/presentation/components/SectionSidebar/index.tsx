@@ -11,6 +11,8 @@ export interface SectionItem {
   disabled?: boolean;
   /** Hover text, shown to the right of the item. */
   tooltip?: string;
+  /** Hover text while the item is disabled, saying why. Falls back to `tooltip`. */
+  disabledTooltip?: string;
 }
 
 interface SectionSidebarProps {
@@ -123,9 +125,12 @@ const SectionSidebar = ({
             </ListItemButton>
           );
 
-          if (!section.tooltip) return item;
+          const hint = section.disabled
+            ? (section.disabledTooltip ?? section.tooltip)
+            : section.tooltip;
+          if (!hint) return item;
           return (
-            <Tooltip key={section.id} title={section.tooltip} placement="right" enterDelay={500}>
+            <Tooltip key={section.id} title={hint} placement="right" enterDelay={500} describeChild>
               {/* A disabled button fires no events, so the span carries the hover. */}
               <span style={{ display: "block" }}>{item}</span>
             </Tooltip>

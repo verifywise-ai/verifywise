@@ -1,7 +1,5 @@
 import { useState, useEffect, useMemo } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
-import TabPanel from "@mui/lab/TabPanel";
-import TabContext from "@mui/lab/TabContext";
 import { Box, Stack } from "@mui/material";
 import {
   Archive,
@@ -67,6 +65,8 @@ const BUILT_IN_TABS = [
   "roles",
   ...(SHOW_AI_APPROVAL_RULES ? ["ai-approval-rules"] : []),
 ];
+
+const NO_ACCESS_HINT = "You don't have access to this section.";
 
 export default function ProfilePage() {
   const { userRoleName, isSuperAdmin } = useAuth();
@@ -169,6 +169,7 @@ export default function ProfilePage() {
       label: "Team",
       Icon: Users,
       disabled: isTeamManagementDisabled,
+      disabledTooltip: NO_ACCESS_HINT,
       tooltip: "Manage team members and their roles",
     },
     {
@@ -188,6 +189,7 @@ export default function ProfilePage() {
       label: "Features",
       Icon: Zap,
       disabled: isFeaturesDisabled,
+      disabledTooltip: NO_ACCESS_HINT,
       tooltip: "Enable or disable optional platform features",
     },
     {
@@ -195,6 +197,7 @@ export default function ProfilePage() {
       label: "API keys",
       Icon: Key,
       disabled: isApiKeysDisabled,
+      disabledTooltip: NO_ACCESS_HINT,
       tooltip: "Generate keys for programmatic API access",
     },
     ...(!isMcpHidden
@@ -284,109 +287,72 @@ export default function ProfilePage() {
       helpArticlePath="settings/user-management"
       tipBoxEntity="settings"
     >
-      <TabContext value={activeTab}>
-        <Stack
-          direction={{ xs: "column", md: "row" }}
-          sx={{ gap: "24px", alignItems: { xs: "stretch", md: "flex-start" }, mt: "16px" }}
-        >
-          <SectionSidebar
-            sections={sections}
-            activeSection={activeTab}
-            onSelect={handleTabChange}
-            width={220}
-            stickyTop={16}
+      <Stack
+        direction={{ xs: "column", md: "row" }}
+        sx={{ gap: "24px", alignItems: { xs: "stretch", md: "flex-start" }, mt: "16px" }}
+      >
+        <SectionSidebar
+          sections={sections}
+          activeSection={activeTab}
+          onSelect={handleTabChange}
+          width={220}
+          stickyTop={16}
+        />
+        {/* Below md the sidebar is hidden; pick the section from a select instead. */}
+        <Box sx={{ display: { xs: "block", md: "none" } }}>
+          <Select
+            id="settings-section"
+            value={activeTab}
+            ariaLabel="Settings section"
+            items={sections
+              .filter((section) => !section.disabled || section.id === activeTab)
+              .map((section) => ({ _id: section.id, name: section.label }))}
+            onChange={(e) => handleTabChange(String(e.target.value))}
+            sx={{ width: "100%" }}
           />
-          {/* Below md the sidebar is hidden; pick the section from a select instead. */}
-          <Box sx={{ display: { xs: "block", md: "none" } }}>
-            <Select
-              id="settings-section"
-              value={activeTab}
-              items={sections
-                .filter((section) => !section.disabled)
-                .map((section) => ({ _id: section.id, name: section.label }))}
-              onChange={(e) => handleTabChange(String(e.target.value))}
-              sx={{ width: "100%" }}
+        </Box>
+        <Box
+          component="section"
+          aria-label={sections.find((section) => section.id === activeTab)?.label}
+          sx={{ "flex": 1, "minWidth": 0, "& > :first-of-type": { mt: 0 } }}
+        >
+          {activeTab === "profile" && <Profile />}
+
+          {activeTab === "password" && <Password />}
+
+          {activeTab === "preferences" && <Preferences />}
+
+          {activeTab === "team" && <TeamManagement />}
+
+          {activeTab === "groups" && <GroupsTab />}
+
+          {activeTab === "organization" && <Organization />}
+
+          {activeTab === "features" && <Features />}
+
+          {activeTab === "apikeys" && <ApiKeys />}
+
+          {!isMcpHidden && activeTab === "mcp" && (
+            <McpConnect
+              disabledReason={
+                isSuperAdmin
+                  ? "You are also a super admin, so set up MCP from Super Admin → Settings → MCP. A connection made there gives you these tools and the super-admin ones together."
+                  : undefined
+              }
             />
-          </Box>
-          <Box sx={{ "flex": 1, "minWidth": 0, "& .MuiTabPanel-root > :first-of-type": { mt: 0 } }}>
-            <TabPanel sx={{ p: 0 }} value="profile">
-              <Profile />
-            </TabPanel>
+          )}
 
-            <TabPanel sx={{ p: 0 }} value="password">
-              <Password />
-            </TabPanel>
+          {!isAuditLedgerDisabled && activeTab === "audit-ledger" && <AuditLedger />}
+          {canManageRetention && activeTab === "data-retention" && <DataRetention />}
 
-            <TabPanel sx={{ p: 0 }} value="preferences">
-              <Preferences />
-            </TabPanel>
-
-            <TabPanel sx={{ p: 0 }} value="team">
-              <TeamManagement />
-            </TabPanel>
-
-            <TabPanel sx={{ p: 0 }} value="groups">
-              <GroupsTab />
-            </TabPanel>
-
-            <TabPanel sx={{ p: 0 }} value="organization">
-              <Organization />
-            </TabPanel>
-
-            <TabPanel sx={{ p: 0 }} value="features">
-              <Features />
-            </TabPanel>
-
-            <TabPanel sx={{ p: 0 }} value="apikeys">
-              <ApiKeys />
-            </TabPanel>
-
-            {!isMcpHidden && (
-              <TabPanel sx={{ p: 0 }} value="mcp">
-                <McpConnect
-                  disabledReason={
-                    isSuperAdmin
-                      ? "You are also a super admin, so set up MCP from Super Admin → Settings → MCP. A connection made there gives you these tools and the super-admin ones together."
-                      : undefined
-                  }
-                />
-              </TabPanel>
-            )}
-
-            {!isAuditLedgerDisabled && (
-              <TabPanel sx={{ p: 0 }} value="audit-ledger">
-                <AuditLedger />
-              </TabPanel>
-            )}
-            {canManageRetention && (
-              <TabPanel sx={{ p: 0 }} value="data-retention">
-                <DataRetention />
-              </TabPanel>
-            )}
-
-            {ssoFeatureEnabled && (
-              <TabPanel sx={{ p: 0 }} value="sso">
-                <EntraIdConfig />
-              </TabPanel>
-            )}
-            {!isCustomFieldsDisabled && (
-              <TabPanel sx={{ p: 0 }} value="custom-fields">
-                <CustomFieldsTab />
-              </TabPanel>
-            )}
-            {canManageRoles && (
-              <TabPanel sx={{ p: 0 }} value="roles">
-                <RolesTab />
-              </TabPanel>
-            )}
-            {SHOW_AI_APPROVAL_RULES && !isAuditLedgerDisabled && (
-              <TabPanel sx={{ p: 0 }} value="ai-approval-rules">
-                <AIApprovalRules />
-              </TabPanel>
-            )}
-          </Box>
-        </Stack>
-      </TabContext>
+          {ssoFeatureEnabled && activeTab === "sso" && <EntraIdConfig />}
+          {!isCustomFieldsDisabled && activeTab === "custom-fields" && <CustomFieldsTab />}
+          {canManageRoles && activeTab === "roles" && <RolesTab />}
+          {SHOW_AI_APPROVAL_RULES &&
+            !isAuditLedgerDisabled &&
+            activeTab === "ai-approval-rules" && <AIApprovalRules />}
+        </Box>
+      </Stack>
     </PageHeaderExtended>
   );
 }

@@ -37,7 +37,7 @@ export const apiAccessContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'info',
-      text: 'Only users with the Admin role can view and manage API keys. The API keys section isn\'t visible to other roles.',
+      text: 'Admins can view and manage API keys. A custom role can too if its "Create, revoke and delete API keys" permission is set to Allow. For everyone else the API keys section shows in the Settings sidebar but is greyed out.',
     },
     {
       type: 'heading',
