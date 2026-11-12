@@ -63,7 +63,8 @@ LLM_KEYS_ADMIN_HEADER = "x-can-manage-llm-keys"
 
 def has_llm_keys_admin(request: Request) -> bool:
     """True when the proxy marked the caller as holding llmKeys.admin."""
-    return request.headers.get(LLM_KEYS_ADMIN_HEADER, "").lower() == "true"
+    headers = getattr(request, "headers", None) or {}
+    return str(headers.get(LLM_KEYS_ADMIN_HEADER, "")).lower() == "true"
 
 
 def require_llm_keys_admin(request: Request) -> None:
