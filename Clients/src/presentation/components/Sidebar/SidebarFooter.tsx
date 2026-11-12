@@ -47,6 +47,7 @@ import { useProfilePhotoFetch } from "../../../application/hooks/useProfilePhoto
 import { useActiveModule } from "../../../application/hooks/useActiveModule";
 import { useAuth } from "../../../application/hooks/useAuth";
 import ReadyToSubscribeBox from "../ReadyToSubscribeBox/ReadyToSubscribeBox";
+import { SIDEBAR_TEXT_SECONDARY } from "./sidebarTokens";
 
 interface IManagementItem {
   name: string;
@@ -354,8 +355,8 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                               stroke: `${text.icon} !important`,
                             },
                             "&:hover svg": {
-                              color: `${text.secondary} !important`,
-                              stroke: `${text.secondary} !important`,
+                              color: `${SIDEBAR_TEXT_SECONDARY} !important`,
+                              stroke: `${SIDEBAR_TEXT_SECONDARY} !important`,
                             },
                           }}
                         >
@@ -456,8 +457,8 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                           stroke: `${text.icon} !important`,
                         },
                         "&:hover svg": {
-                          color: `${text.secondary} !important`,
-                          stroke: `${text.secondary} !important`,
+                          color: `${SIDEBAR_TEXT_SECONDARY} !important`,
+                          stroke: `${SIDEBAR_TEXT_SECONDARY} !important`,
                         },
                       }}
                     >
@@ -878,7 +879,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                   <Typography
                     sx={{
                       fontSize: "13px",
-                      color: theme.palette.text.secondary,
+                      color: SIDEBAR_TEXT_SECONDARY,
                     }}
                   >
                     {item.name}
@@ -1061,7 +1062,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                         <Typography
                           sx={{
                             fontSize: "11px",
-                            color: theme.palette.text.secondary,
+                            color: SIDEBAR_TEXT_SECONDARY,
                             textTransform: "capitalize",
                           }}
                         >
@@ -1071,7 +1072,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                       <Typography
                         sx={{
                           fontSize: "11px",
-                          color: theme.palette.text.secondary,
+                          color: SIDEBAR_TEXT_SECONDARY,
                         }}
                       >
                         {user.email}
