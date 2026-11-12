@@ -248,6 +248,19 @@ async def upload_deepeval_dataset_controller(
         if not isinstance(data, list):
             raise HTTPException(status_code=400, detail="Dataset JSON must be an array of prompt objects")
 
+        # Simulated datasets: every scenario needs the outcome the simulator works toward
+        if turn_type == "simulated":
+            for index, item in enumerate(data, 1):
+                if (
+                    isinstance(item, dict)
+                    and str(item.get("scenario") or "").strip()
+                    and not str(item.get("expected_outcome") or "").strip()
+                ):
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Scenario {index} has no expected_outcome. Each scenario needs one.",
+                    )
+
         # Build upload path (Docker: /app/data/uploads, Local: EvaluationModule/data/uploads)
         uploads_root = _get_uploads_root()
         uploads_dir = uploads_root / str(organization_id)

@@ -120,6 +120,31 @@ RAG_ANSWER_INSTRUCTION = (
     "say that you don't know."
 )
 
+# Turn limit for a simulated conversation when neither the scenario nor the
+# experiment sets one.
+DEFAULT_SIMULATED_MAX_TURNS = 6
+
+
+def _is_scenario_row(row: Any) -> bool:
+    """A simulated-dataset row: a non-empty scenario and no prompt or turns."""
+    return (
+        isinstance(row, dict)
+        and bool(str(row.get("scenario") or "").strip())
+        and not row.get("prompt")
+        and not row.get("turns")
+    )
+
+
+def _positive_int(value: Any) -> Optional[int]:
+    """value as a positive int, or None (bools and non-numbers are rejected)."""
+    if isinstance(value, bool):
+        return None
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        return None
+    return number if number > 0 else None
+
 
 def _normalize_passages(value: Any) -> List[str]:
     """
@@ -514,8 +539,16 @@ async def run_evaluation(
                     error_message=error_msg
                 )
                 return {"error": error_msg}
+        # Scenarios sent with the request (simulated mode). When present, the
+        # dataset file is not loaded again.
+        simulated_scenarios = (
+            [s for s in (dataset_config.get("scenarios") or []) if _is_scenario_row(s)]
+            if dataset_config.get("simulatedMode")
+            else []
+        )
+
         # Custom dataset path if provided (only load if we don't have data yet)
-        if not prompts and not conversations and dataset_config.get("path"):
+        if not prompts and not conversations and not simulated_scenarios and dataset_config.get("path"):
             custom_path = Path(dataset_config["path"])
             path_error: Optional[str] = None
             if not custom_path.is_absolute():
@@ -542,7 +575,15 @@ async def run_evaluation(
                 else:
                     prompts = loaded
             print(f"✓ Loaded dataset from {custom_path}")
-        if not prompts and not conversations:
+        # A simulated dataset holds scenario rows instead of prompts or turns. Recognise
+        # them here so every caller (wizard, API, MCP, reruns) gets simulated mode.
+        if not simulated_scenarios and prompts and isinstance(prompts, list):
+            if all(_is_scenario_row(p) for p in prompts if isinstance(p, dict)):
+                simulated_scenarios = [p for p in prompts if _is_scenario_row(p)]
+                if simulated_scenarios:
+                    print(f"📝 Detected simulated dataset with {len(simulated_scenarios)} scenarios")
+                    prompts = []
+        if not prompts and not conversations and not simulated_scenarios:
             error_msg = "No prompts or conversations in dataset"
             print(f"❌ {error_msg}")
             await crud.update_experiment_status(
@@ -559,11 +600,8 @@ async def run_evaluation(
         # the failure reason if no prompt succeeds
         generation_errors: Dict[int, str] = {}
 
-        # Check if this is a simulated conversation mode
-        simulated_mode = dataset_config.get("simulatedMode", False)
-        simulated_scenarios = dataset_config.get("scenarios", [])
-        
-        if simulated_mode and simulated_scenarios:
+        # Simulated conversation mode (scenarios found while loading the dataset)
+        if simulated_scenarios:
             # Import ConversationSimulator (required for simulated mode)
             try:
                 from deepeval.simulator import ConversationSimulator
@@ -604,18 +642,19 @@ async def run_evaluation(
                 )
                 return Turn(role="assistant", content=response or "")
             
-            # Create ConversationalGoldens from scenarios
-            goldens = []
+            # Create ConversationalGoldens from scenarios, grouped by their turn limit:
+            # the simulator takes one limit per call, and each scenario keeps its own.
+            default_max_turns = _positive_int(dataset_config.get("maxTurns")) or DEFAULT_SIMULATED_MAX_TURNS
+            goldens_by_turns: Dict[int, list] = {}
             for scenario_data in simulated_scenarios:
                 golden = ConversationalGolden(
-                    scenario=scenario_data.get("scenario", "General conversation"),
-                    expected_outcome=scenario_data.get("expected_outcome", "Helpful response"),
-                    user_description=scenario_data.get("user_description", "A typical user"),
+                    scenario=str(scenario_data.get("scenario") or "").strip() or "General conversation",
+                    expected_outcome=str(scenario_data.get("expected_outcome") or "").strip() or "Helpful response",
+                    user_description=str(scenario_data.get("user_description") or "").strip() or "A typical user",
                 )
-                goldens.append(golden)
-            
-            # Run simulation
-            max_turns = dataset_config.get("maxTurns", 6)
+                limit = _positive_int(scenario_data.get("max_turns")) or default_max_turns
+                goldens_by_turns.setdefault(limit, []).append(golden)
+
             # The simulated user is played by the judge LLM, through the gateway like the
             # metrics; without it DeepEval falls back to its own OpenAI client.
             simulator = ConversationSimulator(
@@ -629,12 +668,16 @@ async def run_evaluation(
                 async_mode=False,
             )
 
-            print(f"🔄 Simulating conversations with max {max_turns} user turns each...")
-            simulated_test_cases = await asyncio.to_thread(
-                simulator.simulate,
-                conversational_goldens=goldens,
-                max_user_simulations=max_turns,
-            )
+            simulated_test_cases = []
+            for max_turns, goldens in goldens_by_turns.items():
+                print(f"🔄 Simulating {len(goldens)} conversations with max {max_turns} user turns each...")
+                simulated_test_cases.extend(
+                    await asyncio.to_thread(
+                        simulator.simulate,
+                        conversational_goldens=goldens,
+                        max_user_simulations=max_turns,
+                    )
+                )
             
             # Convert simulated test cases to our format
             for idx, conv_tc in enumerate(simulated_test_cases, 1):
@@ -992,7 +1035,7 @@ async def run_evaluation(
         # - conversations: only those that produced a test case are logged (one with no
         #   user turns is skipped), so count those to match the experiment's logs;
         # - simulated: no logs are written; count the scenarios the run tried.
-        if simulated_mode and simulated_scenarios:
+        if simulated_scenarios:
             prompts_attempted = len(simulated_scenarios)
         elif conversations:
             prompts_attempted = len(test_cases_data)

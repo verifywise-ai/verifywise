@@ -66,6 +66,23 @@ async def test_simulated_dataset_keeps_turn_type_and_counts_scenarios(saved):
 
 
 @pytest.mark.asyncio
+async def test_simulated_scenario_without_expected_outcome_is_rejected(saved):
+    from fastapi import HTTPException
+
+    rows = [
+        {"scenario": "Reset a password", "expected_outcome": "Steps explained"},
+        {"scenario": "Cancel an order"},
+    ]
+    with pytest.raises(HTTPException) as err:
+        await controller.upload_deepeval_dataset_controller(
+            dataset=_upload(rows), organization_id=1, org_id="1", turn_type="simulated"
+        )
+    assert err.value.status_code == 400
+    assert "Scenario 2" in err.value.detail
+    assert saved == {}
+
+
+@pytest.mark.asyncio
 async def test_scenario_rows_are_not_counted_as_single_turn_prompts(saved):
     rows = [{"scenario": "Reset a password", "expected_outcome": "Steps explained"}]
     await controller.upload_deepeval_dataset_controller(

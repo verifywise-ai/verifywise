@@ -238,7 +238,7 @@ export const managingDatasetsContent: ArticleContent = {
         { bold: 'scenario', text: '(required) What the simulated user wants to accomplish.' },
         { bold: 'expected_outcome', text: '(required) What a successful conversation ends with.' },
         { bold: 'user_description', text: '(optional) A persona for the simulated user.' },
-        { bold: 'max_turns', text: '(optional) The most turns to simulate. The experiment uses the largest value in the dataset, or 6 when none is set.' },
+        { bold: 'max_turns', text: '(optional) The most user turns to simulate for this scenario. Defaults to 6.' },
       ],
     },
     {

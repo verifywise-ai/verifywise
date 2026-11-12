@@ -868,11 +868,14 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
                   {
                     label: "My datasets",
                     color: palette.accent.indigo.text,
-                    items: myDatasets.map((ds) => ({
-                      value: ds.path,
-                      label: ds.name,
-                      description: `${ds.promptCount} prompts • ${ds.datasetType || "chatbot"}`,
-                    })),
+                    // Arena compares answers to prompts; simulated datasets hold scenarios
+                    items: myDatasets
+                      .filter((ds) => ds.turnType !== "simulated")
+                      .map((ds) => ({
+                        value: ds.path,
+                        label: ds.name,
+                        description: `${ds.promptCount} prompts • ${ds.datasetType || "chatbot"}`,
+                      })),
                   },
                   {
                     label: "Template datasets",

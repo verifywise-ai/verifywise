@@ -72,7 +72,7 @@ import {
 import { canProceedToNextStep, getMissingKeyProviders } from "./NewExperiment/stepValidation";
 import DatasetStep from "./NewExperiment/DatasetStep";
 import ModelStep from "./NewExperiment/ModelStep";
-import { simulatedMaxTurns, toSimulatedScenarios } from "./NewExperiment/simulatedScenarios";
+import { toSimulatedScenarios } from "./NewExperiment/simulatedScenarios";
 import { countLabel } from "../../tools/countLabel";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { METRIC_LABELS } from "./metricLabels";
@@ -671,6 +671,21 @@ export default function NewExperimentModal({
         return;
       }
 
+      // A simulated dataset runs its scenarios; without any it would run as plain prompts
+      const simulatedScenarios = isSimulatedDataset ? toSimulatedScenarios(datasetPrompts) : [];
+      if (isSimulatedDataset && simulatedScenarios.length === 0) {
+        setAlert({
+          show: true,
+          variant: "error",
+          title: "No scenarios in dataset",
+          body: "This simulated dataset has no rows with a scenario. Add a scenario to each row, or pick another dataset.",
+        });
+        setLoading(false);
+        return;
+      }
+      // What the run will evaluate: scenarios for a simulated dataset, prompts otherwise
+      const sampleCount = isSimulatedDataset ? simulatedScenarios.length : datasetPrompts.length;
+
       // Resolve model name/provider for validation (saved model takes precedence)
       const savedModelForValidation = selectedSavedModelId
         ? (savedModels.find((m) => m.id === selectedSavedModelId) ?? null)
@@ -792,12 +807,10 @@ export default function NewExperimentModal({
           existingExperimentNames,
         );
 
-      const simulatedScenarios = isSimulatedDataset ? toSimulatedScenarios(datasetPrompts) : [];
-
       const experimentConfig = {
         project_id: projectId,
         name: resolvedExperimentName,
-        description: `Evaluating ${experimentModelName} with ${countLabel(datasetPrompts.length, "prompt")}`,
+        description: `Evaluating ${experimentModelName} with ${countLabel(sampleCount, isSimulatedDataset ? "scenario" : "prompt")}`,
         model_inventory_id: selectedModelInventoryId || undefined,
         config: {
           project_id: projectId, // Include in config for runner
@@ -900,16 +913,11 @@ export default function NewExperimentModal({
                 : undefined),
             path: selectedUserDataset?.path || selectedPresetPath || undefined,
             datasetId: selectedUserDataset?.id || undefined,
-            prompts: datasetPrompts,
-            count: datasetPrompts.length,
-            // Without these the runner treats a simulated dataset as plain prompts
-            ...(simulatedScenarios.length > 0
-              ? {
-                  simulatedMode: true,
-                  scenarios: simulatedScenarios,
-                  maxTurns: simulatedMaxTurns(simulatedScenarios),
-                }
-              : {}),
+            // A simulated dataset's rows go once, as scenarios; the runner applies
+            // each scenario's max_turns.
+            prompts: isSimulatedDataset ? [] : datasetPrompts,
+            count: sampleCount,
+            ...(isSimulatedDataset ? { simulatedMode: true, scenarios: simulatedScenarios } : {}),
           },
           metrics: config.metrics,
           thresholds: config.thresholds,
