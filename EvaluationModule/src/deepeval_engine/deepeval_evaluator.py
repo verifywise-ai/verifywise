@@ -270,6 +270,27 @@ warnings.filterwarnings(
 _REASON_SCORE = re.compile(r"(score (?:is|of) )(\d+(?:\.\d+)?)", re.IGNORECASE)
 
 
+def _native_bias_scores_clean_share() -> bool:
+    """
+    True when the installed DeepEval scores BiasMetric/ToxicityMetric as the share of
+    clean verdicts (4.2.0 and later). Read from the installed package, not the
+    requirements file: an environment that pulled new code but kept DeepEval 4.1.3
+    must not invert scores that are already on VerifyWise's scale.
+    """
+    try:
+        from importlib.metadata import version as _installed_version
+
+        from packaging.version import Version
+
+        return Version(_installed_version("deepeval")) >= Version("4.2.0")
+    except Exception:
+        # No metadata to read: assume the pinned version (4.3.4).
+        return True
+
+
+NATIVE_BIAS_SCORES_CLEAN_SHARE = _native_bias_scores_clean_share()
+
+
 class LowerIsBetterNativeMetric:
     """
     Keep DeepEval's native BiasMetric and ToxicityMetric on VerifyWise's scale.
@@ -278,8 +299,10 @@ class LowerIsBetterNativeMetric:
     verdicts (1 = pass) and `threshold` became the minimum passing score. VerifyWise
     stores, charts, reports and gates them as the share of biased or toxic verdicts
     (0 = none found) with `threshold` as the maximum, the same scale GEvalLikeMetric
-    uses with lower_is_better. This wrapper hands DeepEval `1 - threshold` and reports
-    `1 - score`, so stored results, saved thresholds and the CI gate keep their meaning.
+    uses with lower_is_better. On 4.2.0+ this wrapper hands DeepEval `1 - threshold`
+    and reports `1 - score`, so stored results, saved thresholds and the CI gate keep
+    their meaning. On an older DeepEval the scores are already on that scale and pass
+    through unchanged.
 
     DeepEval's reason quotes its own score ("The score is 0.75 because ..."), so a
     quoted number matching the native score is rewritten to the stored one.
@@ -287,7 +310,8 @@ class LowerIsBetterNativeMetric:
 
     def __init__(self, metric_cls: Any, *, threshold: float = 0.5, **kwargs: Any) -> None:
         self.threshold = threshold
-        self._metric = metric_cls(threshold=1.0 - threshold, **kwargs)
+        self._invert = NATIVE_BIAS_SCORES_CLEAN_SHARE
+        self._metric = metric_cls(threshold=1.0 - threshold if self._invert else threshold, **kwargs)
         self.score: Optional[float] = None
         self.success: Optional[bool] = None
         self.reason: Optional[str] = None
@@ -296,10 +320,13 @@ class LowerIsBetterNativeMetric:
     def _convert(self) -> Optional[float]:
         native = self._metric.score
         # Pass/fail uses the exact value; the stored score is rounded for display.
-        self._found = None if native is None else min(1.0, max(0.0, 1.0 - native))
+        if native is None:
+            self._found = None
+        else:
+            self._found = min(1.0, max(0.0, 1.0 - native if self._invert else native))
         self.score = None if self._found is None else round(self._found, 6)
         self.reason = getattr(self._metric, "reason", None)
-        if native is not None and isinstance(self.reason, str):
+        if self._invert and native is not None and isinstance(self.reason, str):
             def _swap(match: "re.Match[str]") -> str:
                 if abs(float(match.group(2)) - native) < 0.005:
                     return match.group(1) + format(self.score, ".2f")

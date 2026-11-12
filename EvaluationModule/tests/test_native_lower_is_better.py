@@ -14,6 +14,19 @@ from types import SimpleNamespace
 import pytest
 
 
+@pytest.fixture(autouse=True)
+def _clean_share_scale(request, monkeypatch):
+    """Stub tests exercise the 4.2.0+ conversion whatever DeepEval is installed.
+
+    The guard test reads the real decision, and the older-DeepEval test sets its own.
+    """
+    if request.node.name == "test_version_check_matches_how_installed_deepeval_scores":
+        return
+    from deepeval_engine import deepeval_evaluator
+
+    monkeypatch.setattr(deepeval_evaluator, "NATIVE_BIAS_SCORES_CLEAN_SHARE", True)
+
+
 class _StubNativeMetric:
     """Behaves like DeepEval >= 4.2: score = share of clean verdicts, threshold = minimum."""
 
@@ -156,8 +169,13 @@ def test_openai_judge_wraps_native_bias_and_toxicity(monkeypatch):
         assert metrics[name]._metric.threshold == pytest.approx(1 - limit)
 
 
-def test_installed_deepeval_scores_bias_and_toxicity_as_share_of_clean_verdicts():
-    """Guards the wrapper: if DeepEval flips these metrics back, this fails loudly."""
+def test_version_check_matches_how_installed_deepeval_scores():
+    """
+    Guards the wrapper: the version decision must match what the installed BiasMetric
+    and ToxicityMetric do, on 4.1.3 and 4.3.4 alike. If DeepEval flips these metrics
+    again under the same version range, this fails loudly.
+    """
+    from deepeval_engine.deepeval_evaluator import NATIVE_BIAS_SCORES_CLEAN_SHARE
     from deepeval.metrics import BiasMetric, ToxicityMetric
     from deepeval.metrics.bias.schema import BiasVerdict
     from deepeval.metrics.toxicity.schema import ToxicityVerdict
@@ -184,7 +202,25 @@ def test_installed_deepeval_scores_bias_and_toxicity_as_share_of_clean_verdicts(
         metric.verdicts = [verdict_cls(verdict="yes", reason="r")] + [
             verdict_cls(verdict="no") for _ in range(3)
         ]
-        # One biased/toxic verdict out of four: DeepEval reports 0.75 clean ...
-        assert metric._calculate_score() == pytest.approx(0.75)
-        # ... which VerifyWise stores as 0.25 found.
-        assert 1 - metric._calculate_score() == pytest.approx(0.25)
+        # One biased/toxic verdict out of four: 0.75 on the clean-share scale (4.2.0+),
+        # 0.25 on the found scale (older). VerifyWise stores 0.25 either way.
+        expected_native = 0.75 if NATIVE_BIAS_SCORES_CLEAN_SHARE else 0.25
+        assert metric._calculate_score() == pytest.approx(expected_native)
+
+
+def test_older_deepeval_passes_scores_through(monkeypatch):
+    """With DeepEval < 4.2.0 still installed, scores are already 'found' and must not flip."""
+    from deepeval_engine import deepeval_evaluator
+
+    monkeypatch.setattr(deepeval_evaluator, "NATIVE_BIAS_SCORES_CLEAN_SHARE", False)
+    metric = _wrapped(threshold=0.2, native_score=0.25)
+    assert metric._metric.threshold == 0.2
+    assert metric.score == pytest.approx(0.25)
+    assert not metric.is_successful()
+    # The reason already quotes the stored scale; it is left alone.
+    assert metric.reason == "The score is 0.25 because one opinion was biased."
+
+    clean = _wrapped(threshold=0.2, native_score=0.0)
+    assert clean.score == 0.0
+    assert clean.is_successful()
+
