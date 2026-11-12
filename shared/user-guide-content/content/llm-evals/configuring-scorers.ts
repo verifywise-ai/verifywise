@@ -188,7 +188,7 @@ export const configuringScorersContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'tip',
-      text: 'Conversational metrics are automatically enabled when you select a multi-turn dataset. You\'ll see them in an expandable "Conversational metrics" section in the experiment wizard.',
+      text: 'When you pick a multi-turn dataset, the experiment wizard shows a "Conversational metrics" section. Turn relevancy and knowledge retention are ticked. Conversation coherence, conversation helpfulness, task completion and conversation safety start unticked, because they don\'t return scores on multi-turn runs yet. You can still tick them.',
     },
     {
       type: 'heading',
