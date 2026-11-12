@@ -118,7 +118,7 @@ export default function ProviderModelFields({
               fontSize: "13px",
               fontWeight: 500,
               color: palette.text.secondary,
-              mb: 1,
+              mb: "2px",
             }}
           >
             Model
@@ -204,7 +204,7 @@ export default function ProviderModelFields({
               "fontSize": "11px",
               "color": palette.text.tertiary,
               "p": 0,
-              "mb": 0.5,
+              "mb": "1px",
               "minWidth": "auto",
               "&:hover": { color: palette.brand.primary },
             }}
@@ -224,7 +224,7 @@ export default function ProviderModelFields({
 
   return (
     <Box ref={fieldsRef}>
-      <Stack spacing={3}>
+      <Stack spacing="6px">
         {/* Judge custom_api places URL before the model field */}
         {mode === "judge" && providerId === "custom_api" ? urlField : null}
         {modelField}
@@ -234,13 +234,13 @@ export default function ProviderModelFields({
           (hasApiKeyConfigured ? (
             <Box
               sx={{
-                p: 1.5,
+                p: "3px",
                 backgroundColor: palette.status.success.bg,
                 borderRadius: "8px",
                 border: `1px solid ${palette.status.success.border}`,
               }}
             >
-              <Stack direction="row" alignItems="center" spacing={1}>
+              <Stack direction="row" alignItems="center" spacing="2px">
                 <Check size={16} color={palette.status.success.text} />
                 <Typography sx={{ fontSize: "12px", color: palette.status.success.text }}>
                   API key configured — will be saved for future experiments

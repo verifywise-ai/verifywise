@@ -37,7 +37,7 @@ export default function MyDatasetsSection({
 }: MyDatasetsSectionProps) {
   if (loading) {
     return (
-      <Box sx={{ py: 2, textAlign: "center" }}>
+      <Box sx={{ py: "4px", textAlign: "center" }}>
         <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
           Loading your datasets...
         </Typography>
@@ -49,7 +49,7 @@ export default function MyDatasetsSection({
 
   return (
     <Box>
-      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
+      <Stack direction="row" alignItems="center" justifyContent="space-between" sx={{ mb: "2px" }}>
         <Typography
           sx={{
             fontSize: "12px",
@@ -70,7 +70,7 @@ export default function MyDatasetsSection({
             "textTransform": "none",
             "fontSize": "11px",
             "color": palette.text.tertiary,
-            "p": 0.5,
+            "p": "1px",
             "minWidth": "auto",
             "&:hover": { color: palette.brand.primary },
           }}

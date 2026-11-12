@@ -48,7 +48,7 @@ export default function TemplateDatasetsSection({
           color: palette.text.disabled,
           textTransform: "uppercase",
           letterSpacing: "0.5px",
-          mb: 1,
+          mb: "2px",
         }}
       >
         Option 3: {TASK_TYPE_LABEL[taskType]} templates

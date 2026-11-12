@@ -1361,7 +1361,7 @@ export default function NewExperimentModal({
             {(judgeMode === "scorer" || judgeMode === "both") && (
               <Box>
                 {loadingScorers ? (
-                  <Box sx={{ py: 3, textAlign: "center" }}>
+                  <Box sx={{ py: "6px", textAlign: "center" }}>
                     <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
                       Loading your scorers...
                     </Typography>
@@ -1372,7 +1372,7 @@ export default function NewExperimentModal({
                       direction="row"
                       alignItems="center"
                       justifyContent="space-between"
-                      sx={{ mb: 1.5 }}
+                      sx={{ mb: "3px" }}
                     >
                       <Typography
                         sx={{
@@ -1385,7 +1385,7 @@ export default function NewExperimentModal({
                       >
                         Your scorers
                       </Typography>
-                      <Stack direction="row" spacing={1}>
+                      <Stack direction="row" spacing="2px">
                         <Button
                           size="small"
                           variant="text"
@@ -1400,7 +1400,7 @@ export default function NewExperimentModal({
                             "textTransform": "none",
                             "fontSize": "11px",
                             "color": palette.text.tertiary,
-                            "p": 0.5,
+                            "p": "1px",
                             "minWidth": "auto",
                             "&:hover": { color: palette.brand.primary },
                           }}
@@ -1418,7 +1418,7 @@ export default function NewExperimentModal({
                             "textTransform": "none",
                             "fontSize": "11px",
                             "color": palette.text.tertiary,
-                            "p": 0.5,
+                            "p": "1px",
                             "minWidth": "auto",
                             "&:hover": { color: palette.brand.primary },
                           }}
@@ -1459,7 +1459,9 @@ export default function NewExperimentModal({
                         );
                       })}
                     </Stack>
-                    <FormHelperText sx={{ mt: 1, fontSize: "11px", color: palette.text.tertiary }}>
+                    <FormHelperText
+                      sx={{ mt: "2px", fontSize: "11px", color: palette.text.tertiary }}
+                    >
                       {selectedScorerIds.length > 0
                         ? `${selectedScorerIds.length} scorer${selectedScorerIds.length > 1 ? "s" : ""} selected. Only these will run during evaluation.`
                         : "No scorers selected. All enabled scorers will run if none are selected."}
@@ -1467,8 +1469,8 @@ export default function NewExperimentModal({
                     {missingKeyProviders.length > 0 && (
                       <Box
                         sx={{
-                          mt: 1.5,
-                          p: 1.5,
+                          mt: "3px",
+                          p: "3px",
                           borderRadius: "8px",
                           backgroundColor: palette.status.warning.bg,
                           border: `1px solid ${palette.status.warning.text}`,
@@ -1500,17 +1502,17 @@ export default function NewExperimentModal({
                 ) : (
                   <Box
                     sx={{
-                      py: 4,
+                      py: "8px",
                       textAlign: "center",
                       border: `1px dashed ${palette.border.dark}`,
                       borderRadius: "8px",
                     }}
                   >
                     <Sparkles size={32} color={palette.border.dark} style={{ marginBottom: 8 }} />
-                    <Typography sx={{ fontSize: "14px", color: palette.text.tertiary, mb: 1 }}>
+                    <Typography sx={{ fontSize: "14px", color: palette.text.tertiary, mb: "2px" }}>
                       No custom scorers yet
                     </Typography>
-                    <Typography sx={{ fontSize: "12px", color: palette.text.disabled, mb: 2 }}>
+                    <Typography sx={{ fontSize: "12px", color: palette.text.disabled, mb: "4px" }}>
                       Create a scorer to use custom evaluation criteria
                     </Typography>
                     <Button
@@ -1538,8 +1540,8 @@ export default function NewExperimentModal({
 
             {/* Divider between sections when in "both" mode */}
             {judgeMode === "both" && (
-              <Box sx={{ pt: 2 }}>
-                <Divider sx={{ mb: 2 }} />
+              <Box sx={{ pt: "4px" }}>
+                <Divider sx={{ mb: "4px" }} />
                 <Typography
                   sx={{
                     fontSize: "12px",
@@ -1547,7 +1549,7 @@ export default function NewExperimentModal({
                     color: palette.text.disabled,
                     textTransform: "uppercase",
                     letterSpacing: "0.5px",
-                    mb: 1,
+                    mb: "2px",
                   }}
                 >
                   Standard Judge Configuration
@@ -1566,7 +1568,7 @@ export default function NewExperimentModal({
                       color: palette.text.disabled,
                       textTransform: "uppercase",
                       letterSpacing: "0.5px",
-                      mb: 1,
+                      mb: "2px",
                     }}
                   >
                     Select a Provider
@@ -1612,14 +1614,14 @@ export default function NewExperimentModal({
                             <CardContent
                               sx={{
                                 "textAlign": "center",
-                                "py": 3,
-                                "px": 2,
+                                "py": "6px",
+                                "px": "4px",
                                 "height": "100%",
                                 "display": "flex",
                                 "flexDirection": "column",
                                 "alignItems": "center",
                                 "justifyContent": "center",
-                                "&:last-child": { pb: 3 },
+                                "&:last-child": { pb: "6px" },
                               }}
                             >
                               {isSelected && (
@@ -1653,7 +1655,7 @@ export default function NewExperimentModal({
                                   "justifyContent": "center",
                                   "width": 40,
                                   "height": 40,
-                                  "mb": 1.5,
+                                  "mb": "3px",
                                   "& svg": {
                                     width: 32,
                                     height: 32,
@@ -1685,7 +1687,7 @@ export default function NewExperimentModal({
 
                 {config.judgeLlm.provider && (
                   <Box ref={formFieldsRef}>
-                    <Stack spacing={3}>
+                    <Stack spacing="6px">
                       {/* Model Selection - Dropdown for cloud providers, text input for local/OpenRouter */}
                       {PROVIDERS[config.judgeLlm.provider] ? (
                         /* Cloud judges, OpenRouter included: the gateway catalog, any ID typed */
@@ -1723,7 +1725,7 @@ export default function NewExperimentModal({
                                 : "e.g., gpt-4, claude-3-opus";
 
                           return (
-                            <Stack spacing={2}>
+                            <Stack spacing="4px">
                               {/* Endpoint URL for Custom / Self-hosted judge */}
                               {isCustom && (
                                 <Field
@@ -1748,7 +1750,7 @@ export default function NewExperimentModal({
                                       fontSize: "13px",
                                       fontWeight: 500,
                                       color: palette.text.secondary,
-                                      mb: 1,
+                                      mb: "2px",
                                     }}
                                   >
                                     Model
@@ -1849,7 +1851,7 @@ export default function NewExperimentModal({
                                         "fontSize": "11px",
                                         "color": palette.text.tertiary,
                                         "p": 0,
-                                        "mb": 0.5,
+                                        "mb": "1px",
                                         "minWidth": "auto",
                                         "&:hover": { color: palette.brand.primary },
                                       }}
@@ -1897,13 +1899,13 @@ export default function NewExperimentModal({
                         (hasApiKey(config.judgeLlm.provider) ? (
                           <Box
                             sx={{
-                              p: 1.5,
+                              p: "3px",
                               backgroundColor: palette.status.success.bg,
                               borderRadius: "8px",
                               border: `1px solid ${palette.status.success.border}`,
                             }}
                           >
-                            <Stack direction="row" alignItems="center" spacing={1}>
+                            <Stack direction="row" alignItems="center" spacing="2px">
                               <Check size={16} color={palette.status.success.text} />
                               <Typography
                                 sx={{ fontSize: "12px", color: palette.status.success.text }}
@@ -1943,10 +1945,10 @@ export default function NewExperimentModal({
         // If using scorer-only mode, don't show metrics selection
         if (judgeMode === "scorer") {
           return (
-            <Stack spacing={3}>
+            <Stack spacing="6px">
               <Box
                 sx={{
-                  p: 4,
+                  p: "8px",
                   textAlign: "center",
                   border: `1px solid ${palette.border.dark}`,
                   borderRadius: "8px",
@@ -1954,7 +1956,12 @@ export default function NewExperimentModal({
                 }}
               >
                 <Typography
-                  sx={{ fontSize: "15px", fontWeight: 600, color: palette.text.secondary, mb: 1 }}
+                  sx={{
+                    fontSize: "15px",
+                    fontWeight: 600,
+                    color: palette.text.secondary,
+                    mb: "2px",
+                  }}
                 >
                   No metrics available
                 </Typography>
@@ -2017,7 +2024,7 @@ export default function NewExperimentModal({
                   : "Select metrics for your evaluation. Universal core metrics run for all use cases."}
               </Typography>
               {isMultiTurnDataset && (
-                <Box sx={{ mt: 1.5, mb: 3 }}>
+                <Box sx={{ mt: "3px", mb: "6px" }}>
                   <Chip
                     label="Multi-turn dataset detected"
                     size="small"
@@ -2059,14 +2066,14 @@ export default function NewExperimentModal({
                     </Typography>
                     <Typography
                       variant="caption"
-                      sx={{ mt: 0.5, display: "block", color: palette.accent.blue.text }}
+                      sx={{ mt: "1px", display: "block", color: palette.accent.blue.text }}
                     >
                       Designed for multi-turn conversation evaluation
                     </Typography>
                   </Box>
                 </AccordionSummary>
                 <AccordionDetails sx={{ px: "12px", pt: "12px", pb: "16px" }}>
-                  <Stack spacing={2.5}>
+                  <Stack spacing="5px">
                     {Object.entries({
                       turnRelevancy: {
                         label: "Turn Relevancy",
@@ -2114,9 +2121,9 @@ export default function NewExperimentModal({
                           variant="caption"
                           color="text.secondary"
                           sx={{
-                            ml: 3.5,
-                            mt: 0.5,
-                            pr: 2,
+                            ml: "7px",
+                            mt: "1px",
+                            pr: "4px",
                             display: "block",
                             fontSize: "12px",
                             lineHeight: 1.4,
@@ -2135,7 +2142,7 @@ export default function NewExperimentModal({
             {isMultiTurnDataset && (
               <Box
                 sx={{
-                  p: 2.5,
+                  p: "5px",
                   border: `1px solid ${palette.accent.orange.bg}`,
                   borderRadius: "4px",
                   backgroundColor: palette.accent.orange.bg,
@@ -2146,18 +2153,18 @@ export default function NewExperimentModal({
                     fontSize: "14px",
                     fontWeight: 600,
                     color: palette.accent.orange.text,
-                    mb: 0.5,
+                    mb: "1px",
                   }}
                 >
                   Per-Turn Safety Metrics
                 </Typography>
                 <Typography
                   variant="caption"
-                  sx={{ display: "block", mb: 2, color: palette.accent.orange.text }}
+                  sx={{ display: "block", mb: "4px", color: palette.accent.orange.text }}
                 >
                   Bias and Toxicity will be evaluated on each assistant turn and aggregated
                 </Typography>
-                <Stack direction="row" spacing={4}>
+                <Stack direction="row" spacing="8px">
                   <Checkbox
                     id="metric-toxicity-perturn"
                     label="Toxicity (per-turn)"
@@ -2219,14 +2226,14 @@ export default function NewExperimentModal({
                     <Typography
                       variant="caption"
                       color="text.secondary"
-                      sx={{ mt: 0.5, display: "block" }}
+                      sx={{ mt: "1px", display: "block" }}
                     >
                       Runs for every use case (Chatbot, RAG, Agent)
                     </Typography>
                   </Box>
                 </AccordionSummary>
                 <AccordionDetails sx={{ px: "12px", pt: "12px", pb: "16px" }}>
-                  <Stack spacing={2.5}>
+                  <Stack spacing="5px">
                     {Object.entries({
                       answerRelevancy: {
                         label: "Answer Relevancy",
@@ -2278,9 +2285,9 @@ export default function NewExperimentModal({
                           variant="caption"
                           color="text.secondary"
                           sx={{
-                            ml: 3.5,
-                            mt: 0.5,
-                            pr: 2,
+                            ml: "7px",
+                            mt: "1px",
+                            pr: "4px",
                             display: "block",
                             fontSize: "12px",
                             lineHeight: 1.4,
@@ -2299,14 +2306,19 @@ export default function NewExperimentModal({
             {config.taskType === "rag" && !isMultiTurnDataset && (
               <Box>
                 <Typography
-                  sx={{ fontSize: "14px", fontWeight: 600, color: palette.text.secondary, mb: 1.5 }}
+                  sx={{
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    color: palette.text.secondary,
+                    mb: "3px",
+                  }}
                 >
                   RAG Metrics
                 </Typography>
                 <Typography
                   variant="caption"
                   color="text.secondary"
-                  sx={{ display: "block", mb: 2 }}
+                  sx={{ display: "block", mb: "4px" }}
                 >
                   Requires retrieval_context in your dataset
                 </Typography>
@@ -2328,8 +2340,8 @@ export default function NewExperimentModal({
                     desc: "Checks if the answer is grounded in the provided retrieval context.",
                   },
                 }).map(([key, meta]) => (
-                  <Box key={key} sx={{ mb: 1.5 }}>
-                    <Stack spacing={0.5}>
+                  <Box key={key} sx={{ mb: "3px" }}>
+                    <Stack spacing="1px">
                       <Checkbox
                         id={`metric-${key}`}
                         label={(meta as { label: string }).label}
@@ -2349,7 +2361,7 @@ export default function NewExperimentModal({
                       <Typography
                         variant="caption"
                         color="text.secondary"
-                        sx={{ ml: 4, pr: 2, display: "block", fontSize: "12px" }}
+                        sx={{ ml: "8px", pr: "4px", display: "block", fontSize: "12px" }}
                       >
                         {(meta as { desc: string }).desc}
                       </Typography>
@@ -2363,14 +2375,19 @@ export default function NewExperimentModal({
             {config.taskType === "agent" && !isMultiTurnDataset && (
               <Box>
                 <Typography
-                  sx={{ fontSize: "14px", fontWeight: 600, color: palette.text.secondary, mb: 1.5 }}
+                  sx={{
+                    fontSize: "14px",
+                    fontWeight: 600,
+                    color: palette.text.secondary,
+                    mb: "3px",
+                  }}
                 >
                   Agent Metrics
                 </Typography>
                 <Typography
                   variant="caption"
                   color="text.secondary"
-                  sx={{ display: "block", mb: 2 }}
+                  sx={{ display: "block", mb: "4px" }}
                 >
                   Comprehensive agent evaluation based on{" "}
                   <a
@@ -2389,8 +2406,8 @@ export default function NewExperimentModal({
                     fontSize: "12px",
                     fontWeight: 600,
                     color: palette.text.tertiary,
-                    mb: 1,
-                    mt: 2,
+                    mb: "2px",
+                    mt: "4px",
                   }}
                 >
                   🧠 Reasoning Layer
@@ -2405,8 +2422,8 @@ export default function NewExperimentModal({
                     desc: "Measures how well the agent follows its own plan during execution.",
                   },
                 }).map(([key, meta]) => (
-                  <Box key={key} sx={{ mb: 1.5 }}>
-                    <Stack spacing={0.5}>
+                  <Box key={key} sx={{ mb: "3px" }}>
+                    <Stack spacing="1px">
                       <Checkbox
                         id={`metric-${key}`}
                         label={(meta as { label: string }).label}
@@ -2426,7 +2443,7 @@ export default function NewExperimentModal({
                       <Typography
                         variant="caption"
                         color="text.secondary"
-                        sx={{ ml: 4, pr: 2, display: "block", fontSize: "12px" }}
+                        sx={{ ml: "8px", pr: "4px", display: "block", fontSize: "12px" }}
                       >
                         {(meta as { desc: string }).desc}
                       </Typography>
@@ -2440,8 +2457,8 @@ export default function NewExperimentModal({
                     fontSize: "12px",
                     fontWeight: 600,
                     color: palette.text.tertiary,
-                    mb: 1,
-                    mt: 2,
+                    mb: "2px",
+                    mt: "4px",
                   }}
                 >
                   🔧 Action Layer
@@ -2460,8 +2477,8 @@ export default function NewExperimentModal({
                     desc: "Evaluates if tool arguments are correctly typed, formatted, and extracted from context.",
                   },
                 }).map(([key, meta]) => (
-                  <Box key={key} sx={{ mb: 1.5 }}>
-                    <Stack spacing={0.5}>
+                  <Box key={key} sx={{ mb: "3px" }}>
+                    <Stack spacing="1px">
                       <Checkbox
                         id={`metric-${key}`}
                         label={(meta as { label: string }).label}
@@ -2481,7 +2498,7 @@ export default function NewExperimentModal({
                       <Typography
                         variant="caption"
                         color="text.secondary"
-                        sx={{ ml: 4, pr: 2, display: "block", fontSize: "12px" }}
+                        sx={{ ml: "8px", pr: "4px", display: "block", fontSize: "12px" }}
                       >
                         {(meta as { desc: string }).desc}
                       </Typography>
@@ -2495,8 +2512,8 @@ export default function NewExperimentModal({
                     fontSize: "12px",
                     fontWeight: 600,
                     color: palette.text.tertiary,
-                    mb: 1,
-                    mt: 2,
+                    mb: "2px",
+                    mt: "4px",
                   }}
                 >
                   ✅ Execution Layer
@@ -2515,8 +2532,8 @@ export default function NewExperimentModal({
                     desc: "Checks if all agent actions directly contribute to the goal.",
                   },
                 }).map(([key, meta]) => (
-                  <Box key={key} sx={{ mb: 1.5 }}>
-                    <Stack spacing={0.5}>
+                  <Box key={key} sx={{ mb: "3px" }}>
+                    <Stack spacing="1px">
                       <Checkbox
                         id={`metric-${key}`}
                         label={(meta as { label: string }).label}
@@ -2536,7 +2553,7 @@ export default function NewExperimentModal({
                       <Typography
                         variant="caption"
                         color="text.secondary"
-                        sx={{ ml: 4, pr: 2, display: "block", fontSize: "12px" }}
+                        sx={{ ml: "8px", pr: "4px", display: "block", fontSize: "12px" }}
                       >
                         {(meta as { desc: string }).desc}
                       </Typography>
@@ -2642,9 +2659,9 @@ export default function NewExperimentModal({
             sx={{
               display: "inline-flex",
               alignItems: "center",
-              gap: 0.5,
-              px: 1,
-              py: 0.25,
+              gap: "1px",
+              px: "2px",
+              py: "0.5px",
               borderRadius: "4px",
               backgroundColor:
                 config.taskType === "agent"
