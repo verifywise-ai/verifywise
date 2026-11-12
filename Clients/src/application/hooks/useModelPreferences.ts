@@ -1,13 +1,15 @@
 /**
  * Hook for auto-populating model settings in experiment forms
  *
- * Fetches the most recently used model from the Models table.
- * For judge LLM, uses the most recently used scorer's config if available.
+ * The model comes from the most recently saved entry in the Models table.
+ * The judge comes from the organization's most recent completed experiment that used
+ * one, so it is remembered without adding anything to the Scorers list, and a judge
+ * that made a run fail is not suggested again.
  */
 
 import { useCallback, useState, useEffect, useRef } from "react";
 import { evalModelsService } from "../../infrastructure/api/evalModelsService";
-import { deepEvalScorersService } from "../../infrastructure/api/deepEvalScorersService";
+import { experimentsService } from "../../infrastructure/api/evaluationLogsService";
 import { deepEvalOrgsService } from "../../infrastructure/api/deepEvalOrgsService";
 import { DEFAULT_JUDGE } from "../../presentation/utils/providers";
 
@@ -18,7 +20,7 @@ export interface ModelPreferences {
     accessMethod: string;
     endpointUrl?: string;
   };
-  // Judge LLM settings (from scorer config or defaults)
+  // Judge LLM settings (from the latest experiment, or defaults)
   judgeLlm: {
     provider: string;
     model: string;
@@ -28,11 +30,36 @@ export interface ModelPreferences {
   savedAt?: string;
 }
 
+interface ExperimentJudgeSummary {
+  created_at?: string;
+  config?: { judgeLlm?: { provider?: string; model?: string; endpointUrl?: string } };
+}
+
+/** Enough recent runs to find one that used a judge; scorer-only runs carry none. */
+const RECENT_EXPERIMENTS_TO_SCAN = 20;
+
+/** The judge of the newest experiment that used one (the list comes newest first). */
+function latestJudgeFrom(
+  experiments: ExperimentJudgeSummary[],
+): ModelPreferences["judgeLlm"] | null {
+  for (const exp of experiments) {
+    const judge = exp.config?.judgeLlm;
+    if (judge?.provider && judge?.model) {
+      return {
+        provider: judge.provider,
+        model: judge.model,
+        endpointUrl: judge.endpointUrl || undefined,
+      };
+    }
+  }
+  return null;
+}
+
 /**
  * Hook to get the most recently used model for auto-populating experiments
  */
 export function useModelPreferences(projectId: string, orgId?: string | null) {
-  void projectId; // Reserved for future project-scoped preferences
+  void projectId; // Preferences are organization-wide, like the Models list
   const [preferences, setPreferences] = useState<ModelPreferences | null>(null);
   const [loading, setLoading] = useState(false);
   const [loaded, setLoaded] = useState(false);
@@ -51,29 +78,14 @@ export function useModelPreferences(projectId: string, orgId?: string | null) {
     try {
       const currentOrgId = orgIdRef.current;
 
-      // Fetch latest model and scorers in parallel
-      const [models, scorersRes] = await Promise.all([
+      const [models, experimentsRes] = await Promise.all([
         evalModelsService.listModels(currentOrgId || undefined),
-        deepEvalScorersService.list({ org_id: currentOrgId || undefined }),
+        experimentsService
+          .getExperiments({ status: "completed", limit: RECENT_EXPERIMENTS_TO_SCAN })
+          .catch(() => ({ experiments: [] })),
       ]);
-
-      // Find the latest judge scorer (type: "llm" with judge config).
-      // Scorers may be persisted in either the flat shape ({provider, model}) used by
-      // this hook historically, or the nested shape ({judgeModel: {name, provider}})
-      // used by the Scorers page. Accept both so we don't lose the latest pick.
-      const latestJudge = scorersRes.scorers
-        .filter((s) => {
-          if (s.type !== "llm") return false;
-          const cfg = s.config;
-          const provider = cfg?.judgeModel?.provider || cfg?.provider;
-          const model = cfg?.judgeModel?.name || cfg?.model;
-          return Boolean(provider && model);
-        })
-        .sort((a, b) => {
-          const dateA = a.updatedAt ? new Date(a.updatedAt).getTime() : 0;
-          const dateB = b.updatedAt ? new Date(b.updatedAt).getTime() : 0;
-          return dateB - dateA;
-        })[0];
+      const experiments: ExperimentJudgeSummary[] = experimentsRes?.experiments ?? [];
+      const latestJudge = latestJudgeFrom(experiments);
 
       if (models.length > 0 || latestJudge) {
         const latestModel = models[0];
@@ -90,27 +102,8 @@ export function useModelPreferences(projectId: string, orgId?: string | null) {
                 accessMethod: "",
                 endpointUrl: undefined,
               },
-          // Use latest judge from scorers, or default. Read both shapes:
-          // nested config.judgeModel.{name,provider,endpointUrl} takes precedence
-          // (canonical / Scorers-page shape), with fall-through to the flat
-          // {provider, model, endpointUrl} historically written by this hook.
-          judgeLlm: latestJudge
-            ? {
-                provider:
-                  latestJudge.config?.judgeModel?.provider ||
-                  latestJudge.config?.provider ||
-                  DEFAULT_JUDGE.provider,
-                model:
-                  latestJudge.config?.judgeModel?.name ||
-                  latestJudge.config?.model ||
-                  DEFAULT_JUDGE.model,
-                endpointUrl:
-                  latestJudge.config?.judgeModel?.endpointUrl ||
-                  latestJudge.config?.endpointUrl ||
-                  undefined,
-              }
-            : { provider: DEFAULT_JUDGE.provider, model: DEFAULT_JUDGE.model },
-          savedAt: latestModel?.updatedAt || latestJudge?.updatedAt || undefined,
+          judgeLlm: latestJudge ?? { provider: DEFAULT_JUDGE.provider, model: DEFAULT_JUDGE.model },
+          savedAt: latestModel?.updatedAt || experiments[0]?.created_at || undefined,
         };
         setPreferences(prefs);
         return prefs;
@@ -139,8 +132,8 @@ export function useModelPreferences(projectId: string, orgId?: string | null) {
   }, [loaded, preferences, loadPreferences]);
 
   /**
-   * Save model to the models table and judge to the scorers table
-   * Called when experiment is submitted - saves configs for next time
+   * Save the model to the Models table. Called when an experiment is submitted. The judge
+   * needs no saving: the new experiment stores it and the next load reads it from there.
    */
   const savePreferences = useCallback(
     async (prefs: Omit<ModelPreferences, "savedAt">): Promise<boolean> => {
@@ -163,7 +156,7 @@ export function useModelPreferences(projectId: string, orgId?: string | null) {
           return false;
         }
 
-        // 1. Save the model (if not already exists)
+        // Save the model (if not already exists)
         const models = await evalModelsService.listModels(currentOrgId);
         const existingModel = models.find(
           (m) => m.name === prefs.model.name && m.provider === prefs.model.accessMethod,
@@ -178,66 +171,21 @@ export function useModelPreferences(projectId: string, orgId?: string | null) {
           });
         }
 
-        // 2. Upsert the judge as a scorer — update if it exists (keeps table clean, refreshes updatedAt),
-        //    create if it doesn't. Dedup by provider + model so each unique judge appears only once.
-        if (prefs.judgeLlm?.provider && prefs.judgeLlm?.model) {
-          const scorersRes = await deepEvalScorersService.list({ org_id: currentOrgId });
-          const judgeScorerName = `Judge: ${prefs.judgeLlm.model}`;
-          // Persist BOTH shapes:
-          //  - nested `judgeModel` is what EvalServer's run_custom_scorer reads at
-          //    runtime; omitting it causes "Scorer has no judge model configured".
-          //  - flat `provider` / `model` are kept for backward compatibility with
-          //    older reads elsewhere in the UI.
-          const judgeConfig = {
-            provider: prefs.judgeLlm.provider,
-            model: prefs.judgeLlm.model,
-            judgeModel: {
-              name: prefs.judgeLlm.model,
-              provider: prefs.judgeLlm.provider,
-              ...(prefs.judgeLlm.endpointUrl ? { endpointUrl: prefs.judgeLlm.endpointUrl } : {}),
-            },
-            ...(prefs.judgeLlm.endpointUrl ? { endpointUrl: prefs.judgeLlm.endpointUrl } : {}),
-          };
-
-          // Match by model + provider (handle both flat config.model and nested config.judgeModel.name)
-          const existingJudge = scorersRes.scorers.find(
-            (s) =>
-              s.type === "llm" &&
-              (s.config?.model === prefs.judgeLlm.model ||
-                s.config?.judgeModel?.name === prefs.judgeLlm.model) &&
-              (s.config?.provider === prefs.judgeLlm.provider ||
-                s.config?.judgeModel?.provider === prefs.judgeLlm.provider),
-          );
-
-          if (existingJudge) {
-            // Update to refresh updatedAt and sync any changes (threshold, name)
-            await deepEvalScorersService.update(existingJudge.id, {
-              name: judgeScorerName,
-              description: `Auto-saved judge LLM: ${prefs.judgeLlm.provider}/${prefs.judgeLlm.model}`,
-              config: judgeConfig,
-              defaultThreshold: existingJudge.defaultThreshold ?? 0.5,
-            });
-          } else {
-            await deepEvalScorersService.create({
-              orgId: currentOrgId,
-              name: judgeScorerName,
-              description: `Auto-saved judge LLM: ${prefs.judgeLlm.provider}/${prefs.judgeLlm.model}`,
-              type: "llm",
-              metricKey: `judge_${prefs.judgeLlm.model.replace(/[^a-z0-9]/gi, "_").toLowerCase()}`,
-              config: judgeConfig,
-              enabled: true,
-              defaultThreshold: 0.5,
-            });
-          }
-        }
-
-        setPreferences({
+        // A scorer-only run has no judge; keep the last one rather than blanking it
+        setPreferences((prev) => ({
           ...prefs,
+          judgeLlm:
+            prefs.judgeLlm?.provider && prefs.judgeLlm?.model
+              ? prefs.judgeLlm
+              : (prev?.judgeLlm ?? {
+                  provider: DEFAULT_JUDGE.provider,
+                  model: DEFAULT_JUDGE.model,
+                }),
           savedAt: new Date().toISOString(),
-        });
+        }));
         return true;
       } catch (err) {
-        console.error("Failed to save model/judge preferences:", err);
+        console.error("Failed to save model preferences:", err);
         return false;
       }
     },

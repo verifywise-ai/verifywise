@@ -51,7 +51,7 @@ async function selectLocalModel(modelName = "llama2") {
 /** Advance from step 0 to the dataset step (step 1). */
 async function goToDatasetStep() {
   fireEvent.click(screen.getByRole("button", { name: "Next" }));
-  await screen.findByText("Option 1: Use custom dataset");
+  await screen.findByText("Upload a dataset");
 }
 
 /** Advance from the dataset step to the scorer/judge step (step 2). */
@@ -154,7 +154,7 @@ describe("NewExperimentModal", () => {
       expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
 
       // Select a template → dataset prompts load → Next enabled
-      fireEvent.click(screen.getByText("Basic Chatbot"));
+      fireEvent.click(screen.getByText("Basic chatbot"));
       await waitFor(() =>
         expect(deepEvalMocks.readDataset).toHaveBeenCalledWith(DEFAULT_TEMPLATE_PATH),
       );
@@ -170,7 +170,7 @@ describe("NewExperimentModal", () => {
 
       // Back navigation returns to the dataset step
       fireEvent.click(screen.getByRole("button", { name: "Back" }));
-      expect(await screen.findByText("Option 1: Use custom dataset")).toBeInTheDocument();
+      expect(await screen.findByText("Upload a dataset")).toBeInTheDocument();
       expect(screen.queryByText("Select the model you want to evaluate.")).not.toBeInTheDocument();
     });
 
@@ -195,6 +195,7 @@ describe("NewExperimentModal", () => {
       renderModal();
       await selectLocalModel();
       await goToDatasetStep();
+      fireEvent.click(screen.getByText("Basic chatbot"));
       await waitFor(() =>
         expect(deepEvalMocks.readDataset).toHaveBeenCalledWith(DEFAULT_TEMPLATE_PATH),
       );
@@ -202,7 +203,7 @@ describe("NewExperimentModal", () => {
 
       // Switch to "Judge + scorer" mode → divider + scorers + judge config render
       fireEvent.click(screen.getByText("Judge + scorer"));
-      expect(await screen.findByText("Standard Judge Configuration")).toBeInTheDocument();
+      expect(await screen.findByText("Standard judge")).toBeInTheDocument();
 
       // Judge not configured yet → Next disabled
       expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
@@ -234,9 +235,7 @@ describe("NewExperimentModal", () => {
 
       fireEvent.click(screen.getByText("OpenAI"));
 
-      expect(
-        await screen.findByText("API key configured — will be saved for future experiments"),
-      ).toBeInTheDocument();
+      expect(await screen.findByText("Uses your saved API key")).toBeInTheDocument();
       expect(screen.queryByLabelText("API key")).not.toBeInTheDocument();
       expect(deepEvalMocks.verifySavedLlmApiKey).toHaveBeenCalledWith(1);
     });
@@ -254,9 +253,7 @@ describe("NewExperimentModal", () => {
 
       expect(await screen.findByLabelText("API key")).toBeInTheDocument();
       expect(screen.getByText(REJECTED_SAVED_KEY_HINT)).toBeInTheDocument();
-      expect(
-        screen.queryByText("API key configured — will be saved for future experiments"),
-      ).not.toBeInTheDocument();
+      expect(screen.queryByText("Uses your saved API key")).not.toBeInTheDocument();
       expect(deepEvalMocks.verifySavedLlmApiKey).toHaveBeenCalledTimes(1);
     });
 
@@ -288,9 +285,7 @@ describe("NewExperimentModal", () => {
       rerender(modal(true));
       fireEvent.click(await screen.findByText("Gemini"));
 
-      expect(
-        await screen.findByText("API key configured — will be saved for future experiments"),
-      ).toBeInTheDocument();
+      expect(await screen.findByText("Uses your saved API key")).toBeInTheDocument();
       expect(screen.queryByText(REJECTED_SAVED_KEY_HINT)).not.toBeInTheDocument();
       expect(deepEvalMocks.verifySavedLlmApiKey).toHaveBeenCalledTimes(2);
     });
@@ -422,7 +417,7 @@ describe("NewExperimentModal", () => {
       await selectLocalModel();
       await goToDatasetStep();
 
-      expect(await screen.findByText("Option 2: Your datasets")).toBeInTheDocument();
+      expect(await screen.findByText("Your datasets")).toBeInTheDocument();
       fireEvent.click(screen.getByText("My Multi Dataset"));
       await waitFor(() =>
         expect(deepEvalMocks.readDataset).toHaveBeenCalledWith("uploads/mine.json"),
@@ -480,7 +475,7 @@ describe("NewExperimentModal", () => {
       await selectLocalModel();
       await goToDatasetStep();
 
-      fireEvent.click(screen.getByText("General Assistant Multi-Turn"));
+      fireEvent.click(screen.getByText("General assistant (multi-turn)"));
       await waitFor(() =>
         expect(deepEvalMocks.readDataset).toHaveBeenCalledWith(
           "chatbot/chatbot_general_assistant_multiturn.json",
@@ -490,11 +485,11 @@ describe("NewExperimentModal", () => {
       await selectLocalJudge();
       await goToMetricsStep();
 
-      expect(screen.getByText("Conversational Metrics")).toBeInTheDocument();
-      expect(screen.getByText("Per-Turn Safety Metrics")).toBeInTheDocument();
-      expect(screen.getByText("Multi-turn dataset detected")).toBeInTheDocument();
+      expect(screen.getByText("Conversational metrics")).toBeInTheDocument();
+      expect(screen.getByText("Per-turn safety metrics")).toBeInTheDocument();
+      expect(screen.getByText("Multi-turn dataset")).toBeInTheDocument();
 
-      const turnRelevancy = screen.getByRole("checkbox", { name: "Turn Relevancy" });
+      const turnRelevancy = screen.getByRole("checkbox", { name: "Turn relevancy" });
       expect(turnRelevancy).toBeChecked();
       fireEvent.click(turnRelevancy);
       expect(turnRelevancy).not.toBeChecked();
@@ -521,6 +516,7 @@ describe("NewExperimentModal", () => {
       renderModal();
       await selectLocalModel();
       await goToDatasetStep();
+      fireEvent.click(screen.getByText("Basic chatbot"));
       await waitFor(() =>
         expect(deepEvalMocks.readDataset).toHaveBeenCalledWith(DEFAULT_TEMPLATE_PATH),
       );
@@ -567,6 +563,7 @@ describe("NewExperimentModal", () => {
       // Select the saved cloud model (no saved API key)
       fireEvent.click(await screen.findByText("gpt-4o"));
       await goToDatasetStep();
+      fireEvent.click(screen.getByText("Basic chatbot"));
       await waitFor(() =>
         expect(deepEvalMocks.readDataset).toHaveBeenCalledWith(DEFAULT_TEMPLATE_PATH),
       );
@@ -575,13 +572,13 @@ describe("NewExperimentModal", () => {
       await goToMetricsStep();
 
       // First submit triggers model validation → warning
-      fireEvent.click(screen.getByRole("button", { name: "Start Experiment" }));
+      fireEvent.click(screen.getByRole("button", { name: "Start experiment" }));
       expect(await screen.findByText("API key may not be configured")).toBeInTheDocument();
       expect(deepEvalMocks.validateModel).toHaveBeenCalledWith("gpt-4o", "openai", true);
       expect(deepEvalMocks.createExperiment).not.toHaveBeenCalled();
 
       // Second submit acknowledges the warning and creates the experiment
-      fireEvent.click(screen.getByRole("button", { name: "Start Experiment" }));
+      fireEvent.click(screen.getByRole("button", { name: "Start experiment" }));
       await waitFor(() => expect(deepEvalMocks.createExperiment).toHaveBeenCalled());
       expect(onStarted).toHaveBeenCalled();
     });
@@ -609,6 +606,7 @@ describe("NewExperimentModal", () => {
       renderModal();
       fireEvent.click(await screen.findByText("gpt-4o"));
       await goToDatasetStep();
+      fireEvent.click(screen.getByText("Basic chatbot"));
       await waitFor(() =>
         expect(deepEvalMocks.readDataset).toHaveBeenCalledWith(DEFAULT_TEMPLATE_PATH),
       );
@@ -616,7 +614,7 @@ describe("NewExperimentModal", () => {
       await selectLocalJudge();
       await goToMetricsStep();
 
-      fireEvent.click(screen.getByRole("button", { name: "Start Experiment" }));
+      fireEvent.click(screen.getByRole("button", { name: "Start experiment" }));
       expect(await screen.findByText("The provider refused this model")).toBeInTheDocument();
       expect(screen.getByText(/not available to this API key/)).toBeInTheDocument();
       expect(deepEvalMocks.createExperiment).not.toHaveBeenCalled();
@@ -624,6 +622,48 @@ describe("NewExperimentModal", () => {
   });
 
   describe("submit (3.3.4)", () => {
+    it("starts the dataset step with no dataset selected", async () => {
+      mockListDatasetsWith("chatbot", [DEFAULT_TEMPLATE_PATH]);
+      deepEvalMocks.readDataset.mockResolvedValue({ prompts: samplePrompts });
+
+      renderModal();
+      await selectLocalModel("llama2");
+      await goToDatasetStep();
+
+      // Give any auto-load a chance to run; nothing may be picked for the user
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+      expect(deepEvalMocks.readDataset).not.toHaveBeenCalled();
+      expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
+    });
+
+    it("leaves the failing conversational metrics off for a multi-turn dataset", async () => {
+      const multiTurnPath = "chatbot/chatbot_general_assistant_multiturn.json";
+      mockListDatasetsWith("chatbot", [multiTurnPath]);
+      deepEvalMocks.readDataset.mockResolvedValue({ prompts: samplePrompts });
+
+      renderModal();
+      await selectLocalModel("llama2");
+      await goToDatasetStep();
+      fireEvent.click(screen.getByText("General assistant (multi-turn)"));
+      await waitFor(() => expect(deepEvalMocks.readDataset).toHaveBeenCalledWith(multiTurnPath));
+      await goToScorerStep();
+      await selectLocalJudge();
+      await goToMetricsStep();
+
+      fireEvent.click(screen.getByRole("button", { name: "Start experiment" }));
+
+      await waitFor(() => expect(deepEvalMocks.createExperiment).toHaveBeenCalled());
+      const { metrics } = deepEvalMocks.createExperiment.mock.calls[0][0].config;
+      expect(metrics.conversationCoherence).toBe(false);
+      expect(metrics.conversationHelpfulness).toBe(false);
+      expect(metrics.taskCompletion).toBe(false);
+      expect(metrics.conversationSafety).toBe(false);
+      expect(metrics.turnRelevancy).toBe(true);
+      expect(metrics.knowledgeRetention).toBe(true);
+    });
+
     it("creates an experiment on submit and notifies the parent", async () => {
       mockListDatasetsWith("chatbot", [DEFAULT_TEMPLATE_PATH]);
       deepEvalMocks.readDataset.mockResolvedValue({ prompts: samplePrompts });
@@ -632,6 +672,7 @@ describe("NewExperimentModal", () => {
 
       await selectLocalModel("llama2");
       await goToDatasetStep();
+      fireEvent.click(screen.getByText("Basic chatbot"));
       await waitFor(() =>
         expect(deepEvalMocks.readDataset).toHaveBeenCalledWith(DEFAULT_TEMPLATE_PATH),
       );
@@ -639,7 +680,7 @@ describe("NewExperimentModal", () => {
       await selectLocalJudge();
       await goToMetricsStep();
 
-      fireEvent.click(screen.getByRole("button", { name: "Start Experiment" }));
+      fireEvent.click(screen.getByRole("button", { name: "Start experiment" }));
 
       await waitFor(() => expect(deepEvalMocks.createExperiment).toHaveBeenCalled());
       const arg = deepEvalMocks.createExperiment.mock.calls[0][0];
@@ -653,7 +694,7 @@ describe("NewExperimentModal", () => {
       expect(arg.config.judgeLlm.provider).toBe("ollama");
       expect(arg.config.evaluationMode).toBe("standard");
 
-      expect(await screen.findByText("Experiment Created!")).toBeInTheDocument();
+      expect(await screen.findByText("Experiment created")).toBeInTheDocument();
       expect(onStarted).toHaveBeenCalledWith(
         expect.objectContaining({
           id: "exp-123",
@@ -680,6 +721,7 @@ describe("NewExperimentModal", () => {
       renderModal();
       await selectLocalModel();
       await goToDatasetStep();
+      fireEvent.click(screen.getByText("Basic chatbot"));
       await waitFor(() =>
         expect(deepEvalMocks.readDataset).toHaveBeenCalledWith(DEFAULT_TEMPLATE_PATH),
       );
@@ -690,7 +732,7 @@ describe("NewExperimentModal", () => {
       fireEvent.change(screen.getByLabelText("Experiment name"), {
         target: { value: "My custom run" },
       });
-      fireEvent.click(screen.getByRole("button", { name: "Start Experiment" }));
+      fireEvent.click(screen.getByRole("button", { name: "Start experiment" }));
 
       await waitFor(() => expect(deepEvalMocks.createExperiment).toHaveBeenCalled());
       expect(deepEvalMocks.createExperiment.mock.calls[0][0].name).toBe("My custom run");

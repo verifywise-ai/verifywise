@@ -89,21 +89,21 @@ export interface DatasetTemplate {
 export const DATASET_TEMPLATES: readonly DatasetTemplate[] = [
   // Chatbot — single-turn
   {
-    name: "Basic Chatbot",
+    name: "Basic chatbot",
     path: "chatbot/chatbot_basic.json",
     desc: "Standard question-answer pairs",
     type: "single-turn",
     taskType: "chatbot",
   },
   {
-    name: "Coding Helper",
+    name: "Coding helper",
     path: "chatbot/chatbot_coding_helper.json",
     desc: "Code assistance scenarios",
     type: "single-turn",
     taskType: "chatbot",
   },
   {
-    name: "Customer Support (Single-Turn)",
+    name: "Customer support (single-turn)",
     path: "chatbot/chatbot_customer_support.json",
     desc: "Support Q&A pairs",
     type: "single-turn",
@@ -111,21 +111,21 @@ export const DATASET_TEMPLATES: readonly DatasetTemplate[] = [
   },
   // Chatbot — multi-turn
   {
-    name: "General Assistant Multi-Turn",
+    name: "General assistant (multi-turn)",
     path: "chatbot/chatbot_general_assistant_multiturn.json",
     desc: "Multi-turn conversations",
     type: "multi-turn",
     taskType: "chatbot",
   },
   {
-    name: "Customer Support Multi-Turn",
+    name: "Customer support (multi-turn)",
     path: "chatbot/chatbot_customer_support_multiturn.json",
     desc: "Support conversations",
     type: "multi-turn",
     taskType: "chatbot",
   },
   {
-    name: "Tech Support Multi-Turn",
+    name: "Tech support (multi-turn)",
     path: "chatbot/chatbot_tech_support_multiturn.json",
     desc: "Technical help conversations",
     type: "multi-turn",
@@ -133,7 +133,7 @@ export const DATASET_TEMPLATES: readonly DatasetTemplate[] = [
   },
   // RAG
   {
-    name: "Product Docs",
+    name: "Product docs",
     path: "rag/rag_product_docs.json",
     desc: "Product documentation queries",
     type: "single-turn",
@@ -147,14 +147,14 @@ export const DATASET_TEMPLATES: readonly DatasetTemplate[] = [
     taskType: "rag",
   },
   {
-    name: "Research Papers",
+    name: "Research papers",
     path: "rag/rag_research_papers.json",
     desc: "Academic content retrieval",
     type: "single-turn",
     taskType: "rag",
   },
   {
-    name: "Document Q&A Multi-Turn",
+    name: "Document Q&A (multi-turn)",
     path: "rag/rag_document_qa_multiturn.json",
     desc: "Multi-turn document conversations",
     type: "multi-turn",
@@ -162,21 +162,21 @@ export const DATASET_TEMPLATES: readonly DatasetTemplate[] = [
   },
   // Agent
   {
-    name: "Agent Planning",
+    name: "Agent planning",
     path: "agent/agent_planning_multiturn.json",
     desc: "Multi-step planning scenarios",
     type: "multi-turn",
     taskType: "agent",
   },
   {
-    name: "Agent Task Execution",
+    name: "Agent task execution",
     path: "agent/agent_task_execution_multiturn.json",
     desc: "Tool usage and task completion",
     type: "multi-turn",
     taskType: "agent",
   },
   {
-    name: "Agent Workflow Automation",
+    name: "Agent workflow automation",
     path: "agent/agent_workflow_automation_multiturn.json",
     desc: "Automated workflow tasks",
     type: "multi-turn",

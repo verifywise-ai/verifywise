@@ -56,8 +56,6 @@ def patched_dependencies(monkeypatch: pytest.MonkeyPatch, stub_model_runner: Mag
     # The scorer crud helpers are imported by NAME into run_evaluation, so patch
     # the names where they are *used*, not where they are defined.
     monkeypatch.setattr(run_eval_module, "list_scorers", _async_return([]))
-    monkeypatch.setattr(run_eval_module, "create_scorer", _async_return({"id": "s1"}))
-    monkeypatch.setattr(run_eval_module, "update_scorer", _async_return(None))
     monkeypatch.setattr(run_eval_module, "touch_scorer_updated_at", _async_return(None))
 
     monkeypatch.setattr(
@@ -211,8 +209,6 @@ async def test_dataset_loading_simulated_mode(
     monkeypatch.setattr(crud_module, "create_metric", _async_return(None))
     monkeypatch.setattr(crud_module, "update_log_metadata", _async_return(None))
     monkeypatch.setattr(run_eval_module, "list_scorers", _async_return([]))
-    monkeypatch.setattr(run_eval_module, "create_scorer", _async_return({"id": "s1"}))
-    monkeypatch.setattr(run_eval_module, "update_scorer", _async_return(None))
     monkeypatch.setattr(run_eval_module, "touch_scorer_updated_at", _async_return(None))
     monkeypatch.setattr(
         evaluator_module.DeepEvalEvaluator,

@@ -7,6 +7,7 @@
  */
 
 import { Box, Card, CardContent, CircularProgress, Grid, Stack, Typography } from "@mui/material";
+import SectionLabel from "./SectionLabel";
 import { Check } from "lucide-react";
 import type { RefObject } from "react";
 import Select from "../../../components/Inputs/Select";
@@ -34,7 +35,6 @@ export interface ModelStepProps {
     endpointUrl: string;
     apiKey: string;
   };
-  useCustomModelName: boolean;
   modelInventories: ModelInventoryOption[];
   selectedModelInventoryId: number | null;
   fieldsRef?: RefObject<HTMLDivElement | null>;
@@ -48,7 +48,6 @@ export interface ModelStepProps {
   onEndpointUrlChange: (url: string) => void;
   onApiKeyChange: (key: string) => void;
   onSavedModelSelect: (id: string | null) => void;
-  onUseCustomModelNameChange: (custom: boolean) => void;
   onModelInventoryChange: (id: number | null) => void;
 }
 
@@ -57,7 +56,6 @@ export default function ModelStep({
   savedModels,
   selectedSavedModelId,
   modelConfig,
-  useCustomModelName,
   modelInventories,
   selectedModelInventoryId,
   fieldsRef,
@@ -70,7 +68,6 @@ export default function ModelStep({
   onEndpointUrlChange,
   onApiKeyChange,
   onSavedModelSelect,
-  onUseCustomModelNameChange,
   onModelInventoryChange,
 }: ModelStepProps) {
   const selectedModelProvider = availableModelProviders.find(
@@ -87,7 +84,7 @@ export default function ModelStep({
   });
 
   return (
-    <Stack spacing={4}>
+    <Stack spacing="20px">
       <Box>
         <Typography variant="body2" color="text.secondary">
           Select the model you want to evaluate.
@@ -95,20 +92,20 @@ export default function ModelStep({
       </Box>
 
       {loadingApiKeys ? (
-        <Box sx={{ py: 4, textAlign: "center" }}>
+        <Box sx={{ py: "8px", textAlign: "center" }}>
           <CircularProgress size={24} />
-          <Typography sx={{ mt: 1, fontSize: "13px", color: palette.text.tertiary }}>
+          <Typography sx={{ mt: "2px", fontSize: "13px", color: palette.text.tertiary }}>
             Loading providers...
           </Typography>
         </Box>
       ) : (
         <Box>
           <Typography
-            sx={{ mb: 2.5, fontSize: "14px", fontWeight: 500, color: palette.text.secondary }}
+            sx={{ mb: "8px", fontSize: "13px", fontWeight: 600, color: palette.text.secondary }}
           >
             Model provider
           </Typography>
-          <Grid container spacing={1.5}>
+          <Grid container spacing="3px">
             {availableModelProviders.map((provider) => {
               const { Logo } = provider;
               const isSelected = modelConfig.accessMethod === provider.id;
@@ -135,14 +132,14 @@ export default function ModelStep({
                     <CardContent
                       sx={{
                         "textAlign": "center",
-                        "py": 3,
-                        "px": 2,
+                        "py": "6px",
+                        "px": "4px",
                         "height": "100%",
                         "display": "flex",
                         "flexDirection": "column",
                         "alignItems": "center",
                         "justifyContent": "center",
-                        "&:last-child": { pb: 3 },
+                        "&:last-child": { pb: "6px" },
                       }}
                     >
                       {isSelected && (
@@ -171,7 +168,7 @@ export default function ModelStep({
                           "justifyContent": "center",
                           "width": 40,
                           "height": 40,
-                          "mb": 1.5,
+                          "mb": "3px",
                           "& svg": {
                             width: 32,
                             height: 32,
@@ -202,19 +199,8 @@ export default function ModelStep({
 
       {uniqueSavedModels.length > 0 && (
         <Box>
-          <Typography
-            sx={{
-              fontSize: "12px",
-              fontWeight: 600,
-              color: palette.text.disabled,
-              textTransform: "uppercase",
-              letterSpacing: "0.06em",
-              mb: 1.5,
-            }}
-          >
-            Saved models
-          </Typography>
-          <Stack spacing={1}>
+          <SectionLabel>Saved models</SectionLabel>
+          <Stack spacing="6px">
             {uniqueSavedModels.map((m) => {
               const providerKey = m.provider.toLowerCase();
               const providerEntry = availableModelProviders.find((p) => p.id === providerKey);
@@ -228,10 +214,12 @@ export default function ModelStep({
                     "display": "flex",
                     "alignItems": "center",
                     "justifyContent": "space-between",
-                    "px": 2,
-                    "py": 1.25,
-                    "borderRadius": "8px",
-                    "border": `1.5px solid ${isSelected ? palette.brand.primary : palette.border.light}`,
+                    "px": "12px",
+                    "py": "10px",
+                    "minHeight": "40px",
+                    "boxSizing": "border-box",
+                    "borderRadius": "4px",
+                    "border": `1px solid ${isSelected ? palette.brand.primary : palette.border.light}`,
                     "backgroundColor": isSelected ? palette.brand.primaryLight : "transparent",
                     "cursor": "pointer",
                     "transition": "all 0.15s ease",
@@ -241,7 +229,7 @@ export default function ModelStep({
                     },
                   }}
                 >
-                  <Stack direction="row" alignItems="center" spacing={1.5}>
+                  <Stack direction="row" alignItems="center" spacing="3px">
                     {ProviderLogo && (
                       <Box
                         sx={{
@@ -306,7 +294,6 @@ export default function ModelStep({
           modelValue={modelConfig.name}
           endpointUrl={modelConfig.endpointUrl}
           apiKey={modelConfig.apiKey}
-          useCustomModelName={useCustomModelName}
           hasApiKeyConfigured={hasApiKey(modelConfig.accessMethod)}
           savedKeyRejected={savedKeyRejected(modelConfig.accessMethod)}
           needsApiKey={!!selectedModelProvider?.needsApiKey}
@@ -317,7 +304,6 @@ export default function ModelStep({
           onModelChange={onModelNameChange}
           onEndpointChange={onEndpointUrlChange}
           onApiKeyChange={onApiKeyChange}
-          onCustomModelToggle={onUseCustomModelNameChange}
         />
       )}
 
