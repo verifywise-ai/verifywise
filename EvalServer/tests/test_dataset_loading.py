@@ -304,6 +304,7 @@ def _scenario_config(dataset: Dict[str, Any]) -> Dict[str, Any]:
 
     cfg = _base_config(taskType="chatbot")
     cfg["dataset"] = dataset
+    cfg["judgeLlm"] = {"provider": "openai", "model": "gpt-4o-mini"}
     return cfg
 
 
@@ -416,6 +417,107 @@ async def test_simulated_cases_carry_scenario_and_expected_outcome(
     assert captured[0]["scenario"] == "Reset a password"
     assert captured[0]["expected_outcome"] == "Steps are explained"
     assert captured[0]["metadata"]["turn_count"] == 2
+
+
+@pytest.mark.asyncio
+async def test_simulated_conversations_keep_row_order_and_get_logs(
+    mock_db_session: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+    stub_model_runner: MagicMock,
+) -> None:
+    """Grouping by turn limit must not reorder results, and each conversation is logged."""
+    _install_fake_simulator(monkeypatch)
+    from crud import evaluation_logs as crud_module
+    from deepeval_engine import deepeval_evaluator as evaluator_module
+    from utils.run_evaluation import run_evaluation
+
+    captured: List[Dict[str, Any]] = []
+    monkeypatch.setattr(
+        evaluator_module.DeepEvalEvaluator,
+        "run_evaluation",
+        lambda self, **kwargs: captured.extend(kwargs.get("test_cases_data") or []) or [],
+    )
+    logs: List[Dict[str, Any]] = []
+
+    async def record_log(**kwargs: Any) -> Dict[str, Any]:
+        logs.append(kwargs)
+        return {"id": f"log-{len(logs)}"}
+
+    monkeypatch.setattr(crud_module, "create_log", record_log)
+
+    config = _scenario_config(
+        {
+            "prompts": [
+                {"scenario": "a", "expected_outcome": "x", "max_turns": 2},
+                {"scenario": "b", "expected_outcome": "x"},
+                {"scenario": "c", "expected_outcome": "x", "max_turns": 2},
+            ]
+        }
+    )
+    result = await run_evaluation(
+        db=mock_db_session, experiment_id="exp-sim-5", config=config, organization_id=1
+    )
+
+    assert "error" not in result
+    assert [c["scenario"] for c in captured] == ["a", "b", "c"]
+    assert [c["metadata"]["sample_id"] for c in captured] == [
+        "simulated_scenario_1",
+        "simulated_scenario_2",
+        "simulated_scenario_3",
+    ]
+    simulated_logs = [log for log in logs if log.get("metadata", {}).get("is_simulated")]
+    assert [log["metadata"]["scenario"] for log in simulated_logs] == ["a", "b", "c"]
+    assert simulated_logs[0]["metadata"]["turns"] == [
+        {"role": "user", "content": "Hi, I need help"},
+        {"role": "assistant", "content": "stub response"},
+    ]
+    assert simulated_logs[0]["input_text"] == "User: Hi, I need help"
+    assert simulated_logs[0]["output_text"] == "Assistant: stub response"
+    assert [c["metadata"]["log_id"] for c in captured] == ["log-1", "log-2", "log-3"]
+
+
+@pytest.mark.asyncio
+async def test_simulated_run_without_a_judge_fails(
+    mock_db_session: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+    stub_model_runner: MagicMock,
+) -> None:
+    """No judge in this run's config: fail rather than use another run's G_EVAL_* values."""
+    calls, _ = _install_fake_simulator(monkeypatch)
+    from utils.run_evaluation import run_evaluation
+
+    monkeypatch.setenv("G_EVAL_PROVIDER", "anthropic")
+    monkeypatch.setenv("G_EVAL_MODEL", "left-over-from-another-run")
+    config = _scenario_config({"prompts": [{"scenario": "a", "expected_outcome": "x"}]})
+    config["judgeLlm"] = {}
+    config["evaluationMode"] = "scorer"
+
+    result = await run_evaluation(
+        db=mock_db_session, experiment_id="exp-sim-6", config=config, organization_id=1
+    )
+
+    assert "judge model" in result["error"]
+    assert calls == []
+
+
+@pytest.mark.asyncio
+async def test_mixed_rows_run_as_prompts_not_scenarios(
+    mock_db_session: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+    stub_model_runner: MagicMock,
+) -> None:
+    """A list with any non-scenario row is not a simulated dataset; no row is dropped."""
+    calls, _ = _install_fake_simulator(monkeypatch)
+    from utils.run_evaluation import run_evaluation
+
+    config = _scenario_config(
+        {"prompts": ["Plain prompt", {"scenario": "a", "expected_outcome": "x"}]}
+    )
+    await run_evaluation(
+        db=mock_db_session, experiment_id="exp-sim-7", config=config, organization_id=1
+    )
+
+    assert calls == []
 
 
 @pytest.mark.asyncio

@@ -53,7 +53,6 @@ async def test_simulated_dataset_keeps_turn_type_and_counts_scenarios(saved):
     rows = [
         {"scenario": "Reset a password", "expected_outcome": "Steps explained"},
         {"scenario": "Cancel an order", "expected_outcome": "Order cancelled", "max_turns": 4},
-        {"scenario": "   ", "expected_outcome": "blank scenario is not counted"},
     ]
     response = await controller.upload_deepeval_dataset_controller(
         dataset=_upload(rows), organization_id=1, org_id="1", turn_type="simulated"
@@ -63,6 +62,36 @@ async def test_simulated_dataset_keeps_turn_type_and_counts_scenarios(saved):
     assert body["turnType"] == "simulated"
     assert saved["turn_type"] == "simulated"
     assert saved["prompt_count"] == 2
+
+
+@pytest.mark.asyncio
+@pytest.mark.parametrize(
+    "rows, expected_detail",
+    [
+        ([], "at least one scenario"),
+        ([{"prompt": "Hello"}], "Row 1 is not a scenario"),
+        (
+            [
+                {"scenario": "Reset a password", "expected_outcome": "Steps explained"},
+                {"scenario": "Cancel", "prompt": "Cancel my order", "expected_outcome": "Done"},
+            ],
+            "Row 2 is not a scenario",
+        ),
+        ([{"scenario": "   ", "expected_outcome": "Done"}], "Row 1 is not a scenario"),
+        (["Reset a password"], "Row 1 is not a scenario"),
+    ],
+)
+async def test_simulated_dataset_accepts_only_scenario_rows(saved, rows, expected_detail):
+    """The runner runs a file with any non-scenario row as plain prompts, so upload refuses it."""
+    from fastapi import HTTPException
+
+    with pytest.raises(HTTPException) as err:
+        await controller.upload_deepeval_dataset_controller(
+            dataset=_upload(rows), organization_id=1, org_id="1", turn_type="simulated"
+        )
+    assert err.value.status_code == 400
+    assert expected_detail in err.value.detail
+    assert saved == {}
 
 
 @pytest.mark.asyncio

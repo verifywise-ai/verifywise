@@ -17,13 +17,19 @@ export interface SimulatedScenario {
 const text = (value: unknown): string | undefined =>
   typeof value === "string" && value.trim() ? value.trim() : undefined;
 
-/** Scenario rows with a non-empty `scenario`; other rows are skipped. */
+const isEmpty = (value: unknown): boolean => !value || (Array.isArray(value) && value.length === 0);
+
+/**
+ * Scenario rows: a non-empty `scenario` and no `prompt` or `turns`, the same rule as
+ * the runner and the upload check (EvalServer/src/utils/scenario_rows.py). Other rows
+ * are skipped.
+ */
 export function toSimulatedScenarios(rows: unknown[]): SimulatedScenario[] {
   return rows.flatMap((row) => {
     if (typeof row !== "object" || row === null) return [];
     const obj = row as Record<string, unknown>;
     const scenario = text(obj.scenario);
-    if (!scenario) return [];
+    if (!scenario || !isEmpty(obj.prompt) || !isEmpty(obj.turns)) return [];
     const expectedOutcome = text(obj.expected_outcome);
     const userDescription = text(obj.user_description);
     const maxTurns = Number(obj.max_turns);

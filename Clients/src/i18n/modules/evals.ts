@@ -509,6 +509,9 @@ export const de: Record<string, string> = {
   "No scenarios in dataset": "Keine Szenarien im Datensatz",
   "This simulated dataset has no rows with a scenario. Add a scenario to each row, or pick another dataset.":
     "Dieser simulierte Datensatz enthält keine Zeilen mit einem Szenario. Fügen Sie jeder Zeile ein Szenario hinzu oder wählen Sie einen anderen Datensatz.",
+  "Simulated datasets need a judge": "Simulierte Datensätze benötigen einen Judge",
+  "The judge model plays the user in each conversation. Choose an evaluation mode that includes the judge.":
+    "Das Judge-Modell übernimmt in jeder Unterhaltung die Rolle des Benutzers. Wählen Sie einen Bewertungsmodus, der den Judge einschließt.",
   "Overall scores, pass/fail verdict, key findings":
     "Gesamtbewertungen, Bestanden/Nicht bestanden-Verdikt, wichtige Befunde",
   "Per-metric scores grouped by Quality and Safety":
@@ -1208,6 +1211,9 @@ export const fr: Record<string, string> = {
   "No scenarios in dataset": "Aucun scénario dans le jeu de données",
   "This simulated dataset has no rows with a scenario. Add a scenario to each row, or pick another dataset.":
     "Ce jeu de données simulé ne contient aucune ligne avec un scénario. Ajoutez un scénario à chaque ligne ou choisissez un autre jeu de données.",
+  "Simulated datasets need a judge": "Les jeux de données simulés nécessitent un juge",
+  "The judge model plays the user in each conversation. Choose an evaluation mode that includes the judge.":
+    "Le modèle juge joue le rôle de l'utilisateur dans chaque conversation. Choisissez un mode d'évaluation qui inclut le juge.",
   "Overall scores, pass/fail verdict, key findings":
     "Scores globaux, verdict de réussite/échec, résultats clés",
   "Per-metric scores grouped by Quality and Safety":
@@ -1907,6 +1913,9 @@ export const es: Record<string, string> = {
   "No scenarios in dataset": "No hay escenarios en el conjunto de datos",
   "This simulated dataset has no rows with a scenario. Add a scenario to each row, or pick another dataset.":
     "Este conjunto de datos simulado no tiene filas con un escenario. Añada un escenario a cada fila o elija otro conjunto de datos.",
+  "Simulated datasets need a judge": "Los conjuntos de datos simulados necesitan un juez",
+  "The judge model plays the user in each conversation. Choose an evaluation mode that includes the judge.":
+    "El modelo juez interpreta al usuario en cada conversación. Elija un modo de evaluación que incluya el juez.",
   "Overall scores, pass/fail verdict, key findings":
     "Puntuaciones generales, veredicto de aprobado/no aprobado, hallazgos clave",
   "Per-metric scores grouped by Quality and Safety":

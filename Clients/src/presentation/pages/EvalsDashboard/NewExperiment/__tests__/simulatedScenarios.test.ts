@@ -39,4 +39,14 @@ describe("toSimulatedScenarios", () => {
       ]),
     ).toEqual([{ scenario: "Cancel an order" }]);
   });
+
+  it("skips rows that also have a prompt or turns, as the runner does", () => {
+    expect(
+      toSimulatedScenarios([
+        { scenario: "With a prompt", prompt: "Cancel my order" },
+        { scenario: "With turns", turns: [{ role: "user", content: "Hi" }] },
+        { scenario: "Empty prompt and turns", prompt: "", turns: [] },
+      ]),
+    ).toEqual([{ scenario: "Empty prompt and turns" }]);
+  });
 });

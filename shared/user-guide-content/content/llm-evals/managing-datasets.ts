@@ -242,6 +242,10 @@ export const managingDatasetsContent: ArticleContent = {
       ],
     },
     {
+      type: 'paragraph',
+      text: 'Every row must be a scenario: a row with a prompt or turns, or with a blank scenario, is rejected at upload. Because the judge plays the user, a simulated dataset can\'t run with custom scorers alone; choose an evaluation mode that includes the judge. Each simulated conversation is saved with its transcript, so you can read it next to its scores.',
+    },
+    {
       type: 'heading',
       id: 'legacy-format',
       level: 3,

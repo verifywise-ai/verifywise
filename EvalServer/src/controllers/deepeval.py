@@ -28,6 +28,7 @@ from crud.deepeval_scorers import (
     get_scorer_by_id,
 )
 from utils.run_custom_scorer import run_custom_scorer
+from utils.scenario_rows import is_scenario_row
 
 METRICS = [
     {
@@ -248,14 +249,18 @@ async def upload_deepeval_dataset_controller(
         if not isinstance(data, list):
             raise HTTPException(status_code=400, detail="Dataset JSON must be an array of prompt objects")
 
-        # Simulated datasets: every scenario needs the outcome the simulator works toward
+        # Simulated datasets: only scenario rows (the runner runs a file with any other
+        # row as plain prompts), and each needs the outcome the simulator works toward
         if turn_type == "simulated":
+            if not data:
+                raise HTTPException(status_code=400, detail="A simulated dataset needs at least one scenario.")
             for index, item in enumerate(data, 1):
-                if (
-                    isinstance(item, dict)
-                    and str(item.get("scenario") or "").strip()
-                    and not str(item.get("expected_outcome") or "").strip()
-                ):
+                if not is_scenario_row(item):
+                    raise HTTPException(
+                        status_code=400,
+                        detail=f"Row {index} is not a scenario. Each row needs a scenario and no prompt or turns.",
+                    )
+                if not str(item.get("expected_outcome") or "").strip():
                     raise HTTPException(
                         status_code=400,
                         detail=f"Scenario {index} has no expected_outcome. Each scenario needs one.",

@@ -320,6 +320,14 @@ export default function NewExperimentModal({
   // so it is scored with the multi-turn metrics too.
   const isSimulatedDataset = selectedUserDataset?.turnType === "simulated";
 
+  // What a run evaluates: scenarios for a simulated dataset, prompts otherwise
+  const simulatedScenarios = useMemo(
+    () => (isSimulatedDataset ? toSimulatedScenarios(datasetPrompts) : []),
+    [isSimulatedDataset, datasetPrompts],
+  );
+  const sampleCount = isSimulatedDataset ? simulatedScenarios.length : datasetPrompts.length;
+  const sampleNoun = isSimulatedDataset ? "scenario" : "prompt";
+
   // Track if selected dataset is multi-turn
   const isMultiTurnDataset =
     isSimulatedDataset ||
@@ -672,7 +680,6 @@ export default function NewExperimentModal({
       }
 
       // A simulated dataset runs its scenarios; without any it would run as plain prompts
-      const simulatedScenarios = isSimulatedDataset ? toSimulatedScenarios(datasetPrompts) : [];
       if (isSimulatedDataset && simulatedScenarios.length === 0) {
         setAlert({
           show: true,
@@ -683,8 +690,17 @@ export default function NewExperimentModal({
         setLoading(false);
         return;
       }
-      // What the run will evaluate: scenarios for a simulated dataset, prompts otherwise
-      const sampleCount = isSimulatedDataset ? simulatedScenarios.length : datasetPrompts.length;
+      // The judge plays the user in a simulated conversation; custom scorers alone send none
+      if (isSimulatedDataset && judgeMode === "scorer") {
+        setAlert({
+          show: true,
+          variant: "error",
+          title: "Simulated datasets need a judge",
+          body: "The judge model plays the user in each conversation. Choose an evaluation mode that includes the judge.",
+        });
+        setLoading(false);
+        return;
+      }
 
       // Resolve model name/provider for validation (saved model takes precedence)
       const savedModelForValidation = selectedSavedModelId
@@ -1842,7 +1858,7 @@ export default function NewExperimentModal({
               />
 
               {/* Estimated time display */}
-              {datasetPrompts.length > 0 && (
+              {sampleCount > 0 && (
                 <Box
                   sx={{
                     p: "8px",
@@ -1859,11 +1875,10 @@ export default function NewExperimentModal({
                     <Typography
                       sx={{ fontSize: "13px", fontWeight: 500, color: palette.brand.primary }}
                     >
-                      Estimated time: {getEstimatedTimeRange(datasetPrompts.length)}
+                      Estimated time: {getEstimatedTimeRange(sampleCount)}
                     </Typography>
                     <Typography sx={{ fontSize: "12px", color: palette.status.success.text }}>
-                      Based on {datasetPrompts.length} prompt
-                      {datasetPrompts.length !== 1 ? "s" : ""} in your dataset
+                      {`Based on ${countLabel(sampleCount, sampleNoun)} in your dataset`}
                     </Typography>
                   </Box>
                 </Box>
@@ -2438,7 +2453,7 @@ export default function NewExperimentModal({
             </Box>
 
             {/* Estimated time display */}
-            {datasetPrompts.length > 0 && (
+            {sampleCount > 0 && (
               <Box
                 sx={{
                   mt: "16px",
@@ -2456,10 +2471,10 @@ export default function NewExperimentModal({
                   <Typography
                     sx={{ fontSize: "13px", fontWeight: 500, color: palette.brand.primary }}
                   >
-                    Estimated time: {getEstimatedTimeRange(datasetPrompts.length)}
+                    Estimated time: {getEstimatedTimeRange(sampleCount)}
                   </Typography>
                   <Typography sx={{ fontSize: "12px", color: palette.status.success.text }}>
-                    {`Based on ${countLabel(datasetPrompts.length, "prompt")} in your dataset`}
+                    {`Based on ${countLabel(sampleCount, sampleNoun)} in your dataset`}
                   </Typography>
                 </Box>
               </Box>

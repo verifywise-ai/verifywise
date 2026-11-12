@@ -55,6 +55,7 @@ from crud.deepeval_scorers import list_scorers, touch_scorer_updated_at
 from deepeval_engine.gatekeeper import evaluate_gate
 from utils.run_custom_scorer import run_custom_scorer, ScorerResult
 from utils.safe_outbound_url import checked_endpoint, openai_base_url
+from utils.scenario_rows import is_scenario_row as _is_scenario_row
 from utils.error_detection import (
     FatalErrorTracker,
     build_no_responses_message,
@@ -123,16 +124,6 @@ RAG_ANSWER_INSTRUCTION = (
 # Turn limit for a simulated conversation when neither the scenario nor the
 # experiment sets one.
 DEFAULT_SIMULATED_MAX_TURNS = 6
-
-
-def _is_scenario_row(row: Any) -> bool:
-    """A simulated-dataset row: a non-empty scenario and no prompt or turns."""
-    return (
-        isinstance(row, dict)
-        and bool(str(row.get("scenario") or "").strip())
-        and not row.get("prompt")
-        and not row.get("turns")
-    )
 
 
 def _positive_int(value: Any) -> Optional[int]:
@@ -578,11 +569,11 @@ async def run_evaluation(
         # A simulated dataset holds scenario rows instead of prompts or turns. Recognise
         # them here so every caller (wizard, API, MCP, reruns) gets simulated mode.
         if not simulated_scenarios and prompts and isinstance(prompts, list):
-            if all(_is_scenario_row(p) for p in prompts if isinstance(p, dict)):
-                simulated_scenarios = [p for p in prompts if _is_scenario_row(p)]
-                if simulated_scenarios:
-                    print(f"📝 Detected simulated dataset with {len(simulated_scenarios)} scenarios")
-                    prompts = []
+            # Every row must be a scenario: a mixed list runs as prompts, none dropped.
+            if all(_is_scenario_row(p) for p in prompts):
+                simulated_scenarios = list(prompts)
+                print(f"📝 Detected simulated dataset with {len(simulated_scenarios)} scenarios")
+                prompts = []
         if not prompts and not conversations and not simulated_scenarios:
             error_msg = "No prompts or conversations in dataset"
             print(f"❌ {error_msg}")
@@ -620,7 +611,29 @@ async def run_evaluation(
                 return {"error": error_msg}
             # 3A-SIM. Simulated conversation mode: use ConversationSimulator
             print(f"\n🎭 SIMULATED MODE: Generating conversations for {len(simulated_scenarios)} scenarios...")
-            
+
+            # The judge plays the simulated user. Read it from this run's config only: the
+            # G_EVAL_* variables are process-wide, so without a judge here they would hold
+            # another experiment's model, or fall back to OpenAI.
+            if not (judge_config or {}).get("model"):
+                error_msg = (
+                    "Simulated datasets need a judge model, which plays the user. "
+                    "Pick a judge, or an evaluation mode that includes one."
+                )
+                print(f"❌ {error_msg}")
+                await crud.update_experiment_status(
+                    db=db,
+                    experiment_id=experiment_id,
+                    organization_id=organization_id,
+                    status="failed",
+                    error_message=error_msg
+                )
+                return {"error": error_msg}
+
+            # Tokens and cost per conversation, keyed by its first user message (DeepEval
+            # gives the finished test case no thread id to match on).
+            conversation_usage: Dict[str, Dict[str, Any]] = {}
+
             # Create model callback for the simulator. DeepEval passes `input`, `turns` and
             # `thread_id` by keyword and drops names the callback does not declare, so the
             # parameter names matter. It is synchronous because the simulator runs in sync
@@ -634,26 +647,32 @@ async def run_evaluation(
                 context = "\n".join(context_parts)
 
                 prompt = f"{context}\n\nUser: {input}\n\nAssistant:" if context else f"User: {input}\n\nAssistant:"
-                
+
                 response = model_runner.generate(
                     prompt=prompt,
                     max_tokens=1024,
                     temperature=0.7,
                 )
+                turn_tokens, turn_cost = _generation_usage(model_runner, input, response or "")
+                first_user = turns[0].content if turns else input
+                usage = conversation_usage.setdefault(first_user, {"tokens": 0, "cost": None})
+                usage["tokens"] += turn_tokens
+                usage["cost"] = _add_cost(usage["cost"], turn_cost)
                 return Turn(role="assistant", content=response or "")
-            
+
             # Create ConversationalGoldens from scenarios, grouped by their turn limit:
             # the simulator takes one limit per call, and each scenario keeps its own.
+            # Each golden keeps its dataset position so results come back in row order.
             default_max_turns = _positive_int(dataset_config.get("maxTurns")) or DEFAULT_SIMULATED_MAX_TURNS
-            goldens_by_turns: Dict[int, list] = {}
-            for scenario_data in simulated_scenarios:
+            goldens_by_turns: Dict[int, List[Tuple[int, Any]]] = {}
+            for position, scenario_data in enumerate(simulated_scenarios):
                 golden = ConversationalGolden(
                     scenario=str(scenario_data.get("scenario") or "").strip() or "General conversation",
                     expected_outcome=str(scenario_data.get("expected_outcome") or "").strip() or "Helpful response",
                     user_description=str(scenario_data.get("user_description") or "").strip() or "A typical user",
                 )
                 limit = _positive_int(scenario_data.get("max_turns")) or default_max_turns
-                goldens_by_turns.setdefault(limit, []).append(golden)
+                goldens_by_turns.setdefault(limit, []).append((position, golden))
 
             # The simulated user is played by the judge LLM, through the gateway like the
             # metrics; without it DeepEval falls back to its own OpenAI client.
@@ -668,21 +687,33 @@ async def run_evaluation(
                 async_mode=False,
             )
 
-            simulated_test_cases = []
-            for max_turns, goldens in goldens_by_turns.items():
-                print(f"🔄 Simulating {len(goldens)} conversations with max {max_turns} user turns each...")
-                simulated_test_cases.extend(
-                    await asyncio.to_thread(
-                        simulator.simulate,
-                        conversational_goldens=goldens,
-                        max_user_simulations=max_turns,
-                    )
+            simulated_by_position: Dict[int, Any] = {}
+            for max_turns, entries in goldens_by_turns.items():
+                print(f"🔄 Simulating {len(entries)} conversations with max {max_turns} user turns each...")
+                started = datetime.now()
+                group_cases = await asyncio.to_thread(
+                    simulator.simulate,
+                    conversational_goldens=[golden for _, golden in entries],
+                    max_user_simulations=max_turns,
                 )
-            
-            # Convert simulated test cases to our format. The evaluator builds Task
-            # Completion from expected_outcome and stores both fields with the result,
-            # as it does for scripted conversations.
-            for idx, conv_tc in enumerate(simulated_test_cases, 1):
+                # Wall-clock time of the group, shared out evenly: the simulator does not
+                # time conversations one by one.
+                per_case_ms = int((datetime.now() - started).total_seconds() * 1000 / max(len(group_cases), 1))
+                # The simulator returns one test case per golden, in order.
+                for (position, _), conv_tc in zip(entries, group_cases):
+                    simulated_by_position[position] = (conv_tc, per_case_ms)
+
+            # Convert simulated test cases to our format, in dataset order. The evaluator
+            # builds Task Completion from expected_outcome and stores both fields with the
+            # result, as it does for scripted conversations. Each conversation gets a log,
+            # which holds its transcript and receives its metric scores.
+            for position in sorted(simulated_by_position):
+                conv_tc, latency_ms = simulated_by_position[position]
+                idx = position + 1
+                conv_turns = list(conv_tc.turns or [])
+                raw_turns = [{"role": t.role, "content": t.content} for t in conv_turns]
+                user_messages = [t.content for t in conv_turns if t.role == "user"]
+                usage = conversation_usage.get(user_messages[0], {}) if user_messages else {}
                 test_cases_data.append({
                     "test_case": conv_tc,
                     "is_conversational": True,
@@ -691,10 +722,44 @@ async def run_evaluation(
                     "metadata": {
                         "sample_id": f"simulated_scenario_{idx}",
                         "protected_attributes": {"category": conv_tc.scenario or f"scenario_{idx}", "difficulty": "simulated"},
-                        "turn_count": len(conv_tc.turns or []),
+                        "turn_count": len(conv_turns),
                     }
                 })
-            
+                created_log = await crud.create_log(
+                    db=db,
+                    project_id=config.get("project_id"),
+                    organization_id=organization_id,
+                    experiment_id=experiment_id,
+                    input_text="\n".join(f"User: {m}" for m in user_messages) or conv_tc.scenario,
+                    output_text="\n".join(f"Assistant: {t.content}" for t in conv_turns if t.role == "assistant"),
+                    model_name=model_name,
+                    latency_ms=latency_ms,
+                    token_count=usage.get("tokens"),
+                    cost=usage.get("cost"),
+                    metadata={
+                        "is_conversational": True,
+                        "is_simulated": True,
+                        "scenario": conv_tc.scenario or "",
+                        "expected_outcome": conv_tc.expected_outcome or "",
+                        "turn_count": len(conv_turns),
+                        "turns": raw_turns,
+                    },
+                )
+                if created_log:
+                    test_cases_data[-1]["metadata"]["log_id"] = created_log.get("id")
+
+            if not test_cases_data:
+                error_msg = f"No conversations were simulated for {len(simulated_scenarios)} scenarios"
+                print(f"❌ {error_msg}")
+                await crud.update_experiment_status(
+                    db=db,
+                    experiment_id=experiment_id,
+                    organization_id=organization_id,
+                    status="failed",
+                    error_message=error_msg
+                )
+                return {"error": error_msg}
+
             print(f"✓ Generated {len(test_cases_data)} simulated conversations")
             
         elif conversations:
