@@ -14,6 +14,20 @@ export const llmArenaContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'turning-on',
+      level: 2,
+      text: 'Turning Arena on',
+    },
+    {
+      type: 'paragraph',
+      text: 'Arena is off by default. An Admin can turn it on under **Arena** in **Settings**, at the bottom of the LLM Evals sidebar. While Arena is off, it is hidden from the sidebar and comparisons can\'t be created, opened or deleted. Turning Arena off keeps your comparisons, and they reappear when an Admin turns it back on.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Organizations that ran Arena comparisons before this setting existed have Arena on until an Admin changes it.',
+    },
+    {
+      type: 'heading',
       id: 'starting',
       level: 2,
       text: 'Starting a comparison',

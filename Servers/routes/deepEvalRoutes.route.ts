@@ -7,6 +7,7 @@ import {
 } from "../domain.layer/models/evaluationLlmApiKey/evaluationLlmApiKey.model";
 import { getDecryptedAiGatewayKeyForProviderQuery } from "../utils/aiGatewayEvalKey.utils";
 import { getGatewayInternalKey, getGatewayUrl } from "../utils/aiGatewayConfig";
+import { requestHasPermission } from "../utils/rolePermissions.utils";
 
 // JSON body parser for routes that need to inspect/modify the body before proxying
 const jsonParser = express.json({ limit: "50mb" });
@@ -41,6 +42,44 @@ interface ReportGenerateBody {
 }
 
 // Headers are now set directly in the proxyReq handler to ensure they're forwarded
+
+/**
+ * Header that tells the EvalServer the caller may change LLM Evals
+ * organization settings (PUT /deepeval/settings/arena). The proxy always
+ * strips a client-supplied value and sets it only from the caller's
+ * "organization.admin" permission, so the EvalServer can trust it the same way
+ * it trusts x-organization-id.
+ */
+export const MANAGE_SETTINGS_HEADER = "x-can-manage-org-settings";
+
+const READ_ONLY_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
+
+type SettingsPermissionRequest = Request & { canManageEvalsSettings?: boolean };
+
+/**
+ * Resolve, for write requests, whether the caller holds "organization.admin",
+ * the permission that gates LLM Evals organization settings. The EvalServer
+ * decides which routes need it; resolving it here for every write (rather than
+ * matching the settings path) means no path spelling can skip the check.
+ * Fails closed: on a lookup error the flag stays unset and the EvalServer
+ * refuses the settings write.
+ */
+export async function resolveEvalsSettingsPermission(
+  req: Request,
+  _res: Response,
+  next: NextFunction,
+): Promise<void> {
+  const r = req as SettingsPermissionRequest;
+  r.canManageEvalsSettings = false;
+  if (!READ_ONLY_METHODS.has(req.method)) {
+    try {
+      r.canManageEvalsSettings = await requestHasPermission(req, "organization.admin");
+    } catch (error) {
+      console.error("[DeepEval Proxy] Permission lookup failed:", error);
+    }
+  }
+  next();
+}
 
 /**
  * Build the LiteLLM model string from a (provider, model) pair.
@@ -457,6 +496,7 @@ function deepEvalRoutes() {
         proxyReq.removeHeader("x-organization-id");
         proxyReq.removeHeader("x-user-id");
         proxyReq.removeHeader("x-role");
+        proxyReq.removeHeader(MANAGE_SETTINGS_HEADER);
 
         if (expressReq.organizationId) {
           proxyReq.setHeader("x-organization-id", expressReq.organizationId.toString());
@@ -466,6 +506,9 @@ function deepEvalRoutes() {
         }
         if (expressReq.role) {
           proxyReq.setHeader("x-role", expressReq.role);
+        }
+        if ((expressReq as SettingsPermissionRequest).canManageEvalsSettings) {
+          proxyReq.setHeader(MANAGE_SETTINGS_HEADER, "true");
         }
 
         // Fix request body - this re-streams the parsed body to the proxy target
@@ -492,7 +535,14 @@ function deepEvalRoutes() {
   });
 
   // All routes go through the proxy to Python eval server (including /models)
-  router.use("/", authenticateJWT, jsonParser, injectApiKeys, proxy);
+  router.use(
+    "/",
+    authenticateJWT,
+    jsonParser,
+    injectApiKeys,
+    resolveEvalsSettingsPermission,
+    proxy,
+  );
 
   return router;
 }

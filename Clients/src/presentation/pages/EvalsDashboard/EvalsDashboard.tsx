@@ -34,6 +34,7 @@ import { PageBreadcrumbs } from "../../components/breadcrumbs/PageBreadcrumbs";
 import { PageHeader } from "../../components/Layout/PageHeader";
 import { useEvalsSidebarContext } from "../../../application/contexts/EvalsSidebar.context";
 import { useAuth } from "../../../application/hooks/useAuth";
+import { useArenaSetting } from "../../../application/hooks/useArenaSetting";
 import ModalStandard from "../../components/Modals/StandardModal";
 import Field from "../../components/Inputs/Field";
 import Alert from "../../components/Alert";
@@ -104,6 +105,8 @@ const ArenaPage = lazyRoute(() => import("./ArenaPage"));
 const BiasAuditsList = lazyRoute(() => import("./BiasAuditsList"));
 const BiasAuditDetail = lazyRoute(() => import("./BiasAuditDetail"));
 const ReportPage = lazyRoute(() => import("./ReportPage"));
+import ArenaSettingSection from "./ArenaSettingSection";
+import ArenaDisabledState from "./ArenaDisabledState";
 import type { DeepEvalProject } from "./types";
 
 // Track if Evals dashboard has been loaded before (persists across module switches)
@@ -247,6 +250,9 @@ export default function EvalsDashboard() {
   const [scorersCount, setScorersCount] = useState<number>(0);
   const [modelsCount, setModelsCount] = useState<number>(0);
   const [arenaCount, setArenaCount] = useState<number>(0);
+  // Arena is an organization setting (off by default); undefined while loading.
+  const { data: arenaSetting, isLoading: arenaSettingLoading } = useArenaSetting();
+  const arenaEnabled = arenaSetting?.enabled === true;
   // Skip initial loading state if we've loaded before AND we're on a specific project
   // If no projectId, we might redirect to last project, so keep loading to prevent flash
   const shouldSkipLoading = hasLoadedEvalsBefore && !!projectId;
@@ -724,21 +730,36 @@ export default function EvalsDashboard() {
         // Load saved models count
         const modelsData = await evalModelsService.listModels();
         setModelsCount(modelsData.length || 0);
-
-        // Load arena battles count
-        const arenaData = await listArenaComparisons();
-        setArenaCount(arenaData.comparisons?.length || 0);
       } catch (err) {
         console.error("Failed to load counts:", err);
         setDatasetsCount(0);
         setScorersCount(0);
         setModelsCount(0);
-        setArenaCount(0);
       }
     };
 
     loadCounts();
   }, [projectId, currentProject, orgId]);
+
+  // Arena battles count, only while Arena is on (the Arena API refuses otherwise)
+  useEffect(() => {
+    if (!projectId || !currentProject || !arenaEnabled) {
+      setArenaCount(0);
+      return;
+    }
+    let cancelled = false;
+    listArenaComparisons()
+      .then((arenaData) => {
+        if (!cancelled) setArenaCount(arenaData.comparisons?.length || 0);
+      })
+      .catch((err) => {
+        console.error("Failed to load arena count:", err);
+        if (!cancelled) setArenaCount(0);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, currentProject, arenaEnabled]);
 
   // Sync sidebar counts and callbacks with context (not activeTab - that's handled via URL)
   useEffect(() => {
@@ -1745,6 +1766,9 @@ export default function EvalsDashboard() {
               )}
             </Box>
 
+            {/* ── Arena section (organization setting) ── */}
+            <ArenaSettingSection />
+
             {/* ── Project settings section ── */}
             {currentProject && (
               <>
@@ -1926,7 +1950,16 @@ export default function EvalsDashboard() {
                 />
               )}
 
-              {tab === "arena" && <ArenaPage orgId={orgId || currentProject?.orgId || ""} />}
+              {tab === "arena" &&
+                (arenaSettingLoading ? (
+                  <LazyFallback />
+                ) : arenaEnabled ? (
+                  <ArenaPage orgId={orgId || currentProject?.orgId || ""} />
+                ) : (
+                  <ArenaDisabledState
+                    onOpenSettings={() => navigate(`${location.pathname}#settings`)}
+                  />
+                ))}
 
               {tab === "playground" && (
                 <PlaygroundPage

@@ -16,6 +16,7 @@ import SidebarShell, {
   RecentSection,
   ProjectSelectorConfig,
 } from "../../components/Sidebar/SidebarShell";
+import { useArenaSetting } from "../../../application/hooks/useArenaSetting";
 
 interface RecentExperiment {
   id: string;
@@ -69,8 +70,12 @@ export default function EvalsSidebar({
   allProjects = [],
   onProjectChange,
 }: EvalsSidebarProps) {
+  // Arena is an organization setting; hide it unless it is on (also while loading).
+  const { data: arenaSetting } = useArenaSetting();
+  const arenaEnabled = arenaSetting?.enabled === true;
+
   // Menu items for Evals
-  const flatItems: SidebarMenuItem[] = [
+  const allItems: SidebarMenuItem[] = [
     {
       id: "overview",
       label: "Overview",
@@ -155,6 +160,7 @@ export default function EvalsSidebar({
       disabled: false, // Organization-wide settings - always enabled
     },
   ];
+  const flatItems = arenaEnabled ? allItems : allItems.filter((item) => item.id !== "arena");
 
   // Recent sections
   const recentSections: RecentSection[] = [

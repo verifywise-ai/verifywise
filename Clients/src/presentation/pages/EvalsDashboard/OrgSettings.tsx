@@ -25,6 +25,7 @@ import {
 import { useIsAdmin } from "../../../application/hooks/useIsAdmin";
 import { palette } from "../../themes/palette";
 import { LLM_PROVIDERS as ALL_LLM_PROVIDERS } from "./llmProviders";
+import ArenaSettingSection from "./ArenaSettingSection";
 
 interface SavedKey {
   id?: number;
@@ -516,6 +517,9 @@ export default function OrgSettings() {
             </Typography>
           )}
         </Box>
+
+        {/* Arena (organization setting) */}
+        <ArenaSettingSection />
       </Stack>
 
       {/* Confirmation Dialog */}

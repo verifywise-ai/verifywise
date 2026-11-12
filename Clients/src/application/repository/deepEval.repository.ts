@@ -58,6 +58,7 @@ import {
   type ArenaComparisonResult,
   type ArenaComparison,
   type ArenaComparisonSummary,
+  type ArenaSetting,
 } from "../../infrastructure/api/deepEvalArenaService";
 import {
   biasAuditService,
@@ -108,6 +109,7 @@ export type {
   ArenaComparisonResult,
   ArenaComparison,
   ArenaComparisonSummary,
+  ArenaSetting,
   // Bias audit types
   BiasAuditPresetSummary,
   BiasAuditPreset,
@@ -318,6 +320,10 @@ export const getArenaComparisonResults = (comparisonId: string) =>
 
 export const deleteArenaComparison = (comparisonId: string) =>
   deepEvalArenaService.deleteComparison(comparisonId);
+
+export const getArenaSetting = () => deepEvalArenaService.getSetting();
+
+export const updateArenaSetting = (enabled: boolean) => deepEvalArenaService.updateSetting(enabled);
 
 // ==================== BIAS AUDITS ====================
 
