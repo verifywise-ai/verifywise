@@ -83,6 +83,44 @@ METRIC_NAME_MAP = {
 }
 
 
+# RAG datasets carry the passages a retriever would have found: retrieval_context
+# on single-turn prompts, context on multi-turn conversations. The model under
+# test gets them in its prompt, and the test case keeps them so the context
+# metrics (faithfulness, context precision/recall/relevancy) can score.
+RAG_ANSWER_INSTRUCTION = (
+    "Answer using only the context below. If the context does not contain the answer, "
+    "say that you don't know."
+)
+
+
+def _normalize_passages(value: Any) -> List[str]:
+    """Retrieved passages as a list of non-empty strings (a single string counts as one)."""
+    if isinstance(value, str):
+        value = [value]
+    if not isinstance(value, list):
+        return []
+    return [p.strip() for p in value if isinstance(p, str) and p.strip()]
+
+
+def _context_block(passages: List[str]) -> str:
+    numbered = "\n".join(f"[{i}] {p}" for i, p in enumerate(passages, 1))
+    return f"Context:\n{numbered}"
+
+
+def _single_turn_generation_prompt(question: str, passages: List[str]) -> str:
+    """What the model under test is sent for one single-turn prompt."""
+    if not passages:
+        return question
+    return f"{RAG_ANSWER_INSTRUCTION}\n\n{_context_block(passages)}\n\nQuestion: {question}"
+
+
+def _conversation_preamble(passages: List[str]) -> str:
+    """Opening instruction for every turn of a multi-turn conversation."""
+    if not passages:
+        return "You are a helpful assistant."
+    return f"You are a helpful assistant. {RAG_ANSWER_INSTRUCTION}\n\n{_context_block(passages)}"
+
+
 def route_threshold_keys(thresholds: Optional[Dict[str, Any]]) -> Dict[str, Any]:
     """Key thresholds by the metric each name enables, the same way as metric toggles.
 
@@ -653,6 +691,7 @@ async def run_evaluation(
                 scenario = convo.get("scenario") or f"scenario_{s_idx}"
                 expected_outcome = convo.get("expected_outcome", "")
                 raw_turns = convo.get("turns") or []
+                preamble = _conversation_preamble(_normalize_passages(convo.get("context")))
                 
                 print(f"  [{s_idx}/{len(conversations)}] Scenario: {scenario[:50]}...")
                 
@@ -688,14 +727,14 @@ async def run_evaluation(
                     # Build prompt with conversation context
                     if len(conversation_history) == 1:
                         # First turn - just the user message
-                        prompt = f"You are a helpful assistant. Respond to the user.\n\nUser: {user_msg}\n\nAssistant:"
+                        prompt = f"{preamble} Respond to the user.\n\nUser: {user_msg}\n\nAssistant:"
                     else:
                         # Build multi-turn prompt with history
                         history_str = ""
                         for h in conversation_history[:-1]:  # Exclude current turn
                             role_label = "User" if h["role"] == "user" else "Assistant"
                             history_str += f"{role_label}: {h['content']}\n"
-                        prompt = f"You are a helpful assistant. Continue this conversation.\n\n{history_str}User: {user_msg}\n\nAssistant:"
+                        prompt = f"{preamble} Continue this conversation.\n\n{history_str}User: {user_msg}\n\nAssistant:"
                     
                     # GENERATE assistant response using the model
                     try:
@@ -828,10 +867,12 @@ async def run_evaluation(
                 generated = False
                 try:
                     print(f"  [{idx}/{len(prompts)}] Processing: {prompt_data['prompt'][:50]}...")
+                    passages = _normalize_passages(prompt_data.get("retrieval_context"))
+                    generation_prompt = _single_turn_generation_prompt(prompt_data["prompt"], passages)
                     
                     # Generate response (first attempt)
                     response = model_runner.generate(
-                        prompt=prompt_data["prompt"],
+                        prompt=generation_prompt,
                         max_tokens=2048,
                         temperature=0.7,
                     )
@@ -843,7 +884,7 @@ async def run_evaluation(
                         print("     • Empty response, retrying with higher max_tokens/lower temperature...")
                         try:
                             response = model_runner.generate(
-                                prompt=prompt_data["prompt"],
+                                prompt=generation_prompt,
                                 max_tokens=2048,
                                 temperature=0.2,
                             )
@@ -884,6 +925,7 @@ async def run_evaluation(
                         input=prompt_data["prompt"],
                         actual_output=response,
                         expected_output=prompt_data.get("expected_output", ""),
+                        retrieval_context=passages or None,
                     )
                     
                     # Log the interaction
