@@ -62,5 +62,7 @@ describe("option helpers", () => {
     expect(entityCountNoun("project", 1)).toBe("use case");
     expect(entityCountNoun("project", 80)).toBe("use cases");
     expect(entityCountNoun("model_inventory", 2)).toBe("models");
+    expect(entityCountNoun("ai_app", 1)).toBe("AI app");
+    expect(entityCountNoun("ai_app", 3)).toBe("AI apps");
   });
 });
