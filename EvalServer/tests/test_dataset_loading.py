@@ -216,41 +216,52 @@ async def test_dataset_loading_simulated_mode(
         lambda self, **kwargs: [],
     )
 
-    # Inject fake deepeval.conversation_simulator module — the version of
-    # DeepEval used in CI may not ship it yet, so we provide a stub that the
-    # `from deepeval.conversation_simulator import ConversationSimulator`
-    # import inside run_evaluation() will resolve to.
-    import sys
-    import types
+    # Replace only the simulator class inside the real deepeval.simulator module.
+    # The fake takes the real constructor and simulate() arguments, and drives the
+    # callback through DeepEval's own generate_turn_from_callback, which passes
+    # input/turns/thread_id by keyword: a misnamed callback parameter fails here.
+    import deepeval.simulator as simulator_module
+    from deepeval.dataset import ConversationalGolden
+    from deepeval.test_case import ConversationalTestCase, Turn
+
+    real_simulator = simulator_module.ConversationSimulator
+    judge_sentinel = object()
+    monkeypatch.setattr(evaluator_module, "get_judge_llm", lambda **_: judge_sentinel)
 
     fake_simulator_calls: List[Any] = []
 
-    class FakeConvTestCase:
-        def __init__(self):
-            self.scenario = "simulated"
-            self.turns = []
-
     class FakeSimulator:
-        def __init__(self, model_callback):
+        def __init__(self, model_callback, simulator_model=None, async_mode=True):
             self.model_callback = model_callback
+            self.simulator_model = simulator_model
+            self.async_mode = async_mode
 
-        def simulate(self, goldens, max_turns):
-            fake_simulator_calls.append({"goldens": goldens, "max_turns": max_turns})
-            return [FakeConvTestCase()]
+        def simulate(self, conversational_goldens, max_user_simulations=10):
+            reply = real_simulator.generate_turn_from_callback(
+                self,
+                input="Hi, I need help",
+                turns=[Turn(role="user", content="Earlier question")],
+                thread_id="thread-1",
+                model_callback=self.model_callback,
+            )
+            fake_simulator_calls.append(
+                {
+                    "goldens": conversational_goldens,
+                    "max_user_simulations": max_user_simulations,
+                    "simulator_model": self.simulator_model,
+                    "async_mode": self.async_mode,
+                    "reply": reply,
+                }
+            )
+            return [
+                ConversationalTestCase(
+                    scenario=golden.scenario,
+                    turns=[Turn(role="user", content="Hi, I need help"), reply],
+                )
+                for golden in conversational_goldens
+            ]
 
-    class FakeGolden:
-        def __init__(self, scenario, expected_outcome, user_description):
-            self.scenario = scenario
-            self.expected_outcome = expected_outcome
-            self.user_description = user_description
-
-    fake_conv_sim = types.ModuleType("deepeval.conversation_simulator")
-    fake_conv_sim.ConversationSimulator = FakeSimulator
-    monkeypatch.setitem(sys.modules, "deepeval.conversation_simulator", fake_conv_sim)
-
-    import deepeval.dataset as ds_module
-
-    monkeypatch.setattr(ds_module, "ConversationalGolden", FakeGolden, raising=False)
+    monkeypatch.setattr(simulator_module, "ConversationSimulator", FakeSimulator)
 
     from utils.run_evaluation import run_evaluation
 
@@ -263,7 +274,17 @@ async def test_dataset_loading_simulated_mode(
 
     assert "error" not in result
     assert len(fake_simulator_calls) == 1
-    assert fake_simulator_calls[0]["max_turns"] == 4
+    call = fake_simulator_calls[0]
+    assert call["max_user_simulations"] == 4
+    assert all(isinstance(g, ConversationalGolden) for g in call["goldens"])
+    # The judge plays the simulated user, and sync mode avoids nesting event loops.
+    assert call["simulator_model"] is judge_sentinel
+    assert call["async_mode"] is False
+    # The callback got the user's input and history and returned the model's turn.
+    assert call["reply"] == Turn(role="assistant", content="stub response")
+    prompt = stub_model_runner.call_args.kwargs["prompt"]
+    assert "User: Earlier question" in prompt
+    assert prompt.endswith("User: Hi, I need help\n\nAssistant:")
 
 
 @pytest.mark.asyncio

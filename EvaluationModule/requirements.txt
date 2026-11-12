@@ -43,7 +43,7 @@ openai>=3.46.0
 ollama>=0.6.3
 
 # DeepEval for comprehensive LLM evaluation
-deepeval>=4.3.3
+deepeval>=4.3.4,<4.4
 
 # Optional: GPU support (uncomment if using CUDA)
 # torch>=2.7.0+cu118 --extra-index-url https://download.pytorch.org/whl/cu118
