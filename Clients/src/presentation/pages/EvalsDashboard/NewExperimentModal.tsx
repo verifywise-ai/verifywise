@@ -1403,7 +1403,7 @@ export default function NewExperimentModal({
                           letterSpacing: "0.5px",
                         }}
                       >
-                        Your Scorers
+                        Your scorers
                       </Typography>
                       <Stack direction="row" spacing={1}>
                         <Button

@@ -76,6 +76,15 @@ export default function ModelStep({
   const selectedModelProvider = availableModelProviders.find(
     (p) => p.id === modelConfig.accessMethod,
   );
+  // Nothing stops the same model being saved twice (Models page, older seeds); identical
+  // rows can't be told apart, so list each name + provider + endpoint once
+  const seenSavedModels = new Set<string>();
+  const uniqueSavedModels = savedModels.filter((m) => {
+    const key = `${m.provider.toLowerCase()}|${m.name}|${m.endpointUrl ?? ""}`;
+    if (seenSavedModels.has(key)) return false;
+    seenSavedModels.add(key);
+    return true;
+  });
 
   return (
     <Stack spacing={4}>
@@ -191,7 +200,7 @@ export default function ModelStep({
         </Box>
       )}
 
-      {savedModels.length > 0 && (
+      {uniqueSavedModels.length > 0 && (
         <Box>
           <Typography
             sx={{
@@ -206,7 +215,7 @@ export default function ModelStep({
             Saved models
           </Typography>
           <Stack spacing={1}>
-            {savedModels.map((m) => {
+            {uniqueSavedModels.map((m) => {
               const providerKey = m.provider.toLowerCase();
               const providerEntry = availableModelProviders.find((p) => p.id === providerKey);
               const ProviderLogo = providerEntry?.Logo ?? null;
@@ -316,7 +325,6 @@ export default function ModelStep({
         <Select
           id="experiment-model-inventory-link"
           label="Link to model inventory (optional)"
-          placeholder="None — don't link to inventory"
           value={selectedModelInventoryId !== null ? String(selectedModelInventoryId) : ""}
           onChange={(e) => {
             const val = String(e.target.value);
