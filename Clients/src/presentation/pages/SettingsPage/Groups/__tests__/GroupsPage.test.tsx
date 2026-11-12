@@ -14,8 +14,14 @@ vi.mock("../../../../../application/hooks/useCan", () => {
 });
 
 const mockUsers: { id: number; name: string; surname: string; email: string }[] = [];
+const usersState = { loading: false };
 vi.mock("../../../../../application/hooks/useUsers", () => ({
-  default: () => ({ users: mockUsers, loading: false, error: null, refreshUsers: vi.fn() }),
+  default: () => ({
+    users: mockUsers,
+    loading: usersState.loading,
+    error: null,
+    refreshUsers: vi.fn(),
+  }),
 }));
 
 const mockMutateAsync = vi.fn();
@@ -66,10 +72,11 @@ describe("GroupsPage (#5253)", () => {
     mockUpdateAsync.mockResolvedValue({});
     mockSetMembersAsync.mockResolvedValue(undefined);
     mockUsers.length = 0;
+    usersState.loading = false;
   });
 
   it("renders the groups with their member counts", async () => {
-    renderWithProviders(<GroupsPage />, { route: "/groups" });
+    renderWithProviders(<GroupsPage />, { route: "/settings/groups" });
     await waitFor(() => {
       expect(screen.getByText("Model risk team")).toBeInTheDocument();
     });
@@ -78,14 +85,14 @@ describe("GroupsPage (#5253)", () => {
 
   it("shows an empty state when there are no groups", async () => {
     mockUseGroups.mockReturnValue({ data: [], isLoading: false, isError: false });
-    renderWithProviders(<GroupsPage />, { route: "/groups" });
+    renderWithProviders(<GroupsPage />, { route: "/settings/groups" });
     await waitFor(() => {
       expect(screen.getByText(/No groups yet/i)).toBeInTheDocument();
     });
   });
 
   it("creates a group from the modal", async () => {
-    renderWithProviders(<GroupsPage />, { route: "/groups" });
+    renderWithProviders(<GroupsPage />, { route: "/settings/groups" });
     fireEvent.click(screen.getByRole("button", { name: /new group/i }));
     fireEvent.change(screen.getByPlaceholderText("e.g. Model risk team"), {
       target: { value: "Compliance team" },
@@ -103,7 +110,7 @@ describe("GroupsPage (#5253)", () => {
     mockUseGroupMembers.mockImplementation((id: number | null) =>
       id === 1 ? loadedMembers : { data: undefined, isLoading: false, isError: false },
     );
-    renderWithProviders(<GroupsPage />, { route: "/groups" });
+    renderWithProviders(<GroupsPage />, { route: "/settings/groups" });
     fireEvent.click(screen.getByRole("button", { name: /edit model risk team/i }));
     fireEvent.change(screen.getByPlaceholderText("e.g. Model risk team"), {
       target: { value: "Model risk office" },
@@ -120,9 +127,42 @@ describe("GroupsPage (#5253)", () => {
 
   it("does not replace members while they are still loading", async () => {
     mockUseGroupMembers.mockReturnValue({ data: undefined, isLoading: true, isError: false });
-    renderWithProviders(<GroupsPage />, { route: "/groups" });
+    renderWithProviders(<GroupsPage />, { route: "/settings/groups" });
     fireEvent.click(screen.getByRole("button", { name: /edit model risk team/i }));
     expect(screen.getByText("Loading members...")).toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
+    await waitFor(() => expect(mockUpdateAsync).toHaveBeenCalled());
+    expect(mockSetMembersAsync).not.toHaveBeenCalled();
+  });
+
+  it("keeps a member missing from the user list when another is added", async () => {
+    // Alan (12) is a member but not in the user list; Grace (13) is added.
+    mockUsers.push(
+      { id: 11, name: "Ada", surname: "Lovelace", email: "ada@example.com" },
+      { id: 13, name: "Grace", surname: "Hopper", email: "grace@example.com" },
+    );
+    mockUseGroupMembers.mockImplementation((id: number | null) =>
+      id === 1 ? loadedMembers : { data: undefined, isLoading: false, isError: false },
+    );
+    renderWithProviders(<GroupsPage />, { route: "/settings/groups" });
+    fireEvent.click(screen.getByRole("button", { name: /edit model risk team/i }));
+    expect(await screen.findByText("Alan Turing")).toBeInTheDocument();
+    fireEvent.mouseDown(screen.getByRole("combobox"));
+    fireEvent.click(await screen.findByText("Grace Hopper"));
+    fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
+    await waitFor(() => expect(mockSetMembersAsync).toHaveBeenCalled());
+    const { userIds } = mockSetMembersAsync.mock.calls[0][0];
+    expect([...userIds].sort()).toEqual([11, 12, 13]);
+  });
+
+  it("keeps the members picker disabled until the user list loads", async () => {
+    usersState.loading = true;
+    mockUseGroupMembers.mockImplementation((id: number | null) =>
+      id === 1 ? loadedMembers : { data: undefined, isLoading: false, isError: false },
+    );
+    renderWithProviders(<GroupsPage />, { route: "/settings/groups" });
+    fireEvent.click(screen.getByRole("button", { name: /edit model risk team/i }));
+    expect(screen.getByRole("combobox")).toBeDisabled();
     fireEvent.click(screen.getByRole("button", { name: /^save$/i }));
     await waitFor(() => expect(mockUpdateAsync).toHaveBeenCalled());
     expect(mockSetMembersAsync).not.toHaveBeenCalled();
@@ -134,7 +174,7 @@ describe("GroupsPage (#5253)", () => {
     mockSetMembersAsync.mockRejectedValueOnce({
       response: { data: { message: "Members service unavailable" } },
     });
-    renderWithProviders(<GroupsPage />, { route: "/groups" });
+    renderWithProviders(<GroupsPage />, { route: "/settings/groups" });
     fireEvent.click(screen.getByRole("button", { name: /new group/i }));
     fireEvent.change(screen.getByPlaceholderText("e.g. Model risk team"), {
       target: { value: "Compliance team" },
@@ -164,7 +204,7 @@ describe("GroupsPage (#5253)", () => {
     mockMutateAsync.mockRejectedValueOnce({
       response: { data: { message: "Group is still in use" } },
     });
-    renderWithProviders(<GroupsPage />, { route: "/groups" });
+    renderWithProviders(<GroupsPage />, { route: "/settings/groups" });
     fireEvent.click(screen.getByRole("button", { name: /delete model risk team/i }));
     fireEvent.click(screen.getByRole("button", { name: /^delete$/i }));
 

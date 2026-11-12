@@ -16,7 +16,7 @@ import {
   Typography,
   useTheme,
 } from "@mui/material";
-import { ChevronDown, Pencil, Plus as PlusIcon, Trash2, Users } from "lucide-react";
+import { Pencil, Plus as PlusIcon, Trash2, Users } from "lucide-react";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import ConfirmationModal from "../../../components/Dialogs/ConfirmationModal";
@@ -48,6 +48,13 @@ interface GroupFormState {
   memberIds: number[];
 }
 
+interface MemberOption {
+  id: number;
+  name: string;
+  surname: string;
+  email: string;
+}
+
 const emptyForm: GroupFormState = { name: "", description: "", memberIds: [] };
 
 const sameIds = (a: number[], b: number[]) => {
@@ -67,7 +74,7 @@ const GroupsPage: React.FC = () => {
   const canManageGroups = useCan("groups.manage");
 
   const { data: groups, isLoading, isError } = useGroups();
-  const { users } = useUsers();
+  const { users, loading: usersLoading } = useUsers();
 
   const [editing, setEditing] = useState<IGroup | null>(null);
   const [creating, setCreating] = useState(false);
@@ -84,23 +91,37 @@ const GroupsPage: React.FC = () => {
   // differs from this, so an edit can never wipe members it did not load.
   const [initialMemberIds, setInitialMemberIds] = useState<number[] | null>(null);
 
-  const memberOptions = useMemo(
-    () =>
-      users.map((user) => ({
-        id: Number(user.id),
-        name: user.name,
-        surname: user.surname,
-        email: user.email,
-      })),
-    [users],
-  );
-
   const editingId = editing?.id ?? null;
   const {
     data: currentMembers,
     isLoading: membersLoading,
     isError: membersError,
   } = useGroupMembers(editingId);
+
+  // Every user, plus any current member missing from the user list, so the
+  // picker can show (and keep) the whole membership it is about to save.
+  const memberOptions = useMemo(() => {
+    const options: MemberOption[] = users.map((user) => ({
+      id: Number(user.id),
+      name: user.name,
+      surname: user.surname,
+      email: user.email,
+    }));
+    const known = new Set(options.map((option) => option.id));
+    for (const member of editing ? (currentMembers ?? []) : []) {
+      const id = Number(member.user_id);
+      if (!known.has(id)) {
+        options.push({ id, name: member.name, surname: member.surname, email: member.email });
+        known.add(id);
+      }
+    }
+    return options;
+  }, [users, currentMembers, editing]);
+
+  const selectedMembers = useMemo(() => {
+    const selected = new Set(form.memberIds);
+    return memberOptions.filter((option) => selected.has(option.id));
+  }, [memberOptions, form.memberIds]);
 
   useEffect(() => {
     if (editingId === null || !currentMembers || initialMemberIds !== null) return;
@@ -137,7 +158,9 @@ const GroupsPage: React.FC = () => {
     setMembersSaveFailed(false);
   };
 
-  const membersReady = !editing || initialMemberIds !== null;
+  // Wait for the user list too: a selection shown before it loads looks
+  // empty, and saving a change to it would drop the members not shown.
+  const membersReady = !usersLoading && (!editing || initialMemberIds !== null);
 
   const handleSubmit = async () => {
     setServerError(null);
@@ -226,7 +249,7 @@ const GroupsPage: React.FC = () => {
           icon={Users}
           message={
             canManageGroups
-              ? "No groups yet. Create one to give a whole team access to a use case."
+              ? "No groups yet. Create one to grant a whole team access to a use case."
               : "No groups yet."
           }
         />
@@ -331,7 +354,7 @@ const GroupsPage: React.FC = () => {
               label="Members"
               isOptional
               placeholder="Select members"
-              value={memberOptions.filter((member) => form.memberIds.includes(member.id))}
+              value={selectedMembers}
               options={memberOptions}
               getOptionLabel={(member) => `${member.name} ${member.surname}`.trim()}
               isOptionEqualToValue={(option, value) => option.id === value.id}
@@ -366,12 +389,11 @@ const GroupsPage: React.FC = () => {
                 );
               }}
               noOptionsText={
-                memberOptions.length > 0 && form.memberIds.length === memberOptions.length
+                memberOptions.length > 0 && selectedMembers.length === memberOptions.length
                   ? "All members selected"
                   : "No members found"
               }
               loading={!membersReady && !membersError}
-              popupIcon={<ChevronDown size={16} strokeWidth={1.5} />}
               disabled={!canManageGroups || !membersReady}
               sx={{ width: "100%" }}
             />

@@ -97,6 +97,10 @@ vi.mock("../DataRetention", () => ({
   default: () => <div data-testid="data-retention-tab" />,
 }));
 
+vi.mock("../Groups", () => ({
+  default: () => <div data-testid="groups-tab" />,
+}));
+
 vi.mock("../../../components/HelperIcon", () => ({
   default: () => null,
   HelperIcon: () => null,
@@ -176,6 +180,12 @@ describe("SettingsPage", () => {
     mockHasOrganizationAdmin = false;
     renderWithProviders(<ProfilePage />, { route: "/settings" });
     expect(screen.queryByText("Data retention")).not.toBeInTheDocument();
+  });
+
+  it("opens the Groups tab from a direct link", () => {
+    renderAt("/settings/groups");
+    expect(screen.getByTestId("path")).toHaveTextContent("/settings/groups");
+    expect(screen.getByTestId("groups-tab")).toBeInTheDocument();
   });
 
   it("opens the MCP tab for an Admin", () => {

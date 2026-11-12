@@ -1539,7 +1539,7 @@ const ProjectSettings = React.memo(
                     isOptionEqualToValue={(option, value) => option.id === value.id}
                     noOptionsText={
                       (groups ?? []).length === 0
-                        ? "No groups yet. Create them in Settings → Groups."
+                        ? "No groups yet. Groups are managed in Settings → Groups."
                         : "All groups selected"
                     }
                     onChange={(_event, selected) => {
