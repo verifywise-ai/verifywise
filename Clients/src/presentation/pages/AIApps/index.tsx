@@ -251,15 +251,22 @@ export default function AIApps() {
     }
   }, [appPendingDelete, deleteAiAppMutation, isSelected, toggleSelection]);
 
-  const handleModalSuccess = useCallback(() => {
-    const wasEditing = !!editingApp;
-    setIsModalOpen(false);
-    setEditingApp(null);
-    setAlert({
-      variant: "success",
-      body: wasEditing ? "AI app updated successfully" : "AI app created successfully",
-    });
-  }, [editingApp]);
+  const handleModalSuccess = useCallback(
+    (result?: { warning?: string }) => {
+      const wasEditing = !!editingApp;
+      setIsModalOpen(false);
+      setEditingApp(null);
+      setAlert(
+        result?.warning
+          ? { variant: "error", body: result.warning }
+          : {
+              variant: "success",
+              body: wasEditing ? "AI app updated successfully" : "AI app created successfully",
+            },
+      );
+    },
+    [editingApp],
+  );
 
   const handleCloseAlert = () => setAlert(null);
 

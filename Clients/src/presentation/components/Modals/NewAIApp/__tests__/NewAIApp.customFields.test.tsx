@@ -92,4 +92,46 @@ describe("NewAIApp custom fields (#5262)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Save" }));
     expect(mockUpdate).not.toHaveBeenCalled();
   });
+
+  it("closes create mode with a warning when the flush fails after create", async () => {
+    mockSetCustomFieldValue.mockRejectedValueOnce(new Error("boom"));
+    const onSuccess = vi.fn();
+    renderWithProviders(<NewAIApp isOpen onClose={vi.fn()} onSuccess={onSuccess} />);
+    await userEvent.type(screen.getByPlaceholderText("e.g. ChatGPT Enterprise"), "Copilot");
+    await userEvent.type(screen.getByPlaceholderText("Enter business unit"), "Finance");
+    await userEvent.click(screen.getByRole("button", { name: "Create" }));
+    await waitFor(() => expect(onSuccess).toHaveBeenCalledTimes(1));
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(onSuccess.mock.calls[0][0].warning).toMatch(/custom field values were not saved/);
+  });
+
+  it("flushes against the existing app id when editing", async () => {
+    const onSuccess = vi.fn();
+    renderWithProviders(
+      <NewAIApp
+        isOpen
+        onClose={vi.fn()}
+        onSuccess={onSuccess}
+        app={
+          {
+            id: 5,
+            organization_id: 1,
+            name: "Copilot",
+            status: "draft",
+            discovered_source: "manual",
+          } as never
+        }
+      />,
+    );
+    await userEvent.type(screen.getByPlaceholderText("Enter business unit"), "Finance");
+    await userEvent.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() =>
+      expect(mockSetCustomFieldValue).toHaveBeenCalledWith({
+        definition_id: 11,
+        entity_id: 5,
+        value: "Finance",
+      }),
+    );
+    expect(onSuccess).toHaveBeenCalledWith();
+  });
 });

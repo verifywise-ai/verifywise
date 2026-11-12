@@ -14,6 +14,7 @@ import { VendorModel } from "../../../../domain/models/Common/vendor/vendor.mode
 import { IAIApp, IAIAppDetail } from "../../../../domain/interfaces/i.aiApp";
 import { STATUS_OPTIONS } from "../../../pages/AIApps/utils";
 import Alert from "../../Alert";
+import { useTranslation } from "../../../../application/hooks/useTranslation";
 import CustomFieldsSection, { type CustomFieldsSectionHandle } from "../../CustomFieldsSection";
 import { useRequiredCustomFieldsGate } from "../../CustomFieldsSection/RequiredCustomFieldsGate";
 
@@ -24,7 +25,8 @@ interface ApiErrorResponse {
 interface NewAIAppProps {
   isOpen: boolean;
   onClose: () => void;
-  onSuccess: () => void;
+  /** `warning` is set when the app was saved but its custom field values were not. */
+  onSuccess: (result?: { warning?: string }) => void;
   /** When provided, the modal edits this app instead of creating a new one. */
   app?: IAIAppDetail | IAIApp | null;
 }
@@ -80,6 +82,7 @@ function stateFromApp(app: IAIAppDetail | IAIApp): FormState {
 }
 
 export default function NewAIApp({ isOpen, onClose, onSuccess, app }: NewAIAppProps) {
+  const { t } = useTranslation();
   const isEditing = !!app;
   const [values, setValues] = useState<FormState>(initialState);
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -183,9 +186,17 @@ export default function NewAIApp({ isOpen, onClose, onSuccess, app }: NewAIAppPr
         try {
           await customFieldsRef.current.flush(savedId);
         } catch (cfError) {
-          // The app is saved. Keep the modal open so the inline warning from
-          // CustomFieldsSection stays visible.
           console.error("AI app saved, but custom field values failed to save:", cfError);
+          if (isEditing) {
+            // Retrying an edit is an update, so keep the modal open with its inline warning.
+            return;
+          }
+          // The app exists now. Close create mode so a retry cannot duplicate it.
+          onSuccess({
+            warning: t(
+              "Saved the AI app, but its custom field values were not saved. Edit the app to try again.",
+            ),
+          });
           return;
         }
       }

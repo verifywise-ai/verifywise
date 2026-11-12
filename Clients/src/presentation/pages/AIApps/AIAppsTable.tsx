@@ -133,19 +133,21 @@ export default function AIAppsTable({
     onServerSortChange?.(sortConfig.key, sortConfig.direction);
   }, [onServerSortChange, sortConfig.key, sortConfig.direction]);
 
-  const baseColumns = serverPaging
-    ? TABLE_COLUMNS.map((c) => ({ ...c, sortable: c.sortable && SERVER_SORTABLE.has(c.id) }))
-    : TABLE_COLUMNS;
-  // Custom field columns sit before the actions column.
+  const isServerPaged = !!serverPaging;
   const columns = useMemo(() => {
+    const baseColumns = isServerPaged
+      ? TABLE_COLUMNS.map((c) => ({ ...c, sortable: c.sortable && SERVER_SORTABLE.has(c.id) }))
+      : TABLE_COLUMNS;
+    // Custom field columns sit before the actions column.
     const customCols: StandardColumn[] = customFieldDefs.map((d) => ({
       id: `cf_${d.id}`,
       label: d.label,
       sortable: false,
     }));
     const actionsIdx = baseColumns.findIndex((c) => c.id === "actions");
+    if (actionsIdx === -1) return [...baseColumns, ...customCols];
     return [...baseColumns.slice(0, actionsIdx), ...customCols, ...baseColumns.slice(actionsIdx)];
-  }, [baseColumns, customFieldDefs]);
+  }, [isServerPaged, customFieldDefs]);
   const visibleRows = serverPaging
     ? sortedRows
     : sortedRows.slice(validPage * rowsPerPage, validPage * rowsPerPage + rowsPerPage);

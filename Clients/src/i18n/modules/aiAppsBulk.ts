@@ -55,6 +55,8 @@ export const de: Record<string, string> = {
     "Die Antworten konnten nicht gespeichert werden. Versuchen Sie es erneut.",
   "Could not save the questionnaire. Try again.":
     "Der Fragebogen konnte nicht gespeichert werden. Versuchen Sie es erneut.",
+  "Saved the AI app, but its custom field values were not saved. Edit the app to try again.":
+    "Die KI-App wurde gespeichert, aber ihre benutzerdefinierten Feldwerte nicht. Bearbeiten Sie die App, um es erneut zu versuchen.",
   "Could not select all AI apps. Try again.":
     "Es konnten nicht alle KI-Apps ausgewählt werden. Versuchen Sie es erneut.",
   "Could not upload the answers. Try again.":
@@ -226,6 +228,8 @@ export const fr: Record<string, string> = {
   "Could not save the answers. Try again.": "Impossible d'enregistrer les réponses. Réessayez.",
   "Could not save the questionnaire. Try again.":
     "Impossible d'enregistrer le questionnaire. Réessayez.",
+  "Saved the AI app, but its custom field values were not saved. Edit the app to try again.":
+    "L'application d'IA a été enregistrée, mais les valeurs de ses champs personnalisés ne l'ont pas été. Modifiez l'application pour réessayer.",
   "Could not select all AI apps. Try again.":
     "Impossible de sélectionner toutes les applications d'IA. Réessayez.",
   "Could not upload the answers. Try again.": "Impossible d'importer les réponses. Réessayez.",
@@ -397,6 +401,8 @@ export const es: Record<string, string> = {
     "No se pudieron guardar las respuestas. Inténtalo de nuevo.",
   "Could not save the questionnaire. Try again.":
     "No se pudo guardar el cuestionario. Inténtalo de nuevo.",
+  "Saved the AI app, but its custom field values were not saved. Edit the app to try again.":
+    "La aplicación de IA se guardó, pero los valores de sus campos personalizados no. Edita la aplicación para intentarlo de nuevo.",
   "Could not select all AI apps. Try again.":
     "No se pudieron seleccionar todas las aplicaciones de IA. Inténtalo de nuevo.",
   "Could not upload the answers. Try again.":
