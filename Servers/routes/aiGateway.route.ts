@@ -8,10 +8,10 @@
 
 import { createProxyMiddleware, fixRequestBody } from "http-proxy-middleware";
 import authenticateJWT from "../middleware/auth.middleware";
-import express, { NextFunction, Request, Response, Router } from "express";
+import express, { Request, Router } from "express";
 import { updateGuardrailSettings } from "../controllers/aiGatewaySettings.ctrl";
 import { getGatewayInternalKey, getGatewayUrl } from "../utils/aiGatewayConfig";
-import { requestHasPermission } from "../utils/rolePermissions.utils";
+import { createPermissionFlagMiddleware } from "../utils/proxyPermissionFlag.utils";
 
 const jsonParser = express.json({ limit: "50mb" });
 
@@ -24,47 +24,21 @@ const jsonParser = express.json({ limit: "50mb" });
  */
 export const LLM_KEYS_ADMIN_HEADER = "x-can-manage-llm-keys";
 
-const READ_ONLY_METHODS = new Set(["GET", "HEAD", "OPTIONS"]);
-
 type KeysPermissionRequest = Request & { canManageLlmKeys?: boolean };
 
 /**
- * Whether the request path (relative to /api/ai-gateway) is under /keys.
- * Decoded and lower-cased; a spelling that doesn't match only means the
- * header is not set, and the gateway falls back to the role name (fail closed).
- */
-export function isKeysPath(path: string): boolean {
-  let decoded = path;
-  try {
-    decoded = decodeURIComponent(path);
-  } catch {
-    // Malformed escape: keep the raw path.
-  }
-  const normalized = decoded.toLowerCase().replace(/\/+/g, "/");
-  return normalized === "/keys" || normalized.startsWith("/keys/");
-}
-
-/**
  * For writes to the provider key routes, resolve whether the caller holds
- * "llmKeys.admin". Other requests skip the lookup. Fails closed: on a lookup
- * error the flag stays unset and the gateway checks the role name only.
+ * "llmKeys.admin". The gateway already accepts the "Admin" role name, so no
+ * lookup is needed for it. Fails closed: on a lookup error the flag stays
+ * unset and the gateway checks the role name only.
  */
-export async function resolveLlmKeysPermission(
-  req: Request,
-  _res: Response,
-  next: NextFunction,
-): Promise<void> {
-  const r = req as KeysPermissionRequest;
-  r.canManageLlmKeys = false;
-  if (!READ_ONLY_METHODS.has(req.method) && isKeysPath(req.path)) {
-    try {
-      r.canManageLlmKeys = await requestHasPermission(req, "llmKeys.admin");
-    } catch (error) {
-      console.error("[AI Gateway Proxy] Permission lookup failed:", error);
-    }
-  }
-  next();
-}
+export const resolveLlmKeysPermission = createPermissionFlagMiddleware({
+  pathPrefix: "/keys",
+  permission: "llmKeys.admin",
+  flag: "canManageLlmKeys",
+  skipLookupForRoles: ["Admin"],
+  logLabel: "AI Gateway Proxy",
+});
 
 function aiGatewayRoutes() {
   const router = Router();

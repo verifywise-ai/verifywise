@@ -28,17 +28,17 @@ jest.mock("../../utils/rolePermissions.utils", () => ({
 
 import aiGatewayRoutes, {
   LLM_KEYS_ADMIN_HEADER,
-  isKeysPath,
   resolveLlmKeysPermission,
 } from "../aiGateway.route";
+import { isUnderPathPrefix } from "../../utils/proxyPermissionFlag.utils";
 import { requestHasPermission } from "../../utils/rolePermissions.utils";
 
 const mockHasPermission = requestHasPermission as jest.MockedFunction<typeof requestHasPermission>;
 
 type FlagReq = Partial<Request> & { canManageLlmKeys?: boolean };
 
-const run = async (method: string, path: string): Promise<FlagReq> => {
-  const req: FlagReq = { method, path, role: "Key managers" } as FlagReq;
+const run = async (method: string, path: string, role = "Key managers"): Promise<FlagReq> => {
+  const req: FlagReq = { method, path, role } as FlagReq;
   const next = jest.fn();
   await resolveLlmKeysPermission(req as Request, {} as Response, next as unknown as NextFunction);
   expect(next).toHaveBeenCalledTimes(1);
@@ -50,12 +50,20 @@ beforeEach(() => {
   proxyOptions.length = 0;
 });
 
-describe("isKeysPath", () => {
+describe("isUnderPathPrefix", () => {
   it.each(["/keys", "/keys/12", "/KEYS/12/verify", "//keys", "/%6Beys/3"])("matches %s", (p) => {
-    expect(isKeysPath(p)).toBe(true);
+    expect(isUnderPathPrefix(p, "/keys")).toBe(true);
   });
-  it.each(["/keysets", "/endpoints", "/virtual-keys/1", "/"])("does not match %s", (p) => {
-    expect(isKeysPath(p)).toBe(false);
+  it.each([
+    "/keysets",
+    "/endpoints",
+    "/virtual-keys/1",
+    "/",
+    "/keys/../endpoints",
+    "/keys/%2e%2e/virtual-keys",
+    "/keys/./1",
+  ])("does not match %s", (p) => {
+    expect(isUnderPathPrefix(p, "/keys")).toBe(false);
   });
 });
 
@@ -79,6 +87,12 @@ describe("resolveLlmKeysPermission", () => {
     expect(req.canManageLlmKeys).toBe(true);
   });
 
+  it("skips the lookup for the Admin role, which the gateway accepts by name", async () => {
+    const req = await run("DELETE", "/keys/7", "Admin");
+    expect(mockHasPermission).not.toHaveBeenCalled();
+    expect(req.canManageLlmKeys).toBe(false);
+  });
+
   it("leaves the flag off when the permission is missing", async () => {
     mockHasPermission.mockResolvedValueOnce(false);
     const req = await run("POST", "/keys");
@@ -99,7 +113,7 @@ describe("proxy header", () => {
     aiGatewayRoutes();
     const proxyReq = { setHeader: jest.fn(), removeHeader: jest.fn() };
     const req = { organizationId: 1, userId: 2, role: "Key managers", canManageLlmKeys: flag };
-    proxyOptions[0].on.proxyReq(proxyReq, req);
+    proxyOptions[proxyOptions.length - 1].on.proxyReq(proxyReq, req);
     return proxyReq;
   };
 
