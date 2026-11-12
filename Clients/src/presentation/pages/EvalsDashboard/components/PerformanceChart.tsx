@@ -201,7 +201,7 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
 
   if (loading) {
     return (
-      <Box textAlign="center" py={4}>
+      <Box textAlign="center" py="8px">
         <Typography variant="body2" color="text.secondary">
           Loading performance data...
         </Typography>
@@ -211,7 +211,7 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
 
   if (data.length === 0) {
     return (
-      <Box textAlign="center" py={4}>
+      <Box textAlign="center" py="8px">
         <Typography variant="body2" color="text.secondary">
           No completed experiments in this time range.
         </Typography>
@@ -293,7 +293,7 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
           minWidth: "180px",
         }}
       >
-        <Typography sx={{ fontWeight: 600, fontSize: "13px", mb: 1 }}>
+        <Typography sx={{ fontWeight: 600, fontSize: "13px", mb: "2px" }}>
           {dataPoint.uniqueId || label}
         </Typography>
         {validEntries.map((entry: TooltipEntry) => {
@@ -310,8 +310,8 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
               sx={{
                 display: "flex",
                 alignItems: "center",
-                gap: 1,
-                py: 0.25,
+                gap: "2px",
+                py: "0.5px",
               }}
             >
               <Box

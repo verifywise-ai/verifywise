@@ -625,7 +625,7 @@ export default function ProjectExperiments({
           title="Rerun experiment"
           body={
             <Box>
-              <Typography sx={{ fontSize: "14px", color: "#475467", lineHeight: 1.6, mb: 2 }}>
+              <Typography sx={{ fontSize: "14px", color: "#475467", lineHeight: 1.6, mb: "4px" }}>
                 This will create a new experiment run using the same configuration as "
                 {rerunConfirm.experiment.name}".
               </Typography>
@@ -694,8 +694,8 @@ export default function ProjectExperiments({
       )}
 
       {/* Header + description */}
-      <Stack spacing={1} mb={4}>
-        <Box display="flex" alignItems="center" gap={1}>
+      <Stack spacing="2px" mb="8px">
+        <Box display="flex" alignItems="center" gap="2px">
           <Typography variant="h6" fontSize={15} fontWeight="600" color="#111827">
             Experiments
           </Typography>
@@ -721,14 +721,19 @@ export default function ProjectExperiments({
           boxShadow: "none",
         }}
       >
-        <CardContent sx={{ py: 2 }}>
-          <Box mb={1}>
+        <CardContent sx={{ py: "4px" }}>
+          <Box mb="2px">
             <Typography variant="h6" sx={{ fontSize: "14px", fontWeight: 600 }}>
               Performance tracking
             </Typography>
           </Box>
           <Box
-            sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 2 }}
+            sx={{
+              display: "flex",
+              justifyContent: "space-between",
+              alignItems: "center",
+              mb: "4px",
+            }}
           >
             <Typography variant="body2" color="text.secondary" sx={{ fontSize: "13px" }}>
               Track metric scores across eval runs
@@ -740,7 +745,7 @@ export default function ProjectExperiments({
                 sx={{
                   "fontSize": "12px",
                   "height": "28px",
-                  "& .MuiSelect-select": { py: 0.5, px: 1.5 },
+                  "& .MuiSelect-select": { py: "1px", px: "3px" },
                   "& .MuiOutlinedInput-notchedOutline": { borderColor: "#E5E7EB" },
                   "&:hover .MuiOutlinedInput-notchedOutline": { borderColor: "#D1D5DB" },
                   "&.Mui-focused .MuiOutlinedInput-notchedOutline": { borderColor: "#13715B" },
@@ -789,7 +794,7 @@ export default function ProjectExperiments({
                     fontWeight: 500,
                     color: "#374151",
                     textAlign: "center",
-                    px: 3,
+                    px: "6px",
                   }}
                 >
                   You can start tracking metrics once you define your experiments
@@ -806,9 +811,9 @@ export default function ProjectExperiments({
         justifyContent="space-between"
         alignItems="center"
         sx={{ marginBottom: "18px" }}
-        gap={2}
+        gap="4px"
       >
-        <Stack direction="row" alignItems="center" gap={2}>
+        <Stack direction="row" alignItems="center" gap="4px">
           <FilterBy columns={experimentFilterColumns} onFilterChange={handleFilterChange} />
           <GroupBy
             options={[
@@ -833,7 +838,7 @@ export default function ProjectExperiments({
           sx={{
             backgroundColor: "#13715B",
             border: "1px solid #13715B",
-            gap: 2,
+            gap: "4px",
           }}
           onClick={() => setNewEvalModalOpen(true)}
           isDisabled={!canCreateExperiment}
@@ -841,7 +846,7 @@ export default function ProjectExperiments({
       </Stack>
 
       {/* Experiments Table with Pagination */}
-      <Box mb={4}>
+      <Box mb="8px">
         <GroupedTableView
           groupedData={groupedRows}
           ungroupedData={tableRows}

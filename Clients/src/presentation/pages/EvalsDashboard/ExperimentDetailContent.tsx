@@ -100,17 +100,41 @@ const MarkdownRenderer = ({ content }: { content: string }) => {
         "fontSize": 14,
         "color": palette.text.secondary,
         "lineHeight": 1.7,
-        "& p": { mb: 1, mt: 0 },
-        "& h1": { fontSize: 16, fontWeight: 700, color: palette.text.primary, mt: 2, mb: 1 },
-        "& h2": { fontSize: 15, fontWeight: 700, color: palette.text.primary, mt: 2, mb: 1 },
-        "& h3": { fontSize: 14, fontWeight: 700, color: palette.text.primary, mt: 2, mb: 1 },
-        "& h4": { fontSize: 14, fontWeight: 600, color: palette.text.primary, mt: 1.5, mb: 0.5 },
-        "& ul, & ol": { pl: 3.5, mb: 1, ml: 0.5 },
-        "& li": { mb: 0.5 },
+        "& p": { mb: "2px", mt: 0 },
+        "& h1": {
+          fontSize: 16,
+          fontWeight: 700,
+          color: palette.text.primary,
+          mt: "4px",
+          mb: "2px",
+        },
+        "& h2": {
+          fontSize: 15,
+          fontWeight: 700,
+          color: palette.text.primary,
+          mt: "4px",
+          mb: "2px",
+        },
+        "& h3": {
+          fontSize: 14,
+          fontWeight: 700,
+          color: palette.text.primary,
+          mt: "4px",
+          mb: "2px",
+        },
+        "& h4": {
+          fontSize: 14,
+          fontWeight: 600,
+          color: palette.text.primary,
+          mt: "3px",
+          mb: "1px",
+        },
+        "& ul, & ol": { pl: "7px", mb: "2px", ml: "1px" },
+        "& li": { mb: "1px" },
         "& code": {
           backgroundColor: palette.background.hover,
-          px: 0.75,
-          py: 0.25,
+          px: "1.5px",
+          py: "0.5px",
           borderRadius: "4px",
           fontFamily: "'Fira Code', monospace",
           fontSize: 11,
@@ -119,8 +143,8 @@ const MarkdownRenderer = ({ content }: { content: string }) => {
         "& pre": {
           "backgroundColor": "#1e293b",
           "borderRadius": "6px",
-          "p": 2,
-          "my": 1.5,
+          "p": "4px",
+          "my": "3px",
           "overflow": "auto",
           "& code": {
             backgroundColor: "transparent",
@@ -130,10 +154,10 @@ const MarkdownRenderer = ({ content }: { content: string }) => {
         },
         "& strong": { fontWeight: 600 },
         "& em": { fontStyle: "italic" },
-        "& hr": { border: "none", borderTop: `1px solid ${palette.border.light}`, my: 2 },
+        "& hr": { border: "none", borderTop: `1px solid ${palette.border.light}`, my: "4px" },
         "& blockquote": {
           borderLeft: `3px solid ${palette.border.light}`,
-          pl: 2,
+          pl: "4px",
           ml: 0,
           color: palette.text.disabled,
           fontStyle: "italic",
@@ -141,13 +165,13 @@ const MarkdownRenderer = ({ content }: { content: string }) => {
         "& table": {
           borderCollapse: "collapse",
           width: "100%",
-          my: 1,
+          my: "2px",
           fontSize: 11,
         },
         "& th, & td": {
           border: `1px solid ${palette.border.light}`,
-          px: 1,
-          py: 0.5,
+          px: "2px",
+          py: "1px",
           textAlign: "left",
         },
         "& th": {
@@ -159,7 +183,7 @@ const MarkdownRenderer = ({ content }: { content: string }) => {
           fontSize: "1em",
         },
         "& .katex-display": {
-          my: 1,
+          my: "2px",
           overflow: "auto",
         },
       }}
@@ -395,7 +419,7 @@ export default function ExperimentDetailContent({
 
   if (!experiment) {
     return (
-      <Box p={4}>
+      <Box p="8px">
         <Typography>Experiment not found</Typography>
       </Box>
     );
@@ -476,7 +500,7 @@ export default function ExperimentDetailContent({
       )}
 
       {/* Back button */}
-      <Box sx={{ mb: 2 }}>
+      <Box sx={{ mb: "4px" }}>
         <Typography
           component="span"
           onClick={onBack}
@@ -497,12 +521,14 @@ export default function ExperimentDetailContent({
       </Box>
 
       {/* Header - Title and Actions */}
-      <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: 1 }}>
+      <Box
+        sx={{ display: "flex", justifyContent: "space-between", alignItems: "center", mb: "2px" }}
+      >
         <Box
           sx={{
             "display": "inline-flex",
             "alignItems": "center",
-            "gap": 0.5,
+            "gap": "1px",
             "&:hover .edit-icon": {
               opacity: 1,
             },
@@ -572,7 +598,7 @@ export default function ExperimentDetailContent({
         </Box>
 
         {/* Action buttons */}
-        <Stack direction="row" spacing={1} alignItems="center" sx={{ mb: 3 }}>
+        <Stack direction="row" spacing="2px" alignItems="center" sx={{ mb: "6px" }}>
           <VWTooltip
             content={EXPERIMENT_ACTION_TOOLTIPS.downloadFull}
             placement="bottom"
@@ -646,7 +672,7 @@ export default function ExperimentDetailContent({
             </CustomizableButton>
           </VWTooltip>
           <Box
-            sx={{ width: "1px", height: "24px", backgroundColor: palette.border.light, mx: 0.5 }}
+            sx={{ width: "1px", height: "24px", backgroundColor: palette.border.light, mx: "1px" }}
           />
           <VWTooltip
             content={
@@ -690,7 +716,7 @@ export default function ExperimentDetailContent({
               : experiment.status === "failed"
                 ? `1px solid ${palette.status.error.text}`
                 : `1px solid ${palette.border.light}`,
-          mb: 3,
+          mb: "6px",
         }}
       >
         <Stack direction="row" alignItems="center" justifyContent="space-between">
@@ -698,7 +724,7 @@ export default function ExperimentDetailContent({
           <Stack
             direction="row"
             alignItems="center"
-            spacing={2}
+            spacing="4px"
             sx={failureReason ? { flex: 1, minWidth: 0, mr: "24px" } : undefined}
           >
             <Box sx={failureReason ? { minWidth: 0 } : undefined}>
@@ -749,7 +775,7 @@ export default function ExperimentDetailContent({
                 sx={{
                   "display": "inline-flex",
                   "alignItems": "center",
-                  "gap": 0.5,
+                  "gap": "1px",
                   "&:hover .edit-icon": { opacity: 1 },
                 }}
               >
@@ -825,7 +851,7 @@ export default function ExperimentDetailContent({
           </Stack>
 
           {/* Info Section */}
-          <Stack direction="row" spacing={5} alignItems="flex-start">
+          <Stack direction="row" spacing="10px" alignItems="flex-start">
             <Box sx={{ textAlign: "center" }}>
               <Typography
                 sx={{
@@ -1396,7 +1422,7 @@ export default function ExperimentDetailContent({
                       display: "flex",
                       alignItems: "center",
                       justifyContent: "space-between",
-                      mb: 1.5,
+                      mb: "3px",
                     }}
                   >
                     <Typography
@@ -1437,7 +1463,7 @@ export default function ExperimentDetailContent({
               {/* Quality Metrics Section */}
               {qualityMetrics.length > 0 && (
                 <Box sx={{ mb: "16px" }}>
-                  <Typography variant="h6" sx={{ fontSize: "15px", fontWeight: 600, mb: 2 }}>
+                  <Typography variant="h6" sx={{ fontSize: "15px", fontWeight: 600, mb: "4px" }}>
                     Quality metrics
                   </Typography>
                   <Box
@@ -1455,7 +1481,7 @@ export default function ExperimentDetailContent({
               {/* Conversational Metrics Section (Multi-turn) */}
               {conversationalMetrics.length > 0 && (
                 <Box sx={{ mb: "16px" }}>
-                  <Typography variant="h6" sx={{ fontSize: "15px", fontWeight: 600, mb: 2 }}>
+                  <Typography variant="h6" sx={{ fontSize: "15px", fontWeight: 600, mb: "4px" }}>
                     Conversational metrics
                     <Typography
                       component="span"
@@ -1463,7 +1489,7 @@ export default function ExperimentDetailContent({
                         fontSize: "12px",
                         fontWeight: 400,
                         color: palette.text.disabled,
-                        ml: 1,
+                        ml: "2px",
                       }}
                     >
                       (multi-turn)
@@ -1484,7 +1510,7 @@ export default function ExperimentDetailContent({
               {/* Safety Metrics Section */}
               {safetyMetrics.length > 0 && (
                 <Box sx={{ mb: "16px" }}>
-                  <Typography variant="h6" sx={{ fontSize: "15px", fontWeight: 600, mb: 2 }}>
+                  <Typography variant="h6" sx={{ fontSize: "15px", fontWeight: 600, mb: "4px" }}>
                     Safety metrics
                   </Typography>
                   <Box
@@ -1502,7 +1528,7 @@ export default function ExperimentDetailContent({
               {/* Custom Scorers Section - only show truly custom ones not matching known metrics */}
               {customScorerMetrics.length > 0 && (
                 <Box sx={{ mb: "16px" }}>
-                  <Typography variant="h6" sx={{ fontSize: "15px", fontWeight: 600, mb: 2 }}>
+                  <Typography variant="h6" sx={{ fontSize: "15px", fontWeight: 600, mb: "4px" }}>
                     Custom scorers
                   </Typography>
                   <Box
@@ -1521,7 +1547,7 @@ export default function ExperimentDetailContent({
         })()}
 
       {/* Split Panel Layout */}
-      <Typography variant="h6" sx={{ fontSize: "15px", fontWeight: 600, mb: 2 }}>
+      <Typography variant="h6" sx={{ fontSize: "15px", fontWeight: 600, mb: "4px" }}>
         All samples
       </Typography>
       {/* Extract unique metric names from all logs */}
@@ -1825,7 +1851,7 @@ export default function ExperimentDetailContent({
                           display: "flex",
                           flexDirection: "column",
                           borderRight: `1px solid ${palette.border.light}`,
-                          pr: 4,
+                          pr: "8px",
                         }}
                       >
                         {/* Conversational Display (for multi-turn) */}
@@ -1836,7 +1862,7 @@ export default function ExperimentDetailContent({
                                 fontSize: 14,
                                 fontWeight: 600,
                                 color: palette.text.primary,
-                                mb: 1.5,
+                                mb: "3px",
                               }}
                             >
                               Conversation (
@@ -1846,7 +1872,7 @@ export default function ExperimentDetailContent({
                             </Typography>
                             {selectedLog.metadata.scenario && (
                               <Typography
-                                sx={{ fontSize: 12, color: palette.text.disabled, mb: 1.5 }}
+                                sx={{ fontSize: 12, color: palette.text.disabled, mb: "3px" }}
                               >
                                 Scenario: {selectedLog.metadata.scenario}
                               </Typography>
@@ -1857,11 +1883,11 @@ export default function ExperimentDetailContent({
                                 backgroundColor: palette.accent.purple.bg,
                                 border: `1px solid ${palette.accent.purple.border}`,
                                 borderRadius: "8px",
-                                p: 2.5,
+                                p: "5px",
                                 overflowY: "auto",
                               }}
                             >
-                              <Stack spacing={2}>
+                              <Stack spacing="4px">
                                 {(
                                   selectedLog.metadata.turns as Array<{
                                     role: string;
@@ -1880,7 +1906,7 @@ export default function ExperimentDetailContent({
                                       <Box
                                         sx={{
                                           maxWidth: "85%",
-                                          p: 1.5,
+                                          p: "3px",
                                           borderRadius: "12px",
                                           backgroundColor: isUser
                                             ? palette.status.success.bg
@@ -1898,7 +1924,7 @@ export default function ExperimentDetailContent({
                                               : palette.status.info.text,
                                             fontSize: "10px",
                                             textTransform: "uppercase",
-                                            mb: 0.5,
+                                            mb: "1px",
                                           }}
                                         >
                                           {isUser ? "User" : "Assistant"}
@@ -1913,8 +1939,8 @@ export default function ExperimentDetailContent({
                             {selectedLog.metadata.expected_outcome && (
                               <Box
                                 sx={{
-                                  mt: 2,
-                                  p: 1.5,
+                                  mt: "4px",
+                                  p: "3px",
                                   backgroundColor: palette.status.warning.bg,
                                   borderRadius: "6px",
                                   border: `1px solid ${palette.status.warning.border}`,
@@ -1930,7 +1956,11 @@ export default function ExperimentDetailContent({
                                   Expected Outcome:
                                 </Typography>
                                 <Typography
-                                  sx={{ fontSize: 12, color: palette.status.warning.text, mt: 0.5 }}
+                                  sx={{
+                                    fontSize: 12,
+                                    color: palette.status.warning.text,
+                                    mt: "1px",
+                                  }}
                                 >
                                   {selectedLog.metadata.expected_outcome}
                                 </Typography>
@@ -1940,21 +1970,21 @@ export default function ExperimentDetailContent({
                         ) : (
                           <Box sx={{ flex: 1, display: "flex", flexDirection: "column" }}>
                             {/* Input */}
-                            <Box sx={{ mb: 3 }}>
+                            <Box sx={{ mb: "6px" }}>
                               <Typography
                                 sx={{
                                   fontSize: 14,
                                   fontWeight: 600,
                                   color: palette.text.primary,
-                                  mb: 1,
+                                  mb: "2px",
                                 }}
                               >
                                 Input
                               </Typography>
                               <Box
                                 sx={{
-                                  p: 2.5,
-                                  pl: 4,
+                                  p: "5px",
+                                  pl: "8px",
                                   backgroundColor: palette.background.accent,
                                   border: `1px solid ${palette.border.light}`,
                                   borderRadius: "8px",
@@ -1981,7 +2011,7 @@ export default function ExperimentDetailContent({
                                   fontSize: 14,
                                   fontWeight: 600,
                                   color: palette.text.primary,
-                                  mb: 1,
+                                  mb: "2px",
                                 }}
                               >
                                 Output
@@ -1989,8 +2019,8 @@ export default function ExperimentDetailContent({
                               <Box
                                 sx={{
                                   flex: 1,
-                                  p: 2.5,
-                                  pl: 4,
+                                  p: "5px",
+                                  pl: "8px",
                                   backgroundColor: palette.background.accent,
                                   border: `1px solid ${palette.border.light}`,
                                   borderRadius: "8px",
@@ -2008,14 +2038,19 @@ export default function ExperimentDetailContent({
 
                       {/* Right Panel: Metric Scores with Full Reasoning */}
                       <Box
-                        sx={{ display: "flex", flexDirection: "column", overflowY: "auto", pl: 1 }}
+                        sx={{
+                          display: "flex",
+                          flexDirection: "column",
+                          overflowY: "auto",
+                          pl: "2px",
+                        }}
                       >
                         <Typography
                           sx={{
                             fontSize: 14,
                             fontWeight: 600,
                             color: palette.text.primary,
-                            mb: 1.5,
+                            mb: "3px",
                           }}
                         >
                           Evaluation Metrics
@@ -2023,7 +2058,7 @@ export default function ExperimentDetailContent({
 
                         {selectedLog.metadata?.metric_scores &&
                         Object.keys(selectedLog.metadata.metric_scores).length > 0 ? (
-                          <Stack spacing={2} sx={{ flex: 1, overflowY: "auto", pr: 1 }}>
+                          <Stack spacing="4px" sx={{ flex: 1, overflowY: "auto", pr: "2px" }}>
                             {Object.entries(selectedLog.metadata.metric_scores).map(
                               ([metricName, metricData]) => {
                                 const entry = metricData as MetricScoreEntry;
@@ -2042,7 +2077,7 @@ export default function ExperimentDetailContent({
                                   <Box
                                     key={metricName}
                                     sx={{
-                                      p: 2,
+                                      p: "4px",
                                       borderRadius: "6px",
                                       backgroundColor: palette.background.main,
                                       border: `1px solid ${palette.border.light}`,
@@ -2053,7 +2088,7 @@ export default function ExperimentDetailContent({
                                       direction="row"
                                       justifyContent="space-between"
                                       alignItems="center"
-                                      sx={{ mb: 0.75 }}
+                                      sx={{ mb: "1.5px" }}
                                     >
                                       <Typography
                                         sx={{
@@ -2136,8 +2171,8 @@ export default function ExperimentDetailContent({
                     {selectedLog.error_message && (
                       <Box
                         sx={{
-                          mt: 2,
-                          p: 2,
+                          mt: "4px",
+                          p: "4px",
                           backgroundColor: palette.status.error.bg,
                           borderRadius: "6px",
                           border: `1px solid ${palette.status.error.border}`,
@@ -2148,7 +2183,7 @@ export default function ExperimentDetailContent({
                             fontSize: 12,
                             fontWeight: 600,
                             color: palette.status.error.text,
-                            mb: 0.5,
+                            mb: "1px",
                           }}
                         >
                           Error
@@ -2169,15 +2204,15 @@ export default function ExperimentDetailContent({
                     {/* Footer: Metadata + Sample ID */}
                     <Box
                       sx={{
-                        mt: 2,
-                        pt: 2,
+                        mt: "4px",
+                        pt: "4px",
                         borderTop: `1px solid ${palette.border.light}`,
                         display: "flex",
                         justifyContent: "space-between",
                         alignItems: "center",
                       }}
                     >
-                      <Stack direction="row" spacing={3}>
+                      <Stack direction="row" spacing="6px">
                         {selectedLog.model_name && (
                           <Typography sx={{ fontSize: 11, color: palette.text.disabled }}>
                             <span style={{ fontWeight: 600 }}>Model:</span> {selectedLog.model_name}

@@ -145,7 +145,7 @@ const ExperimentTableBody: React.FC<IExperimentTableBodyProps> = ({
               }}
             >
               {isRunning ? (
-                <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                <Box sx={{ display: "flex", alignItems: "center", gap: "2px" }}>
                   <Box
                     component={Loader2}
                     size={14}
@@ -330,12 +330,12 @@ const ExperimentTableBody: React.FC<IExperimentTableBodyProps> = ({
             border: `1px solid ${palette.border.dark}`,
             boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
             overflow: "hidden",
-            mt: 0.5,
-            p: 1,
+            mt: "1px",
+            p: "2px",
           },
         }}
       >
-        <Stack spacing={1}>
+        <Stack spacing="2px">
           {onRerun && (
             <VWTooltip
               content={

@@ -118,7 +118,7 @@ const ExperimentTable: React.FC<IExperimentTableProps> = ({
         {loading ? (
           <TableBody>
             <TableRow>
-              <TableCell colSpan={columns.length} sx={{ textAlign: "center", py: 4 }}>
+              <TableCell colSpan={columns.length} sx={{ textAlign: "center", py: "8px" }}>
                 <Typography>Loading...</Typography>
               </TableCell>
             </TableRow>
