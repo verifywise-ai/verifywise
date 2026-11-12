@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { screen, fireEvent, act } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import { AiAppStatus } from "../../../../domain/enums/aiApp.enum";
 
@@ -66,7 +66,21 @@ vi.mock("../../../components/Layout/PageHeaderExtended", () => ({
 
 // Mock NewAIApp modal
 vi.mock("../../../components/Modals/NewAIApp", () => ({
-  default: () => <div data-testid="new-ai-app-modal" />,
+  default: ({ onSuccess }: { onSuccess: (r?: { warning?: string }) => void }) => (
+    <div data-testid="new-ai-app-modal">
+      <button
+        onClick={() =>
+          onSuccess({
+            warning:
+              "Saved the AI app, but its custom field values were not saved. Edit the app to try again.",
+          })
+        }
+      >
+        finish with warning
+      </button>
+      <button onClick={() => onSuccess()}>finish</button>
+    </div>
+  ),
 }));
 
 import AIApps from "../index";
@@ -134,5 +148,28 @@ describe("AIApps page", () => {
     mockPending = { ...emptyPending, total: 1 };
     renderWithProviders(<AIApps />, { route: "/ai-apps?stage=planned" });
     expect(screen.queryByTestId("pending-intake-submissions")).toBeNull();
+  });
+
+  describe("alerts after the modal saves", () => {
+    afterEach(() => vi.useRealTimers());
+
+    it("keeps the custom field warning past 3s but auto-dismisses success", () => {
+      vi.useFakeTimers();
+      renderWithProviders(<AIApps />, { route: "/ai-apps" });
+
+      fireEvent.click(screen.getByText("finish"));
+      expect(screen.getByText("AI app created successfully")).toBeInTheDocument();
+      act(() => {
+        vi.advanceTimersByTime(3100);
+      });
+      expect(screen.queryByText("AI app created successfully")).toBeNull();
+
+      fireEvent.click(screen.getByText("finish with warning"));
+      expect(screen.getByText(/custom field values were not saved/)).toBeInTheDocument();
+      act(() => {
+        vi.advanceTimersByTime(3100);
+      });
+      expect(screen.getByText(/custom field values were not saved/)).toBeInTheDocument();
+    });
   });
 });
