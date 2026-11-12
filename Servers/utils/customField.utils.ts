@@ -1,5 +1,6 @@
 import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../database/db";
+import type { PermissionKey } from "../config/rolePermissions.config";
 import {
   ValidationException,
   NotFoundException,
@@ -108,6 +109,23 @@ export const ENTITY_TYPE_TO_TABLE: Record<CustomFieldEntityType, string> = {
   model_risk: "model_risks",
   ai_app: "ai_apps",
 };
+
+// entity_type -> the permission needed to change that entity, and so its
+// custom field values. Checked by the value write routes (PUT/DELETE
+// /custom-fields/values). The intake approval path writes through
+// setCustomFieldValueQuery directly and is gated by its own approval.
+export const CUSTOM_FIELD_EDIT_PERMISSION: Readonly<Record<CustomFieldEntityType, PermissionKey>> =
+  {
+    vendor: "vendor.edit",
+    vendor_risk: "vendor.edit",
+    policy: "policy.edit",
+    project: "useCase.edit",
+    project_risk: "risks.edit",
+    model_inventory: "model.edit",
+    model_risk: "model.edit",
+    task: "task.edit",
+    ai_app: "aiApp.edit",
+  };
 
 // ---------- Internal validators ----------
 
