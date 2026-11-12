@@ -1,16 +1,11 @@
 import { useState, useMemo, useEffect } from "react";
-import {
-  Box,
-  Stack,
-  Typography,
-  Checkbox,
-  FormControlLabel,
-  RadioGroup,
-  Radio,
-  Chip,
-} from "@mui/material";
+import { Box, Stack, Typography } from "@mui/material";
 import ModalStandard from "../../components/Modals/StandardModal";
 import Field from "../../components/Inputs/Field";
+import Radio from "../../components/Inputs/Radio";
+import Checkbox from "../../components/Inputs/Checkbox";
+import Chip from "../../components/Chip";
+import { palette } from "../../themes/palette";
 import type { ReportConfig, ReportSection, ReportFormat } from "./types";
 import { DEFAULT_REPORT_SECTIONS } from "./types";
 
@@ -94,14 +89,14 @@ export default function ReportConfigModal({
     <ModalStandard
       isOpen={open}
       onClose={onClose}
-      title="Generate Evaluation Report"
+      title="Generate evaluation report"
       description="Configure report contents and select which experiments to include."
       onSubmit={handleSubmit}
-      submitButtonText={isGenerating ? "Generating..." : "Generate Report"}
+      submitButtonText={isGenerating ? "Generating..." : "Generate report"}
       isSubmitting={isGenerating}
       maxWidth="680px"
     >
-      <Stack spacing={3}>
+      <Stack spacing="6px">
         {/* Title */}
         <Field
           label="Report title"
@@ -111,39 +106,37 @@ export default function ReportConfigModal({
 
         {/* Format */}
         <Box>
-          <Typography sx={{ fontSize: 13, fontWeight: 600, color: "#344054", mb: 1 }}>
+          <Typography
+            sx={{ fontSize: 13, fontWeight: 600, color: palette.text.secondary, mb: "2px" }}
+          >
             Format
           </Typography>
-          <RadioGroup
-            row
-            value={format}
-            onChange={(e) => setFormat(e.target.value as ReportFormat)}
-          >
-            <FormControlLabel
+          <Stack direction="row" gap="12px" role="radiogroup" aria-label="Format">
+            <Radio
+              id="report-format-pdf"
+              name="report-format"
               value="pdf"
-              control={<Radio size="small" />}
-              label={
-                <Typography sx={{ fontSize: 13 }}>
-                  PDF — Structured report with charts and tables
-                </Typography>
-              }
+              size="small"
+              checked={format === "pdf"}
+              onChange={(e) => setFormat(e.target.value as ReportFormat)}
+              title="PDF: structured report with charts and tables"
             />
-            <FormControlLabel
+            <Radio
+              id="report-format-csv"
+              name="report-format"
               value="csv"
-              control={<Radio size="small" />}
-              label={
-                <Typography sx={{ fontSize: 13 }}>
-                  CSV — Raw metric data for further analysis
-                </Typography>
-              }
+              size="small"
+              checked={format === "csv"}
+              onChange={(e) => setFormat(e.target.value as ReportFormat)}
+              title="CSV: raw metric data for further analysis"
             />
-          </RadioGroup>
+          </Stack>
         </Box>
 
         {/* Experiment Selection */}
         <Box>
-          <Stack direction="row" alignItems="center" justifyContent="space-between" mb={1}>
-            <Typography sx={{ fontSize: 13, fontWeight: 600, color: "#344054" }}>
+          <Stack direction="row" alignItems="center" justifyContent="space-between" mb="2px">
+            <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.text.secondary }}>
               Experiments to include
             </Typography>
             <Typography
@@ -151,7 +144,7 @@ export default function ReportConfigModal({
               onClick={selectAllExperiments}
               sx={{
                 "fontSize": 12,
-                "color": "#13715B",
+                "color": palette.brand.primary,
                 "cursor": "pointer",
                 "&:hover": { textDecoration: "underline" },
               }}
@@ -163,7 +156,7 @@ export default function ReportConfigModal({
           </Stack>
 
           {completedExperiments.length === 0 ? (
-            <Typography sx={{ fontSize: 12, color: "#6B7280", fontStyle: "italic", py: 1 }}>
+            <Typography sx={{ fontSize: 12, color: palette.text.tertiary, py: "2px" }}>
               No completed experiments available. Run an experiment first.
             </Typography>
           ) : (
@@ -171,8 +164,8 @@ export default function ReportConfigModal({
               sx={{
                 maxHeight: 180,
                 overflowY: "auto",
-                border: "1px solid #E5E7EB",
-                borderRadius: "6px",
+                border: `1px solid ${palette.border.dark}`,
+                borderRadius: "4px",
               }}
             >
               {completedExperiments.map((exp) => (
@@ -182,26 +175,31 @@ export default function ReportConfigModal({
                   sx={{
                     "display": "flex",
                     "alignItems": "center",
-                    "gap": 1,
-                    "px": 1.5,
+                    "gap": "2px",
+                    "px": "3px",
                     "py": "8px",
                     "cursor": "pointer",
-                    "borderBottom": "1px solid #F3F4F6",
-                    "&:hover": { backgroundColor: "#F9FAFB" },
+                    "borderBottom": `1px solid ${palette.border.light}`,
+                    "&:hover": { backgroundColor: palette.background.accent },
                     "&:last-child": { borderBottom: "none" },
                   }}
                 >
                   <Checkbox
+                    id={`report-experiment-${exp.id}`}
+                    value={exp.id}
                     size="small"
-                    checked={selectedExperimentIds.includes(exp.id)}
-                    sx={{ p: 0.5 }}
+                    isChecked={selectedExperimentIds.includes(exp.id)}
+                    ariaLabel={exp.name || exp.id}
+                    // The row's onClick toggles the selection; the click bubbles up to it.
+                    onChange={() => {}}
+                    sx={{ p: "1px" }}
                   />
                   <Box sx={{ flex: 1, minWidth: 0 }}>
                     <Typography
                       sx={{
                         fontSize: 12,
                         fontWeight: 500,
-                        color: "#111827",
+                        color: palette.text.primary,
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
@@ -210,22 +208,13 @@ export default function ReportConfigModal({
                       {exp.name || exp.id}
                     </Typography>
                   </Box>
-                  <Chip
-                    label={exp.model}
-                    size="small"
-                    sx={{
-                      fontSize: 10,
-                      height: 20,
-                      backgroundColor: "#ECFDF5",
-                      color: "#13715B",
-                    }}
-                  />
+                  <Chip label={exp.model} variant="success" size="small" uppercase={false} />
                 </Box>
               ))}
             </Box>
           )}
 
-          <Typography sx={{ fontSize: 11, color: "#9CA3AF", mt: 0.5 }}>
+          <Typography sx={{ fontSize: 12, color: palette.text.tertiary, mt: "1px" }}>
             {selectedExperimentIds.length} of {completedExperiments.length} selected
           </Typography>
         </Box>
@@ -233,15 +222,17 @@ export default function ReportConfigModal({
         {/* Section Selection (only for PDF) */}
         {format === "pdf" && (
           <Box>
-            <Typography sx={{ fontSize: 13, fontWeight: 600, color: "#344054", mb: 1 }}>
+            <Typography
+              sx={{ fontSize: 13, fontWeight: 600, color: palette.text.secondary, mb: "2px" }}
+            >
               Report sections
             </Typography>
             <Box
               sx={{
                 maxHeight: 220,
                 overflowY: "auto",
-                border: "1px solid #E5E7EB",
-                borderRadius: "6px",
+                border: `1px solid ${palette.border.dark}`,
+                borderRadius: "4px",
               }}
             >
               {sections.map((section) => (
@@ -251,21 +242,30 @@ export default function ReportConfigModal({
                   sx={{
                     "display": "flex",
                     "alignItems": "flex-start",
-                    "gap": 1,
-                    "px": 1.5,
-                    "py": 1,
+                    "gap": "2px",
+                    "px": "3px",
+                    "py": "2px",
                     "cursor": "pointer",
-                    "borderBottom": "1px solid #F3F4F6",
-                    "&:hover": { backgroundColor: "#F9FAFB" },
+                    "borderBottom": `1px solid ${palette.border.light}`,
+                    "&:hover": { backgroundColor: palette.background.accent },
                     "&:last-child": { borderBottom: "none" },
                   }}
                 >
-                  <Checkbox size="small" checked={section.enabled} sx={{ p: 0.5, mt: -0.25 }} />
+                  <Checkbox
+                    id={`report-section-${section.id}`}
+                    value={section.id}
+                    size="small"
+                    isChecked={section.enabled}
+                    ariaLabel={section.label}
+                    // The row's onClick toggles the section; the click bubbles up to it.
+                    onChange={() => {}}
+                    sx={{ p: "1px", mt: "-0.5px" }}
+                  />
                   <Box>
-                    <Typography sx={{ fontSize: 12, fontWeight: 500, color: "#111827" }}>
+                    <Typography sx={{ fontSize: 12, fontWeight: 500, color: palette.text.primary }}>
                       {section.label}
                     </Typography>
-                    <Typography sx={{ fontSize: 11, color: "#6B7280" }}>
+                    <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
                       {section.description}
                     </Typography>
                   </Box>

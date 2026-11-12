@@ -62,7 +62,7 @@ describe("DatasetsTableBody", () => {
         <DatasetsTableBody {...defaultProps} />
       </table>,
     );
-    expect(screen.getByText("Single-Turn")).toBeInTheDocument();
+    expect(screen.getByText("Single-turn")).toBeInTheDocument();
   });
 
   it("renders multi-turn chip", () => {
@@ -71,7 +71,7 @@ describe("DatasetsTableBody", () => {
         <DatasetsTableBody {...defaultProps} />
       </table>,
     );
-    expect(screen.getByText("Multi-Turn")).toBeInTheDocument();
+    expect(screen.getByText("Multi-turn")).toBeInTheDocument();
   });
 
   it("renders simulated chip", () => {
