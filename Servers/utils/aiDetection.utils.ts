@@ -514,6 +514,7 @@ export async function createFindingsBatchQuery(
       :provider_${index},
       :confidence_${index},
       :risk_level_${index},
+      :severity_${index},
       :description_${index},
       :documentation_url_${index},
       :file_count_${index},
@@ -538,6 +539,7 @@ export async function createFindingsBatchQuery(
     replacements[`provider_${index}`] = input.provider || null;
     replacements[`confidence_${index}`] = input.confidence;
     replacements[`risk_level_${index}`] = input.risk_level || "medium";
+    replacements[`severity_${index}`] = input.severity ?? null;
     replacements[`description_${index}`] = input.description || null;
     replacements[`documentation_url_${index}`] = input.documentation_url || null;
     replacements[`file_count_${index}`] = input.file_count || 1;
@@ -561,6 +563,7 @@ export async function createFindingsBatchQuery(
       provider,
       confidence,
       risk_level,
+      severity,
       description,
       documentation_url,
       file_count,
@@ -577,6 +580,7 @@ export async function createFindingsBatchQuery(
     ON CONFLICT (scan_id, name, provider) DO UPDATE SET
       file_count = ai_detection_findings.file_count + EXCLUDED.file_count,
       file_paths = ai_detection_findings.file_paths || EXCLUDED.file_paths,
+      severity = COALESCE(EXCLUDED.severity, ai_detection_findings.severity),
       license_id = COALESCE(EXCLUDED.license_id, ai_detection_findings.license_id),
       license_name = COALESCE(EXCLUDED.license_name, ai_detection_findings.license_name),
       license_risk = COALESCE(EXCLUDED.license_risk, ai_detection_findings.license_risk),
@@ -1051,9 +1055,13 @@ export async function getFindingsSummaryQuery(
 /**
  * Count critical findings for a scan (used by the CI status check).
  *
- * A finding is critical when its severity is "critical" (vulnerability and
- * model security findings) or it is a hardcoded secret (finding_type
- * "secret", which carries no severity but is always a release blocker).
+ * A finding is critical when its severity is "critical" or it is a hardcoded
+ * secret (finding_type "secret", which carries no severity but is always a
+ * release blocker). Severity is read from the finding row (written by
+ * createFindingsBatchQuery for LLM vulnerability findings and by
+ * createModelSecurityFindingsBatchQuery for model security findings) and,
+ * for vulnerability rows stored before severity was persisted, from
+ * ai_detection_vulnerability_details.vulnerability_details->>'severity'.
  * Findings that are suppressed, marked as accepted risk, or fixed in an
  * incremental scan are not counted, matching what the governance score
  * excludes.
@@ -1069,13 +1077,19 @@ export async function countCriticalFindingsQuery(
   validateOrganizationId(organizationId);
   const query = `
     SELECT COUNT(*) AS count
-    FROM ai_detection_findings
-    WHERE scan_id = :scanId
-      AND organization_id = :organizationId
-      AND (severity = 'critical' OR finding_type = 'secret')
-      AND COALESCE(suppressed, FALSE) = FALSE
-      AND COALESCE(governance_status, '') NOT IN ('suppressed', 'accepted_risk')
-      AND COALESCE(finding_status, '') <> 'fixed';
+    FROM ai_detection_findings f
+    LEFT JOIN ai_detection_vulnerability_details vd
+      ON vd.finding_id = f.id AND vd.organization_id = f.organization_id
+    WHERE f.scan_id = :scanId
+      AND f.organization_id = :organizationId
+      AND (
+        f.severity = 'critical'
+        OR vd.vulnerability_details->>'severity' = 'critical'
+        OR f.finding_type = 'secret'
+      )
+      AND COALESCE(f.suppressed, FALSE) = FALSE
+      AND COALESCE(f.governance_status, '') NOT IN ('suppressed', 'accepted_risk')
+      AND COALESCE(f.finding_status, '') <> 'fixed';
   `;
 
   const results = await sequelize.query(query, {

@@ -16,12 +16,13 @@
 
 import {
   ConfidenceLevel,
+  FindingSeverity,
   ICreateFindingInput,
   IFilePath,
   RiskLevel,
 } from "../domain.layer/interfaces/i.aiDetection";
 
-const LEVEL_RANK: Record<string, number> = { low: 0, medium: 1, high: 2 };
+const LEVEL_RANK: Record<string, number> = { low: 0, medium: 1, high: 2, critical: 3 };
 
 function normalise(value: string | null | undefined): string {
   return (value ?? "").trim().toLowerCase();
@@ -37,7 +38,7 @@ function isDisplayName(name: string): boolean {
   return name !== name.toLowerCase();
 }
 
-function higherLevel<T extends ConfidenceLevel | RiskLevel>(
+function higherLevel<T extends ConfidenceLevel | RiskLevel | FindingSeverity>(
   a: T | undefined,
   b: T | undefined,
 ): T | undefined {
@@ -82,6 +83,8 @@ function mergePair(target: ICreateFindingInput, incoming: ICreateFindingInput): 
 
   target.confidence = higherLevel(target.confidence, incoming.confidence) ?? target.confidence;
   target.risk_level = higherLevel(target.risk_level, incoming.risk_level);
+  target.severity =
+    higherLevel(target.severity ?? undefined, incoming.severity ?? undefined) ?? null;
 
   target.file_paths = mergeFilePaths(target.file_paths, incoming.file_paths);
   target.file_count = target.file_paths.length;

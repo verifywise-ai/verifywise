@@ -31,9 +31,14 @@
  *    AT TIME ZONE 'UTC'. On servers that run in UTC the offset is 0 and
  *    nothing shifts.
  *
+ * 3. Severity. LLM vulnerability findings kept their severity only inside
+ *    ai_detection_vulnerability_details.vulnerability_details, so the
+ *    finding's own severity column was empty and the CI critical-findings
+ *    gate could not see them. Empty severities are backfilled from that JSON.
+ *
  * Down drops the two FKs and converts the columns back to TIMESTAMP holding
- * UTC wall time. It does not restore deleted orphans or the old server-local
- * values of started_at/completed_at.
+ * UTC wall time. It does not restore deleted orphans, the old server-local
+ * values of started_at/completed_at, or empty severities.
  */
 
 const SCHEMA = "verifywise";
@@ -94,6 +99,17 @@ module.exports = {
          ALTER TABLE ${SCHEMA}.ai_detection_repositories
            ADD CONSTRAINT fk_ai_detection_repositories_last_scan
            FOREIGN KEY (last_scan_id) REFERENCES ${SCHEMA}.ai_detection_scans(id) ON DELETE SET NULL;`,
+        { transaction },
+      );
+
+      // ---- 1b. Backfill finding severity from vulnerability details ----------
+      await queryInterface.sequelize.query(
+        `UPDATE ${SCHEMA}.ai_detection_findings f
+         SET severity = vd.vulnerability_details->>'severity'
+         FROM ${SCHEMA}.ai_detection_vulnerability_details vd
+         WHERE vd.finding_id = f.id
+           AND f.severity IS NULL
+           AND vd.vulnerability_details->>'severity' IN ('critical', 'high', 'medium', 'low');`,
         { transaction },
       );
 

@@ -85,7 +85,7 @@ ai_detection_findings
 ├── license_id, license_name, license_risk, license_source
 ├── governance_status (VARCHAR(20))
 ├── governance_updated_at, governance_updated_by
-├── severity, cwe_id, cwe_name (security fields)
+├── severity (critical/high/medium/low; model security and LLM vulnerability findings), cwe_id, cwe_name
 ├── owasp_ml_id, owasp_ml_name (ML security)
 ├── threat_type, operator_name, module_name
 └── created_at (TIMESTAMPTZ)
@@ -683,8 +683,14 @@ the stored score.
 | `error` | scan not completed, no governance score (scoring failed), or the critical count could not be read | `Governance score is not available, so thresholds could not be evaluated` |
 
 A critical finding (`countCriticalFindingsQuery`) is one with `severity = 'critical'`
-(vulnerability and model security findings) or `finding_type = 'secret'` (hardcoded
-credentials carry no severity but always block). Findings that are suppressed, have
+or `finding_type = 'secret'` (hardcoded credentials carry no severity but always
+block). Model security findings write `severity` in
+`createModelSecurityFindingsBatchQuery`; LLM vulnerability findings write it in
+`createFindingsBatchQuery` (the analyzer sets `severity` on the input). Before
+`20261112143747` vulnerability severity was stored only in
+`ai_detection_vulnerability_details.vulnerability_details`, so the migration backfills
+empty severities from that JSON and the count query also matches
+`vulnerability_details->>'severity' = 'critical'`. Findings that are suppressed, have
 governance status `suppressed` or `accepted_risk`, or are `fixed` in an incremental
 scan are not counted, matching what the governance score excludes. The total
 `findings_count` is not used for the gate.

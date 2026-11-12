@@ -176,6 +176,11 @@ export type ConfidenceLevel = "high" | "medium" | "low";
 export type RiskLevel = "high" | "medium" | "low";
 
 /**
+ * Severity of a vulnerability or model security finding
+ */
+export type FindingSeverity = "critical" | "high" | "medium" | "low";
+
+/**
  * License risk levels for findings
  */
 export type LicenseRiskLevel = "high" | "medium" | "low" | "unknown";
@@ -256,6 +261,8 @@ export interface ICreateFindingInput {
   vulnerability_details?: Record<string, unknown> | null;
   // Incremental scan fields
   finding_status?: FindingStatus;
+  // Severity (vulnerability findings); used by the CI critical-findings gate
+  severity?: FindingSeverity | null;
   // Suppression flags (set by the matcher at scan completion)
   suppressed?: boolean;
   suppression_rule_id?: number | null;

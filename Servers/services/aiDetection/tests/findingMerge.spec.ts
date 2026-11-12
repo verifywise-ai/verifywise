@@ -93,6 +93,14 @@ describe("mergeDuplicateFindings", () => {
     expect(result[0].risk_level).toBe("medium");
   });
 
+  it("keeps the higher severity so a critical variant is never downgraded", () => {
+    const result = mergeDuplicateFindings([
+      finding({ severity: "high" }),
+      finding({ name: "Qdrant", severity: "critical" }),
+    ]);
+    expect(result[0].severity).toBe("critical");
+  });
+
   it("treats a fresh detection as active when merged with a carried-forward one", () => {
     const result = mergeDuplicateFindings([
       finding({ finding_status: "carried_forward" }),
