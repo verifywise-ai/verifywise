@@ -18,6 +18,19 @@ import { DatasetRow } from "./index";
 import { text, background, status, accent } from "../../../themes/palette";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 
+// Use case keeps a hue per category; difficulty is the only status-coloured chip.
+const USE_CASE_CHIP_COLORS: Record<string, { bg: string; text: string }> = {
+  chatbot: { bg: `${accent.teal.bg}`, text: `${accent.teal.text}` },
+  rag: { bg: `${accent.purple.bg}`, text: `${accent.purple.text}` },
+  agent: { bg: `${accent.red.bg}`, text: `${accent.red.text}` },
+};
+
+const DIFFICULTY_CHIP_VARIANT: Record<string, "success" | "warning" | "error"> = {
+  Easy: "success",
+  Medium: "warning",
+  Hard: "error",
+};
+
 interface DatasetsTableBodyProps {
   rows: DatasetRow[];
   page: number;
@@ -126,27 +139,15 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
                 <StatusBadge
                   label={
                     dataset.type === "single-turn"
-                      ? "Single-Turn"
+                      ? "Single-turn"
                       : dataset.type === "multi-turn"
-                        ? "Multi-Turn"
+                        ? "Multi-turn"
                         : "Simulated"
                   }
                   size="small"
                   uppercase={false}
-                  backgroundColor={
-                    dataset.type === "single-turn"
-                      ? "#FEF3C7"
-                      : dataset.type === "multi-turn"
-                        ? accent.blue.bg
-                        : "#F3E8FF"
-                  }
-                  textColor={
-                    dataset.type === "single-turn"
-                      ? accent.amber.text
-                      : dataset.type === "multi-turn"
-                        ? accent.blue.text
-                        : "#7C3AED"
-                  }
+                  variant="default"
+                  textColor={`${text.secondary}`}
                 />
               ) : (
                 <Typography sx={{ fontSize: "13px", color: `${text.disabled}` }}>-</Typography>
@@ -171,22 +172,10 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
                   size="small"
                   uppercase={false}
                   backgroundColor={
-                    dataset.useCase === "chatbot"
-                      ? "#CCFBF1"
-                      : dataset.useCase === "rag"
-                        ? "#f3e5f5"
-                        : dataset.useCase === "agent"
-                          ? "#FEE2E2"
-                          : "#e0e0e0"
+                    USE_CASE_CHIP_COLORS[dataset.useCase]?.bg ?? `${status.default.bg}`
                   }
                   textColor={
-                    dataset.useCase === "chatbot"
-                      ? "#0D9488"
-                      : dataset.useCase === "rag"
-                        ? "#7b1fa2"
-                        : dataset.useCase === "agent"
-                          ? "#DC2626"
-                          : "#616161"
+                    USE_CASE_CHIP_COLORS[dataset.useCase]?.text ?? `${status.default.text}`
                   }
                 />
               ) : (
@@ -228,23 +217,8 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
                   label={metadata?.avgDifficulty ?? "Medium"}
                   size="small"
                   uppercase={false}
-                  backgroundColor={
-                    metadata?.avgDifficulty === "Easy"
-                      ? "#c8e6c9"
-                      : metadata?.avgDifficulty === "Medium"
-                        ? "#fff3e0"
-                        : metadata?.avgDifficulty === "Hard"
-                          ? "#ffebee"
-                          : "#e0e0e0"
-                  }
-                  textColor={
-                    metadata?.avgDifficulty === "Easy"
-                      ? "#388e3c"
-                      : metadata?.avgDifficulty === "Medium"
-                        ? "#ef6c00"
-                        : metadata?.avgDifficulty === "Hard"
-                          ? "#c62828"
-                          : "#616161"
+                  variant={
+                    DIFFICULTY_CHIP_VARIANT[metadata?.avgDifficulty ?? "Medium"] ?? "default"
                   }
                 />
               )}
@@ -306,12 +280,12 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
             border: `1px solid ${palette.border.dark}`,
             boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
             overflow: "hidden",
-            mt: 0.5,
-            p: 1,
+            mt: "1px",
+            p: "2px",
           },
         }}
       >
-        <Stack spacing={1}>
+        <Stack spacing="2px">
           {onView && (
             <CustomizableButton
               variant="outlined"

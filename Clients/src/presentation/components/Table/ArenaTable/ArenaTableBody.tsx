@@ -31,7 +31,7 @@ import { ArenaRow } from "./index";
 import ConfirmationModal from "../../Dialogs/ConfirmationModal";
 import { CustomizableButton } from "../../button/customizable-button";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
-import { border, status, text } from "../../../themes/palette";
+import { accent, border, brand, status, text } from "../../../themes/palette";
 
 interface ArenaTableBodyProps {
   rows: ArenaRow[];
@@ -172,7 +172,7 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
               textTransform: "none",
             }}
           >
-            <Stack direction="row" spacing={0.5} justifyContent="center" flexWrap="wrap" gap={0.5}>
+            <Stack direction="row" spacing="1px" justifyContent="center" flexWrap="wrap" gap="1px">
               {row.contestants?.slice(0, 4).map((contestant, idx) => {
                 const name = getContestantName(contestant, idx);
                 return (
@@ -220,20 +220,25 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
               <Chip label={row.winner} size="small" uppercase={false} variant="success" />
             ) : row.status === "running" || row.status === "pending" ? (
               <Box
-                sx={{ display: "flex", alignItems: "center", justifyContent: "center", gap: 0.75 }}
+                sx={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  gap: "1.5px",
+                }}
               >
                 <Box
                   component={Loader2}
                   size={12}
                   sx={{
-                    color: "#ef6c00",
+                    color: status.warning.text,
                     animation: `${spin} 1s linear infinite`,
                   }}
                 />
                 <Typography
                   sx={{
                     fontSize: 12,
-                    color: "#ef6c00",
+                    color: status.warning.text,
                     fontWeight: 500,
                     animation: `${pulse} 1.5s ease-in-out infinite`,
                   }}
@@ -272,7 +277,7 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
             onClick={(e) => e.stopPropagation()}
           >
             {deleting === row.id ? (
-              <CircularProgress size={18} sx={{ color: "#6366f1" }} />
+              <CircularProgress size={18} sx={{ color: accent.indigo.text }} />
             ) : (
               <IconButton
                 disableRipple={theme.components?.MuiIconButton?.defaultProps?.disableRipple}
@@ -301,12 +306,12 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
             border: `1px solid ${border.dark}`,
             boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
             overflow: "hidden",
-            mt: 0.5,
-            p: 1,
+            mt: "1px",
+            p: "2px",
           },
         }}
       >
-        <Stack spacing={1}>
+        <Stack spacing="2px">
           {onViewResults && menuRow?.status === "completed" && (
             <CustomizableButton
               variant="outlined"
@@ -321,7 +326,7 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
                 "backgroundColor": "transparent",
                 "justifyContent": "flex-start",
                 "&:hover": {
-                  backgroundColor: "#F0FDF4",
+                  backgroundColor: brand.primaryLight,
                   borderColor: "brand.primary",
                   color: "brand.primary",
                 },
@@ -344,7 +349,7 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
                 "backgroundColor": "transparent",
                 "justifyContent": "flex-start",
                 "&:hover": {
-                  backgroundColor: "#F0FDF4",
+                  backgroundColor: brand.primaryLight,
                   borderColor: "brand.primary",
                   color: "brand.primary",
                 },
@@ -367,7 +372,7 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
                 "backgroundColor": "transparent",
                 "justifyContent": "flex-start",
                 "&:hover": {
-                  backgroundColor: "#F0FDF4",
+                  backgroundColor: brand.primaryLight,
                   borderColor: "brand.primary",
                   color: "brand.primary",
                 },
@@ -390,7 +395,7 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
                 "backgroundColor": "transparent",
                 "justifyContent": "flex-start",
                 "&:hover": {
-                  backgroundColor: "#FEF2F2",
+                  backgroundColor: status.error.bg,
                   borderColor: status.error.text,
                 },
               }}
@@ -404,7 +409,7 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
       {/* Delete Confirmation Modal */}
       <ConfirmationModal
         isOpen={deleteConfirmOpen}
-        title="Delete Arena Battle"
+        title="Delete arena battle"
         body={
           <Typography sx={{ fontSize: 14, color: "text.icon" }}>
             Are you sure you want to delete "{rowToDelete?.name}"? This action cannot be undone.

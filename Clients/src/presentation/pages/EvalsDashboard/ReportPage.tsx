@@ -4,7 +4,6 @@ import {
   Stack,
   Typography,
   CircularProgress,
-  Chip,
   IconButton,
   Popover,
   Table,
@@ -24,9 +23,13 @@ import {
   ExternalLink,
   Trash2,
   MoreVertical,
+  Plus,
 } from "lucide-react";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import Alert from "../../components/Alert";
+import Chip from "../../components/Chip";
+import { PageHeader } from "../../components/Layout/PageHeader";
+import HelperIcon from "../../components/HelperIcon";
 import { EmptyState } from "../../components/EmptyState";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import ReportConfigModal from "./ReportConfigModal";
@@ -37,6 +40,7 @@ import { getAllExperiments } from "../../../application/repository/deepEval.repo
 import { palette } from "../../themes/palette";
 import singleTheme from "../../themes/v1SingleTheme";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
+import { countLabel } from "../../tools/countLabel";
 
 interface ReportPageProps {
   projectId: string;
@@ -315,143 +319,109 @@ export default function ReportPage({
 
   if (loading) {
     return (
-      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", py: 10 }}>
+      <Box sx={{ display: "flex", justifyContent: "center", alignItems: "center", py: "20px" }}>
         <CircularProgress size={28} />
       </Box>
     );
   }
 
   return (
-    <Box sx={{ display: "flex", flexDirection: "column", gap: 3, width: "100%" }}>
+    <Stack sx={{ width: "100%" }}>
       {alert && (
         <Alert variant={alert.variant} body={alert.body} isToast onClick={() => setAlert(null)} />
       )}
 
-      {/* Header */}
-      <Stack spacing={1}>
-        <Typography
-          variant="h6"
-          sx={{ fontSize: 15, fontWeight: 600, color: palette.text.primary }}
-        >
-          Evaluation Reports
+      <PageHeader
+        title="Reports"
+        description="Generate PDF or CSV reports from completed experiments. Reports follow the EvalCards standard for AI evaluation documentation."
+        rightContent={<HelperIcon articlePath="llm-evals/reports" />}
+      />
+
+      {/* Controls row */}
+      <Stack
+        direction="row"
+        justifyContent="space-between"
+        alignItems="center"
+        sx={{ mt: "18px", marginBottom: "18px" }}
+        gap="4px"
+      >
+        <Typography sx={{ fontSize: 13, color: palette.text.tertiary }}>
+          {countLabel(completedCount, "completed experiment")} available
         </Typography>
-        <Typography variant="body2" sx={{ color: "text.secondary", lineHeight: 1.8, fontSize: 13 }}>
-          Generate evaluation reports from your experiment results. Reports follow the{" "}
-          <Typography
-            component="a"
-            href="https://arxiv.org/abs/2206.11249"
-            target="_blank"
-            rel="noopener noreferrer"
-            sx={{
-              "fontSize": 13,
-              "color": palette.brand.primary,
-              "fontWeight": 600,
-              "textDecoration": "none",
-              "&:hover": { textDecoration: "underline" },
-            }}
-          >
-            EvalCards
-          </Typography>{" "}
-          standard for structured AI evaluation documentation.
-        </Typography>
+        <CustomizableButton
+          variant="contained"
+          text="Generate report"
+          icon={<Plus size={16} />}
+          onClick={() => setConfigModalOpen(true)}
+          isDisabled={completedCount === 0 || isGenerating}
+          sx={{
+            backgroundColor: palette.brand.primary,
+            border: `1px solid ${palette.brand.primary}`,
+            gap: "4px",
+          }}
+        />
       </Stack>
 
-      {/* Action Card / Progress */}
-      <Box
-        sx={{
-          background: "#fff",
-          border: "1px solid #d0d5dd",
-          borderRadius: "4px",
-          p: "24px",
-        }}
-      >
-        {isGenerating ? (
-          <Stack spacing={2} alignItems="center" sx={{ py: 3 }}>
-            <CircularProgress size={32} sx={{ color: palette.brand.primary }} />
-            <Typography sx={{ fontSize: 14, fontWeight: 600, color: palette.text.primary }}>
-              Generating report...
-            </Typography>
-            <Typography
-              sx={{
-                fontSize: 12,
-                color: palette.text.secondary,
-                textAlign: "center",
-                maxWidth: 400,
-              }}
-            >
-              Analyzing evaluation results and generating AI-powered summaries. This may take up to
-              a minute.
-            </Typography>
-          </Stack>
-        ) : (
-          <>
-            <Stack direction="row" alignItems="center" justifyContent="space-between">
-              <Stack direction="row" alignItems="center" gap={2}>
-                <Box
-                  sx={{
-                    width: 42,
-                    height: 42,
-                    borderRadius: "8px",
-                    background: "linear-gradient(135deg, #ECFDF5 0%, #D1FAE5 100%)",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                  }}
-                >
-                  <FileText size={20} strokeWidth={1.5} color={palette.brand.primary} />
-                </Box>
-                <Box>
-                  <Typography sx={{ fontSize: 14, fontWeight: 600, color: palette.text.primary }}>
-                    Generate new report
-                  </Typography>
-                  <Typography sx={{ fontSize: 12, color: palette.text.secondary }}>
-                    {completedCount} completed experiment{completedCount !== 1 ? "s" : ""} available
-                  </Typography>
-                </Box>
-              </Stack>
-              <CustomizableButton
-                variant="contained"
-                onClick={() => setConfigModalOpen(true)}
-                disabled={completedCount === 0}
-                icon={<Download size={14} />}
-                text="Generate report"
-                sx={{
-                  height: "34px",
-                  fontSize: 13,
-                }}
-              />
-            </Stack>
+      {completedCount === 0 && !isGenerating && (
+        <Box
+          sx={{
+            mb: "18px",
+            p: "12px",
+            borderRadius: "4px",
+            backgroundColor: palette.status.warning.bg,
+            border: `1px solid ${palette.status.warning.border}`,
+            display: "flex",
+            alignItems: "center",
+            gap: "8px",
+          }}
+        >
+          <AlertTriangle size={16} color={palette.status.warning.text} />
+          <Typography sx={{ fontSize: 13, color: palette.status.warning.text }}>
+            No completed experiments yet. Run at least one experiment to generate a report.
+          </Typography>
+        </Box>
+      )}
 
-            {completedCount === 0 && (
-              <Box
-                sx={{
-                  mt: 2,
-                  p: 2,
-                  borderRadius: "6px",
-                  backgroundColor: palette.status.warning.bg,
-                  border: "1px solid #FDE68A",
-                  display: "flex",
-                  alignItems: "center",
-                  gap: 1.5,
-                }}
-              >
-                <AlertTriangle size={16} color={palette.status.warning.text} />
-                <Typography sx={{ fontSize: 12, color: palette.status.warning.text }}>
-                  No completed experiments yet. Run at least one experiment to generate a report.
-                </Typography>
-              </Box>
-            )}
-          </>
-        )}
-      </Box>
+      {/* Generation progress */}
+      {isGenerating && (
+        <Stack
+          spacing="4px"
+          alignItems="center"
+          sx={{
+            mb: "18px",
+            py: "24px",
+            px: "16px",
+            backgroundColor: palette.background.main,
+            border: `1px solid ${palette.border.dark}`,
+            borderRadius: "4px",
+          }}
+        >
+          <CircularProgress size={32} sx={{ color: palette.brand.primary }} />
+          <Typography sx={{ fontSize: 14, fontWeight: 600, color: palette.text.primary }}>
+            Generating report...
+          </Typography>
+          <Typography
+            sx={{
+              fontSize: 12,
+              color: palette.text.secondary,
+              textAlign: "center",
+              maxWidth: 400,
+            }}
+          >
+            Analyzing evaluation results and generating AI-powered summaries. This may take up to a
+            minute.
+          </Typography>
+        </Stack>
+      )}
 
       {/* PDF Viewer */}
       {pdfBlobUrl && (
         <Box
           ref={pdfContainerRef}
           sx={{
-            background: "#fff",
-            border: "1px solid #d0d5dd",
+            mb: "18px",
+            background: palette.background.main,
+            border: `1px solid ${palette.border.dark}`,
             borderRadius: "4px",
             overflow: "hidden",
           }}
@@ -461,19 +431,19 @@ export default function ReportPage({
               display: "flex",
               alignItems: "center",
               justifyContent: "space-between",
-              px: 2.5,
-              py: 1.5,
-              borderBottom: "1px solid #E5E7EB",
+              px: "5px",
+              py: "3px",
+              borderBottom: `1px solid ${palette.border.light}`,
               backgroundColor: palette.background.accent,
             }}
           >
-            <Stack direction="row" alignItems="center" gap={1.5}>
+            <Stack direction="row" alignItems="center" gap="3px">
               <Eye size={16} color={palette.brand.primary} />
               <Typography sx={{ fontSize: 13, fontWeight: 600, color: palette.text.primary }}>
                 {pdfTitle}
               </Typography>
             </Stack>
-            <Stack direction="row" alignItems="center" gap={0.5}>
+            <Stack direction="row" alignItems="center" gap="1px">
               <IconButton size="small" onClick={handleDownloadCurrent} title="Download PDF">
                 <Download size={16} color={palette.text.secondary} />
               </IconButton>
@@ -488,7 +458,7 @@ export default function ReportPage({
           <Box sx={{ width: "100%", height: "80vh", backgroundColor: "#525659" }}>
             <iframe
               src={pdfBlobUrl}
-              title="Report Preview"
+              title="Report preview"
               style={{ width: "100%", height: "100%", border: "none" }}
             />
           </Box>
@@ -506,7 +476,7 @@ export default function ReportPage({
           <EmptyStateTip
             icon={Download}
             title="Generate your first report"
-            description={`You have ${completedCount} completed experiment${completedCount !== 1 ? "s" : ""}. Click "Generate report" above to create a PDF or CSV report with AI-powered summaries.`}
+            description={`You have ${countLabel(completedCount, "completed experiment")}. Click "Generate report" above to create a PDF or CSV report with AI-powered summaries.`}
           />
         </EmptyState>
       )}
@@ -562,7 +532,7 @@ export default function ReportPage({
                   }}
                 >
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    <Stack direction="row" alignItems="center" gap={1}>
+                    <Stack direction="row" alignItems="center" gap="2px">
                       <FileText size={14} strokeWidth={1.5} color={palette.brand.primary} />
                       <Typography
                         sx={{ fontSize: 13, color: theme.palette.text.primary, fontWeight: 500 }}
@@ -572,21 +542,11 @@ export default function ReportPage({
                     </Stack>
                   </TableCell>
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    <Chip
-                      label={report.format.toUpperCase()}
-                      size="small"
-                      sx={{
-                        fontSize: 11,
-                        height: 22,
-                        fontWeight: 500,
-                        backgroundColor: palette.status.success.bg,
-                        color: palette.brand.primary,
-                      }}
-                    />
+                    <Chip label={report.format.toUpperCase()} variant="success" size="small" />
                   </TableCell>
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
                     <Typography sx={{ fontSize: 13, color: theme.palette.text.secondary }}>
-                      {report.experiments} exp{report.experiments !== 1 ? "s" : ""}
+                      {countLabel(report.experiments, "exp")}
                     </Typography>
                   </TableCell>
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
@@ -646,12 +606,12 @@ export default function ReportPage({
             border: `1px solid ${palette.border.dark}`,
             boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
             overflow: "hidden",
-            mt: 0.5,
-            p: 1,
+            mt: "1px",
+            p: "2px",
           },
         }}
       >
-        <Stack spacing={1}>
+        <Stack spacing="2px">
           <CustomizableButton
             variant="outlined"
             onClick={() => {
@@ -686,13 +646,13 @@ export default function ReportPage({
               "height": "34px",
               "fontSize": "13px",
               "fontWeight": 500,
-              "color": "#DC2626",
+              "color": palette.status.error.text,
               "borderColor": palette.border.dark,
               "backgroundColor": "transparent",
               "justifyContent": "flex-start",
               "&:hover": {
-                backgroundColor: "#FEF2F2",
-                borderColor: "#DC2626",
+                backgroundColor: palette.status.error.bg,
+                borderColor: palette.status.error.text,
               },
             }}
           >
@@ -732,6 +692,6 @@ export default function ReportPage({
           TitleFontSize={13}
         />
       )}
-    </Box>
+    </Stack>
   );
 }

@@ -4,7 +4,6 @@ import {
   Typography,
   IconButton,
   CircularProgress,
-  Alert,
   useTheme,
   Table,
   TableHead,
@@ -24,9 +23,11 @@ import {
   Users,
   BarChart3,
   FileText,
+  Plus,
 } from "lucide-react";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import SearchBox from "../../components/Search/SearchBox";
+import Alert from "../../components/Alert";
 import { EmptyState } from "../../components/EmptyState";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { PageHeader } from "../../components/Layout/PageHeader";
@@ -216,24 +217,30 @@ export default function BiasAuditsList({ orgId, onViewAudit }: BiasAuditsListPro
         rightContent={<HelperIcon articlePath="llm-evals/bias-audits" />}
       />
 
-      {/* Search + New bias audit button */}
+      {/* Controls row */}
       <Stack
         direction="row"
-        alignItems="center"
         justifyContent="space-between"
-        sx={{ mt: "18px", mb: 3 }}
+        alignItems="center"
+        sx={{ mt: "18px", marginBottom: "18px" }}
+        gap="4px"
       >
-        <Box sx={{ maxWidth: 320 }}>
-          <SearchBox value={searchQuery} onChange={setSearchQuery} placeholder="Search audits..." />
-        </Box>
+        <SearchBox
+          placeholder="Search audits..."
+          value={searchQuery}
+          onChange={setSearchQuery}
+          inputProps={{ "aria-label": "Search bias audits" }}
+          fullWidth={false}
+        />
         <CustomizableButton
           variant="contained"
           text="New bias audit"
+          icon={<Plus size={16} />}
           onClick={() => setModalOpen(true)}
           sx={{
             "backgroundColor": palette.brand.primary,
             "border": `1px solid ${palette.brand.primary}`,
-            "gap": 2,
+            "gap": "4px",
             "&:hover": {
               backgroundColor: palette.brand.primaryHover,
             },
@@ -242,14 +249,19 @@ export default function BiasAuditsList({ orgId, onViewAudit }: BiasAuditsListPro
       </Stack>
 
       {error && (
-        <Alert severity="error" onClose={() => setError(null)} sx={{ mb: 2, fontSize: 13 }}>
-          {error}
-        </Alert>
+        <Alert
+          variant="error"
+          body={error}
+          inline
+          isToast
+          onClick={() => setError(null)}
+          sx={{ marginBottom: "18px" }}
+        />
       )}
 
       {/* Content */}
       {loading ? (
-        <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
+        <Box sx={{ display: "flex", justifyContent: "center", py: "12px" }}>
           <CircularProgress size={24} sx={{ color: theme.palette.primary.main }} />
         </Box>
       ) : sortedAudits.length === 0 ? (
@@ -340,14 +352,14 @@ export default function BiasAuditsList({ orgId, onViewAudit }: BiasAuditsListPro
                   }}
                 >
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell}>
-                    <Stack spacing={0.25}>
+                    <Stack spacing="0.5px">
                       <Typography
                         sx={{ fontSize: 13, fontWeight: 500, color: theme.palette.text.primary }}
                       >
                         {(audit.config?.systemName as string | undefined) || audit.presetName}
                       </Typography>
                       {(audit.config?.systemName as string | undefined) && (
-                        <Typography sx={{ fontSize: 11, color: theme.palette.text.secondary }}>
+                        <Typography sx={{ fontSize: 12, color: theme.palette.text.secondary }}>
                           {audit.presetName}
                         </Typography>
                       )}
@@ -373,14 +385,14 @@ export default function BiasAuditsList({ orgId, onViewAudit }: BiasAuditsListPro
                           borderRadius: "4px",
                           backgroundColor: palette.status.success.bg,
                           color: palette.status.success.text,
-                          fontSize: "11px",
+                          fontSize: "12px",
                           fontWeight: 500,
                         }}
                       >
                         Linked
                       </Box>
                     ) : (
-                      <Typography sx={{ fontSize: "11px", color: palette.text.secondary }}>
+                      <Typography sx={{ fontSize: "12px", color: palette.text.secondary }}>
                         Unlinked
                       </Typography>
                     )}
@@ -394,18 +406,18 @@ export default function BiasAuditsList({ orgId, onViewAudit }: BiasAuditsListPro
                     sx={singleTheme.tableStyles.primary.body.cell}
                     onClick={(e) => e.stopPropagation()}
                   >
-                    <Stack direction="row" spacing={0.5}>
+                    <Stack direction="row" spacing="1px">
                       <IconButton
                         size="small"
                         onClick={() => onViewAudit(audit.id)}
-                        sx={{ padding: 0.5 }}
+                        sx={{ padding: "1px" }}
                       >
                         <Eye size={16} strokeWidth={1.5} color={theme.palette.text.secondary} />
                       </IconButton>
                       <IconButton
                         size="small"
                         onClick={() => setAuditToDelete(audit.id)}
-                        sx={{ padding: 0.5 }}
+                        sx={{ padding: "1px" }}
                       >
                         <Trash2 size={16} strokeWidth={1.5} color={theme.palette.text.secondary} />
                       </IconButton>
