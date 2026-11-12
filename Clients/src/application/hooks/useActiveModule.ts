@@ -4,13 +4,24 @@ import { useDispatch, useSelector } from "react-redux";
 import { AppModule, setActiveModule } from "../redux/ui/uiSlice";
 import { RootState } from "../redux/store";
 import { storageService } from "../../infrastructure/storage";
-import { getAppModuleFromPath } from "../utils/appModule";
+import { getAppModuleFromPath, isGlobalPath } from "../utils/appModule";
 
 const STORAGE_KEY = "verifywise_active_module";
+
+const KNOWN_MODULES: AppModule[] = [
+  "main",
+  "evals",
+  "ai-detection",
+  "shadow-ai",
+  "ai-gateway",
+  "ai-trust-index",
+  "super-admin",
+];
 
 /**
  * Hook for managing active module state
  * - Auto-detects module from URL path
+ * - Keeps the current module on organization-wide pages (Settings, Event tracker)
  * - Persists to localStorage
  * - Syncs with Redux state
  */
@@ -26,8 +37,10 @@ export function useActiveModule() {
     [],
   );
 
-  // Sync module state with URL on navigation
+  // Sync module state with URL on navigation. Global pages belong to no module,
+  // so the module the user came from (or, after a reload, the stored one) stays.
   useEffect(() => {
+    if (isGlobalPath(location.pathname)) return;
     const detectedModule = getModuleFromPath(location.pathname);
     if (detectedModule !== activeModule) {
       dispatch(setActiveModule(detectedModule));
@@ -38,7 +51,9 @@ export function useActiveModule() {
   // Handle module change from AppSwitcher click
   const handleModuleChange = useCallback(
     (module: AppModule) => {
-      if (module === activeModule) return;
+      // On a global page the module's own pages are not showing, so clicking the
+      // current module still navigates back to it.
+      if (module === activeModule && !isGlobalPath(location.pathname)) return;
 
       dispatch(setActiveModule(module));
       storageService.setRaw(STORAGE_KEY, module, { raw: true });
@@ -69,30 +84,28 @@ export function useActiveModule() {
           break;
       }
     },
-    [activeModule, dispatch, navigate],
+    [activeModule, dispatch, navigate, location.pathname],
   );
 
   // Initialize from localStorage on mount
   useEffect(() => {
     const stored = storageService.getRaw<AppModule | null>(STORAGE_KEY, null, { raw: true });
-    if (
-      stored &&
-      [
-        "main",
-        "evals",
-        "ai-detection",
-        "shadow-ai",
-        "ai-gateway",
-        "ai-trust-index",
-        "super-admin",
-      ].includes(stored)
-    ) {
-      // Only set if URL doesn't already indicate a different module
-      const urlModule = getModuleFromPath(location.pathname);
-      if (urlModule === "main" && stored !== "main") {
-        // URL is at root but stored module is different - respect URL
-        dispatch(setActiveModule(urlModule));
+    if (!stored || !KNOWN_MODULES.includes(stored)) return;
+
+    // A reload on a global page restores the module the user was in. Super admin is
+    // excluded: /settings and /event-tracker render in the organization layout.
+    if (isGlobalPath(location.pathname)) {
+      if (stored !== "super-admin" && stored !== activeModule) {
+        dispatch(setActiveModule(stored));
       }
+      return;
+    }
+
+    // Only set if URL doesn't already indicate a different module
+    const urlModule = getModuleFromPath(location.pathname);
+    if (urlModule === "main" && stored !== "main") {
+      // URL is at root but stored module is different - respect URL
+      dispatch(setActiveModule(urlModule));
     }
   }, []); // eslint-disable-line react-hooks/exhaustive-deps
 

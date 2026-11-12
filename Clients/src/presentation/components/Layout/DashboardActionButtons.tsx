@@ -1,6 +1,7 @@
 import { useState, useMemo, memo, useCallback, useEffect, type ReactNode } from "react";
 import { Stack, IconButton, Box } from "@mui/material";
 import { useNavigate, useLocation } from "react-router";
+import { useSelector } from "react-redux";
 import { Search, Zap, WorkflowIcon, Package, ClipboardList } from "lucide-react";
 import { useAuth } from "../../../application/hooks/useAuth";
 import VWTooltip from "../VWTooltip";
@@ -11,7 +12,8 @@ import {
   getPendingApprovals,
   getMyApprovalRequests,
 } from "../../../application/repository/approvalRequest.repository";
-import { getAppModuleFromPath } from "../../../application/utils/appModule";
+import { getAppModuleFromPath, isGlobalPath } from "../../../application/utils/appModule";
+import type { RootState } from "../../../application/redux/store";
 import { actionButtonsStyles } from "./style";
 import "./icon-shake.css";
 import { useCan } from "../../../application/hooks/useCan";
@@ -91,10 +93,14 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
   // pure SuperAdmin doesn't have.
   const isSuperAdminRoute = location.pathname.startsWith("/super-admin");
 
-  // Intake forms belong to the Governance ("main") module only
+  // Intake forms belong to the Governance ("main") module only. Global pages
+  // (Settings, Event tracker) keep the module the user came from.
+  const activeModule = useSelector((state: RootState) => state.ui.appModule?.active ?? "main");
   const isGovernanceModule = useMemo(
-    () => getAppModuleFromPath(location.pathname) === "main",
-    [location.pathname],
+    () =>
+      (isGlobalPath(location.pathname) ? activeModule : getAppModuleFromPath(location.pathname)) ===
+      "main",
+    [location.pathname, activeModule],
   );
 
   const shouldHide = (hideOnMainDashboard && isMainDashboard) || isSuperAdminRoute;

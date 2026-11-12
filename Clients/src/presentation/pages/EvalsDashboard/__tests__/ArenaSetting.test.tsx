@@ -1,6 +1,11 @@
 import { screen, fireEvent, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
+// The sidebar footer opens the right-hand helper panel; App.tsx provides it.
+vi.mock("../../../components/UserGuide/UserGuideSidebarContext", () => ({
+  useUserGuideSidebarContext: () => ({ open: vi.fn(), openTab: vi.fn() }),
+}));
+
 const arenaState = vi.hoisted(() => ({
   data: undefined as { enabled: boolean; configured: boolean } | undefined,
   isLoading: false,
