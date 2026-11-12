@@ -4,16 +4,7 @@
  * @module pages/EvalsDashboard/NewExperiment/ProviderModelFields
  */
 
-import {
-  Box,
-  Button,
-  Divider,
-  FormControl,
-  MenuItem,
-  Select,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Box, Stack, Typography } from "@mui/material";
 import { Check } from "lucide-react";
 import type { RefObject } from "react";
 import Field from "../../../components/Inputs/Field";
@@ -30,7 +21,6 @@ export interface ProviderModelFieldsProps {
   modelValue: string;
   endpointUrl: string;
   apiKey: string;
-  useCustomModelName: boolean;
   hasApiKeyConfigured: boolean;
   /** A key is saved but the provider refused it; the key field explains why it is back. */
   savedKeyRejected?: boolean;
@@ -43,7 +33,6 @@ export interface ProviderModelFieldsProps {
   onModelChange: (name: string) => void;
   onEndpointChange: (url: string) => void;
   onApiKeyChange: (key: string) => void;
-  onCustomModelToggle: (custom: boolean) => void;
 }
 
 export default function ProviderModelFields({
@@ -53,7 +42,6 @@ export default function ProviderModelFields({
   modelValue,
   endpointUrl,
   apiKey,
-  useCustomModelName,
   hasApiKeyConfigured,
   savedKeyRejected = false,
   needsApiKey,
@@ -64,7 +52,6 @@ export default function ProviderModelFields({
   onModelChange,
   onEndpointChange,
   onApiKeyChange,
-  onCustomModelToggle,
 }: ProviderModelFieldsProps) {
   if (!providerId) return null;
 
@@ -101,8 +88,8 @@ export default function ProviderModelFields({
       );
     }
 
+    // Local and custom providers: saved names first, any name can be typed
     const providerSavedModels = getProviderModels(providerId);
-    const showDropdown = providerSavedModels.length > 0 && !useCustomModelName;
     const placeholder =
       providerId === "ollama"
         ? "e.g., llama2, mistral, codellama"
@@ -110,115 +97,27 @@ export default function ProviderModelFields({
           ? "e.g., TinyLlama/TinyLlama-1.1B-Chat-v1.0"
           : "e.g., gpt-4, claude-3-opus";
 
-    if (showDropdown) {
+    if (providerSavedModels.length > 0) {
       return (
-        <Box>
-          <Typography
-            sx={{
-              fontSize: "13px",
-              fontWeight: 500,
-              color: palette.text.secondary,
-              mb: "2px",
-            }}
-          >
-            Model
-          </Typography>
-          <FormControl fullWidth size="small">
-            <Select
-              value={modelValue}
-              onChange={(e) => {
-                const val = e.target.value as string;
-                if (val === "__other__") {
-                  onCustomModelToggle(true);
-                  onModelChange("");
-                } else {
-                  onModelChange(val);
-                }
-              }}
-              displayEmpty
-              sx={{
-                "fontSize": "13px",
-                "& .MuiOutlinedInput-notchedOutline": {
-                  borderColor: palette.border.dark,
-                },
-                "&:hover .MuiOutlinedInput-notchedOutline": {
-                  borderColor: palette.border.dark,
-                },
-                "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-                  borderColor: palette.brand.primary,
-                },
-              }}
-            >
-              <MenuItem value="" disabled>
-                <Typography sx={{ color: palette.text.disabled, fontSize: "13px" }}>
-                  Select a model
-                </Typography>
-              </MenuItem>
-              {providerSavedModels.map((model) => (
-                <MenuItem key={model.id} value={model.id}>
-                  <Stack
-                    direction="row"
-                    alignItems="center"
-                    justifyContent="space-between"
-                    sx={{ width: "100%" }}
-                  >
-                    <Typography sx={{ fontSize: "13px" }}>{model.name}</Typography>
-                    {model.description && (
-                      <Typography sx={{ fontSize: "11px", color: palette.text.disabled }}>
-                        {model.description}
-                      </Typography>
-                    )}
-                  </Stack>
-                </MenuItem>
-              ))}
-              <Divider />
-              <MenuItem value="__other__">
-                <Typography
-                  sx={{
-                    fontSize: "13px",
-                    color: palette.text.tertiary,
-                    fontStyle: "italic",
-                  }}
-                >
-                  Other (type custom)
-                </Typography>
-              </MenuItem>
-            </Select>
-          </FormControl>
-        </Box>
+        <ModelPicker
+          label="Model name"
+          value={modelValue}
+          onChange={onModelChange}
+          models={providerSavedModels}
+          savedModelIds={providerSavedModels.map((m) => m.id)}
+          placeholder={placeholder}
+          testId={mode}
+        />
       );
     }
 
     return (
-      <Box>
-        {providerSavedModels.length > 0 && (
-          <Button
-            size="small"
-            variant="text"
-            onClick={() => {
-              onCustomModelToggle(false);
-              onModelChange("");
-            }}
-            sx={{
-              "textTransform": "none",
-              "fontSize": "11px",
-              "color": palette.text.tertiary,
-              "p": 0,
-              "mb": "1px",
-              "minWidth": "auto",
-              "&:hover": { color: palette.brand.primary },
-            }}
-          >
-            &larr; Back to saved models
-          </Button>
-        )}
-        <Field
-          label="Model name"
-          value={modelValue}
-          onChange={(e) => onModelChange(e.target.value)}
-          placeholder={placeholder}
-        />
-      </Box>
+      <Field
+        label="Model name"
+        value={modelValue}
+        onChange={(e) => onModelChange(e.target.value)}
+        placeholder={placeholder}
+      />
     );
   })();
 
@@ -234,16 +133,16 @@ export default function ProviderModelFields({
           (hasApiKeyConfigured ? (
             <Box
               sx={{
-                p: "3px",
+                p: "8px 10px",
                 backgroundColor: palette.status.success.bg,
-                borderRadius: "8px",
+                borderRadius: "4px",
                 border: `1px solid ${palette.status.success.border}`,
               }}
             >
-              <Stack direction="row" alignItems="center" spacing="2px">
-                <Check size={16} color={palette.status.success.text} />
+              <Stack direction="row" alignItems="center" spacing="6px">
+                <Check size={14} color={palette.status.success.text} />
                 <Typography sx={{ fontSize: "12px", color: palette.status.success.text }}>
-                  API key configured — will be saved for future experiments
+                  Uses your saved API key
                 </Typography>
               </Stack>
             </Box>

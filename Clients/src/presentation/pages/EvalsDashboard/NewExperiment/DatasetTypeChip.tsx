@@ -7,6 +7,7 @@
 import Chip from "../../../components/Chip";
 import { palette } from "../../../themes/palette";
 import type { DatasetTurnType } from "./newExperimentConfig";
+import { countLabel } from "../../../tools/countLabel";
 
 interface DatasetTypeChipProps {
   /** Underlying turn type; omit / undefined treated as single-turn. */
@@ -35,12 +36,13 @@ export default function DatasetTypeChip({
     );
   }
 
-  const countLabel = isSelected && promptCount > 0 ? `${promptCount} prompts` : undefined;
+  const promptCountText =
+    isSelected && promptCount > 0 ? countLabel(promptCount, "prompt") : undefined;
 
   if (turnType === "multi-turn") {
     return (
       <Chip
-        label={countLabel ?? "Multi-Turn"}
+        label={promptCountText ?? "Multi-turn"}
         backgroundColor={palette.accent.blue.bg}
         textColor={palette.accent.blue.text}
         uppercase={false}
@@ -51,7 +53,7 @@ export default function DatasetTypeChip({
   if (turnType === "simulated") {
     return (
       <Chip
-        label={countLabel ?? "Simulated"}
+        label={promptCountText ?? "Simulated"}
         backgroundColor={palette.accent.purple.bg}
         textColor={palette.accent.purple.text}
         uppercase={false}
@@ -61,7 +63,7 @@ export default function DatasetTypeChip({
 
   return (
     <Chip
-      label={countLabel ?? "Single-Turn"}
+      label={promptCountText ?? "Single-turn"}
       backgroundColor={palette.status.warning.bg}
       textColor={palette.status.warning.text}
       uppercase={false}

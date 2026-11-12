@@ -26,7 +26,7 @@
  * ```
  */
 
-import React from "react";
+import React, { useId } from "react";
 import { Modal, Stack, Box, Typography, Step, Stepper, StepLabel } from "@mui/material";
 import { background, border, text } from "../../../themes/palette";
 import { X as CloseIcon } from "lucide-react";
@@ -77,6 +77,12 @@ interface StepperModalProps {
 
   /** Optional control shown next to the close button (e.g., an activity toggle) */
   headerAction?: React.ReactNode;
+
+  /** Fixed width; by default the modal fits its content, so it changes size between steps */
+  width?: string;
+
+  /** Keep the content area one height on every step so the buttons don't move */
+  fixedHeight?: boolean;
 }
 
 const StepperModal: React.FC<StepperModalProps> = ({
@@ -95,7 +101,10 @@ const StepperModal: React.FC<StepperModalProps> = ({
   maxWidth = "1000px",
   headerBadge,
   headerAction,
+  width,
+  fixedHeight = false,
 }) => {
+  const titleId = useId();
   const isLastStep = activeStep === steps.length - 1;
   const isFirstStep = activeStep === 0;
 
@@ -118,12 +127,15 @@ const StepperModal: React.FC<StepperModalProps> = ({
       sx={{ overflowY: "scroll" }}
     >
       <Stack
+        role="dialog"
+        aria-modal="true"
+        aria-labelledby={titleId}
         sx={{
           "position": "absolute",
           "top": "50%",
           "left": "50%",
           "transform": "translate(-50%, -50%)",
-          "width": "fit-content",
+          "width": width ?? "fit-content",
           "minWidth": "600px",
           "maxWidth": maxWidth,
           "backgroundColor": "background.main",
@@ -149,6 +161,7 @@ const StepperModal: React.FC<StepperModalProps> = ({
             <Stack spacing={0.5}>
               <Stack direction="row" alignItems="center" spacing={1.5}>
                 <Typography
+                  id={titleId}
                   sx={{
                     fontSize: 15,
                     fontWeight: 600,
@@ -177,6 +190,7 @@ const StepperModal: React.FC<StepperModalProps> = ({
               <Box
                 component="span"
                 role="button"
+                aria-label="Close"
                 tabIndex={0}
                 onClick={(e) => {
                   e.stopPropagation();
@@ -212,7 +226,10 @@ const StepperModal: React.FC<StepperModalProps> = ({
             padding: "24px",
             flex: 1,
             overflow: "auto",
-            maxHeight: "calc(90vh - 180px)",
+            // flex-basis would override a plain height, so a fixed height also opts out of flex
+            ...(fixedHeight
+              ? { flex: "none", height: "calc(90vh - 180px)", maxHeight: "calc(90vh - 180px)" }
+              : { maxHeight: "calc(90vh - 180px)" }),
             border: `1px solid ${border.light}`,
             borderRadius: "16px",
             backgroundColor: "background.main",
