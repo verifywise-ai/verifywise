@@ -472,6 +472,10 @@ export const de: Record<string, string> = {
   "The group was created, but its members were not saved. Select Save to try again.":
     "Die Gruppe wurde erstellt, aber ihre Mitglieder wurden nicht gespeichert. Wählen Sie Speichern, um es erneut zu versuchen.",
   "Groups": "Gruppen",
+  "Bundle users into teams to give them use-case access together":
+    "Benutzer zu Teams bündeln, um ihnen gemeinsam Zugriff auf Anwendungsfälle zu geben",
+  "Loading groups": "Gruppen werden geladen",
+  "Members": "Mitglieder",
   "Groups bundle users so you can add a whole team to a use case in one step.":
     "Gruppen fassen Benutzer zusammen, sodass Sie ein ganzes Team in einem Schritt zu einem Anwendungsfall hinzufügen können.",
   "Loading members...": "Mitglieder werden geladen...",
@@ -966,6 +970,10 @@ export const fr: Record<string, string> = {
   "The group was created, but its members were not saved. Select Save to try again.":
     "Le groupe a été créé, mais ses membres n’ont pas été enregistrés. Sélectionnez Enregistrer pour réessayer.",
   "Groups": "Groupes",
+  "Bundle users into teams to give them use-case access together":
+    "Regrouper des utilisateurs en équipes pour leur donner ensemble accès aux cas d'usage",
+  "Loading groups": "Chargement des groupes",
+  "Members": "Membres",
   "Groups bundle users so you can add a whole team to a use case in one step.":
     "Les groupes rassemblent des utilisateurs pour que vous puissiez ajouter toute une équipe à un cas d'usage en une seule étape.",
   "Loading members...": "Chargement des membres...",
@@ -1456,6 +1464,10 @@ export const es: Record<string, string> = {
   "The group was created, but its members were not saved. Select Save to try again.":
     "El grupo se creó, pero sus miembros no se guardaron. Seleccione Guardar para intentarlo de nuevo.",
   "Groups": "Grupos",
+  "Bundle users into teams to give them use-case access together":
+    "Agrupar usuarios en equipos para darles acceso conjunto a los casos de uso",
+  "Loading groups": "Cargando grupos",
+  "Members": "Miembros",
   "Groups bundle users so you can add a whole team to a use case in one step.":
     "Los grupos reúnen usuarios para que pueda agregar un equipo completo a un caso de uso en un solo paso.",
   "Loading members...": "Cargando miembros...",

@@ -565,8 +565,8 @@ const SidebarShell: FC<SidebarShellProps> = ({
     >
       {/* Logo Header */}
       <Stack
-        pt={theme.spacing(6)}
-        pb={theme.spacing(12)}
+        pt="4px"
+        pb="8px"
         sx={{
           position: "relative",
           pl: delayedCollapsed

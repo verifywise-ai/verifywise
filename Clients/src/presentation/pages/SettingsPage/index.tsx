@@ -19,6 +19,7 @@ import { useSsoFeatureEnabled } from "../../../application/hooks/useSsoFeatureEn
 import CustomFieldsTab from "./CustomFields";
 import AIApprovalRules from "./AIApprovalRules";
 import RolesTab from "./Roles";
+import GroupsTab from "./Groups";
 import TabBar, { TabItem } from "../../components/TabBar";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 
@@ -35,6 +36,7 @@ const BUILT_IN_TABS = [
   "password",
   "preferences",
   "team",
+  "groups",
   "organization",
   "features",
   "apikeys",
@@ -172,6 +174,12 @@ export default function ProfilePage() {
               tooltip: "Manage team members and their roles",
             },
             {
+              label: "Groups",
+              value: "groups",
+              icon: "UsersRound" as TabItem["icon"],
+              tooltip: "Bundle users into teams to give them use-case access together",
+            },
+            {
               label: "Organization",
               value: "organization",
               icon: "Building2",
@@ -283,6 +291,10 @@ export default function ProfilePage() {
 
         <TabPanel sx={{ p: 0 }} value="team">
           <TeamManagement />
+        </TabPanel>
+
+        <TabPanel sx={{ p: 0 }} value="groups">
+          <GroupsTab />
         </TabPanel>
 
         <TabPanel sx={{ p: 0 }} value="organization">

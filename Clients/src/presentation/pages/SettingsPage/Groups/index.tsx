@@ -1,7 +1,6 @@
-import React, { useEffect, useState } from "react";
-import { useCan } from "../../../application/hooks/useCan";
+import React, { useEffect, useMemo, useState } from "react";
+import { useCan } from "../../../../application/hooks/useCan";
 import {
-  Autocomplete,
   Box,
   Chip,
   CircularProgress,
@@ -13,19 +12,19 @@ import {
   TableContainer,
   TableHead,
   TableRow,
-  TextField,
   Tooltip,
   Typography,
   useTheme,
 } from "@mui/material";
-import { Pencil, Plus as PlusIcon, Trash2, Users } from "lucide-react";
-import singleTheme from "../../themes/v1SingleTheme";
-import { CustomizableButton } from "../../components/button/customizable-button";
-import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
-import StandardModal from "../../components/Modals/StandardModal";
-import Field from "../../components/Inputs/Field";
-import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
-import useUsers from "../../../application/hooks/useUsers";
+import { ChevronDown, Pencil, Plus as PlusIcon, Trash2, Users } from "lucide-react";
+import singleTheme from "../../../themes/v1SingleTheme";
+import { CustomizableButton } from "../../../components/button/customizable-button";
+import ConfirmationModal from "../../../components/Dialogs/ConfirmationModal";
+import StandardModal from "../../../components/Modals/StandardModal";
+import Field from "../../../components/Inputs/Field";
+import AutoCompleteField from "../../../components/Inputs/Autocomplete";
+import { EmptyState } from "../../../components/EmptyState";
+import useUsers from "../../../../application/hooks/useUsers";
 import {
   useCreateGroup,
   useDeleteGroup,
@@ -33,8 +32,8 @@ import {
   useGroups,
   useSetGroupMembers,
   useUpdateGroup,
-} from "../../../application/hooks/useGroups";
-import type { IGroup } from "../../../domain/interfaces/i.group";
+} from "../../../../application/hooks/useGroups";
+import type { IGroup } from "../../../../domain/interfaces/i.group";
 
 const TABLE_COLUMNS = [
   { id: "name", label: "NAME" },
@@ -84,6 +83,17 @@ const GroupsPage: React.FC = () => {
   // until they arrive. Saving replaces the membership only when the selection
   // differs from this, so an edit can never wipe members it did not load.
   const [initialMemberIds, setInitialMemberIds] = useState<number[] | null>(null);
+
+  const memberOptions = useMemo(
+    () =>
+      users.map((user) => ({
+        id: Number(user.id),
+        name: user.name,
+        surname: user.surname,
+        email: user.email,
+      })),
+    [users],
+  );
 
   const editingId = editing?.id ?? null;
   const {
@@ -173,48 +183,53 @@ const GroupsPage: React.FC = () => {
   const busy = createMutation.isPending || updateMutation.isPending || setMembersMutation.isPending;
 
   return (
-    <Stack className="vwhome" sx={{ gap: theme.spacing(8) }}>
-      <PageHeaderExtended
-        title="Groups"
-        description="Create teams and grant them use-case access in one step. Members of a group attached to a use case can see and work on it."
-        actionButton={
-          canManageGroups ? (
-            <CustomizableButton
-              variant="contained"
-              text="New group"
-              icon={<PlusIcon size={16} />}
-              onClick={openCreate}
-              sx={{
-                backgroundColor: "brand.primary",
-                border: "1px solid brand.primary",
-                gap: 2,
-              }}
-            />
-          ) : undefined
-        }
-      />
+    <Stack sx={{ mt: "24px", width: "100%", gap: "16px" }}>
+      <Box
+        sx={{
+          display: "flex",
+          justifyContent: "space-between",
+          alignItems: "flex-start",
+          gap: "16px",
+        }}
+      >
+        <Box>
+          <Typography sx={{ fontSize: 15, fontWeight: 600, color: "text.black" }}>
+            Groups
+          </Typography>
+          <Typography sx={{ fontSize: 13, color: "text.secondary", mt: "4px" }}>
+            Create teams and grant them use-case access in one step. Members of a group attached to
+            a use case can see and work on it.
+          </Typography>
+        </Box>
+        {canManageGroups && (
+          <CustomizableButton
+            variant="contained"
+            text="New group"
+            icon={<PlusIcon size={16} strokeWidth={1.5} />}
+            onClick={openCreate}
+            testId="groups-new-group"
+            sx={{ height: "30px", gap: "8px", flexShrink: 0 }}
+          />
+        )}
+      </Box>
 
       {isLoading ? (
-        <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
-          <CircularProgress size={20} />
+        <Box sx={{ display: "flex", justifyContent: "center", py: "48px" }}>
+          <CircularProgress size={20} aria-label="Loading groups" />
         </Box>
       ) : isError ? (
         <Typography sx={{ fontSize: 13, color: theme.palette.error.main }}>
           Failed to load groups.
         </Typography>
       ) : !groups || groups.length === 0 ? (
-        <Box
-          sx={{
-            p: 6,
-            border: `1px dashed ${theme.palette.border.light}`,
-            borderRadius: theme.shape.borderRadius,
-            textAlign: "center",
-          }}
-        >
-          <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-            No groups yet. Create one to grant a whole team access to a use case.
-          </Typography>
-        </Box>
+        <EmptyState
+          icon={Users}
+          message={
+            canManageGroups
+              ? "No groups yet. Create one to give a whole team access to a use case."
+              : "No groups yet."
+          }
+        />
       ) : (
         <TableContainer sx={{ overflowX: "auto" }}>
           <Table sx={{ ...singleTheme.tableStyles.primary.frame }}>
@@ -310,25 +325,55 @@ const GroupsPage: React.FC = () => {
               value={form.description}
               onChange={(e) => setForm({ ...form, description: e.target.value })}
             />
-            <Autocomplete
+            <AutoCompleteField
               multiple
               id="group-members-input"
-              size="small"
-              value={users.filter((user) => form.memberIds.includes(Number(user.id)))}
-              options={users.map((user) => ({
-                id: Number(user.id),
-                name: user.name,
-                surname: user.surname,
-                email: user.email,
-              }))}
-              getOptionLabel={(member) => `${member.name} ${member.surname}`}
+              label="Members"
+              isOptional
+              placeholder="Select members"
+              value={memberOptions.filter((member) => form.memberIds.includes(member.id))}
+              options={memberOptions}
+              getOptionLabel={(member) => `${member.name} ${member.surname}`.trim()}
               isOptionEqualToValue={(option, value) => option.id === value.id}
+              filterSelectedOptions
               onChange={(_event, selected) =>
                 setForm({ ...form, memberIds: selected.map((member) => member.id) })
               }
+              renderOption={(props, option) => {
+                const { key, ...optionProps } = props;
+                return (
+                  <Box
+                    component="li"
+                    key={key}
+                    {...optionProps}
+                    sx={{ display: "flex", justifyContent: "space-between", gap: "8px" }}
+                  >
+                    <Typography sx={{ fontSize: "13px" }}>
+                      {`${option.name} ${option.surname}`.trim()}
+                    </Typography>
+                    <Typography
+                      sx={{
+                        fontSize: "11px",
+                        color: theme.palette.text.secondary,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                        whiteSpace: "nowrap",
+                      }}
+                    >
+                      {option.email}
+                    </Typography>
+                  </Box>
+                );
+              }}
+              noOptionsText={
+                memberOptions.length > 0 && form.memberIds.length === memberOptions.length
+                  ? "All members selected"
+                  : "No members found"
+              }
               loading={!membersReady && !membersError}
-              renderInput={(params) => <TextField {...params} placeholder="Select members" />}
+              popupIcon={<ChevronDown size={16} strokeWidth={1.5} />}
               disabled={!canManageGroups || !membersReady}
+              sx={{ width: "100%" }}
             />
             {editing && membersLoading && (
               <Stack direction="row" sx={{ alignItems: "center", gap: "8px" }}>

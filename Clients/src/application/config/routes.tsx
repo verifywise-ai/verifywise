@@ -67,7 +67,6 @@ const RiskInheritanceGraph = lazyRoute(
   () => import("../../presentation/pages/RiskInheritanceGraph"),
 );
 const Tasks = lazyRoute(() => import("../../presentation/pages/Tasks"));
-const Groups = lazyRoute(() => import("../../presentation/pages/Groups"));
 const AutomationsPage = lazyRoute(() => import("../../presentation/pages/Automations"));
 const ApprovalWorkflows = lazyRoute(() => import("../../presentation/pages/ApprovalWorkflows"));
 const IncidentManagement = lazyRoute(() => import("../../presentation/pages/IncidentManagement"));
@@ -740,14 +739,8 @@ export const createRoutes = (
         </Suspense>
       }
     />
-    <Route
-      path="/groups"
-      element={
-        <Suspense fallback={<LazyFallback />}>
-          <Groups />
-        </Suspense>
-      }
-    />
+    {/* Groups moved to a Settings tab; keep old links working. */}
+    <Route path="/groups" element={<Navigate to="/settings/groups" replace />} />
     <Route
       path="/automations"
       element={

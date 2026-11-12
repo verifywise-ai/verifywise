@@ -1,10 +1,10 @@
 import { screen, fireEvent, waitFor } from "@testing-library/react";
-import { renderWithProviders } from "../../../../test/renderWithProviders";
+import { renderWithProviders } from "../../../../../test/renderWithProviders";
 
-vi.mock("../../../../application/hooks/useMyPermissions", () => ({
+vi.mock("../../../../../application/hooks/useMyPermissions", () => ({
   useMyPermissions: () => ({ permissions: undefined, isLoading: true, error: null }),
 }));
-vi.mock("../../../../application/hooks/useCan", () => {
+vi.mock("../../../../../application/hooks/useCan", () => {
   const useCan = () => true;
   return {
     useCan,
@@ -14,14 +14,14 @@ vi.mock("../../../../application/hooks/useCan", () => {
 });
 
 const mockUsers: { id: number; name: string; surname: string; email: string }[] = [];
-vi.mock("../../../../application/hooks/useUsers", () => ({
+vi.mock("../../../../../application/hooks/useUsers", () => ({
   default: () => ({ users: mockUsers, loading: false, error: null, refreshUsers: vi.fn() }),
 }));
 
 const mockMutateAsync = vi.fn();
 const mockUpdateAsync = vi.fn();
 const mockSetMembersAsync = vi.fn();
-vi.mock("../../../../application/hooks/useGroups", () => ({
+vi.mock("../../../../../application/hooks/useGroups", () => ({
   useGroups: vi.fn(),
   useGroupMembers: vi.fn(),
   useCreateGroup: () => ({ mutateAsync: mockMutateAsync, isPending: false }),
@@ -31,7 +31,7 @@ vi.mock("../../../../application/hooks/useGroups", () => ({
 }));
 
 import GroupsPage from "../index";
-import { useGroupMembers, useGroups } from "../../../../application/hooks/useGroups";
+import { useGroupMembers, useGroups } from "../../../../../application/hooks/useGroups";
 
 const mockUseGroups = useGroups as unknown as ReturnType<typeof vi.fn>;
 const mockUseGroupMembers = useGroupMembers as unknown as ReturnType<typeof vi.fn>;
