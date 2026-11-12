@@ -245,16 +245,10 @@ export default function UploadDatasetModal({
             <CustomizableButton
               size="small"
               variant="text"
+              color="primary"
               startIcon={<Download size={14} />}
               onClick={() => handleDownloadExample(turnType, useCase)}
               text="Download example"
-              sx={{
-                "fontSize": "12px",
-                "color": palette.brand.primary,
-                "&:hover": {
-                  backgroundColor: "rgba(19, 113, 91, 0.08)",
-                },
-              }}
             />
           </Box>
           <Box

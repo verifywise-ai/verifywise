@@ -23,7 +23,7 @@ import {
   deleteLlmApiKey,
 } from "../../../application/repository/deepEval.repository";
 import { useIsAdmin } from "../../../application/hooks/useIsAdmin";
-import { palette } from "../../themes/palette";
+import { status } from "../../themes/palette";
 import { LLM_PROVIDERS as ALL_LLM_PROVIDERS } from "./llmProviders";
 import ArenaSettingSection from "./ArenaSettingSection";
 
@@ -341,19 +341,20 @@ export default function OrgSettings() {
         {gatewayDown && (
           <Box
             sx={{
-              p: 2,
+              py: 4,
+              px: 6,
               borderRadius: "6px",
-              backgroundColor: theme.palette.warning?.light ?? "#fff8e1",
-              border: `1px solid ${theme.palette.warning?.main ?? "#f9a825"}`,
+              backgroundColor: status.warning.bg ?? status.warning.bg,
+              border: `1px solid ${status.warning.border ?? status.warning.border}`,
               display: "flex",
               flexDirection: "column",
-              gap: 0.5,
+              gap: 1,
             }}
           >
-            <Typography sx={{ fontSize: 13, fontWeight: 600, color: "#7c4f00" }}>
+            <Typography sx={{ fontSize: 13, fontWeight: 600, color: status.warning.text }}>
               AI Gateway is not running
             </Typography>
-            <Typography sx={{ fontSize: 12, color: "#7c4f00" }}>
+            <Typography sx={{ fontSize: 12, color: status.warning.text }}>
               API key management requires the AI Gateway service (port 8100). Start it with:{" "}
               <code style={{ fontSize: 11 }}>
                 cd AIGateway/src && uvicorn app:app --host 0.0.0.0 --port 8100 --reload
@@ -461,7 +462,7 @@ export default function OrgSettings() {
                 <Typography
                   sx={{
                     fontSize: 11,
-                    color: palette.status.success.text,
+                    color: status.success.text,
                     mt: 0.5,
                     ml: 0.5,
                   }}
@@ -490,16 +491,6 @@ export default function OrgSettings() {
                 onClick={handleAddKey}
                 isDisabled={!selectedProvider || !newApiKey.trim() || !!apiKeyError}
                 startIcon={<Plus size={16} />}
-                sx={{
-                  "backgroundColor": palette.brand.primary,
-                  "border": `1px solid ${palette.brand.primary}`,
-                  "&:hover": { backgroundColor: palette.brand.primaryHover },
-                  "&:disabled": {
-                    backgroundColor: theme.palette.action.disabledBackground,
-                    color: theme.palette.action.disabled,
-                  },
-                  "textTransform": "none",
-                }}
               />
             </Box>
           </Stack>

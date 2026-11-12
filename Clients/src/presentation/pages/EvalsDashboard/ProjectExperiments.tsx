@@ -28,7 +28,7 @@ import { useTableGrouping, useGroupByState } from "../../../application/hooks/us
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import HelperIcon from "../../components/HelperIcon";
 import Select from "../../components/Inputs/Select";
-import { palette } from "../../themes/palette";
+import { background, palette, text } from "../../themes/palette";
 import { countLabel } from "../../tools/countLabel";
 import TipBox from "../../components/TipBox";
 import { useCanCheck } from "../../../application/hooks/useCan";
@@ -620,7 +620,7 @@ export default function ProjectExperiments({
           body={
             <Box>
               <Typography
-                sx={{ fontSize: "14px", color: palette.text.tertiary, lineHeight: 1.6, mb: "12px" }}
+                sx={{ fontSize: "14px", color: palette.text.tertiary, lineHeight: 1.6, mb: 6 }}
               >
                 This will create a new experiment run using the same configuration as "
                 {rerunConfirm.experiment.name}".
@@ -630,7 +630,7 @@ export default function ProjectExperiments({
                   sx={{
                     display: "flex",
                     alignItems: "center",
-                    gap: "8px",
+                    gap: 4,
                     p: "8px 10px",
                     borderRadius: "4px",
                     backgroundColor: palette.status.success.bg,
@@ -769,7 +769,7 @@ export default function ProjectExperiments({
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
-                  backgroundColor: "rgba(255, 255, 255, 0.6)",
+                  backgroundColor: background.main,
                   zIndex: 1,
                 }}
               >
@@ -777,7 +777,7 @@ export default function ProjectExperiments({
                   sx={{
                     fontSize: "14px",
                     fontWeight: 500,
-                    color: palette.text.secondary,
+                    color: text.secondary,
                     textAlign: "center",
                     px: "12px",
                   }}

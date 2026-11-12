@@ -27,7 +27,8 @@ import "katex/dist/katex.min.css";
 import { getArenaComparisonResults } from "../../../application/repository/deepEval.repository";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import StandardModal from "../../components/Modals/StandardModal";
-import { palette } from "../../themes/palette";
+import { accent, palette } from "../../themes/palette";
+import { amber, yellow } from "@design-tokens/primitives";
 
 // Provider icons
 import { ReactComponent as OpenAILogo } from "../../assets/icons/openai_logo.svg";
@@ -88,13 +89,13 @@ const MarkdownRenderer = ({ content }: { content: string }) => {
         "& ul, & ol": { pl: 2.5, mb: 1 },
         "& li": { mb: 0.5 },
         "& code": {
-          backgroundColor: "#f1f5f9",
+          backgroundColor: accent.teal.bg,
           px: 0.75,
           py: 0.25,
           borderRadius: "4px",
           fontFamily: "'Fira Code', monospace",
           fontSize: 12,
-          color: "#0f766e",
+          color: accent.teal.text,
         },
         "& pre": {
           "backgroundColor": "#1e293b",
@@ -104,7 +105,7 @@ const MarkdownRenderer = ({ content }: { content: string }) => {
           "overflow": "auto",
           "& code": {
             backgroundColor: "transparent",
-            color: "#e2e8f0",
+            color: accent.teal.text,
             p: 0,
           },
         },
@@ -201,10 +202,10 @@ interface ArenaResults {
 
 // Contestant colors
 const COLORS = [
-  { main: "#3b82f6", light: "#eff6ff", text: "#1e40af" },
-  { main: "#ef4444", light: "#fef2f2", text: "#991b1b" },
+  { main: "#3b82f6", light: "#eff6ff", text: accent.blue.text },
+  { main: "#ef4444", light: palette.accent.red.bg, text: accent.red.text },
   { main: "#10b981", light: "#ecfdf5", text: "#065f46" },
-  { main: "#f59e0b", light: "#fffbeb", text: "#92400e" },
+  { main: "#f59e0b", light: "#fffbeb", text: accent.amber.text },
   { main: "#8b5cf6", light: "#f5f3ff", text: "#5b21b6" },
   { main: "#ec4899", light: "#fdf2f8", text: "#9d174d" },
 ];
@@ -386,9 +387,9 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
           p: "12px",
           borderRadius: "4px",
           background: isCompleted
-            ? "linear-gradient(135deg, #fef9c3 0%, #fde047 100%)"
+            ? `linear-gradient(135deg, ${yellow[100]} 0%, ${yellow[300]} 100%)`
             : palette.background.accent,
-          border: isCompleted ? "1px solid #facc15" : `1px solid ${palette.border.dark}`,
+          border: isCompleted ? `1px solid ${yellow[600]}` : `1px solid ${palette.border.dark}`,
           mb: 2,
         }}
       >
@@ -400,7 +401,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                 sx={{
                   fontSize: 10,
                   fontWeight: 600,
-                  color: isCompleted ? "#a16207" : palette.text.disabled,
+                  color: isCompleted ? accent.amber.text : palette.text.disabled,
                   textTransform: "uppercase",
                   letterSpacing: 0.5,
                 }}
@@ -411,13 +412,16 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                 sx={{
                   fontSize: 18,
                   fontWeight: 700,
-                  color: isCompleted ? "#713f12" : palette.text.tertiary,
+                  color: isCompleted ? accent.amber.text : palette.text.tertiary,
                 }}
               >
                 {results.results?.winner || "—"}
               </Typography>
               <Typography
-                sx={{ fontSize: 11, color: isCompleted ? "#a16207" : palette.text.disabled }}
+                sx={{
+                  fontSize: 11,
+                  color: isCompleted ? accent.amber.text : palette.text.disabled,
+                }}
               >
                 {isCompleted && results.results?.winner
                   ? `${winCounts[results.results.winner] || 0} of ${totalRounds} rounds won`
@@ -432,7 +436,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
               <Typography
                 sx={{
                   fontSize: 9,
-                  color: isCompleted ? "#a16207" : palette.text.disabled,
+                  color: isCompleted ? accent.amber.text : palette.text.disabled,
                   textTransform: "uppercase",
                 }}
               >
@@ -442,7 +446,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                 sx={{
                   fontSize: 12,
                   fontWeight: 600,
-                  color: isCompleted ? "#713f12" : palette.text.secondary,
+                  color: isCompleted ? accent.amber.text : palette.text.secondary,
                 }}
               >
                 {results.judgeModel || "gpt-4o"}
@@ -452,7 +456,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
               <Typography
                 sx={{
                   fontSize: 9,
-                  color: isCompleted ? "#a16207" : palette.text.disabled,
+                  color: isCompleted ? accent.amber.text : palette.text.disabled,
                   textTransform: "uppercase",
                 }}
               >
@@ -462,7 +466,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                 sx={{
                   fontSize: 12,
                   fontWeight: 600,
-                  color: isCompleted ? "#713f12" : palette.text.secondary,
+                  color: isCompleted ? accent.amber.text : palette.text.secondary,
                 }}
               >
                 {totalRounds}
@@ -472,7 +476,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
               <Typography
                 sx={{
                   fontSize: 9,
-                  color: isCompleted ? "#a16207" : palette.text.disabled,
+                  color: isCompleted ? accent.amber.text : palette.text.disabled,
                   textTransform: "uppercase",
                 }}
               >
@@ -482,7 +486,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                 sx={{
                   fontSize: 12,
                   fontWeight: 600,
-                  color: isCompleted ? "#713f12" : palette.text.secondary,
+                  color: isCompleted ? accent.amber.text : palette.text.secondary,
                 }}
               >
                 {results.createdAt && results.completedAt
@@ -638,7 +642,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                                   px: 0.75,
                                   py: 0.25,
                                   borderRadius: "4px",
-                                  background: "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
+                                  background: `linear-gradient(135deg, ${yellow[600]} 0%, ${amber[500]} 100%)`,
                                 }}
                               >
                                 <Trophy size={10} color={palette.background.main} />
@@ -1035,7 +1039,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                           p: "12px",
                           borderRadius: "4px",
                           border: isRoundWinner
-                            ? `2px solid #f59e0b`
+                            ? `2px solid ${yellow[600]}`
                             : `1px solid ${palette.border.light}`,
                           backgroundColor: palette.background.main,
                           minWidth: 0,
@@ -1087,7 +1091,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                                 px: 1,
                                 py: 0.5,
                                 borderRadius: "4px",
-                                background: "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
+                                background: `linear-gradient(135deg, ${yellow[300]} 0%, ${amber[500]} 100%)`,
                                 flexShrink: 0,
                               }}
                             >

@@ -10,13 +10,16 @@ import {
   MenuItem,
   Divider,
   Tooltip,
+  alpha,
 } from "@mui/material";
 import { Send, Bot, ChevronDown, Trash2, Paperclip, X, FileText, Mic, Plus } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import CustomAxios from "../../../infrastructure/api/customAxios";
 import { evalModelsService, type SavedModel } from "../../../infrastructure/api/evalModelsService";
 import * as ProviderIcons from "../../components/ProviderIcons";
-import palette from "../../themes/palette";
+import palette, { accent, text } from "../../themes/palette";
+import grey from "@design-tokens/primitives";
+import { CustomizableButton } from "../../components/button/customizable-button";
 
 interface Message {
   role: "user" | "assistant";
@@ -585,7 +588,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                       <Box
                         sx={{
                           backgroundColor: palette.brand.primary,
-                          color: "#fff",
+                          color: text.inverse,
                           borderRadius: "18px 18px 4px 18px",
                           px: "16px",
                           py: "10px",
@@ -693,11 +696,11 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                 px: "14px",
                 py: "10px",
                 borderRadius: "8px",
-                border: "1px solid #FECACA",
-                backgroundColor: "#FFF5F5",
+                border: `1px solid ${accent.red.border}`,
+                backgroundColor: accent.red.bg,
               }}
             >
-              <Typography fontSize={12} color="#DC2626">
+              <Typography fontSize={12} color={text.error}>
                 {error}
               </Typography>
             </Box>
@@ -775,10 +778,10 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                     "right": 2,
                     "width": 18,
                     "height": 18,
-                    "backgroundColor": "rgba(0,0,0,0.45)",
-                    "color": "#fff",
+                    "backgroundColor": alpha(grey[950], 0.45),
+                    "color": text.inverse,
                     "p": 0,
-                    "&:hover": { backgroundColor: "rgba(0,0,0,0.65)" },
+                    "&:hover": { backgroundColor: alpha(grey[950], 0.65) },
                   }}
                 >
                   <X size={10} />
@@ -794,13 +797,13 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
             "display": "flex",
             "alignItems": "center",
             "gap": "6px",
-            "border": `1.5px solid ${dictating ? "#EF4444" : palette.border.light}`,
+            "border": `1.5px solid ${dictating ? text.error : palette.border.light}`,
             "borderRadius": "14px",
             "px": "10px",
             "py": "8px",
             "backgroundColor": palette.background.main,
             "transition": "border-color 0.15s",
-            "&:focus-within": { borderColor: dictating ? "#EF4444" : palette.brand.primary },
+            "&:focus-within": { borderColor: dictating ? accent.red.text : accent.primary.text },
           }}
         >
           {/* Attach */}
@@ -840,7 +843,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                 onClick={toggleDictation}
                 disabled={loading || !selectedModelId}
                 sx={{
-                  "color": dictating ? "#EF4444" : palette.text.tertiary,
+                  "color": dictating ? accent.red.text : palette.text.tertiary,
                   "borderRadius": "50%",
                   "p": "4px",
                   "flexShrink": 0,
@@ -887,24 +890,19 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
           />
 
           {/* Send */}
-          <IconButton
+          <CustomizableButton
             onClick={sendMessage}
+            variant="contained"
+            color="primary"
+            iconOnly={true}
+            ariaLabel="Send message"
             disabled={!canSend}
             sx={{
-              "backgroundColor": canSend ? palette.brand.primary : palette.background.fill,
-              "color": canSend ? "#fff" : palette.text.disabled,
-              "width": 32,
-              "height": 32,
-              "borderRadius": "8px",
-              "flexShrink": 0,
-              "transition": "background-color 0.15s",
-              "&:hover": {
-                backgroundColor: canSend ? palette.brand.primaryHover : palette.background.fill,
-              },
+              borderRadius: "8px",
             }}
           >
             <Send size={14} strokeWidth={1.5} />
-          </IconButton>
+          </CustomizableButton>
         </Box>
 
         <Typography

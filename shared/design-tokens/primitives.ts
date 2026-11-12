@@ -51,6 +51,8 @@ export type RedStep = keyof typeof red;
 
 /** Yellow scale */
 export const yellow = {
+  100: "#FEF9C2",
+  300: "#FDDC30",
   600: "#FBBF24",
 } as const;
 
@@ -60,6 +62,7 @@ export type YellowStep = keyof typeof yellow;
 export const amber = {
   100: "#FFF8E1",
   200: "#F5E6B8",
+  500: "#F59E0B",
   600: "#795548",
   700: "#92400E",
 } as const;
