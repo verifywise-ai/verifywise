@@ -22,6 +22,34 @@ SAFE_MODEL_NAME_PATTERN = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9._:/-]*$')
 evaluation_module_path = Path(__file__).parent.parent.parent.parent / "EvaluationModule"
 sys.path.insert(0, str((evaluation_module_path / "src").resolve()))
 
+
+def _resolve_relative_dataset_path(rel_path: Path) -> Path:
+    """
+    Resolve a relative dataset path the way the dataset read endpoint does.
+
+    Dataset records store paths relative to the built-in datasets folder
+    (e.g. "demo/knowledge_base_golden_set.json"): /app/datasets in Docker,
+    EvaluationModule/data/datasets locally. Older configs used paths relative to
+    EvaluationModule/ itself, so that base is still tried last. A path that
+    resolves outside every base is rejected.
+    """
+    bases = [Path("/app/datasets"), evaluation_module_path / "data" / "datasets", evaluation_module_path]
+    fallback: Optional[Path] = None
+    for base in bases:
+        base = base.resolve()
+        candidate = (base / rel_path).resolve()
+        try:
+            candidate.relative_to(base)
+        except ValueError:
+            continue
+        if candidate.exists():
+            return candidate
+        if fallback is None and base.exists():
+            fallback = candidate
+    if fallback is None:
+        raise ValueError(f"Invalid dataset path: {rel_path}")
+    return fallback
+
 from crud import evaluation_logs as crud
 from crud.deepeval_scorers import list_scorers, create_scorer, update_scorer, touch_scorer_updated_at
 from deepeval_engine.gatekeeper import evaluate_gate
@@ -531,11 +559,15 @@ async def run_evaluation(
         # Custom dataset path if provided (only load if we don't have data yet)
         if not prompts and not conversations and dataset_config.get("path"):
             custom_path = Path(dataset_config["path"])
+            path_error: Optional[str] = None
             if not custom_path.is_absolute():
-                custom_path = (evaluation_module_path / custom_path).resolve()
+                try:
+                    custom_path = _resolve_relative_dataset_path(custom_path)
+                except ValueError as e:
+                    path_error = str(e)
             print(f"📄 Loading custom dataset from: {custom_path}")
-            if not custom_path.exists():
-                error_msg = f"Dataset file not found: {custom_path}"
+            if path_error or not custom_path.exists():
+                error_msg = path_error or f"Dataset file not found: {custom_path}"
                 print(f"❌ {error_msg}")
                 await crud.update_experiment_status(
                     db=db,

@@ -40,7 +40,7 @@
  */
 
 import { sequelize } from "../../database/db";
-import { LLM_EVALS_PROJECTS } from "./demoOrgLlmEvalsData";
+import { LLM_EVALS_PROJECTS, loadGoldenSet, seededExperimentConfig } from "./demoOrgLlmEvalsData";
 import bcrypt from "bcrypt";
 
 const API_BASE = process.env.API_BASE || "http://localhost:3000";
@@ -1243,6 +1243,7 @@ async function seedLlmEvalsScaffold(
       },
     );
 
+    const golden = loadGoldenSet(p);
     const [dsRows] = (await sequelize.query(
       `INSERT INTO llm_evals_datasets
          (name, path, size, prompt_count, dataset_type, turn_type, organization_id,
@@ -1255,8 +1256,8 @@ async function seedLlmEvalsScaffold(
         replacements: {
           name: p.dataset.name,
           path: p.dataset.path,
-          size: p.samples.length * 512,
-          prompts: p.samples.length,
+          size: golden.sizeBytes,
+          prompts: golden.items.length,
           dsType: p.use_case,
           orgId: ctx.orgId,
           createdBy: String(ctx.userId),
@@ -1346,7 +1347,8 @@ async function seedLlmEvalsExperiments(
     const projectId = ids.projectIds[p.key];
     const n = p.trajectory.length;
     const failedIdx = LLM_EVALS_FAILED_INDEX[p.key];
-    const samples = p.samples;
+    const golden = loadGoldenSet(p);
+    const config = seededExperimentConfig(p, golden, ids.datasetIds[p.key]);
 
     for (let i = 0; i < n; i++) {
       // Spread experiments across the last ~3 weeks: oldest experiment ~21
@@ -1359,14 +1361,6 @@ async function seedLlmEvalsExperiments(
       const createdAt = new Date(Date.now() - daysAgo * 86400000);
       createdAt.setUTCHours(9 + i, 15 + i * 3 + projectOffsetMin, 0, 0);
       const experimentId = `exp_${llmEvalsTimestampSuffix(createdAt)}`;
-
-      const config = {
-        model: { name: p.model, provider: "openrouter" },
-        dataset: { name: p.dataset.name },
-        metrics: p.metrics,
-        judgeLlm: { name: "gpt-4o-mini", provider: "openrouter" },
-        evaluationMode: "standard",
-      };
 
       const isFailed = i === failedIdx;
 
@@ -1398,7 +1392,7 @@ async function seedLlmEvalsExperiments(
           projectKey: p.key,
           status: "failed",
           avgScores: null,
-          totalPrompts: p.samples.length,
+          totalPrompts: golden.items.length,
         });
         continue;
       }
@@ -1408,9 +1402,8 @@ async function seedLlmEvalsExperiments(
         avgScores[metric] = llmEvalsMetricScore(metric, p.trajectory[i], i, metricIdx);
       });
 
-      const detailedCount = Math.min(samples.length, 3 + (i % 3)); // 3-5 entries
-      const detailedResults = Array.from({ length: detailedCount }, (_, di) => {
-        const sample = samples[di % samples.length];
+      // One detailed result per golden-set prompt, matching total_prompts.
+      const detailedResults = golden.items.map((item, di) => {
         const metricScores: Record<string, { score: number; passed: boolean; reason: string }> = {};
         p.metrics.forEach((metric, metricIdx) => {
           const score = clamp01(
@@ -1437,8 +1430,9 @@ async function seedLlmEvalsExperiments(
           };
         });
         return {
-          input: sample.input,
-          output: sample.output,
+          input: item.prompt,
+          output: p.seededOutputs[di],
+          expected_output: item.expected_output,
           metric_scores: metricScores,
         };
       });
@@ -1446,7 +1440,7 @@ async function seedLlmEvalsExperiments(
       const completedAt = new Date(createdAt.getTime() + 6 * 60000 + i * 30000);
 
       const results = {
-        total_prompts: p.samples.length,
+        total_prompts: golden.items.length,
         avg_scores: avgScores,
         detailed_results: detailedResults,
         completed_at: completedAt.toISOString(),
@@ -1481,7 +1475,7 @@ async function seedLlmEvalsExperiments(
         projectKey: p.key,
         status: "completed",
         avgScores,
-        totalPrompts: p.samples.length,
+        totalPrompts: golden.items.length,
       });
     }
   }
@@ -1520,9 +1514,9 @@ async function seedLlmEvalsLogsAndMetrics(
 
     const project = LLM_EVALS_PROJECTS.find((p) => p.key === exp.projectKey)!;
     // One log row per golden-set prompt, so PROMPTS matches the dataset.
-    const samples = project.samples;
+    const goldenItems = loadGoldenSet(project).items;
     const metrics = project.metrics;
-    const N = samples.length;
+    const N = goldenItems.length;
 
     // Window the logs' timestamps between the experiment's started_at and
     // completed_at so they land "within" the run.
@@ -1548,7 +1542,7 @@ async function seedLlmEvalsLogsAndMetrics(
     const errorSlot = expHash % 12;
 
     for (let i = 0; i < N; i++) {
-      const sample = samples[i];
+      const item = goldenItems[i];
       const isError = i === errorSlot;
 
       const metricScores: Record<string, { score: number; passed: boolean; reason: string }> = {};
@@ -1580,12 +1574,12 @@ async function seedLlmEvalsLogsAndMetrics(
       logRows.push({
         project_id: projectId,
         experiment_id: exp.id,
-        input_text: sample.input,
-        output_text: isError ? "" : sample.output,
+        input_text: item.prompt,
+        output_text: isError ? "" : project.seededOutputs[i],
         model_name: `openai/${project.model}`,
         metadata: {
           metric_scores: isError ? {} : metricScores,
-          expected_outcome: sample.expected,
+          expected_outcome: item.expected_output,
         },
         latency_ms: latency,
         token_count: tokenCount,
@@ -1638,7 +1632,7 @@ async function seedLlmEvalsLogsAndMetrics(
         timestamp: new Date(completedAt).toISOString(),
       });
     });
-    // PROMPTS in the UI = logs.length = samples.length, which is also what
+    // PROMPTS in the UI = logs.length = golden-set size, which is also what
     // results.total_prompts and the dataset's prompt_count were seeded with.
   }
 
