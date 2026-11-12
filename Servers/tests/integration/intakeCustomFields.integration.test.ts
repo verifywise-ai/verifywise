@@ -9,8 +9,9 @@ import { requestHasPermission } from "../../utils/rolePermissions.utils";
 /**
  * Intake questions mapped to entity custom fields (#5262), against a real
  * database: the allowlist migration, approval writes inside the approval
- * transaction, the publish checks, AI app delete cleanup and the permission
- * gate on PUT /api/custom-fields/values.
+ * transaction (v1 and legacy), the v1 preview, the publish checks, the v1 AI
+ * apps list, AI app delete cleanup and the permission gate on
+ * PUT /api/custom-fields/values.
  */
 
 const ROLE = { Admin: 1, Reviewer: 2, Editor: 3, Auditor: 4 } as const;
@@ -39,14 +40,25 @@ async function defineField(
   orgId: number,
   entityType: string,
   fieldKey: string,
-  fieldType: "text" | "number" | "boolean" = "text",
+  fieldType: "text" | "number" | "boolean" | "select" = "text",
   label = `Label ${fieldKey}`,
+  options: string[] | null = null,
 ): Promise<number> {
   const [rows] = await sequelize.query(
     `INSERT INTO custom_field_definitions
-       (organization_id, entity_type, field_key, label, field_type, required)
-     VALUES (:orgId, :entityType, :fieldKey, :label, :fieldType, false) RETURNING id`,
-    { replacements: { orgId, entityType, fieldKey, label, fieldType } },
+       (organization_id, entity_type, field_key, label, field_type, options, required)
+     VALUES (:orgId, :entityType, :fieldKey, :label, :fieldType, CAST(:options AS jsonb), false)
+     RETURNING id`,
+    {
+      replacements: {
+        orgId,
+        entityType,
+        fieldKey,
+        label,
+        fieldType,
+        options: options ? JSON.stringify(options) : null,
+      },
+    },
   );
   return Number((rows as any[])[0].id);
 }
@@ -181,9 +193,9 @@ describe("Intake custom field mapping (#5262)", () => {
         });
         const api = await as(orgId, adminId, "Admin");
 
-        const res = await api.post(`/api/intake/submissions/${submissionId}/approve`).send({});
+        const res = await api.post(`/api/v1/intake-submissions/${submissionId}/approve`).send({});
         expect(res.status).toBe(200);
-        expect(res.body.data.customFieldSkips ?? []).toEqual([]);
+        expect(res.body.data.customFieldSkips).toEqual([]);
 
         const entityId = await entityIdOf(submissionId);
         const rows = await valuesFor(orgId, cfEntity, entityId);
@@ -208,7 +220,17 @@ describe("Intake custom field mapping (#5262)", () => {
       });
       const api = await as(orgId, adminId, "Admin");
 
-      const res = await api.post(`/api/intake/submissions/${submissionId}/approve`).send({});
+      const preview = await api.get(`/api/v1/intake-submissions/${submissionId}/preview`);
+      expect(preview.status).toBe(200);
+      expect(preview.body.data.customFields).toEqual([
+        { label: "Label cost_centre", displayValue: "CC-1" },
+        { label: "Users", displayValue: "3", skipped: "This custom field no longer exists" },
+      ]);
+      const legacyPreview = await api.get(`/api/intake/submissions/${submissionId}/preview`);
+      expect(legacyPreview.status).toBe(200);
+      expect(legacyPreview.body.data).not.toHaveProperty("customFields");
+
+      const res = await api.post(`/api/v1/intake-submissions/${submissionId}/approve`).send({});
       expect(res.status).toBe(200);
       expect(res.body.data.customFieldSkips).toHaveLength(1);
       expect(res.body.data.customFieldSkips[0]).toMatchObject({
@@ -223,6 +245,27 @@ describe("Intake custom field mapping (#5262)", () => {
       expect((subs as any[])[0].status).toBe("approved");
       const rows = await valuesFor(orgId, "ai_app", await entityIdOf(submissionId));
       expect(rows.map((r) => r.field_key)).toEqual(["cost_centre"]);
+    });
+
+    it("legacy approval writes the values and keeps its old response shape", async () => {
+      const orgId = await createTestOrganization();
+      const adminId = await userIn(orgId, "Admin");
+      await defineField(orgId, "ai_app", "cost_centre", "text");
+      const { submissionId } = await seedSubmission(
+        orgId,
+        adminId,
+        "ai_app",
+        { f_vendor: "CC-7" },
+        [CUSTOM_QUESTIONS[0]],
+      );
+      const api = await as(orgId, adminId, "Admin");
+
+      const res = await api.post(`/api/intake/submissions/${submissionId}/approve`).send({});
+      expect(res.status).toBe(200);
+      expect(res.body.data).not.toHaveProperty("customFieldSkips");
+      expect(res.body.data.status).toBe("approved");
+      const rows = await valuesFor(orgId, "ai_app", await entityIdOf(submissionId));
+      expect(rows.map((r) => [r.field_key, r.value])).toEqual([["cost_centre", "CC-7"]]);
     });
 
     it("does not let reviewer-sent custom_field keys write values", async () => {
@@ -283,6 +326,86 @@ describe("Intake custom field mapping (#5262)", () => {
       );
       const ok = await api.patch(`/api/intake/forms/${formId}`).send({ status: "active" });
       expect(ok.status).toBe(200);
+    });
+  });
+
+  describe("option checks", () => {
+    it("answers 400 on publish when a mapped select question has an option the field lacks", async () => {
+      const orgId = await createTestOrganization();
+      const adminId = await userIn(orgId, "Admin");
+      const api = await as(orgId, adminId, "Admin");
+      await defineField(orgId, "ai_app", "tier", "select", "Tier", ["Low", "High"]);
+      const tierQuestion = (options: Array<{ value: string; label: string }>) => ({
+        id: "f_tier",
+        type: "select",
+        label: "Tier question",
+        options,
+        entityFieldMapping: "custom_field:tier",
+      });
+
+      const bad = await api.post("/api/intake/forms").send({
+        name: "Options mismatch",
+        entityType: "ai_app",
+        status: "active",
+        schema: {
+          version: "1.0",
+          fields: [
+            ...NAME_FIELD.ai_app,
+            tierQuestion([
+              { value: "low", label: "Low" },
+              { value: "medium", label: "Medium" },
+            ]),
+          ],
+        },
+      });
+      expect(bad.status).toBe(400);
+      expect(JSON.stringify(bad.body)).toMatch(/some options do not match/);
+
+      const ok = await api.post("/api/intake/forms").send({
+        name: "Options match",
+        description: "d",
+        entityType: "ai_app",
+        status: "active",
+        schema: {
+          version: "1.0",
+          fields: [
+            ...NAME_FIELD.ai_app,
+            tierQuestion([
+              { value: "o1", label: " low" },
+              { value: "HIGH", label: "Top" },
+            ]),
+          ],
+        },
+      });
+      expect(ok.status).toBe(201);
+    });
+  });
+
+  describe("AI apps list", () => {
+    it("carries custom_fields on the v1 list only", async () => {
+      const orgId = await createTestOrganization();
+      const adminId = await userIn(orgId, "Admin");
+      await defineField(orgId, "ai_app", "cost_centre", "text");
+      const { submissionId } = await seedSubmission(
+        orgId,
+        adminId,
+        "ai_app",
+        { f_vendor: "CC-3" },
+        [CUSTOM_QUESTIONS[0]],
+      );
+      const api = await as(orgId, adminId, "Admin");
+      expect(
+        (await api.post(`/api/intake/submissions/${submissionId}/approve`).send({})).status,
+      ).toBe(200);
+
+      const v1 = await api.get("/api/v1/ai-apps");
+      expect(v1.status).toBe(200);
+      expect(v1.body.data.ai_apps[0].custom_fields).toEqual([
+        expect.objectContaining({ field_key: "cost_centre", value: "CC-3" }),
+      ]);
+      const legacy = await api.get("/api/ai-apps");
+      expect(legacy.status).toBe(200);
+      expect(legacy.body.data.ai_apps[0]).not.toHaveProperty("custom_fields");
     });
   });
 
