@@ -40,6 +40,7 @@
  */
 
 import { sequelize } from "../../database/db";
+import { LLM_EVALS_PROJECTS } from "./demoOrgLlmEvalsData";
 import bcrypt from "bcrypt";
 
 const API_BASE = process.env.API_BASE || "http://localhost:3000";
@@ -1165,48 +1166,7 @@ async function seedIncidents(ctx: Ctx) {
 // by a later phase (seedLlmEvalsLogsAndMetrics) on top of the experiments this
 // phase produces.
 
-type LlmEvalsProjectConfig = {
-  key: string;
-  name: string;
-  use_case: string;
-  // `path` must point to a real file under EvaluationModule/data/datasets/
-  // (built-in datasets) so the "open dataset" read endpoint
-  // (GET /api/deepeval/datasets/read?path=...) resolves to an actual file
-  // instead of 404ing on an invented placeholder path.
-  dataset: { name: string; path: string; prompts: number };
-  model: string;
-  metrics: string[];
-  trajectory: number[]; // one score per experiment, oldest -> newest
-};
-
-const LLM_EVALS_PROJECTS: LlmEvalsProjectConfig[] = [
-  {
-    key: "support",
-    name: "Support chatbot",
-    use_case: "chatbot",
-    dataset: {
-      name: "Support chatbot golden set",
-      path: "chatbot/chatbot_customer_support.json",
-      prompts: 25,
-    },
-    model: "gpt-4o-mini",
-    metrics: ["answerRelevancy", "correctness", "toxicity", "bias"],
-    trajectory: [0.61, 0.68, 0.74, 0.82, 0.85],
-  },
-  {
-    key: "kb",
-    name: "Knowledge base assistant",
-    use_case: "rag",
-    dataset: {
-      name: "Knowledge base assistant golden set",
-      path: "rag/rag_knowledge_base_multiturn.json",
-      prompts: 30,
-    },
-    model: "gpt-4o-mini",
-    metrics: ["answerRelevancy", "faithfulness", "contextPrecision", "contextRecall"],
-    trajectory: [0.66, 0.72, 0.78, 0.84],
-  },
-];
+// Projects, golden-set prompts and dataset files: see demoOrgLlmEvalsData.ts.
 
 // The Support project's oldest experiment (index 0 in its trajectory) is the
 // one that failed outright — a judge-model timeout before any scoring
@@ -1255,64 +1215,6 @@ function llmEvalsMetricScore(
   return clamp01(anchor + offset);
 }
 
-type LlmEvalsPromptSample = { input: string; output: string };
-
-// A few plausible input/output pairs per use case, cycled by index.
-const LLM_EVALS_SAMPLES: Record<string, LlmEvalsPromptSample[]> = {
-  chatbot: [
-    {
-      input: "How do I reset my account password?",
-      output:
-        "Go to Settings > Security > Reset Password, then follow the emailed link. It expires in 30 minutes.",
-    },
-    {
-      input: "What's your refund policy on annual plans?",
-      output:
-        "Annual plans are refundable within 30 days of purchase, prorated for any months already used.",
-    },
-    {
-      input: "My last invoice looks wrong, can you check it?",
-      output:
-        "I can see your last invoice included a mid-cycle seat upgrade — that's the extra line item you're seeing.",
-    },
-    {
-      input: "How do I export my data before closing my account?",
-      output:
-        "Use Settings > Data Export to generate a CSV/JSON archive; it's emailed to you within a few minutes.",
-    },
-    {
-      input: "Can I change my billing email address?",
-      output: "Yes — under Billing > Contacts you can update the billing email at any time.",
-    },
-  ],
-  rag: [
-    {
-      input: "What is our data retention policy for customer support tickets?",
-      output:
-        "Per the retention policy document, support tickets are retained for 24 months, then anonymized.",
-    },
-    {
-      input: "Summarize the onboarding checklist for new enterprise customers.",
-      output:
-        "The checklist covers: kickoff call, SSO setup, data migration, admin training, and a 30-day check-in.",
-    },
-    {
-      input: "What SLA tier applies to a Priority 1 incident?",
-      output: "Priority 1 incidents carry a 1-hour response SLA and a 4-hour resolution target.",
-    },
-    {
-      input: "Where is the API rate limit documented?",
-      output:
-        "The API reference's 'Rate limits' section lists 100 requests/minute for standard tier keys.",
-    },
-    {
-      input: "What's the process for requesting a security questionnaire?",
-      output:
-        "Security questionnaires are requested via the Trust Center form and are typically returned in 3 business days.",
-    },
-  ],
-};
-
 async function seedLlmEvalsScaffold(
   ctx: Ctx,
 ): Promise<{ projectIds: Record<string, string>; datasetIds: Record<string, number> }> {
@@ -1353,8 +1255,8 @@ async function seedLlmEvalsScaffold(
         replacements: {
           name: p.dataset.name,
           path: p.dataset.path,
-          size: p.dataset.prompts * 512,
-          prompts: p.dataset.prompts,
+          size: p.samples.length * 512,
+          prompts: p.samples.length,
           dsType: p.use_case,
           orgId: ctx.orgId,
           createdBy: String(ctx.userId),
@@ -1444,7 +1346,7 @@ async function seedLlmEvalsExperiments(
     const projectId = ids.projectIds[p.key];
     const n = p.trajectory.length;
     const failedIdx = LLM_EVALS_FAILED_INDEX[p.key];
-    const samples = LLM_EVALS_SAMPLES[p.use_case] ?? LLM_EVALS_SAMPLES.chatbot;
+    const samples = p.samples;
 
     for (let i = 0; i < n; i++) {
       // Spread experiments across the last ~3 weeks: oldest experiment ~21
@@ -1496,7 +1398,7 @@ async function seedLlmEvalsExperiments(
           projectKey: p.key,
           status: "failed",
           avgScores: null,
-          totalPrompts: p.dataset.prompts,
+          totalPrompts: p.samples.length,
         });
         continue;
       }
@@ -1544,7 +1446,7 @@ async function seedLlmEvalsExperiments(
       const completedAt = new Date(createdAt.getTime() + 6 * 60000 + i * 30000);
 
       const results = {
-        total_prompts: p.dataset.prompts,
+        total_prompts: p.samples.length,
         avg_scores: avgScores,
         detailed_results: detailedResults,
         completed_at: completedAt.toISOString(),
@@ -1579,7 +1481,7 @@ async function seedLlmEvalsExperiments(
         projectKey: p.key,
         status: "completed",
         avgScores,
-        totalPrompts: p.dataset.prompts,
+        totalPrompts: p.samples.length,
       });
     }
   }
@@ -1596,27 +1498,6 @@ async function seedLlmEvalsExperiments(
 // log.metadata.expected_outcome. Without log rows every experiment shows
 // "PROMPTS: 0 / No samples found". This phase seeds those rows plus the
 // llm_evals_metrics rows the Monitor dashboard reads.
-
-const LLM_EVALS_LOG_COUNT = 10; // 8-12, fixed per experiment for determinism
-
-// A short, plausible "expected" answer per use case, cycled by index — shown
-// in the sample detail drawer as metadata.expected_outcome.
-const LLM_EVALS_EXPECTED: Record<string, string[]> = {
-  chatbot: [
-    "Directs the customer to Settings > Security > Reset Password and mentions the link expiry.",
-    "States the 30-day refund window for annual plans, prorated for used months.",
-    "Explains the invoice line item without asking the customer to repeat details already provided.",
-    "Points to Settings > Data Export and sets expectations on delivery time.",
-    "Confirms the billing email can be changed under Billing > Contacts.",
-  ],
-  rag: [
-    "Cites the 24-month retention period for support tickets before anonymization.",
-    "Lists all five onboarding checklist steps in order.",
-    "States the 1-hour response / 4-hour resolution SLA for Priority 1 incidents.",
-    "References the API reference's rate-limit section and the 100 req/min figure.",
-    "Names the Trust Center form and the 3-business-day turnaround.",
-  ],
-};
 
 function llmEvalsErrorMessage(projectKey: string): string {
   return projectKey === "kb"
@@ -1638,10 +1519,10 @@ async function seedLlmEvalsLogsAndMetrics(
     }
 
     const project = LLM_EVALS_PROJECTS.find((p) => p.key === exp.projectKey)!;
-    const samples = LLM_EVALS_SAMPLES[project.use_case] ?? LLM_EVALS_SAMPLES.chatbot;
-    const expected = LLM_EVALS_EXPECTED[project.use_case] ?? LLM_EVALS_EXPECTED.chatbot;
+    // One log row per golden-set prompt, so PROMPTS matches the dataset.
+    const samples = project.samples;
     const metrics = project.metrics;
-    const N = LLM_EVALS_LOG_COUNT;
+    const N = samples.length;
 
     // Window the logs' timestamps between the experiment's started_at and
     // completed_at so they land "within" the run.
@@ -1661,13 +1542,13 @@ async function seedLlmEvalsLogsAndMetrics(
 
     // Deterministic ~1-in-12 error rate: hash the experiment id to a stable
     // slot in [0, 12) and only error out if that slot falls within this
-    // experiment's N rows. At N=8-12 this yields 0-1 error rows per
-    // experiment (rare, as intended) without depending on Math.random.
+    // experiment's N rows. With 10-prompt golden sets this yields 0-1 error
+    // rows per experiment (rare, as intended) without depending on Math.random.
     const expHash = exp.id.split("").reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
     const errorSlot = expHash % 12;
 
     for (let i = 0; i < N; i++) {
-      const sample = samples[i % samples.length];
+      const sample = samples[i];
       const isError = i === errorSlot;
 
       const metricScores: Record<string, { score: number; passed: boolean; reason: string }> = {};
@@ -1704,7 +1585,7 @@ async function seedLlmEvalsLogsAndMetrics(
         model_name: `openai/${project.model}`,
         metadata: {
           metric_scores: isError ? {} : metricScores,
-          expected_outcome: expected[i % expected.length],
+          expected_outcome: sample.expected,
         },
         latency_ms: latency,
         token_count: tokenCount,
@@ -1757,23 +1638,8 @@ async function seedLlmEvalsLogsAndMetrics(
         timestamp: new Date(completedAt).toISOString(),
       });
     });
-
-    // PROMPTS in the UI = logs.length. Keep results.total_prompts and the
-    // dataset's prompt_count in sync with the N rows actually seeded, so the
-    // header and the samples table never disagree.
-    await sequelize.query(
-      `UPDATE llm_evals_experiments
-          SET results = jsonb_set(results, '{total_prompts}', to_jsonb(:n::int))
-        WHERE id = :id AND organization_id = :orgId`,
-      { replacements: { n: N, id: exp.id, orgId: ctx.orgId } },
-    );
-    await sequelize.query(
-      `UPDATE llm_evals_datasets
-          SET prompt_count = :n
-        WHERE organization_id = :orgId
-          AND name = :name`,
-      { replacements: { n: N, orgId: ctx.orgId, name: project.dataset.name } },
-    );
+    // PROMPTS in the UI = logs.length = samples.length, which is also what
+    // results.total_prompts and the dataset's prompt_count were seeded with.
   }
 
   // Bulk insert both tables via jsonb_to_recordset (mirrors the Agent Control
