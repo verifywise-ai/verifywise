@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect, useCallback, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo } from "react";
 import {
   Box,
   Typography,
@@ -39,9 +39,7 @@ import Chip from "../../components/Chip";
 import { palette } from "../../themes/palette";
 import {
   createExperiment,
-  listDatasets,
   listMyDatasets,
-  readDataset,
   listScorers,
   getAllLlmApiKeys,
   addLlmApiKey,
@@ -77,6 +75,14 @@ import {
 import { canProceedToNextStep, getMissingKeyProviders } from "./NewExperiment/stepValidation";
 import DatasetStep from "./NewExperiment/DatasetStep";
 import ModelStep from "./NewExperiment/ModelStep";
+
+/** Conversational G-Eval metrics built without evaluation_params; they fail on every sample. */
+const FAILING_CONVERSATIONAL_METRICS = [
+  "conversationCoherence",
+  "conversationHelpfulness",
+  "taskCompletion",
+  "conversationSafety",
+] as const;
 
 interface NewExperimentModalProps {
   isOpen: boolean;
@@ -128,7 +134,6 @@ export default function NewExperimentModal({
 
   // Dataset prompts state
   const [datasetPrompts, setDatasetPrompts] = useState<DatasetPrompt[]>([]);
-  const [datasetLoaded, setDatasetLoaded] = useState(false);
   // User's saved datasets (for "My datasets" option)
   const [userDatasets, setUserDatasets] = useState<UserDataset[]>([]);
   const [selectedUserDataset, setSelectedUserDataset] = useState<UserDataset | null>(null);
@@ -316,6 +321,21 @@ export default function NewExperimentModal({
   const isMultiTurnDataset =
     selectedUserDataset?.turnType === "multi-turn" ||
     (selectedPresetPath && selectedPresetPath.includes("multiturn"));
+
+  // Off by default on multi-turn datasets until the conversational G-Eval metrics get
+  // evaluation_params: today they fail on every sample (LLM Evals demo findings spec #2b).
+  // Task completion also runs on single-turn, where it works, so it comes back on there.
+  useEffect(() => {
+    setConfig((prev) => ({
+      ...prev,
+      metrics: isMultiTurnDataset
+        ? {
+            ...prev.metrics,
+            ...Object.fromEntries(FAILING_CONVERSATIONAL_METRICS.map((key) => [key, false])),
+          }
+        : { ...prev.metrics, taskCompletion: true },
+    }));
+  }, [isMultiTurnDataset]);
 
   // ── Auto-generated experiment name ────────────────────────────────────────
   // Mirrors the resolution logic in handleSubmit: a saved model selection
@@ -629,35 +649,6 @@ export default function NewExperimentModal({
   const handleBack = () => {
     setActiveStep((prev) => prev - 1);
   };
-
-  const handleLoadBuiltinDataset = useCallback(async () => {
-    try {
-      // If we already have a selected preset path, load it; otherwise select first by use case
-      if (!selectedPresetPath) {
-        const list = await listDatasets();
-        const options = list[config.taskType] || [];
-        if (options.length > 0) {
-          setSelectedPresetPath(options[0].path);
-        }
-      }
-      const pathToLoad = selectedPresetPath;
-      if (pathToLoad) {
-        const { prompts } = await readDataset(pathToLoad);
-        // Apply category filters and limits if provided
-        let filtered = prompts as DatasetPrompt[];
-        if (config.dataset.categories && config.dataset.categories.length > 0) {
-          filtered = filtered.filter((p) => config.dataset.categories.includes(p.category));
-        }
-        if (config.dataset.limit && config.dataset.limit > 0) {
-          filtered = filtered.slice(0, config.dataset.limit);
-        }
-        setDatasetPrompts(filtered as DatasetPrompt[]);
-        setDatasetLoaded(true);
-      }
-    } catch (err) {
-      console.error("Failed to load dataset:", err);
-    }
-  }, [config.dataset.categories, config.dataset.limit, config.taskType, selectedPresetPath]);
 
   const handleSubmit = async () => {
     setLoading(true);
@@ -978,7 +969,6 @@ export default function NewExperimentModal({
   const resetForm = () => {
     setActiveStep(0);
     setDatasetPrompts([]);
-    setDatasetLoaded(false);
     setSelectedUserDataset(null);
     setSelectedPresetPath("");
     // Reset scorer state
@@ -1176,13 +1166,6 @@ export default function NewExperimentModal({
     void loadGatewayModels(config.judgeLlm.provider as string);
   }, [config.judgeLlm.provider]);
 
-  // Auto-load default dataset when reaching step 2 (Dataset)
-  useEffect(() => {
-    if (activeStep === 1 && config.dataset.useBuiltin && !datasetLoaded) {
-      handleLoadBuiltinDataset();
-    }
-  }, [activeStep, config.dataset.useBuiltin, datasetLoaded, handleLoadBuiltinDataset]);
-
   const selectedModelProvider = availableModelProviders.find(
     (p) => p.id === config.model.accessMethod,
   );
@@ -1291,7 +1274,6 @@ export default function NewExperimentModal({
               }));
               if (prompts !== null) {
                 setDatasetPrompts(prompts);
-                setDatasetLoaded(true);
               } else {
                 setDatasetPrompts([]);
               }
@@ -1305,7 +1287,6 @@ export default function NewExperimentModal({
               setSelectedPresetPath("");
               if (prompts !== null) {
                 setDatasetPrompts(prompts);
-                setDatasetLoaded(true);
               } else {
                 setDatasetPrompts([]);
               }
@@ -1319,7 +1300,6 @@ export default function NewExperimentModal({
               setSelectedPresetPath(path);
               if (prompts !== null) {
                 setDatasetPrompts(prompts);
-                setDatasetLoaded(true);
               } else {
                 setDatasetPrompts([]);
               }

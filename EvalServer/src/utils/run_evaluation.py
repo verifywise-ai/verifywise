@@ -51,7 +51,7 @@ def _resolve_relative_dataset_path(rel_path: Path) -> Path:
     return fallback
 
 from crud import evaluation_logs as crud
-from crud.deepeval_scorers import list_scorers, create_scorer, update_scorer, touch_scorer_updated_at
+from crud.deepeval_scorers import list_scorers, touch_scorer_updated_at
 from deepeval_engine.gatekeeper import evaluate_gate
 from utils.run_custom_scorer import run_custom_scorer, ScorerResult
 from utils.safe_outbound_url import checked_endpoint, openai_base_url
@@ -186,104 +186,6 @@ def route_threshold_keys(thresholds: Optional[Dict[str, Any]]) -> Dict[str, Any]
             if is_direct:
                 direct.add(target)
     return routed
-
-
-async def _upsert_judge_scorer(
-    *,
-    db: AsyncSession,
-    config: Dict[str, Any],
-    organization_id: int,
-) -> None:
-    """
-    After an experiment completes, ensure the standard judge LLM is persisted as a
-    scorer record so it appears in the Scorers page.  If a scorer for the same
-    judge model already exists we just touch its updated_at (= LAST RUN date);
-    otherwise we create a new record with sane defaults including choiceScores.
-    """
-    from uuid import uuid4
-    import re as _re
-
-    judge_config = config.get("judgeLlm") or {}
-    judge_model = judge_config.get("model", "").strip()
-    judge_provider = (judge_config.get("provider") or "openai").strip().lower()
-
-    if not judge_model:
-        return  # No standard judge used; nothing to save.
-
-    try:
-        existing = await list_scorers(organization_id=organization_id, db=db)
-
-        # Match on judgeModel.name inside config, legacy flat judgeModel string,
-        # or the auto-generated name pattern "Judge: {model}"
-        def _matches(s: Dict[str, Any]) -> bool:
-            if s.get("name", "") == f"Judge: {judge_model}":
-                return True
-            cfg = s.get("config") or {}
-            jm = cfg.get("judgeModel")
-            if isinstance(jm, dict):
-                return jm.get("name", "") == judge_model
-            if isinstance(jm, str):
-                return jm == judge_model
-            return False
-
-        matched = next((s for s in existing if _matches(s)), None)
-
-        if matched:
-            matched_cfg = matched.get("config") or {}
-            if not matched_cfg.get("choiceScores"):
-                # Backfill missing choiceScores and update judgeModel info
-                updated_cfg = {
-                    **matched_cfg,
-                    "provider": matched_cfg.get("provider") or judge_provider,
-                    "judgeModel": matched_cfg.get("judgeModel") or {"name": judge_model, "provider": judge_provider},
-                    "choiceScores": [
-                        {"label": "PASS", "score": 1},
-                        {"label": "FAIL", "score": 0},
-                    ],
-                }
-                await update_scorer(
-                    scorer_id=matched["id"],
-                    organization_id=organization_id,
-                    config=updated_cfg,
-                    db=db,
-                )
-            else:
-                # Just update the timestamp so LAST RUN shows correctly.
-                await touch_scorer_updated_at(
-                    scorer_id=matched["id"],
-                    organization_id=organization_id,
-                    db=db,
-                )
-        else:
-            # Build a safe metric_key from the model name.
-            safe_key = _re.sub(r"[^a-zA-Z0-9_]", "_", judge_model)
-            scorer_id = f"judge_{uuid4().hex}"
-            await create_scorer(
-                scorer_id=scorer_id,
-                organization_id=organization_id,
-                name=f"Judge: {judge_model}",
-                description=f"Standard LLM judge using {judge_provider}/{judge_model}",
-                scorer_type="llm",
-                metric_key=f"judge_{safe_key}",
-                config={
-                    "provider": judge_provider,
-                    "judgeModel": {"name": judge_model, "provider": judge_provider},
-                    "choiceScores": [
-                        {"label": "PASS", "score": 1},
-                        {"label": "FAIL", "score": 0},
-                    ],
-                },
-                enabled=True,
-                default_threshold=0.5,
-                weight=1.0,
-                created_by=None,
-                db=db,
-            )
-
-        await db.commit()
-        print(f"   ✅ Judge scorer upserted for {judge_model}")
-    except Exception as e:
-        print(f"   ⚠️  Could not upsert judge scorer: {e}")
 
 
 def _scorer_summary(scorer_scores: List[Dict[str, Any]]) -> Optional[Tuple[float, float]]:
@@ -1650,10 +1552,6 @@ async def run_evaluation(
             status="completed",
             results=experiment_results,
         )
-
-        # Auto-save / update the judge scorer record so the Scorers page reflects
-        # this run (correct choiceScores defaults and up-to-date LAST RUN timestamp).
-        await _upsert_judge_scorer(db=db, config=config, organization_id=organization_id)
 
         # Touch updated_at for any custom scorers that ran in this experiment so
         # their LAST RUN date reflects the most recent usage.

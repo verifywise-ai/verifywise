@@ -195,6 +195,7 @@ describe("NewExperimentModal", () => {
       renderModal();
       await selectLocalModel();
       await goToDatasetStep();
+      fireEvent.click(screen.getByText("Basic Chatbot"));
       await waitFor(() =>
         expect(deepEvalMocks.readDataset).toHaveBeenCalledWith(DEFAULT_TEMPLATE_PATH),
       );
@@ -521,6 +522,7 @@ describe("NewExperimentModal", () => {
       renderModal();
       await selectLocalModel();
       await goToDatasetStep();
+      fireEvent.click(screen.getByText("Basic Chatbot"));
       await waitFor(() =>
         expect(deepEvalMocks.readDataset).toHaveBeenCalledWith(DEFAULT_TEMPLATE_PATH),
       );
@@ -567,6 +569,7 @@ describe("NewExperimentModal", () => {
       // Select the saved cloud model (no saved API key)
       fireEvent.click(await screen.findByText("gpt-4o"));
       await goToDatasetStep();
+      fireEvent.click(screen.getByText("Basic Chatbot"));
       await waitFor(() =>
         expect(deepEvalMocks.readDataset).toHaveBeenCalledWith(DEFAULT_TEMPLATE_PATH),
       );
@@ -609,6 +612,7 @@ describe("NewExperimentModal", () => {
       renderModal();
       fireEvent.click(await screen.findByText("gpt-4o"));
       await goToDatasetStep();
+      fireEvent.click(screen.getByText("Basic Chatbot"));
       await waitFor(() =>
         expect(deepEvalMocks.readDataset).toHaveBeenCalledWith(DEFAULT_TEMPLATE_PATH),
       );
@@ -624,6 +628,48 @@ describe("NewExperimentModal", () => {
   });
 
   describe("submit (3.3.4)", () => {
+    it("starts the dataset step with no dataset selected", async () => {
+      mockListDatasetsWith("chatbot", [DEFAULT_TEMPLATE_PATH]);
+      deepEvalMocks.readDataset.mockResolvedValue({ prompts: samplePrompts });
+
+      renderModal();
+      await selectLocalModel("llama2");
+      await goToDatasetStep();
+
+      // Give any auto-load a chance to run; nothing may be picked for the user
+      await act(async () => {
+        await new Promise((resolve) => setTimeout(resolve, 50));
+      });
+      expect(deepEvalMocks.readDataset).not.toHaveBeenCalled();
+      expect(screen.getByRole("button", { name: "Next" })).toBeDisabled();
+    });
+
+    it("leaves the failing conversational metrics off for a multi-turn dataset", async () => {
+      const multiTurnPath = "chatbot/chatbot_general_assistant_multiturn.json";
+      mockListDatasetsWith("chatbot", [multiTurnPath]);
+      deepEvalMocks.readDataset.mockResolvedValue({ prompts: samplePrompts });
+
+      renderModal();
+      await selectLocalModel("llama2");
+      await goToDatasetStep();
+      fireEvent.click(screen.getByText("General Assistant Multi-Turn"));
+      await waitFor(() => expect(deepEvalMocks.readDataset).toHaveBeenCalledWith(multiTurnPath));
+      await goToScorerStep();
+      await selectLocalJudge();
+      await goToMetricsStep();
+
+      fireEvent.click(screen.getByRole("button", { name: "Start Experiment" }));
+
+      await waitFor(() => expect(deepEvalMocks.createExperiment).toHaveBeenCalled());
+      const { metrics } = deepEvalMocks.createExperiment.mock.calls[0][0].config;
+      expect(metrics.conversationCoherence).toBe(false);
+      expect(metrics.conversationHelpfulness).toBe(false);
+      expect(metrics.taskCompletion).toBe(false);
+      expect(metrics.conversationSafety).toBe(false);
+      expect(metrics.turnRelevancy).toBe(true);
+      expect(metrics.knowledgeRetention).toBe(true);
+    });
+
     it("creates an experiment on submit and notifies the parent", async () => {
       mockListDatasetsWith("chatbot", [DEFAULT_TEMPLATE_PATH]);
       deepEvalMocks.readDataset.mockResolvedValue({ prompts: samplePrompts });
@@ -632,6 +678,7 @@ describe("NewExperimentModal", () => {
 
       await selectLocalModel("llama2");
       await goToDatasetStep();
+      fireEvent.click(screen.getByText("Basic Chatbot"));
       await waitFor(() =>
         expect(deepEvalMocks.readDataset).toHaveBeenCalledWith(DEFAULT_TEMPLATE_PATH),
       );
@@ -680,6 +727,7 @@ describe("NewExperimentModal", () => {
       renderModal();
       await selectLocalModel();
       await goToDatasetStep();
+      fireEvent.click(screen.getByText("Basic Chatbot"));
       await waitFor(() =>
         expect(deepEvalMocks.readDataset).toHaveBeenCalledWith(DEFAULT_TEMPLATE_PATH),
       );
