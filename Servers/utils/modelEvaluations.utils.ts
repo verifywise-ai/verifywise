@@ -1,5 +1,6 @@
 import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
+import { withoutProviderKeys } from "./stripProviderKeys.utils";
 
 export async function getAllLinkedEvaluations(organizationId: number) {
   const [experiments, biasAudits] = await Promise.all([
@@ -37,7 +38,11 @@ export async function getAllLinkedEvaluations(organizationId: number) {
     ),
   ]);
 
-  return { experiments, biasAudits };
+  // Experiment configs may still hold provider keys from before they stopped being stored.
+  return {
+    experiments: withoutProviderKeys(experiments as Array<{ config?: unknown }>),
+    biasAudits,
+  };
 }
 
 export async function getEvaluationsByModelInventoryId(
@@ -73,5 +78,9 @@ export async function getEvaluationsByModelInventoryId(
     ),
   ]);
 
-  return { experiments, biasAudits };
+  // Experiment configs may still hold provider keys from before they stopped being stored.
+  return {
+    experiments: withoutProviderKeys(experiments as Array<{ config?: unknown }>),
+    biasAudits,
+  };
 }
