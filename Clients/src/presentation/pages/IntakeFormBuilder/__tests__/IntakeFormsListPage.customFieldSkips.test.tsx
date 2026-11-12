@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { fireEvent, screen, within } from "@testing-library/react";
+import { fireEvent, screen, waitFor, within } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import { IntakeFormsListPage } from "../IntakeFormsListPage";
 
@@ -61,5 +61,20 @@ describe("IntakeFormsListPage approval with skipped custom field values", () => 
     const alert = await screen.findByRole("alert");
     expect(within(alert).getByText("Submission approved")).toBeInTheDocument();
     expect(alert.className).toMatch(/Success/);
+  });
+
+  it("keeps the warning when the user clicks elsewhere, until it is closed", async () => {
+    renderWithProviders(<IntakeFormsListPage />, {
+      route: "/intake-forms/submissions?submission=5",
+    });
+    fireEvent.click(await screen.findByText("approve-with-skips"));
+    const alert = await screen.findByRole("alert");
+    // The click-away listener arms on the next tick; the exit transition takes a moment.
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    fireEvent.click(document.body);
+    await new Promise((resolve) => setTimeout(resolve, 600));
+    expect(screen.getByRole("alert")).toBe(alert);
+    fireEvent.click(within(alert).getByRole("button", { name: /close/i }));
+    await waitFor(() => expect(screen.queryByRole("alert")).toBeNull());
   });
 });

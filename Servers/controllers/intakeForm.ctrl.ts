@@ -915,7 +915,7 @@ async function customFieldMappingErrors(
  * its options changed, the entity is not found) is skipped and reported; any
  * other error fails the approval.
  */
-async function writeIntakeCustomFields(
+export async function writeIntakeCustomFields(
   intakeEntityType: string,
   answers: Record<string, unknown>,
   schema: IIntakeFormSchema,
@@ -939,9 +939,16 @@ async function writeIntakeCustomFields(
       await savepoint.commit();
     } catch (error) {
       await savepoint.rollback();
-      if (error instanceof NotFoundException) {
+      if (
+        error instanceof NotFoundException &&
+        error.metadata?.resource === "custom_field_definition"
+      ) {
         skips.push({ fieldKey: value.fieldKey, label: value.label, reason: "field_removed" });
-      } else if (error instanceof ValidationException || error instanceof ForbiddenException) {
+      } else if (
+        error instanceof NotFoundException ||
+        error instanceof ValidationException ||
+        error instanceof ForbiddenException
+      ) {
         skips.push({ fieldKey: value.fieldKey, label: value.label, reason: "invalid_value" });
       } else {
         throw error;

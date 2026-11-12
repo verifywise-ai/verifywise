@@ -1179,7 +1179,11 @@ export function IntakeFormsListPage() {
       <Snackbar
         open={snackbar.open}
         autoHideDuration={snackbar.autoHide === undefined ? 4000 : snackbar.autoHide}
-        onClose={() => setSnackbar((prev) => ({ ...prev, open: false }))}
+        onClose={(_event, reason) => {
+          // A click elsewhere must not dismiss a warning the user has not read yet.
+          if (reason === "clickaway") return;
+          setSnackbar((prev) => ({ ...prev, open: false }));
+        }}
         anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
       >
         <Alert
