@@ -30,14 +30,14 @@ export const apiAccessContent: ArticleContent = {
       type: 'ordered-list',
       items: [
         { text: 'Go to Settings from the bottom of the sidebar' },
-        { text: 'Select the API keys tab' },
+        { text: 'Select the API keys section' },
         { text: 'View your existing keys or create new ones' },
       ],
     },
     {
       type: 'callout',
       variant: 'info',
-      text: 'Only users with the Admin role can view and manage API keys. The API keys tab isn\'t visible to other roles.',
+      text: 'Only users with the Admin role can view and manage API keys. The API keys section isn\'t visible to other roles.',
     },
     {
       type: 'heading',
@@ -116,8 +116,8 @@ export const apiAccessContent: ArticleContent = {
     {
       type: 'image',
       src: '/images/user-guide/api-keys.png',
-      alt: 'API keys settings tab showing a list of API keys with their names, status indicators, creation dates, and expiration dates',
-      caption: 'The API keys tab shows all your keys with their status and expiration info.',
+      alt: 'API keys settings section showing a list of API keys with their names, status indicators, creation dates, and expiration dates',
+      caption: 'The API keys section shows all your keys with their status and expiration info.',
     },
     {
       type: 'paragraph',

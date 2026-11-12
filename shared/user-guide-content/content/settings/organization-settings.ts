@@ -26,7 +26,7 @@ export const organizationSettingsContent: ArticleContent = {
       type: 'ordered-list',
       items: [
         { text: 'Click on Settings in the sidebar footer' },
-        { text: 'Select the Organization tab' },
+        { text: 'Select the Organization section' },
       ],
     },
     {
@@ -94,8 +94,8 @@ export const organizationSettingsContent: ArticleContent = {
     {
       type: 'image',
       src: '/images/user-guide/organization-settings.png',
-      alt: 'Organization settings tab showing organization name field and logo upload with Delete and Update options',
-      caption: 'Configure your organization name and logo from the Organization settings tab.',
+      alt: 'Organization settings section showing organization name field and logo upload with Delete and Update options',
+      caption: 'Configure your organization name and logo from the Organization settings section.',
     },
     {
       type: 'paragraph',
@@ -151,24 +151,24 @@ export const organizationSettingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Use the **MCP** tab under **Settings** to connect Claude Code or another MCP client to VerifyWise. Only Admins see this tab. The server runs in your VerifyWise deployment, so there is nothing to install. The connection is limited to your own organization.',
+      text: 'Use the **MCP** section under **Settings** to connect Claude Code or another MCP client to VerifyWise. Only Admins see this section. The server runs in your VerifyWise deployment, so there is nothing to install. The connection is limited to your own organization.',
     },
     {
       type: 'ordered-list',
       items: [
         { text: 'Choose when the token expires, then select **Download config file**.' },
-        { text: 'In the folder holding the file, run the command shown on the tab to add it to Claude Code. Then delete the file.' },
-        { text: 'Restart Claude Code and run `/mcp`. You should see `verifywise` with the tools listed on the tab.' },
+        { text: 'In the folder holding the file, run the command shown in the MCP section to add it to Claude Code. Then delete the file.' },
+        { text: 'Restart Claude Code and run `/mcp`. You should see `verifywise` with the tools listed in the MCP section.' },
       ],
     },
     {
       type: 'callout',
       variant: 'warning',
-      text: 'The file contains an API token. A person who has the file can use those tools as you. Downloading a new file revokes the token you got from this tab last time, so anything set up with the old file stops working.',
+      text: 'The file contains an API token. A person who has the file can use those tools as you. Downloading a new file revokes the token you got from this section last time, so anything set up with the old file stops working.',
     },
     {
       type: 'paragraph',
-      text: 'For other MCP clients, create a token on the **API keys** tab and use the connect command on the **MCP** tab. If you are also a super admin, set up the connection from **Super Admin**, **Settings**, **MCP** instead.',
+      text: 'For other MCP clients, create a token on the **API keys** section and use the connect command on the **MCP** section. If you are also a super admin, set up the connection from **Super Admin**, **Settings**, **MCP** instead.',
     },
     {
       type: 'heading',
@@ -184,7 +184,7 @@ export const organizationSettingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Yes. You can update the organization name at any time from the Organization tab in Settings. The change takes effect right away across the platform.',
+      text: 'Yes. You can update the organization name at any time from the Organization section in Settings. The change takes effect right away across the platform.',
     },
     {
       type: 'heading',
@@ -204,7 +204,7 @@ export const organizationSettingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Data retention tab in Settings shows how long each kind of record is kept, whether it is deleted automatically, and when the last cleanup ran. Only Admins can open it and change a period.',
+      text: 'The Data retention section in Settings shows how long each kind of record is kept, whether it is deleted automatically, and when the last cleanup ran. Only Admins can open it and change a period.',
     },
     {
       type: 'bullet-list',
