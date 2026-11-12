@@ -55,7 +55,8 @@ PROVIDER_VERIFY_ENDPOINTS: dict[str, dict] = {
         "headers": lambda k: {"Authorization": f"Bearer {k}"},
     },
     "openrouter": {
-        "url": lambda _k: "https://openrouter.ai/api/v1/models",
+        # /models is public and answers 200 to any key; /key needs a valid one (401 otherwise).
+        "url": lambda _k: "https://openrouter.ai/api/v1/key",
         "headers": lambda k: {"Authorization": f"Bearer {k}"},
     },
     "together_ai": {

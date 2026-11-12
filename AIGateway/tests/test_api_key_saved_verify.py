@@ -173,3 +173,16 @@ async def test_saved_key_provider_name_is_normalised(monkeypatch):
     res = await router.verify_saved_api_key(6, _request())
     assert seen and urlparse(seen[0]).hostname == "generativelanguage.googleapis.com"
     assert res["data"]["valid"] is False
+
+
+async def test_openrouter_is_checked_against_an_endpoint_that_needs_the_key(monkeypatch):
+    # openrouter.ai/api/v1/models is public: it returned 200 for any key, so every
+    # OpenRouter key passed the check and only failed later, mid-run.
+    seen = _provider_replies(monkeypatch, 200)
+    await router._check_provider_key("openrouter", "sk-or-v1-good")
+    assert [urlparse(u).path for u in seen] == ["/api/v1/key"]
+
+
+async def test_openrouter_401_is_a_rejected_key(monkeypatch):
+    _provider_replies(monkeypatch, 401, '{"error": {"code": 401, "message": "No auth credentials found"}}')
+    assert (await router._check_provider_key("openrouter", "vck_not-an-openrouter-key"))["valid"] is False
