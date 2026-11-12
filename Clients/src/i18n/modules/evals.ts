@@ -249,8 +249,6 @@ export const de: Record<string, string> = {
     "Bias und Toxizität werden bei jedem Assistenten-Schritt bewertet und aggregiert",
   "Choose the regulatory framework that applies to your bias audit":
     "Wählen Sie das regulatorische Rahmenwerk, das für Ihr Bias-Audit gilt",
-  'Click "Add local provider" to get started':
-    'Klicken Sie auf "Lokalen Anbieter hinzufügen", um zu beginnen',
   "Column mapping": "Spaltenzuordnung",
   "Comma-separated values with demographic columns":
     "Komma-getrennte Werte mit demografischen Spalten",
@@ -697,6 +695,7 @@ export const de: Record<string, string> = {
   "Sample-level details": "Details auf Stichprobenebene",
   "Arena comparison": "Arena-Vergleich",
   "Limitations & recommendations": "Einschränkungen & Empfehlungen",
+  'Click "Add provider" to get started': 'Klicken Sie auf "Anbieter hinzufügen", um zu beginnen',
 };
 
 export const fr: Record<string, string> = {
@@ -946,8 +945,6 @@ export const fr: Record<string, string> = {
     "Le biais et la toxicité seront évalués à chaque tour d'assistant et agrégés",
   "Choose the regulatory framework that applies to your bias audit":
     "Choisissez le référentiel réglementaire qui s'applique à votre audit de biais",
-  'Click "Add local provider" to get started':
-    'Cliquez sur "Ajouter un fournisseur local" pour commencer',
   "Column mapping": "Mappage des colonnes",
   "Comma-separated values with demographic columns":
     "Valeurs séparées par des virgules avec colonnes démographiques",
@@ -1395,6 +1392,7 @@ export const fr: Record<string, string> = {
   "Sample-level details": "Détails par échantillon",
   "Arena comparison": "Comparaison d'arène",
   "Limitations & recommendations": "Limitations et recommandations",
+  'Click "Add provider" to get started': 'Cliquez sur "Ajouter un fournisseur" pour commencer',
 };
 
 export const es: Record<string, string> = {
@@ -1644,7 +1642,6 @@ export const es: Record<string, string> = {
     "El sesgo y la toxicidad se evaluarán en cada turno del asistente y se agregarán",
   "Choose the regulatory framework that applies to your bias audit":
     "Elija el marco regulatorio que se aplica a su auditoría de sesgo",
-  'Click "Add local provider" to get started': "Haga clic en «Añadir proveedor local» para empezar",
   "Column mapping": "Asignación de columnas",
   "Comma-separated values with demographic columns":
     "Valores separados por comas con columnas demográficas",
@@ -2092,4 +2089,5 @@ export const es: Record<string, string> = {
   "Sample-level details": "Detalles por muestra",
   "Arena comparison": "Comparación de arena",
   "Limitations & recommendations": "Limitaciones y recomendaciones",
+  'Click "Add provider" to get started': "Haga clic en «Añadir proveedor» para empezar",
 };

@@ -1663,8 +1663,8 @@ export default function EvalsDashboard() {
                   <Typography sx={{ fontSize: 14, fontWeight: 500, color: palette.text.tertiary }}>
                     No local providers configured yet
                   </Typography>
-                  <Typography sx={{ fontSize: 13, color: palette.text.disabled, mt: 0.5 }}>
-                    Click "Add local provider" to get started
+                  <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: "1px" }}>
+                    Click "Add provider" to get started
                   </Typography>
                 </Box>
               ) : (
@@ -1927,6 +1927,7 @@ export default function EvalsDashboard() {
                     orgId={orgId}
                     onViewExperiment={(experimentId) => setSelectedExperimentId(experimentId)}
                     useCase={(currentProject.useCase || "chatbot") as "chatbot" | "rag" | "agent"}
+                    onExperimentsCountChange={setExperimentsCount}
                   />
                 ) : null)}
 
