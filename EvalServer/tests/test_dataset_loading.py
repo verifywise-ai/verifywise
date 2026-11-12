@@ -21,6 +21,7 @@ was called the expected number of times.
 
 from __future__ import annotations
 
+import os
 from typing import Any, Dict, List
 from unittest.mock import AsyncMock, MagicMock, patch
 
@@ -498,6 +499,34 @@ async def test_simulated_run_without_a_judge_fails(
 
     assert "judge model" in result["error"]
     assert calls == []
+    assert "G_EVAL_MODEL" not in os.environ
+    assert "G_EVAL_PROVIDER" not in os.environ
+
+
+@pytest.mark.asyncio
+async def test_simulated_user_is_this_runs_judge_even_without_a_key_in_config(
+    mock_db_session: AsyncMock,
+    monkeypatch: pytest.MonkeyPatch,
+    stub_model_runner: MagicMock,
+) -> None:
+    """Cloud judges come without a key when the org has none for that provider; stale values must not win."""
+    _install_fake_simulator(monkeypatch)
+    from deepeval_engine import deepeval_evaluator as evaluator_module
+    from utils.run_evaluation import run_evaluation
+
+    judges: List[Dict[str, Any]] = []
+    monkeypatch.setattr(evaluator_module, "get_judge_llm", lambda **kwargs: judges.append(kwargs) or object())
+    monkeypatch.setenv("G_EVAL_PROVIDER", "openai")
+    monkeypatch.setenv("G_EVAL_MODEL", "left-over-from-another-run")
+    config = _scenario_config({"prompts": [{"scenario": "a", "expected_outcome": "x"}]})
+    config["judgeLlm"] = {"provider": "anthropic", "model": "claude-sonnet-4-6"}
+
+    result = await run_evaluation(
+        db=mock_db_session, experiment_id="exp-sim-8", config=config, organization_id=1
+    )
+
+    assert "error" not in result
+    assert judges[0] == {"provider": "anthropic", "model_name": "claude-sonnet-4-6"}
 
 
 @pytest.mark.asyncio

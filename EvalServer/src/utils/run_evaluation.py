@@ -367,9 +367,10 @@ async def run_evaluation(
         print(f"📝 Judge LLM config: provider={judge_config.get('provider')}, has_apiKey={bool(judge_config.get('apiKey'))}")
         has_judge_key = judge_config.get("apiKey") and judge_config["apiKey"] not in ["***", "", None]
         is_self_hosted_judge = judge_config.get("provider", "").lower() in ("self-hosted", "ollama")
-        # Set below only for a self-hosted judge; never inherit one from an earlier run
-        os.environ.pop("G_EVAL_BASE_URL", None)
-        os.environ.pop("G_EVAL_API_KEY", None)
+        # Set below from this run's judge only; never inherit one from an earlier run
+        # (the environment is process-wide and the worker runs many experiments)
+        for judge_env in ("G_EVAL_BASE_URL", "G_EVAL_API_KEY", "G_EVAL_PROVIDER", "G_EVAL_MODEL", "G_EVAL_MAX_TOKENS"):
+            os.environ.pop(judge_env, None)
 
         if has_judge_key or is_self_hosted_judge:
             provider = judge_config.get("provider", "").lower()
@@ -403,19 +404,23 @@ async def run_evaluation(
                 # gateway; many self-hosted servers need no key
                 if judge_config.get("apiKey") and judge_config["apiKey"] not in ["***", "", None]:
                     os.environ["G_EVAL_API_KEY"] = judge_config["apiKey"]
-                # DeepEval's native metrics are picked for provider "openai"
-                provider = "openai"
 
-            # Expose judge provider/model for evaluator (provider-agnostic G‑Eval)
-            if provider:
-                os.environ["G_EVAL_PROVIDER"] = provider
-            if judge_config.get("model"):
-                os.environ["G_EVAL_MODEL"] = str(judge_config["model"])
+        # Expose this run's judge provider/model to the evaluator and the simulator, with
+        # or without a key in the config (cloud judges are reached through the gateway)
+        judge_provider = (judge_config.get("provider") or "").lower()
+        if is_self_hosted_judge:
+            # DeepEval's native metrics are picked for provider "openai"
+            judge_provider = "openai"
+        if judge_provider:
+            os.environ["G_EVAL_PROVIDER"] = judge_provider
+        if judge_config.get("model"):
+            os.environ["G_EVAL_MODEL"] = str(judge_config["model"])
+        if judge_config:
             # Set max tokens for judge (default 512, but user can set higher)
             max_tokens = judge_config.get("maxTokens", 512)
             os.environ["G_EVAL_MAX_TOKENS"] = str(max_tokens)
             print(f"✅ G_EVAL_MAX_TOKENS set to {max_tokens}")
-        
+
         # Model API keys (for the model being tested)
         if model_config.get("apiKey") and model_config["apiKey"] != "***":
             provider = (model_config.get("provider") or model_config.get("accessMethod") or "").lower()
@@ -612,10 +617,9 @@ async def run_evaluation(
             # 3A-SIM. Simulated conversation mode: use ConversationSimulator
             print(f"\n🎭 SIMULATED MODE: Generating conversations for {len(simulated_scenarios)} scenarios...")
 
-            # The judge plays the simulated user. Read it from this run's config only: the
-            # G_EVAL_* variables are process-wide, so without a judge here they would hold
-            # another experiment's model, or fall back to OpenAI.
-            if not (judge_config or {}).get("model"):
+            # The judge plays the simulated user. G_EVAL_PROVIDER/G_EVAL_MODEL were cleared
+            # and set from this run's judge above; without one they would fall back to OpenAI.
+            if not ((judge_config or {}).get("model") and (judge_config or {}).get("provider")):
                 error_msg = (
                     "Simulated datasets need a judge model, which plays the user. "
                     "Pick a judge, or an evaluation mode that includes one."
