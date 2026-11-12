@@ -35,7 +35,7 @@ export const quantitativeRiskAssessmentContent: ArticleContent = {
       type: 'ordered-list',
       items: [
         { text: 'Go to Settings in the sidebar' },
-        { text: 'Open the Features tab' },
+        { text: 'Open the Features section' },
         { text: 'Toggle "Quantitative risk assessment" on' },
         { text: 'A Quantitative tab now appears whenever you create or edit a risk' },
       ],

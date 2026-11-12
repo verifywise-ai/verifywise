@@ -213,7 +213,7 @@ export const roleConfigurationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'A custom role belongs to your organization. You name it and decide, permission by permission, what it may do. Manage custom roles in the **Roles** tab under Settings. Only Admins see this tab by default; a custom role can get it too if you allow its "Create, update and delete custom organization roles" permission.',
+      text: 'A custom role belongs to your organization. You name it and decide, permission by permission, what it may do. Manage custom roles in the **Roles** section under Settings. Only Admins see this section by default; a custom role can get it too if you allow its "Create, update and delete custom organization roles" permission.',
     },
     {
       type: 'heading',

@@ -1580,6 +1580,105 @@
         }
       ],
       "errorFieldIds": ["n", "t"]
+    },
+    {
+      "name": "two questions mapped to the same custom field",
+      "entityType": "model",
+      "fields": [
+        {
+          "id": "a",
+          "type": "text",
+          "label": "A",
+          "order": 0,
+          "entityFieldMapping": "custom_field:owner"
+        },
+        {
+          "id": "b",
+          "type": "text",
+          "label": "B",
+          "order": 1,
+          "entityFieldMapping": "custom_field:owner"
+        }
+      ],
+      "errorFieldIds": ["b"],
+      "messages": ["Field \"B\": two questions map to the same custom field"]
+    },
+    {
+      "name": "two questions mapped to different custom fields",
+      "entityType": "model",
+      "fields": [
+        {
+          "id": "a",
+          "type": "text",
+          "label": "A",
+          "order": 0,
+          "entityFieldMapping": "custom_field:owner"
+        },
+        {
+          "id": "b",
+          "type": "text",
+          "label": "B",
+          "order": 1,
+          "entityFieldMapping": "custom_field:region"
+        }
+      ],
+      "errorFieldIds": []
+    }
+  ],
+  "unmatchedCustomFieldOptions": [
+    {
+      "name": "matches by value or label, trimmed and case-insensitive",
+      "questionType": "select",
+      "questionOptions": [
+        { "value": "low", "label": "Low" },
+        { "value": "opt_2", "label": " MEDIUM " },
+        { "value": "x", "label": "High" }
+      ],
+      "fieldType": "select",
+      "fieldOptions": ["LOW", "medium", "high"],
+      "unmatched": []
+    },
+    {
+      "name": "reports a question option the custom field does not have",
+      "questionType": "multiselect",
+      "questionOptions": [
+        { "value": "eu", "label": "EU" },
+        { "value": "apac", "label": "APAC" }
+      ],
+      "fieldType": "multiselect",
+      "fieldOptions": ["EU", "US"],
+      "unmatched": ["apac"]
+    },
+    {
+      "name": "scored options match by id or label",
+      "questionType": "select",
+      "questionOptions": [
+        { "value": "s1", "label": "anything" },
+        { "value": "minor", "label": "Minor" },
+        { "value": "major", "label": "Major" }
+      ],
+      "fieldType": "scored_select",
+      "fieldOptions": [
+        { "id": "s1", "label": "Severe", "score": 3 },
+        { "id": "m", "label": "minor", "score": 1 }
+      ],
+      "unmatched": ["major"]
+    },
+    {
+      "name": "a question type without options is never reported",
+      "questionType": "text",
+      "questionOptions": [{ "value": "a", "label": "A" }],
+      "fieldType": "select",
+      "fieldOptions": ["B"],
+      "unmatched": []
+    },
+    {
+      "name": "a field type without options is never reported",
+      "questionType": "select",
+      "questionOptions": [{ "value": "a", "label": "A" }],
+      "fieldType": "text",
+      "fieldOptions": null,
+      "unmatched": []
     }
   ]
 }

@@ -1,11 +1,18 @@
-import { Box, List, ListItemButton, ListItemIcon, ListItemText } from "@mui/material";
+import { Box, List, ListItemButton, ListItemIcon, ListItemText, Tooltip } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import { LucideIcon } from "lucide-react";
+import { SIDEBAR_TEXT_SECONDARY } from "../Sidebar/sidebarTokens";
 
 export interface SectionItem {
   id: string;
   label: string;
   Icon: LucideIcon;
+  /** Shown but not selectable. */
+  disabled?: boolean;
+  /** Hover text, shown to the right of the item. */
+  tooltip?: string;
+  /** Hover text while the item is disabled, saying why. Falls back to `tooltip`. */
+  disabledTooltip?: string;
 }
 
 interface SectionSidebarProps {
@@ -45,12 +52,14 @@ const SectionSidebar = ({
           const isActive = activeSection === section.id;
           const SectionIcon = section.Icon;
 
-          return (
+          const item = (
             <ListItemButton
               key={section.id}
               disableRipple={theme.components?.MuiListItemButton?.defaultProps?.disableRipple}
               className={isActive ? "selected-path" : "unselected"}
               onClick={() => onSelect(section.id)}
+              disabled={section.disabled}
+              aria-current={isActive ? "page" : undefined}
               sx={{
                 "height": "32px",
                 "gap": "8px",
@@ -109,11 +118,22 @@ const SectionSidebar = ({
                   "& .MuiListItemText-primary": {
                     fontSize: "13px",
                     fontWeight: isActive ? 600 : 400,
-                    color: isActive ? theme.palette.text.primary : theme.palette.text.secondary,
+                    color: isActive ? theme.palette.text.primary : SIDEBAR_TEXT_SECONDARY,
                   },
                 }}
               />
             </ListItemButton>
+          );
+
+          const hint = section.disabled
+            ? (section.disabledTooltip ?? section.tooltip)
+            : section.tooltip;
+          if (!hint) return item;
+          return (
+            <Tooltip key={section.id} title={hint} placement="right" enterDelay={500} describeChild>
+              {/* A disabled button fires no events, so the span carries the hover. */}
+              <span style={{ display: "block" }}>{item}</span>
+            </Tooltip>
           );
         })}
       </List>

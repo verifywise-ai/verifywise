@@ -347,6 +347,133 @@ async def test_dataset_loading_unknown_builtin_does_not_load(
 
 
 # --------------------------------------------------------------------------- #
+# RAG: retrieved passages reach the model under test and the test case         #
+# --------------------------------------------------------------------------- #
+
+
+@pytest.fixture
+def captured_test_cases(monkeypatch: pytest.MonkeyPatch, patched_dependencies: MagicMock):
+    """Record the test cases run_evaluation hands to the evaluator."""
+    from deepeval_engine import deepeval_evaluator as evaluator_module
+
+    captured: List[Dict[str, Any]] = []
+
+    def _capture(self: Any, **kwargs: Any) -> List[Any]:
+        captured.extend(kwargs.get("test_cases_data") or [])
+        return []
+
+    monkeypatch.setattr(evaluator_module.DeepEvalEvaluator, "run_evaluation", _capture)
+    return captured
+
+
+@pytest.mark.asyncio
+async def test_single_turn_rag_passages_reach_model_and_test_case(
+    mock_db_session: AsyncMock,
+    patched_dependencies: MagicMock,
+    captured_test_cases: List[Dict[str, Any]],
+) -> None:
+    from utils.run_evaluation import run_evaluation
+
+    cfg = {
+        "project_id": "p1",
+        "model": {"name": "m", "provider": "ollama"},
+        "judgeLlm": {},
+        "dataset": {
+            "prompts": [
+                {
+                    "prompt": "How long do we keep audit logs?",
+                    "expected_output": "7 years.",
+                    "retrieval_context": ["Audit logs are retained for 7 years.", "  ", 42],
+                },
+                {"prompt": "What is 2+2?", "expected_output": "4"},
+            ]
+        },
+        "metrics": {"faithfulness": True},
+        "evaluationMode": "standard",
+    }
+
+    result = await run_evaluation(
+        db=mock_db_session, experiment_id="exp-rag-1", config=cfg, organization_id=1
+    )
+
+    assert "error" not in result
+    rag_prompt = patched_dependencies.call_args_list[0].kwargs["prompt"]
+    assert "Context:\n[1] Audit logs are retained for 7 years." in rag_prompt
+    assert rag_prompt.endswith("Question: How long do we keep audit logs?")
+    assert "[2]" not in rag_prompt  # blank and non-string passages dropped
+    # A prompt without passages is sent as-is.
+    assert patched_dependencies.call_args_list[1].kwargs["prompt"] == "What is 2+2?"
+
+    cases = [c["test_case"] for c in captured_test_cases]
+    assert cases[0].input == "How long do we keep audit logs?"
+    assert cases[0].retrieval_context == ["Audit logs are retained for 7 years."]
+    assert not cases[1].retrieval_context
+
+
+@pytest.mark.asyncio
+async def test_multi_turn_conversation_context_reaches_model(
+    mock_db_session: AsyncMock,
+    patched_dependencies: MagicMock,
+    captured_test_cases: List[Dict[str, Any]],
+) -> None:
+    from utils.run_evaluation import run_evaluation
+
+    cfg = {
+        "project_id": "p1",
+        "model": {"name": "m", "provider": "ollama"},
+        "judgeLlm": {},
+        "dataset": {
+            "prompts": [
+                {
+                    "scenario": "Employee handbook",
+                    "context": ["PTO: 15 days a year."],
+                    "turns": [
+                        {"role": "user", "content": "How many PTO days do I get?"},
+                        {"role": "assistant", "content": "15."},
+                        {"role": "user", "content": "Do they roll over?"},
+                    ],
+                }
+            ]
+        },
+        "metrics": {},
+        "evaluationMode": "standard",
+    }
+
+    result = await run_evaluation(
+        db=mock_db_session, experiment_id="exp-rag-2", config=cfg, organization_id=1
+    )
+
+    assert "error" not in result
+    prompts = [c.kwargs["prompt"] for c in patched_dependencies.call_args_list]
+    assert len(prompts) == 2
+    for p in prompts:
+        assert "Context:\n[1] PTO: 15 days a year." in p
+    # The conversational test case keeps the passages for the judge.
+    assert captured_test_cases[0]["test_case"].context == ["PTO: 15 days a year."]
+
+
+def test_passages_accept_structured_entries_and_single_strings() -> None:
+    from utils import run_evaluation as run_eval_module
+
+    norm = run_eval_module._normalize_passages
+    assert norm("One passage.") == ["One passage."]
+    assert norm([{"text": "From text.", "source": "a.pdf"}, {"content": "From content."}, {"id": 1}]) == [
+        "From text.",
+        "From content.",
+    ]
+    assert norm(None) == []
+
+
+def test_single_turn_prompt_may_use_context_key() -> None:
+    from utils import run_evaluation as run_eval_module
+
+    assert run_eval_module._prompt_passages({"prompt": "q", "context": ["C."]}) == ["C."]
+    # retrieval_context wins when both are present.
+    assert run_eval_module._prompt_passages(
+        {"prompt": "q", "retrieval_context": ["R."], "context": ["C."]}
+    ) == ["R."]
+
+# --------------------------------------------------------------------------- #
 # Relative dataset paths resolve like the dataset read endpoint                #
 # --------------------------------------------------------------------------- #
 

@@ -3,6 +3,8 @@ import { Request, Response } from "express";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import { sequelize } from "../database/db";
 import { logFailure, logProcessing, logSuccess } from "../utils/logger/logHelper";
+import { requestHasPermission } from "../utils/rolePermissions.utils";
+import { canUserEditTaskQuery } from "../utils/task.utils";
 import { translateError } from "../utils/i18n.utils";
 import { ConflictException } from "../domain.layer/exceptions/custom.exception";
 import { OPTIONS_IN_USE } from "../utils/customFieldScoredSelect.utils";
@@ -11,6 +13,7 @@ import {
   createCustomFieldDefinitionQuery,
   deleteCustomFieldDefinitionQuery,
   deleteCustomFieldValueQuery,
+  CUSTOM_FIELD_EDIT_PERMISSION,
   getCustomFieldDefinitionByIdQuery,
   getCustomFieldUsageQuery,
   getCustomFieldValuesForEntityQuery,
@@ -334,7 +337,80 @@ export async function getMissingRequiredCustomFields(req: Request, res: Response
   }
 }
 
+// Looks up the definition in the caller's org and checks the edit permission
+// for its entity type. Returns true when it already answered (404, 403 or an
+// error), false when the write may go ahead. Runs before any transaction.
+// Tasks: task.edit, or being one of the people who may change the task's
+// status (its creator, an assignee or an admin). A malformed definition id fails inside the definition lookup
+// and goes through the normal error path, not the denial log.
+async function respondIfWriteDenied(
+  req: Request,
+  res: Response,
+  definitionId: number,
+  entityId: number,
+  fn: string,
+  eventType: "Update" | "Delete",
+): Promise<boolean> {
+  try {
+    const def = await getCustomFieldDefinitionByIdQuery(definitionId, req.organizationId!);
+    if (!def) {
+      res.status(404).json(STATUS_CODE[404]({}));
+      return true;
+    }
+    if (await requestHasPermission(req, CUSTOM_FIELD_EDIT_PERMISSION[def.entity_type])) {
+      return false;
+    }
+    if (
+      def.entity_type === "task" &&
+      Number.isSafeInteger(entityId) &&
+      entityId > 0 &&
+      (await canUserEditTaskQuery(
+        entityId,
+        { userId: req.userId!, role: req.role! },
+        req.organizationId!,
+      ))
+    ) {
+      return false;
+    }
+    await logFailure({
+      eventType,
+      description: `Denied custom field value write (definition=${definitionId}, entity=${def.entity_type}/${entityId}): missing edit permission`,
+      functionName: fn,
+      fileName: FILE_NAME,
+      error: new Error("Access denied"),
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
+    return true;
+  } catch (error) {
+    await logFailure({
+      eventType,
+      description: "Failed to check custom field value permission",
+      functionName: fn,
+      fileName: FILE_NAME,
+      error: error as Error,
+      userId: req.userId!,
+      organizationId: req.organizationId!,
+    });
+    respondWithError(req, res, error);
+    return true;
+  }
+}
+
 export async function setCustomFieldValue(req: Request, res: Response): Promise<any> {
+  if (
+    await respondIfWriteDenied(
+      req,
+      res,
+      req.body?.definition_id,
+      req.body?.entity_id,
+      "setCustomFieldValue",
+      "Update",
+    )
+  ) {
+    return;
+  }
   const transaction = await sequelize.transaction();
 
   logProcessing({
@@ -375,6 +451,11 @@ export async function setCustomFieldValue(req: Request, res: Response): Promise<
 export async function deleteCustomFieldValue(req: Request, res: Response): Promise<any> {
   const definitionId = parseIntParam(req.params.definitionId);
   const entityId = parseIntParam(req.params.entityId);
+  if (
+    await respondIfWriteDenied(req, res, definitionId, entityId, "deleteCustomFieldValue", "Delete")
+  ) {
+    return;
+  }
   const transaction = await sequelize.transaction();
 
   logProcessing({

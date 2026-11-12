@@ -23,6 +23,8 @@ export interface IAIApp {
   retired_at?: string | null;
   last_confirmed_at?: string | null;
   last_confirmed_by?: number | null;
+  /** Custom field values (#5262), returned by GET /api/v1/ai-apps. */
+  custom_fields?: { definition_id: number; value: unknown }[];
 }
 
 export interface IAIAppVendor {
