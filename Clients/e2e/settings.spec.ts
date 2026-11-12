@@ -38,44 +38,46 @@ test.describe("Settings", () => {
     expect(results.violations).toEqual([]);
   });
 
-  test("settings form or tabs are visible", async ({ authedPage: page }) => {
+  test("settings form or sections are visible", async ({ authedPage: page }) => {
     await page.goto("/settings");
 
     const content = page
-      .getByRole("tab")
+      .getByRole("button", { name: /profile/i })
       .or(page.getByRole("form"))
       .or(page.getByRole("textbox"))
       .or(page.getByText(/general/i));
     await expect(content.first()).toBeVisible({ timeout: 10_000 });
   });
 
-  // --- Tier 1: Tab navigation ---
+  // --- Tier 1: Section sidebar navigation ---
 
-  test("clicking Password tab navigates to /settings/password", async ({ authedPage: page }) => {
-    await page.goto("/settings");
-    const passwordTab = page.getByRole("tab").filter({ hasText: /^password$/i });
-    await expect(passwordTab.first()).toBeVisible({ timeout: 10_000 });
-    await passwordTab.first().click();
-    await expect(page).toHaveURL(/\/settings\/password/, { timeout: 10_000 });
-  });
-
-  test("clicking Organization tab navigates to /settings/organization", async ({
+  test("clicking Password section navigates to /settings/password", async ({
     authedPage: page,
   }) => {
     await page.goto("/settings");
-    const orgTab = page.getByRole("tab").filter({ hasText: /^organization$/i });
-    await expect(orgTab.first()).toBeVisible({ timeout: 10_000 });
-    await orgTab.first().click();
+    const passwordSection = page.getByRole("button").filter({ hasText: /^password$/i });
+    await expect(passwordSection.first()).toBeVisible({ timeout: 10_000 });
+    await passwordSection.first().click();
+    await expect(page).toHaveURL(/\/settings\/password/, { timeout: 10_000 });
+  });
+
+  test("clicking Organization section navigates to /settings/organization", async ({
+    authedPage: page,
+  }) => {
+    await page.goto("/settings");
+    const orgSection = page.getByRole("button").filter({ hasText: /^organization$/i });
+    await expect(orgSection.first()).toBeVisible({ timeout: 10_000 });
+    await orgSection.first().click();
     await expect(page).toHaveURL(/\/settings\/organization/, {
       timeout: 10_000,
     });
   });
 
-  test("clicking Profile tab returns to profile view", async ({ authedPage: page }) => {
+  test("clicking Profile section returns to profile view", async ({ authedPage: page }) => {
     await page.goto("/settings/password");
-    const profileTab = page.getByRole("tab").filter({ hasText: /^profile$/i });
-    await expect(profileTab.first()).toBeVisible({ timeout: 10_000 });
-    await profileTab.first().click();
+    const profileSection = page.getByRole("button").filter({ hasText: /^profile$/i });
+    await expect(profileSection.first()).toBeVisible({ timeout: 10_000 });
+    await profileSection.first().click();
     // Should be back on /settings (profile is default)
     await expect(page).toHaveURL(/\/settings(\/?|$)/, { timeout: 10_000 });
   });
