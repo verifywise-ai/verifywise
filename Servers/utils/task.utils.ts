@@ -503,8 +503,10 @@ const getTaskInvolvement = async (
   };
 };
 
-// True when the user could update the task through PUT /tasks/:id: the task is
-// visible to them and they are its creator, an assignee or an admin.
+// True when the task is visible to the user and they are one of the people who
+// may change its status: its creator, an assignee or an admin. Callers add
+// task.edit. Deliberately stricter than PUT /tasks/:id, which lets any viewer
+// change the title and description.
 export const canUserEditTaskQuery = async (
   taskId: number,
   { userId, role }: { userId: number; role: string },

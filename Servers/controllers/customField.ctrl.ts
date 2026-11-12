@@ -340,8 +340,8 @@ export async function getMissingRequiredCustomFields(req: Request, res: Response
 // Looks up the definition in the caller's org and checks the edit permission
 // for its entity type. Returns true when it already answered (404, 403 or an
 // error), false when the write may go ahead. Runs before any transaction.
-// Tasks follow the task's own edit rule: task.edit, or being the task's creator
-// or an assignee. A malformed definition id fails inside the definition lookup
+// Tasks: task.edit, or being one of the people who may change the task's
+// status (its creator, an assignee or an admin). A malformed definition id fails inside the definition lookup
 // and goes through the normal error path, not the denial log.
 async function respondIfWriteDenied(
   req: Request,

@@ -199,7 +199,7 @@ export const intakeFormFieldsContent: ArticleContent = {
       items: [
         { text: 'Click the question on the canvas to open its settings.' },
         { text: 'Open **Map to entity field**. Below the standard fields, a **Custom fields** group lists the custom fields this question can fill.' },
-        { text: 'Choose one. If it is a select custom field, its options are copied into the question and replace the question\'s current options.' },
+        { text: 'Choose one. If it is a select custom field, the question takes its options. A question option that already matches one, by value or label, keeps working with the custom field\'s label. Options the custom field doesn\'t have are removed.' },
         { text: 'Click **Save**.' },
       ],
     },
@@ -225,8 +225,8 @@ export const intakeFormFieldsContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { text: '**Publishing:** a form can\'t be published if a mapped custom field was deleted or no longer fits the question type. Fix or clear the mapping first.' },
-        { text: '**Review:** the reviewer sees the values that will be saved in a read-only **Custom fields** block of the submission preview. They can\'t edit them there.' },
+        { text: '**Publishing:** a form can\'t be published if a mapped custom field was deleted, no longer fits the question type, or doesn\'t have all of the question\'s options. Fix or clear the mapping first.' },
+        { text: '**Review:** the reviewer sees the values that will be saved in a read-only **Custom fields** block of the submission preview. They can\'t edit them there. A value that won\'t be saved shows the answer as submitted and the reason.' },
         { text: '**Approval:** each answer is saved to the new model, use case or AI app. A value that no longer fits, such as an answer that matches none of the field\'s options, is skipped. The approval goes through and a warning lists what was not saved.' },
         { text: '**Required custom fields:** they never block publishing or approval.' },
       ],
