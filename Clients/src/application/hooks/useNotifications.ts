@@ -59,6 +59,9 @@ export type NotificationType =
   | "file_uploaded"
   | "comment_added"
   | "mention"
+  | "ai_detection_scan_completed"
+  | "ai_detection_scan_failed"
+  | "ai_detection_scan_attention"
   | "system"
   | "connected"; // Internal type for SSE handshake
 
@@ -348,6 +351,9 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
         file_uploaded: "info",
         comment_added: "info",
         mention: "info",
+        ai_detection_scan_completed: "success",
+        ai_detection_scan_failed: "error",
+        ai_detection_scan_attention: "warning",
         system: "info",
       };
 

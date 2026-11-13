@@ -670,6 +670,44 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
           ...commonVariables,
         ];
 
+      case "ai_detection_scan_completed":
+      case "ai_detection_high_risk_finding":
+      case "ai_detection_scan_failed": {
+        const scanVariables = [
+          { var: "{{scan.repository}}", desc: "Repository (owner/name)" },
+          { var: "{{scan.url}}", desc: "Link to the scan" },
+          { var: "{{scan.id}}", desc: "Scan ID" },
+          { var: "{{scan.status}}", desc: "Scan status" },
+          { var: "{{scan.trigger}}", desc: "How the scan started (manual, scheduled, webhook)" },
+        ];
+        if (trigger.type === "ai_detection_scan_failed") {
+          return [
+            ...scanVariables,
+            { var: "{{scan.error}}", desc: "Why the scan failed" },
+            ...commonVariables,
+          ];
+        }
+        return [
+          ...scanVariables,
+          { var: "{{scan.findings_count}}", desc: "Number of findings" },
+          { var: "{{scan.high_risk_count}}", desc: "Number of high-risk findings" },
+          { var: "{{scan.secret_count}}", desc: "Number of exposed secrets" },
+          { var: "{{scan.grade}}", desc: "Governance grade" },
+          { var: "{{scan.score}}", desc: "Governance score" },
+          { var: "{{scan.previous_grade}}", desc: "Grade of the previous scan" },
+          {
+            var: "{{scan.new_high_risk_count}}",
+            desc: "New high-risk findings since the previous scan",
+          },
+          {
+            var: "{{scan.new_high_risk_findings}}",
+            desc: "Names of the new high-risk findings",
+          },
+          { var: "{{scan.new_secret_count}}", desc: "New exposed secrets since the previous scan" },
+          ...commonVariables,
+        ];
+      }
+
       case "scheduled_report": {
         // Base variables available for all reports
         const baseReportVariables = [

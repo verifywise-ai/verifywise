@@ -94,6 +94,10 @@ import { isModelFileExtension } from "../config/modelSecurityPatterns";
 import { getLicenseForFinding } from "../utils/licenseDetection.utils";
 import { cacheAside, buildOrgCacheKey, deleteByPattern, CACHE_KEYS } from "../utils/cache.utils";
 import { calculateAndStoreRiskScore, effectiveLlmStatus } from "./aiDetection/riskScoring";
+import {
+  notifyAiDetectionScanFinished,
+  notifyAiDetectionScanFailed,
+} from "./aiDetection/scanNotifications";
 import { reportScanToGitHub } from "./aiDetection/githubStatusReporter";
 import {
   runVulnerabilityChecks,
@@ -1626,6 +1630,7 @@ async function executeIncrementalScan(
     });
 
     invalidateAIDetectionStatsCache(ctx.organizationId).catch(() => {});
+    void notifyAiDetectionScanFinished(scanId, ctx.organizationId);
 
     if (scan) {
       // Report to GitHub for webhook-triggered scans (fire-and-forget)
@@ -2152,6 +2157,7 @@ async function executeScan(
       invalidateAIDetectionStatsCache(ctx.organizationId).catch(() => {
         // Silently ignore cache invalidation errors
       });
+      void notifyAiDetectionScanFinished(scanId, ctx.organizationId);
 
       // Report to GitHub for webhook-triggered scans (fire-and-forget)
       const completedScan = await getScanByIdQuery(scanId, ctx.organizationId);
@@ -2194,6 +2200,7 @@ async function executeScan(
     updateLinkedRepositoryLastScan(scanId, status, ctx.organizationId).catch((err) => {
       logger.error(`Failed to update repository last scan for scan ${scanId}:`, err);
     });
+    void notifyAiDetectionScanFailed(scanId, ctx.organizationId);
   } finally {
     // Clean up cloned repository
     if (clonedRepoPath) {

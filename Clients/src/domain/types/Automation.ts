@@ -51,6 +51,9 @@ export type TriggerType =
   | "training_updated"
   | "policy_updated"
   | "incident_updated"
+  | "ai_detection_scan_completed"
+  | "ai_detection_high_risk_finding"
+  | "ai_detection_scan_failed"
   | "scheduled_report";
 
 export type ActionType = "send_email";
@@ -70,6 +73,7 @@ export interface TriggerTemplate {
     | "training"
     | "policy"
     | "incident"
+    | "aiDetection"
     | "reporting";
   icon: string;
   defaultConfiguration: Record<string, any>;

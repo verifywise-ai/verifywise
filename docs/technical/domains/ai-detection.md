@@ -473,6 +473,43 @@ The repositories page allows registering repos for recurring scans:
 - Calculates `next_scan_at` before triggering scan to prevent reprocessing
 - Handles stale scan recovery (marks scans stuck >30 minutes as failed)
 
+## Notifications
+
+`services/aiDetection/scanNotifications.ts` announces the end of every scan. `executeScan` and `executeIncrementalScan` call it once, fire-and-forget (`void`, never awaited):
+
+- `notifyAiDetectionScanFinished(scanId, organizationId)` after the completed status is committed and `scoreCompletedScan` has stored the governance score (full and incremental paths)
+- `notifyAiDetectionScanFailed(scanId, organizationId)` in the failure handler. A cancelled scan is not announced.
+
+The notifier never throws, and each channel (in-app write, email, automation enqueue) is isolated, so a notification failure cannot fail a scan or block the other channels.
+
+| Event | In-app | Email | Recipients |
+|-------|--------|-------|------------|
+| Scan completed | "Scan of owner/repo finished: 7 findings, grade B" (`ai_detection_scan_completed`) | No | Triggering user |
+| Scan needs attention (see below) | `ai_detection_scan_attention` | Yes (`ai-detection-scan-alert.mjml`) | Triggering user + org Admins |
+| Scan failed, manual | "Scan of owner/repo failed: <reason>" (`ai_detection_scan_failed`) | No (the user sees it on screen) | Triggering user |
+| Scan failed, scheduled or webhook | Same | Yes | Triggering user + org Admins |
+
+- **Triggering user** is `ai_detection_scans.triggered_by`. Scheduled and webhook scans run as the repository's `created_by`, so that user is the triggering user for them.
+- **Recipients** come from `organization_members` (the triggering user plus `role_id = 1`), de-duplicated, and only while they are still members of the organization. This is the same "owner plus every Admin" rule the deadline escalation sweep uses.
+- **Needs attention** compares the scan with the previous completed scan of the same repository (any scan mode). It fires when there are new exposed secrets, new high-risk findings (`risk_level = 'high'`, matched on finding type + name + provider), or a lower governance grade. Findings suppressed by a rule, suppressed or accepted by a reviewer, or marked `fixed` are ignored on both sides. On a repository's first scan every high-risk finding counts as new. One notice per recipient per scan lists every reason.
+- **Score.** The notices use the rule-based governance score that `scoreCompletedScan` stores before the notifier runs. Optional LLM analysis can adjust the score later; the notices are not re-sent. If scoring failed, the notices leave the grade out and the grade-drop check is skipped.
+- **Announced once.** The notifier's own in-app rows (`entity_type = 'ai_detection_scan'`, `entity_id` = scan id) are the record. A second call for a scan that already has one sends nothing.
+- **Failure reason** is the first line of `error_message`, capped at 200 characters, with any credentials in a URL removed.
+- **Language.** In-app titles, messages and email subjects are translated into each recipient's language (`Servers/locales`). Email bodies are English, like the other notification emails.
+- **Not announced:** scans that `markStaleScansFailed` marks as failed after a crash or restart, since they never reach the failure handler.
+
+### Automations triggers
+
+Three triggers, seeded by `20261112143741-ai-detection-notifications-and-triggers.js` and linked to `send_email`:
+
+| Key | Fires |
+|-----|-------|
+| `ai_detection_scan_completed` | Every completed scan |
+| `ai_detection_high_risk_finding` | A completed scan with new high-risk findings (exposed secrets included) |
+| `ai_detection_scan_failed` | Every failed scan (manual, scheduled or webhook) |
+
+Every active automation of the trigger runs (not only the first). Template variables (`utils/automation/aiDetection.automation.utils.ts`): `{{scan.repository}}`, `{{scan.url}}`, `{{scan.id}}`, `{{scan.status}}`, `{{scan.trigger}}`, `{{scan.findings_count}}`, `{{scan.high_risk_count}}`, `{{scan.secret_count}}`, `{{scan.grade}}`, `{{scan.score}}`, `{{scan.previous_grade}}`, `{{scan.new_high_risk_count}}`, `{{scan.new_high_risk_findings}}` (first 10 names), `{{scan.new_secret_count}}`, `{{scan.error}}`, `{{date_and_time}}`. A grade or score that could not be calculated reads "Not calculated".
+
 ## Detection Patterns
 
 ### Supported Technologies (100+)
@@ -719,6 +756,9 @@ The system maps findings to EU AI Act articles:
 | `services/aiDetection/vulnerabilityPreFilter.ts` | Regex pre-filter for vulnerability candidates |
 | `services/aiDetection/vulnerabilityAnalyzer.ts` | LLM deep analysis of vulnerability candidates |
 | `services/aiDetection/scheduledScanProcessor.ts` | BullMQ worker for recurring scans |
+| `services/aiDetection/scanNotifications.ts` | In-app, email and Automations notices when a scan ends |
+| `utils/aiDetectionNotification.utils.ts` | Queries for the scan notifier (previous scan, recipients, dedup) |
+| `utils/automation/aiDetection.automation.utils.ts` | Template variables for the AI Detection triggers |
 | `config/llmVulnerabilityPatterns.ts` | OWASP LLM Top 10 regex patterns and LLM rubrics |
 | `config/riskScoringConfig.ts` | Risk scoring dimensions, penalties, grades |
 | `config/aiDetectionPatterns.ts` | 100+ AI/ML detection patterns |
