@@ -26,6 +26,36 @@ export const de: Record<string, string> = {
   "API calls": "API-Aufrufe",
   "Below 70 threshold": "Unter Schwelle 70",
   "Clear status": "Status löschen",
+  "Added to risk register": "Zum Risikoregister hinzugefügt",
+  "All suggested risks for this scan have been handled.":
+    "Alle vorgeschlagenen Risiken dieses Scans wurden bearbeitet.",
+  "Matched a suppression rule": "Entspricht einer Unterdrückungsregel",
+  "View risk": "Risiko anzeigen",
+  "Show added": "Hinzugefügte anzeigen",
+  "Hide added": "Hinzugefügte ausblenden",
+  "Show ignored": "Ignorierte anzeigen",
+  "Hide ignored": "Ignorierte ausblenden",
+  "Change status": "Status ändern",
+  "Set status": "Status festlegen",
+  "A status set on the repository's latest scan is kept in later scans.":
+    "Ein Status, der beim neuesten Scan des Repositorys gesetzt wird, bleibt in späteren Scans erhalten.",
+  "A status set on the repository's latest scan is kept in later scans, unless the finding's risk level rises or, for secrets, vulnerabilities and model security findings, it appears in a new file.":
+    "Ein Status, der beim neuesten Scan des Repositorys gesetzt wird, bleibt in späteren Scans erhalten, außer das Risikoniveau des Funds steigt oder er erscheint (bei Secrets, Schwachstellen und Modellsicherheits-Funden) in einer neuen Datei.",
+  "This is not the repository's latest scan. Status changes here apply to this scan only and are not kept in later scans.":
+    "Dies ist nicht der neueste Scan dieses Repositorys. Statusänderungen gelten nur für diesen Scan und werden nicht in spätere Scans übernommen.",
+  "Status updated on this scan only: {status}": "Status nur für diesen Scan aktualisiert: {status}",
+  "by {name}": "von {name}",
+  "Ignored: {reason}": "Ignoriert: {reason}",
+  "{added} added to the risk register, {ignored} ignored":
+    "{added} zum Risikoregister hinzugefügt, {ignored} ignoriert",
+  "This suggestion is already in the risk register":
+    "Dieser Vorschlag ist bereits im Risikoregister",
+  "Failed to check the suggested risk. Try again.":
+    "Das vorgeschlagene Risiko konnte nicht geprüft werden. Versuchen Sie es erneut.",
+  "Failed to ignore the suggestion": "Der Vorschlag konnte nicht ignoriert werden",
+  "Failed to restore the suggestion": "Der Vorschlag konnte nicht wiederhergestellt werden",
+  "Failed to load what was done with the suggested risks":
+    "Der Bearbeitungsstand der vorgeschlagenen Risiken konnte nicht geladen werden",
   "Day of month": "Tag des Monats",
   "Day of week": "Wochentag",
   "Dimensions at risk": "Gefährdete Dimensionen",
@@ -441,6 +471,37 @@ export const fr: Record<string, string> = {
   "API calls": "Appels API",
   "Below 70 threshold": "Sous le seuil de 70",
   "Clear status": "Effacer le statut",
+  "Added to risk register": "Ajouté au registre des risques",
+  "All suggested risks for this scan have been handled.":
+    "Tous les risques suggérés pour cette analyse ont été traités.",
+  "Matched a suppression rule": "Correspond à une règle de suppression",
+  "View risk": "Voir le risque",
+  "Show added": "Afficher les ajoutés",
+  "Hide added": "Masquer les ajoutés",
+  "Show ignored": "Afficher les ignorés",
+  "Hide ignored": "Masquer les ignorés",
+  "Change status": "Modifier le statut",
+  "Set status": "Définir le statut",
+  "A status set on the repository's latest scan is kept in later scans.":
+    "Un statut défini sur la dernière analyse du dépôt est conservé lors des analyses ultérieures.",
+  "A status set on the repository's latest scan is kept in later scans, unless the finding's risk level rises or, for secrets, vulnerabilities and model security findings, it appears in a new file.":
+    "Un statut défini sur la dernière analyse du dépôt est conservé lors des analyses ultérieures, sauf si le niveau de risque du résultat augmente ou s'il apparaît dans un nouveau fichier (pour les secrets, les vulnérabilités et les résultats de sécurité des modèles).",
+  "This is not the repository's latest scan. Status changes here apply to this scan only and are not kept in later scans.":
+    "Ce n'est pas la dernière analyse de ce dépôt. Les changements de statut ne s'appliquent qu'à cette analyse et ne sont pas conservés lors des analyses ultérieures.",
+  "Status updated on this scan only: {status}":
+    "Statut mis à jour pour cette analyse uniquement : {status}",
+  "by {name}": "par {name}",
+  "Ignored: {reason}": "Ignoré : {reason}",
+  "{added} added to the risk register, {ignored} ignored":
+    "{added} ajouté(s) au registre des risques, {ignored} ignoré(s)",
+  "This suggestion is already in the risk register":
+    "Cette suggestion figure déjà dans le registre des risques",
+  "Failed to check the suggested risk. Try again.":
+    "Impossible de vérifier le risque suggéré. Réessayez.",
+  "Failed to ignore the suggestion": "Impossible d'ignorer la suggestion",
+  "Failed to restore the suggestion": "Impossible de restaurer la suggestion",
+  "Failed to load what was done with the suggested risks":
+    "Impossible de charger le suivi des risques suggérés",
   "Day of month": "Jour du mois",
   "Day of week": "Jour de la semaine",
   "Dimensions at risk": "Dimensions à risque",
@@ -857,6 +918,37 @@ export const es: Record<string, string> = {
   "API calls": "Llamadas a la API",
   "Below 70 threshold": "Por debajo del umbral de 70",
   "Clear status": "Borrar estado",
+  "Added to risk register": "Añadido al registro de riesgos",
+  "All suggested risks for this scan have been handled.":
+    "Se han gestionado todos los riesgos sugeridos de este análisis.",
+  "Matched a suppression rule": "Coincide con una regla de supresión",
+  "View risk": "Ver riesgo",
+  "Show added": "Mostrar añadidos",
+  "Hide added": "Ocultar añadidos",
+  "Show ignored": "Mostrar ignorados",
+  "Hide ignored": "Ocultar ignorados",
+  "Change status": "Cambiar estado",
+  "Set status": "Establecer estado",
+  "A status set on the repository's latest scan is kept in later scans.":
+    "Un estado establecido en el último análisis del repositorio se mantiene en los análisis posteriores.",
+  "A status set on the repository's latest scan is kept in later scans, unless the finding's risk level rises or, for secrets, vulnerabilities and model security findings, it appears in a new file.":
+    "Un estado establecido en el último análisis del repositorio se mantiene en los análisis posteriores, salvo que el nivel de riesgo del hallazgo aumente o que aparezca en un archivo nuevo (en secretos, vulnerabilidades y hallazgos de seguridad de modelos).",
+  "This is not the repository's latest scan. Status changes here apply to this scan only and are not kept in later scans.":
+    "Este no es el último análisis de este repositorio. Los cambios de estado solo se aplican a este análisis y no se mantienen en análisis posteriores.",
+  "Status updated on this scan only: {status}":
+    "Estado actualizado solo en este análisis: {status}",
+  "by {name}": "por {name}",
+  "Ignored: {reason}": "Ignorado: {reason}",
+  "{added} added to the risk register, {ignored} ignored":
+    "{added} añadido(s) al registro de riesgos, {ignored} ignorado(s)",
+  "This suggestion is already in the risk register":
+    "Esta sugerencia ya está en el registro de riesgos",
+  "Failed to check the suggested risk. Try again.":
+    "No se pudo comprobar el riesgo sugerido. Inténtelo de nuevo.",
+  "Failed to ignore the suggestion": "No se pudo ignorar la sugerencia",
+  "Failed to restore the suggestion": "No se pudo restaurar la sugerencia",
+  "Failed to load what was done with the suggested risks":
+    "No se pudo cargar lo realizado con los riesgos sugeridos",
   "Day of month": "Día del mes",
   "Day of week": "Día de la semana",
   "Dimensions at risk": "Dimensiones en riesgo",

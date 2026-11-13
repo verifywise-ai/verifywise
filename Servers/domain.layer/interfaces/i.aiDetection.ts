@@ -247,6 +247,8 @@ export interface IFinding {
   governance_status?: GovernanceStatus | null;
   governance_updated_at?: Date;
   governance_updated_by?: number;
+  /** Display name of governance_updated_by (joined from users on read). */
+  governance_updated_by_name?: string | null;
   // Suppression flags
   suppressed?: boolean;
   suppression_rule_id?: number | null;
@@ -465,6 +467,8 @@ export interface IFindingResponse {
   governance_status?: GovernanceStatus | null;
   governance_updated_at?: string;
   governance_updated_by?: number;
+  /** API v1 only: display name of governance_updated_by. */
+  governance_updated_by_name?: string | null;
   // License information
   license_id?: string | null;
   license_name?: string | null;
@@ -499,6 +503,49 @@ export interface IUpdateGovernanceStatusResponse {
 }
 
 /**
+ * Where a governance status change applies: "repository" when it was set on
+ * the repository's latest completed scan (stored for later scans), "scan"
+ * when it changed only this scan's finding.
+ */
+export type GovernanceDecisionScope = "repository" | "scan";
+
+/**
+ * Response for a governance status update on API v1: who set the status
+ * (null once cleared) and where the change applies.
+ */
+export interface IFindingGovernanceUpdate {
+  id: number;
+  governance_status: GovernanceStatus | null;
+  governance_updated_at: string | null;
+  governance_updated_by: number | null;
+  governance_updated_by_name: string | null;
+  decision_scope: GovernanceDecisionScope;
+}
+
+/**
+ * Why a suggested risk was ignored.
+ */
+export type SuggestedRiskIgnoreReason = "already_added" | "not_real_risk";
+
+/**
+ * What a user did with one LLM-suggested risk on a scan.
+ */
+export interface ISuggestedRiskAction {
+  id: number;
+  scan_id: number;
+  suggestion_key: string;
+  risk_name: string;
+  action: "added" | "ignored";
+  risk_id: number | null;
+  ignore_reason: SuggestedRiskIgnoreReason | null;
+  acted_by: number | null;
+  acted_by_name: string | null;
+  acted_at: string;
+  /** True when the risk created from this suggestion was deleted since. */
+  risk_deleted: boolean;
+}
+
+/**
  * Paginated findings response
  */
 export interface IFindingsResponse {
@@ -509,6 +556,11 @@ export interface IFindingsResponse {
     limit: number;
     total_pages: number;
   };
+  /**
+   * API v1 only: whether this is the repository's latest completed scan.
+   * Status changes on any other scan apply to that scan only.
+   */
+  is_latest_scan?: boolean;
 }
 
 /**

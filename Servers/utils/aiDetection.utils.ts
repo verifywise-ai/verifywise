@@ -32,10 +32,18 @@ import { mergeDuplicateFindings } from "./aiDetectionFindingMerge.utils";
  * @param organizationId - The organization identifier
  * @throws Error if organization ID is invalid
  */
-function validateOrganizationId(organizationId: number): void {
+export function validateOrganizationId(organizationId: number): void {
   if (!organizationId || !Number.isInteger(organizationId) || organizationId <= 0) {
     throw new Error(`Invalid organization identifier: ${organizationId}`);
   }
+}
+
+/**
+ * SQL for a user's display name ("First Last", or NULL when empty), for a
+ * `users` table joined under the given alias.
+ */
+export function userDisplayNameSql(alias: string): string {
+  return `NULLIF(TRIM(CONCAT(${alias}.name, ' ', COALESCE(${alias}.surname, ''))), '')`;
 }
 
 /** Serialise a timestamp with an explicit UTC offset; null stays null. */
@@ -820,9 +828,11 @@ export async function getFindingsForScanQuery(
   `;
 
   const dataQuery = `
-    SELECT f.*, vd.mitigation, vd.data_flow_summary, vd.vulnerability_details
+    SELECT f.*, vd.mitigation, vd.data_flow_summary, vd.vulnerability_details,
+      ${userDisplayNameSql("gu")} AS governance_updated_by_name
     FROM ai_detection_findings f
     LEFT JOIN ai_detection_vulnerability_details vd ON vd.finding_id = f.id AND vd.organization_id = f.organization_id
+    LEFT JOIN users gu ON gu.id = f.governance_updated_by
     ${whereClause}
     ORDER BY
       CASE f.confidence
@@ -1193,7 +1203,8 @@ export async function clearScanCachePathQuery(
  * @param governanceStatus - New governance status (or null to clear)
  * @param userId - User making the update
  * @param organizationId - Organization ID for multi-tenancy
- * @returns Updated finding or null if not found
+ * @param transaction - Optional transaction
+ * @returns Updated finding (with `governance_updated_by_name`) or null if not found
  */
 export async function updateFindingGovernanceStatusQuery(
   findingId: number,
@@ -1201,19 +1212,25 @@ export async function updateFindingGovernanceStatusQuery(
   governanceStatus: GovernanceStatus | null,
   userId: number,
   organizationId: number,
+  transaction?: Transaction,
 ): Promise<IFinding | null> {
   validateOrganizationId(organizationId);
   const query = `
-    UPDATE ai_detection_findings
-    SET
-      governance_status = :governance_status,
-      governance_updated_at = NOW(),
-      governance_updated_by = :user_id
-    WHERE id = :finding_id AND scan_id = :scan_id AND organization_id = :organizationId
-    RETURNING *;
+    WITH updated AS (
+      UPDATE ai_detection_findings
+      SET
+        governance_status = :governance_status,
+        governance_updated_at = NOW(),
+        governance_updated_by = :user_id
+      WHERE id = :finding_id AND scan_id = :scan_id AND organization_id = :organizationId
+      RETURNING *
+    )
+    SELECT updated.*, ${userDisplayNameSql("u")} AS governance_updated_by_name
+    FROM updated
+    LEFT JOIN users u ON u.id = updated.governance_updated_by;
   `;
 
-  const results = await sequelize.query(query, {
+  const rows = await sequelize.query(query, {
     replacements: {
       finding_id: findingId,
       scan_id: scanId,
@@ -1221,10 +1238,11 @@ export async function updateFindingGovernanceStatusQuery(
       user_id: userId,
       organizationId,
     },
-    type: QueryTypes.UPDATE,
+    type: QueryTypes.SELECT,
+    transaction,
   });
 
-  return (results as unknown as IFinding[][])[0]?.[0] || null;
+  return (rows as IFinding[])[0] || null;
 }
 
 /**

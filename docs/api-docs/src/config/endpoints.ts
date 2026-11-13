@@ -12763,6 +12763,75 @@ export const v1V1aiAppsEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Ai Detection endpoints
+export const v1V1aiDetectionEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/ai-detection/scans/{scanId}/suggested-risks/actions',
+    summary: "List Suggested Risk Actions Controller",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+    ],
+    tag: "v1: V1/Ai Detection",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/ai-detection/scans/{scanId}/suggested-risks/actions',
+    summary: "Record Suggested Risk Action Controller",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Detection",
+  },
+  {
+    method: 'DELETE',
+    path: '/v1/ai-detection/scans/{scanId}/suggested-risks/actions/{actionId}',
+    summary: "Delete Suggested Risk Action Controller",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Detection",
+  },
+  {
+    method: 'GET',
+    path: '/v1/ai-detection/scans/{scanId}/findings',
+    summary: "Get Scan Findings V1 Controller",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Detection",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/ai-detection/scans/{scanId}/findings/{findingId}/governance',
+    summary: "Update Governance Status V1 Controller",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Detection",
+  },
+  {
+    method: 'POST',
+    path: '/v1/ai-detection/scans/{scanId}/suggested-risks/risks',
+    summary: "Add Suggested Risk To Register Controller",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Detection",
+  },
+];
+
 // v1: V1/Ai Detection Repositories endpoints
 export const v1V1aiDetectionRepositoriesEndpoints: Endpoint[] = [
   {
@@ -13771,6 +13840,7 @@ export const allEndpoints = {
   v1UseCaseSettings: v1UseCaseSettingsEndpoints,
   v1V1aiAppLifecycle: v1V1aiAppLifecycleEndpoints,
   v1V1aiApps: v1V1aiAppsEndpoints,
+  v1V1aiDetection: v1V1aiDetectionEndpoints,
   v1V1aiDetectionRepositories: v1V1aiDetectionRepositoriesEndpoints,
   v1V1dashboard: v1V1dashboardEndpoints,
   v1V1groups: v1V1groupsEndpoints,

@@ -35,7 +35,7 @@ import {
   IScanStatusResponse,
   IRiskScoreDetails,
   GovernanceStatus,
-  IUpdateGovernanceStatusResponse,
+  IFindingGovernanceUpdate,
   IFinding,
   RiskGrade,
 } from "../domain.layer/interfaces/i.aiDetection";
@@ -67,6 +67,12 @@ import {
   getBaselineFindingsQuery,
 } from "../utils/aiDetection.utils";
 import { getActiveSuppressionsQuery } from "../utils/aiDetectionSuppression.utils";
+import {
+  applyGovernanceDecisionsToScanQuery,
+  beginOrganizationTransaction,
+  getScanDecisionScopeQuery,
+  writeGovernanceDecisionQuery,
+} from "../utils/aiDetectionDecisions.utils";
 import { applySuppressions } from "./aiDetection/suppressionMatcher";
 import {
   AI_DETECTION_PATTERNS,
@@ -1195,6 +1201,23 @@ export async function startScan(
 }
 
 /**
+ * Carry review decisions made on earlier scans of the repository onto a
+ * scan's findings. Runs after the scan was committed, in its own
+ * transaction: a failure is logged and the scan stays completed, with its
+ * findings unreviewed.
+ */
+export async function applyStoredGovernanceDecisions(
+  scanId: number,
+  organizationId: number,
+): Promise<void> {
+  try {
+    await applyGovernanceDecisionsToScanQuery(scanId, organizationId);
+  } catch (err) {
+    logger.error(`Failed to apply stored review decisions to scan ${scanId}:`, err);
+  }
+}
+
+/**
  * Cross-reference vulnerability findings with non-vulnerability findings
  * that share the same file paths. Updates vulnerability_details JSONB
  * with related_finding_ids and related_finding_types so the UI can
@@ -1636,6 +1659,8 @@ async function executeIncrementalScan(
     if (scan) {
       await scoreCompletedScan(scanId, `${scan.repository_owner}/${scan.repository_name}`, ctx);
     }
+
+    await applyStoredGovernanceDecisions(scanId, ctx.organizationId);
 
     progressState.status = "completed";
     progressState.progress = 100;
@@ -2148,6 +2173,8 @@ async function executeScan(
 
       await scoreCompletedScan(scanId, `${owner}/${repo}`, ctx);
 
+      await applyStoredGovernanceDecisions(scanId, ctx.organizationId);
+
       progressState.status = "completed";
       progressState.progress = 100;
 
@@ -2353,6 +2380,7 @@ export async function getScanFindings(
   limit: number = 50,
   confidence?: string,
   findingType?: string,
+  options: { includeDecisionDetails?: boolean } = {},
 ): Promise<IFindingsResponse> {
   // Verify scan exists
   const scan = await getScanByIdQuery(scanId, ctx.organizationId);
@@ -2385,6 +2413,9 @@ export async function getScanFindings(
       governance_status: f.governance_status,
       governance_updated_at: f.governance_updated_at?.toISOString(),
       governance_updated_by: f.governance_updated_by,
+      ...(options.includeDecisionDetails
+        ? { governance_updated_by_name: f.governance_updated_by_name ?? null }
+        : {}),
       // License information
       license_id: f.license_id,
       license_name: f.license_name,
@@ -2402,6 +2433,12 @@ export async function getScanFindings(
       limit,
       total_pages: Math.ceil(total / limit),
     },
+    ...(options.includeDecisionDetails
+      ? {
+          is_latest_scan:
+            (await getScanDecisionScopeQuery(scanId, ctx.organizationId))?.is_latest_scan ?? false,
+        }
+      : {}),
   };
 }
 
@@ -2788,18 +2825,24 @@ export async function getSecuritySummary(
 /**
  * Update governance status for a finding
  *
+ * The finding's own status always changes. When the scan is the repository's
+ * latest completed scan, the status is also stored for the repository (or
+ * removed, when cleared) so later scans inherit it; on an older scan only
+ * that scan's finding changes. The finding update and the stored decision
+ * are written in one transaction with the RLS organization bound first.
+ *
  * @param scanId - Scan ID
  * @param findingId - Finding ID
  * @param governanceStatus - New status or null to clear
  * @param ctx - Service context
- * @returns Updated finding with governance info
+ * @returns Updated finding with governance info and where the change applies
  */
 export async function updateFindingGovernanceStatus(
   scanId: number,
   findingId: number,
   governanceStatus: GovernanceStatus | null,
   ctx: IServiceContext,
-): Promise<IUpdateGovernanceStatusResponse> {
+): Promise<IFindingGovernanceUpdate> {
   // Verify scan exists and belongs to tenant
   const scan = await getScanByIdQuery(scanId, ctx.organizationId);
   if (!scan) {
@@ -2816,25 +2859,52 @@ export async function updateFindingGovernanceStatus(
     );
   }
 
-  // Update the finding
-  const updatedFinding = await updateFindingGovernanceStatusQuery(
-    findingId,
-    scanId,
-    governanceStatus,
-    ctx.userId,
-    ctx.organizationId,
-  );
+  const transaction = await beginOrganizationTransaction(ctx.organizationId);
+  let result: IFindingGovernanceUpdate;
+  try {
+    const updatedFinding = await updateFindingGovernanceStatusQuery(
+      findingId,
+      scanId,
+      governanceStatus,
+      ctx.userId,
+      ctx.organizationId,
+      transaction,
+    );
 
-  if (!updatedFinding) {
-    throw new NotFoundException(`Finding ${findingId} not found in scan ${scanId}`);
+    if (!updatedFinding) {
+      throw new NotFoundException(`Finding ${findingId} not found in scan ${scanId}`);
+    }
+
+    const storedForRepository = await writeGovernanceDecisionQuery(
+      findingId,
+      scanId,
+      governanceStatus,
+      ctx.userId,
+      ctx.organizationId,
+      transaction,
+    );
+
+    result = {
+      id: updatedFinding.id!,
+      governance_status: governanceStatus,
+      governance_updated_at:
+        governanceStatus && updatedFinding.governance_updated_at
+          ? new Date(updatedFinding.governance_updated_at).toISOString()
+          : null,
+      governance_updated_by: governanceStatus ? ctx.userId : null,
+      governance_updated_by_name: governanceStatus
+        ? (updatedFinding.governance_updated_by_name ?? null)
+        : null,
+      decision_scope: storedForRepository ? "repository" : "scan",
+    };
+
+    await transaction.commit();
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
   }
 
-  return {
-    id: updatedFinding.id!,
-    governance_status: governanceStatus,
-    governance_updated_at: new Date().toISOString(),
-    governance_updated_by: ctx.userId,
-  };
+  return result;
 }
 
 /**

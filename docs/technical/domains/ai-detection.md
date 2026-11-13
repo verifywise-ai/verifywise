@@ -125,6 +125,58 @@ Incremental scans carry a baseline finding's severity and vulnerability details
 forward, but not its suppression: every finding is matched against the current rules,
 so an edited or deleted rule stops applying on the next scan.
 
+### Governance Decisions Table
+
+The latest governance status set for a finding on the repository's latest completed scan, stored per repository so it survives rescans.
+
+```
+ai_detection_governance_decisions
+├── id (PK, SERIAL)
+├── organization_id (INTEGER NOT NULL, RLS tenant_isolation)
+├── repository_key (VARCHAR(512))      -- LOWER(owner || '/' || name)
+├── finding_type (VARCHAR(100))
+├── finding_name_key (VARCHAR(255))    -- LOWER(name)
+├── provider_key (VARCHAR(100))        -- LOWER(COALESCE(provider, ''))
+├── governance_status (VARCHAR(20))    -- reviewed | approved | flagged | suppressed | accepted_risk
+├── risk_rank (SMALLINT)               -- GREATEST(risk_level rank 1-3, severity rank 1-4) when decided
+├── file_paths (TEXT[])                -- distinct file paths of the decided finding (no line numbers)
+├── source_scan_id (FK → ai_detection_scans, SET NULL)
+├── decided_by (FK → users, SET NULL)
+└── decided_at (TIMESTAMPTZ)
+
+Constraints:
+└── UNIQUE(organization_id, repository_key, finding_type, finding_name_key, provider_key)
+```
+
+- `PATCH .../governance` (legacy and v1) always updates the finding. The stored decision is written (or, for `null`, deleted) only when the scan is the repository's **latest completed scan** (`completed_at DESC NULLS LAST, id DESC`); on an older scan only that scan's finding changes. The check runs in the same transaction as the write, under a per-repository advisory lock (`pg_advisory_xact_lock`) that decision application takes too. v1 answers `decision_scope: "repository" | "scan"`; the v1 findings list answers `is_latest_scan`, and the Scan details page shows a note on older scans.
+- Both writes run in a transaction opened by `beginOrganizationTransaction`, which binds `app.current_org` (`set_config(..., true)`) as its first statement: a transaction a service opens itself does not inherit the request's RLS transaction.
+- Scan completion (full and incremental) runs `applyGovernanceDecisionsToScanQuery` (`utils/aiDetectionDecisions.utils.ts`) **after** the scan's transaction commits, in its own transaction (organization bound first, then the repository lock), and before the risk score is calculated. A failure is logged and the scan stays completed with its findings unreviewed. Findings of the new scan with no status get the matching decision, keeping the original `governance_updated_by`/`_at`.
+- **Reset rules** (the finding arrives unreviewed instead): the finding's risk rank is now higher than `risk_rank`; or, for path-scoped types (`secret`, `model_security` and the vulnerability types), its file paths are not a subset of the decision's `file_paths`. Library-like findings (libraries, API calls, models, RAG, agents) are not path-scoped: their paths are only the places a dependency is used, so a new import keeps the decision. `flagged` is always applied.
+- The migration backfills one decision per identity from existing findings: the most recently changed finding (`governance_updated_at`) decides, including a cleared one, so a clear after an approval leaves no decision. Backfilled decisions get the decided finding's file paths.
+
+### Suggested Risk Actions Table
+
+What a user did with an LLM-suggested risk on a scan.
+
+```
+ai_detection_suggested_risk_actions
+├── id (PK, SERIAL)
+├── organization_id (INTEGER NOT NULL, RLS tenant_isolation)
+├── scan_id (FK → ai_detection_scans, CASCADE)
+├── suggestion_key (VARCHAR(255))      -- LOWER(TRIM(risk_name))
+├── risk_name (VARCHAR(500))
+├── action (VARCHAR(20))               -- added | ignored
+├── risk_id (FK → risks, SET NULL)     -- set when added
+├── ignore_reason (VARCHAR(50))        -- already_added | not_real_risk
+├── acted_by (FK → users, SET NULL)
+└── acted_at (TIMESTAMPTZ)
+
+Constraints:
+└── UNIQUE(organization_id, scan_id, suggestion_key)
+```
+
+Adding goes through `POST /v1/ai-detection/scans/:scanId/suggested-risks/risks`: the risk is created through `createRiskService` (same validation as `POST /projectRisks`, needs `aiDetection.edit` and `risks.edit`) and the `added` action is written in the same transaction, under an advisory lock on (organization, scan, suggestion key). A suggestion linked to a live risk is refused with 409 and `risk_id`; nothing is created. The post-commit steps of a normal risk create run after (`runRiskCreatedSideEffects` in `risks.ctrl.ts`). If the risk is later deleted (`risks.is_deleted`), the list returns `risk_deleted: true` and the suggestion can be added again. Ignoring takes the same lock. Only ignored actions can be deleted (undo).
+
 ### Vulnerability Details Table
 
 ```
@@ -268,7 +320,7 @@ type FindingType =
 ### Governance Status
 
 ```typescript
-type GovernanceStatus = 'reviewed' | 'approved' | 'flagged' | null;
+type GovernanceStatus = 'reviewed' | 'approved' | 'flagged' | 'suppressed' | 'accepted_risk' | null;
 ```
 
 ## API Endpoints
@@ -292,8 +344,16 @@ type GovernanceStatus = 'reviewed' | 'approved' | 'flagged' | null;
 | GET | `/ai-detection/scans/:scanId/findings` | Get findings (paginated) |
 | GET | `/ai-detection/scans/:scanId/security-findings` | Security threats |
 | GET | `/ai-detection/scans/:scanId/security-summary` | Security summary |
-| PATCH | `/ai-detection/scans/:scanId/findings/:findingId/governance` | Update governance |
+| PATCH | `/ai-detection/scans/:scanId/findings/:findingId/governance` | Update governance (frozen response shape; also stores the repository-level decision on the latest scan) |
 | GET | `/ai-detection/scans/:scanId/governance-summary` | Governance stats |
+| GET | `/v1/ai-detection/scans/:scanId/suggested-risks/actions` | Added/ignored suggested risks for the scan |
+| GET | `/v1/ai-detection/scans/:scanId/findings` | Findings with `governance_updated_by_name`, plus `is_latest_scan` |
+| PATCH | `/v1/ai-detection/scans/:scanId/findings/:findingId/governance` | Update governance; answers who set it (null once cleared) and `decision_scope` |
+| POST | `/v1/ai-detection/scans/:scanId/suggested-risks/risks` | Create a risk from a suggestion and link it (body as `POST /projectRisks` plus `suggestion_name`); 409 with `risk_id` if already linked |
+| PUT | `/v1/ai-detection/scans/:scanId/suggested-risks/actions` | Ignore a suggestion: `{ risk_name, action: "ignored", reason }` |
+| DELETE | `/v1/ai-detection/scans/:scanId/suggested-risks/actions/:actionId` | Restore an ignored suggestion |
+
+Only the v1 findings response includes `governance_updated_by_name` (joined from `users`) and `is_latest_scan`; the legacy routes keep their response shapes. The UI shows the status control, Ignore, Restore and Add to risk register only to users with `aiDetection.edit` (Add also needs `risks.edit`).
 
 ### Analysis & Export
 
@@ -871,6 +931,8 @@ The system maps findings to EU AI Act articles:
 | `routes/aiDetectionRepository.route.ts` | Repository management routes |
 | `utils/aiDetection.utils.ts` | Scan and finding database queries |
 | `utils/aiDetectionRiskScoring.utils.ts` | Risk scoring database queries |
+| `utils/aiDetectionDecisions.utils.ts` | Governance decisions across scans, suggested risk actions |
+| `services/aiDetectionSuggestedRisks.service.ts` | Suggested risk add/ignore/restore rules |
 | `domain.layer/interfaces/i.aiDetection.ts` | Type definitions |
 
 ### Frontend

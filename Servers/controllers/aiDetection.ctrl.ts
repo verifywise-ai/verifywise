@@ -14,6 +14,7 @@ import {
   ValidationException,
   NotFoundException,
   BusinessLogicException,
+  ConflictException,
   ExternalServiceException,
 } from "../domain.layer/exceptions/custom.exception";
 import {
@@ -35,7 +36,9 @@ import {
   getComplianceMapping,
 } from "../services/aiDetection.service";
 import {
+  IFindingGovernanceUpdate,
   IServiceContext,
+  IUpdateGovernanceStatusResponse,
   ScanStatus,
   FINDING_TYPES,
   VULNERABILITY_FINDING_TYPES,
@@ -60,7 +63,7 @@ const FILE_NAME = "aiDetection.ctrl.ts";
 /**
  * Build service context from request.
  */
-function buildServiceContext(req: Request): IServiceContext {
+export function buildServiceContext(req: Request): IServiceContext {
   return {
     userId: req.userId!,
     role: req.role!,
@@ -71,12 +74,15 @@ function buildServiceContext(req: Request): IServiceContext {
 /**
  * Handle service exceptions and send appropriate response
  */
-function handleException(req: Request, res: Response, error: unknown): Response {
+export function handleException(req: Request, res: Response, error: unknown): Response {
   if (error instanceof ValidationException) {
     return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
   }
   if (error instanceof NotFoundException) {
     return res.status(404).json(STATUS_CODE[404](translateError(req, error)));
+  }
+  if (error instanceof ConflictException) {
+    return res.status(409).json(STATUS_CODE[409](translateError(req, error)));
   }
   if (error instanceof BusinessLogicException) {
     return res.status(422).json(STATUS_CODE[422](translateError(req, error)));
@@ -245,6 +251,25 @@ export async function getScanController(req: Request, res: Response): Promise<Re
  * Query: page, limit, confidence, finding_type
  */
 export async function getScanFindingsController(req: Request, res: Response): Promise<Response> {
+  return respondWithScanFindings(req, res, false);
+}
+
+/**
+ * Get findings for a scan (API v1): adds who set each status and whether the
+ * scan is the repository's latest completed scan.
+ *
+ * GET /v1/ai-detection/scans/:scanId/findings
+ * Query: page, limit, confidence, finding_type
+ */
+export async function getScanFindingsV1Controller(req: Request, res: Response): Promise<Response> {
+  return respondWithScanFindings(req, res, true);
+}
+
+async function respondWithScanFindings(
+  req: Request,
+  res: Response,
+  includeDecisionDetails: boolean,
+): Promise<Response> {
   logProcessing({
     description: "Getting AI detection scan findings",
     functionName: "getScanFindingsController",
@@ -307,7 +332,9 @@ export async function getScanFindingsController(req: Request, res: Response): Pr
     }
 
     const ctx = buildServiceContext(req);
-    const findings = await getScanFindings(scanId, ctx, page, limit, confidence, findingType);
+    const findings = await getScanFindings(scanId, ctx, page, limit, confidence, findingType, {
+      includeDecisionDetails,
+    });
 
     return res.status(200).json(STATUS_CODE[200](findings));
   } catch (error) {
@@ -592,11 +619,34 @@ export async function getSecuritySummaryController(req: Request, res: Response):
  * Update governance status for a finding
  *
  * PATCH /ai-detection/scans/:scanId/findings/:findingId/governance
- * Body: { governance_status: "reviewed" | "approved" | "flagged" | null }
+ * Body: { governance_status: "reviewed" | "approved" | "flagged" | "suppressed" | "accepted_risk" | null }
  */
 export async function updateGovernanceStatusController(
   req: Request,
   res: Response,
+): Promise<Response> {
+  return respondToGovernanceStatusUpdate(req, res, false);
+}
+
+/**
+ * Update governance status for a finding (API v1). Also answers who set the
+ * status (null fields once cleared) and `decision_scope`: "repository" when
+ * the status is stored for later scans, "scan" when only this scan changed.
+ *
+ * PATCH /v1/ai-detection/scans/:scanId/findings/:findingId/governance
+ * Body: { governance_status: "reviewed" | "approved" | "flagged" | "suppressed" | "accepted_risk" | null }
+ */
+export async function updateGovernanceStatusV1Controller(
+  req: Request,
+  res: Response,
+): Promise<Response> {
+  return respondToGovernanceStatusUpdate(req, res, true);
+}
+
+async function respondToGovernanceStatusUpdate(
+  req: Request,
+  res: Response,
+  isV1: boolean,
 ): Promise<Response> {
   logProcessing({
     description: "Updating finding governance status",
@@ -660,7 +710,17 @@ export async function updateGovernanceStatusController(
       organizationId: req.organizationId!,
     });
 
-    return res.status(200).json(STATUS_CODE[200](result));
+    // The frozen legacy route keeps its response shape
+    const body: IFindingGovernanceUpdate | IUpdateGovernanceStatusResponse = isV1
+      ? result
+      : {
+          id: result.id,
+          governance_status: result.governance_status,
+          governance_updated_at: result.governance_updated_at ?? new Date().toISOString(),
+          governance_updated_by: result.governance_updated_by ?? ctx.userId,
+        };
+
+    return res.status(200).json(STATUS_CODE[200](body));
   } catch (error) {
     await logError({
       error: error as Error,

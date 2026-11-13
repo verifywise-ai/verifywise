@@ -3,6 +3,13 @@ import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import { VulnerabilitiesTab } from "../VulnerabilitiesTab";
 import type { Finding } from "../../../../../domain/ai-detection/types";
 
+// Permission keys the current user holds (all edit keys by default)
+const permissions = vi.hoisted(() => ({ denied: new Set<string>() }));
+vi.mock("../../../../../application/hooks/useCan", () => ({
+  useCan: (key: string) => !permissions.denied.has(key),
+  useCanCheck: () => (key: string) => !permissions.denied.has(key),
+}));
+
 vi.mock("../../../../../application/repository/aiDetection.repository", () => ({
   updateFindingGovernanceStatus: vi.fn(),
   createSuppression: vi.fn(),

@@ -36,6 +36,7 @@ import policyTemplatesRoutes from "./policyTemplates.route";
 import frameworkImportRoutes from "./frameworkImport.route";
 import importedFrameworkAssessmentRoutes from "./importedFrameworkAssessment.route";
 import intakeSubmissionsRoutes from "./intakeSubmissions.route";
+import aiDetectionRoutes from "./aiDetection.route";
 import aiDetectionRepositoriesRoutes from "./aiDetectionRepositories.route";
 
 const router = express.Router();
@@ -96,5 +97,9 @@ router.use("/imported-framework-assessments", importedFrameworkAssessmentRoutes)
 router.use("/intake-submissions", intakeSubmissionsRoutes);
 // AI Detection CI/CD: the public webhook URL for repository setup.
 router.use("/ai-detection-repositories", aiDetectionRepositoriesRoutes);
+
+// AI Detection finding reviews and suggested risks; the legacy
+// /api/ai-detection router is frozen.
+router.use("/ai-detection", aiDetectionRoutes);
 
 export default router;

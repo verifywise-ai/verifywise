@@ -27,6 +27,8 @@ import Toggle from "../../components/Inputs/Toggle";
 import AIDepGraphModal from "../../components/AIDepGraphModal";
 import { palette } from "../../themes/palette";
 import { useScanDetails } from "./ScanDetails/useScanDetails";
+import { useCan } from "../../../application/hooks/useCan";
+import { useTranslation } from "../../../application/hooks/useTranslation";
 import { ScanDetailsHeader } from "./ScanDetails/ScanDetailsHeader";
 import { SuggestedRisksSection } from "./ScanDetails/SuggestedRisksSection";
 import { FindingsTabPanel } from "./ScanDetails/FindingsTabPanel";
@@ -46,6 +48,7 @@ export default function ScanDetailsPage() {
   const {
     scanId,
     scan,
+    isLatestScan,
     isLoading,
     activeTab,
     handleTabChange,
@@ -77,6 +80,8 @@ export default function ScanDetailsPage() {
     handleExportAIBOM,
     navigate,
   } = useScanDetails();
+  const { t } = useTranslation();
+  const canEditStatus = useCan("aiDetection.edit");
 
   if (isLoading && !scan) {
     return (
@@ -134,11 +139,25 @@ export default function ScanDetailsPage() {
         onExport={handleExportAIBOM}
       />
 
+      {/* Older scan: status changes are not kept for later scans */}
+      {canEditStatus && isLatestScan === false && (
+        <Alert
+          variant="info"
+          isToast={false}
+          body={t(
+            "This is not the repository's latest scan. Status changes here apply to this scan only and are not kept in later scans.",
+          )}
+        />
+      )}
+
       {/* Suggested Risks - only when LLM suggestions exist */}
       {scan.scan.status === "completed" &&
         scan.scan.risk_score_details?.llm_suggested_risks &&
         scan.scan.risk_score_details.llm_suggested_risks.length > 0 && (
           <SuggestedRisksSection
+            scanId={scanId}
+            repositoryOwner={scan.scan.repository_owner}
+            repositoryName={scan.scan.repository_name}
             suggestions={scan.scan.risk_score_details.llm_suggested_risks}
             onSuccess={() => showAlert("success", "Risk added to risk register")}
             onError={(message) => showAlert("error", message)}

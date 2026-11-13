@@ -48,7 +48,8 @@ export interface AddNewRiskFormCorePropsBase {
   popupStatus: "new" | "edit";
   initialRiskValues?: RiskFormValues;
   initialMitigationValues?: MitigationFormValues;
-  onSuccess: () => void;
+  /** Called after a save; on create it receives the new risk's id when the API returned one. */
+  onSuccess: (createdRiskId?: number) => void;
   onError?: (message: string) => void;
   onLoading?: (message: string) => void;
   users?: User[];
@@ -56,6 +57,12 @@ export interface AddNewRiskFormCorePropsBase {
   compactMode?: boolean;
   /** Entity ID for change history tracking (edit mode only) */
   entityId?: number;
+  /**
+   * Creates the risk instead of POST /projectRisks (create mode only), e.g. to
+   * create it and link it to its source in one request. Must answer like
+   * POST /projectRisks: status 201 with the risk under data.data.
+   */
+  createRisk?: (body: Record<string, unknown>) => Promise<unknown>;
 }
 
 // Note: AddNewRiskFormCoreProps with React MutableRefObject has been moved to:
