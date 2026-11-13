@@ -5,11 +5,12 @@ import { ISearchBoxProps } from "../../../types/widget.types";
 import { getSearchBoxStyles } from "../../../utils/inputStyles";
 import { background, status, radiusPx } from "../../../themes/palette";
 import { isClassicUi } from "../../../themes/uiStyle";
+import { useTranslation } from "../../../../application/hooks/useTranslation";
 
 const classicUi = isClassicUi();
 
 const SearchBox: React.FC<ISearchBoxProps> = ({
-  placeholder = classicUi ? "Search..." : "Search this list",
+  placeholder,
   value,
   onChange,
   sx = {},
@@ -18,6 +19,8 @@ const SearchBox: React.FC<ISearchBoxProps> = ({
   fullWidth = true,
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation();
+  const resolvedPlaceholder = placeholder ?? (classicUi ? "Search..." : t("Search this list"));
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     onChange(event.target.value);
@@ -51,7 +54,7 @@ const SearchBox: React.FC<ISearchBoxProps> = ({
     <Box sx={searchBoxStyle}>
       <Search size={16} style={{ color: `${status.default.text}`, marginRight: "8px" }} />
       <InputBase
-        placeholder={placeholder}
+        placeholder={resolvedPlaceholder}
         value={value}
         onChange={handleChange}
         sx={searchInputStyle}
