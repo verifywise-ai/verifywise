@@ -3,7 +3,7 @@ import { X as ClearIcon } from "lucide-react";
 import { FC } from "react";
 import { useModalKeyHandling } from "../../../application/hooks/useModalKeyHandling";
 import { IPopupProps } from "../../types/widget.types";
-import { text, palette as vwPalette } from "../../themes/palette";
+import { text } from "../../themes/palette";
 import { chartTheme } from "../../themes/chartTheme";
 
 const Popup: FC<IPopupProps> = ({
@@ -30,11 +30,11 @@ const Popup: FC<IPopupProps> = ({
       "height": 34,
       "fontSize": 13,
       "textTransform": "inherit",
-      "backgroundColor": chartTheme.actionFill,
+      "backgroundColor": chartTheme.action.fill,
       "boxShadow": "none",
       "borderRadius": 2,
-      "border": `1px solid ${vwPalette.status.info.text}`,
-      "&:hover": { boxShadow: "none", backgroundColor: `${vwPalette.status.info.text} ` },
+      "border": `1px solid ${chartTheme.action.border}`,
+      "&:hover": { boxShadow: "none", backgroundColor: chartTheme.action.hover },
       "display": "none",
     },
     closePopupButton: {
@@ -63,9 +63,9 @@ const Popup: FC<IPopupProps> = ({
       "borderRadius": 2,
       "maxHeight": 34,
       "textTransform": "inherit",
-      "backgroundColor": chartTheme.actionFill,
+      "backgroundColor": chartTheme.action.fill,
       "boxShadow": "none",
-      "border": `1px solid ${vwPalette.status.info.text}`,
+      "border": `1px solid ${chartTheme.action.border}`,
       "ml": "auto",
       "mr": 0,
       "mt": "30px",

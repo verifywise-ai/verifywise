@@ -86,8 +86,12 @@ export const chartTheme = {
     teal: byLook("#0CA5AF", chart[3]),
     heart: byLook("#FF1493", chart[1]),
   },
-  /** Fill of the blue action buttons in popups and forms; phase 1 uses the primary button fill. */
-  actionFill: byLook("#4C7DE7", button.primary.contained.bg.default),
+  /** Blue action buttons in popups and forms: fill, hover and border. Phase 1 uses the primary button tokens. */
+  action: {
+    fill: byLook("#4C7DE7", button.primary.contained.bg.default),
+    hover: byLook("#175CD3", button.primary.contained.bg.hover),
+    border: byLook("#175CD3", button.primary.contained.bg.default),
+  },
   /** Node colours in the entity graph. */
   entityTypes: {
     model: byLook("#2196F3", chart[0]),
@@ -143,10 +147,27 @@ export const chartTheme = {
     ],
     chart,
   ),
-  /** Six contestant colours in the LLM arena. */
+  /**
+   * Six contestants in the LLM arena: solid colour, tint and text. Phase 1 takes
+   * all three from one hue (series colour with its matching accent family).
+   */
   contestants: byLook(
-    ["#3B82F6", "#EF4444", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899"],
-    chart.slice(0, 6),
+    [
+      { main: "#3b82f6", light: "#eff6ff", text: "#1e40af" },
+      { main: "#ef4444", light: "#fef2f2", text: "#991b1b" },
+      { main: "#10b981", light: "#ecfdf5", text: "#065f46" },
+      { main: "#f59e0b", light: "#fffbeb", text: "#92400e" },
+      { main: "#8b5cf6", light: "#f5f3ff", text: "#5b21b6" },
+      { main: "#ec4899", light: "#fdf2f8", text: "#9d174d" },
+    ],
+    [
+      { main: chart[0], light: accent.indigo.bg, text: accent.indigo.text },
+      { main: chart[1], light: accent.pink.bg, text: accent.pink.text },
+      { main: chart[2], light: accent.amber.bg, text: accent.amber.text },
+      { main: chart[3], light: accent.teal.bg, text: accent.teal.text },
+      { main: chart[4], light: accent.orange.bg, text: accent.orange.text },
+      { main: chart[5], light: accent.purple.bg, text: accent.purple.text },
+    ],
   ),
   /** Nine tile colours on the Start here page. */
   tiles: byLook(

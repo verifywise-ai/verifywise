@@ -29,10 +29,10 @@ const AssessmentItem = ({
           sx={{
             "display": "block",
             "& .MuiListItemButton-root.Mui-selected": {
-              backgroundColor: chartTheme.actionFill,
+              backgroundColor: chartTheme.action.fill,
             },
             "& .MuiListItemButton-root.Mui-selected:hover": {
-              backgroundColor: chartTheme.actionFill,
+              backgroundColor: chartTheme.action.fill,
             },
           }}
         >
@@ -43,7 +43,7 @@ const AssessmentItem = ({
             sx={{
               paddingLeft: 4,
               borderRadius: radiusPx.sm,
-              backgroundColor: index === activeTab ? chartTheme.actionFill : "transparent",
+              backgroundColor: index === activeTab ? chartTheme.action.fill : "transparent",
               width: 260,
               height: 40,
             }}

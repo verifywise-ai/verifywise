@@ -202,38 +202,7 @@ interface ArenaResults {
 }
 
 // Contestant colors
-const COLORS = [
-  {
-    main: chartTheme.contestants[0],
-    light: palette.accent.indigo.bg,
-    text: palette.accent.indigo.text,
-  },
-  {
-    main: chartTheme.contestants[1],
-    light: palette.accent.pink.bg,
-    text: palette.accent.pink.text,
-  },
-  {
-    main: chartTheme.contestants[2],
-    light: palette.accent.amber.bg,
-    text: palette.accent.amber.text,
-  },
-  {
-    main: chartTheme.contestants[3],
-    light: palette.accent.teal.bg,
-    text: palette.accent.teal.text,
-  },
-  {
-    main: chartTheme.contestants[4],
-    light: palette.accent.orange.bg,
-    text: palette.accent.orange.text,
-  },
-  {
-    main: chartTheme.contestants[5],
-    light: palette.accent.purple.bg,
-    text: palette.accent.purple.text,
-  },
-];
+const COLORS = chartTheme.contestants;
 
 const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBack }) => {
   const [results, setResults] = useState<ArenaResults | null>(null);
