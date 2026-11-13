@@ -29,6 +29,9 @@ import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import Field from "../../components/Inputs/Field";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import Alert from "../../components/Alert";
+import StandardModal from "../../components/Modals/StandardModal";
+import { useTranslation } from "../../../application/hooks/useTranslation";
+import { fill } from "../../../i18n/fill";
 import SuppressionRulesTab from "./components/SuppressionRulesTab";
 import {
   getGitHubTokenStatus,
@@ -96,9 +99,13 @@ export default function SettingsPage() {
   const [vulnerabilityScanEnabled, setVulnerabilityScanEnabled] = useState(false);
   // Set once the admin touches the vulnerability toggle on this page
   const [vulnerabilityToggleTouched, setVulnerabilityToggleTouched] = useState(false);
-  // Until an admin chooses, vulnerability detection follows the default: on with an LLM key
+  // Vulnerability checks send code to the LLM provider, so they stay off until an admin
+  // makes an explicit choice; saving with LLM analysis on asks for that choice first.
   const vulnerabilityIsDefault =
     !riskConfig?.vulnerability_scan_explicit && !vulnerabilityToggleTouched;
+  const [vulnerabilityConsentOpen, setVulnerabilityConsentOpen] = useState(false);
+  const { t } = useTranslation();
+  const selectedLlmKeyName = llmKeys.find((key) => key.id === llmKeyId)?.name;
   const [vulnerabilityTypesEnabled, setVulnerabilityTypesEnabled] = useState<
     Record<VulnerabilityTypeKey, boolean>
   >({ ...DEFAULT_VULNERABILITY_TYPES_ENABLED });
@@ -227,9 +234,6 @@ export default function SettingsPage() {
   // Risk scoring handlers
   const handleLlmToggle = (checked: boolean) => {
     setLlmEnabled(checked);
-    // Mirror the server default: with LLM analysis on, vulnerability detection is on
-    // unless an admin turned it off
-    if (checked && vulnerabilityIsDefault) setVulnerabilityScanEnabled(true);
   };
 
   const handleVulnerabilityToggle = (checked: boolean) => {
@@ -248,7 +252,7 @@ export default function SettingsPage() {
   const weightsTotal = Object.values(dimensionWeights).reduce((sum, w) => sum + w, 0);
   const weightsValid = Math.abs(weightsTotal - 1.0) < 0.02;
 
-  const handleSaveRiskConfig = async () => {
+  const handleSaveRiskConfig = async (vulnerabilityChoice?: boolean) => {
     if (!weightsValid) {
       setAlert({ variant: "error", body: "Dimension weights must sum to 100%" });
       return;
@@ -257,6 +261,13 @@ export default function SettingsPage() {
       setAlert({ variant: "error", body: "Please select an LLM key or disable LLM analysis" });
       return;
     }
+    // First save with LLM analysis on and no vulnerability choice yet: ask before any code is sent
+    if (llmEnabled && vulnerabilityIsDefault && vulnerabilityChoice === undefined) {
+      setVulnerabilityConsentOpen(true);
+      return;
+    }
+    const vulnerabilityValue = vulnerabilityChoice ?? vulnerabilityScanEnabled;
+    setVulnerabilityConsentOpen(false);
     setRiskConfigSaving(true);
     try {
       const updated = await updateRiskScoringConfig({
@@ -264,7 +275,7 @@ export default function SettingsPage() {
         llm_key_id: llmEnabled ? llmKeyId : null,
         dimension_weights: dimensionWeights,
         // Only a choice while LLM analysis is on; otherwise leave the stored value alone
-        vulnerability_scan_enabled: llmEnabled ? vulnerabilityScanEnabled : undefined,
+        vulnerability_scan_enabled: llmEnabled ? vulnerabilityValue : undefined,
         vulnerability_types_enabled: vulnerabilityTypesEnabled,
       });
       setRiskConfig(updated);
@@ -554,8 +565,9 @@ export default function SettingsPage() {
                     graders and mapped to the OWASP LLM Top 10.
                   </Typography>
                   <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: "4px" }}>
-                    On by default once LLM-enhanced analysis has a key. Scans without vulnerability
-                    checks get a partial governance score.
+                    Off until an admin turns it on. Code snippets from scanned files are sent to
+                    your LLM provider. Scans without vulnerability checks get a partial governance
+                    score.
                   </Typography>
                 </Box>
 
@@ -730,7 +742,7 @@ export default function SettingsPage() {
               <Box sx={{ display: "flex", justifyContent: "flex-end" }}>
                 <CustomizableButton
                   variant="contained"
-                  onClick={handleSaveRiskConfig}
+                  onClick={() => handleSaveRiskConfig()}
                   isDisabled={riskConfigSaving || !weightsValid}
                   loading={riskConfigSaving}
                 >
@@ -744,6 +756,48 @@ export default function SettingsPage() {
           <SuppressionRulesTab onMessage={(variant, body) => setAlert({ variant, body })} />
         </TabPanel>
       </TabContext>
+
+      <StandardModal
+        isOpen={vulnerabilityConsentOpen}
+        onClose={() => setVulnerabilityConsentOpen(false)}
+        title="Turn on vulnerability checks?"
+        description="Vulnerability checks send code snippets from scanned files to your LLM provider."
+        maxWidth="560px"
+        customFooter={
+          <Box sx={{ display: "flex", gap: "8px", justifyContent: "flex-end", width: "100%" }}>
+            <CustomizableButton
+              variant="outlined"
+              text="Keep checks off"
+              onClick={() => handleSaveRiskConfig(false)}
+              isDisabled={riskConfigSaving}
+            />
+            <CustomizableButton
+              variant="contained"
+              text="Turn on vulnerability checks"
+              onClick={() => handleSaveRiskConfig(true)}
+              isDisabled={riskConfigSaving}
+            />
+          </Box>
+        }
+      >
+        <Box sx={{ display: "flex", flexDirection: "column", gap: "8px" }}>
+          <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
+            LLM-enhanced scoring on its own only sends finding details, not code. Vulnerability
+            checks need the code itself to look for LLM security issues such as prompt injection.
+          </Typography>
+          {selectedLlmKeyName && (
+            <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
+              {fill(t("Snippets would be sent using the key {name}."), {
+                name: selectedLlmKeyName,
+              })}
+            </Typography>
+          )}
+          <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>
+            With checks off, governance scores are marked partial. You can change this later on this
+            tab.
+          </Typography>
+        </Box>
+      </StandardModal>
     </PageHeaderExtended>
   );
 }

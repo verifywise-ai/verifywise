@@ -173,7 +173,7 @@ export interface RiskScoringConfig {
   dimension_weights: Record<DimensionKey, number>;
   /** Effective value: the admin's choice, or the default when none was made */
   vulnerability_scan_enabled: boolean;
-  /** False when vulnerability_scan_enabled is the default (on with an LLM key) */
+  /** False when no admin has chosen yet (vulnerability checks then stay off) */
   vulnerability_scan_explicit?: boolean;
   vulnerability_types_enabled: Record<VulnerabilityTypeKey, boolean>;
   updated_by: number | null;

@@ -1116,7 +1116,7 @@ export async function updateRiskScoringConfigController(
 
     // vulnerability_scan_enabled is only a real choice while LLM analysis is on
     // (the checks need its key). With LLM analysis off, the value is not stored,
-    // so an org that never chose keeps the default: on once a key is set.
+    // so an org that never chose stays "not chosen" (off) until an admin opts in.
     // Check persisted config when llm_enabled is not in the request body.
     let effectiveVulnScan: boolean | undefined = undefined;
     if (vulnerability_scan_enabled !== undefined && vulnerability_scan_enabled !== null) {

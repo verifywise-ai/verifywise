@@ -17,34 +17,31 @@ import {
 const mockQuery = sequelize.query as unknown as jest.Mock;
 
 describe("resolveVulnerabilityScanEnabled", () => {
-  it("is on by default when LLM analysis has a key", () => {
-    expect(resolveVulnerabilityScanEnabled(null, true, 4)).toBe(true);
-    expect(resolveVulnerabilityScanEnabled(undefined, true, 4)).toBe(true);
-  });
-
-  it("is off by default without a key or with LLM analysis off", () => {
-    expect(resolveVulnerabilityScanEnabled(null, true, null)).toBe(false);
-    expect(resolveVulnerabilityScanEnabled(null, false, 4)).toBe(false);
+  it("stays off until an admin chooses, even with an LLM key (code is never sent implicitly)", () => {
+    expect(resolveVulnerabilityScanEnabled(null, true, 4)).toBe(false);
+    expect(resolveVulnerabilityScanEnabled(undefined, true, 4)).toBe(false);
     expect(resolveVulnerabilityScanEnabled(null, null, null)).toBe(false);
   });
 
-  it("lets an explicit choice win", () => {
-    expect(resolveVulnerabilityScanEnabled(false, true, 4)).toBe(false);
+  it("runs only when explicitly on and LLM analysis has a key", () => {
     expect(resolveVulnerabilityScanEnabled(true, true, 4)).toBe(true);
+    expect(resolveVulnerabilityScanEnabled(false, true, 4)).toBe(false);
+    expect(resolveVulnerabilityScanEnabled(true, true, null)).toBe(false);
+    expect(resolveVulnerabilityScanEnabled(true, false, 4)).toBe(false);
   });
 });
 
 describe("getRiskScoringConfigQuery", () => {
   beforeEach(() => mockQuery.mockReset());
 
-  it("reports the default as not explicit when the org never chose", async () => {
+  it("reports an unchosen setting as off and not explicit", async () => {
     mockQuery
       .mockResolvedValueOnce([{ id: 1, llm_enabled: true, llm_key_id: 4, dimension_weights: {} }])
       .mockResolvedValueOnce([]);
 
     const config = await getRiskScoringConfigQuery(9);
 
-    expect(config!.vulnerability_scan_enabled).toBe(true);
+    expect(config!.vulnerability_scan_enabled).toBe(false);
     expect(config!.vulnerability_scan_explicit).toBe(false);
   });
 

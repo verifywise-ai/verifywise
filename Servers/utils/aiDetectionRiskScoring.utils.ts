@@ -93,17 +93,18 @@ function defaultVulnerabilityTypesEnabled(): Record<VulnerabilityTypeKey, boolea
 /**
  * Effective vulnerability detection setting.
  *
- * An explicit choice wins. When the org never chose, vulnerability detection
- * is on when AI Detection has LLM analysis enabled with a key, and off
- * otherwise (the checks need that key to run).
+ * Vulnerability checks send code snippets to the org's LLM provider, so they
+ * only run after an admin explicitly turns them on (the Settings page asks
+ * for that choice when LLM analysis is first saved with a key). A stored
+ * NULL means "not chosen yet" and resolves to off. They also need LLM
+ * analysis with a key to run at all.
  */
 export function resolveVulnerabilityScanEnabled(
   stored: boolean | null | undefined,
   llmEnabled: boolean | null | undefined,
   llmKeyId: number | null | undefined,
 ): boolean {
-  if (stored === true || stored === false) return stored;
-  return llmEnabled === true && llmKeyId != null;
+  return stored === true && llmEnabled === true && llmKeyId != null;
 }
 
 function mergeVulnerabilityConfig(

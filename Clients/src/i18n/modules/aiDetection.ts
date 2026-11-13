@@ -350,8 +350,19 @@ export const de: Record<string, string> = {
     "Dieser Scan erfasst nicht, ob Schwachstellenprüfungen ausgeführt wurden. Scannen Sie erneut, um zu prüfen.",
   "Scan GitHub repositories (public, or private with a token in Settings) for AI libraries, models, agents, secrets and LLM vulnerabilities.":
     "Scannen Sie GitHub-Repositories (öffentlich oder privat mit einem Token in den Einstellungen) auf KI-Bibliotheken, Modelle, Agenten, Geheimnisse und LLM-Schwachstellen.",
-  "On by default once LLM-enhanced analysis has a key. Scans without vulnerability checks get a partial governance score.":
-    "Standardmäßig an, sobald die LLM-gestützte Analyse einen Schlüssel hat. Scans ohne Schwachstellenprüfungen erhalten eine teilweise Governance-Bewertung.",
+  "Off until an admin turns it on. Code snippets from scanned files are sent to your LLM provider. Scans without vulnerability checks get a partial governance score.":
+    "Bis ein Administrator sie einschaltet, ist sie aus. Codeausschnitte aus gescannten Dateien werden an Ihren LLM-Anbieter gesendet. Scans ohne Schwachstellenprüfungen erhalten eine teilweise Governance-Bewertung.",
+  "Turn on vulnerability checks?": "Schwachstellenprüfungen einschalten?",
+  "Vulnerability checks send code snippets from scanned files to your LLM provider.":
+    "Schwachstellenprüfungen senden Codeausschnitte aus gescannten Dateien an Ihren LLM-Anbieter.",
+  "Keep checks off": "Prüfungen ausgeschaltet lassen",
+  "Turn on vulnerability checks": "Schwachstellenprüfungen einschalten",
+  "LLM-enhanced scoring on its own only sends finding details, not code. Vulnerability checks need the code itself to look for LLM security issues such as prompt injection.":
+    "Die LLM-gestützte Bewertung allein sendet nur Angaben zu Befunden, keinen Code. Schwachstellenprüfungen benötigen den Code selbst, um nach LLM-Sicherheitsproblemen wie Prompt-Injection zu suchen.",
+  "Snippets would be sent using the key {name}.":
+    "Die Ausschnitte würden mit dem Schlüssel {name} gesendet.",
+  "With checks off, governance scores are marked partial. You can change this later on this tab.":
+    "Bei ausgeschalteten Prüfungen werden Governance-Bewertungen als teilweise markiert. Sie können dies später auf diesem Tab ändern.",
 };
 
 export const fr: Record<string, string> = {
@@ -704,8 +715,19 @@ export const fr: Record<string, string> = {
     "Cette analyse n'indique pas si les contrôles de vulnérabilités ont été exécutés. Relancez une analyse pour vérifier.",
   "Scan GitHub repositories (public, or private with a token in Settings) for AI libraries, models, agents, secrets and LLM vulnerabilities.":
     "Analysez des dépôts GitHub (publics, ou privés avec un jeton dans les paramètres) pour y trouver des bibliothèques d'IA, des modèles, des agents, des secrets et des vulnérabilités LLM.",
-  "On by default once LLM-enhanced analysis has a key. Scans without vulnerability checks get a partial governance score.":
-    "Activé par défaut dès que l'analyse enrichie par LLM a une clé. Les analyses sans contrôles de vulnérabilités obtiennent un score de gouvernance partiel.",
+  "Off until an admin turns it on. Code snippets from scanned files are sent to your LLM provider. Scans without vulnerability checks get a partial governance score.":
+    "Désactivé jusqu'à ce qu'un administrateur l'active. Des extraits de code des fichiers analysés sont envoyés à votre fournisseur LLM. Les analyses sans contrôles de vulnérabilités obtiennent un score de gouvernance partiel.",
+  "Turn on vulnerability checks?": "Activer les contrôles de vulnérabilités ?",
+  "Vulnerability checks send code snippets from scanned files to your LLM provider.":
+    "Les contrôles de vulnérabilités envoient des extraits de code des fichiers analysés à votre fournisseur LLM.",
+  "Keep checks off": "Laisser les contrôles désactivés",
+  "Turn on vulnerability checks": "Activer les contrôles de vulnérabilités",
+  "LLM-enhanced scoring on its own only sends finding details, not code. Vulnerability checks need the code itself to look for LLM security issues such as prompt injection.":
+    "La notation enrichie par LLM seule n'envoie que les détails des constats, pas de code. Les contrôles de vulnérabilités ont besoin du code lui-même pour rechercher des problèmes de sécurité LLM comme l'injection de prompt.",
+  "Snippets would be sent using the key {name}.":
+    "Les extraits seraient envoyés avec la clé {name}.",
+  "With checks off, governance scores are marked partial. You can change this later on this tab.":
+    "Lorsque les contrôles sont désactivés, les scores de gouvernance sont marqués comme partiels. Vous pouvez modifier ce choix plus tard dans cet onglet.",
 };
 
 export const es: Record<string, string> = {
@@ -1064,6 +1086,17 @@ export const es: Record<string, string> = {
     "Este análisis no registra si se ejecutaron las comprobaciones de vulnerabilidades. Vuelva a analizar para comprobarlo.",
   "Scan GitHub repositories (public, or private with a token in Settings) for AI libraries, models, agents, secrets and LLM vulnerabilities.":
     "Analice repositorios de GitHub (públicos, o privados con un token en Configuración) en busca de bibliotecas de IA, modelos, agentes, secretos y vulnerabilidades de LLM.",
-  "On by default once LLM-enhanced analysis has a key. Scans without vulnerability checks get a partial governance score.":
-    "Activado por defecto cuando el análisis mejorado con LLM tiene una clave. Los análisis sin comprobaciones de vulnerabilidades obtienen una puntuación de gobernanza parcial.",
+  "Off until an admin turns it on. Code snippets from scanned files are sent to your LLM provider. Scans without vulnerability checks get a partial governance score.":
+    "Desactivado hasta que un administrador lo active. Se envían fragmentos de código de los archivos analizados a su proveedor de LLM. Los análisis sin comprobaciones de vulnerabilidades obtienen una puntuación de gobernanza parcial.",
+  "Turn on vulnerability checks?": "¿Activar las comprobaciones de vulnerabilidades?",
+  "Vulnerability checks send code snippets from scanned files to your LLM provider.":
+    "Las comprobaciones de vulnerabilidades envían fragmentos de código de los archivos analizados a su proveedor de LLM.",
+  "Keep checks off": "Mantener las comprobaciones desactivadas",
+  "Turn on vulnerability checks": "Activar las comprobaciones de vulnerabilidades",
+  "LLM-enhanced scoring on its own only sends finding details, not code. Vulnerability checks need the code itself to look for LLM security issues such as prompt injection.":
+    "La puntuación mejorada con LLM por sí sola solo envía detalles de los hallazgos, no código. Las comprobaciones de vulnerabilidades necesitan el código para buscar problemas de seguridad de LLM como la inyección de prompts.",
+  "Snippets would be sent using the key {name}.":
+    "Los fragmentos se enviarían con la clave {name}.",
+  "With checks off, governance scores are marked partial. You can change this later on this tab.":
+    "Con las comprobaciones desactivadas, las puntuaciones de gobernanza se marcan como parciales. Puede cambiarlo más adelante en esta pestaña.",
 };

@@ -330,19 +330,97 @@ describe("SettingsPage", () => {
     });
   });
 
-  it("turns vulnerability detection on with LLM analysis when the org never chose", async () => {
+  it("does not turn vulnerability detection on by itself when LLM analysis is turned on", async () => {
     renderWithProviders(<SettingsPage />, { route: "/ai-detection/settings?tab=risk-scoring" });
 
     await waitFor(() => {
       expect(screen.getByText("Total: 100%")).toBeInTheDocument();
     });
-    const [llmToggle, vulnerabilityToggle] = screen.getAllByRole("switch");
-    expect(vulnerabilityToggle).not.toBeChecked();
-
-    fireEvent.click(llmToggle);
+    fireEvent.click(screen.getAllByRole("switch")[0]);
 
     await waitFor(() => {
-      expect(screen.getAllByRole("switch")[1]).toBeChecked();
+      expect(screen.getAllByRole("switch")[0]).toBeChecked();
+    });
+    expect(screen.getAllByRole("switch")[1]).not.toBeChecked();
+  });
+
+  describe("asking before code is sent to the LLM provider", () => {
+    const renderUnchosenWithKey = async () => {
+      mockGetLLMKeys.mockResolvedValue({ data: { data: [openAIKey] } });
+      mockGetRiskScoringConfig.mockResolvedValue(
+        makeRiskConfig({ llm_enabled: true, llm_key_id: openAIKey.id }),
+      );
+      mockUpdateRiskScoringConfig.mockImplementation(async (body) =>
+        makeRiskConfig({
+          llm_enabled: true,
+          llm_key_id: openAIKey.id,
+          vulnerability_scan_enabled: body.vulnerability_scan_enabled,
+          vulnerability_scan_explicit: true,
+        }),
+      );
+      renderWithProviders(<SettingsPage />, { route: "/ai-detection/settings?tab=risk-scoring" });
+      await waitFor(() => {
+        expect(screen.getByText("Total: 100%")).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => {
+        expect(screen.getByText("Turn on vulnerability checks?")).toBeInTheDocument();
+      });
+    };
+
+    it("asks first and saves nothing until the admin chooses", async () => {
+      await renderUnchosenWithKey();
+
+      expect(
+        screen.getByText(
+          "Vulnerability checks send code snippets from scanned files to your LLM provider.",
+        ),
+      ).toBeInTheDocument();
+      expect(screen.getByText("Snippets would be sent using the key OpenAI.")).toBeInTheDocument();
+      expect(mockUpdateRiskScoringConfig).not.toHaveBeenCalled();
+    });
+
+    it("saves an explicit off when the admin keeps checks off", async () => {
+      await renderUnchosenWithKey();
+      fireEvent.click(screen.getByRole("button", { name: "Keep checks off" }));
+
+      await waitFor(() => {
+        expect(mockUpdateRiskScoringConfig).toHaveBeenCalledTimes(1);
+      });
+      expect(mockUpdateRiskScoringConfig.mock.calls[0][0].vulnerability_scan_enabled).toBe(false);
+    });
+
+    it("saves an explicit on when the admin turns checks on", async () => {
+      await renderUnchosenWithKey();
+      fireEvent.click(screen.getByRole("button", { name: "Turn on vulnerability checks" }));
+
+      await waitFor(() => {
+        expect(mockUpdateRiskScoringConfig).toHaveBeenCalledTimes(1);
+      });
+      expect(mockUpdateRiskScoringConfig.mock.calls[0][0].vulnerability_scan_enabled).toBe(true);
+    });
+
+    it("does not ask again once a choice is stored", async () => {
+      mockGetLLMKeys.mockResolvedValue({ data: { data: [openAIKey] } });
+      mockGetRiskScoringConfig.mockResolvedValue(
+        makeRiskConfig({
+          llm_enabled: true,
+          llm_key_id: openAIKey.id,
+          vulnerability_scan_enabled: false,
+          vulnerability_scan_explicit: true,
+        }),
+      );
+      mockUpdateRiskScoringConfig.mockResolvedValue(makeRiskConfig());
+      renderWithProviders(<SettingsPage />, { route: "/ai-detection/settings?tab=risk-scoring" });
+      await waitFor(() => {
+        expect(screen.getByText("Total: 100%")).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      await waitFor(() => {
+        expect(mockUpdateRiskScoringConfig).toHaveBeenCalledTimes(1);
+      });
+      expect(screen.queryByText("Turn on vulnerability checks?")).not.toBeInTheDocument();
     });
   });
 
