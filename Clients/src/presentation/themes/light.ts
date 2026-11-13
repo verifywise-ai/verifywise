@@ -1,5 +1,8 @@
 import { createTheme } from "@mui/material/styles";
-import { text, background, border, status, brand, icon } from "./palette";
+import { text, background, border, status, brand, icon, radiusPx } from "./palette";
+import { isClassicUi } from "./uiStyle";
+
+const classicUi = isClassicUi();
 
 declare module "@mui/material/Button" {
   interface ButtonPropsVariantOverrides {
@@ -127,7 +130,7 @@ const light = createTheme({
             },
           ],
           "fontWeight": 400,
-          "borderRadius": 4,
+          "borderRadius": radiusPx.sm,
           "boxShadow": "none",
           "textTransform": "none",
           "&:focus:not(:focus-visible)": {
@@ -171,7 +174,7 @@ const light = createTheme({
           border: 1,
           borderStyle: "solid",
           borderColor: border.light,
-          borderRadius: 4,
+          borderRadius: radiusPx.sm,
           boxShadow: shadow,
           backgroundColor: background.main,
         },
@@ -200,7 +203,7 @@ const light = createTheme({
       },
       styleOverrides: {
         root: {
-          "borderRadius": 4,
+          "borderRadius": radiusPx.sm,
           "backgroundColor": "inherit",
           "padding": "4px 6px",
           "color": text.secondary,
@@ -224,7 +227,10 @@ const light = createTheme({
     MuiTableHead: {
       styleOverrides: {
         root: {
-          background: `linear-gradient(180deg, ${background.accent} 0%, ${background.hover} 100%)`,
+          // Phase 1: flat raised grey header, no gradient.
+          background: classicUi
+            ? `linear-gradient(180deg, ${background.accent} 0%, ${background.hover} 100%)`
+            : background.hover,
         },
       },
     },
@@ -237,7 +243,7 @@ const light = createTheme({
           "borderColor": border.light,
           "& button": {
             color: text.tertiary,
-            borderRadius: 4,
+            borderRadius: radiusPx.sm,
           },
           "& li:first-of-type button, & li:last-of-type button": {
             border: 1,
@@ -259,7 +265,7 @@ const light = createTheme({
     MuiSkeleton: {
       styleOverrides: {
         root: {
-          backgroundColor: "#f2f4f7",
+          backgroundColor: classicUi ? "#f2f4f7" : background.hover,
         },
       },
     },
@@ -283,7 +289,7 @@ const light = createTheme({
           "backgroundColor": background.main,
           "& .MuiOutlinedInput-root": {
             "backgroundColor": background.main,
-            "borderRadius": 2,
+            "borderRadius": classicUi ? 2 : radiusPx.sm,
             "& .MuiOutlinedInput-notchedOutline": {
               borderColor: border.dark,
               borderWidth: "1px",
@@ -291,10 +297,9 @@ const light = createTheme({
             "&:hover .MuiOutlinedInput-notchedOutline": {
               borderColor: border.dark,
             },
-            "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-              borderColor: border.dark,
-              borderWidth: "1px",
-            },
+            "&.Mui-focused .MuiOutlinedInput-notchedOutline": classicUi
+              ? { borderColor: border.dark, borderWidth: "1px" }
+              : { borderColor: brand.primary, borderWidth: "2px" },
           },
         },
       },
@@ -303,7 +308,7 @@ const light = createTheme({
       styleOverrides: {
         root: {
           "backgroundColor": background.main,
-          "borderRadius": 2,
+          "borderRadius": classicUi ? 2 : radiusPx.sm,
           "& .MuiOutlinedInput-notchedOutline": {
             borderColor: border.dark,
             borderWidth: "1px",
@@ -311,10 +316,9 @@ const light = createTheme({
           "&:hover .MuiOutlinedInput-notchedOutline": {
             borderColor: border.dark,
           },
-          "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-            borderColor: border.dark,
-            borderWidth: "1px",
-          },
+          "&.Mui-focused .MuiOutlinedInput-notchedOutline": classicUi
+            ? { borderColor: border.dark, borderWidth: "1px" }
+            : { borderColor: brand.primary, borderWidth: "2px" },
         },
       },
     },
@@ -336,12 +340,12 @@ const light = createTheme({
       styleOverrides: {
         tooltip: {
           fontSize: "13px",
-          backgroundColor: "#1F2937",
+          backgroundColor: classicUi ? "#1F2937" : text.primary,
           padding: "8px 12px",
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
         },
         arrow: {
-          color: "#1F2937",
+          color: classicUi ? "#1F2937" : text.primary,
         },
       },
     },

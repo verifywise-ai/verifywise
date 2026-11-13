@@ -21,7 +21,7 @@ import { useNavigate } from "react-router";
 import dayjs, { Dayjs } from "dayjs";
 import { Info as GreyCircleInfoIcon } from "lucide-react";
 import { cardStyles } from "../../../themes";
-import { green, yellow } from "@design-tokens/primitives";
+import { green, yellow } from "../../../themes";
 import { background, border, status, text } from "../../../themes/palette";
 import {
   CEMarkingData,

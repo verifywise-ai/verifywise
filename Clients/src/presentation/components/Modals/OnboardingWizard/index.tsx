@@ -27,7 +27,7 @@ import { LucideIcon, Shield, Check, X } from "lucide-react";
 import { CustomizableButton } from "../../button/customizable-button";
 import { border, icon, text } from "../../../themes/palette";
 import { textStyles, fontSize } from "../../../themes/typography";
-import grey from "@design-tokens/primitives";
+import { grey } from "../../../themes";
 
 const useIsDarkMode = () => {
   const [isDark, setIsDark] = useState(() =>

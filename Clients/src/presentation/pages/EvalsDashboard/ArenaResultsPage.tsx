@@ -36,6 +36,7 @@ import { ReactComponent as GeminiLogo } from "../../assets/icons/gemini_logo.svg
 import { ReactComponent as MistralLogo } from "../../assets/icons/mistral_logo.svg";
 import { ReactComponent as XAILogo } from "../../assets/icons/xai_logo.svg";
 import { ReactComponent as OpenRouterLogo } from "../../assets/icons/openrouter_logo.svg";
+import { fontFamily } from "../../themes/typography";
 
 const PROVIDER_ICONS: Record<string, React.FC<React.SVGProps<SVGSVGElement>>> = {
   openai: OpenAILogo,
@@ -92,7 +93,7 @@ const MarkdownRenderer = ({ content }: { content: string }) => {
           px: 0.75,
           py: 0.25,
           borderRadius: "4px",
-          fontFamily: "'Fira Code', monospace",
+          fontFamily: fontFamily.mono,
           fontSize: 12,
           color: "#0f766e",
         },

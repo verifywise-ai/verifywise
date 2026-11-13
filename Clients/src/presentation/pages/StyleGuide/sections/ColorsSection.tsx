@@ -12,7 +12,7 @@ import {
   purple,
   teal,
   pink,
-} from "@design-tokens/primitives";
+} from "../../../themes";
 import { button } from "../../../themes/palette";
 import { fontSize } from "../../../themes/typography";
 

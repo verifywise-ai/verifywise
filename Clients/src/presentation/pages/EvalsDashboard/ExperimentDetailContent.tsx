@@ -62,6 +62,7 @@ import {
 } from "./metricLabels";
 import { countLabel } from "../../tools/countLabel";
 import { Link as RouterLink } from "react-router";
+import { fontFamily } from "../../themes/typography";
 
 // Preprocess LaTeX delimiters to work with remark-math
 const preprocessLatex = (text: string): string => {
@@ -132,7 +133,7 @@ const MarkdownRenderer = ({ content }: { content: string }) => {
           px: "1.5px",
           py: "0.5px",
           borderRadius: "4px",
-          fontFamily: "'Fira Code', monospace",
+          fontFamily: fontFamily.mono,
           fontSize: 12,
           color: "#0f766e",
         },

@@ -1,4 +1,11 @@
 /**
+ * PHASE 1 RESTYLE: drop-in replacement for shared/design-tokens/palette.ts
+ * Same export names and shapes as today; only which scale each token points
+ * at has changed (marked NEW). Hex values live in primitives.phase1.ts.
+ *
+ * Rule of thumb: colour in a table or chart means risk, status or a series,
+ * nothing else. Brand green is for brand, primary actions and selection.
+ *
  * Semantic color tokens shared by the frontend theme and the backend
  * email/PDF renderers. Scale hex lives in ./primitives.ts.
  */
@@ -13,29 +20,39 @@ import {
   purple,
   teal,
   pink,
+  series,
+  signalGreen,
+  cocoa,
+  neutral,
+  score,
+  part,
+  radius,
 } from "./primitives";
 
 export const status = {
   // strong = vivid green reserved for transient confirmations (e.g. save success).
   // Not on the green scale; kept here until that step exists in primitives.ts.
+  // NEW: success uses the signal green, not the brand green
   success: {
-    bg: green[200],
-    text: green[600],
-    border: green[300],
-    strong: "#079455",
+    bg: signalGreen[100],
+    text: signalGreen[700],
+    border: signalGreen[300],
+    strong: signalGreen[500],
   },
-  error: { bg: red[200], text: red[500], border: red[300] },
-  warning: { bg: amber[100], text: amber[600], border: amber[200] },
+  error: { bg: red[200], text: red[700], border: red[300] },
+  // NEW: warning is orange (the High colour), not brown on amber
+  warning: { bg: orange[100], text: orange[600], border: orange[200] },
   info: { bg: blue[50], text: blue[800], border: blue[100] },
   default: { bg: grey[100], text: grey[500], border: grey[200] },
 } as const;
 
 export const risk = {
-  critical: { bg: red[200], text: red[500], border: red[300] },
+  critical: { bg: red[200], text: red[700], border: red[300] },
   high: { bg: orange[100], text: orange[600], border: orange[200] },
   medium: { bg: amber[100], text: amber[600], border: amber[200] },
-  low: { bg: green[200], text: green[600], border: green[300] },
-  veryLow: { bg: teal[50], text: teal[800], border: teal[100] },
+  // NEW: Low is signal green; Very low is neutral grey (teal is a chart colour now)
+  low: { bg: signalGreen[100], text: signalGreen[700], border: signalGreen[300] },
+  veryLow: { bg: neutral[100], text: neutral[700], border: neutral[300] },
 } as const;
 
 export const severity = {
@@ -54,19 +71,27 @@ export const accent = {
   teal: { bg: teal[50], text: teal[800], border: teal[100] },
   blue: { bg: blue[50], text: blue[800], border: blue[100] },
   pink: { bg: pink[50], text: pink[800], border: pink[100] },
-  red: { bg: red[50], text: red[500], border: red[200] },
+  red: { bg: red[50], text: red[700], border: red[200] },
   amber: { bg: amber[100], text: amber[700], border: amber[200] },
+  // NEW
+  cocoa: { bg: cocoa[50], text: cocoa[800], border: cocoa[100] },
 } as const;
 
+// NEW: fixed order, 9 hues then Other. Series 1 is always Indigo, 2 Rose, and so on;
+// never reorder per chart. The order keeps neighbouring series far apart for
+// colour-blind viewers too. Past 9 series, fold the smallest into Other.
+// For a chart with one measure, use brand green[700] instead.
 export const chart = [
-  "#5C8A7D", // muted teal-green (primary family)
-  "#7986CB", // muted indigo
-  "#A1887F", // muted brown
-  "#9575CD", // muted purple
-  "#4DB6AC", // muted teal
-  "#E57373", // muted red
-  "#FFB74D", // muted orange
-  "#81C784", // muted green
+  series.indigo, // 1
+  series.rose,   // 2
+  series.sand,   // 3
+  series.teal,   // 4
+  series.clay,   // 5
+  series.violet, // 6
+  series.moss,   // 7
+  series.sky,    // 8
+  series.plum,   // 9
+  series.other,  // Other
 ] as const;
 
 export const text = {
@@ -109,7 +134,7 @@ export const border = {
 
 export const brand = {
   primary: green[700],
-  primaryHover: green[900],
+  primaryHover: green[800], // NEW: 900 is now very dark
   primaryLight: green[100],
   primaryDark: green[800],
 } as const;
@@ -143,7 +168,7 @@ export const button = {
       text: { default: grey[50], disabled: grey[350] },
     },
     outlined: {
-      bg: {  hover: grey[150] },
+      bg: { hover: grey[150] },
       text: { default: grey[700] },
       border: { default: grey[300], hover: grey[500] },
     },
@@ -181,6 +206,36 @@ export const userTextColors = [
   "#9333ea",
 ] as const;
 
+/* ------------------------------------------------------------------ */
+/* NEW EXPORTS                                                         */
+/* ------------------------------------------------------------------ */
+
+/** Solid marks for dots, bars and heat-map cells, one per tier. Always beside a label. */
+export const riskMark = {
+  critical: red[500],
+  high: orange[500],
+  medium: amber[500],
+  low: signalGreen[500],
+  veryLow: neutral[300],
+} as const;
+
+/** Score spectrum 0 to 100: score[Math.round(value / 10)]. */
+export { score };
+
+/** ON HOLD until the new sidebar (phase 2). Do not use in phase 1. */
+export { part };
+
+/** Corner radius in px. */
+export { radius };
+
+/** Lifecycle stage is shown as plain text with 4 grey step bars, never as a coloured pill. */
+export const stage = {
+  barOn: grey[600],
+  barOff: grey[200],
+  text: text.primary,
+  textPast: text.tertiary,
+} as const;
+
 export const palette = {
   status,
   risk,
@@ -194,6 +249,8 @@ export const palette = {
   brand,
   button,
   editor,
+  riskMark,
+  stage,
 } as const;
 
 export default palette;
