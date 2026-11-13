@@ -230,6 +230,7 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
     filterData: filterPolicyTemplateData,
     handleFilterChange: handlePolicyTemplateFilterChange,
     conditions: policyTemplateFilterConditions,
+    logic: policyTemplateFilterLogic,
   } = useFilterBy<TemplateRow>(getPolicyTemplateFieldValue);
 
   // Templates in the current section, before filter + search
@@ -311,6 +312,7 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
             columns={policyTemplateFilterColumns}
             onFilterChange={handlePolicyTemplateFilterChange}
             defaultConditions={policyTemplateFilterConditions}
+            defaultLogic={policyTemplateFilterLogic}
             data={sectionRows}
             getFieldValue={getPolicyTemplateFieldValue}
           />

@@ -218,6 +218,7 @@ const ProjectList = ({
     filterData: filterProjectData,
     handleFilterChange: handleProjectFilterChange,
     conditions: projectFilterConditions,
+    logic: projectFilterLogic,
   } = useFilterBy<Project>(getProjectFieldValue);
 
   // Filter projects using FilterBy and search
@@ -400,6 +401,7 @@ const ProjectList = ({
             columns={projectFilterColumns}
             onFilterChange={handleProjectFilterChange}
             defaultConditions={projectFilterConditions}
+            defaultLogic={projectFilterLogic}
             data={projects}
             getFieldValue={getProjectFieldValue}
           />

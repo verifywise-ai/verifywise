@@ -281,3 +281,144 @@ describe("FilterChips across a tab switch", () => {
     expect(onFilterChange).not.toHaveBeenCalled();
   });
 });
+
+describe("FilterChips faceted counts", () => {
+  it("counts each option over the rows that pass the other set chips", async () => {
+    const { user } = renderChips();
+    await user.click(screen.getByTestId("filter-chip-owner"));
+    await user.click(screen.getByTestId("filter-chip-option-owner-2"));
+
+    // Only one draft row belongs to Grace, and the published row has no owner.
+    await user.click(screen.getByTestId("filter-chip-status"));
+    expect(menuItems().map((i) => i.textContent)).toEqual(["All", "Draft1"]);
+  });
+
+  it("an option's count equals the rows the filter keeps once it is picked", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<TabbedPage />);
+    await user.click(screen.getByTestId("filter-chip-status"));
+    await user.click(screen.getByTestId("filter-chip-option-status-draft"));
+
+    await user.click(screen.getByTestId("filter-chip-owner"));
+    expect(menuItems().map((i) => i.textContent)).toEqual(["All", "Ada2", "Grace1"]);
+    await user.click(screen.getByTestId("filter-chip-option-owner-1"));
+    expect(screen.getByTestId("row-count")).toHaveTextContent("2");
+  });
+
+  it("the open chip's own selection does not narrow its menu", async () => {
+    const { user } = renderChips({
+      defaultConditions: [{ id: "a", columnId: "status", operator: "is", value: "draft" }],
+    });
+    await user.click(screen.getByTestId("filter-chip-status"));
+    expect(menuItems().map((i) => i.textContent)).toEqual(["All", "Draft3", "Published1"]);
+  });
+});
+
+interface TaggedRow {
+  name: string;
+  tags: string[];
+  project: string[];
+}
+
+const taggedColumns: FilterColumn[] = [
+  {
+    id: "tags",
+    label: "Tags",
+    type: "select",
+    options: [
+      { value: "1", label: "One" },
+      { value: "2", label: "Two" },
+      { value: "3", label: "Three" },
+    ],
+  },
+];
+
+const taggedRows: TaggedRow[] = [
+  { name: "A", tags: ["1", "2"], project: ["10"] },
+  { name: "B", tags: ["2"], project: ["10", "20"] },
+  { name: "C", tags: [], project: ["10"] },
+];
+
+const getTaggedValue = (row: TaggedRow, columnId: string) =>
+  columnId === "tags" ? row.tags : columnId === "project" ? row.project : row.name;
+
+function TaggedPage() {
+  const { filterData, handleFilterChange, conditions } = useFilterBy<TaggedRow>(getTaggedValue);
+  return (
+    <>
+      <FilterChips<TaggedRow>
+        columns={taggedColumns}
+        onFilterChange={handleFilterChange}
+        defaultConditions={conditions}
+        data={taggedRows}
+        getFieldValue={getTaggedValue}
+      />
+      <span data-testid="row-count">{filterData(taggedRows).length}</span>
+    </>
+  );
+}
+
+describe("FilterChips with multi-valued fields", () => {
+  it("counts a row once under each value it holds and filters by inclusion", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<TaggedPage />);
+    await user.click(screen.getByTestId("filter-chip-tags"));
+    expect(menuItems().map((i) => i.textContent)).toEqual(["All", "One1", "Two2"]);
+
+    await user.click(screen.getByTestId("filter-chip-option-tags-2"));
+    expect(screen.getByTestId("row-count")).toHaveTextContent("2");
+  });
+
+  it("a server-filtered column with a value picked lists every option, without counts", async () => {
+    const projectColumn: FilterColumn = {
+      id: "project",
+      label: "Use case",
+      type: "select",
+      serverFiltered: true,
+      options: [
+        { value: "10", label: "Ten" },
+        { value: "20", label: "Twenty" },
+        { value: "30", label: "Thirty" },
+      ],
+    };
+    const user = userEvent.setup();
+    renderWithProviders(
+      <FilterChips<TaggedRow>
+        columns={[projectColumn]}
+        onFilterChange={vi.fn()}
+        // The page loaded only use case 20's rows.
+        defaultConditions={[{ id: "p", columnId: "project", operator: "is", value: "20" }]}
+        data={taggedRows.filter((row) => row.project.includes("20"))}
+        getFieldValue={getTaggedValue}
+      />,
+    );
+    await user.click(screen.getByTestId("filter-chip-project"));
+    expect(menuItems().map((i) => i.textContent)).toEqual(["All", "Ten", "Twenty", "Thirty"]);
+  });
+
+  it("a server-filtered column with nothing picked counts as usual", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(
+      <FilterChips<TaggedRow>
+        columns={[
+          {
+            id: "project",
+            label: "Use case",
+            type: "select",
+            serverFiltered: true,
+            options: [
+              { value: "10", label: "Ten" },
+              { value: "20", label: "Twenty" },
+              { value: "30", label: "Thirty" },
+            ],
+          },
+        ]}
+        onFilterChange={vi.fn()}
+        data={taggedRows}
+        getFieldValue={getTaggedValue}
+      />,
+    );
+    await user.click(screen.getByTestId("filter-chip-project"));
+    expect(menuItems().map((i) => i.textContent)).toEqual(["All", "Ten3", "Twenty1"]);
+  });
+});

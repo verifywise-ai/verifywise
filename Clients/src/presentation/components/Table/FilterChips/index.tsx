@@ -5,6 +5,12 @@
  * occur in the table's rows, with a count each; the first item, "All", resets
  * it. Text columns get no chip because the search box covers them.
  *
+ * Counts are faceted: an option's count is the rows that pass every other set
+ * chip and that option, so it equals what the filter keeps once the option is
+ * picked. The page's search box and summary cards filter outside this
+ * component, so the counts do not reflect them. A multi-valued field (an
+ * array from `getFieldValue`) counts a row once under each value it holds.
+ *
  * Emits the same `onFilterChange(conditions, "and")` shape as `FilterBy`, so a
  * page keeps its `useFilterBy` wiring. Render it through `TableFilter`, which
  * keeps `FilterBy` for the classic look.
@@ -49,6 +55,20 @@ const DATE_OPTIONS: ChipMenuOption[] = [
 ];
 
 const isChipColumn = (column: FilterColumn) => column.type === "select" || column.type === "date";
+
+/** Whether a row passes every selection except the one on `skipColumnId`. */
+function passesOtherSelections<T>(
+  row: T,
+  selections: Record<string, ChipSelection>,
+  skipColumnId: string,
+  getFieldValue: (item: T, columnId: string) => FilterFieldValue,
+): boolean {
+  return Object.entries(selections).every(
+    ([columnId, selection]) =>
+      columnId === skipColumnId ||
+      matchesFilterCondition(getFieldValue(row, columnId), selection.operator, selection.value),
+  );
+}
 
 /** Every option a column's menu can offer, before counting. */
 function optionsFor(column: FilterColumn): ChipMenuOption[] {
@@ -136,16 +156,24 @@ export function FilterChips<T>({
     emit(next);
   };
 
-  /** Options for the open menu: those with at least one row, plus the one already picked. */
+  /**
+   * Options for the open menu: those with at least one row, plus the one
+   * already picked. A server-filtered column with a value picked lists every
+   * option without counts, since the loaded rows hold only the picked value.
+   */
   const menuOptions = useMemo(() => {
     if (!menu) return [];
     const column = chipColumns.find((c) => c.id === menu.columnId);
     if (!column) return [];
+    const countable = canCount && !(column.serverFiltered && selections[column.id]);
+    const facetRows = countable
+      ? data!.filter((row) => passesOtherSelections(row, selections, column.id, getFieldValue!))
+      : [];
     return optionsFor(column)
       .map((option) => ({
         ...option,
-        count: canCount
-          ? data!.filter((row) =>
+        count: countable
+          ? facetRows.filter((row) =>
               matchesFilterCondition(getFieldValue!(row, column.id), option.operator, option.value),
             ).length
           : undefined,

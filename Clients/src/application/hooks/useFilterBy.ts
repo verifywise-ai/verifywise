@@ -1,6 +1,10 @@
 import { useCallback, useState } from "react";
 import { FilterCondition } from "../../presentation/components/Table/FilterBy";
-import { matchesFilterCondition, NO_VALUE_FILTER_OPERATORS } from "../utils/filterConditions";
+import {
+  matchesFilterCondition,
+  NO_VALUE_FILTER_OPERATORS,
+  type FilterFieldValue,
+} from "../utils/filterConditions";
 
 export interface UseFilterByResult<T> {
   filterData: (data: T[]) => T[];
@@ -15,7 +19,7 @@ export interface UseFilterByResult<T> {
  * @param getFieldValue - Function to get the value of a field from a data item
  */
 export function useFilterBy<T>(
-  getFieldValue: (item: T, fieldId: string) => string | number | Date | null | undefined,
+  getFieldValue: (item: T, fieldId: string) => FilterFieldValue,
 ): UseFilterByResult<T> {
   const [conditions, setConditions] = useState<FilterCondition[]>([]);
   const [logic, setLogic] = useState<"and" | "or">("and");

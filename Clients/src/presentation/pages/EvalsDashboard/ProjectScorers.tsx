@@ -118,6 +118,7 @@ export default function ProjectScorers({ projectId, orgId }: ProjectScorersProps
     filterData,
     handleFilterChange,
     conditions: filterConditions,
+    logic: filterLogic,
   } = useFilterBy<DeepEvalScorer>(getFieldValue);
 
   const filteredScorers = useMemo(() => {
@@ -398,6 +399,7 @@ export default function ProjectScorers({ projectId, orgId }: ProjectScorersProps
             columns={filterColumns}
             onFilterChange={handleFilterChange}
             defaultConditions={filterConditions}
+            defaultLogic={filterLogic}
             data={scorers}
             getFieldValue={getFieldValue}
           />

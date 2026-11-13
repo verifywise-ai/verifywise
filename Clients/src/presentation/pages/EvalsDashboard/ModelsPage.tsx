@@ -201,6 +201,7 @@ export default function ModelsPage({ orgId, openAddModal, onAddModalConsumed }: 
     filterData,
     handleFilterChange,
     conditions: filterConditions,
+    logic: filterLogic,
   } = useFilterBy<SavedModel>(getFieldValue);
 
   const filteredModels = useMemo(() => {
@@ -347,6 +348,7 @@ export default function ModelsPage({ orgId, openAddModal, onAddModalConsumed }: 
             columns={filterColumns}
             onFilterChange={handleFilterChange}
             defaultConditions={filterConditions}
+            defaultLogic={filterLogic}
             data={models}
             getFieldValue={getFieldValue}
           />

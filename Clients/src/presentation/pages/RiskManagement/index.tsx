@@ -35,7 +35,7 @@ import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import {
   getRiskFieldValue,
-  riskLevelCardKey,
+  riskLevelCardAfterFilterChange,
   RISK_LEVEL_OPTIONS,
   SEVERITY_OPTIONS,
 } from "./riskFilters";
@@ -243,23 +243,21 @@ const RiskManagement = () => {
     filterData,
     handleFilterChange: handleFilterByChangeBase,
     conditions: filterConditions,
+    logic: filterLogic,
   } = useFilterBy<RiskModel>(getRiskFieldValue);
 
   // Wrapper to sync selected risk level card with filter conditions
   const handleFilterByChange = useCallback(
     (conditions: FilterCondition[], logic: "and" | "or") => {
-      // Sync selected risk level card with filter conditions
-      const riskLevelCondition = conditions.find((c) => c.columnId === "risk_level");
-      if (riskLevelCondition && riskLevelCondition.operator === "is" && riskLevelCondition.value) {
-        setSelectedRiskLevel(riskLevelCardKey(riskLevelCondition.value));
-      } else {
-        setSelectedRiskLevel(null);
-      }
+      // Move the risk level card only when the risk level condition changes,
+      // so picking another filter keeps the card the user selected.
+      const card = riskLevelCardAfterFilterChange(filterConditions, conditions);
+      if (card !== undefined) setSelectedRiskLevel(card);
 
       // Pass to base handler for client-side filtering
       handleFilterByChangeBase(conditions, logic);
     },
-    [handleFilterByChangeBase],
+    [filterConditions, handleFilterByChangeBase],
   );
 
   // Handle risk card click to filter risks by risk level
@@ -775,6 +773,7 @@ const RiskManagement = () => {
                 columns={filterColumns}
                 onFilterChange={handleFilterByChange}
                 defaultConditions={filterConditions}
+                defaultLogic={filterLogic}
                 data={projectRisks}
                 getFieldValue={getRiskFieldValue}
               />

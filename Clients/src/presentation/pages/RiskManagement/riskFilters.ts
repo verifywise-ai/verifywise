@@ -8,6 +8,7 @@
 import type { RiskModel } from "../../../domain/models/Common/risks/risk.model";
 import { Severity } from "../../../domain/enums/severity.enum";
 import { RiskLevelAutoCalculated } from "../../../domain/enums/riskLevelAutoCalculated.enum";
+import type { FilterCondition } from "../../components/Table/FilterBy";
 
 /** Severity values as stored on a risk. */
 export const SEVERITY_OPTIONS = Object.values(Severity).map((value) => ({ value, label: value }));
@@ -38,6 +39,30 @@ const CARD_KEY_BY_LEVEL: Record<string, string> = {
 /** The summary card that matches a filtered risk level, so the card shows as selected. */
 export function riskLevelCardKey(level: string): string | null {
   return CARD_KEY_BY_LEVEL[level.toLowerCase()] ?? null;
+}
+
+/** The risk-level condition's operator and value, or "" when there is none. */
+function riskLevelSignature(conditions: FilterCondition[]): string {
+  const condition = conditions.find((c) => c.columnId === "risk_level");
+  return condition ? `${condition.operator}|${condition.value}` : "";
+}
+
+/**
+ * The summary card to select after a filter change. Only a change to the
+ * risk-level condition moves the card: it then follows that condition, or
+ * clears when the condition is gone. Any other filter change returns
+ * `undefined`, meaning keep the card the user picked.
+ */
+export function riskLevelCardAfterFilterChange(
+  previous: FilterCondition[],
+  next: FilterCondition[],
+): string | null | undefined {
+  if (riskLevelSignature(previous) === riskLevelSignature(next)) return undefined;
+  const condition = next.find((c) => c.columnId === "risk_level");
+  if (condition && condition.operator === "is" && condition.value) {
+    return riskLevelCardKey(condition.value);
+  }
+  return null;
 }
 
 /** Reads a filter column's value from a risk. */

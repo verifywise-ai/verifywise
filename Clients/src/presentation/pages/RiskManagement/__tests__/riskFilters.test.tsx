@@ -2,10 +2,11 @@ import { screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import { FilterChips } from "../../../components/Table/FilterChips";
-import type { FilterColumn } from "../../../components/Table/FilterBy";
+import type { FilterColumn, FilterCondition } from "../../../components/Table/FilterBy";
 import type { RiskModel } from "../../../../domain/models/Common/risks/risk.model";
 import {
   getRiskFieldValue,
+  riskLevelCardAfterFilterChange,
   riskLevelCardKey,
   RISK_LEVEL_OPTIONS,
   SEVERITY_OPTIONS,
@@ -61,5 +62,42 @@ describe("Risk management filter chips", () => {
     expect(riskLevelCardKey("Very Low risk")).toBe("Very low");
     expect(riskLevelCardKey("No risk")).toBe("Very low");
     expect(riskLevelCardKey("unknown")).toBeNull();
+  });
+});
+
+describe("riskLevelCardAfterFilterChange", () => {
+  const severity: FilterCondition = {
+    id: "s",
+    columnId: "severity",
+    operator: "is",
+    value: "Major",
+  };
+  const level = (value: string): FilterCondition => ({
+    id: "l",
+    columnId: "risk_level",
+    operator: "is",
+    value,
+  });
+
+  it("keeps the selected card when an unrelated filter is picked", () => {
+    // The user clicked the High card (no risk_level condition), then Severity=Major.
+    expect(riskLevelCardAfterFilterChange([], [severity])).toBeUndefined();
+  });
+
+  it("keeps the card when the risk level condition is unchanged", () => {
+    expect(
+      riskLevelCardAfterFilterChange([level("High risk")], [level("High risk"), severity]),
+    ).toBeUndefined();
+  });
+
+  it("follows a new risk level condition", () => {
+    expect(riskLevelCardAfterFilterChange([], [level("Very Low risk")])).toBe("Very low");
+    expect(riskLevelCardAfterFilterChange([level("High risk")], [level("Medium risk")])).toBe(
+      "Medium",
+    );
+  });
+
+  it("clears the card when the risk level condition is removed", () => {
+    expect(riskLevelCardAfterFilterChange([level("High risk"), severity], [severity])).toBeNull();
   });
 });

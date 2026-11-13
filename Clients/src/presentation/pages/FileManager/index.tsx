@@ -738,6 +738,7 @@ const FileManager: React.FC = (): JSX.Element => {
     filterData: filterFileData,
     handleFilterChange: handleFileFilterChange,
     conditions: fileFilterConditions,
+    logic: fileFilterLogic,
   } = useFilterBy<FileModel>(getFileFieldValue);
 
   // Filter files
@@ -892,6 +893,7 @@ const FileManager: React.FC = (): JSX.Element => {
               columns={fileFilterColumns}
               onFilterChange={handleFileFilterChange}
               defaultConditions={fileFilterConditions}
+              defaultLogic={fileFilterLogic}
               data={activeFilesData}
               getFieldValue={getFileFieldValue}
             />

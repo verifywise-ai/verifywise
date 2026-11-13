@@ -462,6 +462,7 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
     filterData: filterPolicyData,
     handleFilterChange: handlePolicyFilterChange,
     conditions: policyFilterConditions,
+    logic: policyFilterLogic,
   } = useFilterBy<PolicyManagerModel>(getPolicyFieldValue);
 
   // ✅ Filter + search using FilterBy
@@ -637,6 +638,7 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
                 columns={policyFilterColumns}
                 onFilterChange={handlePolicyFilterChange}
                 defaultConditions={policyFilterConditions}
+                defaultLogic={policyFilterLogic}
                 data={policies}
                 getFieldValue={getPolicyFieldValue}
               />

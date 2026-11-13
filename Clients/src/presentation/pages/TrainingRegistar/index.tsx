@@ -707,6 +707,7 @@ const Training: React.FC = () => {
     filterData: filterTrainingData,
     handleFilterChange: handleTrainingFilterChange,
     conditions: trainingFilterConditions,
+    logic: trainingFilterLogic,
   } = useFilterBy<TrainingRegistarModel>(getTrainingFieldValue);
 
   // Evidence filter
@@ -746,6 +747,7 @@ const Training: React.FC = () => {
     filterData: filterEvidenceData,
     handleFilterChange: handleEvidenceFilterChange,
     conditions: evidenceFilterConditions,
+    logic: evidenceFilterLogic,
   } = useFilterBy<EvidenceHubModel>(getEvidenceFieldValue);
 
   // Filtered trainings using FilterBy and search
@@ -1006,6 +1008,7 @@ const Training: React.FC = () => {
                 columns={trainingFilterColumns}
                 onFilterChange={handleTrainingFilterChange}
                 defaultConditions={trainingFilterConditions}
+                defaultLogic={trainingFilterLogic}
                 data={trainingData}
                 getFieldValue={getTrainingFieldValue}
               />
@@ -1090,6 +1093,7 @@ const Training: React.FC = () => {
                 columns={evidenceFilterColumns}
                 onFilterChange={handleEvidenceFilterChange}
                 defaultConditions={evidenceFilterConditions}
+                defaultLogic={evidenceFilterLogic}
                 data={evidenceHubData}
                 getFieldValue={getEvidenceFieldValue}
               />

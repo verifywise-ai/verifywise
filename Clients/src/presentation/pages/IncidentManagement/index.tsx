@@ -360,6 +360,7 @@ const IncidentManagement: React.FC = () => {
     filterData: filterIncidentData,
     handleFilterChange: handleIncidentFilterChange,
     conditions: incidentFilterConditions,
+    logic: incidentFilterLogic,
   } = useFilterBy<AIIncidentManagementModel>(getIncidentFieldValue);
 
   /** -------------------- FILTERING -------------------- */
@@ -849,6 +850,7 @@ const IncidentManagement: React.FC = () => {
               columns={incidentFilterColumns}
               onFilterChange={handleIncidentFilterChange}
               defaultConditions={incidentFilterConditions}
+              defaultLogic={incidentFilterLogic}
               data={nonArchivedIncidents}
               getFieldValue={getIncidentFieldValue}
             />

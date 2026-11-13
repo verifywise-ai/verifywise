@@ -655,6 +655,7 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
               <TableFilter
                 columns={filterColumns}
                 defaultConditions={filterConditions}
+                defaultLogic={filterLogic}
                 onFilterChange={(conditions, logic) => {
                   setFilterConditions(conditions);
                   setFilterLogic(logic);

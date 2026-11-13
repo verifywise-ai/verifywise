@@ -185,6 +185,7 @@ const Datasets: React.FC = () => {
     filterData: filterDatasetData,
     handleFilterChange: handleDatasetFilterChange,
     conditions: datasetFilterConditions,
+    logic: datasetFilterLogic,
   } = useFilterBy<IDataset>(getDatasetFieldValue);
 
   // GroupBy - Get group key for a dataset
@@ -473,6 +474,7 @@ const Datasets: React.FC = () => {
               columns={DATASET_FILTER_COLUMNS}
               onFilterChange={handleDatasetFilterChange}
               defaultConditions={datasetFilterConditions}
+              defaultLogic={datasetFilterLogic}
               data={datasetData}
               getFieldValue={getDatasetFieldValue}
             />

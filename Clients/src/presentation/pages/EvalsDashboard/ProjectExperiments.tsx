@@ -510,6 +510,7 @@ export default function ProjectExperiments({
     filterData,
     handleFilterChange,
     conditions: filterConditions,
+    logic: filterLogic,
   } = useFilterBy<ExperimentWithMetrics>(getExperimentFieldValue);
 
   const filteredExperiments = useMemo(() => {
@@ -824,6 +825,7 @@ export default function ProjectExperiments({
             columns={experimentFilterColumns}
             onFilterChange={handleFilterChange}
             defaultConditions={filterConditions}
+            defaultLogic={filterLogic}
             data={experiments}
             getFieldValue={getExperimentFieldValue}
           />

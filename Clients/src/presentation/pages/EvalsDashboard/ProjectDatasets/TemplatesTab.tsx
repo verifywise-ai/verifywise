@@ -18,6 +18,8 @@ export type TemplatesTabProps = {
   onFilterChange: (conditions: FilterCondition[], logic: "and" | "or") => void;
   /** The page's current conditions, so the filter shows them again after a tab switch. */
   filterConditions: FilterCondition[];
+  /** The page's current and/or logic, so the classic filter restores it too. */
+  filterLogic: "and" | "or";
   /** Templates before filtering, so the filter chips can count values. */
   filterRows: TemplateWithCategory[];
   getFilterFieldValue: (item: TemplateWithCategory, fieldId: string) => FilterFieldValue;
@@ -36,6 +38,7 @@ export default function TemplatesTab({
   filterColumns,
   onFilterChange,
   filterConditions,
+  filterLogic,
   filterRows,
   getFilterFieldValue,
   templateSearchTerm,
@@ -55,6 +58,7 @@ export default function TemplatesTab({
         <TableFilter
           columns={filterColumns}
           defaultConditions={filterConditions}
+          defaultLogic={filterLogic}
           onFilterChange={onFilterChange}
           data={filterRows}
           getFieldValue={getFilterFieldValue}

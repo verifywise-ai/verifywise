@@ -19,6 +19,12 @@ export interface FilterColumn {
   label: string;
   type: FilterColumnType;
   options?: FilterColumnOption[]; // Required for 'select' type
+  /**
+   * The page fetches rows for the picked value, so the loaded rows cannot
+   * count the other values. Once a value is picked, the phase 1 chip menu
+   * lists every option without counts. The classic filter ignores it.
+   */
+  serverFiltered?: boolean;
 }
 
 export type FilterOperator =

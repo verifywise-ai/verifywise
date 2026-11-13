@@ -382,6 +382,7 @@ const ModelInventory: React.FC = () => {
     filterData: filterModelData,
     handleFilterChange: handleModelFilterChange,
     conditions: modelFilterConditions,
+    logic: modelFilterLogic,
   } = useFilterBy<IModelInventory>(getModelFieldValue);
 
   // FilterBy - Dynamic options generators for Model Risks tab
@@ -496,6 +497,7 @@ const ModelInventory: React.FC = () => {
     filterData: filterModelRiskData,
     handleFilterChange: handleModelRiskFilterChange,
     conditions: modelRiskFilterConditions,
+    logic: modelRiskFilterLogic,
   } = useFilterBy<IModelRisk>(getModelRiskFieldValue);
 
   const [evidenceHubData, setEvidenceHubData] = useState<EvidenceHubModel[]>([]);
@@ -662,6 +664,7 @@ const ModelInventory: React.FC = () => {
     filterData: filterEvidenceData,
     handleFilterChange: handleEvidenceFilterChange,
     conditions: evidenceFilterConditions,
+    logic: evidenceFilterLogic,
   } = useFilterBy<EvidenceHubModel>(getEvidenceFieldValue);
 
   const [isEvidenceLoading, setEvidenceLoading] = useState(false);
@@ -2306,6 +2309,7 @@ const ModelInventory: React.FC = () => {
                     columns={modelFilterColumns}
                     onFilterChange={handleModelFilterChange}
                     defaultConditions={modelFilterConditions}
+                    defaultLogic={modelFilterLogic}
                     data={modelInventoryData}
                     getFieldValue={getModelFieldValue}
                   />
@@ -2411,6 +2415,7 @@ const ModelInventory: React.FC = () => {
                     columns={modelRiskFilterColumns}
                     onFilterChange={handleModelRiskFilterChange}
                     defaultConditions={modelRiskFilterConditions}
+                    defaultLogic={modelRiskFilterLogic}
                     data={modelRisksData}
                     getFieldValue={getModelRiskFieldValue}
                   />
@@ -2511,6 +2516,7 @@ const ModelInventory: React.FC = () => {
                     columns={evidenceFilterColumns}
                     onFilterChange={handleEvidenceFilterChange}
                     defaultConditions={evidenceFilterConditions}
+                    defaultLogic={evidenceFilterLogic}
                     data={evidenceHubData}
                     getFieldValue={getEvidenceFieldValue}
                   />

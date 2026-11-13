@@ -49,6 +49,7 @@ import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { FilterColumn } from "../../components/Table/FilterBy";
 import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
+import type { FilterFieldValue } from "../../../application/utils/filterConditions";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import Alert from "../../components/Alert";
@@ -282,32 +283,30 @@ const Tasks: React.FC = () => {
   );
 
   // FilterBy - Field value getter
-  const getTaskFieldValue = useCallback(
-    (item: TaskModel, fieldId: string): string | number | Date | null | undefined => {
-      switch (fieldId) {
-        case "title":
-          return item.title;
-        case "status":
-          return item.status;
-        case "priority":
-          return item.priority;
-        case "assignee":
-          // Return comma-separated assignee IDs for matching
-          return item.assignees?.map((id) => String(id)).join(",");
-        case "due_date":
-          return item.due_date;
-        default:
-          return null;
-      }
-    },
-    [],
-  );
+  const getTaskFieldValue = useCallback((item: TaskModel, fieldId: string): FilterFieldValue => {
+    switch (fieldId) {
+      case "title":
+        return item.title;
+      case "status":
+        return item.status;
+      case "priority":
+        return item.priority;
+      case "assignee":
+        // A task can have several assignees: "is" matches any of them.
+        return item.assignees?.map((id) => String(id)) ?? [];
+      case "due_date":
+        return item.due_date;
+      default:
+        return null;
+    }
+  }, []);
 
   // FilterBy - Initialize hook
   const {
     filterData: filterTaskData,
     handleFilterChange: handleTaskFilterChange,
     conditions: taskFilterConditions,
+    logic: taskFilterLogic,
   } = useFilterBy<TaskModel>(getTaskFieldValue);
 
   // Apply FilterBy and search filtering
@@ -877,6 +876,7 @@ const Tasks: React.FC = () => {
                 columns={taskFilterColumns}
                 onFilterChange={handleTaskFilterChange}
                 defaultConditions={taskFilterConditions}
+                defaultLogic={taskFilterLogic}
                 data={tasks}
                 getFieldValue={getTaskFieldValue}
               />

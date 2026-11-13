@@ -299,6 +299,7 @@ const Reports: React.FC<ReportsProps> = ({
     filterData: filterReportData,
     handleFilterChange: handleReportFilterChange,
     conditions: reportFilterConditions,
+    logic: reportFilterLogic,
   } = useFilterBy<GeneratedReports>(getReportFieldValue);
 
   // Filter reports using FilterBy and search
@@ -369,6 +370,7 @@ const Reports: React.FC<ReportsProps> = ({
             columns={reportFilterColumns}
             onFilterChange={handleReportFilterChange}
             defaultConditions={reportFilterConditions}
+            defaultLogic={reportFilterLogic}
             data={generatedReports}
             getFieldValue={getReportFieldValue}
           />

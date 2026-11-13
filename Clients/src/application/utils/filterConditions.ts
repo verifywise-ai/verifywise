@@ -2,11 +2,20 @@ import type { FilterOperator } from "../../presentation/components/Table/FilterB
 
 /**
  * Pure matching rules for table filter conditions. `useFilterBy` filters rows
- * with them and the phase 1 filter chips count rows with them, so a chip's
- * count always equals the rows the table shows once that chip is picked.
+ * with them and the phase 1 filter chips count rows with them, so a chip
+ * option's count equals the rows the filter keeps once that option is picked,
+ * given the other chips. The page's search box and summary cards are applied
+ * outside these rules, so the counts do not reflect them.
+ *
+ * A multi-valued field (a vendor's projects, a task's assignees) is read as an
+ * array: `is` then means "includes" and `is not` means "does not include".
  */
 
-export type FilterFieldValue = string | number | Date | null | undefined;
+/** One value of a field. */
+export type FilterScalarValue = string | number | Date | null | undefined;
+
+/** A field's value: one scalar, or an array for a multi-valued field. */
+export type FilterFieldValue = FilterScalarValue | ReadonlyArray<string | number>;
 
 /** Date operators: they need no value input. */
 export const DATE_FILTER_OPERATORS: FilterOperator[] = [
@@ -25,7 +34,7 @@ export const NO_VALUE_FILTER_OPERATORS: FilterOperator[] = [
   ...DATE_FILTER_OPERATORS,
 ];
 
-function parseDate(value: FilterFieldValue): Date | null {
+function parseDate(value: FilterScalarValue): Date | null {
   if (!value) return null;
   if (value instanceof Date) return value;
   const parsed = new Date(value);
@@ -67,9 +76,37 @@ function isPast(date: Date | null): boolean {
   return date < now;
 }
 
-/** Whether one field value passes one filter condition. Text matching ignores case. */
+/**
+ * Whether one field value passes one filter condition. Text matching ignores
+ * case. On an array, a positive operator (is, contains, a date range) passes
+ * when any element passes, a negative one (is not, does not contain) when no
+ * element matches its positive form, and the empty checks look at the length.
+ */
 export function matchesFilterCondition(
   itemValue: FilterFieldValue,
+  operator: FilterOperator,
+  filterValue: string,
+): boolean {
+  if (Array.isArray(itemValue)) {
+    const values = itemValue as ReadonlyArray<string | number>;
+    switch (operator) {
+      case "is_empty":
+        return values.length === 0;
+      case "is_not_empty":
+        return values.length > 0;
+      case "is_not":
+        return !values.some((v) => matchesScalar(v, "is", filterValue));
+      case "does_not_contain":
+        return !values.some((v) => matchesScalar(v, "contains", filterValue));
+      default:
+        return values.some((v) => matchesScalar(v, operator, filterValue));
+    }
+  }
+  return matchesScalar(itemValue as FilterScalarValue, operator, filterValue);
+}
+
+function matchesScalar(
+  itemValue: FilterScalarValue,
   operator: FilterOperator,
   filterValue: string,
 ): boolean {

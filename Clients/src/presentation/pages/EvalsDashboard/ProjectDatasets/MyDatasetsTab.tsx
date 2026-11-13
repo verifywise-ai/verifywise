@@ -22,6 +22,8 @@ export type MyDatasetsTabProps = {
   onFilterChange: (conditions: FilterCondition[], logic: "and" | "or") => void;
   /** The page's current conditions, so the filter shows them again after a tab switch. */
   filterConditions: FilterCondition[];
+  /** The page's current and/or logic, so the classic filter restores it too. */
+  filterLogic: "and" | "or";
   onGroupChange: (field: string | null, sortOrder: "asc" | "desc") => void;
   searchTerm: string;
   onSearchTermChange: (value: string) => void;
@@ -44,6 +46,7 @@ export default function MyDatasetsTab({
   filterColumns,
   onFilterChange,
   filterConditions,
+  filterLogic,
   onGroupChange,
   searchTerm,
   onSearchTermChange,
@@ -75,6 +78,7 @@ export default function MyDatasetsTab({
           <TableFilter
             columns={filterColumns}
             defaultConditions={filterConditions}
+            defaultLogic={filterLogic}
             onFilterChange={onFilterChange}
           />
           <GroupBy

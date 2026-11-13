@@ -277,6 +277,7 @@ export default function HistoryPage() {
     filterData,
     handleFilterChange,
     conditions: filterConditions,
+    logic: filterLogic,
   } = useFilterBy<Scan>(getScanFieldValue);
 
   // Save rowsPerPage to localStorage whenever it changes
@@ -764,6 +765,7 @@ export default function HistoryPage() {
           columns={FILTER_COLUMNS}
           onFilterChange={handleFilterChange}
           defaultConditions={filterConditions}
+          defaultLogic={filterLogic}
           data={scans}
           getFieldValue={getScanFieldValue}
         />

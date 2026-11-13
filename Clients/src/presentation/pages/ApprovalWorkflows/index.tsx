@@ -107,6 +107,7 @@ const ApprovalWorkflows: React.FC = () => {
     filterData: filterWorkflowData,
     handleFilterChange: handleWorkflowFilterChange,
     conditions: workflowFilterConditions,
+    logic: workflowFilterLogic,
   } = useFilterBy<ApprovalWorkflowModel>(getWorkflowFieldValue);
 
   /** -------------------- FILTERING -------------------- */
@@ -352,6 +353,7 @@ const ApprovalWorkflows: React.FC = () => {
               columns={workflowFilterColumns}
               onFilterChange={handleWorkflowFilterChange}
               defaultConditions={workflowFilterConditions}
+              defaultLogic={workflowFilterLogic}
               data={workflowData}
               getFieldValue={getWorkflowFieldValue}
             />
