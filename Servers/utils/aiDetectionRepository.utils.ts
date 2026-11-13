@@ -11,6 +11,7 @@ import { sequelize } from "../database/db";
 import { Transaction, QueryTypes } from "sequelize";
 import {
   IAIDetectionRepository,
+  IAIDetectionRepositoryResponse,
   ICreateRepositoryInput,
   IUpdateRepositoryInput,
   ScheduleFrequency,
@@ -136,23 +137,53 @@ export async function getRepositoryByOwnerNameQuery(
   return (results as IAIDetectionRepository[])[0] || null;
 }
 
-export async function getRepositoryByOwnerNameForWebhook(
+/** Most repositories a single webhook delivery is checked against. */
+const MAX_WEBHOOK_CANDIDATES = 50;
+
+/**
+ * Every CI-enabled repository registered under this GitHub owner/name, in any
+ * organization. Intentionally cross-organization: the public webhook endpoint
+ * has no tenant context, so the caller must verify the delivery's signature
+ * against each candidate's secret and only act on the ones that verify.
+ *
+ * GitHub owner and repository names are case-insensitive, so the match is too.
+ */
+export async function getRepositoriesForWebhookQuery(
   owner: string,
   name: string,
-): Promise<(IAIDetectionRepository & { organization_id: number }) | null> {
+): Promise<(IAIDetectionRepository & { organization_id: number })[]> {
   const query = `
     SELECT * FROM ai_detection_repositories
-    WHERE repository_owner = :owner AND repository_name = :name
+    WHERE LOWER(repository_owner) = LOWER(:owner) AND LOWER(repository_name) = LOWER(:name)
       AND is_enabled = TRUE AND ci_enabled = TRUE
-    LIMIT 1;
+    ORDER BY id ASC
+    LIMIT :limit;
   `;
 
   const results = await sequelize.query(query, {
-    replacements: { owner, name },
+    replacements: { owner, name, limit: MAX_WEBHOOK_CANDIDATES },
     type: QueryTypes.SELECT,
   });
 
-  return (results as (IAIDetectionRepository & { organization_id: number })[])[0] || null;
+  return results as (IAIDetectionRepository & { organization_id: number })[];
+}
+
+/**
+ * Shape a repository row for an API response. The webhook secret is removed
+ * and replaced by `has_webhook_secret`; pass `revealSecret` only on the
+ * response to the request that generated the secret, so an editor can copy it
+ * into GitHub once.
+ */
+export function toRepositoryResponse(
+  repository: IAIDetectionRepository,
+  options: { revealSecret?: boolean } = {},
+): IAIDetectionRepositoryResponse {
+  const { webhook_secret, ...rest } = repository;
+  return {
+    ...rest,
+    has_webhook_secret: !!webhook_secret,
+    ...(options.revealSecret && webhook_secret ? { webhook_secret } : {}),
+  };
 }
 
 /**

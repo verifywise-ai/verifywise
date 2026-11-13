@@ -11,10 +11,13 @@
 import { Request, Response } from "express";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import {
-  getRepositoryByOwnerNameForWebhook,
+  getRepositoriesForWebhookQuery,
   recordWebhookDeliveryQuery,
 } from "../utils/aiDetectionRepository.utils";
-import { WebhookDeliveryStatus } from "../domain.layer/interfaces/i.aiDetectionRepository";
+import {
+  IAIDetectionRepository,
+  WebhookDeliveryStatus,
+} from "../domain.layer/interfaces/i.aiDetectionRepository";
 import {
   verifyGitHubSignature,
   handlePushEvent,
@@ -42,6 +45,49 @@ async function recordDelivery(
   }
 }
 
+type WebhookRepository = IAIDetectionRepository & { organization_id: number };
+type DeliveryResult = { triggered: boolean; reason: string };
+
+const INTERNAL_ERROR_RESULT: DeliveryResult = {
+  triggered: false,
+  reason: "Internal processing error",
+};
+
+/**
+ * Handle one verified delivery for one repository and record the outcome.
+ * A failure is recorded as "error" on that repository only, so one
+ * organization's failure never hides another's result.
+ */
+async function processDelivery(
+  repo: WebhookRepository,
+  event: string,
+  payload: Record<string, unknown>,
+): Promise<DeliveryResult | null> {
+  try {
+    let result: DeliveryResult;
+    switch (event) {
+      case "push":
+        result = await handlePushEvent(payload as any, repo);
+        break;
+      case "pull_request":
+        result = await handlePullRequestEvent(payload as any, repo);
+        break;
+      default:
+        result = { triggered: false, reason: `Unsupported event type: ${event}` };
+    }
+    logger.info(`GitHub webhook ${event} for repository ${repo.id}: ${result.reason}`);
+    await recordDelivery(repo, "ok");
+    return result;
+  } catch (error) {
+    logger.error(
+      "Failed to process GitHub webhook:",
+      error instanceof Error ? error : new Error(String(error)),
+    );
+    await recordDelivery(repo, "error");
+    return null;
+  }
+}
+
 /**
  * Handle GitHub webhook events
  *
@@ -51,8 +97,6 @@ async function recordDelivery(
  */
 export async function githubWebhookController(req: Request, res: Response): Promise<Response> {
   logger.info("Processing GitHub webhook");
-
-  let matchedRepo: Awaited<ReturnType<typeof getRepositoryByOwnerNameForWebhook>> = null;
 
   try {
     // 1. Extract headers
@@ -92,84 +136,82 @@ export async function githubWebhookController(req: Request, res: Response): Prom
       return res.status(400).json(STATUS_CODE[400](req.t!("Missing repository info in payload")));
     }
 
-    // 5. Look up registered repository (with CI enabled)
-    const repo = await getRepositoryByOwnerNameForWebhook(owner, name);
+    // 5. Look up every registered repository (with CI enabled) for this
+    // owner/name. The same GitHub repository can be registered by more than
+    // one organization, each with its own secret.
+    const candidates = await getRepositoriesForWebhookQuery(owner, name);
 
-    if (!repo) {
+    if (candidates.length === 0) {
       // Return 200 to avoid GitHub retrying — repo not registered or CI disabled
       return res
         .status(200)
         .json({ message: req.t!("Repository not registered or CI not enabled") });
     }
 
-    // 6. Verify HMAC signature
-    // Unverified requests never write to the repository row: anyone who knows
-    // the public URL could otherwise overwrite the last verified delivery.
-    if (!repo.webhook_secret) {
+    // 6. Verify the HMAC signature against each candidate's secret. Only the
+    // repositories whose secret verifies are acted on. Secrets are random
+    // per repository, so in practice that is the one organization that set
+    // up this webhook. Unverified requests never write to any repository row:
+    // anyone who knows the public URL could otherwise overwrite the last
+    // verified delivery.
+    const withSecret = candidates.filter((repo) => !!repo.webhook_secret);
+    if (withSecret.length === 0) {
       logStructured(
         "error",
-        `webhook rejected for repository ${repo.id}: no secret configured`,
+        `webhook rejected for ${owner}/${name}: no signing key configured`,
         "githubWebhookController",
         "webhook.ctrl.ts",
       );
       return res.status(200).json({ message: req.t!("Webhook secret not configured") });
     }
 
-    if (!verifyGitHubSignature(rawBody, signature, repo.webhook_secret)) {
+    const verified = withSecret.filter((repo) =>
+      verifyGitHubSignature(rawBody, signature, repo.webhook_secret as string),
+    );
+    if (verified.length === 0) {
       logStructured(
         "error",
-        `webhook rejected for repository ${repo.id}: signature did not verify`,
+        `webhook rejected for ${owner}/${name}: signature did not verify`,
         "githubWebhookController",
         "webhook.ctrl.ts",
       );
       return res.status(401).json(STATUS_CODE[401](req.t!("Invalid signature")));
     }
 
-    matchedRepo = repo;
-
     // 7. Handle ping event (sent when webhook is first configured)
     if (event === "ping") {
       logger.info(`Webhook ping received for ${owner}/${name} (delivery: ${deliveryId})`);
-      await recordDelivery(repo, "ok");
+      for (const repo of verified) {
+        await recordDelivery(repo, "ok");
+      }
       return res.status(200).json({ message: req.t!("pong") });
     }
 
-    // 8. Route to appropriate handler
-    let result: { triggered: boolean; reason: string };
-
-    switch (event) {
-      case "push":
-        result = await handlePushEvent(payload as any, repo);
-        break;
-
-      case "pull_request":
-        result = await handlePullRequestEvent(payload as any, repo);
-        break;
-
-      default:
-        result = { triggered: false, reason: `Unsupported event type: ${event}` };
+    // 8. Route to the handler for each verified repository
+    const results: (DeliveryResult | null)[] = [];
+    for (const repo of verified) {
+      results.push(await processDelivery(repo, event, payload));
     }
 
-    logger.info(`GitHub webhook ${event}: ${result.reason}`);
-    await recordDelivery(repo, "ok");
-
-    return res.status(200).json(result);
+    if (results.every((result) => result === null)) {
+      return res.status(200).json(STATUS_CODE[200](INTERNAL_ERROR_RESULT));
+    }
+    const handled = results.map((result) => result ?? INTERNAL_ERROR_RESULT);
+    if (handled.length === 1) {
+      return res.status(200).json(handled[0]);
+    }
+    return res.status(200).json({
+      triggered: handled.some((result) => result.triggered),
+      reason: handled.map((result) => result.reason).join("; "),
+    });
   } catch (error) {
     logger.error(
       "Failed to process GitHub webhook:",
       error instanceof Error ? error : new Error(String(error)),
     );
-    if (matchedRepo) {
-      await recordDelivery(matchedRepo, "error");
-    }
 
     // Always return 200 to prevent GitHub from retrying on internal errors
     // Log the error server-side but don't expose details
-    return res.status(200).json(
-      STATUS_CODE[200]({
-        triggered: false,
-        reason: "Internal processing error",
-      }),
-    );
+    return res.status(200).json(STATUS_CODE[200](INTERNAL_ERROR_RESULT));
   }
 }

@@ -4,12 +4,13 @@
  * StandardModal for registering a new repository or editing an existing one.
  * Includes optional schedule and CI/CD configuration. When a save turns CI/CD
  * on, the modal switches to a setup step with the webhook URL, the secret the
- * server generated, and the GitHub steps to finish the connection.
+ * server generated, and the GitHub steps to finish the connection. The secret
+ * is only ever shown right after it is generated: reads never return it.
  *
  * @module pages/AIDetection/AddRepositoryModal
  */
 
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect, useRef, type FocusEvent } from "react";
 import {
   Box,
   Stack,
@@ -19,8 +20,10 @@ import {
   InputAdornment,
   Tooltip,
 } from "@mui/material";
-import { Copy, Check, RefreshCw } from "lucide-react";
+import { Copy, Check } from "lucide-react";
 import StandardModal from "../../components/Modals/StandardModal";
+import Alert from "../../components/Alert";
+import { CustomizableButton } from "../../components/button/customizable-button";
 import Field from "../../components/Inputs/Field";
 import Select from "../../components/Inputs/Select";
 import Toggle from "../../components/Inputs/Toggle";
@@ -29,13 +32,10 @@ import {
   CreateRepositoryInput,
   UpdateRepositoryInput,
   ScheduleFrequency,
-  WebhookConfig,
   WebhookDeliveryStatus,
 } from "../../../domain/ai-detection/repositoryTypes";
-import {
-  generateWebhookSecret,
-  getWebhookConfig,
-} from "../../../application/repository/aiDetectionRepository.repository";
+import { generateWebhookSecret } from "../../../application/repository/aiDetectionRepository.repository";
+import { useWebhookConfig } from "../../../application/hooks/useWebhookConfig";
 import { useTranslation } from "../../../application/hooks/useTranslation";
 import { fill } from "../../../i18n/fill";
 import {
@@ -144,16 +144,21 @@ export default function AddRepositoryModal({
   const [ciMaxCritical, setCiMaxCritical] = useState(String(DEFAULT_MAX_CRITICAL));
   const [ciPostComments, setCiPostComments] = useState(true);
   const [ciStatusChecks, setCiStatusChecks] = useState(true);
+  /** A secret generated in this modal session; the server never sends it on reads. */
   const [webhookSecret, setWebhookSecret] = useState("");
   const [isGeneratingSecret, setIsGeneratingSecret] = useState(false);
   const [copiedField, setCopiedField] = useState<string | null>(null);
-  const [webhookConfig, setWebhookConfig] = useState<WebhookConfig | null>(null);
+  /** The field whose copy failed; its value is then shown for manual copying. */
+  const [copyFailedField, setCopyFailedField] = useState<string | null>(null);
   /** Set after a save that turned CI/CD on: the modal shows the setup step. */
   const [setupRepository, setSetupRepository] = useState<AIDetectionRepository | null>(null);
   const copyTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
     setSetupRepository(null);
+    setWebhookSecret("");
+    setCopiedField(null);
+    setCopyFailedField(null);
     if (editingRepository) {
       setRepositoryUrl(editingRepository.repository_url);
       setDisplayName(editingRepository.display_name || "");
@@ -170,7 +175,6 @@ export default function AddRepositoryModal({
       setCiMaxCritical(String(editingRepository.ci_max_critical ?? DEFAULT_MAX_CRITICAL));
       setCiPostComments(editingRepository.ci_post_comments ?? true);
       setCiStatusChecks(editingRepository.ci_status_checks ?? true);
-      setWebhookSecret(editingRepository.webhook_secret || "");
     } else {
       setRepositoryUrl("");
       setDisplayName("");
@@ -187,25 +191,12 @@ export default function AddRepositoryModal({
       setCiMaxCritical(String(DEFAULT_MAX_CRITICAL));
       setCiPostComments(true);
       setCiStatusChecks(true);
-      setWebhookSecret("");
     }
   }, [editingRepository, isOpen, focusSchedule]);
 
-  // The webhook URL comes from the server's public address setting.
-  useEffect(() => {
-    if (!isOpen) return;
-    let cancelled = false;
-    getWebhookConfig()
-      .then((config) => {
-        if (!cancelled) setWebhookConfig(config);
-      })
-      .catch(() => {
-        if (!cancelled) setWebhookConfig(null);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [isOpen]);
+  // The webhook URL comes from the server's public address settings. It is
+  // only needed once CI/CD is on, and it is cached across modal opens.
+  const { data: webhookConfig } = useWebhookConfig(isOpen && (ciEnabled || !!setupRepository));
 
   useEffect(
     () => () => {
@@ -248,10 +239,10 @@ export default function AddRepositoryModal({
     const saved = await onSubmit(data);
     if (!saved) return;
 
-    // Turning CI/CD on needs a step in GitHub, so show it before closing.
-    const needsGitHubSetup =
-      saved.ci_enabled && (!editingRepository?.ci_enabled || !editingRepository.webhook_secret);
-    if (needsGitHubSetup && saved.webhook_secret) {
+    // The server returns the secret only when this save generated it (CI/CD
+    // turned on for the first time). That needs a step in GitHub, so show it
+    // before closing.
+    if (saved.ci_enabled && saved.webhook_secret) {
       setSetupRepository(saved);
       return;
     }
@@ -259,14 +250,39 @@ export default function AddRepositoryModal({
   };
 
   const webhookUrl = webhookConfig?.webhook_url || browserWebhookUrl();
-  const showReachabilityWarning = webhookConfig !== null && !webhookConfig.is_public;
+  const showReachabilityWarning = !!webhookConfig && !webhookConfig.is_public;
+  const hasWebhookSecret = !!webhookSecret || !!editingRepository?.has_webhook_secret;
 
-  const copyToClipboard = (text: string, field: string) => {
-    Promise.resolve(navigator.clipboard?.writeText(text)).catch(() => undefined);
-    setCopiedField(field);
+  /**
+   * Copy a value. "Copied" is shown only when the write succeeded; the
+   * clipboard API is missing on plain-http deployments and can be refused, so
+   * a failure says so and leaves the value visible to copy by hand.
+   */
+  const copyToClipboard = async (text: string, field: string) => {
     if (copyTimeoutRef.current) clearTimeout(copyTimeoutRef.current);
-    copyTimeoutRef.current = setTimeout(() => setCopiedField(null), 2000);
+    try {
+      if (!navigator.clipboard?.writeText) throw new Error("Clipboard not available");
+      await navigator.clipboard.writeText(text);
+      setCopyFailedField(null);
+      setCopiedField(field);
+      copyTimeoutRef.current = setTimeout(() => setCopiedField(null), 2000);
+    } catch {
+      setCopiedField(null);
+      setCopyFailedField(field);
+    }
   };
+
+  const selectAll = (event: FocusEvent<HTMLInputElement>) => event.target.select();
+
+  const copyFailedAlert = (field: string) =>
+    copyFailedField === field ? (
+      <Alert
+        variant="error"
+        inline
+        hasIcon={false}
+        body="Could not copy to the clipboard. Select the text and copy it manually."
+      />
+    ) : null;
 
   const handleGenerateSecret = async () => {
     if (!editingRepository?.id) return;
@@ -274,6 +290,7 @@ export default function AddRepositoryModal({
     try {
       const result = await generateWebhookSecret(editingRepository.id);
       setWebhookSecret(result.webhook_secret);
+      setCopyFailedField(null);
     } catch {
       // Error handled by API layer
     } finally {
@@ -289,13 +306,32 @@ export default function AddRepositoryModal({
     </Tooltip>
   );
 
+  /** A read-only secret with a copy button. Shown as text if copying failed. */
+  const secretField = (secret: string) => (
+    <Field
+      label="Webhook secret"
+      type={copyFailedField === "secret" ? "text" : "password"}
+      value={secret}
+      onFocus={selectAll}
+      InputProps={{
+        readOnly: true,
+        endAdornment: (
+          <InputAdornment position="end">
+            {copyAdornment(secret, "secret", "Copy webhook secret")}
+          </InputAdornment>
+        ),
+      }}
+    />
+  );
+
   const webhookUrlField = (
     <Stack sx={{ gap: "4px" }}>
       <Field
         label="Webhook URL"
         value={webhookUrl}
-        disabled
+        onFocus={selectAll}
         InputProps={{
+          readOnly: true,
           endAdornment: (
             <InputAdornment position="end">
               {copyAdornment(webhookUrl, "url", "Copy webhook URL")}
@@ -303,6 +339,7 @@ export default function AddRepositoryModal({
           ),
         }}
       />
+      {copyFailedAlert("url")}
       {showReachabilityWarning && (
         <Box
           role="status"
@@ -314,8 +351,8 @@ export default function AddRepositoryModal({
           }}
         >
           <Typography variant="caption" sx={{ color: theme.palette.status.warning.text }}>
-            GitHub must be able to reach this address. Set FRONTEND_URL to this deployment's public
-            URL if it is not reachable from the internet.
+            GitHub must be able to reach this address. If it is not reachable from the internet, set
+            API_PUBLIC_URL on the server to the public address of this deployment's API.
           </Typography>
         </Box>
       )}
@@ -341,21 +378,11 @@ export default function AddRepositoryModal({
           {webhookUrlField}
 
           <Stack sx={{ gap: "4px" }}>
-            <Field
-              label="Webhook secret"
-              type="password"
-              value={secret}
-              disabled
-              InputProps={{
-                endAdornment: (
-                  <InputAdornment position="end">
-                    {copyAdornment(secret, "secret", "Copy webhook secret")}
-                  </InputAdornment>
-                ),
-              }}
-            />
+            {secretField(secret)}
+            {copyFailedAlert("secret")}
             <Typography variant="caption" sx={captionSx}>
-              Copy the secret now. You can see it again, or replace it, by editing the repository.
+              Copy the secret now. It is not shown again. To replace it, edit the repository and
+              regenerate the secret.
             </Typography>
           </Stack>
 
@@ -537,43 +564,40 @@ export default function AddRepositoryModal({
             <Stack sx={{ gap: "8px" }}>
               {webhookUrlField}
 
-              {/* Webhook secret: shown when editing; a new repository gets one on save */}
-              {isEditing && webhookSecret ? (
+              {/* Webhook secret: never read back. Editing shows whether one is set and
+                  lets an editor replace it; the new value is shown once. */}
+              {isEditing && hasWebhookSecret ? (
                 <Stack sx={{ gap: "4px" }}>
-                  <Field
-                    label="Webhook secret"
-                    type="password"
-                    value={webhookSecret}
-                    disabled
-                    InputProps={{
-                      endAdornment: (
-                        <InputAdornment position="end">
-                          {copyAdornment(webhookSecret, "secret", "Copy webhook secret")}
-                          <Tooltip title={t("Regenerate secret")}>
-                            <IconButton
-                              size="small"
-                              aria-label="Regenerate secret"
-                              onClick={handleGenerateSecret}
-                              disabled={isGeneratingSecret}
-                            >
-                              <RefreshCw
-                                size={16}
-                                style={
-                                  isGeneratingSecret
-                                    ? { animation: "spin 1s linear infinite" }
-                                    : undefined
-                                }
-                              />
-                            </IconButton>
-                          </Tooltip>
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
-                  <Typography variant="caption" sx={captionSx}>
-                    Use this secret in the GitHub webhook. After regenerating, update it in GitHub
-                    too.
-                  </Typography>
+                  {webhookSecret && secretField(webhookSecret)}
+                  {webhookSecret && copyFailedAlert("secret")}
+                  <Stack
+                    direction="row"
+                    alignItems="center"
+                    justifyContent="space-between"
+                    sx={{ gap: "8px" }}
+                  >
+                    <Typography
+                      variant="caption"
+                      sx={captionSx}
+                      data-testid="webhook-secret-status"
+                    >
+                      {webhookSecret
+                        ? t(
+                            "Copy the new secret now. It is not shown again. Update it in the GitHub webhook too.",
+                          )
+                        : t(
+                            "A webhook secret is set. It is only shown when it is created. Regenerate it if you need it again, then update it in GitHub.",
+                          )}
+                    </Typography>
+                    <CustomizableButton
+                      text="Regenerate secret"
+                      variant="outlined"
+                      onClick={handleGenerateSecret}
+                      loading={isGeneratingSecret}
+                      isDisabled={isGeneratingSecret}
+                      sx={{ flexShrink: 0 }}
+                    />
+                  </Stack>
                 </Stack>
               ) : (
                 <Typography variant="caption" sx={captionSx}>

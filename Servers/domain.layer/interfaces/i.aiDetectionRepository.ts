@@ -128,8 +128,19 @@ export interface IUpdateRepositoryInput {
 // API Response Types
 // ============================================================================
 
+/**
+ * A repository as the API returns it. The webhook secret is never part of a
+ * read response: `has_webhook_secret` says whether one is set, and
+ * `webhook_secret` is present only on the create or update response that
+ * generated it (and on the regenerate response).
+ */
+export type IAIDetectionRepositoryResponse = Omit<IAIDetectionRepository, "webhook_secret"> & {
+  has_webhook_secret: boolean;
+  webhook_secret?: string;
+};
+
 export interface IRepositoryListResponse {
-  repositories: IAIDetectionRepository[];
+  repositories: IAIDetectionRepositoryResponse[];
   pagination: {
     total: number;
     page: number;

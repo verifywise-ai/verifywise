@@ -5,6 +5,7 @@ import { QueryTypes } from "sequelize";
 import { cleanupDatabase, seedTwoOrgsAndUsers } from "./helpers";
 import {
   createRepositoryQuery,
+  getRepositoriesForWebhookQuery,
   recordWebhookDeliveryQuery,
 } from "../../utils/aiDetectionRepository.utils";
 import { githubWebhookController } from "../../controllers/webhook.ctrl";
@@ -104,5 +105,56 @@ describe("AI Detection webhook delivery tracking", () => {
     const after = await deliveryColumns(repo.id!);
     expect(after.last_webhook_status).toBe("ok");
     expect(after.last_webhook_at).toEqual(verified.last_webhook_at);
+  });
+
+  it("finds the repository in every organization, ignoring case, and acts only on the one whose secret verifies", async () => {
+    const { orgA, orgB, userA, userB } = await seedTwoOrgsAndUsers();
+    const repoA = await createRepositoryQuery(
+      {
+        repository_url: "https://github.com/Acme/Shared",
+        repository_owner: "Acme",
+        repository_name: "Shared",
+        ci_enabled: true,
+        webhook_secret: "secret-a",
+        created_by: userA,
+      },
+      orgA,
+    );
+    const repoB = await createRepositoryQuery(
+      {
+        repository_url: "https://github.com/acme/shared",
+        repository_owner: "acme",
+        repository_name: "shared",
+        ci_enabled: true,
+        webhook_secret: "secret-b",
+        created_by: userB,
+      },
+      orgB,
+    );
+
+    const candidates = await getRepositoriesForWebhookQuery("ACME", "shared");
+    expect(candidates.map((r) => r.id).sort()).toEqual([repoA.id, repoB.id].sort());
+
+    // GitHub sends the canonical case; org B's secret signs the delivery.
+    const body = Buffer.from(
+      JSON.stringify({ zen: "hi", repository: { owner: { login: "ACME" }, name: "Shared" } }),
+    );
+    const signature =
+      "sha256=" + crypto.createHmac("sha256", "secret-b").update(body).digest("hex");
+    const res: any = {};
+    res.status = jest.fn().mockReturnValue(res);
+    res.json = jest.fn().mockReturnValue(res);
+    await githubWebhookController(
+      {
+        headers: { "x-github-event": "ping", "x-hub-signature-256": signature },
+        body,
+        t: (k: string) => k,
+      } as any,
+      res,
+    );
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect((await deliveryColumns(repoB.id!)).last_webhook_status).toBe("ok");
+    expect((await deliveryColumns(repoA.id!)).last_webhook_status).toBeNull();
   });
 });

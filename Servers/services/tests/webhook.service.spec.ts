@@ -102,10 +102,24 @@ describe("webhook.service", () => {
       "http://192.168.1.20:8080",
       "http://172.20.0.3",
       "http://verifywise.local",
+      "http://169.254.169.254",
+      "http://100.64.1.2",
+      "http://127.8.9.10",
+      "http://0.0.0.0:3000",
+      "http://[fd00::5]",
+      "http://[fe80::1]",
+      "http://backend:3000",
+      "http://host.docker.internal:3000",
     ])("flags %s as not reachable by GitHub", (base) => {
       const result = buildGitHubWebhookUrl(base);
       expect(result.is_public).toBe(false);
       expect(result.webhook_url).toMatch(/\/api\/webhooks\/github$/);
+    });
+
+    it("accepts a base that already ends in /api", () => {
+      expect(buildGitHubWebhookUrl("https://api.example.com/api/").webhook_url).toBe(
+        "https://api.example.com/api/webhooks/github",
+      );
     });
 
     it("treats a public IP outside the private ranges as public", () => {

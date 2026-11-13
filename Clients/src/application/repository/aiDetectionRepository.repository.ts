@@ -78,9 +78,23 @@ export async function generateWebhookSecret(id: number): Promise<{ webhook_secre
   return response.data.data;
 }
 
-export async function getWebhookConfig(): Promise<WebhookConfig> {
+/**
+ * Where GitHub should send webhooks. `apiBaseUrl` is the address this app
+ * talks to the API at, when it is absolute: the server uses it when the API
+ * has no explicit public address and that one is reachable from the internet.
+ */
+export async function getWebhookConfig(
+  apiBaseUrl?: string,
+  signal?: AbortSignal,
+): Promise<WebhookConfig> {
   const response = await apiServices.get<{ data: WebhookConfig }>(
     "/v1/ai-detection-repositories/webhook-config",
+    {
+      ...(apiBaseUrl ? { api_base_url: apiBaseUrl } : {}),
+      signal,
+      // The modal falls back to the browser's own address, so no global toast.
+      suppressGlobalErrorToast: true,
+    },
   );
   return response.data.data;
 }

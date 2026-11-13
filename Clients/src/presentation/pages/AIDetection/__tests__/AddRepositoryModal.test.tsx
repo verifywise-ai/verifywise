@@ -1,4 +1,5 @@
 import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { QueryClient } from "@tanstack/react-query";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import AddRepositoryModal from "../AddRepositoryModal";
 import type { AIDetectionRepository } from "../../../../domain/ai-detection/repositoryTypes";
@@ -45,7 +46,7 @@ const editingRepository: AIDetectionRepository = {
   schedule_day_of_month: null,
   schedule_hour: 4,
   schedule_minute: 30,
-  webhook_secret: "existing-secret",
+  has_webhook_secret: true,
   ci_enabled: true,
   ci_min_score: 60,
   ci_max_critical: 2,
@@ -56,6 +57,9 @@ const editingRepository: AIDetectionRepository = {
   created_at: "2026-01-01T00:00:00Z",
   updated_at: "2026-01-01T00:00:00Z",
 };
+
+/** The check mark the copy button shows after a successful copy. */
+const copiedIcon = () => document.querySelector(".lucide-check");
 
 describe("AddRepositoryModal", () => {
   beforeEach(() => {
@@ -171,7 +175,7 @@ describe("AddRepositoryModal", () => {
     expect(screen.getByText("CI/CD integration")).toBeInTheDocument();
   });
 
-  it("shows the webhook secret field only when editing and CI is enabled", () => {
+  it("says a secret is set without showing it when editing", () => {
     renderWithProviders(
       <AddRepositoryModal
         isOpen
@@ -181,8 +185,39 @@ describe("AddRepositoryModal", () => {
       />,
     );
 
-    // CI already enabled from editingRepository
-    expect(screen.getByLabelText("Webhook secret")).toBeInTheDocument();
+    // CI already enabled from editingRepository; reads never carry the secret.
+    expect(screen.getByTestId("webhook-secret-status")).toHaveTextContent(
+      /A webhook secret is set/,
+    );
+    expect(screen.queryByLabelText("Webhook secret")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Regenerate secret" })).toBeInTheDocument();
+  });
+
+  it("never shows a secret passed in with the repository being edited", () => {
+    renderWithProviders(
+      <AddRepositoryModal
+        isOpen
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+        editingRepository={{ ...editingRepository, webhook_secret: "old-api-value" }}
+      />,
+    );
+
+    expect(screen.queryByDisplayValue("old-api-value")).not.toBeInTheDocument();
+  });
+
+  it("offers no regenerate action when the repository has no secret yet", () => {
+    renderWithProviders(
+      <AddRepositoryModal
+        isOpen
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+        editingRepository={{ ...editingRepository, has_webhook_secret: false }}
+      />,
+    );
+
+    expect(screen.queryByRole("button", { name: "Regenerate secret" })).not.toBeInTheDocument();
+    expect(screen.getByText(/A webhook secret is created when you save/)).toBeInTheDocument();
   });
 
   it("copies the webhook URL to the clipboard", async () => {
@@ -205,6 +240,85 @@ describe("AddRepositoryModal", () => {
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith(
       "https://vw.example.com/api/webhooks/github",
     );
+    await waitFor(() => expect(copiedIcon()).not.toBeNull());
+    expect(screen.queryByText(/Could not copy to the clipboard/)).not.toBeInTheDocument();
+  });
+
+  it("tells the user to copy manually when the clipboard write fails", async () => {
+    Object.assign(navigator, {
+      clipboard: { writeText: vi.fn().mockRejectedValue(new Error("denied")) },
+    });
+    renderWithProviders(
+      <AddRepositoryModal
+        isOpen
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+        editingRepository={editingRepository}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Copy webhook URL" }));
+
+    expect(await screen.findByText(/Could not copy to the clipboard/)).toBeInTheDocument();
+    expect(copiedIcon()).toBeNull();
+    // The value stays selectable (read-only, not disabled).
+    expect(screen.getByLabelText("Webhook URL")).not.toBeDisabled();
+    expect(screen.getByLabelText("Webhook URL")).toHaveAttribute("readonly");
+  });
+
+  it("shows the secret as text when the clipboard is not available", async () => {
+    Object.assign(navigator, { clipboard: undefined });
+    const onSubmit = vi.fn().mockResolvedValue({
+      ...editingRepository,
+      id: 7,
+      webhook_secret: "fresh-secret",
+    });
+    renderWithProviders(<AddRepositoryModal isOpen onClose={vi.fn()} onSubmit={onSubmit} />);
+
+    fireEvent.change(screen.getByPlaceholderText("https://github.com/owner/repo"), {
+      target: { value: "https://github.com/acme/widgets" },
+    });
+    fireEvent.click(screen.getAllByRole("switch")[1]);
+    fireEvent.click(screen.getByRole("button", { name: "Add repository" }));
+    await screen.findByRole("heading", { name: "Connect GitHub" });
+
+    expect(screen.getByLabelText("Webhook secret")).toHaveAttribute("type", "password");
+    fireEvent.click(screen.getByRole("button", { name: "Copy webhook secret" }));
+
+    expect(await screen.findByText(/Could not copy to the clipboard/)).toBeInTheDocument();
+    expect(screen.getByLabelText("Webhook secret")).toHaveAttribute("type", "text");
+    expect(screen.getByLabelText("Webhook secret")).toHaveValue("fresh-secret");
+  });
+
+  it("fetches the webhook URL only once CI/CD is turned on", async () => {
+    renderWithProviders(<AddRepositoryModal isOpen onClose={vi.fn()} onSubmit={vi.fn()} />);
+
+    expect(mockGetWebhookConfig).not.toHaveBeenCalled();
+    fireEvent.click(screen.getAllByRole("switch")[1]);
+
+    await waitFor(() => expect(mockGetWebhookConfig).toHaveBeenCalledTimes(1));
+  });
+
+  it("reuses the cached webhook URL when the modal opens again", async () => {
+    const queryClient = new QueryClient({ defaultOptions: { queries: { retry: false } } });
+    const modal = (
+      <AddRepositoryModal
+        isOpen
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+        editingRepository={editingRepository}
+      />
+    );
+    const first = renderWithProviders(modal, { queryClient });
+    await waitFor(() => expect(mockGetWebhookConfig).toHaveBeenCalledTimes(1));
+    first.unmount();
+
+    renderWithProviders(modal, { queryClient });
+
+    expect(
+      await screen.findByDisplayValue("https://vw.example.com/api/webhooks/github"),
+    ).toBeInTheDocument();
+    expect(mockGetWebhookConfig).toHaveBeenCalledTimes(1);
   });
 
   it("generates a new webhook secret when requested", async () => {
@@ -224,6 +338,10 @@ describe("AddRepositoryModal", () => {
     await waitFor(() => {
       expect(mockGenerateWebhookSecret).toHaveBeenCalledWith(1);
     });
+    expect(await screen.findByLabelText("Webhook secret")).toHaveValue("new-secret-value");
+    expect(screen.getByTestId("webhook-secret-status")).toHaveTextContent(
+      /Copy the new secret now/,
+    );
   });
 
   it("submits update data reflecting the edited CI thresholds", async () => {
@@ -282,6 +400,7 @@ describe("AddRepositoryModal", () => {
 
     fireEvent.click(screen.getByRole("button", { name: "Copy webhook secret" }));
     expect(navigator.clipboard.writeText).toHaveBeenCalledWith("fresh-secret");
+    await waitFor(() => expect(copiedIcon()).not.toBeNull());
 
     fireEvent.click(screen.getByRole("button", { name: "Done" }));
     expect(onClose).toHaveBeenCalled();

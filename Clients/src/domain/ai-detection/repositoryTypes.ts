@@ -25,6 +25,12 @@ export interface AIDetectionRepository {
   schedule_minute: number;
 
   // CI/CD webhook fields
+  /** Whether a webhook secret is set. Reads never include the secret itself. */
+  has_webhook_secret?: boolean;
+  /**
+   * Present only on the create or update response that generated the secret,
+   * so it can be copied into GitHub once.
+   */
   webhook_secret?: string | null;
   ci_enabled: boolean;
   ci_min_score: number;

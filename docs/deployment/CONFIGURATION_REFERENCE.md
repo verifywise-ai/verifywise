@@ -45,6 +45,7 @@ calls `POST /api/autoDrivers`. The same endpoint backs the CLI seeder
 |----------|-------------|---------|----------|
 | `BACKEND_URL` | Full URL to backend API | `http://localhost:3000` | Yes |
 | `FRONTEND_URL` | Full URL to frontend | `http://localhost:8080` | Yes |
+| `API_PUBLIC_URL` | Public address of the API, when it is not served under `FRONTEND_URL` (e.g. `https://api.example.com`). Used for the AI Detection GitHub webhook URL; when unset, that URL is built from the app's API address or `FRONTEND_URL` | — | No |
 | `HOST` | Bind address | `localhost` | No |
 
 ```bash

@@ -80,7 +80,7 @@ export const repositoriesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'When you save a repository with CI/CD integration on, VerifyWise creates a webhook secret and shows a **Connect GitHub** step with the webhook URL, the secret and copy buttons for both. Then, in GitHub:',
+      text: 'When you save a repository with CI/CD integration on, VerifyWise creates a webhook secret and shows a **Connect GitHub** step with the webhook URL, the secret and copy buttons for both. Copy the secret now: it is shown only this once. If the browser cannot copy (for example on a deployment served over plain http), VerifyWise says so and shows the value so you can select and copy it yourself. Then, in GitHub:',
     },
     {
       type: 'ordered-list',
@@ -92,17 +92,17 @@ export const repositoriesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'GitHub sends a test delivery when you add the webhook. To check that it arrived, open the repository with the pencil icon: under the webhook secret, **Last delivery** shows when GitHub last reached VerifyWise and whether the scan started. Only deliveries signed with the right secret are shown. If GitHub reports deliveries but **Last delivery** does not change, check that the secret in GitHub matches the one in VerifyWise.',
+      text: 'GitHub sends a test delivery when you add the webhook. To check that it arrived, open the repository with the pencil icon: in the CI/CD section, **Last delivery** shows when GitHub last reached VerifyWise and whether the scan started. Only deliveries signed with the right secret are shown. If GitHub reports deliveries but **Last delivery** does not change, regenerate the secret and paste the new one into GitHub.',
     },
     {
       type: 'callout',
       variant: 'warning',
       title: 'GitHub must be able to reach VerifyWise',
-      text: 'The webhook URL is built from the deployment\'s public address (the `FRONTEND_URL` setting). If that address is missing, local or on a private network, the form shows a warning: GitHub cannot deliver to it until the deployment has a public URL.',
+      text: 'The webhook URL is built from the public address of the deployment\'s API: the `API_PUBLIC_URL` setting when it is set, otherwise the address the app uses for its API, otherwise `FRONTEND_URL`. If that address is missing, local or on a private network, the form shows a warning: GitHub cannot deliver to it until the API has a public address. Set `API_PUBLIC_URL` when the API runs on a different host from the app.',
     },
     {
       type: 'paragraph',
-      text: 'You can see and copy the secret again later by editing the repository. **Regenerate secret** replaces it; after regenerating, paste the new secret into the webhook in GitHub too, or deliveries are rejected.',
+      text: 'VerifyWise does not show the secret again later, and it is never visible to people who can only view repositories. When you edit the repository, the CI/CD section says a secret is set. **Regenerate secret** replaces it and shows the new secret once; paste it into the webhook in GitHub too, or deliveries are rejected.',
     },
     {
       type: 'heading',

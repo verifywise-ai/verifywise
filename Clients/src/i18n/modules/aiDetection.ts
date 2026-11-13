@@ -330,8 +330,6 @@ export const de: Record<string, string> = {
     "Fügen Sie diesen Webhook in GitHub hinzu, damit Pull Requests und Pushes Scans starten.",
   "CI/CD integration": "CI/CD-Integration",
   "Connect GitHub": "GitHub verbinden",
-  "Copy the secret now. You can see it again, or replace it, by editing the repository.":
-    "Kopieren Sie das Geheimnis jetzt. Sie können es erneut ansehen oder ersetzen, indem Sie das Repository bearbeiten.",
   "Minimum governance score": "Minimaler Governance-Score",
   "PR checks fail when a scan has more critical findings than this":
     "PR-Prüfungen schlagen fehl, wenn ein Scan mehr kritische Befunde als diesen Wert hat",
@@ -354,10 +352,6 @@ export const de: Record<string, string> = {
     "Wählen Sie „Let me select individual events“, aktivieren Sie Pull requests und Pushes und klicken Sie dann auf Add webhook.",
   "Pushes to the default branch start a full scan. Opened and updated pull requests start a scan of the changed files. Results are posted to GitHub with the token from AI Detection settings.":
     "Pushes auf den Standard-Branch starten einen vollständigen Scan. Geöffnete und aktualisierte Pull Requests starten einen Scan der geänderten Dateien. Ergebnisse werden mit dem Token aus den KI-Erkennungseinstellungen an GitHub gesendet.",
-  "GitHub must be able to reach this address. Set FRONTEND_URL to this deployment's public URL if it is not reachable from the internet.":
-    "GitHub muss diese Adresse erreichen können. Setzen Sie FRONTEND_URL auf die öffentliche URL dieser Bereitstellung, wenn sie nicht aus dem Internet erreichbar ist.",
-  "Use this secret in the GitHub webhook. After regenerating, update it in GitHub too.":
-    "Verwenden Sie dieses Geheimnis im GitHub-Webhook. Aktualisieren Sie es nach dem Neuerzeugen auch in GitHub.",
   "A webhook secret is created when you save. The next step shows how to add it in GitHub.":
     "Beim Speichern wird ein Webhook-Geheimnis erstellt. Der nächste Schritt zeigt, wie Sie es in GitHub hinzufügen.",
   "Last delivery: {time}. {status}": "Letzte Zustellung: {time}. {status}",
@@ -365,6 +359,16 @@ export const de: Record<string, string> = {
   "{utc} UTC = {local} your time": "{utc} UTC = {local} Ihre Zeit",
   "Enter a whole number from 0 to 100": "Geben Sie eine ganze Zahl von 0 bis 100 ein",
   "Enter a whole number of 0 or more": "Geben Sie eine ganze Zahl von 0 oder mehr ein",
+  "Copy the secret now. It is not shown again. To replace it, edit the repository and regenerate the secret.":
+    "Kopieren Sie das Geheimnis jetzt. Es wird nicht erneut angezeigt. Um es zu ersetzen, bearbeiten Sie das Repository und erzeugen Sie das Geheimnis neu.",
+  "GitHub must be able to reach this address. If it is not reachable from the internet, set API_PUBLIC_URL on the server to the public address of this deployment's API.":
+    "GitHub muss diese Adresse erreichen können. Wenn sie nicht aus dem Internet erreichbar ist, setzen Sie API_PUBLIC_URL auf dem Server auf die öffentliche Adresse der API dieser Bereitstellung.",
+  "Could not copy to the clipboard. Select the text and copy it manually.":
+    "Kopieren in die Zwischenablage nicht möglich. Markieren Sie den Text und kopieren Sie ihn manuell.",
+  "Copy the new secret now. It is not shown again. Update it in the GitHub webhook too.":
+    "Kopieren Sie das neue Geheimnis jetzt. Es wird nicht erneut angezeigt. Aktualisieren Sie es auch im GitHub-Webhook.",
+  "A webhook secret is set. It is only shown when it is created. Regenerate it if you need it again, then update it in GitHub.":
+    "Ein Webhook-Geheimnis ist festgelegt. Es wird nur beim Erstellen angezeigt. Erzeugen Sie es neu, wenn Sie es erneut benötigen, und aktualisieren Sie es dann in GitHub.",
 };
 
 export const fr: Record<string, string> = {
@@ -697,8 +701,6 @@ export const fr: Record<string, string> = {
     "Ajoutez ce webhook dans GitHub pour que les pull requests et les pushs lancent des analyses.",
   "CI/CD integration": "Intégration CI/CD",
   "Connect GitHub": "Connecter GitHub",
-  "Copy the secret now. You can see it again, or replace it, by editing the repository.":
-    "Copiez le secret maintenant. Vous pourrez le revoir ou le remplacer en modifiant le dépôt.",
   "Minimum governance score": "Score de gouvernance minimal",
   "PR checks fail when a scan has more critical findings than this":
     "Les vérifications de PR échouent si une analyse a plus de résultats critiques que cette valeur",
@@ -721,10 +723,6 @@ export const fr: Record<string, string> = {
     "Choisissez « Let me select individual events », cochez Pull requests et Pushes, puis cliquez sur Add webhook.",
   "Pushes to the default branch start a full scan. Opened and updated pull requests start a scan of the changed files. Results are posted to GitHub with the token from AI Detection settings.":
     "Les pushs sur la branche par défaut lancent une analyse complète. Les pull requests ouvertes et mises à jour lancent une analyse des fichiers modifiés. Les résultats sont publiés dans GitHub avec le jeton des paramètres de détection IA.",
-  "GitHub must be able to reach this address. Set FRONTEND_URL to this deployment's public URL if it is not reachable from the internet.":
-    "GitHub doit pouvoir joindre cette adresse. Définissez FRONTEND_URL sur l'URL publique de ce déploiement si elle n'est pas accessible depuis Internet.",
-  "Use this secret in the GitHub webhook. After regenerating, update it in GitHub too.":
-    "Utilisez ce secret dans le webhook GitHub. Après l'avoir régénéré, mettez-le aussi à jour dans GitHub.",
   "A webhook secret is created when you save. The next step shows how to add it in GitHub.":
     "Un secret de webhook est créé à l'enregistrement. L'étape suivante explique comment l'ajouter dans GitHub.",
   "Last delivery: {time}. {status}": "Dernière livraison : {time}. {status}",
@@ -732,6 +730,16 @@ export const fr: Record<string, string> = {
   "{utc} UTC = {local} your time": "{utc} UTC = {local} votre heure",
   "Enter a whole number from 0 to 100": "Saisissez un nombre entier de 0 à 100",
   "Enter a whole number of 0 or more": "Saisissez un nombre entier supérieur ou égal à 0",
+  "Copy the secret now. It is not shown again. To replace it, edit the repository and regenerate the secret.":
+    "Copiez le secret maintenant. Il ne sera plus affiché. Pour le remplacer, modifiez le dépôt et régénérez le secret.",
+  "GitHub must be able to reach this address. If it is not reachable from the internet, set API_PUBLIC_URL on the server to the public address of this deployment's API.":
+    "GitHub doit pouvoir joindre cette adresse. Si elle n'est pas accessible depuis Internet, définissez API_PUBLIC_URL sur le serveur avec l'adresse publique de l'API de ce déploiement.",
+  "Could not copy to the clipboard. Select the text and copy it manually.":
+    "Impossible de copier dans le presse-papiers. Sélectionnez le texte et copiez-le manuellement.",
+  "Copy the new secret now. It is not shown again. Update it in the GitHub webhook too.":
+    "Copiez le nouveau secret maintenant. Il ne sera plus affiché. Mettez-le aussi à jour dans le webhook GitHub.",
+  "A webhook secret is set. It is only shown when it is created. Regenerate it if you need it again, then update it in GitHub.":
+    "Un secret de webhook est défini. Il n'est affiché qu'à sa création. Régénérez-le si vous en avez de nouveau besoin, puis mettez-le à jour dans GitHub.",
 };
 
 export const es: Record<string, string> = {
@@ -1068,8 +1076,6 @@ export const es: Record<string, string> = {
     "Añada este webhook en GitHub para que las pull requests y los pushes inicien escaneos.",
   "CI/CD integration": "Integración CI/CD",
   "Connect GitHub": "Conectar GitHub",
-  "Copy the secret now. You can see it again, or replace it, by editing the repository.":
-    "Copie el secreto ahora. Puede volver a verlo o sustituirlo editando el repositorio.",
   "Minimum governance score": "Puntuación de gobernanza mínima",
   "PR checks fail when a scan has more critical findings than this":
     "Las comprobaciones de PR fallan si un escaneo tiene más hallazgos críticos que este valor",
@@ -1092,10 +1098,6 @@ export const es: Record<string, string> = {
     "Elija «Let me select individual events», marque Pull requests y Pushes y, a continuación, haga clic en Add webhook.",
   "Pushes to the default branch start a full scan. Opened and updated pull requests start a scan of the changed files. Results are posted to GitHub with the token from AI Detection settings.":
     "Los pushes a la rama predeterminada inician un escaneo completo. Las pull requests abiertas y actualizadas inician un escaneo de los archivos modificados. Los resultados se publican en GitHub con el token de la configuración de detección de IA.",
-  "GitHub must be able to reach this address. Set FRONTEND_URL to this deployment's public URL if it is not reachable from the internet.":
-    "GitHub debe poder acceder a esta dirección. Establezca FRONTEND_URL en la URL pública de esta implementación si no es accesible desde Internet.",
-  "Use this secret in the GitHub webhook. After regenerating, update it in GitHub too.":
-    "Use este secreto en el webhook de GitHub. Después de regenerarlo, actualícelo también en GitHub.",
   "A webhook secret is created when you save. The next step shows how to add it in GitHub.":
     "Al guardar se crea un secreto de webhook. El siguiente paso muestra cómo añadirlo en GitHub.",
   "Last delivery: {time}. {status}": "Última entrega: {time}. {status}",
@@ -1103,4 +1105,14 @@ export const es: Record<string, string> = {
   "{utc} UTC = {local} your time": "{utc} UTC = {local} su hora",
   "Enter a whole number from 0 to 100": "Introduzca un número entero de 0 a 100",
   "Enter a whole number of 0 or more": "Introduzca un número entero igual o superior a 0",
+  "Copy the secret now. It is not shown again. To replace it, edit the repository and regenerate the secret.":
+    "Copie el secreto ahora. No se volverá a mostrar. Para reemplazarlo, edite el repositorio y regenere el secreto.",
+  "GitHub must be able to reach this address. If it is not reachable from the internet, set API_PUBLIC_URL on the server to the public address of this deployment's API.":
+    "GitHub debe poder acceder a esta dirección. Si no es accesible desde Internet, establezca API_PUBLIC_URL en el servidor con la dirección pública de la API de esta implementación.",
+  "Could not copy to the clipboard. Select the text and copy it manually.":
+    "No se pudo copiar al portapapeles. Seleccione el texto y cópielo manualmente.",
+  "Copy the new secret now. It is not shown again. Update it in the GitHub webhook too.":
+    "Copie el nuevo secreto ahora. No se volverá a mostrar. Actualícelo también en el webhook de GitHub.",
+  "A webhook secret is set. It is only shown when it is created. Regenerate it if you need it again, then update it in GitHub.":
+    "Hay un secreto de webhook configurado. Solo se muestra al crearlo. Regénérelo si lo necesita de nuevo y luego actualícelo en GitHub.",
 };
