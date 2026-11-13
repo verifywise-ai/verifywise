@@ -315,8 +315,11 @@ const Vendors = () => {
   );
 
   // FilterBy - Initialize hook for Vendors tab
-  const { filterData: filterVendorData, handleFilterChange: handleVendorFilterChangeBase } =
-    useFilterBy<VendorModel>(getVendorFieldValue);
+  const {
+    filterData: filterVendorData,
+    handleFilterChange: handleVendorFilterChangeBase,
+    conditions: vendorFilterConditions,
+  } = useFilterBy<VendorModel>(getVendorFieldValue);
 
   // Wrapper to extract project_id from filter conditions and update API filter
   const handleVendorFilterChange = useCallback(
@@ -447,8 +450,11 @@ const Vendors = () => {
   );
 
   // FilterBy - Initialize hook for Vendor Risks tab
-  const { filterData: filterVendorRiskData, handleFilterChange: handleVendorRiskFilterChangeBase } =
-    useFilterBy<any>(getVendorRiskFieldValue);
+  const {
+    filterData: filterVendorRiskData,
+    handleFilterChange: handleVendorRiskFilterChangeBase,
+    conditions: vendorRiskFilterConditions,
+  } = useFilterBy<any>(getVendorRiskFieldValue);
 
   // Wrapper to extract project_id from filter conditions and update API filter for vendor risks
   const handleVendorRiskFilterChange = useCallback(
@@ -1168,6 +1174,7 @@ const Vendors = () => {
                 <TableFilter
                   columns={vendorFilterColumns}
                   onFilterChange={handleVendorFilterChange}
+                  defaultConditions={vendorFilterConditions}
                   data={vendors}
                   getFieldValue={getVendorFieldValue}
                 />
@@ -1248,6 +1255,7 @@ const Vendors = () => {
                 <TableFilter
                   columns={vendorRiskFilterColumns}
                   onFilterChange={handleVendorRiskFilterChange}
+                  defaultConditions={vendorRiskFilterConditions}
                   data={vendorRisks}
                   getFieldValue={getVendorRiskFieldValue}
                 />

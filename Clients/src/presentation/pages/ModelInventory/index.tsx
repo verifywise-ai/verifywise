@@ -378,8 +378,11 @@ const ModelInventory: React.FC = () => {
   );
 
   // FilterBy - Initialize hook for Models tab
-  const { filterData: filterModelData, handleFilterChange: handleModelFilterChange } =
-    useFilterBy<IModelInventory>(getModelFieldValue);
+  const {
+    filterData: filterModelData,
+    handleFilterChange: handleModelFilterChange,
+    conditions: modelFilterConditions,
+  } = useFilterBy<IModelInventory>(getModelFieldValue);
 
   // FilterBy - Dynamic options generators for Model Risks tab
   const getUniqueRiskOwners = useCallback(() => {
@@ -489,8 +492,11 @@ const ModelInventory: React.FC = () => {
   );
 
   // FilterBy - Initialize hook for Model Risks tab
-  const { filterData: filterModelRiskData, handleFilterChange: handleModelRiskFilterChange } =
-    useFilterBy<IModelRisk>(getModelRiskFieldValue);
+  const {
+    filterData: filterModelRiskData,
+    handleFilterChange: handleModelRiskFilterChange,
+    conditions: modelRiskFilterConditions,
+  } = useFilterBy<IModelRisk>(getModelRiskFieldValue);
 
   const [evidenceHubData, setEvidenceHubData] = useState<EvidenceHubModel[]>([]);
 
@@ -652,8 +658,11 @@ const ModelInventory: React.FC = () => {
   );
 
   // FilterBy - Initialize hook for Evidence Hub tab
-  const { filterData: filterEvidenceData, handleFilterChange: handleEvidenceFilterChange } =
-    useFilterBy<EvidenceHubModel>(getEvidenceFieldValue);
+  const {
+    filterData: filterEvidenceData,
+    handleFilterChange: handleEvidenceFilterChange,
+    conditions: evidenceFilterConditions,
+  } = useFilterBy<EvidenceHubModel>(getEvidenceFieldValue);
 
   const [isEvidenceLoading, setEvidenceLoading] = useState(false);
 
@@ -2296,6 +2305,7 @@ const ModelInventory: React.FC = () => {
                   <TableFilter
                     columns={modelFilterColumns}
                     onFilterChange={handleModelFilterChange}
+                    defaultConditions={modelFilterConditions}
                     data={modelInventoryData}
                     getFieldValue={getModelFieldValue}
                   />
@@ -2400,6 +2410,7 @@ const ModelInventory: React.FC = () => {
                   <TableFilter
                     columns={modelRiskFilterColumns}
                     onFilterChange={handleModelRiskFilterChange}
+                    defaultConditions={modelRiskFilterConditions}
                     data={modelRisksData}
                     getFieldValue={getModelRiskFieldValue}
                   />
@@ -2499,6 +2510,7 @@ const ModelInventory: React.FC = () => {
                   <TableFilter
                     columns={evidenceFilterColumns}
                     onFilterChange={handleEvidenceFilterChange}
+                    defaultConditions={evidenceFilterConditions}
                     data={evidenceHubData}
                     getFieldValue={getEvidenceFieldValue}
                   />

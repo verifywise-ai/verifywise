@@ -33,6 +33,12 @@ import { useTableGrouping, useGroupByState } from "../../../application/hooks/us
 import { FilterColumn, FilterCondition } from "../../components/Table/FilterBy";
 import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
+import {
+  getRiskFieldValue,
+  riskLevelCardKey,
+  RISK_LEVEL_OPTIONS,
+  SEVERITY_OPTIONS,
+} from "./riskFilters";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import { useEntityChangeHistory } from "../../../application/hooks/useEntityChangeHistory";
@@ -190,25 +196,13 @@ const RiskManagement = () => {
         id: "severity",
         label: "Severity",
         type: "select" as const,
-        options: [
-          { value: "Very High", label: "Very High" },
-          { value: "High", label: "High" },
-          { value: "Medium", label: "Medium" },
-          { value: "Low", label: "Low" },
-          { value: "Very Low", label: "Very Low" },
-        ],
+        options: SEVERITY_OPTIONS,
       },
       {
         id: "risk_level",
         label: "Risk level",
         type: "select" as const,
-        options: [
-          { value: "Very High", label: "Very High" },
-          { value: "High", label: "High" },
-          { value: "Medium", label: "Medium" },
-          { value: "Low", label: "Low" },
-          { value: "Very Low", label: "Very Low" },
-        ],
+        options: RISK_LEVEL_OPTIONS,
       },
       {
         id: "mitigation_status",
@@ -245,37 +239,11 @@ const RiskManagement = () => {
     [getUniqueOwners],
   );
 
-  // Get field value for filtering
-  const getRiskFieldValue = useCallback(
-    (risk: RiskModel, fieldId: string): string | number | Date | null | undefined => {
-      switch (fieldId) {
-        case "risk_name":
-          return risk.risk_name;
-        case "risk_description":
-          return risk.risk_description;
-        case "severity":
-          return risk.severity;
-        case "risk_level":
-          return risk.current_risk_level || risk.risk_level_autocalculated;
-        case "mitigation_status":
-          return risk.mitigation_status;
-        case "risk_owner":
-          return risk.risk_owner?.toString();
-        case "impact":
-          return risk.impact;
-        case "deadline":
-          return risk.deadline;
-        case "date_of_assessment":
-          return risk.date_of_assessment;
-        default:
-          return null;
-      }
-    },
-    [],
-  );
-
-  const { filterData, handleFilterChange: handleFilterByChangeBase } =
-    useFilterBy<RiskModel>(getRiskFieldValue);
+  const {
+    filterData,
+    handleFilterChange: handleFilterByChangeBase,
+    conditions: filterConditions,
+  } = useFilterBy<RiskModel>(getRiskFieldValue);
 
   // Wrapper to sync selected risk level card with filter conditions
   const handleFilterByChange = useCallback(
@@ -283,7 +251,7 @@ const RiskManagement = () => {
       // Sync selected risk level card with filter conditions
       const riskLevelCondition = conditions.find((c) => c.columnId === "risk_level");
       if (riskLevelCondition && riskLevelCondition.operator === "is" && riskLevelCondition.value) {
-        setSelectedRiskLevel(riskLevelCondition.value);
+        setSelectedRiskLevel(riskLevelCardKey(riskLevelCondition.value));
       } else {
         setSelectedRiskLevel(null);
       }
@@ -806,6 +774,7 @@ const RiskManagement = () => {
               <TableFilter
                 columns={filterColumns}
                 onFilterChange={handleFilterByChange}
+                defaultConditions={filterConditions}
                 data={projectRisks}
                 getFieldValue={getRiskFieldValue}
               />

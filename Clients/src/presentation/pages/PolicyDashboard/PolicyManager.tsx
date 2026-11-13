@@ -458,8 +458,11 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
   );
 
   // FilterBy - Initialize hook
-  const { filterData: filterPolicyData, handleFilterChange: handlePolicyFilterChange } =
-    useFilterBy<PolicyManagerModel>(getPolicyFieldValue);
+  const {
+    filterData: filterPolicyData,
+    handleFilterChange: handlePolicyFilterChange,
+    conditions: policyFilterConditions,
+  } = useFilterBy<PolicyManagerModel>(getPolicyFieldValue);
 
   // ✅ Filter + search using FilterBy
   const filteredPolicies = useMemo(() => {
@@ -633,6 +636,7 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
               <TableFilter
                 columns={policyFilterColumns}
                 onFilterChange={handlePolicyFilterChange}
+                defaultConditions={policyFilterConditions}
                 data={policies}
                 getFieldValue={getPolicyFieldValue}
               />

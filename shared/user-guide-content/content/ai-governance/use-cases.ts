@@ -369,7 +369,7 @@ export const useCasesContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Search', text: 'Looks through use case titles and UC IDs.' },
-        { bold: 'Filter', text: 'Narrow by name, risk level, owner, status, or start date. In the new look, pick a filter chip above the table and choose a value; in the classic look, use the Filter button.' },
+        { bold: 'Filter', text: 'Narrow by risk level, owner, status, or start date. In the new look, pick a filter chip above the table and choose a value, and use the search box to find a use case by name; in the classic look, the Filter button also filters by name.' },
         { bold: 'Group', text: 'Organize by risk level, role, owner, or status. Groups collapse and sort.' },
         { bold: 'Columns', text: 'Show or hide columns: UC ID, title, risk classification, role, start date, last updated.' },
       ],

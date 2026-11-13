@@ -181,8 +181,11 @@ const Datasets: React.FC = () => {
   );
 
   // FilterBy - Initialize hook
-  const { filterData: filterDatasetData, handleFilterChange: handleDatasetFilterChange } =
-    useFilterBy<IDataset>(getDatasetFieldValue);
+  const {
+    filterData: filterDatasetData,
+    handleFilterChange: handleDatasetFilterChange,
+    conditions: datasetFilterConditions,
+  } = useFilterBy<IDataset>(getDatasetFieldValue);
 
   // GroupBy - Get group key for a dataset
   const getDatasetGroupKey = useCallback((dataset: IDataset, field: string): string => {
@@ -469,6 +472,7 @@ const Datasets: React.FC = () => {
             <TableFilter
               columns={DATASET_FILTER_COLUMNS}
               onFilterChange={handleDatasetFilterChange}
+              defaultConditions={datasetFilterConditions}
               data={datasetData}
               getFieldValue={getDatasetFieldValue}
             />

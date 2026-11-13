@@ -734,8 +734,11 @@ const FileManager: React.FC = (): JSX.Element => {
     [],
   );
 
-  const { filterData: filterFileData, handleFilterChange: handleFileFilterChange } =
-    useFilterBy<FileModel>(getFileFieldValue);
+  const {
+    filterData: filterFileData,
+    handleFilterChange: handleFileFilterChange,
+    conditions: fileFilterConditions,
+  } = useFilterBy<FileModel>(getFileFieldValue);
 
   // Filter files
   const filteredFiles = useMemo(() => {
@@ -888,6 +891,7 @@ const FileManager: React.FC = (): JSX.Element => {
             <TableFilter
               columns={fileFilterColumns}
               onFilterChange={handleFileFilterChange}
+              defaultConditions={fileFilterConditions}
               data={activeFilesData}
               getFieldValue={getFileFieldValue}
             />

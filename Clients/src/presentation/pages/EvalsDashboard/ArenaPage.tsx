@@ -654,6 +654,7 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
             <Stack direction="row" alignItems="center" gap="4px">
               <TableFilter
                 columns={filterColumns}
+                defaultConditions={filterConditions}
                 onFilterChange={(conditions, logic) => {
                   setFilterConditions(conditions);
                   setFilterLogic(logic);

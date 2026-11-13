@@ -114,7 +114,11 @@ export default function ProjectsList() {
     }
   }, []);
 
-  const { filterData, handleFilterChange } = useFilterBy<DeepEvalProject>(getFieldValue);
+  const {
+    filterData,
+    handleFilterChange,
+    conditions: filterConditions,
+  } = useFilterBy<DeepEvalProject>(getFieldValue);
 
   const filteredProjects = useMemo(() => {
     const afterFilter = filterData(projects);
@@ -406,6 +410,7 @@ export default function ProjectsList() {
           <TableFilter
             columns={filterColumns}
             onFilterChange={handleFilterChange}
+            defaultConditions={filterConditions}
             data={projects}
             getFieldValue={getFieldValue}
           />

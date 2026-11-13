@@ -42,7 +42,7 @@ interface ChipMenuOption extends ChipSelection {
 }
 
 const DATE_OPTIONS: ChipMenuOption[] = [
-  { key: "is_today", operator: "is_today", value: "", label: "Due today" },
+  { key: "is_today", operator: "is_today", value: "", label: "Today" },
   { key: "in_7_days", operator: "in_7_days", value: "", label: "In 7 days" },
   { key: "in_30_days", operator: "in_30_days", value: "", label: "In 30 days" },
   { key: "is_past", operator: "is_past", value: "", label: "Past" },
@@ -82,6 +82,13 @@ function selectionsFromConditions(
   return result;
 }
 
+/** A stable key for a condition list, so re-renders with an equal list are no-ops. */
+function conditionsSignature(conditions: FilterCondition[] | undefined): string {
+  return (conditions ?? [])
+    .map((condition) => `${condition.columnId}|${condition.operator}|${condition.value}`)
+    .join("\n");
+}
+
 export function FilterChips<T>({
   columns,
   onFilterChange,
@@ -93,6 +100,17 @@ export function FilterChips<T>({
   const [selections, setSelections] = useState<Record<string, ChipSelection>>(() =>
     selectionsFromConditions(columns, defaultConditions),
   );
+
+  // The page owns the filter state (`useFilterBy`), and this component remounts
+  // whenever its tab does. Follow the page's conditions when their content
+  // changes, so a chip never reads "All" over a filtered table. Compared by
+  // content, not identity, and never emitted back, so it cannot loop.
+  const conditionsKey = conditionsSignature(defaultConditions);
+  const [syncedKey, setSyncedKey] = useState(conditionsKey);
+  if (conditionsKey !== syncedKey) {
+    setSyncedKey(conditionsKey);
+    setSelections(selectionsFromConditions(columns, defaultConditions));
+  }
   const [menu, setMenu] = useState<{ columnId: string; anchor: HTMLElement } | null>(null);
 
   const canCount = !!data && !!getFieldValue;

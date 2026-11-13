@@ -120,6 +120,7 @@ export function ProjectDatasets({ projectId, orgId }: ProjectDatasetsProps) {
         <MyDatasetsTab
           filterColumns={ds.filterColumns}
           onFilterChange={ds.handleFilterChange}
+          filterConditions={ds.filterConditions}
           onGroupChange={ds.handleDatasetsGroupChange}
           searchTerm={ds.searchTerm}
           onSearchTermChange={ds.setSearchTerm}
@@ -143,6 +144,7 @@ export function ProjectDatasets({ projectId, orgId }: ProjectDatasetsProps) {
         <TemplatesTab
           filterColumns={ds.templateFilterColumns}
           onFilterChange={ds.handleTemplateFilterChange}
+          filterConditions={ds.templateFilterConditions}
           filterRows={ds.flattenedTemplates}
           getFilterFieldValue={ds.getTemplateFieldValue}
           templateSearchTerm={ds.templateSearchTerm}

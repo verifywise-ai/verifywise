@@ -273,7 +273,11 @@ export default function HistoryPage() {
   );
 
   // FilterBy hook
-  const { filterData, handleFilterChange } = useFilterBy<Scan>(getScanFieldValue);
+  const {
+    filterData,
+    handleFilterChange,
+    conditions: filterConditions,
+  } = useFilterBy<Scan>(getScanFieldValue);
 
   // Save rowsPerPage to localStorage whenever it changes
   useEffect(() => {
@@ -759,6 +763,7 @@ export default function HistoryPage() {
         <TableFilter
           columns={FILTER_COLUMNS}
           onFilterChange={handleFilterChange}
+          defaultConditions={filterConditions}
           data={scans}
           getFieldValue={getScanFieldValue}
         />

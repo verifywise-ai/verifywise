@@ -103,8 +103,11 @@ const ApprovalWorkflows: React.FC = () => {
   );
 
   // FilterBy - Initialize hook
-  const { filterData: filterWorkflowData, handleFilterChange: handleWorkflowFilterChange } =
-    useFilterBy<ApprovalWorkflowModel>(getWorkflowFieldValue);
+  const {
+    filterData: filterWorkflowData,
+    handleFilterChange: handleWorkflowFilterChange,
+    conditions: workflowFilterConditions,
+  } = useFilterBy<ApprovalWorkflowModel>(getWorkflowFieldValue);
 
   /** -------------------- FILTERING -------------------- */
   const filteredData = useMemo(() => {
@@ -348,6 +351,7 @@ const ApprovalWorkflows: React.FC = () => {
             <TableFilter
               columns={workflowFilterColumns}
               onFilterChange={handleWorkflowFilterChange}
+              defaultConditions={workflowFilterConditions}
               data={workflowData}
               getFieldValue={getWorkflowFieldValue}
             />

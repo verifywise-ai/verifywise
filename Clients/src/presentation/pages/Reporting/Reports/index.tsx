@@ -295,8 +295,11 @@ const Reports: React.FC<ReportsProps> = ({
   );
 
   // FilterBy - Initialize hook
-  const { filterData: filterReportData, handleFilterChange: handleReportFilterChange } =
-    useFilterBy<GeneratedReports>(getReportFieldValue);
+  const {
+    filterData: filterReportData,
+    handleFilterChange: handleReportFilterChange,
+    conditions: reportFilterConditions,
+  } = useFilterBy<GeneratedReports>(getReportFieldValue);
 
   // Filter reports using FilterBy and search
   const filteredReports = useMemo(() => {
@@ -365,6 +368,7 @@ const Reports: React.FC<ReportsProps> = ({
           <TableFilter
             columns={reportFilterColumns}
             onFilterChange={handleReportFilterChange}
+            defaultConditions={reportFilterConditions}
             data={generatedReports}
             getFieldValue={getReportFieldValue}
           />

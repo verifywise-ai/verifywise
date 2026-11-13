@@ -356,8 +356,11 @@ const IncidentManagement: React.FC = () => {
   );
 
   // FilterBy - Initialize hook
-  const { filterData: filterIncidentData, handleFilterChange: handleIncidentFilterChange } =
-    useFilterBy<AIIncidentManagementModel>(getIncidentFieldValue);
+  const {
+    filterData: filterIncidentData,
+    handleFilterChange: handleIncidentFilterChange,
+    conditions: incidentFilterConditions,
+  } = useFilterBy<AIIncidentManagementModel>(getIncidentFieldValue);
 
   /** -------------------- FILTERING -------------------- */
   // Archived incidents never show, so the filter chips count only the rest
@@ -845,6 +848,7 @@ const IncidentManagement: React.FC = () => {
             <TableFilter
               columns={incidentFilterColumns}
               onFilterChange={handleIncidentFilterChange}
+              defaultConditions={incidentFilterConditions}
               data={nonArchivedIncidents}
               getFieldValue={getIncidentFieldValue}
             />

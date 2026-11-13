@@ -221,8 +221,11 @@ const AgentDiscovery: React.FC = () => {
   );
 
   // FilterBy hook
-  const { filterData, handleFilterChange: handleFilterChangeBase } =
-    useFilterBy<AgentPrimitiveRow>(getFieldValue);
+  const {
+    filterData,
+    handleFilterChange: handleFilterChangeBase,
+    conditions: filterConditions,
+  } = useFilterBy<AgentPrimitiveRow>(getFieldValue);
 
   const handleFilterChange = useCallback(
     (conditions: FilterCondition[], logic: "and" | "or") => {
@@ -413,6 +416,7 @@ const AgentDiscovery: React.FC = () => {
               <TableFilter
                 columns={filterColumns}
                 onFilterChange={handleFilterChange}
+                defaultConditions={filterConditions}
                 data={agents}
                 getFieldValue={getFieldValue}
               />

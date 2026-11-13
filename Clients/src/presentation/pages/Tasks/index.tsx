@@ -304,8 +304,11 @@ const Tasks: React.FC = () => {
   );
 
   // FilterBy - Initialize hook
-  const { filterData: filterTaskData, handleFilterChange: handleTaskFilterChange } =
-    useFilterBy<TaskModel>(getTaskFieldValue);
+  const {
+    filterData: filterTaskData,
+    handleFilterChange: handleTaskFilterChange,
+    conditions: taskFilterConditions,
+  } = useFilterBy<TaskModel>(getTaskFieldValue);
 
   // Apply FilterBy and search filtering
   const filteredTasks = useMemo(() => {
@@ -873,6 +876,7 @@ const Tasks: React.FC = () => {
               <TableFilter
                 columns={taskFilterColumns}
                 onFilterChange={handleTaskFilterChange}
+                defaultConditions={taskFilterConditions}
                 data={tasks}
                 getFieldValue={getTaskFieldValue}
               />

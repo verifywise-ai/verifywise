@@ -214,8 +214,11 @@ const ProjectList = ({
   );
 
   // FilterBy - Initialize hook
-  const { filterData: filterProjectData, handleFilterChange: handleProjectFilterChange } =
-    useFilterBy<Project>(getProjectFieldValue);
+  const {
+    filterData: filterProjectData,
+    handleFilterChange: handleProjectFilterChange,
+    conditions: projectFilterConditions,
+  } = useFilterBy<Project>(getProjectFieldValue);
 
   // Filter projects using FilterBy and search
   const filteredProjects = useMemo(() => {
@@ -396,6 +399,7 @@ const ProjectList = ({
           <TableFilter
             columns={projectFilterColumns}
             onFilterChange={handleProjectFilterChange}
+            defaultConditions={projectFilterConditions}
             data={projects}
             getFieldValue={getProjectFieldValue}
           />

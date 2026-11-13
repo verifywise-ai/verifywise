@@ -4,6 +4,8 @@ import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import { FilterChips } from "..";
 import type { FilterColumn, FilterCondition } from "../../FilterBy";
 import { primitives } from "../../../../themes/palette";
+import { useState } from "react";
+import { useFilterBy } from "../../../../../application/hooks/useFilterBy";
 
 interface Row {
   status: string;
@@ -139,14 +141,14 @@ describe("FilterChips", () => {
     expect(screen.getByTestId("filter-chip-owner")).toHaveTextContent("Owner: Ada");
   });
 
-  it("date chips offer due today, in 7 days, in 30 days and past", async () => {
+  it("date chips offer today, in 7 days, in 30 days and past", async () => {
     const { user, onFilterChange } = renderChips();
     await user.click(screen.getByTestId("filter-chip-due"));
 
     const items = menuItems();
     expect(items.map((i) => i.textContent)).toEqual([
       "All",
-      "Due today1",
+      "Today1",
       "In 7 days2",
       "In 30 days2",
       "Past1",
@@ -212,5 +214,70 @@ describe("FilterChips", () => {
       "Published",
       "Archived",
     ]);
+  });
+});
+
+/**
+ * A page that keeps its filter in `useFilterBy` and renders the chips only on
+ * its first tab, so switching tabs unmounts and remounts them.
+ */
+function TabbedPage() {
+  const [tab, setTab] = useState<"rows" | "other">("rows");
+  const { filterData, handleFilterChange, conditions } = useFilterBy<Row>(getFieldValue);
+  return (
+    <>
+      <button onClick={() => setTab(tab === "rows" ? "other" : "rows")}>switch tab</button>
+      {tab === "rows" && (
+        <>
+          <FilterChips<Row>
+            columns={columns}
+            onFilterChange={handleFilterChange}
+            defaultConditions={conditions}
+            data={data}
+            getFieldValue={getFieldValue}
+          />
+          <span data-testid="row-count">{filterData(data).length}</span>
+        </>
+      )}
+    </>
+  );
+}
+
+describe("FilterChips across a tab switch", () => {
+  it("shows the page's filter again after unmount and remount", async () => {
+    const user = userEvent.setup();
+    renderWithProviders(<TabbedPage />);
+    await user.click(screen.getByTestId("filter-chip-status"));
+    await user.click(screen.getByTestId("filter-chip-option-status-published"));
+    expect(screen.getByTestId("row-count")).toHaveTextContent("1");
+
+    await user.click(screen.getByRole("button", { name: "switch tab" }));
+    expect(screen.queryByTestId("filter-chip-status")).not.toBeInTheDocument();
+    await user.click(screen.getByRole("button", { name: "switch tab" }));
+
+    expect(screen.getByTestId("filter-chip-status")).toHaveTextContent("Status: Published");
+    expect(screen.getByTestId("filter-chip-status")).toHaveAttribute("data-state", "set");
+    expect(screen.getByTestId("row-count")).toHaveTextContent("1");
+  });
+
+  it("follows the page's conditions when they change from outside", () => {
+    const onFilterChange = vi.fn();
+    const props = { columns, onFilterChange, data, getFieldValue };
+    const { rerender } = renderWithProviders(
+      <FilterChips<Row> {...props} defaultConditions={[]} />,
+    );
+    expect(screen.getByTestId("filter-chip-status")).toHaveTextContent("Status: All");
+
+    rerender(
+      <FilterChips<Row>
+        {...props}
+        defaultConditions={[{ id: "x", columnId: "status", operator: "is", value: "draft" }]}
+      />,
+    );
+    expect(screen.getByTestId("filter-chip-status")).toHaveTextContent("Status: Draft");
+
+    rerender(<FilterChips<Row> {...props} defaultConditions={[]} />);
+    expect(screen.getByTestId("filter-chip-status")).toHaveTextContent("Status: All");
+    expect(onFilterChange).not.toHaveBeenCalled();
   });
 });

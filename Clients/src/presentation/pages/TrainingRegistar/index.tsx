@@ -703,8 +703,11 @@ const Training: React.FC = () => {
   );
 
   // FilterBy - Initialize hook
-  const { filterData: filterTrainingData, handleFilterChange: handleTrainingFilterChange } =
-    useFilterBy<TrainingRegistarModel>(getTrainingFieldValue);
+  const {
+    filterData: filterTrainingData,
+    handleFilterChange: handleTrainingFilterChange,
+    conditions: trainingFilterConditions,
+  } = useFilterBy<TrainingRegistarModel>(getTrainingFieldValue);
 
   // Evidence filter
   const evidenceFilterColumns: FilterColumn[] = useMemo(() => {
@@ -739,8 +742,11 @@ const Training: React.FC = () => {
     [],
   );
 
-  const { filterData: filterEvidenceData, handleFilterChange: handleEvidenceFilterChange } =
-    useFilterBy<EvidenceHubModel>(getEvidenceFieldValue);
+  const {
+    filterData: filterEvidenceData,
+    handleFilterChange: handleEvidenceFilterChange,
+    conditions: evidenceFilterConditions,
+  } = useFilterBy<EvidenceHubModel>(getEvidenceFieldValue);
 
   // Filtered trainings using FilterBy and search
   const filteredTraining = useMemo(() => {
@@ -999,6 +1005,7 @@ const Training: React.FC = () => {
               <TableFilter
                 columns={trainingFilterColumns}
                 onFilterChange={handleTrainingFilterChange}
+                defaultConditions={trainingFilterConditions}
                 data={trainingData}
                 getFieldValue={getTrainingFieldValue}
               />
@@ -1082,6 +1089,7 @@ const Training: React.FC = () => {
               <TableFilter
                 columns={evidenceFilterColumns}
                 onFilterChange={handleEvidenceFilterChange}
+                defaultConditions={evidenceFilterConditions}
                 data={evidenceHubData}
                 getFieldValue={getEvidenceFieldValue}
               />

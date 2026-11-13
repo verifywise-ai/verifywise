@@ -20,6 +20,8 @@ import type { BuiltInDataset } from "./types";
 export type MyDatasetsTabProps = {
   filterColumns: FilterColumn[];
   onFilterChange: (conditions: FilterCondition[], logic: "and" | "or") => void;
+  /** The page's current conditions, so the filter shows them again after a tab switch. */
+  filterConditions: FilterCondition[];
   onGroupChange: (field: string | null, sortOrder: "asc" | "desc") => void;
   searchTerm: string;
   onSearchTermChange: (value: string) => void;
@@ -41,6 +43,7 @@ export type MyDatasetsTabProps = {
 export default function MyDatasetsTab({
   filterColumns,
   onFilterChange,
+  filterConditions,
   onGroupChange,
   searchTerm,
   onSearchTermChange,
@@ -69,7 +72,11 @@ export default function MyDatasetsTab({
         sx={{ marginBottom: "18px" }}
       >
         <Stack direction="row" alignItems="center" gap={2}>
-          <TableFilter columns={filterColumns} onFilterChange={onFilterChange} />
+          <TableFilter
+            columns={filterColumns}
+            defaultConditions={filterConditions}
+            onFilterChange={onFilterChange}
+          />
           <GroupBy
             options={[
               { id: "name", label: "Name" },
