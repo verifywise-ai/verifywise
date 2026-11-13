@@ -1,5 +1,11 @@
 import { Theme } from "@mui/material";
-import { text, background, border as borderPalette, radiusPx } from "../../../themes/palette";
+import {
+  text,
+  background,
+  border as borderPalette,
+  radiusPx,
+  palette as vwPalette,
+} from "../../../themes/palette";
 
 export const addNewStep = {
   "gap": "8px",
@@ -20,7 +26,7 @@ export const stepNumberStyle = {
   justifyContent: "center",
   alignItems: "center",
   gap: "12px",
-  background: "#11725B",
+  background: vwPalette.brand.primary,
   borderRadius: "12px",
   color: `${background.main}`,
   fontSize: "14px",

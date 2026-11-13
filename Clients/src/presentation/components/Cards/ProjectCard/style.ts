@@ -54,13 +54,13 @@ export const viewProjectButtonStyle = {
   "mt": 1,
   "height": 34,
   "&:hover": {
-    backgroundColor: "#0e5c47",
+    backgroundColor: vwPalette.brand.primaryHover,
   },
   "border": "none",
 };
 
 export const euAiActChipStyle = {
-  "backgroundColor": "#014576",
+  "backgroundColor": vwPalette.status.info.text,
   "color": `${background.main}`,
   "fontWeight": 600,
   "fontSize": 11,
@@ -72,15 +72,15 @@ export const euAiActChipStyle = {
   "padding": "0 6px 0 10px",
   "boxShadow": "none",
   "&:hover": {
-    backgroundColor: "#014576",
+    backgroundColor: vwPalette.status.info.text,
     boxShadow: "none",
   },
   "&:active": {
-    backgroundColor: "#014576",
+    backgroundColor: vwPalette.status.info.text,
     boxShadow: "none",
   },
   "&:focus": {
-    backgroundColor: "#014576",
+    backgroundColor: vwPalette.status.info.text,
     boxShadow: "none",
   },
   "& .MuiButton-endIcon": {
@@ -89,7 +89,7 @@ export const euAiActChipStyle = {
 };
 
 export const iso42001ChipStyle = {
-  "backgroundColor": "#0ca5af",
+  "backgroundColor": vwPalette.chart[3],
   "color": `${background.main}`,
   "fontWeight": 600,
   "fontSize": 11,
@@ -101,15 +101,15 @@ export const iso42001ChipStyle = {
   "padding": "0 6px 0 10px",
   "boxShadow": "none",
   "&:hover": {
-    backgroundColor: "#0ca5af",
+    backgroundColor: vwPalette.chart[3],
     boxShadow: "none",
   },
   "&:active": {
-    backgroundColor: "#0ca5af",
+    backgroundColor: vwPalette.chart[3],
     boxShadow: "none",
   },
   "&:focus": {
-    backgroundColor: "#0ca5af",
+    backgroundColor: vwPalette.chart[3],
     boxShadow: "none",
   },
   "& .MuiButton-endIcon": {

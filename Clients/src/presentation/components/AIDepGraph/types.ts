@@ -49,7 +49,7 @@ export const NODE_TYPE_COLORS: Record<DependencyNodeType, string> = {
   api: palette.riskMark.medium, // Amber
   secret: palette.riskMark.critical, // Red
   rag: palette.status.success.strong, // Emerald
-  agent: "#6366f1", // Indigo
+  agent: palette.chart[0], // Indigo
   repository: palette.text.icon, // Slate
 };
 

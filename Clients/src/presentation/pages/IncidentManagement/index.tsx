@@ -753,7 +753,7 @@ const IncidentManagement: React.FC = () => {
                 {
                   key: IncidentManagementStatus.OPEN,
                   label: "Open",
-                  color: chartTheme.status.warning,
+                  color: chartTheme.status.info,
                   count: incidentsData.filter(
                     (i) => i.status === IncidentManagementStatus.OPEN && !i.archived,
                   ).length,

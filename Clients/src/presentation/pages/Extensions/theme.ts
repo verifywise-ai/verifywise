@@ -12,7 +12,7 @@ import { palette as vwPalette } from "../../themes/palette";
 export const colors = {
   // Primary — matches themes/palette.ts brand.primary
   primary: vwPalette.brand.primary,
-  primaryHover: "#0F5A47",
+  primaryHover: vwPalette.brand.primaryHover,
   primaryLight: "rgba(19, 113, 91, 0.08)",
 
   // Secondary neutral — matches v1SingleTheme colors.secondary
@@ -20,23 +20,23 @@ export const colors = {
   secondaryHover: vwPalette.text.tertiary,
 
   // Status: success — matches themes/palette.ts status.success
-  success: "#079455",
-  successHover: "#047857",
+  success: vwPalette.status.success.text,
+  successHover: vwPalette.status.success.text,
   successLight: vwPalette.status.success.bg,
 
   // Status: warning — matches themes/palette.ts status.warning
-  warning: "#B45309",
-  warningHover: "#92400E",
+  warning: vwPalette.status.warning.text,
+  warningHover: vwPalette.status.warning.text,
   warningLight: vwPalette.risk.medium.bg,
 
   // Status: error — matches themes/palette.ts status.error
   error: vwPalette.status.error.text,
-  errorHover: "#B91C1C",
+  errorHover: vwPalette.status.error.text,
   errorLight: vwPalette.status.error.border,
 
   // Status: info — matches themes/palette.ts status.info
   info: vwPalette.status.info.text,
-  infoHover: "#0D47A1",
+  infoHover: vwPalette.status.info.text,
   infoLight: vwPalette.status.info.bg,
 
   // Text — matches themes/palette.ts text.*

@@ -72,7 +72,7 @@ export const radioOptionStyle = {
   },
   "&.selected": {
     borderColor: `${brand.primary}`,
-    backgroundColor: "#F0F9F6",
+    backgroundColor: vwPalette.background.fill,
   },
 };
 

@@ -117,15 +117,15 @@ export const createProjectFormStyles = {
     "borderRadius": 2,
     "maxHeight": 34,
     "textTransform": "inherit",
-    "backgroundColor": "#4C7DE7",
+    "backgroundColor": vwPalette.chart[0],
     "boxShadow": "none",
-    "border": "1px solid #175CD3",
+    "border": `1px solid ${vwPalette.status.info.text}`,
     "ml": "auto",
     "mr": 0,
     "mt": "30px",
     "&:hover": {
       boxShadow: "none",
-      backgroundColor: "#175CD3",
+      backgroundColor: vwPalette.status.info.text,
     },
   },
 } as const;

@@ -1,4 +1,4 @@
-import { radiusPx } from "../../../themes/palette";
+import { radiusPx, palette as vwPalette } from "../../../themes/palette";
 export const BasicModalCancelButtonStyle = {
   "minWidth": 100,
   "textTransform": "capitalize",
@@ -14,15 +14,15 @@ export const BasicModalCancelButtonStyle = {
 export const BasicModalDeleteButtonStyle = {
   "minWidth": 160,
   "fontSize": 13,
-  "backgroundColor": "#DB504A",
-  "border": "1px solid #DB504A",
+  "backgroundColor": vwPalette.riskMark.critical,
+  "border": `1px solid ${vwPalette.riskMark.critical}`,
   "boxShadow": "none",
   "borderRadius": radiusPx.sm,
   "padding": "8px 16px",
   "textTransform": "capitalize",
   "&:hover": {
     boxShadow: "none",
-    backgroundColor: "#c23c34",
-    borderColor: "#c23c34",
+    backgroundColor: vwPalette.riskMark.critical,
+    borderColor: vwPalette.riskMark.critical,
   },
 };

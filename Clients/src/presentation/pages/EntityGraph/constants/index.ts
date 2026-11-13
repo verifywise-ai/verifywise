@@ -4,11 +4,11 @@ import { brand, palette as vwPalette } from "../../../themes/palette";
 // Entity type colors following VerifyWise design system
 export const entityColors: Record<EntityType, string> = {
   useCase: `${brand.primary}`, // Primary green
-  model: "#2196F3", // Blue
-  risk: "#f44336", // Red
-  vendor: "#9c27b0", // Purple
-  evidence: "#ff9800", // Orange
-  framework: "#607d8b", // Blue grey
+  model: vwPalette.chart[0], // Blue
+  risk: vwPalette.chart[4], // Red
+  vendor: vwPalette.chart[5], // Purple
+  evidence: vwPalette.chart[2], // Orange
+  framework: vwPalette.chart[9], // Blue grey
   user: vwPalette.risk.medium.text, // Brown
 };
 

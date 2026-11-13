@@ -6,23 +6,23 @@ export const RISK_LABELS = {
   },
   medium: {
     text: "Medium risk",
-    color: "#8D6E63", // darker brown (instead of washed yellow)
+    color: palette.risk.medium.text,
   },
   high: {
     text: "High risk",
-    color: "#E65100", // deep orange
+    color: palette.risk.high.text,
   },
   critical: {
     text: "Very high risk",
-    color: "#B71C1C", // stronger red
+    color: palette.risk.critical.text,
   },
   noRisk: {
     text: "Very Low risk",
-    color: "#33691E", // deep green
+    color: palette.risk.veryLow.text,
   },
   negligible: {
     text: "Negligible",
-    color: "#33691E",
+    color: palette.risk.veryLow.text,
   },
   minor: {
     text: "Minor",
@@ -30,19 +30,19 @@ export const RISK_LABELS = {
   },
   moderate: {
     text: "Moderate",
-    color: "#8D6E63",
+    color: palette.risk.medium.text,
   },
   major: {
     text: "Major",
-    color: "#E65100",
+    color: palette.risk.high.text,
   },
   catastrophic: {
     text: "Catastrophic",
-    color: "#B71C1C",
+    color: palette.risk.critical.text,
   },
   overdue: {
     text: "Overdue",
-    color: "#B71C1C", // use same color as critical/catastrophic
+    color: palette.risk.critical.text,
   },
 };
 

@@ -16,7 +16,7 @@ export const styles = {
   },
   BpCheckedIcon: {
     "backgroundColor": `${brand.primary}`,
-    "boxShadow": "inset 0 0 0 1px #297af2, inset 0 -1px 0 #297af2",
+    "boxShadow": `inset 0 0 0 1px ${vwPalette.brand.primary}, inset 0 -1px 0 ${vwPalette.brand.primary}`,
     "&::before": {
       display: "block",
       width: 20,

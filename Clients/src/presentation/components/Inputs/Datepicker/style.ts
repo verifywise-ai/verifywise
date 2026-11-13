@@ -1,5 +1,5 @@
 import { Theme } from "@mui/material";
-import { radiusPx } from "../../../themes/palette";
+import { radiusPx, palette as vwPalette } from "../../../themes/palette";
 
 export const getDatePickerStyle = (theme: Theme) => ({
   "backgroundColor": theme.palette.background.paper,
@@ -114,10 +114,10 @@ export const DatePickerStyle = {
     borderRadius: radiusPx.sm,
   },
   "& .MuiPickersOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline": {
-    borderColor: "#5FA896 !important",
+    borderColor: `${vwPalette.brand.primary} !important`,
   },
   "& .MuiPickersOutlinedInput-root:hover fieldset": {
-    borderColor: "#5FA896 !important",
+    borderColor: `${vwPalette.brand.primary} !important`,
   },
   "& .MuiPickersOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": {
     borderColor: "brand.primary !important",

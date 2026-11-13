@@ -69,21 +69,21 @@ export function getStatusColor(status: string): string {
     case "Not Started":
       return palette.text.tertiary;
     case "Draft":
-      return "#D97706";
+      return palette.text.accent;
     case "In progress":
-      return "#2563EB";
+      return palette.riskMark.medium;
     case "Awaiting review":
-      return "#7C3AED";
+      return palette.status.info.text;
     case "Awaiting approval":
-      return "#4F46E5";
+      return palette.accent.indigo.text;
     case "Implemented":
-      return "#059669";
+      return palette.status.success.text;
     case "Done":
-      return "#059669";
+      return palette.status.success.text;
     case "Audited":
-      return "#0D9488";
+      return palette.accent.teal.text;
     case "Needs rework":
-      return "#EA580C";
+      return palette.riskMark.high;
     default:
       return palette.text.tertiary; // Default to "Not Started" color
   }

@@ -75,7 +75,7 @@ export const incidentTag = {
   height: "20px",
   backgroundColor: "background.surface",
   borderRadius: 4,
-  color: "#666",
+  color: vwPalette.text.tertiary,
   margin: 0,
   fontWeight: 500,
 };
@@ -85,7 +85,7 @@ export const incidentTagExtra = {
   height: "20px",
   backgroundColor: vwPalette.border.light,
   borderRadius: 4,
-  color: "#666",
+  color: vwPalette.text.tertiary,
   margin: 0,
   fontWeight: 500,
 };

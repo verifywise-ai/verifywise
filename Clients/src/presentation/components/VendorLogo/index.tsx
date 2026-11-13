@@ -4,7 +4,6 @@ import { Building2 } from "lucide-react";
 import { getBrandFetchUrl } from "../../../config/brandfetch.config";
 import { text, background, palette as vwPalette, radiusPx } from "../../themes/palette";
 import { chartTheme } from "../../themes/chartTheme";
-import { isClassicUi } from "../../themes/uiStyle";
 
 interface VendorLogoProps {
   /** Vendor's website URL or domain */
@@ -21,25 +20,9 @@ interface VendorLogoProps {
  * Vibrant color palette for avatar backgrounds
  * Each vendor gets a consistent color based on their name
  */
-const CLASSIC_COLOR_PALETTE = [
-  { bg: "#EF4444", text: `${background.main}` }, // Red
-  { bg: "#F59E0B", text: `${background.main}` }, // Amber
-  { bg: "#10B981", text: `${background.main}` }, // Emerald
-  { bg: "#3B82F6", text: `${background.main}` }, // Blue
-  { bg: "#8B5CF6", text: `${background.main}` }, // Violet
-  { bg: "#EC4899", text: `${background.main}` }, // Pink
-  { bg: "#06B6D4", text: `${background.main}` }, // Cyan
-  { bg: "#F97316", text: `${background.main}` }, // Orange
-  { bg: "#14B8A6", text: `${background.main}` }, // Teal
-  { bg: "#6366F1", text: `${background.main}` }, // Indigo
-  { bg: "#A855F7", text: `${background.main}` }, // Purple
-  { bg: "#84CC16", text: `${background.main}` }, // Lime
-];
 
-// Phase 1: avatars use the nine chart series (never a risk or status colour).
-const COLOR_PALETTE = isClassicUi()
-  ? CLASSIC_COLOR_PALETTE
-  : chartTheme.series.slice(0, 9).map((bg) => ({ bg, text: `${background.main}` }));
+// Avatars use the chart series (never a risk or status colour); classic keeps its 12 colours.
+const COLOR_PALETTE = chartTheme.avatars.map((bg) => ({ bg, text: `${background.main}` }));
 
 /**
  * Generates a consistent color for a vendor based on their name

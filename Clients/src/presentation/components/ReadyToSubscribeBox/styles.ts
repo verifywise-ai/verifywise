@@ -5,7 +5,7 @@ import { text, background, radiusPx, palette as vwPalette } from "../../themes/p
 const getStyles = (theme: Theme) => ({
   container: {
     width: "90%",
-    backgroundColor: "#28A745",
+    backgroundColor: vwPalette.brand.primary,
     borderRadius: radiusPx.sm,
   },
   stack: {

@@ -5,11 +5,11 @@ import { radiusPx, palette as vwPalette } from "../../../themes/palette";
 
 export const StyledTableRow = styled(TableRow)<{ isflashing: number }>(({ isflashing }) => ({
   "& > *": {
-    backgroundColor: isflashing ? "#e3f5e6" : "inherit",
+    backgroundColor: isflashing ? vwPalette.status.success.bg : "inherit",
     transition: "background-color 0.3s ease",
   },
   "&:hover > *": {
-    backgroundColor: isflashing ? "#e3f5e6" : vwPalette.background.alt,
+    backgroundColor: isflashing ? vwPalette.status.success.bg : vwPalette.background.alt,
     cursor: "pointer",
   },
 }));

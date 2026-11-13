@@ -23,9 +23,9 @@ export const colors = {
   },
   brand: {
     primary: `${brand.primary}`,
-    primaryDark: "#0A4A3A",
-    success: "#17B26A",
-    warning: "#F79009",
+    primaryDark: vwPalette.brand.primaryHover,
+    success: vwPalette.status.success.strong,
+    warning: vwPalette.riskMark.high,
     error: vwPalette.status.error.text,
   },
   border: {
@@ -110,7 +110,7 @@ export const chipStyles = {
   // URL chips (light green)
   url: {
     backgroundColor: vwPalette.status.success.bg,
-    color: "#1e7e34",
+    color: vwPalette.status.success.text,
     padding: "2px 8px",
     borderRadius: radiusPx.sm,
     fontFamily: typography.fontFamily.mono,
@@ -119,7 +119,7 @@ export const chipStyles = {
   // File/code chips (light gray)
   code: {
     backgroundColor: vwPalette.background.hover,
-    color: "#5f6368",
+    color: vwPalette.text.tertiary,
     padding: "2px 8px",
     borderRadius: radiusPx.sm,
     fontFamily: typography.fontFamily.mono,

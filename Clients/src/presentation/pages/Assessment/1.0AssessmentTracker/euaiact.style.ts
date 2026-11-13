@@ -24,9 +24,9 @@ export const flashAnimation = keyframes`
 export const getPriorityColors = (priority: string): { bg: string; text: string } => {
   switch (priority?.toLowerCase()) {
     case "high priority":
-      return { bg: "#FEE2E2", text: palette.riskMark.critical }; // Error/Critical
+      return { bg: palette.status.error.bg, text: palette.riskMark.critical }; // Error/Critical
     case "medium priority":
-      return { bg: "#FEF3C7", text: palette.riskMark.medium }; // Warning/Pending
+      return { bg: palette.risk.medium.bg, text: palette.riskMark.medium }; // Warning/Pending
     case "low priority":
       return { bg: "background.hover", text: "status.default.text" }; // Neutral
     default:

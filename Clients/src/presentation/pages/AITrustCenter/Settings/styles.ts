@@ -1,4 +1,5 @@
 import { useTheme } from "@mui/material/styles";
+import { palette } from "../../../themes/palette";
 
 export const useStyles = () => {
   const theme = useTheme();
@@ -42,7 +43,7 @@ export const useStyles = () => {
       width: 120,
       height: 48,
       borderRadius: 2,
-      background: "linear-gradient(90deg, #A6C1EE 0%, #FBC2EB 100%)",
+      background: `linear-gradient(90deg, ${palette.accent.indigo.border} 0%, ${palette.accent.pink.border} 100%)`,
       display: "flex",
       alignItems: "center",
       justifyContent: "center",
@@ -65,7 +66,9 @@ export const useStyles = () => {
       height: 28,
       borderRadius: "50%",
       background: color,
-      border: selected ? `2px solid #2C6392` : `1.5px solid ${theme.palette.border.light}`,
+      border: selected
+        ? `2px solid ${palette.brand.primary}`
+        : `1.5px solid ${theme.palette.border.light}`,
       cursor: "pointer",
       boxSizing: "border-box",
       display: "inline-block",

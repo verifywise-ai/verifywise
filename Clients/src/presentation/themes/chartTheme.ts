@@ -28,9 +28,48 @@ import { isClassicUi } from "./uiStyle";
 
 const classicUi = isClassicUi();
 
+/** The classic look's 12 avatar colours, one per vendor name hash. */
+const CLASSIC_AVATARS = [
+  "#EF4444",
+  "#F59E0B",
+  "#10B981",
+  "#3B82F6",
+  "#8B5CF6",
+  "#EC4899",
+  "#06B6D4",
+  "#F97316",
+  "#14B8A6",
+  "#6366F1",
+  "#A855F7",
+  "#84CC16",
+] as const;
+
+/** The classic look's 15 line colours for charts with many series. */
+const CLASSIC_LINES = [
+  "#2563EB",
+  "#DC2626",
+  "#16A34A",
+  "#7C3AED",
+  "#EA580C",
+  "#0891B2",
+  "#DB2777",
+  "#CA8A04",
+  "#0D9488",
+  "#4F46E5",
+  "#059669",
+  "#9333EA",
+  "#C026D3",
+  "#65A30D",
+  "#0284C7",
+] as const;
+
 export const chartTheme = {
   /** Categorical series in fixed order; the last entry is Other. */
   series: chart,
+  /** Avatar backgrounds (12 in classic, the nine series in phase 1), indexed by hash. */
+  avatars: classicUi ? CLASSIC_AVATARS : chart.slice(0, 9),
+  /** Line colours for a chart with up to 15 series: classic keeps 15, phase 1 folds the rest into Other. */
+  lines: classicUi ? CLASSIC_LINES : [...chart.slice(0, 9), ...Array(6).fill(chart[9])],
   /** A chart with a single measure. */
   single: brand.primary,
   /** Risk tiers as solid marks (dots, bars, slices). */

@@ -1,3 +1,12 @@
+/**
+ * Screens use tokens, not hex. Scans every .ts and .tsx file under
+ * `presentation/pages` and `presentation/components` (not `__tests__`, test or
+ * `.d.ts` files) for `#rgb`, `#rgba`, `#rrggbb` and `#rrggbbaa` in code:
+ * string literals, template text and JSX text. Comments are ignored.
+ *
+ * Out of scope: `rgb()`, `rgba()` and `hsl()` values. They are not caught
+ * here and are reviewed by hand.
+ */
 import { readdirSync, readFileSync } from "node:fs";
 import path from "node:path";
 import ts from "typescript";
@@ -13,22 +22,32 @@ function collect(dir: string, out: string[] = []): string[] {
     const full = path.join(dir, entry.name);
     if (entry.isDirectory()) {
       if (entry.name !== "__tests__") collect(full, out);
-    } else if (entry.name.endsWith(".tsx") && !/\.(test|spec)\.tsx$/.test(entry.name)) {
+    } else if (
+      /\.tsx?$/.test(entry.name) &&
+      !/\.(test|spec)\.tsx?$/.test(entry.name) &&
+      !entry.name.endsWith(".d.ts")
+    ) {
       out.push(full);
     }
   }
   return out;
 }
 
-const isAllowed = (rel: string) =>
-  HEX_ALLOW_LIST.some((e) => (e.file.endsWith("/") ? rel.startsWith(e.file) : rel === e.file));
+const allowEntry = (rel: string) =>
+  HEX_ALLOW_LIST.find((e) => (e.file.endsWith("/") ? rel.startsWith(e.file) : rel === e.file));
 
 /** Hex in code (string, template and JSX text), never in comments. */
-function hexHits(file: string): string[] {
+function hexHits(file: string, literal?: string): string[] {
   const source = readFileSync(file, "utf8");
   if (!HEX.test(source)) return [];
   HEX.lastIndex = 0;
-  const sf = ts.createSourceFile(file, source, ts.ScriptTarget.Latest, true, ts.ScriptKind.TSX);
+  const sf = ts.createSourceFile(
+    file,
+    source,
+    ts.ScriptTarget.Latest,
+    true,
+    file.endsWith("x") ? ts.ScriptKind.TSX : ts.ScriptKind.TS,
+  );
   const hits: string[] = [];
   const visit = (node: ts.Node) => {
     let text: string | undefined;
@@ -43,6 +62,7 @@ function hexHits(file: string): string[] {
     } else if (ts.isJsxText(node)) {
       text = node.getText(sf);
     }
+    if (text && literal) text = text.split(literal).join("");
     if (text) {
       for (const match of text.matchAll(HEX)) {
         const { line } = sf.getLineAndCharacterOfPosition(node.getStart(sf));
@@ -61,8 +81,9 @@ describe("no hard-coded hex in screens", () => {
     for (const root of ROOTS) {
       for (const file of collect(path.join(PRESENTATION, root))) {
         const rel = path.relative(PRESENTATION, file).split(path.sep).join("/");
-        if (isAllowed(rel)) continue;
-        const hits = hexHits(file);
+        const entry = allowEntry(rel);
+        if (entry && !entry.literal) continue;
+        const hits = hexHits(file, entry?.literal);
         if (hits.length) offenders.push(`${rel}: ${hits.join(", ")}`);
       }
     }
