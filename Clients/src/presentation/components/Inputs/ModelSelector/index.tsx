@@ -37,6 +37,7 @@ import { ReactComponent as MistralLogo } from "../../../assets/icons/mistral_log
 import { ReactComponent as XAILogo } from "../../../assets/icons/xai_logo.svg";
 import { ReactComponent as OpenRouterLogo } from "../../../assets/icons/openrouter_logo.svg";
 import { ReactComponent as OllamaLogo } from "../../../assets/icons/ollama_logo.svg";
+import { radiusPx } from "../../../themes/palette";
 
 const PROVIDER_ICONS: Record<string, React.FC<React.SVGProps<SVGSVGElement>>> = {
   "openai": OpenAILogo,
@@ -470,7 +471,7 @@ function ModelSelector({
                         sx={{
                           width: 48,
                           height: 48,
-                          borderRadius: "12px",
+                          borderRadius: radiusPx.xl,
                           backgroundColor: theme.palette.warning.light,
                           display: "flex",
                           alignItems: "center",

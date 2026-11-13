@@ -56,13 +56,16 @@ export const {
 /**
  * Corner radius as CSS strings for the active look. Phase 1: 2px on buttons,
  * cards, inputs, menus and modals; 8px on the table search field; 9px on the
- * top corners of tabs; fully round pills. Classic: 4px, with 6px (md) and 8px (lg) for inner and large panels and 12px (xl) for modals and menus.
+ * top corners of tabs; fully round pills. Classic: 4px, with 6px (md) and 8px (lg) for inner and large panels, 10px (lgPlus) for icon tiles,
+ * 12px (xl) for modals and menus and 16px (xxl) for modal bodies.
  */
 export const radiusPx = {
   sm: `${radius.sm}px`,
   md: `${radius.md}px`,
   lg: `${radius.lg}px`,
   xl: `${radius.xl}px`,
+  lgPlus: `${radius.lgPlus}px`,
+  xxl: `${radius.xxl}px`,
   search: `${radius.search}px`,
   tab: `${radius.tab}px`,
   pill: `${radius.pill}px`,

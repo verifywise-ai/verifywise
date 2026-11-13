@@ -939,7 +939,7 @@ const StartHere = () => {
                       sx={{
                         width: 48,
                         height: 48,
-                        borderRadius: "12px",
+                        borderRadius: radiusPx.xl,
                         background: s.bg,
                         display: "flex",
                         alignItems: "center",

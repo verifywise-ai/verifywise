@@ -381,7 +381,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
                   "fontWeight": 500,
                   "backgroundColor": isActive ? vwPalette.background.alt : vwPalette.border.light,
                   "color": vwPalette.text.tertiary,
-                  "borderRadius": "9px",
+                  "borderRadius": radiusPx.pill,
                   "minWidth": "18px",
                   "maxWidth": "36px",
                   "& .MuiChip-label": {
@@ -509,7 +509,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
                 "fontWeight": 500,
                 "backgroundColor": isActive ? vwPalette.background.alt : vwPalette.border.light,
                 "color": vwPalette.text.tertiary,
-                "borderRadius": "9px",
+                "borderRadius": radiusPx.pill,
                 "minWidth": "18px",
                 "maxWidth": "36px",
                 "& .MuiChip-label": {

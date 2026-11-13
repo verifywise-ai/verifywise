@@ -389,7 +389,7 @@ export default function ProjectsList() {
                 "fontSize": "11px",
                 "height": "20px",
                 "minWidth": "20px",
-                "borderRadius": "10px",
+                "borderRadius": radiusPx.pill,
                 "& .MuiChip-label": {
                   padding: "0 6px",
                 },

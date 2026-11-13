@@ -21,13 +21,17 @@ describe("radiusPx", () => {
     expect(radiusPx.md).toBe("2px");
     expect(radiusPx.lg).toBe("2px");
     expect(radiusPx.xl).toBe("2px");
+    expect(radiusPx.lgPlus).toBe("2px");
+    expect(radiusPx.xxl).toBe("2px");
   });
 
-  it("classic keeps the 6px, 8px and 12px corners", async () => {
+  it("classic keeps the 6px, 8px, 10px, 12px and 16px corners", async () => {
     const radiusPx = await loadRadiusPx("classic");
     expect(radiusPx.sm).toBe("4px");
     expect(radiusPx.md).toBe("6px");
     expect(radiusPx.lg).toBe("8px");
     expect(radiusPx.xl).toBe("12px");
+    expect(radiusPx.lgPlus).toBe("10px");
+    expect(radiusPx.xxl).toBe("16px");
   });
 });

@@ -327,7 +327,7 @@ export const FilePickerModal: FC<FilePickerModalProps> = ({
                     sx={{
                       width: 36,
                       height: 36,
-                      borderRadius: "6px",
+                      borderRadius: radiusPx.md,
                       backgroundColor: theme.palette.background.fill,
                       display: "flex",
                       alignItems: "center",

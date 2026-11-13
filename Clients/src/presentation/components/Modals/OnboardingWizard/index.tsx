@@ -263,7 +263,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           <Box
             sx={{
               display: "flex",
-              borderRadius: "10px",
+              borderRadius: radiusPx.lgPlus,
               overflow: "hidden",
               border: isDark ? "1px solid rgba(0,0,0,0.08)" : "1px solid rgba(255,255,255,0.08)",
             }}

@@ -298,7 +298,7 @@ const StandardModal: React.FC<StandardModalProps> = ({
                   ? "min(740px, calc(90vh - 180px))"
                   : "calc(100vh - 240px)",
               border: `1px solid ${border.light}`,
-              borderRadius: "16px",
+              borderRadius: radiusPx.xxl,
               backgroundColor: "background.main",
               zIndex: 1,
               position: "relative",

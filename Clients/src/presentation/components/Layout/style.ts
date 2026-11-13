@@ -27,7 +27,7 @@ export const approvalCountBadgeStyle = {
   px: "6px",
   py: "4px",
   ml: "8px",
-  borderRadius: "12px",
+  borderRadius: radiusPx.pill,
   fontSize: "11px",
   fontWeight: 600,
   lineHeight: 1,

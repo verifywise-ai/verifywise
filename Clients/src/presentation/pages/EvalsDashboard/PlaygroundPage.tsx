@@ -510,7 +510,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
             sx={{
               width: 48,
               height: 48,
-              borderRadius: "12px",
+              borderRadius: radiusPx.xl,
               backgroundColor: palette.background.fill,
               border: `1px solid ${palette.border.light}`,
               display: "flex",
@@ -606,7 +606,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                     sx={{
                       width: 28,
                       height: 28,
-                      borderRadius: "8px",
+                      borderRadius: radiusPx.lg,
                       backgroundColor: palette.background.fill,
                       border: `1px solid ${palette.border.light}`,
                       display: "flex",
@@ -663,7 +663,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                 sx={{
                   width: 28,
                   height: 28,
-                  borderRadius: "8px",
+                  borderRadius: radiusPx.lg,
                   backgroundColor: palette.background.fill,
                   border: `1px solid ${palette.border.light}`,
                   display: "flex",
@@ -723,7 +723,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
               p: "10px",
               backgroundColor: palette.background.fill,
               border: `1px solid ${palette.border.light}`,
-              borderRadius: "10px",
+              borderRadius: radiusPx.lgPlus,
             }}
           >
             {attachments.map((att, idx) => (
@@ -898,7 +898,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
               "color": canSend ? vwPalette.background.main : palette.text.disabled,
               "width": 32,
               "height": 32,
-              "borderRadius": "8px",
+              "borderRadius": radiusPx.lg,
               "flexShrink": 0,
               "transition": "background-color 0.15s",
               "&:hover": {

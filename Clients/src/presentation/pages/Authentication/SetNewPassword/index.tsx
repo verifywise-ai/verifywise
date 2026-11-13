@@ -16,7 +16,7 @@ import type { FormErrors } from "../../../../application/validations/formValidat
 import { extractUserToken } from "../../../../application/tools/extractToken";
 import { resetPassword } from "../../../../application/repository/auth.repository";
 import CustomizableSkeleton from "../../../components/Skeletons";
-import { background, border as borderPalette } from "../../../themes/palette";
+import { background, border as borderPalette, radiusPx } from "../../../themes/palette";
 
 interface ResetPasswordFormValues {
   password: string;
@@ -219,7 +219,7 @@ const SetNewPassword: React.FC = () => {
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-              borderRadius: "12px",
+              borderRadius: radiusPx.xl,
               border: `2px solid ${borderPalette.light}`,
               gap: theme.spacing(12),
             }}

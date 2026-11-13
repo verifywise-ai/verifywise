@@ -118,7 +118,7 @@ export default function PromptEditDrawer({
                   <Box
                     sx={{
                       border: `1px solid ${palette.accent.purple.border}`,
-                      borderRadius: "12px",
+                      borderRadius: radiusPx.xl,
                       backgroundColor: palette.accent.purple.bg,
                       p: 2,
                       minHeight: "200px",

@@ -1219,7 +1219,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
               textAlign: "center",
               py: 8,
               backgroundColor: palette.background.accent,
-              borderRadius: "12px",
+              borderRadius: radiusPx.xl,
               border: `1px solid ${palette.border.dark}`,
             }}
           >

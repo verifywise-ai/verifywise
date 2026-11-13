@@ -27,7 +27,7 @@ export const stepNumberStyle = {
   alignItems: "center",
   gap: "12px",
   background: vwPalette.brand.primary,
-  borderRadius: "12px",
+  borderRadius: radiusPx.pill,
   color: `${background.main}`,
   fontSize: "14px",
   fontWeight: 600,

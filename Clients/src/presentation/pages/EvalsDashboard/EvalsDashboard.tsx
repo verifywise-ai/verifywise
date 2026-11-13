@@ -1321,7 +1321,7 @@ export default function EvalsDashboard() {
                 <Box
                   sx={{
                     border: `2px dashed ${palette.border.dark}`,
-                    borderRadius: "12px",
+                    borderRadius: radiusPx.xl,
                     p: 6,
                     textAlign: "center",
                     backgroundColor: palette.background.accent,
@@ -1406,7 +1406,7 @@ export default function EvalsDashboard() {
                                 height: 56,
                                 minWidth: 56,
                                 minHeight: 56,
-                                borderRadius: "12px",
+                                borderRadius: radiusPx.xl,
                                 backgroundColor: palette.background.accent,
                                 border: `1px solid ${palette.border.dark}`,
                                 flexShrink: 0,
@@ -1654,7 +1654,7 @@ export default function EvalsDashboard() {
                 <Box
                   sx={{
                     border: `2px dashed ${palette.border.dark}`,
-                    borderRadius: "12px",
+                    borderRadius: radiusPx.xl,
                     p: 5,
                     textAlign: "center",
                     backgroundColor: palette.background.accent,
@@ -1693,7 +1693,7 @@ export default function EvalsDashboard() {
                               width: 56,
                               height: 56,
                               minWidth: 56,
-                              borderRadius: "12px",
+                              borderRadius: radiusPx.xl,
                               backgroundColor: palette.background.accent,
                               border: `1px solid ${palette.border.dark}`,
                               display: "flex",

@@ -163,7 +163,7 @@ const DashboardTabs: React.FC<DashboardTabsProps> = ({
             "width": 28,
             "height": 28,
             "border": `1px dashed ${border.light}`,
-            "borderRadius": "6px",
+            "borderRadius": radiusPx.md,
             "color": text.secondary,
             "&:hover": { backgroundColor: background.hover, color: brand.primary },
           }}

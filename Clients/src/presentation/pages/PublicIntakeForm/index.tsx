@@ -103,7 +103,7 @@ function GradientBanner({
       sx={{
         background: gradient,
         minHeight: height,
-        borderRadius: "12px 12px 0 0",
+        borderRadius: `${radiusPx.xl} ${radiusPx.xl} 0 0`,
         display: "flex",
         flexDirection: "column",
         justifyContent: "flex-end",
@@ -118,7 +118,7 @@ function GradientBanner({
             width: 56,
             height: 56,
             backgroundColor: "background.main",
-            borderRadius: "10px",
+            borderRadius: radiusPx.lgPlus,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -579,7 +579,7 @@ export function PublicIntakeForm() {
             p: 4,
             maxWidth: 500,
             textAlign: "center",
-            borderRadius: "12px",
+            borderRadius: radiusPx.xl,
             backgroundColor: "background.main",
             boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
           }}
@@ -655,7 +655,7 @@ export function PublicIntakeForm() {
             sx={{
               flex: 1,
               minWidth: 0,
-              borderRadius: "12px",
+              borderRadius: radiusPx.xl,
               overflow: "hidden",
               backgroundColor: "background.main",
               border: `1px solid ${vwPalette.border.dark}`,

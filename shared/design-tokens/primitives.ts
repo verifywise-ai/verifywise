@@ -240,6 +240,8 @@ export const radius = {
   md: 2, // classic 6px corners (inner panels, callouts): 2px in phase 1
   lg: 2, // classic 8px corners (large panels): 2px in phase 1
   xl: 2, // classic 12px corners (modals, menus): 2px in phase 1
+  lgPlus: 2, // classic 10px corners (icon tiles, inner panels): 2px in phase 1
+  xxl: 2, // classic 16px corners (modal bodies, public form cards): 2px in phase 1
   search: 8, // the search field above a table
   tab: 9, // top corners of a tab in the tab bar (bottom corners square)
   pill: 999, // pills, filter chips, link chips

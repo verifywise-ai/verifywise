@@ -7,7 +7,12 @@ import { ReactComponent as Background } from "../../../assets/imgs/background-gr
 import { CheckCircle as Success } from "lucide-react";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { useNavigate } from "react-router";
-import { text, border as borderPalette, palette as vwPalette } from "../../../themes/palette";
+import {
+  text,
+  border as borderPalette,
+  palette as vwPalette,
+  radiusPx,
+} from "../../../themes/palette";
 
 const ResetPasswordContinue = () => {
   const navigate = useNavigate();
@@ -49,7 +54,7 @@ const ResetPasswordContinue = () => {
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            borderRadius: "12px",
+            borderRadius: radiusPx.xl,
             border: `2px solid ${borderPalette.light}`,
             gap: theme.spacing(12),
           }}

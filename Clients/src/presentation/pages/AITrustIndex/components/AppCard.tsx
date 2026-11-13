@@ -110,7 +110,7 @@ export default function AppCard({
           sx={{
             width: 36,
             height: 36,
-            borderRadius: "8px",
+            borderRadius: radiusPx.lg,
             border: `1px solid ${palette.border.dark}`,
             display: "flex",
             alignItems: "center",

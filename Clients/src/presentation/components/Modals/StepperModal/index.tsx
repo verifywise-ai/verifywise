@@ -231,7 +231,7 @@ const StepperModal: React.FC<StepperModalProps> = ({
               ? { flex: "none", height: "calc(90vh - 180px)", maxHeight: "calc(90vh - 180px)" }
               : { maxHeight: "calc(90vh - 180px)" }),
             border: `1px solid ${border.light}`,
-            borderRadius: "16px",
+            borderRadius: radiusPx.xxl,
             backgroundColor: "background.main",
             zIndex: 1,
             position: "relative",

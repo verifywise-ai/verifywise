@@ -65,7 +65,7 @@ export function SubmissionSuccess() {
         <Box
           sx={{
             backgroundColor: "background.main",
-            borderRadius: "16px 16px 0 0",
+            borderRadius: `${radiusPx.xxl} ${radiusPx.xxl} 0 0`,
             boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
             p: 4,
             textAlign: "center",

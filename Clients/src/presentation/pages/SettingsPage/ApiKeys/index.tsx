@@ -304,7 +304,7 @@ const ApiKeys = ({ showLlmKeys = true }: ApiKeysProps) => {
           <Box
             sx={{
               border: "2px dashed status.default.border",
-              borderRadius: "12px",
+              borderRadius: radiusPx.xl,
               p: 6,
               textAlign: "center",
               backgroundColor: vwPalette.background.alt,

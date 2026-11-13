@@ -62,7 +62,7 @@ export default function DatasetUploadZone({
           sx={{
             width: 32,
             height: 32,
-            borderRadius: "6px",
+            borderRadius: radiusPx.md,
             backgroundColor: palette.brand.primary,
             display: "flex",
             alignItems: "center",
