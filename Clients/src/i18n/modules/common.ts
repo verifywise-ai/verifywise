@@ -5627,6 +5627,8 @@ export const de: Record<string, string> = {
   "Use case and AI app lifecycles, intake form logic and MCP server auth":
     "Lebenszyklen für Anwendungsfälle und KI-Apps, Logik für Aufnahmeformulare und MCP-Server-Authentifizierung",
   "AI app bulk import and bulk assessment": "Massenimport und Massenbewertung von KI-Apps",
+  "Training assignments, groups and custom roles, and framework import":
+    "Schulungszuweisungen, Gruppen und benutzerdefinierte Rollen sowie Framework-Import",
 };
 
 export const fr: Record<string, string> = {
@@ -11186,6 +11188,8 @@ export const fr: Record<string, string> = {
   "Use case and AI app lifecycles, intake form logic and MCP server auth":
     "Cycles de vie des cas d'usage et des applications d'IA, logique des formulaires d'intake et authentification des serveurs MCP",
   "AI app bulk import and bulk assessment": "Import et évaluation en masse des applications d'IA",
+  "Training assignments, groups and custom roles, and framework import":
+    "Affectation des formations, groupes et rôles personnalisés, et import de référentiels",
 
   "Request": "Requête",
 };
@@ -16637,6 +16641,8 @@ export const es: Record<string, string> = {
     "Ciclos de vida de casos de uso y aplicaciones de IA, lógica de formularios de solicitud y autenticación de servidores MCP",
   "AI app bulk import and bulk assessment":
     "Importación y evaluación masivas de aplicaciones de IA",
+  "Training assignments, groups and custom roles, and framework import":
+    "Asignación de formaciones, grupos y roles personalizados, e importación de marcos",
   "Enter a full web address starting with http:// or https://":
     "Introduzca una dirección web completa que empiece por http:// o https://",
   "Shown under the field on the public form":
