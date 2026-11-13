@@ -185,8 +185,14 @@ describe("ScanDetailsPage", () => {
     });
   });
 
-  it("switches to the security tab and shows the clean state", async () => {
+  it("switches to the security tab and shows the clean state when model files were scanned", async () => {
     mockGetScan.mockResolvedValue(makeScanResponse());
+    mockGetScanSecuritySummary.mockResolvedValue({
+      total: 0,
+      by_severity: { critical: 0, high: 0, medium: 0, low: 0 },
+      by_threat_type: {},
+      model_files_scanned: 3,
+    });
     renderWithProviders(<ScanDetailsPage />);
 
     await waitFor(() => {
@@ -198,6 +204,41 @@ describe("ScanDetailsPage", () => {
     await waitFor(() => {
       expect(screen.getByText("No security issues detected")).toBeInTheDocument();
     });
+  });
+
+  it("says no model files were found instead of a clean result when none were scanned", async () => {
+    mockGetScan.mockResolvedValue(makeScanResponse());
+    renderWithProviders(<ScanDetailsPage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("acme/widgets")[0]).toBeInTheDocument();
+    });
+
+    // Badge doesn't claim "0 found" for a check that had nothing to check
+    expect(screen.getByRole("tab", { name: /Security/ })).toHaveTextContent("–");
+    fireEvent.click(screen.getByRole("tab", { name: /Security/ }));
+
+    await waitFor(() => {
+      expect(screen.getByText("No model files found in this repository")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("No security issues detected")).toBeNull();
+  });
+
+  it("shows a not-checked badge and state when vulnerability checks were off", async () => {
+    mockGetScan.mockResolvedValue(makeScanResponse({ vulnerability_check_status: "off" }));
+    renderWithProviders(<ScanDetailsPage />);
+
+    await waitFor(() => {
+      expect(screen.getAllByText("acme/widgets")[0]).toBeInTheDocument();
+    });
+
+    expect(screen.getByRole("tab", { name: /Vulnerabilities/ })).toHaveTextContent("–");
+    fireEvent.click(screen.getByRole("tab", { name: /Vulnerabilities/ }));
+
+    await waitFor(() => {
+      expect(screen.getByText("Vulnerability checks didn't run for this scan")).toBeInTheDocument();
+    });
+    expect(screen.queryByText("No LLM vulnerabilities detected")).toBeNull();
   });
 
   it("switches to the compliance tab and lazily loads compliance data", async () => {
@@ -263,7 +304,7 @@ describe("ScanDetailsPage", () => {
       expect(mockRecalculateRiskScore).toHaveBeenCalledWith(123);
     });
     await waitFor(() => {
-      expect(screen.getByText("Risk score updated: 90 (A)")).toBeInTheDocument();
+      expect(screen.getByText("Governance score updated: 90 (A)")).toBeInTheDocument();
     });
   });
 
@@ -279,7 +320,7 @@ describe("ScanDetailsPage", () => {
     fireEvent.click(screen.getByText("Recalculate score"));
 
     await waitFor(() => {
-      expect(screen.getByText("Failed to recalculate risk score")).toBeInTheDocument();
+      expect(screen.getByText("Failed to calculate the governance score")).toBeInTheDocument();
     });
   });
 
@@ -376,7 +417,7 @@ describe("ScanDetailsPage", () => {
     renderWithProviders(<ScanDetailsPage />);
 
     await waitFor(() => {
-      expect(screen.getByText("No security issues detected")).toBeInTheDocument();
+      expect(screen.getByText("No model files found in this repository")).toBeInTheDocument();
     });
   });
 });

@@ -27,7 +27,7 @@ export const historyContent: ArticleContent = {
       items: [
         { bold: 'Repository', text: 'Owner and name of the scanned repository' },
         { bold: 'Status', text: 'Current state: Pending, Cloning, Scanning, Completed, Failed or Cancelled' },
-        { bold: 'Risk score', text: 'AGRS letter grade (A through F) and numeric score, if calculated' },
+        { bold: 'Governance score', text: 'AGRS letter grade (A through F) and numeric score, with a **Partial** marker when vulnerability checks didn\'t run or didn\'t cover every file' },
         { bold: 'Findings', text: 'Total detections: libraries, API calls, secrets, security issues' },
         { bold: 'Files scanned', text: 'Total source files analyzed' },
         { bold: 'Duration', text: 'Time taken to complete the scan' },
@@ -36,13 +36,13 @@ export const historyContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Click any completed scan row to see its full results: risk score, library findings, API calls, secrets and security issues.',
+      text: 'Click any completed scan row to see its full results: governance score, library findings, API calls, secrets and security issues.',
     },
     {
       type: 'image',
       src: '/images/user-guide/ai-detection-history.png',
       alt: 'Scan results table showing past repository scans with status and findings',
-      caption: 'Complete scan results with repository, status, risk score, findings and duration',
+      caption: 'Complete scan results with repository, status, governance score, findings and duration',
     },
     {
       type: 'heading',
@@ -78,11 +78,11 @@ export const historyContent: ArticleContent = {
       type: 'heading',
       id: 'risk-score-column',
       level: 2,
-      text: 'Risk score column',
+      text: 'Governance score column',
     },
     {
       type: 'paragraph',
-      text: 'Each completed scan shows a letter grade badge (A through F) with the numeric score. Scans without a calculated score show a dash. To generate one, open the scan details and click **Calculate risk score**.',
+      text: 'Each completed scan shows a letter grade badge (A through F) with the numeric score. The score is calculated when the scan finishes. Hover a **Partial** marker to see why the score leaves out vulnerability checks. A scan without a score shows a dash; open the scan details and click **Recalculate score** to calculate it.',
     },
     {
       type: 'heading',
@@ -139,7 +139,7 @@ export const historyContent: ArticleContent = {
           collectionId: 'ai-detection',
           articleId: 'risk-scoring',
           title: 'Risk scoring',
-          description: 'Understanding the AI Governance Risk Score',
+          description: 'Understanding the governance score',
         },
         {
           collectionId: 'ai-detection',

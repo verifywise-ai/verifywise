@@ -26,6 +26,7 @@ import {
 import { TabValue } from "./scanDetailsConfig";
 import { usePaginatedFindings } from "./usePaginatedFindings";
 import { useScanFindingsEffects } from "./useScanFindingsEffects";
+import { LLM_ANALYSIS_POLL_ATTEMPTS, LLM_ANALYSIS_POLL_MS } from "../components/governanceScore";
 
 export type ScanDetailsAlert = { variant: "success" | "error"; body: string };
 
@@ -160,15 +161,42 @@ export function useScanDetails() {
     securityState,
   });
 
+  // Background AI analysis: re-read the scan until it finishes. The server
+  // reports a long-pending analysis as failed, so this stops well before the cap.
+  const llmPending = scan?.scan.risk_score_details?.llm_status === "pending";
+  useEffect(() => {
+    if (!llmPending) return undefined;
+    let cancelled = false;
+    let attempts = 0;
+    const timer = setInterval(async () => {
+      attempts += 1;
+      if (attempts >= LLM_ANALYSIS_POLL_ATTEMPTS) clearInterval(timer);
+      try {
+        const fresh = await getScan(scanId);
+        if (!cancelled) setScan(fresh);
+      } catch {
+        // Keep the current score; the next tick tries again
+      }
+    }, LLM_ANALYSIS_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [llmPending, scanId]);
+
   const handleRecalculateRiskScore = async () => {
-    if (!scan) return;
+    // A recalculation would start a second paid LLM run; the server refuses it too
+    if (!scan || llmPending) return;
     setIsRecalculating(true);
     try {
       const result = await recalculateRiskScore(scanId);
       setScan(await getScan(scanId));
-      showAlert("success", `Risk score updated: ${result.score} (${result.grade})`);
+      showAlert(
+        "success",
+        `Governance score updated: ${Math.round(result.score)} (${result.grade})`,
+      );
     } catch {
-      showAlert("error", "Failed to recalculate risk score");
+      showAlert("error", "Failed to calculate the governance score");
     } finally {
       setIsRecalculating(false);
     }

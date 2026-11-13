@@ -27,6 +27,7 @@ import {
   IFilePath,
   IParsedGitHubUrl,
   ScanStatus,
+  VulnerabilityCheckStatus,
   ScanMode,
   IScanResponse,
   IFindingsResponse,
@@ -93,14 +94,16 @@ import { QueryTypes } from "sequelize";
 import { isModelFileExtension } from "../config/modelSecurityPatterns";
 import { getLicenseForFinding } from "../utils/licenseDetection.utils";
 import { cacheAside, buildOrgCacheKey, deleteByPattern, CACHE_KEYS } from "../utils/cache.utils";
-import { calculateAndStoreRiskScore } from "./aiDetection/riskScoring";
+import { calculateAndStoreRiskScore, effectiveLlmStatus } from "./aiDetection/riskScoring";
+import {
+  notifyAiDetectionScanFinished,
+  notifyAiDetectionScanFailed,
+} from "./aiDetection/scanNotifications";
 import { reportScanToGitHub } from "./aiDetection/githubStatusReporter";
 import {
-  scanFileForVulnerabilityIndicators,
-  buildAnalysisContext,
-  VulnerabilityCandidate,
-} from "./aiDetection/vulnerabilityPreFilter";
-import { analyzeVulnerabilities } from "./aiDetection/vulnerabilityAnalyzer";
+  runVulnerabilityChecks,
+  vulnerabilityChecksActive,
+} from "./aiDetection/vulnerabilityAnalyzer";
 import { getRiskScoringConfigQuery } from "../utils/aiDetectionRiskScoring.utils";
 
 // ============================================================================
@@ -152,25 +155,6 @@ async function reportStoredScanToGitHub(scanId: number, organizationId: number):
   } catch (err) {
     logger.error(`Failed to report scan #${scanId} to GitHub:`, err);
   }
-}
-
-/**
- * Calculate and store the governance score, then report the scan to GitHub.
- *
- * The GitHub status check reads the stored score, so it must run after the
- * score is written. Runs in the background; errors are logged, never thrown.
- * If scoring fails the scan has no score and the status check reports
- * "error" rather than passing.
- */
-function scoreAndReportScan(scanId: number, repositoryName: string, ctx: IServiceContext): void {
-  void (async () => {
-    try {
-      await calculateAndStoreRiskScore(scanId, repositoryName, ctx);
-    } catch (err) {
-      logger.error(`Failed to calculate risk score for scan ${scanId}:`, err);
-    }
-    await reportStoredScanToGitHub(scanId, ctx.organizationId);
-  })();
 }
 
 /**
@@ -1369,6 +1353,27 @@ async function getChangedFiles(
 }
 
 /**
+ * Last step of every completed scan (manual, scheduled or webhook): store the
+ * rule-based governance score. Optional LLM analysis continues in the
+ * background. A scoring failure never fails the scan: the scan stays
+ * completed without a score, and "Recalculate score" can fill it in.
+ */
+async function scoreCompletedScan(
+  scanId: number,
+  repositoryName: string,
+  ctx: IServiceContext,
+): Promise<void> {
+  try {
+    const result = await calculateAndStoreRiskScore(scanId, repositoryName, ctx);
+    if (!result) {
+      logger.warn(`Scan ${scanId} completed without a governance score`);
+    }
+  } catch (err) {
+    logger.error(`Governance score failed for scan ${scanId}:`, err);
+  }
+}
+
+/**
  * Build the input that carries a baseline finding into an incremental scan.
  * Severity and vulnerability details are kept so the CI critical-findings gate
  * still sees a carried critical finding, and the baseline suppression is kept
@@ -1572,8 +1577,20 @@ async function executeIncrementalScan(
 
   progressState.progress = 85;
 
+  // Incremental scans don't run vulnerability checks on changed files; findings
+  // from the last full scan are carried forward for unchanged files. That only
+  // makes the score partial when the org runs checks at all.
+  let vulnerabilityCheckStatus: VulnerabilityCheckStatus = "incremental";
+  try {
+    const riskConfig = await getRiskScoringConfigQuery(ctx.organizationId);
+    if (!vulnerabilityChecksActive(riskConfig)) vulnerabilityCheckStatus = "off";
+  } catch (err) {
+    logger.warn(`Could not read vulnerability settings for incremental scan ${scanId}:`, err);
+  }
+
   // Store all findings in a single transaction
   const transaction = await sequelize.transaction();
+  let committed = false;
   try {
     const allFindings = [...newFindingInputs, ...carriedForwardInputs];
 
@@ -1606,12 +1623,19 @@ async function executeIncrementalScan(
         findings_count: totalFindings,
         completed_at: completedAt,
         duration_ms: durationMs,
+        vulnerability_check_status: vulnerabilityCheckStatus,
       },
       ctx.organizationId,
       transaction,
     );
 
     await transaction.commit();
+    committed = true;
+
+    const scan = await getScanByIdQuery(scanId, ctx.organizationId);
+    if (scan) {
+      await scoreCompletedScan(scanId, `${scan.repository_owner}/${scan.repository_name}`, ctx);
+    }
 
     progressState.status = "completed";
     progressState.progress = 100;
@@ -1623,12 +1647,18 @@ async function executeIncrementalScan(
 
     invalidateAIDetectionStatsCache(ctx.organizationId).catch(() => {});
 
-    const scan = await getScanByIdQuery(scanId, ctx.organizationId);
     if (scan) {
-      scoreAndReportScan(scanId, `${scan.repository_owner}/${scan.repository_name}`, ctx);
+      // Report to GitHub from the stored row, which now has the score
+      void reportStoredScanToGitHub(scanId, ctx.organizationId);
     }
+
+    // Last step: once announced (notified_at claimed), a later failure here
+    // would mark the scan failed but could no longer announce it.
+    void notifyAiDetectionScanFinished(scanId, ctx.organizationId);
   } catch (error) {
-    await transaction.rollback();
+    // A committed transaction cannot be rolled back; rolling it back would
+    // throw and hide the original error.
+    if (!committed) await transaction.rollback();
     throw error;
   }
 }
@@ -1828,59 +1858,22 @@ async function executeScan(
     // ========================================================================
     // LLM Vulnerability Pre-Filter (Phase 2)
     // ========================================================================
-    let vulnerabilityCandidates: VulnerabilityCandidate[] = [];
-    const vulnerabilityFileContents = new Map<string, string>();
     let vulnerabilityFindings: ICreateFindingInput[] = [];
+    // Recorded on the scan so the UI can tell "checked and clean" from "not checked"
+    let vulnerabilityCheckStatus: VulnerabilityCheckStatus = "off";
 
     try {
-      // Check if vulnerability scanning is enabled for this org
-      const riskConfig = await getRiskScoringConfigQuery(ctx.organizationId);
-      const vulnScanEnabled =
-        riskConfig?.vulnerability_scan_enabled && riskConfig?.llm_enabled && riskConfig?.llm_key_id;
-
-      // Determine which vulnerability types are enabled
-      const enabledTypes = riskConfig?.vulnerability_types_enabled ?? {
-        prompt_injection: true,
-        pii_exposure: true,
-        excessive_agency: true,
-        jailbreak_risk: true,
-        training_data_poisoning: true,
-        model_dos: true,
-        supply_chain: true,
-        insecure_plugin: true,
-        overreliance: true,
-        model_theft: true,
-      };
-
-      if (vulnScanEnabled && !signal?.aborted) {
-        // Re-scan code files for vulnerability indicators
-        for (const file of filesToScan) {
-          if (signal?.aborted) break;
-          try {
-            const content = await readFileContent(file.fullPath);
-            const candidates = scanFileForVulnerabilityIndicators(content, file.path).filter(
-              (c) => enabledTypes[c.vulnerabilityType as keyof typeof enabledTypes] !== false,
-            );
-            if (candidates.length > 0) {
-              vulnerabilityCandidates.push(...candidates);
-              vulnerabilityFileContents.set(file.path, content);
-            }
-          } catch {
-            // Skip unreadable files
-          }
-        }
-
-        // Run LLM analysis on candidates
-        if (vulnerabilityCandidates.length > 0 && riskConfig!.llm_key_id) {
-          const context = buildAnalysisContext(vulnerabilityCandidates, vulnerabilityFileContents);
-          vulnerabilityFindings = await analyzeVulnerabilities(
-            context,
-            riskConfig!.llm_key_id,
-            ctx.organizationId,
-            scanId,
-          );
-        }
-      }
+      // Status comes from what actually ran: off, failed (cancelled, key or LLM errors) or ran
+      const outcome = await runVulnerabilityChecks({
+        config: await getRiskScoringConfigQuery(ctx.organizationId),
+        files: filesToScan,
+        readFile: readFileContent,
+        organizationId: ctx.organizationId,
+        scanId,
+        signal,
+      });
+      vulnerabilityFindings = outcome.findings;
+      vulnerabilityCheckStatus = outcome.status;
     } catch (err) {
       // Graceful degradation: vulnerability scan failure does not fail the overall scan
       logger.warn(
@@ -1888,6 +1881,7 @@ async function executeScan(
         err,
       );
       vulnerabilityFindings = [];
+      vulnerabilityCheckStatus = "failed";
     }
 
     // ========================================================================
@@ -2007,6 +2001,7 @@ async function executeScan(
 
     // Store findings in database
     const transaction = await sequelize.transaction();
+    let committed = false;
     try {
       // Deduplicate findings by name+provider+findingType+modelName to avoid ON CONFLICT errors
       // Each finding type is kept separate (library, api_call, secret, model_ref, rag_component, agent)
@@ -2142,12 +2137,16 @@ async function executeScan(
           findings_count: totalFindings,
           completed_at: completedAt,
           duration_ms: durationMs,
+          vulnerability_check_status: vulnerabilityCheckStatus,
         },
         ctx.organizationId,
         transaction,
       );
 
       await transaction.commit();
+      committed = true;
+
+      await scoreCompletedScan(scanId, `${owner}/${repo}`, ctx);
 
       progressState.status = "completed";
       progressState.progress = 100;
@@ -2168,10 +2167,17 @@ async function executeScan(
         // Silently ignore cache invalidation errors
       });
 
-      // Calculate the governance score, then report to GitHub (fire-and-forget)
-      scoreAndReportScan(scanId, `${owner}/${repo}`, ctx);
+      // Report to GitHub from the stored row, which now has the score
+      // (fire-and-forget, never throws)
+      void reportStoredScanToGitHub(scanId, ctx.organizationId);
+
+      // Last step: once announced (notified_at claimed), a later failure here
+      // would mark the scan failed but could no longer announce it.
+      void notifyAiDetectionScanFinished(scanId, ctx.organizationId);
     } catch (error) {
-      await transaction.rollback();
+      // A committed transaction cannot be rolled back; rolling it back would
+      // throw and hide the original error.
+      if (!committed) await transaction.rollback();
       throw error;
     }
   } catch (error) {
@@ -2204,6 +2210,7 @@ async function executeScan(
     updateLinkedRepositoryLastScan(scanId, status, ctx.organizationId).catch((err) => {
       logger.error(`Failed to update repository last scan for scan ${scanId}:`, err);
     });
+    void notifyAiDetectionScanFailed(scanId, ctx.organizationId);
 
     // Resolve the commit status of a webhook scan as "error", so a required
     // check does not stay pending. Cancelled scans are reported too: nothing
@@ -2266,6 +2273,19 @@ export async function getScanStatus(
 }
 
 /**
+ * Report a background LLM analysis that has been pending too long (e.g. the
+ * server restarted mid-analysis) as failed, so the page stops waiting.
+ */
+function withEffectiveLlmStatus(
+  details: IRiskScoreDetails | null,
+  calculatedAt: Date | null | undefined,
+): IRiskScoreDetails | null {
+  if (!details) return details;
+  const status = effectiveLlmStatus(details.llm_status, calculatedAt);
+  return status === details.llm_status ? details : { ...details, llm_status: status };
+}
+
+/**
  * Get scan with full details
  *
  * @param scanId - Scan ID
@@ -2296,10 +2316,14 @@ export async function getScan(scanId: number, ctx: IServiceContext): Promise<ISc
       triggered_by: scan.triggered_by_user,
       risk_score: scan.risk_score != null ? parseFloat(String(scan.risk_score)) : null,
       risk_score_grade: (scan.risk_score_grade as RiskGrade | null | undefined) ?? null,
-      risk_score_details: (scan.risk_score_details as IRiskScoreDetails | null | undefined) ?? null,
+      risk_score_details: withEffectiveLlmStatus(
+        (scan.risk_score_details as IRiskScoreDetails | null | undefined) ?? null,
+        scan.risk_score_calculated_at,
+      ),
       risk_score_calculated_at: scan.risk_score_calculated_at
         ? (scan.risk_score_calculated_at as Date).toISOString()
         : null,
+      vulnerability_check_status: scan.vulnerability_check_status ?? null,
       scan_mode: scan.scan_mode,
       base_commit_sha: scan.base_commit_sha ?? null,
       head_commit_sha: scan.head_commit_sha ?? null,
@@ -2413,6 +2437,7 @@ export async function getScans(
       triggered_by: s.triggered_by_user,
       risk_score: s.risk_score != null ? parseFloat(String(s.risk_score)) : null,
       risk_score_grade: (s.risk_score_grade as RiskGrade | null | undefined) ?? null,
+      vulnerability_check_status: s.vulnerability_check_status ?? null,
       scan_mode: s.scan_mode,
       baseline_scan_id: s.baseline_scan_id ?? null,
       changed_files_count: s.changed_files_count ?? null,

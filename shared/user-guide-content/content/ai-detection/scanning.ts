@@ -10,7 +10,7 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'AI Detection scans GitHub repositories for AI and machine learning usage in your codebase. It finds "shadow AI" (AI usage that hasn\'t been formally documented or approved) and keeps an inventory of detected AI technologies.',
+      text: 'AI Detection scans GitHub repositories (public, or private with a token in Settings) for AI libraries, models, API calls, agents, secrets and LLM vulnerabilities. Each scan lists what it found and the files it found it in, so you can see where AI is used across your repositories.',
     },
     {
       type: 'paragraph',
@@ -181,7 +181,7 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Vulnerabilities tab shows findings from the 2-phase LLM vulnerability pipeline. Phase 1 runs a regex pre-filter against known patterns. Phase 2 sends candidates to an LLM for analysis using type-specific rubric prompts.',
+      text: 'The Vulnerabilities tab shows findings from the 2-phase LLM vulnerability pipeline. Phase 1 runs a regex pre-filter against known patterns. Phase 2 sends candidates to an LLM for analysis using type-specific rubric prompts. A green **No LLM vulnerabilities detected** message only appears when the checks ran and found nothing.',
     },
     {
       type: 'paragraph',
@@ -209,7 +209,7 @@ export const scanningContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'info',
-      text: 'LLM vulnerability detection needs an LLM key configured and vulnerability scanning turned on in **AI Detection → Settings**. Without it, only the regex pre-filter runs and findings may be less accurate.',
+      text: 'Vulnerability checks need LLM-enhanced analysis with a key in **AI Detection → Settings → Risk scoring**, and an admin has to turn them on there, because they send code snippets to your LLM provider. When they\'re off, there\'s no key or every vulnerability type is turned off, the tab says **Vulnerability checks didn\'t run for this scan** and its badge shows a dash instead of 0. When the LLM analysis fails for some or all types, the tab says **Vulnerability checks didn\'t finish for this scan** and lists findings from the types that finished. Incremental scans don\'t check changed files: the tab says **Changed files weren\'t checked for vulnerabilities** and lists findings carried over from the last full scan. In all of these cases the governance score is marked partial.',
     },
     {
       type: 'heading',
@@ -276,7 +276,7 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Security tab shows findings from model file analysis. Serialized model files (`.pkl`, `.pt`, `.h5`) can contain malicious code that runs when loaded. The scanner looks for system command execution, network access and code injection patterns.',
+      text: 'The Security tab shows findings from model file analysis. Serialized model files (`.pkl`, `.pt`, `.h5`) can contain malicious code that runs when loaded. The scanner looks for system command execution, network access and code injection patterns. If the repository has no model files, the tab says **No model files found in this repository** and its badge shows a dash, because there was nothing to check.',
     },
     {
       type: 'paragraph',
@@ -449,7 +449,7 @@ export const scanningContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Risk scoring', text: 'Calculate an AI Governance Risk Score (AGRS) across 5 risk dimensions. You can also enable LLM-enhanced analysis for written summaries, recommendations and suggested risks to add to your risk register.' },
+        { bold: 'Governance score', text: 'Review the governance score (AGRS) across 5 risk dimensions, calculated automatically when the scan finishes. You can also enable LLM-enhanced analysis for written summaries, recommendations and suggested risks to add to your risk register.' },
         { bold: 'View graph', text: 'Open an interactive dependency graph. Nodes are findings, edges are inferred dependencies based on shared files and providers.' },
         { bold: 'Export AI-BOM', text: 'Download scan results as an AI Bill of Materials (AI-BOM) in JSON. The format is CycloneDX-inspired and includes all detected components, providers, risk levels and file locations.' },
       ],
@@ -498,6 +498,39 @@ export const scanningContent: ArticleContent = {
       caption: 'Configure GitHub Personal Access Token for private repository scanning',
     },
     {
+      type: 'heading',
+      id: 'notifications',
+      level: 2,
+      text: 'Notifications',
+    },
+    {
+      type: 'paragraph',
+      text: 'When a scan ends, the person who started it gets a notification in the bell menu, for example "Scan of owner/repo finished: 7 findings, grade B". Click it to open the scan. Scheduled and webhook scans count as started by the person who added the repository.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Some results also send an email, to the person who started the scan and to every Admin in your organization:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'New exposed secrets', text: 'The scan found secrets that the previous scan of the same repository did not have, or a known secret in a file where the previous scan did not find it.' },
+        { bold: 'New high-risk findings', text: 'The scan found high-risk findings that the previous scan of the same repository did not have. On the first scan of a repository, every high-risk finding counts as new.' },
+        { bold: 'Lower governance grade', text: 'The grade is worse than the previous scan of the repository.' },
+        { bold: 'Failed scheduled or webhook scan', text: 'Nobody was watching the scan run, so the failure is emailed. A failed scan you started yourself shows on screen and in the bell menu only.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Findings that are suppressed or marked as accepted risk in the new scan are left out, and a finding the previous scan already had is not reported again, even if someone accepted it there. Grades are compared before any AI adjustment, so both scans are measured the same way. If the governance score could not be calculated, the notification leaves the grade out. Cancelled scans send nothing. A scan that stops after a server restart is reported as failed.',
+    },
+    {
+      type: 'callout',
+      variant: 'tip',
+      title: 'Send scan results to a team',
+      text: 'To email other people or a shared mailbox, create an automation with one of the AI Detection triggers: scan finishes, scan finds new high-risk findings, or scan fails. See **Automations** for how to set one up.',
+    },
+    {
       type: 'article-links',
       title: 'Related articles',
       items: [
@@ -505,7 +538,7 @@ export const scanningContent: ArticleContent = {
           collectionId: 'ai-detection',
           articleId: 'risk-scoring',
           title: 'Risk scoring',
-          description: 'Understanding the AI Governance Risk Score and suggested risks',
+          description: 'Understanding the governance score and suggested risks',
         },
         {
           collectionId: 'ai-detection',

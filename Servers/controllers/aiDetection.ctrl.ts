@@ -40,7 +40,10 @@ import {
   FINDING_TYPES,
   VULNERABILITY_FINDING_TYPES,
 } from "../domain.layer/interfaces/i.aiDetection";
-import { calculateAndStoreRiskScore } from "../services/aiDetection/riskScoring";
+import {
+  calculateAndStoreRiskScore,
+  isLlmAnalysisPending,
+} from "../services/aiDetection/riskScoring";
 import {
   getRiskScoringConfigQuery,
   upsertRiskScoringConfigQuery,
@@ -960,6 +963,19 @@ export async function recalculateRiskScoreController(
         .json(STATUS_CODE[422](req.t!("Can only calculate risk score for completed scans")));
     }
 
+    // getScan reports a stale pending analysis as failed, so this never blocks for good.
+    // Returning early (instead of a rule-based recalculation) keeps the running
+    // analysis's run id valid, so its result still lands.
+    if (isLlmAnalysisPending(scan.scan.risk_score_details?.llm_status)) {
+      return res
+        .status(409)
+        .json(
+          STATUS_CODE[409](
+            req.t!("AI analysis is still running for this scan. Try again when it finishes."),
+          ),
+        );
+    }
+
     const repoName = `${scan.scan.repository_owner}/${scan.scan.repository_name}`;
     const result = await calculateAndStoreRiskScore(scanId, repoName, ctx);
 
@@ -1007,7 +1023,9 @@ export async function getRiskScoringConfigController(
       llm_enabled: false,
       llm_key_id: null,
       dimension_weights: DEFAULT_DIMENSION_WEIGHTS,
+      // No LLM key yet, so the default is off and nothing was chosen
       vulnerability_scan_enabled: false,
+      vulnerability_scan_explicit: false,
       vulnerability_types_enabled: {
         prompt_injection: true,
         pii_exposure: true,
@@ -1112,16 +1130,25 @@ export async function updateRiskScoringConfigController(
       }
     }
 
-    // Validate vulnerability_scan_enabled requires llm_enabled
-    // Check persisted config when llm_enabled is not in the request body
+    // vulnerability_scan_enabled is only a real choice while LLM analysis is on
+    // (the checks need its key). With LLM analysis off, the value is not stored,
+    // so an org that never chose stays "not chosen" (off) until an admin opts in.
+    // Check persisted config when llm_enabled is not in the request body.
     let effectiveVulnScan: boolean | undefined = undefined;
-    if (vulnerability_scan_enabled !== undefined) {
+    if (vulnerability_scan_enabled !== undefined && vulnerability_scan_enabled !== null) {
+      if (typeof vulnerability_scan_enabled !== "boolean") {
+        return res
+          .status(400)
+          .json(STATUS_CODE[400](req.t!("vulnerability_scan_enabled must be a boolean")));
+      }
       let effectiveLlmEnabled = llm_enabled;
       if (effectiveLlmEnabled === undefined) {
         const existingConfig = await getRiskScoringConfigQuery(req.organizationId!);
         effectiveLlmEnabled = existingConfig?.llm_enabled ?? false;
       }
-      effectiveVulnScan = vulnerability_scan_enabled && effectiveLlmEnabled;
+      if (effectiveLlmEnabled) {
+        effectiveVulnScan = vulnerability_scan_enabled;
+      }
     }
 
     // Validate vulnerability_types_enabled if provided

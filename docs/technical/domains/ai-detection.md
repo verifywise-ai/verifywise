@@ -43,6 +43,7 @@ ai_detection_scans
 ├── risk_score_grade (VARCHAR(2))
 ├── risk_score_details (JSONB)
 ├── risk_score_calculated_at (TIMESTAMPTZ)
+├── vulnerability_check_status (VARCHAR(32), nullable: ran | off | failed | incremental; NULL on older scans)
 ├── started_at (TIMESTAMPTZ)
 ├── completed_at (TIMESTAMPTZ)
 ├── duration_ms (INTEGER)
@@ -146,7 +147,7 @@ Constraints:
 ai_detection_vulnerability_config
 ├── id (PK, SERIAL)
 ├── organization_id (INTEGER NOT NULL, UNIQUE)
-├── vulnerability_scan_enabled (BOOLEAN, default: false)
+├── vulnerability_scan_enabled (BOOLEAN, nullable: NULL = not chosen = off)
 ├── vulnerability_types_enabled (JSONB)
 ├── updated_by (INTEGER)
 └── updated_at (TIMESTAMPTZ)
@@ -410,7 +411,9 @@ Candidates from phase 1 are sent to an LLM with type-specific rubric prompts:
 ### Vulnerability Settings
 
 Per-organization configuration in `ai_detection_vulnerability_config`:
-- Toggle vulnerability scanning on/off
+- Toggle vulnerability scanning on/off. The checks send code snippets to the LLM provider, so they need explicit consent: NULL means "not chosen", which is off. The effective value (`resolveVulnerabilityScanEnabled` in `utils/aiDetectionRiskScoring.utils.ts`) is on only when the stored value is `true` and the risk scoring config has `llm_enabled` and an `llm_key_id`. The API returns the effective value plus `vulnerability_scan_explicit`. `PATCH` only stores the toggle while LLM analysis is on, so saving other settings never turns "not chosen" into a choice.
+- Consent is tied to the provider: a `PATCH` that changes `llm_key_id` (including clearing it, which the Settings page does when LLM analysis is turned off) or turns `llm_enabled` from false to true resets `vulnerability_scan_enabled` to NULL in the same transaction (`shouldResetVulnerabilityConsent` in `upsertRiskScoringConfigQuery`), unless the same request sets `vulnerability_scan_enabled` explicitly. This holds for every API client; no MCP tool writes this config. The Settings page asks again (consent dialog) on such a save when the toggle would be on. Editing the LLM key itself (`PATCH /api/llm-keys/:id`) to another provider or endpoint URL also resets a `true` consent to NULL for the organization using that key, in the key update's transaction (`resetVulnerabilityConsentOnProviderChangeQuery`); model-only or API-key-only edits keep it.
+- Each scan records `vulnerability_check_status` (`runVulnerabilityChecks` in `services/aiDetection/vulnerabilityAnalyzer.ts` for full scans): `ran` (every file pre-filtered and every LLM call finished; findings may be zero), `off` (not chosen, off, no key, or every type disabled), `failed` (scan cancelled during the checks, key couldn't be resolved, or any LLM call threw; findings from types that finished are kept), `incremental` (incremental scan with checks on: changed files weren't checked, vulnerability findings for unchanged files carry over from the last full scan). An incremental scan records `off` when the org's checks are off. The UI shows a neutral "not checked" state instead of a clean result, and marks the governance score partial, for anything but `ran`
 - Enable/disable individual vulnerability types via `vulnerability_types_enabled` JSONB field
 - Managed through the settings page and `PATCH /ai-detection/risk-scoring/config`
 
@@ -426,7 +429,11 @@ After scan completes, `crossReferenceFindings()` links vulnerability findings to
 
 ### Overview
 
-Calculates a 0–100 risk score across 5 governance dimensions, with an A–F letter grade. Optionally enhanced by LLM for contextual analysis.
+Calculates a 0–100 score across 5 governance dimensions (higher = safer), with an A–F letter grade. The UI calls it the **governance score**; API and DB names keep `risk_score`. Optionally enhanced by LLM for contextual analysis.
+
+**When it runs:** `scoreCompletedScan()` in `aiDetection.service.ts` stores the rule-based score as the last step of every completed scan (manual, scheduled, webhook; full and incremental), after the findings transaction commits and before the in-memory progress reports `completed` and before the GitHub status report. A scoring failure is logged and never fails the scan (the score stays NULL; "Recalculate score" fills it in). `POST /scans/:id/risk-score/recalculate` uses the same path.
+
+**LLM enhancement is background work:** `calculateAndStoreRiskScore()` stores the rule-based score with `risk_score_details.llm_status = "pending"` and an `llm_run_id`, returns it, then runs the LLM call (2-minute timeout). The result replaces the stored score only while `llm_run_id` still matches (a newer recalculation wins), with `llm_status` `done` or `failed`. `getScan` reports a `pending` older than 10 minutes as `failed` (covers a restart). The scan details page and the scan page's completion card poll every 5 s while `pending` and show the final score when it finishes. While the stored analysis is `pending` (and not stale), `POST /scans/:id/risk-score/recalculate` returns 409 without recalculating: a new run would start a second paid LLM call and orphan the running one. The Recalculate button is disabled meanwhile. `llm_status` is `off` when LLM analysis isn't configured or there are no findings; older scores have no `llm_status`.
 
 ### Dimensions
 
@@ -514,6 +521,47 @@ The repositories page allows registering repos for recurring scans:
 - Uses Redis distributed lock per tenant to prevent concurrent workers on same repos
 - Calculates `next_scan_at` before triggering scan to prevent reprocessing
 - Handles stale scan recovery (marks scans stuck >30 minutes as failed)
+
+## Notifications
+
+`services/aiDetection/scanNotifications.ts` announces the end of every scan. `executeScan` and `executeIncrementalScan` call it once, fire-and-forget (`void`, never awaited):
+
+- `notifyAiDetectionScanFinished(scanId, organizationId)` as the last step after the completed status is committed and `scoreCompletedScan` has stored the governance score (full and incremental paths). Nothing after it can fail the scan, so a scan is never announced as completed and then rewritten as failed.
+- `notifyAiDetectionScanFailed(scanId, organizationId)` in the failure handler, and from the scheduled scan check (`scheduledScanProcessor.ts`) for every scan id `markStaleScansFailed` returns (scans stuck after a crash or restart). A cancelled scan is not announced.
+
+The notifier never throws, and each channel (in-app write, email, automation enqueue) is isolated, so a notification failure cannot fail a scan or block the other channels.
+
+| Event | In-app | Email | Recipients |
+|-------|--------|-------|------------|
+| Scan completed | "Scan of owner/repo finished: 7 findings, grade B" (`ai_detection_scan_completed`) | No | Triggering user |
+| Scan needs attention (see below) | `ai_detection_scan_attention` | Yes (`ai-detection-scan-alert.mjml`) | Triggering user + org Admins |
+| Scan failed, manual | "Scan of owner/repo failed: <reason>" (`ai_detection_scan_failed`) | No (the user sees it on screen) | Triggering user |
+| Scan failed, scheduled or webhook | Same | Yes | Triggering user + org Admins |
+
+- **Triggering user** is `ai_detection_scans.triggered_by`. Scheduled and webhook scans run as the repository's `created_by`, so that user is the triggering user for them.
+- **Recipients** come from `organization_members` (the triggering user plus `role_id = 1`), de-duplicated, and only while they are still members of the organization. This is the same "owner plus every Admin" rule the deadline escalation sweep uses.
+- **Needs attention** compares the scan with the previous completed scan of the same repository (any scan mode). It fires when there are new exposed secrets, new high-risk findings (`risk_level = 'high'`, matched on finding type + name + provider), or a lower governance grade. On a repository's first scan every high-risk finding counts as new. One notice per recipient per scan lists every reason.
+  - This scan's side counts only findings that still count: not suppressed by a rule, not suppressed or accepted by a reviewer, not marked `fixed`. The previous scan's side (`getPreviousScanFindingsQuery`) keeps suppressed and accepted findings, because those decisions are stored per finding row and are not copied to the next scan; a finding accepted on the previous scan is therefore not "new" on this one. Revisit once reviewer decisions carry over to new scans.
+  - A scan stores one row per name and provider, with every file it was found in, and a vulnerability finding's name only carries the file's basename (`Prompt injection: index.ts`). A secret or vulnerability the previous scan had counts again when it appears in a file the previous scan did not list; the notice names it with the new paths (`AWS key (deploy/prod.env)`).
+  - Vulnerability findings (`VULNERABILITY_FINDING_TYPES`) are compared only when both scans have `vulnerability_check_status = 'ran'`. An incremental, failed or off run does not check every file, so its missing vulnerabilities would otherwise look new on the next full run.
+- **Score.** The notices use the rule-based governance score that `scoreCompletedScan` stores before the notifier runs. Optional LLM analysis can adjust the score later; the notices are not re-sent. If scoring failed, the notices leave the grade out and the grade-drop check is skipped. The rule-based write also stores `risk_score_details.rule_grade`, and the LLM write keeps it, so the grade-drop check compares this scan's rule-based grade with the previous scan's `rule_grade` even when that scan was LLM-adjusted. Scores stored before `rule_grade` existed fall back to comparing the stored grades only when neither or both are LLM-adjusted (`llm_enhanced`). `previous_grade` in the notices and Automations is the grade that was compared.
+- **Findings count** in the notices and `{{scan.findings_count}}` is `ai_detection_scans.findings_count`, the number the scan page shows. The high-risk and secret counts use the counted findings (same filter as the score).
+- **Announced once.** Before sending, the notifier claims the scan with `UPDATE ai_detection_scans SET notified_at = NOW() WHERE id = :id AND organization_id = :orgId AND status = :status AND notified_at IS NULL RETURNING id` (`claimScanNotificationQuery`). Only the call that wins sends anything, so a retry or a concurrent call cannot repeat notices or Automations. The claim comes first: if the notifier then fails, the scan stays unannounced rather than announced twice.
+- **Failure reason** is the first line of `error_message`, capped at 200 characters, with any credentials in a URL removed.
+- **Language.** In-app titles, messages and email subjects are passed as keys (`titleKey`, `messageKey`, `subjectKey`) and translated by `sendInAppNotification` into each recipient's language (`Servers/locales`), read once per recipient. Email bodies are English, like the other notification emails.
+- **Stale scans.** A scan stuck in `pending`/`cloning`/`scanning` for 30 minutes (crash or restart) is marked failed by `markStaleScansFailed` and announced as a failed scan, best-effort: an announcement error is logged and never fails the scheduled check. That notice does not take the `notified_at` claim (`claim: false`): the sweep's `UPDATE ... RETURNING` returns each scan once, and a scan that was only slow and later completes still claims and announces its completion.
+
+### Automations triggers
+
+Three triggers, seeded by `20261112143741-ai-detection-notifications-and-triggers.js` and linked to `send_email`:
+
+| Key | Fires |
+|-----|-------|
+| `ai_detection_scan_completed` | Every completed scan |
+| `ai_detection_high_risk_finding` | A completed scan with new high-risk findings (exposed secrets included) |
+| `ai_detection_scan_failed` | Every failed scan (manual, scheduled or webhook) |
+
+Every active automation of the trigger runs (not only the first). Template variables (`utils/automation/aiDetection.automation.utils.ts`): `{{scan.repository}}`, `{{scan.url}}`, `{{scan.id}}`, `{{scan.status}}`, `{{scan.trigger}}`, `{{scan.findings_count}}`, `{{scan.high_risk_count}}`, `{{scan.secret_count}}`, `{{scan.grade}}`, `{{scan.score}}`, `{{scan.previous_grade}}`, `{{scan.new_high_risk_count}}`, `{{scan.new_high_risk_findings}}` (first 10 names), `{{scan.new_secret_count}}`, `{{scan.error}}`, `{{date_and_time}}` (UTC, for example "Nov 13, 2026, 14:00 UTC"; the email's sent time uses the same format). A grade or score that could not be calculated reads "Not calculated".
 
 ## CI/CD Webhooks
 
@@ -622,13 +670,15 @@ __pycache__, dist, build, target
 9. Database Insert
    └── Batch insert findings, then mark the scan completed
 
-10. Risk Score Calculation (background, after completion)
-    ├── Calculate dimension scores from all findings
-    ├── Optional LLM enhancement
-    ├── Store score, grade, and details on scan record
-    └── Then report webhook-triggered scans to GitHub (see CI status checks)
+10. Governance Score Calculation (after the findings commit, before completion is reported)
+    ├── Calculate dimension scores from all findings and store score, grade, details
+    └── Optional LLM enhancement continues in the background (llm_status: pending → done | failed)
 
-11. Cleanup
+11. Report and announce
+    ├── Report webhook-triggered scans to GitHub from the stored row, which has the score (see CI status checks)
+    └── Announce the scan (see Notifications)
+
+12. Cleanup
     └── Remove temp clone directory
 ```
 
@@ -702,9 +752,11 @@ useEffect(() => {
 
 Webhook-triggered scans report back to GitHub when the repository has
 `ci_status_checks` (commit status, context "VerifyWise AI Detection") and/or
-`ci_post_comments` (PR comment). `scoreAndReportScan` in `aiDetection.service.ts`
-stores the governance score first and only then reports, so the check always reads
-the stored score.
+`ci_post_comments` (PR comment). `executeScan` and `executeIncrementalScan` in
+`aiDetection.service.ts` await `scoreCompletedScan` first and only then call
+`reportStoredScanToGitHub`, which re-reads the scan row, so the check always reads
+the stored rule-based score. Failed and cancelled scans are reported too
+(`error`), so a required check never stays pending.
 
 `evaluateThresholds(scan, repo, criticalCount)`:
 
@@ -809,6 +861,9 @@ The system maps findings to EU AI Act articles:
 | `services/aiDetection/vulnerabilityPreFilter.ts` | Regex pre-filter for vulnerability candidates |
 | `services/aiDetection/vulnerabilityAnalyzer.ts` | LLM deep analysis of vulnerability candidates |
 | `services/aiDetection/scheduledScanProcessor.ts` | BullMQ worker for recurring scans |
+| `services/aiDetection/scanNotifications.ts` | In-app, email and Automations notices when a scan ends |
+| `utils/aiDetectionNotification.utils.ts` | Queries for the scan notifier (previous scan, recipients, dedup) |
+| `utils/automation/aiDetection.automation.utils.ts` | Template variables for the AI Detection triggers |
 | `config/llmVulnerabilityPatterns.ts` | OWASP LLM Top 10 regex patterns and LLM rubrics |
 | `config/riskScoringConfig.ts` | Risk scoring dimensions, penalties, grades |
 | `config/aiDetectionPatterns.ts` | 100+ AI/ML detection patterns |

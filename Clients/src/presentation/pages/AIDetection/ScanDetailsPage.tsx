@@ -33,6 +33,10 @@ import { FindingsTabPanel } from "./ScanDetails/FindingsTabPanel";
 import { SecurityFindingsTab } from "./ScanDetails/SecurityFindingsTab";
 import { ComplianceTab } from "./ScanDetails/ComplianceTab";
 import { VulnerabilitiesTab } from "./ScanDetails/VulnerabilitiesTab";
+import { hasNoModelFiles, vulnerabilityChecksRan } from "./components/governanceScore";
+
+/** Tab badge when a check didn't run, so "0" never reads as "checked, none found" */
+const NOT_CHECKED_BADGE = "–";
 
 // ============================================================================
 // Main Component
@@ -97,6 +101,12 @@ export default function ScanDetailsPage() {
       </PageHeaderExtended>
     );
   }
+
+  const vulnerabilitiesChecked = vulnerabilityChecksRan(
+    scan.scan.vulnerability_check_status,
+    vulnerabilityFindings.length,
+  );
+  const noModelFiles = hasNoModelFiles(securitySummary);
 
   return (
     <PageHeaderExtended
@@ -185,16 +195,22 @@ export default function ScanDetailsPage() {
               label: "Vulnerabilities",
               value: "vulnerabilities",
               icon: "ShieldAlert",
-              count: vulnerabilityFindings.length,
-              tooltip:
-                "LLM-specific vulnerabilities (prompt injection, PII exposure, excessive agency, jailbreak risk)",
+              count:
+                vulnerabilitiesChecked || vulnerabilityFindings.length > 0
+                  ? vulnerabilityFindings.length
+                  : NOT_CHECKED_BADGE,
+              tooltip: vulnerabilitiesChecked
+                ? "LLM-specific vulnerabilities (prompt injection, PII exposure, excessive agency, jailbreak risk)"
+                : "Vulnerability checks didn't run for this scan",
             },
             {
               label: "Security",
               value: "security",
               icon: "Shield",
-              count: securitySummary?.total || 0,
-              tooltip: "Security vulnerabilities in AI dependencies",
+              count: noModelFiles ? NOT_CHECKED_BADGE : securitySummary?.total || 0,
+              tooltip: noModelFiles
+                ? "No model files found in this repository"
+                : "Security vulnerabilities in AI dependencies",
             },
             {
               label: "Compliance",
@@ -554,6 +570,7 @@ export default function ScanDetailsPage() {
             scanId={scanId}
             repositoryOwner={scan.scan.repository_owner}
             repositoryName={scan.scan.repository_name}
+            vulnerabilityCheckStatus={scan.scan.vulnerability_check_status}
             onStatusMessage={showAlert}
           />
         )}

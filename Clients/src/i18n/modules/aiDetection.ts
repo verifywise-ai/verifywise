@@ -19,9 +19,7 @@ export const de: Record<string, string> = {
   "Back to history": "Zurück zum Verlauf",
   "Delete scan?": "Scan löschen?",
   "Export AI-BOM": "AI-BOM exportieren",
-  "Recalculate risk score": "Risikobewertung neu berechnen",
   "Recalculate score": "Bewertung neu berechnen",
-  "Recalculating risk score": "Risikobewertung wird neu berechnet",
   "Scan another": "Weiteren scannen",
   "AI analysis": "KI-Analyse",
   "All detections": "Alle Erkennungen",
@@ -83,8 +81,6 @@ export const de: Record<string, string> = {
     "Gesamtanzahl aller KI-/ML-Erkennungen über abgeschlossene Scans hinweg, einschließlich Bibliotheken, API-Aufrufen und Geheimnissen.",
   "Each scan creates a snapshot. Compare scans to see what AI components were added, removed, or changed across your codebase.":
     "Jeder Scan erstellt einen Snapshot. Vergleichen Sie Scans, um zu sehen, welche KI-Komponenten in Ihrer Codebasis hinzugefügt, entfernt oder geändert wurden.",
-  "Enter a public GitHub repository URL to detect AI/ML libraries and frameworks.":
-    "Geben Sie die URL eines öffentlichen GitHub-Repositories ein, um KI-/ML-Bibliotheken und Rahmenwerke zu erkennen.",
   "Go to the Repositories tab and add a GitHub repository URL. Once added, you can run scans to detect AI/ML usage.":
     "Gehen Sie zum Repositories-Tab und fügen Sie eine GitHub-Repository-URL hinzu. Nach dem Hinzufügen können Sie Scans ausführen, um KI-/ML-Nutzung zu erkennen.",
   "Max critical findings": "Max. kritische Erkenntnisse",
@@ -109,7 +105,6 @@ export const de: Record<string, string> = {
   "REPOSITORY": "REPOSITORY",
   "FILES SCANNED": "GESCANNTE DATEIEN",
   "FINDINGS": "ERKENNTNISSE",
-  "RISK SCORE": "RISIKOBEWERTUNG",
   "TRIGGERED BY": "AUSGELÖST VON",
   "Cancelled": "Abgebrochen",
   "Cloning": "Wird geklont",
@@ -135,8 +130,6 @@ export const de: Record<string, string> = {
   "No API keys, tokens, or other secrets were found in the scanned code.":
     "Im gescannten Code wurden keine API-Schlüssel, Tokens oder andere Geheimnisse gefunden.",
   "No LLM vulnerabilities detected": "Keine LLM-Sicherheitslücken erkannt",
-  "Enable vulnerability scanning in settings for deep LLM analysis.":
-    "Aktivieren Sie das Scannen auf Sicherheitslücken in den Einstellungen für eine tiefgehende LLM-Analyse.",
   "Insecure output handling": "Unsichere Ausgabeverarbeitung",
   "Sensitive information disclosure": "Offenlegung sensibler Informationen",
   "LLM01 — Untrusted input injected into system prompts":
@@ -171,7 +164,6 @@ export const de: Record<string, string> = {
     "Im Code wurden KI-Agenten-Frameworks und autonome Systeme erkannt. Dazu gehören LangChain-Agenten, CrewAI, AutoGen und MCP-Server.",
   "AI agents can take autonomous actions and interact with external systems. Review these carefully for governance and security implications.":
     "KI-Agenten können autonome Aktionen ausführen und mit externen Systemen interagieren. Prüfen Sie diese sorgfältig auf Governance- und Sicherheitsauswirkungen.",
-  "AI governance risk score": "KI-Governance-Risikobewertung",
   "Agent findings are marked as high risk due to their autonomous nature and ability to interact with external systems.":
     "Agentenfunde werden aufgrund ihrer autonomen Natur und ihrer Fähigkeit, mit externen Systemen zu interagieren, als hochriskant eingestuft.",
   "Automatically scan this repository on a recurring schedule.":
@@ -231,7 +223,6 @@ export const de: Record<string, string> = {
   "Use this secret when configuring the webhook in your GitHub repository settings.":
     "Verwenden Sie dieses Geheimnis bei der Konfiguration des Webhooks in den Einstellungen Ihres GitHub-Repositorys.",
   "Vulnerability detection": "Schwachstellenerkennung",
-  "AI is thinking really hard": "Die KI denkt angestrengt nach",
   "AI/ML libraries detected in this repository": "In diesem Repository erkannte KI/ML-Bibliotheken",
   "Accepted risk": "Akzeptiertes Risiko",
   "Address immediately - critical for compliance":
@@ -241,17 +232,11 @@ export const de: Record<string, string> = {
     "Bei Gelegenheit behandeln – für die Compliance empfohlen",
   "All findings of this type": "Alle Befunde dieses Typs",
   "All findings with this name": "Alle Befunde mit diesem Namen",
-  "Almost there, finalizing score": "Fast geschafft, Bewertung wird finalisiert",
-  "Asking AI for a second opinion": "KI um eine zweite Meinung bitten",
   "Autonomous AI agent implementations": "Implementierungen autonomer KI-Agenten",
-  "Calculating dimension penalties": "Dimensions-Strafen werden berechnet",
-  "Configure AI Governance Risk Score settings":
-    "Einstellungen für die KI-Governance-Risikobewertung konfigurieren",
   "Connect a GitHub token to scan private repositories":
     "Verbinden Sie ein GitHub-Token, um private Repositories zu scannen",
-  "Create a rule that hides matching findings from future scans and excludes them from risk scores.":
-    "Erstellen Sie eine Regel, die übereinstimmende Befunde aus zukünftigen Scans ausblendet und aus Risikobewertungen ausschließt.",
-  "Cross-referencing correlations": "Querverweis-Korrelationen",
+  "Create a rule that hides matching findings from future scans and excludes them from governance scores.":
+    "Erstellen Sie eine Regel, die übereinstimmende Befunde aus zukünftigen Scans ausblendet und aus Governance-Bewertungen ausschließt.",
   "Data sent to external cloud APIs. Risk of data leakage, vendor lock-in, and compliance violations.":
     "Daten werden an externe Cloud-APIs gesendet. Risiko von Datenlecks, Anbieterabhängigkeit und Compliance-Verstößen.",
   "Delete rule": "Regel löschen",
@@ -266,7 +251,6 @@ export const de: Record<string, string> = {
   "Failed to test token": "Testen des Tokens fehlgeschlagen",
   "Framework that can connect to cloud APIs depending on configuration. Review usage to assess actual risk.":
     "Rahmenwerk, das je nach Konfiguration eine Verbindung zu Cloud-APIs herstellen kann. Überprüfen Sie die Nutzung, um das tatsächliche Risiko zu bewerten.",
-  "Gathering scan findings": "Scan-Befunde werden gesammelt",
   "GitHub integration": "GitHub-Integration",
   "GitHub token deleted successfully": "GitHub-Token erfolgreich gelöscht",
   "GitHub token saved successfully": "GitHub-Token erfolgreich gespeichert",
@@ -279,7 +263,6 @@ export const de: Record<string, string> = {
     "Nur lokale Verarbeitung. Daten bleiben in Ihrer Infrastruktur mit minimaler externer Exposition.",
   "Manage rules that suppress matching findings on future scans":
     "Regeln verwalten, die übereinstimmende Befunde bei zukünftigen Scans unterdrücken",
-  "Mapping findings to risk dimensions": "Befunde Risikodimensionen zuordnen",
   "Moderate restrictions (LGPL, MPL, CC-BY-SA). Some obligations but generally allows commercial use.":
     "Mäßige Einschränkungen (LGPL, MPL, CC-BY-SA). Einige Verpflichtungen, erlaubt aber im Allgemeinen die kommerzielle Nutzung.",
   "NEXT SCAN": "NÄCHSTER SCAN",
@@ -325,6 +308,68 @@ export const de: Record<string, string> = {
   "Suppression rules": "Unterdrückungsregeln",
   "Token is valid": "Token ist gültig",
   "Vulnerabilities": "Schwachstellen",
+  "Governance score": "Governance-Bewertung",
+  "GOVERNANCE SCORE": "GOVERNANCE-BEWERTUNG",
+  "Grade (partial)": "Note (teilweise)",
+  "Partial: vulnerability checks off": "Teilweise: Schwachstellenprüfungen aus",
+  "Open vulnerability settings": "Schwachstelleneinstellungen öffnen",
+  "AI analysis is running. The score updates when it finishes.":
+    "KI-Analyse läuft. Die Bewertung wird aktualisiert, sobald sie abgeschlossen ist.",
+  "AI analysis didn't finish. The score shown is rule-based.":
+    "Die KI-Analyse wurde nicht abgeschlossen. Die angezeigte Bewertung ist regelbasiert.",
+  "Calculating governance score…": "Governance-Bewertung wird berechnet…",
+  "This scan has no governance score yet. Select Recalculate score to calculate it.":
+    "Dieser Scan hat noch keine Governance-Bewertung. Wählen Sie „Bewertung neu berechnen“, um sie zu berechnen.",
+  "Calculating…": "Wird berechnet…",
+  "Recalculate the governance score": "Governance-Bewertung neu berechnen",
+  "Failed to calculate the governance score": "Governance-Bewertung konnte nicht berechnet werden",
+  "AI analysis running": "KI-Analyse läuft",
+  "Configure governance score settings": "Einstellungen der Governance-Bewertung konfigurieren",
+  "Find AI usage across repositories": "KI-Nutzung in allen Repositories finden",
+  "See which AI libraries, models, API calls and agents each repository uses, with the files they appear in.":
+    "Sehen Sie, welche KI-Bibliotheken, Modelle, API-Aufrufe und Agenten jedes Repository nutzt, mit den Dateien, in denen sie vorkommen.",
+  "No model files found in this repository": "Keine Modelldateien in diesem Repository gefunden",
+  "This tab checks serialized model files for malicious code. The scan found none, so there was nothing to check.":
+    "Dieser Tab prüft serialisierte Modelldateien auf Schadcode. Der Scan hat keine gefunden, daher gab es nichts zu prüfen.",
+  "No vulnerability check recorded for this scan":
+    "Für diesen Scan ist keine Schwachstellenprüfung erfasst",
+  "Vulnerability checks didn't run for this scan":
+    "Für diesen Scan wurden keine Schwachstellenprüfungen ausgeführt",
+  "This scan doesn't record whether vulnerability checks ran. Scan again to check.":
+    "Dieser Scan erfasst nicht, ob Schwachstellenprüfungen ausgeführt wurden. Scannen Sie erneut, um zu prüfen.",
+  "Scan GitHub repositories (public, or private with a token in Settings) for AI libraries, models, agents, secrets and LLM vulnerabilities.":
+    "Scannen Sie GitHub-Repositories (öffentlich oder privat mit einem Token in den Einstellungen) auf KI-Bibliotheken, Modelle, Agenten, Geheimnisse und LLM-Schwachstellen.",
+  "Off until an admin turns it on. Code snippets from scanned files are sent to your LLM provider. Scans without vulnerability checks get a partial governance score.":
+    "Bis ein Administrator sie einschaltet, ist sie aus. Codeausschnitte aus gescannten Dateien werden an Ihren LLM-Anbieter gesendet. Scans ohne Schwachstellenprüfungen erhalten eine teilweise Governance-Bewertung.",
+  "Turn on vulnerability checks?": "Schwachstellenprüfungen einschalten?",
+  "Vulnerability checks send code snippets from scanned files to your LLM provider.":
+    "Schwachstellenprüfungen senden Codeausschnitte aus gescannten Dateien an Ihren LLM-Anbieter.",
+  "Keep checks off": "Prüfungen ausgeschaltet lassen",
+  "Turn on vulnerability checks": "Schwachstellenprüfungen einschalten",
+  "LLM-enhanced scoring on its own only sends finding details, not code. Vulnerability checks need the code itself to look for LLM security issues such as prompt injection.":
+    "Die LLM-gestützte Bewertung allein sendet nur Angaben zu Befunden, keinen Code. Schwachstellenprüfungen benötigen den Code selbst, um nach LLM-Sicherheitsproblemen wie Prompt-Injection zu suchen.",
+  "Snippets would be sent using the key {name}.":
+    "Die Ausschnitte würden mit dem Schlüssel {name} gesendet.",
+  "With checks off, governance scores are marked partial. You can change this later on this tab.":
+    "Bei ausgeschalteten Prüfungen werden Governance-Bewertungen als teilweise markiert. Sie können dies später auf diesem Tab ändern.",
+  "Partial: vulnerability checks didn't finish":
+    "Teilweise: Schwachstellenprüfungen nicht abgeschlossen",
+  "Partial: changed files not checked for vulnerabilities":
+    "Teilweise: geänderte Dateien nicht auf Schwachstellen geprüft",
+  "Vulnerability checks didn't finish for this scan":
+    "Die Schwachstellenprüfungen wurden für diesen Scan nicht abgeschlossen",
+  "The LLM analysis failed for some or all vulnerability types, so this scan wasn't fully checked. Any findings shown come from the types that finished. Check the LLM key in Settings, then scan again.":
+    "Die LLM-Analyse ist für einige oder alle Schwachstellentypen fehlgeschlagen, daher wurde dieser Scan nicht vollständig geprüft. Angezeigte Befunde stammen von den Typen, die abgeschlossen wurden. Prüfen Sie den LLM-Schlüssel in den Einstellungen und scannen Sie erneut.",
+  "Changed files weren't checked for vulnerabilities":
+    "Geänderte Dateien wurden nicht auf Schwachstellen geprüft",
+  "Incremental scans don't run vulnerability checks. Any findings shown come from the last full scan, for files that haven't changed. Run a full scan to check the changed files.":
+    "Inkrementelle Scans führen keine Schwachstellenprüfungen aus. Angezeigte Befunde stammen aus dem letzten vollständigen Scan, für Dateien, die sich nicht geändert haben. Führen Sie einen vollständigen Scan aus, um die geänderten Dateien zu prüfen.",
+  "Vulnerability checks are off, AI detection has no LLM key, or every vulnerability type is turned off. Turn them on in Settings, then scan again.":
+    "Schwachstellenprüfungen sind ausgeschaltet, die KI-Erkennung hat keinen LLM-Schlüssel oder alle Schwachstellentypen sind deaktiviert. Schalten Sie sie in den Einstellungen ein und scannen Sie erneut.",
+  "Intentionally vulnerable LLM app for testing vulnerability detection, which runs once vulnerability checks are turned on in Settings":
+    "Absichtlich verwundbare LLM-App zum Testen der Schwachstellenerkennung, die läuft, sobald Schwachstellenprüfungen in den Einstellungen eingeschaltet sind",
+  "AI analysis is running. Recalculate when it finishes.":
+    "Die KI-Analyse läuft. Berechnen Sie neu, wenn sie abgeschlossen ist.",
   "Weighing risk dimensions": "Risikodimensionen abwägen",
   "Add this webhook in GitHub so pull requests and pushes start scans.":
     "Fügen Sie diesen Webhook in GitHub hinzu, damit Pull Requests und Pushes Scans starten.",
@@ -389,9 +434,7 @@ export const fr: Record<string, string> = {
   "Back to history": "Retour à l'historique",
   "Delete scan?": "Supprimer l'analyse ?",
   "Export AI-BOM": "Exporter AI-BOM",
-  "Recalculate risk score": "Recalculer le score de risque",
   "Recalculate score": "Recalculer le score",
-  "Recalculating risk score": "Recalcul du score de risque",
   "Scan another": "Analyser un autre",
   "AI analysis": "Analyse IA",
   "All detections": "Toutes les détections",
@@ -453,8 +496,6 @@ export const fr: Record<string, string> = {
     "Nombre combiné de toutes les détections IA/ML sur les analyses terminées, y compris les bibliothèques, les appels API et les secrets.",
   "Each scan creates a snapshot. Compare scans to see what AI components were added, removed, or changed across your codebase.":
     "Chaque analyse crée un instantané. Comparez les analyses pour voir quels composants IA ont été ajoutés, retirés ou modifiés dans votre code.",
-  "Enter a public GitHub repository URL to detect AI/ML libraries and frameworks.":
-    "Saisissez l'URL d'un dépôt GitHub public pour détecter les bibliothèques et référentiels IA/ML.",
   "Go to the Repositories tab and add a GitHub repository URL. Once added, you can run scans to detect AI/ML usage.":
     "Allez dans l'onglet Dépôts et ajoutez une URL de dépôt GitHub. Une fois ajouté, vous pouvez lancer des analyses pour détecter l'usage d'IA/ML.",
   "Max critical findings": "Max. constats critiques",
@@ -480,7 +521,6 @@ export const fr: Record<string, string> = {
   "REPOSITORY": "DÉPÔT",
   "FILES SCANNED": "FICHIERS ANALYSÉS",
   "FINDINGS": "CONSTATS",
-  "RISK SCORE": "SCORE DE RISQUE",
   "TRIGGERED BY": "DÉCLENCHÉ PAR",
   "Cancelled": "Annulé",
   "Cloning": "Clonage",
@@ -506,8 +546,6 @@ export const fr: Record<string, string> = {
   "No API keys, tokens, or other secrets were found in the scanned code.":
     "Aucune clé API, jeton ou autre secret n'a été trouvé dans le code analysé.",
   "No LLM vulnerabilities detected": "Aucune vulnérabilité LLM détectée",
-  "Enable vulnerability scanning in settings for deep LLM analysis.":
-    "Activez l'analyse des vulnérabilités dans les paramètres pour une analyse LLM approfondie.",
   "Insecure output handling": "Traitement de sortie non sécurisé",
   "Sensitive information disclosure": "Divulgation d'informations sensibles",
   "LLM01 — Untrusted input injected into system prompts":
@@ -542,7 +580,6 @@ export const fr: Record<string, string> = {
     "Frameworks d'agents IA et systèmes autonomes détectés dans le code. Cela inclut les agents LangChain, CrewAI, AutoGen et les serveurs MCP.",
   "AI agents can take autonomous actions and interact with external systems. Review these carefully for governance and security implications.":
     "Les agents IA peuvent effectuer des actions autonomes et interagir avec des systèmes externes. Examinez-les attentivement pour leurs implications en matière de gouvernance et de sécurité.",
-  "AI governance risk score": "Score de risque de gouvernance IA",
   "Agent findings are marked as high risk due to their autonomous nature and ability to interact with external systems.":
     "Les détections d'agents sont marquées à haut risque en raison de leur nature autonome et de leur capacité à interagir avec des systèmes externes.",
   "Automatically scan this repository on a recurring schedule.":
@@ -601,7 +638,6 @@ export const fr: Record<string, string> = {
   "Use this secret when configuring the webhook in your GitHub repository settings.":
     "Utilisez ce secret lors de la configuration du webhook dans les paramètres de votre dépôt GitHub.",
   "Vulnerability detection": "Détection de vulnérabilités",
-  "AI is thinking really hard": "L'IA réfléchit intensément",
   "AI/ML libraries detected in this repository": "Bibliothèques IA/ML détectées dans ce dépôt",
   "Accepted risk": "Risque accepté",
   "Address immediately - critical for compliance":
@@ -611,17 +647,11 @@ export const fr: Record<string, string> = {
     "À traiter dès que possible — recommandé pour la conformité",
   "All findings of this type": "Tous les résultats de ce type",
   "All findings with this name": "Tous les résultats avec ce nom",
-  "Almost there, finalizing score": "Presque terminé, finalisation du score",
-  "Asking AI for a second opinion": "Demander un deuxième avis à l'IA",
   "Autonomous AI agent implementations": "Implémentations d'agents IA autonomes",
-  "Calculating dimension penalties": "Calcul des pénalités de dimension",
-  "Configure AI Governance Risk Score settings":
-    "Configurer les paramètres du score de risque de gouvernance IA",
   "Connect a GitHub token to scan private repositories":
     "Connectez un jeton GitHub pour analyser les dépôts privés",
-  "Create a rule that hides matching findings from future scans and excludes them from risk scores.":
-    "Créez une règle qui masque les résultats correspondants des futures analyses et les exclut des scores de risque.",
-  "Cross-referencing correlations": "Corrélations de références croisées",
+  "Create a rule that hides matching findings from future scans and excludes them from governance scores.":
+    "Créez une règle qui masque les résultats correspondants des futures analyses et les exclut des scores de gouvernance.",
   "Data sent to external cloud APIs. Risk of data leakage, vendor lock-in, and compliance violations.":
     "Données envoyées à des API cloud externes. Risque de fuite de données, de dépendance fournisseur et de non-conformité.",
   "Delete rule": "Supprimer la règle",
@@ -636,7 +666,6 @@ export const fr: Record<string, string> = {
   "Failed to test token": "Échec du test du jeton",
   "Framework that can connect to cloud APIs depending on configuration. Review usage to assess actual risk.":
     "Référentiel pouvant se connecter à des API cloud selon la configuration. Examinez l'utilisation pour évaluer le risque réel.",
-  "Gathering scan findings": "Collecte des résultats d'analyse",
   "GitHub integration": "Intégration GitHub",
   "GitHub token deleted successfully": "Jeton GitHub supprimé avec succès",
   "GitHub token saved successfully": "Jeton GitHub enregistré avec succès",
@@ -649,7 +678,6 @@ export const fr: Record<string, string> = {
     "Traitement local uniquement. Les données restent sur votre infrastructure avec une exposition externe minimale.",
   "Manage rules that suppress matching findings on future scans":
     "Gérer les règles qui suppriment les résultats correspondants lors des futures analyses",
-  "Mapping findings to risk dimensions": "Mappage des résultats aux dimensions de risque",
   "Moderate restrictions (LGPL, MPL, CC-BY-SA). Some obligations but generally allows commercial use.":
     "Restrictions modérées (LGPL, MPL, CC-BY-SA). Certaines obligations mais autorise généralement l'utilisation commerciale.",
   "NEXT SCAN": "PROCHAINE ANALYSE",
@@ -696,6 +724,68 @@ export const fr: Record<string, string> = {
   "Suppression rules": "Règles de suppression",
   "Token is valid": "Le jeton est valide",
   "Vulnerabilities": "Vulnérabilités",
+  "Governance score": "Score de gouvernance",
+  "GOVERNANCE SCORE": "SCORE DE GOUVERNANCE",
+  "Grade (partial)": "Note (partielle)",
+  "Partial: vulnerability checks off": "Partiel : contrôles de vulnérabilités désactivés",
+  "Open vulnerability settings": "Ouvrir les paramètres de vulnérabilités",
+  "AI analysis is running. The score updates when it finishes.":
+    "L'analyse IA est en cours. Le score sera mis à jour à la fin.",
+  "AI analysis didn't finish. The score shown is rule-based.":
+    "L'analyse IA n'a pas abouti. Le score affiché est basé sur des règles.",
+  "Calculating governance score…": "Calcul du score de gouvernance…",
+  "This scan has no governance score yet. Select Recalculate score to calculate it.":
+    "Cette analyse n'a pas encore de score de gouvernance. Sélectionnez Recalculer le score pour le calculer.",
+  "Calculating…": "Calcul en cours…",
+  "Recalculate the governance score": "Recalculer le score de gouvernance",
+  "Failed to calculate the governance score": "Échec du calcul du score de gouvernance",
+  "AI analysis running": "Analyse IA en cours",
+  "Configure governance score settings": "Configurer les paramètres du score de gouvernance",
+  "Find AI usage across repositories": "Trouver l'usage de l'IA dans les dépôts",
+  "See which AI libraries, models, API calls and agents each repository uses, with the files they appear in.":
+    "Voyez quelles bibliothèques d'IA, quels modèles, appels d'API et agents chaque dépôt utilise, avec les fichiers où ils apparaissent.",
+  "No model files found in this repository": "Aucun fichier de modèle trouvé dans ce dépôt",
+  "This tab checks serialized model files for malicious code. The scan found none, so there was nothing to check.":
+    "Cet onglet vérifie les fichiers de modèle sérialisés à la recherche de code malveillant. L'analyse n'en a trouvé aucun, il n'y avait donc rien à vérifier.",
+  "No vulnerability check recorded for this scan":
+    "Aucun contrôle de vulnérabilités enregistré pour cette analyse",
+  "Vulnerability checks didn't run for this scan":
+    "Les contrôles de vulnérabilités n'ont pas été exécutés pour cette analyse",
+  "This scan doesn't record whether vulnerability checks ran. Scan again to check.":
+    "Cette analyse n'indique pas si les contrôles de vulnérabilités ont été exécutés. Relancez une analyse pour vérifier.",
+  "Scan GitHub repositories (public, or private with a token in Settings) for AI libraries, models, agents, secrets and LLM vulnerabilities.":
+    "Analysez des dépôts GitHub (publics, ou privés avec un jeton dans les paramètres) pour y trouver des bibliothèques d'IA, des modèles, des agents, des secrets et des vulnérabilités LLM.",
+  "Off until an admin turns it on. Code snippets from scanned files are sent to your LLM provider. Scans without vulnerability checks get a partial governance score.":
+    "Désactivé jusqu'à ce qu'un administrateur l'active. Des extraits de code des fichiers analysés sont envoyés à votre fournisseur LLM. Les analyses sans contrôles de vulnérabilités obtiennent un score de gouvernance partiel.",
+  "Turn on vulnerability checks?": "Activer les contrôles de vulnérabilités ?",
+  "Vulnerability checks send code snippets from scanned files to your LLM provider.":
+    "Les contrôles de vulnérabilités envoient des extraits de code des fichiers analysés à votre fournisseur LLM.",
+  "Keep checks off": "Laisser les contrôles désactivés",
+  "Turn on vulnerability checks": "Activer les contrôles de vulnérabilités",
+  "LLM-enhanced scoring on its own only sends finding details, not code. Vulnerability checks need the code itself to look for LLM security issues such as prompt injection.":
+    "La notation enrichie par LLM seule n'envoie que les détails des constats, pas de code. Les contrôles de vulnérabilités ont besoin du code lui-même pour rechercher des problèmes de sécurité LLM comme l'injection de prompt.",
+  "Snippets would be sent using the key {name}.":
+    "Les extraits seraient envoyés avec la clé {name}.",
+  "With checks off, governance scores are marked partial. You can change this later on this tab.":
+    "Lorsque les contrôles sont désactivés, les scores de gouvernance sont marqués comme partiels. Vous pouvez modifier ce choix plus tard dans cet onglet.",
+  "Partial: vulnerability checks didn't finish":
+    "Partiel : contrôles de vulnérabilités non terminés",
+  "Partial: changed files not checked for vulnerabilities":
+    "Partiel : fichiers modifiés non contrôlés pour les vulnérabilités",
+  "Vulnerability checks didn't finish for this scan":
+    "Les contrôles de vulnérabilités ne se sont pas terminés pour cette analyse",
+  "The LLM analysis failed for some or all vulnerability types, so this scan wasn't fully checked. Any findings shown come from the types that finished. Check the LLM key in Settings, then scan again.":
+    "L'analyse LLM a échoué pour certains ou tous les types de vulnérabilités, cette analyse n'a donc pas été entièrement contrôlée. Les constats affichés proviennent des types qui se sont terminés. Vérifiez la clé LLM dans les paramètres, puis relancez l'analyse.",
+  "Changed files weren't checked for vulnerabilities":
+    "Les fichiers modifiés n'ont pas été contrôlés pour les vulnérabilités",
+  "Incremental scans don't run vulnerability checks. Any findings shown come from the last full scan, for files that haven't changed. Run a full scan to check the changed files.":
+    "Les analyses incrémentielles n'exécutent pas de contrôles de vulnérabilités. Les constats affichés proviennent de la dernière analyse complète, pour les fichiers qui n'ont pas changé. Lancez une analyse complète pour contrôler les fichiers modifiés.",
+  "Vulnerability checks are off, AI detection has no LLM key, or every vulnerability type is turned off. Turn them on in Settings, then scan again.":
+    "Les contrôles de vulnérabilités sont désactivés, la détection IA n'a pas de clé LLM, ou tous les types de vulnérabilités sont désactivés. Activez-les dans les paramètres, puis relancez l'analyse.",
+  "Intentionally vulnerable LLM app for testing vulnerability detection, which runs once vulnerability checks are turned on in Settings":
+    "Application LLM volontairement vulnérable pour tester la détection de vulnérabilités, qui s'exécute une fois les contrôles de vulnérabilités activés dans les paramètres",
+  "AI analysis is running. Recalculate when it finishes.":
+    "L'analyse IA est en cours. Recalculez lorsqu'elle sera terminée.",
   "Weighing risk dimensions": "Pondération des dimensions de risque",
   "Add this webhook in GitHub so pull requests and pushes start scans.":
     "Ajoutez ce webhook dans GitHub pour que les pull requests et les pushs lancent des analyses.",
@@ -760,9 +850,7 @@ export const es: Record<string, string> = {
   "Back to history": "Volver al historial",
   "Delete scan?": "¿Eliminar análisis?",
   "Export AI-BOM": "Exportar AI-BOM",
-  "Recalculate risk score": "Recalcular puntuación de riesgo",
   "Recalculate score": "Recalcular puntuación",
-  "Recalculating risk score": "Recalculando puntuación de riesgo",
   "Scan another": "Escanear otro",
   "AI analysis": "Análisis de IA",
   "All detections": "Todas las detecciones",
@@ -824,8 +912,6 @@ export const es: Record<string, string> = {
     "Recuento combinado de todas las detecciones de IA/ML en los análisis completados, incluidas bibliotecas, llamadas a API y secretos.",
   "Each scan creates a snapshot. Compare scans to see what AI components were added, removed, or changed across your codebase.":
     "Cada análisis crea una instantánea. Compare los análisis para ver qué componentes de IA se han añadido, eliminado o modificado en su base de código.",
-  "Enter a public GitHub repository URL to detect AI/ML libraries and frameworks.":
-    "Introduzca la URL de un repositorio público de GitHub para detectar bibliotecas y marcos de IA/ML.",
   "Go to the Repositories tab and add a GitHub repository URL. Once added, you can run scans to detect AI/ML usage.":
     "Vaya a la pestaña Repositorios y añada la URL de un repositorio de GitHub. Una vez añadido, podrá ejecutar análisis para detectar el uso de IA/ML.",
   "Max critical findings": "Máximo de hallazgos críticos",
@@ -851,7 +937,6 @@ export const es: Record<string, string> = {
   "REPOSITORY": "REPOSITORIO",
   "FILES SCANNED": "ARCHIVOS ANALIZADOS",
   "FINDINGS": "HALLAZGOS",
-  "RISK SCORE": "PUNTUACIÓN DE RIESGO",
   "TRIGGERED BY": "ACTIVADO POR",
   "Cancelled": "Cancelado",
   "Cloning": "Clonando",
@@ -878,8 +963,6 @@ export const es: Record<string, string> = {
   "No API keys, tokens, or other secrets were found in the scanned code.":
     "No se encontraron claves de API, tokens ni otros secretos en el código analizado.",
   "No LLM vulnerabilities detected": "No se han detectado vulnerabilidades de LLM",
-  "Enable vulnerability scanning in settings for deep LLM analysis.":
-    "Active el análisis de vulnerabilidades en la configuración para un análisis profundo de LLM.",
   "Insecure output handling": "Gestión insegura de salidas",
   "Sensitive information disclosure": "Divulgación de información sensible",
   "LLM01 — Untrusted input injected into system prompts":
@@ -914,7 +997,6 @@ export const es: Record<string, string> = {
     "Marcos de agentes de IA y sistemas autónomos detectados en el código base. Incluyen agentes de LangChain, CrewAI, AutoGen y servidores MCP.",
   "AI agents can take autonomous actions and interact with external systems. Review these carefully for governance and security implications.":
     "Los agentes de IA pueden realizar acciones autónomas e interactuar con sistemas externos. Revíselos cuidadosamente por sus implicaciones para la gobernanza y la seguridad.",
-  "AI governance risk score": "Puntuación de riesgo de gobernanza de IA",
   "Agent findings are marked as high risk due to their autonomous nature and ability to interact with external systems.":
     "Los hallazgos de agentes se marcan como de alto riesgo debido a su naturaleza autónoma y su capacidad para interactuar con sistemas externos.",
   "Automatically scan this repository on a recurring schedule.":
@@ -975,7 +1057,6 @@ export const es: Record<string, string> = {
   "Use this secret when configuring the webhook in your GitHub repository settings.":
     "Use este secreto al configurar el webhook en la configuración de su repositorio de GitHub.",
   "Vulnerability detection": "Detección de vulnerabilidades",
-  "AI is thinking really hard": "La IA está pensando intensamente",
   "AI/ML libraries detected in this repository":
     "Bibliotecas de IA/ML detectadas en este repositorio",
   "Accepted risk": "Riesgo aceptado",
@@ -986,17 +1067,11 @@ export const es: Record<string, string> = {
     "Abordar cuando sea posible: recomendado para el cumplimiento",
   "All findings of this type": "Todos los hallazgos de este tipo",
   "All findings with this name": "Todos los hallazgos con este nombre",
-  "Almost there, finalizing score": "Casi listo, finalizando la puntuación",
-  "Asking AI for a second opinion": "Pidiendo a la IA una segunda opinión",
   "Autonomous AI agent implementations": "Implementaciones de agentes de IA autónomos",
-  "Calculating dimension penalties": "Calculando penalizaciones por dimensión",
-  "Configure AI Governance Risk Score settings":
-    "Configure los ajustes de la puntuación de riesgo de gobernanza de IA",
   "Connect a GitHub token to scan private repositories":
     "Conecte un token de GitHub para analizar repositorios privados",
-  "Create a rule that hides matching findings from future scans and excludes them from risk scores.":
-    "Cree una regla que oculte los hallazgos coincidentes en futuros análisis y los excluya de las puntuaciones de riesgo.",
-  "Cross-referencing correlations": "Correlación de referencias cruzadas",
+  "Create a rule that hides matching findings from future scans and excludes them from governance scores.":
+    "Cree una regla que oculte los hallazgos coincidentes en futuros análisis y los excluya de las puntuaciones de gobernanza.",
   "Data sent to external cloud APIs. Risk of data leakage, vendor lock-in, and compliance violations.":
     "Datos enviados a API en la nube externas. Riesgo de fuga de datos, dependencia del proveedor e incumplimientos normativos.",
   "Delete rule": "Eliminar regla",
@@ -1012,7 +1087,6 @@ export const es: Record<string, string> = {
   "Failed to test token": "Error al probar el token",
   "Framework that can connect to cloud APIs depending on configuration. Review usage to assess actual risk.":
     "Marco que puede conectarse a API en la nube según la configuración. Revise el uso para evaluar el riesgo real.",
-  "Gathering scan findings": "Recopilando hallazgos del análisis",
   "GitHub integration": "Integración con GitHub",
   "GitHub token deleted successfully": "Token de GitHub eliminado correctamente",
   "GitHub token saved successfully": "Token de GitHub guardado correctamente",
@@ -1025,7 +1099,6 @@ export const es: Record<string, string> = {
     "Solo procesamiento local. Los datos permanecen en su infraestructura con una exposición externa mínima.",
   "Manage rules that suppress matching findings on future scans":
     "Gestione reglas que supriman los hallazgos coincidentes en futuros análisis",
-  "Mapping findings to risk dimensions": "Asignación de hallazgos a dimensiones de riesgo",
   "Moderate restrictions (LGPL, MPL, CC-BY-SA). Some obligations but generally allows commercial use.":
     "Restricciones moderadas (LGPL, MPL, CC-BY-SA). Algunas obligaciones, pero por lo general permite el uso comercial.",
   "NEXT SCAN": "PRÓXIMO ESCANEO",
@@ -1071,6 +1144,69 @@ export const es: Record<string, string> = {
   "Suppression rules": "Reglas de supresión",
   "Token is valid": "El token es válido",
   "Vulnerabilities": "Vulnerabilidades",
+  "Governance score": "Puntuación de gobernanza",
+  "GOVERNANCE SCORE": "PUNTUACIÓN DE GOBERNANZA",
+  "Grade (partial)": "Calificación (parcial)",
+  "Partial: vulnerability checks off": "Parcial: comprobaciones de vulnerabilidades desactivadas",
+  "Open vulnerability settings": "Abrir la configuración de vulnerabilidades",
+  "AI analysis is running. The score updates when it finishes.":
+    "El análisis de IA está en curso. La puntuación se actualizará cuando termine.",
+  "AI analysis didn't finish. The score shown is rule-based.":
+    "El análisis de IA no terminó. La puntuación mostrada se basa en reglas.",
+  "Calculating governance score…": "Calculando la puntuación de gobernanza…",
+  "This scan has no governance score yet. Select Recalculate score to calculate it.":
+    "Este análisis aún no tiene puntuación de gobernanza. Seleccione Recalcular puntuación para calcularla.",
+  "Calculating…": "Calculando…",
+  "Recalculate the governance score": "Recalcular la puntuación de gobernanza",
+  "Failed to calculate the governance score": "No se pudo calcular la puntuación de gobernanza",
+  "AI analysis running": "Análisis de IA en curso",
+  "Configure governance score settings": "Configurar la puntuación de gobernanza",
+  "Find AI usage across repositories": "Encontrar el uso de IA en los repositorios",
+  "See which AI libraries, models, API calls and agents each repository uses, with the files they appear in.":
+    "Vea qué bibliotecas de IA, modelos, llamadas a API y agentes usa cada repositorio, con los archivos en los que aparecen.",
+  "No model files found in this repository":
+    "No se encontraron archivos de modelo en este repositorio",
+  "This tab checks serialized model files for malicious code. The scan found none, so there was nothing to check.":
+    "Esta pestaña revisa los archivos de modelo serializados en busca de código malicioso. El análisis no encontró ninguno, así que no había nada que revisar.",
+  "No vulnerability check recorded for this scan":
+    "No hay ninguna comprobación de vulnerabilidades registrada para este análisis",
+  "Vulnerability checks didn't run for this scan":
+    "Las comprobaciones de vulnerabilidades no se ejecutaron en este análisis",
+  "This scan doesn't record whether vulnerability checks ran. Scan again to check.":
+    "Este análisis no registra si se ejecutaron las comprobaciones de vulnerabilidades. Vuelva a analizar para comprobarlo.",
+  "Scan GitHub repositories (public, or private with a token in Settings) for AI libraries, models, agents, secrets and LLM vulnerabilities.":
+    "Analice repositorios de GitHub (públicos, o privados con un token en Configuración) en busca de bibliotecas de IA, modelos, agentes, secretos y vulnerabilidades de LLM.",
+  "Off until an admin turns it on. Code snippets from scanned files are sent to your LLM provider. Scans without vulnerability checks get a partial governance score.":
+    "Desactivado hasta que un administrador lo active. Se envían fragmentos de código de los archivos analizados a su proveedor de LLM. Los análisis sin comprobaciones de vulnerabilidades obtienen una puntuación de gobernanza parcial.",
+  "Turn on vulnerability checks?": "¿Activar las comprobaciones de vulnerabilidades?",
+  "Vulnerability checks send code snippets from scanned files to your LLM provider.":
+    "Las comprobaciones de vulnerabilidades envían fragmentos de código de los archivos analizados a su proveedor de LLM.",
+  "Keep checks off": "Mantener las comprobaciones desactivadas",
+  "Turn on vulnerability checks": "Activar las comprobaciones de vulnerabilidades",
+  "LLM-enhanced scoring on its own only sends finding details, not code. Vulnerability checks need the code itself to look for LLM security issues such as prompt injection.":
+    "La puntuación mejorada con LLM por sí sola solo envía detalles de los hallazgos, no código. Las comprobaciones de vulnerabilidades necesitan el código para buscar problemas de seguridad de LLM como la inyección de prompts.",
+  "Snippets would be sent using the key {name}.":
+    "Los fragmentos se enviarían con la clave {name}.",
+  "With checks off, governance scores are marked partial. You can change this later on this tab.":
+    "Con las comprobaciones desactivadas, las puntuaciones de gobernanza se marcan como parciales. Puede cambiarlo más adelante en esta pestaña.",
+  "Partial: vulnerability checks didn't finish":
+    "Parcial: las comprobaciones de vulnerabilidades no terminaron",
+  "Partial: changed files not checked for vulnerabilities":
+    "Parcial: archivos modificados sin comprobar vulnerabilidades",
+  "Vulnerability checks didn't finish for this scan":
+    "Las comprobaciones de vulnerabilidades no terminaron en este escaneo",
+  "The LLM analysis failed for some or all vulnerability types, so this scan wasn't fully checked. Any findings shown come from the types that finished. Check the LLM key in Settings, then scan again.":
+    "El análisis LLM falló para algunos o todos los tipos de vulnerabilidad, así que este escaneo no se comprobó por completo. Los hallazgos que se muestran provienen de los tipos que terminaron. Revise la clave LLM en Configuración y vuelva a escanear.",
+  "Changed files weren't checked for vulnerabilities":
+    "Los archivos modificados no se comprobaron en busca de vulnerabilidades",
+  "Incremental scans don't run vulnerability checks. Any findings shown come from the last full scan, for files that haven't changed. Run a full scan to check the changed files.":
+    "Los escaneos incrementales no ejecutan comprobaciones de vulnerabilidades. Los hallazgos que se muestran provienen del último escaneo completo, para los archivos que no han cambiado. Ejecute un escaneo completo para comprobar los archivos modificados.",
+  "Vulnerability checks are off, AI detection has no LLM key, or every vulnerability type is turned off. Turn them on in Settings, then scan again.":
+    "Las comprobaciones de vulnerabilidades están desactivadas, la detección de IA no tiene clave LLM o todos los tipos de vulnerabilidad están desactivados. Actívelas en Configuración y vuelva a escanear.",
+  "Intentionally vulnerable LLM app for testing vulnerability detection, which runs once vulnerability checks are turned on in Settings":
+    "Aplicación LLM intencionadamente vulnerable para probar la detección de vulnerabilidades, que se ejecuta una vez activadas las comprobaciones de vulnerabilidades en Configuración",
+  "AI analysis is running. Recalculate when it finishes.":
+    "El análisis de IA está en curso. Recalcule cuando termine.",
   "Weighing risk dimensions": "Ponderación de las dimensiones de riesgo",
   "Add this webhook in GitHub so pull requests and pushes start scans.":
     "Añada este webhook en GitHub para que las pull requests y los pushes inicien escaneos.",
