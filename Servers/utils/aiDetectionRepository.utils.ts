@@ -11,9 +11,11 @@ import { sequelize } from "../database/db";
 import { Transaction, QueryTypes } from "sequelize";
 import {
   IAIDetectionRepository,
+  IAIDetectionRepositoryResponse,
   ICreateRepositoryInput,
   IUpdateRepositoryInput,
   ScheduleFrequency,
+  WebhookDeliveryStatus,
 } from "../domain.layer/interfaces/i.aiDetectionRepository";
 
 // ============================================================================
@@ -54,7 +56,7 @@ export async function createRepositoryQuery(
       schedule_enabled, schedule_frequency, schedule_day_of_week,
       schedule_day_of_month, schedule_hour, schedule_minute,
       ci_enabled, ci_min_score, ci_max_critical, ci_post_comments, ci_status_checks,
-      next_scan_at, is_enabled, created_by,
+      webhook_secret, next_scan_at, is_enabled, created_by,
       created_at, updated_at
     ) VALUES (
       :organizationId, :repository_url, :repository_owner, :repository_name,
@@ -62,7 +64,7 @@ export async function createRepositoryQuery(
       :schedule_enabled, :schedule_frequency, :schedule_day_of_week,
       :schedule_day_of_month, :schedule_hour, :schedule_minute,
       :ci_enabled, :ci_min_score, :ci_max_critical, :ci_post_comments, :ci_status_checks,
-      :next_scan_at, TRUE, :created_by,
+      :webhook_secret, :next_scan_at, TRUE, :created_by,
       NOW(), NOW()
     )
     RETURNING *;
@@ -88,6 +90,7 @@ export async function createRepositoryQuery(
       ci_max_critical: input.ci_max_critical ?? 0,
       ci_post_comments: input.ci_post_comments ?? true,
       ci_status_checks: input.ci_status_checks ?? true,
+      webhook_secret: input.webhook_secret ?? null,
       next_scan_at: nextScanAt,
       created_by: input.created_by,
     },
@@ -134,23 +137,76 @@ export async function getRepositoryByOwnerNameQuery(
   return (results as IAIDetectionRepository[])[0] || null;
 }
 
-export async function getRepositoryByOwnerNameForWebhook(
+/** Most repositories a single webhook delivery is checked against. */
+const MAX_WEBHOOK_CANDIDATES = 50;
+
+/**
+ * Every CI-enabled repository registered under this GitHub owner/name, in any
+ * organization. Intentionally cross-organization: the public webhook endpoint
+ * has no tenant context, so the caller must verify the delivery's signature
+ * against each candidate's secret and only act on the ones that verify.
+ *
+ * GitHub owner and repository names are case-insensitive, so the match is too.
+ */
+export async function getRepositoriesForWebhookQuery(
   owner: string,
   name: string,
-): Promise<(IAIDetectionRepository & { organization_id: number }) | null> {
+): Promise<(IAIDetectionRepository & { organization_id: number })[]> {
   const query = `
     SELECT * FROM ai_detection_repositories
-    WHERE repository_owner = :owner AND repository_name = :name
+    WHERE LOWER(repository_owner) = LOWER(:owner) AND LOWER(repository_name) = LOWER(:name)
       AND is_enabled = TRUE AND ci_enabled = TRUE
-    LIMIT 1;
+    ORDER BY id ASC
+    LIMIT :limit;
   `;
 
   const results = await sequelize.query(query, {
-    replacements: { owner, name },
+    replacements: { owner, name, limit: MAX_WEBHOOK_CANDIDATES },
     type: QueryTypes.SELECT,
   });
 
-  return (results as (IAIDetectionRepository & { organization_id: number })[])[0] || null;
+  return results as (IAIDetectionRepository & { organization_id: number })[];
+}
+
+/**
+ * Shape a repository row for an API response. The webhook secret is removed
+ * and replaced by `has_webhook_secret`; pass `revealSecret` only on the
+ * response to the request that generated the secret, so an editor can copy it
+ * into GitHub once.
+ */
+export function toRepositoryResponse(
+  repository: IAIDetectionRepository,
+  options: { revealSecret?: boolean } = {},
+): IAIDetectionRepositoryResponse {
+  const { webhook_secret, ...rest } = repository;
+  return {
+    ...rest,
+    has_webhook_secret: !!webhook_secret,
+    ...(options.revealSecret && webhook_secret ? { webhook_secret } : {}),
+  };
+}
+
+/**
+ * Record the outcome of a GitHub webhook delivery on the repository row.
+ * Called from the public webhook endpoint, so it is scoped by both the
+ * repository id and the organization the repository belongs to.
+ */
+export async function recordWebhookDeliveryQuery(
+  repositoryId: number,
+  organizationId: number,
+  status: WebhookDeliveryStatus,
+): Promise<void> {
+  validateOrganizationId(organizationId);
+  const query = `
+    UPDATE ai_detection_repositories
+    SET last_webhook_at = NOW(), last_webhook_status = :status
+    WHERE id = :repositoryId AND organization_id = :organizationId;
+  `;
+
+  await sequelize.query(query, {
+    replacements: { repositoryId, organizationId, status },
+    type: QueryTypes.UPDATE,
+  });
 }
 
 export async function getRepositoriesListQuery(
@@ -236,9 +292,9 @@ export async function updateRepositoryQuery(
     setClauses.push("schedule_minute = :schedule_minute");
     replacements.schedule_minute = input.schedule_minute;
   }
-  if ((input as any).webhook_secret !== undefined) {
+  if (input.webhook_secret !== undefined) {
     setClauses.push("webhook_secret = :webhook_secret");
-    replacements.webhook_secret = (input as any).webhook_secret;
+    replacements.webhook_secret = input.webhook_secret;
   }
   if (input.ci_enabled !== undefined) {
     setClauses.push("ci_enabled = :ci_enabled");

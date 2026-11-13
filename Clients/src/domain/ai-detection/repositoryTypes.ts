@@ -25,12 +25,21 @@ export interface AIDetectionRepository {
   schedule_minute: number;
 
   // CI/CD webhook fields
+  /** Whether a webhook secret is set. Reads never include the secret itself. */
+  has_webhook_secret?: boolean;
+  /**
+   * Present only on the create or update response that generated the secret,
+   * so it can be copied into GitHub once.
+   */
   webhook_secret?: string | null;
   ci_enabled: boolean;
   ci_min_score: number;
   ci_max_critical: number;
   ci_post_comments: boolean;
   ci_status_checks: boolean;
+  /** When GitHub last delivered a webhook for this repository */
+  last_webhook_at?: string | null;
+  last_webhook_status?: WebhookDeliveryStatus | null;
 
   last_scan_id?: number | null;
   last_scan_status?: string | null;
@@ -89,4 +98,15 @@ export interface RepositoriesResponse {
     limit: number;
     total_pages: number;
   };
+}
+
+/** Outcome of the most recent signature-verified GitHub webhook delivery */
+export type WebhookDeliveryStatus = "ok" | "error";
+
+/** Where GitHub should send webhooks, from the deployment's public address */
+export interface WebhookConfig {
+  /** Null when the deployment has no public address configured */
+  webhook_url: string | null;
+  /** False when the address is missing or not reachable from the internet */
+  is_public: boolean;
 }

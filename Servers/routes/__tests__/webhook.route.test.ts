@@ -31,11 +31,11 @@ const REPO_ROW = {
   webhook_secret: WEBHOOK_SECRET,
 };
 
-const getRepositoryByOwnerNameForWebhook = jest.fn(async () => REPO_ROW as any);
+const getRepositoriesForWebhookQuery = jest.fn(async () => [REPO_ROW] as any);
 jest.mock("../../utils/aiDetectionRepository.utils", () => ({
   __esModule: true,
-  getRepositoryByOwnerNameForWebhook: (...args: unknown[]) =>
-    getRepositoryByOwnerNameForWebhook(...(args as [])),
+  getRepositoriesForWebhookQuery: (...args: unknown[]) =>
+    getRepositoriesForWebhookQuery(...(args as [])),
 }));
 
 // DB/service boundary behind the handlers; avoids loading the DB layer at all.
@@ -103,7 +103,7 @@ const postGithub = (body: string, headers: Record<string, string> = {}, signatur
 
 beforeEach(() => {
   jest.clearAllMocks();
-  getRepositoryByOwnerNameForWebhook.mockResolvedValue(REPO_ROW as any);
+  getRepositoriesForWebhookQuery.mockResolvedValue([REPO_ROW] as any);
 });
 
 describe("POST /webhooks/github — HMAC signature guard", () => {
@@ -159,7 +159,7 @@ describe("POST /webhooks/github — HMAC signature guard", () => {
   });
 
   it("answers 200 by design when the repository is not registered (no GitHub retry)", async () => {
-    getRepositoryByOwnerNameForWebhook.mockResolvedValue(null as any);
+    getRepositoriesForWebhookQuery.mockResolvedValue([] as any);
 
     const res = await postGithub(PAYLOAD, {}, sign(PAYLOAD));
 
