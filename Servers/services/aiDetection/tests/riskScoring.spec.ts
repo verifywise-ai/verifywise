@@ -268,6 +268,9 @@ describe("riskScoring", () => {
       expect(details.llm_status).toBe("done");
       expect(details.llm_enhanced).toBe(true);
       expect(details.llm_narrative).toBe("Secret in code");
+      // The rule-based grade is stored with the rule-based score and survives the LLM write.
+      expect(mockUpdate.mock.calls[0][3].rule_grade).toBe(result!.grade);
+      expect(details.rule_grade).toBe(result!.grade);
       expect(score).toBeLessThan(result!.score);
       expect(orgId).toBe(7);
       expect(guard).toBe(runId);
@@ -285,6 +288,7 @@ describe("riskScoring", () => {
       expect(mockUpdate).toHaveBeenCalledTimes(2);
       const [, score, grade, details, , guard] = mockUpdate.mock.calls[1];
       expect(details.llm_status).toBe("failed");
+      expect(details.rule_grade).toBe(result!.grade);
       expect(score).toBe(result!.score);
       expect(grade).toBe(result!.grade);
       expect(guard).toBe(result!.details.llm_run_id);

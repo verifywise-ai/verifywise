@@ -84,6 +84,8 @@ export interface IScan {
   risk_score_details?: IRiskScoreDetails | null;
   risk_score_calculated_at?: Date | null;
   vulnerability_check_status?: VulnerabilityCheckStatus | null;
+  /** When the scan's end was announced (services/aiDetection/scanNotifications.ts); NULL until then. */
+  notified_at?: Date | null;
   // Incremental scan fields
   scan_mode?: ScanMode;
   base_commit_sha?: string | null;
@@ -387,6 +389,12 @@ export interface IRiskScoreDetails {
   llm_status?: LlmAnalysisStatus;
   /** Ties a background LLM write to the rule-based run that started it */
   llm_run_id?: string;
+  /**
+   * The rule-based grade before any LLM adjustment. Kept on the LLM write so
+   * scans can be compared on the same basis (scan notifications' grade-drop
+   * check). Absent on scores stored before it was recorded.
+   */
+  rule_grade?: RiskGrade;
 }
 
 /**

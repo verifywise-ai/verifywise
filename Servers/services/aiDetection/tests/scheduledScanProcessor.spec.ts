@@ -25,6 +25,10 @@ jest.mock("../../aiDetection.service", () => ({
   startScan: jest.fn(),
 }));
 
+jest.mock("../scanNotifications", () => ({
+  notifyAiDetectionScanFailed: jest.fn(),
+}));
+
 jest.mock("../../../utils/logger/fileLogger", () => ({
   default: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
   __esModule: true,
@@ -50,6 +54,7 @@ import {
 } from "../../../utils/aiDetectionRepository.utils";
 import { getActiveScanForRepoQuery, markStaleScansFailed } from "../../../utils/aiDetection.utils";
 import { startScan } from "../../aiDetection.service";
+import { notifyAiDetectionScanFailed } from "../scanNotifications";
 
 const mockGetAllOrgs = getAllOrganizationsQuery as jest.MockedFunction<
   typeof getAllOrganizationsQuery
@@ -66,12 +71,17 @@ const mockGetActiveScan = getActiveScanForRepoQuery as jest.MockedFunction<
 >;
 const mockMarkStale = markStaleScansFailed as jest.MockedFunction<typeof markStaleScansFailed>;
 const mockStartScan = startScan as jest.MockedFunction<typeof startScan>;
+const mockNotifyFailed = notifyAiDetectionScanFailed as jest.MockedFunction<
+  typeof notifyAiDetectionScanFailed
+>;
 
 describe("scheduledScanProcessor", () => {
   beforeEach(() => {
     jest.clearAllMocks();
     mockRedisSet.mockResolvedValue("OK");
     mockRedisDel.mockResolvedValue(1);
+    mockMarkStale.mockResolvedValue([]);
+    mockNotifyFailed.mockResolvedValue();
   });
 
   describe("processScheduledAiDetectionScans", () => {
@@ -97,19 +107,37 @@ describe("scheduledScanProcessor", () => {
       expect(mockGetDueRepos).not.toHaveBeenCalled();
     });
 
-    it("should mark stale scans before processing", async () => {
+    it("should mark stale scans before processing and announce each one", async () => {
       mockGetAllOrgs.mockResolvedValue([{ id: 1 }] as any);
-      mockMarkStale.mockResolvedValue(3);
+      mockMarkStale.mockResolvedValue([101, 102, 103]);
       mockGetDueRepos.mockResolvedValue([]);
 
       await processScheduledAiDetectionScans();
 
       expect(mockMarkStale).toHaveBeenCalledWith(1, 30);
+      // No notified_at claim, so a scan that was only slow can still announce completion.
+      expect(mockNotifyFailed.mock.calls).toEqual([
+        [101, 1, { claim: false }],
+        [102, 1, { claim: false }],
+        [103, 1, { claim: false }],
+      ]);
+    });
+
+    it("keeps processing when announcing a stale scan fails", async () => {
+      mockGetAllOrgs.mockResolvedValue([{ id: 1 }] as any);
+      mockMarkStale.mockResolvedValue([101]);
+      mockNotifyFailed.mockRejectedValue(new Error("redis down"));
+      mockGetDueRepos.mockResolvedValue([]);
+
+      await expect(processScheduledAiDetectionScans()).resolves.toBeUndefined();
+      await new Promise((resolve) => setImmediate(resolve));
+
+      expect(mockGetDueRepos).toHaveBeenCalledWith(1);
     });
 
     it("should skip repo with active scan in progress", async () => {
       mockGetAllOrgs.mockResolvedValue([{ id: 1 }] as any);
-      mockMarkStale.mockResolvedValue(0);
+      mockMarkStale.mockResolvedValue([]);
       mockGetDueRepos.mockResolvedValue([
         {
           id: 10,
@@ -133,7 +161,7 @@ describe("scheduledScanProcessor", () => {
     it("should start scan for due repository", async () => {
       const nextScanAt = new Date("2026-01-01T00:00:00Z");
       mockGetAllOrgs.mockResolvedValue([{ id: 1 }] as any);
-      mockMarkStale.mockResolvedValue(0);
+      mockMarkStale.mockResolvedValue([]);
       mockGetDueRepos.mockResolvedValue([
         {
           id: 10,
@@ -167,7 +195,7 @@ describe("scheduledScanProcessor", () => {
 
     it("should not update next_scan_at when schedule_frequency is null", async () => {
       mockGetAllOrgs.mockResolvedValue([{ id: 1 }] as any);
-      mockMarkStale.mockResolvedValue(0);
+      mockMarkStale.mockResolvedValue([]);
       mockGetDueRepos.mockResolvedValue([
         {
           id: 10,
@@ -188,7 +216,7 @@ describe("scheduledScanProcessor", () => {
 
     it("should release lock after processing", async () => {
       mockGetAllOrgs.mockResolvedValue([{ id: 1 }] as any);
-      mockMarkStale.mockResolvedValue(0);
+      mockMarkStale.mockResolvedValue([]);
       mockGetDueRepos.mockResolvedValue([]);
 
       await processScheduledAiDetectionScans();
@@ -207,7 +235,7 @@ describe("scheduledScanProcessor", () => {
 
     it("should handle repo-level errors without stopping other repos", async () => {
       mockGetAllOrgs.mockResolvedValue([{ id: 1 }] as any);
-      mockMarkStale.mockResolvedValue(0);
+      mockMarkStale.mockResolvedValue([]);
       mockGetDueRepos.mockResolvedValue([
         {
           id: 10,
@@ -228,7 +256,7 @@ describe("scheduledScanProcessor", () => {
 
     it("should process multiple organizations", async () => {
       mockGetAllOrgs.mockResolvedValue([{ id: 1 }, { id: 2 }] as any);
-      mockMarkStale.mockResolvedValue(0);
+      mockMarkStale.mockResolvedValue([]);
       mockGetDueRepos.mockResolvedValue([]);
 
       await processScheduledAiDetectionScans();

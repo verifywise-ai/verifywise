@@ -498,6 +498,39 @@ export const scanningContent: ArticleContent = {
       caption: 'Configure GitHub Personal Access Token for private repository scanning',
     },
     {
+      type: 'heading',
+      id: 'notifications',
+      level: 2,
+      text: 'Notifications',
+    },
+    {
+      type: 'paragraph',
+      text: 'When a scan ends, the person who started it gets a notification in the bell menu, for example "Scan of owner/repo finished: 7 findings, grade B". Click it to open the scan. Scheduled and webhook scans count as started by the person who added the repository.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Some results also send an email, to the person who started the scan and to every Admin in your organization:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'New exposed secrets', text: 'The scan found secrets that the previous scan of the same repository did not have, or a known secret in a file where the previous scan did not find it.' },
+        { bold: 'New high-risk findings', text: 'The scan found high-risk findings that the previous scan of the same repository did not have. On the first scan of a repository, every high-risk finding counts as new.' },
+        { bold: 'Lower governance grade', text: 'The grade is worse than the previous scan of the repository.' },
+        { bold: 'Failed scheduled or webhook scan', text: 'Nobody was watching the scan run, so the failure is emailed. A failed scan you started yourself shows on screen and in the bell menu only.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Findings that are suppressed or marked as accepted risk in the new scan are left out, and a finding the previous scan already had is not reported again, even if someone accepted it there. Grades are compared before any AI adjustment, so both scans are measured the same way. If the governance score could not be calculated, the notification leaves the grade out. Cancelled scans send nothing. A scan that stops after a server restart is reported as failed.',
+    },
+    {
+      type: 'callout',
+      variant: 'tip',
+      title: 'Send scan results to a team',
+      text: 'To email other people or a shared mailbox, create an automation with one of the AI Detection triggers: scan finishes, scan finds new high-risk findings, or scan fails. See **Automations** for how to set one up.',
+    },
+    {
       type: 'article-links',
       title: 'Related articles',
       items: [

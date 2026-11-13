@@ -94,6 +94,10 @@ import { isModelFileExtension } from "../config/modelSecurityPatterns";
 import { getLicenseForFinding } from "../utils/licenseDetection.utils";
 import { cacheAside, buildOrgCacheKey, deleteByPattern, CACHE_KEYS } from "../utils/cache.utils";
 import { calculateAndStoreRiskScore, effectiveLlmStatus } from "./aiDetection/riskScoring";
+import {
+  notifyAiDetectionScanFinished,
+  notifyAiDetectionScanFailed,
+} from "./aiDetection/scanNotifications";
 import { reportScanToGitHub } from "./aiDetection/githubStatusReporter";
 import {
   runVulnerabilityChecks,
@@ -1580,6 +1584,7 @@ async function executeIncrementalScan(
 
   // Store all findings in a single transaction
   const transaction = await sequelize.transaction();
+  let committed = false;
   try {
     const allFindings = [...newFindingInputs, ...carriedForwardInputs];
 
@@ -1611,6 +1616,7 @@ async function executeIncrementalScan(
     );
 
     await transaction.commit();
+    committed = true;
 
     const scan = await getScanByIdQuery(scanId, ctx.organizationId);
     if (scan) {
@@ -1633,8 +1639,14 @@ async function executeIncrementalScan(
         logger.error(`Failed to report scan #${scanId} to GitHub:`, err);
       });
     }
+
+    // Last step: once announced (notified_at claimed), a later failure here
+    // would mark the scan failed but could no longer announce it.
+    void notifyAiDetectionScanFinished(scanId, ctx.organizationId);
   } catch (error) {
-    await transaction.rollback();
+    // A committed transaction cannot be rolled back; rolling it back would
+    // throw and hide the original error.
+    if (!committed) await transaction.rollback();
     throw error;
   }
 }
@@ -1977,6 +1989,7 @@ async function executeScan(
 
     // Store findings in database
     const transaction = await sequelize.transaction();
+    let committed = false;
     try {
       // Deduplicate findings by name+provider+findingType+modelName to avoid ON CONFLICT errors
       // Each finding type is kept separate (library, api_call, secret, model_ref, rag_component, agent)
@@ -2131,6 +2144,7 @@ async function executeScan(
       );
 
       await transaction.commit();
+      committed = true;
 
       await scoreCompletedScan(scanId, `${owner}/${repo}`, ctx);
 
@@ -2160,8 +2174,14 @@ async function executeScan(
           logger.error(`Failed to report scan #${scanId} to GitHub:`, err);
         });
       }
+
+      // Last step: once announced (notified_at claimed), a later failure here
+      // would mark the scan failed but could no longer announce it.
+      void notifyAiDetectionScanFinished(scanId, ctx.organizationId);
     } catch (error) {
-      await transaction.rollback();
+      // A committed transaction cannot be rolled back; rolling it back would
+      // throw and hide the original error.
+      if (!committed) await transaction.rollback();
       throw error;
     }
   } catch (error) {
@@ -2194,6 +2214,7 @@ async function executeScan(
     updateLinkedRepositoryLastScan(scanId, status, ctx.organizationId).catch((err) => {
       logger.error(`Failed to update repository last scan for scan ${scanId}:`, err);
     });
+    void notifyAiDetectionScanFailed(scanId, ctx.organizationId);
   } finally {
     // Clean up cloned repository
     if (clonedRepoPath) {
