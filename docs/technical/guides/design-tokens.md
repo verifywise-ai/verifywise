@@ -8,13 +8,19 @@ This guide documents the design tokens, theme configuration, and visual standard
 
 ```
 shared/design-tokens/
-├── primitives.ts      # Color scale hex
-└── palette.ts         # Semantic tokens built from those scales
+├── primitives.ts      # Color scale hex (phase 1 restyle values)
+├── palette.ts         # Semantic tokens built from those scales
+└── classic/           # The pre-restyle values, client only; delete at the January 2027 cutover
+    ├── primitives.ts
+    └── palette.ts
 
 Clients/src/presentation/themes/
 ├── index.ts           # Central export hub
 ├── light.ts           # Main MUI theme configuration
-├── palette.ts         # Re-exports shared/design-tokens/palette.ts
+├── palette.ts         # Hands out the active set (phase 1 or classic) with the same shape
+├── uiStyle.ts         # Which look is active: localStorage `vw-ui-style`, read once at load
+├── chartTheme.ts      # One chart theme: series order, risk and status marks, grid
+├── cssVars.ts         # Writes tokens to :root as --vw-* custom properties for .css files
 ├── typography.ts      # Font scale and textStyles
 ├── v1SingleTheme.ts   # Standardized patterns
 ├── theme.d.ts         # TypeScript type definitions
@@ -23,6 +29,19 @@ Clients/src/presentation/themes/
 ├── alerts.ts          # Alert status styles
 └── tables.ts          # Table-specific styles
 ```
+
+## Phase 1 restyle and the classic look
+
+The phase 1 restyle (hand-off of 12 Nov 2026) changed colours, type, corners, icons and the tab bar, with no change to layout. The classic look stays selectable until the January 2027 cutover.
+
+- **Switch.** Settings → Preferences → Interface style. `themes/uiStyle.ts` reads `localStorage["vw-ui-style"]` once when the app loads (`"classic"` or anything else, which means phase 1). Changing it saves and reloads, because tokens are module-level constants used in hundreds of files. Code that must differ between the looks branches on `isClassicUi()`.
+- **Two token sets, one shape.** `shared/design-tokens/` holds the phase 1 values; `shared/design-tokens/classic/` holds the previous values extended to the same exports. The client entry `themes/palette.ts` picks one and widens literal hex types to `string`. Raw scales for the active set come from `themes/index.ts` (`grey`, `green`, ... `signalGreen`, `series`).
+- **Backend.** Emails and PDF reports compile only the top-level files, so they always use the phase 1 values.
+- **New tokens.** `riskMark` (solid marks for dots, bars and slices; risk text colours are for words on a tint), `stage` (step bars), `score` (0–100 spectrum), `part` (Record/Track/Enforce, **on hold until the phase 2 sidebar**), `radius` / `radiusPx` (`sm` 2px, `search` 8px, `tab` 9px, `pill`; classic `sm` is 4px).
+- **Charts.** Use `chartTheme` (`themes/chartTheme.ts`): `series` in fixed order for categories (fold past nine into Other), `single` for one measure, `risk.*` and `status.*` marks, `riskSummary` / `statusSummary` for count cards.
+- **CSS files.** Use `var(--vw-<token>, <fallback hex>)`; `themes/cssVars.ts` sets the variables and `data-ui-style` on `<html>` so a rule can be scoped to one look.
+- **Icons.** `components/VWIcon` holds the VerifyWise icon set (sidebar, app switcher, settings). Keep Lucide for small UI icons such as chevrons, close and search.
+- **No hex in screens.** Use a token; for a value with no token, use the nearest one.
 
 `shared/design-tokens/primitives.ts` holds the scale hex. `shared/design-tokens/palette.ts` builds brand, button, text, icon, background, border, and status from those scales. The client `palette.ts` re-exports the shared palette, so existing screen imports stay valid. Email and PDF rendering can import the shared modules.
 
@@ -46,12 +65,14 @@ function App() {
 
 ### Brand Colors
 
+Phase 1 values; classic values are in `shared/design-tokens/classic/`.
+
 | Token                            | Value     | Usage                            |
 | -------------------------------- | --------- | -------------------------------- |
-| `brand.primary` / `primary.main` | `#13715B` | Primary actions, links, emphasis |
-| `brand.primaryHover`             | `#0F5A47` | Hover state for primary          |
-| `brand.primaryLight`             | `#E6F0EC` | Light backgrounds, highlights    |
-| `brand.primaryDark`              | `#10614D` | Dark variant                     |
+| `brand.primary` / `primary.main` | `#14715B` | Primary actions, links, emphasis |
+| `brand.primaryHover`             | `#075443` | Hover state for primary          |
+| `brand.primaryLight`             | `#D9F2E9` | Light backgrounds, selected      |
+| `brand.primaryDark`              | `#075443` | Dark variant                     |
 
 ### Button Colors
 
@@ -116,8 +137,8 @@ Icon strokes. They read the color scales directly and do not alias text tokens.
 
 | Token          | Value     | Usage           |
 | -------------- | --------- | --------------- |
-| `border.dark`  | `#D0D5DD` | Default borders |
-| `border.light` | `#E5E7EB` | Subtle borders  |
+| `border.dark`  | `#D1D5D5` | Inputs, stronger borders |
+| `border.light` | `#E4E6E6` | Hairline: cards, tables, tabs |
 
 ### Status Colors
 
@@ -272,13 +293,15 @@ sx={{
 ### Border Radius
 
 ```typescript
-// Standard border radius
-borderRadius: "4px"; // Primary standard
+import { radiusPx } from "../themes/palette";
 
-// Using theme
-borderRadius: theme.shape.borderRadius; // 4px
-borderRadius: theme.spacing(1.5); // 12px for modals
+borderRadius: radiusPx.sm; // 2px (classic 4px): buttons, cards, inputs, menus, modals
+borderRadius: radiusPx.search; // 8px: the search field above a table
+borderRadius: `${radiusPx.tab} ${radiusPx.tab} 0 0`; // 9px top corners of a tab
+borderRadius: radiusPx.pill; // pills, filter chips, link chips
 ```
+
+In `sx`, a bare number is multiplied by `theme.shape.borderRadius` (2), so `borderRadius: 4` renders 8px. Use `radiusPx` instead of numbers.
 
 ### Border Styles
 

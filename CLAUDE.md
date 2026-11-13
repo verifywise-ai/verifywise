@@ -1,6 +1,6 @@
 # VerifyWise - Development Guide
 
-> **Last Updated:** 2026-11-12
+> **Last Updated:** 2026-11-13
 
 This document contains cross-cutting rules for the VerifyWise codebase. Directory-scoped guides load automatically when working in each area:
 
@@ -191,8 +191,12 @@ Check for an existing pattern before implementing a new one — these are alread
 used across most of `Clients/src`, so a bespoke version is nearly always a
 duplicate.
 
-House UI rules: sentence case for all screen text; border `#d0d5dd`; border
-radius 4px; green primary `#13715B`; 34px control height on desktop (buttons,
+House UI rules: sentence case for all screen text; colours, corners and fonts
+from tokens only (`themes/palette`: `border.*`, `brand.primary`, `radiusPx.*`,
+never a hex or `"4px"` typed into a screen — the phase 1 restyle values are
+`border.dark` `#D1D5D5`, `radiusPx.sm` 2px, `brand.primary` `#14715B`, and the
+classic look stays switchable until January 2027, see
+`docs/technical/guides/design-tokens.md`); 34px control height on desktop (buttons,
 inputs, selects, search boxes, dropdown triggers). That is the default of the
 house components (`CustomizableButton` medium, `Field`, `Select`, `SearchBox`),
 so use the defaults and don't force another height per page.

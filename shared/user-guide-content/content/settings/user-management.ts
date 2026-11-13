@@ -284,6 +284,20 @@ export const userManagementContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'interface-style',
+      level: 3,
+      text: 'Interface style',
+    },
+    {
+      type: 'paragraph',
+      text: 'VerifyWise has a new look: updated colours, icons, corners and tabs. If you prefer the previous look, pick Classic under Interface style. The classic look stays available until January 2027.',
+    },
+    {
+      type: 'paragraph',
+      text: 'This setting applies straight away and reloads the page; you don\'t need to click Save. It is kept in this browser, so set it again on another browser or device.',
+    },
+    {
+      type: 'heading',
       id: 'faq',
       level: 2,
       text: 'Frequently asked questions',
