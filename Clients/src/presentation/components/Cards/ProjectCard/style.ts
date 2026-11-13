@@ -6,6 +6,7 @@ import {
   palette as vwPalette,
   radiusPx,
 } from "../../../themes/palette";
+import { chartTheme } from "../../../themes/chartTheme";
 export const projectCardStyle = {
   border: `1px solid ${borderPalette.dark}`,
   borderRadius: radiusPx.sm,
@@ -89,7 +90,7 @@ export const euAiActChipStyle = {
 };
 
 export const iso42001ChipStyle = {
-  "backgroundColor": vwPalette.chart[3],
+  "backgroundColor": chartTheme.entity.teal,
   "color": `${background.main}`,
   "fontWeight": 600,
   "fontSize": 11,
@@ -101,15 +102,15 @@ export const iso42001ChipStyle = {
   "padding": "0 6px 0 10px",
   "boxShadow": "none",
   "&:hover": {
-    backgroundColor: vwPalette.chart[3],
+    backgroundColor: chartTheme.entity.teal,
     boxShadow: "none",
   },
   "&:active": {
-    backgroundColor: vwPalette.chart[3],
+    backgroundColor: chartTheme.entity.teal,
     boxShadow: "none",
   },
   "&:focus": {
-    backgroundColor: vwPalette.chart[3],
+    backgroundColor: chartTheme.entity.teal,
     boxShadow: "none",
   },
   "& .MuiButton-endIcon": {

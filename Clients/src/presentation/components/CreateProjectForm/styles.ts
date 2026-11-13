@@ -1,5 +1,6 @@
 import { Theme } from "@mui/material/styles";
 import { background, palette as vwPalette, radiusPx } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 
 export const createProjectFormStyles = {
   formContainer: {
@@ -117,7 +118,7 @@ export const createProjectFormStyles = {
     "borderRadius": 2,
     "maxHeight": 34,
     "textTransform": "inherit",
-    "backgroundColor": vwPalette.chart[0],
+    "backgroundColor": chartTheme.actionFill,
     "boxShadow": "none",
     "border": `1px solid ${vwPalette.status.info.text}`,
     "ml": "auto",

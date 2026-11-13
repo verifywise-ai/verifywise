@@ -6,6 +6,7 @@ import DropDowns from "../../Inputs/Dropdowns";
 import AuditorFeedback from "../ComplianceFeedback/ComplianceFeedback";
 import { ICustomModalProps } from "../../../../domain/interfaces/i.customs";
 import { border as borderPalette, palette as vwPalette, radiusPx } from "../../../themes/palette";
+import { chartTheme } from "../../../themes/chartTheme";
 
 const CustomModal: React.FC<ICustomModalProps> = ({
   isOpen,
@@ -58,7 +59,7 @@ const CustomModal: React.FC<ICustomModalProps> = ({
   const buttonStyle = {
     "fontSize": 13,
     "textTransform": "capitalize",
-    "backgroundColor": vwPalette.chart[0],
+    "backgroundColor": chartTheme.actionFill,
     "boxShadow": "none",
     "borderRadius": radiusPx.sm,
     "border": `1px solid ${vwPalette.status.info.text}`,

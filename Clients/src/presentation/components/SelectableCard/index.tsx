@@ -9,6 +9,7 @@ import {
   palette as vwPalette,
   radiusPx,
 } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 
 export interface SelectableCardProps {
   /** Whether this card is currently selected */
@@ -67,7 +68,7 @@ const SelectableCard = ({
       "backgroundColor": disabled
         ? `${background.accent}`
         : isSelected
-          ? accentColor === vwPalette.chart[0]
+          ? accentColor === chartTheme.entity.indigo
             ? vwPalette.accent.indigo.bg
             : vwPalette.status.success.bg
           : `${background.main}`,
@@ -81,7 +82,7 @@ const SelectableCard = ({
         : {
             borderColor: accentColor,
             backgroundColor: isSelected
-              ? accentColor === vwPalette.chart[0]
+              ? accentColor === chartTheme.entity.indigo
                 ? vwPalette.accent.indigo.bg
                 : vwPalette.status.success.bg
               : `${background.accent}`,

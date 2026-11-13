@@ -23,6 +23,7 @@ import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
 import { Tooltip as MuiTooltip } from "@mui/material";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import palette from "../../../themes/palette";
+import { chartTheme } from "../../../themes/chartTheme";
 import { palette as vwPalette } from "../../../themes/palette";
 import {
   sectionTitleSx,
@@ -274,7 +275,7 @@ export default function MCPAuditLogPage() {
                     <Bar
                       dataKey="count"
                       name="Calls"
-                      fill={vwPalette.chart[3]}
+                      fill={chartTheme.bars.primary}
                       radius={[3, 3, 0, 0]}
                     />
                   </BarChart>
@@ -319,7 +320,7 @@ export default function MCPAuditLogPage() {
                     <Bar
                       dataKey="avg_latency_ms"
                       name="Avg Latency"
-                      fill={vwPalette.chart[0]}
+                      fill={chartTheme.bars.secondary}
                       radius={[3, 3, 0, 0]}
                     />
                   </BarChart>

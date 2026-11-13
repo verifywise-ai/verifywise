@@ -30,6 +30,7 @@ import {
   palette as vwPalette,
   radiusPx,
 } from "../../../themes/palette";
+import { chartTheme } from "../../../themes/chartTheme";
 import {
   CEMarkingData,
   ConformityStepStatus,
@@ -222,7 +223,7 @@ const getStatusBgColor = (stepStatus: ConformityStepStatus): string => {
     case ConformityStepStatus.Completed:
       return `${green[500]}20`;
     case ConformityStepStatus.InProgress:
-      return `${vwPalette.chart[0]}20`;
+      return `${chartTheme.entity.blue}20`;
     case ConformityStepStatus.NotStarted:
       return `${status.default.text}20`;
     case ConformityStepStatus.NotNeeded:

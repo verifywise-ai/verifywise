@@ -16,6 +16,7 @@ import VWTooltip from "../VWTooltip";
 import "../Layout/icon-shake.css";
 
 import { text, palette as vwPalette, radiusPx } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 /**
@@ -88,9 +89,9 @@ const getNotificationColor = (type: string): string => {
     training_due_soon: vwPalette.riskMark.medium, // Amber
     training_overdue: vwPalette.riskMark.critical, // Red
     vendor_review_due: vwPalette.riskMark.medium, // Amber
-    file_uploaded: vwPalette.chart[0], // Indigo
-    comment_added: vwPalette.chart[0], // Indigo
-    mention: vwPalette.chart[1], // Pink
+    file_uploaded: chartTheme.entity.indigo, // Indigo (phase 1: series 1)
+    comment_added: chartTheme.entity.indigo, // Indigo (phase 1: series 1)
+    mention: chartTheme.entity.pink, // Rose in phase 1
     system: vwPalette.text.icon, // Slate
   };
   return colors[type] || vwPalette.text.icon;

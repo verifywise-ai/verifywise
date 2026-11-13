@@ -13,6 +13,7 @@ import type {
   GovernanceStatus,
 } from "../../../domain/ai-detection/types";
 import { palette } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 
 // Re-export for convenience
 export type DependencyNodeType = DomainDependencyNodeType;
@@ -49,7 +50,7 @@ export const NODE_TYPE_COLORS: Record<DependencyNodeType, string> = {
   api: palette.riskMark.medium, // Amber
   secret: palette.riskMark.critical, // Red
   rag: palette.status.success.strong, // Emerald
-  agent: palette.chart[0], // Indigo
+  agent: chartTheme.entity.indigo, // Indigo (phase 1: series 1)
   repository: palette.text.icon, // Slate
 };
 

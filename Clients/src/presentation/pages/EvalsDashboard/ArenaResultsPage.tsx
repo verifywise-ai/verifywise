@@ -28,6 +28,7 @@ import { getArenaComparisonResults } from "../../../application/repository/deepE
 import { CustomizableButton } from "../../components/button/customizable-button";
 import StandardModal from "../../components/Modals/StandardModal";
 import { palette, radiusPx } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 
 // Provider icons
 import { ReactComponent as OpenAILogo } from "../../assets/icons/openai_logo.svg";
@@ -202,12 +203,36 @@ interface ArenaResults {
 
 // Contestant colors
 const COLORS = [
-  { main: palette.chart[0], light: palette.accent.indigo.bg, text: palette.accent.indigo.text },
-  { main: palette.chart[1], light: palette.accent.pink.bg, text: palette.accent.pink.text },
-  { main: palette.chart[2], light: palette.accent.amber.bg, text: palette.accent.amber.text },
-  { main: palette.chart[3], light: palette.accent.teal.bg, text: palette.accent.teal.text },
-  { main: palette.chart[4], light: palette.accent.orange.bg, text: palette.accent.orange.text },
-  { main: palette.chart[5], light: palette.accent.purple.bg, text: palette.accent.purple.text },
+  {
+    main: chartTheme.contestants[0],
+    light: palette.accent.indigo.bg,
+    text: palette.accent.indigo.text,
+  },
+  {
+    main: chartTheme.contestants[1],
+    light: palette.accent.pink.bg,
+    text: palette.accent.pink.text,
+  },
+  {
+    main: chartTheme.contestants[2],
+    light: palette.accent.amber.bg,
+    text: palette.accent.amber.text,
+  },
+  {
+    main: chartTheme.contestants[3],
+    light: palette.accent.teal.bg,
+    text: palette.accent.teal.text,
+  },
+  {
+    main: chartTheme.contestants[4],
+    light: palette.accent.orange.bg,
+    text: palette.accent.orange.text,
+  },
+  {
+    main: chartTheme.contestants[5],
+    light: palette.accent.purple.bg,
+    text: palette.accent.purple.text,
+  },
 ];
 
 const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBack }) => {

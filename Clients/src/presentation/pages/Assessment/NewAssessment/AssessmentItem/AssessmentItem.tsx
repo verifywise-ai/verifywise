@@ -4,7 +4,8 @@
 
 import { List, ListItem, ListItemButton, ListItemText, Typography, useTheme } from "@mui/material";
 import { Topic } from "../../../../../application/hooks/useAssessmentAnswers";
-import { background, radiusPx, palette as vwPalette } from "../../../../themes/palette";
+import { background, radiusPx } from "../../../../themes/palette";
+import { chartTheme } from "../../../../themes/chartTheme";
 
 interface AssessmentItemProps {
   assessmentsValues: Topic[];
@@ -28,10 +29,10 @@ const AssessmentItem = ({
           sx={{
             "display": "block",
             "& .MuiListItemButton-root.Mui-selected": {
-              backgroundColor: vwPalette.chart[0],
+              backgroundColor: chartTheme.actionFill,
             },
             "& .MuiListItemButton-root.Mui-selected:hover": {
-              backgroundColor: vwPalette.chart[0],
+              backgroundColor: chartTheme.actionFill,
             },
           }}
         >
@@ -42,7 +43,7 @@ const AssessmentItem = ({
             sx={{
               paddingLeft: 4,
               borderRadius: radiusPx.sm,
-              backgroundColor: index === activeTab ? vwPalette.chart[0] : "transparent",
+              backgroundColor: index === activeTab ? chartTheme.actionFill : "transparent",
               width: 260,
               height: 40,
             }}

@@ -26,6 +26,7 @@ import { FileData } from "../../../domain/types/File";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { FileExpiryChip } from "../FileExpiryChip";
 import { palette, radiusPx } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 
 interface FilePickerModalProps {
   open: boolean;
@@ -38,12 +39,13 @@ interface FilePickerModalProps {
 
 const getFileIcon = (filename: string) => {
   const ext = filename?.split(".").pop()?.toLowerCase() || "";
-  if (["pdf"].includes(ext)) return <FileIcon size={20} color={palette.chart[4]} />;
+  if (["pdf"].includes(ext)) return <FileIcon size={20} color={chartTheme.fileTypes.pdf} />;
   if (["jpg", "jpeg", "png", "gif", "bmp", "webp"].includes(ext))
-    return <ImageIcon size={20} color={palette.chart[7]} />;
+    return <ImageIcon size={20} color={chartTheme.fileTypes.image} />;
   if (["doc", "docx", "txt", "rtf"].includes(ext))
-    return <FileIcon size={20} color={palette.chart[3]} />;
-  if (["xls", "xlsx", "csv"].includes(ext)) return <FileIcon size={20} color={palette.chart[6]} />;
+    return <FileIcon size={20} color={chartTheme.fileTypes.doc} />;
+  if (["xls", "xlsx", "csv"].includes(ext))
+    return <FileIcon size={20} color={chartTheme.fileTypes.sheet} />;
   return <DefaultFileIcon size={20} color={palette.text.icon} />;
 };
 

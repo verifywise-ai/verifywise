@@ -1,14 +1,15 @@
 import type { EntityType } from "../EntityNode";
 import { brand, palette as vwPalette } from "../../../themes/palette";
+import { chartTheme } from "../../../themes/chartTheme";
 
 // Entity type colors following VerifyWise design system
 export const entityColors: Record<EntityType, string> = {
   useCase: `${brand.primary}`, // Primary green
-  model: vwPalette.chart[0], // Blue
-  risk: vwPalette.chart[4], // Red
-  vendor: vwPalette.chart[5], // Purple
-  evidence: vwPalette.chart[2], // Orange
-  framework: vwPalette.chart[9], // Blue grey
+  model: chartTheme.entityTypes.model,
+  risk: chartTheme.entityTypes.risk,
+  vendor: chartTheme.entityTypes.vendor,
+  evidence: chartTheme.entityTypes.evidence,
+  framework: chartTheme.entityTypes.framework,
   user: vwPalette.risk.medium.text, // Brown
 };
 

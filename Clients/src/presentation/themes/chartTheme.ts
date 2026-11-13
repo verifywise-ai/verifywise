@@ -20,6 +20,7 @@ import {
   status as statusTokens,
   text,
   background,
+  button,
   accent,
   risk as riskTokens,
   score,
@@ -63,6 +64,9 @@ const CLASSIC_LINES = [
   "#0284C7",
 ] as const;
 
+/** Pick by look: `classic` keeps today's colour, `phase1` is the deliberate phase 1 token. */
+const byLook = <C, P>(classic: C, phase1: P): C | P => (classicUi ? classic : phase1);
+
 export const chartTheme = {
   /** Categorical series in fixed order; the last entry is Other. */
   series: chart,
@@ -70,6 +74,128 @@ export const chartTheme = {
   avatars: classicUi ? CLASSIC_AVATARS : chart.slice(0, 9),
   /** Line colours for a chart with up to 15 series: classic keeps 15, phase 1 folds the rest into Other. */
   lines: classicUi ? CLASSIC_LINES : [...chart.slice(0, 9), ...Array(6).fill(chart[9])],
+  /**
+   * Named single-purpose marks for icons, chips and decoration. Classic keeps
+   * the colour each screen had before the restyle; phase 1 maps to a series
+   * (or the brand action fill). Prefer these over indexing `series`.
+   */
+  entity: {
+    indigo: byLook("#6366F1", chart[0]),
+    pink: byLook("#EC4899", chart[1]),
+    blue: byLook("#3B82F6", chart[0]),
+    teal: byLook("#0CA5AF", chart[3]),
+    heart: byLook("#FF1493", chart[1]),
+  },
+  /** Fill of the blue action buttons in popups and forms; phase 1 uses the primary button fill. */
+  actionFill: byLook("#4C7DE7", button.primary.contained.bg.default),
+  /** Node colours in the entity graph. */
+  entityTypes: {
+    model: byLook("#2196F3", chart[0]),
+    risk: byLook("#F44336", chart[4]),
+    vendor: byLook("#9C27B0", chart[5]),
+    evidence: byLook("#FF9800", chart[2]),
+    framework: byLook("#607D8B", chart[9]),
+  },
+  /** File type icons in the file picker. */
+  fileTypes: {
+    pdf: byLook("#E53935", chart[4]),
+    image: byLook("#1E88E5", chart[7]),
+    doc: byLook("#00ACC1", chart[3]),
+    sheet: byLook("#43A047", chart[6]),
+  },
+  /** Gold and bronze for ranking medals (silver is a neutral text token). */
+  medal: {
+    gold: byLook("#D4AF37", chart[2]),
+    bronze: byLook("#CD7F32", chart[4]),
+  },
+  /** Bars in the MCP audit log charts. */
+  bars: {
+    primary: byLook("#5C8A7D", chart[3]),
+    secondary: byLook("#7986CB", chart[0]),
+  },
+  /** LLM provider colours in charts. */
+  providers: {
+    openai: byLook("#10A37F", chart[3]),
+    anthropic: byLook("#D4A574", chart[4]),
+    gemini: byLook("#4285F4", chart[7]),
+    google: byLook("#4285F4", chart[7]),
+    mistral: byLook("#FF7000", chart[2]),
+    xai: byLook("#1DA1F2", chart[0]),
+    bedrock: byLook("#FF9900", chart[8]),
+    azure: byLook("#0078D4", chart[5]),
+    together_ai: byLook("#6366F1", chart[9]),
+    deepinfra: byLook("#06B6D4", chart[1]),
+    cohere: byLook("#39B89D", chart[6]),
+  },
+  /** Fallback provider colours by index. */
+  providerFallback: byLook(
+    [
+      "#13715B",
+      "#3B82F6",
+      "#F59E0B",
+      "#EF4444",
+      "#8B5CF6",
+      "#06B6D4",
+      "#EC4899",
+      "#14B8A6",
+      "#F97316",
+      "#6366F1",
+    ],
+    chart,
+  ),
+  /** Six contestant colours in the LLM arena. */
+  contestants: byLook(
+    ["#3B82F6", "#EF4444", "#10B981", "#F59E0B", "#8B5CF6", "#EC4899"],
+    chart.slice(0, 6),
+  ),
+  /** Nine tile colours on the Start here page. */
+  tiles: byLook(
+    [
+      "#1E88E5",
+      "#F4511E",
+      "#7B1FA2",
+      "#00796B",
+      "#D84315",
+      "#283593",
+      "#558B2F",
+      "#C2185B",
+      "#1565C0",
+    ],
+    chart.slice(0, 9),
+  ),
+  /** Nine icon colours in the add-new menu. */
+  menuIcons: byLook(
+    [
+      "#81C784",
+      "#64B5F6",
+      "#BA68C8",
+      "#FFB74D",
+      "#7986CB",
+      "#E57373",
+      "#F06292",
+      "#4DD0E1",
+      "#FF8A65",
+    ],
+    chart.slice(0, 9),
+  ),
+  /** Celebration colours for the flying hearts. */
+  confetti: byLook(
+    [
+      "#FF1493",
+      "#FF69B4",
+      "#9D4EDD",
+      "#06FFA5",
+      "#FFD60A",
+      "#FF006E",
+      "#FB5607",
+      "#3A86FF",
+      "#8338EC",
+      "#FFBE0B",
+      "#FF006E",
+      "#06FFA5",
+    ],
+    chart.slice(0, 9),
+  ),
   /** A chart with a single measure. */
   single: brand.primary,
   /** Risk tiers as solid marks (dots, bars, slices). */

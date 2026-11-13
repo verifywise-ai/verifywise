@@ -246,24 +246,26 @@ export const chartTooltipStyle = {
 
 /** Consistent color mapping for LLM providers across all charts. */
 export const PROVIDER_COLORS: Record<string, string> = {
-  openai: chartTheme.series[3],
-  anthropic: chartTheme.series[4],
-  gemini: chartTheme.series[7],
-  google: chartTheme.series[7],
-  mistral: chartTheme.series[2],
-  xai: chartTheme.series[0],
-  bedrock: chartTheme.series[8],
-  azure: chartTheme.series[5],
-  together_ai: chartTheme.series[9],
+  openai: chartTheme.providers.openai,
+  anthropic: chartTheme.providers.anthropic,
+  gemini: chartTheme.providers.gemini,
+  google: chartTheme.providers.google,
+  mistral: chartTheme.providers.mistral,
+  xai: chartTheme.providers.xai,
+  bedrock: chartTheme.providers.bedrock,
+  azure: chartTheme.providers.azure,
+  together_ai: chartTheme.providers.together_ai,
   openrouter: vwPalette.accent.purple.text,
   fireworks_ai: vwPalette.riskMark.critical,
-  deepinfra: chartTheme.series[1],
-  cohere: chartTheme.series[6],
+  deepinfra: chartTheme.providers.deepinfra,
+  cohere: chartTheme.providers.cohere,
   replicate: vwPalette.text.primary,
 };
 
 /** Get provider color — falls back to chart palette by index. */
 export const getProviderColor = (provider: string, index: number = 0): string => {
   const p = provider.toLowerCase().replace(/[^a-z_]/g, "");
-  return PROVIDER_COLORS[p] || chartTheme.series[index % chartTheme.series.length];
+  return (
+    PROVIDER_COLORS[p] || chartTheme.providerFallback[index % chartTheme.providerFallback.length]
+  );
 };

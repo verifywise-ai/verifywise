@@ -38,7 +38,7 @@ interface Heart {
   size: number;
 }
 
-const colors = chartTheme.series.slice(0, 9);
+const colors = chartTheme.confetti;
 
 interface FlyingHeartsProps {
   onComplete?: () => void;

@@ -35,6 +35,7 @@ import {
   palette as vwPalette,
   radiusPx,
 } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 import { isClassicUi } from "../../themes/uiStyle";
 import { toggleSidebar } from "../../../application/redux/ui/uiSlice";
 import "../Layout/icon-shake.css";
@@ -647,9 +648,9 @@ const SidebarShell: FC<SidebarShellProps> = ({
                   >
                     <Heart
                       size={14}
-                      color={vwPalette.chart[1]}
+                      color={chartTheme.entity.heart}
                       strokeWidth={1.5}
-                      fill={vwPalette.chart[1]}
+                      fill={chartTheme.entity.heart}
                     />
                   </IconButton>
                 </Tooltip>

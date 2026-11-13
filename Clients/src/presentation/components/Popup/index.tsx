@@ -4,6 +4,7 @@ import { FC } from "react";
 import { useModalKeyHandling } from "../../../application/hooks/useModalKeyHandling";
 import { IPopupProps } from "../../types/widget.types";
 import { text, palette as vwPalette } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 
 const Popup: FC<IPopupProps> = ({
   popupId,
@@ -29,7 +30,7 @@ const Popup: FC<IPopupProps> = ({
       "height": 34,
       "fontSize": 13,
       "textTransform": "inherit",
-      "backgroundColor": vwPalette.chart[0],
+      "backgroundColor": chartTheme.actionFill,
       "boxShadow": "none",
       "borderRadius": 2,
       "border": `1px solid ${vwPalette.status.info.text}`,
@@ -62,7 +63,7 @@ const Popup: FC<IPopupProps> = ({
       "borderRadius": 2,
       "maxHeight": 34,
       "textTransform": "inherit",
-      "backgroundColor": vwPalette.chart[0],
+      "backgroundColor": chartTheme.actionFill,
       "boxShadow": "none",
       "border": `1px solid ${vwPalette.status.info.text}`,
       "ml": "auto",
