@@ -90,6 +90,7 @@
   "Administrators cannot demote themselves from admin role": "Les administrateurs ne peuvent pas révoquer leur propre rôle d'administrateur",
   "Agent primitive not found": "Primitive d'agent introuvable",
   "agentName is required": "agentName est requis",
+  "AI analysis is still running for this scan. Try again when it finishes.": "L'analyse IA de cette analyse est toujours en cours. Réessayez lorsqu'elle sera terminée.",
   "AI App name is required": "Le nom de l'application IA est requis",
   "AI app name must be text of at most 255 characters": "Le nom de l'application IA doit être un texte de 255 caractères maximum",
   "AI app not found": "Application IA introuvable",

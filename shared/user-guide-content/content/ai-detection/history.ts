@@ -27,7 +27,7 @@ export const historyContent: ArticleContent = {
       items: [
         { bold: 'Repository', text: 'Owner and name of the scanned repository' },
         { bold: 'Status', text: 'Current state: Pending, Cloning, Scanning, Completed, Failed or Cancelled' },
-        { bold: 'Governance score', text: 'AGRS letter grade (A through F) and numeric score, with a **Partial** marker when vulnerability checks didn\'t run' },
+        { bold: 'Governance score', text: 'AGRS letter grade (A through F) and numeric score, with a **Partial** marker when vulnerability checks didn\'t run or didn\'t cover every file' },
         { bold: 'Findings', text: 'Total detections: libraries, API calls, secrets, security issues' },
         { bold: 'Files scanned', text: 'Total source files analyzed' },
         { bold: 'Duration', text: 'Time taken to complete the scan' },

@@ -90,6 +90,7 @@
   "Administrators cannot demote themselves from admin role": "Administrators cannot demote themselves from admin role",
   "Agent primitive not found": "Agent primitive not found",
   "agentName is required": "agentName is required",
+  "AI analysis is still running for this scan. Try again when it finishes.": "AI analysis is still running for this scan. Try again when it finishes.",
   "AI App name is required": "AI App name is required",
   "AI app name must be text of at most 255 characters": "AI app name must be text of at most 255 characters",
   "AI app not found": "AI app not found",

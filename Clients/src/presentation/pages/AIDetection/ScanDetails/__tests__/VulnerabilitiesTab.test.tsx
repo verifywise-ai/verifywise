@@ -59,10 +59,10 @@ describe("VulnerabilitiesTab", () => {
     fireEvent.click(screen.getByText("Open vulnerability settings"));
   });
 
-  it("explains that incremental scans skip the checks, without a settings link", () => {
+  it("says changed files weren't checked on an incremental scan, and lists carried findings", () => {
     renderWithProviders(
       <VulnerabilitiesTab
-        vulnerabilityFindings={[]}
+        vulnerabilityFindings={[makeFinding({ id: 1, name: "Carried prompt injection" })]}
         showSuppressed
         scanId={1}
         repositoryOwner="acme"
@@ -71,8 +71,33 @@ describe("VulnerabilitiesTab", () => {
       />,
     );
 
-    expect(screen.getByText(/Incremental scans skip vulnerability checks/)).toBeInTheDocument();
+    expect(
+      screen.getByText("Changed files weren't checked for vulnerabilities"),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Any findings shown come from the last full scan/)).toBeInTheDocument();
+    expect(screen.getByText("Carried prompt injection")).toBeInTheDocument();
+    expect(screen.queryByText("No LLM vulnerabilities detected")).toBeNull();
     expect(screen.queryByText("Open vulnerability settings")).toBeNull();
+  });
+
+  it("does not read as checked and clean when some checks failed", () => {
+    renderWithProviders(
+      <VulnerabilitiesTab
+        vulnerabilityFindings={[makeFinding({ id: 1, name: "Finished type finding" })]}
+        showSuppressed
+        scanId={1}
+        repositoryOwner="acme"
+        repositoryName="widgets"
+        vulnerabilityCheckStatus="failed"
+      />,
+    );
+
+    expect(
+      screen.getByText("Vulnerability checks didn't finish for this scan"),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/failed for some or all vulnerability types/)).toBeInTheDocument();
+    expect(screen.getByText("Finished type finding")).toBeInTheDocument();
+    expect(screen.getByText("Open vulnerability settings")).toBeInTheDocument();
   });
 
   it("does not claim a clean result for older scans with no recorded status", () => {

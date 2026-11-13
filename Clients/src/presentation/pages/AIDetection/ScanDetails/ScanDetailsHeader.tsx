@@ -41,6 +41,9 @@ export function ScanDetailsHeader({
   isExporting,
   onExport,
 }: ScanDetailsHeaderProps) {
+  // Recalculating now would start a second paid AI analysis; the server refuses it too
+  const llmPending = scan.scan.risk_score_details?.llm_status === "pending";
+
   return (
     <>
       {/* Back Button */}
@@ -102,14 +105,22 @@ export function ScanDetailsHeader({
         {/* Action Buttons */}
         {scan.scan.status === "completed" && (
           <Box sx={{ display: "flex", gap: "8px" }}>
-            <Tooltip title="Recalculate the governance score" arrow placement="top">
+            <Tooltip
+              title={
+                llmPending
+                  ? "AI analysis is running. Recalculate when it finishes."
+                  : "Recalculate the governance score"
+              }
+              arrow
+              placement="top"
+            >
               <span>
                 <CustomizableButton
                   text={isRecalculating ? "Calculating…" : "Recalculate score"}
                   onClick={onRecalculate}
                   variant="outlined"
                   startIcon={<RefreshCw size={16} />}
-                  isDisabled={isRecalculating}
+                  isDisabled={isRecalculating || llmPending}
                   sx={{ height: 34 }}
                 />
               </span>

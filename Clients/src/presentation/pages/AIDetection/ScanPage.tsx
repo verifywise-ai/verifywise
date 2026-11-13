@@ -54,7 +54,11 @@ import {
 } from "../../../domain/ai-detection/types";
 import { useAIDetectionSidebarContext } from "../../../application/contexts/AIDetectionSidebar.context";
 import { palette } from "../../themes/palette";
-import { isScorePartial } from "./components/governanceScore";
+import {
+  isScorePartial,
+  LLM_ANALYSIS_POLL_ATTEMPTS,
+  LLM_ANALYSIS_POLL_MS,
+} from "./components/governanceScore";
 
 type ScanState = "idle" | "scanning" | "completed" | "failed";
 
@@ -83,29 +87,38 @@ export default function ScanPage() {
   const [scoreWaitOverFor, setScoreWaitOverFor] = useState<number | null>(null);
   const completedScanId = scanState === "completed" ? (result?.scan.id ?? null) : null;
   const scoreMissing = scanState === "completed" && result?.scan.risk_score == null;
+  // Background AI analysis replaces the rule-based score when it finishes
+  const llmPending =
+    scanState === "completed" && result?.scan.risk_score_details?.llm_status === "pending";
 
+  // Re-read the scan while the score is missing or the AI analysis is running.
+  // Each phase is bounded; when the stored score changes phase (score stored,
+  // analysis done or failed) the effect restarts or stops.
   useEffect(() => {
-    if (completedScanId === null || !scoreMissing) return undefined;
+    if (completedScanId === null || (!scoreMissing && !llmPending)) return undefined;
+    const intervalMs = scoreMissing ? SCORE_WAIT_INTERVAL_MS : LLM_ANALYSIS_POLL_MS;
+    const maxAttempts = scoreMissing ? SCORE_WAIT_ATTEMPTS : LLM_ANALYSIS_POLL_ATTEMPTS;
+    let cancelled = false;
     let attempts = 0;
     const timer = setInterval(async () => {
       attempts += 1;
       try {
         const fresh = await getScan(completedScanId);
-        if (fresh.scan.risk_score != null) {
-          setResult(fresh);
-          clearInterval(timer);
-          return;
-        }
+        if (cancelled) return;
+        if (fresh.scan.risk_score != null) setResult(fresh);
       } catch {
         // Try again on the next tick
       }
-      if (attempts >= SCORE_WAIT_ATTEMPTS) {
-        setScoreWaitOverFor(completedScanId);
+      if (!cancelled && attempts >= maxAttempts) {
+        if (scoreMissing) setScoreWaitOverFor(completedScanId);
         clearInterval(timer);
       }
-    }, SCORE_WAIT_INTERVAL_MS);
-    return () => clearInterval(timer);
-  }, [completedScanId, scoreMissing]);
+    }, intervalMs);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [completedScanId, scoreMissing, llmPending]);
 
   // Toast alert state
   const [alert, setAlert] = useState<{ variant: "success" | "error"; body: string } | null>(null);
@@ -460,7 +473,7 @@ export default function ScanPage() {
                   {
                     repo: "verifywise-ai/llm-security-tester",
                     description:
-                      "Intentionally vulnerable LLM app for testing vulnerability detection, which runs when AI detection has an LLM key in Settings",
+                      "Intentionally vulnerable LLM app for testing vulnerability detection, which runs once vulnerability checks are turned on in Settings",
                   },
                 ] as const
               ).map(({ repo, description }) => (

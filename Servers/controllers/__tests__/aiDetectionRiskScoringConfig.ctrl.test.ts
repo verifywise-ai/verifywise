@@ -1,15 +1,18 @@
 /**
- * AI Detection risk scoring config controller: how the vulnerability
- * detection toggle is stored. It is only stored as a choice while LLM
- * analysis is on, so an org that never chose keeps the "on with a key"
- * default.
+ * AI Detection risk scoring controllers: how the vulnerability detection
+ * toggle is stored, and when a score recalculation is refused. The toggle is
+ * only stored as a choice while LLM analysis is on; a stored NULL means "not
+ * chosen", which is off.
  */
 
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 
-jest.mock("../../services/aiDetection.service", () => ({}));
+jest.mock("../../services/aiDetection.service", () => ({
+  getScan: jest.fn(),
+}));
 jest.mock("../../services/aiDetection/riskScoring", () => ({
   calculateAndStoreRiskScore: jest.fn(),
+  isLlmAnalysisPending: (status: string | undefined) => status === "pending",
 }));
 jest.mock("../../utils/aiDetectionRiskScoring.utils", () => ({
   getRiskScoringConfigQuery: jest.fn(),
@@ -30,8 +33,11 @@ jest.mock("../../utils/i18n.utils", () => ({
 
 import {
   getRiskScoringConfigController,
+  recalculateRiskScoreController,
   updateRiskScoringConfigController,
 } from "../aiDetection.ctrl";
+import { getScan } from "../../services/aiDetection.service";
+import { calculateAndStoreRiskScore } from "../../services/aiDetection/riskScoring";
 import {
   getRiskScoringConfigQuery,
   upsertRiskScoringConfigQuery,
@@ -110,4 +116,54 @@ describe("getRiskScoringConfigController", () => {
     expect(body.data.vulnerability_scan_enabled).toBe(false);
     expect(body.data.vulnerability_scan_explicit).toBe(false);
   });
+});
+
+describe("recalculateRiskScoreController", () => {
+  const mockGetScan = getScan as jest.MockedFunction<typeof getScan>;
+  const mockCalculate = calculateAndStoreRiskScore as jest.MockedFunction<
+    typeof calculateAndStoreRiskScore
+  >;
+
+  function scanWithLlmStatus(llmStatus: string | undefined) {
+    return {
+      scan: {
+        status: "completed",
+        repository_owner: "acme",
+        repository_name: "widgets",
+        risk_score: 80,
+        risk_score_grade: "B",
+        risk_score_details: llmStatus ? { llm_status: llmStatus } : null,
+      },
+    } as never;
+  }
+
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockCalculate.mockResolvedValue({ score: 82, grade: "B", label: "", details: {} } as never);
+  });
+
+  it("refuses while the background AI analysis is pending, without starting another LLM run", async () => {
+    mockGetScan.mockResolvedValue(scanWithLlmStatus("pending"));
+    const req = createMockReq({ params: { scanId: "7" } });
+    const res = createMockRes();
+
+    await recalculateRiskScoreController(req as never, res);
+
+    expect(res.status).toHaveBeenCalledWith(409);
+    expect(mockCalculate).not.toHaveBeenCalled();
+  });
+
+  it.each(["done", "failed", "off", undefined])(
+    "recalculates when the AI analysis is %s",
+    async (llmStatus) => {
+      mockGetScan.mockResolvedValue(scanWithLlmStatus(llmStatus));
+      const req = createMockReq({ params: { scanId: "7" } });
+      const res = createMockRes();
+
+      await recalculateRiskScoreController(req as never, res);
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(mockCalculate).toHaveBeenCalledTimes(1);
+    },
+  );
 });

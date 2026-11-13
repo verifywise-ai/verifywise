@@ -424,6 +424,75 @@ describe("SettingsPage", () => {
     });
   });
 
+  describe("asking again when consent no longer covers the provider", () => {
+    const renderWithStoredConsent = async (overrides: Partial<RiskScoringConfig>) => {
+      mockGetLLMKeys.mockResolvedValue({ data: { data: [openAIKey, anthropicKey] } });
+      mockGetRiskScoringConfig.mockResolvedValue(
+        makeRiskConfig({
+          llm_enabled: true,
+          llm_key_id: openAIKey.id,
+          vulnerability_scan_enabled: true,
+          vulnerability_scan_explicit: true,
+          ...overrides,
+        }),
+      );
+      mockUpdateRiskScoringConfig.mockImplementation(async (body) =>
+        makeRiskConfig({
+          llm_enabled: body.llm_enabled,
+          llm_key_id: body.llm_key_id,
+          vulnerability_scan_enabled: body.vulnerability_scan_enabled ?? false,
+          vulnerability_scan_explicit: body.vulnerability_scan_enabled !== undefined,
+        }),
+      );
+      renderWithProviders(<SettingsPage />, { route: "/ai-detection/settings?tab=risk-scoring" });
+      await waitFor(() => {
+        expect(screen.getByText("Total: 100%")).toBeInTheDocument();
+      });
+    };
+
+    it("asks again when the LLM key changes", async () => {
+      await renderWithStoredConsent({});
+      fireEvent.mouseDown(screen.getByRole("combobox"));
+      fireEvent.click(await screen.findByRole("option", { name: "Anthropic — claude-x" }));
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      await waitFor(() => {
+        expect(screen.getByText("Turn on vulnerability checks?")).toBeInTheDocument();
+      });
+      expect(
+        screen.getByText("Snippets would be sent using the key Anthropic."),
+      ).toBeInTheDocument();
+      expect(mockUpdateRiskScoringConfig).not.toHaveBeenCalled();
+    });
+
+    it("asks again when LLM analysis is turned back on with checks on", async () => {
+      // The API resolves the toggle to off while LLM analysis is off
+      await renderWithStoredConsent({ llm_enabled: false, vulnerability_scan_enabled: false });
+      fireEvent.click(screen.getAllByRole("switch")[0]);
+      await waitFor(() => {
+        expect(screen.getAllByRole("switch")[1]).not.toBeDisabled();
+      });
+      fireEvent.click(screen.getAllByRole("switch")[1]);
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      await waitFor(() => {
+        expect(screen.getByText("Turn on vulnerability checks?")).toBeInTheDocument();
+      });
+      expect(mockUpdateRiskScoringConfig).not.toHaveBeenCalled();
+    });
+
+    it("keeps consent without asking when the key is unchanged", async () => {
+      await renderWithStoredConsent({});
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      await waitFor(() => {
+        expect(mockUpdateRiskScoringConfig).toHaveBeenCalledTimes(1);
+      });
+      expect(screen.queryByText("Turn on vulnerability checks?")).not.toBeInTheDocument();
+      expect(mockUpdateRiskScoringConfig.mock.calls[0][0].vulnerability_scan_enabled).toBe(true);
+    });
+  });
+
   it("keeps an explicit 'off' choice when LLM analysis is turned on", async () => {
     mockGetRiskScoringConfig.mockResolvedValue(
       makeRiskConfig({ vulnerability_scan_enabled: false, vulnerability_scan_explicit: true }),

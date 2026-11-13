@@ -40,7 +40,10 @@ import {
   FINDING_TYPES,
   VULNERABILITY_FINDING_TYPES,
 } from "../domain.layer/interfaces/i.aiDetection";
-import { calculateAndStoreRiskScore } from "../services/aiDetection/riskScoring";
+import {
+  calculateAndStoreRiskScore,
+  isLlmAnalysisPending,
+} from "../services/aiDetection/riskScoring";
 import {
   getRiskScoringConfigQuery,
   upsertRiskScoringConfigQuery,
@@ -958,6 +961,19 @@ export async function recalculateRiskScoreController(
       return res
         .status(422)
         .json(STATUS_CODE[422](req.t!("Can only calculate risk score for completed scans")));
+    }
+
+    // getScan reports a stale pending analysis as failed, so this never blocks for good.
+    // Returning early (instead of a rule-based recalculation) keeps the running
+    // analysis's run id valid, so its result still lands.
+    if (isLlmAnalysisPending(scan.scan.risk_score_details?.llm_status)) {
+      return res
+        .status(409)
+        .json(
+          STATUS_CODE[409](
+            req.t!("AI analysis is still running for this scan. Try again when it finishes."),
+          ),
+        );
     }
 
     const repoName = `${scan.scan.repository_owner}/${scan.scan.repository_name}`;

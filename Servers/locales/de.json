@@ -90,6 +90,7 @@
   "Administrators cannot demote themselves from admin role": "Administratoren können sich nicht selbst aus der Administratorrolle entfernen",
   "Agent primitive not found": "Agent-Primitive nicht gefunden",
   "agentName is required": "agentName ist erforderlich",
+  "AI analysis is still running for this scan. Try again when it finishes.": "Die KI-Analyse für diesen Scan läuft noch. Versuchen Sie es erneut, wenn sie abgeschlossen ist.",
   "AI App name is required": "Der Name der KI-App ist erforderlich",
   "AI app name must be text of at most 255 characters": "Der Name der KI-App muss ein Text mit höchstens 255 Zeichen sein",
   "AI app not found": "KI-App nicht gefunden",

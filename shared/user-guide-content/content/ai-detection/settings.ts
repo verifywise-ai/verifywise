@@ -142,7 +142,7 @@ export const aiDetectionSettingsContent: ArticleContent = {
     },
     {
       type: "paragraph",
-      text: "**Vulnerability detection** sends code snippets from scanned files to your LLM provider, so it stays off until an admin turns it on. The first time you save LLM-enhanced analysis with a key, VerifyWise asks whether to turn vulnerability checks on or keep them off. It uses extra LLM tokens per scan. Scans without vulnerability checks get a partial governance score. When it's on, toggles appear for each OWASP LLM Top 10 type. Turn individual types on or off based on what matters to your team:",
+      text: "**Vulnerability detection** sends code snippets from scanned files to your LLM provider, so it stays off until an admin turns it on. The first time you save LLM-enhanced analysis with a key, VerifyWise asks whether to turn vulnerability checks on or keep them off. The choice covers that key only: when you switch to a different key, or turn LLM-enhanced analysis off and on again, VerifyWise asks again before any code is sent, and checks stay off until you answer. This also applies to changes made through the API. It uses extra LLM tokens per scan. Scans without vulnerability checks get a partial governance score. When it's on, toggles appear for each OWASP LLM Top 10 type. Turn individual types on or off based on what matters to your team:",
     },
     {
       type: "bullet-list",

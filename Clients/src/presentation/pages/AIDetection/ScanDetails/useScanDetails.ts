@@ -26,11 +26,9 @@ import {
 import { TabValue } from "./scanDetailsConfig";
 import { usePaginatedFindings } from "./usePaginatedFindings";
 import { useScanFindingsEffects } from "./useScanFindingsEffects";
+import { LLM_ANALYSIS_POLL_ATTEMPTS, LLM_ANALYSIS_POLL_MS } from "../components/governanceScore";
 
 export type ScanDetailsAlert = { variant: "success" | "error"; body: string };
-
-/** How often to re-read the scan while background AI analysis is running */
-export const LLM_ANALYSIS_POLL_MS = 5000;
 
 export function useScanDetails() {
   const navigate = useNavigate();
@@ -164,12 +162,15 @@ export function useScanDetails() {
   });
 
   // Background AI analysis: re-read the scan until it finishes. The server
-  // reports a long-pending analysis as failed, so this always stops.
+  // reports a long-pending analysis as failed, so this stops well before the cap.
   const llmPending = scan?.scan.risk_score_details?.llm_status === "pending";
   useEffect(() => {
     if (!llmPending) return undefined;
     let cancelled = false;
+    let attempts = 0;
     const timer = setInterval(async () => {
+      attempts += 1;
+      if (attempts >= LLM_ANALYSIS_POLL_ATTEMPTS) clearInterval(timer);
       try {
         const fresh = await getScan(scanId);
         if (!cancelled) setScan(fresh);
@@ -184,7 +185,8 @@ export function useScanDetails() {
   }, [llmPending, scanId]);
 
   const handleRecalculateRiskScore = async () => {
-    if (!scan) return;
+    // A recalculation would start a second paid LLM run; the server refuses it too
+    if (!scan || llmPending) return;
     setIsRecalculating(true);
     try {
       const result = await recalculateRiskScore(scanId);

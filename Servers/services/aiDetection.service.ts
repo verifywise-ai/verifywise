@@ -96,14 +96,8 @@ import { cacheAside, buildOrgCacheKey, deleteByPattern, CACHE_KEYS } from "../ut
 import { calculateAndStoreRiskScore, effectiveLlmStatus } from "./aiDetection/riskScoring";
 import { reportScanToGitHub } from "./aiDetection/githubStatusReporter";
 import {
-  scanFileForVulnerabilityIndicators,
-  buildAnalysisContext,
-  VulnerabilityCandidate,
-} from "./aiDetection/vulnerabilityPreFilter";
-import {
-  analyzeVulnerabilities,
-  VulnerabilityAnalysisStats,
-  vulnerabilityCheckStatusFromStats,
+  runVulnerabilityChecks,
+  vulnerabilityChecksActive,
 } from "./aiDetection/vulnerabilityAnalyzer";
 import { getRiskScoringConfigQuery } from "../utils/aiDetectionRiskScoring.utils";
 
@@ -1573,6 +1567,17 @@ async function executeIncrementalScan(
 
   progressState.progress = 85;
 
+  // Incremental scans don't run vulnerability checks on changed files; findings
+  // from the last full scan are carried forward for unchanged files. That only
+  // makes the score partial when the org runs checks at all.
+  let vulnerabilityCheckStatus: VulnerabilityCheckStatus = "incremental";
+  try {
+    const riskConfig = await getRiskScoringConfigQuery(ctx.organizationId);
+    if (!vulnerabilityChecksActive(riskConfig)) vulnerabilityCheckStatus = "off";
+  } catch (err) {
+    logger.warn(`Could not read vulnerability settings for incremental scan ${scanId}:`, err);
+  }
+
   // Store all findings in a single transaction
   const transaction = await sequelize.transaction();
   try {
@@ -1599,8 +1604,7 @@ async function executeIncrementalScan(
         findings_count: totalFindings,
         completed_at: completedAt,
         duration_ms: durationMs,
-        // Incremental scans carry findings forward but don't run vulnerability checks
-        vulnerability_check_status: "incremental",
+        vulnerability_check_status: vulnerabilityCheckStatus,
       },
       ctx.organizationId,
       transaction,
@@ -1608,13 +1612,9 @@ async function executeIncrementalScan(
 
     await transaction.commit();
 
-    const committedScan = await getScanByIdQuery(scanId, ctx.organizationId);
-    if (committedScan) {
-      await scoreCompletedScan(
-        scanId,
-        `${committedScan.repository_owner}/${committedScan.repository_name}`,
-        ctx,
-      );
+    const scan = await getScanByIdQuery(scanId, ctx.organizationId);
+    if (scan) {
+      await scoreCompletedScan(scanId, `${scan.repository_owner}/${scan.repository_name}`, ctx);
     }
 
     progressState.status = "completed";
@@ -1627,7 +1627,6 @@ async function executeIncrementalScan(
 
     invalidateAIDetectionStatsCache(ctx.organizationId).catch(() => {});
 
-    const scan = await getScanByIdQuery(scanId, ctx.organizationId);
     if (scan) {
       // Report to GitHub for webhook-triggered scans (fire-and-forget)
       reportScanToGitHub(scan, ctx.organizationId).catch((err) => {
@@ -1835,69 +1834,22 @@ async function executeScan(
     // ========================================================================
     // LLM Vulnerability Pre-Filter (Phase 2)
     // ========================================================================
-    let vulnerabilityCandidates: VulnerabilityCandidate[] = [];
-    const vulnerabilityFileContents = new Map<string, string>();
     let vulnerabilityFindings: ICreateFindingInput[] = [];
     // Recorded on the scan so the UI can tell "checked and clean" from "not checked"
     let vulnerabilityCheckStatus: VulnerabilityCheckStatus = "off";
 
     try {
-      // Check if vulnerability scanning is enabled for this org
-      const riskConfig = await getRiskScoringConfigQuery(ctx.organizationId);
-      const vulnScanEnabled =
-        riskConfig?.vulnerability_scan_enabled && riskConfig?.llm_enabled && riskConfig?.llm_key_id;
-
-      // Determine which vulnerability types are enabled
-      const enabledTypes = riskConfig?.vulnerability_types_enabled ?? {
-        prompt_injection: true,
-        pii_exposure: true,
-        excessive_agency: true,
-        jailbreak_risk: true,
-        training_data_poisoning: true,
-        model_dos: true,
-        supply_chain: true,
-        insecure_plugin: true,
-        overreliance: true,
-        model_theft: true,
-      };
-
-      if (vulnScanEnabled && !signal?.aborted) {
-        vulnerabilityCheckStatus = "ran";
-        // Re-scan code files for vulnerability indicators
-        for (const file of filesToScan) {
-          if (signal?.aborted) break;
-          try {
-            const content = await readFileContent(file.fullPath);
-            const candidates = scanFileForVulnerabilityIndicators(content, file.path).filter(
-              (c) => enabledTypes[c.vulnerabilityType as keyof typeof enabledTypes] !== false,
-            );
-            if (candidates.length > 0) {
-              vulnerabilityCandidates.push(...candidates);
-              vulnerabilityFileContents.set(file.path, content);
-            }
-          } catch {
-            // Skip unreadable files
-          }
-        }
-
-        // Run LLM analysis on candidates
-        if (vulnerabilityCandidates.length > 0 && riskConfig!.llm_key_id) {
-          const context = buildAnalysisContext(vulnerabilityCandidates, vulnerabilityFileContents);
-          const analysisStats: VulnerabilityAnalysisStats = {
-            keyMissing: false,
-            attemptedTypes: 0,
-            failedTypes: 0,
-          };
-          vulnerabilityFindings = await analyzeVulnerabilities(
-            context,
-            riskConfig!.llm_key_id,
-            ctx.organizationId,
-            scanId,
-            analysisStats,
-          );
-          vulnerabilityCheckStatus = vulnerabilityCheckStatusFromStats(analysisStats);
-        }
-      }
+      // Status comes from what actually ran: off, failed (cancelled, key or LLM errors) or ran
+      const outcome = await runVulnerabilityChecks({
+        config: await getRiskScoringConfigQuery(ctx.organizationId),
+        files: filesToScan,
+        readFile: readFileContent,
+        organizationId: ctx.organizationId,
+        scanId,
+        signal,
+      });
+      vulnerabilityFindings = outcome.findings;
+      vulnerabilityCheckStatus = outcome.status;
     } catch (err) {
       // Graceful degradation: vulnerability scan failure does not fail the overall scan
       logger.warn(

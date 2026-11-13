@@ -152,6 +152,23 @@ describe("RiskScoreCard", () => {
     );
   });
 
+  it.each([
+    ["failed", "Partial: vulnerability checks didn't finish"],
+    ["incremental", "Partial: changed files not checked for vulnerabilities"],
+  ] as const)("explains a partial score when checks were %s", (status, label) => {
+    renderWithProviders(
+      <RiskScoreCard
+        score={95}
+        grade="A"
+        details={makeDetails()}
+        calculatedAt={null}
+        vulnerabilityCheckStatus={status}
+      />,
+    );
+
+    expect(screen.getByText(label)).toBeInTheDocument();
+  });
+
   it("does not mark the score partial when vulnerability checks ran", () => {
     renderWithProviders(
       <RiskScoreCard

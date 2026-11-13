@@ -7,7 +7,7 @@
  */
 
 import { sequelize } from "../database/db";
-import { QueryTypes } from "sequelize";
+import { QueryTypes, Transaction } from "sequelize";
 import { DimensionKey, DEFAULT_DIMENSION_WEIGHTS } from "../config/riskScoringConfig";
 import type { IRiskScoreDetails } from "../domain.layer/interfaces/i.aiDetection";
 
@@ -159,6 +159,7 @@ export async function getRiskScoringConfigQuery(
  */
 export async function getVulnerabilityConfigQuery(
   organizationId: number,
+  transaction?: Transaction,
 ): Promise<VulnerabilityConfig | null> {
   validateOrganizationId(organizationId);
   const query = `
@@ -171,14 +172,44 @@ export async function getVulnerabilityConfigQuery(
   const results = await sequelize.query(query, {
     replacements: { organizationId },
     type: QueryTypes.SELECT,
+    transaction,
   });
 
   return (results as VulnerabilityConfig[])[0] || null;
 }
 
+function normalizeKeyId(value: number | string | null | undefined): number | null {
+  return value == null ? null : Number(value);
+}
+
+/**
+ * Whether a config save invalidates the vulnerability consent. Consent is
+ * given for sending code to one provider: it no longer holds when the LLM
+ * key changes (including clearing it) or LLM analysis is turned back on, so
+ * the stored choice goes back to "not chosen" (off) and the Settings page
+ * asks again. An explicit vulnerability_scan_enabled in the same save is
+ * that new choice and wins.
+ */
+export function shouldResetVulnerabilityConsent(
+  existing: { llm_enabled: boolean | null; llm_key_id: number | string | null } | null,
+  data: {
+    llm_enabled?: boolean;
+    llm_key_id?: number | null;
+    vulnerability_scan_enabled?: boolean;
+  },
+): boolean {
+  if (data.vulnerability_scan_enabled !== undefined) return false;
+  const keyChanged =
+    data.llm_key_id !== undefined &&
+    normalizeKeyId(data.llm_key_id) !== normalizeKeyId(existing?.llm_key_id);
+  const reEnabled = data.llm_enabled === true && existing?.llm_enabled !== true;
+  return keyChanged || reEnabled;
+}
+
 /**
  * Upsert risk scoring config for an organization.
- * If config exists, update it. Otherwise create it.
+ * If config exists, update it. Otherwise create it. Runs in one transaction,
+ * so a key change and the consent reset it causes land together.
  */
 export async function upsertRiskScoringConfigQuery(
   organizationId: number,
@@ -193,85 +224,112 @@ export async function upsertRiskScoringConfigQuery(
 ): Promise<RiskScoringConfig> {
   validateOrganizationId(organizationId);
 
-  // Fetch existing config from the base risk scoring table (without merged vuln config)
-  const baseQuery = `
-    SELECT id, organization_id, llm_enabled, llm_key_id, dimension_weights, updated_by, updated_at
-    FROM ai_detection_risk_scoring_config
-    WHERE organization_id = :organizationId
-    ORDER BY id DESC LIMIT 1;
-  `;
-  const baseResults = await sequelize.query(baseQuery, {
-    replacements: { organizationId },
-    type: QueryTypes.SELECT,
-  });
-  const existing = (baseResults as RiskScoringConfig[])[0] || null;
-
-  let config: RiskScoringConfig;
-
-  if (existing) {
-    const query = `
-      UPDATE ai_detection_risk_scoring_config
-      SET
-        llm_enabled = COALESCE(:llm_enabled, llm_enabled),
-        llm_key_id = CASE WHEN :has_llm_key_id THEN :llm_key_id ELSE llm_key_id END,
-        dimension_weights = COALESCE(:dimension_weights, dimension_weights),
-        updated_by = :updated_by,
-        updated_at = NOW()
-      WHERE id = :id AND organization_id = :organizationId
-      RETURNING id, organization_id, llm_enabled, llm_key_id, dimension_weights, updated_by, updated_at;
+  return sequelize.transaction(async (transaction) => {
+    // Fetch existing config from the base risk scoring table (without merged vuln config).
+    // Locked so concurrent saves can't both miss a key change.
+    const baseQuery = `
+      SELECT id, organization_id, llm_enabled, llm_key_id, dimension_weights, updated_by, updated_at
+      FROM ai_detection_risk_scoring_config
+      WHERE organization_id = :organizationId
+      ORDER BY id DESC LIMIT 1
+      FOR UPDATE;
     `;
-
-    const results = await sequelize.query(query, {
-      replacements: {
-        id: existing.id,
-        organizationId,
-        llm_enabled: data.llm_enabled ?? null,
-        has_llm_key_id: data.llm_key_id !== undefined,
-        llm_key_id: data.llm_key_id ?? null,
-        dimension_weights: data.dimension_weights ? JSON.stringify(data.dimension_weights) : null,
-        updated_by: data.updated_by,
-      },
+    const baseResults = await sequelize.query(baseQuery, {
+      replacements: { organizationId },
       type: QueryTypes.SELECT,
+      transaction,
     });
+    const existing = (baseResults as RiskScoringConfig[])[0] || null;
 
-    config = (results as RiskScoringConfig[])[0];
-  } else {
-    const query = `
-      INSERT INTO ai_detection_risk_scoring_config
-        (organization_id, llm_enabled, llm_key_id, dimension_weights, updated_by, updated_at)
-      VALUES
-        (:organizationId, :llm_enabled, :llm_key_id, :dimension_weights, :updated_by, NOW())
-      RETURNING id, organization_id, llm_enabled, llm_key_id, dimension_weights, updated_by, updated_at;
-    `;
+    let config: RiskScoringConfig;
 
-    const [results] = await sequelize.query(query, {
-      replacements: {
+    if (existing) {
+      const query = `
+        UPDATE ai_detection_risk_scoring_config
+        SET
+          llm_enabled = COALESCE(:llm_enabled, llm_enabled),
+          llm_key_id = CASE WHEN :has_llm_key_id THEN :llm_key_id ELSE llm_key_id END,
+          dimension_weights = COALESCE(:dimension_weights, dimension_weights),
+          updated_by = :updated_by,
+          updated_at = NOW()
+        WHERE id = :id AND organization_id = :organizationId
+        RETURNING id, organization_id, llm_enabled, llm_key_id, dimension_weights, updated_by, updated_at;
+      `;
+
+      const results = await sequelize.query(query, {
+        replacements: {
+          id: existing.id,
+          organizationId,
+          llm_enabled: data.llm_enabled ?? null,
+          has_llm_key_id: data.llm_key_id !== undefined,
+          llm_key_id: data.llm_key_id ?? null,
+          dimension_weights: data.dimension_weights ? JSON.stringify(data.dimension_weights) : null,
+          updated_by: data.updated_by,
+        },
+        type: QueryTypes.SELECT,
+        transaction,
+      });
+
+      config = (results as RiskScoringConfig[])[0];
+    } else {
+      const query = `
+        INSERT INTO ai_detection_risk_scoring_config
+          (organization_id, llm_enabled, llm_key_id, dimension_weights, updated_by, updated_at)
+        VALUES
+          (:organizationId, :llm_enabled, :llm_key_id, :dimension_weights, :updated_by, NOW())
+        RETURNING id, organization_id, llm_enabled, llm_key_id, dimension_weights, updated_by, updated_at;
+      `;
+
+      const [results] = await sequelize.query(query, {
+        replacements: {
+          organizationId,
+          llm_enabled: data.llm_enabled ?? false,
+          llm_key_id: data.llm_key_id ?? null,
+          dimension_weights: JSON.stringify(data.dimension_weights ?? DEFAULT_DIMENSION_WEIGHTS),
+          updated_by: data.updated_by,
+        },
+        transaction,
+      });
+
+      config = (results as RiskScoringConfig[])[0];
+    }
+
+    // A new key or re-enabled LLM analysis needs a fresh vulnerability choice
+    if (shouldResetVulnerabilityConsent(existing, data)) {
+      await sequelize.query(
+        `
+        UPDATE ai_detection_vulnerability_config
+        SET vulnerability_scan_enabled = NULL, updated_by = :updated_by, updated_at = NOW()
+        WHERE organization_id = :organizationId;
+      `,
+        {
+          replacements: { organizationId, updated_by: data.updated_by },
+          type: QueryTypes.UPDATE,
+          transaction,
+        },
+      );
+    }
+
+    // Upsert vulnerability scan config in the dedicated table
+    if (
+      data.vulnerability_scan_enabled !== undefined ||
+      data.vulnerability_types_enabled !== undefined
+    ) {
+      await upsertVulnerabilityConfigQuery(
         organizationId,
-        llm_enabled: data.llm_enabled ?? false,
-        llm_key_id: data.llm_key_id ?? null,
-        dimension_weights: JSON.stringify(data.dimension_weights ?? DEFAULT_DIMENSION_WEIGHTS),
-        updated_by: data.updated_by,
-      },
-    });
+        {
+          vulnerability_scan_enabled: data.vulnerability_scan_enabled,
+          vulnerability_types_enabled: data.vulnerability_types_enabled,
+          updated_by: data.updated_by,
+        },
+        transaction,
+      );
+    }
 
-    config = (results as RiskScoringConfig[])[0];
-  }
-
-  // Upsert vulnerability scan config in the dedicated table
-  if (
-    data.vulnerability_scan_enabled !== undefined ||
-    data.vulnerability_types_enabled !== undefined
-  ) {
-    await upsertVulnerabilityConfigQuery(organizationId, {
-      vulnerability_scan_enabled: data.vulnerability_scan_enabled,
-      vulnerability_types_enabled: data.vulnerability_types_enabled,
-      updated_by: data.updated_by,
-    });
-  }
-
-  // Merge vulnerability config into the returned object
-  const vulnConfig = await getVulnerabilityConfigQuery(organizationId);
-  return mergeVulnerabilityConfig(config, vulnConfig);
+    // Merge vulnerability config into the returned object
+    const vulnConfig = await getVulnerabilityConfigQuery(organizationId, transaction);
+    return mergeVulnerabilityConfig(config, vulnConfig);
+  });
 }
 
 /**
@@ -284,8 +342,9 @@ async function upsertVulnerabilityConfigQuery(
     vulnerability_types_enabled?: Record<VulnerabilityTypeKey, boolean>;
     updated_by: number;
   },
+  transaction?: Transaction,
 ): Promise<void> {
-  // NULL = not chosen; the effective value then follows the LLM key default
+  // NULL = not chosen, which resolves to off (see resolveVulnerabilityScanEnabled)
   const insertVulnEnabled = data.vulnerability_scan_enabled ?? null;
   const insertTypesEnabled = data.vulnerability_types_enabled
     ? JSON.stringify(data.vulnerability_types_enabled)
@@ -314,6 +373,7 @@ async function upsertVulnerabilityConfigQuery(
         : null,
       updated_by: data.updated_by,
     },
+    transaction,
   });
 }
 

@@ -105,7 +105,7 @@ Constraints:
 ai_detection_vulnerability_config
 ├── id (PK, SERIAL)
 ├── organization_id (INTEGER NOT NULL, UNIQUE)
-├── vulnerability_scan_enabled (BOOLEAN, nullable: NULL = never chosen, effective value = LLM analysis on with a key)
+├── vulnerability_scan_enabled (BOOLEAN, nullable: NULL = not chosen = off)
 ├── vulnerability_types_enabled (JSONB)
 ├── updated_by (INTEGER)
 └── updated_at (TIMESTAMPTZ)
@@ -362,8 +362,9 @@ Candidates from phase 1 are sent to an LLM with type-specific rubric prompts:
 ### Vulnerability Settings
 
 Per-organization configuration in `ai_detection_vulnerability_config`:
-- Toggle vulnerability scanning on/off. NULL means the org never chose: the effective value (`resolveVulnerabilityScanEnabled` in `utils/aiDetectionRiskScoring.utils.ts`) is on when the risk scoring config has `llm_enabled` and an `llm_key_id`, off otherwise. The API returns the effective value plus `vulnerability_scan_explicit`. `PATCH` only stores the toggle while LLM analysis is on, so saving other settings never turns the default into a choice.
-- Each full scan records `vulnerability_check_status` on the scan: `ran` (checks ran, findings may be zero), `off` (disabled or no key), `failed` (key missing or every LLM call threw), `incremental` (incremental scans skip the checks). The UI shows a neutral "didn't run" state instead of a clean result, and marks the governance score partial, for anything but `ran`
+- Toggle vulnerability scanning on/off. The checks send code snippets to the LLM provider, so they need explicit consent: NULL means "not chosen", which is off. The effective value (`resolveVulnerabilityScanEnabled` in `utils/aiDetectionRiskScoring.utils.ts`) is on only when the stored value is `true` and the risk scoring config has `llm_enabled` and an `llm_key_id`. The API returns the effective value plus `vulnerability_scan_explicit`. `PATCH` only stores the toggle while LLM analysis is on, so saving other settings never turns "not chosen" into a choice.
+- Consent is tied to the provider: a `PATCH` that changes `llm_key_id` (including clearing it, which the Settings page does when LLM analysis is turned off) or turns `llm_enabled` from false to true resets `vulnerability_scan_enabled` to NULL in the same transaction (`shouldResetVulnerabilityConsent` in `upsertRiskScoringConfigQuery`), unless the same request sets `vulnerability_scan_enabled` explicitly. This holds for every API client; no MCP tool writes this config. The Settings page asks again (consent dialog) on such a save when the toggle would be on.
+- Each scan records `vulnerability_check_status` (`runVulnerabilityChecks` in `services/aiDetection/vulnerabilityAnalyzer.ts` for full scans): `ran` (every file pre-filtered and every LLM call finished; findings may be zero), `off` (not chosen, off, no key, or every type disabled), `failed` (scan cancelled during the checks, key couldn't be resolved, or any LLM call threw; findings from types that finished are kept), `incremental` (incremental scan with checks on: changed files weren't checked, vulnerability findings for unchanged files carry over from the last full scan). An incremental scan records `off` when the org's checks are off. The UI shows a neutral "not checked" state instead of a clean result, and marks the governance score partial, for anything but `ran`
 - Enable/disable individual vulnerability types via `vulnerability_types_enabled` JSONB field
 - Managed through the settings page and `PATCH /ai-detection/risk-scoring/config`
 
@@ -383,7 +384,7 @@ Calculates a 0–100 score across 5 governance dimensions (higher = safer), with
 
 **When it runs:** `scoreCompletedScan()` in `aiDetection.service.ts` stores the rule-based score as the last step of every completed scan (manual, scheduled, webhook; full and incremental), after the findings transaction commits and before the in-memory progress reports `completed` and before the GitHub status report. A scoring failure is logged and never fails the scan (the score stays NULL; "Recalculate score" fills it in). `POST /scans/:id/risk-score/recalculate` uses the same path.
 
-**LLM enhancement is background work:** `calculateAndStoreRiskScore()` stores the rule-based score with `risk_score_details.llm_status = "pending"` and an `llm_run_id`, returns it, then runs the LLM call (2-minute timeout). The result replaces the stored score only while `llm_run_id` still matches (a newer recalculation wins), with `llm_status` `done` or `failed`. `getScan` reports a `pending` older than 10 minutes as `failed` (covers a restart). The scan details page polls every 5 s while `pending`. `llm_status` is `off` when LLM analysis isn't configured or there are no findings; older scores have no `llm_status`.
+**LLM enhancement is background work:** `calculateAndStoreRiskScore()` stores the rule-based score with `risk_score_details.llm_status = "pending"` and an `llm_run_id`, returns it, then runs the LLM call (2-minute timeout). The result replaces the stored score only while `llm_run_id` still matches (a newer recalculation wins), with `llm_status` `done` or `failed`. `getScan` reports a `pending` older than 10 minutes as `failed` (covers a restart). The scan details page and the scan page's completion card poll every 5 s while `pending` and show the final score when it finishes. While the stored analysis is `pending` (and not stale), `POST /scans/:id/risk-score/recalculate` returns 409 without recalculating: a new run would start a second paid LLM call and orphan the running one. The Recalculate button is disabled meanwhile. `llm_status` is `off` when LLM analysis isn't configured or there are no findings; older scores have no `llm_status`.
 
 ### Dimensions
 

@@ -209,7 +209,7 @@ export const scanningContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'info',
-      text: 'Vulnerability checks need LLM-enhanced analysis with a key in **AI Detection → Settings → Risk scoring**. They\'re on by default once that key is set. When they didn\'t run for a scan (detection off, no key, the LLM call failed, or an incremental scan), neither phase runs: the tab says **Vulnerability checks didn\'t run for this scan**, its badge shows a dash instead of 0, and the governance score is marked partial.',
+      text: 'Vulnerability checks need LLM-enhanced analysis with a key in **AI Detection → Settings → Risk scoring**, and an admin has to turn them on there, because they send code snippets to your LLM provider. When they\'re off, there\'s no key or every vulnerability type is turned off, the tab says **Vulnerability checks didn\'t run for this scan** and its badge shows a dash instead of 0. When the LLM analysis fails for some or all types, the tab says **Vulnerability checks didn\'t finish for this scan** and lists findings from the types that finished. Incremental scans don\'t check changed files: the tab says **Changed files weren\'t checked for vulnerabilities** and lists findings carried over from the last full scan. In all of these cases the governance score is marked partial.',
     },
     {
       type: 'heading',

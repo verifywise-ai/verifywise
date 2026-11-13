@@ -93,9 +93,9 @@ export const riskScoringContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Vulnerability checks off', text: 'Vulnerability detection is turned off, or AI detection has no LLM key. Turn it on in **AI Detection → Settings → Risk scoring**, then scan again.' },
-        { bold: 'Vulnerability checks failed', text: 'The checks were on but the LLM analysis couldn\'t run, for example because the key no longer works.' },
-        { bold: 'Incremental scans skip vulnerability checks', text: 'Incremental scans don\'t run the checks. Run a full scan for a complete score.' },
+        { bold: 'Vulnerability checks off', text: 'Vulnerability detection is off or hasn\'t been turned on yet, AI detection has no LLM key, or every vulnerability type is turned off. Turn it on in **AI Detection → Settings → Risk scoring**, then scan again.' },
+        { bold: 'Vulnerability checks didn\'t finish', text: 'The checks were on but the LLM analysis failed for some or all vulnerability types, for example because the key no longer works. Findings from the types that finished are still listed, but the scan wasn\'t fully checked.' },
+        { bold: 'Changed files not checked for vulnerabilities', text: 'Incremental scans don\'t run the checks. Vulnerability findings for unchanged files carry over from the last full scan; changed files weren\'t checked. Run a full scan for a complete score. When vulnerability detection is off, an incremental scan is marked **vulnerability checks off** instead.' },
       ],
     },
     {
@@ -138,7 +138,7 @@ export const riskScoringContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'LLM analysis runs in the background after the rule-based score is saved, so it never holds up a scan. While it runs, the score card reads **AI analysis is running** and the page refreshes the score when it finishes. If it doesn\'t finish, the card says so and the rule-based score stays.',
+      text: 'LLM analysis runs in the background after the rule-based score is saved, so it never holds up a scan. While it runs, the score card reads **AI analysis is running** and the page refreshes the score when it finishes, on the scan details page and on the scan page right after a scan. **Recalculate score** is unavailable until it finishes, so each analysis is paid for once. If it doesn\'t finish, the card says so and the rule-based score stays.',
     },
     {
       type: 'paragraph',

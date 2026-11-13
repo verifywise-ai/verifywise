@@ -33,7 +33,7 @@ import { FindingsTabPanel } from "./ScanDetails/FindingsTabPanel";
 import { SecurityFindingsTab } from "./ScanDetails/SecurityFindingsTab";
 import { ComplianceTab } from "./ScanDetails/ComplianceTab";
 import { VulnerabilitiesTab } from "./ScanDetails/VulnerabilitiesTab";
-import { vulnerabilityChecksRan } from "./components/governanceScore";
+import { hasNoModelFiles, vulnerabilityChecksRan } from "./components/governanceScore";
 
 /** Tab badge when a check didn't run, so "0" never reads as "checked, none found" */
 const NOT_CHECKED_BADGE = "–";
@@ -106,10 +106,7 @@ export default function ScanDetailsPage() {
     scan.scan.vulnerability_check_status,
     vulnerabilityFindings.length,
   );
-  const noModelFiles =
-    securitySummary !== null &&
-    securitySummary.model_files_scanned === 0 &&
-    securitySummary.total === 0;
+  const noModelFiles = hasNoModelFiles(securitySummary);
 
   return (
     <PageHeaderExtended

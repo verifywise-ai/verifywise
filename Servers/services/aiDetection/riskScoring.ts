@@ -622,6 +622,17 @@ export function effectiveLlmStatus(
   return now - started > LLM_PENDING_STALE_MS ? "failed" : status;
 }
 
+/**
+ * Whether a recalculation must wait for the background LLM analysis. A new
+ * run while one is pending would start a second paid LLM call and orphan
+ * the first one (its run id no longer matches, so its result is dropped).
+ * `status` must be the effective status (see effectiveLlmStatus), so an
+ * analysis that went stale no longer blocks a recalculation.
+ */
+export function isLlmAnalysisPending(status: LlmAnalysisStatus | undefined): boolean {
+  return status === "pending";
+}
+
 interface RuleBasedScore {
   result: RiskScoreResult;
   findings: FindingForScoring[];

@@ -312,9 +312,6 @@ export const de: Record<string, string> = {
   "GOVERNANCE SCORE": "GOVERNANCE-BEWERTUNG",
   "Grade (partial)": "Note (teilweise)",
   "Partial: vulnerability checks off": "Teilweise: Schwachstellenprüfungen aus",
-  "Partial: vulnerability checks failed": "Teilweise: Schwachstellenprüfungen fehlgeschlagen",
-  "Partial: incremental scans skip vulnerability checks":
-    "Teilweise: inkrementelle Scans überspringen Schwachstellenprüfungen",
   "Open vulnerability settings": "Schwachstelleneinstellungen öffnen",
   "AI analysis is running. The score updates when it finishes.":
     "KI-Analyse läuft. Die Bewertung wird aktualisiert, sobald sie abgeschlossen ist.",
@@ -331,10 +328,6 @@ export const de: Record<string, string> = {
   "Find AI usage across repositories": "KI-Nutzung in allen Repositories finden",
   "See which AI libraries, models, API calls and agents each repository uses, with the files they appear in.":
     "Sehen Sie, welche KI-Bibliotheken, Modelle, API-Aufrufe und Agenten jedes Repository nutzt, mit den Dateien, in denen sie vorkommen.",
-  "Incremental scans skip vulnerability checks. Run a full scan to check this repository.":
-    "Inkrementelle Scans überspringen Schwachstellenprüfungen. Führen Sie einen vollständigen Scan aus, um dieses Repository zu prüfen.",
-  "Intentionally vulnerable LLM app for testing vulnerability detection, which runs when AI detection has an LLM key in Settings":
-    "Absichtlich verwundbare LLM-App zum Testen der Schwachstellenerkennung, die läuft, wenn die KI-Erkennung in den Einstellungen einen LLM-Schlüssel hat",
   "No model files found in this repository": "Keine Modelldateien in diesem Repository gefunden",
   "This tab checks serialized model files for malicious code. The scan found none, so there was nothing to check.":
     "Dieser Tab prüft serialisierte Modelldateien auf Schadcode. Der Scan hat keine gefunden, daher gab es nichts zu prüfen.",
@@ -342,10 +335,6 @@ export const de: Record<string, string> = {
     "Für diesen Scan ist keine Schwachstellenprüfung erfasst",
   "Vulnerability checks didn't run for this scan":
     "Für diesen Scan wurden keine Schwachstellenprüfungen ausgeführt",
-  "The LLM analysis couldn't run. Check the LLM key in Settings, then scan again.":
-    "Die LLM-Analyse konnte nicht ausgeführt werden. Prüfen Sie den LLM-Schlüssel in den Einstellungen und scannen Sie erneut.",
-  "Vulnerability detection is off, or AI detection has no LLM key. Turn it on in Settings, then scan again.":
-    "Die Schwachstellenerkennung ist aus oder die KI-Erkennung hat keinen LLM-Schlüssel. Aktivieren Sie sie in den Einstellungen und scannen Sie erneut.",
   "This scan doesn't record whether vulnerability checks ran. Scan again to check.":
     "Dieser Scan erfasst nicht, ob Schwachstellenprüfungen ausgeführt wurden. Scannen Sie erneut, um zu prüfen.",
   "Scan GitHub repositories (public, or private with a token in Settings) for AI libraries, models, agents, secrets and LLM vulnerabilities.":
@@ -363,6 +352,24 @@ export const de: Record<string, string> = {
     "Die Ausschnitte würden mit dem Schlüssel {name} gesendet.",
   "With checks off, governance scores are marked partial. You can change this later on this tab.":
     "Bei ausgeschalteten Prüfungen werden Governance-Bewertungen als teilweise markiert. Sie können dies später auf diesem Tab ändern.",
+  "Partial: vulnerability checks didn't finish":
+    "Teilweise: Schwachstellenprüfungen nicht abgeschlossen",
+  "Partial: changed files not checked for vulnerabilities":
+    "Teilweise: geänderte Dateien nicht auf Schwachstellen geprüft",
+  "Vulnerability checks didn't finish for this scan":
+    "Die Schwachstellenprüfungen wurden für diesen Scan nicht abgeschlossen",
+  "The LLM analysis failed for some or all vulnerability types, so this scan wasn't fully checked. Any findings shown come from the types that finished. Check the LLM key in Settings, then scan again.":
+    "Die LLM-Analyse ist für einige oder alle Schwachstellentypen fehlgeschlagen, daher wurde dieser Scan nicht vollständig geprüft. Angezeigte Befunde stammen von den Typen, die abgeschlossen wurden. Prüfen Sie den LLM-Schlüssel in den Einstellungen und scannen Sie erneut.",
+  "Changed files weren't checked for vulnerabilities":
+    "Geänderte Dateien wurden nicht auf Schwachstellen geprüft",
+  "Incremental scans don't run vulnerability checks. Any findings shown come from the last full scan, for files that haven't changed. Run a full scan to check the changed files.":
+    "Inkrementelle Scans führen keine Schwachstellenprüfungen aus. Angezeigte Befunde stammen aus dem letzten vollständigen Scan, für Dateien, die sich nicht geändert haben. Führen Sie einen vollständigen Scan aus, um die geänderten Dateien zu prüfen.",
+  "Vulnerability checks are off, AI detection has no LLM key, or every vulnerability type is turned off. Turn them on in Settings, then scan again.":
+    "Schwachstellenprüfungen sind ausgeschaltet, die KI-Erkennung hat keinen LLM-Schlüssel oder alle Schwachstellentypen sind deaktiviert. Schalten Sie sie in den Einstellungen ein und scannen Sie erneut.",
+  "Intentionally vulnerable LLM app for testing vulnerability detection, which runs once vulnerability checks are turned on in Settings":
+    "Absichtlich verwundbare LLM-App zum Testen der Schwachstellenerkennung, die läuft, sobald Schwachstellenprüfungen in den Einstellungen eingeschaltet sind",
+  "AI analysis is running. Recalculate when it finishes.":
+    "Die KI-Analyse läuft. Berechnen Sie neu, wenn sie abgeschlossen ist.",
 };
 
 export const fr: Record<string, string> = {
@@ -677,9 +684,6 @@ export const fr: Record<string, string> = {
   "GOVERNANCE SCORE": "SCORE DE GOUVERNANCE",
   "Grade (partial)": "Note (partielle)",
   "Partial: vulnerability checks off": "Partiel : contrôles de vulnérabilités désactivés",
-  "Partial: vulnerability checks failed": "Partiel : échec des contrôles de vulnérabilités",
-  "Partial: incremental scans skip vulnerability checks":
-    "Partiel : les analyses incrémentielles ignorent les contrôles de vulnérabilités",
   "Open vulnerability settings": "Ouvrir les paramètres de vulnérabilités",
   "AI analysis is running. The score updates when it finishes.":
     "L'analyse IA est en cours. Le score sera mis à jour à la fin.",
@@ -696,10 +700,6 @@ export const fr: Record<string, string> = {
   "Find AI usage across repositories": "Trouver l'usage de l'IA dans les dépôts",
   "See which AI libraries, models, API calls and agents each repository uses, with the files they appear in.":
     "Voyez quelles bibliothèques d'IA, quels modèles, appels d'API et agents chaque dépôt utilise, avec les fichiers où ils apparaissent.",
-  "Incremental scans skip vulnerability checks. Run a full scan to check this repository.":
-    "Les analyses incrémentielles ignorent les contrôles de vulnérabilités. Lancez une analyse complète pour vérifier ce dépôt.",
-  "Intentionally vulnerable LLM app for testing vulnerability detection, which runs when AI detection has an LLM key in Settings":
-    "Application LLM volontairement vulnérable pour tester la détection des vulnérabilités, qui s'exécute lorsque la détection IA dispose d'une clé LLM dans les paramètres",
   "No model files found in this repository": "Aucun fichier de modèle trouvé dans ce dépôt",
   "This tab checks serialized model files for malicious code. The scan found none, so there was nothing to check.":
     "Cet onglet vérifie les fichiers de modèle sérialisés à la recherche de code malveillant. L'analyse n'en a trouvé aucun, il n'y avait donc rien à vérifier.",
@@ -707,10 +707,6 @@ export const fr: Record<string, string> = {
     "Aucun contrôle de vulnérabilités enregistré pour cette analyse",
   "Vulnerability checks didn't run for this scan":
     "Les contrôles de vulnérabilités n'ont pas été exécutés pour cette analyse",
-  "The LLM analysis couldn't run. Check the LLM key in Settings, then scan again.":
-    "L'analyse LLM n'a pas pu s'exécuter. Vérifiez la clé LLM dans les paramètres, puis relancez l'analyse.",
-  "Vulnerability detection is off, or AI detection has no LLM key. Turn it on in Settings, then scan again.":
-    "La détection des vulnérabilités est désactivée ou la détection IA n'a pas de clé LLM. Activez-la dans les paramètres, puis relancez l'analyse.",
   "This scan doesn't record whether vulnerability checks ran. Scan again to check.":
     "Cette analyse n'indique pas si les contrôles de vulnérabilités ont été exécutés. Relancez une analyse pour vérifier.",
   "Scan GitHub repositories (public, or private with a token in Settings) for AI libraries, models, agents, secrets and LLM vulnerabilities.":
@@ -728,6 +724,24 @@ export const fr: Record<string, string> = {
     "Les extraits seraient envoyés avec la clé {name}.",
   "With checks off, governance scores are marked partial. You can change this later on this tab.":
     "Lorsque les contrôles sont désactivés, les scores de gouvernance sont marqués comme partiels. Vous pouvez modifier ce choix plus tard dans cet onglet.",
+  "Partial: vulnerability checks didn't finish":
+    "Partiel : contrôles de vulnérabilités non terminés",
+  "Partial: changed files not checked for vulnerabilities":
+    "Partiel : fichiers modifiés non contrôlés pour les vulnérabilités",
+  "Vulnerability checks didn't finish for this scan":
+    "Les contrôles de vulnérabilités ne se sont pas terminés pour cette analyse",
+  "The LLM analysis failed for some or all vulnerability types, so this scan wasn't fully checked. Any findings shown come from the types that finished. Check the LLM key in Settings, then scan again.":
+    "L'analyse LLM a échoué pour certains ou tous les types de vulnérabilités, cette analyse n'a donc pas été entièrement contrôlée. Les constats affichés proviennent des types qui se sont terminés. Vérifiez la clé LLM dans les paramètres, puis relancez l'analyse.",
+  "Changed files weren't checked for vulnerabilities":
+    "Les fichiers modifiés n'ont pas été contrôlés pour les vulnérabilités",
+  "Incremental scans don't run vulnerability checks. Any findings shown come from the last full scan, for files that haven't changed. Run a full scan to check the changed files.":
+    "Les analyses incrémentielles n'exécutent pas de contrôles de vulnérabilités. Les constats affichés proviennent de la dernière analyse complète, pour les fichiers qui n'ont pas changé. Lancez une analyse complète pour contrôler les fichiers modifiés.",
+  "Vulnerability checks are off, AI detection has no LLM key, or every vulnerability type is turned off. Turn them on in Settings, then scan again.":
+    "Les contrôles de vulnérabilités sont désactivés, la détection IA n'a pas de clé LLM, ou tous les types de vulnérabilités sont désactivés. Activez-les dans les paramètres, puis relancez l'analyse.",
+  "Intentionally vulnerable LLM app for testing vulnerability detection, which runs once vulnerability checks are turned on in Settings":
+    "Application LLM volontairement vulnérable pour tester la détection de vulnérabilités, qui s'exécute une fois les contrôles de vulnérabilités activés dans les paramètres",
+  "AI analysis is running. Recalculate when it finishes.":
+    "L'analyse IA est en cours. Recalculez lorsqu'elle sera terminée.",
 };
 
 export const es: Record<string, string> = {
@@ -1046,10 +1060,6 @@ export const es: Record<string, string> = {
   "GOVERNANCE SCORE": "PUNTUACIÓN DE GOBERNANZA",
   "Grade (partial)": "Calificación (parcial)",
   "Partial: vulnerability checks off": "Parcial: comprobaciones de vulnerabilidades desactivadas",
-  "Partial: vulnerability checks failed":
-    "Parcial: las comprobaciones de vulnerabilidades fallaron",
-  "Partial: incremental scans skip vulnerability checks":
-    "Parcial: los análisis incrementales omiten las comprobaciones de vulnerabilidades",
   "Open vulnerability settings": "Abrir la configuración de vulnerabilidades",
   "AI analysis is running. The score updates when it finishes.":
     "El análisis de IA está en curso. La puntuación se actualizará cuando termine.",
@@ -1066,10 +1076,6 @@ export const es: Record<string, string> = {
   "Find AI usage across repositories": "Encontrar el uso de IA en los repositorios",
   "See which AI libraries, models, API calls and agents each repository uses, with the files they appear in.":
     "Vea qué bibliotecas de IA, modelos, llamadas a API y agentes usa cada repositorio, con los archivos en los que aparecen.",
-  "Incremental scans skip vulnerability checks. Run a full scan to check this repository.":
-    "Los análisis incrementales omiten las comprobaciones de vulnerabilidades. Ejecute un análisis completo para comprobar este repositorio.",
-  "Intentionally vulnerable LLM app for testing vulnerability detection, which runs when AI detection has an LLM key in Settings":
-    "Aplicación LLM vulnerable a propósito para probar la detección de vulnerabilidades, que se ejecuta cuando la detección de IA tiene una clave LLM en Configuración",
   "No model files found in this repository":
     "No se encontraron archivos de modelo en este repositorio",
   "This tab checks serialized model files for malicious code. The scan found none, so there was nothing to check.":
@@ -1078,10 +1084,6 @@ export const es: Record<string, string> = {
     "No hay ninguna comprobación de vulnerabilidades registrada para este análisis",
   "Vulnerability checks didn't run for this scan":
     "Las comprobaciones de vulnerabilidades no se ejecutaron en este análisis",
-  "The LLM analysis couldn't run. Check the LLM key in Settings, then scan again.":
-    "El análisis LLM no se pudo ejecutar. Compruebe la clave LLM en Configuración y vuelva a analizar.",
-  "Vulnerability detection is off, or AI detection has no LLM key. Turn it on in Settings, then scan again.":
-    "La detección de vulnerabilidades está desactivada o la detección de IA no tiene clave LLM. Actívela en Configuración y vuelva a analizar.",
   "This scan doesn't record whether vulnerability checks ran. Scan again to check.":
     "Este análisis no registra si se ejecutaron las comprobaciones de vulnerabilidades. Vuelva a analizar para comprobarlo.",
   "Scan GitHub repositories (public, or private with a token in Settings) for AI libraries, models, agents, secrets and LLM vulnerabilities.":
@@ -1099,4 +1101,22 @@ export const es: Record<string, string> = {
     "Los fragmentos se enviarían con la clave {name}.",
   "With checks off, governance scores are marked partial. You can change this later on this tab.":
     "Con las comprobaciones desactivadas, las puntuaciones de gobernanza se marcan como parciales. Puede cambiarlo más adelante en esta pestaña.",
+  "Partial: vulnerability checks didn't finish":
+    "Parcial: las comprobaciones de vulnerabilidades no terminaron",
+  "Partial: changed files not checked for vulnerabilities":
+    "Parcial: archivos modificados sin comprobar vulnerabilidades",
+  "Vulnerability checks didn't finish for this scan":
+    "Las comprobaciones de vulnerabilidades no terminaron en este escaneo",
+  "The LLM analysis failed for some or all vulnerability types, so this scan wasn't fully checked. Any findings shown come from the types that finished. Check the LLM key in Settings, then scan again.":
+    "El análisis LLM falló para algunos o todos los tipos de vulnerabilidad, así que este escaneo no se comprobó por completo. Los hallazgos que se muestran provienen de los tipos que terminaron. Revise la clave LLM en Configuración y vuelva a escanear.",
+  "Changed files weren't checked for vulnerabilities":
+    "Los archivos modificados no se comprobaron en busca de vulnerabilidades",
+  "Incremental scans don't run vulnerability checks. Any findings shown come from the last full scan, for files that haven't changed. Run a full scan to check the changed files.":
+    "Los escaneos incrementales no ejecutan comprobaciones de vulnerabilidades. Los hallazgos que se muestran provienen del último escaneo completo, para los archivos que no han cambiado. Ejecute un escaneo completo para comprobar los archivos modificados.",
+  "Vulnerability checks are off, AI detection has no LLM key, or every vulnerability type is turned off. Turn them on in Settings, then scan again.":
+    "Las comprobaciones de vulnerabilidades están desactivadas, la detección de IA no tiene clave LLM o todos los tipos de vulnerabilidad están desactivados. Actívelas en Configuración y vuelva a escanear.",
+  "Intentionally vulnerable LLM app for testing vulnerability detection, which runs once vulnerability checks are turned on in Settings":
+    "Aplicación LLM intencionadamente vulnerable para probar la detección de vulnerabilidades, que se ejecuta una vez activadas las comprobaciones de vulnerabilidades en Configuración",
+  "AI analysis is running. Recalculate when it finishes.":
+    "El análisis de IA está en curso. Recalcule cuando termine.",
 };

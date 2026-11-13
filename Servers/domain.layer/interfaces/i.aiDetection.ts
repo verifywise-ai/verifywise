@@ -35,10 +35,15 @@ export type FindingStatus = "active" | "fixed" | "carried_forward";
 
 /**
  * Whether LLM vulnerability checks ran for a scan.
- * - ran: checks ran (findings may be zero)
- * - off: vulnerability detection is off, or no LLM key is set for AI Detection
- * - failed: checks were on but the LLM analysis could not run
- * - incremental: incremental scans don't run vulnerability checks
+ * - ran: every file was checked and every LLM call finished (findings may be zero)
+ * - off: vulnerability detection is off or not chosen, no LLM key is set for
+ *   AI Detection, or every vulnerability type is disabled
+ * - failed: checks were on but didn't finish: the key couldn't be resolved,
+ *   any LLM call failed, or the scan was cancelled. Findings from the types
+ *   that finished are kept.
+ * - incremental: an incremental scan with checks on. Changed files weren't
+ *   checked; vulnerability findings for unchanged files carry over from the
+ *   last full scan.
  * NULL on scans created before this was recorded.
  */
 export const VULNERABILITY_CHECK_STATUSES = ["ran", "off", "failed", "incremental"] as const;

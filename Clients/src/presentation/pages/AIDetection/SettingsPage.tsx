@@ -261,8 +261,16 @@ export default function SettingsPage() {
       setAlert({ variant: "error", body: "Please select an LLM key or disable LLM analysis" });
       return;
     }
-    // First save with LLM analysis on and no vulnerability choice yet: ask before any code is sent
-    if (llmEnabled && vulnerabilityIsDefault && vulnerabilityChoice === undefined) {
+    // Consent covers one provider: a different key, or LLM analysis turned back on, needs it
+    // again. The server resets the stored choice in those cases unless this save sets it.
+    const consentInvalidated =
+      llmEnabled && (!riskConfig?.llm_enabled || (riskConfig.llm_key_id ?? null) !== llmKeyId);
+    // Ask before any code is sent: no choice yet, or checks would stay on for a new provider
+    if (
+      llmEnabled &&
+      vulnerabilityChoice === undefined &&
+      (vulnerabilityIsDefault || (consentInvalidated && vulnerabilityScanEnabled))
+    ) {
       setVulnerabilityConsentOpen(true);
       return;
     }

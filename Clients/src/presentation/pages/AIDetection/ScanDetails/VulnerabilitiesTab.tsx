@@ -48,22 +48,23 @@ function notCheckedCopy(status: VulnerabilityCheckStatus | null | undefined): {
   switch (status) {
     case "failed":
       return {
-        headline: "Vulnerability checks didn't run for this scan",
-        detail: "The LLM analysis couldn't run. Check the LLM key in Settings, then scan again.",
+        headline: "Vulnerability checks didn't finish for this scan",
+        detail:
+          "The LLM analysis failed for some or all vulnerability types, so this scan wasn't fully checked. Any findings shown come from the types that finished. Check the LLM key in Settings, then scan again.",
         showSettingsLink: true,
       };
     case "incremental":
       return {
-        headline: "Vulnerability checks didn't run for this scan",
+        headline: "Changed files weren't checked for vulnerabilities",
         detail:
-          "Incremental scans skip vulnerability checks. Run a full scan to check this repository.",
+          "Incremental scans don't run vulnerability checks. Any findings shown come from the last full scan, for files that haven't changed. Run a full scan to check the changed files.",
         showSettingsLink: false,
       };
     case "off":
       return {
         headline: "Vulnerability checks didn't run for this scan",
         detail:
-          "Vulnerability detection is off, or AI detection has no LLM key. Turn it on in Settings, then scan again.",
+          "Vulnerability checks are off, AI detection has no LLM key, or every vulnerability type is turned off. Turn them on in Settings, then scan again.",
         showSettingsLink: true,
       };
     default:

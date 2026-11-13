@@ -14,6 +14,7 @@ import {
 } from "../../../../domain/ai-detection/types";
 import { palette } from "../../../themes/palette";
 import { SecurityFindingRow } from "./SecurityFindingRow";
+import { hasNoModelFiles } from "../components/governanceScore";
 
 interface SecurityFindingsTabProps {
   summary: SecuritySummary | null;
@@ -40,9 +41,9 @@ export function SecurityFindingsTab({
   repositoryOwner,
   repositoryName,
 }: SecurityFindingsTabProps) {
-  // Nothing to check: say so instead of "No security issues detected"
-  const noModelFiles =
-    summary !== null && summary.model_files_scanned === 0 && findings.length === 0;
+  // Nothing to check: say so instead of "No security issues detected". Same
+  // check as the tab badge, so the two agree with or without a severity filter.
+  const noModelFiles = hasNoModelFiles(summary);
 
   return (
     <Box sx={{ mt: "8px" }}>
@@ -177,7 +178,7 @@ export function SecurityFindingsTab({
           Security findings
         </Typography>
 
-        {noModelFiles && !severityFilter ? (
+        {noModelFiles ? (
           <Box
             sx={{
               backgroundColor: palette.background.accent,
