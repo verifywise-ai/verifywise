@@ -70,6 +70,7 @@ const TODAY_NAV_PATHS: ReadonlyArray<{ path: string; source: string }> = [
   { path: "/ai-gateway/models", source: "AI Gateway: Models" },
   { path: "/ai-gateway/logs", source: "AI Gateway: Logs" },
   { path: "/ai-gateway/settings", source: "AI Gateway: Settings" },
+  { path: "/ai-gateway/virtual-keys", source: "AI Gateway: virtual keys route (Settings tab)" },
   { path: "/ai-gateway/mcp/runs", source: "Agent Control: Runs" },
   { path: "/ai-gateway/mcp/audit", source: "Agent Control: Activity" },
   { path: "/ai-gateway/mcp/approvals", source: "Agent Control: Approvals" },
@@ -106,10 +107,16 @@ const navPaths = (): Set<string> =>
     ]),
   );
 
+/** Routes with no entry of their own that a sub-item explicitly claims (matchPrefixes). */
+const claimedPaths = (): Set<string> =>
+  new Set(
+    allItems().flatMap((item) => (item.children ?? []).flatMap((s) => s.matchPrefixes ?? [])),
+  );
+
 describe("NAV_GROUPS: nothing lost", () => {
   it.each(TODAY_NAV_PATHS)("$path ($source) is in the sidebar or kept elsewhere", ({ path }) => {
     const kept = KEPT_ELSEWHERE.some((k) => k.path === path);
-    expect(navPaths().has(path) || kept).toBe(true);
+    expect(navPaths().has(path) || claimedPaths().has(path) || kept).toBe(true);
   });
 
   it("gives a reason for every path kept elsewhere", () => {

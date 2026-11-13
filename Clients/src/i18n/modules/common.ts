@@ -5648,6 +5648,7 @@ export const de: Record<string, string> = {
   "Trust Index settings": "Einstellungen des Vertrauensindex",
   "Shadow AI settings": "Schatten-KI-Einstellungen",
   "Scan settings": "Scan-Einstellungen",
+  "Admin access required.": "Administratorzugriff erforderlich.",
 };
 
 export const fr: Record<string, string> = {
@@ -11230,6 +11231,7 @@ export const fr: Record<string, string> = {
   "Trust Index settings": "Paramètres de l'index de confiance",
   "Shadow AI settings": "Paramètres de l'IA fantôme",
   "Scan settings": "Paramètres d'analyse",
+  "Admin access required.": "Accès administrateur requis.",
 };
 
 export const es: Record<string, string> = {
@@ -16704,4 +16706,5 @@ export const es: Record<string, string> = {
   "Trust Index settings": "Configuración del índice de confianza",
   "Shadow AI settings": "Configuración de IA en la sombra",
   "Scan settings": "Configuración de escaneo",
+  "Admin access required.": "Se requiere acceso de administrador.",
 };
