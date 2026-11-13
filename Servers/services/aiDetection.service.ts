@@ -36,6 +36,7 @@ import {
   IRiskScoreDetails,
   GovernanceStatus,
   IUpdateGovernanceStatusResponse,
+  IFinding,
   RiskGrade,
 } from "../domain.layer/interfaces/i.aiDetection";
 import {
@@ -140,6 +141,21 @@ interface ScanProgressEntry {
  * Key: scanId, Value: progress state with timestamp
  */
 const scanProgressMap = new Map<number, ScanProgressEntry>();
+
+/**
+ * Report a finished scan to GitHub from its stored row. Only webhook-triggered
+ * scans are reported (reportScanToGitHub checks). Errors are logged, never thrown.
+ */
+async function reportStoredScanToGitHub(scanId: number, organizationId: number): Promise<void> {
+  try {
+    const scan = await getScanByIdQuery(scanId, organizationId);
+    if (scan) {
+      await reportScanToGitHub(scan, organizationId);
+    }
+  } catch (err) {
+    logger.error(`Failed to report scan #${scanId} to GitHub:`, err);
+  }
+}
 
 /**
  * Update the linked repository's last_scan fields after scan completion
@@ -1358,6 +1374,45 @@ async function scoreCompletedScan(
 }
 
 /**
+ * Build the input that carries a baseline finding into an incremental scan.
+ * Severity and vulnerability details are kept so the CI critical-findings gate
+ * still sees a carried critical finding, and the baseline suppression is kept
+ * (it is dropped later if its rule is no longer active). Review decisions are
+ * carried separately.
+ */
+function baselineFindingInput(
+  bf: IFinding,
+  scanId: number,
+  filePaths: IFilePath[],
+  findingStatus: "fixed" | "carried_forward",
+): ICreateFindingInput {
+  return {
+    scan_id: scanId,
+    finding_type: bf.finding_type,
+    category: bf.category,
+    name: bf.name,
+    provider: bf.provider,
+    confidence: bf.confidence,
+    risk_level: bf.risk_level,
+    severity: bf.severity ?? null,
+    description: bf.description,
+    documentation_url: bf.documentation_url,
+    file_count: filePaths.length,
+    file_paths: filePaths,
+    license_id: bf.license_id,
+    license_name: bf.license_name,
+    license_risk: bf.license_risk,
+    license_source: bf.license_source,
+    mitigation: bf.mitigation,
+    data_flow_summary: bf.data_flow_summary,
+    vulnerability_details: bf.vulnerability_details,
+    suppressed: bf.suppressed === true,
+    suppression_rule_id: bf.suppression_rule_id ?? null,
+    finding_status: findingStatus,
+  };
+}
+
+/**
  * Execute an incremental scan: scan only changed files and merge with baseline.
  */
 async function executeIncrementalScan(
@@ -1504,66 +1559,17 @@ async function executeIncrementalScan(
 
     if (allInDeleted) {
       // All files deleted → fixed
-      carriedForwardInputs.push({
-        scan_id: scanId,
-        finding_type: bf.finding_type,
-        category: bf.category,
-        name: bf.name,
-        provider: bf.provider,
-        confidence: bf.confidence,
-        risk_level: bf.risk_level,
-        description: bf.description,
-        documentation_url: bf.documentation_url,
-        file_count: bf.file_count,
-        file_paths: filePaths,
-        license_id: bf.license_id,
-        license_name: bf.license_name,
-        license_risk: bf.license_risk,
-        license_source: bf.license_source,
-        finding_status: "fixed",
-      });
+      carriedForwardInputs.push(baselineFindingInput(bf, scanId, filePaths, "fixed"));
     } else if (allOutsideChanged) {
       // All files unchanged → carried forward
-      carriedForwardInputs.push({
-        scan_id: scanId,
-        finding_type: bf.finding_type,
-        category: bf.category,
-        name: bf.name,
-        provider: bf.provider,
-        confidence: bf.confidence,
-        risk_level: bf.risk_level,
-        description: bf.description,
-        documentation_url: bf.documentation_url,
-        file_count: bf.file_count,
-        file_paths: filePaths,
-        license_id: bf.license_id,
-        license_name: bf.license_name,
-        license_risk: bf.license_risk,
-        license_source: bf.license_source,
-        finding_status: "carried_forward",
-      });
+      carriedForwardInputs.push(baselineFindingInput(bf, scanId, filePaths, "carried_forward"));
     } else {
       // Mixed: carry forward only unchanged file paths
       const unchangedPaths = filePaths.filter((fp) => !changedPathsSet.has(fp.path));
       if (unchangedPaths.length > 0) {
-        carriedForwardInputs.push({
-          scan_id: scanId,
-          finding_type: bf.finding_type,
-          category: bf.category,
-          name: bf.name,
-          provider: bf.provider,
-          confidence: bf.confidence,
-          risk_level: bf.risk_level,
-          description: bf.description,
-          documentation_url: bf.documentation_url,
-          file_count: unchangedPaths.length,
-          file_paths: unchangedPaths,
-          license_id: bf.license_id,
-          license_name: bf.license_name,
-          license_risk: bf.license_risk,
-          license_source: bf.license_source,
-          finding_status: "carried_forward",
-        });
+        carriedForwardInputs.push(
+          baselineFindingInput(bf, scanId, unchangedPaths, "carried_forward"),
+        );
       }
       // Changed paths will be re-detected (or not) by the new scan → ON CONFLICT merges
     }
@@ -1588,14 +1594,22 @@ async function executeIncrementalScan(
   try {
     const allFindings = [...newFindingInputs, ...carriedForwardInputs];
 
+    // Count what is stored: the batch insert merges case-variant duplicates
+    let totalFindings = 0;
     if (allFindings.length > 0) {
       const suppressionRules = await getActiveSuppressionsQuery(ctx.organizationId);
+      // Carried findings are re-matched against the current rules rather than
+      // keeping their baseline flag, so an edited or deleted rule stops
+      // applying on the next scan.
+      for (const finding of allFindings) {
+        finding.suppressed = false;
+        finding.suppression_rule_id = null;
+      }
       applySuppressions(allFindings, suppressionRules);
-      await createFindingsBatchQuery(allFindings, ctx.organizationId, transaction);
+      totalFindings = await createFindingsBatchQuery(allFindings, ctx.organizationId, transaction);
     }
 
     // Complete scan
-    const totalFindings = allFindings.length;
     const completedAt = new Date();
     const durationMs = progressState.startedAt
       ? completedAt.getTime() - progressState.startedAt.getTime()
@@ -1634,10 +1648,8 @@ async function executeIncrementalScan(
     invalidateAIDetectionStatsCache(ctx.organizationId).catch(() => {});
 
     if (scan) {
-      // Report to GitHub for webhook-triggered scans (fire-and-forget)
-      reportScanToGitHub(scan, ctx.organizationId).catch((err) => {
-        logger.error(`Failed to report scan #${scanId} to GitHub:`, err);
-      });
+      // Report to GitHub from the stored row, which now has the score
+      void reportStoredScanToGitHub(scanId, ctx.organizationId);
     }
 
     // Last step: once announced (notified_at claimed), a later failure here
@@ -2044,6 +2056,8 @@ async function executeScan(
       }
 
       const findingInputs = Array.from(deduplicatedFindingsMap.values());
+      // Rows actually stored; the batch insert merges case-variant duplicates
+      let storedFindingsCount = 0;
 
       // Fetch active suppression rules once for both insert paths below
       const suppressionRules =
@@ -2083,48 +2097,34 @@ async function executeScan(
         console.log(`[LICENSE] Total licenses found: ${licensesFound}/${findingInputs.length}`);
 
         applySuppressions(findingInputs, suppressionRules);
-        await createFindingsBatchQuery(findingInputs, ctx.organizationId, transaction);
-      }
-
-      // Store vulnerability findings
-      if (vulnerabilityFindings.length > 0) {
-        applySuppressions(vulnerabilityFindings, suppressionRules);
-        await createFindingsBatchQuery(vulnerabilityFindings, ctx.organizationId, transaction);
-      }
-
-      // Store model security findings (deduplicate by name+provider to avoid ON CONFLICT errors)
-      if (modelSecurityFindings.length > 0) {
-        // Deduplicate security findings by aggregating file paths
-        const securityFindingsMap = new Map<string, ICreateModelSecurityFindingInput>();
-        for (const finding of modelSecurityFindings) {
-          const normalizedProvider = finding.provider || "NULL";
-          const key = `${finding.name}::${normalizedProvider}`;
-          const existing = securityFindingsMap.get(key);
-          if (existing) {
-            // Merge file paths
-            const existingPaths = existing.file_paths || [];
-            const newPaths = finding.file_paths || [];
-            existing.file_paths = [...existingPaths, ...newPaths];
-            existing.file_count = existing.file_paths.length;
-          } else {
-            securityFindingsMap.set(key, { ...finding });
-          }
-        }
-        const deduplicatedSecurityFindings = Array.from(securityFindingsMap.values());
-        await createModelSecurityFindingsBatchQuery(
-          deduplicatedSecurityFindings,
+        storedFindingsCount += await createFindingsBatchQuery(
+          findingInputs,
           ctx.organizationId,
           transaction,
         );
       }
 
-      // Mark scan as completed (include both library and security findings)
-      const deduplicatedSecurityCount =
-        modelSecurityFindings.length > 0
-          ? new Set(modelSecurityFindings.map((f) => `${f.name}::${f.provider}`)).size
-          : 0;
-      const totalFindings =
-        findingsMap.size + deduplicatedSecurityCount + vulnerabilityFindings.length;
+      // Store vulnerability findings
+      if (vulnerabilityFindings.length > 0) {
+        applySuppressions(vulnerabilityFindings, suppressionRules);
+        storedFindingsCount += await createFindingsBatchQuery(
+          vulnerabilityFindings,
+          ctx.organizationId,
+          transaction,
+        );
+      }
+
+      // Store model security findings (the batch insert merges duplicates)
+      if (modelSecurityFindings.length > 0) {
+        storedFindingsCount += await createModelSecurityFindingsBatchQuery(
+          modelSecurityFindings,
+          ctx.organizationId,
+          transaction,
+        );
+      }
+
+      // Mark scan as completed (library, vulnerability and model security findings)
+      const totalFindings = storedFindingsCount;
       const completedAt = new Date();
       const durationMs = progressState.startedAt
         ? completedAt.getTime() - progressState.startedAt.getTime()
@@ -2167,13 +2167,9 @@ async function executeScan(
         // Silently ignore cache invalidation errors
       });
 
-      // Report to GitHub for webhook-triggered scans (fire-and-forget)
-      const completedScan = await getScanByIdQuery(scanId, ctx.organizationId);
-      if (completedScan) {
-        reportScanToGitHub(completedScan, ctx.organizationId).catch((err) => {
-          logger.error(`Failed to report scan #${scanId} to GitHub:`, err);
-        });
-      }
+      // Report to GitHub from the stored row, which now has the score
+      // (fire-and-forget, never throws)
+      void reportStoredScanToGitHub(scanId, ctx.organizationId);
 
       // Last step: once announced (notified_at claimed), a later failure here
       // would mark the scan failed but could no longer announce it.
@@ -2215,6 +2211,11 @@ async function executeScan(
       logger.error(`Failed to update repository last scan for scan ${scanId}:`, err);
     });
     void notifyAiDetectionScanFailed(scanId, ctx.organizationId);
+
+    // Resolve the commit status of a webhook scan as "error", so a required
+    // check does not stay pending. Cancelled scans are reported too: nothing
+    // else would ever resolve their check (fire-and-forget, never throws).
+    void reportStoredScanToGitHub(scanId, ctx.organizationId);
   } finally {
     // Clean up cloned repository
     if (clonedRepoPath) {

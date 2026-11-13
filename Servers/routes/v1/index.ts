@@ -36,6 +36,7 @@ import policyTemplatesRoutes from "./policyTemplates.route";
 import frameworkImportRoutes from "./frameworkImport.route";
 import importedFrameworkAssessmentRoutes from "./importedFrameworkAssessment.route";
 import intakeSubmissionsRoutes from "./intakeSubmissions.route";
+import aiDetectionRepositoriesRoutes from "./aiDetectionRepositories.route";
 
 const router = express.Router();
 
@@ -93,5 +94,7 @@ router.use("/framework-import", frameworkImportRoutes);
 router.use("/imported-framework-assessments", importedFrameworkAssessmentRoutes);
 // Intake submission preview and approval with custom field values (#5262).
 router.use("/intake-submissions", intakeSubmissionsRoutes);
+// AI Detection CI/CD: the public webhook URL for repository setup.
+router.use("/ai-detection-repositories", aiDetectionRepositoriesRoutes);
 
 export default router;

@@ -3194,9 +3194,12 @@ components:
           type: integer
           minimum: 0
           maximum: 59
+        has_webhook_secret:
+          type: boolean
+          description: 'Whether a webhook secret is set. Read responses never include the secret.'
         webhook_secret:
           type: string
-          nullable: true
+          description: 'Returned only on the create or update response that generated the secret (CI/CD turned on for the first time), so it can be copied into GitHub once.'
         ci_enabled:
           type: boolean
         ci_min_score:
@@ -7929,6 +7932,8 @@ tags:
     name: 'v1: V1/Ai App Lifecycle'
   -
     name: 'v1: V1/Ai Apps'
+  -
+    name: 'v1: V1/Ai Detection Repositories'
   -
     name: 'v1: V1/Dashboard'
   -
@@ -28776,6 +28781,20 @@ paths:
       tags:
         - 'v1: Intake submissions'
       operationId: approveSubmissionV1
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-detection-repositories/webhook-config:
+    get:
+      summary: 'Get Webhook Config Controller'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Detection Repositories'
+      operationId: getWebhookConfigController
       security:
         -
           bearerAuth: []

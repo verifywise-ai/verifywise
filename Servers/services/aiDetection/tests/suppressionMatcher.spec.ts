@@ -98,6 +98,33 @@ describe("suppressionMatcher", () => {
       expect(result[1].suppressed).toBeUndefined();
     });
 
+    it("should match exact name and provider rules case-insensitively", () => {
+      // "qdrant" and "Qdrant" are merged into one finding stored as "Qdrant",
+      // so a rule written for either spelling must keep matching it.
+      const findings: ICreateFindingInput[] = [
+        { name: "Qdrant", finding_type: "library", category: "RAG", provider: "Qdrant" },
+        { name: "CrewAI", finding_type: "library", category: "Agents", provider: "CrewAI" },
+      ];
+      const rules: ISuppression[] = [
+        { id: 30, field: "name", match_type: "exact", value: "qdrant" } as ISuppression,
+        { id: 31, field: "provider", match_type: "exact", value: " crewai " } as ISuppression,
+      ];
+      const result = applySuppressions(findings, rules);
+      expect(result[0].suppression_rule_id).toBe(30);
+      expect(result[1].suppression_rule_id).toBe(31);
+    });
+
+    it("should keep exact category and finding type rules case-sensitive", () => {
+      const findings: ICreateFindingInput[] = [
+        { name: "x", finding_type: "secret", category: "Security", provider: "openai" },
+      ];
+      const rules: ISuppression[] = [
+        { id: 32, field: "category", match_type: "exact", value: "security" } as ISuppression,
+      ];
+      const result = applySuppressions(findings, rules);
+      expect(result[0].suppressed).toBeUndefined();
+    });
+
     it("should use first matching rule and stop checking", () => {
       const findings: ICreateFindingInput[] = [
         { name: "match", finding_type: "secret", category: "security", provider: "openai" },

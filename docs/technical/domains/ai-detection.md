@@ -54,13 +54,26 @@ ai_detection_scans
 └── updated_at (TIMESTAMPTZ)
 ```
 
+All AI Detection timestamps are `TIMESTAMPTZ`. Until migration
+`20261112143747-ai-detection-scan-fk-and-timestamptz` the scans, findings and risk
+scoring config tables used `TIMESTAMP` with mixed contents: columns set with `NOW()`
+held UTC wall time (Sequelize runs sessions at `+00:00`), while `started_at` and
+`completed_at`, bound from a JS `Date` in a raw query, held the Node server's local
+wall time. The UI therefore showed scans hours off. The migration recovers each
+row's offset from `started_at - created_at` (rounded to 15 minutes), shifts those two
+columns to UTC and converts every column with `AT TIME ZONE 'UTC'`. Rows without
+`started_at` are not shifted: `updated_at` is rewritten after completion (risk
+scoring, cache cleanup), so it cannot anchor `completed_at`. `updateScanProgressQuery` now binds `started_at` /
+`completed_at` as ISO strings, so the stored instant does not depend on the process
+or session time zone.
+
 ### Findings Table
 
 ```
 ai_detection_findings
 ├── id (PK, SERIAL)
 ├── organization_id (INTEGER NOT NULL)
-├── scan_id (FK → ai_detection_scans, CASCADE DELETE)
+├── scan_id (FK → ai_detection_scans, ON DELETE CASCADE, `fk_ai_detection_findings_scan`)
 ├── finding_type (VARCHAR(100) NOT NULL)
 ├── category (VARCHAR(100) NOT NULL)
 ├── name (VARCHAR(255) NOT NULL)
@@ -74,14 +87,43 @@ ai_detection_findings
 ├── license_id, license_name, license_risk, license_source
 ├── governance_status (VARCHAR(20))
 ├── governance_updated_at, governance_updated_by
-├── severity, cwe_id, cwe_name (security fields)
+├── severity (critical/high/medium/low; model security and LLM vulnerability findings), cwe_id, cwe_name
 ├── owasp_ml_id, owasp_ml_name (ML security)
 ├── threat_type, operator_name, module_name
 └── created_at (TIMESTAMPTZ)
 
 Constraints:
-└── UNIQUE(scan_id, name, provider)
+├── UNIQUE(scan_id, name, provider)
+└── FOREIGN KEY(scan_id) → ai_detection_scans(id) ON DELETE CASCADE
 ```
+
+The scan FK was added in `20261112143747`, which first deleted findings whose scan no
+longer existed (left behind by earlier scan deletes). `deleteScanQuery` also deletes
+the scan's findings explicitly before the scan. Vulnerability details cascade from
+findings (`finding_id` FK).
+
+Findings are merged before insert by `mergeDuplicateFindings`
+(`utils/aiDetectionFindingMerge.utils.ts`), keyed on scan, name and provider
+compared case-insensitively. Some libraries appear twice in the pattern catalogue
+(for example `qdrant` as a vector database library and `Qdrant` as a RAG component,
+`crewai` and `CrewAI`), and both entries match the same import. The merged finding
+keeps the capitalised display name with its finding type, category and description,
+unions the file lists (by path and line) and recomputes `file_count`, and keeps the
+higher confidence and risk level. It keeps the highest severity, and the description,
+mitigation, vulnerability details and CWE/OWASP fields of the variant that supplied
+it. Model security findings go through the same merge in
+`createModelSecurityFindingsBatchQuery`. A scan's `findings_count` is the number of
+rows stored after this merge.
+
+Suppression rules are matched against each variant before the merge. The merge fails
+closed: the merged finding is suppressed only when its most severe variant was (at
+equal severity, only when every variant was), so a rule written for a low-severity
+variant never hides a critical one from the score or the CI gate. Exact rules on
+`name` and `provider` compare case-insensitively, like the merge key, so a rule on
+`qdrant` matches every case variant and keeps the stored `Qdrant` finding suppressed.
+Incremental scans carry a baseline finding's severity and vulnerability details
+forward, but not its suppression: every finding is matched against the current rules,
+so an edited or deleted rule stops applying on the next scan.
 
 ### Vulnerability Details Table
 
@@ -143,8 +185,12 @@ ai_detection_repositories
 ├── schedule_minute (INTEGER)
 ├── next_scan_at (TIMESTAMPTZ)
 ├── last_scan_at (TIMESTAMPTZ)
-├── last_scan_id (INTEGER)
+├── last_scan_id (INTEGER, FK → ai_detection_scans, ON DELETE SET NULL)
 ├── github_token_id (INTEGER)
+├── webhook_secret (VARCHAR(255))            -- HMAC secret for GitHub deliveries
+├── ci_enabled, ci_min_score, ci_max_critical, ci_post_comments, ci_status_checks
+├── last_webhook_at (TIMESTAMPTZ)            -- most recent verified GitHub delivery
+├── last_webhook_status (VARCHAR(30))        -- ok | error
 ├── created_by (INTEGER NOT NULL)
 ├── created_at (TIMESTAMPTZ)
 └── updated_at (TIMESTAMPTZ)
@@ -278,6 +324,9 @@ type GovernanceStatus = 'reviewed' | 'approved' | 'flagged' | null;
 | DELETE | `/ai-detection/repositories/:id` | Delete repository | Admin |
 | POST | `/ai-detection/repositories/:id/scan` | Trigger scan for repo | Admin, Editor |
 | GET | `/ai-detection/repositories/:id/scans` | Get repo scan history | All |
+| POST | `/ai-detection/repositories/:id/webhook-secret` | Regenerate the webhook secret | Admin, Editor |
+| GET | `/v1/ai-detection-repositories/webhook-config` | Public webhook URL (`webhook_url`, `is_public`); optional `api_base_url` query = the app's absolute API base | All |
+| POST | `/webhooks/github` | GitHub webhook receiver (HMAC, no JWT) | Public |
 
 ### Start Scan Request
 
@@ -514,6 +563,17 @@ Three triggers, seeded by `20261112143741-ai-detection-notifications-and-trigger
 
 Every active automation of the trigger runs (not only the first). Template variables (`utils/automation/aiDetection.automation.utils.ts`): `{{scan.repository}}`, `{{scan.url}}`, `{{scan.id}}`, `{{scan.status}}`, `{{scan.trigger}}`, `{{scan.findings_count}}`, `{{scan.high_risk_count}}`, `{{scan.secret_count}}`, `{{scan.grade}}`, `{{scan.score}}`, `{{scan.previous_grade}}`, `{{scan.new_high_risk_count}}`, `{{scan.new_high_risk_findings}}` (first 10 names), `{{scan.new_secret_count}}`, `{{scan.error}}`, `{{date_and_time}}` (UTC, for example "Nov 13, 2026, 14:00 UTC"; the email's sent time uses the same format). A grade or score that could not be calculated reads "Not calculated".
 
+## CI/CD Webhooks
+
+- **Setup:** creating a repository with `ci_enabled: true`, or turning CI/CD on for a repository without a secret, generates `webhook_secret` server-side (`generateWebhookSecret`). The add/edit modal then shows a "Connect GitHub" step with the URL, the secret and the GitHub steps.
+- **Secret exposure:** `webhook_secret` is never part of a read response. `toRepositoryResponse` (`utils/aiDetectionRepository.utils.ts`) strips it from list, get and update responses and adds `has_webhook_secret`. The secret is returned only once, to the editor whose request generated it: the create response, the update response that turned CI/CD on and generated it, and `POST /:id/webhook-secret`. Anyone with read access (Auditors included) would otherwise be able to sign forged deliveries. The edit modal shows "A webhook secret is set" with a "Regenerate secret" button; a regenerated secret is shown once. This was fixed in place on the legacy routes as a security bug fix; the change is additive for clients except that `webhook_secret` no longer appears on reads.
+- **Null CI/CD fields:** on `POST`/`PATCH /ai-detection/repositories`, a `ci_*` field sent as `null` means its default (`ci_enabled` false, `ci_min_score` 70, `ci_max_critical` 0, `ci_post_comments` and `ci_status_checks` true), as older clients send it (`applyCiDefaults`). Absent fields are left unchanged on update.
+- **Webhook URL:** `getPublicBaseUrl` (`utils/publicUrl.utils.ts`) picks the API's public address: `API_PUBLIC_URL` when set, then the app's absolute `VITE_APP_API_BASE_URL` (sent as `api_base_url`) when it is on a public host, then `FRONTEND_URL` (deployments proxy `/api/` from the app's public host), then the app's private address as a last resort. There is no localhost default. `buildGitHubWebhookUrl` in `services/webhook.service.ts` appends `/api/webhooks/github` (a base already ending in `/api` is accepted). `is_public` (`isPublicHostname`) is false for a missing address, loopback (`127/8`, `::1`), `0.0.0.0`, private (`10/8`, `172.16/12`, `192.168/16`, `fc00::/7`), link-local (`169.254/16`, `fe80::/10`), carrier-grade NAT (`100.64/10`), single-label hosts and `.local`/`.localhost`/`.internal`/`.lan`/`.home.arpa` names (`host.docker.internal`); the modal then warns that GitHub must be able to reach the address. Set `API_PUBLIC_URL` when the API is served on a different host from the app. The modal fetches the config only once CI/CD is on, cached for an hour (`useWebhookConfig`).
+- **Matching a delivery:** `getRepositoriesForWebhookQuery` returns every enabled, CI-enabled repository with the payload's owner/name, compared case-insensitively (GitHub names are case-insensitive), across organizations (the endpoint has no tenant context; capped at 50 rows). The signature is checked against each candidate's secret with a constant-time compare, and the delivery is processed for every repository whose secret verifies. Secrets are random per repository, so in practice that is the one organization that set up the webhook; if two ever verify, each is handled and recorded on its own row.
+- **Events:** `push` to the default branch starts a full scan; `pull_request` with action `opened`, `synchronize` or `reopened` starts an incremental scan; `ping` is acknowledged. Everything else is ignored.
+- **Delivery tracking:** `webhook.ctrl.ts` writes `last_webhook_at` / `last_webhook_status` for each verified repository (`recordWebhookDeliveryQuery`, scoped by id and organization) only after the HMAC signature verifies: `ok`, or `error` when processing fails. Unsigned, bad-signature and no-secret requests are logged and never written, so an unauthenticated caller cannot overwrite the status. The route is rate-limited (`webhookLimiter`, 100/min). Recording never fails the response to GitHub.
+- **Results:** `githubStatusReporter.ts` posts a commit status ("VerifyWise AI Detection") and, for pull requests, a comment, using the organization's GitHub token, after a webhook-triggered scan completes.
+
 ## Detection Patterns
 
 ### Supported Technologies (100+)
@@ -600,20 +660,25 @@ __pycache__, dist, build, target
    └── Store confirmed findings with vulnerability details
 
 7. Finding Aggregation
-   ├── Deduplicate by name + provider
+   ├── Deduplicate by name + provider (case-insensitive) + finding type
+   ├── Merge case variants of one library (see Findings Table)
    └── Aggregate file paths per finding
 
 8. Cross-referencing
    └── Link vulnerability findings to overlapping non-vulnerability findings
 
-9. Governance Score Calculation (after the findings commit, before completion is reported)
-   ├── Calculate dimension scores from all findings and store score, grade, details
-   └── Optional LLM enhancement continues in the background (llm_status: pending → done | failed)
+9. Database Insert
+   └── Batch insert findings, then mark the scan completed
 
-10. Database Insert
-    └── Batch insert findings
+10. Governance Score Calculation (after the findings commit, before completion is reported)
+    ├── Calculate dimension scores from all findings and store score, grade, details
+    └── Optional LLM enhancement continues in the background (llm_status: pending → done | failed)
 
-11. Cleanup
+11. Report and announce
+    ├── Report webhook-triggered scans to GitHub from the stored row, which has the score (see CI status checks)
+    └── Announce the scan (see Notifications)
+
+12. Cleanup
     └── Remove temp clone directory
 ```
 
@@ -682,6 +747,42 @@ useEffect(() => {
 ```
 
 ## GitHub Integration
+
+### CI status checks (`githubStatusReporter.ts`)
+
+Webhook-triggered scans report back to GitHub when the repository has
+`ci_status_checks` (commit status, context "VerifyWise AI Detection") and/or
+`ci_post_comments` (PR comment). `executeScan` and `executeIncrementalScan` in
+`aiDetection.service.ts` await `scoreCompletedScan` first and only then call
+`reportStoredScanToGitHub`, which re-reads the scan row, so the check always reads
+the stored rule-based score. Failed and cancelled scans are reported too
+(`error`), so a required check never stays pending.
+
+`evaluateThresholds(scan, repo, criticalCount)`:
+
+| Result | When | Example description |
+|--------|------|---------------------|
+| `failure` | `round(risk_score) < ci_min_score` (score is 0–100, higher is safer; equal passes) | `Governance score 62 is below the minimum of 70` |
+| `failure` | critical findings `> ci_max_critical` | `3 critical findings exceed the limit of 0` |
+| `success` | both thresholds pass | `Governance score 85 (minimum 70), 0 critical findings (limit 0)` |
+| `error` | scan not completed, no governance score (scoring failed), or the critical count could not be read | `Governance score is not available, so thresholds could not be evaluated` |
+
+A critical finding (`countCriticalFindingsQuery`) is one with `severity = 'critical'`
+or `finding_type = 'secret'` (hardcoded credentials carry no severity but always
+block). Model security findings write `severity` in
+`createModelSecurityFindingsBatchQuery`; LLM vulnerability findings write it in
+`createFindingsBatchQuery` (the analyzer sets `severity` on the input). Before
+`20261112143747` vulnerability severity was stored only in
+`ai_detection_vulnerability_details.vulnerability_details`, so the migration backfills
+empty severities from that JSON; incremental scans carry severity forward with the
+baseline finding. Findings that are suppressed or have governance status `suppressed`
+or `accepted_risk` are not counted, as the governance score also leaves them out.
+Findings marked `fixed` by an incremental scan are not counted either, although the
+score still includes them. The total `findings_count` is not used for the gate.
+
+The score comparison uses the whole-number score shown in the status, so a stored
+69.6 is shown as 70 and passes a minimum of 70. A webhook scan that fails or is
+cancelled is reported as `error`, so a required check does not stay pending.
 
 ### Token Management
 
