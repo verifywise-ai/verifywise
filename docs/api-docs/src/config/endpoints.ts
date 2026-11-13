@@ -12798,6 +12798,39 @@ export const v1V1aiDetectionEndpoints: Endpoint[] = [
     ],
     tag: "v1: V1/Ai Detection",
   },
+  {
+    method: 'GET',
+    path: '/v1/ai-detection/scans/{scanId}/findings',
+    summary: "Get Scan Findings V1 Controller",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Detection",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/ai-detection/scans/{scanId}/findings/{findingId}/governance',
+    summary: "Update Governance Status V1 Controller",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Detection",
+  },
+  {
+    method: 'POST',
+    path: '/v1/ai-detection/scans/{scanId}/suggested-risks/risks',
+    summary: "Add Suggested Risk To Register Controller",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Detection",
+  },
 ];
 
 // v1: V1/Dashboard endpoints

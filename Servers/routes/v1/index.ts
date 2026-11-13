@@ -36,7 +36,7 @@ import policyTemplatesRoutes from "./policyTemplates.route";
 import frameworkImportRoutes from "./frameworkImport.route";
 import importedFrameworkAssessmentRoutes from "./importedFrameworkAssessment.route";
 import intakeSubmissionsRoutes from "./intakeSubmissions.route";
-import aiDetectionSuggestedRisksRoutes from "./aiDetectionSuggestedRisks.route";
+import aiDetectionRoutes from "./aiDetection.route";
 
 const router = express.Router();
 
@@ -95,8 +95,8 @@ router.use("/imported-framework-assessments", importedFrameworkAssessmentRoutes)
 // Intake submission preview and approval with custom field values (#5262).
 router.use("/intake-submissions", intakeSubmissionsRoutes);
 
-// What was done with an AI Detection scan's suggested risks; the legacy
+// AI Detection finding reviews and suggested risks; the legacy
 // /api/ai-detection router is frozen.
-router.use("/ai-detection", aiDetectionSuggestedRisksRoutes);
+router.use("/ai-detection", aiDetectionRoutes);
 
 export default router;

@@ -162,7 +162,7 @@ export const riskScoringContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'After you save, the suggestion is linked to the new risk and saved on the scan, so it stays handled after a reload. A suggestion that is already linked to a risk can\'t be added again. If that risk is later deleted, the suggestion is offered again.',
+      text: 'When you save, the risk is created and linked to the suggestion in one step, and the link is saved on the scan, so it stays handled after a reload. A suggestion that is already linked to a risk can\'t be added again: if someone else added it in the meantime, you see a message and the suggestion shows as added. If that risk is later deleted, the suggestion is offered again.',
     },
     {
       type: 'heading',
@@ -172,7 +172,7 @@ export const riskScoringContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Click **Ignore** on a suggestion and pick a reason: "This has already been added before" or "This is not a real risk". The reason is saved with the suggestion. Ignoring a suggestion doesn\'t change the score.',
+      text: 'Click **Ignore** on a suggestion and pick a reason: "This has already been added before" or "This is not a real risk". The reason is saved with the suggestion. Ignoring a suggestion doesn\'t change the score. **Ignore**, **Restore** and **Add to risk register** are shown only to users whose role can edit AI Detection; **Add to risk register** also needs permission to edit risks.',
     },
     {
       type: 'heading',

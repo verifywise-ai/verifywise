@@ -16,6 +16,7 @@ import { FilePathItem } from "./FilePathItem";
 import { FindingRowGovernancePopover } from "./FindingRowGovernancePopover";
 import { FindingGovernanceStatus } from "./FindingGovernanceStatus";
 import { useFindingGovernance } from "./useFindingGovernance";
+import { useCan } from "../../../../application/hooks/useCan";
 import {
   CONFIDENCE_CHIP_VARIANT,
   CONFIDENCE_TOOLTIPS,
@@ -55,6 +56,7 @@ export function FindingRow({
     isUpdating,
     changeStatus: handleStatusChange,
   } = useFindingGovernance({ finding, scanId, onGovernanceChange, onStatusMessage });
+  const canEdit = useCan("aiDetection.edit");
   const localStatus = governance.status;
   const [suppressDialogOpen, setSuppressDialogOpen] = useState(false);
 
@@ -240,22 +242,25 @@ export function FindingRow({
             </Typography>
           </Box>
           {/* Governance Status Button */}
-          <Tooltip title={localStatus ? "Change status" : "Set status"} arrow placement="top">
-            <IconButton
-              size="small"
-              onClick={handleGovernanceClick}
-              disabled={isUpdating}
-              aria-label={localStatus ? "Change status" : "Set status"}
-              sx={{
-                "border": `1px solid ${palette.border.light}`,
-                "borderRadius": "4px",
-                "p": "4px",
-                "&:hover": { backgroundColor: palette.background.hover },
-              }}
-            >
-              <StatusIcon size={16} color={statusColor} />
-            </IconButton>
-          </Tooltip>
+          {/* Status changes need the permission the endpoint authorizes on */}
+          {canEdit && (
+            <Tooltip title={localStatus ? "Change status" : "Set status"} arrow placement="top">
+              <IconButton
+                size="small"
+                onClick={handleGovernanceClick}
+                disabled={isUpdating}
+                aria-label={localStatus ? "Change status" : "Set status"}
+                sx={{
+                  "border": `1px solid ${palette.border.light}`,
+                  "borderRadius": "4px",
+                  "p": "4px",
+                  "&:hover": { backgroundColor: palette.background.hover },
+                }}
+              >
+                <StatusIcon size={16} color={statusColor} />
+              </IconButton>
+            </Tooltip>
+          )}
         </Box>
       </Box>
 

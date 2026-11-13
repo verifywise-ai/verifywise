@@ -58,6 +58,10 @@ export function useScanDetails() {
   const [isRecalculating, setIsRecalculating] = useState(false);
   const [alert, setAlert] = useState<ScanDetailsAlert | null>(null);
 
+  // Whether this is the repository's latest completed scan; status changes on
+  // any other scan apply to that scan only
+  const [isLatestScan, setIsLatestScan] = useState<boolean | undefined>(undefined);
+
   const showAlert = (variant: "success" | "error", body: string) => {
     setAlert({ variant, body });
     setTimeout(() => setAlert(null), 3000);
@@ -115,6 +119,7 @@ export function useScanDetails() {
           ]),
         ]);
         setScan(scanResponse);
+        setIsLatestScan(findingsResponse.is_latest_scan);
         libraryState.setFindings(findingsResponse.findings);
         libraryState.setTotalPages(findingsResponse.pagination.total_pages);
         apiCallState.setFindings(apiCallFindingsResponse.findings);
@@ -201,6 +206,7 @@ export function useScanDetails() {
   return {
     scanId,
     scan,
+    isLatestScan,
     isLoading,
     activeTab,
     handleTabChange,

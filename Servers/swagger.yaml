@@ -28822,3 +28822,45 @@ paths:
       security:
         -
           bearerAuth: []
+  '/v1/ai-detection/scans/{scanId}/findings':
+    get:
+      summary: 'Get Scan Findings V1 Controller'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Detection'
+      operationId: getScanFindingsV1Controller
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-detection/scans/{scanId}/findings/{findingId}/governance':
+    patch:
+      summary: 'Update Governance Status V1 Controller'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Detection'
+      operationId: updateGovernanceStatusV1Controller
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-detection/scans/{scanId}/suggested-risks/risks':
+    post:
+      summary: 'Add Suggested Risk To Register Controller'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Detection'
+      operationId: addSuggestedRiskToRegisterController
+      security:
+        -
+          bearerAuth: []

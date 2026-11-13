@@ -39,10 +39,13 @@ export const de: Record<string, string> = {
   "Hide ignored": "Ignorierte ausblenden",
   "Change status": "Status ändern",
   "Set status": "Status festlegen",
-  "Kept on this finding in later scans of the repository.":
-    "Bleibt bei späteren Scans des Repositorys für diesen Fund erhalten.",
-  "Kept on this finding in later scans of the repository unless its risk level rises.":
-    "Bleibt bei späteren Scans des Repositorys für diesen Fund erhalten, sofern sein Risikoniveau nicht steigt.",
+  "A status set on the repository's latest scan is kept in later scans.":
+    "Ein Status, der beim neuesten Scan des Repositorys gesetzt wird, bleibt in späteren Scans erhalten.",
+  "A status set on the repository's latest scan is kept in later scans, unless the finding's risk level rises or, for secrets, vulnerabilities and model security findings, it appears in a new file.":
+    "Ein Status, der beim neuesten Scan des Repositorys gesetzt wird, bleibt in späteren Scans erhalten, außer das Risikoniveau des Funds steigt oder er erscheint (bei Secrets, Schwachstellen und Modellsicherheits-Funden) in einer neuen Datei.",
+  "This is not the repository's latest scan. Status changes here apply to this scan only and are not kept in later scans.":
+    "Dies ist nicht der neueste Scan dieses Repositorys. Statusänderungen gelten nur für diesen Scan und werden nicht in spätere Scans übernommen.",
+  "Status updated on this scan only: {status}": "Status nur für diesen Scan aktualisiert: {status}",
   "by {name}": "von {name}",
   "Ignored: {reason}": "Ignoriert: {reason}",
   "{added} added to the risk register, {ignored} ignored":
@@ -51,8 +54,6 @@ export const de: Record<string, string> = {
     "Dieser Vorschlag ist bereits im Risikoregister",
   "Failed to check the suggested risk. Try again.":
     "Das vorgeschlagene Risiko konnte nicht geprüft werden. Versuchen Sie es erneut.",
-  "The risk was added, but it could not be linked to this suggestion":
-    "Das Risiko wurde hinzugefügt, konnte aber nicht mit diesem Vorschlag verknüpft werden",
   "Failed to ignore the suggestion": "Der Vorschlag konnte nicht ignoriert werden",
   "Failed to restore the suggestion": "Der Vorschlag konnte nicht wiederhergestellt werden",
   "Failed to load what was done with the suggested risks":
@@ -395,10 +396,14 @@ export const fr: Record<string, string> = {
   "Hide ignored": "Masquer les ignorés",
   "Change status": "Modifier le statut",
   "Set status": "Définir le statut",
-  "Kept on this finding in later scans of the repository.":
-    "Conservé sur ce résultat lors des analyses ultérieures du dépôt.",
-  "Kept on this finding in later scans of the repository unless its risk level rises.":
-    "Conservé sur ce résultat lors des analyses ultérieures du dépôt, sauf si son niveau de risque augmente.",
+  "A status set on the repository's latest scan is kept in later scans.":
+    "Un statut défini sur la dernière analyse du dépôt est conservé lors des analyses ultérieures.",
+  "A status set on the repository's latest scan is kept in later scans, unless the finding's risk level rises or, for secrets, vulnerabilities and model security findings, it appears in a new file.":
+    "Un statut défini sur la dernière analyse du dépôt est conservé lors des analyses ultérieures, sauf si le niveau de risque du résultat augmente ou s'il apparaît dans un nouveau fichier (pour les secrets, les vulnérabilités et les résultats de sécurité des modèles).",
+  "This is not the repository's latest scan. Status changes here apply to this scan only and are not kept in later scans.":
+    "Ce n'est pas la dernière analyse de ce dépôt. Les changements de statut ne s'appliquent qu'à cette analyse et ne sont pas conservés lors des analyses ultérieures.",
+  "Status updated on this scan only: {status}":
+    "Statut mis à jour pour cette analyse uniquement : {status}",
   "by {name}": "par {name}",
   "Ignored: {reason}": "Ignoré : {reason}",
   "{added} added to the risk register, {ignored} ignored":
@@ -407,8 +412,6 @@ export const fr: Record<string, string> = {
     "Cette suggestion figure déjà dans le registre des risques",
   "Failed to check the suggested risk. Try again.":
     "Impossible de vérifier le risque suggéré. Réessayez.",
-  "The risk was added, but it could not be linked to this suggestion":
-    "Le risque a été ajouté, mais n'a pas pu être lié à cette suggestion",
   "Failed to ignore the suggestion": "Impossible d'ignorer la suggestion",
   "Failed to restore the suggestion": "Impossible de restaurer la suggestion",
   "Failed to load what was done with the suggested risks":
@@ -752,10 +755,14 @@ export const es: Record<string, string> = {
   "Hide ignored": "Ocultar ignorados",
   "Change status": "Cambiar estado",
   "Set status": "Establecer estado",
-  "Kept on this finding in later scans of the repository.":
-    "Se mantiene en este hallazgo en los análisis posteriores del repositorio.",
-  "Kept on this finding in later scans of the repository unless its risk level rises.":
-    "Se mantiene en este hallazgo en los análisis posteriores del repositorio, salvo que su nivel de riesgo aumente.",
+  "A status set on the repository's latest scan is kept in later scans.":
+    "Un estado establecido en el último análisis del repositorio se mantiene en los análisis posteriores.",
+  "A status set on the repository's latest scan is kept in later scans, unless the finding's risk level rises or, for secrets, vulnerabilities and model security findings, it appears in a new file.":
+    "Un estado establecido en el último análisis del repositorio se mantiene en los análisis posteriores, salvo que el nivel de riesgo del hallazgo aumente o que aparezca en un archivo nuevo (en secretos, vulnerabilidades y hallazgos de seguridad de modelos).",
+  "This is not the repository's latest scan. Status changes here apply to this scan only and are not kept in later scans.":
+    "Este no es el último análisis de este repositorio. Los cambios de estado solo se aplican a este análisis y no se mantienen en análisis posteriores.",
+  "Status updated on this scan only: {status}":
+    "Estado actualizado solo en este análisis: {status}",
   "by {name}": "por {name}",
   "Ignored: {reason}": "Ignorado: {reason}",
   "{added} added to the risk register, {ignored} ignored":
@@ -764,8 +771,6 @@ export const es: Record<string, string> = {
     "Esta sugerencia ya está en el registro de riesgos",
   "Failed to check the suggested risk. Try again.":
     "No se pudo comprobar el riesgo sugerido. Inténtelo de nuevo.",
-  "The risk was added, but it could not be linked to this suggestion":
-    "El riesgo se añadió, pero no se pudo vincular a esta sugerencia",
   "Failed to ignore the suggestion": "No se pudo ignorar la sugerencia",
   "Failed to restore the suggestion": "No se pudo restaurar la sugerencia",
   "Failed to load what was done with the suggested risks":

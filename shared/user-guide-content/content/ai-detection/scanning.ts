@@ -157,7 +157,7 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'You can give a finding a governance status to record your review. This works on the Libraries, API calls, Secrets, Models, RAG, Agents and Vulnerabilities tabs. Click the square status button at the right end of a row (it shows "…" until a status is set, then the status icon) and pick a status:',
+      text: 'You can give a finding a governance status to record your review. This works on the Libraries, API calls, Secrets, Models, RAG, Agents and Vulnerabilities tabs. Click the square status button at the right end of a row (it shows "…" until a status is set, then the status icon) and pick a status. The button is shown only to users whose role can edit AI Detection (Admins and Editors by default); others see the status but can\'t change it:',
     },
     {
       type: 'bullet-list',
@@ -185,11 +185,11 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'A status is saved for the repository, not just for one scan. When a later scan of the same repository (full or incremental) finds the same finding again, meaning the same finding type, name and provider, ignoring upper and lower case, the finding gets the saved status with the original reviewer and date, before the new scan\'s score is calculated. Changing or clearing the status on any scan updates what later scans inherit; the latest change wins.',
+      text: 'A status is saved for the repository, not just for one scan. When a later scan of the same repository (full or incremental) finds the same finding again, meaning the same finding type, name and provider, ignoring upper and lower case, the finding gets the saved status with the original reviewer and date, before the new scan\'s score is calculated. Only the repository\'s latest scan decides what later scans inherit: changing or clearing a status there updates it. On an older scan a change applies to that scan only; the page says so above the tabs, and the confirmation reads "Status updated on this scan only".',
     },
     {
       type: 'paragraph',
-      text: 'One exception: if the finding has become riskier since the review (its risk level or security severity is higher than when the status was set), the status is not carried over and the finding shows as unreviewed so someone looks at it again. A **Flagged** status is always carried over. Statuses are never copied between organizations or between different repositories.',
+      text: 'Two exceptions keep new risk from being hidden. If the finding has become riskier since the review (its risk level or security severity is higher than when the status was set), the status is not carried over and the finding shows as unreviewed so someone looks at it again. And for secrets, vulnerabilities and model security findings, the status carries over only while the finding stays in the files it was in when the status was set (line numbers don\'t matter); if it shows up in a new file, it arrives unreviewed. Libraries, API calls, models, RAG components and agents keep their status when they are used in new files, because their status is about the dependency itself. A **Flagged** status is always carried over. Statuses are never copied between organizations or between different repositories.',
     },
     {
       type: 'image',

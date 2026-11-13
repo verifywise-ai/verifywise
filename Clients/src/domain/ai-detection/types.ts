@@ -303,6 +303,11 @@ export interface Pagination {
 export interface FindingsResponse {
   findings: Finding[];
   pagination: Pagination;
+  /**
+   * Whether this is the repository's latest completed scan. Status changes on
+   * any other scan apply to that scan only.
+   */
+  is_latest_scan?: boolean;
 }
 
 export interface ScansResponse {
@@ -397,6 +402,11 @@ export interface UpdateGovernanceStatusResponse {
   governance_updated_at: string | null;
   governance_updated_by: number | null;
   governance_updated_by_name: string | null;
+  /**
+   * "repository" when the status is kept for later scans of the repository,
+   * "scan" when it changed only this scan (an older scan of the repository).
+   */
+  decision_scope: "repository" | "scan";
 }
 
 /** Why a suggested risk was ignored. */
@@ -418,9 +428,12 @@ export interface SuggestedRiskAction {
   risk_deleted: boolean;
 }
 
-export type RecordSuggestedRiskActionRequest =
-  | { risk_name: string; action: "added"; risk_id: number }
-  | { risk_name: string; action: "ignored"; reason: SuggestedRiskIgnoreReason };
+/** Ignore a suggested risk. Adding one goes through addSuggestedRiskToRegister. */
+export interface RecordSuggestedRiskActionRequest {
+  risk_name: string;
+  action: "ignored";
+  reason: SuggestedRiskIgnoreReason;
+}
 
 // ============================================================================
 // Statistics Types

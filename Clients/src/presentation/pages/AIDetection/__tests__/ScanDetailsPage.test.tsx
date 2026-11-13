@@ -37,6 +37,13 @@ vi.mock("../../../../application/repository/aiDetection.repository", () => ({
   createSuppression: (...args: unknown[]) => mockCreateSuppression(...args),
 }));
 
+// Permission keys the current user holds (all edit keys by default)
+const permissions = vi.hoisted(() => ({ denied: new Set<string>() }));
+vi.mock("../../../../application/hooks/useCan", () => ({
+  useCan: (key: string) => !permissions.denied.has(key),
+  useCanCheck: () => (key: string) => !permissions.denied.has(key),
+}));
+
 vi.mock("../../../components/Layout/PageHeaderExtended", () => ({
   PageHeaderExtended: ({ children, title, description, alert }: any) => (
     <div data-testid="page-header">
@@ -103,16 +110,20 @@ function makeFinding(overrides: Partial<Finding> = {}): Finding {
 
 const emptyPagination = { total: 0, page: 1, limit: 50, total_pages: 1 };
 
-function setupFindingsMock(overrides: Record<string, Finding[]> = {}) {
+function setupFindingsMock(overrides: Record<string, Finding[]> = {}, isLatestScan = true) {
   mockGetScanFindings.mockImplementation((_id: number, params: any) => {
     const type = params?.finding_type;
     const findings = overrides[type] || [];
     return Promise.resolve({
       findings,
       pagination: { ...emptyPagination, total: findings.length },
+      is_latest_scan: isLatestScan,
     });
   });
 }
+
+const OLDER_SCAN_NOTE =
+  "This is not the repository's latest scan. Status changes here apply to this scan only and are not kept in later scans.";
 
 describe("ScanDetailsPage", () => {
   beforeEach(() => {
@@ -377,6 +388,37 @@ describe("ScanDetailsPage", () => {
 
     await waitFor(() => {
       expect(screen.getByText("No security issues detected")).toBeInTheDocument();
+    });
+  });
+
+  describe("older scans", () => {
+    beforeEach(() => {
+      permissions.denied.clear();
+      mockGetScan.mockResolvedValue(makeScanResponse());
+      mockGetScanSecurityFindings.mockResolvedValue({ findings: [], pagination: emptyPagination });
+      mockGetScanSecuritySummary.mockResolvedValue({ total: 0, by_severity: {} });
+    });
+
+    it("says that status changes apply to this scan only", async () => {
+      setupFindingsMock({}, false);
+      renderWithProviders(<ScanDetailsPage />);
+      expect(await screen.findByText(OLDER_SCAN_NOTE)).toBeInTheDocument();
+    });
+
+    it("shows no note on the latest scan", async () => {
+      setupFindingsMock({}, true);
+      renderWithProviders(<ScanDetailsPage />);
+      await waitFor(() => expect(mockGetScan).toHaveBeenCalled());
+      await screen.findByText("Libraries");
+      expect(screen.queryByText(OLDER_SCAN_NOTE)).not.toBeInTheDocument();
+    });
+
+    it("shows no note to a user who cannot change statuses", async () => {
+      permissions.denied.add("aiDetection.edit");
+      setupFindingsMock({}, false);
+      renderWithProviders(<ScanDetailsPage />);
+      await screen.findByText("Libraries");
+      expect(screen.queryByText(OLDER_SCAN_NOTE)).not.toBeInTheDocument();
     });
   });
 });

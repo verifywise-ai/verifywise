@@ -5,6 +5,13 @@ import type { SuggestedRiskAction } from "../../../../../domain/ai-detection/typ
 import type { RiskFormValues } from "../../../../../domain/types/riskForm.types";
 
 const mockNavigate = vi.fn();
+// Permission keys the current user holds (all edit keys by default)
+const permissions = vi.hoisted(() => ({ denied: new Set<string>() }));
+vi.mock("../../../../../application/hooks/useCan", () => ({
+  useCan: (key: string) => !permissions.denied.has(key),
+  useCanCheck: () => (key: string) => !permissions.denied.has(key),
+}));
+
 vi.mock("react-router", () => ({ useNavigate: () => mockNavigate }));
 
 vi.mock("../../../../../application/hooks/useUsers", () => ({
@@ -14,7 +21,9 @@ vi.mock("../../../../../application/hooks/useUsers", () => ({
 const mockGetActions = vi.fn();
 const mockRecordAction = vi.fn();
 const mockRestore = vi.fn();
+const mockAddToRegister = vi.fn();
 vi.mock("../../../../../application/repository/aiDetection.repository", () => ({
+  addSuggestedRiskToRegister: (...args: unknown[]) => mockAddToRegister(...args),
   getSuggestedRiskActions: (...args: unknown[]) => mockGetActions(...args),
   recordSuggestedRiskAction: (...args: unknown[]) => mockRecordAction(...args),
   restoreSuggestedRisk: (...args: unknown[]) => mockRestore(...args),
@@ -22,18 +31,34 @@ vi.mock("../../../../../application/repository/aiDetection.repository", () => ({
 
 vi.mock("../../../../components/AddNewRiskForm", () => ({
   __esModule: true,
+  // Saves like the real form: through createRisk when given, then onSuccess
   default: ({
     onSuccess,
     onError,
     initialRiskValues,
+    createRisk,
   }: {
     onSuccess: (id?: number) => void;
     onError: (m: string) => void;
     initialRiskValues?: RiskFormValues;
+    createRisk?: (body: Record<string, unknown>) => Promise<unknown>;
   }) => (
     <div data-testid="add-new-risk-form">
       <span data-testid="review-notes">{initialRiskValues?.reviewNotes}</span>
-      <button onClick={() => onSuccess(42)}>Simulate success</button>
+      <button
+        onClick={async () => {
+          try {
+            const res = (await createRisk?.({ risk_name: "Edited name" })) as {
+              data: { data: { id: number } };
+            };
+            onSuccess(res?.data?.data?.id);
+          } catch (e) {
+            onError((e as Error).message);
+          }
+        }}
+      >
+        Simulate save
+      </button>
       <button onClick={() => onError("boom")}>Simulate error</button>
     </div>
   ),
@@ -91,7 +116,9 @@ function renderSection(
 describe("SuggestedRisksSection", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    permissions.denied.clear();
     mockGetActions.mockResolvedValue([]);
+    mockAddToRegister.mockResolvedValue({ status: 201, data: { data: { id: 42 } } });
     mockRecordAction.mockResolvedValue([]);
     mockRestore.mockResolvedValue([]);
   });
@@ -157,9 +184,8 @@ describe("SuggestedRisksSection", () => {
     expect(await screen.findByText("Add to risk register")).toBeInTheDocument();
   });
 
-  it("adds a suggestion, links the new risk and references the scan in the review notes", async () => {
+  it("adds a suggestion by creating and linking the risk in one request", async () => {
     const onSuccess = vi.fn();
-    mockRecordAction.mockResolvedValue([makeAction()]);
     renderSection([makeSuggestion()], { onSuccess });
     fireEvent.click(screen.getByText("Suggested risks"));
     fireEvent.click(screen.getByText("Add to risk register"));
@@ -169,16 +195,61 @@ describe("SuggestedRisksSection", () => {
       "AI Detection scan #7 (acme/app)",
     );
 
-    fireEvent.click(screen.getByText("Simulate success"));
-    expect(onSuccess).toHaveBeenCalled();
+    mockGetActions.mockResolvedValue([makeAction()]);
+    fireEvent.click(screen.getByText("Simulate save"));
     await waitFor(() =>
-      expect(mockRecordAction).toHaveBeenCalledWith(7, {
-        risk_name: "Sensitive data exposure",
-        action: "added",
-        risk_id: 42,
+      expect(mockAddToRegister).toHaveBeenCalledWith(7, "Sensitive data exposure", {
+        risk_name: "Edited name",
       }),
     );
+    await waitFor(() => expect(onSuccess).toHaveBeenCalled());
+    // No separate link call: the list is reloaded from the server
+    expect(mockRecordAction).not.toHaveBeenCalled();
     expect(await screen.findByText("1 added to the risk register, 0 ignored")).toBeInTheDocument();
+  });
+
+  it("shows the suggestion as added when the save was refused because it was added meanwhile", async () => {
+    const onError = vi.fn();
+    renderSection([makeSuggestion()], { onError });
+    fireEvent.click(screen.getByText("Suggested risks"));
+    fireEvent.click(screen.getByText("Add to risk register"));
+    await screen.findByTestId("add-new-risk-form");
+
+    mockAddToRegister.mockRejectedValue(
+      new Error("This suggestion is already in the risk register"),
+    );
+    mockGetActions.mockResolvedValue([makeAction()]);
+    fireEvent.click(screen.getByText("Simulate save"));
+
+    await waitFor(() =>
+      expect(onError).toHaveBeenCalledWith("This suggestion is already in the risk register"),
+    );
+    expect(await screen.findByText("1 added to the risk register, 0 ignored")).toBeInTheDocument();
+  });
+
+  it("shows no actions to a user who cannot edit AI Detection", async () => {
+    permissions.denied.add("aiDetection.edit");
+    mockGetActions.mockResolvedValue([
+      makeAction({ id: 5, action: "ignored", risk_id: null, ignore_reason: "already_added" }),
+    ]);
+    renderSection([makeSuggestion(), makeSuggestion({ risk_name: "Model drift" })]);
+    fireEvent.click(screen.getByText("Suggested risks"));
+    fireEvent.click(await screen.findByText("Show ignored"));
+
+    expect(screen.getByText("Model drift")).toBeInTheDocument();
+    expect(screen.queryByText("Ignore")).not.toBeInTheDocument();
+    expect(screen.queryByText("Add to risk register")).not.toBeInTheDocument();
+    expect(screen.queryByText("Restore")).not.toBeInTheDocument();
+  });
+
+  it("offers ignore but not add to a user who cannot edit risks", async () => {
+    permissions.denied.add("risks.edit");
+    renderSection();
+    fireEvent.click(screen.getByText("Suggested risks"));
+    await waitFor(() => expect(mockGetActions).toHaveBeenCalled());
+
+    expect(screen.getByText("Ignore")).toBeInTheDocument();
+    expect(screen.queryByText("Add to risk register")).not.toBeInTheDocument();
   });
 
   it("refuses to add a suggestion that was added elsewhere since the page loaded", async () => {

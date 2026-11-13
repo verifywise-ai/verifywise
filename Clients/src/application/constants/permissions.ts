@@ -58,6 +58,7 @@ export const BUILTIN_UI_PERMISSIONS = {
   "governanceOs.admin": ADMIN,
   "approvalWorkflow.admin": ADMIN,
   "reporting.admin": ADMIN,
+  "aiDetection.edit": EDITOR,
 } as const satisfies Record<string, readonly BuiltinRoleName[]>;
 
 export type UiPermissionKey = keyof typeof BUILTIN_UI_PERMISSIONS;

@@ -35,9 +35,9 @@ export function FindingGovernanceStatus({
       <Tooltip
         title={
           status === "flagged"
-            ? t("Kept on this finding in later scans of the repository.")
+            ? t("A status set on the repository's latest scan is kept in later scans.")
             : t(
-                "Kept on this finding in later scans of the repository unless its risk level rises.",
+                "A status set on the repository's latest scan is kept in later scans, unless the finding's risk level rises or, for secrets, vulnerabilities and model security findings, it appears in a new file.",
               )
         }
         arrow

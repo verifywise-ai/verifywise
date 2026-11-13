@@ -18,6 +18,7 @@ import {
   getScanSecuritySummary,
   getScanStatus,
   getSuggestedRiskActions,
+  addSuggestedRiskToRegister,
   pollScanStatus,
   recordSuggestedRiskAction,
   restoreSuggestedRisk,
@@ -163,7 +164,7 @@ describe("Test AI Detection Repository", () => {
       );
 
       expect(apiServices.get).toHaveBeenCalledWith(
-        `/ai-detection/scans/12345/findings?page=1&limit=10&confidence=high&finding_type=library`,
+        `/v1/ai-detection/scans/12345/findings?page=1&limit=10&confidence=high&finding_type=library`,
         {
           signal,
         },
@@ -196,7 +197,7 @@ describe("Test AI Detection Repository", () => {
       );
 
       expect(apiServices.get).toHaveBeenCalledWith(
-        `/ai-detection/scans/12345/findings?limit=10&confidence=high&finding_type=library`,
+        `/v1/ai-detection/scans/12345/findings?limit=10&confidence=high&finding_type=library`,
         {
           signal,
         },
@@ -227,7 +228,7 @@ describe("Test AI Detection Repository", () => {
       );
 
       expect(apiServices.get).toHaveBeenCalledWith(
-        `/ai-detection/scans/12345/findings?page=1&confidence=high&finding_type=library`,
+        `/v1/ai-detection/scans/12345/findings?page=1&confidence=high&finding_type=library`,
         {
           signal,
         },
@@ -258,7 +259,7 @@ describe("Test AI Detection Repository", () => {
       );
 
       expect(apiServices.get).toHaveBeenCalledWith(
-        `/ai-detection/scans/12345/findings?page=1&limit=10&finding_type=library`,
+        `/v1/ai-detection/scans/12345/findings?page=1&limit=10&finding_type=library`,
         {
           signal,
         },
@@ -289,7 +290,7 @@ describe("Test AI Detection Repository", () => {
       );
 
       expect(apiServices.get).toHaveBeenCalledWith(
-        `/ai-detection/scans/12345/findings?page=1&limit=10&confidence=high`,
+        `/v1/ai-detection/scans/12345/findings?page=1&limit=10&confidence=high`,
         {
           signal,
         },
@@ -878,7 +879,7 @@ describe("Test AI Detection Repository", () => {
       await updateFindingGovernanceStatus(scanId, findingId, governanceStatus);
 
       expect(apiServices.patch).toHaveBeenCalledWith(
-        "/ai-detection/scans/12345/findings/678/governance",
+        "/v1/ai-detection/scans/12345/findings/678/governance",
         { governance_status: "approved" },
         { signal: undefined },
       );
@@ -1210,18 +1211,34 @@ describe("Test AI Detection Repository", () => {
       );
     });
 
-    it("records an action with PUT", async () => {
+    it("records an ignore with PUT", async () => {
       vi.mocked(apiServices.put).mockResolvedValue({
         data: { data: actions },
         status: 200,
         statusText: "OK",
       });
-      const input = { risk_name: "X", action: "added" as const, risk_id: 42 };
+      const input = {
+        risk_name: "X",
+        action: "ignored" as const,
+        reason: "not_real_risk" as const,
+      };
       await expect(recordSuggestedRiskAction(7, input)).resolves.toEqual(actions);
       expect(apiServices.put).toHaveBeenCalledWith(
         "/v1/ai-detection/scans/7/suggested-risks/actions",
         input,
         { signal: undefined },
+      );
+    });
+
+    it("creates and links a risk from a suggestion with one POST", async () => {
+      const response = { data: { data: { id: 55 } }, status: 201, statusText: "Created" };
+      vi.mocked(apiServices.post).mockResolvedValue(response);
+      await expect(
+        addSuggestedRiskToRegister(7, "Prompt injection", { risk_name: "Edited", risk_owner: 3 }),
+      ).resolves.toEqual(response);
+      expect(apiServices.post).toHaveBeenCalledWith(
+        "/v1/ai-detection/scans/7/suggested-risks/risks",
+        { risk_name: "Edited", risk_owner: 3, suggestion_name: "Prompt injection" },
       );
     });
 

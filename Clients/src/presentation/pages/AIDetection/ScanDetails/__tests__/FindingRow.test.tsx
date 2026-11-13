@@ -4,6 +4,13 @@ import type { Finding } from "../../../../../domain/ai-detection/types";
 
 const mockUpdateFindingGovernanceStatus = vi.fn();
 
+// Permission keys the current user holds (all edit keys by default)
+const permissions = vi.hoisted(() => ({ denied: new Set<string>() }));
+vi.mock("../../../../../application/hooks/useCan", () => ({
+  useCan: (key: string) => !permissions.denied.has(key),
+  useCanCheck: () => (key: string) => !permissions.denied.has(key),
+}));
+
 vi.mock("../../../../../application/repository/aiDetection.repository", () => ({
   updateFindingGovernanceStatus: (...args: unknown[]) => mockUpdateFindingGovernanceStatus(...args),
   createSuppression: vi.fn(),
@@ -28,6 +35,7 @@ const baseFinding: Finding = {
 describe("FindingRow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    permissions.denied.clear();
   });
 
   it("renders the finding name and description", () => {
@@ -305,5 +313,42 @@ describe("FindingRow", () => {
 
     fireEvent.click(screen.getByText("openai"));
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("says when a change applies to this scan only", async () => {
+    mockUpdateFindingGovernanceStatus.mockResolvedValue({
+      id: 1,
+      governance_status: "approved",
+      governance_updated_at: "2026-11-03T10:00:00.000Z",
+      governance_updated_by: 7,
+      governance_updated_by_name: "Ada Lovelace",
+      decision_scope: "scan",
+    });
+    const onStatusMessage = vi.fn();
+    render(<FindingRow finding={baseFinding} scanId={7} onStatusMessage={onStatusMessage} />);
+
+    fireEvent.click(screen.getByRole("button", { name: "Set status" }));
+    fireEvent.click(await screen.findByText("Approved"));
+
+    await waitFor(() =>
+      expect(onStatusMessage).toHaveBeenCalledWith(
+        "success",
+        "Status updated on this scan only: Approved",
+      ),
+    );
+  });
+
+  it("hides the status control from a user who cannot edit AI Detection", () => {
+    permissions.denied.add("aiDetection.edit");
+    render(
+      <FindingRow
+        finding={{ ...baseFinding, governance_status: "approved" }}
+        scanId={7}
+        onStatusMessage={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Change status" })).not.toBeInTheDocument();
+    // The status itself stays visible
+    expect(screen.getByTestId("finding-governance-status")).toBeInTheDocument();
   });
 });

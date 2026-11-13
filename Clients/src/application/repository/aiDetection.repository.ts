@@ -40,6 +40,8 @@ import {
 } from "../../domain/ai-detection/riskScoringTypes";
 
 const BASE_URL = "/ai-detection";
+/** API v1 endpoints; the legacy /ai-detection router is frozen. */
+const V1_BASE_URL = "/v1/ai-detection";
 
 // ============================================================================
 // Scan Operations
@@ -129,7 +131,8 @@ export async function getScanFindings(
   if (params.finding_type) queryParams.append("finding_type", params.finding_type);
 
   const queryString = queryParams.toString();
-  const url = `${BASE_URL}/scans/${scanId}/findings${queryString ? `?${queryString}` : ""}`;
+  // API v1: adds who set each status and whether this is the latest scan
+  const url = `${V1_BASE_URL}/scans/${scanId}/findings${queryString ? `?${queryString}` : ""}`;
 
   const response = await apiServices.get<{ data: FindingsResponse }>(url, {
     signal,
@@ -388,8 +391,9 @@ export async function updateFindingGovernanceStatus(
   governanceStatus: GovernanceStatus | null,
   signal?: AbortSignal,
 ): Promise<UpdateGovernanceStatusResponse> {
+  // API v1: adds who set the status and where the change applies
   const response = await apiServices.patch<{ data: UpdateGovernanceStatusResponse }>(
-    `${BASE_URL}/scans/${scanId}/findings/${findingId}/governance`,
+    `${V1_BASE_URL}/scans/${scanId}/findings/${findingId}/governance`,
     { governance_status: governanceStatus },
     {
       signal,
@@ -647,9 +651,6 @@ export async function deleteSuppression(id: number, signal?: AbortSignal): Promi
 // Suggested Risk Actions
 // ============================================================================
 
-/** These endpoints are on API v1; the legacy /ai-detection router is frozen. */
-const V1_BASE_URL = "/v1/ai-detection";
-
 /**
  * List what was done with a scan's suggested risks (added to the risk register or ignored).
  */
@@ -665,7 +666,26 @@ export async function getSuggestedRiskActions(
 }
 
 /**
- * Record that a suggested risk was added to the risk register or ignored.
+ * Create a risk from a suggested risk and link it to the suggestion, in one
+ * request. The body is the risk as for POST /projectRisks. Answers 201 with
+ * the created risk, or 409 (with the linked risk's id) when the suggestion is
+ * already in the risk register.
+ *
+ * Returns the raw response, as createProjectRisk does, for the risk form.
+ */
+export async function addSuggestedRiskToRegister(
+  scanId: number,
+  suggestionName: string,
+  riskBody: Record<string, unknown>,
+) {
+  return apiServices.post<{ data: { id: number } }>(
+    `${V1_BASE_URL}/scans/${scanId}/suggested-risks/risks`,
+    { ...riskBody, suggestion_name: suggestionName },
+  );
+}
+
+/**
+ * Record that a suggested risk was ignored.
  *
  * @returns All actions for the scan after the change
  */

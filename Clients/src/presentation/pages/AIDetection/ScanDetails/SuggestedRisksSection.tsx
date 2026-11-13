@@ -5,6 +5,9 @@
  * What a user does with a suggestion is saved on the scan: an added suggestion keeps
  * the id of the risk it created, an ignored one keeps the reason. On reload, added and
  * ignored suggestions are summarised in one line and can be shown; an ignore can be undone.
+ * Saving the "Add to risk register" form creates the risk and links it to the suggestion
+ * in one request, so a suggestion can never be added twice. Only users who can edit
+ * AI Detection see the actions.
  *
  * @module pages/AIDetection/ScanDetails/SuggestedRisksSection
  */
@@ -19,9 +22,11 @@ import { VWLink } from "../../../components/Link";
 import AddNewRiskForm from "../../../components/AddNewRiskForm";
 import StandardModal from "../../../components/Modals/StandardModal";
 import useUsers from "../../../../application/hooks/useUsers";
+import { useCan } from "../../../../application/hooks/useCan";
 import { useTranslation } from "../../../../application/hooks/useTranslation";
 import { fill } from "../../../../i18n/fill";
 import {
+  addSuggestedRiskToRegister,
   getSuggestedRiskActions,
   recordSuggestedRiskAction,
   restoreSuggestedRisk,
@@ -88,6 +93,9 @@ export function SuggestedRisksSection({
 }: SuggestedRisksSectionProps) {
   const { t } = useTranslation();
   const navigate = useNavigate();
+  // Same keys the endpoints authorize on; adding also creates a risk
+  const canEdit = useCan("aiDetection.edit");
+  const canAddRisks = useCan("risks.edit");
   const [isSuggestedRiskModalOpen, setIsSuggestedRiskModalOpen] = useState(false);
   const [selectedSuggestedRisk, setSelectedSuggestedRisk] = useState<RiskFormValues | null>(null);
   const [selectedSuggestedMitigation, setSelectedSuggestedMitigation] =
@@ -190,30 +198,34 @@ export function SuggestedRisksSection({
     }
   };
 
-  const handleSuggestedRiskSuccess = async (createdRiskId?: number) => {
-    const suggestion = addingSuggestionRef.current;
+  /** Create the risk and link it to the suggestion being added, in one request. */
+  const createRiskFromSuggestion = useCallback(
+    (body: Record<string, unknown>) => {
+      const suggestion = addingSuggestionRef.current;
+      if (!suggestion) {
+        return Promise.reject(new Error("No suggestion is being added"));
+      }
+      return addSuggestedRiskToRegister(scanId, suggestion.risk_name, body);
+    },
+    [scanId],
+  );
+
+  const refreshActions = () => {
+    loadActions().catch(() => {
+      // The list keeps its last state; the next load shows the change
+    });
+  };
+
+  const handleSuggestedRiskSuccess = () => {
     onSuccess();
     handleSuggestedRiskModalClose();
-    if (!suggestion) return;
-    if (!createdRiskId) {
-      onError("The risk was added, but it could not be linked to this suggestion");
-      return;
-    }
-    try {
-      setActions(
-        await recordSuggestedRiskAction(scanId, {
-          risk_name: suggestion.risk_name,
-          action: "added",
-          risk_id: createdRiskId,
-        }),
-      );
-    } catch {
-      onError("The risk was added, but it could not be linked to this suggestion");
-    }
+    refreshActions();
   };
 
   const handleSuggestedRiskError = (message: string) => {
     onError(message || "Failed to add risk");
+    // Someone may have added the suggestion meanwhile; show it as added
+    refreshActions();
   };
 
   const handleIgnoreSuggestion = async (reason: SuggestedRiskIgnoreReason) => {
@@ -340,7 +352,7 @@ export function SuggestedRisksSection({
             )}
           </Box>
           <Box sx={{ display: "flex", gap: "8px", flexShrink: 0, alignItems: "center" }}>
-            {state === "pending" && (
+            {state === "pending" && canEdit && (
               <>
                 <CustomizableButton
                   text="Ignore"
@@ -351,14 +363,16 @@ export function SuggestedRisksSection({
                   }
                   sx={{ whiteSpace: "nowrap", color: palette.text.tertiary }}
                 />
-                <CustomizableButton
-                  text="Add to risk register"
-                  variant="outlined"
-                  isDisabled={isBusy}
-                  startIcon={<Plus size={14} strokeWidth={1.5} />}
-                  onClick={() => handleAddSuggestedRisk(suggestion)}
-                  sx={{ whiteSpace: "nowrap" }}
-                />
+                {canAddRisks && (
+                  <CustomizableButton
+                    text="Add to risk register"
+                    variant="outlined"
+                    isDisabled={isBusy}
+                    startIcon={<Plus size={14} strokeWidth={1.5} />}
+                    onClick={() => handleAddSuggestedRisk(suggestion)}
+                    sx={{ whiteSpace: "nowrap" }}
+                  />
+                )}
               </>
             )}
             {state === "added" && action?.risk_id && (
@@ -369,7 +383,7 @@ export function SuggestedRisksSection({
                 View risk
               </VWLink>
             )}
-            {state === "ignored" && action && (
+            {state === "ignored" && action && canEdit && (
               <CustomizableButton
                 text="Restore"
                 variant="text"
@@ -533,6 +547,7 @@ export function SuggestedRisksSection({
           users={users}
           usersLoading={usersLoading}
           onSubmitRef={suggestedRiskSubmitRef}
+          createRisk={createRiskFromSuggestion}
         />
       </StandardModal>
     </>
