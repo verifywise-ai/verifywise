@@ -1,6 +1,6 @@
 # Clients — Frontend Development Guide
 
-> **Last Updated:** 2026-11-11
+> **Last Updated:** 2026-11-13
 
 ---
 
@@ -37,6 +37,15 @@ infrastructure/   → API clients, external services
 **Extensions:** UI in `src/presentation/pages/Extensions/` (catalog, `Settings/`, one folder per extension key). Gate every entry point with `useExtensions().isEnabled("<key>")` (`src/application/contexts/Extensions.context.tsx`). Bundled frameworks (ids 5–25) render through `pages/Framework/Generic` + `components/Drawer/GenericFrameworkDrawer`. There is no per-framework UI. See `docs/technical/infrastructure/extensions.md` and `docs/technical/guides/adding-new-framework.md`.
 
 **Permission gating:** decide what to show from permission keys, never from the role name (a custom role can never match one). Use `useCan("vendor.edit")` or `useCanCheck()` (`src/application/hooks/useCan.ts`) with the key the server route authorizes on; add a new UI key to `BUILTIN_UI_PERMISSIONS` (`src/application/constants/permissions.ts`) and to `Servers/config/rolePermissions.config.ts` together, since `permissions.test.ts` checks they match. See `docs/technical/architecture/authentication.md`.
+
+---
+
+## UI patterns
+
+- **Table filters:** `components/Table/TableFilter.tsx`, not `FilterBy`, for every new table. It shows `FilterBy` in the classic look and filter chips in phase 1 from one `FilterColumn[]`. Group and Columns stay as they are.
+- **Lifecycle stage:** `components/StageSteps`.
+- **No hex colours in screens:** `noHexInScreens.test.ts` fails on a hex literal under `presentation/pages` or `presentation/components`. Use a token or a named map in `themes/chartTheme.ts` (`entity`, `action`, `providers`, `tiles`, `avatars` and others); never index `chart[n]`. A genuine exception goes in `themes/hexAllowList.ts`.
+- Details: `docs/technical/guides/design-tokens.md`.
 
 ---
 

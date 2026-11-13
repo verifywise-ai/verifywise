@@ -369,7 +369,7 @@ export const useCasesContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Search', text: 'Looks through use case titles and UC IDs.' },
-        { bold: 'Filter', text: 'Narrow by name, risk level, owner, status, or start date.' },
+        { bold: 'Filter', text: 'Narrow by name, risk level, owner, status, or start date. In the new look, pick a filter chip above the table and choose a value; in the classic look, use the Filter button.' },
         { bold: 'Group', text: 'Organize by risk level, role, owner, or status. Groups collapse and sort.' },
         { bold: 'Columns', text: 'Show or hide columns: UC ID, title, risk classification, role, start date, last updated.' },
       ],
