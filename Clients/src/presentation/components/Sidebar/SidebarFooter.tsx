@@ -616,7 +616,8 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
             </ListItemButton>
           )}
         </List>
-      ) : (
+      ) : isClassicUi() ? (
+        // Phase 1 lists Event tracker and Settings in the unified sidebar's Workspace group.
         <List
           component="nav"
           aria-labelledby="nested-management-subheader"
@@ -907,7 +908,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
             ))}
           </Menu>
         </List>
-      )}
+      ) : null}
 
       {/* Ready To Subscribe Box - only shown when not collapsed and enabled */}
       {showReadyToSubscribe && !collapsed && (
