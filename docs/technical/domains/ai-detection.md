@@ -186,6 +186,10 @@ ai_detection_repositories
 ├── last_scan_at (TIMESTAMPTZ)
 ├── last_scan_id (INTEGER, FK → ai_detection_scans, ON DELETE SET NULL)
 ├── github_token_id (INTEGER)
+├── webhook_secret (VARCHAR(255))            -- HMAC secret for GitHub deliveries
+├── ci_enabled, ci_min_score, ci_max_critical, ci_post_comments, ci_status_checks
+├── last_webhook_at (TIMESTAMPTZ)            -- most recent verified GitHub delivery
+├── last_webhook_status (VARCHAR(30))        -- ok | error
 ├── created_by (INTEGER NOT NULL)
 ├── created_at (TIMESTAMPTZ)
 └── updated_at (TIMESTAMPTZ)
@@ -319,6 +323,9 @@ type GovernanceStatus = 'reviewed' | 'approved' | 'flagged' | null;
 | DELETE | `/ai-detection/repositories/:id` | Delete repository | Admin |
 | POST | `/ai-detection/repositories/:id/scan` | Trigger scan for repo | Admin, Editor |
 | GET | `/ai-detection/repositories/:id/scans` | Get repo scan history | All |
+| POST | `/ai-detection/repositories/:id/webhook-secret` | Regenerate the webhook secret | Admin, Editor |
+| GET | `/v1/ai-detection-repositories/webhook-config` | Public webhook URL (`webhook_url`, `is_public`); optional `api_base_url` query = the app's absolute API base | All |
+| POST | `/webhooks/github` | GitHub webhook receiver (HMAC, no JWT) | Public |
 
 ### Start Scan Request
 
@@ -507,6 +514,17 @@ The repositories page allows registering repos for recurring scans:
 - Uses Redis distributed lock per tenant to prevent concurrent workers on same repos
 - Calculates `next_scan_at` before triggering scan to prevent reprocessing
 - Handles stale scan recovery (marks scans stuck >30 minutes as failed)
+
+## CI/CD Webhooks
+
+- **Setup:** creating a repository with `ci_enabled: true`, or turning CI/CD on for a repository without a secret, generates `webhook_secret` server-side (`generateWebhookSecret`). The add/edit modal then shows a "Connect GitHub" step with the URL, the secret and the GitHub steps.
+- **Secret exposure:** `webhook_secret` is never part of a read response. `toRepositoryResponse` (`utils/aiDetectionRepository.utils.ts`) strips it from list, get and update responses and adds `has_webhook_secret`. The secret is returned only once, to the editor whose request generated it: the create response, the update response that turned CI/CD on and generated it, and `POST /:id/webhook-secret`. Anyone with read access (Auditors included) would otherwise be able to sign forged deliveries. The edit modal shows "A webhook secret is set" with a "Regenerate secret" button; a regenerated secret is shown once. This was fixed in place on the legacy routes as a security bug fix; the change is additive for clients except that `webhook_secret` no longer appears on reads.
+- **Null CI/CD fields:** on `POST`/`PATCH /ai-detection/repositories`, a `ci_*` field sent as `null` means its default (`ci_enabled` false, `ci_min_score` 70, `ci_max_critical` 0, `ci_post_comments` and `ci_status_checks` true), as older clients send it (`applyCiDefaults`). Absent fields are left unchanged on update.
+- **Webhook URL:** `getPublicBaseUrl` (`utils/publicUrl.utils.ts`) picks the API's public address: `API_PUBLIC_URL` when set, then the app's absolute `VITE_APP_API_BASE_URL` (sent as `api_base_url`) when it is on a public host, then `FRONTEND_URL` (deployments proxy `/api/` from the app's public host), then the app's private address as a last resort. There is no localhost default. `buildGitHubWebhookUrl` in `services/webhook.service.ts` appends `/api/webhooks/github` (a base already ending in `/api` is accepted). `is_public` (`isPublicHostname`) is false for a missing address, loopback (`127/8`, `::1`), `0.0.0.0`, private (`10/8`, `172.16/12`, `192.168/16`, `fc00::/7`), link-local (`169.254/16`, `fe80::/10`), carrier-grade NAT (`100.64/10`), single-label hosts and `.local`/`.localhost`/`.internal`/`.lan`/`.home.arpa` names (`host.docker.internal`); the modal then warns that GitHub must be able to reach the address. Set `API_PUBLIC_URL` when the API is served on a different host from the app. The modal fetches the config only once CI/CD is on, cached for an hour (`useWebhookConfig`).
+- **Matching a delivery:** `getRepositoriesForWebhookQuery` returns every enabled, CI-enabled repository with the payload's owner/name, compared case-insensitively (GitHub names are case-insensitive), across organizations (the endpoint has no tenant context; capped at 50 rows). The signature is checked against each candidate's secret with a constant-time compare, and the delivery is processed for every repository whose secret verifies. Secrets are random per repository, so in practice that is the one organization that set up the webhook; if two ever verify, each is handled and recorded on its own row.
+- **Events:** `push` to the default branch starts a full scan; `pull_request` with action `opened`, `synchronize` or `reopened` starts an incremental scan; `ping` is acknowledged. Everything else is ignored.
+- **Delivery tracking:** `webhook.ctrl.ts` writes `last_webhook_at` / `last_webhook_status` for each verified repository (`recordWebhookDeliveryQuery`, scoped by id and organization) only after the HMAC signature verifies: `ok`, or `error` when processing fails. Unsigned, bad-signature and no-secret requests are logged and never written, so an unauthenticated caller cannot overwrite the status. The route is rate-limited (`webhookLimiter`, 100/min). Recording never fails the response to GitHub.
+- **Results:** `githubStatusReporter.ts` posts a commit status ("VerifyWise AI Detection") and, for pull requests, a comment, using the organization's GitHub token, after a webhook-triggered scan completes.
 
 ## Detection Patterns
 
