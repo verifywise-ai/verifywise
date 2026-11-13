@@ -1,8 +1,7 @@
 import { ReactNode } from "react";
 import { Box, Link, Typography, type SxProps, type Theme } from "@mui/material";
 import { useNavigate } from "react-router";
-import { useAuth } from "../../../application/hooks/useAuth";
-import allowedRoles from "../../../application/constants/permissions";
+import { useCanCheck } from "../../../application/hooks/useCan";
 import { LLM_KEY_CREATE_PATH } from "../../../application/constants/llmKeyDeepLink";
 import { fontSize } from "../../themes/typography";
 
@@ -31,8 +30,8 @@ const LLMKeyRequiredNotice = ({
   sx,
 }: LLMKeyRequiredNoticeProps) => {
   const navigate = useNavigate();
-  const { userRoleName } = useAuth();
-  const canManageKeys = allowedRoles.llmKeys.manage.includes(userRoleName);
+  const can = useCanCheck();
+  const canManageKeys = can("llmKeys.admin");
 
   return (
     <Box

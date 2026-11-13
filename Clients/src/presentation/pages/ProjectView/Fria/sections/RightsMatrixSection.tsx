@@ -9,7 +9,7 @@ import { FriaRight } from "../../../../../application/hooks/useFria";
 import FriaEvidenceButton from "../FriaEvidenceButton";
 import FriaSectionCard from "../FriaSectionCard";
 import { EU_ACT_LINK, EU_CHARTER_LINK } from "../friaConstants";
-import { brand } from "../../../../themes/palette";
+import { brand, border } from "../../../../themes/palette";
 
 interface RightsMatrixSectionProps {
   friaId: number;
@@ -118,7 +118,7 @@ function RightsMatrixSection({
           <Box
             key={right.id ?? right.right_key}
             sx={{
-              border: `1px solid ${right.flagged ? theme.palette.warning.light : "#d0d5dd"}`,
+              border: `1px solid ${right.flagged ? theme.palette.warning.light : border.dark}`,
               borderRadius: "4px",
               p: 2,
               backgroundColor: right.flagged

@@ -24,7 +24,7 @@ import {
   setPaginationRowCount,
 } from "../../../../application/utils/paginationStorage";
 import { ITableProps } from "../../../types/interfaces/i.table";
-import { text } from "../../../themes/palette";
+import { text, border } from "../../../themes/palette";
 
 const POLICY_TABLE_SORTING_KEY = "verifywise_policy_table_sorting";
 
@@ -187,7 +187,7 @@ const CustomizablePolicyTable = ({
               minWidth: 40,
               maxWidth: 40,
               padding: 0,
-              borderBottom: "1px solid #d0d5dd",
+              borderBottom: `1px solid ${border.dark}`,
             }}
           >
             <Box
@@ -317,7 +317,7 @@ const CustomizablePolicyTable = ({
           alignItems="center"
           justifyContent="center"
           sx={{
-            border: "1px solid #EEEEEE",
+            border: `1px solid ${border.light}`,
             borderRadius: "4px",
             padding: theme.spacing(15, 5),
             paddingBottom: theme.spacing(20),
@@ -391,8 +391,8 @@ const CustomizablePolicyTable = ({
                         inputProps: { id: "pagination-dropdown" },
                         IconComponent: SelectorVertical,
                         sx: {
-                          "ml": theme.spacing(4),
-                          "mr": theme.spacing(12),
+                          "ml": "8px",
+                          "mr": "24px",
                           "minWidth": theme.spacing(20),
                           "textAlign": "left",
                           "&.Mui-focused > div": {

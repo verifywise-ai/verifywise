@@ -26,7 +26,8 @@ import {
   setPaginationRowCount,
 } from "../../../../application/utils/paginationStorage";
 import { IEventsTableProps } from "../../../types/interfaces/i.table";
-import { status } from "../../../themes/palette";
+import { status, risk, border, background } from "../../../themes/palette";
+import StatusBadge from "../../StatusBadge";
 import { pageOfLabel } from "../pageOfLabel";
 
 const EVENTS_TABLE_SORTING_KEY = "verifywise_events_table_sorting";
@@ -49,36 +50,21 @@ const TABLE_COLUMNS = [
 
 const DEFAULT_ROWS_PER_PAGE = 10;
 
+// Read, Update and the unknown fallback have no palette token with the same
+// value, so they keep their literals to stay visually unchanged.
+const EVENT_TYPE_COLORS: Record<Event["event_type"], { bg: string; text: string }> = {
+  Create: { bg: status.success.bg, text: status.success.text },
+  Read: { bg: "#DCEFFF", text: "#1976D2" },
+  Update: { bg: status.warning.bg, text: "#795000" },
+  Delete: { bg: status.error.bg, text: status.error.text },
+  Error: { bg: risk.high.bg, text: risk.high.text },
+};
+
+const UNKNOWN_EVENT_TYPE_COLORS = { bg: "#E0E0E0", text: "#424242" };
+
 const EventTypeBadge: React.FC<{ eventType: Event["event_type"] }> = ({ eventType }) => {
-  const eventTypeStyles = {
-    Create: { bg: "#E6F4EA", color: `${status.success.text}` },
-    Read: { bg: "#DCEFFF", color: "#1976D2" },
-    Update: { bg: "#FFF8E1", color: "#795000" },
-    Delete: { bg: "#FFD6D6", color: `${status.error.text}` },
-    Error: { bg: "#FFE5D0", color: "#E64A19" },
-  };
-
-  const style = eventTypeStyles[eventType] || {
-    bg: "#E0E0E0",
-    color: "#424242",
-  };
-
-  return (
-    <span
-      style={{
-        backgroundColor: style.bg,
-        color: style.color,
-        padding: "4px 8px",
-        borderRadius: "4px",
-        fontWeight: 500,
-        fontSize: 11,
-        textTransform: "uppercase",
-        display: "inline-block",
-      }}
-    >
-      {eventType}
-    </span>
-  );
+  const colors = EVENT_TYPE_COLORS[eventType] ?? UNKNOWN_EVENT_TYPE_COLORS;
+  return <StatusBadge label={eventType} backgroundColor={colors.bg} textColor={colors.text} />;
 };
 
 const EventsTable: React.FC<IEventsTableProps> = ({
@@ -296,8 +282,8 @@ const EventsTable: React.FC<IEventsTableProps> = ({
                   whiteSpace: "nowrap",
                   backgroundColor:
                     sortConfig.key && sortConfig.key.toLowerCase().includes("id")
-                      ? "#e8e8e8"
-                      : "#fafafa",
+                      ? background.surface
+                      : background.alt,
                 }}
               >
                 {event.id}
@@ -393,7 +379,7 @@ const EventsTable: React.FC<IEventsTableProps> = ({
         alignItems="center"
         justifyContent="center"
         sx={{
-          border: "1px solid #EEEEEE",
+          border: `1px solid ${border.light}`,
           borderRadius: "4px",
           padding: theme.spacing(15, 5),
           paddingBottom: theme.spacing(20),

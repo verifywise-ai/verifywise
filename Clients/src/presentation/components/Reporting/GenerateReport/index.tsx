@@ -11,7 +11,6 @@ import { showAlert } from "../../../../infrastructure/api/customAxios";
 import { useProjects } from "../../../../application/hooks/useProjects";
 import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
 import { logEngine } from "../../../../application/tools/log.engine";
-import { useIsAdmin } from "../../../../application/hooks/useIsAdmin";
 import { useLLMKeyStatus } from "../../../../application/hooks/useLLMKeyStatus";
 import AIKeyBanner from "./AIKeyBanner";
 import { IGenerateReportProps, ReportFormat } from "../../../../domain/interfaces/i.widget";
@@ -22,6 +21,7 @@ import {
   saveSectionPreferences,
   selectionToBackendFormat,
 } from "./constants";
+import { useCan, usePermissionsSettled } from "../../../../application/hooks/useCan";
 
 type ModalPage = "basic" | "sections" | "status";
 
@@ -50,7 +50,9 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
   // dashboardValues.projects while the guard below checks useProjects(). When
   // they disagree, "Use case not found" is the symptom.
   const { dashboardValues } = useContext(VerifyWiseContext);
-  const isAdmin = useIsAdmin();
+  // Generating a report authorizes on reporting.admin.
+  const isAdmin = useCan("reporting.admin");
+  const permissionsSettled = usePermissionsSettled();
   const { hasKeys } = useLLMKeyStatus();
   const validateFormRef = useRef<(() => boolean) | null>(null);
 
@@ -406,6 +408,7 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
   };
 
   // Show access denied message for non-admin users
+  if (!permissionsSettled) return null;
   if (!isAdmin) {
     return (
       <StandardModal

@@ -15,6 +15,7 @@ def _text(sql: str):
     return text(sql)
 
 from sqlalchemy.ext.asyncio import AsyncSession
+from utils.secret_config import strip_secrets
 
 
 async def get_experiments_for_report(
@@ -54,6 +55,7 @@ async def get_experiments_for_report(
         config = row["config"] or {}
         if isinstance(config, str):
             config = json.loads(config)
+        config = strip_secrets(config)
         results = row["results"] or {}
         if isinstance(results, str):
             results = json.loads(results)

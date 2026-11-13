@@ -168,7 +168,7 @@ describe("ProjectExperiments", () => {
       renderExperiments();
 
       expect(
-        await screen.findByText("You can start tracking metrics once you define your experiments"),
+        await screen.findByText("Run your first experiment to start tracking scores"),
       ).toBeInTheDocument();
       expect(screen.getByTestId("performance-chart")).toBeInTheDocument();
     });

@@ -9,8 +9,9 @@ vi.mock("react-router", async () => {
 });
 
 let mockIsAdmin = true;
-vi.mock("../../../../application/hooks/useIsAdmin", () => ({
-  useIsAdmin: () => mockIsAdmin,
+vi.mock("../../../../application/hooks/useCan", () => ({
+  useCan: (key: string) => key === "organization.admin" && mockIsAdmin,
+  usePermissionsSettled: () => true,
 }));
 
 const mockGetAllLlmApiKeys = vi.fn();
@@ -19,6 +20,8 @@ vi.mock("../../../../application/repository/deepEval.repository", () => ({
   getAllLlmApiKeys: (...args: any[]) => mockGetAllLlmApiKeys(...args),
   addLlmApiKey: vi.fn(),
   deleteLlmApiKey: vi.fn(),
+  getArenaSetting: vi.fn().mockResolvedValue({ enabled: false, configured: false }),
+  updateArenaSetting: vi.fn(),
 }));
 
 vi.mock("../../../../application/hooks/useAuth", () => ({
@@ -126,5 +129,10 @@ describe("OrgSettings", () => {
     await waitFor(() => {
       expect(screen.getByText("Remove API key")).toBeInTheDocument();
     });
+  });
+
+  it("includes the Arena setting section", async () => {
+    renderWithProviders(<OrgSettings />);
+    expect(await screen.findByRole("switch", { name: "Turn on Arena" })).not.toBeChecked();
   });
 });

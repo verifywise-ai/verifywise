@@ -4,8 +4,8 @@ import { Box, CircularProgress, Stack, Typography, useTheme } from "@mui/materia
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import { useExtensions } from "../../../application/contexts/Extensions.context";
-import { useAuth } from "../../../application/hooks/useAuth";
 import { Extension } from "../../../domain/types/extensions";
+import { useCan, usePermissionsSettled } from "../../../application/hooks/useCan";
 
 // Map backend enum snake_case to display strings. `category` mirrors the DB
 // CHECK constraint on verifywise.extensions.category.
@@ -195,10 +195,12 @@ function ExtensionCard({
 export default function ExtensionsPage() {
   const theme = useTheme();
   const { extensions, loading, error, enable, disable } = useExtensions();
-  const { userRoleName } = useAuth();
+  const canManageExtensions = useCan("extension.admin");
+  const settled = usePermissionsSettled();
   const navigate = useNavigate();
 
-  if (userRoleName !== "Admin") {
+  if (!settled) return null;
+  if (!canManageExtensions) {
     return <Navigate to="/" replace />;
   }
 

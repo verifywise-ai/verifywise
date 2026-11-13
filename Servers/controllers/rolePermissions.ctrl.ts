@@ -23,6 +23,7 @@ import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper
 import {
   getEffectivePermissions,
   listPermissionCatalog,
+  requestEffectivePermissions,
   replaceRolePermissionsQuery,
 } from "../utils/rolePermissions.utils";
 
@@ -91,7 +92,7 @@ export async function getMyPermissions(req: Request, res: Response): Promise<any
       return res.status(401).json(STATUS_CODE[401](req.t!("Authentication required")));
     }
 
-    const permissions = await getEffectivePermissions(req.organizationId ?? null, req.role);
+    const permissions = await requestEffectivePermissions(req);
 
     await logSuccess({
       eventType: "Read",

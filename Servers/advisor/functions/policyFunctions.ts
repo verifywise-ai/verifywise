@@ -1,13 +1,15 @@
 import { getAllPoliciesQuery } from "../../utils/policyManager.utils";
+import { getPolicyTemplatesQuery } from "../../utils/policyTemplate.utils";
 import { POLICY_TAGS } from "../../domain.layer/interfaces/i.policy";
 import { POLICY_STATUS_ENUM } from "../../utils/validations/policiesValidation.utils";
 import logger from "../../utils/logger/fileLogger";
 
-// Import policy templates from the client-side JSON
-// Note: In production, this should be fetched from a proper data source
-import * as fs from "fs";
-import * as path from "path";
-
+// Policy templates now come from the policy_templates table (VW-CQ-09): the
+// seeded system library (organization_id IS NULL) plus the organization's
+// own templates. The old fs-load of Clients/public/data/PolicyTemplates.json
+// was the stand-in this replaces; the JSON file stays as the seed source the
+// migration copies from. name maps to title so the tool result shape is
+// unchanged for callers.
 interface PolicyTemplate {
   id: number;
   title: string;
@@ -15,19 +17,21 @@ interface PolicyTemplate {
   content: string;
   tags: string[];
   category: string;
+  origin: "system" | "organization";
 }
 
-let policyTemplates: PolicyTemplate[] = [];
-try {
-  const templatesPath = path.join(
-    __dirname,
-    "../../../../Clients/public/data/PolicyTemplates.json",
-  );
-  const templatesContent = fs.readFileSync(templatesPath, "utf-8");
-  policyTemplates = JSON.parse(templatesContent);
-} catch (error) {
-  logger.warn("Could not load policy templates:", error);
-}
+const loadPolicyTemplates = async (organizationId: number): Promise<PolicyTemplate[]> => {
+  const rows = await getPolicyTemplatesQuery(organizationId);
+  return rows.map((t: any) => ({
+    id: t.id,
+    title: t.name,
+    description: t.description ?? "",
+    content: t.content ?? "",
+    tags: t.tags ?? [],
+    category: t.category,
+    origin: t.organization_id ? "organization" : "system",
+  }));
+};
 
 export interface FetchPoliciesParams {
   status?: "Draft" | "Under Review" | "Approved" | "Published" | "Archived" | "Deprecated";
@@ -454,10 +458,10 @@ interface PolicyTemplateResult {
 
 const searchPolicyTemplates = async (
   params: SearchPolicyTemplatesParams,
-  _organizationId: number,
+  organizationId: number,
 ): Promise<PolicyTemplateResult[]> => {
   try {
-    let templates = [...policyTemplates];
+    let templates = await loadPolicyTemplates(organizationId);
 
     // Apply filters
     if (params.category) {
@@ -518,6 +522,7 @@ const getTemplateRecommendations = async (
 ): Promise<TemplateRecommendation[]> => {
   try {
     const policies = (await getAllPoliciesQuery(organizationId)) as PolicyWithReviewers[];
+    const policyTemplates = await loadPolicyTemplates(organizationId);
 
     // Get all tags currently covered by existing policies
     const existingTags = new Set<string>();
@@ -591,6 +596,7 @@ const getTemplateRecommendations = async (
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { sequelize } from "../../database/db";
 import { QueryTypes } from "sequelize";
+import { sanitizeUserHtml } from "../../utils/sanitization.utils";
 
 const agentCreatePolicy = createWriteToolFn({
   toolName: "agent_create_policy",
@@ -611,7 +617,8 @@ const agentCreatePolicy = createWriteToolFn({
         replacements: {
           organization_id: organizationId,
           title: params.policy_name as string,
-          content_html: (params.description as string) || "",
+          // Same sanitizer policy.ctrl.ts applies: model output is user HTML.
+          content_html: sanitizeUserHtml((params.description as string) || "") ?? "",
           status: (params.status as string) || "Draft",
           tags,
           next_review_date: params.review_date ? new Date(params.review_date as string) : null,
@@ -657,7 +664,7 @@ const agentUpdatePolicy = createWriteToolFn({
     }
     if (params.description !== undefined) {
       updateFields.push("content_html = :content_html");
-      replacements.content_html = params.description;
+      replacements.content_html = sanitizeUserHtml(String(params.description ?? "")) ?? "";
     }
     if (params.status !== undefined) {
       updateFields.push("status = :status");

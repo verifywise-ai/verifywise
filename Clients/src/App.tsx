@@ -132,7 +132,7 @@ function App() {
   const { users, refreshUsers } = useUsers();
   const { userPreferences } = useUserPreferences();
   const commandPalette = useCommandPalette();
-  const { completeOnboarding, state, isLoading: isOnboardingLoading } = useOnboarding();
+  const { completeOnboarding, state } = useOnboarding();
 
   // SSE notifications disabled for now - can be re-enabled later if needed
   // useNotifications({
@@ -147,12 +147,11 @@ function App() {
   // Derive modal visibility from onboarding state and current route
   // Only show modal if:
   // 1. User is authenticated (has token and userId)
-  // 2. Onboarding state is loaded (not loading)
-  // 3. Onboarding is not complete (first login)
-  // 4. Currently on dashboard or start-here route
+  // 2. Onboarding is not complete (first login)
+  // 3. Currently on dashboard or start-here route
   const showModal = useMemo(
-    () => token && userId && !isOnboardingLoading && !state.isComplete && isOnboardingRoute,
-    [token, userId, isOnboardingLoading, state.isComplete, isOnboardingRoute],
+    () => token && userId && !state.isComplete && isOnboardingRoute,
+    [token, userId, state.isComplete, isOnboardingRoute],
   );
 
   const handleOnboardingDone = useCallback(() => {

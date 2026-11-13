@@ -1,4 +1,5 @@
 import React, { useCallback, useEffect, useRef, useState } from "react";
+import { useCan } from "../../../../application/hooks/useCan";
 import { Link as RouterLink, useNavigate, useParams } from "react-router";
 import { Box, Stack, Typography, Divider } from "@mui/material";
 import { Bot, ClipboardCheck, Eye, Pencil } from "lucide-react";
@@ -22,7 +23,6 @@ import { formatSourceLabel, formatUseCaseLabel, getAgentOwnerIds } from "../agen
 import { useUserNames } from "../useUserNames";
 import { useLinkedModelLabel } from "../useLinkedModelLabel";
 import ReviewAgentModal from "../../../components/Modals/AgentDiscovery/ReviewAgentModal";
-import { useHasPermission } from "../../../../application/hooks/useMyPermissions";
 import ManualAgentModal from "../../../components/Modals/AgentDiscovery/ManualAgentModal";
 import { palette } from "../../../themes/palette";
 import LifecycleStepper from "./LifecycleStepper";
@@ -73,7 +73,7 @@ function parseAgentId(id: string | undefined): number | null {
 export default function AgentDetail() {
   const navigate = useNavigate();
   const formatUserDate = useFormattedDate();
-  const canManage = useHasPermission("agentDiscovery.admin", { fallbackToAdmin: true });
+  const canManage = useCan("agentDiscovery.admin");
   const { t } = useTranslation();
   const { id } = useParams<{ id: string }>();
   const agentId = parseAgentId(id);

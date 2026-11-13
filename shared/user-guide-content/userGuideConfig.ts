@@ -84,7 +84,7 @@ export const collections: Collection[] = [
         id: 'use-cases',
         title: 'Use cases',
         description: 'Create and manage AI use cases with risk classification, framework linking, team assignment, and approval workflows.',
-        keywords: ['use case', 'project', 'create', 'risk classification', 'high risk', 'deployer', 'provider', 'framework', 'approval', 'owner', 'team', 'scope', 'geography', 'industry'],
+        keywords: ['use case', 'project', 'create', 'risk classification', 'high risk', 'deployer', 'provider', 'framework', 'approval', 'owner', 'team', 'scope', 'geography', 'industry', 'raci', 'responsible', 'accountable', 'consulted', 'informed', 'ai app', 'access'],
       },
       {
         id: 'intake-forms',
@@ -96,7 +96,7 @@ export const collections: Collection[] = [
         id: 'intake-form-fields',
         title: 'Intake form fields',
         description: 'Every intake form field type, its settings and what is checked when a form is submitted.',
-        keywords: ['intake', 'field', 'field type', 'short text', 'long text', 'email', 'url', 'number', 'date', 'dropdown', 'multi-select', 'checkbox', 'calculated', 'validation', 'required', 'options', 'placeholder', 'help text', 'guidance', 'risk dimension'],
+        keywords: ['intake', 'field', 'field type', 'short text', 'long text', 'email', 'url', 'number', 'date', 'dropdown', 'multi-select', 'checkbox', 'calculated', 'validation', 'required', 'options', 'placeholder', 'help text', 'guidance', 'risk dimension', 'custom field', 'map to entity field'],
       },
       {
         id: 'intake-calculated-values',
@@ -126,7 +126,7 @@ export const collections: Collection[] = [
         id: 'ai-apps',
         title: 'Managing the AI apps inventory',
         description: 'Track the AI applications your teams use, with owners, approvals, policies, and risk.',
-        keywords: ['ai app', 'application', 'inventory', 'shadow ai', 'approval', 'governance'],
+        keywords: ['ai app', 'application', 'inventory', 'shadow ai', 'approval', 'governance', 'custom field'],
       },
       {
         id: 'model-lifecycle',
@@ -390,7 +390,7 @@ export const collections: Collection[] = [
     title: 'Compliance frameworks',
     description: 'Stay compliant with AI regulations including EU AI Act, ISO 42001, and more.',
     icon: 'Shield',
-    articleCount: 9,
+    articleCount: 10,
     articles: [
       {
         id: 'assessments',
@@ -403,6 +403,12 @@ export const collections: Collection[] = [
         title: 'Adding frameworks',
         description: 'Add any of the 25 built-in frameworks to your organization or a use case, and work through their requirements.',
         keywords: ['framework', 'add framework', 'remove framework', 'manage frameworks', 'organizational', 'use case', 'soc 2', 'gdpr', 'ccpa', 'dora', 'hipaa', 'pci-dss', 'cis controls', 'nist csf', 'cybersecurity', 'nyc local law 144', 'altai', 'oecd', 'ftc', 'colorado', 'texas', 'quebec', 'pdpl', 'data governance', 'ai ethics', 'custom framework', 'requirement'],
+      },
+      {
+        id: 'framework-import',
+        title: 'Importing your own framework',
+        description: 'Import your own framework from an Excel file, add it to use cases and assess it topic by topic.',
+        keywords: ['framework import', 'import framework', 'excel', 'xlsx', 'spreadsheet', 'template', 'custom framework', 'internal policy', 'topics', 'subtopics', 're-import', 'retired', 'extension', 'use case', 'assessment'],
       },
       {
         id: 'eu-ai-act',
@@ -476,8 +482,8 @@ export const collections: Collection[] = [
       {
         id: 'policy-templates',
         title: 'Policy templates library',
-        description: 'Browse, filter and create policies from the full template library with categories, tags and the rich text editor.',
-        keywords: ['template', 'library', 'category', 'filter', 'group', 'editor', 'rich text', 'tiptap', 'copy', 'customize'],
+        description: 'Browse the built-in policy templates, keep your organization\'s own templates, and create policies from either.',
+        keywords: ['template', 'library', 'category', 'filter', 'group', 'editor', 'rich text', 'copy', 'duplicate', 'save as template', 'our templates', 'system templates', 'customize'],
       },
     ],
   },
@@ -492,7 +498,7 @@ export const collections: Collection[] = [
         id: 'training-tracking',
         title: 'Training registry',
         description: 'Track AI training programs and team competency development.',
-        keywords: ['training', 'track', 'completion', 'team', 'program', 'competency', 'registry'],
+        keywords: ['training', 'track', 'completion', 'team', 'program', 'competency', 'registry', 'assign', 'assignment', 'due date', 'overdue', 'reminder', 'my training'],
       },
     ],
   },
@@ -727,13 +733,13 @@ export const collections: Collection[] = [
     title: 'Settings & configuration',
     description: 'Configure VerifyWise to match your organization\'s needs.',
     icon: 'Settings',
-    articleCount: 5,
+    articleCount: 6,
     articles: [
       {
         id: 'organization-settings',
         title: 'Organization settings',
-        description: 'Set your organization name and branding.',
-        keywords: ['organization', 'settings', 'name', 'logo', 'branding'],
+        description: 'Set your organization name and branding, and connect an MCP client.',
+        keywords: ['organization', 'settings', 'name', 'logo', 'branding', 'mcp', 'claude code', 'api token'],
       },
       {
         id: 'user-management',
@@ -743,9 +749,15 @@ export const collections: Collection[] = [
       },
       {
         id: 'role-configuration',
-        title: 'Role configuration',
-        description: 'Understand the Admin, Reviewer, Editor and Auditor roles.',
-        keywords: ['role', 'permission', 'admin', 'reviewer', 'editor', 'auditor', 'access'],
+        title: 'Roles and permissions',
+        description: 'Understand the built-in roles and create custom roles with their own permissions.',
+        keywords: ['role', 'roles', 'custom role', 'permission', 'permissions', 'allow', 'deny', 'admin', 'reviewer', 'editor', 'auditor', 'access'],
+      },
+      {
+        id: 'user-groups',
+        title: 'Groups',
+        description: 'Create groups of users and give a whole team access to a use case.',
+        keywords: ['group', 'groups', 'team', 'teams', 'members', 'use case access', 'project access', 'permission'],
       },
       {
         id: 'notifications',

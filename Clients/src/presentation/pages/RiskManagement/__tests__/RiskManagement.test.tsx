@@ -74,17 +74,6 @@ vi.mock("../../../../infrastructure/api/networkServices", () => ({
   apiServices: {},
 }));
 
-// Mock constants
-vi.mock("../../../../application/constants/permissions", () => ({
-  default: {
-    projectRisks: {
-      create: ["Admin", "Editor"],
-      update: ["Admin", "Editor"],
-      delete: ["Admin"],
-    },
-  },
-}));
-
 // Mock child components
 vi.mock("../../../components/Table/VWProjectRisksTable", () => ({
   default: () => <div data-testid="project-risks-table" />,

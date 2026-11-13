@@ -58,9 +58,9 @@ function listOptionsFrom(req: Request) {
 }
 
 /**
- * GET /api/v1/ai-apps (#5193): the legacy list plus the lifecycle columns, an
- * optional ?lifecycle_stage= filter and ?search= (name or description). Same
- * query, paging and sorting otherwise.
+ * GET /api/v1/ai-apps (#5193): the legacy list plus the lifecycle columns,
+ * each app's `custom_fields` (#5262), an optional ?lifecycle_stage= filter and
+ * ?search= (name or description). Same query, paging and sorting otherwise.
  */
 export async function getAllAiAppsV1(req: Request, res: Response): Promise<any> {
   const stage = req.query.lifecycle_stage;
@@ -74,6 +74,7 @@ export async function getAllAiAppsV1(req: Request, res: Response): Promise<any> 
       ...listOptionsFrom(req),
       lifecycleStage: stage,
       withLifecycle: true,
+      withCustomFields: true,
       search: search || undefined,
     });
     return res.status(200).json(STATUS_CODE[200](result));

@@ -429,7 +429,7 @@ export async function deleteUseCaseCtrl(req: Request, res: Response): Promise<an
   const ctx = logContext(req, "deleteUseCaseCtrl");
   const projectId = intParam(req, "id");
   if (!Number.isInteger(projectId) || projectId <= 0) {
-    return res.status(400).json(STATUS_CODE[400]("Invalid use case id"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid use case id")));
   }
   logProcessing({ ...ctx, description: `deleting Jira Assets use case project ${projectId}` });
   try {

@@ -13,7 +13,7 @@ import { Trash2, MoreVertical } from "lucide-react";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { ModelRow } from "./index";
 import { CustomizableButton } from "../../button/customizable-button";
-import { text, background, border as borderPalette, status } from "../../../themes/palette";
+import { text, background, border as borderPalette, status, accent } from "../../../themes/palette";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 
 interface ModelsTableBodyProps {
@@ -32,20 +32,21 @@ const formatTimestamp = (
   return formatDate(dateStr, { includeTime: true });
 };
 
-// Provider color mapping for chips
+// Provider color mapping for chips. Values with an identical palette token use
+// it; the rest are provider-specific shades with no token and stay literal.
 const getProviderColor = (provider: string): { bg: string; text: string } => {
   const colors: Record<string, { bg: string; text: string }> = {
     openai: { bg: "#E8F5E9", text: "#2E7D32" },
     anthropic: { bg: "#FFF3E0", text: "#E65100" },
-    google: { bg: "#E3F2FD", text: "#1565C0" },
+    google: { bg: accent.blue.bg, text: accent.blue.text },
     mistral: { bg: "#F3E5F5", text: "#7B1FA2" },
     ollama: { bg: "#ECEFF1", text: "#37474F" },
-    huggingface: { bg: "#FFF8E1", text: "#F57F17" },
+    huggingface: { bg: accent.amber.bg, text: "#F57F17" },
     xai: { bg: "#FAFAFA", text: "#212121" },
     bedrock: { bg: "#FFF3E0", text: "#FF6F00" },
     meta: { bg: "#E8F0FE", text: "#1A56DB" },
     deepseek: { bg: "#EDE8FD", text: "#5B21B6" },
-    microsoft: { bg: "#E3F2FD", text: "#0369A1" },
+    microsoft: { bg: accent.blue.bg, text: "#0369A1" },
     cohere: { bg: "#FFF3E0", text: "#B45309" },
     perplexity: { bg: "#F0FDF4", text: "#15803D" },
     nvidia: { bg: "#F0FDF4", text: "#166534" },
@@ -344,13 +345,13 @@ const ModelsTableBody: React.FC<ModelsTableBodyProps> = ({
                 "height": "34px",
                 "fontSize": "13px",
                 "fontWeight": 500,
-                "color": "#DC2626",
+                "color": status.error.text,
                 "borderColor": `${borderPalette.dark}`,
                 "backgroundColor": "transparent",
                 "justifyContent": "flex-start",
                 "&:hover": {
                   backgroundColor: "#FEF2F2",
-                  borderColor: "#DC2626",
+                  borderColor: status.error.text,
                 },
               }}
             >

@@ -20,8 +20,8 @@ import {
   useGovernancePreferences,
   useUpdatePreferences,
 } from "../../../../application/hooks/useGovernanceOs";
-import { useIsAdmin } from "../../../../application/hooks/useIsAdmin";
 import { border as borderPalette, background, text, brand } from "../../../themes/palette";
+import { useCan } from "../../../../application/hooks/useCan";
 
 const FRAMEWORK_NAMES: Record<number, string> = {
   1: "EU AI Act",
@@ -32,7 +32,7 @@ const FRAMEWORK_NAMES: Record<number, string> = {
 
 const GovernanceSettings: React.FC = () => {
   const navigate = useNavigate();
-  const isAdmin = useIsAdmin();
+  const isAdmin = useCan("governanceOs.admin");
   const { data: preferences, isLoading: prefsLoading } = useGovernancePreferences();
   const updatePrefsMutation = useUpdatePreferences();
 

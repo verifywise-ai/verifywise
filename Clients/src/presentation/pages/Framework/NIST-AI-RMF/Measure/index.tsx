@@ -14,7 +14,7 @@ import { ArrowRight as RightArrowBlack } from "lucide-react";
 import { useSearchParams } from "react-router";
 import StatusDropdown from "../../../../components/StatusDropdown";
 import { useAuth } from "../../../../../application/hooks/useAuth";
-import allowedRoles from "../../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../../application/hooks/useCan";
 import { Project } from "../../../../../domain/types/Project";
 import { handleAlert } from "../../../../../application/tools/alertUtils";
 import Alert from "../../../../components/Alert";
@@ -47,7 +47,8 @@ const NISTAIRMFMeasure = ({
   initialCategoryId,
   initialSubcategoryId,
 }: NISTAIRMFMeasureProps) => {
-  const { userId: _userId, userRoleName } = useAuth();
+  const { userId: _userId } = useAuth();
+  const can = useCanCheck();
   const [categories, setCategories] = useState<any[]>([]);
   const [expanded, setExpanded] = useState<number | false>(false);
   const [refreshTrigger, setRefreshTrigger] = useState(0);
@@ -378,8 +379,7 @@ const NISTAIRMFMeasure = ({
                 currentStatus={subcategory.status ?? "Not started"}
                 onStatusChange={(newStatus) => handleStatusUpdate(newStatus, subcategory, index)}
                 size="small"
-                allowedRoles={allowedRoles.frameworks.edit}
-                userRole={userRoleName}
+                canEdit={can("framework.edit")}
               />
             </Stack>
           ))

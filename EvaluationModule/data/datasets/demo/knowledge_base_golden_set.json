@@ -1,0 +1,102 @@
+[
+  {
+    "id": "kb_001",
+    "category": "knowledge-base",
+    "prompt": "What is our data retention policy for customer support tickets?",
+    "expected_output": "Support tickets are kept for 24 months and then anonymized.",
+    "difficulty": "medium",
+    "retrieval_context": [
+      "Data retention policy, section 4.2: Customer support tickets are retained for 24 months from closure, after which personal data is anonymized."
+    ]
+  },
+  {
+    "id": "kb_002",
+    "category": "knowledge-base",
+    "prompt": "Summarize the onboarding checklist for new enterprise customers.",
+    "expected_output": "Kickoff call, SSO setup, data migration, admin training, and a 30-day check-in.",
+    "difficulty": "medium",
+    "retrieval_context": [
+      "Enterprise onboarding checklist: 1. Kickoff call. 2. SSO setup. 3. Data migration. 4. Admin training. 5. 30-day check-in with the customer success manager."
+    ]
+  },
+  {
+    "id": "kb_003",
+    "category": "knowledge-base",
+    "prompt": "What SLA tier applies to a Priority 1 incident?",
+    "expected_output": "Priority 1 incidents have a 1-hour response SLA and a 4-hour resolution target.",
+    "difficulty": "medium",
+    "retrieval_context": [
+      "Support SLA matrix: Priority 1 (service down) - response within 1 hour, resolution target 4 hours. Priority 2 - response within 4 hours, resolution target 2 business days."
+    ]
+  },
+  {
+    "id": "kb_004",
+    "category": "knowledge-base",
+    "prompt": "Where is the API rate limit documented?",
+    "expected_output": "In the 'Rate limits' section of the API reference: 100 requests per minute for standard tier keys.",
+    "difficulty": "medium",
+    "retrieval_context": [
+      "API reference, Rate limits: Standard tier keys are limited to 100 requests per minute. Enterprise keys can request a higher limit through support."
+    ]
+  },
+  {
+    "id": "kb_005",
+    "category": "knowledge-base",
+    "prompt": "What's the process for requesting a security questionnaire?",
+    "expected_output": "Request it through the Trust Center form. Questionnaires are usually returned within 3 business days.",
+    "difficulty": "medium",
+    "retrieval_context": [
+      "Trust Center: Customers request security questionnaires through the Trust Center request form. The security team returns completed questionnaires within 3 business days."
+    ]
+  },
+  {
+    "id": "kb_006",
+    "category": "knowledge-base",
+    "prompt": "How often must Tier 1 models be revalidated?",
+    "expected_output": "Tier 1 models are revalidated at least once a year, and again after any material change.",
+    "difficulty": "medium",
+    "retrieval_context": [
+      "Model risk management standard, section 6: Tier 1 models undergo independent revalidation at least annually and after any material change to data, methodology or use."
+    ]
+  },
+  {
+    "id": "kb_007",
+    "category": "knowledge-base",
+    "prompt": "Who approves exceptions to the AI acceptable use policy?",
+    "expected_output": "The Chief Risk Officer approves exceptions, through the policy exception form, for up to 90 days.",
+    "difficulty": "medium",
+    "retrieval_context": [
+      "AI acceptable use policy, section 9: Exceptions require written approval from the Chief Risk Officer via the policy exception form. Approved exceptions expire after at most 90 days."
+    ]
+  },
+  {
+    "id": "kb_008",
+    "category": "knowledge-base",
+    "prompt": "Can I paste customer data into a public generative AI tool?",
+    "expected_output": "No. Only public information may be entered into public AI tools; customer personal data and confidential data are prohibited.",
+    "difficulty": "medium",
+    "retrieval_context": [
+      "AI acceptable use policy, section 5: Only information classified Public may be entered into public generative AI tools. Customer personal data and Confidential or Restricted data are prohibited."
+    ]
+  },
+  {
+    "id": "kb_009",
+    "category": "knowledge-base",
+    "prompt": "How long do we keep audit logs?",
+    "expected_output": "Audit logs are kept for 7 years.",
+    "difficulty": "medium",
+    "retrieval_context": [
+      "Data retention policy, section 4.5: System and access audit logs are retained for 7 years to meet regulatory record-keeping requirements."
+    ]
+  },
+  {
+    "id": "kb_010",
+    "category": "knowledge-base",
+    "prompt": "What do I do if I suspect a model is producing biased outcomes?",
+    "expected_output": "Log it in the incident register within 24 hours; the model owner and the model risk team are notified.",
+    "difficulty": "medium",
+    "retrieval_context": [
+      "AI incident procedure: Suspected bias or unfair outcomes must be logged in the incident register within 24 hours of discovery. Logging notifies the model owner and the model risk management team."
+    ]
+  }
+]

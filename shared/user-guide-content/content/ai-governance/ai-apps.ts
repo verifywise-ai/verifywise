@@ -169,6 +169,16 @@ export const aiAppsContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'linked-use-cases',
+      level: 3,
+      text: 'Linked use cases',
+    },
+    {
+      type: 'paragraph',
+      text: 'List the use cases this app serves. Select **Add use case**, choose one and select **Add**, or select the X next to a use case to remove the link. You only see the names of use cases you have access to. Any others are shown as a count.',
+    },
+    {
+      type: 'heading',
       id: 'shadow-ai',
       level: 2,
       text: 'Promoting a shadow AI tool',
@@ -250,6 +260,16 @@ export const aiAppsContent: ArticleContent = {
     {
       type: 'paragraph',
       text: 'Editing a questionnaire changes its pending assessments. Completed assessments keep the questions they were answered with.',
+    },
+    {
+      type: 'heading',
+      id: 'custom-fields',
+      level: 2,
+      text: 'Custom fields',
+    },
+    {
+      type: 'paragraph',
+      text: 'AI apps support custom fields. Define them in **Settings** > **Custom fields**. They appear in the AI app form and as extra columns in the AI apps table.',
     },
     {
       type: 'heading',

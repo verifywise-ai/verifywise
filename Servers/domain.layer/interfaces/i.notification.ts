@@ -36,6 +36,8 @@ export enum NotificationType {
   // Training notifications
   TRAINING_ASSIGNED = "training_assigned",
   TRAINING_COMPLETED = "training_completed",
+  TRAINING_DUE_SOON = "training_due_soon",
+  TRAINING_OVERDUE = "training_overdue",
 
   // Vendor notifications
   VENDOR_REVIEW_DUE = "vendor_review_due",
@@ -218,15 +220,44 @@ export interface IBulkNotification {
   metadata?: Record<string, any>;
 }
 
+/** Values for the {placeholders} in a translation key. */
+export type ITranslationVars = Record<string, string | number>;
+
 /**
  * Email notification configuration
- * Used when a notification should also trigger an email
+ * Used when a notification should also trigger an email.
+ *
+ * The subject is either fixed English text (`subject`) or a dictionary key
+ * (`subjectKey` + `subjectVars`) that sendInAppNotification translates into the
+ * recipient's saved language. The template body stays English.
  */
-export interface IEmailNotificationConfig {
+export type IEmailNotificationConfig = {
   template: string;
-  subject: string;
   variables: Record<string, string>;
-}
+} & (
+  | { subject: string; subjectKey?: never; subjectVars?: never }
+  | { subject?: never; subjectKey: string; subjectVars?: ITranslationVars }
+);
+
+/** Title of an in-app notification: English text, or a key translated per recipient. */
+export type INotificationTitle =
+  | { title: string; titleKey?: never; titleVars?: never }
+  | { title?: never; titleKey: string; titleVars?: ITranslationVars };
+
+/** Message of an in-app notification: English text, or a key translated per recipient. */
+export type INotificationMessage =
+  | { message: string; messageKey?: never; messageVars?: never }
+  | { message?: never; messageKey: string; messageVars?: ITranslationVars };
+
+/**
+ * What sendInAppNotification accepts. Keys (`titleKey`, `messageKey`, and the
+ * email's `subjectKey`) are translated with the recipient's saved language,
+ * read once per recipient. A caller that already knows that language (because
+ * it needs it for its own vars) passes it as `lang` to skip the lookup.
+ */
+export type IInAppNotificationInput = Omit<ICreateNotification, "title" | "message"> &
+  INotificationTitle &
+  INotificationMessage & { lang?: string };
 
 /**
  * Notification with optional email

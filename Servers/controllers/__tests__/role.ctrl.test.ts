@@ -332,6 +332,39 @@ describe("role.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(403);
     });
 
+    it("should return 400 when the new name collides with another role", async () => {
+      mockGetById.mockResolvedValue(customRole);
+      mockGetByName.mockResolvedValue({ id: 2, name: "Validator", organization_id: 1 } as any);
+      const req = createReq({ params: { id: "1" }, body: { name: "Validator" } });
+      const res = createRes();
+      await updateRoleById(req, res);
+      const tx = await mockTransaction.mock.results[0].value;
+      expect(tx.rollback).toHaveBeenCalled();
+      expect(mockUpdate).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+
+    it("should return 400 when renaming to a built-in role name", async () => {
+      mockGetById.mockResolvedValue(customRole);
+      const req = createReq({ params: { id: "1" }, body: { name: "Admin" } });
+      const res = createRes();
+      await updateRoleById(req, res);
+      expect(mockUpdate).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
+
+    it("should roll back and return 404 when the update matches no row", async () => {
+      mockGetById.mockResolvedValue(customRole);
+      mockUpdate.mockResolvedValue(null as any);
+      const req = createReq({ params: { id: "1" }, body: { description: "Updated" } });
+      const res = createRes();
+      await updateRoleById(req, res);
+      const tx = await mockTransaction.mock.results[0].value;
+      expect(tx.rollback).toHaveBeenCalled();
+      expect(tx.commit).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
+
     it("should return 500 on error", async () => {
       mockGetById.mockResolvedValue(customRole);
       mockUpdate.mockRejectedValue(new Error("DB error"));

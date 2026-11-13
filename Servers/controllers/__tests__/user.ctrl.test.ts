@@ -600,6 +600,17 @@ describe("user.ctrl", () => {
         expect.objectContaining({ data: expect.objectContaining({ token: "token" }) }),
       );
     });
+    it("persists the last login timestamp", async () => {
+      mockGetByEmail.mockResolvedValue(mockUser(buildUser()) as any);
+      mockOrganizations.mockResolvedValue([ACME]);
+      const req = createReq({ body: { email: "a@b.com", password: "pass" } });
+      const res = createRes();
+      await loginUser(req, res);
+      expect(mockUpdate).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ last_login: expect.any(Date) }),
+      );
+    });
     it("should ask a user with several organizations to choose, without a session", async () => {
       mockGetByEmail.mockResolvedValue(mockUser(buildUser()) as any);
       mockOrganizations.mockResolvedValue([ACME, GLOBEX]);
@@ -1217,6 +1228,18 @@ describe("user.ctrl", () => {
         res,
       );
       expect(res.status).toHaveBeenCalledWith(202);
+    });
+    it("persists the last login timestamp", async () => {
+      mockGetByEmail.mockResolvedValue(ssoUser());
+      // Existing member of the SSO organization: first membership lookup finds it.
+      mockOrganizations.mockResolvedValueOnce([GLOBEX]);
+      const res = createRes();
+      await loginUserWithMicrosoft(ssoReq(), res);
+      expect(res.status).toHaveBeenCalledWith(202);
+      expect(mockUpdate).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({ last_login: expect.any(Date) }),
+      );
     });
     it("should not join an account linked to another Microsoft identity, or none", async () => {
       for (const user of [ssoUser({ sso_user_id: "someone-else" }), mockUser(buildUser()) as any]) {

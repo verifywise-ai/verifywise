@@ -46,7 +46,7 @@ import { updateEUAIActAnswerById } from "../../../../application/repository/ques
 import { getEntityById } from "../../../../application/repository/entity.repository";
 import { attachFilesToEntity } from "../../../../application/repository/file.repository";
 import { getAssessmentTopicById } from "../../../../application/repository/assesment.repository";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../application/hooks/useCan";
 
 const FRAMEWORK_TYPE = "eu_ai_act";
 const ENTITY_TYPE = "assessment";
@@ -101,7 +101,8 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
   onSaveSuccess,
 }) => {
   const theme = useTheme();
-  const { userRoleName, userId } = useAuth();
+  const { userId } = useAuth();
+  const can = useCanCheck();
   const { users } = useUsers();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -131,7 +132,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
 
   const risks = useLinkedRisks({ onAlert: handleAlert });
 
-  const isEditingDisabled = !allowedRoles.frameworks.edit.includes(userRoleName);
+  const isEditingDisabled = !can("framework.edit");
 
   const fetchLinkedRisks = async (riskIds?: number[]) => {
     if (!questionProp?.answer_id) return;

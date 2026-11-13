@@ -43,7 +43,7 @@ import {
 import { getEntityById } from "../../../../application/repository/entity.repository";
 import { attachFilesToEntity } from "../../../../application/repository/file.repository";
 import { useInvalidateEvidenceGaps } from "../../../../application/hooks/useEvidenceAi";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../application/hooks/useCan";
 import { HistorySidebar } from "../../Common/HistorySidebar";
 import { useQueryClient } from "@tanstack/react-query";
 
@@ -107,7 +107,8 @@ const VWISO42001AnnexDrawerDialog = ({
   project_id,
   onSaveSuccess,
 }: VWISO42001ClauseDrawerDialogProps) => {
-  const { userId, userRoleName } = useAuth();
+  const { userId } = useAuth();
+  const can = useCanCheck();
   const { users } = useUsers();
 
   const [isLoading, setIsLoading] = useState(false);
@@ -160,8 +161,8 @@ const VWISO42001AnnexDrawerDialog = ({
     [users],
   );
 
-  const isEditingDisabled = !allowedRoles.frameworks.edit.includes(userRoleName);
-  const isAuditingDisabled = !allowedRoles.frameworks.audit.includes(userRoleName);
+  const isEditingDisabled = !can("framework.edit");
+  const isAuditingDisabled = !can("framework.audit");
 
   const fetchLinkedRisks = async () => {
     if (!fetchedAnnex?.id) return;

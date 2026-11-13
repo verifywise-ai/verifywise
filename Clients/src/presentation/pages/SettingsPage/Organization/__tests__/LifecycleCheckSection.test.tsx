@@ -4,8 +4,16 @@ import LifecycleCheckSection from "../LifecycleCheckSection";
 
 let mockPermissions: string[] | undefined = ["organization.admin"];
 vi.mock("../../../../../application/hooks/useMyPermissions", () => ({
-  useHasPermission: (key: string) => !!mockPermissions?.includes(key),
+  useMyPermissions: () => ({ permissions: undefined, isLoading: true, error: null }),
 }));
+vi.mock("../../../../../application/hooks/useCan", () => {
+  const useCan = (key: string) => !!mockPermissions?.includes(key);
+  return {
+    useCan,
+    useCanCheck: () => useCan,
+    usePermissionsSettled: () => true,
+  };
+});
 
 const mockGetSettings = vi.fn();
 const mockUpdateSettings = vi.fn();

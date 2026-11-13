@@ -16,7 +16,6 @@ This controller manages project risk-related operations, providing CRUD function
 
 ```typescript
 import { Request, Response } from "express";
-import { MOCKDATA_ON } from "../flags";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 ```
 

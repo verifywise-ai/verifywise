@@ -32,7 +32,7 @@ import { CustomizableButton } from "../../button/customizable-button";
 import RichTextEditor from "../../RichTextEditor";
 import StandardModal from "../../Modals/StandardModal";
 import { FilePickerModal } from "../../FilePickerModal";
-import { text, status } from "../../../themes/palette";
+import { accent, background, border, status, text } from "../../../themes/palette";
 
 import NotesTab from "../../Notes/NotesTab";
 import { HistorySidebar } from "../../Common/HistorySidebar";
@@ -43,7 +43,7 @@ import AddNewRiskForm from "../../AddNewRiskForm";
 import { AlertBox, styles } from "../../../pages/ComplianceTracker/1.0ComplianceTracker/styles";
 import { handleAlert } from "../../../../application/tools/alertUtils";
 import { AlertProps } from "../../../types/alert.types";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../application/hooks/useCan";
 import { updateControl } from "../../../../application/repository/control_eu_act.repository";
 import { useInvalidateEvidenceGaps } from "../../../../application/hooks/useEvidenceAi";
 import { useAuth } from "../../../../application/hooks/useAuth";
@@ -52,6 +52,7 @@ import { User } from "../../../../domain/types/User";
 import { useSearchParams } from "react-router";
 import { getFileById } from "../../../../application/repository/file.repository";
 import { getEntityById } from "../../../../application/repository/entity.repository";
+import { textStyles } from "../../../themes/typography";
 
 // Input styles matching other drawers
 export const inputStyles = {
@@ -107,7 +108,8 @@ const NewControlPane = ({
   onComplianceUpdate?: () => void;
   projectId: number;
 }) => {
-  const { userRoleName, userId } = useAuth();
+  const { userId } = useAuth();
+  const can = useCanCheck();
   const { users } = useUsers();
 
   // ========================================================================
@@ -143,8 +145,8 @@ const NewControlPane = ({
   // PERMISSIONS
   // ========================================================================
 
-  const isEditingDisabled = !allowedRoles.frameworks.edit.includes(userRoleName);
-  const isAuditingDisabled = !allowedRoles.frameworks.audit.includes(userRoleName);
+  const isEditingDisabled = !can("framework.edit");
+  const isAuditingDisabled = !can("framework.audit");
 
   // ========================================================================
   // STATE - FORM DATA (Per-subcontrol map)
@@ -995,7 +997,7 @@ const NewControlPane = ({
             margin: 0,
             borderRadius: 0,
             overflowX: "hidden",
-            backgroundColor: "#FCFCFD",
+            backgroundColor: background.main,
             height: "100vh",
             display: "flex",
             flexDirection: "column",
@@ -1006,7 +1008,7 @@ const NewControlPane = ({
         <Box
           sx={{
             padding: "16px 20px",
-            borderBottom: "1px solid #eaecf0",
+            borderBottom: `1px solid ${border.light}`,
             display: "flex",
             justifyContent: "space-between",
             alignItems: "flex-start",
@@ -1018,7 +1020,7 @@ const NewControlPane = ({
               sx={{
                 fontSize: "16px",
                 fontWeight: 600,
-                color: "#1c2130",
+                color: text.primary,
                 mb: controlData.description ? 1.5 : 0,
               }}
             >
@@ -1028,16 +1030,18 @@ const NewControlPane = ({
             {controlData.description && (
               <Stack
                 sx={{
-                  border: "1px solid #eee",
+                  border: `1px solid ${border.light}`,
                   padding: "12px",
-                  backgroundColor: "#f8f9fa",
+                  backgroundColor: background.alt,
                   borderRadius: "4px",
                 }}
               >
-                <Typography fontSize={13} sx={{ marginBottom: "8px" }}>
-                  <strong>Description:</strong>
+                <Typography
+                  sx={{ ...textStyles.subsectionTitle, color: text.primary, marginBottom: 4 }}
+                >
+                  Description:
                 </Typography>
-                <Typography fontSize={13} color="#666">
+                <Typography {...textStyles.body} color={text.secondary}>
                   {controlData.description}
                 </Typography>
               </Stack>
@@ -1058,7 +1062,7 @@ const NewControlPane = ({
         <Box
           sx={{
             padding: "16px 20px",
-            borderBottom: "1px solid #eaecf0",
+            borderBottom: `1px solid ${border.light}`,
           }}
         >
           <Stack direction="row" gap="16px" flexWrap="wrap">
@@ -1193,7 +1197,7 @@ const NewControlPane = ({
                   sx={{
                     fontSize: "16px",
                     fontWeight: 600,
-                    color: "#1c2130",
+                    color: text.primary,
                     mb: currentSubcontrol.description ? 1.5 : 0,
                   }}
                 >
@@ -1204,16 +1208,18 @@ const NewControlPane = ({
                 {currentSubcontrol.description && (
                   <Stack
                     sx={{
-                      border: "1px solid #eee",
+                      border: `1px solid ${border.light}`,
                       padding: "12px",
-                      backgroundColor: "#f8f9fa",
+                      backgroundColor: background.alt,
                       borderRadius: "4px",
                     }}
                   >
-                    <Typography fontSize={13} sx={{ marginBottom: "8px" }}>
-                      <strong>Description:</strong>
+                    <Typography
+                      sx={{ ...textStyles.subsectionTitle, color: text.primary, marginBottom: 4 }}
+                    >
+                      Description:
                     </Typography>
-                    <Typography fontSize={13} color="#666">
+                    <Typography {...textStyles.body} color={text.secondary}>
                       {currentSubcontrol.description}
                     </Typography>
                   </Stack>
@@ -1332,7 +1338,7 @@ const NewControlPane = ({
                         sx={{
                           fontSize: "14px",
                           fontWeight: 600,
-                          color: "#1F2937",
+                          color: text.primary,
                           mb: 1,
                         }}
                       >
@@ -1361,13 +1367,13 @@ const NewControlPane = ({
                             "width": 155,
                             "height": 25,
                             "fontSize": 11,
-                            "border": "1px solid #d0d5dd",
+                            "border": `1px solid ${border.dark}`,
                             "backgroundColor": "white",
                             "color": "text.secondary",
                             "textTransform": "none",
                             "&:hover": {
                               backgroundColor: "background.accent",
-                              border: "1px solid #d0d5dd",
+                              border: `1px solid ${border.dark}`,
                             },
                           }}
                         >
@@ -1382,13 +1388,13 @@ const NewControlPane = ({
                             "width": 155,
                             "height": 25,
                             "fontSize": 11,
-                            "border": "1px solid #d0d5dd",
+                            "border": `1px solid ${border.dark}`,
                             "backgroundColor": "white",
                             "color": "text.secondary",
                             "textTransform": "none",
                             "&:hover": {
                               backgroundColor: "background.accent",
-                              border: "1px solid #d0d5dd",
+                              border: `1px solid ${border.dark}`,
                             },
                           }}
                         >
@@ -1420,7 +1426,7 @@ const NewControlPane = ({
                             </Typography>
                           )}
                           {currentFormData.pendingAttachEvidenceFiles.length > 0 && (
-                            <Typography sx={{ fontSize: 11, color: "#0369A1" }}>
+                            <Typography sx={{ fontSize: 11, color: accent.blue.text }}>
                               +{currentFormData.pendingAttachEvidenceFiles.length} pending attach
                             </Typography>
                           )}
@@ -1443,7 +1449,7 @@ const NewControlPane = ({
                                 "alignItems": "center",
                                 "justifyContent": "space-between",
                                 "padding": "10px 12px",
-                                "border": "1px solid #eaecf0",
+                                "border": `1px solid ${border.light}`,
                                 "borderRadius": "4px",
                                 "backgroundColor": "background.main",
                                 "&:hover": {
@@ -1466,7 +1472,7 @@ const NewControlPane = ({
                                     sx={{
                                       fontSize: 13,
                                       fontWeight: 500,
-                                      color: "#1F2937",
+                                      color: text.primary,
                                       overflow: "hidden",
                                       textOverflow: "ellipsis",
                                       whiteSpace: "nowrap",
@@ -1478,7 +1484,7 @@ const NewControlPane = ({
                                     <Typography
                                       sx={{
                                         fontSize: 11,
-                                        color: "status.default.text",
+                                        color: text.secondary,
                                         mt: 0.25,
                                       }}
                                     >
@@ -1528,7 +1534,7 @@ const NewControlPane = ({
                             sx={{
                               fontSize: 12,
                               fontWeight: 600,
-                              color: "#92400E",
+                              color: accent.amber.text,
                               mb: 1,
                             }}
                           >
@@ -1543,9 +1549,9 @@ const NewControlPane = ({
                                   alignItems: "center",
                                   justifyContent: "space-between",
                                   padding: "10px 12px",
-                                  border: "1px solid #FEF3C7",
+                                  border: `1px solid ${accent.amber.border}`,
                                   borderRadius: "4px",
-                                  backgroundColor: "#FFFBEB",
+                                  backgroundColor: accent.amber.bg,
                                 }}
                               >
                                 <Box
@@ -1557,13 +1563,13 @@ const NewControlPane = ({
                                     minWidth: 0,
                                   }}
                                 >
-                                  <FileIcon size={18} color="#D97706" />
+                                  <FileIcon size={18} color={accent.amber.text} />
                                   <Box sx={{ minWidth: 0, flex: 1 }}>
                                     <Typography
                                       sx={{
                                         fontSize: 13,
                                         fontWeight: 500,
-                                        color: "#92400E",
+                                        color: accent.amber.text,
                                         overflow: "hidden",
                                         textOverflow: "ellipsis",
                                         whiteSpace: "nowrap",
@@ -1606,7 +1612,7 @@ const NewControlPane = ({
                             sx={{
                               fontSize: 12,
                               fontWeight: 600,
-                              color: "#0369A1",
+                              color: accent.blue.text,
                               mb: 1,
                             }}
                           >
@@ -1621,9 +1627,9 @@ const NewControlPane = ({
                                   alignItems: "center",
                                   justifyContent: "space-between",
                                   padding: "10px 12px",
-                                  border: "1px solid #BAE6FD",
+                                  border: `1px solid ${accent.blue.border}`,
                                   borderRadius: "4px",
-                                  backgroundColor: "#F0F9FF",
+                                  backgroundColor: accent.blue.bg,
                                 }}
                               >
                                 <Box
@@ -1635,13 +1641,13 @@ const NewControlPane = ({
                                     minWidth: 0,
                                   }}
                                 >
-                                  <FileIcon size={18} color="#0369A1" />
+                                  <FileIcon size={18} color={accent.blue.text} />
                                   <Box sx={{ minWidth: 0, flex: 1 }}>
                                     <Typography
                                       sx={{
                                         fontSize: 13,
                                         fontWeight: 500,
-                                        color: "#0C4A6E",
+                                        color: accent.blue.text,
                                         overflow: "hidden",
                                         textOverflow: "ellipsis",
                                         whiteSpace: "nowrap",
@@ -1689,7 +1695,7 @@ const NewControlPane = ({
                               py: 4,
                               mt: 2,
                               color: "status.default.text",
-                              border: "2px dashed #D1D5DB",
+                              border: `2px dashed ${border.light}`,
                               borderRadius: 1,
                               backgroundColor: "background.accent",
                             }}
@@ -1708,7 +1714,7 @@ const NewControlPane = ({
                         sx={{
                           fontSize: "14px",
                           fontWeight: 600,
-                          color: "#1F2937",
+                          color: text.primary,
                           mb: 1,
                         }}
                       >
@@ -1737,13 +1743,13 @@ const NewControlPane = ({
                             "width": 155,
                             "height": 25,
                             "fontSize": 11,
-                            "border": "1px solid #d0d5dd",
+                            "border": `1px solid ${border.dark}`,
                             "backgroundColor": "white",
                             "color": "text.secondary",
                             "textTransform": "none",
                             "&:hover": {
                               backgroundColor: "background.accent",
-                              border: "1px solid #d0d5dd",
+                              border: `1px solid ${border.dark}`,
                             },
                           }}
                         >
@@ -1758,13 +1764,13 @@ const NewControlPane = ({
                             "width": 155,
                             "height": 25,
                             "fontSize": 11,
-                            "border": "1px solid #d0d5dd",
+                            "border": `1px solid ${border.dark}`,
                             "backgroundColor": "white",
                             "color": "text.secondary",
                             "textTransform": "none",
                             "&:hover": {
                               backgroundColor: "background.accent",
-                              border: "1px solid #d0d5dd",
+                              border: `1px solid ${border.dark}`,
                             },
                           }}
                         >
@@ -1797,7 +1803,7 @@ const NewControlPane = ({
                             </Typography>
                           )}
                           {currentFormData.pendingAttachFeedbackFiles.length > 0 && (
-                            <Typography sx={{ fontSize: 11, color: "#0369A1" }}>
+                            <Typography sx={{ fontSize: 11, color: accent.blue.text }}>
                               +{currentFormData.pendingAttachFeedbackFiles.length} pending attach
                             </Typography>
                           )}
@@ -1820,7 +1826,7 @@ const NewControlPane = ({
                                 "alignItems": "center",
                                 "justifyContent": "space-between",
                                 "padding": "10px 12px",
-                                "border": "1px solid #eaecf0",
+                                "border": `1px solid ${border.light}`,
                                 "borderRadius": "4px",
                                 "backgroundColor": "background.main",
                                 "&:hover": {
@@ -1843,7 +1849,7 @@ const NewControlPane = ({
                                     sx={{
                                       fontSize: 13,
                                       fontWeight: 500,
-                                      color: "#1F2937",
+                                      color: text.secondary,
                                       overflow: "hidden",
                                       textOverflow: "ellipsis",
                                       whiteSpace: "nowrap",
@@ -1905,7 +1911,7 @@ const NewControlPane = ({
                             sx={{
                               fontSize: 12,
                               fontWeight: 600,
-                              color: "#92400E",
+                              color: accent.amber.text,
                               mb: 1,
                             }}
                           >
@@ -1920,9 +1926,9 @@ const NewControlPane = ({
                                   alignItems: "center",
                                   justifyContent: "space-between",
                                   padding: "10px 12px",
-                                  border: "1px solid #FEF3C7",
+                                  border: `1px solid ${accent.amber.border}`,
                                   borderRadius: "4px",
-                                  backgroundColor: "#FFFBEB",
+                                  backgroundColor: accent.amber.bg,
                                 }}
                               >
                                 <Box
@@ -1934,13 +1940,13 @@ const NewControlPane = ({
                                     minWidth: 0,
                                   }}
                                 >
-                                  <FileIcon size={18} color="#D97706" />
+                                  <FileIcon size={18} color={accent.amber.text} />
                                   <Box sx={{ minWidth: 0, flex: 1 }}>
                                     <Typography
                                       sx={{
                                         fontSize: 13,
                                         fontWeight: 500,
-                                        color: "#92400E",
+                                        color: accent.amber.text,
                                         overflow: "hidden",
                                         textOverflow: "ellipsis",
                                         whiteSpace: "nowrap",
@@ -1983,7 +1989,7 @@ const NewControlPane = ({
                             sx={{
                               fontSize: 12,
                               fontWeight: 600,
-                              color: "#0369A1",
+                              color: accent.blue.text,
                               mb: 1,
                             }}
                           >
@@ -1998,9 +2004,9 @@ const NewControlPane = ({
                                   alignItems: "center",
                                   justifyContent: "space-between",
                                   padding: "10px 12px",
-                                  border: "1px solid #BAE6FD",
+                                  border: `1px solid ${accent.blue.border}`,
                                   borderRadius: "4px",
-                                  backgroundColor: "#F0F9FF",
+                                  backgroundColor: accent.blue.bg,
                                 }}
                               >
                                 <Box
@@ -2012,13 +2018,13 @@ const NewControlPane = ({
                                     minWidth: 0,
                                   }}
                                 >
-                                  <FileIcon size={18} color="#0369A1" />
+                                  <FileIcon size={18} color={accent.blue.text} />
                                   <Box sx={{ minWidth: 0, flex: 1 }}>
                                     <Typography
                                       sx={{
                                         fontSize: 13,
                                         fontWeight: 500,
-                                        color: "#0C4A6E",
+                                        color: accent.blue.text,
                                         overflow: "hidden",
                                         textOverflow: "ellipsis",
                                         whiteSpace: "nowrap",
@@ -2066,7 +2072,7 @@ const NewControlPane = ({
                               py: 4,
                               mt: 2,
                               color: "status.default.text",
-                              border: "2px dashed #D1D5DB",
+                              border: `2px dashed ${border.light}`,
                               borderRadius: 1,
                               backgroundColor: "background.accent",
                             }}
@@ -2100,13 +2106,13 @@ const NewControlPane = ({
                           "width": 155,
                           "height": 25,
                           "fontSize": 11,
-                          "border": "1px solid #d0d5dd",
+                          "border": `1px solid ${border.dark}`,
                           "backgroundColor": "white",
                           "color": "text.secondary",
                           "textTransform": "none",
                           "&:hover": {
                             backgroundColor: "background.accent",
-                            border: "1px solid #d0d5dd",
+                            border: `1px solid ${border.dark}`,
                           },
                         }}
                         onClick={() => setShowLinkedRisksPopup(true)}
@@ -2151,7 +2157,7 @@ const NewControlPane = ({
                                 "alignItems": "center",
                                 "justifyContent": "space-between",
                                 "padding": "10px 12px",
-                                "border": "1px solid #eaecf0",
+                                "border": `1px solid ${border.light}`,
                                 "borderRadius": "4px",
                                 "backgroundColor": "background.main",
                                 "&:hover": {
@@ -2164,7 +2170,7 @@ const NewControlPane = ({
                                   sx={{
                                     fontSize: 13,
                                     fontWeight: 500,
-                                    color: "#1F2937",
+                                    color: text.primary,
                                     overflow: "hidden",
                                     textOverflow: "ellipsis",
                                     whiteSpace: "nowrap",
@@ -2228,7 +2234,7 @@ const NewControlPane = ({
                             textAlign: "center",
                             py: 4,
                             color: "status.default.text",
-                            border: "2px dashed #D1D5DB",
+                            border: `2px dashed ${border.light}`,
                             borderRadius: 1,
                             backgroundColor: "background.accent",
                           }}
@@ -2326,7 +2332,7 @@ const NewControlPane = ({
         <Box
           sx={{
             padding: "16px 20px",
-            borderTop: "1px solid #eaecf0",
+            borderTop: `1px solid ${border.light}`,
             display: "flex",
             justifyContent: "flex-end",
           }}

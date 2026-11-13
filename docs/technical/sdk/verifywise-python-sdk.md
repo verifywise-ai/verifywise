@@ -341,6 +341,8 @@ report = client.reports.generate_and_download(
 
 Run model-vs-model comparisons where a judge LLM picks a winner.
 
+Arena is an organization setting and is off by default (organizations that already had Arena comparisons start with it on). While it is off, every `client.arena` call fails with HTTP 403. An Admin turns it on in LLM Evals → Settings → Arena (`PUT /api/deepeval/settings/arena` with `{"enabled": true}`).
+
 #### `client.arena.compare(...) -> ArenaComparison`
 
 Start an arena comparison.

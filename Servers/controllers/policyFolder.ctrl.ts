@@ -5,7 +5,8 @@
  *
  * Authorization:
  * - GET endpoints: All authenticated users
- * - PATCH endpoints: Admin and Editor roles only
+ * - PATCH endpoints: the policy.edit permission (Admin and Editor by default)
+ *   or a pure super admin, as the old Admin/SuperAdmin/Editor list allowed
  *
  * @module controllers/policyFolder.ctrl
  */
@@ -18,13 +19,13 @@ import {
   bulkUpdatePolicyFoldersQuery,
 } from "../utils/policyFolder.utils";
 import { sequelize } from "../database/db";
+import { isPureSuperAdmin, requestHasPermission } from "../utils/rolePermissions.utils";
 
 import { translateError } from "../utils/i18n.utils";
-const ALLOWED_ROLES = ["Admin", "SuperAdmin", "Editor"];
-
-const hasManagePermission = (userRole: string | undefined): boolean => {
-  return userRole ? ALLOWED_ROLES.includes(userRole) : false;
-};
+// policy.edit is held by Admin and Editor; a pure super admin was on the old
+// role-name list too, so it keeps access.
+const hasManagePermission = async (req: Request): Promise<boolean> =>
+  isPureSuperAdmin(req) || (await requestHasPermission(req, "policy.edit"));
 
 const parseParamId = (param: string | string[] | undefined): number => {
   const value = Array.isArray(param) ? param[0] : param;
@@ -76,7 +77,7 @@ export const getPoliciesInFolder = async (req: Request, res: Response): Promise<
 export const updatePolicyFolders = async (req: Request, res: Response): Promise<Response> => {
   const transaction = await sequelize.transaction();
   try {
-    if (!hasManagePermission(req.role)) {
+    if (!(await hasManagePermission(req))) {
       await transaction.rollback();
       return res.status(403).json(STATUS_CODE[403](req.t!("Insufficient permissions")));
     }

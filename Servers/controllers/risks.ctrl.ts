@@ -857,7 +857,7 @@ export async function suggestRisksWithAI(req: Request, res: Response): Promise<a
       logger.debug(`No LLM keys found for organization: ${organizationId}`);
       return res
         .status(400)
-        .json(STATUS_CODE[400]("No LLM keys configured for this organization."));
+        .json(STATUS_CODE[400](req.t!("No LLM keys configured for this organization.")));
     }
 
     const llmKeyId = req.body?.llmKeyId !== undefined ? Number(req.body.llmKeyId) : undefined;

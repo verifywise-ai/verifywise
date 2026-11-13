@@ -7,7 +7,9 @@ VerifyWise ships 25 compliance frameworks, all available to every organization. 
 - **4 core frameworks** (ids 1–4): EU AI Act, ISO 42001, ISO 27001 and NIST AI RMF. Each has hand-built tables, endpoints and pages. Most of this document describes these.
 - **21 bundled frameworks** (ids 5–25): SOC 2, GDPR, HIPAA and others. They are declared in the structure registry (`Servers/structures/`) and served by generic endpoints and a generic UI. See [Bundled frameworks (ids 5–25)](#bundled-frameworks-ids-525).
 
-All frameworks share the same patterns for progress tracking, status management and risk linking. Users cannot create, import or export their own frameworks. New frameworks are added in code. See [Adding a New Compliance Framework](../guides/adding-new-framework.md).
+- **Imported frameworks**: an organization's own frameworks, imported from Excel through the `framework-import` extension. They are stored per organization outside the bundled catalog, and use cases assess them like the bundled ones. See [Imported frameworks](#imported-frameworks).
+
+All frameworks share the same patterns for progress tracking, status management and risk linking. New bundled frameworks are added in code. See [Adding a New Compliance Framework](../guides/adding-new-framework.md).
 
 ## Supported Frameworks
 
@@ -565,6 +567,54 @@ Generated reports cover only the four core frameworks. `Servers/services/reporti
 - The Frameworks page **Settings** tab (`Clients/src/presentation/pages/Framework/Settings/index.tsx`) only offers ISO 27001, ISO 42001 and NIST AI RMF. Organizational bundled frameworks are added through **Manage frameworks → Add/remove frameworks**.
 - The legacy `custom_framework_*` tables are still in the database. `GET /api/extensions/jira-assets/projects/:projectId/custom-frameworks-progress` still reads them.
 
+## Imported frameworks
+
+An organization with the `framework-import` extension enabled imports its own framework from Excel (`POST /api/v1/framework-import/import`), then adds it to a use case and assesses it with the same page and drawer as the bundled frameworks (#5254).
+
+### Storage
+
+Imported frameworks never enter `frameworks` or `projects_frameworks`. Those tables hold the global bundled catalog, and ids 26+ are kept for future bundled frameworks. Every table below carries `organization_id` and the `tenant_isolation` RLS policy.
+
+| Table | Holds |
+|-------|-------|
+| `imported_frameworks` | One row per imported framework per organization (`is_active`) |
+| `imported_framework_topics`, `imported_framework_subtopics` | The structure. `is_retired` marks an item a re-import dropped but a use case had assessed. |
+| `projects_imported_frameworks` | Use case ↔ imported framework link. FK to the framework is RESTRICT. |
+| `imported_framework_topic_impl` (L2), `imported_framework_subtopic_impl` (L3) | One assessment row per topic / subtopic per link. Same columns and status values as the bundled impl tables; FKs to topics / subtopics are RESTRICT. |
+| `imported_framework_topic_impl__risks`, `imported_framework_subtopic_impl__risks` | Linked risks |
+
+Migrations: `20261111092002-imported-framework-storage.js`, `20261111094001-imported-framework-assessment.js`.
+
+The hierarchy is three-level: L1 is the imported framework itself (one group node, no status), L2 the topics and L3 the subtopics. A topic with no subtopics is assessed at L2. Evidence is stored in `file_entity_links` with `framework_type = 'imported'` and `entity_type` `imported_topic` / `imported_subtopic`; uploads get the file source "Imported framework items".
+
+### Endpoints
+
+`Servers/routes/v1/importedFrameworkAssessment.route.ts`, mounted at `/api/v1/imported-framework-assessments`; controller and service in `Servers/extensions/framework-import/importedAssessment.{ctrl,service}.ts`. All routes need a token and access to the use case (403 otherwise). Another organization's ids are 404 and ids that are not positive integers are 400.
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/projects/:projectId` | Imported frameworks on the use case |
+| POST | `/projects/:projectId` | Attach `{ imported_framework_id }`. Needs `useCase.edit` and the extension enabled. 400 for the organizational project or an inactive import, 403 while an approval request is pending, 409 if already attached. Seeds an assessment row ("Not started") for every non-retired topic and subtopic in the same transaction. |
+| DELETE | `/projects/:projectId/:linkId` | Detach. Needs `useCase.edit`. Deletes the link's assessment data and evidence links. 403 while an approval request is pending. |
+| GET | `/links/:linkId/tree` | Same shape as the bundled tree (`framework.framework_type = "imported"`, `hierarchy_type = "three_level"`). Nodes also carry `number` (the spreadsheet number) and `retired`. |
+| GET | `/links/:linkId/dashboard` | Same counts as the bundled dashboard, over the rows the tree shows |
+| GET / PATCH | `/links/:linkId/impl/:level/:implId` | `:level` is `l2` or `l3`. PATCH takes the bundled multipart fields. Owner, reviewer and approver must be organization members; status must be one of the eight values. |
+| GET / PUT | `/links/:linkId/impl/:level/:implId/risks` | Linked risks. PUT `{ risk_ids }` replaces them. A newly linked risk must belong to the use case. |
+
+Reading and assessing keep working when the extension is turned off; only attaching needs it. Assessing needs access to the use case, like the bundled impl PATCH.
+
+### Re-import and delete
+
+Re-importing a framework with the same name updates it in place. Topics match on topic number, subtopics on topic + subtopic number. Matched items take the new name, description and order, new items get assessment rows on every attached use case, and items missing from the file are retired if any use case holds data on them (a status other than "Not started", text, people, a due date, evidence or a linked risk) or deleted otherwise. A retired item that comes back is un-retired. The import result reports `added`, `updated`, `retired` and `removed`. Retired items stay in a use case's tree, flagged, only where that use case has data on them.
+
+An imported framework cannot be deleted while a use case uses it: the delete answers 409 and lists the use cases in `use_cases`. Setting `is_active = false` only hides it from the attach picker; attached use cases keep it. Deleting a use case removes its imported framework links and their evidence links (`Servers/utils/project.utils.ts`). The project payload lists them in `imported_frameworks: [{ project_imported_framework_id, imported_framework_id, name }]`.
+
+### Not covered
+
+- Imported frameworks attach to use cases only, not to the organizational project, and are not part of the use case defaults (`default_framework_ids`).
+- Reports do not include them (bundled frameworks 5–25 are not in reports either).
+- The drawer has no Notes tab for them: `NotesAttachedToEnum` has no imported values.
+
 ## Key Files
 
 ### Backend
@@ -587,6 +637,8 @@ Generated reports cover only the four core frameworks. `Servers/services/reporti
 | `utils/frameworkRegistry.utils.ts` | Add/remove bundled frameworks on a project |
 | `routes/frameworkImpl.route.ts`, `controllers/frameworkImpl.ctrl.ts`, `utils/frameworkImpl.utils.ts` | Generic implementation endpoints |
 | `types/framework.type.ts` | `frameworkAdditionMap` / `frameworkDeletionMap` by framework id |
+| `extensions/framework-import/frameworkImport.service.ts` | Import, re-import diff, list / rename / delete imported frameworks |
+| `extensions/framework-import/importedAssessment.service.ts`, `importedAssessment.ctrl.ts`, `routes/v1/importedFrameworkAssessment.route.ts` | Imported frameworks on use cases: attach, tree, dashboard, assessment rows |
 
 ### Frontend
 

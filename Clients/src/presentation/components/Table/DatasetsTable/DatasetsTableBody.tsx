@@ -12,9 +12,10 @@ import {
 import { MoreVertical, Eye, Edit3, Download, Trash2 } from "lucide-react";
 import { CustomizableButton } from "../../button/customizable-button";
 import palette from "../../../themes/palette";
-import Chip from "../../Chip";
+import StatusBadge from "../../StatusBadge";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { DatasetRow } from "./index";
+import { getCategoryStyles, getDifficultyVariant } from "../TemplatesTable/TemplatesList";
 import { text, background, status } from "../../../themes/palette";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 
@@ -123,30 +124,18 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
               }}
             >
               {dataset.type ? (
-                <Chip
+                <StatusBadge
                   label={
                     dataset.type === "single-turn"
-                      ? "Single-Turn"
+                      ? "Single-turn"
                       : dataset.type === "multi-turn"
-                        ? "Multi-Turn"
+                        ? "Multi-turn"
                         : "Simulated"
                   }
                   size="small"
                   uppercase={false}
-                  backgroundColor={
-                    dataset.type === "single-turn"
-                      ? "#FEF3C7"
-                      : dataset.type === "multi-turn"
-                        ? "#E3F2FD"
-                        : "#F3E8FF"
-                  }
-                  textColor={
-                    dataset.type === "single-turn"
-                      ? "#92400E"
-                      : dataset.type === "multi-turn"
-                        ? "#1565C0"
-                        : "#7C3AED"
-                  }
+                  variant="default"
+                  textColor={`${text.secondary}`}
                 />
               ) : (
                 <Typography sx={{ fontSize: "13px", color: `${text.disabled}` }}>-</Typography>
@@ -162,7 +151,7 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
               }}
             >
               {dataset.useCase ? (
-                <Chip
+                <StatusBadge
                   label={
                     dataset.useCase === "rag"
                       ? "RAG"
@@ -170,24 +159,8 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
                   }
                   size="small"
                   uppercase={false}
-                  backgroundColor={
-                    dataset.useCase === "chatbot"
-                      ? "#CCFBF1"
-                      : dataset.useCase === "rag"
-                        ? "#f3e5f5"
-                        : dataset.useCase === "agent"
-                          ? "#FEE2E2"
-                          : "#e0e0e0"
-                  }
-                  textColor={
-                    dataset.useCase === "chatbot"
-                      ? "#0D9488"
-                      : dataset.useCase === "rag"
-                        ? "#7b1fa2"
-                        : dataset.useCase === "agent"
-                          ? "#DC2626"
-                          : "#616161"
-                  }
+                  backgroundColor={getCategoryStyles(dataset.useCase).backgroundColor}
+                  textColor={getCategoryStyles(dataset.useCase).color}
                 />
               ) : (
                 <Typography sx={{ fontSize: "13px", color: `${text.disabled}` }}>-</Typography>
@@ -205,9 +178,9 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
               {metadata?.loading ? (
                 <CircularProgress size={14} sx={{ color: `${text.disabled}` }} />
               ) : metadata?.promptCount === 0 ? (
-                <Chip label="Empty" size="small" variant="error" />
+                <StatusBadge label="Empty" size="small" variant="error" />
               ) : (
-                <Typography sx={{ fontSize: "13px", color: "#374151" }}>
+                <Typography sx={{ fontSize: "13px", color: `${text.secondary}` }}>
                   {metadata?.promptCount ?? "-"}
                 </Typography>
               )}
@@ -224,28 +197,11 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
               {metadata?.loading ? (
                 <CircularProgress size={14} sx={{ color: `${text.disabled}` }} />
               ) : (
-                <Chip
+                <StatusBadge
                   label={metadata?.avgDifficulty ?? "Medium"}
                   size="small"
                   uppercase={false}
-                  backgroundColor={
-                    metadata?.avgDifficulty === "Easy"
-                      ? "#c8e6c9"
-                      : metadata?.avgDifficulty === "Medium"
-                        ? "#fff3e0"
-                        : metadata?.avgDifficulty === "Hard"
-                          ? "#ffebee"
-                          : "#e0e0e0"
-                  }
-                  textColor={
-                    metadata?.avgDifficulty === "Easy"
-                      ? "#388e3c"
-                      : metadata?.avgDifficulty === "Medium"
-                        ? "#ef6c00"
-                        : metadata?.avgDifficulty === "Hard"
-                          ? "#c62828"
-                          : "#616161"
-                  }
+                  variant={getDifficultyVariant(metadata?.avgDifficulty ?? "Medium")}
                 />
               )}
             </TableCell>
@@ -306,12 +262,12 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
             border: `1px solid ${palette.border.dark}`,
             boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
             overflow: "hidden",
-            mt: 0.5,
-            p: 1,
+            mt: "1px",
+            p: "2px",
           },
         }}
       >
-        <Stack spacing={1}>
+        <Stack spacing="2px">
           {onView && (
             <CustomizableButton
               variant="outlined"

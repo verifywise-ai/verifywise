@@ -18,7 +18,14 @@
 
 import { crudEntity } from "./tenantIsolation.matrix";
 import type { MatrixSpec } from "./tenantIsolation.matrix";
-import { fileFixture, projectFixture, riskFixture, taskFixture } from "./tenantIsolation.fixtures";
+import {
+  fileFixture,
+  groupFixture,
+  policyTemplateFixture,
+  projectFixture,
+  riskFixture,
+  taskFixture,
+} from "./tenantIsolation.fixtures";
 
 export interface IsolationEntity {
   /** Human-readable entity name (kebab-case). */
@@ -84,6 +91,29 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
   crudEntity("tasks", "/api/tasks", ["tasks", "task_assignees"], taskFixture, {
     updateVerb: "PUT",
   }),
+  // Groups / teams with group-level use-case access (#5253). The group itself
+  // runs through the matrix; its members and its use case links are
+  // sub-resources with no read-by-id route, covered by a hand-written test.
+  crudEntity("groups", "/api/v1/groups", ["groups"], groupFixture),
+  {
+    name: "group_members",
+    tables: ["group_members"],
+    baseRoute: "/api/v1/groups/:id/members",
+    testFile: "groups-sub-resources.isolation.test.ts",
+  },
+  {
+    name: "project_groups",
+    tables: ["project_groups"],
+    baseRoute: "/api/v1/groups/projects/:projectId/groups",
+    testFile: "groups-sub-resources.isolation.test.ts",
+  },
+  // Organisation-owned policy templates (#5261).
+  crudEntity(
+    "policy_templates",
+    "/api/v1/policy-templates",
+    ["policy_templates"],
+    policyTemplateFixture,
+  ),
   {
     name: "ai_incidents",
     tables: ["ai_incident_managements"],
@@ -146,6 +176,11 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     name: "raci_entries",
     tables: ["raci_entries"],
     baseRoute: "/api/v1/projects",
+  },
+  {
+    name: "training_assignments",
+    tables: ["training_assignments"],
+    baseRoute: "/api/v1/training/assignments",
   },
   {
     // One row per user per organization; the JWT alone picks the row.
@@ -300,6 +335,30 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     tables: ["risk_links"],
     baseRoute: "/api/riskLinks",
     testFile: "riskLinks.isolation.test.ts",
+  },
+  {
+    // Framework import extension (#5254). The list is keyed by the caller's
+    // organization and topics/subtopics are only reachable through their
+    // framework, so a hand-written file covers all three tables.
+    name: "imported_frameworks",
+    tables: ["imported_frameworks", "imported_framework_topics", "imported_framework_subtopics"],
+    baseRoute: "/api/v1/framework-import/imported",
+    testFile: "framework-import.isolation.test.ts",
+  },
+  {
+    // Imported frameworks attached to use cases and assessed (#5254). Impl
+    // rows and their risk links are only reachable through their link, so a
+    // hand-written file covers all five tables.
+    name: "imported_framework_assessments",
+    tables: [
+      "projects_imported_frameworks",
+      "imported_framework_topic_impl",
+      "imported_framework_subtopic_impl",
+      "imported_framework_topic_impl__risks",
+      "imported_framework_subtopic_impl__risks",
+    ],
+    baseRoute: "/api/v1/imported-framework-assessments",
+    testFile: "imported-framework-assessment.isolation.test.ts",
   },
 ];
 

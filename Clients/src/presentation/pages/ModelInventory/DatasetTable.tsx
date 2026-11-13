@@ -18,8 +18,7 @@ import CustomizableSkeleton from "../../components/Skeletons";
 import "../../components/Table/index.css";
 import singleTheme from "../../themes/v1SingleTheme";
 import CustomIconButton from "../../components/IconButton";
-import allowedRoles from "../../../application/constants/permissions";
-import { useAuth } from "../../../application/hooks/useAuth";
+import { useCanCheck } from "../../../application/hooks/useCan";
 import {
   ChevronsUpDown,
   ChevronUp,
@@ -51,8 +50,8 @@ import {
 import dayjs from "dayjs";
 import utc from "dayjs/plugin/utc";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
-import { DatasetStatus, DataClassification, DatasetType } from "../../../domain/enums/dataset.enum";
-import Chip from "../../components/Chip";
+import { DataClassification, DatasetType } from "../../../domain/enums/dataset.enum";
+import StatusBadge from "../../components/StatusBadge";
 import { palette } from "../../themes/palette";
 
 dayjs.extend(utc);
@@ -98,10 +97,6 @@ const TooltipCell: React.FC<{ value: string | null | undefined }> = ({ value }) 
   );
 };
 
-const StatusBadge: React.FC<{ status: DatasetStatus }> = ({ status }) => {
-  return <Chip label={status} />;
-};
-
 /**
  * type and classification are nullable columns with no default, so a dataset
  * saved without them arrives here as null. An empty chip says nothing, so these
@@ -109,18 +104,18 @@ const StatusBadge: React.FC<{ status: DatasetStatus }> = ({ status }) => {
  */
 const TypeBadge: React.FC<{ type: DatasetType | null }> = ({ type }) => {
   if (!type) return <TooltipCell value={type} />;
-  return <Chip label={type} />;
+  return <StatusBadge label={type} />;
 };
 
 const ClassificationBadge: React.FC<{ classification: DataClassification | null }> = ({
   classification,
 }) => {
   if (!classification) return <TooltipCell value={classification} />;
-  return <Chip label={classification} />;
+  return <StatusBadge label={classification} />;
 };
 
 const PIIBadge: React.FC<{ containsPii: boolean }> = ({ containsPii }) => {
-  return <Chip label={containsPii ? "Yes" : "No"} />;
+  return <StatusBadge label={containsPii ? "Yes" : "No"} />;
 };
 
 const DatasetTable: React.FC<DatasetTableProps> = ({
@@ -136,7 +131,7 @@ const DatasetTable: React.FC<DatasetTableProps> = ({
 }) => {
   const formatDate = useFormattedDate();
   const theme = useTheme();
-  const { userRoleName } = useAuth();
+  const can = useCanCheck();
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(() =>
     getPaginationRowCount("datasets", DEFAULT_ROWS_PER_PAGE),
@@ -234,14 +229,8 @@ const DatasetTable: React.FC<DatasetTableProps> = ({
     [sortConfig],
   );
 
-  const hasEditPermission = useMemo(
-    () => allowedRoles.modelInventory.edit?.includes(userRoleName || "") ?? false,
-    [userRoleName],
-  );
-  const hasDeletePermission = useMemo(
-    () => allowedRoles.modelInventory.delete?.includes(userRoleName || "") ?? false,
-    [userRoleName],
-  );
+  const hasEditPermission = can("model.edit");
+  const hasDeletePermission = can("model.edit");
 
   const isVisible = useCallback(
     (key: string) => {
@@ -410,7 +399,7 @@ const DatasetTable: React.FC<DatasetTableProps> = ({
                 )}
                 {isVisible("status") && (
                   <TableCell>
-                    <StatusBadge status={dataset.status} />
+                    <StatusBadge label={dataset.status} />
                   </TableCell>
                 )}
                 {isVisible("owner") && (

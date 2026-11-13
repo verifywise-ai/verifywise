@@ -9,7 +9,7 @@ import { FriaAssessment, FriaRight } from "../../../../../application/hooks/useF
 import FriaEvidenceButton from "../FriaEvidenceButton";
 import FriaSectionCard from "../FriaSectionCard";
 import { EU_ACT_LINK } from "../friaConstants";
-import { brand } from "../../../../themes/palette";
+import { brand, border } from "../../../../themes/palette";
 
 interface SummarySectionProps {
   assessment: FriaAssessment;
@@ -76,7 +76,7 @@ function SummarySection({ assessment, rights, onUpdate, isSaving }: SummarySecti
       <Box
         sx={{
           padding: "16px",
-          border: "1px solid #d0d5dd",
+          border: `1px solid ${border.dark}`,
           borderRadius: "4px",
           backgroundColor: theme.palette.background.default,
           display: "flex",

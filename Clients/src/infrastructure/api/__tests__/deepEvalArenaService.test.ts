@@ -44,4 +44,22 @@ describe("deepEvalArenaService", () => {
     const result = await deepEvalArenaService.deleteComparison("z");
     expect(result.message).toBe("deleted");
   });
+
+  it("getSetting reads the organization's Arena setting", async () => {
+    const result = await deepEvalArenaService.getSetting();
+    expect(result).toEqual({ enabled: true, configured: true });
+  });
+
+  it("updateSetting puts { enabled } to /deepeval/settings/arena", async () => {
+    let received: unknown;
+    server.use(
+      http.put("/api/deepeval/settings/arena", async ({ request }) => {
+        received = await request.json();
+        return HttpResponse.json({ enabled: false, configured: true });
+      }),
+    );
+    const result = await deepEvalArenaService.updateSetting(false);
+    expect(received).toEqual({ enabled: false });
+    expect(result).toEqual({ enabled: false, configured: true });
+  });
 });

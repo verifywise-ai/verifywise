@@ -33,8 +33,8 @@ import {
 import { PageBreadcrumbs } from "../../components/breadcrumbs/PageBreadcrumbs";
 import { PageHeader } from "../../components/Layout/PageHeader";
 import { useEvalsSidebarContext } from "../../../application/contexts/EvalsSidebar.context";
-import { useAuth } from "../../../application/hooks/useAuth";
-import allowedRoles from "../../../application/constants/permissions";
+import { useCan } from "../../../application/hooks/useCan";
+import { useArenaSetting } from "../../../application/hooks/useArenaSetting";
 import ModalStandard from "../../components/Modals/StandardModal";
 import Field from "../../components/Inputs/Field";
 import Alert from "../../components/Alert";
@@ -105,6 +105,9 @@ const ArenaPage = lazyRoute(() => import("./ArenaPage"));
 const BiasAuditsList = lazyRoute(() => import("./BiasAuditsList"));
 const BiasAuditDetail = lazyRoute(() => import("./BiasAuditDetail"));
 const ReportPage = lazyRoute(() => import("./ReportPage"));
+import { EmptyState } from "../../components/EmptyState";
+import ArenaSettingSection from "./ArenaSettingSection";
+import ArenaDisabledState from "./ArenaDisabledState";
 import type { DeepEvalProject } from "./types";
 
 // Track if Evals dashboard has been loaded before (persists across module switches)
@@ -200,10 +203,9 @@ export default function EvalsDashboard() {
   const { projectId } = useParams<{ projectId?: string }>();
   const navigate = useNavigate();
   const location = useLocation();
-  const { userRoleName } = useAuth();
-
-  // Helper to check if user can perform write operations
-  const canManageApiKeys = allowedRoles.evals.manageApiKeys.includes(userRoleName);
+  // These keys live in the AI Gateway, which accepts the Admin role name or a
+  // caller the proxy marked as holding llmKeys.admin.
+  const canManageApiKeys = useCan("llmKeys.admin");
 
   // Determine tab from URL hash or default
   const [openModelsAddModal, setOpenModelsAddModal] = useState(false);
@@ -246,6 +248,13 @@ export default function EvalsDashboard() {
   const [scorersCount, setScorersCount] = useState<number>(0);
   const [modelsCount, setModelsCount] = useState<number>(0);
   const [arenaCount, setArenaCount] = useState<number>(0);
+  // Arena is an organization setting (off by default); undefined while loading.
+  const {
+    data: arenaSetting,
+    isLoading: arenaSettingLoading,
+    isError: arenaSettingError,
+  } = useArenaSetting();
+  const arenaEnabled = arenaSetting?.enabled === true;
   // Skip initial loading state if we've loaded before AND we're on a specific project
   // If no projectId, we might redirect to last project, so keep loading to prevent flash
   const shouldSkipLoading = hasLoadedEvalsBefore && !!projectId;
@@ -723,21 +732,36 @@ export default function EvalsDashboard() {
         // Load saved models count
         const modelsData = await evalModelsService.listModels();
         setModelsCount(modelsData.length || 0);
-
-        // Load arena battles count
-        const arenaData = await listArenaComparisons();
-        setArenaCount(arenaData.comparisons?.length || 0);
       } catch (err) {
         console.error("Failed to load counts:", err);
         setDatasetsCount(0);
         setScorersCount(0);
         setModelsCount(0);
-        setArenaCount(0);
       }
     };
 
     loadCounts();
   }, [projectId, currentProject, orgId]);
+
+  // Arena battles count, only while Arena is on (the Arena API refuses otherwise)
+  useEffect(() => {
+    if (!projectId || !currentProject || !arenaEnabled) {
+      setArenaCount(0);
+      return;
+    }
+    let cancelled = false;
+    listArenaComparisons()
+      .then((arenaData) => {
+        if (!cancelled) setArenaCount(arenaData.comparisons?.length || 0);
+      })
+      .catch((err) => {
+        console.error("Failed to load arena count:", err);
+        if (!cancelled) setArenaCount(0);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [projectId, currentProject, arenaEnabled]);
 
   // Sync sidebar counts and callbacks with context (not activeTab - that's handled via URL)
   useEffect(() => {
@@ -1639,8 +1663,8 @@ export default function EvalsDashboard() {
                   <Typography sx={{ fontSize: 14, fontWeight: 500, color: palette.text.tertiary }}>
                     No local providers configured yet
                   </Typography>
-                  <Typography sx={{ fontSize: 13, color: palette.text.disabled, mt: 0.5 }}>
-                    Click "Add local provider" to get started
+                  <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: "1px" }}>
+                    Click "Add provider" to get started
                   </Typography>
                 </Box>
               ) : (
@@ -1743,6 +1767,9 @@ export default function EvalsDashboard() {
                 </Box>
               )}
             </Box>
+
+            {/* ── Arena section (organization setting) ── */}
+            <ArenaSettingSection />
 
             {/* ── Project settings section ── */}
             {currentProject && (
@@ -1900,6 +1927,7 @@ export default function EvalsDashboard() {
                     orgId={orgId}
                     onViewExperiment={(experimentId) => setSelectedExperimentId(experimentId)}
                     useCase={(currentProject.useCase || "chatbot") as "chatbot" | "rag" | "agent"}
+                    onExperimentsCountChange={setExperimentsCount}
                   />
                 ) : null)}
 
@@ -1925,7 +1953,22 @@ export default function EvalsDashboard() {
                 />
               )}
 
-              {tab === "arena" && <ArenaPage orgId={orgId || currentProject?.orgId || ""} />}
+              {tab === "arena" &&
+                (arenaSettingLoading ? (
+                  <LazyFallback />
+                ) : arenaSettingError ? (
+                  <EmptyState
+                    icon={Swords}
+                    message="Could not load the Arena setting."
+                    showBorder
+                  />
+                ) : arenaEnabled ? (
+                  <ArenaPage orgId={orgId || currentProject?.orgId || ""} />
+                ) : (
+                  <ArenaDisabledState
+                    onOpenSettings={() => navigate(`${location.pathname}#settings`)}
+                  />
+                ))}
 
               {tab === "playground" && (
                 <PlaygroundPage
@@ -1933,6 +1976,8 @@ export default function EvalsDashboard() {
                   onNavigateToModels={() => {
                     setOpenModelsAddModal(true);
                     setTab("models");
+                    // Keep the hash in step so reload, back and the user guide see Models
+                    navigate(`${location.pathname}#models`);
                   }}
                 />
               )}

@@ -10,16 +10,23 @@ export const policyTemplatesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise ships with a library of 15 pre-built policy templates covering the most common AI governance topics. Each template is a full policy document you can copy into your organization\'s policy list, customize and publish. Templates save you from starting with a blank page every time you need a new policy.',
+      text: 'A policy template is a complete policy document you can start a new policy from. VerifyWise includes 15 built-in templates covering common AI governance topics. Your organization can also keep its own templates. You copy them from a built-in one or save them from an existing policy, then edit them like any policy.',
     },
     {
       type: 'paragraph',
-      text: 'You\'ll find the templates in the **Policy templates** tab inside the policy manager. They\'re organized by category so you can quickly find the one that fits your needs.',
+      text: 'Templates live in the **Policy templates** tab of the policy manager, in two sections:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'System templates', text: 'The 15 built-in templates. They can\'t be edited or deleted. Their ID column shows a **System** label.' },
+        { bold: 'Our templates', text: 'Your organization\'s own templates. Only members of your organization see them.' },
+      ],
     },
     {
       type: 'callout',
       variant: 'info',
-      text: 'Templates are read-only starting points. When you select a template, VerifyWise creates a copy in your organizational policies. The original template stays unchanged for future use.',
+      text: 'Creating a policy from a template copies the template\'s content. Editing or deleting the template later does not change policies already created from it.',
     },
     {
       type: 'heading',
@@ -28,40 +35,31 @@ export const policyTemplatesContent: ArticleContent = {
       text: 'Why use policy templates?',
     },
     {
-      type: 'paragraph',
-      text: 'Writing AI governance policies from scratch requires deep knowledge of both AI technology and regulatory requirements. Templates give you professionally written content built on industry best practices. They cover governance areas you might otherwise overlook and use language refined through real-world deployments.',
-    },
-    {
       type: 'bullet-list',
       items: [
-        { bold: 'Save time', text: 'Start with complete, structured content rather than an empty editor' },
-        { bold: 'Cover blind spots', text: 'Templates address governance topics that are easy to miss when writing from scratch' },
-        { bold: 'Regulatory alignment', text: 'Content reflects requirements from the EU AI Act, ISO 42001 and other frameworks' },
-        { bold: 'Consistency', text: 'Policies created from templates share a consistent structure and tone across your organization' },
-        { bold: 'Customizable', text: 'Every template can be edited to match your organization\'s specific context after copying' },
+        { bold: 'Save time', text: 'Start from complete, structured content instead of an empty editor' },
+        { bold: 'Cover blind spots', text: 'The built-in templates cover governance topics that are easy to miss when writing from scratch' },
+        { bold: 'Consistency', text: 'Keep your organization\'s wording and structure in one template, then reuse it for every new policy of that kind' },
+        { bold: 'Customizable', text: 'Every policy created from a template can be edited before you save it' },
       ],
     },
     {
       type: 'heading',
       id: 'accessing-templates',
       level: 2,
-      text: 'Accessing the templates tab',
-    },
-    {
-      type: 'paragraph',
-      text: 'To open the template library:',
+      text: 'Opening the templates tab',
     },
     {
       type: 'ordered-list',
       items: [
-        { text: 'Go to **Policy manager** from the sidebar' },
-        { text: 'Click the **Policy templates** tab at the top of the page' },
-        { text: 'The tab badge shows the total number of available templates' },
+        { text: 'Go to **Policy manager** from the sidebar.' },
+        { text: 'Click the **Policy templates** tab at the top of the page.' },
+        { text: 'Choose **System templates** or **Our templates**.' },
       ],
     },
     {
       type: 'paragraph',
-      text: 'The templates tab shows a table with five columns: ID, title, tags, description and actions. Each row represents one template you can use as a starting point.',
+      text: 'Both sections use the same table, with ID, title, tags, description and actions columns.',
     },
     {
       type: 'heading',
@@ -71,7 +69,7 @@ export const policyTemplatesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Templates are organized into six categories. You can use the filter button to narrow the list by category or search by title.',
+      text: 'Every template has a category. The built-in templates use the 5 below. For your own templates you can also pick **Industry packs**.',
     },
     {
       type: 'icon-cards',
@@ -107,11 +105,11 @@ export const policyTemplatesContent: ArticleContent = {
       type: 'heading',
       id: 'available-templates',
       level: 2,
-      text: 'Available templates',
+      text: 'Built-in templates',
     },
     {
       type: 'paragraph',
-      text: 'Here\'s the full list of templates included with VerifyWise:',
+      text: 'The **System templates** section lists these 15 templates:',
     },
     {
       type: 'table',
@@ -146,54 +144,16 @@ export const policyTemplatesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The toolbar above the templates table has several tools to help you find the right template.',
-    },
-    {
-      type: 'heading',
-      id: 'filter-by',
-      level: 3,
-      text: 'Filter by',
-    },
-    {
-      type: 'paragraph',
-      text: 'Click the **Filter** button to open the filter panel. You can filter by:',
+      text: 'The toolbar above the table works the same way in both sections.',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Title', text: 'Free text search within template titles' },
-        { bold: 'Category', text: 'Select one of the five template categories to narrow the list' },
+        { bold: 'Filter', text: 'Filter by title (free text) or by category.' },
+        { bold: 'Group by', text: 'Group templates by category into collapsible sections.' },
+        { bold: 'Column selector', text: 'Show or hide the ID, tags, description and actions columns. **Title** is always visible. Your choice is saved in your browser.' },
+        { bold: 'Search', text: 'Filters templates by title as you type.' },
       ],
-    },
-    {
-      type: 'heading',
-      id: 'group-by',
-      level: 3,
-      text: 'Group by',
-    },
-    {
-      type: 'paragraph',
-      text: 'Click the **Group by** button to group templates by category. Groups appear as collapsible sections in the table, making it easy to scan all templates within a specific governance area.',
-    },
-    {
-      type: 'heading',
-      id: 'column-selector',
-      level: 3,
-      text: 'Column selector',
-    },
-    {
-      type: 'paragraph',
-      text: 'Click the column selector button to show or hide table columns. The **Title** column is always visible. You can toggle the ID, tags and description columns based on your preference. Your column choices are saved in your browser and persist across sessions.',
-    },
-    {
-      type: 'heading',
-      id: 'search',
-      level: 3,
-      text: 'Search',
-    },
-    {
-      type: 'paragraph',
-      text: 'The search box filters templates by title as you type. Combine search with category filtering to narrow results quickly.',
     },
     {
       type: 'heading',
@@ -203,26 +163,138 @@ export const policyTemplatesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'To create a new organizational policy based on a template:',
+      text: 'This works the same for system templates and your own. You need permission to create policies.',
     },
     {
       type: 'ordered-list',
       items: [
-        { text: 'Click any row in the templates table' },
-        { text: 'VerifyWise opens the policy editor with the template\'s title, tags and content pre-filled' },
-        { text: 'The page title shows "New policy from template" to confirm you\'re working from a template' },
-        { text: 'Edit the title to match your organization\'s naming convention' },
-        { text: 'Review and customize the content. Replace any placeholder text with your organization\'s specifics' },
-        { text: 'Adjust the tags if needed. Template tags are pre-applied but you can add or remove them' },
-        { text: 'Set the policy status (usually Draft for new policies)' },
-        { text: 'Click **Save in organizational policies** to create the policy' },
+        { text: 'Click a row in the templates table.' },
+        { text: 'The policy editor opens with the template\'s title, tags and content filled in. The page title reads "New policy from template".' },
+        { text: 'Change the title, content and tags to fit your organization.' },
+        { text: 'Set the status (usually Draft for a new policy).' },
+        { text: 'Click **Save in organizational policies**.' },
       ],
     },
     {
       type: 'callout',
       variant: 'tip',
       title: 'Customization tip',
-      text: 'Templates include placeholder text and general language you should replace with your organization\'s specific details. Look for generic references and replace them with your actual team names, processes and requirements.',
+      text: 'The built-in templates use general language. Replace it with your own team names, processes and thresholds before you publish.',
+    },
+    {
+      type: 'heading',
+      id: 'own-templates',
+      level: 2,
+      text: 'Your organization\'s templates',
+    },
+    {
+      type: 'paragraph',
+      text: 'You can add a template to **Our templates** in two ways: duplicate a system template, or save an existing policy as a template.',
+    },
+    {
+      type: 'heading',
+      id: 'duplicate-template',
+      level: 3,
+      text: 'Duplicate a system template',
+    },
+    {
+      type: 'ordered-list',
+      items: [
+        { text: 'Open **Policy templates** > **System templates**.' },
+        { text: 'In the template\'s row, click the copy icon (tooltip "Duplicate into our templates").' },
+        { text: 'The copy appears under **Our templates** with "(copy)" after its name. It keeps the original\'s category, description, content and tags.' },
+      ],
+    },
+    {
+      type: 'callout',
+      variant: 'info',
+      text: 'Template names must be unique within your organization. If you duplicate the same template again, the new copy is named "(copy 2)", "(copy 3)" and so on.',
+    },
+    {
+      type: 'heading',
+      id: 'save-as-template',
+      level: 3,
+      text: 'Save a policy as a template',
+    },
+    {
+      type: 'ordered-list',
+      items: [
+        { text: 'Open **Policy manager** > **Organizational policies**.' },
+        { text: 'In the policy\'s row, click the "Save as template" icon.' },
+        { text: 'In the **Save as template** dialog, enter a **Template name** and pick a **Category**. The name starts as the policy title followed by "(template)". The category starts as Core AI governance policies.' },
+        { text: 'Click **Save template**. You see "The policy was saved as an organization template." The policy\'s content and tags are copied into the template.' },
+      ],
+    },
+    {
+      type: 'heading',
+      id: 'edit-template',
+      level: 3,
+      text: 'Edit a template',
+    },
+    {
+      type: 'paragraph',
+      text: 'Each row under **Our templates** has two edit actions:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Edit details', text: 'Opens the **Edit template details** dialog. Change the **Name**, **Description** or **Category** and click **Save**.' },
+        { bold: 'Edit content', text: 'Opens the template in the same rich text editor that policies use. Make your changes and click **Save template**. **Back to policy templates** returns you to the list.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'A system template opened in the content editor is read-only and shows: "System templates are read-only. Duplicate this template into your templates to change it."',
+    },
+    {
+      type: 'heading',
+      id: 'delete-template',
+      level: 3,
+      text: 'Delete a template',
+    },
+    {
+      type: 'ordered-list',
+      items: [
+        { text: 'Under **Our templates**, click the trash icon (tooltip "Delete template") in the template\'s row.' },
+        { text: 'Click **Delete** in the "Delete this template?" dialog.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'The template leaves your organization\'s library. Policies already created from it are not affected.',
+    },
+    {
+      type: 'heading',
+      id: 'template-rules',
+      level: 2,
+      text: 'Template rules',
+    },
+    {
+      type: 'table',
+      columns: [
+        { key: 'field', label: 'Field', width: '25%' },
+        { key: 'rule', label: 'Rule', width: '75%' },
+      ],
+      rows: [
+        { field: 'Name', rule: 'Required, 2 to 255 characters, unique within your organization' },
+        { field: 'Category', rule: 'Required, at most 100 characters' },
+        { field: 'Description', rule: 'Optional, at most 2,000 characters' },
+        { field: 'Tags', rule: 'At most 50 tags, each at most 100 characters' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'If a save breaks one of these rules, the server\'s error message appears under the form.',
+    },
+    {
+      type: 'heading',
+      id: 'permissions',
+      level: 2,
+      text: 'Who can manage templates',
+    },
+    {
+      type: 'paragraph',
+      text: 'Everyone in the organization can browse both sections. Duplicating, editing, deleting and saving a policy as a template all need the "Create, update and delete organization policy templates" permission (module **Policy templates**). By default **Admin** and **Editor** have it; Reviewer and Auditor do not. Without it, the action icons are hidden.',
     },
     {
       type: 'heading',
@@ -232,17 +304,13 @@ export const policyTemplatesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'When you select a template (or create a blank policy), the full-featured policy editor opens. It\'s a rich text editor built on TipTap with a familiar toolbar.',
+      text: 'When you create a policy from a template (or a blank policy), the policy editor opens. It\'s a rich text editor with a familiar toolbar. The template content editor uses the same toolbar.',
     },
     {
       type: 'heading',
       id: 'editor-toolbar',
       level: 3,
       text: 'Editor toolbar',
-    },
-    {
-      type: 'paragraph',
-      text: 'The toolbar at the top of the editor gives you formatting controls:',
     },
     {
       type: 'bullet-list',
@@ -268,7 +336,7 @@ export const policyTemplatesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'On the right side of the editor, a metadata panel lets you configure:',
+      text: 'On the right side of the policy editor, a metadata panel lets you set:',
     },
     {
       type: 'bullet-list',
@@ -290,7 +358,7 @@ export const policyTemplatesContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Import DOCX', text: 'Upload an existing Word document to import its content into the editor' },
-        { bold: 'Export', text: 'Download the policy as DOCX for sharing outside VerifyWise' },
+        { bold: 'Export', text: 'Download the policy as PDF or DOCX for sharing outside VerifyWise. PDFs include images you uploaded, but not images loaded from an external web address' },
         { bold: 'Character count', text: 'Shown at the bottom of the editor' },
         { bold: 'Change history', text: 'Click the history icon to view all changes made to the policy over time' },
         { bold: 'Image upload', text: 'Drag and drop images or use the image button to upload files directly' },
@@ -304,17 +372,13 @@ export const policyTemplatesContent: ArticleContent = {
       text: 'Recommended workflow',
     },
     {
-      type: 'paragraph',
-      text: 'Here\'s a workflow that works well for most organizations:',
-    },
-    {
       type: 'ordered-list',
       items: [
-        { bold: 'Pick templates', text: 'Browse the template library and select the templates that match your governance priorities' },
-        { bold: 'Create policies', text: 'Click each template to create a draft policy. Start with core governance policies before moving to specialized ones' },
-        { bold: 'Customize content', text: 'Replace generic language with your organization\'s specific teams, processes and thresholds' },
-        { bold: 'Internal review', text: 'Set the status to Under review and assign a reviewer to check the content' },
-        { bold: 'Approve and publish', text: 'Once reviewed, move the policy to Approved and then Published' },
+        { bold: 'Pick templates', text: 'Find the system templates that match your governance priorities' },
+        { bold: 'Make them yours', text: 'Duplicate the ones you\'ll reuse and adapt their content once' },
+        { bold: 'Create policies', text: 'Click a template to create a draft policy from it' },
+        { bold: 'Review', text: 'Set the status to Under review and assign a reviewer' },
+        { bold: 'Approve and publish', text: 'Move the policy to Approved, then Published' },
         { bold: 'Schedule reviews', text: 'Set a next review date so policies don\'t go stale' },
       ],
     },
@@ -322,7 +386,7 @@ export const policyTemplatesContent: ArticleContent = {
       type: 'callout',
       variant: 'tip',
       title: 'Start small',
-      text: 'Don\'t try to create all 15 policies at once. Start with 3-4 core governance policies (AI Ethics, AI Risk Management, AI Governance) and add more as your program matures.',
+      text: 'You don\'t need all 15 policies at once. Start with three or four core governance policies and add more as your program matures.',
     },
     {
       type: 'heading',
@@ -332,7 +396,7 @@ export const policyTemplatesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Templates come with pre-applied tags that carry over when you create a policy. Common tags you\'ll see across the library:',
+      text: 'Built-in templates come with tags that carry over when you create a policy. Common ones:',
     },
     {
       type: 'bullet-list',
@@ -353,25 +417,17 @@ export const policyTemplatesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'If your search or filter returns no results, the page shows an empty state with helpful tips:',
-    },
-    {
-      type: 'bullet-list',
-      items: [
-        { bold: 'What are policy templates?', text: 'Pre-built policy documents covering common AI governance topics. Copy a template, customize it and publish.' },
-        { bold: 'Filter by framework', text: 'Templates are grouped by framework (EU AI Act, ISO 42001, etc.). Use the search bar to find templates relevant to your compliance needs.' },
-        { bold: 'Build your own', text: 'If no template fits, create a policy from scratch in the organizational policies tab.' },
-      ],
+      text: 'If a search or filter returns nothing, or **Our templates** is empty, the page shows "No policy templates found." with a few tips. Under **Our templates**, the tip suggests saving a policy as a template or duplicating a system template.',
     },
     {
       type: 'heading',
       id: 'deep-link',
       level: 2,
-      text: 'Deep linking to templates',
+      text: 'Linking to a template',
     },
     {
       type: 'paragraph',
-      text: 'Templates support deep linking via URL parameters. If you share a link like `/policies/templates?templateId=5`, the recipient will be redirected straight to the policy editor with that template pre-loaded. This is useful when sharing specific templates with colleagues or bookmarking a frequently used template.',
+      text: 'A link like `/policies/templates?templateId=system-5` or `/policies/templates?templateId=organization-12` opens the policy editor with that template loaded. The prefix names the section the template is in. A link with a number only, such as `?templateId=5`, opens a system template.',
     },
     {
       type: 'article-links',
@@ -390,10 +446,10 @@ export const policyTemplatesContent: ArticleContent = {
           description: 'Understand the policy status workflow and review scheduling',
         },
         {
-          collectionId: 'compliance',
-          articleId: 'eu-ai-act',
-          title: 'EU AI Act compliance',
-          description: 'Learn about the regulation that many policy templates align with',
+          collectionId: 'settings',
+          articleId: 'role-configuration',
+          title: 'Roles and permissions',
+          description: 'See what each role is allowed to do',
         },
       ],
     },

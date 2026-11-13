@@ -1,6 +1,6 @@
 import { Box, Typography, Chip, Stack, Divider } from "@mui/material";
 import { Check, FileText } from "lucide-react";
-import { brand, text, background, status } from "../../../themes/palette";
+import { brand, text, background, status, accent } from "../../../themes/palette";
 
 // Re-export TemplateRow from this file to avoid circular dependency
 export interface TemplateRow {
@@ -28,27 +28,36 @@ const getPredominantDifficultyLabel = (diff?: {
   return "Easy";
 };
 
-const getDifficultyStyles = (difficulty: string) => {
-  switch (difficulty) {
-    case "Easy":
-      return { backgroundColor: "#c8e6c9", color: "#388e3c" };
-    case "Medium":
-      return { backgroundColor: "#fff3e0", color: "#ef6c00" };
-    case "Hard":
-      return { backgroundColor: "#ffebee", color: "#c62828" };
+// One difficulty-to-chip mapping for every dataset screen.
+export const getDifficultyVariant = (
+  difficulty?: string,
+): "success" | "warning" | "error" | "default" => {
+  switch (difficulty?.toLowerCase()) {
+    case "easy":
+      return "success";
+    case "medium":
+      return "warning";
+    case "hard":
+    case "very hard":
+      return "error";
     default:
-      return { backgroundColor: "#e0e0e0", color: "#616161" };
+      return "default";
   }
+};
+
+const getDifficultyStyles = (difficulty: string) => {
+  const tone = status[getDifficultyVariant(difficulty)];
+  return { backgroundColor: `${tone.bg}`, color: `${tone.text}` };
 };
 
 const getCategoryStyles = (category: string) => {
   switch (category) {
     case "chatbot":
-      return { backgroundColor: "#CCFBF1", color: "#0D9488" };
+      return { backgroundColor: `${accent.teal.bg}`, color: `${accent.teal.text}` };
     case "rag":
-      return { backgroundColor: "#E0E7FF", color: "#3730A3" };
+      return { backgroundColor: `${accent.indigo.bg}`, color: `${accent.indigo.text}` };
     case "agent":
-      return { backgroundColor: "#FEE2E2", color: "#DC2626" };
+      return { backgroundColor: `${accent.red.bg}`, color: `${accent.red.text}` };
     default:
       return { backgroundColor: `${background.hover}`, color: `${status.default.text}` };
   }
@@ -86,20 +95,20 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
       <Box
         onClick={() => onSelect?.(template)}
         sx={{
-          "p": compact ? 1 : 1.5,
+          "p": compact ? "2px" : "3px",
           "border": "1px solid",
           "borderColor": isSelected ? `${brand.primary}` : `${status.default.border}`,
-          "borderRadius": "8px",
+          "borderRadius": "4px",
           "cursor": "pointer",
-          "backgroundColor": isSelected ? "#F0FDF4" : `${background.main}`,
+          "backgroundColor": isSelected ? `${brand.primaryLight}` : `${background.main}`,
           "transition": "all 0.15s ease",
           "&:hover": {
             borderColor: `${brand.primary}`,
-            backgroundColor: isSelected ? "#F0FDF4" : `${background.accent}`,
+            backgroundColor: isSelected ? `${brand.primaryLight}` : `${background.accent}`,
           },
         }}
       >
-        <Stack direction="row" alignItems="center" spacing={1.5}>
+        <Stack direction="row" alignItems="center" spacing="3px">
           <Box
             sx={{
               width: compact ? 28 : 32,
@@ -122,7 +131,7 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
               sx={{
                 fontSize: compact ? "12px" : "13px",
                 fontWeight: 500,
-                color: "#374151",
+                color: text.secondary,
                 whiteSpace: "nowrap",
                 overflow: "hidden",
                 textOverflow: "ellipsis",
@@ -144,7 +153,7 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
               </Typography>
             )}
           </Box>
-          <Stack direction="row" alignItems="center" spacing={0.5} sx={{ flexShrink: 0 }}>
+          <Stack direction="row" alignItems="center" spacing="1px" sx={{ flexShrink: 0 }}>
             <Chip
               label={
                 template.category === "rag"
@@ -176,7 +185,7 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
                 "fontSize": compact ? "9px" : "10px",
                 "fontWeight": 500,
                 "borderRadius": "4px",
-                "& .MuiChip-label": { px: 0.75 },
+                "& .MuiChip-label": { px: "1.5px" },
               }}
             />
             {isSelected && <Check size={14} color={brand.primary} />}
@@ -188,7 +197,7 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
 
   if (loading) {
     return (
-      <Box sx={{ py: 3, textAlign: "center" }}>
+      <Box sx={{ py: "6px", textAlign: "center" }}>
         <Typography sx={{ fontSize: "13px", color: `${status.default.text}` }}>
           Loading templates...
         </Typography>
@@ -198,7 +207,7 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
 
   if (templates.length === 0) {
     return (
-      <Box sx={{ py: 3, textAlign: "center" }}>
+      <Box sx={{ py: "6px", textAlign: "center" }}>
         <Typography sx={{ fontSize: "13px", color: `${status.default.text}` }}>
           No templates available
         </Typography>
@@ -209,11 +218,11 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
   return (
     <Box sx={{ maxHeight, overflowY: "auto" }}>
       {groupByTurnType ? (
-        <Stack spacing={2}>
+        <Stack spacing="4px">
           {/* Multi-turn templates */}
           {multiTurn.length > 0 && (
             <Box>
-              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+              <Stack direction="row" alignItems="center" spacing="2px" sx={{ mb: "2px" }}>
                 <Typography
                   sx={{
                     fontSize: "11px",
@@ -223,7 +232,7 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
                     letterSpacing: "0.5px",
                   }}
                 >
-                  Multi-Turn Conversations
+                  Multi-turn conversations
                 </Typography>
                 <Chip
                   label={multiTurn.length}
@@ -231,13 +240,12 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
                   sx={{
                     "height": "16px",
                     "fontSize": "10px",
-                    "backgroundColor": "#E3F2FD",
-                    "color": "#1565C0",
-                    "& .MuiChip-label": { px: 0.75 },
+                    ...TYPE_CHIP_STYLES,
+                    "& .MuiChip-label": { px: "1.5px" },
                   }}
                 />
               </Stack>
-              <Stack spacing={0.75}>
+              <Stack spacing="1.5px">
                 {multiTurn.map((template) => (
                   <TemplateItem key={template.key} template={template} />
                 ))}
@@ -248,8 +256,8 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
           {/* Single-turn templates */}
           {singleTurn.length > 0 && (
             <Box>
-              {multiTurn.length > 0 && <Divider sx={{ mb: 2 }} />}
-              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+              {multiTurn.length > 0 && <Divider sx={{ mb: "4px" }} />}
+              <Stack direction="row" alignItems="center" spacing="2px" sx={{ mb: "2px" }}>
                 <Typography
                   sx={{
                     fontSize: "11px",
@@ -259,7 +267,7 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
                     letterSpacing: "0.5px",
                   }}
                 >
-                  Single-Turn Prompts
+                  Single-turn prompts
                 </Typography>
                 <Chip
                   label={singleTurn.length}
@@ -267,13 +275,12 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
                   sx={{
                     "height": "16px",
                     "fontSize": "10px",
-                    "backgroundColor": "#FEF3C7",
-                    "color": "#92400E",
-                    "& .MuiChip-label": { px: 0.75 },
+                    ...TYPE_CHIP_STYLES,
+                    "& .MuiChip-label": { px: "1.5px" },
                   }}
                 />
               </Stack>
-              <Stack spacing={0.75}>
+              <Stack spacing="1.5px">
                 {singleTurn.map((template) => (
                   <TemplateItem key={template.key} template={template} />
                 ))}
@@ -284,8 +291,8 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
           {/* Simulated templates */}
           {simulated.length > 0 && (
             <Box>
-              {(multiTurn.length > 0 || singleTurn.length > 0) && <Divider sx={{ mb: 2 }} />}
-              <Stack direction="row" alignItems="center" spacing={1} sx={{ mb: 1 }}>
+              {(multiTurn.length > 0 || singleTurn.length > 0) && <Divider sx={{ mb: "4px" }} />}
+              <Stack direction="row" alignItems="center" spacing="2px" sx={{ mb: "2px" }}>
                 <Typography
                   sx={{
                     fontSize: "11px",
@@ -295,7 +302,7 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
                     letterSpacing: "0.5px",
                   }}
                 >
-                  Simulated Conversations
+                  Simulated conversations
                 </Typography>
                 <Chip
                   label={simulated.length}
@@ -303,13 +310,12 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
                   sx={{
                     "height": "16px",
                     "fontSize": "10px",
-                    "backgroundColor": "#EDE9FE",
-                    "color": "#6D28D9",
-                    "& .MuiChip-label": { px: 0.75 },
+                    ...TYPE_CHIP_STYLES,
+                    "& .MuiChip-label": { px: "1.5px" },
                   }}
                 />
               </Stack>
-              <Stack spacing={0.75}>
+              <Stack spacing="1.5px">
                 {simulated.map((template) => (
                   <TemplateItem key={template.key} template={template} />
                 ))}
@@ -318,7 +324,7 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
           )}
         </Stack>
       ) : (
-        <Stack spacing={0.75}>
+        <Stack spacing="1.5px">
           {templates.map((template) => (
             <TemplateItem key={template.key} template={template} />
           ))}
@@ -331,16 +337,9 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
 export default TemplatesList;
 export { TemplatesList, getPredominantDifficultyLabel, getDifficultyStyles, getCategoryStyles };
 
-// Re-export getTypeStyles (same logic, re-implemented for co-location)
-export const getTypeStyles = (type?: string) => {
-  switch (type) {
-    case "single-turn":
-      return { backgroundColor: "#FEF3C7", color: "#92400E" };
-    case "multi-turn":
-      return { backgroundColor: "#E3F2FD", color: "#1565C0" };
-    case "simulated":
-      return { backgroundColor: "#EDE9FE", color: "#6D28D9" };
-    default:
-      return { backgroundColor: `${background.hover}`, color: `${status.default.text}` };
-  }
+// Type is a classification, not a status: every turn type uses the same
+// neutral chip so it never reads as a warning next to the difficulty chip.
+export const TYPE_CHIP_STYLES = {
+  backgroundColor: `${background.hover}`,
+  color: `${text.secondary}`,
 };

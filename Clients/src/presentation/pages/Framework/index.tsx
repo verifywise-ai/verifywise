@@ -33,7 +33,7 @@ import ISO42001Annex from "./ISO42001/Annex";
 import { getAllEntities } from "../../../application/repository/entity.repository";
 import { ProjectForm } from "../../components/Forms/ProjectForm";
 import AddFrameworkModal from "../ProjectView/AddNewFramework";
-import allowedRoles from "../../../application/constants/permissions";
+import { useCanCheck, useCan } from "../../../application/hooks/useCan";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import StandardModal from "../../components/Modals/StandardModal";
@@ -59,6 +59,13 @@ import { brand, border as borderPalette, icon } from "../../themes/palette";
 import GovernanceIntelligenceContextBar from "../../components/GovernanceOS/GovernanceIntelligenceContextBar";
 import { storageService } from "../../../infrastructure/storage";
 import { textStyles } from "../../themes/typography";
+import { useExtensions } from "../../../application/contexts/Extensions.context";
+import {
+  useDeleteImportedFramework,
+  useImportedFrameworks,
+} from "../../../application/hooks/useFrameworkImport";
+import FrameworkImportModal from "./Components/FrameworkImportModal";
+import { FileUp as FileUpIcon } from "lucide-react";
 
 // Tab styles following ProjectFrameworks pattern
 const tabStyle = {
@@ -85,6 +92,16 @@ const tabListStyle = {
   },
 };
 
+/**
+ * Message for a failed imported-framework delete. On a 409 (still used by use
+ * cases) the server's translated message already names those use cases.
+ */
+function importedDeleteErrorMessage(error: unknown): string {
+  return error instanceof Error && error.message
+    ? error.message
+    : "Failed to delete the imported framework. Please try again.";
+}
+
 const Framework = () => {
   const [searchParams] = useSearchParams();
   const { tab } = useParams<{ tab?: string }>();
@@ -109,12 +126,30 @@ const Framework = () => {
   const categoryId = searchParams.get("categoryId");
   const subcategoryId = searchParams.get("subcategoryId");
 
-  const { changeComponentVisibility, projects, userRoleName, setProjects } =
-    useContext(VerifyWiseContext);
+  const { changeComponentVisibility, projects, setProjects } = useContext(VerifyWiseContext);
+  const can = useCanCheck();
   const { refs, allVisible } = useMultipleOnScreen<HTMLElement>({
     countToTrigger: 1,
   });
   const { users } = useUsers();
+  // The framework-import routes authorize on this key, so a custom role
+  // granted it gets the import controls too (Admin and Editor by default).
+  const canImportFrameworks = useCan("ext.frameworkImport.edit");
+
+  // Framework import extension (#5254).
+  const { isEnabled } = useExtensions();
+  const isFrameworkImportEnabled = isEnabled("framework-import");
+  const [isImportModalOpen, setIsImportModalOpen] = useState(false);
+  const { data: importedFrameworks = [] } = useImportedFrameworks({
+    enabled: isFrameworkImportEnabled,
+  });
+  const deleteImportedMutation = useDeleteImportedFramework();
+  const [confirmDeleteImported, setConfirmDeleteImported] = useState<number | null>(null);
+  const [deleteImportedError, setDeleteImportedError] = useState<string | null>(null);
+  const closeDeleteImported = () => {
+    setConfirmDeleteImported(null);
+    setDeleteImportedError(null);
+  };
 
   // Check if there are any organizational projects
   const organizationalProject = useMemo(() => {
@@ -803,11 +838,7 @@ const Framework = () => {
                     setRotated((prev) => !prev);
                     handleManageProjectClick(event as React.MouseEvent<any>);
                   }}
-                  isDisabled={
-                    !allowedRoles.frameworks.manage.includes(userRoleName) &&
-                    !allowedRoles.projects.edit.includes(userRoleName) &&
-                    !allowedRoles.projects.delete.includes(userRoleName)
-                  }
+                  isDisabled={!can("framework.edit") && !can("useCase.edit")}
                   sx={{
                     backgroundColor: "brand.primary",
                     border: "1px solid brand.primary",
@@ -837,10 +868,7 @@ const Framework = () => {
                     },
                   }}
                 >
-                  <MenuItem
-                    onClick={handleManageFrameworksClick}
-                    disabled={!allowedRoles.frameworks.manage.includes(userRoleName)}
-                  >
+                  <MenuItem onClick={handleManageFrameworksClick} disabled={!can("framework.edit")}>
                     <ListItemIcon sx={{ minWidth: 32 }}>
                       <SettingsIcon size={16} color={icon.default} />
                     </ListItemIcon>
@@ -852,10 +880,27 @@ const Framework = () => {
                       }}
                     />
                   </MenuItem>
-                  <MenuItem
-                    onClick={handleEditProjectClick}
-                    disabled={!allowedRoles.projects.edit.includes(userRoleName)}
-                  >
+                  {isFrameworkImportEnabled && (
+                    <MenuItem
+                      onClick={() => {
+                        closeFrameworkMenu();
+                        setIsImportModalOpen(true);
+                      }}
+                      disabled={!canImportFrameworks}
+                    >
+                      <ListItemIcon sx={{ minWidth: 32 }}>
+                        <FileUpIcon size={16} color={icon.default} />
+                      </ListItemIcon>
+                      <ListItemText
+                        primary="Import framework from Excel"
+                        primaryTypographyProps={{
+                          ...textStyles.body,
+                          color: "text.primary",
+                        }}
+                      />
+                    </MenuItem>
+                  )}
+                  <MenuItem onClick={handleEditProjectClick} disabled={!can("useCase.edit")}>
                     <ListItemIcon sx={{ minWidth: 32 }}>
                       <EditIconGrey size={16} color={icon.default} />
                     </ListItemIcon>
@@ -868,10 +913,7 @@ const Framework = () => {
                     />
                   </MenuItem>
                   <Divider sx={{ my: 0.5 }} />
-                  <MenuItem
-                    onClick={handleDeleteProjectClick}
-                    disabled={!allowedRoles.projects.delete.includes(userRoleName)}
-                  >
+                  <MenuItem onClick={handleDeleteProjectClick} disabled={!can("useCase.edit")}>
                     <ListItemIcon sx={{ minWidth: 32 }}>
                       <DeleteIconRed size={16} color={icon.error} />
                     </ListItemIcon>
@@ -891,7 +933,7 @@ const Framework = () => {
                 text="New Project"
                 startIcon={<AddCircleOutlineIcon size={16} />}
                 onClick={() => setIsProjectFormModalOpen(true)}
-                isDisabled={!allowedRoles.projects.create.includes(userRoleName)}
+                isDisabled={!can("useCase.edit")}
               />
             )}
           </Box>
@@ -900,6 +942,114 @@ const Framework = () => {
         {/* Only show framework content if organizational project exists */}
         {organizationalProject && (
           <>
+            {/* Imported frameworks (#5254): self-service spreadsheet imports live here. */}
+            {isFrameworkImportEnabled && (
+              <Box sx={{ marginBottom: "32px" }}>
+                <Stack
+                  direction="row"
+                  justifyContent="space-between"
+                  alignItems="center"
+                  sx={{ marginBottom: "8px" }}
+                >
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    Imported frameworks
+                  </Typography>
+                  <CustomizableButton
+                    variant="outlined"
+                    text="Import from Excel"
+                    startIcon={<FileUpIcon size={16} />}
+                    onClick={() => setIsImportModalOpen(true)}
+                    isDisabled={!canImportFrameworks}
+                  />
+                </Stack>
+                <Typography sx={{ fontSize: 13, color: "text.secondary", marginBottom: "8px" }}>
+                  Your own frameworks, imported from Excel. Add one to a use case from that use
+                  case's Frameworks tab to assess it.
+                </Typography>
+                {importedFrameworks.length === 0 ? (
+                  <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
+                    No imported frameworks yet. Import one from a spreadsheet to keep its topics and
+                    subtopics here.
+                  </Typography>
+                ) : (
+                  <Stack sx={{ gap: "8px" }}>
+                    {importedFrameworks.map((fw) => (
+                      <Stack
+                        key={fw.id}
+                        direction="row"
+                        justifyContent="space-between"
+                        alignItems="center"
+                        sx={{
+                          border: `1px solid ${borderPalette.dark}`,
+                          borderRadius: "4px",
+                          padding: "16px",
+                        }}
+                      >
+                        <Box>
+                          <Typography sx={{ fontSize: 13, fontWeight: 600 }}>{fw.name}</Typography>
+                          <Typography sx={{ fontSize: 12, color: "text.secondary" }}>
+                            {fw.topics.length} topic(s) ·{" "}
+                            {fw.topics.reduce((acc, t) => acc + t.subtopics.length, 0)} subtopic(s)
+                          </Typography>
+                        </Box>
+                        {canImportFrameworks && (
+                          <CustomizableButton
+                            variant="outlined"
+                            text="Delete"
+                            onClick={() => setConfirmDeleteImported(fw.id)}
+                            isDisabled={deleteImportedMutation.isPending}
+                          />
+                        )}
+                      </Stack>
+                    ))}
+                  </Stack>
+                )}
+              </Box>
+            )}
+
+            {isImportModalOpen && (
+              <FrameworkImportModal
+                open={isImportModalOpen}
+                onClose={() => setIsImportModalOpen(false)}
+                onImportComplete={() => setIsImportModalOpen(false)}
+              />
+            )}
+
+            {confirmDeleteImported !== null && (
+              <ConfirmationModal
+                isOpen
+                title="Delete this imported framework?"
+                body={
+                  <Stack sx={{ gap: "8px" }}>
+                    <Typography fontSize={13}>
+                      This removes the imported framework with all its topics and subtopics. You can
+                      import it again from your file later. A framework used by a use case cannot be
+                      deleted: remove it from those use cases first.
+                    </Typography>
+                    {deleteImportedError && (
+                      <Typography fontSize={13} color="error" role="alert">
+                        {deleteImportedError}
+                      </Typography>
+                    )}
+                  </Stack>
+                }
+                cancelText="Cancel"
+                proceedText="Delete"
+                proceedButtonColor="error"
+                proceedButtonVariant="contained"
+                onCancel={closeDeleteImported}
+                onProceed={async () => {
+                  try {
+                    await deleteImportedMutation.mutateAsync(confirmDeleteImported);
+                    closeDeleteImported();
+                  } catch (error) {
+                    setDeleteImportedError(importedDeleteErrorMessage(error));
+                  }
+                }}
+                isLoading={deleteImportedMutation.isPending}
+              />
+            )}
+
             <TabContext value={mainTabValue}>
               <TabBar
                 tabs={[

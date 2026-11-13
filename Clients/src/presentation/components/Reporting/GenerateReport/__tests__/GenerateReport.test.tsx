@@ -26,6 +26,12 @@ vi.mock("../../../../../application/hooks/useUsers", () => ({
 vi.mock("../../../../../application/hooks/useIsAdmin", () => ({
   useIsAdmin: () => true,
 }));
+// The screen gates on a permission key (#5314); same flag as useIsAdmin.
+vi.mock("../../../../../application/hooks/useCan", () => ({
+  useCan: () => true,
+  useCanCheck: () => () => true,
+  usePermissionsSettled: () => true,
+}));
 
 const mockLLMKeyStatus = vi.hoisted(() => ({
   data: { hasKeys: true, keyCount: 1, providers: ["Anthropic"] } as any,

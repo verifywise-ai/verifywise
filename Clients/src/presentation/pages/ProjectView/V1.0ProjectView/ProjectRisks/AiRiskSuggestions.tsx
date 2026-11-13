@@ -17,8 +17,7 @@ import AddNewRiskForm from "../../../../components/AddNewRiskForm";
 import StandardModal from "../../../../components/Modals/StandardModal";
 import Alert from "../../../../components/Alert";
 import useUsers from "../../../../../application/hooks/useUsers";
-import { useAuth } from "../../../../../application/hooks/useAuth";
-import allowedRoles from "../../../../../application/constants/permissions";
+import { useCanCheck } from "../../../../../application/hooks/useCan";
 import { handleAlert } from "../../../../../application/tools/alertUtils";
 import { suggestRisksWithAI } from "../../../../../application/repository/projectRisk.repository";
 import type {
@@ -66,8 +65,8 @@ interface AiRiskSuggestionsProps {
 export function AiRiskSuggestions({ onRiskSaved }: AiRiskSuggestionsProps) {
   const [searchParams] = useSearchParams();
   const projectId = parseInt(searchParams.get("projectId") ?? "", 10);
-  const { userRoleName } = useAuth();
-  const canCreateRisks = allowedRoles.projectRisks.create.includes(userRoleName);
+  const can = useCanCheck();
+  const canCreateRisks = can("risks.edit");
   const { users, loading: usersLoading } = useUsers();
 
   const [isSuggesting, setIsSuggesting] = useState(false);

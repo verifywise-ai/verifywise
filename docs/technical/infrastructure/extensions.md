@@ -17,8 +17,11 @@ Each extension has:
 - a **catalog row** in `verifywise.extensions`, seeded by a migration
 - an optional **declarative config form** in `verifywise.extension_config_fields`
 - a **per-organization state row** in `verifywise.extension_enablements`
-- **server code** in `Servers/extensions/<key>/`, mounted at
-  `/api/extensions/<key>` behind the `requireExtensionEnabled("<key>")` gate
+- **server code** in `Servers/extensions/<key>/`, mounted behind the
+  `requireExtensionEnabled("<key>")` gate. Older extensions mount at
+  `/api/extensions/<key>`; new extension routers go under `/api/v1`
+  (for example `/api/v1/framework-import`, `routes/v1/frameworkImport.route.ts`),
+  because new contracts must not be added to unversioned paths
 - **client code** in `Clients/src/presentation/pages/Extensions/<key>/`, shown
   only when `useExtensions().isEnabled("<key>")` is true
 
@@ -106,6 +109,7 @@ enabled the extension. All are tenant-scoped by `organization_id`.
 | jira-assets | `jira_assets_config`, `jira_assets_use_cases`, sequence `jira_use_case_uc_id_seq`; runs and schedule in the shared `extension_sync_runs` / `extension_sync_settings` (the old `jira_assets_sync_history` is kept, unwritten, for one release) |
 | jira-incidents | `jira_incidents_config`, `jira_incident_links`, `jira_incident_sync_events`; imported incidents live in the core `ai_incident_managements`; runs and schedule in `extension_sync_runs` / `extension_sync_settings` |
 | risk-import, dataset-bulk-upload | None. They write to the core `risks` and `datasets` / `files` tables. |
+| framework-import | `imported_frameworks`, `imported_framework_topics`, `imported_framework_subtopics`, plus the use case tables `projects_imported_frameworks`, `imported_framework_topic_impl`, `imported_framework_subtopic_impl`, `imported_framework_topic_impl__risks`, `imported_framework_subtopic_impl__risks` (all eight with the `tenant_isolation` RLS policy). Imported frameworks are **not** rows in the global `frameworks` catalog or `projects_frameworks`; use cases attach them through `projects_imported_frameworks`. See [Imported frameworks](../domains/compliance-frameworks.md#imported-frameworks). |
 
 ---
 
@@ -254,7 +258,7 @@ connection** for unsaved values).
 
 ---
 
-## The eight extensions
+## The nine extensions
 
 | Key | Category | Config fields | Server dir | Client dir | Where it surfaces |
 |-----|----------|---------------|------------|------------|-------------------|
@@ -266,6 +270,7 @@ connection** for unsaved values).
 | `jira-assets` | data_management | none (post-enable panel, stored in `jira_assets_config`) | `Servers/extensions/jira-assets/` | `Extensions/jira-assets/` | Imported use cases; Jira use-case views in `ProjectView/V1.0ProjectView` |
 | `jira-incidents` | data_management | none (post-enable panel, stored in `jira_incidents_config`) | `Servers/extensions/jira-incidents/` | `Extensions/jira-incidents/` | Imported incidents; a Jira chip on the incidents table and the incident header (`components/JiraIssueChip`) |
 | `dataset-bulk-upload` | data_management | none | `Servers/extensions/dataset-bulk-upload/` | `Extensions/dataset-bulk-upload/` | Datasets → **Bulk upload** |
+| `framework-import` | data_management | none | `Servers/extensions/framework-import/` (routers in `Servers/routes/v1/frameworkImport.route.ts` and `Servers/routes/v1/importedFrameworkAssessment.route.ts`) | `Framework/Components/FrameworkImportModal.tsx` | Organizational frameworks page → **Imported frameworks** list and **Import from Excel**; a use case's Frameworks tab → add an imported framework and assess it like a bundled one. |
 
 Client dirs are relative to `Clients/src/presentation/pages/`.
 
@@ -286,6 +291,8 @@ enabled can call the route.
 | `/api/extensions/jira-assets` | `GET/POST /config`, `PATCH /config/sync`, `PATCH /config/selection`, `GET /vw-attributes`, schema and object-type discovery (`GET /object-types/:id/objects?startAt=` is one page of up to 1000 for the import picker), `POST /import`, `POST /sync` (202, queued for the worker), `GET /sync/status`, `GET /sync/history`, `GET /use-cases`, `POST /use-cases/remove-missing`, `GET/DELETE /use-cases/:id`, `GET /projects/:projectId/custom-frameworks-progress` | `extension.admin` (Admin) on `POST /config`, `PATCH /config/sync`, `PATCH /config/selection`, `POST /import`, `POST /sync`, `POST /use-cases/remove-missing`, `DELETE /use-cases/:id`. Errors: 400 bad input, 404 not configured, 409 a run is live or a sync job is waiting, 502 Jira or network failure (reason in `error`), 503 the job queue did not answer. |
 | `/api/extensions/jira-incidents` | `GET/PUT /config`, `GET /jira/projects`, `GET /jira/issue-types?project=`, `GET /jira/statuses?project=&issue_type=` (with `default_map_in` / `default_map_out`), `GET /jira/priorities` (with `default_severity_map`), `GET /jira/labels?query=`, `GET /events?limit=` (1–200, default 50), `GET /links?incident_ids=` (at most 500) | `extension.admin` (Admin) on every route, reads included, **except `GET /links`**: it is registered before the extension gate, open to any member, and returns `[]` when the extension is disabled. Errors: 400 bad input or "Connect to Jira first" on the pickers, 502 Jira's answer (401 from Jira included) or a network failure. |
 | `/api/extensions/dataset-bulk-upload` | `POST /upload` (multipart, one file per request, 30 MB, CSV/XLS/XLSX; 413/415 on error) | Admin, Editor |
+| `/api/v1/framework-import` (the first extension router under `/api/v1`; it is not mounted under `/api/extensions`) | `GET /template`, `POST /import`, `GET /imported`, `PATCH /imported/:id`, `DELETE /imported/:id` | `ext.frameworkImport.edit` (Admin, Editor) on everything except `GET /imported`. `POST /import` takes at most 5000 rows and answers 400 with the full result, per-row `errors` included, under `data` when validation fails; nothing is written then. 400 for an id that is not a positive integer or a PATCH field of the wrong type, 404 for another organization's id. A re-import updates the framework in place and reports `added` / `updated` / `retired` / `removed`. `DELETE /imported/:id` answers 409 with `use_cases` while a use case uses it. |
+| `/api/v1/imported-framework-assessments` (the extension gate applies to `POST /projects/:projectId` only, so attached frameworks stay readable and assessable when the extension is turned off) | `GET/POST /projects/:projectId`, `DELETE /projects/:projectId/:linkId`, `GET /links/:linkId/tree`, `GET /links/:linkId/dashboard`, `GET/PATCH /links/:linkId/impl/:level/:implId`, `GET/PUT /links/:linkId/impl/:level/:implId/risks` | `useCase.edit` (Admin, Editor) on attach and detach; every route also needs access to the use case (403). See [Imported frameworks](../domains/compliance-frameworks.md#imported-frameworks). |
 
 The full list is in `Servers/swagger.yaml` under `/extensions/...`.
 

@@ -10,6 +10,8 @@ import { EMAIL_TEMPLATES } from "../constants/emailTemplates";
 import {
   ICreateNotification,
   IEmailNotificationConfig,
+  INotificationMessage,
+  INotificationTitle,
   NotificationEntityType,
   NotificationType,
 } from "../domain.layer/interfaces/i.notification";
@@ -224,12 +226,15 @@ export const maybeAutoOpenFindingForBreach = async (
  * Fan an alert out to every recipient via the standard dual-dispatch entry
  * point (in-app always; email when the org enabled it — sendInAppNotification
  * gates and swallows email failures itself). Per-recipient try/catch so one
- * failing recipient never blocks the rest; never throws.
+ * failing recipient never blocks the rest; never throws. Keyed title, message
+ * and subject are translated per recipient by sendInAppNotification.
  */
 export const dispatchAlerts = async (
   organizationId: number,
   recipients: number[],
-  notification: Omit<ICreateNotification, "user_id">,
+  notification: Omit<ICreateNotification, "user_id" | "title" | "message"> &
+    INotificationTitle &
+    INotificationMessage,
   emailEnabled: boolean,
   email: IEmailNotificationConfig,
 ): Promise<void> => {
@@ -302,8 +307,10 @@ export const notifyRevalidationDue = async (
     recipients,
     {
       type: NotificationType.MRM_REVALIDATION_DUE,
-      title: `Validation overdue: ${label}`,
-      message: `${label} — periodic revalidation was due on ${dueDate} and has not been started.`,
+      titleKey: "Validation overdue: {label}",
+      titleVars: { label },
+      messageKey: "{label} — periodic revalidation was due on {dueDate} and has not been started.",
+      messageVars: { label, dueDate },
       entity_type: NotificationEntityType.MODEL,
       entity_id: modelInventoryId,
       entity_name: label,
@@ -312,7 +319,8 @@ export const notifyRevalidationDue = async (
     settings.alert_email_enabled,
     {
       template: EMAIL_TEMPLATES.MRM_REVALIDATION_DUE,
-      subject: `Validation overdue: ${label}`,
+      subjectKey: "Validation overdue: {label}",
+      subjectVars: { label },
       variables: {
         model_label: label,
         due_date: dueDate,

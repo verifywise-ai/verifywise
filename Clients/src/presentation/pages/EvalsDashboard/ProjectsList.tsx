@@ -53,8 +53,8 @@ import {
 } from "../../../application/repository/deepEval.repository";
 import singleTheme from "../../themes/v1SingleTheme";
 import type { DeepEvalProject } from "./types";
-import { useAuth } from "../../../application/hooks/useAuth";
-import allowedRoles from "../../../application/constants/permissions";
+import { useCanCheck } from "../../../application/hooks/useCan";
+import { useArenaSetting } from "../../../application/hooks/useArenaSetting";
 import { palette } from "../../themes/palette";
 
 const columns: StandardColumn[] = [
@@ -70,6 +70,7 @@ export default function ProjectsList() {
   const formatUserDate = useFormattedDate();
   const navigate = useNavigate();
   const [projects, setProjects] = useState<DeepEvalProject[]>([]);
+  const { data: arenaSetting } = useArenaSetting();
   const [runsByProject, setRunsByProject] = useState<Record<string, number>>({});
   const [createModalOpen, setCreateModalOpen] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -79,10 +80,10 @@ export default function ProjectsList() {
   } | null>(null);
 
   // RBAC permissions
-  const { userRoleName } = useAuth();
-  const canCreateProject = allowedRoles.evals.createProject.includes(userRoleName);
-  const canEditProject = allowedRoles.evals.editProject.includes(userRoleName);
-  const canDeleteProject = allowedRoles.evals.deleteProject.includes(userRoleName);
+  const can = useCanCheck();
+  const canCreateProject = can("evals.edit");
+  const canEditProject = can("evals.edit");
+  const canDeleteProject = can("evals.edit");
 
   // Search and filter state
   const [searchTerm, setSearchTerm] = useState("");
@@ -443,11 +444,13 @@ export default function ProjectsList() {
                 title="What is an eval project?"
                 description="A project groups related evaluations for a single LLM application. Define test suites, scoring criteria, and track quality over time."
               />
-              <EmptyStateTip
-                icon={Layers}
-                title="Compare models side by side"
-                description="Run the same test suite across different models or prompts. The arena view shows head-to-head comparisons with automated scoring."
-              />
+              {arenaSetting?.enabled === true && (
+                <EmptyStateTip
+                  icon={Layers}
+                  title="Compare models side by side"
+                  description="Run the same test suite across different models or prompts. The arena view shows head-to-head comparisons with automated scoring."
+                />
+              )}
               <EmptyStateTip
                 icon={TrendingUp}
                 title="Track quality over releases"

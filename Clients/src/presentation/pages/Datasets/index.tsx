@@ -12,7 +12,6 @@ import {
 } from "../../../application/repository/entity.repository";
 import { createDataset } from "../../../application/repository/dataset.repository";
 import { logEngine } from "../../../application/tools/log.engine";
-import { useAuth } from "../../../application/hooks/useAuth";
 import { useExtensions } from "../../../application/contexts/Extensions.context";
 import BulkUploadButton from "../Extensions/dataset-bulk-upload/BulkUploadButton";
 import BulkUploadModal from "../Extensions/dataset-bulk-upload/BulkUploadModal";
@@ -35,6 +34,7 @@ import DatasetTable from "../ModelInventory/DatasetTable";
 import NewDataset from "../../components/Modals/NewDataset";
 
 import Alert from "../../components/Alert";
+import { useCan } from "../../../application/hooks/useCan";
 
 const DATASET_GROUP_BY_OPTIONS = [
   { id: "status", label: "Status" },
@@ -138,7 +138,6 @@ const Datasets: React.FC = () => {
 
   const [isBulkUploadOpen, setIsBulkUploadOpen] = useState(false);
 
-  const { userRoleName } = useAuth();
   const { isEnabled } = useExtensions();
 
   // GroupBy state
@@ -199,7 +198,8 @@ const Datasets: React.FC = () => {
         return "Other";
     }
   }, []);
-  const isCreatingDisabled = !userRoleName || !["Admin", "Editor"].includes(userRoleName);
+  // Same gate as the dataset table (model.edit); the dataset routes need only a login.
+  const isCreatingDisabled = !useCan("model.edit");
 
   // Alert state
   const [alert, setAlert] = useState<{

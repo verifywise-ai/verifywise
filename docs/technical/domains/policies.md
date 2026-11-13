@@ -305,13 +305,27 @@ POST /policy-linked/:policyId/linked-objects
 
 ### Policy Templates
 
-Pre-built templates by category:
-- Core AI governance
-- Model lifecycle
-- Data and security
-- Legal and compliance
-- People and organization
-- Industry packs
+Templates live in the `policy_templates` table (#5261), served by
+`/api/v1/policy-templates` (`routes/v1/policyTemplates.route.ts`,
+`utils/policyTemplate.utils.ts`).
+
+- **System templates**: `organization_id IS NULL`, `is_system_template = true`,
+  seeded by migration `20261111091002-seed-policy-templates.js` from
+  `database/seeders/systemPolicyTemplates.js`. Read-only for every org.
+- **Organization templates**: `organization_id` set. Created by duplicating a
+  system template, by "Save as template" on a policy (`POST /from-policy`,
+  content sanitized, category asked in the modal), or directly. Edited in
+  two places: details (name, description, category) in a modal, content in
+  the template editor page `/policies/templates/:templateId/edit`.
+- Writes need `policyTemplate.edit` (Admin and Editor by default). Update and
+  delete only match `organization_id = caller AND is_system_template = false`.
+- All HTML content goes through `sanitizeUserHtml`; tags are written as
+  `text[]` and validated (at most 50, 100 characters each).
+- A policy created from a template keeps its own copy; deleting a template
+  does not affect policies.
+
+Categories: Core AI governance, Model lifecycle, Data and security, Legal
+and compliance, People and organization, Industry packs.
 
 ## Automation Triggers
 

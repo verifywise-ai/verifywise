@@ -1112,6 +1112,8 @@ export const de: Record<string, string> = {
   "Cost saved": "Eingesparte Kosten",
   "Count": "Anzahl",
   "Created": "Erstellt",
+  "CREATED AT": "ERSTELLT AM",
+  "LAST LOGGED IN": "LETZTE ANMELDUNG",
   "Created by": "Erstellt von",
   "Current": "Aktuell",
   "Current risk level": "Aktuelle Risikostufe",
@@ -1203,7 +1205,6 @@ export const de: Record<string, string> = {
   "Money saved by serving cached responses instead of calling the LLM":
     "Durch das Ausliefern gecachter Antworten statt LLM-Aufrufen eingesparte Kosten",
   "Most likely": "Wahrscheinlichstes",
-  "Multi-Turn": "Multi-Turn",
   "Multi-turn dataset detected": "Multi-Turn-Datensatz erkannt",
   "Multiple tags": "Mehrere Tags",
   "Name your organization": "Organisation benennen",
@@ -1305,7 +1306,6 @@ export const de: Record<string, string> = {
   "Shared specifications": "Geteilte Spezifikationen",
   "Simulated": "Simuliert",
   "Single tag": "Einzelnes Tag",
-  "Single-Turn": "Single-Turn",
   "Source identifier": "Quellkennung",
   "Source system": "Quellsystem",
   "Space between": "Abstand zwischen",
@@ -4353,6 +4353,8 @@ export const de: Record<string, string> = {
   "Single line text input": "Einzeilige Texteingabe",
   "Single selection dropdown": "Einzelauswahl-Dropdown",
   "Slack workspace connected successfully!": "Slack-Workspace erfolgreich verbunden!",
+  "Something went wrong while setting up your workspace. Try again, or skip for now.":
+    "Beim Einrichten Ihres Arbeitsbereichs ist ein Fehler aufgetreten. Versuchen Sie es erneut oder überspringen Sie es vorerst.",
   "Something went wrong, please try again": "Etwas ist schiefgegangen, bitte erneut versuchen",
   "South America": "Südamerika",
   "Special category data (racial, political)": "Daten besonderer Kategorien (rassisch, politisch)",
@@ -5625,6 +5627,8 @@ export const de: Record<string, string> = {
   "Use case and AI app lifecycles, intake form logic and MCP server auth":
     "Lebenszyklen für Anwendungsfälle und KI-Apps, Logik für Aufnahmeformulare und MCP-Server-Authentifizierung",
   "AI app bulk import and bulk assessment": "Massenimport und Massenbewertung von KI-Apps",
+  "Training assignments, groups and custom roles, and framework import":
+    "Schulungszuweisungen, Gruppen und benutzerdefinierte Rollen sowie Framework-Import",
 };
 
 export const fr: Record<string, string> = {
@@ -6801,6 +6805,8 @@ export const fr: Record<string, string> = {
   "Cost saved": "Coût économisé",
   "Count": "Nombre",
   "Created": "Créé",
+  "CREATED AT": "CRÉÉ LE",
+  "LAST LOGGED IN": "DERNIÈRE CONNEXION",
   "Created by": "Créé par",
   "Current": "Actuel",
   "Current risk level": "Niveau de risque actuel",
@@ -6892,7 +6898,6 @@ export const fr: Record<string, string> = {
 
   // Batch 04
   "Most likely": "Plus probable",
-  "Multi-Turn": "Multi-tours",
   "Multi-turn dataset detected": "Jeu de données multi-tours détecté",
   "Multiple tags": "Plusieurs étiquettes",
   "Name your organization": "Nommez votre organisation",
@@ -6990,7 +6995,6 @@ export const fr: Record<string, string> = {
   "Shared specifications": "Spécifications partagées",
   "Simulated": "Simulé",
   "Single tag": "Étiquette unique",
-  "Single-Turn": "Mono-tour",
   "Source identifier": "Identifiant de source",
   "Source system": "Système source",
   "Space between": "Espace entre",
@@ -9921,6 +9925,8 @@ export const fr: Record<string, string> = {
   "Single line text input": "Saisie de texte sur une ligne",
   "Single selection dropdown": "Liste déroulante à sélection unique",
   "Slack workspace connected successfully!": "Espace de travail Slack connecté avec succès !",
+  "Something went wrong while setting up your workspace. Try again, or skip for now.":
+    "Une erreur s'est produite lors de la configuration de votre espace de travail. Réessayez ou passez cette étape pour le moment.",
   "Something went wrong, please try again": "Quelque chose s'est mal passé, veuillez réessayer",
   "South America": "Amérique du Sud",
   "Special category data (racial, political)": "Données de catégorie spéciale (raciale, politique)",
@@ -11182,6 +11188,8 @@ export const fr: Record<string, string> = {
   "Use case and AI app lifecycles, intake form logic and MCP server auth":
     "Cycles de vie des cas d'usage et des applications d'IA, logique des formulaires d'intake et authentification des serveurs MCP",
   "AI app bulk import and bulk assessment": "Import et évaluation en masse des applications d'IA",
+  "Training assignments, groups and custom roles, and framework import":
+    "Affectation des formations, groupes et rôles personnalisés, et import de référentiels",
 
   "Request": "Requête",
 };
@@ -12156,6 +12164,8 @@ export const es: Record<string, string> = {
   "Cost saved": "Coste ahorrado",
   "Count": "Recuento",
   "Created": "Creado",
+  "CREATED AT": "CREADO EL",
+  "LAST LOGGED IN": "ÚLTIMO INICIO DE SESIÓN",
   "Created by": "Creado por",
   "Current": "Actual",
   "Current risk level": "Nivel de riesgo actual",
@@ -12245,7 +12255,6 @@ export const es: Record<string, string> = {
   "Modal": "Modal",
   "Models covered": "Modelos cubiertos",
   "Most likely": "Más probable",
-  "Multi-Turn": "Multiturno",
   "Multi-turn dataset detected": "Conjunto de datos multiturno detectado",
   "Multiple tags": "Varias etiquetas",
   "Name your organization": "Asigna un nombre a tu organización",
@@ -12340,7 +12349,6 @@ export const es: Record<string, string> = {
   "Shared specifications": "Especificaciones compartidas",
   "Simulated": "Simulado",
   "Single tag": "Etiqueta única",
-  "Single-Turn": "Turno único",
   "Source identifier": "Identificador de origen",
   "Source system": "Sistema de origen",
   "Space between": "Espacio entre",
@@ -13812,6 +13820,8 @@ export const es: Record<string, string> = {
   "Single selection dropdown": "Lista desplegable de selección única",
   "Slack workspace connected successfully!":
     "¡Espacio de trabajo de Slack conectado correctamente!",
+  "Something went wrong while setting up your workspace. Try again, or skip for now.":
+    "Se produjo un error al configurar su espacio de trabajo. Inténtelo de nuevo u omita este paso por ahora.",
   "Something went wrong, please try again": "Algo ha salido mal, inténtalo de nuevo",
   "South America": "Sudamérica",
   "Specific incident management information": "Información específica de gestión de incidentes",
@@ -16631,6 +16641,8 @@ export const es: Record<string, string> = {
     "Ciclos de vida de casos de uso y aplicaciones de IA, lógica de formularios de solicitud y autenticación de servidores MCP",
   "AI app bulk import and bulk assessment":
     "Importación y evaluación masivas de aplicaciones de IA",
+  "Training assignments, groups and custom roles, and framework import":
+    "Asignación de formaciones, grupos y roles personalizados, e importación de marcos",
   "Enter a full web address starting with http:// or https://":
     "Introduzca una dirección web completa que empiece por http:// o https://",
   "Shown under the field on the public form":

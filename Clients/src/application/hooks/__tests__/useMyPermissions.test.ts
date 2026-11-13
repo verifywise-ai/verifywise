@@ -6,19 +6,17 @@ import React from "react";
 const authState = vi.hoisted(() => ({
   userId: 1 as number | null,
   organizationId: 7 as number | null,
+  userRoleName: "Risk analyst",
 }));
 vi.mock("../useAuth", () => ({
   useAuth: () => authState,
-}));
-const adminState = vi.hoisted(() => ({ isAdmin: false }));
-vi.mock("../useIsAdmin", () => ({
-  useIsAdmin: () => adminState.isAdmin,
 }));
 vi.mock("../../repository/role.repository", () => ({
   getMyPermissions: vi.fn(),
 }));
 
-import { useHasPermission, useMyPermissions } from "../useMyPermissions";
+import { useMyPermissions } from "../useMyPermissions";
+import { useCan, usePermissionsSettled } from "../useCan";
 import { getMyPermissions } from "../../repository/role.repository";
 
 const mockGetMyPermissions = getMyPermissions as unknown as ReturnType<typeof vi.fn>;
@@ -33,7 +31,7 @@ beforeEach(() => {
   vi.clearAllMocks();
   authState.userId = 1;
   authState.organizationId = 7;
-  adminState.isAdmin = false;
+  authState.userRoleName = "Risk analyst";
 });
 
 describe("useMyPermissions", () => {
@@ -51,92 +49,74 @@ describe("useMyPermissions", () => {
   });
 });
 
-describe("useHasPermission", () => {
-  it("is true when the key is granted (e.g. through a custom role)", async () => {
-    mockGetMyPermissions.mockResolvedValue(["agentDiscovery.admin"]);
-    const { result } = renderHook(() => useHasPermission("agentDiscovery.admin"), {
-      wrapper: createWrapper(),
-    });
-    await waitFor(() => expect(result.current).toBe(true));
-  });
-
-  it("is false when the key is not granted", async () => {
-    mockGetMyPermissions.mockResolvedValue(["aiApp.admin"]);
-    const { result } = renderHook(
+// One rule for every permission gate (#5314): the loaded list decides; until
+// it loads, or if it fails, a built-in role answers from its static matrix and
+// a custom role is denied.
+describe("useCan through the real permissions query", () => {
+  function renderCan(key: Parameters<typeof useCan>[0]) {
+    return renderHook(
       () => ({
-        has: useHasPermission("agentDiscovery.admin"),
+        has: useCan(key),
+        settled: usePermissionsSettled(),
+        error: useMyPermissions().error,
         loading: useMyPermissions().isLoading,
       }),
       { wrapper: createWrapper() },
     );
+  }
+
+  it("is true when a custom role was granted the key", async () => {
+    mockGetMyPermissions.mockResolvedValue(["agentDiscovery.admin"]);
+    const { result } = renderCan("agentDiscovery.admin");
+    await waitFor(() => expect(result.current.has).toBe(true));
+    expect(result.current.settled).toBe(true);
+  });
+
+  it("is false when the key is not granted", async () => {
+    mockGetMyPermissions.mockResolvedValue(["aiApp.admin"]);
+    const { result } = renderCan("agentDiscovery.admin");
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.has).toBe(false);
   });
 
-  it("is false while loading", () => {
+  it("denies a custom role while loading, and is not settled yet", () => {
     mockGetMyPermissions.mockReturnValue(new Promise(() => {}));
-    const { result } = renderHook(() => useHasPermission("agentDiscovery.admin"), {
-      wrapper: createWrapper(),
-    });
-    expect(result.current).toBe(false);
+    const { result } = renderCan("agentDiscovery.admin");
+    expect(result.current.has).toBe(false);
+    expect(result.current.settled).toBe(false);
   });
 
-  it("is false when the request fails, even for an Admin, without fallbackToAdmin", async () => {
-    adminState.isAdmin = true;
+  it("answers a built-in role from its matrix while loading", () => {
+    authState.userRoleName = "Admin";
+    mockGetMyPermissions.mockReturnValue(new Promise(() => {}));
+    const { result } = renderCan("agentDiscovery.admin");
+    expect(result.current.has).toBe(true);
+    expect(result.current.settled).toBe(true);
+  });
+
+  it("answers a built-in role from its matrix when the request fails", async () => {
+    authState.userRoleName = "Editor";
     mockGetMyPermissions.mockRejectedValue(new Error("down"));
-    const { result } = renderHook(
-      () => ({
-        has: useHasPermission("agentDiscovery.admin"),
-        error: useMyPermissions().error,
-      }),
-      { wrapper: createWrapper() },
-    );
+    const editorKey = renderCan("policyTemplate.edit");
+    const adminKey = renderCan("agentDiscovery.admin");
+    await waitFor(() => expect(editorKey.result.current.error).toBeTruthy());
+    expect(editorKey.result.current.has).toBe(true);
+    expect(adminKey.result.current.has).toBe(false);
+  });
+
+  it("denies a custom role when the request fails", async () => {
+    mockGetMyPermissions.mockRejectedValue(new Error("down"));
+    const { result } = renderCan("agentDiscovery.admin");
     await waitFor(() => expect(result.current.error).toBeTruthy());
     expect(result.current.has).toBe(false);
+    expect(result.current.settled).toBe(true);
   });
 
-  describe("with fallbackToAdmin", () => {
-    function renderWithFallback() {
-      return renderHook(
-        () => ({
-          has: useHasPermission("agentDiscovery.admin", { fallbackToAdmin: true }),
-          error: useMyPermissions().error,
-          loading: useMyPermissions().isLoading,
-        }),
-        { wrapper: createWrapper() },
-      );
-    }
-
-    it("is true for an Admin when the request fails", async () => {
-      adminState.isAdmin = true;
-      mockGetMyPermissions.mockRejectedValue(new Error("down"));
-      const { result } = renderWithFallback();
-      await waitFor(() => expect(result.current.error).toBeTruthy());
-      expect(result.current.has).toBe(true);
-    });
-
-    it("is false for a non-Admin when the request fails", async () => {
-      adminState.isAdmin = false;
-      mockGetMyPermissions.mockRejectedValue(new Error("down"));
-      const { result } = renderWithFallback();
-      await waitFor(() => expect(result.current.error).toBeTruthy());
-      expect(result.current.has).toBe(false);
-    });
-
-    it("is still false for an Admin while loading", () => {
-      adminState.isAdmin = true;
-      mockGetMyPermissions.mockReturnValue(new Promise(() => {}));
-      const { result } = renderWithFallback();
-      expect(result.current.loading).toBe(true);
-      expect(result.current.has).toBe(false);
-    });
-
-    it("follows the loaded permissions, not the role, when the request succeeds", async () => {
-      adminState.isAdmin = true;
-      mockGetMyPermissions.mockResolvedValue(["aiApp.admin"]);
-      const { result } = renderWithFallback();
-      await waitFor(() => expect(result.current.loading).toBe(false));
-      expect(result.current.has).toBe(false);
-    });
+  it("follows the loaded list, not the role name, once it arrives", async () => {
+    authState.userRoleName = "Admin";
+    mockGetMyPermissions.mockResolvedValue(["aiApp.admin"]);
+    const { result } = renderCan("agentDiscovery.admin");
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(result.current.has).toBe(false);
   });
 });

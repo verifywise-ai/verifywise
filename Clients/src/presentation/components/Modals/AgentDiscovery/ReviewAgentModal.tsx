@@ -1,4 +1,5 @@
 import React, { useEffect, useState } from "react";
+import { useCan } from "../../../../application/hooks/useCan";
 import { Drawer, Stack, Box, Typography, Divider, IconButton } from "@mui/material";
 import { X, Link as LinkIcon, Unlink, Pencil } from "lucide-react";
 import VWChip from "../../Chip";
@@ -9,7 +10,6 @@ import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import LinkAgentModal, { AgentLinkKind } from "./LinkAgentModal";
 import Alert from "../../Alert";
 import { getClientErrorReason } from "../../../../application/utils/apiErrorReason";
-import { useHasPermission } from "../../../../application/hooks/useMyPermissions";
 import {
   formatSourceLabel,
   formatUseCaseLabel,
@@ -47,7 +47,7 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
   const [actionError, setActionError] = useState<string | null>(null);
   // Review, link, unlink and edit need the agentDiscovery.admin permission
   // (Admins by default) on the server; everyone else gets a read-only view.
-  const canManage = useHasPermission("agentDiscovery.admin", { fallbackToAdmin: true });
+  const canManage = useCan("agentDiscovery.admin");
 
   useEffect(() => {
     setActionError(null);

@@ -200,6 +200,7 @@ export const de: Record<string, string> = {
     "Benutzersitzung nicht gefunden. Bitte erneut anmelden.",
   "Version control": "Versionskontrolle",
   "AI Approval Rules": "AI Approval Rules",
+  "AI approval rules": "KI-Genehmigungsregeln",
   "Add Rule": "Add Rule",
   "Auto-Approve": "Auto-Approve",
   "Auto-Reject": "Auto-Reject",
@@ -453,6 +454,54 @@ export const de: Record<string, string> = {
     "Leer lassen oder 0 eingeben, um unbegrenzt aufzubewahren. Maximum {max}.",
   "Retention settings could not be loaded.":
     "Die Aufbewahrungseinstellungen konnten nicht geladen werden.",
+  // Groups and custom roles (#5253)
+  "Add a whole group to the use case in one step.":
+    "Fügen Sie eine ganze Gruppe in einem Schritt zum Anwendungsfall hinzu.",
+  "Allow": "Erlauben",
+  "Could not update the use case": "Der Anwendungsfall konnte nicht aktualisiert werden",
+  "Create teams and grant them use-case access in one step. Members of a group attached to a use case can see and work on it.":
+    "Erstellen Sie Teams und gewähren Sie ihnen in einem Schritt Zugriff auf Anwendungsfälle. Mitglieder einer Gruppe, die einem Anwendungsfall zugeordnet ist, können ihn sehen und bearbeiten.",
+  "Custom role": "Benutzerdefinierte Rolle",
+  "Delete group": "Gruppe löschen",
+  "Delete this group?": "Diese Gruppe löschen?",
+  "Edit group": "Gruppe bearbeiten",
+  "Edit what each custom role is allowed to do":
+    "Legen Sie fest, was jede benutzerdefinierte Rolle tun darf",
+  "Every group member can see and work on the use case.":
+    "Jedes Gruppenmitglied kann den Anwendungsfall sehen und bearbeiten.",
+  "Failed to load groups.": "Gruppen konnten nicht geladen werden.",
+  "The group was created, but its members were not saved. Select Save to try again.":
+    "Die Gruppe wurde erstellt, aber ihre Mitglieder wurden nicht gespeichert. Wählen Sie Speichern, um es erneut zu versuchen.",
+  "Groups": "Gruppen",
+  "Bundle users into teams to give them use-case access together":
+    "Benutzer zu Teams bündeln, um ihnen gemeinsam Zugriff auf Anwendungsfälle zu geben",
+  "Loading groups": "Gruppen werden geladen",
+  "Members": "Mitglieder",
+  "You don't have access to this section.": "Sie haben keinen Zugriff auf diesen Bereich.",
+  "No groups yet.": "Noch keine Gruppen.",
+  "No members found": "Keine Mitglieder gefunden",
+  "No groups yet. Groups are managed in Settings → Groups.":
+    "Noch keine Gruppen. Gruppen werden unter Einstellungen → Gruppen verwaltet.",
+  "Groups bundle users so you can add a whole team to a use case in one step.":
+    "Gruppen fassen Benutzer zusammen, sodass Sie ein ganzes Team in einem Schritt zu einem Anwendungsfall hinzufügen können.",
+  "Loading members...": "Mitglieder werden geladen...",
+  "New group": "Neue Gruppe",
+  "No groups yet. Create one to grant a whole team access to a use case.":
+    "Noch keine Gruppen. Erstellen Sie eine, um einem ganzen Team Zugriff auf einen Anwendungsfall zu geben.",
+  "Only Admins can manage roles.": "Nur Administratoren können Rollen verwalten.",
+  "Roles and permissions": "Rollen und Berechtigungen",
+  "Save permissions": "Berechtigungen speichern",
+  "Select groups": "Gruppen auswählen",
+  "Select members": "Mitglieder auswählen",
+  "What is this group responsible for?": "Wofür ist diese Gruppe zuständig?",
+  "Create a role, choose what it can do, then assign it to people in the Team tab.":
+    "Erstellen Sie eine Rolle, legen Sie fest, was sie darf, und weisen Sie sie dann im Tab „Team“ Personen zu.",
+  "Delete role": "Rolle löschen",
+  "Loading permissions": "Berechtigungen werden geladen",
+  "Loading roles": "Rollen werden geladen",
+  "New role": "Neue Rolle",
+  "No custom roles yet": "Noch keine benutzerdefinierten Rollen",
+  "What this role is for": "Wofür diese Rolle gedacht ist",
 };
 
 export const fr: Record<string, string> = {
@@ -655,6 +704,7 @@ export const fr: Record<string, string> = {
     "Session utilisateur introuvable. Veuillez vous reconnecter.",
   "Version control": "Contrôle de version",
   "AI Approval Rules": "AI Approval Rules",
+  "AI approval rules": "Règles d'approbation IA",
   "Add Rule": "Add Rule",
   "Auto-Approve": "Auto-Approve",
   "Auto-Reject": "Auto-Reject",
@@ -908,6 +958,54 @@ export const fr: Record<string, string> = {
     "Laissez vide ou saisissez 0 pour conserver indéfiniment. Maximum {max}.",
   "Retention settings could not be loaded.":
     "Les paramètres de conservation n'ont pas pu être chargés.",
+  // Groups and custom roles (#5253)
+  "Add a whole group to the use case in one step.":
+    "Ajoutez un groupe entier au cas d'usage en une seule étape.",
+  "Allow": "Autoriser",
+  "Could not update the use case": "Impossible de mettre à jour le cas d'usage",
+  "Create teams and grant them use-case access in one step. Members of a group attached to a use case can see and work on it.":
+    "Créez des équipes et donnez-leur accès aux cas d'usage en une seule étape. Les membres d'un groupe associé à un cas d'usage peuvent le voir et y travailler.",
+  "Custom role": "Rôle personnalisé",
+  "Delete group": "Supprimer le groupe",
+  "Delete this group?": "Supprimer ce groupe ?",
+  "Edit group": "Modifier le groupe",
+  "Edit what each custom role is allowed to do":
+    "Modifiez ce que chaque rôle personnalisé est autorisé à faire",
+  "Every group member can see and work on the use case.":
+    "Chaque membre du groupe peut voir le cas d'usage et y travailler.",
+  "Failed to load groups.": "Impossible de charger les groupes.",
+  "The group was created, but its members were not saved. Select Save to try again.":
+    "Le groupe a été créé, mais ses membres n’ont pas été enregistrés. Sélectionnez Enregistrer pour réessayer.",
+  "Groups": "Groupes",
+  "Bundle users into teams to give them use-case access together":
+    "Regrouper des utilisateurs en équipes pour leur donner ensemble accès aux cas d'usage",
+  "Loading groups": "Chargement des groupes",
+  "Members": "Membres",
+  "You don't have access to this section.": "Vous n'avez pas accès à cette section.",
+  "No groups yet.": "Aucun groupe pour le moment.",
+  "No members found": "Aucun membre trouvé",
+  "No groups yet. Groups are managed in Settings → Groups.":
+    "Aucun groupe pour le moment. Les groupes se gèrent dans Paramètres → Groupes.",
+  "Groups bundle users so you can add a whole team to a use case in one step.":
+    "Les groupes rassemblent des utilisateurs pour que vous puissiez ajouter toute une équipe à un cas d'usage en une seule étape.",
+  "Loading members...": "Chargement des membres...",
+  "New group": "Nouveau groupe",
+  "No groups yet. Create one to grant a whole team access to a use case.":
+    "Aucun groupe pour l'instant. Créez-en un pour donner à toute une équipe l'accès à un cas d'usage.",
+  "Only Admins can manage roles.": "Seuls les administrateurs peuvent gérer les rôles.",
+  "Roles and permissions": "Rôles et autorisations",
+  "Save permissions": "Enregistrer les autorisations",
+  "Select groups": "Sélectionner des groupes",
+  "Select members": "Sélectionner des membres",
+  "What is this group responsible for?": "De quoi ce groupe est-il responsable ?",
+  "Create a role, choose what it can do, then assign it to people in the Team tab.":
+    "Créez un rôle, choisissez ce qu'il permet de faire, puis attribuez-le à des personnes dans l'onglet Équipe.",
+  "Delete role": "Supprimer le rôle",
+  "Loading permissions": "Chargement des autorisations",
+  "Loading roles": "Chargement des rôles",
+  "New role": "Nouveau rôle",
+  "No custom roles yet": "Aucun rôle personnalisé pour le moment",
+  "What this role is for": "À quoi sert ce rôle",
 };
 
 export const es: Record<string, string> = {
@@ -1108,6 +1206,7 @@ export const es: Record<string, string> = {
     "No se encontró la sesión del usuario. Inicia sesión de nuevo.",
   "Version control": "Control de versiones",
   "AI Approval Rules": "Reglas de aprobación de IA",
+  "AI approval rules": "Reglas de aprobación de IA",
   "Add Rule": "Añadir regla",
   "Auto-Approve": "Aprobar automáticamente",
   "Auto-Reject": "Rechazar automáticamente",
@@ -1360,4 +1459,51 @@ export const es: Record<string, string> = {
   "Leave empty or enter 0 to keep indefinitely. Maximum {max}.":
     "Déjalo vacío o escribe 0 para conservar indefinidamente. Máximo {max}.",
   "Retention settings could not be loaded.": "No se pudo cargar la configuración de retención.",
+  // Groups and custom roles (#5253)
+  "Add a whole group to the use case in one step.":
+    "Agregue un grupo completo al caso de uso en un solo paso.",
+  "Allow": "Permitir",
+  "Could not update the use case": "No se pudo actualizar el caso de uso",
+  "Create teams and grant them use-case access in one step. Members of a group attached to a use case can see and work on it.":
+    "Cree equipos y deles acceso a casos de uso en un solo paso. Los miembros de un grupo asociado a un caso de uso pueden verlo y trabajar en él.",
+  "Custom role": "Rol personalizado",
+  "Delete group": "Eliminar grupo",
+  "Delete this group?": "¿Eliminar este grupo?",
+  "Edit group": "Editar grupo",
+  "Edit what each custom role is allowed to do": "Edite lo que cada rol personalizado puede hacer",
+  "Every group member can see and work on the use case.":
+    "Cada miembro del grupo puede ver el caso de uso y trabajar en él.",
+  "Failed to load groups.": "No se pudieron cargar los grupos.",
+  "The group was created, but its members were not saved. Select Save to try again.":
+    "El grupo se creó, pero sus miembros no se guardaron. Seleccione Guardar para intentarlo de nuevo.",
+  "Groups": "Grupos",
+  "Bundle users into teams to give them use-case access together":
+    "Agrupar usuarios en equipos para darles acceso conjunto a los casos de uso",
+  "Loading groups": "Cargando grupos",
+  "Members": "Miembros",
+  "You don't have access to this section.": "No tienes acceso a esta sección.",
+  "No groups yet.": "Aún no hay grupos.",
+  "No members found": "No se encontraron miembros",
+  "No groups yet. Groups are managed in Settings → Groups.":
+    "Aún no hay grupos. Los grupos se gestionan en Configuración → Grupos.",
+  "Groups bundle users so you can add a whole team to a use case in one step.":
+    "Los grupos reúnen usuarios para que pueda agregar un equipo completo a un caso de uso en un solo paso.",
+  "Loading members...": "Cargando miembros...",
+  "New group": "Nuevo grupo",
+  "No groups yet. Create one to grant a whole team access to a use case.":
+    "Aún no hay grupos. Cree uno para dar acceso a un caso de uso a todo un equipo.",
+  "Only Admins can manage roles.": "Solo los administradores pueden gestionar roles.",
+  "Roles and permissions": "Roles y permisos",
+  "Save permissions": "Guardar permisos",
+  "Select groups": "Seleccionar grupos",
+  "Select members": "Seleccionar miembros",
+  "What is this group responsible for?": "¿De qué es responsable este grupo?",
+  "Create a role, choose what it can do, then assign it to people in the Team tab.":
+    "Cree un rol, elija lo que puede hacer y asígnelo a personas en la pestaña Equipo.",
+  "Delete role": "Eliminar rol",
+  "Loading permissions": "Cargando permisos",
+  "Loading roles": "Cargando roles",
+  "New role": "Nuevo rol",
+  "No custom roles yet": "Aún no hay roles personalizados",
+  "What this role is for": "Para qué sirve este rol",
 };

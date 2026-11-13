@@ -11,6 +11,7 @@ import {
   getUsersByIds,
 } from "../utils/intakeForm.utils";
 import { translate } from "../utils/i18n.utils";
+import type { ClassificationLevel } from "./intakeScoring/scoreMath";
 import { escapeHtml } from "../utils/sanitization.utils";
 
 // `lang?: string` on each helper below currently uses the *requester's* locale
@@ -139,7 +140,7 @@ export async function sendSubmissionReceivedEmail(
 /** The initial assessment shown in the new-submission email. */
 export interface IntakeNotificationResults {
   /** EU AI Act level from the rules; null when the submission was not rule-checked. */
-  level: string | null;
+  level: ClassificationLevel | null;
   /** Already worded, e.g. "64 (High)", "at least 70 (rules only)", "No score yet". */
   scoreText: string;
   suggestionCount: number;

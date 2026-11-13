@@ -1,15 +1,22 @@
 import React, { useCallback, useMemo } from "react";
-import { Table, TableBody, TableCell, TableContainer, TableRow, Stack } from "@mui/material";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableRow,
+  Stack,
+  Typography,
+} from "@mui/material";
 import "../../components/Table/index.css";
 import singleTheme from "../../themes/v1SingleTheme";
 import CustomIconButton from "../../components/IconButton";
-import allowedRoles from "../../../application/constants/permissions";
+import { useCanCheck } from "../../../application/hooks/useCan";
 import { GraduationCap, Users, Calendar, Award } from "lucide-react";
 import { EmptyState } from "../../components/EmptyState";
 import CustomizableSkeleton from "../../components/Skeletons";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { TableEmptyStateLayout } from "../../components/Table/TableEmptyStateLayout";
-import { useAuth } from "../../../application/hooks/useAuth";
 import { TrainingRegistarModel } from "../../../domain/models/Common/trainingRegistar/trainingRegistar.model";
 import { TrainingStatus } from "../../../domain/enums/status.enum";
 import Chip from "../../components/Chip";
@@ -18,6 +25,9 @@ import { useStandardTable } from "../../../application/hooks/useStandardTable";
 import type { StandardColumn } from "../../../domain/types/standardTable";
 import StandardTableHead from "../../components/Table/StandardTableHead";
 import StandardTablePagination from "../../components/Table/StandardTablePagination";
+import { CustomizableButton } from "../../components/button/customizable-button";
+import { useTranslation } from "../../../application/hooks/useTranslation";
+import type { TrainingAssignmentSummary } from "../../../application/repository/trainingAssignment.repository";
 
 const TABLE_COLUMNS: StandardColumn[] = [
   { id: "training_name", label: "TRAINING NAME", sortable: true },
@@ -26,6 +36,7 @@ const TABLE_COLUMNS: StandardColumn[] = [
   { id: "department", label: "DEPARTMENT", sortable: true },
   { id: "status", label: "STATUS", sortable: true },
   { id: "numberOfPeople", label: "PEOPLE", sortable: true },
+  { id: "assignments", label: "ASSIGNED", sortable: false },
   { id: "actions", label: "", sortable: false },
 ];
 
@@ -51,6 +62,54 @@ const StatusBadge: React.FC<{ status: TrainingStatus }> = ({ status }) => {
   return <Chip label={status} />;
 };
 
+interface AssignmentsCellProps {
+  summary?: TrainingAssignmentSummary;
+  canEdit: boolean;
+  trainingId: number;
+  onOpen: () => void;
+}
+
+const AssignmentsCell: React.FC<AssignmentsCellProps> = ({
+  summary,
+  canEdit,
+  trainingId,
+  onOpen,
+}) => {
+  const { t } = useTranslation();
+  const hasAssignments = Boolean(summary && summary.total > 0);
+
+  if (!hasAssignments && !canEdit) return <>-</>;
+
+  const buttonText =
+    summary && hasAssignments
+      ? t("{completed} of {total} complete")
+          .replace("{completed}", String(summary.completed))
+          .replace("{total}", String(summary.total))
+      : "Assign";
+
+  return (
+    <Stack direction="row" sx={{ gap: "8px", alignItems: "center" }}>
+      <CustomizableButton
+        variant="text"
+        size="small"
+        text={buttonText}
+        // A row click opens the edit modal, so this click must stop here.
+        onClick={(event) => {
+          event.stopPropagation();
+          onOpen();
+        }}
+        testId={`button-training-assignments-${trainingId}`}
+        sx={{ height: "30px", minHeight: "30px", whiteSpace: "nowrap" }}
+      />
+      {summary && summary.overdue > 0 && (
+        <Typography sx={{ fontSize: "13px", color: "status.error.text", whiteSpace: "nowrap" }}>
+          {t("{count} overdue").replace("{count}", String(summary.overdue))}
+        </Typography>
+      )}
+    </Stack>
+  );
+};
+
 const TrainingTable: React.FC<TrainingTableProps> = ({
   data,
   isLoading,
@@ -59,8 +118,11 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
   paginated = true,
   hidePagination = false,
   visibleColumns,
+  assignmentSummaries,
+  onOpenAssignments,
 }) => {
-  const { userRoleName } = useAuth();
+  const can = useCanCheck();
+  const canEditAssignments = can("training.edit");
 
   const isVisible = useCallback(
     (id: string) => !visibleColumns || visibleColumns.size === 0 || visibleColumns.has(id),
@@ -72,7 +134,7 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
     [isVisible],
   );
 
-  const isDeletingAllowed = allowedRoles.training?.delete?.includes(userRoleName);
+  const isDeletingAllowed = can("training.admin");
 
   const sortComparator = useCallback(
     (a: TrainingRegistarModel, b: TrainingRegistarModel, key: string): number => {
@@ -251,6 +313,22 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
                       {training.numberOfPeople}
                     </TableCell>
                   )}
+                  {isVisible("assignments") && (
+                    <TableCell
+                      sx={{
+                        ...singleTheme.tableStyles.primary.body.cell,
+                        cursor: "pointer",
+                        textTransform: "none !important",
+                      }}
+                    >
+                      <AssignmentsCell
+                        summary={assignmentSummaries?.get(trainingId)}
+                        canEdit={canEditAssignments}
+                        trainingId={trainingId}
+                        onOpen={() => onOpenAssignments?.(training)}
+                      />
+                    </TableCell>
+                  )}
                   {isVisible("actions") && (
                     <TableCell
                       sx={{
@@ -302,6 +380,9 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
       visibleTableColumns,
       sortConfig.key,
       hidePagination,
+      assignmentSummaries,
+      onOpenAssignments,
+      canEditAssignments,
     ],
   );
 

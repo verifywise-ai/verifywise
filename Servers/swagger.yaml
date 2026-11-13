@@ -6786,6 +6786,8 @@ components:
         - policy_overdue
         - training_assigned
         - training_completed
+        - training_due_soon
+        - training_overdue
         - vendor_review_due
         - file_uploaded
         - comment_added
@@ -7914,7 +7916,11 @@ tags:
   -
     name: 'v1: Change History'
   -
+    name: 'v1: Extensions'
+  -
     name: 'v1: Intake Forms'
+  -
+    name: 'v1: Intake submissions'
   -
     name: 'v1: Shadow AI'
   -
@@ -7926,11 +7932,19 @@ tags:
   -
     name: 'v1: V1/Dashboard'
   -
+    name: 'v1: V1/Groups'
+  -
+    name: 'v1: V1/Imported Framework Assessments'
+  -
     name: 'v1: V1/Intake Form Review Time'
   -
     name: 'v1: V1/Lifecycle Settings'
   -
+    name: 'v1: V1/Policy Templates'
+  -
     name: 'v1: V1/Projects'
+  -
+    name: 'v1: V1/Training'
   -
     name: 'v1: V1/Use Case Lifecycle'
 paths:
@@ -24714,7 +24728,7 @@ paths:
       tags:
         - 'Intake Forms'
       summary: 'Approve Submission'
-      description: 'With routing on, only a reviewer of the lane the approval would make true, or an Admin, can approve (403 otherwise). A standard-lane approval by a non-senior reviewer may be picked for a second review.'
+      description: 'With routing on, only a reviewer of the lane the approval would make true, or an Admin, can approve (403 otherwise). A standard-lane approval by a non-senior reviewer may be picked for a second review. Answers mapped to entity custom fields are written on the new entity in the approval transaction; custom_field:* keys in confirmedEntityData are ignored. The response data is the approved submission; POST /api/v1/intake-submissions/{id}/approve also reports the custom field values it could not write.'
       operationId: approveSubmission
       security:
         -
@@ -26550,6 +26564,8 @@ paths:
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Forbidden - the user lacks edit permission on the record the custom field belongs to (for a task: the people who may change its status, that is its creator, an assignee, an admin, or anyone with task.edit)'
         '500':
           description: 'Internal server error'
       tags:
@@ -26564,6 +26580,8 @@ paths:
       responses:
         '200':
           description: Success
+        '403':
+          description: 'Forbidden - the user lacks edit permission on the record the custom field belongs to (for a task: the people who may change its status, that is its creator, an assignee, an admin, or anyone with task.edit)'
         '500':
           description: 'Internal server error'
       tags:
@@ -27514,6 +27532,7 @@ paths:
   /v1/ai-apps:
     get:
       summary: 'Get All Ai Apps V1'
+      description: 'The legacy GET /api/ai-apps list plus the lifecycle columns, an optional ?lifecycle_stage= filter, ?search= on name or description, and each app''s custom_fields: [{ definition_id, field_key, label, field_type, value }].'
       responses:
         '200':
           description: Success
@@ -28156,6 +28175,607 @@ paths:
       tags:
         - 'v1: V1/Ai Apps'
       operationId: listAiAppAssessmentsForApp
+      security:
+        -
+          bearerAuth: []
+  /v1/training/assignments/mine:
+    get:
+      summary: 'List My Training Assignments'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Training'
+      operationId: listMyTrainingAssignments
+      security:
+        -
+          bearerAuth: []
+  /v1/training/assignments/summary:
+    get:
+      summary: 'Get Training Assignment Summary'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Training'
+      operationId: getTrainingAssignmentSummary
+      security:
+        -
+          bearerAuth: []
+  /v1/training/assignments:
+    get:
+      summary: 'List Training Assignments'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Training'
+      operationId: listTrainingAssignments
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Create Training Assignments'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Training'
+      operationId: createTrainingAssignments
+      security:
+        -
+          bearerAuth: []
+  /v1/training/assignments/complete-all:
+    post:
+      summary: 'Complete All Training Assignments'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Training'
+      operationId: completeAllTrainingAssignments
+      security:
+        -
+          bearerAuth: []
+  '/v1/training/assignments/{id}':
+    patch:
+      summary: 'Update Training Assignment'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Training'
+      operationId: updateTrainingAssignment
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete Training Assignment'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Training'
+      operationId: deleteTrainingAssignment
+      security:
+        -
+          bearerAuth: []
+  '/v1/training/assignments/{id}/complete':
+    post:
+      summary: 'Complete Training Assignment'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Training'
+      operationId: completeTrainingAssignment
+      security:
+        -
+          bearerAuth: []
+  '/v1/training/assignments/{id}/reopen':
+    post:
+      summary: 'Reopen Training Assignment'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Training'
+      operationId: reopenTrainingAssignment
+      security:
+        -
+          bearerAuth: []
+  /v1/groups:
+    get:
+      summary: 'List Groups'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: listGroups
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Create Group'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: createGroup
+      security:
+        -
+          bearerAuth: []
+  '/v1/groups/{id}':
+    get:
+      summary: 'Get Group By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: getGroupById
+      security:
+        -
+          bearerAuth: []
+    patch:
+      summary: 'Update Group By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: updateGroupById
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete Group By Id'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: deleteGroupById
+      security:
+        -
+          bearerAuth: []
+  '/v1/groups/{id}/members':
+    get:
+      summary: 'List Group Members'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: listGroupMembers
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Add Group Members'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: addGroupMembers
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Set Group Members'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: setGroupMembers
+      security:
+        -
+          bearerAuth: []
+  '/v1/groups/{id}/members/{userId}':
+    delete:
+      summary: 'Remove Group Member'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: removeGroupMember
+      security:
+        -
+          bearerAuth: []
+  '/v1/groups/projects/{projectId}/groups':
+    get:
+      summary: 'List Project Groups'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: listProjectGroups
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Set Project Groups'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Groups'
+      operationId: setProjectGroups
+      security:
+        -
+          bearerAuth: []
+  /v1/policy-templates:
+    get:
+      summary: 'List Policy Templates'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Policy Templates'
+      operationId: listPolicyTemplates
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Create Policy Template'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Policy Templates'
+      operationId: createPolicyTemplate
+      security:
+        -
+          bearerAuth: []
+  '/v1/policy-templates/{id}':
+    get:
+      summary: 'Get Policy Template'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Policy Templates'
+      operationId: getPolicyTemplate
+      security:
+        -
+          bearerAuth: []
+    patch:
+      summary: 'Update Policy Template'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Policy Templates'
+      operationId: updatePolicyTemplate
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete Policy Template'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Policy Templates'
+      operationId: deletePolicyTemplate
+      security:
+        -
+          bearerAuth: []
+  /v1/policy-templates/from-policy:
+    post:
+      summary: 'Create Policy Template From Policy'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Policy Templates'
+      operationId: createPolicyTemplateFromPolicy
+      security:
+        -
+          bearerAuth: []
+  /v1/framework-import/template:
+    get:
+      summary: 'Download Excel Template'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Extensions'
+      operationId: v1_framework_import_downloadExcelTemplate
+      security:
+        -
+          bearerAuth: []
+  /v1/framework-import/import:
+    post:
+      summary: 'Bulk Import Frameworks'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Extensions'
+      operationId: bulkImportFrameworks
+      security:
+        -
+          bearerAuth: []
+  /v1/framework-import/imported:
+    get:
+      summary: 'List Imported Frameworks'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Extensions'
+      operationId: listImportedFrameworks
+      security:
+        -
+          bearerAuth: []
+  '/v1/framework-import/imported/{id}':
+    patch:
+      summary: 'Update Imported Framework'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Extensions'
+      operationId: updateImportedFramework
+      security:
+        -
+          bearerAuth: []
+    delete:
+      summary: 'Delete Imported Framework'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Extensions'
+      operationId: deleteImportedFramework
+      security:
+        -
+          bearerAuth: []
+  '/v1/imported-framework-assessments/projects/{projectId}':
+    get:
+      summary: 'List Project Links'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Imported Framework Assessments'
+      operationId: listProjectLinks
+      security:
+        -
+          bearerAuth: []
+    post:
+      summary: 'Attach To Project'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Imported Framework Assessments'
+      operationId: attachToProject
+      security:
+        -
+          bearerAuth: []
+  '/v1/imported-framework-assessments/projects/{projectId}/{linkId}':
+    delete:
+      summary: 'Detach From Project'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Imported Framework Assessments'
+      operationId: detachFromProject
+      security:
+        -
+          bearerAuth: []
+  '/v1/imported-framework-assessments/links/{linkId}/tree':
+    get:
+      summary: 'Get Link Tree'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Imported Framework Assessments'
+      operationId: getLinkTree
+      security:
+        -
+          bearerAuth: []
+  '/v1/imported-framework-assessments/links/{linkId}/dashboard':
+    get:
+      summary: 'Get Link Dashboard'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Imported Framework Assessments'
+      operationId: getLinkDashboard
+      security:
+        -
+          bearerAuth: []
+  '/v1/imported-framework-assessments/links/{linkId}/impl/{level}/{implId}':
+    get:
+      summary: 'Get Impl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Imported Framework Assessments'
+      operationId: getImpl
+      security:
+        -
+          bearerAuth: []
+    patch:
+      summary: 'Update Impl'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Imported Framework Assessments'
+      operationId: v1_imported_framework_assessments_updateImpl
+      security:
+        -
+          bearerAuth: []
+  '/v1/imported-framework-assessments/links/{linkId}/impl/{level}/{implId}/risks':
+    get:
+      summary: 'Get Impl Risks'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Imported Framework Assessments'
+      operationId: v1_imported_framework_assessments_getImplRisks
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Replace Impl Risks'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Imported Framework Assessments'
+      operationId: replaceImplRisks
+      security:
+        -
+          bearerAuth: []
+  '/v1/intake-submissions/{id}/preview':
+    get:
+      summary: 'Get Submission Preview V1'
+      description: 'The legacy GET /api/intake/submissions/{id}/preview response plus customFields, for a pending submission: in question order, the entity custom field values approval would write from answers mapped to custom fields, as { label, displayValue, skipped? }. For a value that would not be written, displayValue is the answer as submitted and skipped is the translated reason. customFields is null when the custom field definitions could not be read, and absent once the submission is decided.'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: 'Invalid submission ID'
+        '404':
+          description: 'Submission or form not found'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake submissions'
+      operationId: getSubmissionPreviewV1
+      security:
+        -
+          bearerAuth: []
+  '/v1/intake-submissions/{id}/approve':
+    post:
+      summary: 'Approve Submission V1'
+      description: 'Same request, checks and effects as the legacy POST /api/intake/submissions/{id}/approve. Answers mapped to entity custom fields are written on the new entity in the approval transaction; custom_field:* keys in confirmedEntityData are ignored. The response data is the approved submission plus customFieldSkips: [{ label, reason }], the values not written and the translated reason (an empty array when none were skipped).'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+        '400':
+          description: 'Invalid submission ID, a submission that is not pending, or invalid entity data'
+        '403':
+          description: 'Forbidden - the caller lacks intakeForm.edit, or routing is on and the caller may not decide this lane'
+        '404':
+          description: 'Submission or form not found'
+        '409':
+          description: 'Conflict - the submission changed while it was being approved, or an AI app with this name already exists'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Intake submissions'
+      operationId: approveSubmissionV1
       security:
         -
           bearerAuth: []

@@ -10,7 +10,7 @@ export const roleConfigurationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise uses role-based access control (RBAC) to manage what users can see and do. Each user gets a role that sets their permissions across all features.',
+      text: 'VerifyWise uses role-based access control (RBAC) to manage what users can see and do. Each user gets a role that sets their permissions across all features. You can use one of the four built-in roles or create custom roles for your organization.',
     },
     {
       type: 'paragraph',
@@ -24,7 +24,7 @@ export const roleConfigurationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise has four predefined roles:',
+      text: 'VerifyWise has four built-in roles. Their permissions are fixed. They can\'t be renamed or deleted. If none of them fits, create a custom role (see "Custom roles" below).',
     },
     {
       type: 'icon-cards',
@@ -207,13 +207,106 @@ export const roleConfigurationContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'custom-roles',
+      level: 2,
+      text: 'Custom roles',
+    },
+    {
+      type: 'paragraph',
+      text: 'A custom role belongs to your organization. You name it and decide, permission by permission, what it may do. Manage custom roles in the **Roles** section under Settings. Only Admins see this section by default; a custom role can get it too if you allow its "Create, update and delete custom organization roles" permission.',
+    },
+    {
+      type: 'heading',
+      id: 'create-custom-role',
+      level: 3,
+      text: 'Create a custom role',
+    },
+    {
+      type: 'ordered-list',
+      items: [
+        { text: 'Go to Settings > Roles' },
+        { text: 'Click **New role**' },
+        { text: 'Enter a name and a description. Both are required, up to 255 characters each' },
+        { text: 'Click **Create role**. The new role is selected and its permission list opens' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'A name can\'t match a built-in role (Admin, Reviewer, Editor, Auditor) or another role in your organization. The form checks this before saving, ignoring case.',
+    },
+    {
+      type: 'heading',
+      id: 'set-permissions',
+      level: 3,
+      text: 'Choose what the role can do',
+    },
+    {
+      type: 'paragraph',
+      text: 'Permissions are grouped by area, such as Use cases, Risks or Groups. Each row shows the permission and a short description of what it covers. A new role starts with every permission set to Deny.',
+    },
+    {
+      type: 'ordered-list',
+      items: [
+        { text: 'In Settings > Roles, select the role from the row of role buttons' },
+        { text: 'Set each permission to **Allow** or **Deny**' },
+        { text: 'Click **Save permissions**. The button is disabled until you change something' },
+      ],
+    },
+    {
+      type: 'heading',
+      id: 'edit-custom-role',
+      level: 3,
+      text: 'Rename or edit a custom role',
+    },
+    {
+      type: 'paragraph',
+      text: 'Select the role and click **Edit** to change its name or description, then click **Save changes**. If you rename it, everyone with that role has to sign in again.',
+    },
+    {
+      type: 'heading',
+      id: 'delete-custom-role',
+      level: 3,
+      text: 'Delete a custom role',
+    },
+    {
+      type: 'paragraph',
+      text: 'Select the role, click **Delete**, then confirm with **Delete role**. Its permission settings are removed along with it.',
+    },
+    {
+      type: 'callout',
+      variant: 'warning',
+      text: 'You can only delete a role that no user has. If people have it, the delete is refused. Assign them another role in Settings > Team first, then try again.',
+    },
+    {
+      type: 'heading',
+      id: 'custom-role-limits',
+      level: 3,
+      text: 'What custom roles don\'t change',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { text: 'Built-in roles keep their permissions. You can\'t edit, rename or delete them' },
+        { text: 'Only Admins see every use case. People with a custom role see the use cases they own, are a team member of or reach through a group' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'These areas still need the built-in Admin role, whatever you allow: Settings > Team, Settings > Features, Settings > MCP, the LLM Evals API keys and evals settings, AI Trust Index settings, intake form routing and acting in any review lane, downloading files, the demo data menu and the "All tasks" view. Managing evidence folders needs the built-in Admin or Editor role.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Four permissions only change what the screens show. The server doesn\'t check them yet: "Choose a use case\'s team members", "Edit framework controls and answers, and add or remove frameworks", "Record audit results on framework controls" and "Create and change eval projects, experiments, scorers and datasets". Their descriptions in Settings > Roles say so.',
+    },
+    {
+      type: 'heading',
       id: 'assigning-roles',
       level: 2,
       text: 'Assigning roles',
     },
     {
       type: 'paragraph',
-      text: 'Roles are assigned in two ways:',
+      text: 'Built-in and custom roles are assigned the same way, in one of two places:',
     },
     {
       type: 'heading',
@@ -223,7 +316,7 @@ export const roleConfigurationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'When inviting a new team member, select the appropriate role in the invitation modal. The user will have this role when they create their account.',
+      text: 'When inviting a new team member, select the appropriate role in the invitation modal. The list includes your custom roles. The user will have this role when they create their account.',
     },
     {
       type: 'heading',
@@ -276,7 +369,9 @@ export const roleConfigurationContent: ArticleContent = {
         { feature: 'Evidence files', admin: 'Full access', reviewer: 'Upload + manage', editor: 'Upload + manage', auditor: 'View only' },
         { feature: 'Reports', admin: 'Generate', reviewer: 'View only', editor: 'Run templates + schedules', auditor: 'View only' },
         { feature: 'Approval workflows', admin: 'Full access', reviewer: 'Approve when assigned', editor: 'Approve when assigned', auditor: 'Approve when assigned' },
+        { feature: 'Groups', admin: 'Full access', reviewer: 'View only', editor: 'View only', auditor: 'View only' },
         { feature: 'Team management', admin: 'Full access', reviewer: 'None', editor: 'None', auditor: 'None' },
+        { feature: 'Custom roles', admin: 'Full access', reviewer: 'None', editor: 'None', auditor: 'None' },
         { feature: 'Organization settings', admin: 'Full access', reviewer: 'View only', editor: 'View only', auditor: 'View only' },
         { feature: 'Audit ledger and data retention', admin: 'Full access', reviewer: 'None', editor: 'None', auditor: 'None' },
         { feature: 'Integrations', admin: 'Full access', reviewer: 'None', editor: 'None', auditor: 'None' },
@@ -285,7 +380,7 @@ export const roleConfigurationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Admins see every use case in the organization. Other roles see the use cases they own or are a team member of. Likewise, Admins see every task, and other roles see the tasks they created or are assigned to.',
+      text: 'Admins see every use case in the organization. Other roles, custom roles included, see the use cases they own, are a team member of or reach through a group attached to the use case. Likewise, Admins see every task, and other roles see the tasks they created or are assigned to.',
     },
     {
       type: 'paragraph',
@@ -320,7 +415,7 @@ export const roleConfigurationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Not right now. VerifyWise has four predefined roles (Admin, Reviewer, Editor, Auditor). Custom role configuration isn\'t available in this version.',
+      text: 'Yes. Go to Settings > Roles, click **New role**, then set each permission to Allow or Deny. The four built-in roles are unchanged.',
     },
     {
       type: 'heading',
@@ -351,6 +446,12 @@ export const roleConfigurationContent: ArticleContent = {
           articleId: 'user-management',
           title: 'User management',
           description: 'Manage team members and access',
+        },
+        {
+          collectionId: 'settings',
+          articleId: 'user-groups',
+          title: 'Groups',
+          description: 'Give a whole team access to a use case',
         },
         {
           collectionId: 'integrations',

@@ -50,6 +50,7 @@ import {
 } from "../../utils/reportTemplate.utils";
 import { runScheduledReport } from "../../services/reporting/reportRunOrchestrator";
 import { ValidationException } from "../../domain.layer/exceptions/custom.exception";
+import { getTranslator } from "../../utils/i18n.utils";
 
 function mockRes() {
   const r: any = {};
@@ -62,7 +63,7 @@ const mockReq = (over: any = {}) => ({
   userId: 9,
   params: {},
   body: {},
-  t: (s: string) => s,
+  t: getTranslator("en"),
   ...over,
 });
 

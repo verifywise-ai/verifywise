@@ -43,6 +43,20 @@ vi.mock("react", async () => {
   };
 });
 
+// Mock contexts
+const mockIsEnabled = vi.fn((_key: string) => false);
+vi.mock("../../../../application/contexts/Extensions.context", () => ({
+  useExtensions: () => ({ isEnabled: mockIsEnabled }),
+  ExtensionsProvider: ({ children }: any) => children,
+}));
+
+const mockImportedFrameworks = vi.fn(() => [] as unknown[]);
+const mockDeleteImported = vi.fn();
+vi.mock("../../../../application/hooks/useFrameworkImport", () => ({
+  useImportedFrameworks: () => ({ data: mockImportedFrameworks() }),
+  useDeleteImportedFramework: () => ({ mutateAsync: mockDeleteImported, isPending: false }),
+}));
+
 // Mock repositories
 const mockGetAllEntities = vi.fn();
 vi.mock("../../../../application/repository/entity.repository", () => ({
@@ -87,9 +101,10 @@ vi.mock("../../ProjectView/AddNewFramework", () => ({
     ) : null,
 }));
 vi.mock("../../../components/Dialogs/ConfirmationModal", () => ({
-  default: ({ title, onCancel, onProceed, proceedText }: any) => (
+  default: ({ title, body, onCancel, onProceed, proceedText }: any) => (
     <div data-testid="confirmation-modal">
       <span>{title}</span>
+      {typeof body === "string" ? null : body}
       <button onClick={onCancel}>cancel-confirmation</button>
       <button onClick={onProceed}>{proceedText}</button>
     </div>
@@ -162,14 +177,25 @@ vi.mock("react-router", async () => {
   };
 });
 
-// Mock constants
-vi.mock("../../../../application/constants/permissions", () => ({
-  default: {
-    frameworks: { manage: ["Admin"] },
-    projects: { create: ["Admin"], edit: ["Admin"], delete: ["Admin"] },
-  },
+const mockHasPermission = vi.fn((_key: string) => true);
+vi.mock("../../../../application/hooks/useMyPermissions", () => ({
+  // The signed-in Admin's keys that this page gates on.
+  useMyPermissions: () => ({
+    permissions: ["framework.edit", "useCase.edit"],
+    isLoading: false,
+    error: null,
+  }),
 }));
+vi.mock("../../../../application/hooks/useCan", () => {
+  const useCan = (key: string) => mockHasPermission(key);
+  return {
+    useCan,
+    useCanCheck: () => useCan,
+    usePermissionsSettled: () => true,
+  };
+});
 
+// Mock constants
 vi.mock("../../../components/Forms/ProjectForm/constants", () => ({
   FrameworkTypeEnum: { OrganizationWide: "organization_wide" },
 }));
@@ -589,5 +615,86 @@ describe("Framework", () => {
     mockUseParams.mockReturnValue({ tab: "settings" });
     renderWithProviders(<Framework />, { route: "/framework/settings" });
     expect(screen.getByTestId("framework-settings")).toBeInTheDocument();
+  });
+
+  describe("imported frameworks (#5254)", () => {
+    const withImported = () => {
+      mockIsEnabled.mockImplementation((key: string) => key === "framework-import");
+      mockImportedFrameworks.mockReturnValue([
+        {
+          id: 9,
+          name: "Internal AI policy",
+          description: null,
+          is_active: true,
+          created_at: "",
+          updated_at: "",
+          topics: [],
+        },
+      ]);
+      mockUseContext.mockReturnValue({
+        changeComponentVisibility: vi.fn(),
+        projects: [buildOrgProject([])],
+        userRoleName: "Admin",
+        setProjects: vi.fn(),
+      });
+    };
+
+    afterEach(() => {
+      mockIsEnabled.mockImplementation(() => false);
+      mockImportedFrameworks.mockReturnValue([]);
+      mockHasPermission.mockImplementation(() => true);
+    });
+
+    it("gates import and delete on ext.frameworkImport.edit, not the role name", () => {
+      withImported();
+      // An Admin by role name, but without the import permission.
+      mockHasPermission.mockImplementation((key) => key !== "ext.frameworkImport.edit");
+      renderWithProviders(<Framework />, { route: "/framework" });
+      expect(screen.getByRole("button", { name: "Import from Excel" })).toBeDisabled();
+      expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
+    });
+
+    it("lets a custom role holding ext.frameworkImport.edit import and delete", () => {
+      withImported();
+      mockUseContext.mockReturnValue({
+        changeComponentVisibility: vi.fn(),
+        projects: [buildOrgProject([])],
+        userRoleName: "Compliance lead",
+        setProjects: vi.fn(),
+      });
+      renderWithProviders(<Framework />, { route: "/framework" });
+      expect(mockHasPermission).toHaveBeenCalledWith("ext.frameworkImport.edit");
+      expect(screen.getByRole("button", { name: "Import from Excel" })).not.toBeDisabled();
+      expect(screen.getByRole("button", { name: "Delete" })).toBeInTheDocument();
+    });
+
+    it("says imported frameworks are added from the use case's Frameworks tab", () => {
+      withImported();
+      renderWithProviders(<Framework />, { route: "/framework" });
+      expect(screen.getByText(/Add one to a use case from that use case/)).toBeInTheDocument();
+      expect(screen.queryByText(/cannot be added to use cases/)).not.toBeInTheDocument();
+    });
+
+    it("keeps the delete dialog open with the server's reason when the framework is in use", async () => {
+      withImported();
+      mockDeleteImported.mockRejectedValue(
+        new Error("Used by these use cases: Credit scoring. Remove it from them first."),
+      );
+      renderWithProviders(<Framework />, { route: "/framework" });
+
+      fireEvent.click(screen.getByRole("button", { name: "Delete" }));
+      expect(
+        screen.getByText(/cannot be deleted: remove it from those use cases first/),
+      ).toBeVisible();
+      const deleteButtons = screen.getAllByRole("button", { name: "Delete" });
+      fireEvent.click(deleteButtons[deleteButtons.length - 1]);
+
+      expect(
+        await screen.findByText(
+          "Used by these use cases: Credit scoring. Remove it from them first.",
+        ),
+      ).toBeInTheDocument();
+      expect(mockDeleteImported).toHaveBeenCalledWith(9);
+    });
   });
 });

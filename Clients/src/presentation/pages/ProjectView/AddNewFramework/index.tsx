@@ -4,6 +4,7 @@ import { Check as CheckGreenIcon, Shield as ShieldIcon } from "lucide-react";
 import { getFrameworkBadgePath } from "../../../tools/frameworkBadge";
 import StandardModal from "../../../components/Modals/StandardModal";
 import { CustomizableButton } from "../../../components/button/customizable-button";
+import { accent, background, brand, icon, text } from "../../../themes/palette";
 import { Project } from "../../../../domain/types/Project";
 import { Framework } from "../../../../domain/types/Framework";
 import {
@@ -23,6 +24,8 @@ import { AlertProps } from "../../../types/alert.types";
 import CustomizableToast from "../../../components/Toast";
 import ConfirmationModal from "../../../components/Dialogs/ConfirmationModal";
 import { useModalKeyHandling } from "../../../../application/hooks/useModalKeyHandling";
+import { useExtensions } from "../../../../application/contexts/Extensions.context";
+import ImportedFrameworksSection from "./ImportedFrameworksSection";
 // Governance OS prompt imports removed while the module is not broadly released.
 // The module remains reachable by direct URL for authorized users.
 
@@ -31,7 +34,8 @@ interface AddFrameworkModalProps {
   onClose: () => void;
   frameworks: Framework[];
   project: Project;
-  onFrameworksChanged?: (action: "add" | "remove", frameworkId?: number) => void;
+  /** "removeImported" carries no framework id: imported frameworks are not in the frameworks table. */
+  onFrameworksChanged?: (action: "add" | "remove" | "removeImported", frameworkId?: number) => void;
 }
 
 const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
@@ -45,6 +49,9 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
   const [alert, setAlert] = useState<AlertProps | null>(null);
   const [frameworkToRemove, setFrameworkToRemove] = useState<Framework | null>(null);
   const [isRemoveModalOpen, setIsRemoveModalOpen] = useState(false);
+  const { isEnabled } = useExtensions();
+  // Imported frameworks attach to use cases only, and only while the extension is on.
+  const showImported = open && isEnabled("framework-import") && !project.is_organizational;
 
   const showToast = (variant: AlertProps["variant"], body: string) => {
     handleAlert({ variant, body, setAlert, alertTimeout: 3000 });
@@ -123,16 +130,10 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
           <Box />
           <CustomizableButton
             variant="contained"
+            size="medium"
             text="Done"
             onClick={onClose}
-            sx={{
-              "minWidth": "80px",
-              "height": "34px",
-              "backgroundColor": "brand.primary",
-              "&:hover": {
-                backgroundColor: "brand.primaryHover",
-              },
-            }}
+            sx={{ minWidth: "80px" }}
           />
         </>
       }
@@ -183,12 +184,12 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
                           display: "flex",
                           alignItems: "center",
                           justifyContent: "center",
-                          backgroundColor: "#F1F3F4",
+                          backgroundColor: background.surface,
                           borderRadius: "4px",
                           flexShrink: 0,
                         }}
                       >
-                        <ShieldIcon size={18} color="#666666" />
+                        <ShieldIcon size={18} color={icon.default} />
                       </Box>
                     )}
                     <Typography sx={frameworkCardTitleStyle}>{fw.name}</Typography>
@@ -212,14 +213,14 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
                         setIsRemoveModalOpen(true);
                       }}
                       sx={{
-                        "minWidth": 100,
+                        "minWidth": "100px",
                         "borderColor": "#F87171",
-                        "color": "#DC2626",
+                        "color": accent.red.text,
                         "fontWeight": 600,
                         "textTransform": "none",
                         "&:hover": {
                           borderColor: "#EF4444",
-                          backgroundColor: "#FEF2F2",
+                          backgroundColor: accent.red.bg,
                         },
                       }}
                     >
@@ -232,12 +233,12 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
                       disabled={isLoading}
                       onClick={() => handleAddFramework(fw)}
                       sx={{
-                        "minWidth": 100,
+                        "minWidth": "100px",
                         "fontWeight": 600,
                         "textTransform": "none",
-                        "backgroundColor": "#13715B",
-                        "color": "#fff",
-                        "&:hover": { backgroundColor: "#0e5c47" },
+                        "backgroundColor": brand.primary,
+                        "color": text.inverse,
+                        "&:hover": { backgroundColor: brand.primaryHover },
                       }}
                     >
                       Add
@@ -248,6 +249,15 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
             );
           })}
         </Box>
+        {showImported && (
+          <ImportedFrameworksSection
+            project={project}
+            disabled={isLoading}
+            onBusyChange={setIsLoading}
+            onResult={showToast}
+            onChanged={(action) => onFrameworksChanged?.(action)}
+          />
+        )}
         {isRemoveModalOpen && frameworkToRemove && (
           <ConfirmationModal
             title="Confirm framework removal"

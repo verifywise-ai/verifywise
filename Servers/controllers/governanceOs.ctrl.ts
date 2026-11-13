@@ -44,7 +44,7 @@ export async function getAllMappings(req: Request, res: Response): Promise<any> 
   try {
     const { organizationId } = req;
     if (!organizationId) {
-      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     const { frameworkId, strength, domain } = req.query;
@@ -67,7 +67,7 @@ export async function getMappingsBetween(req: Request, res: Response): Promise<a
   try {
     const { organizationId } = req;
     if (!organizationId) {
-      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     const { sourceId, targetId } = req.params;
@@ -95,7 +95,7 @@ export async function getMappingsForControl(req: Request, res: Response): Promis
   try {
     const { organizationId } = req;
     if (!organizationId) {
-      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     const { controlType, controlId } = req.params;
@@ -118,7 +118,7 @@ export async function createMapping(req: Request, res: Response): Promise<any> {
   try {
     const { organizationId } = req;
     if (!organizationId) {
-      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     const validation = validateMappingInput(req.body);
@@ -142,7 +142,7 @@ export async function updateMapping(req: Request, res: Response): Promise<any> {
   try {
     const { organizationId } = req;
     if (!organizationId) {
-      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     const validation = validateMappingInput(req.body, true);
@@ -153,7 +153,7 @@ export async function updateMapping(req: Request, res: Response): Promise<any> {
     const { id } = req.params;
     const mapping = await updateMappingQuery(organizationId, Number(id), req.body);
     if (!mapping) {
-      return res.status(404).json(STATUS_CODE[404]("Mapping not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Mapping not found")));
     }
     await invalidateCoverageCache(organizationId);
     logStructured("successful", `updated mapping ${id}`, FN, FILE_NAME);
@@ -170,13 +170,13 @@ export async function deleteMapping(req: Request, res: Response): Promise<any> {
   try {
     const { organizationId } = req;
     if (!organizationId) {
-      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     const { id } = req.params;
     const deleted = await deleteMappingQuery(organizationId, Number(id));
     if (!deleted) {
-      return res.status(404).json(STATUS_CODE[404]("Mapping not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Mapping not found")));
     }
     await invalidateCoverageCache(organizationId);
     logStructured("successful", `deleted mapping ${id}`, FN, FILE_NAME);
@@ -193,12 +193,12 @@ export async function createBulkMappings(req: Request, res: Response): Promise<a
   try {
     const { organizationId } = req;
     if (!organizationId) {
-      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     const { mappings } = req.body;
     if (!Array.isArray(mappings) || mappings.length === 0) {
-      return res.status(400).json(STATUS_CODE[400]("mappings array is required"));
+      return res.status(400).json(STATUS_CODE[400](req.t!("mappings array is required")));
     }
 
     // Prevent cross-tenant pollution: every mapping in the bulk payload is
@@ -225,19 +225,19 @@ export async function activateScenario(req: Request, res: Response): Promise<any
   try {
     const { organizationId, userId } = req;
     if (!organizationId || !userId) {
-      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     const { id } = req.params;
     const scenario = await getScenarioByIdQuery(Number(id));
     if (!scenario) {
-      return res.status(404).json(STATUS_CODE[404]("Scenario not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Scenario not found")));
     }
 
     // IDOR prevention: built-in scenarios are visible to all orgs, but custom
     // scenarios must belong to the caller's organization.
     if (!scenario.is_builtin && scenario.organization_id !== organizationId) {
-      return res.status(403).json(STATUS_CODE[403]("Access denied to this scenario"));
+      return res.status(403).json(STATUS_CODE[403](req.t!("Access denied to this scenario")));
     }
 
     const priorityOrder = (scenario.priority_order || {}) as {
@@ -255,7 +255,7 @@ export async function activateScenario(req: Request, res: Response): Promise<any
     ) {
       return res
         .status(400)
-        .json(STATUS_CODE[400]("projectIds must be an array of positive integers"));
+        .json(STATUS_CODE[400](req.t!("projectIds must be an array of positive integers")));
     }
     if (
       ownerAssignments !== undefined &&
@@ -266,7 +266,9 @@ export async function activateScenario(req: Request, res: Response): Promise<any
       return res
         .status(400)
         .json(
-          STATUS_CODE[400]("ownerAssignments must be an object mapping framework IDs to user IDs"),
+          STATUS_CODE[400](
+            req.t!("ownerAssignments must be an object mapping framework IDs to user IDs"),
+          ),
         );
     }
 
@@ -309,7 +311,7 @@ export async function simulateScenario(req: Request, res: Response): Promise<any
   try {
     const { organizationId } = req;
     if (!organizationId) {
-      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     const { frameworkIds, priorityOrder } = req.body;
@@ -320,7 +322,9 @@ export async function simulateScenario(req: Request, res: Response): Promise<any
     ) {
       return res
         .status(400)
-        .json(STATUS_CODE[400]("frameworkIds must be a non-empty array of positive integers"));
+        .json(
+          STATUS_CODE[400](req.t!("frameworkIds must be a non-empty array of positive integers")),
+        );
     }
 
     // Count total controls across selected frameworks using struct tables
@@ -412,7 +416,7 @@ export async function getActivationHistory(req: Request, res: Response): Promise
   try {
     const { organizationId } = req;
     if (!organizationId) {
-      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
     const activations = await getActivationHistoryQuery(organizationId);
     logStructured("successful", `fetched ${activations.length} activations`, FN, FILE_NAME);
@@ -429,12 +433,12 @@ export async function deactivateScenario(req: Request, res: Response): Promise<a
   try {
     const { organizationId } = req;
     if (!organizationId) {
-      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
     const { id } = req.params;
     const result = await deactivateScenarioQuery(Number(id), organizationId);
     if (!result) {
-      return res.status(404).json(STATUS_CODE[404]("Activation not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Activation not found")));
     }
     logStructured("successful", "deactivated scenario activation", FN, FILE_NAME);
     return res.status(200).json(STATUS_CODE[200](result));
@@ -450,7 +454,7 @@ export async function getScenarioProgress(req: Request, res: Response): Promise<
   try {
     const { organizationId } = req;
     if (!organizationId) {
-      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
     const { id } = req.params;
     const frameworks = await getTaskProgressByFrameworkQuery(Number(id), organizationId);
@@ -493,11 +497,11 @@ export async function getScenarioById(req: Request, res: Response): Promise<any>
     const { id } = req.params;
     const scenario = await getScenarioByIdQuery(Number(id));
     if (!scenario) {
-      return res.status(404).json(STATUS_CODE[404]("Scenario not found"));
+      return res.status(404).json(STATUS_CODE[404](req.t!("Scenario not found")));
     }
     // Built-in scenarios are visible to all; custom scenarios must belong to the org
     if (!scenario.is_builtin && scenario.organization_id !== organizationId) {
-      return res.status(403).json(STATUS_CODE[403]("Access denied to this scenario"));
+      return res.status(403).json(STATUS_CODE[403](req.t!("Access denied to this scenario")));
     }
     const rules = await getScenarioRulesQuery(scenario.id!);
     const result = { ...scenario.get({ plain: true }), rules };
@@ -515,7 +519,7 @@ export async function createScenario(req: Request, res: Response): Promise<any> 
   try {
     const { organizationId } = req;
     if (!organizationId) {
-      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     const validation = validateScenarioInput(req.body);
@@ -542,7 +546,7 @@ export async function updateScenario(req: Request, res: Response): Promise<any> 
   try {
     const { organizationId } = req;
     if (!organizationId) {
-      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     const { id } = req.params;
@@ -553,7 +557,9 @@ export async function updateScenario(req: Request, res: Response): Promise<any> 
 
     const scenario = await updateScenarioQuery(Number(id), organizationId, req.body);
     if (!scenario) {
-      return res.status(404).json(STATUS_CODE[404]("Scenario not found or cannot be modified"));
+      return res
+        .status(404)
+        .json(STATUS_CODE[404](req.t!("Scenario not found or cannot be modified")));
     }
     logStructured("successful", `updated scenario ${id}`, FN, FILE_NAME);
     return res.status(200).json(STATUS_CODE[200](scenario));
@@ -569,13 +575,15 @@ export async function deleteScenario(req: Request, res: Response): Promise<any> 
   try {
     const { organizationId } = req;
     if (!organizationId) {
-      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     const { id } = req.params;
     const deleted = await deleteScenarioQuery(Number(id), organizationId);
     if (!deleted) {
-      return res.status(404).json(STATUS_CODE[404]("Scenario not found or cannot be deleted"));
+      return res
+        .status(404)
+        .json(STATUS_CODE[404](req.t!("Scenario not found or cannot be deleted")));
     }
     logStructured("successful", `deleted scenario ${id}`, FN, FILE_NAME);
     return res.status(200).json(STATUS_CODE[200]({ message: "Scenario deleted" }));
@@ -617,7 +625,7 @@ export async function getCoverage(req: Request, res: Response): Promise<any> {
   try {
     const { organizationId } = req;
     if (!organizationId) {
-      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     const { projectId } = req.params;
@@ -636,7 +644,7 @@ export async function refreshCoverage(req: Request, res: Response): Promise<any>
   try {
     const { organizationId } = req;
     if (!organizationId) {
-      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     const { projectId } = req.params;
@@ -656,7 +664,7 @@ export async function getUnifiedView(req: Request, res: Response): Promise<any> 
   try {
     const { organizationId } = req;
     if (!organizationId) {
-      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     const { projectId } = req.params;
@@ -691,7 +699,7 @@ export async function getEligibility(req: Request, res: Response): Promise<any> 
   try {
     const { organizationId } = req;
     if (!organizationId) {
-      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     // Count distinct frameworks assigned to projects in this org
@@ -729,7 +737,7 @@ export async function getPreferences(req: Request, res: Response): Promise<any> 
   try {
     const { organizationId } = req;
     if (!organizationId) {
-      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     const preferences = await getOrgPreferencesQuery(organizationId);
@@ -747,7 +755,7 @@ export async function updatePreferences(req: Request, res: Response): Promise<an
   try {
     const { organizationId } = req;
     if (!organizationId) {
-      return res.status(401).json(STATUS_CODE[401]("Unauthorized"));
+      return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
     }
 
     const preferences = await upsertOrgPreferencesQuery(organizationId, req.body);

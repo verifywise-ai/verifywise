@@ -158,7 +158,7 @@ export const managingDatasetsContent: ArticleContent = {
         { bold: 'expected_output', text: '(required) What a good response looks like. The judge uses this to evaluate answer quality. Be specific enough to enable meaningful comparison.' },
         { bold: 'expected_keywords', text: '(optional) Key terms that should appear in a good response. Useful for checking that models mention specific products, procedures, or concepts.' },
         { bold: 'difficulty', text: '(optional) How hard this test case is: easy, medium, or hard. Helps you understand whether failures are on routine cases or challenging ones.' },
-        { bold: 'retrieval_context', text: '(optional) For RAG evaluations, the context documents that should inform the answer. Include this when testing whether models properly use provided information.' },
+        { bold: 'retrieval_context', text: '(optional) For RAG evaluations, the passages a retriever would return for this prompt: a list of strings, or of objects with a text field. The model is sent the passages with the prompt and told to answer only from them, and the judge sees them when scoring faithfulness and the context metrics. Without passages, those metrics are skipped. A field named context works too.' },
       ],
     },
     {
@@ -205,6 +205,45 @@ export const managingDatasetsContent: ArticleContent = {
     {
       type: 'paragraph',
       text: 'Notice the empty assistant content fields. During evaluation, the model generates these responses based on the conversation context up to that point. This tests real conversational ability rather than just comparing against pre-written answers.',
+    },
+    {
+      type: 'paragraph',
+      text: 'For RAG conversations, add a context list next to turns. The model gets those passages on every turn, and the judge sees them when scoring.',
+    },
+    {
+      type: 'heading',
+      id: 'simulated-datasets',
+      level: 3,
+      text: 'Simulated datasets',
+    },
+    {
+      type: 'paragraph',
+      text: 'A simulated dataset holds scenarios instead of written conversations. During the experiment, the judge model plays the user described in each scenario and talks to your model, and the resulting conversations are scored with the conversational metrics. To upload one, click **Upload dataset** in the **Datasets** tab, choose **Multi-turn**, then **Simulated**.',
+    },
+    {
+      type: 'code',
+      language: 'json',
+      code: `[
+  {
+    "scenario": "A customer asks how to reset their account password.",
+    "expected_outcome": "The assistant explains the reset steps clearly.",
+    "user_description": "A polite, non-technical customer",
+    "max_turns": 4
+  }
+]`,
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'scenario', text: '(required) What the simulated user wants to accomplish.' },
+        { bold: 'expected_outcome', text: '(required) What a successful conversation ends with.' },
+        { bold: 'user_description', text: '(optional) A persona for the simulated user.' },
+        { bold: 'max_turns', text: '(optional) The most user turns to simulate for this scenario. Defaults to 6.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Every row must be a scenario: a row with a prompt or turns, or with a blank scenario, is rejected at upload. Because the judge plays the user, a simulated dataset can\'t run with custom scorers alone; choose an evaluation mode that includes the judge. Each simulated conversation is saved with its transcript, so you can read it next to its scores.',
     },
     {
       type: 'heading',

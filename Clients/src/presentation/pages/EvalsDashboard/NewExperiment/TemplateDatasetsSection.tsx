@@ -1,10 +1,11 @@
 /**
- * @fileoverview "Option 3: templates" list for the Dataset wizard step.
+ * @fileoverview "<Use case> templates" list for the Dataset wizard step.
  *
  * @module pages/EvalsDashboard/NewExperiment/TemplateDatasetsSection
  */
 
-import { Box, Stack, Typography } from "@mui/material";
+import { Box, Stack } from "@mui/material";
+import SectionLabel from "./SectionLabel";
 import { Database } from "lucide-react";
 import SelectableCard from "../../../components/SelectableCard";
 import { palette } from "../../../themes/palette";
@@ -41,18 +42,7 @@ export default function TemplateDatasetsSection({
 
   return (
     <Box>
-      <Typography
-        sx={{
-          fontSize: "12px",
-          fontWeight: 600,
-          color: palette.text.disabled,
-          textTransform: "uppercase",
-          letterSpacing: "0.5px",
-          mb: 1,
-        }}
-      >
-        Option 3: {TASK_TYPE_LABEL[taskType]} templates
-      </Typography>
+      <SectionLabel>{TASK_TYPE_LABEL[taskType]} templates</SectionLabel>
       <Stack spacing="8px">
         {templates.map((template) => {
           const isSelected = selectedPresetPath === template.path && useBuiltin;
@@ -71,7 +61,7 @@ export default function TemplateDatasetsSection({
               icon={
                 <Database
                   size={14}
-                  color={isSelected ? palette.accent.indigo.text : palette.text.disabled}
+                  color={isSelected ? palette.accent.indigo.text : palette.text.tertiary}
                 />
               }
               title={template.name}

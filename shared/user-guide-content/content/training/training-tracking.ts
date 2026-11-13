@@ -59,6 +59,7 @@ export const trainingTrackingContent: ArticleContent = {
         { bold: 'Department', text: 'Which department the training is for or organized by' },
         { bold: 'Status', text: 'Current state of the training (Planned, In progress, Completed)' },
         { bold: 'People', text: 'Number of participants' },
+        { bold: 'Assigned', text: 'How many assigned people have completed the training, with a count of any overdue' },
       ],
     },
     {
@@ -147,6 +148,89 @@ export const trainingTrackingContent: ArticleContent = {
         { bold: 'Number of people', text: 'How many participants are enrolled or have completed the training' },
         { bold: 'Description', text: 'Details about content, objectives and outcomes' },
       ],
+    },
+    {
+      type: 'heading',
+      id: 'assigning-training',
+      level: 2,
+      text: 'Assigning training to people',
+    },
+    {
+      type: 'paragraph',
+      text: 'Assign a training to named people with a due date. Each person gets an email and an in-app notification. The registry shows who has completed it.',
+    },
+    {
+      type: 'ordered-list',
+      items: [
+        { text: 'In the Assigned column, click "Assign". If people are already assigned, click the completion count instead, for example "2 of 5 complete"' },
+        { text: 'Select one or more people' },
+        { text: 'Set a due date of today or later' },
+        { text: 'Click "Assign"' },
+      ],
+    },
+    {
+      type: 'callout',
+      variant: 'info',
+      text: 'Only users with Admin or Editor roles can assign training or change assignments. Other roles can open the list to see who is assigned.',
+    },
+    {
+      type: 'paragraph',
+      text: 'You can assign up to 500 people at a time. A person who is already assigned is skipped and keeps their due date. The People number on the training record is separate from assignments.',
+    },
+    {
+      type: 'heading',
+      id: 'tracking-completion',
+      level: 3,
+      text: 'Tracking completion',
+    },
+    {
+      type: 'paragraph',
+      text: 'The list shows each person with their due date and status:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Pending', text: 'Not completed, with a due date of today or later' },
+        { bold: 'Overdue', text: 'Not completed, with a due date that has passed' },
+        { bold: 'Completed', text: 'Marked complete, with the completion date shown' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'Admins and Editors can change a due date, select "Mark complete" or "Reopen" for a person, or remove an assignment. Removing an assignment deletes its completion record. "Mark all complete" completes every open assignment for that training after you confirm.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Changing a training\'s status to Completed leaves its assignments as they are.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Every assignment, due date change, completion, reopen and removal is recorded in the Activity tab of the training record, with who made the change and when.',
+    },
+    {
+      type: 'callout',
+      variant: 'info',
+      text: '"Mark complete" records what the person or an editor reports, and asks for no proof. To back a completion with a certificate or attendance record, upload it to the Evidence tab of the training record.',
+    },
+    {
+      type: 'heading',
+      id: 'my-training',
+      level: 3,
+      text: 'The My training tab',
+    },
+    {
+      type: 'paragraph',
+      text: 'The My training tab lists the training assigned to you, with open items first. Select "Mark complete" when you finish a training, or "Reopen" if you marked it by mistake. All roles can use this tab.',
+    },
+    {
+      type: 'heading',
+      id: 'training-reminders',
+      level: 3,
+      text: 'Reminders',
+    },
+    {
+      type: 'paragraph',
+      text: 'Each person gets one reminder when an open assignment is due within 7 days, by email and in-app notification. They get one more when it becomes overdue. If you assign a training with a due date less than 7 days away, the first reminder is skipped, because the assignment notice has already told them. Changing the due date or reopening an assignment restarts the reminders.',
     },
     {
       type: 'heading',

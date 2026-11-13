@@ -24,7 +24,6 @@ import { VWField, VWSelect } from "../../../components/VWComponents";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import StandardModal from "../../../components/Modals/StandardModal";
-import { useAuth } from "../../../../application/hooks/useAuth";
 import { getApiErrorReason } from "../../../../application/utils/apiErrorReason";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import ExtensionSyncPanel from "../../../components/ExtensionSyncPanel";
@@ -48,6 +47,7 @@ import {
   removeInBatches,
   summaryMessage,
 } from "./batching";
+import { useCan } from "../../../../application/hooks/useCan";
 
 /** A panel message: the text, then each count with its own label (each translatable). */
 function MessageBody({ message }: { message: PanelMessage }) {
@@ -127,8 +127,7 @@ export const JiraAssetsConfiguration: React.FC = () => {
   const formatDate = useFormattedDate();
   // The settings page already redirects non-Admins; this keeps the sync
   // controls read-only if the panel is ever shown to anyone else.
-  const { userRoleName } = useAuth();
-  const canManageSync = userRoleName === "Admin";
+  const canManageSync = useCan("extension.admin");
   // The "Last sync" date in the Import & Sync header comes from the sync engine.
   const syncStatus = useExtensionSyncStatus("jira-assets");
   const lastSyncAt = syncStatus.data?.last_finished_run?.completed_at ?? null;

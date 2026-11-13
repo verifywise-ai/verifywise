@@ -18,6 +18,8 @@ import { vwTooltipStyle, ChartOutlineWrapper } from "../../../components/Charts/
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { displayFormattedTime } from "../../../tools/isoDateToString";
 import { lowerIsBetter } from "../metricScore";
+import { palette } from "../../../themes/palette";
+import { metricLabel as sharedMetricLabel } from "../metricLabels";
 
 export type TimeRange = "7d" | "30d" | "100d" | "all";
 
@@ -52,53 +54,16 @@ const CHART_COLORS = [
   "#0284C7", // Sky
 ];
 
-// Metric definitions - maps camelCase keys to labels
-const metricDefinitions: Record<string, { label: string }> = {
-  // Standard DeepEval metrics
-  answerRelevancy: { label: "Answer Relevancy" },
-  faithfulness: { label: "Faithfulness" },
-  contextualRelevancy: { label: "Contextual Relevancy" },
-  contextualRecall: { label: "Contextual Recall" },
-  contextualPrecision: { label: "Contextual Precision" },
-  bias: { label: "Bias" },
-  toxicity: { label: "Toxicity" },
-  hallucination: { label: "Hallucination" },
-  // Chatbot-specific metrics
-  knowledgeRetention: { label: "Knowledge Retention" },
-  conversationCompleteness: { label: "Conversation Completeness" },
-  conversationRelevancy: { label: "Conversation Relevancy" },
-  roleAdherence: { label: "Role Adherence" },
-  // Agent metrics
-  taskCompletion: { label: "Task Completion" },
-  toolCorrectness: { label: "Tool Correctness" },
-  // G-Eval metrics (legacy support)
-  answerCorrectness: { label: "Answer Correctness" },
-  coherence: { label: "Coherence" },
-  tonality: { label: "Tonality" },
-  safety: { label: "Safety" },
-};
-
 // Legend and tooltip label. Lower is better metrics (bias, toxicity, hallucination) share
 // the 0-100% axis with the rest, so say which way is good: 0% is the best score for them.
 export const metricLabel = (metricKey: string): string => {
-  const label = metricDefinitions[metricKey]?.label || formatMetricLabel(metricKey);
+  const label = sharedMetricLabel(metricKey);
   return lowerIsBetter(metricKey) ? `${label} (lower is better)` : label;
 };
 
 // Get color for a metric by index to ensure unique colors
 const getMetricColor = (index: number): string => {
   return CHART_COLORS[index % CHART_COLORS.length];
-};
-
-// Convert snake_case or camelCase to Title Case for custom scorers
-const formatMetricLabel = (key: string): string => {
-  return key
-    .replace(/_/g, " ")
-    .replace(/([A-Z])/g, " $1")
-    .trim()
-    .split(" ")
-    .map((word) => word.charAt(0).toUpperCase() + word.slice(1).toLowerCase())
-    .join(" ");
 };
 
 type ChartPoint = {
@@ -201,7 +166,7 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
 
   if (loading) {
     return (
-      <Box textAlign="center" py={4}>
+      <Box textAlign="center" py="8px">
         <Typography variant="body2" color="text.secondary">
           Loading performance data...
         </Typography>
@@ -211,7 +176,7 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
 
   if (data.length === 0) {
     return (
-      <Box textAlign="center" py={4}>
+      <Box textAlign="center" py="24px">
         <Typography variant="body2" color="text.secondary">
           No completed experiments in this time range.
         </Typography>
@@ -219,16 +184,27 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
     );
   }
 
+  // A trend needs two runs; a single point says nothing and takes the space of a chart
+  if (data.length === 1) {
+    return (
+      <Box textAlign="center" py="24px">
+        <Typography variant="body2" color="text.secondary">
+          Run another experiment in this project to see how scores change over time.
+        </Typography>
+      </Box>
+    );
+  }
+
   // Get the metrics to display - only those that have data
-  const metricsToDisplay =
-    activeMetrics.length > 0 ? activeMetrics : Object.keys(metricDefinitions);
+  // Only metrics that have data; an empty series per known metric would just clutter the legend
+  const metricsToDisplay = activeMetrics;
 
   // Calculate dynamic height based on the legend's length against the measured chart
-  // width. Rough estimate: ~6.5px per character at 11px plus ~34px for each item's icon
+  // width. Rough estimate: ~7px per character at 12px plus ~34px for each item's icon
   // and gap; labels vary in length (e.g. "Hallucination (lower is better)").
   const legendLineHeight = 20;
   const legendWidth = metricsToDisplay.reduce(
-    (width, metricKey) => width + metricLabel(metricKey).length * 6.5 + 34,
+    (width, metricKey) => width + metricLabel(metricKey).length * 7 + 34,
     0,
   );
   const legendLines = Math.max(1, Math.ceil(legendWidth / Math.max(chartWidth - 40, 200)));
@@ -293,7 +269,7 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
           minWidth: "180px",
         }}
       >
-        <Typography sx={{ fontWeight: 600, fontSize: "13px", mb: 1 }}>
+        <Typography sx={{ fontWeight: 600, fontSize: "13px", mb: "2px" }}>
           {dataPoint.uniqueId || label}
         </Typography>
         {validEntries.map((entry: TooltipEntry) => {
@@ -310,8 +286,8 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
               sx={{
                 display: "flex",
                 alignItems: "center",
-                gap: 1,
-                py: 0.25,
+                gap: "2px",
+                py: "0.5px",
               }}
             >
               <Box
@@ -323,7 +299,7 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
                   flexShrink: 0,
                 }}
               />
-              <Typography sx={{ fontSize: "12px", color: "#374151" }}>
+              <Typography sx={{ fontSize: "12px", color: palette.text.secondary }}>
                 {label} : <span style={{ fontWeight: 600 }}>{value}%</span>
               </Typography>
             </Box>
@@ -344,7 +320,7 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
         onResize={(width) => setChartWidth((prev) => (Math.abs(prev - width) > 1 ? width : prev))}
       >
         <LineChart data={data} margin={{ top: 5, right: 20, left: 10, bottom: 20 }}>
-          <CartesianGrid strokeDasharray="3 3" stroke="#E5E7EB" />
+          <CartesianGrid strokeDasharray="3 3" stroke={palette.border.light} />
           <XAxis
             dataKey="index"
             type="number"
@@ -353,8 +329,8 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
             }
             ticks={data.map((_, i) => i)}
             tickFormatter={formatXAxisTick}
-            tick={{ fontSize: 10, fill: "#6B7280", dy: 10 }}
-            axisLine={{ stroke: "#E5E7EB" }}
+            tick={{ fontSize: 12, fill: palette.text.secondary, dy: 10 }}
+            axisLine={{ stroke: palette.border.light }}
             interval={0}
             angle={-25}
             textAnchor="end"
@@ -364,14 +340,14 @@ export default function PerformanceChart({ projectId, timeRange }: PerformanceCh
           />
           <YAxis
             domain={[0, 1]}
-            tick={{ fontSize: 10, fill: "#6B7280" }}
-            axisLine={{ stroke: "#E5E7EB" }}
+            tick={{ fontSize: 12, fill: palette.text.secondary }}
+            axisLine={{ stroke: palette.border.light }}
             tickFormatter={(value) => `${(value * 100).toFixed(0)}%`}
             width={40}
           />
           <Tooltip content={<CustomTooltip />} />
           <Legend
-            wrapperStyle={{ paddingTop: 12, fontSize: 11 }}
+            wrapperStyle={{ paddingTop: 12, fontSize: 12 }}
             formatter={(value: string) => metricLabel(value)}
           />
           {metricsToDisplay.map((metricKey, index) => {

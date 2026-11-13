@@ -93,8 +93,6 @@ export interface SidebarShellProps {
   onDismissDemoDataButton?: () => void;
   showDemoDataButton?: boolean;
   showReadyToSubscribe?: boolean;
-  openUserGuide?: () => void;
-  openReleaseNotes?: () => void;
   /** Only show demo data options to admins */
   isAdmin?: boolean;
 
@@ -117,8 +115,6 @@ const SidebarShell: FC<SidebarShellProps> = ({
   onDismissDemoDataButton,
   showDemoDataButton = true,
   showReadyToSubscribe = false,
-  openUserGuide,
-  openReleaseNotes,
   isAdmin = false,
   enableFlyingHearts = false,
 }) => {
@@ -565,8 +561,8 @@ const SidebarShell: FC<SidebarShellProps> = ({
     >
       {/* Logo Header */}
       <Stack
-        pt={theme.spacing(6)}
-        pb={theme.spacing(12)}
+        pt="4px"
+        pb="8px"
         sx={{
           position: "relative",
           pl: delayedCollapsed
@@ -1066,8 +1062,6 @@ const SidebarShell: FC<SidebarShellProps> = ({
         onDismissDemoDataButton={onDismissDemoDataButton}
         showDemoDataButton={showDemoDataButton}
         showReadyToSubscribe={showReadyToSubscribe}
-        openUserGuide={openUserGuide}
-        openReleaseNotes={openReleaseNotes}
         isAdmin={isAdmin}
       />
 

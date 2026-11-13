@@ -90,6 +90,16 @@ export interface ArenaComparisonSummary {
   completedAt?: string;
 }
 
+/**
+ * Arena is a per-organization setting, off by default. `configured` is false
+ * until an Admin saves it; `enabled` is then true only for organizations that
+ * already have Arena comparisons.
+ */
+export interface ArenaSetting {
+  enabled: boolean;
+  configured: boolean;
+}
+
 const BASE_URL = "/deepeval";
 
 // API timeout for arena operations (matches experiments)
@@ -172,6 +182,22 @@ class DeepEvalArenaService {
       `${BASE_URL}/arena/comparisons/${comparisonId}/results`,
       { timeout: API_TIMEOUT_MS },
     );
+    return response.data;
+  }
+
+  /**
+   * Whether Arena is on for the current organization
+   */
+  async getSetting(): Promise<ArenaSetting> {
+    const response = await CustomAxios.get(`${BASE_URL}/settings/arena`);
+    return response.data;
+  }
+
+  /**
+   * Turn Arena on or off for the current organization (Admins only)
+   */
+  async updateSetting(enabled: boolean): Promise<ArenaSetting> {
+    const response = await CustomAxios.put(`${BASE_URL}/settings/arena`, { enabled });
     return response.data;
   }
 

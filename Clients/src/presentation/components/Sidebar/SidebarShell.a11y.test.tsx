@@ -1,6 +1,11 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi } from "vitest";
 import { renderWithProviders } from "../../../../src/test/renderWithProviders";
 import SidebarShell, { SidebarMenuItem } from "./SidebarShell";
+
+// The sidebar footer opens the right-hand helper panel; App.tsx provides it.
+vi.mock("../UserGuide/UserGuideSidebarContext", () => ({
+  useUserGuideSidebarContext: () => ({ open: vi.fn(), openTab: vi.fn() }),
+}));
 
 describe("SidebarShell a11y", () => {
   it("count chip: accessible name contains visible text (WCAG 2.5.3)", async () => {

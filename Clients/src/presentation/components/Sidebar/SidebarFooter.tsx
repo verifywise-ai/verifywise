@@ -47,6 +47,10 @@ import { useProfilePhotoFetch } from "../../../application/hooks/useProfilePhoto
 import { useActiveModule } from "../../../application/hooks/useActiveModule";
 import { useAuth } from "../../../application/hooks/useAuth";
 import ReadyToSubscribeBox from "../ReadyToSubscribeBox/ReadyToSubscribeBox";
+import { useUserGuideSidebarContext } from "../UserGuide/UserGuideSidebarContext";
+
+const USER_GUIDE_URL = "https://verifywise.ai/user-guide";
+const BLOG_URL = "https://verifywise.ai/blog";
 
 interface IManagementItem {
   name: string;
@@ -64,8 +68,6 @@ interface SidebarFooterProps {
   onDismissDemoDataButton?: () => void;
   showDemoDataButton?: boolean;
   showReadyToSubscribe?: boolean;
-  openUserGuide?: () => void;
-  openReleaseNotes?: () => void;
   /** Only show demo data options to admins */
   isAdmin?: boolean;
 }
@@ -115,8 +117,6 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
   onDismissDemoDataButton,
   showDemoDataButton = true,
   showReadyToSubscribe = false,
-  openUserGuide,
-  openReleaseNotes,
   isAdmin = false,
 }) => {
   const theme = useTheme();
@@ -124,6 +124,9 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
   const location = useLocation();
   const logout = useLogout();
   const { activeModule } = useActiveModule();
+  // The footer opens the right-hand panel itself, so every module's sidebar gets
+  // working menu items without passing handlers down.
+  const { openTab: openHelperTab } = useUserGuideSidebarContext();
   const managementItems =
     activeModule === "super-admin" ? SUPER_ADMIN_MANAGEMENT_ITEMS : MANAGEMENT_ITEMS;
   const { userId, users, photoRefreshFlag } = useContext(VerifyWiseContext);
@@ -1169,11 +1172,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                   {/* Help Center */}
                   <ListItemButton
                     onClick={() => {
-                      if (openUserGuide) {
-                        openUserGuide();
-                      } else {
-                        window.open("https://verifywise.ai", "_blank", "noreferrer");
-                      }
+                      window.open(USER_GUIDE_URL, "_blank", "noopener,noreferrer");
                       closePopup();
                     }}
                     sx={{
@@ -1204,9 +1203,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                   {/* Release notes */}
                   <ListItemButton
                     onClick={() => {
-                      if (openReleaseNotes) {
-                        openReleaseNotes();
-                      }
+                      openHelperTab("whats-new");
                       closePopup();
                     }}
                     sx={{
@@ -1237,7 +1234,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                   {/* What's New */}
                   <ListItemButton
                     onClick={() => {
-                      window.open("https://verifywise.ai/blog", "_blank", "noreferrer");
+                      window.open(BLOG_URL, "_blank", "noopener,noreferrer");
                       closePopup();
                     }}
                     sx={{

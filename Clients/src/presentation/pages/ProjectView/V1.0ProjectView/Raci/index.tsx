@@ -18,8 +18,7 @@ import CustomizableSkeleton from "../../../../components/Skeletons";
 import { ExportMenu } from "../../../../components/Table/ExportMenu";
 import VWTooltip from "../../../../components/VWTooltip";
 import singleTheme from "../../../../themes/v1SingleTheme";
-import allowedRoles from "../../../../../application/constants/permissions";
-import { useAuth } from "../../../../../application/hooks/useAuth";
+import { useCanCheck } from "../../../../../application/hooks/useCan";
 import { useRaci, useUpdateRaciRoles } from "../../../../../application/hooks/useRaci";
 import type { RaciRow } from "../../../../../application/repository/raci.repository";
 import { RaciRole, RaciSubjectType } from "../../../../../domain/enums/raci.enum";
@@ -75,8 +74,8 @@ interface RaciProps {
 
 const Raci: FC<RaciProps> = ({ projectId }) => {
   const theme = useTheme();
-  const { userRoleName } = useAuth();
-  const canEdit = allowedRoles.projects.edit.includes(userRoleName);
+  const can = useCanCheck();
+  const canEdit = can("useCase.edit");
   const { data, isLoading, refetch } = useRaci(projectId);
   const updateRoles = useUpdateRaciRoles(projectId);
   const [isAddOpen, setIsAddOpen] = useState(false);

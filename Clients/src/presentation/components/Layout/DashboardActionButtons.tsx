@@ -1,6 +1,7 @@
 import { useState, useMemo, memo, useCallback, useEffect, type ReactNode } from "react";
 import { Stack, IconButton, Box } from "@mui/material";
 import { useNavigate, useLocation } from "react-router";
+import { useSelector } from "react-redux";
 import { Search, Zap, WorkflowIcon, Package, ClipboardList } from "lucide-react";
 import { useAuth } from "../../../application/hooks/useAuth";
 import VWTooltip from "../VWTooltip";
@@ -11,9 +12,11 @@ import {
   getPendingApprovals,
   getMyApprovalRequests,
 } from "../../../application/repository/approvalRequest.repository";
-import { getAppModuleFromPath } from "../../../application/utils/appModule";
+import { getAppModuleFromPath, isGlobalPath } from "../../../application/utils/appModule";
+import type { RootState } from "../../../application/redux/store";
 import { actionButtonsStyles } from "./style";
 import "./icon-shake.css";
+import { useCan } from "../../../application/hooks/useCan";
 
 interface DashboardActionButtonsProps {
   hideOnMainDashboard?: boolean;
@@ -61,7 +64,11 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
   const navigate = useNavigate();
   const location = useLocation();
   const { userRoleName } = useAuth();
+  // The intake forms link stays on the role name: its routes allow Editors
+  // too (intakeForm.edit), and no Admin-only key covers it.
   const isAdmin = userRoleName === "Admin";
+  const canManageWorkflows = useCan("approvalWorkflow.admin");
+  const canManageExtensions = useCan("extension.admin");
 
   // Detect if user is on Mac for keyboard shortcuts
   const isMac = useMemo(() => {
@@ -86,10 +93,14 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
   // pure SuperAdmin doesn't have.
   const isSuperAdminRoute = location.pathname.startsWith("/super-admin");
 
-  // Intake forms belong to the Governance ("main") module only
+  // Intake forms belong to the Governance ("main") module only. Global pages
+  // (Settings, Event tracker) keep the module the user came from.
+  const activeModule = useSelector((state: RootState) => state.ui.appModule?.active ?? "main");
   const isGovernanceModule = useMemo(
-    () => getAppModuleFromPath(location.pathname) === "main",
-    [location.pathname],
+    () =>
+      (isGlobalPath(location.pathname) ? activeModule : getAppModuleFromPath(location.pathname)) ===
+      "main",
+    [location.pathname, activeModule],
   );
 
   const shouldHide = (hideOnMainDashboard && isMainDashboard) || isSuperAdminRoute;
@@ -183,7 +194,7 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
       />
 
       {/* Approval workflows */}
-      {isAdmin && (
+      {canManageWorkflows && (
         <VWTooltip
           header="Approval Workflows"
           content={
@@ -230,7 +241,9 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
       <VWTooltip
         header="Extensions"
         content={
-          isAdmin ? "Enable or disable extensions for your organization." : "Admin access required."
+          canManageExtensions
+            ? "Enable or disable extensions for your organization."
+            : "Admin access required."
         }
         placement="bottom"
         maxWidth={200}
@@ -238,8 +251,8 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
         <span>
           <IconButton
             size="small"
-            onClick={isAdmin ? () => navigate("/extensions") : undefined}
-            disabled={!isAdmin}
+            onClick={canManageExtensions ? () => navigate("/extensions") : undefined}
+            disabled={!canManageExtensions}
             aria-label="Extensions"
             sx={{ ...baseStyles, ...actionButtonsStyles.integrations }}
           >

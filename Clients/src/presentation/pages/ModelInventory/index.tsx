@@ -81,6 +81,7 @@ import { palette } from "../../themes/palette";
 
 import Alert from "../../components/Alert";
 import ListStateWrapper from "../../components/ListStateWrapper";
+import { useCan } from "../../../application/hooks/useCan";
 
 // Constants
 const REDIRECT_DELAY_MS = 2000;
@@ -176,8 +177,8 @@ const ModelInventory: React.FC = () => {
   const [users, setUsers] = useState<any[]>([]);
   const [showAlert, setShowAlert] = useState(false);
 
-  const { userRoleName, userId } = useAuth();
-  const isCreatingDisabled = !userRoleName || !["Admin", "Editor"].includes(userRoleName);
+  const { userId } = useAuth();
+  const isCreatingDisabled = !useCan("model.edit");
   const theme = useTheme();
 
   const { isEnabled } = useExtensions();

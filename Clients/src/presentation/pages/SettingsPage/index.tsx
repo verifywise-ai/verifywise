@@ -1,16 +1,31 @@
-import React, { useState, useEffect, useMemo } from "react";
+import { useState, useEffect, useMemo } from "react";
 import { useLocation, useNavigate, useParams } from "react-router";
-import TabPanel from "@mui/lab/TabPanel";
-import TabContext from "@mui/lab/TabContext";
+import { Box, Stack } from "@mui/material";
+import {
+  Archive,
+  Bot,
+  Building2,
+  FileCheck,
+  Key,
+  ListPlus,
+  Lock,
+  ShieldCheck,
+  Shield,
+  SlidersHorizontal,
+  User,
+  UserCog,
+  Users,
+  UsersRound,
+  Zap,
+} from "lucide-react";
 import Profile from "./Profile/index";
 import Password from "./Password/index";
 import TeamManagement from "./Team/index";
 import Organization from "./Organization";
 import Preferences from "./Preferences/index";
 import Features from "./Features/index";
-import allowedRoles from "../../../application/constants/permissions";
 import { useAuth } from "../../../application/hooks/useAuth";
-import { useHasPermission, useMyPermissions } from "../../../application/hooks/useMyPermissions";
+import { useCan, usePermissionsSettled } from "../../../application/hooks/useCan";
 import ApiKeys from "./ApiKeys";
 import McpConnect from "./McpConnect";
 import AuditLedger from "./AuditLedger";
@@ -19,7 +34,10 @@ import EntraIdConfig from "./EntraIdConfig";
 import { useSsoFeatureEnabled } from "../../../application/hooks/useSsoFeatureEnabled";
 import CustomFieldsTab from "./CustomFields";
 import AIApprovalRules from "./AIApprovalRules";
-import TabBar, { TabItem } from "../../components/TabBar";
+import RolesTab from "./Roles";
+import GroupsTab from "./Groups";
+import SectionSidebar, { SectionItem } from "../../components/SectionSidebar";
+import Select from "../../components/Inputs/Select";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 
 // Built-in tabs (defined outside component to avoid recreation on each render)
@@ -35,6 +53,7 @@ const BUILT_IN_TABS = [
   "password",
   "preferences",
   "team",
+  "groups",
   "organization",
   "features",
   "apikeys",
@@ -43,27 +62,33 @@ const BUILT_IN_TABS = [
   "data-retention",
   "sso",
   "custom-fields",
+  "roles",
   ...(SHOW_AI_APPROVAL_RULES ? ["ai-approval-rules"] : []),
 ];
+
+const NO_ACCESS_HINT = "You don't have access to this section.";
 
 export default function ProfilePage() {
   const { userRoleName, isSuperAdmin } = useAuth();
   const ssoFeatureEnabled = useSsoFeatureEnabled();
   const location = useLocation();
   const navigate = useNavigate();
-  const isTeamManagementDisabled = !allowedRoles.projects.editTeamMembers.includes(userRoleName);
-  const isApiKeysDisabled = !allowedRoles.apiKeys?.view?.includes(userRoleName);
-  const isFeaturesDisabled = !allowedRoles.features?.manage?.includes(userRoleName);
-  const isAuditLedgerDisabled = userRoleName !== "Admin";
+  // Team and Features stay Admin-only by role name: their server checks are
+  // role-name checks too (updateUserById, featureSettings.ctrl), so a custom
+  // role would only get controls the server refuses.
+  const isTeamManagementDisabled = userRoleName !== "Admin";
+  const isApiKeysDisabled = !useCan("apiKeys.admin");
+  const isFeaturesDisabled = userRoleName !== "Admin";
+  const isAuditLedgerDisabled = !useCan("auditLedger.admin");
   // Data retention follows the organization.admin permission its routes
   // authorize on, so a custom role granted it gets the tab too.
-  const canManageRetention = useHasPermission("organization.admin", { fallbackToAdmin: true });
-  // Resolved means the permissions arrived (or failed, when the Admin fallback
-  // applies). A disabled query (no user yet) is not resolved, even though
-  // React Query reports it as not loading.
-  const { permissions, error: permissionsError } = useMyPermissions();
-  const permissionsResolved = permissions !== undefined || Boolean(permissionsError);
-  const isCustomFieldsDisabled = userRoleName !== "Admin";
+  const canManageRetention = useCan("organization.admin");
+  // Roles admin: the roles.manage permission its routes authorize on (#5253).
+  const canManageRoles = useCan("roles.manage");
+  // Settled: a built-in role at once, a custom role once its permissions
+  // arrived or failed. A disabled query (no user yet) is not settled.
+  const permissionsResolved = usePermissionsSettled();
+  const isCustomFieldsDisabled = !useCan("customField.admin");
   // The MCP server admits organization Admins only (Servers/routes/mcp.route.ts).
   const isMcpHidden = userRoleName !== "Admin";
 
@@ -125,7 +150,130 @@ export default function ProfilePage() {
     }
   }, [location.state, isTeamManagementDisabled, navigate, location.pathname, validTabs]);
 
-  const handleTabChange = (_: React.SyntheticEvent, newValue: string) => {
+  const sections: SectionItem[] = [
+    {
+      id: "profile",
+      label: "Profile",
+      Icon: User,
+      tooltip: "Your name, email and personal details",
+    },
+    { id: "password", label: "Password", Icon: Lock, tooltip: "Update your account password" },
+    {
+      id: "preferences",
+      label: "Preferences",
+      Icon: SlidersHorizontal,
+      tooltip: "Customize your display and notification preferences",
+    },
+    {
+      id: "team",
+      label: "Team",
+      Icon: Users,
+      disabled: isTeamManagementDisabled,
+      disabledTooltip: NO_ACCESS_HINT,
+      tooltip: "Manage team members and their roles",
+    },
+    {
+      id: "groups",
+      label: "Groups",
+      Icon: UsersRound,
+      tooltip: "Bundle users into teams to give them use-case access together",
+    },
+    {
+      id: "organization",
+      label: "Organization",
+      Icon: Building2,
+      tooltip: "Organization name and general settings",
+    },
+    {
+      id: "features",
+      label: "Features",
+      Icon: Zap,
+      disabled: isFeaturesDisabled,
+      disabledTooltip: NO_ACCESS_HINT,
+      tooltip: "Enable or disable optional platform features",
+    },
+    {
+      id: "apikeys",
+      label: "API keys",
+      Icon: Key,
+      disabled: isApiKeysDisabled,
+      disabledTooltip: NO_ACCESS_HINT,
+      tooltip: "Generate keys for programmatic API access",
+    },
+    ...(!isMcpHidden
+      ? [
+          {
+            id: "mcp",
+            label: "MCP",
+            Icon: Bot,
+            tooltip: "Connect Claude Code to this organization",
+          },
+        ]
+      : []),
+    ...(!isAuditLedgerDisabled
+      ? [
+          {
+            id: "audit-ledger",
+            label: "Audit ledger",
+            Icon: FileCheck,
+            tooltip: "Tamper-proof log of all platform changes",
+          },
+        ]
+      : []),
+    ...(canManageRetention
+      ? [
+          {
+            id: "data-retention",
+            label: "Data retention",
+            Icon: Archive,
+            tooltip: "How long each kind of record is kept",
+          },
+        ]
+      : []),
+    ...(ssoFeatureEnabled
+      ? [
+          {
+            id: "sso",
+            label: "SSO",
+            Icon: Shield,
+            tooltip: "Configure Microsoft Entra ID single sign-on",
+          },
+        ]
+      : []),
+    ...(!isCustomFieldsDisabled
+      ? [
+          {
+            id: "custom-fields",
+            label: "Custom fields",
+            Icon: ListPlus,
+            tooltip: "Define organization-specific fields on entities like Vendors, Policies, etc.",
+          },
+        ]
+      : []),
+    ...(canManageRoles
+      ? [
+          {
+            id: "roles",
+            label: "Roles",
+            Icon: UserCog,
+            tooltip: "Edit what each custom role is allowed to do",
+          },
+        ]
+      : []),
+    ...(SHOW_AI_APPROVAL_RULES && !isAuditLedgerDisabled
+      ? [
+          {
+            id: "ai-approval-rules",
+            label: "AI approval rules",
+            Icon: ShieldCheck,
+            tooltip:
+              "Configure auto-approve, require-approval, and auto-reject rules for AI operations",
+          },
+        ]
+      : []),
+  ];
+
+  const handleTabChange = (newValue: string) => {
     setActiveTab(newValue);
 
     if (newValue === defaultTab) navigate("/settings");
@@ -139,152 +287,52 @@ export default function ProfilePage() {
       helpArticlePath="settings/user-management"
       tipBoxEntity="settings"
     >
-      <TabContext value={activeTab}>
-        <TabBar
-          tabs={[
-            {
-              label: "Profile",
-              value: "profile",
-              icon: "User" as TabItem["icon"],
-              tooltip: "Your name, email and personal details",
-            },
-            {
-              label: "Password",
-              value: "password",
-              icon: "Lock" as TabItem["icon"],
-              tooltip: "Update your account password",
-            },
-            {
-              label: "Preferences",
-              value: "preferences",
-              icon: "Settings" as TabItem["icon"],
-              tooltip: "Customize your display and notification preferences",
-            },
-            {
-              label: "Team",
-              value: "team",
-              icon: "Users",
-              disabled: isTeamManagementDisabled,
-              tooltip: "Manage team members and their roles",
-            },
-            {
-              label: "Organization",
-              value: "organization",
-              icon: "Building2",
-              tooltip: "Organization name and general settings",
-            },
-            {
-              label: "Features",
-              value: "features",
-              icon: "Zap",
-              disabled: isFeaturesDisabled,
-              tooltip: "Enable or disable optional platform features",
-            },
-            {
-              label: "API Keys",
-              value: "apikeys",
-              icon: "Key",
-              disabled: isApiKeysDisabled,
-              tooltip: "Generate keys for programmatic API access",
-            },
-            ...(!isMcpHidden
-              ? [
-                  {
-                    label: "MCP",
-                    value: "mcp",
-                    icon: "Bot" as TabItem["icon"],
-                    tooltip: "Connect Claude Code to this organization",
-                  },
-                ]
-              : []),
-            ...(!isAuditLedgerDisabled
-              ? [
-                  {
-                    label: "Audit ledger",
-                    value: "audit-ledger",
-                    icon: "FileCheck" as TabItem["icon"],
-                    tooltip: "Tamper-proof log of all platform changes",
-                  },
-                ]
-              : []),
-            ...(canManageRetention
-              ? [
-                  {
-                    label: "Data retention",
-                    value: "data-retention",
-                    icon: "Archive" as TabItem["icon"],
-                    tooltip: "How long each kind of record is kept",
-                  },
-                ]
-              : []),
-            ...(ssoFeatureEnabled
-              ? [
-                  {
-                    label: "SSO",
-                    value: "sso",
-                    icon: "Shield" as TabItem["icon"],
-                    tooltip: "Configure Microsoft Entra ID single sign-on",
-                  },
-                ]
-              : []),
-            ...(!isCustomFieldsDisabled
-              ? [
-                  {
-                    label: "Custom fields",
-                    value: "custom-fields",
-                    icon: "Settings" as TabItem["icon"],
-                    tooltip:
-                      "Define organization-specific fields on entities like Vendors, Policies, etc.",
-                  },
-                ]
-              : []),
-            ...(SHOW_AI_APPROVAL_RULES && !isAuditLedgerDisabled
-              ? [
-                  {
-                    label: "AI Approval Rules",
-                    value: "ai-approval-rules",
-                    icon: "Shield" as TabItem["icon"],
-                    tooltip:
-                      "Configure auto-approve, require-approval, and auto-reject rules for AI operations",
-                  },
-                ]
-              : []),
-          ]}
-          activeTab={activeTab}
-          onChange={handleTabChange}
-          scrollable
+      <Stack
+        direction={{ xs: "column", md: "row" }}
+        sx={{ gap: "24px", alignItems: { xs: "stretch", md: "flex-start" }, mt: "16px" }}
+      >
+        <SectionSidebar
+          sections={sections}
+          activeSection={activeTab}
+          onSelect={handleTabChange}
+          width={220}
+          stickyTop={16}
         />
+        {/* Below md the sidebar is hidden; pick the section from a select instead. */}
+        <Box sx={{ display: { xs: "block", md: "none" } }}>
+          <Select
+            id="settings-section"
+            value={activeTab}
+            ariaLabel="Settings section"
+            items={sections
+              .filter((section) => !section.disabled || section.id === activeTab)
+              .map((section) => ({ _id: section.id, name: section.label }))}
+            onChange={(e) => handleTabChange(String(e.target.value))}
+            sx={{ width: "100%" }}
+          />
+        </Box>
+        <Box
+          component="section"
+          aria-label={sections.find((section) => section.id === activeTab)?.label}
+          sx={{ "flex": 1, "minWidth": 0, "& > :first-of-type": { mt: 0 } }}
+        >
+          {activeTab === "profile" && <Profile />}
 
-        <TabPanel sx={{ p: 0 }} value="profile">
-          <Profile />
-        </TabPanel>
+          {activeTab === "password" && <Password />}
 
-        <TabPanel sx={{ p: 0 }} value="password">
-          <Password />
-        </TabPanel>
+          {activeTab === "preferences" && <Preferences />}
 
-        <TabPanel sx={{ p: 0 }} value="preferences">
-          <Preferences />
-        </TabPanel>
+          {activeTab === "team" && <TeamManagement />}
 
-        <TabPanel sx={{ p: 0 }} value="team">
-          <TeamManagement />
-        </TabPanel>
+          {activeTab === "groups" && <GroupsTab />}
 
-        <TabPanel sx={{ p: 0 }} value="organization">
-          <Organization />
-        </TabPanel>
+          {activeTab === "organization" && <Organization />}
 
-        <TabPanel sx={{ p: 0 }} value="features">
-          <Features />
-        </TabPanel>
+          {activeTab === "features" && <Features />}
 
-        <TabPanel sx={{ p: 0 }} value="apikeys">
-          <ApiKeys />
-        </TabPanel>
+          {activeTab === "apikeys" && <ApiKeys />}
 
-        {!isMcpHidden && (
-          <TabPanel sx={{ p: 0 }} value="mcp">
+          {!isMcpHidden && activeTab === "mcp" && (
             <McpConnect
               disabledReason={
                 isSuperAdmin
@@ -292,36 +340,19 @@ export default function ProfilePage() {
                   : undefined
               }
             />
-          </TabPanel>
-        )}
+          )}
 
-        {!isAuditLedgerDisabled && (
-          <TabPanel sx={{ p: 0 }} value="audit-ledger">
-            <AuditLedger />
-          </TabPanel>
-        )}
-        {canManageRetention && (
-          <TabPanel sx={{ p: 0 }} value="data-retention">
-            <DataRetention />
-          </TabPanel>
-        )}
+          {!isAuditLedgerDisabled && activeTab === "audit-ledger" && <AuditLedger />}
+          {canManageRetention && activeTab === "data-retention" && <DataRetention />}
 
-        {ssoFeatureEnabled && (
-          <TabPanel sx={{ p: 0 }} value="sso">
-            <EntraIdConfig />
-          </TabPanel>
-        )}
-        {!isCustomFieldsDisabled && (
-          <TabPanel sx={{ p: 0 }} value="custom-fields">
-            <CustomFieldsTab />
-          </TabPanel>
-        )}
-        {SHOW_AI_APPROVAL_RULES && !isAuditLedgerDisabled && (
-          <TabPanel sx={{ p: 0 }} value="ai-approval-rules">
-            <AIApprovalRules />
-          </TabPanel>
-        )}
-      </TabContext>
+          {ssoFeatureEnabled && activeTab === "sso" && <EntraIdConfig />}
+          {!isCustomFieldsDisabled && activeTab === "custom-fields" && <CustomFieldsTab />}
+          {canManageRoles && activeTab === "roles" && <RolesTab />}
+          {SHOW_AI_APPROVAL_RULES &&
+            !isAuditLedgerDisabled &&
+            activeTab === "ai-approval-rules" && <AIApprovalRules />}
+        </Box>
+      </Stack>
     </PageHeaderExtended>
   );
 }

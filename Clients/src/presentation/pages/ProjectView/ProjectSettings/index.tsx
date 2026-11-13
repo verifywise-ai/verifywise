@@ -42,7 +42,13 @@ import { logEngine } from "../../../../application/tools/log.engine";
 import { useNavigate, useSearchParams } from "react-router";
 import useProjectData from "../../../../application/hooks/useProjectData";
 import useUsers from "../../../../application/hooks/useUsers";
+import {
+  useGroups,
+  useProjectGroups,
+  useSetProjectGroups,
+} from "../../../../application/hooks/useGroups";
 import { CustomizableButton } from "../../../components/button/customizable-button";
+import { border, text } from "../../../themes/palette";
 import { Save as SaveIcon, Trash2 as DeleteIcon } from "lucide-react";
 import CustomizableToast from "../../../components/Toast";
 import CustomizableSkeleton from "../../../components/Skeletons";
@@ -53,7 +59,7 @@ import CustomFieldsSection, {
 import { useRequiredCustomFieldsGate } from "../../../components/CustomFieldsSection/RequiredCustomFieldsGate";
 import useFrameworks from "../../../../application/hooks/useFrameworks";
 import { Framework } from "../../../../domain/types/Framework";
-import allowedRoles from "../../../../application/constants/permissions";
+import { useCanCheck, useCan } from "../../../../application/hooks/useCan";
 import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
 import {
   deleteProject,
@@ -214,14 +220,15 @@ const OwnerPartyName = ({ party }: { party: OwnerParty }) =>
 const ProjectSettings = React.memo(
   ({ triggerRefresh = () => {} }: { triggerRefresh?: (isUpdate: boolean) => void }) => {
     const { setProjects } = useContext(VerifyWiseContext);
-    const { userRoleName, userId } = useAuth();
+    const { userId } = useAuth();
+    const can = useCanCheck();
     const [searchParams] = useSearchParams();
     const projectId = searchParams.get("projectId") ?? "1"; // default project ID is 2
     const theme = useTheme();
     const styles = useStyles();
     const [pendingOwnerChange, setPendingOwnerChange] = useState<PendingOwnerChange | null>(null);
     const [isRiskModalOpen, setIsRiskModalOpen] = useState(false);
-    const canClassify = allowedRoles.projects.classify.includes(userRoleName);
+    const canClassify = can("useCase.classify");
 
     const { project } = useProjectData({ projectId });
     const navigate = useNavigate();
@@ -318,6 +325,14 @@ const ProjectSettings = React.memo(
     }, [project]);
 
     const { users } = useUsers();
+
+    // Groups attached to this use case (#5253).
+    const { data: groups } = useGroups();
+    const { data: projectGroups } = useProjectGroups(Number(projectId));
+    const setProjectGroupsMutation = useSetProjectGroups(Number(projectId));
+    // The groups route checks useCase.edit, so the picker does too.
+    const canEditProjectGroups = useCan("useCase.edit");
+    const selectedGroupIds = (projectGroups ?? []).map((g) => g.id);
 
     const { filteredFrameworks: monitoredFrameworks, allFrameworks } = useFrameworks({
       listOfFrameworks: project?.framework || [],
@@ -949,7 +964,7 @@ const ProjectSettings = React.memo(
                   {/* Use case title Row */}
                   <Box>
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Use case title</Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", mt: 0.5 }}>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, mt: 0.5 }}>
                       A concise name for your AI use case
                     </Typography>
                   </Box>
@@ -967,7 +982,7 @@ const ProjectSettings = React.memo(
                   {/* Description Row */}
                   <Box>
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Description</Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", mt: 0.5 }}>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, mt: 0.5 }}>
                       Overview of this use case
                     </Typography>
                   </Box>
@@ -987,7 +1002,7 @@ const ProjectSettings = React.memo(
                   {/* Goal Row */}
                   <Box>
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Goal</Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", mt: 0.5 }}>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, mt: 0.5 }}>
                       What you aim to achieve
                     </Typography>
                   </Box>
@@ -1008,7 +1023,7 @@ const ProjectSettings = React.memo(
                   {/* Target industry Row */}
                   <Box>
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Target industry</Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", mt: 0.5 }}>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, mt: 0.5 }}>
                       Industry sector for this use case
                     </Typography>
                   </Box>
@@ -1159,7 +1174,7 @@ const ProjectSettings = React.memo(
                   {/* Use case status Row */}
                   <Box>
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Use case status</Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", mt: 0.5 }}>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, mt: 0.5 }}>
                       Development stage of this use case
                     </Typography>
                   </Box>
@@ -1200,7 +1215,9 @@ const ProjectSettings = React.memo(
                         <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
                           Applicable regulations (optional)
                         </Typography>
-                        <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                        <Typography
+                          sx={{ fontSize: 12, color: text.subdued, whiteSpace: "nowrap" }}
+                        >
                           Add all monitored regulations and standards of the use case.
                         </Typography>
                       </Box>
@@ -1355,7 +1372,7 @@ const ProjectSettings = React.memo(
                                     "& .MuiAutocomplete-listbox": {
                                       "& .MuiAutocomplete-option": {
                                         fontSize: "13px",
-                                        color: "#1c2130",
+                                        color: text.primary,
                                         paddingLeft: "9px",
                                         paddingRight: "9px",
                                       },
@@ -1381,7 +1398,7 @@ const ProjectSettings = React.memo(
                   {/* Team members Row */}
                   <Box>
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Team members</Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, whiteSpace: "nowrap" }}>
                       Add all team members of the use case.
                       <br />
                       Only those who are added will be able to see the use case.
@@ -1389,7 +1406,7 @@ const ProjectSettings = React.memo(
                   </Box>
                   <Autocomplete
                     multiple
-                    readOnly={!allowedRoles.projects.editTeamMembers.includes(userRoleName)}
+                    readOnly={!can("useCase.members")}
                     id="users-input"
                     size="small"
                     value={users.filter((user) => values.members.includes(Number(user.id)))}
@@ -1484,7 +1501,7 @@ const ProjectSettings = React.memo(
                           "& .MuiAutocomplete-listbox": {
                             "& .MuiAutocomplete-option": {
                               fontSize: "13px",
-                              color: "#1c2130",
+                              color: text.primary,
                               paddingLeft: "9px",
                               paddingRight: "9px",
                             },
@@ -1502,6 +1519,92 @@ const ProjectSettings = React.memo(
                     }}
                   />
 
+                  {/* Groups Row (#5253): attaching a group grants every member access. */}
+                  <Box>
+                    <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Groups</Typography>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, whiteSpace: "nowrap" }}>
+                      Add a whole group to the use case in one step.
+                      <br />
+                      Every group member can see and work on the use case.
+                    </Typography>
+                  </Box>
+                  <Autocomplete
+                    multiple
+                    readOnly={!canEditProjectGroups}
+                    id="groups-input"
+                    size="small"
+                    value={(projectGroups ?? []).filter((g) => selectedGroupIds.includes(g.id))}
+                    options={(groups ?? []).filter((g) => !selectedGroupIds.includes(g.id))}
+                    getOptionLabel={(group) => group.name}
+                    isOptionEqualToValue={(option, value) => option.id === value.id}
+                    noOptionsText={
+                      (groups ?? []).length === 0
+                        ? "No groups yet. Groups are managed in Settings → Groups."
+                        : "All groups selected"
+                    }
+                    onChange={(_event, selected) => {
+                      setProjectGroupsMutation.mutate(
+                        selected.map((g) => g.id),
+                        {
+                          onError: () => {
+                            setAlert({
+                              variant: "error",
+                              body: "Could not update the use case's groups. Please try again.",
+                              isToast: true,
+                              visible: true,
+                            });
+                            setTimeout(() => setAlert(null), 3000);
+                          },
+                        },
+                      );
+                    }}
+                    popupIcon={<ChevronDown size={16} color={theme.palette.text.tertiary} />}
+                    renderInput={(params) => (
+                      <TextField
+                        {...params}
+                        placeholder="Select groups"
+                        sx={{
+                          "& .MuiOutlinedInput-root": {
+                            height: "34px",
+                            padding: "0 10px",
+                            display: "flex",
+                            alignItems: "center",
+                          },
+                          "& .MuiInputBase-root": {
+                            height: "34px !important",
+                            padding: "0 10px !important",
+                            display: "flex !important",
+                            alignItems: "center !important",
+                            justifyContent: "flex-start !important",
+                          },
+                          "& .MuiInputBase-input": {
+                            padding: "0 !important",
+                            margin: "0 !important",
+                            fontSize: "13px",
+                            lineHeight: "1 !important",
+                          },
+                          "& ::placeholder": {
+                            fontSize: "13px",
+                          },
+                        }}
+                      />
+                    )}
+                    sx={{
+                      ...getAutocompleteStyles(theme, { hasError: false }),
+                      "width": "400px",
+                      "backgroundColor": theme.palette.background.main,
+                      "& .MuiOutlinedInput-root": {
+                        ...getAutocompleteStyles(theme, { hasError: false })[
+                          "& .MuiOutlinedInput-root"
+                        ],
+                        borderRadius: "4px",
+                      },
+                      "& .MuiChip-root": {
+                        borderRadius: "4px",
+                      },
+                    }}
+                  />
+
                   {values.monitoredRegulationsAndStandards.some((fw) => fw._id === 1) && (
                     <>
                       {/* AI risk classification Row */}
@@ -1510,7 +1613,9 @@ const ProjectSettings = React.memo(
                           AI risk classification *
                         </Typography>
                         {canClassify && (
-                          <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                          <Typography
+                            sx={{ fontSize: 12, color: text.subdued, whiteSpace: "nowrap" }}
+                          >
                             Not sure about your risk level?&nbsp;
                             <VWLink onClick={() => setIsRiskModalOpen(true)}>
                               Calculate your AI risk classification
@@ -1538,7 +1643,9 @@ const ProjectSettings = React.memo(
                         <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
                           High-risk roles *
                         </Typography>
-                        <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                        <Typography
+                          sx={{ fontSize: 12, color: text.subdued, whiteSpace: "nowrap" }}
+                        >
                           If you are not sure about the high risk role,&nbsp;
                           <VWLink
                             url="https://artificialintelligenceact.eu/high-level-summary/"
@@ -1567,7 +1674,7 @@ const ProjectSettings = React.memo(
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
                       Use case category
                     </Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, whiteSpace: "nowrap" }}>
                       Select the category that best describes the use case.
                     </Typography>
                   </Box>
@@ -1588,7 +1695,7 @@ const ProjectSettings = React.memo(
                   {/* Use case purpose Row */}
                   <Box>
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Use case purpose</Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, whiteSpace: "nowrap" }}>
                       What business purpose does the use case serve?
                     </Typography>
                   </Box>
@@ -1611,7 +1718,7 @@ const ProjectSettings = React.memo(
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
                       Use case audience
                     </Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, whiteSpace: "nowrap" }}>
                       Who is the intended audience for the use case?
                     </Typography>
                   </Box>
@@ -1634,7 +1741,7 @@ const ProjectSettings = React.memo(
                     <Typography sx={{ fontSize: 13, fontWeight: 500 }}>
                       Deployment context
                     </Typography>
-                    <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+                    <Typography sx={{ fontSize: 12, color: text.subdued, whiteSpace: "nowrap" }}>
                       How is the AI use case deployed?
                     </Typography>
                   </Box>
@@ -1674,7 +1781,7 @@ const ProjectSettings = React.memo(
                   <CustomizableButton
                     sx={{
                       ...styles.saveButton,
-                      backgroundColor: isSaveDisabled ? "#ccc" : "brand.primary",
+                      backgroundColor: isSaveDisabled ? border.dark : "brand.primary",
                       border: isSaveDisabled
                         ? "1px solid rgba(0, 0, 0, 0.26)"
                         : "1px solid brand.primary",
@@ -1690,7 +1797,7 @@ const ProjectSettings = React.memo(
                 </Box>
 
                 {/* divider for seperation */}
-                <Box sx={{ mt: 6, borderTop: "1px solid #E0E0E0", pt: 8, width: "100%" }} />
+                <Box sx={{ mt: 6, borderTop: `1px solid ${border.dark}`, pt: 8, width: "100%" }} />
                 <Typography
                   sx={{
                     fontSize: theme.typography.fontSize,
@@ -1714,16 +1821,14 @@ const ProjectSettings = React.memo(
                   sx={{
                     width: { xs: "100%", sm: theme.spacing(80) },
                     mb: theme.spacing(4),
-                    backgroundColor: "#DB504A",
-                    color: "background.main",
-                    border: "1px solid #DB504A",
                     gap: 2,
                   }}
                   icon={<DeleteIcon size={16} />}
                   variant="contained"
+                  color="error"
                   onClick={handleOpenDeleteDialog}
                   text="Delete use case"
-                  isDisabled={!allowedRoles.projects.delete.includes(userRoleName)}
+                  isDisabled={!can("useCase.edit")}
                 />
               </Stack>
             </Stack>

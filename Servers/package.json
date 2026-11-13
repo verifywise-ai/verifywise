@@ -40,6 +40,8 @@
     "i18n:translate": "node scripts/translate-with-glossary.mjs",
     "i18n:audit": "node scripts/i18n-audit.mjs",
     "i18n:audit:strict": "node scripts/i18n-audit.mjs --strict",
+    "i18n:check-en": "node scripts/i18n-check-en.mjs",
+    "test:i18n-scripts": "node --test \"scripts/node-tests/*.node-test.mjs\"",
     "format": "prettier --write .",
     "format-check": "prettier --check .",
     "lint": "eslint .",

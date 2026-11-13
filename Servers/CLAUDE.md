@@ -1,6 +1,6 @@
 # Servers — Backend Development Guide
 
-> **Last Updated:** 2026-10-29
+> **Last Updated:** 2026-11-11
 
 ---
 
@@ -246,6 +246,38 @@ push and PR touching `Servers/**`. It regenerates `swagger.yaml` and
 from the regenerated output, then runs `npm run check:api-drift` as a semantic
 backstop. Skipping step 3 above will therefore break CI — regenerate and commit
 the generated files with your route change.
+
+---
+
+## Server Messages (i18n)
+
+Messages sent to users are English keys in `locales/en.json`, translated in
+`de.json` and `fr.json`.
+
+- Send them through the request translator: `STATUS_CODE[400](req.t!("Name is required"))`.
+  A bare `STATUS_CODE[n]("literal")` always goes out in English.
+- Never pass a template literal: use named placeholders,
+  `req.t!("Invalid email: {email}", { email })`.
+- `i18nMiddleware` is registered in `app.ts` before `csrfProtection` and every
+  router, so `req.t` is set in all middleware and handlers, including csrf
+  and rls.
+- Notifications: pass `titleKey` / `messageKey` (+ `titleVars` / `messageVars`)
+  and, in the email config, `subjectKey` / `subjectVars`. `sendInAppNotification`
+  translates them with the recipient's saved language (read once per
+  recipient; pass `lang` when you already have it). Email bodies stay English.
+- Other code without a `req` (jobs): `translate(lang, key, vars)`, with the
+  recipient's language from `getUserLanguage(userId)`.
+- Exceptions thrown in utils/services keep English messages; controllers
+  translate them with `translateError(req, error)`.
+
+After adding or changing a message: `npm run i18n:extract` (rewrites en.json
+from the code), add the same keys to de.json/fr.json, then check with
+`npm run i18n:audit:strict` (de/fr against en) and `npm run i18n:check-en`
+(en against the code: no missing or unused keys, no bare or template
+messages). Email subjects not translated yet are listed by
+`npm run i18n:check-en -- --report`; their keys are optional. Both checks and
+the scanner's own tests (`npm run test:i18n-scripts`) run in the
+`lint-and-build` CI job.
 
 ---
 

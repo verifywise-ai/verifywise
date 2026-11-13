@@ -14,9 +14,9 @@ import {
   importDocxToHtml,
 } from "../../../application/repository/policy.repository";
 import { useUpdatePolicy } from "../../../application/hooks/usePolicyMutations";
+import { usePolicyTemplate } from "../../../application/hooks/usePolicyTemplates";
 import useUsers from "../../../application/hooks/useUsers";
-import { useAuth } from "../../../application/hooks/useAuth";
-import allowedRoles from "../../../application/constants/permissions";
+import { useCanCheck } from "../../../application/hooks/useCan";
 import { User } from "../../../domain/types/User";
 import { PolicyFormData, PolicyInput } from "../../types/interfaces/i.policy";
 import { PolicyManagerModel } from "../../../domain/models/Common/policy/policyManager.model";
@@ -39,24 +39,35 @@ export default function PolicyEditorPage() {
   const navigate = useNavigate();
   const { users } = useUsers();
   const updatePolicyMutation = useUpdatePolicy();
-  const { userRoleName } = useAuth();
-  const readOnly = !userRoleName || !allowedRoles.policies.edit.includes(userRoleName);
+  const can = useCanCheck();
+  const readOnly = !can("policy.edit");
 
   const isNew = !id;
   const templateId = searchParams.get("templateId");
 
-  // Policy templates (loaded dynamically)
-  const [policyTemplates, setPolicyTemplates] = useState<
+  // Policy templates (#5261) resolve through the API. Links carry a composite
+  // `origin-id` (system and org template ids can collide); a bare numeric id
+  // is a legacy link into the static JSON library, kept as a fallback.
+  const [templateOrigin, templateNumericId] = useMemo(() => {
+    if (!templateId) return [null, null] as const;
+    const composite = templateId.match(/^(system|organization)-(\d+)$/);
+    if (composite) return [composite[1], Number(composite[2])] as const;
+    return ["system", Number(templateId)] as const;
+  }, [templateId]);
+
+  const { data: apiTemplate } = usePolicyTemplate(templateNumericId ?? undefined);
+
+  const [staticTemplates, setStaticTemplates] = useState<
     { id: number; title: string; tags: string[]; content: string }[]
   >([]);
 
   useEffect(() => {
-    if (!templateId) return;
+    if (!templateId || templateOrigin !== "system") return;
     fetch("/data/PolicyTemplates.json")
       .then((res) => res.json())
-      .then(setPolicyTemplates)
+      .then(setStaticTemplates)
       .catch(() => {});
-  }, [templateId]);
+  }, [templateId, templateOrigin]);
 
   // Data loading state
   const [policy, setPolicy] = useState<PolicyManagerModel | null>(null);
@@ -177,9 +188,12 @@ export default function PolicyEditorPage() {
   // Resolve template from query param (memoized to avoid new object each render)
   const template = useMemo(() => {
     if (!templateId) return undefined;
-    const t = policyTemplates.find((p) => p.id === Number(templateId));
+    if (apiTemplate && (templateOrigin === "organization" || apiTemplate.is_system_template)) {
+      return { title: apiTemplate.name, tags: apiTemplate.tags, content: apiTemplate.content };
+    }
+    const t = staticTemplates.find((p) => p.id === templateNumericId);
     return t ? { title: t.title, tags: t.tags, content: t.content } : undefined;
-  }, [templateId, policyTemplates]);
+  }, [templateId, templateOrigin, templateNumericId, apiTemplate, staticTemplates]);
 
   // Prefetch change history for existing policies
   usePolicyChangeHistory(!isNew && policy?.id ? policy.id : undefined);

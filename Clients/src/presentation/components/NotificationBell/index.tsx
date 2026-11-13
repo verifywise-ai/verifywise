@@ -85,6 +85,8 @@ const getNotificationColor = (type: string): string => {
     policy_overdue: "#EF4444", // Red
     training_assigned: "#3B82F6", // Blue
     training_completed: "#10B981", // Green
+    training_due_soon: "#F59E0B", // Amber
+    training_overdue: "#EF4444", // Red
     vendor_review_due: "#F59E0B", // Amber
     file_uploaded: "#6366F1", // Indigo
     comment_added: "#6366F1", // Indigo

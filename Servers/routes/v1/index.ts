@@ -30,6 +30,12 @@ import aiAppsRoutes from "./aiApps.route";
 import aiAppLifecycleRoutes from "./aiAppLifecycle.route";
 import projectsRoutes from "./projects.route";
 import dashboardPreferencesRoutes from "./dashboardPreferences.route";
+import trainingRoutes from "./training.route";
+import groupsRoutes from "./groups.route";
+import policyTemplatesRoutes from "./policyTemplates.route";
+import frameworkImportRoutes from "./frameworkImport.route";
+import importedFrameworkAssessmentRoutes from "./importedFrameworkAssessment.route";
+import intakeSubmissionsRoutes from "./intakeSubmissions.route";
 
 const router = express.Router();
 
@@ -71,5 +77,21 @@ router.use("/projects", projectsRoutes);
 
 // Per-user dashboard layout (#5257).
 router.use("/dashboard", dashboardPreferencesRoutes);
+
+// Training assignments (#5260); the legacy /api/training contracts are frozen.
+router.use("/training", trainingRoutes);
+// Groups / teams with RBAC and group-level use-case access (#5253).
+router.use("/groups", groupsRoutes);
+
+// Organisation-owned policy templates (#5261).
+router.use("/policy-templates", policyTemplatesRoutes);
+
+// Framework import extension (#5254): spreadsheet imports of org-owned
+// frameworks. Gated per org with requireExtensionEnabled inside the router.
+router.use("/framework-import", frameworkImportRoutes);
+// Imported frameworks attached to use cases and assessed there (#5254).
+router.use("/imported-framework-assessments", importedFrameworkAssessmentRoutes);
+// Intake submission preview and approval with custom field values (#5262).
+router.use("/intake-submissions", intakeSubmissionsRoutes);
 
 export default router;

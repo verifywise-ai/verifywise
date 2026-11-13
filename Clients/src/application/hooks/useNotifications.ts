@@ -53,6 +53,8 @@ export type NotificationType =
   | "policy_overdue"
   | "training_assigned"
   | "training_completed"
+  | "training_due_soon"
+  | "training_overdue"
   | "vendor_review_due"
   | "file_uploaded"
   | "comment_added"
@@ -340,6 +342,8 @@ export const useNotifications = (options: UseNotificationsOptions = {}): UseNoti
         policy_overdue: "error",
         training_assigned: "info",
         training_completed: "success",
+        training_due_soon: "warning",
+        training_overdue: "error",
         vendor_review_due: "warning",
         file_uploaded: "info",
         comment_added: "info",

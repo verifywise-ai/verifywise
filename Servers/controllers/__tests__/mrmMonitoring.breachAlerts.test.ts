@@ -101,11 +101,15 @@ describe("handleBreaches alert dispatch", () => {
     const [orgId, recipients, notification, emailEnabled, email] = mockDispatch.mock.calls[0];
     expect(orgId).toBe(1);
     expect(recipients).toEqual([10, 20]);
-    expect(notification.title).toBe("Metric warning: psi");
+    // Keys, translated per recipient by sendInAppNotification.
+    expect(notification.titleKey).toBe("Metric warning: {metric}");
+    expect(notification.titleVars).toEqual({ metric: "psi" });
     expect(emailEnabled).toBe(true);
     expect(email.template).toBe("mrm-breach-alert.mjml");
+    expect(email.subjectKey).toBe("Metric warning: {metric}");
+    expect(email.subjectVars).toEqual({ metric: "psi" });
     expect(email.variables.severity).toBe("warn");
-    expect(mockDispatch.mock.calls[1][2].title).toBe("Metric breach: auc");
+    expect(mockDispatch.mock.calls[1][2].titleKey).toBe("Metric breach: {metric}");
   });
 
   it("attempts the auto-finding for every breach outcome with the org toggle", async () => {

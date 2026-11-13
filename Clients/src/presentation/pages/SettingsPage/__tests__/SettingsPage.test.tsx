@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { Route, Routes, useLocation } from "react-router";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
@@ -14,20 +14,42 @@ vi.mock("../../../../application/hooks/useAuth", () => ({
     isSuperAdmin: mockIsSuperAdmin,
   }),
 }));
+let mockHasRolesManage = false;
 vi.mock("../../../../application/hooks/useMyPermissions", () => ({
-  useHasPermission: (key: string) =>
-    !mockPermissionsLoading && key === "organization.admin" && mockHasOrganizationAdmin,
   // While loading (or disabled, before a user is known) React Query has no
   // data; v5 reports a disabled query as not loading.
   useMyPermissions: () => ({
     permissions: mockPermissionsLoading
       ? undefined
-      : mockHasOrganizationAdmin
-        ? ["organization.admin"]
-        : [],
+      : [
+          ...(mockHasOrganizationAdmin ? ["organization.admin"] : []),
+          ...(mockHasRolesManage ? ["roles.manage"] : []),
+        ],
     isLoading: false,
     error: null,
   }),
+}));
+vi.mock("../../../../application/hooks/useCan", () => {
+  const useCan = (key: string) =>
+    !mockPermissionsLoading &&
+    ((key === "organization.admin" && mockHasOrganizationAdmin) ||
+      (key === "roles.manage" && mockHasRolesManage));
+  return {
+    useCan,
+    useCanCheck: () => useCan,
+    usePermissionsSettled: () => !mockPermissionsLoading,
+  };
+});
+
+// RolesTab mounts (hidden) whenever the tab is permitted — its hooks must not
+// throw or the whole settings page falls into the error boundary (#5253).
+vi.mock("../../../../application/hooks/useRoles", () => ({
+  useRoles: () => ({ roles: [], loading: false, error: null, refreshRoles: vi.fn() }),
+}));
+vi.mock("../../../../application/hooks/useRolePermissions", () => ({
+  usePermissionCatalog: () => ({ data: [], isLoading: false }),
+  useRolePermissions: () => ({ data: [], isLoading: false }),
+  useReplaceRolePermissions: () => ({ mutateAsync: vi.fn(), isPending: false }),
 }));
 
 // Mock child tab components
@@ -73,6 +95,10 @@ vi.mock("../AuditLedger", () => ({
 
 vi.mock("../DataRetention", () => ({
   default: () => <div data-testid="data-retention-tab" />,
+}));
+
+vi.mock("../Groups", () => ({
+  default: () => <div data-testid="groups-tab" />,
 }));
 
 vi.mock("../../../components/HelperIcon", () => ({
@@ -156,9 +182,36 @@ describe("SettingsPage", () => {
     expect(screen.queryByText("Data retention")).not.toBeInTheDocument();
   });
 
+  it("switches section from the sidebar and updates the URL", () => {
+    renderAt("/settings");
+    fireEvent.click(screen.getByRole("button", { name: "Groups" }));
+    expect(screen.getByTestId("path")).toHaveTextContent("/settings/groups");
+    expect(screen.getByTestId("groups-tab")).toBeInTheDocument();
+  });
+
+  it("shows Team as a disabled sidebar item to non-admins", () => {
+    mockRole = "Editor";
+    renderAt("/settings");
+    expect(screen.getByRole("button", { name: "Team" })).toHaveAttribute("aria-disabled", "true");
+  });
+
+  it("lets an Admin open Team from the sidebar", () => {
+    renderAt("/settings");
+    expect(screen.getByRole("button", { name: "Team" })).not.toHaveAttribute(
+      "aria-disabled",
+      "true",
+    );
+  });
+
+  it("opens the Groups tab from a direct link", () => {
+    renderAt("/settings/groups");
+    expect(screen.getByTestId("path")).toHaveTextContent("/settings/groups");
+    expect(screen.getByTestId("groups-tab")).toBeInTheDocument();
+  });
+
   it("opens the MCP tab for an Admin", () => {
     renderAt("/settings/mcp");
-    expect(screen.getByText("MCP")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "MCP" })).toBeInTheDocument();
     expect(screen.getByTestId("path")).toHaveTextContent("/settings/mcp");
     expect(screen.getByTestId("mcp-tab")).toBeInTheDocument();
   });
@@ -172,7 +225,7 @@ describe("SettingsPage", () => {
   it("shows the MCP tab disabled, with the reason, to an Admin who is also a super admin", () => {
     mockIsSuperAdmin = true;
     renderAt("/settings/mcp");
-    expect(screen.getByText("MCP")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "MCP" })).toBeInTheDocument();
     expect(screen.getByTestId("mcp-disabled")).toHaveTextContent(
       "set up MCP from Super Admin → Settings → MCP",
     );
@@ -197,5 +250,14 @@ describe("SettingsPage", () => {
       route: "/settings",
     });
     expect(container).toBeTruthy();
+  });
+
+  it("mounts the Roles tab panel without crashing when roles.manage is granted", () => {
+    mockHasRolesManage = true;
+    renderWithProviders(<ProfilePage />, { route: "/settings" });
+    // The tab is offered and the (hidden) panel mounted — the page itself
+    // must still render the default profile tab.
+    expect(screen.getByText("Roles")).toBeInTheDocument();
+    expect(screen.getByTestId("profile-tab")).toBeInTheDocument();
   });
 });

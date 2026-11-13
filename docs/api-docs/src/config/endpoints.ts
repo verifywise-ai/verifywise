@@ -2600,6 +2600,7 @@ export const customFieldsEndpoints: Endpoint[] = [
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
+      { status: 403, description: "Forbidden - the user lacks edit permission on the record the custom field belongs to (for a task: the people who may change its status, that is its creator, an assignee, an admin, or anyone with task.edit)" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Custom Fields",
@@ -2611,6 +2612,7 @@ export const customFieldsEndpoints: Endpoint[] = [
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
+      { status: 403, description: "Forbidden - the user lacks edit permission on the record the custom field belongs to (for a task: the people who may change its status, that is its creator, an assignee, an admin, or anyone with task.edit)" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Custom Fields",
@@ -6186,7 +6188,7 @@ export const intakeFormEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/intake/submissions/{id}/approve',
     summary: "Approve Submission",
-    description: "With routing on, only a reviewer of the lane the approval would make true, or an Admin, can approve (403 otherwise). A standard-lane approval by a non-senior reviewer may be picked for a second review.",
+    description: "With routing on, only a reviewer of the lane the approval would make true, or an Admin, can approve (403 otherwise). A standard-lane approval by a non-senior reviewer may be picked for a second review. Answers mapped to entity custom fields are written on the new entity in the approval transaction; custom_field:* keys in confirmedEntityData are ignored. The response data is the approved submission; POST /api/v1/intake-submissions/{id}/approve also reports the custom field values it could not write.",
     requiresAuth: true,
     parameters: [
       { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
@@ -12270,6 +12272,65 @@ export const v1ChangeHistoryEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: Extensions endpoints
+export const v1ExtensionsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/framework-import/template',
+    summary: "Download Excel Template",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Extensions",
+  },
+  {
+    method: 'POST',
+    path: '/v1/framework-import/import',
+    summary: "Bulk Import Frameworks",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Extensions",
+  },
+  {
+    method: 'GET',
+    path: '/v1/framework-import/imported',
+    summary: "List Imported Frameworks",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Extensions",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/framework-import/imported/{id}',
+    summary: "Update Imported Framework",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Extensions",
+  },
+  {
+    method: 'DELETE',
+    path: '/v1/framework-import/imported/{id}',
+    summary: "Delete Imported Framework",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Extensions",
+  },
+];
+
 // v1: Intake Forms endpoints
 export const v1IntakeFormsEndpoints: Endpoint[] = [
   {
@@ -12348,6 +12409,46 @@ export const v1IntakeFormsEndpoints: Endpoint[] = [
       { status: 500, description: "Internal server error" },
     ],
     tag: "v1: Intake Forms",
+  },
+];
+
+// v1: Intake submissions endpoints
+export const v1IntakeSubmissionsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/intake-submissions/{id}/preview',
+    summary: "Get Submission Preview V1",
+    description: "The legacy GET /api/intake/submissions/{id}/preview response plus customFields, for a pending submission: in question order, the entity custom field values approval would write from answers mapped to custom fields, as { label, displayValue, skipped? }. For a value that would not be written, displayValue is the answer as submitted and skipped is the translated reason. customFields is null when the custom field definitions could not be read, and absent once the submission is decided.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 400, description: "Invalid submission ID" },
+      { status: 404, description: "Submission or form not found" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake submissions",
+  },
+  {
+    method: 'POST',
+    path: '/v1/intake-submissions/{id}/approve',
+    summary: "Approve Submission V1",
+    description: "Same request, checks and effects as the legacy POST /api/intake/submissions/{id}/approve. Answers mapped to entity custom fields are written on the new entity in the approval transaction; custom_field:* keys in confirmedEntityData are ignored. The response data is the approved submission plus customFieldSkips: [{ label, reason }], the values not written and the translated reason (an empty array when none were skipped).",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 400, description: "Invalid submission ID, a submission that is not pending, or invalid entity data" },
+      { status: 403, description: "Forbidden - the caller lacks intakeForm.edit, or routing is on and the caller may not decide this lane" },
+      { status: 404, description: "Submission or form not found" },
+      { status: 409, description: "Conflict - the submission changed while it was being approved, or an AI app with this name already exists" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Intake submissions",
   },
 ];
 
@@ -12465,6 +12566,7 @@ export const v1V1aiAppsEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/v1/ai-apps',
     summary: "Get All Ai Apps V1",
+    description: "The legacy GET /api/ai-apps list plus the lifecycle columns, an optional ?lifecycle_stage= filter, ?search= on name or description, and each app's custom_fields: [{ definition_id, field_key, label, field_type, value }].",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
@@ -12687,6 +12789,234 @@ export const v1V1dashboardEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Groups endpoints
+export const v1V1groupsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/groups',
+    summary: "List Groups",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+  {
+    method: 'POST',
+    path: '/v1/groups',
+    summary: "Create Group",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+  {
+    method: 'GET',
+    path: '/v1/groups/{id}',
+    summary: "Get Group By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/groups/{id}',
+    summary: "Update Group By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+  {
+    method: 'DELETE',
+    path: '/v1/groups/{id}',
+    summary: "Delete Group By Id",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+  {
+    method: 'GET',
+    path: '/v1/groups/{id}/members',
+    summary: "List Group Members",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+  {
+    method: 'POST',
+    path: '/v1/groups/{id}/members',
+    summary: "Add Group Members",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/groups/{id}/members',
+    summary: "Set Group Members",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+  {
+    method: 'DELETE',
+    path: '/v1/groups/{id}/members/{userId}',
+    summary: "Remove Group Member",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+  {
+    method: 'GET',
+    path: '/v1/groups/projects/{projectId}/groups',
+    summary: "List Project Groups",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/groups/projects/{projectId}/groups',
+    summary: "Set Project Groups",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Groups",
+  },
+];
+
+// v1: V1/Imported Framework Assessments endpoints
+export const v1V1importedFrameworkAssessmentsEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/imported-framework-assessments/projects/{projectId}',
+    summary: "List Project Links",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Imported Framework Assessments",
+  },
+  {
+    method: 'POST',
+    path: '/v1/imported-framework-assessments/projects/{projectId}',
+    summary: "Attach To Project",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Imported Framework Assessments",
+  },
+  {
+    method: 'DELETE',
+    path: '/v1/imported-framework-assessments/projects/{projectId}/{linkId}',
+    summary: "Detach From Project",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Imported Framework Assessments",
+  },
+  {
+    method: 'GET',
+    path: '/v1/imported-framework-assessments/links/{linkId}/tree',
+    summary: "Get Link Tree",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Imported Framework Assessments",
+  },
+  {
+    method: 'GET',
+    path: '/v1/imported-framework-assessments/links/{linkId}/dashboard',
+    summary: "Get Link Dashboard",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Imported Framework Assessments",
+  },
+  {
+    method: 'GET',
+    path: '/v1/imported-framework-assessments/links/{linkId}/impl/{level}/{implId}',
+    summary: "Get Impl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Imported Framework Assessments",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/imported-framework-assessments/links/{linkId}/impl/{level}/{implId}',
+    summary: "Update Impl",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Imported Framework Assessments",
+  },
+  {
+    method: 'GET',
+    path: '/v1/imported-framework-assessments/links/{linkId}/impl/{level}/{implId}/risks',
+    summary: "Get Impl Risks",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Imported Framework Assessments",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/imported-framework-assessments/links/{linkId}/impl/{level}/{implId}/risks',
+    summary: "Replace Impl Risks",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Imported Framework Assessments",
+  },
+];
+
 // v1: V1/Intake Form Review Time endpoints
 export const v1V1intakeFormReviewTimeEndpoints: Endpoint[] = [
   {
@@ -12736,6 +13066,76 @@ export const v1V1lifecycleSettingsEndpoints: Endpoint[] = [
       { status: 500, description: "Internal server error" },
     ],
     tag: "v1: V1/Lifecycle Settings",
+  },
+];
+
+// v1: V1/Policy Templates endpoints
+export const v1V1policyTemplatesEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/policy-templates',
+    summary: "List Policy Templates",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Policy Templates",
+  },
+  {
+    method: 'POST',
+    path: '/v1/policy-templates',
+    summary: "Create Policy Template",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Policy Templates",
+  },
+  {
+    method: 'GET',
+    path: '/v1/policy-templates/{id}',
+    summary: "Get Policy Template",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Policy Templates",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/policy-templates/{id}',
+    summary: "Update Policy Template",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Policy Templates",
+  },
+  {
+    method: 'DELETE',
+    path: '/v1/policy-templates/{id}',
+    summary: "Delete Policy Template",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Policy Templates",
+  },
+  {
+    method: 'POST',
+    path: '/v1/policy-templates/from-policy',
+    summary: "Create Policy Template From Policy",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Policy Templates",
   },
 ];
 
@@ -12817,6 +13217,109 @@ export const v1V1projectsEndpoints: Endpoint[] = [
       { status: 500, description: "Internal server error" },
     ],
     tag: "v1: V1/Projects",
+  },
+];
+
+// v1: V1/Training endpoints
+export const v1V1trainingEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/training/assignments/mine',
+    summary: "List My Training Assignments",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Training",
+  },
+  {
+    method: 'GET',
+    path: '/v1/training/assignments/summary',
+    summary: "Get Training Assignment Summary",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Training",
+  },
+  {
+    method: 'GET',
+    path: '/v1/training/assignments',
+    summary: "List Training Assignments",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Training",
+  },
+  {
+    method: 'POST',
+    path: '/v1/training/assignments',
+    summary: "Create Training Assignments",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Training",
+  },
+  {
+    method: 'POST',
+    path: '/v1/training/assignments/complete-all',
+    summary: "Complete All Training Assignments",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Training",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/training/assignments/{id}',
+    summary: "Update Training Assignment",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Training",
+  },
+  {
+    method: 'DELETE',
+    path: '/v1/training/assignments/{id}',
+    summary: "Delete Training Assignment",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Training",
+  },
+  {
+    method: 'POST',
+    path: '/v1/training/assignments/{id}/complete',
+    summary: "Complete Training Assignment",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Training",
+  },
+  {
+    method: 'POST',
+    path: '/v1/training/assignments/{id}/reopen',
+    summary: "Reopen Training Assignment",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Training",
   },
 ];
 
@@ -13247,14 +13750,20 @@ export const allEndpoints = {
   training: trainingEndpoints,
   user: userEndpoints,
   v1ChangeHistory: v1ChangeHistoryEndpoints,
+  v1Extensions: v1ExtensionsEndpoints,
   v1IntakeForms: v1IntakeFormsEndpoints,
+  v1IntakeSubmissions: v1IntakeSubmissionsEndpoints,
   v1UseCaseSettings: v1UseCaseSettingsEndpoints,
   v1V1aiAppLifecycle: v1V1aiAppLifecycleEndpoints,
   v1V1aiApps: v1V1aiAppsEndpoints,
   v1V1dashboard: v1V1dashboardEndpoints,
+  v1V1groups: v1V1groupsEndpoints,
+  v1V1importedFrameworkAssessments: v1V1importedFrameworkAssessmentsEndpoints,
   v1V1intakeFormReviewTime: v1V1intakeFormReviewTimeEndpoints,
   v1V1lifecycleSettings: v1V1lifecycleSettingsEndpoints,
+  v1V1policyTemplates: v1V1policyTemplatesEndpoints,
   v1V1projects: v1V1projectsEndpoints,
+  v1V1training: v1V1trainingEndpoints,
   v1V1useCaseLifecycle: v1V1useCaseLifecycleEndpoints,
   vendor: vendorEndpoints,
   vendorRisk: vendorRiskEndpoints,

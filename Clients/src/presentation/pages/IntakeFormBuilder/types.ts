@@ -4,10 +4,15 @@ import { brand } from "../../themes/palette";
 import { GEOGRAPHY_ITEMS } from "../../../application/constants/geography";
 import {
   RISK_DIMENSIONS,
+  customFieldKeyOf,
+  isCompatibleCustomFieldType,
+  isCustomFieldMapping,
   sortFields,
+  unmatchedCustomFieldOptions,
   type RiskDimensionKey,
   type Visibility,
 } from "../../../application/utils/intakeFormLogic";
+import type { ICustomFieldDefinition } from "../../../domain/interfaces/i.customField";
 
 /**
  * Field types supported in the intake form builder
@@ -727,6 +732,39 @@ export interface MappingCoverage {
     formField: FormField;
     entityMapping: EntityFieldMapping;
   }>;
+  /** Questions mapped to a custom field that is gone or whose type does not fit. */
+  customFieldProblems: CustomFieldProblem[];
+}
+
+/** Why a question's custom field mapping cannot be published. */
+export interface CustomFieldProblem {
+  formField: FormField;
+  /** `options`: some question options match no option of the custom field. */
+  reason: "missing" | "incompatible" | "options";
+}
+
+/**
+ * The problem with `field`'s custom field mapping, or null when it has none
+ * or it is fine. Undefined `customFields` means they are still loading, so
+ * nothing is reported yet.
+ */
+export function customFieldProblemFor(
+  field: Pick<FormField, "type" | "entityFieldMapping" | "options">,
+  customFields: ICustomFieldDefinition[] | undefined,
+): CustomFieldProblem["reason"] | null {
+  if (!customFields || !isCustomFieldMapping(field.entityFieldMapping)) return null;
+  const key = customFieldKeyOf(field.entityFieldMapping);
+  const definition = customFields.find((d) => d.field_key === key);
+  if (!definition) return "missing";
+  if (!isCompatibleCustomFieldType(field.type, definition.field_type)) return "incompatible";
+  return unmatchedCustomFieldOptions(
+    field.type,
+    field.options,
+    definition.field_type,
+    definition.options,
+  ).length > 0
+    ? "options"
+    : null;
 }
 
 /** Entity fields the EU AI Act risk step fills in, so the builder does not offer them. */
@@ -761,7 +799,7 @@ export function usedEntityMappingsFor(
 export function analyzeMappingCoverage(
   fields: FormField[],
   entityType: IntakeEntityType,
-  options: { riskStepEnabled?: boolean } = {},
+  options: { riskStepEnabled?: boolean; customFields?: ICustomFieldDefinition[] } = {},
 ): MappingCoverage {
   const entityMappings = ENTITY_FIELD_MAPPINGS[entityType] || [];
   const mappedKeys = new Set(
@@ -794,7 +832,13 @@ export function analyzeMappingCoverage(
     }
   }
 
-  return { missingRequired, missingOptional, typeMismatches };
+  const customFieldProblems: CustomFieldProblem[] = [];
+  for (const field of fields) {
+    const reason = customFieldProblemFor(field, options.customFields);
+    if (reason) customFieldProblems.push({ formField: field, reason });
+  }
+
+  return { missingRequired, missingOptional, typeMismatches, customFieldProblems };
 }
 
 /**

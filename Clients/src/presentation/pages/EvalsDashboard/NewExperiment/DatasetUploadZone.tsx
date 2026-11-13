@@ -5,6 +5,7 @@
  */
 
 import { Box, Typography } from "@mui/material";
+import SectionLabel from "./SectionLabel";
 import { Upload } from "lucide-react";
 import { palette } from "../../../themes/palette";
 import { readDataset, uploadDataset } from "../../../../application/repository/deepEval.repository";
@@ -37,18 +38,7 @@ export default function DatasetUploadZone({
 }: DatasetUploadZoneProps) {
   return (
     <Box>
-      <Typography
-        sx={{
-          fontSize: "12px",
-          fontWeight: 600,
-          color: palette.text.disabled,
-          textTransform: "uppercase",
-          letterSpacing: "0.5px",
-          mb: "8px",
-        }}
-      >
-        Option 1: Use custom dataset
-      </Typography>
+      <SectionLabel>Upload a dataset</SectionLabel>
       <Box
         component="label"
         sx={{
@@ -86,7 +76,7 @@ export default function DatasetUploadZone({
           <Typography sx={{ fontSize: "13px", fontWeight: 500, color: palette.text.secondary }}>
             {uploading ? "Uploading..." : "Upload dataset"}
           </Typography>
-          <Typography sx={{ fontSize: "11px", color: palette.text.disabled }}>
+          <Typography sx={{ fontSize: "12px", color: palette.text.tertiary }}>
             JSON file with prompts and expected outputs
           </Typography>
         </Box>

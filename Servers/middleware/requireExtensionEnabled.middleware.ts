@@ -40,7 +40,11 @@ async function checkEnabled(
     if (extensionId === null) {
       res
         .status(404)
-        .json(STATUS_CODE[404](`Extension '${sanitizeForLog(extensionKey)}' not found in catalog`));
+        .json(
+          STATUS_CODE[404](
+            req.t!("Extension '{key}' not found in catalog", { key: sanitizeForLog(extensionKey) }),
+          ),
+        );
       return;
     }
 
@@ -49,13 +53,13 @@ async function checkEnabled(
       organizationId,
     );
     if (!enablement || !enablement.enabled) {
-      res
-        .status(403)
-        .json(
-          STATUS_CODE[403](
-            `Extension '${sanitizeForLog(extensionKey)}' is not enabled for this organization`,
-          ),
-        );
+      res.status(403).json(
+        STATUS_CODE[403](
+          req.t!("Extension '{key}' is not enabled for this organization", {
+            key: sanitizeForLog(extensionKey),
+          }),
+        ),
+      );
       return;
     }
 

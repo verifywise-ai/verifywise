@@ -22,11 +22,40 @@ SAFE_MODEL_NAME_PATTERN = re.compile(r'^[a-zA-Z0-9][a-zA-Z0-9._:/-]*$')
 evaluation_module_path = Path(__file__).parent.parent.parent.parent / "EvaluationModule"
 sys.path.insert(0, str((evaluation_module_path / "src").resolve()))
 
+
+def _resolve_relative_dataset_path(rel_path: Path) -> Path:
+    """
+    Resolve a relative dataset path the way the dataset read endpoint does.
+
+    Dataset records store paths relative to the built-in datasets folder
+    (e.g. "demo/knowledge_base_golden_set.json"): /app/datasets in Docker,
+    EvaluationModule/data/datasets locally. Older configs used paths relative to
+    EvaluationModule/ itself, so that base is still tried last. A path that
+    resolves outside every base is rejected.
+    """
+    bases = [Path("/app/datasets"), evaluation_module_path / "data" / "datasets", evaluation_module_path]
+    fallback: Optional[Path] = None
+    for base in bases:
+        base = base.resolve()
+        candidate = (base / rel_path).resolve()
+        try:
+            candidate.relative_to(base)
+        except ValueError:
+            continue
+        if candidate.exists():
+            return candidate
+        if fallback is None and base.exists():
+            fallback = candidate
+    if fallback is None:
+        raise ValueError(f"Invalid dataset path: {rel_path}")
+    return fallback
+
 from crud import evaluation_logs as crud
-from crud.deepeval_scorers import list_scorers, create_scorer, update_scorer, touch_scorer_updated_at
+from crud.deepeval_scorers import list_scorers, touch_scorer_updated_at
 from deepeval_engine.gatekeeper import evaluate_gate
 from utils.run_custom_scorer import run_custom_scorer, ScorerResult
 from utils.safe_outbound_url import checked_endpoint, openai_base_url
+from utils.scenario_rows import is_scenario_row as _is_scenario_row
 from utils.error_detection import (
     FatalErrorTracker,
     build_no_responses_message,
@@ -83,6 +112,77 @@ METRIC_NAME_MAP = {
 }
 
 
+# RAG datasets carry the passages a retriever would have found: retrieval_context
+# on single-turn prompts, context on multi-turn conversations. The model under
+# test gets them in its prompt, and the test case keeps them so the context
+# metrics (faithfulness, context precision/recall/relevancy) can score.
+RAG_ANSWER_INSTRUCTION = (
+    "Answer using only the context below. If the context does not contain the answer, "
+    "say that you don't know."
+)
+
+# Turn limit for a simulated conversation when neither the scenario nor the
+# experiment sets one.
+DEFAULT_SIMULATED_MAX_TURNS = 6
+
+
+def _positive_int(value: Any) -> Optional[int]:
+    """value as a positive int, or None (bools and non-numbers are rejected)."""
+    if isinstance(value, bool):
+        return None
+    try:
+        number = int(value)
+    except (TypeError, ValueError):
+        return None
+    return number if number > 0 else None
+
+
+def _normalize_passages(value: Any) -> List[str]:
+    """
+    Retrieved passages as a list of non-empty strings.
+
+    Accepts a single string, a list of strings, or a list of objects with a
+    "text" or "content" field (a common export shape). Anything else is dropped.
+    """
+    if isinstance(value, (str, dict)):
+        value = [value]
+    if not isinstance(value, list):
+        return []
+    passages: List[str] = []
+    for p in value:
+        if isinstance(p, dict):
+            p = p.get("text") or p.get("content")
+        if isinstance(p, str) and p.strip():
+            passages.append(p.strip())
+    return passages
+
+
+def _prompt_passages(prompt_data: Dict[str, Any]) -> List[str]:
+    """A single-turn prompt's passages: retrieval_context, or context as the evaluator also accepts."""
+    return _normalize_passages(prompt_data.get("retrieval_context")) or _normalize_passages(
+        prompt_data.get("context")
+    )
+
+
+def _context_block(passages: List[str]) -> str:
+    numbered = "\n".join(f"[{i}] {p}" for i, p in enumerate(passages, 1))
+    return f"Context:\n{numbered}"
+
+
+def _single_turn_generation_prompt(question: str, passages: List[str]) -> str:
+    """What the model under test is sent for one single-turn prompt."""
+    if not passages:
+        return question
+    return f"{RAG_ANSWER_INSTRUCTION}\n\n{_context_block(passages)}\n\nQuestion: {question}"
+
+
+def _conversation_preamble(passages: List[str]) -> str:
+    """Opening instruction for every turn of a multi-turn conversation."""
+    if not passages:
+        return "You are a helpful assistant."
+    return f"You are a helpful assistant. {RAG_ANSWER_INSTRUCTION}\n\n{_context_block(passages)}"
+
+
 def route_threshold_keys(thresholds: Optional[Dict[str, Any]]) -> Dict[str, Any]:
     """Key thresholds by the metric each name enables, the same way as metric toggles.
 
@@ -102,104 +202,6 @@ def route_threshold_keys(thresholds: Optional[Dict[str, Any]]) -> Dict[str, Any]
             if is_direct:
                 direct.add(target)
     return routed
-
-
-async def _upsert_judge_scorer(
-    *,
-    db: AsyncSession,
-    config: Dict[str, Any],
-    organization_id: int,
-) -> None:
-    """
-    After an experiment completes, ensure the standard judge LLM is persisted as a
-    scorer record so it appears in the Scorers page.  If a scorer for the same
-    judge model already exists we just touch its updated_at (= LAST RUN date);
-    otherwise we create a new record with sane defaults including choiceScores.
-    """
-    from uuid import uuid4
-    import re as _re
-
-    judge_config = config.get("judgeLlm") or {}
-    judge_model = judge_config.get("model", "").strip()
-    judge_provider = (judge_config.get("provider") or "openai").strip().lower()
-
-    if not judge_model:
-        return  # No standard judge used; nothing to save.
-
-    try:
-        existing = await list_scorers(organization_id=organization_id, db=db)
-
-        # Match on judgeModel.name inside config, legacy flat judgeModel string,
-        # or the auto-generated name pattern "Judge: {model}"
-        def _matches(s: Dict[str, Any]) -> bool:
-            if s.get("name", "") == f"Judge: {judge_model}":
-                return True
-            cfg = s.get("config") or {}
-            jm = cfg.get("judgeModel")
-            if isinstance(jm, dict):
-                return jm.get("name", "") == judge_model
-            if isinstance(jm, str):
-                return jm == judge_model
-            return False
-
-        matched = next((s for s in existing if _matches(s)), None)
-
-        if matched:
-            matched_cfg = matched.get("config") or {}
-            if not matched_cfg.get("choiceScores"):
-                # Backfill missing choiceScores and update judgeModel info
-                updated_cfg = {
-                    **matched_cfg,
-                    "provider": matched_cfg.get("provider") or judge_provider,
-                    "judgeModel": matched_cfg.get("judgeModel") or {"name": judge_model, "provider": judge_provider},
-                    "choiceScores": [
-                        {"label": "PASS", "score": 1},
-                        {"label": "FAIL", "score": 0},
-                    ],
-                }
-                await update_scorer(
-                    scorer_id=matched["id"],
-                    organization_id=organization_id,
-                    config=updated_cfg,
-                    db=db,
-                )
-            else:
-                # Just update the timestamp so LAST RUN shows correctly.
-                await touch_scorer_updated_at(
-                    scorer_id=matched["id"],
-                    organization_id=organization_id,
-                    db=db,
-                )
-        else:
-            # Build a safe metric_key from the model name.
-            safe_key = _re.sub(r"[^a-zA-Z0-9_]", "_", judge_model)
-            scorer_id = f"judge_{uuid4().hex}"
-            await create_scorer(
-                scorer_id=scorer_id,
-                organization_id=organization_id,
-                name=f"Judge: {judge_model}",
-                description=f"Standard LLM judge using {judge_provider}/{judge_model}",
-                scorer_type="llm",
-                metric_key=f"judge_{safe_key}",
-                config={
-                    "provider": judge_provider,
-                    "judgeModel": {"name": judge_model, "provider": judge_provider},
-                    "choiceScores": [
-                        {"label": "PASS", "score": 1},
-                        {"label": "FAIL", "score": 0},
-                    ],
-                },
-                enabled=True,
-                default_threshold=0.5,
-                weight=1.0,
-                created_by=None,
-                db=db,
-            )
-
-        await db.commit()
-        print(f"   ✅ Judge scorer upserted for {judge_model}")
-    except Exception as e:
-        print(f"   ⚠️  Could not upsert judge scorer: {e}")
 
 
 def _scorer_summary(scorer_scores: List[Dict[str, Any]]) -> Optional[Tuple[float, float]]:
@@ -365,9 +367,10 @@ async def run_evaluation(
         print(f"📝 Judge LLM config: provider={judge_config.get('provider')}, has_apiKey={bool(judge_config.get('apiKey'))}")
         has_judge_key = judge_config.get("apiKey") and judge_config["apiKey"] not in ["***", "", None]
         is_self_hosted_judge = judge_config.get("provider", "").lower() in ("self-hosted", "ollama")
-        # Set below only for a self-hosted judge; never inherit one from an earlier run
-        os.environ.pop("G_EVAL_BASE_URL", None)
-        os.environ.pop("G_EVAL_API_KEY", None)
+        # Set below from this run's judge only; never inherit one from an earlier run
+        # (the environment is process-wide and the worker runs many experiments)
+        for judge_env in ("G_EVAL_BASE_URL", "G_EVAL_API_KEY", "G_EVAL_PROVIDER", "G_EVAL_MODEL", "G_EVAL_MAX_TOKENS"):
+            os.environ.pop(judge_env, None)
 
         if has_judge_key or is_self_hosted_judge:
             provider = judge_config.get("provider", "").lower()
@@ -401,19 +404,23 @@ async def run_evaluation(
                 # gateway; many self-hosted servers need no key
                 if judge_config.get("apiKey") and judge_config["apiKey"] not in ["***", "", None]:
                     os.environ["G_EVAL_API_KEY"] = judge_config["apiKey"]
-                # DeepEval's native metrics are picked for provider "openai"
-                provider = "openai"
 
-            # Expose judge provider/model for evaluator (provider-agnostic G‑Eval)
-            if provider:
-                os.environ["G_EVAL_PROVIDER"] = provider
-            if judge_config.get("model"):
-                os.environ["G_EVAL_MODEL"] = str(judge_config["model"])
+        # Expose this run's judge provider/model to the evaluator and the simulator, with
+        # or without a key in the config (cloud judges are reached through the gateway)
+        judge_provider = (judge_config.get("provider") or "").lower()
+        if is_self_hosted_judge:
+            # DeepEval's native metrics are picked for provider "openai"
+            judge_provider = "openai"
+        if judge_provider:
+            os.environ["G_EVAL_PROVIDER"] = judge_provider
+        if judge_config.get("model"):
+            os.environ["G_EVAL_MODEL"] = str(judge_config["model"])
+        if judge_config:
             # Set max tokens for judge (default 512, but user can set higher)
             max_tokens = judge_config.get("maxTokens", 512)
             os.environ["G_EVAL_MAX_TOKENS"] = str(max_tokens)
             print(f"✅ G_EVAL_MAX_TOKENS set to {max_tokens}")
-        
+
         # Model API keys (for the model being tested)
         if model_config.get("apiKey") and model_config["apiKey"] != "***":
             provider = (model_config.get("provider") or model_config.get("accessMethod") or "").lower()
@@ -528,14 +535,26 @@ async def run_evaluation(
                     error_message=error_msg
                 )
                 return {"error": error_msg}
+        # Scenarios sent with the request (simulated mode). When present, the
+        # dataset file is not loaded again.
+        simulated_scenarios = (
+            [s for s in (dataset_config.get("scenarios") or []) if _is_scenario_row(s)]
+            if dataset_config.get("simulatedMode")
+            else []
+        )
+
         # Custom dataset path if provided (only load if we don't have data yet)
-        if not prompts and not conversations and dataset_config.get("path"):
+        if not prompts and not conversations and not simulated_scenarios and dataset_config.get("path"):
             custom_path = Path(dataset_config["path"])
+            path_error: Optional[str] = None
             if not custom_path.is_absolute():
-                custom_path = (evaluation_module_path / custom_path).resolve()
+                try:
+                    custom_path = _resolve_relative_dataset_path(custom_path)
+                except ValueError as e:
+                    path_error = str(e)
             print(f"📄 Loading custom dataset from: {custom_path}")
-            if not custom_path.exists():
-                error_msg = f"Dataset file not found: {custom_path}"
+            if path_error or not custom_path.exists():
+                error_msg = path_error or f"Dataset file not found: {custom_path}"
                 print(f"❌ {error_msg}")
                 await crud.update_experiment_status(
                     db=db,
@@ -552,7 +571,15 @@ async def run_evaluation(
                 else:
                     prompts = loaded
             print(f"✓ Loaded dataset from {custom_path}")
-        if not prompts and not conversations:
+        # A simulated dataset holds scenario rows instead of prompts or turns. Recognise
+        # them here so every caller (wizard, API, MCP, reruns) gets simulated mode.
+        if not simulated_scenarios and prompts and isinstance(prompts, list):
+            # Every row must be a scenario: a mixed list runs as prompts, none dropped.
+            if all(_is_scenario_row(p) for p in prompts):
+                simulated_scenarios = list(prompts)
+                print(f"📝 Detected simulated dataset with {len(simulated_scenarios)} scenarios")
+                prompts = []
+        if not prompts and not conversations and not simulated_scenarios:
             error_msg = "No prompts or conversations in dataset"
             print(f"❌ {error_msg}")
             await crud.update_experiment_status(
@@ -569,15 +596,13 @@ async def run_evaluation(
         # the failure reason if no prompt succeeds
         generation_errors: Dict[int, str] = {}
 
-        # Check if this is a simulated conversation mode
-        simulated_mode = dataset_config.get("simulatedMode", False)
-        simulated_scenarios = dataset_config.get("scenarios", [])
-        
-        if simulated_mode and simulated_scenarios:
+        # Simulated conversation mode (scenarios found while loading the dataset)
+        if simulated_scenarios:
             # Import ConversationSimulator (required for simulated mode)
             try:
-                from deepeval.conversation_simulator import ConversationSimulator
+                from deepeval.simulator import ConversationSimulator
                 from deepeval.dataset import ConversationalGolden
+                from deepeval_engine.deepeval_evaluator import get_judge_llm
             except ImportError:
                 error_msg = "ConversationSimulator is not available. Please upgrade DeepEval to use simulated mode."
                 print(f"❌ {error_msg}")
@@ -591,53 +616,154 @@ async def run_evaluation(
                 return {"error": error_msg}
             # 3A-SIM. Simulated conversation mode: use ConversationSimulator
             print(f"\n🎭 SIMULATED MODE: Generating conversations for {len(simulated_scenarios)} scenarios...")
-            
-            # Create model callback for the simulator
-            async def model_callback(input_text: str, turns_history: list, thread_id: str = "") -> Turn:
+
+            # The judge plays the simulated user. G_EVAL_PROVIDER/G_EVAL_MODEL were cleared
+            # and set from this run's judge above; without one they would fall back to OpenAI.
+            if not ((judge_config or {}).get("model") and (judge_config or {}).get("provider")):
+                error_msg = (
+                    "Simulated datasets need a judge model, which plays the user. "
+                    "Pick a judge, or an evaluation mode that includes one."
+                )
+                print(f"❌ {error_msg}")
+                await crud.update_experiment_status(
+                    db=db,
+                    experiment_id=experiment_id,
+                    organization_id=organization_id,
+                    status="failed",
+                    error_message=error_msg
+                )
+                return {"error": error_msg}
+
+            # Tokens and cost per conversation, keyed by its first user message (DeepEval
+            # gives the finished test case no thread id to match on).
+            conversation_usage: Dict[str, Dict[str, Any]] = {}
+
+            # Create model callback for the simulator. DeepEval passes `input`, `turns` and
+            # `thread_id` by keyword and drops names the callback does not declare, so the
+            # parameter names matter. It is synchronous because the simulator runs in sync
+            # mode (see below) and model_runner.generate is synchronous.
+            def model_callback(input: str, turns: list, thread_id: str = "") -> Turn:
                 """Generate next assistant response given conversation history."""
                 # Build context from history
                 context_parts = []
-                for t in turns_history[-6:]:  # Keep last 6 turns for context
+                for t in turns[-6:]:  # Keep last 6 turns for context
                     context_parts.append(f"{t.role.capitalize()}: {t.content}")
                 context = "\n".join(context_parts)
-                
-                prompt = f"{context}\n\nUser: {input_text}\n\nAssistant:" if context else f"User: {input_text}\n\nAssistant:"
-                
+
+                prompt = f"{context}\n\nUser: {input}\n\nAssistant:" if context else f"User: {input}\n\nAssistant:"
+
                 response = model_runner.generate(
                     prompt=prompt,
                     max_tokens=1024,
                     temperature=0.7,
                 )
+                turn_tokens, turn_cost = _generation_usage(model_runner, input, response or "")
+                first_user = turns[0].content if turns else input
+                usage = conversation_usage.setdefault(first_user, {"tokens": 0, "cost": None})
+                usage["tokens"] += turn_tokens
+                usage["cost"] = _add_cost(usage["cost"], turn_cost)
                 return Turn(role="assistant", content=response or "")
-            
-            # Create ConversationalGoldens from scenarios
-            goldens = []
-            for scenario_data in simulated_scenarios:
+
+            # Create ConversationalGoldens from scenarios, grouped by their turn limit:
+            # the simulator takes one limit per call, and each scenario keeps its own.
+            # Each golden keeps its dataset position so results come back in row order.
+            default_max_turns = _positive_int(dataset_config.get("maxTurns")) or DEFAULT_SIMULATED_MAX_TURNS
+            goldens_by_turns: Dict[int, List[Tuple[int, Any]]] = {}
+            for position, scenario_data in enumerate(simulated_scenarios):
                 golden = ConversationalGolden(
-                    scenario=scenario_data.get("scenario", "General conversation"),
-                    expected_outcome=scenario_data.get("expected_outcome", "Helpful response"),
-                    user_description=scenario_data.get("user_description", "A typical user"),
+                    scenario=str(scenario_data.get("scenario") or "").strip() or "General conversation",
+                    expected_outcome=str(scenario_data.get("expected_outcome") or "").strip() or "Helpful response",
+                    user_description=str(scenario_data.get("user_description") or "").strip() or "A typical user",
                 )
-                goldens.append(golden)
-            
-            # Run simulation
-            max_turns = dataset_config.get("maxTurns", 6)
-            simulator = ConversationSimulator(model_callback=model_callback)
-            
-            print(f"🔄 Simulating conversations with max {max_turns} turns each...")
-            simulated_test_cases = simulator.simulate(goldens=goldens, max_turns=max_turns)
-            
-            # Convert simulated test cases to our format
-            for idx, conv_tc in enumerate(simulated_test_cases, 1):
+                limit = _positive_int(scenario_data.get("max_turns")) or default_max_turns
+                goldens_by_turns.setdefault(limit, []).append((position, golden))
+
+            # The simulated user is played by the judge LLM, through the gateway like the
+            # metrics; without it DeepEval falls back to its own OpenAI client.
+            simulator = ConversationSimulator(
+                model_callback=model_callback,
+                simulator_model=get_judge_llm(
+                    provider=os.getenv("G_EVAL_PROVIDER", os.getenv("EVAL_PROVIDER", "openai")).lower(),
+                    model_name=os.getenv("G_EVAL_MODEL", os.getenv("OPENAI_G_EVAL_MODEL", "gpt-4o-mini")),
+                ),
+                # Async mode calls loop.run_until_complete, which fails inside this
+                # running event loop; sync mode in a worker thread keeps the loop free.
+                async_mode=False,
+            )
+
+            simulated_by_position: Dict[int, Any] = {}
+            for max_turns, entries in goldens_by_turns.items():
+                print(f"🔄 Simulating {len(entries)} conversations with max {max_turns} user turns each...")
+                started = datetime.now()
+                group_cases = await asyncio.to_thread(
+                    simulator.simulate,
+                    conversational_goldens=[golden for _, golden in entries],
+                    max_user_simulations=max_turns,
+                )
+                # Wall-clock time of the group, shared out evenly: the simulator does not
+                # time conversations one by one.
+                per_case_ms = int((datetime.now() - started).total_seconds() * 1000 / max(len(group_cases), 1))
+                # The simulator returns one test case per golden, in order.
+                for (position, _), conv_tc in zip(entries, group_cases):
+                    simulated_by_position[position] = (conv_tc, per_case_ms)
+
+            # Convert simulated test cases to our format, in dataset order. The evaluator
+            # builds Task Completion from expected_outcome and stores both fields with the
+            # result, as it does for scripted conversations. Each conversation gets a log,
+            # which holds its transcript and receives its metric scores.
+            for position in sorted(simulated_by_position):
+                conv_tc, latency_ms = simulated_by_position[position]
+                idx = position + 1
+                conv_turns = list(conv_tc.turns or [])
+                raw_turns = [{"role": t.role, "content": t.content} for t in conv_turns]
+                user_messages = [t.content for t in conv_turns if t.role == "user"]
+                usage = conversation_usage.get(user_messages[0], {}) if user_messages else {}
                 test_cases_data.append({
                     "test_case": conv_tc,
                     "is_conversational": True,
+                    "scenario": conv_tc.scenario or "",
+                    "expected_outcome": conv_tc.expected_outcome or "",
                     "metadata": {
                         "sample_id": f"simulated_scenario_{idx}",
                         "protected_attributes": {"category": conv_tc.scenario or f"scenario_{idx}", "difficulty": "simulated"},
+                        "turn_count": len(conv_turns),
                     }
                 })
-            
+                created_log = await crud.create_log(
+                    db=db,
+                    project_id=config.get("project_id"),
+                    organization_id=organization_id,
+                    experiment_id=experiment_id,
+                    input_text="\n".join(f"User: {m}" for m in user_messages) or conv_tc.scenario,
+                    output_text="\n".join(f"Assistant: {t.content}" for t in conv_turns if t.role == "assistant"),
+                    model_name=model_name,
+                    latency_ms=latency_ms,
+                    token_count=usage.get("tokens"),
+                    cost=usage.get("cost"),
+                    metadata={
+                        "is_conversational": True,
+                        "is_simulated": True,
+                        "scenario": conv_tc.scenario or "",
+                        "expected_outcome": conv_tc.expected_outcome or "",
+                        "turn_count": len(conv_turns),
+                        "turns": raw_turns,
+                    },
+                )
+                if created_log:
+                    test_cases_data[-1]["metadata"]["log_id"] = created_log.get("id")
+
+            if not test_cases_data:
+                error_msg = f"No conversations were simulated for {len(simulated_scenarios)} scenarios"
+                print(f"❌ {error_msg}")
+                await crud.update_experiment_status(
+                    db=db,
+                    experiment_id=experiment_id,
+                    organization_id=organization_id,
+                    status="failed",
+                    error_message=error_msg
+                )
+                return {"error": error_msg}
+
             print(f"✓ Generated {len(test_cases_data)} simulated conversations")
             
         elif conversations:
@@ -653,6 +779,8 @@ async def run_evaluation(
                 scenario = convo.get("scenario") or f"scenario_{s_idx}"
                 expected_outcome = convo.get("expected_outcome", "")
                 raw_turns = convo.get("turns") or []
+                convo_passages = _normalize_passages(convo.get("context"))
+                preamble = _conversation_preamble(convo_passages)
                 
                 print(f"  [{s_idx}/{len(conversations)}] Scenario: {scenario[:50]}...")
                 
@@ -688,14 +816,14 @@ async def run_evaluation(
                     # Build prompt with conversation context
                     if len(conversation_history) == 1:
                         # First turn - just the user message
-                        prompt = f"You are a helpful assistant. Respond to the user.\n\nUser: {user_msg}\n\nAssistant:"
+                        prompt = f"{preamble} Respond to the user.\n\nUser: {user_msg}\n\nAssistant:"
                     else:
                         # Build multi-turn prompt with history
                         history_str = ""
                         for h in conversation_history[:-1]:  # Exclude current turn
                             role_label = "User" if h["role"] == "user" else "Assistant"
                             history_str += f"{role_label}: {h['content']}\n"
-                        prompt = f"You are a helpful assistant. Continue this conversation.\n\n{history_str}User: {user_msg}\n\nAssistant:"
+                        prompt = f"{preamble} Continue this conversation.\n\n{history_str}User: {user_msg}\n\nAssistant:"
                     
                     # GENERATE assistant response using the model
                     try:
@@ -763,6 +891,7 @@ async def run_evaluation(
                 # Create ConversationalTestCase with MODEL-GENERATED responses
                 conv_test_case = ConversationalTestCase(
                     turns=turn_objects,
+                    context=convo_passages or None,
                 )
                 
                 # Build raw_turns for storage (with generated responses)
@@ -828,10 +957,12 @@ async def run_evaluation(
                 generated = False
                 try:
                     print(f"  [{idx}/{len(prompts)}] Processing: {prompt_data['prompt'][:50]}...")
+                    passages = _prompt_passages(prompt_data)
+                    generation_prompt = _single_turn_generation_prompt(prompt_data["prompt"], passages)
                     
                     # Generate response (first attempt)
                     response = model_runner.generate(
-                        prompt=prompt_data["prompt"],
+                        prompt=generation_prompt,
                         max_tokens=2048,
                         temperature=0.7,
                     )
@@ -843,7 +974,7 @@ async def run_evaluation(
                         print("     • Empty response, retrying with higher max_tokens/lower temperature...")
                         try:
                             response = model_runner.generate(
-                                prompt=prompt_data["prompt"],
+                                prompt=generation_prompt,
                                 max_tokens=2048,
                                 temperature=0.2,
                             )
@@ -884,6 +1015,7 @@ async def run_evaluation(
                         input=prompt_data["prompt"],
                         actual_output=response,
                         expected_output=prompt_data.get("expected_output", ""),
+                        retrieval_context=passages or None,
                     )
                     
                     # Log the interaction
@@ -977,7 +1109,7 @@ async def run_evaluation(
         # - conversations: only those that produced a test case are logged (one with no
         #   user turns is skipped), so count those to match the experiment's logs;
         # - simulated: no logs are written; count the scenarios the run tried.
-        if simulated_mode and simulated_scenarios:
+        if simulated_scenarios:
             prompts_attempted = len(simulated_scenarios)
         elif conversations:
             prompts_attempted = len(test_cases_data)
@@ -1556,10 +1688,6 @@ async def run_evaluation(
             status="completed",
             results=experiment_results,
         )
-
-        # Auto-save / update the judge scorer record so the Scorers page reflects
-        # this run (correct choiceScores defaults and up-to-date LAST RUN timestamp).
-        await _upsert_judge_scorer(db=db, config=config, organization_id=organization_id)
 
         # Touch updated_at for any custom scorers that ran in this experiment so
         # their LAST RUN date reflects the most recent usage.

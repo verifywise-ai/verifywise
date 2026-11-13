@@ -28,11 +28,11 @@ import { useNavigate } from "react-router";
 import { PageHeader } from "../../components/Layout/PageHeader";
 import HelperIcon from "../../components/HelperIcon";
 import TipBox from "../../components/TipBox";
-import { useAuth } from "../../../application/hooks/useAuth";
-import allowedRoles from "../../../application/constants/permissions";
+import { useCanCheck } from "../../../application/hooks/useCan";
 import { palette } from "../../themes/palette";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { experimentPromptCount } from "./experimentPromptCount";
+import { countLabel } from "../../tools/countLabel";
 
 interface ProjectOverviewProps {
   projectId: string;
@@ -111,12 +111,12 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, Icon, subtitle }) => 
           <Typography
             variant="body2"
             sx={{
-              color: palette.text.disabled,
-              fontSize: "11px",
+              color: palette.text.secondary,
+              fontSize: "12px",
               fontWeight: 500,
               textTransform: "uppercase",
               letterSpacing: "0.5px",
-              mb: 0.5,
+              mb: "1px",
             }}
           >
             {title}
@@ -134,9 +134,9 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, Icon, subtitle }) => 
           {subtitle && (
             <Typography
               sx={{
-                fontSize: "10px",
-                color: palette.text.disabled,
-                mt: 0.25,
+                fontSize: "12px",
+                color: palette.text.tertiary,
+                mt: "2px",
                 fontWeight: 400,
               }}
             >
@@ -165,8 +165,8 @@ export default function ProjectOverview({
   const [newExperimentModalOpen, setNewExperimentModalOpen] = useState(false);
 
   // RBAC permissions
-  const { userRoleName } = useAuth();
-  const canCreateExperiment = allowedRoles.evals.createExperiment.includes(userRoleName);
+  const can = useCanCheck();
+  const canCreateExperiment = can("evals.edit");
 
   const loadOverviewData = useCallback(async () => {
     try {
@@ -229,7 +229,7 @@ export default function ProjectOverview({
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" py={8}>
+      <Box display="flex" justifyContent="center" py="16px">
         <CircularProgress />
       </Box>
     );
@@ -266,7 +266,7 @@ export default function ProjectOverview({
         : null;
   const avgLatency = avgLatencyValue ?? "No data";
   const avgLatencySubtitle = avgLatencyValue
-    ? `${logsWithLatency.length} logs`
+    ? countLabel(logsWithLatency.length, "log")
     : "Run a successful experiment";
 
   // Calculate avg score from experiment results (avg_scores contains metric averages)
@@ -295,7 +295,7 @@ export default function ProjectOverview({
         : null;
   const avgScore = avgScoreValue ?? "No data";
   const avgScoreSubtitle = avgScoreValue
-    ? `${allScores.length} experiments`
+    ? countLabel(allScores.length, "experiment")
     : "Run a successful experiment";
 
   // Calculate total tokens from evaluation logs
@@ -403,7 +403,7 @@ export default function ProjectOverview({
       </Box>
 
       {/* Header with New Experiment button */}
-      <Box display="flex" justifyContent="flex-end" alignItems="center" mb={3}>
+      <Box display="flex" justifyContent="flex-end" alignItems="center" mb="6px">
         <CustomizableButton
           onClick={handleNewExperiment}
           variant="contained"
@@ -413,7 +413,7 @@ export default function ProjectOverview({
           sx={{
             "backgroundColor": palette.brand.primary,
             "border": `1px solid ${palette.brand.primary}`,
-            "gap": 2,
+            "gap": "4px",
             "&:hover": {
               backgroundColor: palette.brand.primaryHover,
             },
@@ -465,7 +465,7 @@ export default function ProjectOverview({
 
       {/* Recent experiments table */}
       <Box>
-        <Box display="flex" alignItems="center" justifyContent="space-between" sx={{ mb: 2 }}>
+        <Box display="flex" alignItems="center" justifyContent="space-between" sx={{ mb: "4px" }}>
           <Typography variant="subtitle1" sx={{ fontWeight: 600, fontSize: "14px" }}>
             Recent experiments
           </Typography>
@@ -478,20 +478,20 @@ export default function ProjectOverview({
               borderRadius: "4px",
               backgroundColor: palette.background.main,
               textAlign: "center",
-              py: 4,
-              px: 2,
+              py: "8px",
+              px: "4px",
             }}
           >
-            <Box sx={{ mb: 2 }}>
-              <Beaker size={32} color={palette.text.disabled} strokeWidth={1} />
+            <Box sx={{ mb: "4px" }}>
+              <Beaker size={32} color={palette.text.tertiary} strokeWidth={1} />
             </Box>
-            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: 1, fontSize: "13px" }}>
+            <Typography variant="subtitle2" sx={{ fontWeight: 600, mb: "2px", fontSize: "13px" }}>
               No experiments yet
             </Typography>
             <Typography
               variant="body2"
               color="text.secondary"
-              sx={{ mb: 2, fontSize: "12px", maxWidth: 320, mx: "auto", lineHeight: 1.5 }}
+              sx={{ mb: "4px", fontSize: "12px", maxWidth: 320, mx: "auto", lineHeight: 1.5 }}
             >
               Run your first experiment to start evaluating your LLM.
             </Typography>
@@ -504,7 +504,7 @@ export default function ProjectOverview({
               sx={{
                 "backgroundColor": palette.brand.primary,
                 "border": `1px solid ${palette.brand.primary}`,
-                "gap": 1,
+                "gap": "2px",
                 "fontSize": "12px",
                 "height": "32px",
                 "&:hover": {

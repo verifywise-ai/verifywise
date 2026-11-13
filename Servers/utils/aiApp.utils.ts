@@ -18,6 +18,10 @@ import {
   ValidationException,
   NotFoundException,
 } from "../domain.layer/exceptions/custom.exception";
+import {
+  deleteAllCustomFieldValuesForEntityQuery,
+  fetchCustomFieldsForEntities,
+} from "./customField.utils";
 
 /** UNIQUE(organization_id, name) on ai_apps (20260615140000-create-ai-apps). */
 export const AI_APP_NAME_CONSTRAINT = "ai_apps_organization_id_name_key";
@@ -53,6 +57,8 @@ interface GetAllAiAppsOptions {
   withLifecycle?: boolean;
   /** v1 only (#5193): case-insensitive match on name or description. */
   search?: string;
+  /** v1 only (#5262): add each app's custom field values as `custom_fields`. */
+  withCustomFields?: boolean;
   vendorId?: number;
   page?: number;
   limit?: number;
@@ -188,12 +194,23 @@ export async function getAllAiAppsQuery(
     { replacements },
   );
 
+  const customFieldsByApp = options.withCustomFields
+    ? await fetchCustomFieldsForEntities(
+        "ai_app",
+        (rows as any[]).map((row) => row.id as number),
+        organizationId,
+      )
+    : null;
+
   return {
-    ai_apps: (rows as any[]).map((row) =>
-      options.withLifecycle
+    ai_apps: (rows as any[]).map((row) => {
+      const app = options.withLifecycle
         ? { ...parseAiAppRow(row), ...lifecycleFields(row) }
-        : parseAiAppRow(row),
-    ),
+        : parseAiAppRow(row);
+      return customFieldsByApp
+        ? { ...app, custom_fields: customFieldsByApp.get(row.id) ?? [] }
+        : app;
+    }),
     total: parseInt((countResult as any[])[0].total, 10),
   };
 }
@@ -438,6 +455,7 @@ export async function deleteAiAppByIdQuery(
   organizationId: number,
   transaction: Transaction,
 ): Promise<boolean> {
+  await deleteAllCustomFieldValuesForEntityQuery("ai_app", id, organizationId, transaction);
   const [rows] = await sequelize.query(
     `DELETE FROM ai_apps WHERE organization_id = :organizationId AND id = :id RETURNING *`,
     {

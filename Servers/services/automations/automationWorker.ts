@@ -44,6 +44,7 @@ import {
 import { suggestDirectionForComponent } from "../riskLinks/direction/direction.service";
 import { runFileExpirySweepAllOrgs } from "./actions/fileExpirySweep";
 import { runLifecycleConfirmationSweepAllOrgs } from "./actions/lifecycleConfirmationSweep";
+import { runTrainingAssignmentReminderSweepAllOrgs } from "./actions/trainingAssignmentReminderSweep";
 import { aiGatewayRequest } from "../../utils/aiGatewayInternal.utils";
 import { handleExtensionSyncJob, isExtensionSyncJob } from "../../extensions/sync-engine/jobs";
 import {
@@ -763,6 +764,8 @@ export const createAutomationWorker = () => {
           await runFileExpirySweepAllOrgs();
         } else if (name === "lifecycle_confirmation_sweep") {
           await runLifecycleConfirmationSweepAllOrgs();
+        } else if (name === "training_assignment_reminder_sweep") {
+          await runTrainingAssignmentReminderSweepAllOrgs();
         } else if (name === "mcp_audit_cleanup") {
           try {
             const [auditResult, approvalResult] = await Promise.all([
