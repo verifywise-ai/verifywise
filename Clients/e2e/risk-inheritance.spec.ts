@@ -1,4 +1,6 @@
 import { test, expect, Page } from "@playwright/test";
+import * as phase1Tokens from "../../shared/design-tokens/palette";
+import * as classicTokens from "../../shared/design-tokens/classic/palette";
 
 /**
  * Real-browser verification of the two read-only reports on /risk-inheritance:
@@ -13,10 +15,23 @@ import { test, expect, Page } from "@playwright/test";
  * page renders, so the spec keeps working as the seeded data changes.
  */
 
-// The "no variant matched" fill (background.hover) and text (status.default.text),
-// classic look first, then phase 1.
-const CHIP_DEFAULT_BG = ["rgb(243, 244, 246)", "rgb(243, 246, 245)"];
-const CHIP_DEFAULT_TEXT = ["rgb(107, 114, 128)", "rgb(92, 109, 105)"];
+const hexToRgb = (hex: string) => {
+  const n = parseInt(hex.replace("#", ""), 16);
+  return `rgb(${(n >> 16) & 255}, ${(n >> 8) & 255}, ${n & 255})`;
+};
+
+// The "no variant matched" fill (background.hover) and text (status.default.text)
+// of each interface style, read from the tokens so they follow palette changes.
+const CHIP_DEFAULT = {
+  phase1: {
+    bg: hexToRgb(phase1Tokens.background.hover),
+    text: hexToRgb(phase1Tokens.status.default.text),
+  },
+  classic: {
+    bg: hexToRgb(classicTokens.background.hover),
+    text: hexToRgb(classicTokens.status.default.text),
+  },
+};
 
 interface DuplicateReport {
   scanned: number;
@@ -170,26 +185,33 @@ test("risk level chips pick up a real variant colour instead of falling through 
   const chip = row.getByText(levelled!.risk_level!, { exact: true }).first();
   await expect(chip).toBeVisible();
 
-  // The label can sit in an inner span (phase 1 pill), so read the nearest
-  // element that actually paints a background: a gradient in the classic
-  // look, a flat fill in phase 1.
+  // Classic paints a gradient on the element holding the label; the phase 1
+  // pill paints a flat fill on the label's parent span. Look at those two only,
+  // so a chip that lost its fill can't pass on a cell or row background.
   const painted = await chip.evaluate((el) => {
-    let node: Element | null = el;
-    while (node) {
-      const style = getComputedStyle(node);
-      if (style.backgroundImage !== "none" || style.backgroundColor !== "rgba(0, 0, 0, 0)") {
-        return { fill: `${style.backgroundImage} ${style.backgroundColor}`, color: style.color };
-      }
-      node = node.parentElement;
-    }
-    return { fill: "", color: getComputedStyle(el).color };
+    const look = document.documentElement.dataset.uiStyle === "classic" ? "classic" : "phase1";
+    const pill = look === "classic" ? el : el.parentElement!;
+    const style = getComputedStyle(pill);
+    return {
+      look,
+      image: style.backgroundImage,
+      fill: style.backgroundColor,
+      color: getComputedStyle(el).color,
+    } as const;
   });
 
-  expect(painted.fill).not.toBe("");
+  const grey = CHIP_DEFAULT[painted.look];
+  if (painted.look === "classic") {
+    expect(painted.image).toContain("gradient");
+    expect(painted.image).not.toContain(grey.bg);
+  } else {
+    expect(painted.image).toBe("none");
+    expect(painted.fill).not.toBe("rgba(0, 0, 0, 0)");
+    expect(painted.fill).not.toBe(grey.bg);
+  }
   // An unmatched label falls through to the "default" variant, whose grey
   // would leave the level column carrying no signal at all.
-  for (const grey of CHIP_DEFAULT_BG) expect(painted.fill).not.toContain(grey);
-  expect(CHIP_DEFAULT_TEXT).not.toContain(painted.color);
+  expect(painted.color).not.toBe(grey.text);
 });
 
 test("the reports narrow without ever pushing the page sideways", async ({ page }) => {
