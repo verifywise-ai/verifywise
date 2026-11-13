@@ -114,12 +114,15 @@ it. Model security findings go through the same merge in
 `createModelSecurityFindingsBatchQuery`. A scan's `findings_count` is the number of
 rows stored after this merge.
 
-Suppression rules are matched against each variant before the merge, and the merged
-finding is suppressed when any variant was. Exact rules on `name` and `provider`
-compare case-insensitively, like the merge key, so a rule on `qdrant` keeps matching
-the stored `Qdrant` finding. Incremental scans carry a baseline finding's suppression
-forward while its rule is still active, along with its severity and vulnerability
-details.
+Suppression rules are matched against each variant before the merge. The merge fails
+closed: the merged finding is suppressed only when its most severe variant was (at
+equal severity, only when every variant was), so a rule written for a low-severity
+variant never hides a critical one from the score or the CI gate. Exact rules on
+`name` and `provider` compare case-insensitively, like the merge key, so a rule on
+`qdrant` matches every case variant and keeps the stored `Qdrant` finding suppressed.
+Incremental scans carry a baseline finding's severity and vulnerability details
+forward, but not its suppression: every finding is matched against the current rules,
+so an edited or deleted rule stops applying on the next scan.
 
 ### Vulnerability Details Table
 

@@ -1581,16 +1581,12 @@ async function executeIncrementalScan(
     let totalFindings = 0;
     if (allFindings.length > 0) {
       const suppressionRules = await getActiveSuppressionsQuery(ctx.organizationId);
-      // A carried finding keeps its baseline suppression while that rule is
-      // still active: the rule may have matched a variant merged into it (for
-      // example the "Vector Databases" category of "qdrant"), which the stored
-      // row no longer shows.
-      const activeRuleIds = new Set(suppressionRules.map((rule) => rule.id));
+      // Carried findings are re-matched against the current rules rather than
+      // keeping their baseline flag, so an edited or deleted rule stops
+      // applying on the next scan.
       for (const finding of allFindings) {
-        if (finding.suppressed && !activeRuleIds.has(finding.suppression_rule_id ?? undefined)) {
-          finding.suppressed = false;
-          finding.suppression_rule_id = null;
-        }
+        finding.suppressed = false;
+        finding.suppression_rule_id = null;
       }
       applySuppressions(allFindings, suppressionRules);
       totalFindings = await createFindingsBatchQuery(allFindings, ctx.organizationId, transaction);

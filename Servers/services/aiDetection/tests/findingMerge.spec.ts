@@ -109,26 +109,57 @@ describe("mergeDuplicateFindings", () => {
     expect(result[0].finding_status).toBeUndefined();
   });
 
-  it("keeps a merged finding suppressed when any variant was suppressed", () => {
-    // A rule on "qdrant" matches the package-name variant before the merge;
-    // the stored "Qdrant" finding must stay suppressed.
-    const partly = mergeDuplicateFindings([
+  it("keeps a merged finding suppressed when every variant was suppressed", () => {
+    // A rule on "qdrant" matches both case variants (name rules are
+    // case-insensitive), so the stored "Qdrant" finding stays suppressed.
+    const both = mergeDuplicateFindings([
       finding({ suppressed: true, suppression_rule_id: 4 }),
-      finding({ name: "Qdrant", suppressed: false }),
+      finding({ name: "Qdrant", suppressed: true, suppression_rule_id: 4 }),
     ]);
-    expect(partly[0].name).toBe("Qdrant");
-    expect(partly[0].suppressed).toBe(true);
-    expect(partly[0].suppression_rule_id).toBe(4);
-
-    const second = mergeDuplicateFindings([
-      finding({ name: "Qdrant" }),
-      finding({ suppressed: true, suppression_rule_id: 7 }),
-    ]);
-    expect(second[0].suppressed).toBe(true);
-    expect(second[0].suppression_rule_id).toBe(7);
+    expect(both[0].name).toBe("Qdrant");
+    expect(both[0].suppressed).toBe(true);
+    expect(both[0].suppression_rule_id).toBe(4);
 
     const none = mergeDuplicateFindings([finding({}), finding({ name: "Qdrant" })]);
     expect(none[0].suppressed).toBeUndefined();
+  });
+
+  it("fails closed when only some variants of equal severity were suppressed", () => {
+    for (const order of [
+      [finding({ suppressed: true, suppression_rule_id: 4 }), finding({ name: "Qdrant" })],
+      [finding({ name: "Qdrant" }), finding({ suppressed: true, suppression_rule_id: 4 })],
+    ]) {
+      const result = mergeDuplicateFindings(order);
+      expect(result[0].suppressed).toBeFalsy();
+      expect(result[0].suppression_rule_id ?? null).toBeNull();
+    }
+  });
+
+  it("never lets a suppressed low-severity variant hide a critical one", () => {
+    for (const order of [
+      [
+        finding({ severity: "low", suppressed: true, suppression_rule_id: 9 }),
+        finding({ name: "Qdrant", severity: "critical" }),
+      ],
+      [
+        finding({ name: "Qdrant", severity: "critical" }),
+        finding({ severity: "low", suppressed: true, suppression_rule_id: 9 }),
+      ],
+    ]) {
+      const result = mergeDuplicateFindings(order);
+      expect(result[0].severity).toBe("critical");
+      expect(result[0].suppressed).toBeFalsy();
+      expect(result[0].suppression_rule_id ?? null).toBeNull();
+    }
+  });
+
+  it("stays suppressed when the most severe variant was suppressed", () => {
+    const result = mergeDuplicateFindings([
+      finding({ severity: "low" }),
+      finding({ name: "Qdrant", severity: "critical", suppressed: true, suppression_rule_id: 3 }),
+    ]);
+    expect(result[0].suppressed).toBe(true);
+    expect(result[0].suppression_rule_id).toBe(3);
   });
 
   it("takes the finding type with the display name, so type and category agree", () => {

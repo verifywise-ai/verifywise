@@ -122,11 +122,14 @@ function mergePair(target: MergeableFindingInput, incoming: MergeableFindingInpu
   }
   if (!target.provider && incoming.provider) target.provider = incoming.provider;
 
+  const incomingRank = rank(incoming.severity);
+  const targetRank = rank(target.severity);
+
   target.confidence = higherLevel(target.confidence, incoming.confidence) ?? target.confidence;
   target.risk_level = higherLevel(target.risk_level, incoming.risk_level);
 
   // The variant with the highest severity also supplies the details explaining it.
-  if (rank(incoming.severity) > rank(target.severity)) {
+  if (incomingRank > targetRank) {
     target.severity = incoming.severity;
     for (const field of SEVERITY_DETAIL_FIELDS) {
       targetFields[field] = incomingFields[field] ?? targetFields[field];
@@ -147,12 +150,22 @@ function mergePair(target: MergeableFindingInput, incoming: MergeableFindingInpu
 
   target.finding_status = mergeStatus(target.finding_status, incoming.finding_status);
 
-  // Suppressed when any variant was. Suppression rules are matched against each
-  // variant before the merge, so a rule written for one spelling or category
-  // ("qdrant", "Vector Databases") keeps the merged finding suppressed.
-  if (target.suppressed !== true && incoming.suppressed === true) {
-    target.suppressed = true;
-    target.suppression_rule_id = incoming.suppression_rule_id ?? null;
+  // Fail closed: a suppression only covers the merged finding when it covered
+  // the most severe variant (at equal severity, every variant). A rule written
+  // for a low-severity variant must not hide a critical one from the score and
+  // the CI gate. Name and provider rules match case-insensitively, so a rule on
+  // "qdrant" already matches every case variant before the merge.
+  if (incomingRank > targetRank) {
+    target.suppressed = incoming.suppressed;
+    target.suppression_rule_id =
+      incoming.suppressed === true ? (incoming.suppression_rule_id ?? null) : null;
+  } else if (
+    incomingRank === targetRank &&
+    target.suppressed === true &&
+    incoming.suppressed !== true
+  ) {
+    target.suppressed = false;
+    target.suppression_rule_id = null;
   }
 }
 
