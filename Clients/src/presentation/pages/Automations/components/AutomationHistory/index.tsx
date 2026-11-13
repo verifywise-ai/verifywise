@@ -41,6 +41,7 @@ import { EmptyState } from "../../../../components/EmptyState";
 import singleTheme from "../../../../themes/v1SingleTheme";
 import { ChevronsUpDown } from "lucide-react";
 import { status, background, palette as vwPalette, radiusPx } from "../../../../themes/palette";
+import { chartTheme } from "../../../../themes/chartTheme";
 import useFormattedDate from "../../../../../application/hooks/useFormattedDate";
 import { pageOfLabel } from "../../../../components/Table/pageOfLabel";
 
@@ -712,7 +713,7 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
                                             : log.status === "failure"
                                               ? vwPalette.status.error.border
                                               : vwPalette.risk.medium.bg,
-                                        border: `1px solid ${log.status === "success" ? vwPalette.status.success.text : log.status === "failure" ? vwPalette.status.error.text : vwPalette.risk.medium.text}`,
+                                        border: `1px solid ${log.status === "success" ? vwPalette.status.success.text : log.status === "failure" ? vwPalette.status.error.text : chartTheme.pendingLabelText}`,
                                       }}
                                     >
                                       <Stack direction="row" alignItems="center" spacing={2}>
@@ -723,7 +724,7 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
                                         ) : (
                                           <AlertCircle
                                             size={20}
-                                            color={vwPalette.risk.medium.text}
+                                            color={chartTheme.pendingLabelText}
                                           />
                                         )}
                                         <Box>
@@ -736,7 +737,7 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
                                                   ? "status.success.text"
                                                   : log.status === "failure"
                                                     ? "status.error.text"
-                                                    : vwPalette.risk.medium.text,
+                                                    : chartTheme.pendingLabelText,
                                             }}
                                           >
                                             Overall Result:{" "}
@@ -749,7 +750,7 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
                                             <Typography
                                               sx={{
                                                 fontSize: 12,
-                                                color: vwPalette.risk.medium.text,
+                                                color: chartTheme.pendingLabelText,
                                                 mt: 0.5,
                                               }}
                                             >

@@ -30,6 +30,18 @@ const MAPS = [
   "progress",
   "controls",
   "statusBreakdown",
+  "graphRisk",
+  "riskLabel",
+  "incidentStatus",
+  "frameworkChip",
+  "riskHistory",
+  "countBadge",
+  "connectionNotice",
+  "progressOrange",
+  "pendingLabelText",
+  "evaluationStatus",
+  "priority",
+  "demoButton",
 ] as const;
 
 const isColour = (v: unknown) => typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v);
@@ -223,6 +235,81 @@ const CLASSIC_ORIGINALS: [string, string][] = [
   ["statusBreakdown[3]", "#3B82F6"],
   ["statusBreakdown[4]", "#13715B"],
   ["statusBreakdown[5]", "#EA580C"],
+  // riskLevelColors in pages/EntityGraph/EntityNode.tsx at ba592b3ec (dot and caption)
+  ["graphRisk.mark.Low", "#4caf50"],
+  ["graphRisk.mark.Medium", "#ff9800"],
+  ["graphRisk.mark.High", "#f44336"],
+  ["graphRisk.mark.Critical", "#9c27b0"],
+  ["graphRisk.mark.Very low risk", "#4caf50"],
+  ["graphRisk.mark.Low risk", "#8bc34a"],
+  ["graphRisk.mark.Medium risk", "#ff9800"],
+  ["graphRisk.mark.High risk", "#f44336"],
+  ["graphRisk.mark.Very high risk", "#9c27b0"],
+  ["graphRisk.text.Low", "#4caf50"],
+  ["graphRisk.text.Medium", "#ff9800"],
+  ["graphRisk.text.High", "#f44336"],
+  ["graphRisk.text.Critical", "#9c27b0"],
+  ["graphRisk.text.Very low risk", "#4caf50"],
+  ["graphRisk.text.Low risk", "#8bc34a"],
+  ["graphRisk.text.Medium risk", "#ff9800"],
+  ["graphRisk.text.High risk", "#f44336"],
+  ["graphRisk.text.Very high risk", "#9c27b0"],
+  // RISK_LABELS in components/RiskLevel/constants.ts at ba592b3ec
+  ["riskLabel.medium", "#8D6E63"],
+  ["riskLabel.high", "#E65100"],
+  ["riskLabel.critical", "#B71C1C"],
+  ["riskLabel.veryLow", "#33691E"],
+  // summary cards in pages/IncidentManagement/index.tsx at ba592b3ec
+  ["incidentStatus.open", "#F9A825"],
+  ["incidentStatus.investigating", "#FB8C00"],
+  ["incidentStatus.mitigated", "#2E7D32"],
+  ["incidentStatus.closed", "#455A64"],
+  ["incidentStatus.suspended", "#7B1FA2"],
+  ["incidentStatus.emergency", "#C62828"],
+  // euAiActChipStyle and chips in components/Cards/ProjectCard at ba592b3ec
+  ["frameworkChip", "#014576"],
+  // components/Charts/RiskHistoryChart.tsx (status.success.strong resolved) at ba592b3ec
+  ["riskHistory.negligible", "#079455"],
+  ["riskHistory.minor", "#84CC16"],
+  ["riskHistory.major", "#F97316"],
+  ["riskHistory.noRisk", "#079455"],
+  ["riskHistory.veryLow", "#84CC16"],
+  ["riskHistory.low", "#FCD34D"],
+  // FilterBadge in Table/FilterBy.tsx and GroupBadge in Table/GroupBy.tsx at ba592b3ec
+  ["countBadge.filter.bg", "#dbeafe"],
+  ["countBadge.filter.text", "#1e40af"],
+  ["countBadge.group.bg", "#dcfce7"],
+  ["countBadge.group.text", "#166534"],
+  // connection footer in components/NotificationBell at ba592b3ec
+  ["connectionNotice.bg", "#FEF3C7"],
+  ["connectionNotice.text", "#92400E"],
+  // Framework/Dashboard FrameworkProgressCard and AssignmentStatusCard at ba592b3ec
+  ["progressOrange", "#EA580C"],
+  // Table/EventsTable, Table/LogsTable and AutomationHistory at ba592b3ec
+  ["pendingLabelText", "#795000"],
+  // statusColorMap in pages/ModelInventory/ModelEvaluationsTab.tsx at ba592b3ec
+  ["evaluationStatus.completed", "#4caf50"],
+  ["evaluationStatus.running", "#ff9800"],
+  ["evaluationStatus.failed", "#f44336"],
+  // pages/Assessment/NewAssessment/priorities.tsx at ba592b3ec
+  ["priority.high", "#FD7E14"],
+  ["priority.medium", "#EFB70E"],
+  ["priority.low", "#ABBDA1"],
+  // demo data button in components/Sidebar/SidebarFooter.tsx (tokens resolved) at ba592b3ec
+  ["demoButton.remove.fill", "#FEF3F2"],
+  ["demoButton.remove.fillEnd", "#FEE4E2"],
+  ["demoButton.remove.hoverFill", "#FEE4E2"],
+  ["demoButton.remove.hoverFillEnd", "#FECDCA"],
+  ["demoButton.remove.border", "#FECDCA"],
+  ["demoButton.remove.icon", "#D92D20"],
+  ["demoButton.remove.hoverIcon", "#D32F2F"],
+  ["demoButton.add.fill", "#E6F4EA"],
+  ["demoButton.add.fillEnd", "#D1FADF"],
+  ["demoButton.add.hoverFill", "#D1FADF"],
+  ["demoButton.add.hoverFillEnd", "#A6F4C5"],
+  ["demoButton.add.border", "#A6F4C5"],
+  ["demoButton.add.icon", "#039855"],
+  ["demoButton.add.hoverIcon", "#027A48"],
 ];
 
 describe("chartTheme named colour maps", () => {
@@ -256,6 +343,51 @@ describe("chartTheme named colour maps", () => {
     expect(t.entityTypes.risk).toBe(t.series[4]);
     expect(t.entityTypes.framework).toBe(t.series[9]);
     expect(t.tiles).toHaveLength(9);
+  });
+
+  it("gives each of the 15 phase 1 line colours its own hue, none a risk, brand or part colour", async () => {
+    const t = await loadChartTheme();
+    const { riskMark, brand, part, chart } = await import("../palette");
+    expect(t.lines).toHaveLength(15);
+    expect(new Set(t.lines).size).toBe(15);
+    expect(t.lines.slice(0, 9)).toEqual(chart.slice(0, 9));
+    expect(t.lines).not.toContain(chart[9]);
+    const forbidden = [
+      brand.primary,
+      ...Object.values(riskMark),
+      ...Object.values(part).flatMap((family) => Object.values(family)),
+    ];
+    t.lines.forEach((colour) => expect(forbidden).not.toContain(colour));
+  });
+
+  it("captions phase 1 graph risk levels with the risk text tokens, not the marks", async () => {
+    const t = await loadChartTheme();
+    const { risk, riskMark } = await import("../palette");
+    expect(t.graphRisk.text["Very low risk"]).toBe(risk.veryLow.text);
+    expect(t.graphRisk.mark["Very low risk"]).toBe(riskMark.veryLow);
+    Object.values(t.graphRisk.text).forEach((colour) =>
+      expect(Object.values(riskMark)).not.toContain(colour),
+    );
+  });
+
+  it("keeps the phase 1 status and label colours restored for classic", async () => {
+    const t = await loadChartTheme();
+    const { risk, riskMark, status, primitives } = await import("../palette");
+    expect(t.riskLabel).toEqual({
+      medium: risk.medium.text,
+      high: risk.high.text,
+      critical: risk.critical.text,
+      veryLow: risk.veryLow.text,
+    });
+    expect(t.incidentStatus.open).toBe(primitives.series.sky);
+    expect(t.incidentStatus.emergency).toBe(riskMark.critical);
+    expect(t.frameworkChip).toBe(status.info.text);
+    expect(t.riskHistory.major).toBe(riskMark.high);
+    expect(t.progressOrange).toBe(riskMark.high);
+    expect(t.priority).toEqual({ high: riskMark.high, medium: riskMark.medium, low: riskMark.low });
+    // Phase 1 draws the demo button with plain fills and one icon colour.
+    expect(t.demoButton.add.fill).toBe(t.demoButton.add.fillEnd);
+    expect(t.demoButton.remove.fill).toBe(t.demoButton.remove.fillEnd);
   });
 
   it("gives the action buttons one set of phase 1 button tokens", async () => {

@@ -10,6 +10,7 @@ import {
   palette as vwPalette,
   radiusPx,
 } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 import { isClassicUi } from "../../themes/uiStyle";
 
 // Phase 1 draws the button with a hairline border and 2px corners; classic keeps its look.
@@ -37,8 +38,8 @@ export const GroupBadge: React.FC<{ count: number }> = ({ count }) => (
       width: "18px",
       height: "18px",
       borderRadius: "50%",
-      backgroundColor: vwPalette.status.success.bg,
-      color: vwPalette.status.success.text,
+      backgroundColor: chartTheme.countBadge.group.bg,
+      color: chartTheme.countBadge.group.text,
       fontSize: "11px",
       fontWeight: 600,
       marginLeft: "6px",

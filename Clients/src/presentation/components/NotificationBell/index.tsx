@@ -591,13 +591,13 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ sx }) => {
               px: 2,
               py: 1,
               borderTop: "1px solid status.default.border",
-              backgroundColor: vwPalette.risk.medium.bg,
+              backgroundColor: chartTheme.connectionNotice.bg,
             }}
           >
             <Typography
               sx={{
                 fontSize: "11px",
-                color: vwPalette.status.warning.text,
+                color: chartTheme.connectionNotice.text,
                 display: "flex",
                 alignItems: "center",
                 gap: 0.5,

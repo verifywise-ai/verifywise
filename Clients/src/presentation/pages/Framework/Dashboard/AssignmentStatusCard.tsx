@@ -10,6 +10,7 @@ import {
   type BaseFrameworkData,
 } from "../../../../application/utils/frameworkDataUtils";
 import { palette } from "../../../themes/palette";
+import { chartTheme } from "../../../themes/chartTheme";
 
 /**
  * Assignment Status Card Component
@@ -260,7 +261,8 @@ const AssignmentStatusCard = ({ frameworksData }: AssignmentStatusCardProps) => 
       return <CircleDashed size={14} style={{ color: palette.riskMark.critical }} />;
     if (percentage < 30)
       return <CircleDashed size={14} style={{ color: palette.riskMark.critical }} />;
-    if (percentage < 60) return <CircleDot size={14} style={{ color: palette.riskMark.high }} />;
+    if (percentage < 60)
+      return <CircleDot size={14} style={{ color: chartTheme.progressOrange }} />;
     if (percentage < 85)
       return <CircleDotDashed size={14} style={{ color: palette.riskMark.medium }} />;
     if (percentage < 100) return <CircleDotDashed size={14} style={{ color: "brand.primary" }} />;

@@ -22,18 +22,18 @@ interface RiskHistoryChartProps {
 
 // Color schemes for different risk parameters
 const SEVERITY_COLORS: Record<string, string> = {
-  Negligible: chartTheme.risk.veryLow,
-  Minor: chartTheme.risk.low,
+  Negligible: chartTheme.riskHistory.negligible,
+  Minor: chartTheme.riskHistory.minor,
   Moderate: vwPalette.riskMark.medium,
-  Major: chartTheme.risk.high,
+  Major: chartTheme.riskHistory.major,
   Catastrophic: vwPalette.riskMark.critical,
 };
 
 const LIKELIHOOD_COLORS: Record<string, string> = {
-  "Rare": chartTheme.risk.veryLow,
-  "Unlikely": chartTheme.risk.low,
+  "Rare": chartTheme.riskHistory.negligible,
+  "Unlikely": chartTheme.riskHistory.minor,
   "Possible": vwPalette.riskMark.medium,
-  "Likely": chartTheme.risk.high,
+  "Likely": chartTheme.riskHistory.major,
   "Almost Certain": vwPalette.riskMark.critical,
 };
 
@@ -44,15 +44,15 @@ const MITIGATION_STATUS_COLORS: Record<string, string> = {
   "On Hold": vwPalette.riskMark.medium,
   "Deferred": vwPalette.accent.purple.text,
   "Canceled": vwPalette.riskMark.critical,
-  "Requires review": chartTheme.risk.high,
+  "Requires review": chartTheme.riskHistory.major,
 };
 
 const RISK_LEVEL_COLORS: Record<string, string> = {
-  "No risk": chartTheme.status.neutral,
-  "Very low risk": chartTheme.risk.veryLow,
-  "Low risk": chartTheme.risk.low,
+  "No risk": chartTheme.riskHistory.noRisk,
+  "Very low risk": chartTheme.riskHistory.veryLow,
+  "Low risk": chartTheme.riskHistory.low,
   "Medium risk": vwPalette.riskMark.medium,
-  "High risk": chartTheme.risk.high,
+  "High risk": chartTheme.riskHistory.major,
   "Very high risk": vwPalette.riskMark.critical,
 };
 

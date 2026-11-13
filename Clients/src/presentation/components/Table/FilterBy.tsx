@@ -5,6 +5,7 @@ import Select from "../Inputs/Select";
 import Field from "../Inputs/Field";
 import { VWLink } from "../Link/VWLink";
 import { brand, status, palette as vwPalette, radiusPx } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 
 // Column type determines available operators and value input type
 export type FilterColumnType = "select" | "text" | "date";
@@ -202,8 +203,8 @@ const FilterBadge: React.FC<{ count: number }> = ({ count }) => (
       width: "18px",
       height: "18px",
       borderRadius: "50%",
-      backgroundColor: vwPalette.status.info.bg,
-      color: vwPalette.status.info.text,
+      backgroundColor: chartTheme.countBadge.filter.bg,
+      color: chartTheme.countBadge.filter.text,
       fontSize: "11px",
       fontWeight: 600,
       marginLeft: "6px",

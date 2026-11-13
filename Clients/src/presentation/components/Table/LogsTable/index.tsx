@@ -30,6 +30,7 @@ import {
   palette as vwPalette,
   radiusPx,
 } from "../../../themes/palette";
+import { chartTheme } from "../../../themes/chartTheme";
 import StatusBadge from "../../StatusBadge";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { pageOfLabel } from "../pageOfLabel";
@@ -115,7 +116,7 @@ const parseLogLine = (line: string, index: number): ParsedLogEntry | null => {
 const STATE_COLORS: Record<string, { bg: string; text: string }> = {
   successful: { bg: status.success.bg, text: status.success.text },
   success: { bg: status.success.bg, text: status.success.text },
-  processing: { bg: status.warning.bg, text: vwPalette.risk.medium.text },
+  processing: { bg: status.warning.bg, text: chartTheme.pendingLabelText },
   error: { bg: status.error.bg, text: status.error.text },
   info: { bg: vwPalette.status.info.bg, text: vwPalette.status.info.text },
   warn: { bg: risk.high.bg, text: risk.high.text },

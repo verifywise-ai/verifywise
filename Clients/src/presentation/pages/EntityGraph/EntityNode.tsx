@@ -13,6 +13,7 @@ import {
 } from "lucide-react";
 import VWTooltip from "../../components/VWTooltip";
 import { text, palette as vwPalette, radiusPx } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 
 export type EntityType =
   "useCase" | "model" | "risk" | "vendor" | "evidence" | "framework" | "user";
@@ -40,23 +41,18 @@ const entityIcons: Record<EntityType, LucideIcon> = {
   user: User,
 };
 
-export const riskLevelColors: Record<string, string> = {
-  "Low": vwPalette.riskMark.low,
-  "Medium": vwPalette.riskMark.medium,
-  "High": vwPalette.riskMark.high,
-  "Critical": vwPalette.riskMark.critical,
-  "Very low risk": vwPalette.riskMark.veryLow,
-  "Low risk": vwPalette.riskMark.low,
-  "Medium risk": vwPalette.riskMark.medium,
-  "High risk": vwPalette.riskMark.high,
-  "Very high risk": vwPalette.riskMark.critical,
-};
+/** Risk level dot colours (see `chartTheme.graphRisk`). */
+export const riskLevelColors = chartTheme.graphRisk.mark;
 
 const EntityNode: React.FC<NodeProps> = ({ data, sourcePosition, targetPosition }) => {
   const nodeData = data as unknown as EntityNodeData;
   const IconComponent = entityIcons[nodeData.entityType] || FolderTree;
   const isRiskNode = nodeData.entityType === "risk";
   const riskColor = nodeData.riskLevel ? riskLevelColors[nodeData.riskLevel] : undefined;
+  // The caption needs a text colour: the pale Very low mark is unreadable as 9px text.
+  const riskTextColor = nodeData.riskLevel
+    ? chartTheme.graphRisk.text[nodeData.riskLevel]
+    : undefined;
 
   // Node size based on connections (subtle scaling)
   const connections = nodeData.connectionCount || 0;
@@ -178,7 +174,7 @@ const EntityNode: React.FC<NodeProps> = ({ data, sourcePosition, targetPosition 
               variant="caption"
               sx={{
                 fontSize: 9,
-                color: riskColor || text.icon,
+                color: riskTextColor || text.icon,
                 fontWeight: 500,
               }}
             >

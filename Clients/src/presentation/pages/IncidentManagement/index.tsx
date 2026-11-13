@@ -49,7 +49,6 @@ import {
   UserFacingFieldErrors,
 } from "../../../application/utils/apiErrorReason";
 import { useCan } from "../../../application/hooks/useCan";
-import { palette } from "../../themes/palette";
 import { chartTheme } from "../../themes/chartTheme";
 
 type IncidentColumnKey =
@@ -761,7 +760,7 @@ const IncidentManagement: React.FC = () => {
                 {
                   key: IncidentManagementStatus.OPEN,
                   label: "Open",
-                  color: chartTheme.status.info,
+                  color: chartTheme.incidentStatus.open,
                   count: incidentsData.filter(
                     (i) => i.status === IncidentManagementStatus.OPEN && !i.archived,
                   ).length,
@@ -769,7 +768,7 @@ const IncidentManagement: React.FC = () => {
                 {
                   key: IncidentManagementStatus.INVESTIGATED,
                   label: "Investigating",
-                  color: palette.riskMark.medium,
+                  color: chartTheme.incidentStatus.investigating,
                   count: incidentsData.filter(
                     (i) => i.status === IncidentManagementStatus.INVESTIGATED && !i.archived,
                   ).length,
@@ -777,7 +776,7 @@ const IncidentManagement: React.FC = () => {
                 {
                   key: IncidentManagementStatus.MITIGATED,
                   label: "Mitigated",
-                  color: chartTheme.status.success,
+                  color: chartTheme.incidentStatus.mitigated,
                   count: incidentsData.filter(
                     (i) => i.status === IncidentManagementStatus.MITIGATED && !i.archived,
                   ).length,
@@ -785,7 +784,7 @@ const IncidentManagement: React.FC = () => {
                 {
                   key: IncidentManagementStatus.CLOSED,
                   label: "Closed",
-                  color: chartTheme.status.neutral,
+                  color: chartTheme.incidentStatus.closed,
                   count: incidentsData.filter(
                     (i) => i.status === IncidentManagementStatus.CLOSED && !i.archived,
                   ).length,
@@ -793,7 +792,7 @@ const IncidentManagement: React.FC = () => {
                 {
                   key: IncidentManagementStatus.SUSPENDED,
                   label: "Suspended",
-                  color: chartTheme.status.purple,
+                  color: chartTheme.incidentStatus.suspended,
                   count: incidentsData.filter(
                     (i) => i.status === IncidentManagementStatus.SUSPENDED && !i.archived,
                   ).length,
@@ -801,7 +800,7 @@ const IncidentManagement: React.FC = () => {
                 {
                   key: IncidentManagementStatus.EMERGENCY_ACTION,
                   label: "Emergency action",
-                  color: chartTheme.status.error,
+                  color: chartTheme.incidentStatus.emergency,
                   count: incidentsData.filter(
                     (i) => i.status === IncidentManagementStatus.EMERGENCY_ACTION && !i.archived,
                   ).length,

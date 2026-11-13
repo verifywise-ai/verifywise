@@ -4,6 +4,7 @@ import { FlaskConical, AlertTriangle } from "lucide-react";
 import Chip from "../../components/Chip";
 import CustomizableSkeleton from "../../components/Skeletons";
 import { palette, radiusPx } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 import {
   getAllModelEvaluations,
   type ModelEvaluation,
@@ -12,10 +13,10 @@ import {
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 const statusColorMap: Record<string, string> = {
-  completed: palette.status.success.strong,
-  running: palette.riskMark.medium,
+  completed: chartTheme.evaluationStatus.completed,
+  running: chartTheme.evaluationStatus.running,
   pending: palette.text.disabled,
-  failed: palette.riskMark.critical,
+  failed: chartTheme.evaluationStatus.failed,
 };
 
 function hasFailedMetrics(eval_: ModelEvaluation): boolean {

@@ -61,7 +61,7 @@ export const viewProjectButtonStyle = {
 };
 
 export const euAiActChipStyle = {
-  "backgroundColor": vwPalette.status.info.text,
+  "backgroundColor": chartTheme.frameworkChip,
   "color": `${background.main}`,
   "fontWeight": 600,
   "fontSize": 11,
@@ -73,15 +73,15 @@ export const euAiActChipStyle = {
   "padding": "0 6px 0 10px",
   "boxShadow": "none",
   "&:hover": {
-    backgroundColor: vwPalette.status.info.text,
+    backgroundColor: chartTheme.frameworkChip,
     boxShadow: "none",
   },
   "&:active": {
-    backgroundColor: vwPalette.status.info.text,
+    backgroundColor: chartTheme.frameworkChip,
     boxShadow: "none",
   },
   "&:focus": {
-    backgroundColor: vwPalette.status.info.text,
+    backgroundColor: chartTheme.frameworkChip,
     boxShadow: "none",
   },
   "& .MuiButton-endIcon": {

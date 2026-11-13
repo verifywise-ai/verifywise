@@ -9,6 +9,7 @@ import {
   palette as vwPalette,
   radiusPx,
 } from "../../../themes/palette";
+import { chartTheme } from "../../../themes/chartTheme";
 
 interface FrameworkData {
   frameworkId: number;
@@ -54,7 +55,7 @@ const FrameworkProgressCard = ({ frameworksData }: FrameworkProgressCardProps) =
 
   const getProgressColor = (percentage: number) => {
     if (percentage < 30) return vwPalette.riskMark.critical; // Red
-    if (percentage < 60) return vwPalette.riskMark.high; // Orange
+    if (percentage < 60) return chartTheme.progressOrange; // Orange
     if (percentage < 85) return vwPalette.riskMark.medium; // Yellow
     return `${brand.primary}`; // Green
   };
@@ -63,7 +64,8 @@ const FrameworkProgressCard = ({ frameworksData }: FrameworkProgressCardProps) =
     if (percentage === 0) return <CircleDashed size={14} style={{ color: `${text.disabled}` }} />;
     if (percentage < 30)
       return <CircleDashed size={14} style={{ color: vwPalette.riskMark.critical }} />;
-    if (percentage < 60) return <CircleDot size={14} style={{ color: vwPalette.riskMark.high }} />;
+    if (percentage < 60)
+      return <CircleDot size={14} style={{ color: chartTheme.progressOrange }} />;
     if (percentage < 85)
       return <CircleDotDashed size={14} style={{ color: vwPalette.riskMark.medium }} />;
     if (percentage < 100)

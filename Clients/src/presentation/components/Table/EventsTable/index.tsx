@@ -34,6 +34,7 @@ import {
   palette as vwPalette,
   radiusPx,
 } from "../../../themes/palette";
+import { chartTheme } from "../../../themes/chartTheme";
 import StatusBadge from "../../StatusBadge";
 import { pageOfLabel } from "../pageOfLabel";
 
@@ -62,7 +63,7 @@ const DEFAULT_ROWS_PER_PAGE = 10;
 const EVENT_TYPE_COLORS: Record<Event["event_type"], { bg: string; text: string }> = {
   Create: { bg: status.success.bg, text: status.success.text },
   Read: { bg: vwPalette.status.info.bg, text: vwPalette.status.info.text },
-  Update: { bg: status.warning.bg, text: vwPalette.risk.medium.text },
+  Update: { bg: status.warning.bg, text: chartTheme.pendingLabelText },
   Delete: { bg: status.error.bg, text: status.error.text },
   Error: { bg: risk.high.bg, text: risk.high.text },
 };

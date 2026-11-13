@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import VWIcon from "../VWIcon";
 import { isClassicUi } from "../../themes/uiStyle";
+import { chartTheme } from "../../themes/chartTheme";
 import Avatar from "../Avatar/VWAvatar";
 import { brand, text, background, palette as vwPalette, radiusPx } from "../../themes/palette";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
@@ -116,6 +117,31 @@ const DEFAULT_USER: User = {
   surname: "",
   email: "",
   roleId: 1,
+};
+
+/**
+ * Colours of the demo data button (add or remove), shared by the collapsed
+ * and expanded sidebars. Classic keeps its gradients; phase 1 uses plain fills.
+ */
+const demoButtonColours = (hasDemoData: boolean | undefined) => {
+  const c = hasDemoData ? chartTheme.demoButton.remove : chartTheme.demoButton.add;
+  const fill = (from: string, to: string) =>
+    isClassicUi() ? `linear-gradient(135deg, ${from} 0%, ${to} 100%)` : from;
+  return {
+    "background": fill(c.fill, c.fillEnd),
+    "border": `1px solid ${c.border}`,
+    "&:hover": { background: fill(c.hoverFill, c.hoverFillEnd) },
+    "&:hover svg.demo-icon": {
+      color: `${c.hoverIcon} !important`,
+      stroke: `${c.hoverIcon} !important`,
+    },
+  };
+};
+
+/** The demo button icon: one colour for fill and stroke. */
+const demoIconColours = (hasDemoData: boolean | undefined) => {
+  const { icon } = hasDemoData ? chartTheme.demoButton.remove : chartTheme.demoButton.add;
+  return { color: icon, stroke: icon, transition: "color 0.2s ease, stroke 0.2s ease" };
 };
 
 const SidebarFooter: FC<SidebarFooterProps> = ({
@@ -290,29 +316,11 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                   }
                 }}
                 sx={{
-                  "height": "32px",
-                  "gap": theme.spacing(4),
-                  "borderRadius": theme.shape.borderRadius,
-                  "px": theme.spacing(4),
-                  "background": hasDemoData
-                    ? `linear-gradient(135deg, ${vwPalette.accent.red.bg} 0%, ${vwPalette.status.error.bg} 100%)`
-                    : `linear-gradient(135deg, ${vwPalette.status.success.bg} 0%, ${vwPalette.status.success.bg} 100%)`,
-                  "border": hasDemoData
-                    ? `1px solid ${vwPalette.status.error.border}`
-                    : `1px solid ${vwPalette.status.success.border}`,
-                  "&:hover": {
-                    background: hasDemoData
-                      ? `linear-gradient(135deg, ${vwPalette.status.error.bg} 0%, ${vwPalette.status.error.border} 100%)`
-                      : `linear-gradient(135deg, ${vwPalette.status.success.bg} 0%, ${vwPalette.status.success.border} 100%)`,
-                  },
-                  "&:hover svg.demo-icon": {
-                    color: hasDemoData
-                      ? `${vwPalette.status.error.text} !important`
-                      : `${vwPalette.status.success.text} !important`,
-                    stroke: hasDemoData
-                      ? `${vwPalette.status.error.text} !important`
-                      : `${vwPalette.status.success.text} !important`,
-                  },
+                  height: "32px",
+                  gap: theme.spacing(4),
+                  borderRadius: theme.shape.borderRadius,
+                  px: theme.spacing(4),
+                  ...demoButtonColours(hasDemoData),
                 }}
               >
                 <ListItemIcon
@@ -323,11 +331,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                     "justifyContent": "center",
                     "width": "16px",
                     "mr": 0,
-                    "& svg": {
-                      color: hasDemoData ? vwPalette.text.error : vwPalette.status.success.text,
-                      stroke: hasDemoData ? vwPalette.text.error : vwPalette.status.success.strong,
-                      transition: "color 0.2s ease, stroke 0.2s ease",
-                    },
+                    "& svg": demoIconColours(hasDemoData),
                   }}
                 >
                   {hasDemoData ? (
@@ -402,29 +406,11 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                 }
               }}
               sx={{
-                "height": "32px",
-                "gap": theme.spacing(4),
-                "borderRadius": theme.shape.borderRadius,
-                "px": theme.spacing(4),
-                "background": hasDemoData
-                  ? `linear-gradient(135deg, ${vwPalette.accent.red.bg} 0%, ${vwPalette.status.error.bg} 100%)`
-                  : `linear-gradient(135deg, ${vwPalette.status.success.bg} 0%, ${vwPalette.status.success.bg} 100%)`,
-                "border": hasDemoData
-                  ? `1px solid ${vwPalette.status.error.border}`
-                  : `1px solid ${vwPalette.status.success.border}`,
-                "&:hover": {
-                  background: hasDemoData
-                    ? `linear-gradient(135deg, ${vwPalette.status.error.bg} 0%, ${vwPalette.status.error.border} 100%)`
-                    : `linear-gradient(135deg, ${vwPalette.status.success.bg} 0%, ${vwPalette.status.success.border} 100%)`,
-                },
-                "&:hover svg.demo-icon": {
-                  color: hasDemoData
-                    ? `${vwPalette.status.error.text} !important`
-                    : `${vwPalette.status.success.text} !important`,
-                  stroke: hasDemoData
-                    ? `${vwPalette.status.error.text} !important`
-                    : `${vwPalette.status.success.text} !important`,
-                },
+                height: "32px",
+                gap: theme.spacing(4),
+                borderRadius: theme.shape.borderRadius,
+                px: theme.spacing(4),
+                ...demoButtonColours(hasDemoData),
               }}
             >
               <ListItemIcon
@@ -435,11 +421,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                   "justifyContent": "center",
                   "width": "16px",
                   "mr": 0,
-                  "& svg": {
-                    color: hasDemoData ? vwPalette.text.error : vwPalette.status.success.text,
-                    stroke: hasDemoData ? vwPalette.text.error : vwPalette.status.success.strong,
-                    transition: "color 0.2s ease, stroke 0.2s ease",
-                  },
+                  "& svg": demoIconColours(hasDemoData),
                 }}
               >
                 {hasDemoData ? (

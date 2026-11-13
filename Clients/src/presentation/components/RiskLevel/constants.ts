@@ -1,4 +1,5 @@
 import { palette } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 export const RISK_LABELS = {
   low: {
     text: "Low risk",
@@ -6,23 +7,23 @@ export const RISK_LABELS = {
   },
   medium: {
     text: "Medium risk",
-    color: palette.risk.medium.text,
+    color: chartTheme.riskLabel.medium,
   },
   high: {
     text: "High risk",
-    color: palette.risk.high.text,
+    color: chartTheme.riskLabel.high,
   },
   critical: {
     text: "Very high risk",
-    color: palette.risk.critical.text,
+    color: chartTheme.riskLabel.critical,
   },
   noRisk: {
     text: "Very Low risk",
-    color: palette.risk.veryLow.text,
+    color: chartTheme.riskLabel.veryLow,
   },
   negligible: {
     text: "Negligible",
-    color: palette.risk.veryLow.text,
+    color: chartTheme.riskLabel.veryLow,
   },
   minor: {
     text: "Minor",
@@ -30,19 +31,19 @@ export const RISK_LABELS = {
   },
   moderate: {
     text: "Moderate",
-    color: palette.risk.medium.text,
+    color: chartTheme.riskLabel.medium,
   },
   major: {
     text: "Major",
-    color: palette.risk.high.text,
+    color: chartTheme.riskLabel.high,
   },
   catastrophic: {
     text: "Catastrophic",
-    color: palette.risk.critical.text,
+    color: chartTheme.riskLabel.critical,
   },
   overdue: {
     text: "Overdue",
-    color: palette.risk.critical.text,
+    color: chartTheme.riskLabel.critical,
   },
 };
 
