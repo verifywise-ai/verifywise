@@ -35,6 +35,8 @@ import {
   Moon,
   Sun,
 } from "lucide-react";
+import VWIcon from "../VWIcon";
+import { isClassicUi } from "../../themes/uiStyle";
 import Avatar from "../Avatar/VWAvatar";
 import { brand, text, background } from "../../themes/palette";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
@@ -80,7 +82,11 @@ const MANAGEMENT_ITEMS: IManagementItem[] = [
   },
   {
     name: "Settings",
-    icon: <Settings size={16} strokeWidth={1.5} />,
+    icon: isClassicUi() ? (
+      <Settings size={16} strokeWidth={1.5} />
+    ) : (
+      <VWIcon name="settings" size={16} />
+    ),
     path: "/settings",
   },
 ];
@@ -88,7 +94,11 @@ const MANAGEMENT_ITEMS: IManagementItem[] = [
 const SUPER_ADMIN_MANAGEMENT_ITEMS: IManagementItem[] = [
   {
     name: "Settings",
-    icon: <Settings size={16} strokeWidth={1.5} />,
+    icon: isClassicUi() ? (
+      <Settings size={16} strokeWidth={1.5} />
+    ) : (
+      <VWIcon name="settings" size={16} />
+    ),
     path: "/super-admin/settings",
   },
 ];

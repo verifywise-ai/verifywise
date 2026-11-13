@@ -14,9 +14,18 @@ import { brand, text } from "../../../themes/palette";
 import { setLanguage, getLanguage } from "../../../../i18n/domTranslator";
 import type { Lang } from "../../../../i18n/translations";
 import { textStyles } from "../../../themes/typography";
+import { getUiStyle, setUiStyle, type UiStyle } from "../../../themes/uiStyle";
 
 const PARALLEL_AGENTS_DESCRIPTION =
   "When enabled, the Advisor runs independent sub-tasks in parallel for faster answers; disable if responses seem inconsistent.";
+
+const INTERFACE_STYLE_DESCRIPTION =
+  "The classic look stays available until January 2027. Changing this reloads the page.";
+
+const INTERFACE_STYLE_OPTIONS: { _id: UiStyle; name: string }[] = [
+  { _id: "phase1", name: "New style" },
+  { _id: "classic", name: "Classic" },
+];
 
 const LANGUAGE_OPTIONS: { _id: Lang; name: string }[] = [
   { _id: "en", name: "English" },
@@ -174,6 +183,20 @@ const Preferences: React.FC = () => {
                 onChange={handleLanguageChange}
                 items={LANGUAGE_OPTIONS}
               />
+            </Box>
+            <Box sx={{ mt: theme.spacing(8) }}>
+              {/* Browser-only preference: applies at once and reloads, separate from Save. */}
+              <Select
+                id="interface-style-input"
+                label="Interface style"
+                placeholder="Select a style"
+                value={getUiStyle()}
+                onChange={(event) => setUiStyle(event.target.value as UiStyle)}
+                items={INTERFACE_STYLE_OPTIONS}
+              />
+              <Typography sx={{ ...textStyles.bodySmall, color: text.tertiary, mt: theme.spacing(2) }}>
+                {INTERFACE_STYLE_DESCRIPTION}
+              </Typography>
             </Box>
             <Box sx={{ mt: theme.spacing(8) }}>
               <Typography

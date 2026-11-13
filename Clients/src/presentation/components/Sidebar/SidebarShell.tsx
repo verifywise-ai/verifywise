@@ -25,7 +25,15 @@ import {
   Plus,
   LayoutGrid,
 } from "lucide-react";
-import { brand, background, border as borderPalette } from "../../themes/palette";
+import {
+  brand,
+  background,
+  border as borderPalette,
+  icon as iconPalette,
+  primitives,
+  text as textPalette,
+} from "../../themes/palette";
+import { isClassicUi } from "../../themes/uiStyle";
 import { toggleSidebar } from "../../../application/redux/ui/uiSlice";
 import "../Layout/icon-shake.css";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
@@ -36,6 +44,18 @@ import { FlyingHearts } from "../FlyingHearts";
 declare const __APP_VERSION__: string;
 
 // Types for menu items
+
+const classicUi = isClassicUi();
+// Phase 1 (style guide §10): green.50 hover, green.100 selected, no border,
+// icons in icon.default. Classic keeps the grey gradient.
+const NAV_ACTIVE_BG = classicUi
+  ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
+  : background.selected;
+const NAV_ACTIVE_BORDER = classicUi ? "1px solid #E8E8E8" : "1px solid transparent";
+const NAV_HOVER_BG = classicUi ? "#FAFAFA" : primitives.green[50];
+const NAV_ICON_DEFAULT = classicUi ? textPalette.tertiary : iconPalette.default;
+const NAV_ACTIVE_WEIGHT = classicUi ? 600 : 500;
+
 export interface SidebarMenuItem {
   id: string;
   label: string;
@@ -264,21 +284,14 @@ const SidebarShell: FC<SidebarShellProps> = ({
             "& .MuiListItemText-root": {
               display: collapsed ? "none" : "block",
             },
-            "background":
-              isActive && !isDisabled
-                ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
-                : "transparent",
-            "border": isActive && !isDisabled ? "1px solid #E8E8E8" : "1px solid transparent",
+            "background": isActive && !isDisabled ? NAV_ACTIVE_BG : "transparent",
+            "border": isActive && !isDisabled ? NAV_ACTIVE_BORDER : "1px solid transparent",
             "&:hover": {
-              background: isDisabled
-                ? "transparent"
-                : isActive
-                  ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
-                  : "#FAFAFA",
+              background: isDisabled ? "transparent" : isActive ? NAV_ACTIVE_BG : NAV_HOVER_BG,
               border: isDisabled
                 ? "1px solid transparent"
                 : isActive
-                  ? "1px solid #E8E8E8"
+                  ? NAV_ACTIVE_BORDER
                   : "1px solid transparent",
             },
             "&:hover svg": isDisabled
@@ -310,12 +323,12 @@ const SidebarShell: FC<SidebarShellProps> = ({
                   ? `${theme.palette.text.disabled} !important`
                   : isActive
                     ? `${brand.primary} !important`
-                    : `${theme.palette.text.tertiary} !important`,
+                    : `${NAV_ICON_DEFAULT} !important`,
                 stroke: isDisabled
                   ? `${theme.palette.text.disabled} !important`
                   : isActive
                     ? `${brand.primary} !important`
-                    : `${theme.palette.text.tertiary} !important`,
+                    : `${NAV_ICON_DEFAULT} !important`,
                 transition: "color 0.2s ease, stroke 0.2s ease",
               },
               "& svg path": {
@@ -323,7 +336,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
                   ? `${theme.palette.text.disabled} !important`
                   : isActive
                     ? `${brand.primary} !important`
-                    : `${theme.palette.text.tertiary} !important`,
+                    : `${NAV_ICON_DEFAULT} !important`,
               },
             }}
           >
@@ -334,7 +347,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
               sx={{
                 "& .MuiListItemText-primary": {
                   fontSize: "13px",
-                  fontWeight: isActive ? 600 : 400,
+                  fontWeight: isActive ? NAV_ACTIVE_WEIGHT : 400,
                   color: isDisabled
                     ? theme.palette.text.disabled
                     : isActive
@@ -398,21 +411,14 @@ const SidebarShell: FC<SidebarShellProps> = ({
           "& .MuiListItemText-root": {
             display: collapsed ? "none" : "block",
           },
-          "background":
-            isActive && !isDisabled
-              ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
-              : "transparent",
-          "border": isActive && !isDisabled ? "1px solid #E8E8E8" : "1px solid transparent",
+          "background": isActive && !isDisabled ? NAV_ACTIVE_BG : "transparent",
+          "border": isActive && !isDisabled ? NAV_ACTIVE_BORDER : "1px solid transparent",
           "&:hover": {
-            background: isDisabled
-              ? "transparent"
-              : isActive
-                ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
-                : "#FAFAFA",
+            background: isDisabled ? "transparent" : isActive ? NAV_ACTIVE_BG : NAV_HOVER_BG,
             border: isDisabled
               ? "1px solid transparent"
               : isActive
-                ? "1px solid #E8E8E8"
+                ? NAV_ACTIVE_BORDER
                 : "1px solid transparent",
           },
           "&:hover svg": isDisabled
@@ -445,12 +451,12 @@ const SidebarShell: FC<SidebarShellProps> = ({
                 ? `${theme.palette.text.disabled} !important`
                 : isActive
                   ? `${brand.primary} !important`
-                  : `${theme.palette.text.tertiary} !important`,
+                  : `${NAV_ICON_DEFAULT} !important`,
               stroke: isDisabled
                 ? `${theme.palette.text.disabled} !important`
                 : isActive
                   ? `${brand.primary} !important`
-                  : `${theme.palette.text.tertiary} !important`,
+                  : `${NAV_ICON_DEFAULT} !important`,
               transition: "color 0.2s ease, stroke 0.2s ease",
             },
             "& svg path": {
@@ -458,7 +464,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
                 ? `${theme.palette.text.disabled} !important`
                 : isActive
                   ? `${brand.primary} !important`
-                  : `${theme.palette.text.tertiary} !important`,
+                  : `${NAV_ICON_DEFAULT} !important`,
             },
           }}
         >
@@ -469,7 +475,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
             sx={{
               "& .MuiListItemText-primary": {
                 fontSize: "13px",
-                fontWeight: isActive ? 600 : 400,
+                fontWeight: isActive ? NAV_ACTIVE_WEIGHT : 400,
                 color: isDisabled
                   ? theme.palette.text.disabled
                   : isActive

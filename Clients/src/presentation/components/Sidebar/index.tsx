@@ -25,7 +25,16 @@ import { getAllTasks } from "../../../application/repository/task.repository";
 import { TaskStatus } from "../../../domain/enums/task.enum";
 import SidebarShell, { SidebarMenuItem, SidebarMenuGroup } from "./SidebarShell";
 
+import VWIcon, { type VWIconName } from "../VWIcon";
+import { isClassicUi } from "../../themes/uiStyle";
+
 import "./index.css";
+
+const classicUi = isClassicUi();
+
+/** Phase 1 uses the VerifyWise icon set in the sidebar; classic keeps Lucide. */
+const navIcon = (classicIcon: React.ReactElement, name: VWIconName): React.ReactElement =>
+  classicUi ? classicIcon : <VWIcon name={name} size={16} />;
 
 interface SidebarProps {
   onOpenCreateDemoData?: () => void;
@@ -84,26 +93,26 @@ const Sidebar: React.FC<SidebarProps> = ({
     {
       id: "start-here",
       label: "Start here",
-      icon: <Rocket size={16} strokeWidth={1.5} />,
+      icon: navIcon(<Rocket size={16} strokeWidth={1.5} />, "home"),
       path: "/start-here",
     },
     {
       id: "dashboard",
       label: "Dashboard",
-      icon: <Home size={16} strokeWidth={1.5} />,
+      icon: navIcon(<Home size={16} strokeWidth={1.5} />, "dashboard"),
       path: "/",
     },
     {
       id: "tasks",
       label: "Tasks",
-      icon: <Flag size={16} strokeWidth={1.5} />,
+      icon: navIcon(<Flag size={16} strokeWidth={1.5} />, "tasks"),
       path: "/tasks",
       count: openTasksCount,
     },
     {
       id: "frameworks",
       label: "Frameworks",
-      icon: <Layers size={16} strokeWidth={1.5} />,
+      icon: navIcon(<Layers size={16} strokeWidth={1.5} />, "compliance-frameworks"),
       path: "/framework",
     },
   ];
@@ -116,32 +125,32 @@ const Sidebar: React.FC<SidebarProps> = ({
         {
           id: "use-cases",
           label: "Use cases",
-          icon: <FolderTree size={16} strokeWidth={1.5} />,
+          icon: navIcon(<FolderTree size={16} strokeWidth={1.5} />, "use-cases"),
           path: "/overview",
           highlightPaths: ["/project-view"],
         },
         {
           id: "model-inventory",
           label: "Model inventory",
-          icon: <ListIcon size={16} strokeWidth={1.5} />,
+          icon: navIcon(<ListIcon size={16} strokeWidth={1.5} />, "models"),
           path: "/model-inventory",
         },
         {
           id: "ai-apps",
           label: "AI apps",
-          icon: <Bot size={16} strokeWidth={1.5} />,
+          icon: navIcon(<Bot size={16} strokeWidth={1.5} />, "ai-apps"),
           path: "/ai-apps",
         },
         {
           id: "datasets",
           label: "Datasets",
-          icon: <Database size={16} strokeWidth={1.5} />,
+          icon: navIcon(<Database size={16} strokeWidth={1.5} />, "datasets"),
           path: "/datasets",
         },
         {
           id: "agent-discovery",
           label: "AI agents",
-          icon: <Network size={16} strokeWidth={1.5} />,
+          icon: navIcon(<Network size={16} strokeWidth={1.5} />, "agents"),
           path: "/agent-discovery",
         },
       ],
@@ -152,31 +161,31 @@ const Sidebar: React.FC<SidebarProps> = ({
         {
           id: "risk-management",
           label: "Risk management",
-          icon: <AlertTriangle size={16} strokeWidth={1.5} />,
+          icon: navIcon(<AlertTriangle size={16} strokeWidth={1.5} />, "risk-management"),
           path: "/risk-management",
         },
         {
           id: "training-registry",
           label: "Training registry",
-          icon: <GraduationCap size={16} strokeWidth={1.5} />,
+          icon: navIcon(<GraduationCap size={16} strokeWidth={1.5} />, "training"),
           path: "/training",
         },
         {
           id: "evidence",
           label: "Evidence",
-          icon: <FileText size={16} strokeWidth={1.5} />,
+          icon: navIcon(<FileText size={16} strokeWidth={1.5} />, "evidence-management"),
           path: "/file-manager",
         },
         {
           id: "reporting",
           label: "Reporting",
-          icon: <BarChart3 size={16} strokeWidth={1.5} />,
+          icon: navIcon(<BarChart3 size={16} strokeWidth={1.5} />, "reports"),
           path: "/reporting",
         },
         {
           id: "ai-trust-center",
           label: "AI trust center",
-          icon: <Brain size={16} strokeWidth={1.5} />,
+          icon: navIcon(<Brain size={16} strokeWidth={1.5} />, "public-page"),
           path: "/ai-trust-center",
         },
       ],
@@ -187,19 +196,19 @@ const Sidebar: React.FC<SidebarProps> = ({
         {
           id: "vendors",
           label: "Vendors",
-          icon: <Building size={16} strokeWidth={1.5} />,
+          icon: navIcon(<Building size={16} strokeWidth={1.5} />, "vendor-management"),
           path: "/vendors",
         },
         {
           id: "policy-manager",
           label: "Policy manager",
-          icon: <Shield size={16} strokeWidth={1.5} />,
+          icon: navIcon(<Shield size={16} strokeWidth={1.5} />, "policies"),
           path: "/policies",
         },
         {
           id: "incident-management",
           label: "Incident management",
-          icon: <AlertCircle size={16} strokeWidth={1.5} />,
+          icon: navIcon(<AlertCircle size={16} strokeWidth={1.5} />, "incident-management"),
           path: "/ai-incident-managements",
         },
       ],
