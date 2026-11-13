@@ -1,8 +1,12 @@
 /**
  * @fileoverview AI Governance Risk Score (AGRS) Engine
  *
- * Calculates a 0-100 risk score across 7 governance dimensions,
- * with optional LLM enhancement for contextual analysis.
+ * Calculates a 0-100 governance score (higher = safer) across the governance
+ * dimensions, with optional LLM enhancement for contextual analysis.
+ *
+ * The rule-based score is stored first and is what callers wait for. When LLM
+ * analysis is configured it runs afterwards in the background and replaces
+ * the stored score when it finishes (details.llm_status tracks it).
  *
  * Dimensions: Data sovereignty, Transparency, Security, Autonomy,
  * Supply chain, License, Accuracy
@@ -32,8 +36,10 @@ import {
   FindingForScoring,
 } from "../../utils/aiDetectionRiskScoring.utils";
 import { getLLMKeysWithKeyQuery } from "../../utils/llmKey.utils";
+import { randomUUID } from "crypto";
 import {
   IServiceContext,
+  LlmAnalysisStatus,
   VULNERABILITY_FINDING_TYPES,
 } from "../../domain.layer/interfaces/i.aiDetection";
 
@@ -70,6 +76,10 @@ export interface RiskScoreDetails {
   llm_recommendations: string[] | null;
   llm_adjustments: Record<DimensionKey, number> | null;
   llm_suggested_risks: SuggestedRisk[] | null;
+  /** State of the background LLM analysis (absent on older scores) */
+  llm_status?: LlmAnalysisStatus;
+  /** Ties a background LLM write to the rule-based run that started it */
+  llm_run_id?: string;
 }
 
 export interface RiskScoreResult {
@@ -574,6 +584,7 @@ async function enhanceWithLLM(
     const result = await generateText({
       model: resolved.model,
       prompt,
+      abortSignal: AbortSignal.timeout(LLM_ANALYSIS_TIMEOUT_MS),
     });
 
     return parseLLMScoringResponse(result.text.trim());
@@ -587,103 +598,203 @@ async function enhanceWithLLM(
 // Main Entry Point
 // ============================================================================
 
+/** Upper bound for one LLM scoring call, so a hung provider can't leave it pending */
+export const LLM_ANALYSIS_TIMEOUT_MS = 2 * 60 * 1000;
+
 /**
- * Calculate and store the risk score for a completed scan.
- * Called as fire-and-forget after scan completion.
+ * A "pending" LLM analysis older than this is reported as failed. Covers a
+ * server restart while the background analysis was running.
+ */
+export const LLM_PENDING_STALE_MS = 10 * 60 * 1000;
+
+/**
+ * The LLM status to report for a stored score: a pending analysis that has
+ * been running longer than LLM_PENDING_STALE_MS is reported as failed.
+ */
+export function effectiveLlmStatus(
+  status: LlmAnalysisStatus | undefined,
+  calculatedAt: Date | string | null | undefined,
+  now: number = Date.now(),
+): LlmAnalysisStatus | undefined {
+  if (status !== "pending" || !calculatedAt) return status;
+  const started = new Date(calculatedAt).getTime();
+  if (Number.isNaN(started)) return status;
+  return now - started > LLM_PENDING_STALE_MS ? "failed" : status;
+}
+
+interface RuleBasedScore {
+  result: RiskScoreResult;
+  findings: FindingForScoring[];
+  dimensionScores: Record<DimensionKey, DimensionScore>;
+  weights: Record<DimensionKey, number>;
+  llmKeyId: number | null;
+}
+
+function perfectDimensionScores(): Record<DimensionKey, DimensionScore> {
+  const dimensions = {} as Record<DimensionKey, DimensionScore>;
+  for (const dim of DIMENSION_DEFINITIONS) {
+    dimensions[dim.key] = { score: 100, penalty_count: 0, top_contributors: [] };
+  }
+  return dimensions;
+}
+
+/**
+ * Calculate the rule-based score from the scan's findings and store it.
+ * When LLM analysis is configured and there is something to analyse, the
+ * stored details carry llm_status "pending" and a run id.
+ */
+async function calculateRuleBasedScore(
+  scanId: number,
+  ctx: IServiceContext,
+): Promise<RuleBasedScore> {
+  // Suppressed and accepted findings are excluded from scoring and LLM input
+  const allFindings = await getAllFindingsForScoringQuery(scanId, ctx.organizationId);
+  const findings = allFindings.filter(
+    (f) =>
+      f.suppressed !== true &&
+      f.governance_status !== "suppressed" &&
+      f.governance_status !== "accepted_risk",
+  );
+
+  const config = await getRiskScoringConfigQuery(ctx.organizationId);
+  const weights = config?.dimension_weights ?? DEFAULT_DIMENSION_WEIGHTS;
+  const llmKeyId = config?.llm_enabled && config.llm_key_id ? config.llm_key_id : null;
+
+  // No findings = perfect score, nothing for the LLM to analyse
+  const dimensionScores =
+    findings.length === 0 ? perfectDimensionScores() : calculateDimensionScores(findings);
+  const overallScore = findings.length === 0 ? 100 : computeOverallScore(dimensionScores, weights);
+  const { grade, label } = getGradeForScore(overallScore);
+
+  const runLlm = llmKeyId !== null && findings.length > 0;
+  const details: RiskScoreDetails = {
+    dimensions: dimensionScores,
+    llm_enhanced: false,
+    llm_narrative: null,
+    llm_recommendations: null,
+    llm_adjustments: null,
+    llm_suggested_risks: null,
+    llm_status: runLlm ? "pending" : "off",
+    ...(runLlm ? { llm_run_id: randomUUID() } : {}),
+  };
+
+  await updateScanRiskScoreQuery(scanId, overallScore, grade, details, ctx.organizationId);
+  logger.info(`Rule-based score for scan ${scanId}: ${overallScore} (${grade})`);
+
+  return {
+    result: { score: overallScore, grade, label, details },
+    findings,
+    dimensionScores,
+    weights,
+    llmKeyId: runLlm ? llmKeyId : null,
+  };
+}
+
+/**
+ * Run the LLM analysis for a stored rule-based score and store the enhanced
+ * score. If the analysis fails, the rule-based score stays and llm_status
+ * becomes "failed". The write only applies while the stored score still
+ * belongs to the same run (a recalculation in the meantime wins).
+ */
+async function applyLLMAnalysis(
+  scanId: number,
+  repositoryName: string,
+  ctx: IServiceContext,
+  rule: RuleBasedScore,
+): Promise<RiskScoreResult> {
+  const runId = rule.result.details.llm_run_id;
+  const llmResult = rule.llmKeyId
+    ? await enhanceWithLLM(
+        repositoryName,
+        rule.findings,
+        rule.dimensionScores,
+        rule.llmKeyId,
+        ctx.organizationId,
+      )
+    : null;
+
+  if (!llmResult) {
+    const details: RiskScoreDetails = { ...rule.result.details, llm_status: "failed" };
+    await updateScanRiskScoreQuery(
+      scanId,
+      rule.result.score,
+      rule.result.grade,
+      details,
+      ctx.organizationId,
+      runId,
+    );
+    logger.warn(`LLM analysis did not finish for scan ${scanId}; rule-based score kept`);
+    return { ...rule.result, details };
+  }
+
+  // Positive adjustment = more risk = lower score
+  const dimensionScores = {} as Record<DimensionKey, DimensionScore>;
+  for (const dim of DIMENSION_DEFINITIONS) {
+    const base = rule.dimensionScores[dim.key];
+    const adj = llmResult.adjustments[dim.key] || 0;
+    dimensionScores[dim.key] = {
+      ...base,
+      score: Math.max(0, Math.min(100, base.score - adj)),
+    };
+  }
+
+  const overallScore = computeOverallScore(dimensionScores, rule.weights);
+  const { grade, label } = getGradeForScore(overallScore);
+  const details: RiskScoreDetails = {
+    dimensions: dimensionScores,
+    llm_enhanced: true,
+    llm_narrative: llmResult.narrative,
+    llm_recommendations: llmResult.recommendations,
+    llm_adjustments: llmResult.adjustments,
+    llm_suggested_risks: llmResult.suggested_risks,
+    llm_status: "done",
+    llm_run_id: runId,
+  };
+
+  await updateScanRiskScoreQuery(scanId, overallScore, grade, details, ctx.organizationId, runId);
+  logger.info(`LLM-enhanced score for scan ${scanId}: ${overallScore} (${grade})`);
+
+  return { score: overallScore, grade, label, details };
+}
+
+/**
+ * Calculate and store the governance score for a completed scan.
+ *
+ * Stores the rule-based score and returns it. When LLM analysis is configured
+ * it continues in the background; the scan details page polls for the result.
+ * Never throws: returns null if the rule-based score could not be stored.
  */
 export async function calculateAndStoreRiskScore(
   scanId: number,
   repositoryName: string,
   ctx: IServiceContext,
 ): Promise<RiskScoreResult | null> {
+  let rule: RuleBasedScore;
   try {
-    logger.info(`Calculating risk score for scan ${scanId}, tenant ${ctx.organizationId}`);
-
-    // 1. Get all findings (excluding suppressed ones from scoring + LLM input)
-    const allFindings = await getAllFindingsForScoringQuery(scanId, ctx.organizationId);
-    const findings = allFindings.filter(
-      (f) =>
-        f.suppressed !== true &&
-        f.governance_status !== "suppressed" &&
-        f.governance_status !== "accepted_risk",
-    );
-    if (findings.length === 0) {
-      // No findings = perfect score
-      const details: RiskScoreDetails = {
-        dimensions: {} as Record<DimensionKey, DimensionScore>,
-        llm_enhanced: false,
-        llm_narrative: null,
-        llm_recommendations: null,
-        llm_adjustments: null,
-        llm_suggested_risks: null,
-      };
-      for (const dim of DIMENSION_DEFINITIONS) {
-        details.dimensions[dim.key] = { score: 100, penalty_count: 0, top_contributors: [] };
-      }
-      const { grade, label } = getGradeForScore(100);
-      await updateScanRiskScoreQuery(scanId, 100, grade, details, ctx.organizationId);
-      return { score: 100, grade, label, details };
-    }
-
-    // 2. Get scoring config
-    const config = await getRiskScoringConfigQuery(ctx.organizationId);
-    const weights = config?.dimension_weights ?? DEFAULT_DIMENSION_WEIGHTS;
-
-    // 3. Calculate dimension scores
-    const dimensionScores = calculateDimensionScores(findings);
-
-    // 4. Optional LLM enhancement
-    let llmResult: {
-      adjustments: Record<DimensionKey, number>;
-      narrative: string;
-      recommendations: string[];
-      correlations: string[];
-      suggested_risks: SuggestedRisk[];
-    } | null = null;
-
-    if (config?.llm_enabled && config.llm_key_id) {
-      llmResult = await enhanceWithLLM(
-        repositoryName,
-        findings,
-        dimensionScores,
-        config.llm_key_id,
-        ctx.organizationId,
-      );
-
-      // Apply LLM adjustments (subtract adjustments from scores - positive adjustment = more risk = lower score)
-      if (llmResult) {
-        for (const dim of DIMENSION_DEFINITIONS) {
-          const adj = llmResult.adjustments[dim.key] || 0;
-          dimensionScores[dim.key].score = Math.max(
-            0,
-            Math.min(100, dimensionScores[dim.key].score - adj),
-          );
-        }
-      }
-    }
-
-    // 5. Compute overall score
-    const overallScore = computeOverallScore(dimensionScores, weights);
-    const { grade, label } = getGradeForScore(overallScore);
-
-    // 6. Build details object
-    const details: RiskScoreDetails = {
-      dimensions: dimensionScores,
-      llm_enhanced: !!llmResult,
-      llm_narrative: llmResult?.narrative ?? null,
-      llm_recommendations: llmResult?.recommendations ?? null,
-      llm_adjustments: llmResult?.adjustments ?? null,
-      llm_suggested_risks: llmResult?.suggested_risks ?? null,
-    };
-
-    // 7. Store in database
-    await updateScanRiskScoreQuery(scanId, overallScore, grade, details, ctx.organizationId);
-
-    logger.info(`Risk score calculated for scan ${scanId}: ${overallScore} (${grade})`);
-
-    return { score: overallScore, grade, label, details };
+    logger.info(`Calculating governance score for scan ${scanId}, tenant ${ctx.organizationId}`);
+    rule = await calculateRuleBasedScore(scanId, ctx);
   } catch (error) {
-    logger.error(`Failed to calculate risk score for scan ${scanId}:`, error);
+    logger.error(`Failed to calculate governance score for scan ${scanId}:`, error);
     return null;
   }
+
+  if (rule.result.details.llm_status === "pending") {
+    applyLLMAnalysis(scanId, repositoryName, ctx, rule).catch(async (error) => {
+      logger.error(`Background LLM analysis failed for scan ${scanId}:`, error);
+      try {
+        await updateScanRiskScoreQuery(
+          scanId,
+          rule.result.score,
+          rule.result.grade,
+          { ...rule.result.details, llm_status: "failed" },
+          ctx.organizationId,
+          rule.result.details.llm_run_id,
+        );
+      } catch (writeError) {
+        logger.error(`Could not record failed LLM analysis for scan ${scanId}:`, writeError);
+      }
+    });
+  }
+
+  return rule.result;
 }

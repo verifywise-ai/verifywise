@@ -242,6 +242,10 @@ export async function updateScanProgressQuery(
     setClauses.push("cache_path = :cache_path");
     replacements.cache_path = input.cache_path;
   }
+  if (input.vulnerability_check_status !== undefined) {
+    setClauses.push("vulnerability_check_status = :vulnerability_check_status");
+    replacements.vulnerability_check_status = input.vulnerability_check_status;
+  }
 
   const query = `
     UPDATE ai_detection_scans

@@ -34,6 +34,26 @@ export type ScanMode = "full" | "incremental";
 export type FindingStatus = "active" | "fixed" | "carried_forward";
 
 /**
+ * Whether LLM vulnerability checks ran for a scan.
+ * - ran: checks ran (findings may be zero)
+ * - off: vulnerability detection is off, or no LLM key is set for AI Detection
+ * - failed: checks were on but the LLM analysis could not run
+ * - incremental: incremental scans don't run vulnerability checks
+ * NULL on scans created before this was recorded.
+ */
+export const VULNERABILITY_CHECK_STATUSES = ["ran", "off", "failed", "incremental"] as const;
+export type VulnerabilityCheckStatus = (typeof VULNERABILITY_CHECK_STATUSES)[number];
+
+/**
+ * State of the optional LLM analysis on a governance score.
+ * - pending: rule-based score stored, LLM analysis running in the background
+ * - done: LLM analysis applied
+ * - failed: LLM analysis did not finish; the rule-based score stands
+ * - off: LLM analysis not configured, or nothing to analyse
+ */
+export type LlmAnalysisStatus = "pending" | "done" | "failed" | "off";
+
+/**
  * Represents a scan record in the database
  */
 export interface IScan {
@@ -58,6 +78,7 @@ export interface IScan {
   risk_score_grade?: RiskGrade | null;
   risk_score_details?: IRiskScoreDetails | null;
   risk_score_calculated_at?: Date | null;
+  vulnerability_check_status?: VulnerabilityCheckStatus | null;
   // Incremental scan fields
   scan_mode?: ScanMode;
   base_commit_sha?: string | null;
@@ -109,6 +130,7 @@ export interface IUpdateScanProgressInput {
   duration_ms?: number;
   error_message?: string;
   cache_path?: string;
+  vulnerability_check_status?: VulnerabilityCheckStatus;
 }
 
 // ============================================================================
@@ -356,6 +378,10 @@ export interface IRiskScoreDetails {
   llm_recommendations: string[] | null;
   llm_adjustments: Record<DimensionKey, number> | null;
   llm_suggested_risks: ISuggestedRisk[] | null;
+  /** Absent on scores stored before LLM analysis moved to the background */
+  llm_status?: LlmAnalysisStatus;
+  /** Ties a background LLM write to the rule-based run that started it */
+  llm_run_id?: string;
 }
 
 /**
@@ -388,6 +414,7 @@ export interface IScanResponse {
     risk_score_grade?: RiskGrade | null;
     risk_score_details?: IRiskScoreDetails | null;
     risk_score_calculated_at?: string | null;
+    vulnerability_check_status?: VulnerabilityCheckStatus | null;
     scan_mode?: ScanMode;
     base_commit_sha?: string | null;
     head_commit_sha?: string | null;
@@ -479,6 +506,7 @@ export interface IScanListItem {
   triggered_by: ITriggeredByUser;
   risk_score?: number | null;
   risk_score_grade?: RiskGrade | null;
+  vulnerability_check_status?: VulnerabilityCheckStatus | null;
   scan_mode?: ScanMode;
   baseline_scan_id?: number | null;
   changed_files_count?: number | null;

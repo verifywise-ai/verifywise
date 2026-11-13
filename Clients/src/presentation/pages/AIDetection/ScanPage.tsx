@@ -54,8 +54,12 @@ import {
 } from "../../../domain/ai-detection/types";
 import { useAIDetectionSidebarContext } from "../../../application/contexts/AIDetectionSidebar.context";
 import { palette } from "../../themes/palette";
+import { isScorePartial } from "./components/governanceScore";
 
 type ScanState = "idle" | "scanning" | "completed" | "failed";
+
+const SCORE_WAIT_INTERVAL_MS = 3000;
+const SCORE_WAIT_ATTEMPTS = 10;
 
 export default function ScanPage() {
   const navigate = useNavigate();
@@ -74,6 +78,34 @@ export default function ScanPage() {
   const [headCommitSha, setHeadCommitSha] = useState("");
   const abortControllerRef = useRef<AbortController | null>(null);
   const currentScanIdRef = useRef<number | null>(null);
+  // The score is normally stored before a scan reports completion; this covers
+  // the short gap when it isn't yet (e.g. completion read from another server)
+  const [scoreWaitOverFor, setScoreWaitOverFor] = useState<number | null>(null);
+  const completedScanId = scanState === "completed" ? (result?.scan.id ?? null) : null;
+  const scoreMissing = scanState === "completed" && result?.scan.risk_score == null;
+
+  useEffect(() => {
+    if (completedScanId === null || !scoreMissing) return undefined;
+    let attempts = 0;
+    const timer = setInterval(async () => {
+      attempts += 1;
+      try {
+        const fresh = await getScan(completedScanId);
+        if (fresh.scan.risk_score != null) {
+          setResult(fresh);
+          clearInterval(timer);
+          return;
+        }
+      } catch {
+        // Try again on the next tick
+      }
+      if (attempts >= SCORE_WAIT_ATTEMPTS) {
+        setScoreWaitOverFor(completedScanId);
+        clearInterval(timer);
+      }
+    }, SCORE_WAIT_INTERVAL_MS);
+    return () => clearInterval(timer);
+  }, [completedScanId, scoreMissing]);
 
   // Toast alert state
   const [alert, setAlert] = useState<{ variant: "success" | "error"; body: string } | null>(null);
@@ -294,7 +326,7 @@ export default function ScanPage() {
   return (
     <PageHeaderExtended
       title="Scan repository"
-      description="Enter a public GitHub repository URL to detect AI/ML libraries and frameworks."
+      description="Scan GitHub repositories (public, or private with a token in Settings) for AI libraries, models, agents, secrets and LLM vulnerabilities."
       helpArticlePath="ai-detection/scanning"
       alert={
         alert ? (
@@ -428,7 +460,7 @@ export default function ScanPage() {
                   {
                     repo: "verifywise-ai/llm-security-tester",
                     description:
-                      "Intentionally vulnerable — triggers prompt injection, PII exposure, excessive agency, and jailbreak findings",
+                      "Intentionally vulnerable LLM app for testing vulnerability detection, which runs when AI detection has an LLM key in Settings",
                   },
                 ] as const
               ).map(({ repo, description }) => (
@@ -639,11 +671,41 @@ export default function ScanPage() {
           <Box
             sx={{
               display: "grid",
-              gridTemplateColumns: "repeat(3, 1fr)",
-              gap: 2,
-              mb: 3,
+              gridTemplateColumns: "repeat(4, 1fr)",
+              gap: "16px",
+              mb: "24px",
             }}
           >
+            <Box
+              sx={{
+                p: "16px",
+                backgroundColor: palette.background.accent,
+                borderRadius: "4px",
+                textAlign: "center",
+              }}
+            >
+              <Typography sx={{ fontSize: "20px", fontWeight: 600, color: palette.text.primary }}>
+                {result.scan.risk_score != null && result.scan.risk_score_grade
+                  ? `${Math.round(result.scan.risk_score)} · ${result.scan.risk_score_grade}`
+                  : scoreWaitOverFor === result.scan.id
+                    ? "–"
+                    : "Calculating…"}
+              </Typography>
+              <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
+                Governance score
+              </Typography>
+              {result.scan.risk_score != null &&
+                isScorePartial(result.scan.vulnerability_check_status) && (
+                  <Typography sx={{ fontSize: "13px", color: palette.status.warning.text }}>
+                    Partial
+                  </Typography>
+                )}
+              {result.scan.risk_score_details?.llm_status === "pending" && (
+                <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
+                  AI analysis running
+                </Typography>
+              )}
+            </Box>
             <Box
               sx={{
                 p: 2,

@@ -43,6 +43,7 @@ ai_detection_scans
 ├── risk_score_grade (VARCHAR(2))
 ├── risk_score_details (JSONB)
 ├── risk_score_calculated_at (TIMESTAMPTZ)
+├── vulnerability_check_status (VARCHAR(32), nullable: ran | off | failed | incremental; NULL on older scans)
 ├── started_at (TIMESTAMPTZ)
 ├── completed_at (TIMESTAMPTZ)
 ├── duration_ms (INTEGER)
@@ -104,7 +105,7 @@ Constraints:
 ai_detection_vulnerability_config
 ├── id (PK, SERIAL)
 ├── organization_id (INTEGER NOT NULL, UNIQUE)
-├── vulnerability_scan_enabled (BOOLEAN, default: false)
+├── vulnerability_scan_enabled (BOOLEAN, nullable: NULL = never chosen, effective value = LLM analysis on with a key)
 ├── vulnerability_types_enabled (JSONB)
 ├── updated_by (INTEGER)
 └── updated_at (TIMESTAMPTZ)
@@ -361,7 +362,8 @@ Candidates from phase 1 are sent to an LLM with type-specific rubric prompts:
 ### Vulnerability Settings
 
 Per-organization configuration in `ai_detection_vulnerability_config`:
-- Toggle vulnerability scanning on/off
+- Toggle vulnerability scanning on/off. NULL means the org never chose: the effective value (`resolveVulnerabilityScanEnabled` in `utils/aiDetectionRiskScoring.utils.ts`) is on when the risk scoring config has `llm_enabled` and an `llm_key_id`, off otherwise. The API returns the effective value plus `vulnerability_scan_explicit`. `PATCH` only stores the toggle while LLM analysis is on, so saving other settings never turns the default into a choice.
+- Each full scan records `vulnerability_check_status` on the scan: `ran` (checks ran, findings may be zero), `off` (disabled or no key), `failed` (key missing or every LLM call threw), `incremental` (incremental scans skip the checks). The UI shows a neutral "didn't run" state instead of a clean result, and marks the governance score partial, for anything but `ran`
 - Enable/disable individual vulnerability types via `vulnerability_types_enabled` JSONB field
 - Managed through the settings page and `PATCH /ai-detection/risk-scoring/config`
 
@@ -377,7 +379,11 @@ After scan completes, `crossReferenceFindings()` links vulnerability findings to
 
 ### Overview
 
-Calculates a 0–100 risk score across 5 governance dimensions, with an A–F letter grade. Optionally enhanced by LLM for contextual analysis.
+Calculates a 0–100 score across 5 governance dimensions (higher = safer), with an A–F letter grade. The UI calls it the **governance score**; API and DB names keep `risk_score`. Optionally enhanced by LLM for contextual analysis.
+
+**When it runs:** `scoreCompletedScan()` in `aiDetection.service.ts` stores the rule-based score as the last step of every completed scan (manual, scheduled, webhook; full and incremental), after the findings transaction commits and before the in-memory progress reports `completed` and before the GitHub status report. A scoring failure is logged and never fails the scan (the score stays NULL; "Recalculate score" fills it in). `POST /scans/:id/risk-score/recalculate` uses the same path.
+
+**LLM enhancement is background work:** `calculateAndStoreRiskScore()` stores the rule-based score with `risk_score_details.llm_status = "pending"` and an `llm_run_id`, returns it, then runs the LLM call (2-minute timeout). The result replaces the stored score only while `llm_run_id` still matches (a newer recalculation wins), with `llm_status` `done` or `failed`. `getScan` reports a `pending` older than 10 minutes as `failed` (covers a restart). The scan details page polls every 5 s while `pending`. `llm_status` is `off` when LLM analysis isn't configured or there are no findings; older scores have no `llm_status`.
 
 ### Dimensions
 
@@ -558,10 +564,9 @@ __pycache__, dist, build, target
 8. Cross-referencing
    └── Link vulnerability findings to overlapping non-vulnerability findings
 
-9. Risk Score Calculation
-   ├── Calculate dimension scores from all findings
-   ├── Optional LLM enhancement
-   └── Store score, grade, and details on scan record
+9. Governance Score Calculation (after the findings commit, before completion is reported)
+   ├── Calculate dimension scores from all findings and store score, grade, details
+   └── Optional LLM enhancement continues in the background (llm_status: pending → done | failed)
 
 10. Database Insert
     └── Batch insert findings

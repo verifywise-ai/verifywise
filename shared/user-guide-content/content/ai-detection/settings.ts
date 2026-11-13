@@ -71,7 +71,7 @@ export const aiDetectionSettingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Risk scoring tab controls how the AI Governance Risk Score (AGRS) is calculated for your scans.',
+      text: 'The Risk scoring tab controls how the governance score (AGRS) is calculated for your scans. Links such as **Open vulnerability settings** on a scan open this tab directly.',
     },
     {
       type: 'heading',
@@ -90,7 +90,7 @@ export const aiDetectionSettingsContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'info',
-      text: 'Without LLM enhancement, risk scores use rule-based analysis only. The score is still accurate but won\'t include written summaries, recommendations or suggested risks.',
+      text: 'Without LLM enhancement, governance scores use rule-based analysis only and vulnerability checks don\'t run, so scores are marked partial. They won\'t include written summaries, recommendations or suggested risks.',
     },
     {
       type: 'heading',
@@ -124,7 +124,7 @@ export const aiDetectionSettingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'When LLM-enhanced analysis is on, a **Vulnerability detection** section appears with toggles for each OWASP LLM Top 10 type. Turn individual types on or off based on what matters to your team:',
+      text: '**Vulnerability detection** is on by default once LLM-enhanced analysis has a key. If you turn it off, your choice is kept. It uses extra LLM tokens per scan. Scans without vulnerability checks get a partial governance score. When it\'s on, toggles appear for each OWASP LLM Top 10 type. Turn individual types on or off based on what matters to your team:',
     },
     {
       type: 'bullet-list',
@@ -159,7 +159,7 @@ export const aiDetectionSettingsContent: ArticleContent = {
           collectionId: 'ai-detection',
           articleId: 'risk-scoring',
           title: 'Risk scoring',
-          description: 'Understanding the AI Governance Risk Score and suggested risks',
+          description: 'Understanding the governance score and suggested risks',
         },
         {
           collectionId: 'ai-detection',

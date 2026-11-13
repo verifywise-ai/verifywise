@@ -1363,6 +1363,7 @@
   "View not found": "View not found",
   "visibleEntities must be an array": "visibleEntities must be an array",
   "visibleRelationships must be an array": "visibleRelationships must be an array",
+  "vulnerability_scan_enabled must be a boolean": "vulnerability_scan_enabled must be a boolean",
   "vulnerability_types_enabled.{key} must be a boolean": "vulnerability_types_enabled.{key} must be a boolean",
   "We couldn't find any text in this document. It may be a scanned image. You can fill in the form as usual.": "We couldn't find any text in this document. It may be a scanned image. You can fill in the form as usual.",
   "We couldn't read answers from this document. You can fill in the form as usual.": "We couldn't read answers from this document. You can fill in the form as usual.",

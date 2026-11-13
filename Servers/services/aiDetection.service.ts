@@ -27,6 +27,7 @@ import {
   IFilePath,
   IParsedGitHubUrl,
   ScanStatus,
+  VulnerabilityCheckStatus,
   ScanMode,
   IScanResponse,
   IFindingsResponse,
@@ -92,14 +93,18 @@ import { QueryTypes } from "sequelize";
 import { isModelFileExtension } from "../config/modelSecurityPatterns";
 import { getLicenseForFinding } from "../utils/licenseDetection.utils";
 import { cacheAside, buildOrgCacheKey, deleteByPattern, CACHE_KEYS } from "../utils/cache.utils";
-import { calculateAndStoreRiskScore } from "./aiDetection/riskScoring";
+import { calculateAndStoreRiskScore, effectiveLlmStatus } from "./aiDetection/riskScoring";
 import { reportScanToGitHub } from "./aiDetection/githubStatusReporter";
 import {
   scanFileForVulnerabilityIndicators,
   buildAnalysisContext,
   VulnerabilityCandidate,
 } from "./aiDetection/vulnerabilityPreFilter";
-import { analyzeVulnerabilities } from "./aiDetection/vulnerabilityAnalyzer";
+import {
+  analyzeVulnerabilities,
+  VulnerabilityAnalysisStats,
+  vulnerabilityCheckStatusFromStats,
+} from "./aiDetection/vulnerabilityAnalyzer";
 import { getRiskScoringConfigQuery } from "../utils/aiDetectionRiskScoring.utils";
 
 // ============================================================================
@@ -1334,6 +1339,27 @@ async function getChangedFiles(
 }
 
 /**
+ * Last step of every completed scan (manual, scheduled or webhook): store the
+ * rule-based governance score. Optional LLM analysis continues in the
+ * background. A scoring failure never fails the scan: the scan stays
+ * completed without a score, and "Recalculate score" can fill it in.
+ */
+async function scoreCompletedScan(
+  scanId: number,
+  repositoryName: string,
+  ctx: IServiceContext,
+): Promise<void> {
+  try {
+    const result = await calculateAndStoreRiskScore(scanId, repositoryName, ctx);
+    if (!result) {
+      logger.warn(`Scan ${scanId} completed without a governance score`);
+    }
+  } catch (err) {
+    logger.error(`Governance score failed for scan ${scanId}:`, err);
+  }
+}
+
+/**
  * Execute an incremental scan: scan only changed files and merge with baseline.
  */
 async function executeIncrementalScan(
@@ -1573,12 +1599,23 @@ async function executeIncrementalScan(
         findings_count: totalFindings,
         completed_at: completedAt,
         duration_ms: durationMs,
+        // Incremental scans carry findings forward but don't run vulnerability checks
+        vulnerability_check_status: "incremental",
       },
       ctx.organizationId,
       transaction,
     );
 
     await transaction.commit();
+
+    const committedScan = await getScanByIdQuery(scanId, ctx.organizationId);
+    if (committedScan) {
+      await scoreCompletedScan(
+        scanId,
+        `${committedScan.repository_owner}/${committedScan.repository_name}`,
+        ctx,
+      );
+    }
 
     progressState.status = "completed";
     progressState.progress = 100;
@@ -1592,14 +1629,6 @@ async function executeIncrementalScan(
 
     const scan = await getScanByIdQuery(scanId, ctx.organizationId);
     if (scan) {
-      calculateAndStoreRiskScore(
-        scanId,
-        `${scan.repository_owner}/${scan.repository_name}`,
-        ctx,
-      ).catch((err) => {
-        logger.error(`Failed to calculate risk score for scan ${scanId}:`, err);
-      });
-
       // Report to GitHub for webhook-triggered scans (fire-and-forget)
       reportScanToGitHub(scan, ctx.organizationId).catch((err) => {
         logger.error(`Failed to report scan #${scanId} to GitHub:`, err);
@@ -1809,6 +1838,8 @@ async function executeScan(
     let vulnerabilityCandidates: VulnerabilityCandidate[] = [];
     const vulnerabilityFileContents = new Map<string, string>();
     let vulnerabilityFindings: ICreateFindingInput[] = [];
+    // Recorded on the scan so the UI can tell "checked and clean" from "not checked"
+    let vulnerabilityCheckStatus: VulnerabilityCheckStatus = "off";
 
     try {
       // Check if vulnerability scanning is enabled for this org
@@ -1831,6 +1862,7 @@ async function executeScan(
       };
 
       if (vulnScanEnabled && !signal?.aborted) {
+        vulnerabilityCheckStatus = "ran";
         // Re-scan code files for vulnerability indicators
         for (const file of filesToScan) {
           if (signal?.aborted) break;
@@ -1851,12 +1883,19 @@ async function executeScan(
         // Run LLM analysis on candidates
         if (vulnerabilityCandidates.length > 0 && riskConfig!.llm_key_id) {
           const context = buildAnalysisContext(vulnerabilityCandidates, vulnerabilityFileContents);
+          const analysisStats: VulnerabilityAnalysisStats = {
+            keyMissing: false,
+            attemptedTypes: 0,
+            failedTypes: 0,
+          };
           vulnerabilityFindings = await analyzeVulnerabilities(
             context,
             riskConfig!.llm_key_id,
             ctx.organizationId,
             scanId,
+            analysisStats,
           );
+          vulnerabilityCheckStatus = vulnerabilityCheckStatusFromStats(analysisStats);
         }
       }
     } catch (err) {
@@ -1866,6 +1905,7 @@ async function executeScan(
         err,
       );
       vulnerabilityFindings = [];
+      vulnerabilityCheckStatus = "failed";
     }
 
     // ========================================================================
@@ -2132,12 +2172,15 @@ async function executeScan(
           findings_count: totalFindings,
           completed_at: completedAt,
           duration_ms: durationMs,
+          vulnerability_check_status: vulnerabilityCheckStatus,
         },
         ctx.organizationId,
         transaction,
       );
 
       await transaction.commit();
+
+      await scoreCompletedScan(scanId, `${owner}/${repo}`, ctx);
 
       progressState.status = "completed";
       progressState.progress = 100;
@@ -2156,11 +2199,6 @@ async function executeScan(
       // Invalidate stats cache after successful scan completion
       invalidateAIDetectionStatsCache(ctx.organizationId).catch(() => {
         // Silently ignore cache invalidation errors
-      });
-
-      // Calculate risk score (fire-and-forget)
-      calculateAndStoreRiskScore(scanId, `${owner}/${repo}`, ctx).catch((err) => {
-        logger.error(`Failed to calculate risk score for scan ${scanId}:`, err);
       });
 
       // Report to GitHub for webhook-triggered scans (fire-and-forget)
@@ -2261,6 +2299,19 @@ export async function getScanStatus(
 }
 
 /**
+ * Report a background LLM analysis that has been pending too long (e.g. the
+ * server restarted mid-analysis) as failed, so the page stops waiting.
+ */
+function withEffectiveLlmStatus(
+  details: IRiskScoreDetails | null,
+  calculatedAt: Date | null | undefined,
+): IRiskScoreDetails | null {
+  if (!details) return details;
+  const status = effectiveLlmStatus(details.llm_status, calculatedAt);
+  return status === details.llm_status ? details : { ...details, llm_status: status };
+}
+
+/**
  * Get scan with full details
  *
  * @param scanId - Scan ID
@@ -2291,10 +2342,14 @@ export async function getScan(scanId: number, ctx: IServiceContext): Promise<ISc
       triggered_by: scan.triggered_by_user,
       risk_score: scan.risk_score != null ? parseFloat(String(scan.risk_score)) : null,
       risk_score_grade: (scan.risk_score_grade as RiskGrade | null | undefined) ?? null,
-      risk_score_details: (scan.risk_score_details as IRiskScoreDetails | null | undefined) ?? null,
+      risk_score_details: withEffectiveLlmStatus(
+        (scan.risk_score_details as IRiskScoreDetails | null | undefined) ?? null,
+        scan.risk_score_calculated_at,
+      ),
       risk_score_calculated_at: scan.risk_score_calculated_at
         ? (scan.risk_score_calculated_at as Date).toISOString()
         : null,
+      vulnerability_check_status: scan.vulnerability_check_status ?? null,
       scan_mode: scan.scan_mode,
       base_commit_sha: scan.base_commit_sha ?? null,
       head_commit_sha: scan.head_commit_sha ?? null,
@@ -2408,6 +2463,7 @@ export async function getScans(
       triggered_by: s.triggered_by_user,
       risk_score: s.risk_score != null ? parseFloat(String(s.risk_score)) : null,
       risk_score_grade: (s.risk_score_grade as RiskGrade | null | undefined) ?? null,
+      vulnerability_check_status: s.vulnerability_check_status ?? null,
       scan_mode: s.scan_mode,
       baseline_scan_id: s.baseline_scan_id ?? null,
       changed_files_count: s.changed_files_count ?? null,

@@ -322,6 +322,62 @@ describe("SettingsPage", () => {
     });
   });
 
+  it("opens the risk scoring tab from ?tab=risk-scoring", async () => {
+    renderWithProviders(<SettingsPage />, { route: "/ai-detection/settings?tab=risk-scoring" });
+
+    await waitFor(() => {
+      expect(screen.getByText("Total: 100%")).toBeInTheDocument();
+    });
+  });
+
+  it("turns vulnerability detection on with LLM analysis when the org never chose", async () => {
+    renderWithProviders(<SettingsPage />, { route: "/ai-detection/settings?tab=risk-scoring" });
+
+    await waitFor(() => {
+      expect(screen.getByText("Total: 100%")).toBeInTheDocument();
+    });
+    const [llmToggle, vulnerabilityToggle] = screen.getAllByRole("switch");
+    expect(vulnerabilityToggle).not.toBeChecked();
+
+    fireEvent.click(llmToggle);
+
+    await waitFor(() => {
+      expect(screen.getAllByRole("switch")[1]).toBeChecked();
+    });
+  });
+
+  it("keeps an explicit 'off' choice when LLM analysis is turned on", async () => {
+    mockGetRiskScoringConfig.mockResolvedValue(
+      makeRiskConfig({ vulnerability_scan_enabled: false, vulnerability_scan_explicit: true }),
+    );
+    renderWithProviders(<SettingsPage />, { route: "/ai-detection/settings?tab=risk-scoring" });
+
+    await waitFor(() => {
+      expect(screen.getByText("Total: 100%")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getAllByRole("switch")[0]);
+
+    await waitFor(() => {
+      expect(screen.getAllByRole("switch")[0]).toBeChecked();
+    });
+    expect(screen.getAllByRole("switch")[1]).not.toBeChecked();
+  });
+
+  it("does not send the vulnerability toggle while LLM analysis is off", async () => {
+    mockUpdateRiskScoringConfig.mockResolvedValue(makeRiskConfig());
+    renderWithProviders(<SettingsPage />, { route: "/ai-detection/settings?tab=risk-scoring" });
+
+    await waitFor(() => {
+      expect(screen.getByText("Total: 100%")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(mockUpdateRiskScoringConfig).toHaveBeenCalled();
+    });
+    expect(mockUpdateRiskScoringConfig.mock.calls[0][0].vulnerability_scan_enabled).toBeUndefined();
+  });
+
   it("switches to the suppression rules tab", async () => {
     renderWithProviders(<SettingsPage />);
 

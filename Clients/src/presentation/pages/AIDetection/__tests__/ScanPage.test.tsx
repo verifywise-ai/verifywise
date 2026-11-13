@@ -237,7 +237,13 @@ describe("ScanPage", () => {
       } as ScanStatusResponse);
       return { id: 55, status: "completed", progress: 100, files_scanned: 40, findings_count: 5 };
     });
-    mockGetScan.mockResolvedValue(makeScanResponse());
+    mockGetScan.mockResolvedValue(
+      makeScanResponse({
+        risk_score: 91.4,
+        risk_score_grade: "A",
+        vulnerability_check_status: "off",
+      }),
+    );
 
     renderWithProviders(<ScanPage />);
 
@@ -263,7 +269,39 @@ describe("ScanPage", () => {
       expect(screen.getByText("Scan completed")).toBeInTheDocument();
     });
     expect(screen.getByText("acme/widgets")).toBeInTheDocument();
+    // The governance score is part of the completion card, marked partial
+    expect(screen.getByText("Governance score")).toBeInTheDocument();
+    expect(screen.getByText("91 · A")).toBeInTheDocument();
+    expect(screen.getByText("Partial")).toBeInTheDocument();
     expect(mockRefreshRecentScans).toHaveBeenCalled();
+  });
+
+  it("shows Calculating… on the completion card while the score is not stored yet", async () => {
+    mockStartScan.mockResolvedValue({ id: 55 });
+    mockPollScanStatus.mockResolvedValue({
+      id: 55,
+      status: "completed",
+      progress: 100,
+      files_scanned: 40,
+      findings_count: 5,
+    });
+    mockGetScan.mockResolvedValue(makeScanResponse({ risk_score: null, risk_score_grade: null }));
+
+    renderWithProviders(<ScanPage />);
+
+    await waitFor(() => {
+      expect(screen.getByText("Scan repository")).toBeInTheDocument();
+    });
+    fireEvent.change(
+      screen.getByPlaceholderText("e.g., https://github.com/owner/repo or owner/repo"),
+      { target: { value: "acme/widgets" } },
+    );
+    fireEvent.click(screen.getByText("Scan"));
+
+    await waitFor(() => {
+      expect(screen.getByText("Scan completed")).toBeInTheDocument();
+    });
+    expect(screen.getByText("Calculating…")).toBeInTheDocument();
   });
 
   it("normalizes a full https URL without modification", async () => {

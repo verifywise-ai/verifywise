@@ -1363,6 +1363,7 @@
   "View not found": "Ansicht nicht gefunden",
   "visibleEntities must be an array": "visibleEntities muss ein Array sein",
   "visibleRelationships must be an array": "visibleRelationships muss ein Array sein",
+  "vulnerability_scan_enabled must be a boolean": "vulnerability_scan_enabled muss ein boolescher Wert sein",
   "vulnerability_types_enabled.{key} must be a boolean": "vulnerability_types_enabled.{key} muss ein boolescher Wert sein",
   "We couldn't find any text in this document. It may be a scanned image. You can fill in the form as usual.": "In diesem Dokument wurde kein Text gefunden. Möglicherweise handelt es sich um ein gescanntes Bild. Sie können das Formular wie gewohnt ausfüllen.",
   "We couldn't read answers from this document. You can fill in the form as usual.": "Aus diesem Dokument konnten keine Antworten gelesen werden. Sie können das Formular wie gewohnt ausfüllen.",

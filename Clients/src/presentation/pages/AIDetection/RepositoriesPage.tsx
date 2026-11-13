@@ -429,8 +429,8 @@ export default function RepositoriesPage() {
                       />
                       <EmptyStateTip
                         icon={Shield}
-                        title="Detect shadow AI"
-                        description="Find undocumented AI usage in your codebase. Identify libraries and models that haven't been registered in your AI inventory."
+                        title="Find AI usage across repositories"
+                        description="See which AI libraries, models, API calls and agents each repository uses, with the files they appear in."
                       />
                       <EmptyStateTip
                         icon={RefreshCw}

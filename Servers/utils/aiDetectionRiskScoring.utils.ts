@@ -42,7 +42,10 @@ export interface RiskScoringConfig {
   llm_enabled: boolean;
   llm_key_id: number | null;
   dimension_weights: Record<DimensionKey, number>;
+  /** Effective value: the stored choice, or the default when none was made */
   vulnerability_scan_enabled: boolean;
+  /** True when an admin chose the vulnerability toggle; false when it is the default */
+  vulnerability_scan_explicit: boolean;
   vulnerability_types_enabled: Record<VulnerabilityTypeKey, boolean>;
   updated_by: number | null;
   updated_at: string;
@@ -51,7 +54,8 @@ export interface RiskScoringConfig {
 export interface VulnerabilityConfig {
   id: number;
   organization_id: number;
-  vulnerability_scan_enabled: boolean;
+  /** NULL when the org never chose */
+  vulnerability_scan_enabled: boolean | null;
   vulnerability_types_enabled: Record<VulnerabilityTypeKey, boolean> | null;
   updated_by: number | null;
   updated_at: string;
@@ -86,6 +90,38 @@ function defaultVulnerabilityTypesEnabled(): Record<VulnerabilityTypeKey, boolea
   };
 }
 
+/**
+ * Effective vulnerability detection setting.
+ *
+ * An explicit choice wins. When the org never chose, vulnerability detection
+ * is on when AI Detection has LLM analysis enabled with a key, and off
+ * otherwise (the checks need that key to run).
+ */
+export function resolveVulnerabilityScanEnabled(
+  stored: boolean | null | undefined,
+  llmEnabled: boolean | null | undefined,
+  llmKeyId: number | null | undefined,
+): boolean {
+  if (stored === true || stored === false) return stored;
+  return llmEnabled === true && llmKeyId != null;
+}
+
+function mergeVulnerabilityConfig(
+  config: RiskScoringConfig,
+  vulnConfig: VulnerabilityConfig | null,
+): RiskScoringConfig {
+  const stored = vulnConfig?.vulnerability_scan_enabled ?? null;
+  config.vulnerability_scan_enabled = resolveVulnerabilityScanEnabled(
+    stored,
+    config.llm_enabled,
+    config.llm_key_id,
+  );
+  config.vulnerability_scan_explicit = stored !== null;
+  config.vulnerability_types_enabled =
+    vulnConfig?.vulnerability_types_enabled ?? defaultVulnerabilityTypesEnabled();
+  return config;
+}
+
 // ============================================================================
 // Risk Scoring Config Queries
 // ============================================================================
@@ -114,11 +150,7 @@ export async function getRiskScoringConfigQuery(
 
   // Merge vulnerability config from separate table
   const vulnConfig = await getVulnerabilityConfigQuery(organizationId);
-  config.vulnerability_scan_enabled = vulnConfig?.vulnerability_scan_enabled ?? false;
-  config.vulnerability_types_enabled =
-    vulnConfig?.vulnerability_types_enabled ?? defaultVulnerabilityTypesEnabled();
-
-  return config;
+  return mergeVulnerabilityConfig(config, vulnConfig);
 }
 
 /**
@@ -238,11 +270,7 @@ export async function upsertRiskScoringConfigQuery(
 
   // Merge vulnerability config into the returned object
   const vulnConfig = await getVulnerabilityConfigQuery(organizationId);
-  config.vulnerability_scan_enabled = vulnConfig?.vulnerability_scan_enabled ?? false;
-  config.vulnerability_types_enabled =
-    vulnConfig?.vulnerability_types_enabled ?? defaultVulnerabilityTypesEnabled();
-
-  return config;
+  return mergeVulnerabilityConfig(config, vulnConfig);
 }
 
 /**
@@ -256,7 +284,8 @@ async function upsertVulnerabilityConfigQuery(
     updated_by: number;
   },
 ): Promise<void> {
-  const insertVulnEnabled = data.vulnerability_scan_enabled ?? false;
+  // NULL = not chosen; the effective value then follows the LLM key default
+  const insertVulnEnabled = data.vulnerability_scan_enabled ?? null;
   const insertTypesEnabled = data.vulnerability_types_enabled
     ? JSON.stringify(data.vulnerability_types_enabled)
     : null;
@@ -293,6 +322,11 @@ async function upsertVulnerabilityConfigQuery(
 
 /**
  * Update risk score on a scan record.
+ *
+ * When onlyIfRunId is given, the update only applies while the stored
+ * details still carry that llm_run_id. A background LLM result then can't
+ * overwrite a newer recalculation. risk_score_calculated_at is kept in that
+ * case, so it stays the time the run started.
  */
 export async function updateScanRiskScoreQuery(
   scanId: number,
@@ -300,9 +334,21 @@ export async function updateScanRiskScoreQuery(
   grade: string,
   details: IRiskScoreDetails,
   organizationId: number,
+  onlyIfRunId?: string,
 ): Promise<void> {
   validateOrganizationId(organizationId);
-  const query = `
+  const query = onlyIfRunId
+    ? `
+    UPDATE ai_detection_scans
+    SET
+      risk_score = :score,
+      risk_score_grade = :grade,
+      risk_score_details = :details,
+      updated_at = NOW()
+    WHERE id = :scanId AND organization_id = :organizationId
+      AND risk_score_details->>'llm_run_id' = :runId;
+  `
+    : `
     UPDATE ai_detection_scans
     SET
       risk_score = :score,
@@ -320,6 +366,7 @@ export async function updateScanRiskScoreQuery(
       grade,
       details: JSON.stringify(details),
       organizationId,
+      runId: onlyIfRunId ?? null,
     },
     type: QueryTypes.UPDATE,
   });

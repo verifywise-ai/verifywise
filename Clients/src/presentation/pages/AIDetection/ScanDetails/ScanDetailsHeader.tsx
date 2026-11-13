@@ -1,6 +1,6 @@
 /**
  * @fileoverview Header chrome for the Scan Details page: back button, scan summary,
- * action buttons, failure banner, and risk score card.
+ * action buttons, failure banner, and governance score card.
  *
  * @module pages/AIDetection/ScanDetails/ScanDetailsHeader
  */
@@ -102,10 +102,10 @@ export function ScanDetailsHeader({
         {/* Action Buttons */}
         {scan.scan.status === "completed" && (
           <Box sx={{ display: "flex", gap: "8px" }}>
-            <Tooltip title="Recalculate risk score" arrow placement="top">
+            <Tooltip title="Recalculate the governance score" arrow placement="top">
               <span>
                 <CustomizableButton
-                  text="Recalculate score"
+                  text={isRecalculating ? "Calculating…" : "Recalculate score"}
                   onClick={onRecalculate}
                   variant="outlined"
                   startIcon={<RefreshCw size={16} />}
@@ -162,13 +162,14 @@ export function ScanDetailsHeader({
         </Box>
       )}
 
-      {/* Risk Score Card - only for completed scans */}
+      {/* Governance score card - only for completed scans */}
       {scan.scan.status === "completed" && (
         <RiskScoreCard
           score={scan.scan.risk_score ?? null}
           grade={scan.scan.risk_score_grade ?? null}
           details={scan.scan.risk_score_details ?? null}
           calculatedAt={scan.scan.risk_score_calculated_at ?? null}
+          vulnerabilityCheckStatus={scan.scan.vulnerability_check_status ?? null}
           isRecalculating={isRecalculating}
         />
       )}

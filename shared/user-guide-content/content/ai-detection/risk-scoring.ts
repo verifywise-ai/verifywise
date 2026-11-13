@@ -10,11 +10,11 @@ export const riskScoringContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The AI Governance Risk Score (AGRS) grades scan findings across multiple risk dimensions into a single score (0 to 100) and letter grade (A through F). It gives your team a quick read on the governance risk of a scanned repository.',
+      text: 'The governance score (AGRS) grades scan findings across multiple risk dimensions into a single score (0 to 100) and letter grade (A through F). Higher is better: 100 means no penalties. It gives your team a quick read on the governance risk of a scanned repository.',
     },
     {
       type: 'paragraph',
-      text: 'Scores show up on the scan details page after a scan finishes. You can calculate the score manually, or turn on LLM-enhanced analysis for written summaries, recommendations and suggested risks.',
+      text: 'Every completed scan gets a score automatically, whether you started it, it ran on a schedule, or a webhook triggered it. The score appears on the scan completion card, in Scan results and on the scan details page. Turn on LLM-enhanced analysis for written summaries, recommendations and suggested risks.',
     },
     {
       type: 'heading',
@@ -24,12 +24,12 @@ export const riskScoringContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Once calculated, four cards display across the top of the scan details page:',
+      text: 'Four cards display across the top of the scan details page:',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Overall score', text: 'Score from 0 to 100 with a risk label: Low risk (80+), Moderate risk (60 to 79), or High risk (below 60)' },
+        { bold: 'Governance score', text: 'Score from 0 to 100 with a risk label: Low risk (80+), Moderate risk (60 to 79), or High risk (below 60). A partial score shows why instead (see below).' },
         { bold: 'Grade', text: 'Letter grade from A (Excellent) to F (Critical), with the calculation timestamp' },
         { bold: 'Dimensions at risk', text: 'Count of dimensions scoring below the 70-point threshold' },
         { bold: 'Dimension breakdown', text: 'Horizontal progress bars showing the score for each risk dimension' },
@@ -82,17 +82,40 @@ export const riskScoringContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'partial-score',
+      level: 2,
+      text: 'Partial scores',
+    },
+    {
+      type: 'paragraph',
+      text: 'LLM vulnerability checks feed the score. When they didn\'t run for a scan, the score only reflects the rest of the findings, so it\'s marked partial. The score card says why, for example **Partial: vulnerability checks off**, and links to the setting. The grade stays visible, labelled **Grade (partial)**, and Scan results shows a **Partial** marker next to the score.',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Vulnerability checks off', text: 'Vulnerability detection is turned off, or AI detection has no LLM key. Turn it on in **AI Detection → Settings → Risk scoring**, then scan again.' },
+        { bold: 'Vulnerability checks failed', text: 'The checks were on but the LLM analysis couldn\'t run, for example because the key no longer works.' },
+        { bold: 'Incremental scans skip vulnerability checks', text: 'Incremental scans don\'t run the checks. Run a full scan for a complete score.' },
+      ],
+    },
+    {
+      type: 'callout',
+      variant: 'info',
+      text: 'Scans made before this was recorded have no partial marker, because the app can\'t tell whether their checks ran.',
+    },
+    {
+      type: 'heading',
       id: 'calculating',
       level: 2,
-      text: 'Calculating the score',
+      text: 'Recalculating the score',
     },
     {
       type: 'paragraph',
-      text: 'On the scan details page, click **Calculate risk score** (or **Recalculate score** if one already exists). A progress dialog walks through each step. The score is saved with the scan and shows up on future visits.',
+      text: 'The rule-based score is calculated as the last step of each scan. If it couldn\'t be calculated, the score card says so. On the scan details page, click **Recalculate score** to calculate it again. It takes a moment and the page stays usable while it runs.',
     },
     {
       type: 'paragraph',
-      text: 'You can recalculate whenever you want, for example after enabling LLM analysis or adjusting dimension weights. The old score gets replaced.',
+      text: 'Recalculate whenever you want, for example after enabling LLM analysis, adjusting dimension weights or changing finding statuses. The old score gets replaced. Recalculating doesn\'t rerun vulnerability checks; scan again for that.',
     },
     {
       type: 'heading',
@@ -112,6 +135,10 @@ export const riskScoringContent: ArticleContent = {
         { bold: 'Dimension adjustments', text: 'Score tweaks based on context that rule-based scoring alone would miss' },
         { bold: 'Suggested risks', text: 'Risk suggestions you can add to your risk register' },
       ],
+    },
+    {
+      type: 'paragraph',
+      text: 'LLM analysis runs in the background after the rule-based score is saved, so it never holds up a scan. While it runs, the score card reads **AI analysis is running** and the page refreshes the score when it finishes. If it doesn\'t finish, the card says so and the rule-based score stays.',
     },
     {
       type: 'paragraph',
@@ -210,7 +237,7 @@ export const riskScoringContent: ArticleContent = {
           collectionId: 'ai-detection',
           articleId: 'settings',
           title: 'AI Detection settings',
-          description: 'Configure LLM analysis and dimension weights',
+          description: 'Configure LLM analysis, vulnerability detection and dimension weights',
         },
         {
           collectionId: 'risk-management',

@@ -3,7 +3,8 @@ import { ReactNode } from "react";
 
 export interface TabLabelWithCountOptions {
   label: string;
-  count?: number;
+  /** A number, or a short marker such as "–" when the count is not known */
+  count?: number | string;
   showZero?: boolean;
   isLoading?: boolean;
   chipSx?: SxProps<Theme>;
@@ -64,7 +65,8 @@ export const createTabLabelWithCount = ({
   chipSx,
   icon,
 }: TabLabelWithCountOptions): ReactNode => {
-  const shouldShowChip = !isLoading && count !== undefined && (showZero || count > 0);
+  const shouldShowChip =
+    !isLoading && count !== undefined && (showZero || typeof count === "string" || count > 0);
 
   // Return Box wrapper for consistent alignment across all tabs
   return (
@@ -102,7 +104,7 @@ export const createTabLabelWithCount = ({
             ...chipSx, // Allow custom overrides
           }}
         >
-          {count > MAX_DISPLAY_COUNT ? `${MAX_DISPLAY_COUNT}+` : count}
+          {typeof count === "number" && count > MAX_DISPLAY_COUNT ? `${MAX_DISPLAY_COUNT}+` : count}
         </Box>
       )}
     </Box>

@@ -34,6 +34,12 @@ export interface TriggeredByUser {
   surname?: string;
 }
 
+/**
+ * Whether LLM vulnerability checks ran for a scan. null/undefined on scans
+ * made before this was recorded.
+ */
+export type VulnerabilityCheckStatus = "ran" | "off" | "failed" | "incremental";
+
 export interface Scan {
   id: number;
   repository_url: string;
@@ -53,6 +59,7 @@ export interface Scan {
   risk_score_grade?: RiskGrade | null;
   risk_score_details?: RiskScoreDetails | null;
   risk_score_calculated_at?: string | null;
+  vulnerability_check_status?: VulnerabilityCheckStatus | null;
   // Incremental scan fields
   scan_mode?: ScanMode;
   base_commit_sha?: string | null;

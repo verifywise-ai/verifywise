@@ -10,7 +10,7 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'AI Detection scans GitHub repositories for AI and machine learning usage in your codebase. It finds "shadow AI" (AI usage that hasn\'t been formally documented or approved) and keeps an inventory of detected AI technologies.',
+      text: 'AI Detection scans GitHub repositories (public, or private with a token in Settings) for AI libraries, models, API calls, agents, secrets and LLM vulnerabilities. Each scan lists what it found and the files it found it in, so you can see where AI is used across your repositories.',
     },
     {
       type: 'paragraph',
@@ -181,7 +181,7 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Vulnerabilities tab shows findings from the 2-phase LLM vulnerability pipeline. Phase 1 runs a regex pre-filter against known patterns. Phase 2 sends candidates to an LLM for analysis using type-specific rubric prompts.',
+      text: 'The Vulnerabilities tab shows findings from the 2-phase LLM vulnerability pipeline. Phase 1 runs a regex pre-filter against known patterns. Phase 2 sends candidates to an LLM for analysis using type-specific rubric prompts. A green **No LLM vulnerabilities detected** message only appears when the checks ran and found nothing.',
     },
     {
       type: 'paragraph',
@@ -209,7 +209,7 @@ export const scanningContent: ArticleContent = {
     {
       type: 'callout',
       variant: 'info',
-      text: 'LLM vulnerability detection needs an LLM key configured and vulnerability scanning turned on in **AI Detection → Settings**. Without it, only the regex pre-filter runs and findings may be less accurate.',
+      text: 'Vulnerability checks need LLM-enhanced analysis with a key in **AI Detection → Settings → Risk scoring**. They\'re on by default once that key is set. When they didn\'t run for a scan (detection off, no key, the LLM call failed, or an incremental scan), neither phase runs: the tab says **Vulnerability checks didn\'t run for this scan**, its badge shows a dash instead of 0, and the governance score is marked partial.',
     },
     {
       type: 'heading',
@@ -276,7 +276,7 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Security tab shows findings from model file analysis. Serialized model files (`.pkl`, `.pt`, `.h5`) can contain malicious code that runs when loaded. The scanner looks for system command execution, network access and code injection patterns.',
+      text: 'The Security tab shows findings from model file analysis. Serialized model files (`.pkl`, `.pt`, `.h5`) can contain malicious code that runs when loaded. The scanner looks for system command execution, network access and code injection patterns. If the repository has no model files, the tab says **No model files found in this repository** and its badge shows a dash, because there was nothing to check.',
     },
     {
       type: 'paragraph',
@@ -449,7 +449,7 @@ export const scanningContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Risk scoring', text: 'Calculate an AI Governance Risk Score (AGRS) across 5 risk dimensions. You can also enable LLM-enhanced analysis for written summaries, recommendations and suggested risks to add to your risk register.' },
+        { bold: 'Governance score', text: 'Review the governance score (AGRS) across 5 risk dimensions, calculated automatically when the scan finishes. You can also enable LLM-enhanced analysis for written summaries, recommendations and suggested risks to add to your risk register.' },
         { bold: 'View graph', text: 'Open an interactive dependency graph. Nodes are findings, edges are inferred dependencies based on shared files and providers.' },
         { bold: 'Export AI-BOM', text: 'Download scan results as an AI Bill of Materials (AI-BOM) in JSON. The format is CycloneDX-inspired and includes all detected components, providers, risk levels and file locations.' },
       ],
@@ -505,7 +505,7 @@ export const scanningContent: ArticleContent = {
           collectionId: 'ai-detection',
           articleId: 'risk-scoring',
           title: 'Risk scoring',
-          description: 'Understanding the AI Governance Risk Score and suggested risks',
+          description: 'Understanding the governance score and suggested risks',
         },
         {
           collectionId: 'ai-detection',

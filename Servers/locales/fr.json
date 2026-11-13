@@ -1363,6 +1363,7 @@
   "View not found": "Vue introuvable",
   "visibleEntities must be an array": "visibleEntities doit être un tableau",
   "visibleRelationships must be an array": "visibleRelationships doit être un tableau",
+  "vulnerability_scan_enabled must be a boolean": "vulnerability_scan_enabled doit être un booléen",
   "vulnerability_types_enabled.{key} must be a boolean": "vulnerability_types_enabled.{key} doit être un booléen",
   "We couldn't find any text in this document. It may be a scanned image. You can fill in the form as usual.": "Aucun texte n'a été trouvé dans ce document. Il s'agit peut-être d'une image numérisée. Vous pouvez remplir le formulaire comme d'habitude.",
   "We couldn't read answers from this document. You can fill in the form as usual.": "Aucune réponse n'a pu être lue dans ce document. Vous pouvez remplir le formulaire comme d'habitude.",

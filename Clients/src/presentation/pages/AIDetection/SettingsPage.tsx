@@ -8,6 +8,7 @@
  */
 
 import { useState, useEffect, useCallback, Suspense } from "react";
+import { useSearchParams } from "react-router";
 import {
   Box,
   Typography,
@@ -60,8 +61,17 @@ interface ToastAlert {
   body: string;
 }
 
+const SETTINGS_TABS = ["github", "risk-scoring", "suppressions"] as const;
+
 export default function SettingsPage() {
-  const [activeTab, setActiveTab] = useState("github");
+  // ?tab=risk-scoring opens a tab directly (used by "Open vulnerability settings" links)
+  const [searchParams] = useSearchParams();
+  const requestedTab = searchParams.get("tab");
+  const [activeTab, setActiveTab] = useState<string>(
+    requestedTab && (SETTINGS_TABS as readonly string[]).includes(requestedTab)
+      ? requestedTab
+      : "github",
+  );
   const [tokenStatus, setTokenStatus] = useState<GitHubTokenStatus | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [tokenInput, setTokenInput] = useState("");
@@ -73,7 +83,7 @@ export default function SettingsPage() {
   const [alert, setAlert] = useState<ToastAlert | null>(null);
 
   // Risk scoring state
-  const [_riskConfig, setRiskConfig] = useState<RiskScoringConfig | null>(null);
+  const [riskConfig, setRiskConfig] = useState<RiskScoringConfig | null>(null);
   const [riskConfigLoading, setRiskConfigLoading] = useState(false);
   const [riskConfigSaving, setRiskConfigSaving] = useState(false);
   const [llmEnabled, setLlmEnabled] = useState(false);
@@ -84,6 +94,11 @@ export default function SettingsPage() {
   // Shared, per-organization cache: refreshed wherever a key changes.
   const { keys: llmKeys, loading: llmKeysLoading, isError: llmKeysError } = useLLMKeys();
   const [vulnerabilityScanEnabled, setVulnerabilityScanEnabled] = useState(false);
+  // Set once the admin touches the vulnerability toggle on this page
+  const [vulnerabilityToggleTouched, setVulnerabilityToggleTouched] = useState(false);
+  // Until an admin chooses, vulnerability detection follows the default: on with an LLM key
+  const vulnerabilityIsDefault =
+    !riskConfig?.vulnerability_scan_explicit && !vulnerabilityToggleTouched;
   const [vulnerabilityTypesEnabled, setVulnerabilityTypesEnabled] = useState<
     Record<VulnerabilityTypeKey, boolean>
   >({ ...DEFAULT_VULNERABILITY_TYPES_ENABLED });
@@ -210,6 +225,18 @@ export default function SettingsPage() {
   };
 
   // Risk scoring handlers
+  const handleLlmToggle = (checked: boolean) => {
+    setLlmEnabled(checked);
+    // Mirror the server default: with LLM analysis on, vulnerability detection is on
+    // unless an admin turned it off
+    if (checked && vulnerabilityIsDefault) setVulnerabilityScanEnabled(true);
+  };
+
+  const handleVulnerabilityToggle = (checked: boolean) => {
+    setVulnerabilityToggleTouched(true);
+    setVulnerabilityScanEnabled(checked);
+  };
+
   const handleWeightChange = (key: DimensionKey, newValue: number) => {
     setDimensionWeights((prev) => ({ ...prev, [key]: newValue }));
   };
@@ -236,10 +263,13 @@ export default function SettingsPage() {
         llm_enabled: llmEnabled,
         llm_key_id: llmEnabled ? llmKeyId : null,
         dimension_weights: dimensionWeights,
-        vulnerability_scan_enabled: llmEnabled ? vulnerabilityScanEnabled : false,
+        // Only a choice while LLM analysis is on; otherwise leave the stored value alone
+        vulnerability_scan_enabled: llmEnabled ? vulnerabilityScanEnabled : undefined,
         vulnerability_types_enabled: vulnerabilityTypesEnabled,
       });
       setRiskConfig(updated);
+      setVulnerabilityScanEnabled(updated.vulnerability_scan_enabled ?? false);
+      setVulnerabilityToggleTouched(false);
       setAlert({ variant: "success", body: "Risk scoring settings saved" });
     } catch (err) {
       setAlert({ variant: "error", body: err instanceof Error ? err.message : "Failed to save" });
@@ -299,7 +329,7 @@ export default function SettingsPage() {
               label: "Risk scoring",
               value: "risk-scoring",
               icon: "Shield",
-              tooltip: "Configure AI Governance Risk Score settings",
+              tooltip: "Configure governance score settings",
             },
             {
               label: "Suppression rules",
@@ -457,7 +487,7 @@ export default function SettingsPage() {
                   </Box>
                   <Toggle
                     checked={llmEnabled}
-                    onChange={(e) => setLlmEnabled(e.target.checked)}
+                    onChange={(e) => handleLlmToggle(e.target.checked)}
                     size="small"
                   />
                 </Box>
@@ -513,7 +543,7 @@ export default function SettingsPage() {
                     </Typography>
                     <Toggle
                       checked={vulnerabilityScanEnabled}
-                      onChange={(e) => setVulnerabilityScanEnabled(e.target.checked)}
+                      onChange={(e) => handleVulnerabilityToggle(e.target.checked)}
                       size="small"
                       disabled={!llmEnabled}
                     />
@@ -522,6 +552,10 @@ export default function SettingsPage() {
                     Use LLM analysis to detect security vulnerabilities in scanned code. Uses
                     additional LLM API tokens per scan. Patterns are adapted from Promptfoo redteam
                     graders and mapped to the OWASP LLM Top 10.
+                  </Typography>
+                  <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: "4px" }}>
+                    On by default once LLM-enhanced analysis has a key. Scans without vulnerability
+                    checks get a partial governance score.
                   </Typography>
                 </Box>
 

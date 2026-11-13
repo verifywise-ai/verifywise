@@ -29,6 +29,9 @@ import { useScanFindingsEffects } from "./useScanFindingsEffects";
 
 export type ScanDetailsAlert = { variant: "success" | "error"; body: string };
 
+/** How often to re-read the scan while background AI analysis is running */
+export const LLM_ANALYSIS_POLL_MS = 5000;
+
 export function useScanDetails() {
   const navigate = useNavigate();
   const { scanId: scanIdParam, tab } = useParams<{ scanId: string; tab?: string }>();
@@ -160,15 +163,38 @@ export function useScanDetails() {
     securityState,
   });
 
+  // Background AI analysis: re-read the scan until it finishes. The server
+  // reports a long-pending analysis as failed, so this always stops.
+  const llmPending = scan?.scan.risk_score_details?.llm_status === "pending";
+  useEffect(() => {
+    if (!llmPending) return undefined;
+    let cancelled = false;
+    const timer = setInterval(async () => {
+      try {
+        const fresh = await getScan(scanId);
+        if (!cancelled) setScan(fresh);
+      } catch {
+        // Keep the current score; the next tick tries again
+      }
+    }, LLM_ANALYSIS_POLL_MS);
+    return () => {
+      cancelled = true;
+      clearInterval(timer);
+    };
+  }, [llmPending, scanId]);
+
   const handleRecalculateRiskScore = async () => {
     if (!scan) return;
     setIsRecalculating(true);
     try {
       const result = await recalculateRiskScore(scanId);
       setScan(await getScan(scanId));
-      showAlert("success", `Risk score updated: ${result.score} (${result.grade})`);
+      showAlert(
+        "success",
+        `Governance score updated: ${Math.round(result.score)} (${result.grade})`,
+      );
     } catch {
-      showAlert("error", "Failed to recalculate risk score");
+      showAlert("error", "Failed to calculate the governance score");
     } finally {
       setIsRecalculating(false);
     }

@@ -1007,7 +1007,9 @@ export async function getRiskScoringConfigController(
       llm_enabled: false,
       llm_key_id: null,
       dimension_weights: DEFAULT_DIMENSION_WEIGHTS,
+      // No LLM key yet, so the default is off and nothing was chosen
       vulnerability_scan_enabled: false,
+      vulnerability_scan_explicit: false,
       vulnerability_types_enabled: {
         prompt_injection: true,
         pii_exposure: true,
@@ -1112,16 +1114,25 @@ export async function updateRiskScoringConfigController(
       }
     }
 
-    // Validate vulnerability_scan_enabled requires llm_enabled
-    // Check persisted config when llm_enabled is not in the request body
+    // vulnerability_scan_enabled is only a real choice while LLM analysis is on
+    // (the checks need its key). With LLM analysis off, the value is not stored,
+    // so an org that never chose keeps the default: on once a key is set.
+    // Check persisted config when llm_enabled is not in the request body.
     let effectiveVulnScan: boolean | undefined = undefined;
-    if (vulnerability_scan_enabled !== undefined) {
+    if (vulnerability_scan_enabled !== undefined && vulnerability_scan_enabled !== null) {
+      if (typeof vulnerability_scan_enabled !== "boolean") {
+        return res
+          .status(400)
+          .json(STATUS_CODE[400](req.t!("vulnerability_scan_enabled must be a boolean")));
+      }
       let effectiveLlmEnabled = llm_enabled;
       if (effectiveLlmEnabled === undefined) {
         const existingConfig = await getRiskScoringConfigQuery(req.organizationId!);
         effectiveLlmEnabled = existingConfig?.llm_enabled ?? false;
       }
-      effectiveVulnScan = vulnerability_scan_enabled && effectiveLlmEnabled;
+      if (effectiveLlmEnabled) {
+        effectiveVulnScan = vulnerability_scan_enabled;
+      }
     }
 
     // Validate vulnerability_types_enabled if provided
