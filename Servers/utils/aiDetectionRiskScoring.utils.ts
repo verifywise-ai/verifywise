@@ -207,6 +207,61 @@ export function shouldResetVulnerabilityConsent(
 }
 
 /**
+ * Reset vulnerability consent when an edit to an LLM key changes where code
+ * would be sent. Consent names a key, but the key record itself can be edited
+ * to point at another provider or endpoint while keeping its id; then the
+ * organization using that key goes back to "not chosen" (off) and the Settings
+ * page asks again. Model-only or API-key-only edits keep the same provider and
+ * keep consent. Call it inside the key update's transaction, BEFORE the
+ * update, so the comparison sees the stored provider and URL.
+ *
+ * @param change.name New provider name, or undefined when not changing.
+ * @param change.url New endpoint URL (null clears it), or undefined when not changing.
+ */
+export async function resetVulnerabilityConsentOnProviderChangeQuery(
+  keyId: number,
+  organizationId: number,
+  change: { name?: string; url?: string | null },
+  transaction: Transaction,
+): Promise<void> {
+  const nameSet = change.name !== undefined;
+  const urlSet = change.url !== undefined;
+  if (!nameSet && !urlSet) return;
+
+  await sequelize.query(
+    `
+    UPDATE ai_detection_vulnerability_config v
+    SET vulnerability_scan_enabled = NULL, updated_at = NOW()
+    WHERE v.organization_id = :organizationId
+      AND v.vulnerability_scan_enabled = true
+      AND EXISTS (
+        SELECT 1
+        FROM ai_detection_risk_scoring_config r
+        JOIN llm_keys k ON k.id = r.llm_key_id AND k.organization_id = r.organization_id
+        WHERE r.organization_id = :organizationId
+          AND r.llm_key_id = :keyId
+          AND (
+            (:nameSet AND k.name::text IS DISTINCT FROM CAST(:name AS text))
+            OR (:urlSet AND k.url IS DISTINCT FROM CAST(:url AS text))
+          )
+      );
+    `,
+    {
+      replacements: {
+        organizationId,
+        keyId,
+        nameSet,
+        urlSet,
+        name: change.name ?? null,
+        url: change.url ?? null,
+      },
+      type: QueryTypes.UPDATE,
+      transaction,
+    },
+  );
+}
+
+/**
  * Upsert risk scoring config for an organization.
  * If config exists, update it. Otherwise create it. Runs in one transaction,
  * so a key change and the consent reset it causes land together.

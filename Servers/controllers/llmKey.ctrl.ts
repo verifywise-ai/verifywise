@@ -15,6 +15,7 @@ import {
   updateLLMKeyByIdQuery,
 } from "../utils/llmKey.utils";
 import { ILLMKey, LLMProvider } from "../domain.layer/interfaces/i.llmKey";
+import { resetVulnerabilityConsentOnProviderChangeQuery } from "../utils/aiDetectionRiskScoring.utils";
 
 import { translateError } from "../utils/i18n.utils";
 import { roleHasPermission } from "../utils/rolePermissions.utils";
@@ -325,6 +326,14 @@ export const updateLLMKey = async (req: Request, res: Response) => {
       ...(model && { model }),
       ...(custom_headers !== undefined && { custom_headers: custom_headers || null }),
     };
+    // A different provider or endpoint invalidates AI Detection's consent to
+    // send code through this key; compare against the stored values first.
+    await resetVulnerabilityConsentOnProviderChangeQuery(
+      id,
+      req.organizationId!,
+      { name: data.name, url: data.url },
+      transaction,
+    );
     const llmKey = await updateLLMKeyByIdQuery(id, data, req.organizationId!, transaction);
 
     if (llmKey) {
