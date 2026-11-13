@@ -1,23 +1,29 @@
 /**
- * @fileoverview Risk Score Card Component
+ * @fileoverview Governance score card
  *
- * Displays the AI Governance Risk Score (AGRS) as 4 cards in a row
- * matching the Shadow AI insights StatCard style:
- * 1. Overall score  2. Grade  3. Dimensions at risk  4. Dimension breakdown
+ * Displays the governance score (AGRS, 0-100, higher = safer) as 4 cards in a
+ * row matching the Shadow AI insights StatCard style:
+ * 1. Governance score  2. Grade  3. Dimensions at risk  4. Dimension breakdown
+ *
+ * The score is calculated when a scan completes. A score that leaves out LLM
+ * vulnerability checks is marked partial. Optional LLM analysis runs in the
+ * background; its state is shown under the cards.
  */
 
-import { useState } from "react";
+import { ReactNode, useState } from "react";
+import { Link as RouterLink } from "react-router";
 import {
   Box,
   Card,
   CardContent,
+  CircularProgress,
+  Link,
   Typography,
   LinearProgress,
   Tooltip,
   Collapse,
   useTheme,
 } from "@mui/material";
-import { StepProgressDialog } from "../../../components/StepProgressDialog";
 import {
   ChevronDown,
   ChevronRight,
@@ -38,6 +44,8 @@ import {
   getGradeLabel,
 } from "../../../../domain/ai-detection/riskScoringTypes";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import type { VulnerabilityCheckStatus } from "../../../../domain/ai-detection/types";
+import { isScorePartial, partialScoreLabel, VULNERABILITY_SETTINGS_PATH } from "./governanceScore";
 
 // ============================================================================
 // Types
@@ -48,23 +56,9 @@ interface RiskScoreCardProps {
   grade: RiskGrade | null;
   details: RiskScoreDetails | null;
   calculatedAt: string | null;
+  vulnerabilityCheckStatus?: VulnerabilityCheckStatus | null;
   isRecalculating?: boolean;
 }
-
-// ============================================================================
-// Constants
-// ============================================================================
-
-const RISK_SCORE_STEPS = [
-  { label: "Gathering scan findings", progress: 10 },
-  { label: "Mapping findings to risk dimensions", progress: 25 },
-  { label: "Calculating dimension penalties", progress: 40 },
-  { label: "Weighing risk dimensions", progress: 55 },
-  { label: "Asking AI for a second opinion", progress: 70 },
-  { label: "AI is thinking really hard", progress: 80 },
-  { label: "Cross-referencing correlations", progress: 88 },
-  { label: "Almost there, finalizing score", progress: 95 },
-];
 
 // ============================================================================
 // Helpers
@@ -102,12 +96,14 @@ function RiskStatCard({
   subtitle,
   Icon,
   valueColor,
+  footer,
 }: {
   title: string;
   value: string;
   subtitle?: string;
   Icon: LucideIcon;
   valueColor?: string;
+  footer?: ReactNode;
 }) {
   const theme = useTheme();
   const [isHovered, setIsHovered] = useState(false);
@@ -196,10 +192,55 @@ function RiskStatCard({
               {subtitle}
             </Typography>
           )}
+          {footer}
         </Box>
       </CardContent>
     </Card>
   );
+}
+
+/** Partial-score note with a link to the setting that turns checks on */
+function PartialScoreNote({ status }: { status: VulnerabilityCheckStatus | null | undefined }) {
+  const label = partialScoreLabel(status);
+  if (!label) return null;
+  return (
+    <Box sx={{ mt: "4px" }}>
+      <Typography sx={{ fontSize: "13px", color: palette.status.warning.text, fontWeight: 500 }}>
+        {label}
+      </Typography>
+      {(status === "off" || status === "failed") && (
+        <Link
+          component={RouterLink}
+          to={VULNERABILITY_SETTINGS_PATH}
+          sx={{ fontSize: "13px", color: palette.brand.primary }}
+        >
+          Open vulnerability settings
+        </Link>
+      )}
+    </Box>
+  );
+}
+
+/** State of the background LLM analysis, shown under the cards */
+function LlmStatusNote({ details }: { details: RiskScoreDetails | null }) {
+  if (details?.llm_status === "pending") {
+    return (
+      <Box sx={{ display: "flex", alignItems: "center", gap: "8px", mt: "8px" }}>
+        <CircularProgress size={12} sx={{ color: palette.text.tertiary }} />
+        <Typography sx={{ fontSize: "13px", color: palette.text.tertiary }}>
+          AI analysis is running. The score updates when it finishes.
+        </Typography>
+      </Box>
+    );
+  }
+  if (details?.llm_status === "failed") {
+    return (
+      <Typography sx={{ fontSize: "13px", color: palette.text.tertiary, mt: "8px" }}>
+        AI analysis didn't finish. The score shown is rule-based.
+      </Typography>
+    );
+  }
+  return null;
 }
 
 // ============================================================================
@@ -336,44 +377,47 @@ export function RiskScoreCard({
   grade,
   details,
   calculatedAt,
+  vulnerabilityCheckStatus,
   isRecalculating = false,
 }: RiskScoreCardProps) {
   const theme = useTheme();
   const formatDate = useFormattedDate();
 
-  // Not scored yet
+  // No score: scoring failed at scan completion, or the scan predates automatic scoring
   if (score === null || grade === null) {
     return (
-      <>
-        <Card
-          elevation={0}
-          sx={{
-            ...(cardStyles.base(theme) as Record<string, unknown>),
-            background: `linear-gradient(135deg, ${palette.background.main} 0%, ${palette.background.alt} 100%)`,
-            border: `1px solid ${palette.border.light}`,
-            borderRadius: radiusPx.lg,
-            mb: 2,
-          }}
-        >
-          <CardContent sx={{ "p": "14px 16px", "&:last-child": { pb: "14px" } }}>
-            <Typography sx={{ fontSize: 14, fontWeight: 600, color: palette.text.primary }}>
-              AI governance risk score
+      <Card
+        elevation={0}
+        sx={{
+          ...(cardStyles.base(theme) as Record<string, unknown>),
+          background: `linear-gradient(135deg, ${palette.background.main} 0%, ${palette.background.alt} 100%)`,
+          border: `1px solid ${palette.border.light}`,
+          borderRadius: radiusPx.lg,
+          mb: "16px",
+        }}
+      >
+        <CardContent sx={{ "p": "14px 16px", "&:last-child": { pb: "14px" } }}>
+          <Typography sx={{ fontSize: 14, fontWeight: 600, color: palette.text.primary }}>
+            Governance score
+          </Typography>
+          {isRecalculating ? (
+            <Box sx={{ display: "flex", alignItems: "center", gap: "8px", mt: "12px" }}>
+              <CircularProgress size={12} sx={{ color: palette.text.tertiary }} />
+              <Typography sx={{ fontSize: 13, color: palette.text.accent }}>
+                Calculating governance score…
+              </Typography>
+            </Box>
+          ) : (
+            <Typography sx={{ fontSize: 13, color: palette.text.accent, mt: "12px" }}>
+              This scan has no governance score yet. Select Recalculate score to calculate it.
             </Typography>
-            <Typography sx={{ fontSize: 13, color: palette.text.accent, mt: 1.5 }}>
-              No risk score has been calculated for this scan yet. Click "Calculate" to generate the
-              AI Governance Risk Score.
-            </Typography>
-          </CardContent>
-        </Card>
-
-        <StepProgressDialog
-          open={isRecalculating}
-          title="Recalculating risk score"
-          steps={RISK_SCORE_STEPS}
-        />
-      </>
+          )}
+        </CardContent>
+      </Card>
     );
   }
+
+  const partial = isScorePartial(vulnerabilityCheckStatus);
 
   const gradeColor = getGradeColor(grade);
   const gradeLabel = getGradeLabel(grade);
@@ -385,18 +429,27 @@ export function RiskScoreCard({
     <Box sx={{ mb: 2 }}>
       {/* 4 cards in a row, 16px gap */}
       <Box sx={{ display: "grid", gridTemplateColumns: "1fr 1fr 1fr 1fr", gap: "16px" }}>
-        {/* Card 1 — Overall score */}
+        {/* Card 1 — Governance score */}
         <RiskStatCard
-          title="Overall score"
+          title="Governance score"
           value={`${Math.round(score)} / 100`}
-          subtitle={score >= 80 ? "Low risk" : score >= 60 ? "Moderate risk" : "High risk"}
+          subtitle={
+            partial
+              ? undefined
+              : score >= 80
+                ? "Low risk"
+                : score >= 60
+                  ? "Moderate risk"
+                  : "High risk"
+          }
           Icon={Gauge}
           valueColor={gradeColor}
+          footer={<PartialScoreNote status={vulnerabilityCheckStatus} />}
         />
 
-        {/* Card 2 — Grade */}
+        {/* Card 2 — Grade (kept visible, marked partial when checks didn't run) */}
         <RiskStatCard
-          title="Grade"
+          title={partial ? "Grade (partial)" : "Grade"}
           value={`${grade} — ${gradeLabel}`}
           subtitle={
             calculatedAt ? formatDate(new Date(calculatedAt), { includeTime: true }) : undefined
@@ -558,6 +611,8 @@ export function RiskScoreCard({
         </Card>
       </Box>
 
+      <LlmStatusNote details={details} />
+
       {/* LLM section below the cards — only when LLM analysis is available */}
       {details?.llm_enhanced && (
         <Card
@@ -575,12 +630,6 @@ export function RiskScoreCard({
           </CardContent>
         </Card>
       )}
-
-      <StepProgressDialog
-        open={isRecalculating}
-        title="Recalculating risk score"
-        steps={RISK_SCORE_STEPS}
-      />
     </Box>
   );
 }

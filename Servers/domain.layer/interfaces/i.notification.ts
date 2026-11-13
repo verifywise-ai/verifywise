@@ -68,6 +68,11 @@ export enum NotificationType {
   AI_GATEWAY_VIRTUAL_KEY_BUDGET_EXHAUSTED = "ai_gateway_virtual_key_budget_exhausted",
   AI_GATEWAY_APPROVAL_PENDING = "ai_gateway_approval_pending",
 
+  // AI Detection notifications (services/aiDetection/scanNotifications.ts)
+  AI_DETECTION_SCAN_COMPLETED = "ai_detection_scan_completed",
+  AI_DETECTION_SCAN_FAILED = "ai_detection_scan_failed",
+  AI_DETECTION_SCAN_ATTENTION = "ai_detection_scan_attention",
+
   // System notifications
   SYSTEM = "system",
 
@@ -102,6 +107,7 @@ export enum NotificationEntityType {
   AI_GATEWAY = "ai_gateway",
   AI_ACTION = "ai_action",
   EVIDENCE = "evidence",
+  AI_DETECTION_SCAN = "ai_detection_scan",
 }
 
 /**

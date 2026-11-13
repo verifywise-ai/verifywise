@@ -10,11 +10,11 @@ export const riskScoringContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The AI Governance Risk Score (AGRS) grades scan findings across multiple risk dimensions into a single score (0 to 100) and letter grade (A through F). It gives your team a quick read on the governance risk of a scanned repository.',
+      text: 'The governance score (AGRS) grades scan findings across multiple risk dimensions into a single score (0 to 100) and letter grade (A through F). Higher is better: 100 means no penalties. It gives your team a quick read on the governance risk of a scanned repository.',
     },
     {
       type: 'paragraph',
-      text: 'Scores show up on the scan details page after a scan finishes. You can calculate the score manually, or turn on LLM-enhanced analysis for written summaries, recommendations and suggested risks.',
+      text: 'Every completed scan gets a score automatically, whether you started it, it ran on a schedule, or a webhook triggered it. The score appears on the scan completion card, in Scan results and on the scan details page. Turn on LLM-enhanced analysis for written summaries, recommendations and suggested risks.',
     },
     {
       type: 'heading',
@@ -24,12 +24,12 @@ export const riskScoringContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Once calculated, four cards display across the top of the scan details page:',
+      text: 'Four cards display across the top of the scan details page:',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Overall score', text: 'Score from 0 to 100 with a risk label: Low risk (80+), Moderate risk (60 to 79), or High risk (below 60)' },
+        { bold: 'Governance score', text: 'Score from 0 to 100 with a risk label: Low risk (80+), Moderate risk (60 to 79), or High risk (below 60). A partial score shows why instead (see below).' },
         { bold: 'Grade', text: 'Letter grade from A (Excellent) to F (Critical), with the calculation timestamp' },
         { bold: 'Dimensions at risk', text: 'Count of dimensions scoring below the 70-point threshold' },
         { bold: 'Dimension breakdown', text: 'Horizontal progress bars showing the score for each risk dimension' },
@@ -82,17 +82,40 @@ export const riskScoringContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'partial-score',
+      level: 2,
+      text: 'Partial scores',
+    },
+    {
+      type: 'paragraph',
+      text: 'LLM vulnerability checks feed the score. When they didn\'t run for a scan, the score only reflects the rest of the findings, so it\'s marked partial. The score card says why, for example **Partial: vulnerability checks off**, and links to the setting. The grade stays visible, labelled **Grade (partial)**, and Scan results shows a **Partial** marker next to the score.',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Vulnerability checks off', text: 'Vulnerability detection is off or hasn\'t been turned on yet, AI detection has no LLM key, or every vulnerability type is turned off. Turn it on in **AI Detection → Settings → Risk scoring**, then scan again.' },
+        { bold: 'Vulnerability checks didn\'t finish', text: 'The checks were on but the LLM analysis failed for some or all vulnerability types, for example because the key no longer works. Findings from the types that finished are still listed, but the scan wasn\'t fully checked.' },
+        { bold: 'Changed files not checked for vulnerabilities', text: 'Incremental scans don\'t run the checks. Vulnerability findings for unchanged files carry over from the last full scan; changed files weren\'t checked. Run a full scan for a complete score. When vulnerability detection is off, an incremental scan is marked **vulnerability checks off** instead.' },
+      ],
+    },
+    {
+      type: 'callout',
+      variant: 'info',
+      text: 'Scans made before this was recorded have no partial marker, because the app can\'t tell whether their checks ran.',
+    },
+    {
+      type: 'heading',
       id: 'calculating',
       level: 2,
-      text: 'Calculating the score',
+      text: 'Recalculating the score',
     },
     {
       type: 'paragraph',
-      text: 'On the scan details page, click **Calculate risk score** (or **Recalculate score** if one already exists). A progress dialog walks through each step. The score is saved with the scan and shows up on future visits.',
+      text: 'The rule-based score is calculated as the last step of each scan. If it couldn\'t be calculated, the score card says so. On the scan details page, click **Recalculate score** to calculate it again. It takes a moment and the page stays usable while it runs.',
     },
     {
       type: 'paragraph',
-      text: 'You can recalculate whenever you want, for example after enabling LLM analysis or adjusting dimension weights. The old score gets replaced.',
+      text: 'Recalculate whenever you want, for example after enabling LLM analysis, adjusting dimension weights or changing finding statuses. The old score gets replaced. Recalculating doesn\'t rerun vulnerability checks; scan again for that.',
     },
     {
       type: 'heading',
@@ -112,6 +135,10 @@ export const riskScoringContent: ArticleContent = {
         { bold: 'Dimension adjustments', text: 'Score tweaks based on context that rule-based scoring alone would miss' },
         { bold: 'Suggested risks', text: 'Risk suggestions you can add to your risk register' },
       ],
+    },
+    {
+      type: 'paragraph',
+      text: 'LLM analysis runs in the background after the rule-based score is saved, so it never holds up a scan. While it runs, the score card reads **AI analysis is running** and the page refreshes the score when it finishes, on the scan details page and on the scan page right after a scan. **Recalculate score** is unavailable until it finishes, so each analysis is paid for once. If it doesn\'t finish, the card says so and the rule-based score stays.',
     },
     {
       type: 'paragraph',
@@ -158,17 +185,35 @@ export const riskScoringContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The review notes field gets filled in automatically with a reference to the scan and the findings behind the suggestion.',
+      text: 'The review notes field gets filled in automatically with a reference to the scan (for example "Suggested by AI Detection scan #12 (acme/app).") and the findings behind the suggestion.',
+    },
+    {
+      type: 'paragraph',
+      text: 'When you save, the risk is created and linked to the suggestion in one step, and the link is saved on the scan, so it stays handled after a reload. A suggestion that is already linked to a risk can\'t be added again: if someone else added it in the meantime, you see a message and the suggestion shows as added. If that risk is later deleted, the suggestion is offered again.',
     },
     {
       type: 'heading',
       id: 'dismissing-suggestions',
       level: 3,
-      text: 'Dismissing suggestions',
+      text: 'Ignoring suggestions',
     },
     {
       type: 'paragraph',
-      text: 'Click **Ignore** on a suggestion to dismiss it. Pick a reason ("Not relevant" or "Already mitigated") from the dropdown. Dismissed suggestions are hidden but don\'t affect the score.',
+      text: 'Click **Ignore** on a suggestion and pick a reason: "This has already been added before" or "This is not a real risk". The reason is saved with the suggestion. Ignoring a suggestion doesn\'t change the score. **Ignore**, **Restore** and **Add to risk register** are shown only to users whose role can edit AI Detection; **Add to risk register** also needs permission to edit risks.',
+    },
+    {
+      type: 'heading',
+      id: 'handled-suggestions',
+      level: 3,
+      text: 'Added and ignored suggestions',
+    },
+    {
+      type: 'paragraph',
+      text: 'Handled suggestions are summarised in one line, such as "2 added to the risk register, 1 ignored". Click **Show added** to see the added ones, each marked "Added to risk register" with a **View risk** link that opens the risk. Click **Show ignored** to see the ignored ones with their reason; click **Restore** to bring an ignored suggestion back to the list.',
+    },
+    {
+      type: 'paragraph',
+      text: 'This record belongs to the scan. A new scan of the same repository gets its own suggestions, so check the risk register before adding one that looks familiar.',
     },
     {
       type: 'heading',
@@ -210,7 +255,7 @@ export const riskScoringContent: ArticleContent = {
           collectionId: 'ai-detection',
           articleId: 'settings',
           title: 'AI Detection settings',
-          description: 'Configure LLM analysis and dimension weights',
+          description: 'Configure LLM analysis, vulnerability detection and dimension weights',
         },
         {
           collectionId: 'risk-management',

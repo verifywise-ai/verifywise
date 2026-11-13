@@ -254,23 +254,27 @@ export default function RepositoriesPage() {
     setModalOpen(true);
   };
 
-  const handleModalSubmit = async (data: CreateRepositoryInput | UpdateRepositoryInput) => {
+  // The modal closes itself after a save, or first shows the CI/CD setup step.
+  const handleModalSubmit = async (
+    data: CreateRepositoryInput | UpdateRepositoryInput,
+  ): Promise<AIDetectionRepository | undefined> => {
     setIsSubmitting(true);
     try {
+      let saved: AIDetectionRepository;
       if (editingRepo) {
-        await updateRepository(editingRepo.id, data as UpdateRepositoryInput);
+        saved = await updateRepository(editingRepo.id, data as UpdateRepositoryInput);
         showAlert("success", "Repository updated successfully.");
       } else {
-        await createRepository(data as CreateRepositoryInput);
+        saved = await createRepository(data as CreateRepositoryInput);
         showAlert("success", "Repository added successfully.");
         refreshRepositoryCount();
       }
-      setModalOpen(false);
-      setEditingRepo(null);
       await fetchRepositories();
+      return saved;
     } catch (err: unknown) {
       const message = extractErrorMessage(err, "Operation failed.");
       showAlert("error", message);
+      return undefined;
     } finally {
       setIsSubmitting(false);
     }
@@ -429,8 +433,8 @@ export default function RepositoriesPage() {
                       />
                       <EmptyStateTip
                         icon={Shield}
-                        title="Detect shadow AI"
-                        description="Find undocumented AI usage in your codebase. Identify libraries and models that haven't been registered in your AI inventory."
+                        title="Find AI usage across repositories"
+                        description="See which AI libraries, models, API calls and agents each repository uses, with the files they appear in."
                       />
                       <EmptyStateTip
                         icon={RefreshCw}

@@ -37,7 +37,15 @@ export interface RiskScoreDetails {
   llm_recommendations: string[] | null;
   llm_adjustments: Record<DimensionKey, number> | null;
   llm_suggested_risks: SuggestedRisk[] | null;
+  /** State of the background LLM analysis; absent on older scores */
+  llm_status?: LlmAnalysisStatus;
 }
+
+/**
+ * pending: rule-based score shown, LLM analysis still running
+ * done: LLM analysis applied; failed: it did not finish; off: not configured
+ */
+export type LlmAnalysisStatus = "pending" | "done" | "failed" | "off";
 
 export interface RiskScore {
   score: number | null;
@@ -163,7 +171,10 @@ export interface RiskScoringConfig {
   llm_enabled: boolean;
   llm_key_id: number | null;
   dimension_weights: Record<DimensionKey, number>;
+  /** Effective value: the admin's choice, or the default when none was made */
   vulnerability_scan_enabled: boolean;
+  /** False when no admin has chosen yet (vulnerability checks then stay off) */
+  vulnerability_scan_explicit?: boolean;
   vulnerability_types_enabled: Record<VulnerabilityTypeKey, boolean>;
   updated_by: number | null;
   updated_at: string | null;

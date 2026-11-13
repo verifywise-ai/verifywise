@@ -323,8 +323,8 @@ export const collections: Collection[] = [
       {
         id: 'risk-scoring',
         title: 'Risk scoring',
-        description: 'Understand the AI Governance Risk Score, LLM-enhanced analysis, and suggested risks.',
-        keywords: ['risk', 'score', 'grade', 'agrs', 'dimension', 'llm', 'analysis', 'suggested', 'governance'],
+        description: 'Understand the governance score, partial scores, LLM-enhanced analysis, and suggested risks.',
+        keywords: ['risk', 'score', 'grade', 'agrs', 'dimension', 'llm', 'analysis', 'suggested', 'governance', 'governance score', 'partial', 'recalculate'],
       },
       {
         id: 'repositories',

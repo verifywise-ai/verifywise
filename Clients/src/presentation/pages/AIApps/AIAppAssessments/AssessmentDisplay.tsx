@@ -1,16 +1,9 @@
-import {
-  Box,
-  Stack,
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableRow,
-  Typography,
-} from "@mui/material";
+import { Box, Stack, Table, TableBody, TableCell, TableRow, Typography } from "@mui/material";
+import { AlertCircle } from "lucide-react";
 import Chip from "../../../components/Chip";
+import StandardTableHead from "../../../components/Table/StandardTableHead";
 import VWAvatar from "../../../components/Avatar/VWAvatar";
-import { palette, radiusPx } from "../../../themes/palette";
+import { border, palette, radiusPx } from "../../../themes/palette";
 import { useTranslation } from "../../../../application/hooks/useTranslation";
 import type {
   AiAppAssessmentStatus,
@@ -18,7 +11,9 @@ import type {
   IAiAppQuestion,
   IAiAppQuestionnaire,
 } from "../../../../domain/interfaces/i.aiAppBulk";
+import type { StandardColumn } from "../../../../domain/types/standardTable";
 import { getRiskLevel, RISK_SCORE_OPTIONS } from "../utils";
+import { red } from "@design-tokens/primitives";
 
 const LEVEL_BACKGROUNDS: Record<string, string> = {
   Low: palette.status.success.bg,
@@ -117,51 +112,134 @@ export function AssessmentAnswers({
   );
 }
 
-export function CountSummary({ items }: { items: Array<{ label: string; value: number }> }) {
+/** Every tile is the same width, so the counts line up column to column. */
+const SUMMARY_TILE_WIDTH = "200px";
+
+export function CountSummary({
+  items,
+}: {
+  items: Array<{
+    label: string;
+    value: number;
+    bordered?: boolean;
+    /** Turns the box red, for a count that needs attention. */
+    tone?: "default" | "error";
+  }>;
+}) {
   return (
-    <Stack direction="row" gap="32px" flexWrap="wrap">
-      {items.map((item) => (
-        <Box key={item.label}>
-          <Typography sx={{ fontSize: 13, color: palette.text.secondary }}>{item.label}</Typography>
-          <Typography sx={{ fontSize: 18, fontWeight: 600 }}>{item.value}</Typography>
-        </Box>
-      ))}
+    <Stack direction="row" gap={8} flexWrap="wrap">
+      {items.map((item) => {
+        const isError = item.tone === "error";
+        return (
+          <Box
+            key={item.label}
+            sx={
+              item.bordered
+                ? {
+                    width: SUMMARY_TILE_WIDTH,
+                    flexShrink: 0,
+                    display: "flex",
+                    flexDirection: "column",
+                    justifyContent: "space-between",
+                    py: 4,
+                    px: 6,
+                    border: `1px solid ${isError ? palette.status.error.border : border.light}`,
+                    borderRadius: radiusPx.sm,
+                    backgroundColor: isError ? red[50] : "transparent",
+                  }
+                : undefined
+            }
+          >
+            <Typography
+              sx={{
+                fontSize: 13,
+                color: isError ? palette.status.error.text : palette.text.secondary,
+              }}
+            >
+              {item.label}
+            </Typography>
+            <Typography
+              sx={{
+                fontSize: 18,
+                fontWeight: 600,
+                textAlign: "left",
+                color: isError ? palette.status.error.text : undefined,
+              }}
+            >
+              {item.value}
+            </Typography>
+          </Box>
+        );
+      })}
     </Stack>
   );
 }
 
-const issueCellSx = { fontSize: 13, padding: "6px 12px", verticalAlign: "top" };
+// The header's padding comes from components/Table/index.css (12px 10px), which
+// outranks a cell's own sx, so body cells use the same values to line up with it.
+const issueCellSx = {
+  fontSize: 13,
+  padding: "12px 10px",
+  verticalAlign: "middle",
+};
+
+const NO_SORT = { key: "", direction: null } as const;
+const noop = () => undefined;
 
 export function RowIssuesTable({
   title,
   headers,
   rows,
+  tone = "error",
 }: {
   title: string;
   headers: [string, string, string];
   rows: Array<{ row: number; field: string; message: string }>;
+  tone?: "error" | "neutral";
 }) {
+  const isError = tone === "error";
+  const columns: StandardColumn[] = headers.map((header) => ({
+    id: header,
+    label: header,
+    sortable: false,
+  }));
+
   return (
     <Box>
-      <Typography sx={{ fontSize: 13, fontWeight: 600, mb: "8px" }}>{title}</Typography>
+      <Stack direction="row" alignItems="center" gap={2} sx={{ mb: "8px" }}>
+        <AlertCircle
+          size={14}
+          strokeWidth={2}
+          color={isError ? palette.status.error.text : palette.text.tertiary}
+        />
+        <Typography
+          sx={{
+            fontSize: 13,
+            fontWeight: 600,
+            color: isError ? palette.status.error.text : palette.text.secondary,
+          }}
+        >
+          {title}
+        </Typography>
+      </Stack>
       <Box
         sx={{
-          maxHeight: "220px",
+          maxHeight: "300px",
           overflow: "auto",
-          border: `1px solid ${palette.border.dark}`,
+          border: `1px solid ${isError ? palette.status.error.border : border.light}`,
           borderRadius: radiusPx.sm,
+          ...(isError
+            ? {
+                "& .MuiTableCell-head": { backgroundColor: red[50] },
+                "& .MuiTableCell-head .MuiTypography-root": {
+                  color: palette.status.error.text,
+                },
+              }
+            : {}),
         }}
       >
-        <Table size="small" stickyHeader>
-          <TableHead>
-            <TableRow>
-              {headers.map((header) => (
-                <TableCell key={header} sx={{ ...issueCellSx, fontWeight: 600 }}>
-                  {header}
-                </TableCell>
-              ))}
-            </TableRow>
-          </TableHead>
+        <Table size="small">
+          <StandardTableHead columns={columns} sortConfig={NO_SORT} onSort={noop} />
           <TableBody>
             {rows.map((issue, index) => (
               <TableRow key={`${issue.row}-${issue.field}-${index}`}>

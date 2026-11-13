@@ -27,6 +27,7 @@ import {
   IFilePath,
   IParsedGitHubUrl,
   ScanStatus,
+  VulnerabilityCheckStatus,
   ScanMode,
   IScanResponse,
   IFindingsResponse,
@@ -34,7 +35,8 @@ import {
   IScanStatusResponse,
   IRiskScoreDetails,
   GovernanceStatus,
-  IUpdateGovernanceStatusResponse,
+  IFindingGovernanceUpdate,
+  IFinding,
   RiskGrade,
 } from "../domain.layer/interfaces/i.aiDetection";
 import {
@@ -65,6 +67,12 @@ import {
   getBaselineFindingsQuery,
 } from "../utils/aiDetection.utils";
 import { getActiveSuppressionsQuery } from "../utils/aiDetectionSuppression.utils";
+import {
+  applyGovernanceDecisionsToScanQuery,
+  beginOrganizationTransaction,
+  getScanDecisionScopeQuery,
+  writeGovernanceDecisionQuery,
+} from "../utils/aiDetectionDecisions.utils";
 import { applySuppressions } from "./aiDetection/suppressionMatcher";
 import {
   AI_DETECTION_PATTERNS,
@@ -92,14 +100,16 @@ import { QueryTypes } from "sequelize";
 import { isModelFileExtension } from "../config/modelSecurityPatterns";
 import { getLicenseForFinding } from "../utils/licenseDetection.utils";
 import { cacheAside, buildOrgCacheKey, deleteByPattern, CACHE_KEYS } from "../utils/cache.utils";
-import { calculateAndStoreRiskScore } from "./aiDetection/riskScoring";
+import { calculateAndStoreRiskScore, effectiveLlmStatus } from "./aiDetection/riskScoring";
+import {
+  notifyAiDetectionScanFinished,
+  notifyAiDetectionScanFailed,
+} from "./aiDetection/scanNotifications";
 import { reportScanToGitHub } from "./aiDetection/githubStatusReporter";
 import {
-  scanFileForVulnerabilityIndicators,
-  buildAnalysisContext,
-  VulnerabilityCandidate,
-} from "./aiDetection/vulnerabilityPreFilter";
-import { analyzeVulnerabilities } from "./aiDetection/vulnerabilityAnalyzer";
+  runVulnerabilityChecks,
+  vulnerabilityChecksActive,
+} from "./aiDetection/vulnerabilityAnalyzer";
 import { getRiskScoringConfigQuery } from "../utils/aiDetectionRiskScoring.utils";
 
 // ============================================================================
@@ -137,6 +147,21 @@ interface ScanProgressEntry {
  * Key: scanId, Value: progress state with timestamp
  */
 const scanProgressMap = new Map<number, ScanProgressEntry>();
+
+/**
+ * Report a finished scan to GitHub from its stored row. Only webhook-triggered
+ * scans are reported (reportScanToGitHub checks). Errors are logged, never thrown.
+ */
+async function reportStoredScanToGitHub(scanId: number, organizationId: number): Promise<void> {
+  try {
+    const scan = await getScanByIdQuery(scanId, organizationId);
+    if (scan) {
+      await reportScanToGitHub(scan, organizationId);
+    }
+  } catch (err) {
+    logger.error(`Failed to report scan #${scanId} to GitHub:`, err);
+  }
+}
 
 /**
  * Update the linked repository's last_scan fields after scan completion
@@ -1176,6 +1201,23 @@ export async function startScan(
 }
 
 /**
+ * Carry review decisions made on earlier scans of the repository onto a
+ * scan's findings. Runs after the scan was committed, in its own
+ * transaction: a failure is logged and the scan stays completed, with its
+ * findings unreviewed.
+ */
+export async function applyStoredGovernanceDecisions(
+  scanId: number,
+  organizationId: number,
+): Promise<void> {
+  try {
+    await applyGovernanceDecisionsToScanQuery(scanId, organizationId);
+  } catch (err) {
+    logger.error(`Failed to apply stored review decisions to scan ${scanId}:`, err);
+  }
+}
+
+/**
  * Cross-reference vulnerability findings with non-vulnerability findings
  * that share the same file paths. Updates vulnerability_details JSONB
  * with related_finding_ids and related_finding_types so the UI can
@@ -1334,6 +1376,66 @@ async function getChangedFiles(
 }
 
 /**
+ * Last step of every completed scan (manual, scheduled or webhook): store the
+ * rule-based governance score. Optional LLM analysis continues in the
+ * background. A scoring failure never fails the scan: the scan stays
+ * completed without a score, and "Recalculate score" can fill it in.
+ */
+async function scoreCompletedScan(
+  scanId: number,
+  repositoryName: string,
+  ctx: IServiceContext,
+): Promise<void> {
+  try {
+    const result = await calculateAndStoreRiskScore(scanId, repositoryName, ctx);
+    if (!result) {
+      logger.warn(`Scan ${scanId} completed without a governance score`);
+    }
+  } catch (err) {
+    logger.error(`Governance score failed for scan ${scanId}:`, err);
+  }
+}
+
+/**
+ * Build the input that carries a baseline finding into an incremental scan.
+ * Severity and vulnerability details are kept so the CI critical-findings gate
+ * still sees a carried critical finding, and the baseline suppression is kept
+ * (it is dropped later if its rule is no longer active). Review decisions are
+ * carried separately.
+ */
+function baselineFindingInput(
+  bf: IFinding,
+  scanId: number,
+  filePaths: IFilePath[],
+  findingStatus: "fixed" | "carried_forward",
+): ICreateFindingInput {
+  return {
+    scan_id: scanId,
+    finding_type: bf.finding_type,
+    category: bf.category,
+    name: bf.name,
+    provider: bf.provider,
+    confidence: bf.confidence,
+    risk_level: bf.risk_level,
+    severity: bf.severity ?? null,
+    description: bf.description,
+    documentation_url: bf.documentation_url,
+    file_count: filePaths.length,
+    file_paths: filePaths,
+    license_id: bf.license_id,
+    license_name: bf.license_name,
+    license_risk: bf.license_risk,
+    license_source: bf.license_source,
+    mitigation: bf.mitigation,
+    data_flow_summary: bf.data_flow_summary,
+    vulnerability_details: bf.vulnerability_details,
+    suppressed: bf.suppressed === true,
+    suppression_rule_id: bf.suppression_rule_id ?? null,
+    finding_status: findingStatus,
+  };
+}
+
+/**
  * Execute an incremental scan: scan only changed files and merge with baseline.
  */
 async function executeIncrementalScan(
@@ -1480,66 +1582,17 @@ async function executeIncrementalScan(
 
     if (allInDeleted) {
       // All files deleted → fixed
-      carriedForwardInputs.push({
-        scan_id: scanId,
-        finding_type: bf.finding_type,
-        category: bf.category,
-        name: bf.name,
-        provider: bf.provider,
-        confidence: bf.confidence,
-        risk_level: bf.risk_level,
-        description: bf.description,
-        documentation_url: bf.documentation_url,
-        file_count: bf.file_count,
-        file_paths: filePaths,
-        license_id: bf.license_id,
-        license_name: bf.license_name,
-        license_risk: bf.license_risk,
-        license_source: bf.license_source,
-        finding_status: "fixed",
-      });
+      carriedForwardInputs.push(baselineFindingInput(bf, scanId, filePaths, "fixed"));
     } else if (allOutsideChanged) {
       // All files unchanged → carried forward
-      carriedForwardInputs.push({
-        scan_id: scanId,
-        finding_type: bf.finding_type,
-        category: bf.category,
-        name: bf.name,
-        provider: bf.provider,
-        confidence: bf.confidence,
-        risk_level: bf.risk_level,
-        description: bf.description,
-        documentation_url: bf.documentation_url,
-        file_count: bf.file_count,
-        file_paths: filePaths,
-        license_id: bf.license_id,
-        license_name: bf.license_name,
-        license_risk: bf.license_risk,
-        license_source: bf.license_source,
-        finding_status: "carried_forward",
-      });
+      carriedForwardInputs.push(baselineFindingInput(bf, scanId, filePaths, "carried_forward"));
     } else {
       // Mixed: carry forward only unchanged file paths
       const unchangedPaths = filePaths.filter((fp) => !changedPathsSet.has(fp.path));
       if (unchangedPaths.length > 0) {
-        carriedForwardInputs.push({
-          scan_id: scanId,
-          finding_type: bf.finding_type,
-          category: bf.category,
-          name: bf.name,
-          provider: bf.provider,
-          confidence: bf.confidence,
-          risk_level: bf.risk_level,
-          description: bf.description,
-          documentation_url: bf.documentation_url,
-          file_count: unchangedPaths.length,
-          file_paths: unchangedPaths,
-          license_id: bf.license_id,
-          license_name: bf.license_name,
-          license_risk: bf.license_risk,
-          license_source: bf.license_source,
-          finding_status: "carried_forward",
-        });
+        carriedForwardInputs.push(
+          baselineFindingInput(bf, scanId, unchangedPaths, "carried_forward"),
+        );
       }
       // Changed paths will be re-detected (or not) by the new scan → ON CONFLICT merges
     }
@@ -1547,19 +1600,39 @@ async function executeIncrementalScan(
 
   progressState.progress = 85;
 
+  // Incremental scans don't run vulnerability checks on changed files; findings
+  // from the last full scan are carried forward for unchanged files. That only
+  // makes the score partial when the org runs checks at all.
+  let vulnerabilityCheckStatus: VulnerabilityCheckStatus = "incremental";
+  try {
+    const riskConfig = await getRiskScoringConfigQuery(ctx.organizationId);
+    if (!vulnerabilityChecksActive(riskConfig)) vulnerabilityCheckStatus = "off";
+  } catch (err) {
+    logger.warn(`Could not read vulnerability settings for incremental scan ${scanId}:`, err);
+  }
+
   // Store all findings in a single transaction
   const transaction = await sequelize.transaction();
+  let committed = false;
   try {
     const allFindings = [...newFindingInputs, ...carriedForwardInputs];
 
+    // Count what is stored: the batch insert merges case-variant duplicates
+    let totalFindings = 0;
     if (allFindings.length > 0) {
       const suppressionRules = await getActiveSuppressionsQuery(ctx.organizationId);
+      // Carried findings are re-matched against the current rules rather than
+      // keeping their baseline flag, so an edited or deleted rule stops
+      // applying on the next scan.
+      for (const finding of allFindings) {
+        finding.suppressed = false;
+        finding.suppression_rule_id = null;
+      }
       applySuppressions(allFindings, suppressionRules);
-      await createFindingsBatchQuery(allFindings, ctx.organizationId, transaction);
+      totalFindings = await createFindingsBatchQuery(allFindings, ctx.organizationId, transaction);
     }
 
     // Complete scan
-    const totalFindings = allFindings.length;
     const completedAt = new Date();
     const durationMs = progressState.startedAt
       ? completedAt.getTime() - progressState.startedAt.getTime()
@@ -1573,12 +1646,21 @@ async function executeIncrementalScan(
         findings_count: totalFindings,
         completed_at: completedAt,
         duration_ms: durationMs,
+        vulnerability_check_status: vulnerabilityCheckStatus,
       },
       ctx.organizationId,
       transaction,
     );
 
     await transaction.commit();
+    committed = true;
+
+    const scan = await getScanByIdQuery(scanId, ctx.organizationId);
+    if (scan) {
+      await scoreCompletedScan(scanId, `${scan.repository_owner}/${scan.repository_name}`, ctx);
+    }
+
+    await applyStoredGovernanceDecisions(scanId, ctx.organizationId);
 
     progressState.status = "completed";
     progressState.progress = 100;
@@ -1590,23 +1672,18 @@ async function executeIncrementalScan(
 
     invalidateAIDetectionStatsCache(ctx.organizationId).catch(() => {});
 
-    const scan = await getScanByIdQuery(scanId, ctx.organizationId);
     if (scan) {
-      calculateAndStoreRiskScore(
-        scanId,
-        `${scan.repository_owner}/${scan.repository_name}`,
-        ctx,
-      ).catch((err) => {
-        logger.error(`Failed to calculate risk score for scan ${scanId}:`, err);
-      });
-
-      // Report to GitHub for webhook-triggered scans (fire-and-forget)
-      reportScanToGitHub(scan, ctx.organizationId).catch((err) => {
-        logger.error(`Failed to report scan #${scanId} to GitHub:`, err);
-      });
+      // Report to GitHub from the stored row, which now has the score
+      void reportStoredScanToGitHub(scanId, ctx.organizationId);
     }
+
+    // Last step: once announced (notified_at claimed), a later failure here
+    // would mark the scan failed but could no longer announce it.
+    void notifyAiDetectionScanFinished(scanId, ctx.organizationId);
   } catch (error) {
-    await transaction.rollback();
+    // A committed transaction cannot be rolled back; rolling it back would
+    // throw and hide the original error.
+    if (!committed) await transaction.rollback();
     throw error;
   }
 }
@@ -1806,59 +1883,22 @@ async function executeScan(
     // ========================================================================
     // LLM Vulnerability Pre-Filter (Phase 2)
     // ========================================================================
-    let vulnerabilityCandidates: VulnerabilityCandidate[] = [];
-    const vulnerabilityFileContents = new Map<string, string>();
     let vulnerabilityFindings: ICreateFindingInput[] = [];
+    // Recorded on the scan so the UI can tell "checked and clean" from "not checked"
+    let vulnerabilityCheckStatus: VulnerabilityCheckStatus = "off";
 
     try {
-      // Check if vulnerability scanning is enabled for this org
-      const riskConfig = await getRiskScoringConfigQuery(ctx.organizationId);
-      const vulnScanEnabled =
-        riskConfig?.vulnerability_scan_enabled && riskConfig?.llm_enabled && riskConfig?.llm_key_id;
-
-      // Determine which vulnerability types are enabled
-      const enabledTypes = riskConfig?.vulnerability_types_enabled ?? {
-        prompt_injection: true,
-        pii_exposure: true,
-        excessive_agency: true,
-        jailbreak_risk: true,
-        training_data_poisoning: true,
-        model_dos: true,
-        supply_chain: true,
-        insecure_plugin: true,
-        overreliance: true,
-        model_theft: true,
-      };
-
-      if (vulnScanEnabled && !signal?.aborted) {
-        // Re-scan code files for vulnerability indicators
-        for (const file of filesToScan) {
-          if (signal?.aborted) break;
-          try {
-            const content = await readFileContent(file.fullPath);
-            const candidates = scanFileForVulnerabilityIndicators(content, file.path).filter(
-              (c) => enabledTypes[c.vulnerabilityType as keyof typeof enabledTypes] !== false,
-            );
-            if (candidates.length > 0) {
-              vulnerabilityCandidates.push(...candidates);
-              vulnerabilityFileContents.set(file.path, content);
-            }
-          } catch {
-            // Skip unreadable files
-          }
-        }
-
-        // Run LLM analysis on candidates
-        if (vulnerabilityCandidates.length > 0 && riskConfig!.llm_key_id) {
-          const context = buildAnalysisContext(vulnerabilityCandidates, vulnerabilityFileContents);
-          vulnerabilityFindings = await analyzeVulnerabilities(
-            context,
-            riskConfig!.llm_key_id,
-            ctx.organizationId,
-            scanId,
-          );
-        }
-      }
+      // Status comes from what actually ran: off, failed (cancelled, key or LLM errors) or ran
+      const outcome = await runVulnerabilityChecks({
+        config: await getRiskScoringConfigQuery(ctx.organizationId),
+        files: filesToScan,
+        readFile: readFileContent,
+        organizationId: ctx.organizationId,
+        scanId,
+        signal,
+      });
+      vulnerabilityFindings = outcome.findings;
+      vulnerabilityCheckStatus = outcome.status;
     } catch (err) {
       // Graceful degradation: vulnerability scan failure does not fail the overall scan
       logger.warn(
@@ -1866,6 +1906,7 @@ async function executeScan(
         err,
       );
       vulnerabilityFindings = [];
+      vulnerabilityCheckStatus = "failed";
     }
 
     // ========================================================================
@@ -1985,6 +2026,7 @@ async function executeScan(
 
     // Store findings in database
     const transaction = await sequelize.transaction();
+    let committed = false;
     try {
       // Deduplicate findings by name+provider+findingType+modelName to avoid ON CONFLICT errors
       // Each finding type is kept separate (library, api_call, secret, model_ref, rag_component, agent)
@@ -2039,6 +2081,8 @@ async function executeScan(
       }
 
       const findingInputs = Array.from(deduplicatedFindingsMap.values());
+      // Rows actually stored; the batch insert merges case-variant duplicates
+      let storedFindingsCount = 0;
 
       // Fetch active suppression rules once for both insert paths below
       const suppressionRules =
@@ -2078,48 +2122,34 @@ async function executeScan(
         console.log(`[LICENSE] Total licenses found: ${licensesFound}/${findingInputs.length}`);
 
         applySuppressions(findingInputs, suppressionRules);
-        await createFindingsBatchQuery(findingInputs, ctx.organizationId, transaction);
-      }
-
-      // Store vulnerability findings
-      if (vulnerabilityFindings.length > 0) {
-        applySuppressions(vulnerabilityFindings, suppressionRules);
-        await createFindingsBatchQuery(vulnerabilityFindings, ctx.organizationId, transaction);
-      }
-
-      // Store model security findings (deduplicate by name+provider to avoid ON CONFLICT errors)
-      if (modelSecurityFindings.length > 0) {
-        // Deduplicate security findings by aggregating file paths
-        const securityFindingsMap = new Map<string, ICreateModelSecurityFindingInput>();
-        for (const finding of modelSecurityFindings) {
-          const normalizedProvider = finding.provider || "NULL";
-          const key = `${finding.name}::${normalizedProvider}`;
-          const existing = securityFindingsMap.get(key);
-          if (existing) {
-            // Merge file paths
-            const existingPaths = existing.file_paths || [];
-            const newPaths = finding.file_paths || [];
-            existing.file_paths = [...existingPaths, ...newPaths];
-            existing.file_count = existing.file_paths.length;
-          } else {
-            securityFindingsMap.set(key, { ...finding });
-          }
-        }
-        const deduplicatedSecurityFindings = Array.from(securityFindingsMap.values());
-        await createModelSecurityFindingsBatchQuery(
-          deduplicatedSecurityFindings,
+        storedFindingsCount += await createFindingsBatchQuery(
+          findingInputs,
           ctx.organizationId,
           transaction,
         );
       }
 
-      // Mark scan as completed (include both library and security findings)
-      const deduplicatedSecurityCount =
-        modelSecurityFindings.length > 0
-          ? new Set(modelSecurityFindings.map((f) => `${f.name}::${f.provider}`)).size
-          : 0;
-      const totalFindings =
-        findingsMap.size + deduplicatedSecurityCount + vulnerabilityFindings.length;
+      // Store vulnerability findings
+      if (vulnerabilityFindings.length > 0) {
+        applySuppressions(vulnerabilityFindings, suppressionRules);
+        storedFindingsCount += await createFindingsBatchQuery(
+          vulnerabilityFindings,
+          ctx.organizationId,
+          transaction,
+        );
+      }
+
+      // Store model security findings (the batch insert merges duplicates)
+      if (modelSecurityFindings.length > 0) {
+        storedFindingsCount += await createModelSecurityFindingsBatchQuery(
+          modelSecurityFindings,
+          ctx.organizationId,
+          transaction,
+        );
+      }
+
+      // Mark scan as completed (library, vulnerability and model security findings)
+      const totalFindings = storedFindingsCount;
       const completedAt = new Date();
       const durationMs = progressState.startedAt
         ? completedAt.getTime() - progressState.startedAt.getTime()
@@ -2132,12 +2162,18 @@ async function executeScan(
           findings_count: totalFindings,
           completed_at: completedAt,
           duration_ms: durationMs,
+          vulnerability_check_status: vulnerabilityCheckStatus,
         },
         ctx.organizationId,
         transaction,
       );
 
       await transaction.commit();
+      committed = true;
+
+      await scoreCompletedScan(scanId, `${owner}/${repo}`, ctx);
+
+      await applyStoredGovernanceDecisions(scanId, ctx.organizationId);
 
       progressState.status = "completed";
       progressState.progress = 100;
@@ -2158,20 +2194,17 @@ async function executeScan(
         // Silently ignore cache invalidation errors
       });
 
-      // Calculate risk score (fire-and-forget)
-      calculateAndStoreRiskScore(scanId, `${owner}/${repo}`, ctx).catch((err) => {
-        logger.error(`Failed to calculate risk score for scan ${scanId}:`, err);
-      });
+      // Report to GitHub from the stored row, which now has the score
+      // (fire-and-forget, never throws)
+      void reportStoredScanToGitHub(scanId, ctx.organizationId);
 
-      // Report to GitHub for webhook-triggered scans (fire-and-forget)
-      const completedScan = await getScanByIdQuery(scanId, ctx.organizationId);
-      if (completedScan) {
-        reportScanToGitHub(completedScan, ctx.organizationId).catch((err) => {
-          logger.error(`Failed to report scan #${scanId} to GitHub:`, err);
-        });
-      }
+      // Last step: once announced (notified_at claimed), a later failure here
+      // would mark the scan failed but could no longer announce it.
+      void notifyAiDetectionScanFinished(scanId, ctx.organizationId);
     } catch (error) {
-      await transaction.rollback();
+      // A committed transaction cannot be rolled back; rolling it back would
+      // throw and hide the original error.
+      if (!committed) await transaction.rollback();
       throw error;
     }
   } catch (error) {
@@ -2204,6 +2237,12 @@ async function executeScan(
     updateLinkedRepositoryLastScan(scanId, status, ctx.organizationId).catch((err) => {
       logger.error(`Failed to update repository last scan for scan ${scanId}:`, err);
     });
+    void notifyAiDetectionScanFailed(scanId, ctx.organizationId);
+
+    // Resolve the commit status of a webhook scan as "error", so a required
+    // check does not stay pending. Cancelled scans are reported too: nothing
+    // else would ever resolve their check (fire-and-forget, never throws).
+    void reportStoredScanToGitHub(scanId, ctx.organizationId);
   } finally {
     // Clean up cloned repository
     if (clonedRepoPath) {
@@ -2261,6 +2300,19 @@ export async function getScanStatus(
 }
 
 /**
+ * Report a background LLM analysis that has been pending too long (e.g. the
+ * server restarted mid-analysis) as failed, so the page stops waiting.
+ */
+function withEffectiveLlmStatus(
+  details: IRiskScoreDetails | null,
+  calculatedAt: Date | null | undefined,
+): IRiskScoreDetails | null {
+  if (!details) return details;
+  const status = effectiveLlmStatus(details.llm_status, calculatedAt);
+  return status === details.llm_status ? details : { ...details, llm_status: status };
+}
+
+/**
  * Get scan with full details
  *
  * @param scanId - Scan ID
@@ -2291,10 +2343,14 @@ export async function getScan(scanId: number, ctx: IServiceContext): Promise<ISc
       triggered_by: scan.triggered_by_user,
       risk_score: scan.risk_score != null ? parseFloat(String(scan.risk_score)) : null,
       risk_score_grade: (scan.risk_score_grade as RiskGrade | null | undefined) ?? null,
-      risk_score_details: (scan.risk_score_details as IRiskScoreDetails | null | undefined) ?? null,
+      risk_score_details: withEffectiveLlmStatus(
+        (scan.risk_score_details as IRiskScoreDetails | null | undefined) ?? null,
+        scan.risk_score_calculated_at,
+      ),
       risk_score_calculated_at: scan.risk_score_calculated_at
         ? (scan.risk_score_calculated_at as Date).toISOString()
         : null,
+      vulnerability_check_status: scan.vulnerability_check_status ?? null,
       scan_mode: scan.scan_mode,
       base_commit_sha: scan.base_commit_sha ?? null,
       head_commit_sha: scan.head_commit_sha ?? null,
@@ -2324,6 +2380,7 @@ export async function getScanFindings(
   limit: number = 50,
   confidence?: string,
   findingType?: string,
+  options: { includeDecisionDetails?: boolean } = {},
 ): Promise<IFindingsResponse> {
   // Verify scan exists
   const scan = await getScanByIdQuery(scanId, ctx.organizationId);
@@ -2356,6 +2413,9 @@ export async function getScanFindings(
       governance_status: f.governance_status,
       governance_updated_at: f.governance_updated_at?.toISOString(),
       governance_updated_by: f.governance_updated_by,
+      ...(options.includeDecisionDetails
+        ? { governance_updated_by_name: f.governance_updated_by_name ?? null }
+        : {}),
       // License information
       license_id: f.license_id,
       license_name: f.license_name,
@@ -2373,6 +2433,12 @@ export async function getScanFindings(
       limit,
       total_pages: Math.ceil(total / limit),
     },
+    ...(options.includeDecisionDetails
+      ? {
+          is_latest_scan:
+            (await getScanDecisionScopeQuery(scanId, ctx.organizationId))?.is_latest_scan ?? false,
+        }
+      : {}),
   };
 }
 
@@ -2408,6 +2474,7 @@ export async function getScans(
       triggered_by: s.triggered_by_user,
       risk_score: s.risk_score != null ? parseFloat(String(s.risk_score)) : null,
       risk_score_grade: (s.risk_score_grade as RiskGrade | null | undefined) ?? null,
+      vulnerability_check_status: s.vulnerability_check_status ?? null,
       scan_mode: s.scan_mode,
       baseline_scan_id: s.baseline_scan_id ?? null,
       changed_files_count: s.changed_files_count ?? null,
@@ -2758,18 +2825,24 @@ export async function getSecuritySummary(
 /**
  * Update governance status for a finding
  *
+ * The finding's own status always changes. When the scan is the repository's
+ * latest completed scan, the status is also stored for the repository (or
+ * removed, when cleared) so later scans inherit it; on an older scan only
+ * that scan's finding changes. The finding update and the stored decision
+ * are written in one transaction with the RLS organization bound first.
+ *
  * @param scanId - Scan ID
  * @param findingId - Finding ID
  * @param governanceStatus - New status or null to clear
  * @param ctx - Service context
- * @returns Updated finding with governance info
+ * @returns Updated finding with governance info and where the change applies
  */
 export async function updateFindingGovernanceStatus(
   scanId: number,
   findingId: number,
   governanceStatus: GovernanceStatus | null,
   ctx: IServiceContext,
-): Promise<IUpdateGovernanceStatusResponse> {
+): Promise<IFindingGovernanceUpdate> {
   // Verify scan exists and belongs to tenant
   const scan = await getScanByIdQuery(scanId, ctx.organizationId);
   if (!scan) {
@@ -2786,25 +2859,52 @@ export async function updateFindingGovernanceStatus(
     );
   }
 
-  // Update the finding
-  const updatedFinding = await updateFindingGovernanceStatusQuery(
-    findingId,
-    scanId,
-    governanceStatus,
-    ctx.userId,
-    ctx.organizationId,
-  );
+  const transaction = await beginOrganizationTransaction(ctx.organizationId);
+  let result: IFindingGovernanceUpdate;
+  try {
+    const updatedFinding = await updateFindingGovernanceStatusQuery(
+      findingId,
+      scanId,
+      governanceStatus,
+      ctx.userId,
+      ctx.organizationId,
+      transaction,
+    );
 
-  if (!updatedFinding) {
-    throw new NotFoundException(`Finding ${findingId} not found in scan ${scanId}`);
+    if (!updatedFinding) {
+      throw new NotFoundException(`Finding ${findingId} not found in scan ${scanId}`);
+    }
+
+    const storedForRepository = await writeGovernanceDecisionQuery(
+      findingId,
+      scanId,
+      governanceStatus,
+      ctx.userId,
+      ctx.organizationId,
+      transaction,
+    );
+
+    result = {
+      id: updatedFinding.id!,
+      governance_status: governanceStatus,
+      governance_updated_at:
+        governanceStatus && updatedFinding.governance_updated_at
+          ? new Date(updatedFinding.governance_updated_at).toISOString()
+          : null,
+      governance_updated_by: governanceStatus ? ctx.userId : null,
+      governance_updated_by_name: governanceStatus
+        ? (updatedFinding.governance_updated_by_name ?? null)
+        : null,
+      decision_scope: storedForRepository ? "repository" : "scan",
+    };
+
+    await transaction.commit();
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
   }
 
-  return {
-    id: updatedFinding.id!,
-    governance_status: governanceStatus,
-    governance_updated_at: new Date().toISOString(),
-    governance_updated_by: ctx.userId,
-  };
+  return result;
 }
 
 /**

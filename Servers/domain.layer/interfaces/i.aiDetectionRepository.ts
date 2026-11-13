@@ -20,6 +20,14 @@ export type ScheduleFrequency = "daily" | "weekly" | "monthly";
 
 export type TriggerType = "manual" | "scheduled" | "webhook";
 
+/**
+ * Outcome of the most recent signature-verified GitHub webhook delivery.
+ * Unverified requests are never recorded.
+ * - ok: the event was handled (or ignored on purpose, e.g. another branch)
+ * - error: processing failed after the signature verified
+ */
+export type WebhookDeliveryStatus = "ok" | "error";
+
 // ============================================================================
 // Repository Record
 // ============================================================================
@@ -48,6 +56,8 @@ export interface IAIDetectionRepository {
   ci_max_critical: number;
   ci_post_comments: boolean;
   ci_status_checks: boolean;
+  last_webhook_at?: Date | null;
+  last_webhook_status?: WebhookDeliveryStatus | null;
 
   // Denormalized tracking
   last_scan_id?: number | null;
@@ -86,6 +96,7 @@ export interface ICreateRepositoryInput {
   ci_max_critical?: number;
   ci_post_comments?: boolean;
   ci_status_checks?: boolean;
+  webhook_secret?: string | null;
 
   created_by: number;
 }
@@ -108,6 +119,7 @@ export interface IUpdateRepositoryInput {
   ci_max_critical?: number;
   ci_post_comments?: boolean;
   ci_status_checks?: boolean;
+  webhook_secret?: string | null;
 
   is_enabled?: boolean;
 }
@@ -116,8 +128,19 @@ export interface IUpdateRepositoryInput {
 // API Response Types
 // ============================================================================
 
+/**
+ * A repository as the API returns it. The webhook secret is never part of a
+ * read response: `has_webhook_secret` says whether one is set, and
+ * `webhook_secret` is present only on the create or update response that
+ * generated it (and on the regenerate response).
+ */
+export type IAIDetectionRepositoryResponse = Omit<IAIDetectionRepository, "webhook_secret"> & {
+  has_webhook_secret: boolean;
+  webhook_secret?: string;
+};
+
 export interface IRepositoryListResponse {
-  repositories: IAIDetectionRepository[];
+  repositories: IAIDetectionRepositoryResponse[];
   pagination: {
     total: number;
     page: number;

@@ -29,6 +29,9 @@ import {
   Building,
   CheckSquare,
   BarChart3,
+  ScanSearch,
+  ShieldAlert,
+  XCircle,
 } from "lucide-react";
 import { Button } from "../../../../components/button";
 import { CustomizableButton } from "../../../../components/button/customizable-button";
@@ -61,6 +64,12 @@ const getTriggerIcon = (triggerType: string) => {
       return AlertCircle;
     case "vendor_review_date_approaching":
       return Clock;
+    case "ai_detection_scan_completed":
+      return ScanSearch;
+    case "ai_detection_high_risk_finding":
+      return ShieldAlert;
+    case "ai_detection_scan_failed":
+      return XCircle;
     case "scheduled_report":
       return BarChart3;
     default:
