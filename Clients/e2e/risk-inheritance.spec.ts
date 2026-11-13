@@ -13,8 +13,10 @@ import { test, expect, Page } from "@playwright/test";
  * page renders, so the spec keeps working as the seeded data changes.
  */
 
-const CHIP_DEFAULT_BG = "rgb(243, 244, 246)"; // background.hover — the "no variant matched" fill
-const CHIP_DEFAULT_TEXT = "rgb(107, 114, 128)"; // status.default.text
+// The "no variant matched" fill (background.hover) and text (status.default.text),
+// classic look first, then phase 1.
+const CHIP_DEFAULT_BG = ["rgb(243, 244, 246)", "rgb(243, 246, 245)"];
+const CHIP_DEFAULT_TEXT = ["rgb(107, 114, 128)", "rgb(92, 109, 105)"];
 
 interface DuplicateReport {
   scanned: number;
@@ -168,17 +170,26 @@ test("risk level chips pick up a real variant colour instead of falling through 
   const chip = row.getByText(levelled!.risk_level!, { exact: true }).first();
   await expect(chip).toBeVisible();
 
+  // The label can sit in an inner span (phase 1 pill), so read the nearest
+  // element that actually paints a background: a gradient in the classic
+  // look, a flat fill in phase 1.
   const painted = await chip.evaluate((el) => {
-    const style = getComputedStyle(el);
-    return { image: style.backgroundImage, color: style.color };
+    let node: Element | null = el;
+    while (node) {
+      const style = getComputedStyle(node);
+      if (style.backgroundImage !== "none" || style.backgroundColor !== "rgba(0, 0, 0, 0)") {
+        return { fill: `${style.backgroundImage} ${style.backgroundColor}`, color: style.color };
+      }
+      node = node.parentElement;
+    }
+    return { fill: "", color: getComputedStyle(el).color };
   });
 
-  // Chip paints a linear-gradient, so backgroundColor is transparent by design.
-  expect(painted.image).toContain("gradient");
+  expect(painted.fill).not.toBe("");
   // An unmatched label falls through to the "default" variant, whose grey
   // would leave the level column carrying no signal at all.
-  expect(painted.image).not.toContain(CHIP_DEFAULT_BG);
-  expect(painted.color).not.toBe(CHIP_DEFAULT_TEXT);
+  for (const grey of CHIP_DEFAULT_BG) expect(painted.fill).not.toContain(grey);
+  expect(CHIP_DEFAULT_TEXT).not.toContain(painted.color);
 });
 
 test("the reports narrow without ever pushing the page sideways", async ({ page }) => {
