@@ -42,7 +42,8 @@ import { useCanCheck, useCan } from "../../../application/hooks/useCan";
 import { GroupBy } from "../../components/Table/GroupBy";
 import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
-import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
+import { FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
@@ -629,7 +630,12 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
           <Stack direction="row" spacing={2} alignItems="center">
             {/* FilterBy */}
             <div data-joyride-id="policy-status-filter">
-              <FilterBy columns={policyFilterColumns} onFilterChange={handlePolicyFilterChange} />
+              <TableFilter
+                columns={policyFilterColumns}
+                onFilterChange={handlePolicyFilterChange}
+                data={policies}
+                getFieldValue={getPolicyFieldValue}
+              />
             </div>
 
             {/* Group By */}

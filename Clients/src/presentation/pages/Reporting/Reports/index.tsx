@@ -17,7 +17,8 @@ import { GetMyOrganization } from "../../../../application/repository/organizati
 import { GroupBy } from "../../../components/Table/GroupBy";
 import { useTableGrouping, useGroupByState } from "../../../../application/hooks/useTableGrouping";
 import { GroupedTableView } from "../../../components/Table/GroupedTableView";
-import { FilterBy, FilterColumn } from "../../../components/Table/FilterBy";
+import { FilterColumn } from "../../../components/Table/FilterBy";
+import { TableFilter } from "../../../components/Table/TableFilter";
 import { useFilterBy } from "../../../../application/hooks/useFilterBy";
 import { SearchBox } from "../../../components/Search";
 import { ColumnSelector } from "../../../components/Table/ColumnSelector";
@@ -361,7 +362,12 @@ const Reports: React.FC<ReportsProps> = ({
         sx={{ marginBottom: "16px", marginTop: "0px !important" }}
       >
         <Box sx={{ display: "flex", gap: "8px", alignItems: "center" }}>
-          <FilterBy columns={reportFilterColumns} onFilterChange={handleReportFilterChange} />
+          <TableFilter
+            columns={reportFilterColumns}
+            onFilterChange={handleReportFilterChange}
+            data={generatedReports}
+            getFieldValue={getReportFieldValue}
+          />
           <GroupBy
             options={[
               { id: "type", label: "Report type" },

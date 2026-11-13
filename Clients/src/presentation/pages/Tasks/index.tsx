@@ -46,7 +46,8 @@ import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { ExportMenu } from "../../components/Table/ExportMenu";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 
-import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
+import { FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
@@ -869,7 +870,12 @@ const Tasks: React.FC = () => {
           >
             {/* FilterBy */}
             <Box data-joyride-id="task-filters">
-              <FilterBy columns={taskFilterColumns} onFilterChange={handleTaskFilterChange} />
+              <TableFilter
+                columns={taskFilterColumns}
+                onFilterChange={handleTaskFilterChange}
+                data={tasks}
+                getFieldValue={getTaskFieldValue}
+              />
             </Box>
 
             {/* GroupBy */}

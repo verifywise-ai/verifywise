@@ -1,6 +1,8 @@
 import { test, expect } from "./fixtures/auth.fixture";
 import AxeBuilder from "@axe-core/playwright";
 
+const escapeRegExp = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
 test.describe("File Manager", () => {
   test.beforeEach(async ({ authedPage: page }) => {
     await page.evaluate(() => {
@@ -80,6 +82,41 @@ test.describe("File Manager", () => {
       await searchInput.first().clear();
       await page.waitForTimeout(500);
     }
+  });
+
+  // Phase 1 (CI default) shows filter chips instead of the rule-builder Filter button.
+  test("filter chips set a filter and clear it", async ({ authedPage: page }) => {
+    await page.goto("/file-manager");
+
+    const uploaderChip = page.getByTestId("filter-chip-uploader");
+    await expect(uploaderChip).toBeVisible({ timeout: 10_000 });
+    await expect(uploaderChip).toHaveText(/Uploader: All/);
+    await expect(page.getByTestId("filter-chip-uploadDate")).toHaveText(/Upload date: All/);
+    // Text columns get no chip: the search box covers them.
+    await expect(page.getByTestId("filter-chip-fileName")).toHaveCount(0);
+
+    await uploaderChip.click();
+    const menu = page.getByRole("menu");
+    await expect(menu).toBeVisible();
+    const items = menu.getByRole("menuitem");
+    await expect(items.first()).toHaveText("All");
+
+    // With no files the menu holds only "All"; pick a value when one exists.
+    if ((await items.count()) < 2) {
+      await items.first().click();
+      await expect(uploaderChip).toHaveAttribute("data-state", "unset");
+      return;
+    }
+
+    const valueLabel = (await items.nth(1).locator("span").first().textContent())?.trim() ?? "";
+    await items.nth(1).click();
+    await expect(uploaderChip).toHaveAttribute("data-state", "set");
+    await expect(uploaderChip).toHaveText(new RegExp(`Uploader: ${escapeRegExp(valueLabel)}`));
+
+    await page.getByTestId("filter-chips-clear").click();
+    await expect(uploaderChip).toHaveAttribute("data-state", "unset");
+    await expect(uploaderChip).toHaveText(/Uploader: All/);
+    await expect(page.getByTestId("filter-chips-clear")).toHaveCount(0);
   });
 
   test("column selector shows toggle options", async ({ authedPage: page }) => {

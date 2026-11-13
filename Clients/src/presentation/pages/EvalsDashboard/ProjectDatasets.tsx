@@ -143,6 +143,8 @@ export function ProjectDatasets({ projectId, orgId }: ProjectDatasetsProps) {
         <TemplatesTab
           filterColumns={ds.templateFilterColumns}
           onFilterChange={ds.handleTemplateFilterChange}
+          filterRows={ds.flattenedTemplates}
+          getFilterFieldValue={ds.getTemplateFieldValue}
           templateSearchTerm={ds.templateSearchTerm}
           onTemplateSearchTermChange={ds.setTemplateSearchTerm}
           filteredTemplates={ds.filteredAndSortedTemplates}

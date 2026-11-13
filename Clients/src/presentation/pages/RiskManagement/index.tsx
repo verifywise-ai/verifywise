@@ -30,7 +30,8 @@ import { ExportMenu } from "../../components/Table/ExportMenu";
 import { GroupBy } from "../../components/Table/GroupBy";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
-import { FilterBy, FilterColumn, FilterCondition } from "../../components/Table/FilterBy";
+import { FilterColumn, FilterCondition } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
@@ -802,7 +803,12 @@ const RiskManagement = () => {
         <Stack direction="row" justifyContent="space-between" alignItems="flex-end">
           <Box sx={riskFilterRowStyle}>
             <div data-joyride-id="risk-filters">
-              <FilterBy columns={filterColumns} onFilterChange={handleFilterByChange} />
+              <TableFilter
+                columns={filterColumns}
+                onFilterChange={handleFilterByChange}
+                data={projectRisks}
+                getFieldValue={getRiskFieldValue}
+              />
             </div>
             <GroupBy
               options={[

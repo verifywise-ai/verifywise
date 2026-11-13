@@ -19,7 +19,8 @@ import { PolicyTemplatesProps } from "../../types/interfaces/i.policy";
 import { SearchBox } from "../../components/Search";
 import { PolicyTemplateCategory } from "../../../domain/enums/policy.enum";
 import TagChip from "../../components/Tags/TagChip";
-import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
+import { FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
@@ -230,10 +231,15 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
     handleFilterChange: handlePolicyTemplateFilterChange,
   } = useFilterBy<TemplateRow>(getPolicyTemplateFieldValue);
 
+  // Templates in the current section, before filter + search
+  const sectionRows = useMemo(
+    () => templates.map(toRow).filter((row) => row.origin === section),
+    [templates, section],
+  );
+
   // Section + filter + search
   const filteredPolicyTemplates = useMemo(() => {
-    const rows = templates.map(toRow).filter((row) => row.origin === section);
-    let result = filterPolicyTemplateData(rows);
+    let result = filterPolicyTemplateData(sectionRows);
 
     if (searchTerm.trim()) {
       const query = searchTerm.toLowerCase();
@@ -241,7 +247,7 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
     }
 
     return result;
-  }, [filterPolicyTemplateData, templates, searchTerm, section]);
+  }, [filterPolicyTemplateData, sectionRows, searchTerm]);
 
   // Define how to get the group key for each policy template
   const getTemplateGroupKey = useCallback((template: TemplateRow, field: string): string => {
@@ -300,9 +306,11 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
       <Stack direction="row" alignItems="center" flexWrap="wrap" sx={{ gap: "8px", mb: "16px" }}>
         {/* FilterBy */}
         <div data-joyride-id="policy-status-filter">
-          <FilterBy
+          <TableFilter
             columns={policyTemplateFilterColumns}
             onFilterChange={handlePolicyTemplateFilterChange}
+            data={sectionRows}
+            getFieldValue={getPolicyTemplateFieldValue}
           />
         </div>
 

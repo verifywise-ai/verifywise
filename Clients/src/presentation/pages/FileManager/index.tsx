@@ -27,7 +27,8 @@ import { SearchBox } from "../../components/Search";
 import { GroupBy } from "../../components/Table/GroupBy";
 import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
-import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
+import { FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 
 // Virtual folder imports
@@ -884,7 +885,12 @@ const FileManager: React.FC = (): JSX.Element => {
               gap: 2,
             }}
           >
-            <FilterBy columns={fileFilterColumns} onFilterChange={handleFileFilterChange} />
+            <TableFilter
+              columns={fileFilterColumns}
+              onFilterChange={handleFileFilterChange}
+              data={activeFilesData}
+              getFieldValue={getFileFieldValue}
+            />
             <GroupBy
               options={[{ id: "uploader", label: "Uploader" }]}
               onGroupChange={handleGroupChange}

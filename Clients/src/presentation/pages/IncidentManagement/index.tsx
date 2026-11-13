@@ -36,7 +36,8 @@ import { GroupBy } from "../../components/Table/GroupBy";
 import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { ExportMenu } from "../../components/Table/ExportMenu";
-import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
+import { FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
@@ -359,14 +360,17 @@ const IncidentManagement: React.FC = () => {
     useFilterBy<AIIncidentManagementModel>(getIncidentFieldValue);
 
   /** -------------------- FILTERING -------------------- */
-  const filteredData = useMemo(() => {
-    // Filter out archived items first
-    const nonArchivedData = incidentsData.filter((i) => !i.archived);
+  // Archived incidents never show, so the filter chips count only the rest
+  const nonArchivedIncidents = useMemo(
+    () => incidentsData.filter((i) => !i.archived),
+    [incidentsData],
+  );
 
+  const filteredData = useMemo(() => {
     // Apply card filter by status
     let result = selectedStatus
-      ? nonArchivedData.filter((i) => i.status === selectedStatus)
-      : nonArchivedData;
+      ? nonArchivedIncidents.filter((i) => i.status === selectedStatus)
+      : nonArchivedIncidents;
 
     // Apply FilterBy conditions
     result = filterIncidentData(result);
@@ -383,7 +387,7 @@ const IncidentManagement: React.FC = () => {
     }
 
     return result;
-  }, [filterIncidentData, incidentsData, searchTerm, selectedStatus]);
+  }, [filterIncidentData, nonArchivedIncidents, searchTerm, selectedStatus]);
 
   // Define how to get the group key for each incident
   const getIncidentGroupKey = (
@@ -838,7 +842,12 @@ const IncidentManagement: React.FC = () => {
           sx={incidentFilterRow}
         >
           <Stack direction="row" spacing={2} alignItems="center">
-            <FilterBy columns={incidentFilterColumns} onFilterChange={handleIncidentFilterChange} />
+            <TableFilter
+              columns={incidentFilterColumns}
+              onFilterChange={handleIncidentFilterChange}
+              data={nonArchivedIncidents}
+              getFieldValue={getIncidentFieldValue}
+            />
 
             <GroupBy
               options={[

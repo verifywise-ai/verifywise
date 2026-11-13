@@ -22,7 +22,8 @@ import {
 import { DatasetStatus, DatasetType, DataClassification } from "../../../domain/enums/dataset.enum";
 import { IModelInventory } from "../../../domain/interfaces/i.modelInventory";
 import { GroupBy } from "../../components/Table/GroupBy";
-import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
+import { FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
@@ -465,7 +466,12 @@ const Datasets: React.FC = () => {
       <Stack spacing={2}>
         <Stack direction="row" justifyContent="space-between" alignItems="center">
           <Stack direction="row" spacing={2} alignItems="center">
-            <FilterBy columns={DATASET_FILTER_COLUMNS} onFilterChange={handleDatasetFilterChange} />
+            <TableFilter
+              columns={DATASET_FILTER_COLUMNS}
+              onFilterChange={handleDatasetFilterChange}
+              data={datasetData}
+              getFieldValue={getDatasetFieldValue}
+            />
             <GroupBy options={DATASET_GROUP_BY_OPTIONS} onGroupChange={handleGroupChange} />
             <ColumnSelector
               columns={allDatasetColumns}

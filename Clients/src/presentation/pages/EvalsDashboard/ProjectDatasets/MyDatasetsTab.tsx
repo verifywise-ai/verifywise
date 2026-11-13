@@ -8,11 +8,8 @@ import { Box, Stack } from "@mui/material";
 import { Plus, Upload } from "lucide-react";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import SearchBox from "../../../components/Search/SearchBox";
-import {
-  FilterBy,
-  type FilterColumn,
-  type FilterCondition,
-} from "../../../components/Table/FilterBy";
+import { type FilterColumn, type FilterCondition } from "../../../components/Table/FilterBy";
+import { TableFilter } from "../../../components/Table/TableFilter";
 import { GroupBy } from "../../../components/Table/GroupBy";
 import { GroupedTableView } from "../../../components/Table/GroupedTableView";
 import DatasetsTable, { type DatasetRow } from "../../../components/Table/DatasetsTable";
@@ -72,7 +69,7 @@ export default function MyDatasetsTab({
         sx={{ marginBottom: "18px" }}
       >
         <Stack direction="row" alignItems="center" gap={2}>
-          <FilterBy columns={filterColumns} onFilterChange={onFilterChange} />
+          <TableFilter columns={filterColumns} onFilterChange={onFilterChange} />
           <GroupBy
             options={[
               { id: "name", label: "Name" },

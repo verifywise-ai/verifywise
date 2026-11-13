@@ -12,7 +12,8 @@ import ManualAgentModal from "../../components/Modals/AgentDiscovery/ManualAgent
 import { agentToastContainer, addAgentButton, syncButton } from "./style";
 import { apiServices } from "../../../infrastructure/api/networkServices";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
-import { FilterBy, FilterColumn, FilterCondition } from "../../components/Table/FilterBy";
+import { FilterColumn, FilterCondition } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { GroupBy } from "../../components/Table/GroupBy";
 import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
@@ -409,7 +410,12 @@ const AgentDiscovery: React.FC = () => {
         <Stack spacing={2}>
           <Stack direction="row" justifyContent="space-between" alignItems="center">
             <Stack direction="row" gap={2} alignItems="center">
-              <FilterBy columns={filterColumns} onFilterChange={handleFilterChange} />
+              <TableFilter
+                columns={filterColumns}
+                onFilterChange={handleFilterChange}
+                data={agents}
+                getFieldValue={getFieldValue}
+              />
               <GroupBy
                 options={[
                   { id: "review_status", label: "Status" },

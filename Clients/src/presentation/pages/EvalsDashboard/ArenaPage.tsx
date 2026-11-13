@@ -23,7 +23,8 @@ import GroupedSelect from "../../components/Inputs/Select/GroupedSelect";
 import ModelSelector from "../../components/Inputs/ModelSelector";
 import { DEFAULT_JUDGE } from "../../utils/providers";
 import ArenaResultsPage from "./ArenaResultsPage";
-import { FilterBy, FilterCondition, FilterColumn } from "../../components/Table/FilterBy";
+import { FilterCondition, FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { GroupBy, GroupByOption } from "../../components/Table/GroupBy";
 import {
   createArenaComparison,
@@ -126,6 +127,13 @@ interface TemplateDataset {
 interface ArenaPageProps {
   orgId?: string | null;
 }
+
+/** The fields the battle filter reads; the filter chips count rows with it. */
+const getComparisonFieldValue = (comparison: ArenaComparisonSummary, columnId: string) => {
+  if (columnId === "status") return comparison.status;
+  if (columnId === "name") return comparison.name;
+  return null;
+};
 
 export default function ArenaPage({ orgId }: ArenaPageProps) {
   const navigate = useNavigate();
@@ -644,12 +652,14 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
             gap="4px"
           >
             <Stack direction="row" alignItems="center" gap="4px">
-              <FilterBy
+              <TableFilter
                 columns={filterColumns}
                 onFilterChange={(conditions, logic) => {
                   setFilterConditions(conditions);
                   setFilterLogic(logic);
                 }}
+                data={comparisons}
+                getFieldValue={getComparisonFieldValue}
               />
               <GroupBy
                 options={groupByOptions}

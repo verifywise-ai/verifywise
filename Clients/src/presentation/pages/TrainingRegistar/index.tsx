@@ -29,7 +29,8 @@ import { GroupBy } from "../../components/Table/GroupBy";
 import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { ExportMenu } from "../../components/Table/ExportMenu";
-import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
+import { FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
@@ -995,9 +996,11 @@ const Training: React.FC = () => {
           >
             {/* Left side: FilterBy, GroupBy, Search */}
             <Stack direction="row" spacing={2} alignItems="center">
-              <FilterBy
+              <TableFilter
                 columns={trainingFilterColumns}
                 onFilterChange={handleTrainingFilterChange}
+                data={trainingData}
+                getFieldValue={getTrainingFieldValue}
               />
 
               <GroupBy
@@ -1076,9 +1079,11 @@ const Training: React.FC = () => {
             sx={{ gap: "20px" }}
           >
             <Stack direction="row" spacing={2} alignItems="center">
-              <FilterBy
+              <TableFilter
                 columns={evidenceFilterColumns}
                 onFilterChange={handleEvidenceFilterChange}
+                data={evidenceHubData}
+                getFieldValue={getEvidenceFieldValue}
               />
               <GroupBy
                 options={[

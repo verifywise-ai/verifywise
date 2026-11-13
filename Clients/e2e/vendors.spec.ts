@@ -88,18 +88,19 @@ test.describe("Vendors Page", () => {
     await page.waitForTimeout(500);
   });
 
-  test("filter button opens filter options", async ({ authedPage: page }) => {
+  // Phase 1 (CI default) shows filter chips instead of the rule-builder Filter button.
+  test("filter chip opens its value menu", async ({ authedPage: page }) => {
     await page.goto("/vendors");
-    const filterBtn = page
-      .getByRole("button", { name: /filter/i })
-      .or(page.getByText(/filter by/i));
-    const firstFilter = filterBtn.first();
+    const firstChip = page.locator('[data-testid^="filter-chip-"]').first();
+    await expect(firstChip).toBeVisible({ timeout: 10_000 });
+    await expect(firstChip).toHaveText(/: All/);
 
-    if (await firstFilter.isVisible().catch(() => false)) {
-      await firstFilter.click();
-      await page.waitForTimeout(300);
-      await page.keyboard.press("Escape");
-    }
+    await firstChip.click();
+    const menu = page.getByRole("menu");
+    await expect(menu).toBeVisible();
+    await expect(menu.getByRole("menuitem").first()).toHaveText("All");
+    await page.keyboard.press("Escape");
+    await expect(menu).toBeHidden();
   });
 
   // --- Tier 3: Modal open/close ---

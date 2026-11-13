@@ -3,7 +3,8 @@ import { Box, Stack, Typography, Card, CardContent, Grid, CircularProgress } fro
 import { Plus, Check } from "lucide-react";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import SearchBox from "../../components/Search/SearchBox";
-import { FilterBy, type FilterColumn } from "../../components/Table/FilterBy";
+import { type FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { GroupBy } from "../../components/Table/GroupBy";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { evalModelsService, type SavedModel } from "../../../infrastructure/api/evalModelsService";
@@ -338,7 +339,12 @@ export default function ModelsPage({ orgId, openAddModal, onAddModalConsumed }: 
         gap={2}
       >
         <Stack direction="row" alignItems="center" gap={2}>
-          <FilterBy columns={filterColumns} onFilterChange={handleFilterChange} />
+          <TableFilter
+            columns={filterColumns}
+            onFilterChange={handleFilterChange}
+            data={models}
+            getFieldValue={getFieldValue}
+          />
           <GroupBy
             options={[{ id: "modelProvider", label: "Provider" }]}
             onGroupChange={() => {}}

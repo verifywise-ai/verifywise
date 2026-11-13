@@ -41,7 +41,8 @@ import { useTableGrouping, useGroupByState } from "../../../application/hooks/us
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { ExportMenu } from "../../components/Table/ExportMenu";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
-import { FilterBy, FilterColumn, FilterCondition } from "../../components/Table/FilterBy";
+import { FilterColumn, FilterCondition } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import { Project } from "../../../domain/types/Project";
@@ -1164,7 +1165,12 @@ const Vendors = () => {
           <Stack spacing={2}>
             <Stack direction="row" justifyContent="space-between" alignItems="center">
               <Stack direction="row" gap={2} alignItems="center">
-                <FilterBy columns={vendorFilterColumns} onFilterChange={handleVendorFilterChange} />
+                <TableFilter
+                  columns={vendorFilterColumns}
+                  onFilterChange={handleVendorFilterChange}
+                  data={vendors}
+                  getFieldValue={getVendorFieldValue}
+                />
                 <GroupBy
                   options={[
                     { id: "review_status", label: "Status" },
@@ -1239,9 +1245,11 @@ const Vendors = () => {
                     borderRadius: theme.shape.borderRadius,
                   }}
                 />
-                <FilterBy
+                <TableFilter
                   columns={vendorRiskFilterColumns}
                   onFilterChange={handleVendorRiskFilterChange}
+                  data={vendorRisks}
+                  getFieldValue={getVendorRiskFieldValue}
                 />
                 <GroupBy
                   options={[

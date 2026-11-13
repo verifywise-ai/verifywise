@@ -6,18 +6,19 @@
 
 import { Box, Stack } from "@mui/material";
 import SearchBox from "../../../components/Search/SearchBox";
-import {
-  FilterBy,
-  type FilterColumn,
-  type FilterCondition,
-} from "../../../components/Table/FilterBy";
+import { type FilterColumn, type FilterCondition } from "../../../components/Table/FilterBy";
+import { TableFilter } from "../../../components/Table/TableFilter";
 import { GroupBy } from "../../../components/Table/GroupBy";
 import TemplatesTable from "../../../components/Table/TemplatesTable";
 import type { BuiltInDataset, TemplateWithCategory } from "./types";
+import type { FilterFieldValue } from "../../../../application/utils/filterConditions";
 
 export type TemplatesTabProps = {
   filterColumns: FilterColumn[];
   onFilterChange: (conditions: FilterCondition[], logic: "and" | "or") => void;
+  /** Templates before filtering, so the filter chips can count values. */
+  filterRows: TemplateWithCategory[];
+  getFilterFieldValue: (item: TemplateWithCategory, fieldId: string) => FilterFieldValue;
   templateSearchTerm: string;
   onTemplateSearchTermChange: (value: string) => void;
   filteredTemplates: TemplateWithCategory[];
@@ -32,6 +33,8 @@ export type TemplatesTabProps = {
 export default function TemplatesTab({
   filterColumns,
   onFilterChange,
+  filterRows,
+  getFilterFieldValue,
   templateSearchTerm,
   onTemplateSearchTermChange,
   filteredTemplates,
@@ -46,7 +49,12 @@ export default function TemplatesTab({
     <Box>
       {/* Filter + search toolbar */}
       <Stack direction="row" alignItems="center" gap={2} sx={{ marginBottom: "18px" }}>
-        <FilterBy columns={filterColumns} onFilterChange={onFilterChange} />
+        <TableFilter
+          columns={filterColumns}
+          onFilterChange={onFilterChange}
+          data={filterRows}
+          getFieldValue={getFilterFieldValue}
+        />
         <GroupBy
           options={[
             { id: "category", label: "Category" },

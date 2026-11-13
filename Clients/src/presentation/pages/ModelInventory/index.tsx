@@ -73,7 +73,8 @@ import { GroupBy } from "../../components/Table/GroupBy";
 import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { ExportMenu } from "../../components/Table/ExportMenu";
-import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
+import { FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
@@ -2292,7 +2293,12 @@ const ModelInventory: React.FC = () => {
               {/* Left side: FilterBy + Search + GroupBy */}
               <Stack direction="row" spacing={2} alignItems="center">
                 <div data-joyride-id="model-status-filter">
-                  <FilterBy columns={modelFilterColumns} onFilterChange={handleModelFilterChange} />
+                  <TableFilter
+                    columns={modelFilterColumns}
+                    onFilterChange={handleModelFilterChange}
+                    data={modelInventoryData}
+                    getFieldValue={getModelFieldValue}
+                  />
                 </div>
 
                 <GroupBy
@@ -2391,9 +2397,11 @@ const ModelInventory: React.FC = () => {
             >
               <Stack direction="row" gap={2} alignItems="center">
                 <div data-joyride-id="risk-category-filter">
-                  <FilterBy
+                  <TableFilter
                     columns={modelRiskFilterColumns}
                     onFilterChange={handleModelRiskFilterChange}
+                    data={modelRisksData}
+                    getFieldValue={getModelRiskFieldValue}
                   />
                 </div>
                 <GroupBy
@@ -2488,9 +2496,11 @@ const ModelInventory: React.FC = () => {
               {/* Left side: FilterBy + Search + GroupBy */}
               <Stack direction="row" spacing={2} alignItems="center">
                 <div data-joyride-id="evidence-type-filter">
-                  <FilterBy
+                  <TableFilter
                     columns={evidenceFilterColumns}
                     onFilterChange={handleEvidenceFilterChange}
+                    data={evidenceHubData}
+                    getFieldValue={getEvidenceFieldValue}
                   />
                 </div>
                 <GroupBy

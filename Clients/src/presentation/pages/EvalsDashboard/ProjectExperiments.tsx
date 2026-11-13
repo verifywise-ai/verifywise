@@ -21,7 +21,8 @@ import PerformanceChart, {
 } from "./components/PerformanceChart";
 import type { IExperimentRow } from "../../types/interfaces/i.table";
 import SearchBox from "../../components/Search/SearchBox";
-import { FilterBy, type FilterColumn } from "../../components/Table/FilterBy";
+import { type FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { GroupBy } from "../../components/Table/GroupBy";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
@@ -816,7 +817,12 @@ export default function ProjectExperiments({
         gap="4px"
       >
         <Stack direction="row" alignItems="center" gap="4px">
-          <FilterBy columns={experimentFilterColumns} onFilterChange={handleFilterChange} />
+          <TableFilter
+            columns={experimentFilterColumns}
+            onFilterChange={handleFilterChange}
+            data={experiments}
+            getFieldValue={getExperimentFieldValue}
+          />
           <GroupBy
             options={[
               { id: "status", label: "Status" },

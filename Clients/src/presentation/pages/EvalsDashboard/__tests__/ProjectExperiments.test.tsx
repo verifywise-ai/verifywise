@@ -8,6 +8,14 @@ import { useLocation } from "react-router";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import ProjectExperiments from "../ProjectExperiments";
 
+// TableFilter shows filter chips in phase 1 and the rule-builder popover in the
+// classic look. The popover tests below switch to classic; the chip test stays in phase 1.
+const ui = vi.hoisted(() => ({ classic: false }));
+vi.mock("../../../themes/uiStyle", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../themes/uiStyle")>()),
+  isClassicUi: () => ui.classic,
+}));
+
 // ── Module mocks ─────────────────────────────────────────────────────────────
 // ExperimentTable is a shared table component (not a coverage target). A stub
 // lets the suite drive ProjectExperiments' own row-action handlers directly
@@ -131,6 +139,7 @@ function renderExperiments(
 
 describe("ProjectExperiments", () => {
   beforeEach(() => {
+    ui.classic = false;
     installBrowserStubs();
     resetDeepEvalMocks();
   });
@@ -612,7 +621,25 @@ describe("ProjectExperiments", () => {
       expect(screen.queryByTestId("experiment-row-chat")).not.toBeInTheDocument();
     });
 
+    it("filters rows by status through a filter chip (phase 1)", async () => {
+      mockExperiments(
+        makeExperiment({ id: "done", name: "Done", status: "completed" }),
+        makeExperiment({ id: "run", name: "Run", status: "running", results: undefined }),
+      );
+      renderExperiments();
+
+      await screen.findByTestId("experiment-row-done");
+      fireEvent.click(screen.getByTestId("filter-chip-status"));
+      fireEvent.click(await screen.findByTestId("filter-chip-option-status-completed"));
+
+      await waitFor(() =>
+        expect(screen.queryByTestId("experiment-row-run")).not.toBeInTheDocument(),
+      );
+      expect(screen.getByTestId("experiment-row-done")).toBeInTheDocument();
+    });
+
     it("filters rows by status through the Filter popover", async () => {
+      ui.classic = true;
       mockExperiments(
         makeExperiment({ id: "done", name: "Done", status: "completed" }),
         makeExperiment({ id: "run", name: "Run", status: "running", results: undefined }),

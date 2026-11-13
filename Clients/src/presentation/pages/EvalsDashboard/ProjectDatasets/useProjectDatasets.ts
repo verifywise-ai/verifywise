@@ -615,6 +615,7 @@ export function useProjectDatasets({ orgId }: UseProjectDatasetsArgs) {
     templateGroups,
     flattenedTemplates,
     templateFilterColumns,
+    getTemplateFieldValue,
     handleTemplateFilterChange,
     templateSearchTerm,
     setTemplateSearchTerm,

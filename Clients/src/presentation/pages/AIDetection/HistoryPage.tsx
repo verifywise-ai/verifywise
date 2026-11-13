@@ -44,7 +44,8 @@ import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import TablePaginationActions from "../../components/TablePagination";
 import singleTheme from "../../themes/v1SingleTheme";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
-import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
+import { FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { GroupBy } from "../../components/Table/GroupBy";
 import SearchBox from "../../components/Search/SearchBox";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
@@ -755,7 +756,12 @@ export default function HistoryPage() {
     >
       {/* Toolbar with Filter, Group, Search */}
       <Stack direction="row" gap={2} alignItems="center" sx={{ mb: 2 }}>
-        <FilterBy columns={FILTER_COLUMNS} onFilterChange={handleFilterChange} />
+        <TableFilter
+          columns={FILTER_COLUMNS}
+          onFilterChange={handleFilterChange}
+          data={scans}
+          getFieldValue={getScanFieldValue}
+        />
         <GroupBy options={GROUP_BY_OPTIONS} onGroupChange={handleGroupChange} />
         <SearchBox
           placeholder="Search scans..."

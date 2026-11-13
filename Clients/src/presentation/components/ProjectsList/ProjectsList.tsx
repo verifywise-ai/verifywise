@@ -15,7 +15,8 @@ import { GroupedTableView } from "../Table/GroupedTableView";
 import { Project } from "../../../domain/types/Project";
 import { User } from "../../../domain/types/User";
 import { ExportMenu } from "../Table/ExportMenu";
-import { FilterBy, FilterColumn } from "../Table/FilterBy";
+import { FilterColumn } from "../Table/FilterBy";
+import { TableFilter } from "../Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { ColumnSelector } from "../Table/ColumnSelector";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
@@ -392,7 +393,12 @@ const ProjectList = ({
         }}
       >
         <Stack direction="row" spacing={2} alignItems="center" sx={{ flex: 1 }}>
-          <FilterBy columns={projectFilterColumns} onFilterChange={handleProjectFilterChange} />
+          <TableFilter
+            columns={projectFilterColumns}
+            onFilterChange={handleProjectFilterChange}
+            data={projects}
+            getFieldValue={getProjectFieldValue}
+          />
 
           {viewMode === "table" && (
             <>
