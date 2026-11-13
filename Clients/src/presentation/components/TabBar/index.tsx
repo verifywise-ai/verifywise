@@ -6,6 +6,8 @@ import { createTabLabelWithCount } from "../../utils/tabUtils";
 import { getLucideIcon } from "../../utils/lucideIconMap";
 import type * as LucideIcons from "lucide-react";
 import VWTooltip from "../VWTooltip";
+import VWIcon from "../VWIcon";
+import { tabIconName } from "./tabIcons";
 import { background, border, brand, icon, radiusPx, text } from "../../themes/palette";
 import { isClassicUi } from "../../themes/uiStyle";
 
@@ -209,8 +211,11 @@ const TabBar: React.FC<TabBarProps> = ({
       >
         {tabs.map((tab) => {
           // Look up the icon in the explicit registry (tree-shakeable)
+          const vwIcon = classicUi ? undefined : tabIconName(tab.label, tab.value);
           const IconComponent = tab.icon ? getLucideIcon(tab.icon) : undefined;
-          const iconElement = IconComponent ? (
+          const iconElement = vwIcon ? (
+            <VWIcon name={vwIcon} size={TAB_ICON_SIZE} color={icon.default} />
+          ) : IconComponent ? (
             <IconComponent
               size={TAB_ICON_SIZE}
               strokeWidth={TAB_ICON_STROKE_WIDTH}

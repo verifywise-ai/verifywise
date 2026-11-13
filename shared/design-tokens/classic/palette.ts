@@ -37,6 +37,9 @@ export const status = {
   default: { bg: grey[100], text: grey[500], border: grey[200] },
 } as const;
 
+/** Tip and notice banners (explanations only; errors and success keep status). */
+export const note = { bg: blue[50], border: blue[100], text: grey[700] } as const;
+
 export const risk = {
   critical: { bg: red[200], text: red[500], border: red[300] },
   high: { bg: orange[100], text: orange[600], border: orange[200] },

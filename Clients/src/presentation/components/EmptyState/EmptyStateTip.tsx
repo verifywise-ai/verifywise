@@ -2,10 +2,11 @@ import { type FC, useRef, useState, useEffect, useCallback } from "react";
 import { Box, Typography, useTheme } from "@mui/material";
 import type { LucideIcon } from "lucide-react";
 import { ChevronRight } from "lucide-react";
-import { accent as accentTokens, background, radiusPx } from "../../themes/palette";
+import { accent as accentTokens, background, note, radiusPx } from "../../themes/palette";
+import { isClassicUi } from "../../themes/uiStyle";
 
 /** Three accent palettes that rotate per-tip */
-const ACCENT_PALETTES = [
+const CLASSIC_ACCENT_PALETTES = [
   {
     bg: accentTokens.teal.bg,
     bgHover: accentTokens.teal.border,
@@ -28,6 +29,20 @@ const ACCENT_PALETTES = [
     expandBg: background.main,
   },
 ] as const;
+
+/** Phase 1: every tip is an amber note, whatever its position. */
+const NOTE_PALETTE = {
+  bg: note.bg,
+  bgHover: note.border,
+  icon: note.text,
+  border: note.border,
+  expandBg: note.bg,
+} as const;
+
+const classicUi = isClassicUi();
+const ACCENT_PALETTES = classicUi
+  ? CLASSIC_ACCENT_PALETTES
+  : ([NOTE_PALETTE, NOTE_PALETTE, NOTE_PALETTE] as const);
 
 interface EmptyStateTipProps {
   icon: LucideIcon;
@@ -164,13 +179,13 @@ const EmptyStateTip: FC<EmptyStateTipProps> = ({ icon: Icon, title, description,
           ref={contentRef}
           sx={{
             padding: "12px 14px 12px 54px",
-            backgroundColor: theme.palette.background.main,
+            backgroundColor: classicUi ? theme.palette.background.main : note.bg,
           }}
         >
           <Typography
             sx={{
               fontSize: 13,
-              color: theme.palette.text.secondary,
+              color: classicUi ? theme.palette.text.secondary : note.text,
               lineHeight: 1.6,
             }}
           >

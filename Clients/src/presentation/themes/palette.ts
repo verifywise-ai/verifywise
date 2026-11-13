@@ -32,6 +32,7 @@ export const primitives: PrimitivesModule = classic ? classicPrimitives : phase1
 
 export const {
   status,
+  note,
   risk,
   severity,
   accent,

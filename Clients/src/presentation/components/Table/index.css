@@ -25,6 +25,10 @@
 .MuiTable-root .MuiTableBody-root .MuiTableCell-root {
   font-size: 13px;
 }
+/* Phase 1: figures line up in columns. */
+:root[data-ui-style="phase1"] .MuiTable-root .MuiTableBody-root .MuiTableCell-root {
+  font-variant-numeric: tabular-nums;
+}
 /* Header values come from themes/cssVars.ts so they follow the interface style. */
 .MuiTable-root .MuiTableHead-root .MuiTableCell-root {
   font-size: var(--vw-table-head-size, 13px);
