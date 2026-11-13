@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { vi } from "vitest";
 
 vi.mock("../../repository/task.repository", () => ({
@@ -25,12 +25,19 @@ describe("useOpenTasksCount", () => {
     expect(mockedGetAllTasks).toHaveBeenCalledWith({ status: [TaskStatus.OPEN] });
   });
 
-  it("falls back to 0 when the request fails", async () => {
+  it("falls back to 0 when a refresh fails", async () => {
+    vi.useFakeTimers();
     const error = vi.spyOn(console, "error").mockImplementation(() => {});
-    mockedGetAllTasks.mockRejectedValue(new Error("offline"));
+    mockedGetAllTasks
+      .mockResolvedValueOnce({ data: { tasks: [{}, {}, {}] } } as never)
+      .mockRejectedValueOnce(new Error("offline"));
     const { result } = renderHook(() => useOpenTasksCount());
-    await waitFor(() => expect(mockedGetAllTasks).toHaveBeenCalled());
+    await act(() => vi.advanceTimersByTimeAsync(0));
+    expect(result.current).toBe(3);
+
+    await act(() => vi.advanceTimersByTimeAsync(5 * 60 * 1000));
     expect(result.current).toBe(0);
+    expect(error).toHaveBeenCalledWith("Error fetching open tasks count:", expect.any(Error));
     error.mockRestore();
   });
 

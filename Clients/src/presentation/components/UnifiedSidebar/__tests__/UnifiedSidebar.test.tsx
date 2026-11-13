@@ -23,8 +23,13 @@ vi.mock("../../../../application/hooks/useCan", () => ({
 }));
 
 const arena: { data?: { enabled: boolean } } = {};
+/** The `enabled` option of the latest useArenaSetting call. */
+let arenaQueryEnabled: boolean | undefined;
 vi.mock("../../../../application/hooks/useArenaSetting", () => ({
-  useArenaSetting: () => arena,
+  useArenaSetting: (options?: { enabled?: boolean }) => {
+    arenaQueryEnabled = options?.enabled;
+    return arena;
+  },
 }));
 
 let openTasks = 0;
@@ -91,6 +96,7 @@ beforeEach(() => {
   authState.userRoleName = "Editor";
   permissions.clear();
   delete arena.data;
+  arenaQueryEnabled = undefined;
   openTasks = 0;
   evalsCtx = null;
   detectionCtx = null;
@@ -254,6 +260,20 @@ describe("UnifiedSidebar: gates", () => {
     expect(sub("llm-evals", "arena")).toBeInTheDocument();
   });
 
+  it("asks for the Arena setting only on /evals or with LLM Evals open", () => {
+    renderAt("/tasks");
+    expect(arenaQueryEnabled).toBe(false);
+    fireEvent.click(item("llm-evals"));
+    expect(arenaQueryEnabled).toBe(true);
+    fireEvent.click(item("llm-evals"));
+    expect(arenaQueryEnabled).toBe(false);
+  });
+
+  it("asks for the Arena setting on an /evals route", () => {
+    renderAt("/evals/p1#overview");
+    expect(arenaQueryEnabled).toBe(true);
+  });
+
   it("shows Super admin to super admins only", () => {
     renderAt("/settings");
     expect(querySub("settings", "super-admin")).not.toBeInTheDocument();
@@ -326,10 +346,18 @@ describe("UnifiedSidebar: counts", () => {
     expect(sub("ai-detection", "scan-results")).toHaveAccessibleName("Scan results 9");
   });
 
-  it("shows the AI Gateway and Trust Index counts", () => {
+  it("shows the AI Gateway endpoints count", () => {
     gatewayCtx = { endpointsCount: 8 };
     renderAt("/ai-gateway/dashboard");
     expect(sub("ai-gateway", "endpoints")).toHaveAccessibleName("Endpoints 8");
+  });
+
+  it("shows the Evals models and Arena counts", () => {
+    arena.data = { enabled: true };
+    evalsCtx = { disabled: false, modelsCount: 2, arenaCount: 6 };
+    renderAt("/evals#overview");
+    expect(sub("llm-evals", "models")).toHaveAccessibleName("Models 2");
+    expect(sub("llm-evals", "arena")).toHaveAccessibleName("Arena 6");
   });
 
   it("shows the tracked count", () => {

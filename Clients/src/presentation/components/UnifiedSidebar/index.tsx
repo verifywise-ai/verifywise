@@ -73,8 +73,6 @@ const UnifiedSidebar: FC<UnifiedSidebarProps> = ({
   // Gate sources: the same ones today's navigation reads.
   const can = useCanCheck();
   const { userRoleName, isSuperAdmin } = useAuth();
-  const { data: arenaSetting } = useArenaSetting();
-  const arenaEnabled = arenaSetting?.enabled === true;
 
   // Count sources: the main sidebar's open-task fetch and the module contexts.
   const openTasks = useOpenTasksCount();
@@ -137,6 +135,13 @@ const UnifiedSidebar: FC<UnifiedSidebarProps> = ({
     if (isExpandable(activeItemId)) setOpenItemId(activeItemId);
   }
 
+  // The Arena setting lives on the EvalServer: ask only where Arena can show.
+  const onEvalsRoute = pathname === "/evals" || pathname.startsWith("/evals/");
+  const { data: arenaSetting } = useArenaSetting({
+    enabled: onEvalsRoute || openItemId === EVALS_ITEM_ID,
+  });
+  const arenaEnabled = arenaSetting?.enabled === true;
+
   /**
    * LLM Evals keeps ContextSidebar's rule: away from /evals, go to the current
    * project's tab (or /evals#<tab>); on an /evals page without a project in
@@ -144,8 +149,7 @@ const UnifiedSidebar: FC<UnifiedSidebarProps> = ({
    */
   const evalsPath = (tab: string): string => {
     const projectId = evals?.currentProject?.id;
-    const onEvals = pathname === "/evals" || pathname.startsWith("/evals/");
-    if (!onEvals) return projectId ? `/evals/${projectId}#${tab}` : `/evals#${tab}`;
+    if (!onEvalsRoute) return projectId ? `/evals/${projectId}#${tab}` : `/evals#${tab}`;
     const hasProjectInUrl = Boolean(pathname.split("/")[2]);
     if (!hasProjectInUrl && projectId) return `/evals/${projectId}#${tab}`;
     return `${pathname}#${tab}`;
