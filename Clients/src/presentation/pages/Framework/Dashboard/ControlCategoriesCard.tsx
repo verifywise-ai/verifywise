@@ -34,7 +34,14 @@ import {
   type SubClauseData,
   type ClauseData,
 } from "../../../../application/utils/frameworkDataUtils";
-import { background, border as borderPalette, icon, text } from "../../../themes/palette";
+import {
+  background,
+  border as borderPalette,
+  icon,
+  text,
+  radiusPx,
+  palette as vwPalette,
+} from "../../../themes/palette";
 import { textStyles } from "../../../themes/typography";
 
 interface ControlCategoriesCardProps {
@@ -328,7 +335,7 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
                 key={category.id}
                 sx={{
                   border: `1px solid ${borderPalette.dark}`,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   overflow: "hidden",
                   backgroundColor: "background.main",
                 }}
@@ -336,7 +343,7 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
                 {/* Header Section */}
                 <Box
                   sx={{
-                    backgroundColor: "#F1F3F4",
+                    backgroundColor: vwPalette.background.hover,
                     p: "10px 16px",
                     borderBottom: `1px solid ${borderPalette.dark}`,
                     display: "flex",
@@ -365,7 +372,7 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
                         "display": "flex",
                         "alignItems": "center",
                         "p": "4px",
-                        "borderRadius": "4px",
+                        "borderRadius": radiusPx.sm,
                         "&:hover": {
                           backgroundColor: "rgba(0, 0, 0, 0.04)",
                         },
@@ -475,7 +482,7 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
           textAlign: "center",
           py: 4,
           backgroundColor: "background.accent",
-          borderRadius: 2,
+          borderRadius: radiusPx.sm,
           border: `1px solid ${borderPalette.dark}`,
         }}
       >

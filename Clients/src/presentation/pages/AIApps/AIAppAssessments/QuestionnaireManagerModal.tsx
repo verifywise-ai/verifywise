@@ -9,7 +9,7 @@ import Select from "../../../components/Inputs/Select";
 import Alert from "../../../components/Alert";
 import Chip from "../../../components/Chip";
 import { CustomizableButton } from "../../../components/button/customizable-button";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import { fill } from "../../../../i18n/fill";
 import { useTranslation } from "../../../../application/hooks/useTranslation";
 import {
@@ -205,7 +205,7 @@ export default function QuestionnaireManagerModal({ onClose }: { onClose: () => 
                   sx={{
                     p: "12px",
                     border: `1px solid ${palette.border.dark}`,
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                   }}
                 >
                   <Stack gap="8px">
@@ -308,7 +308,7 @@ export default function QuestionnaireManagerModal({ onClose }: { onClose: () => 
                   sx={controlButtonSx}
                 />
               </Box>
-              <Stack sx={{ border: `1px solid ${palette.border.dark}`, borderRadius: "4px" }}>
+              <Stack sx={{ border: `1px solid ${palette.border.dark}`, borderRadius: radiusPx.sm }}>
                 {questionnaires.map((questionnaire, index) => (
                   <Stack
                     key={questionnaire.id}

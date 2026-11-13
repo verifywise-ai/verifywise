@@ -45,6 +45,7 @@ import {
   brand,
   status,
   accent,
+  radiusPx,
 } from "../../themes/palette";
 import Chip from "../../components/Chip";
 import { cardStyles, tableStyles } from "../../themes/components";
@@ -243,7 +244,7 @@ export default function AIAuditDashboard() {
               "textTransform": "none",
               "minWidth": 120,
               "backgroundColor": brand.primary,
-              "borderRadius": "4px",
+              "borderRadius": radiusPx.sm,
               "fontSize": 13,
               "fontWeight": 500,
               "boxShadow": "none",
@@ -620,7 +621,7 @@ export default function AIAuditDashboard() {
         fullWidth
         PaperProps={{
           sx: {
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             border: `1px solid ${borderPalette.dark}`,
           },
         }}

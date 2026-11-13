@@ -15,7 +15,8 @@ import { GroupedTableView } from "../Table/GroupedTableView";
 import { Project } from "../../../domain/types/Project";
 import { User } from "../../../domain/types/User";
 import { ExportMenu } from "../Table/ExportMenu";
-import { FilterBy, FilterColumn } from "../Table/FilterBy";
+import { FilterColumn } from "../Table/FilterBy";
+import { TableFilter } from "../Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { ColumnSelector } from "../Table/ColumnSelector";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
@@ -213,8 +214,12 @@ const ProjectList = ({
   );
 
   // FilterBy - Initialize hook
-  const { filterData: filterProjectData, handleFilterChange: handleProjectFilterChange } =
-    useFilterBy<Project>(getProjectFieldValue);
+  const {
+    filterData: filterProjectData,
+    handleFilterChange: handleProjectFilterChange,
+    conditions: projectFilterConditions,
+    logic: projectFilterLogic,
+  } = useFilterBy<Project>(getProjectFieldValue);
 
   // Filter projects using FilterBy and search
   const filteredProjects = useMemo(() => {
@@ -392,7 +397,14 @@ const ProjectList = ({
         }}
       >
         <Stack direction="row" spacing={2} alignItems="center" sx={{ flex: 1 }}>
-          <FilterBy columns={projectFilterColumns} onFilterChange={handleProjectFilterChange} />
+          <TableFilter
+            columns={projectFilterColumns}
+            onFilterChange={handleProjectFilterChange}
+            defaultConditions={projectFilterConditions}
+            defaultLogic={projectFilterLogic}
+            data={projects}
+            getFieldValue={getProjectFieldValue}
+          />
 
           {viewMode === "table" && (
             <>

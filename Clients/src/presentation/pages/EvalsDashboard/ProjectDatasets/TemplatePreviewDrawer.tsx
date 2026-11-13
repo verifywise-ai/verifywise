@@ -25,7 +25,7 @@ import { Copy, Database, X } from "lucide-react";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import Chip from "../../../components/Chip";
 import singleTheme from "../../../themes/v1SingleTheme";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import type {
   DatasetPromptRecord,
   SingleTurnPrompt,
@@ -323,7 +323,7 @@ export default function TemplatePreviewDrawer({
                                           mb: 2,
                                           p: 1.5,
                                           backgroundColor: palette.status.success.bg,
-                                          borderRadius: "6px",
+                                          borderRadius: radiusPx.md,
                                         }}
                                       >
                                         <Typography
@@ -360,7 +360,7 @@ export default function TemplatePreviewDrawer({
                                             sx={{
                                               maxWidth: "85%",
                                               p: 1.5,
-                                              borderRadius: "8px",
+                                              borderRadius: radiusPx.lg,
                                               backgroundColor:
                                                 turn.role === "user"
                                                   ? palette.background.hover

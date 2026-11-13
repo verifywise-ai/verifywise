@@ -10,13 +10,25 @@ import { UserDateFormat } from "../../../../domain/enums/userDateFormat.enum";
 import { updateCurrentUserPreferences } from "../../../../application/repository/userPreferences.repository";
 import Select from "../../../components/Inputs/Select";
 import Toggle from "../../../components/Inputs/Toggle";
-import { brand, text } from "../../../themes/palette";
+import { brand, text, radiusPx } from "../../../themes/palette";
 import { setLanguage, getLanguage } from "../../../../i18n/domTranslator";
 import type { Lang } from "../../../../i18n/translations";
 import { textStyles } from "../../../themes/typography";
+import { getUiStyle, setUiStyle, type UiStyle } from "../../../themes/uiStyle";
 
 const PARALLEL_AGENTS_DESCRIPTION =
   "When enabled, the Advisor runs independent sub-tasks in parallel for faster answers; disable if responses seem inconsistent.";
+
+const INTERFACE_STYLE_DESCRIPTION =
+  "The classic look stays available until January 2027. Changing this reloads the page.";
+
+const INTERFACE_STYLE_STORAGE_ERROR =
+  "Your browser is blocking site storage, so the interface style can't be saved. Allow site data for VerifyWise and try again.";
+
+const INTERFACE_STYLE_OPTIONS: { _id: UiStyle; name: string }[] = [
+  { _id: "phase1", name: "New style" },
+  { _id: "classic", name: "Classic" },
+];
 
 const LANGUAGE_OPTIONS: { _id: Lang; name: string }[] = [
   { _id: "en", name: "English" },
@@ -135,7 +147,7 @@ const Preferences: React.FC = () => {
           height="300px"
           minWidth={"100%"}
           minHeight={300}
-          sx={{ borderRadius: 2 }}
+          sx={{ borderRadius: radiusPx.sm }}
         />
       )}
       {alert.visible && (
@@ -176,6 +188,32 @@ const Preferences: React.FC = () => {
               />
             </Box>
             <Box sx={{ mt: theme.spacing(8) }}>
+              {/* Browser-only preference: applies at once and reloads, separate from Save. */}
+              <Select
+                id="interface-style-input"
+                label="Interface style"
+                placeholder="Select a style"
+                value={getUiStyle()}
+                onChange={(event) => {
+                  if (!setUiStyle(event.target.value as UiStyle)) {
+                    setAlert({
+                      variant: "error",
+                      title: "Error",
+                      body: INTERFACE_STYLE_STORAGE_ERROR,
+                      isToast: true,
+                      visible: true,
+                    });
+                  }
+                }}
+                items={INTERFACE_STYLE_OPTIONS}
+              />
+              <Typography
+                sx={{ ...textStyles.bodySmall, color: text.tertiary, mt: theme.spacing(2) }}
+              >
+                {INTERFACE_STYLE_DESCRIPTION}
+              </Typography>
+            </Box>
+            <Box sx={{ mt: theme.spacing(8) }}>
               <Typography
                 sx={{ ...textStyles.cardTitle, color: text.primary, mb: theme.spacing(4) }}
               >
@@ -184,7 +222,7 @@ const Preferences: React.FC = () => {
               <Box
                 sx={{
                   border: `1px solid ${theme.palette.border.light}`,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   p: theme.spacing(8),
                   backgroundColor: theme.palette.background.main,
                   display: "flex",

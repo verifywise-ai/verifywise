@@ -12,6 +12,7 @@ import { EmptyState } from "../../../components/EmptyState";
 import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import palette from "../../../themes/palette";
+import { palette as vwPalette, radiusPx } from "../../../themes/palette";
 import { usePlaygroundRuntime } from "./usePlaygroundRuntime";
 import { PlaygroundMessage } from "./PlaygroundMessage";
 import { PlaygroundComposer } from "./PlaygroundComposer";
@@ -99,7 +100,7 @@ export default function PlaygroundPage() {
             sx={{
               "p": 1,
               "backgroundColor": showSettings ? palette.background.fill : "transparent",
-              "borderRadius": "4px",
+              "borderRadius": radiusPx.sm,
               "&:hover": { backgroundColor: palette.background.fill },
             }}
           >
@@ -161,7 +162,7 @@ export default function PlaygroundPage() {
             flex: 1,
             minHeight: 400,
             border: `1.5px solid ${palette.border.light}`,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             overflow: "hidden",
             display: "flex",
             flexDirection: "column",
@@ -184,31 +185,34 @@ export default function PlaygroundPage() {
                     alignItems: "flex-start",
                     gap: "8px",
                     p: "12px 16px",
-                    borderRadius: "4px",
-                    border: "1px solid #FEDF89",
-                    bgcolor: "#FFFAEB",
+                    borderRadius: radiusPx.sm,
+                    border: `1px solid ${vwPalette.status.warning.border}`,
+                    bgcolor: vwPalette.status.warning.bg,
                     mb: "8px",
                   }}
                 >
                   <TriangleAlert
                     size={16}
                     strokeWidth={1.5}
-                    color="#B54708"
+                    color={vwPalette.risk.high.text}
                     style={{ flexShrink: 0, marginTop: 1 }}
                   />
                   <Box>
-                    <Typography fontSize={13} fontWeight={500} color="#B54708">
+                    <Typography fontSize={13} fontWeight={500} color={vwPalette.risk.high.text}>
                       Setup required
                     </Typography>
-                    <Typography fontSize={12} color="#93370D" mt="2px">
+                    <Typography fontSize={12} color={vwPalette.status.warning.text} mt="2px">
                       The playground needs at least one active endpoint.{" "}
-                      <Link to="/ai-gateway/settings" style={{ color: "#B54708", fontWeight: 500 }}>
+                      <Link
+                        to="/ai-gateway/settings"
+                        style={{ color: vwPalette.risk.high.text, fontWeight: 500 }}
+                      >
                         Add an API key
                       </Link>{" "}
                       in Settings, then{" "}
                       <Link
                         to="/ai-gateway/endpoints"
-                        style={{ color: "#B54708", fontWeight: 500 }}
+                        style={{ color: vwPalette.risk.high.text, fontWeight: 500 }}
                       >
                         create an endpoint
                       </Link>{" "}

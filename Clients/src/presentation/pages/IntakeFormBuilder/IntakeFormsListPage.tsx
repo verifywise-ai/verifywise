@@ -93,6 +93,7 @@ import {
   type PreviewRole,
 } from "../../../application/utils/intakeRouting/previewRole";
 import { usePollWhileVisible } from "../../../application/hooks/usePollWhileVisible";
+import { palette, radiusPx } from "../../themes/palette";
 
 // ============================================================================
 // Helpers
@@ -1094,7 +1095,7 @@ export function IntakeFormsListPage() {
                   selectedEntityType === option.type
                     ? `1px solid ${theme.palette.primary.main}`
                     : `1px solid ${theme.palette.border.dark}`,
-                "borderRadius": "4px",
+                "borderRadius": radiusPx.sm,
                 "cursor": "pointer",
                 "backgroundColor":
                   selectedEntityType === option.type
@@ -1152,7 +1153,7 @@ export function IntakeFormsListPage() {
         }}
         onSubmit={handleDeleteConfirm}
         submitButtonText={isDeleting ? "Deleting..." : "Delete"}
-        submitButtonColor="#c62828"
+        submitButtonColor={palette.status.error.text}
         isSubmitting={isDeleting}
         maxWidth="440px"
         fitContent

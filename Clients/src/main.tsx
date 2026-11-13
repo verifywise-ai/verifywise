@@ -19,6 +19,7 @@ import { QueryClientProvider } from "@tanstack/react-query";
 import { queryClient } from "./application/config/queryClient";
 import { initDomTranslator } from "./i18n/domTranslator";
 import { initBrowserTelemetry } from "./infrastructure/observability/browserTelemetry";
+import { applyTokenCssVars } from "./presentation/themes/cssVars";
 
 // Expose React and related libraries as globals for plugin UI bundles
 (window as any).React = React;
@@ -29,6 +30,7 @@ import { initBrowserTelemetry } from "./infrastructure/observability/browserTele
 (window as any).emotionStyled = emotionStyled;
 (window as any).ReactRouterDOM = ReactRouterDOM;
 
+applyTokenCssVars();
 initDomTranslator();
 initBrowserTelemetry();
 

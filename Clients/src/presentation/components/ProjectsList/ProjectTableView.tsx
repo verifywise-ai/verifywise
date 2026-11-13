@@ -41,7 +41,7 @@ import { deleteProject } from "../../../application/repository/project.repositor
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import Alert from "../Alert";
 import { useCanCheck } from "../../../application/hooks/useCan";
-import { text } from "../../themes/palette";
+import { text, palette as vwPalette } from "../../themes/palette";
 import useUsers from "../../../application/hooks/useUsers";
 import { useCustomFieldDefinitions } from "../../../application/hooks/useCustomFields";
 import { formatCustomFieldValue } from "../CustomFieldsSection/formatCustomFieldValue";
@@ -524,7 +524,10 @@ const ProjectTableView: React.FC<IProjectTableViewProps> = ({
                       ...singleTheme.tableStyles.primary.body.cell,
                       fontSize: "13px",
                       fontWeight: 600,
-                      backgroundColor: sortConfig.key === "ucId" ? "#e8e8e8" : "#fafafa",
+                      backgroundColor:
+                        sortConfig.key === "ucId"
+                          ? vwPalette.border.light
+                          : vwPalette.background.alt,
                     }}
                   >
                     {project.uc_id || project.id}

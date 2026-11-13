@@ -4,7 +4,8 @@ import { X, Filter, Plus } from "lucide-react";
 import Select from "../Inputs/Select";
 import Field from "../Inputs/Field";
 import { VWLink } from "../Link/VWLink";
-import { brand, status } from "../../themes/palette";
+import { brand, status, palette as vwPalette, radiusPx } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 
 // Column type determines available operators and value input type
 export type FilterColumnType = "select" | "text" | "date";
@@ -19,6 +20,12 @@ export interface FilterColumn {
   label: string;
   type: FilterColumnType;
   options?: FilterColumnOption[]; // Required for 'select' type
+  /**
+   * The page fetches rows for the picked value, so the loaded rows cannot
+   * count the other values. Once a value is picked, the phase 1 chip menu
+   * lists every option without counts. The classic filter ignores it.
+   */
+  serverFiltered?: boolean;
 }
 
 export type FilterOperator =
@@ -131,7 +138,7 @@ const LogicToggle: React.FC<{
         display: "flex",
         border: "1px solid",
         borderColor: "divider",
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         overflow: "hidden",
         height: "30px",
         bgcolor: "action.hover",
@@ -196,8 +203,8 @@ const FilterBadge: React.FC<{ count: number }> = ({ count }) => (
       width: "18px",
       height: "18px",
       borderRadius: "50%",
-      backgroundColor: "#dbeafe",
-      color: "#1e40af",
+      backgroundColor: chartTheme.countBadge.filter.bg,
+      color: chartTheme.countBadge.filter.text,
       fontSize: "11px",
       fontWeight: 600,
       marginLeft: "6px",
@@ -216,9 +223,9 @@ const WhereBadge: React.FC = () => (
       justifyContent: "center",
       height: "34px",
       width: LOGIC_CONTROL_WIDTH,
-      borderRadius: "4px",
-      backgroundColor: "#f1f5f9",
-      color: "#475569",
+      borderRadius: radiusPx.sm,
+      backgroundColor: vwPalette.background.hover,
+      color: vwPalette.text.tertiary,
       fontSize: "11px",
       fontWeight: 600,
       textTransform: "uppercase",
@@ -507,18 +514,18 @@ export const FilterBy: React.FC<FilterByProps> = ({
           "fontWeight": 500,
           "padding": "6px 12px",
           "textTransform": "none",
-          "color": "#374151",
+          "color": vwPalette.text.secondary,
           "borderColor": "border.dark",
           "height": "34px",
           "minWidth": activeFilterCount > 0 ? "100px" : "80px",
-          "backgroundColor": open ? "#eff6ff" : "transparent",
+          "backgroundColor": open ? vwPalette.status.info.bg : "transparent",
           "&:hover": {
             borderColor: "text.muted",
-            backgroundColor: "#eff6ff",
+            backgroundColor: vwPalette.status.info.bg,
           },
         }}
       >
-        <Filter size={16} color="#3b82f6" style={{ marginRight: "6px" }} />
+        <Filter size={16} color={vwPalette.status.info.text} style={{ marginRight: "6px" }} />
         Filter
         {activeFilterCount > 0 && <FilterBadge count={activeFilterCount} />}
       </Button>
@@ -542,7 +549,7 @@ export const FilterBy: React.FC<FilterByProps> = ({
               padding: "16px",
               minWidth: "700px",
               boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
             },
           },
         }}
@@ -595,7 +602,7 @@ export const FilterBy: React.FC<FilterByProps> = ({
               mb: "-16px",
               backgroundColor: "background.accent",
               borderTop: "1px solid status.default.border",
-              borderRadius: "0 0 4px 4px",
+              borderRadius: `0 0 ${radiusPx.sm} ${radiusPx.sm}`,
             }}
           >
             <Typography
@@ -608,7 +615,7 @@ export const FilterBy: React.FC<FilterByProps> = ({
                 "letterSpacing": "0.5px",
                 "cursor": "pointer",
                 "&:hover": {
-                  color: "#374151",
+                  color: vwPalette.text.secondary,
                 },
               }}
             >

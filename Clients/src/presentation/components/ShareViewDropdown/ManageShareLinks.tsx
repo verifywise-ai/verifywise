@@ -7,7 +7,7 @@ import {
   useUpdateShareLink,
   useDeleteShareLink,
 } from "../../../application/hooks/useShare";
-import { brand, text, background } from "../../themes/palette";
+import { brand, text, background, palette as vwPalette, radiusPx } from "../../themes/palette";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 /**
@@ -118,7 +118,7 @@ const ManageShareLinks: React.FC<ManageShareLinksProps> = ({
           variant="body2"
           sx={{
             fontSize: "13px",
-            color: "#666",
+            color: vwPalette.text.tertiary,
           }}
         >
           No share links created yet. Enable share view to create one.
@@ -169,8 +169,8 @@ const ManageShareLinks: React.FC<ManageShareLinksProps> = ({
           <Box
             key={shareLink.id}
             sx={{
-              border: "1px solid #e0e0e0",
-              borderRadius: "6px",
+              border: `1px solid ${vwPalette.border.light}`,
+              borderRadius: radiusPx.md,
               p: 1.5,
               backgroundColor: shareLink.is_enabled
                 ? `${background.main}`
@@ -190,7 +190,7 @@ const ManageShareLinks: React.FC<ManageShareLinksProps> = ({
                   variant="body2"
                   sx={{
                     fontSize: "12px",
-                    color: "#666",
+                    color: vwPalette.text.tertiary,
                     mb: 0.5,
                   }}
                 >
@@ -200,7 +200,7 @@ const ManageShareLinks: React.FC<ManageShareLinksProps> = ({
                   variant="body2"
                   sx={{
                     fontSize: "11px",
-                    color: "#999",
+                    color: vwPalette.text.accent,
                     fontFamily: "monospace",
                     wordBreak: "break-all",
                   }}
@@ -221,7 +221,7 @@ const ManageShareLinks: React.FC<ManageShareLinksProps> = ({
                 alignItems: "center",
                 mt: 1,
                 pt: 1,
-                borderTop: "1px solid #e0e0e0",
+                borderTop: `1px solid ${vwPalette.border.light}`,
               }}
             >
               <Box sx={{ display: "flex", gap: 0.5 }}>
@@ -264,7 +264,7 @@ const ManageShareLinks: React.FC<ManageShareLinksProps> = ({
                   onClick={() => handleDeleteLink(shareLink.id)}
                   sx={{
                     "p": 0.5,
-                    "color": "#dc2626",
+                    "color": vwPalette.riskMark.critical,
                     "&:hover": {
                       backgroundColor: "rgba(220, 38, 38, 0.1)",
                     },

@@ -38,7 +38,15 @@ import { WelcomeVideoPlayer } from "../../components/FeatureVideos/WelcomeVideo"
 import { VideoPlayerModal } from "../../components/FeatureVideos/player/VideoPlayerModal";
 import { buildExploreConfig } from "../../components/FeatureVideos/shared/buildExploreConfig";
 import { EXPLORE_VIDEO_DATA } from "../../components/FeatureVideos/exploreVideos";
-import { background, border, brand } from "../../themes/palette";
+import {
+  background,
+  border,
+  brand,
+  radiusPx,
+  primitives,
+  palette as vwPalette,
+} from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 
 // ── Keyframe animations ──
 const fadeInUp = keyframes`
@@ -132,55 +140,55 @@ const EXPLORE_CARDS = [
   {
     title: "Compliance",
     desc: "EU AI Act, ISO 42001, NIST AI RMF frameworks and controls.",
-    color: "#1E88E5",
+    color: chartTheme.tiles[0],
     path: "/framework",
   },
   {
     title: "Risk management",
     desc: "Identify, assess, and mitigate risks across AI systems.",
-    color: "#F4511E",
+    color: chartTheme.tiles[1],
     path: "/risk-management",
   },
   {
     title: "LLM Evals",
     desc: "Evaluate and benchmark your LLM apps for quality and safety.",
-    color: "#7B1FA2",
+    color: chartTheme.tiles[2],
     path: "/evals",
   },
   {
     title: "AI detection",
     desc: "Scan repos for AI/ML libraries, containers, and shadow AI.",
-    color: "#00796B",
+    color: chartTheme.tiles[3],
     path: "/ai-detection",
   },
   {
     title: "Shadow AI",
     desc: "Monitor unauthorized AI tool usage across your organization.",
-    color: "#D84315",
+    color: chartTheme.tiles[4],
     path: "/shadow-ai",
   },
   {
     title: "Policies",
     desc: "Create, manage, and track AI governance policies.",
-    color: "#283593",
+    color: chartTheme.tiles[5],
     path: "/policies",
   },
   {
     title: "Reporting",
     desc: "Generate compliance reports with optional AI enhancement.",
-    color: "#558B2F",
+    color: chartTheme.tiles[6],
     path: "/reporting",
   },
   {
     title: "Training",
     desc: "Track employee AI training and compliance certifications.",
-    color: "#C2185B",
+    color: chartTheme.tiles[7],
     path: "/training",
   },
   {
     title: "Extensions",
     desc: "Enable Slack, MLflow, Azure AI Foundry, Jira Assets, and more.",
-    color: "#1565C0",
+    color: chartTheme.tiles[8],
     path: "/extensions",
   },
 ] as const;
@@ -192,63 +200,63 @@ const SHORTCUTS = [
     icon: LayoutGrid,
     path: "/overview",
     color: brand.primaryHover,
-    bg: `linear-gradient(135deg, ${brand.primaryLight}, #C8E6D0)`,
+    bg: `linear-gradient(135deg, ${brand.primaryLight}, ${primitives.green[200]})`,
   },
   {
     label: "Risks",
     tooltip: "Identify, assess, and track risks across all AI systems.",
     icon: AlertTriangle,
     path: "/risk-management",
-    color: "#1565C0",
-    bg: "linear-gradient(135deg, #E3F2FD, #BBDEFB)",
+    color: vwPalette.accent.blue.text,
+    bg: `linear-gradient(135deg, ${vwPalette.accent.blue.bg}, ${vwPalette.accent.blue.border})`,
   },
   {
     label: "Models",
     tooltip: "Track AI/ML models, their versions, and deployment status.",
     icon: Brain,
     path: "/model-inventory",
-    color: "#E65100",
-    bg: "linear-gradient(135deg, #FFF8E1, #FFECB3)",
+    color: vwPalette.accent.orange.text,
+    bg: `linear-gradient(135deg, ${vwPalette.accent.orange.bg}, ${vwPalette.accent.orange.border})`,
   },
   {
     label: "Vendors",
     tooltip: "Manage third-party AI vendors and their risk profiles.",
     icon: Building,
     path: "/vendors",
-    color: "#C2185B",
-    bg: "linear-gradient(135deg, #FCE4EC, #F8BBD0)",
+    color: vwPalette.accent.pink.text,
+    bg: `linear-gradient(135deg, ${vwPalette.accent.pink.bg}, ${vwPalette.accent.pink.border})`,
   },
   {
     label: "Tasks",
     tooltip: "View and manage compliance tasks assigned to your team.",
     icon: Calendar,
     path: "/tasks",
-    color: "#7B1FA2",
-    bg: "linear-gradient(135deg, #F3E5F5, #E1BEE7)",
+    color: vwPalette.accent.purple.text,
+    bg: `linear-gradient(135deg, ${vwPalette.accent.purple.bg}, ${vwPalette.accent.purple.border})`,
   },
   {
     label: "Reporting",
     tooltip: "Generate compliance and governance reports for stakeholders.",
     icon: BarChart3,
     path: "/reporting",
-    color: "#283593",
-    bg: "linear-gradient(135deg, #E8EAF6, #C5CAE9)",
+    color: vwPalette.accent.indigo.text,
+    bg: `linear-gradient(135deg, ${vwPalette.accent.indigo.bg}, ${vwPalette.accent.indigo.border})`,
   },
   {
     label: "Policies",
     tooltip: "Create and manage AI governance policies for your organization.",
     icon: FileText,
     path: "/policies",
-    color: "#00796B",
-    bg: "linear-gradient(135deg, #E0F2F1, #B2DFDB)",
+    color: vwPalette.accent.teal.text,
+    bg: `linear-gradient(135deg, ${vwPalette.accent.teal.bg}, ${vwPalette.accent.teal.border})`,
   },
   {
     label: "Settings",
     tooltip: "Configure organization settings, users, and preferences.",
     icon: Settings,
     path: "/settings",
-    color: "#E65100",
-    bg: "linear-gradient(135deg, #FFF3E0, #FFE0B2)",
+    color: vwPalette.accent.cocoa.text,
+    bg: `linear-gradient(135deg, ${vwPalette.accent.cocoa.bg}, ${vwPalette.accent.cocoa.border})`,
   },
 ] as const;
 
@@ -432,13 +440,25 @@ const StartHere = () => {
         ...defaults,
         particleCount,
         origin: { x: rand(0.1, 0.3), y: Math.random() - 0.2 },
-        colors: [brand.primary, "#10B981", "#D1FAE5", "#34D399", "#6EE7B7"],
+        colors: [
+          brand.primary,
+          primitives.green[500],
+          primitives.green[100],
+          primitives.green[400],
+          primitives.green[300],
+        ],
       });
       confetti({
         ...defaults,
         particleCount,
         origin: { x: rand(0.7, 0.9), y: Math.random() - 0.2 },
-        colors: [brand.primary, "#10B981", "#D1FAE5", "#34D399", "#6EE7B7"],
+        colors: [
+          brand.primary,
+          primitives.green[500],
+          primitives.green[100],
+          primitives.green[400],
+          primitives.green[300],
+        ],
       });
     }, 250);
 
@@ -504,7 +524,7 @@ const StartHere = () => {
               iconBackground={brand.primaryLight}
               sx={{
                 p: "12px 16px",
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 border: `1px solid ${border.dark}`,
                 backgroundColor: background.accent,
               }}
@@ -536,7 +556,7 @@ const StartHere = () => {
                   }
                 }}
                 sx={{
-                  "borderRadius": "8px",
+                  "borderRadius": radiusPx.lg,
                   "padding": "20px 16px",
                   "position": "relative",
                   "overflow": "hidden",
@@ -643,7 +663,7 @@ const StartHere = () => {
                       alignItems: "center",
                       gap: "4px",
                       backgroundColor: "rgba(0,0,0,0.5)",
-                      borderRadius: "4px",
+                      borderRadius: radiusPx.sm,
                       padding: "3px 8px",
                     }}
                   >
@@ -743,7 +763,7 @@ const StartHere = () => {
                   sx={{
                     "minWidth": 196,
                     "maxWidth": 196,
-                    "borderRadius": "8px",
+                    "borderRadius": radiusPx.lg,
                     "overflow": "hidden",
                     "background": theme.palette.background.main,
                     "border": `1px solid ${theme.palette.border.light}`,
@@ -919,7 +939,7 @@ const StartHere = () => {
                       sx={{
                         width: 48,
                         height: 48,
-                        borderRadius: "12px",
+                        borderRadius: radiusPx.xl,
                         background: s.bg,
                         display: "flex",
                         alignItems: "center",
@@ -972,7 +992,7 @@ const StartHere = () => {
                   sx={{
                     "gap": "8px",
                     "p": "16px",
-                    "borderRadius": "8px",
+                    "borderRadius": radiusPx.lg,
                     "border": `1px solid ${theme.palette.border.light}`,
                     "minWidth": 160,
                     "cursor": "pointer",
@@ -1045,7 +1065,7 @@ const StartHere = () => {
           <Box
             sx={{
               "background": `linear-gradient(135deg, ${brand.primaryHover}, ${brand.primary})`,
-              "borderRadius": "8px",
+              "borderRadius": radiusPx.lg,
               "p": "16px",
               "color": "background.main",
               "position": "relative",
@@ -1146,7 +1166,7 @@ const StartHere = () => {
                       "gap": "8px",
                       "animation": `${fadeInUp} 0.3s ease-out ${0.6 + i * 0.08}s both`,
                       "cursor": !done && step.path ? "pointer" : "default",
-                      "borderRadius": "4px",
+                      "borderRadius": radiusPx.sm,
                       "p": "2px 4px",
                       "mx": "-4px",
                       "transition": "background 0.2s",
@@ -1188,7 +1208,7 @@ const StartHere = () => {
           sx={{
             background: theme.palette.background.main,
             border: `1px solid ${theme.palette.border.light}`,
-            borderRadius: "8px",
+            borderRadius: radiusPx.lg,
             p: "16px",
           }}
         >
@@ -1208,13 +1228,13 @@ const StartHere = () => {
                   sx={{
                     "gap": "8px",
                     "p": "8px",
-                    "borderRadius": "6px",
+                    "borderRadius": radiusPx.md,
                     "cursor": "pointer",
                     "transition": "all 0.2s ease",
                     "textDecoration": "none",
                     "color": "inherit",
                     "&:hover": {
-                      "background": "#F9F9F9",
+                      "background": vwPalette.background.alt,
                       "& .resource-icon svg": {
                         stroke: brand.primary,
                       },
@@ -1253,7 +1273,7 @@ const StartHere = () => {
           sx={{
             background: theme.palette.background.main,
             border: `1px solid ${theme.palette.border.light}`,
-            borderRadius: "8px",
+            borderRadius: radiusPx.lg,
             p: "16px",
           }}
         >
@@ -1268,11 +1288,11 @@ const StartHere = () => {
                 sx={{
                   "gap": "8px",
                   "p": "8px",
-                  "borderRadius": "6px",
+                  "borderRadius": radiusPx.md,
                   "cursor": "pointer",
                   "transition": "all 0.2s ease",
                   "&:hover": {
-                    "background": "#F9F9F9",
+                    "background": vwPalette.background.alt,
                     "& .whatsnew-icon svg": {
                       stroke: brand.primary,
                     },

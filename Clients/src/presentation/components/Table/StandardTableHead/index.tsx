@@ -3,12 +3,15 @@ import { TableCell, TableHead, TableRow, Box, Typography } from "@mui/material";
 import { ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { text, border } from "../../../themes/palette";
+import { isClassicUi } from "../../../themes/uiStyle";
 import Checkbox from "../../Inputs/Checkbox";
 import type {
   SelectionColumnConfig,
   SortConfig,
   StandardColumn,
 } from "../../../../domain/types/standardTable";
+
+const classicUi = isClassicUi();
 
 interface StandardTableHeadProps {
   columns: StandardColumn[];
@@ -58,10 +61,19 @@ const StandardTableHead: React.FC<StandardTableHeadProps> = memo(
           )}
           {columns.map((column) => {
             const isActionColumn = column.id === "actions";
+            const isSorted = sortConfig.key === column.id && sortConfig.direction !== null;
+            const ariaSort = column.sortable
+              ? isSorted
+                ? sortConfig.direction === "asc"
+                  ? "ascending"
+                  : "descending"
+                : "none"
+              : undefined;
 
             return (
               <TableCell
                 key={column.id}
+                aria-sort={classicUi ? undefined : ariaSort}
                 sx={{
                   ...singleTheme.tableStyles.primary.header.cell,
                   textAlign: column.align ?? "left",
@@ -94,15 +106,34 @@ const StandardTableHead: React.FC<StandardTableHeadProps> = memo(
                 >
                   <Typography
                     variant="body2"
-                    sx={{
-                      fontWeight: 500,
-                      fontSize: "13px",
-                      color: sortConfig.key === column.id ? "primary.main" : "inherit",
-                    }}
+                    sx={
+                      classicUi
+                        ? {
+                            fontWeight: 500,
+                            fontSize: "13px",
+                            color: sortConfig.key === column.id ? "primary.main" : "inherit",
+                          }
+                        : {
+                            // Phase 1: the header cell sets the type (11px, 500, uppercase, tracked).
+                            font: "inherit",
+                            letterSpacing: "inherit",
+                            color: isSorted ? "primary.main" : "inherit",
+                          }
+                    }
                   >
                     {column.label}
                   </Typography>
-                  {column.sortable && (
+                  {!classicUi && column.sortable && isSorted && (
+                    <Box
+                      component="span"
+                      aria-hidden="true"
+                      data-testid="sort-arrow"
+                      sx={{ color: "primary.main", lineHeight: 1 }}
+                    >
+                      {sortConfig.direction === "asc" ? "\u2191" : "\u2193"}
+                    </Box>
+                  )}
+                  {classicUi && column.sortable && (
                     <Box
                       sx={{
                         display: "flex",

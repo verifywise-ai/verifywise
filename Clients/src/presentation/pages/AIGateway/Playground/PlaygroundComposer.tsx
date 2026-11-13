@@ -3,6 +3,7 @@ import { Stack, IconButton, useTheme } from "@mui/material";
 import { ComposerPrimitive } from "@assistant-ui/react";
 import { Send } from "lucide-react";
 import palette from "../../../themes/palette";
+import { radiusPx } from "../../../themes/palette";
 
 const ComposerInput = forwardRef<
   HTMLTextAreaElement,
@@ -65,7 +66,7 @@ export function PlaygroundComposer({ disabled }: PlaygroundComposerProps) {
               "color": palette.background.main,
               "width": 36,
               "height": 36,
-              "borderRadius": "4px",
+              "borderRadius": radiusPx.sm,
               "&:hover": { backgroundColor: palette.brand.primaryHover },
               "&:disabled": {
                 backgroundColor: palette.border.light,

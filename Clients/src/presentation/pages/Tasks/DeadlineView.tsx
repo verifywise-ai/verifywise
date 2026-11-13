@@ -21,6 +21,7 @@ import { DASHBOARD_COLORS, DEADLINE_COLORS } from "../../styles/colors";
 import { DeadlineViewProps, DeadlineGroup } from "./types";
 import { getEndOfWeek, getEndOfMonth } from "./utils";
 import { storageService, dynamicKeys } from "../../../infrastructure/storage";
+import { radiusPx } from "../../themes/palette";
 
 const DeadlineView: React.FC<DeadlineViewProps> = ({
   tasks,
@@ -264,7 +265,7 @@ const DeadlineView: React.FC<DeadlineViewProps> = ({
                 "padding": "12px 16px",
                 "backgroundColor": group.bgColor,
                 "border": `1px solid ${DASHBOARD_COLORS.border}`,
-                "borderRadius": isCollapsed ? "4px" : "4px 4px 0 0",
+                "borderRadius": isCollapsed ? radiusPx.sm : `${radiusPx.sm} ${radiusPx.sm} 0 0`,
                 "cursor": "pointer",
                 "&:hover": {
                   opacity: 0.9,
@@ -314,7 +315,7 @@ const DeadlineView: React.FC<DeadlineViewProps> = ({
                   "backgroundColor": DASHBOARD_COLORS.backgroundWhite,
                   "border": `1px solid ${DASHBOARD_COLORS.border}`,
                   "borderTop": "none",
-                  "borderRadius": "0 0 4px 4px",
+                  "borderRadius": `0 0 ${radiusPx.sm} ${radiusPx.sm}`,
                   // Override TasksTable's frame border to prevent double borders
                   "& table": {
                     border: "none",

@@ -19,6 +19,7 @@ import { Project, FrameworkValues } from "../../../../../application/interfaces/
 import NoFrameworkNotice from "../NoFrameworkNotice";
 import { FileText, FileType, Sparkles } from "lucide-react";
 import { ReportFormat } from "../../../../../domain/interfaces/i.widget";
+import { radiusPx } from "../../../../themes/palette";
 
 interface BasicFormValues {
   project: number | null;
@@ -330,7 +331,7 @@ const GenerateReportFrom: React.FC<ReportProps> = ({
             "& .MuiToggleButtonGroup-grouped": {
               "flex": 1,
               "border": `1px solid ${theme.palette.border.dark}`,
-              "borderRadius": "4px !important",
+              "borderRadius": `${radiusPx.sm} !important`,
               "&:not(:first-of-type)": {
                 marginLeft: "8px",
                 borderLeft: `1px solid ${theme.palette.border.dark}`,

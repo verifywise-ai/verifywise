@@ -23,7 +23,8 @@ import GroupedSelect from "../../components/Inputs/Select/GroupedSelect";
 import ModelSelector from "../../components/Inputs/ModelSelector";
 import { DEFAULT_JUDGE } from "../../utils/providers";
 import ArenaResultsPage from "./ArenaResultsPage";
-import { FilterBy, FilterCondition, FilterColumn } from "../../components/Table/FilterBy";
+import { FilterCondition, FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { GroupBy, GroupByOption } from "../../components/Table/GroupBy";
 import {
   createArenaComparison,
@@ -38,7 +39,7 @@ import {
   type LLMApiKey,
 } from "../../../application/repository/deepEval.repository";
 import { useNavigate } from "react-router";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 
 // Timing constants (in milliseconds)
 const POLLING_INTERVAL_MS = 5000;
@@ -126,6 +127,13 @@ interface TemplateDataset {
 interface ArenaPageProps {
   orgId?: string | null;
 }
+
+/** The fields the battle filter reads; the filter chips count rows with it. */
+const getComparisonFieldValue = (comparison: ArenaComparisonSummary, columnId: string) => {
+  if (columnId === "status") return comparison.status;
+  if (columnId === "name") return comparison.name;
+  return null;
+};
 
 export default function ArenaPage({ orgId }: ArenaPageProps) {
   const navigate = useNavigate();
@@ -567,7 +575,7 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
           <Box
             sx={{
               border: `2px dashed ${palette.accent.indigo.border}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: "16px",
               textAlign: "center",
               backgroundColor: palette.accent.purple.bg,
@@ -644,12 +652,16 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
             gap="4px"
           >
             <Stack direction="row" alignItems="center" gap="4px">
-              <FilterBy
+              <TableFilter
                 columns={filterColumns}
+                defaultConditions={filterConditions}
+                defaultLogic={filterLogic}
                 onFilterChange={(conditions, logic) => {
                   setFilterConditions(conditions);
                   setFilterLogic(logic);
                 }}
+                data={comparisons}
+                getFieldValue={getComparisonFieldValue}
               />
               <GroupBy
                 options={groupByOptions}
@@ -960,7 +972,7 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
                     key={index}
                     sx={{
                       p: "6px",
-                      borderRadius: "4px",
+                      borderRadius: radiusPx.sm,
                       border: "2px solid",
                       borderColor: colorScheme.border,
                       backgroundColor: colorScheme.bg,
@@ -978,7 +990,7 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
                         sx={{
                           px: "4px",
                           py: "1.5px",
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                           background: colorScheme.gradient,
                           color: palette.background.main,
                           fontSize: 12,

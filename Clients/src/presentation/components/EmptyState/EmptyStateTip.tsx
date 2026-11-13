@@ -2,13 +2,14 @@ import { type FC, useRef, useState, useEffect, useCallback } from "react";
 import { Box, Typography, useTheme } from "@mui/material";
 import type { LucideIcon } from "lucide-react";
 import { ChevronRight } from "lucide-react";
+import { note, radiusPx } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
+import { isClassicUi } from "../../themes/uiStyle";
 
-/** Three accent palettes that rotate per-tip */
-const ACCENT_PALETTES = [
-  { bg: "#ECFDF3", bgHover: "#D1FADF", icon: "#039855", border: "#A6F4C5", expandBg: "#F6FEF9" },
-  { bg: "#EFF8FF", bgHover: "#D1E9FF", icon: "#1570EF", border: "#84CAFF", expandBg: "#F5FAFF" },
-  { bg: "#FFFAEB", bgHover: "#FEF0C7", icon: "#DC6803", border: "#FEDF89", expandBg: "#FFFCF5" },
-] as const;
+/** Accent palettes that rotate per tip (classic: green, blue, amber; phase 1: all amber notes). */
+const ACCENT_PALETTES = chartTheme.tipAccents;
+
+const classicUi = isClassicUi();
 
 interface EmptyStateTipProps {
   icon: LucideIcon;
@@ -69,7 +70,7 @@ const EmptyStateTip: FC<EmptyStateTipProps> = ({ icon: Icon, title, description,
       ref={detailsRef}
       sx={{
         border: `1px solid ${theme.palette.border.light}`,
-        borderRadius: "6px",
+        borderRadius: radiusPx.md,
         overflow: "hidden",
         transition: "border-color 200ms ease",
       }}
@@ -104,7 +105,7 @@ const EmptyStateTip: FC<EmptyStateTipProps> = ({ icon: Icon, title, description,
             justifyContent: "center",
             width: 30,
             height: 30,
-            borderRadius: "6px",
+            borderRadius: radiusPx.md,
             backgroundColor: accent.bg,
             border: `1px solid ${accent.border}40`,
             flexShrink: 0,
@@ -145,13 +146,13 @@ const EmptyStateTip: FC<EmptyStateTipProps> = ({ icon: Icon, title, description,
           ref={contentRef}
           sx={{
             padding: "12px 14px 12px 54px",
-            backgroundColor: theme.palette.background.main,
+            backgroundColor: classicUi ? theme.palette.background.main : note.bg,
           }}
         >
           <Typography
             sx={{
               fontSize: 13,
-              color: theme.palette.text.secondary,
+              color: classicUi ? theme.palette.text.secondary : note.text,
               lineHeight: 1.6,
             }}
           >

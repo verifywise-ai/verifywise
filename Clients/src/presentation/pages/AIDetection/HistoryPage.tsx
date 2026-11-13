@@ -44,7 +44,8 @@ import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import TablePaginationActions from "../../components/TablePagination";
 import singleTheme from "../../themes/v1SingleTheme";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
-import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
+import { FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { GroupBy } from "../../components/Table/GroupBy";
 import SearchBox from "../../components/Search/SearchBox";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
@@ -57,7 +58,7 @@ import {
 } from "../../../application/repository/aiDetection.repository";
 import { Scan, ScansResponse, ScanStatus } from "../../../domain/ai-detection/types";
 import { useAIDetectionSidebarContext } from "../../../application/contexts/AIDetectionSidebar.context";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 import { pageOfLabel } from "../../components/Table/pageOfLabel";
 import { isScorePartial, partialScoreLabel } from "./components/governanceScore";
 
@@ -273,7 +274,12 @@ export default function HistoryPage() {
   );
 
   // FilterBy hook
-  const { filterData, handleFilterChange } = useFilterBy<Scan>(getScanFieldValue);
+  const {
+    filterData,
+    handleFilterChange,
+    conditions: filterConditions,
+    logic: filterLogic,
+  } = useFilterBy<Scan>(getScanFieldValue);
 
   // Save rowsPerPage to localStorage whenever it changes
   useEffect(() => {
@@ -572,7 +578,7 @@ export default function HistoryPage() {
               sx={{
                 px: 0.75,
                 py: 0.25,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 backgroundColor: `${color}14`,
                 border: `1px solid ${color}30`,
               }}
@@ -767,7 +773,14 @@ export default function HistoryPage() {
     >
       {/* Toolbar with Filter, Group, Search */}
       <Stack direction="row" gap={2} alignItems="center" sx={{ mb: 2 }}>
-        <FilterBy columns={FILTER_COLUMNS} onFilterChange={handleFilterChange} />
+        <TableFilter
+          columns={FILTER_COLUMNS}
+          onFilterChange={handleFilterChange}
+          defaultConditions={filterConditions}
+          defaultLogic={filterLogic}
+          data={scans}
+          getFieldValue={getScanFieldValue}
+        />
         <GroupBy options={GROUP_BY_OPTIONS} onGroupChange={handleGroupChange} />
         <SearchBox
           placeholder="Search scans..."
@@ -785,7 +798,7 @@ export default function HistoryPage() {
           <TableContainer
             sx={{
               backgroundColor: palette.background.main,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               overflow: "hidden",
             }}
           >

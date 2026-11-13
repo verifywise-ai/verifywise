@@ -1,4 +1,5 @@
 import { Theme } from "@mui/material";
+import { radiusPx, palette as vwPalette } from "../../../themes/palette";
 
 export const getDatePickerStyle = (theme: Theme) => ({
   "backgroundColor": theme.palette.background.paper,
@@ -26,7 +27,7 @@ export const getDatePickerStyle = (theme: Theme) => ({
   // MUI v8 DatePicker uses sectionsContainer for the date display
   "& .MuiPickersOutlinedInput-root": {
     backgroundColor: theme.palette.background.paper,
-    borderRadius: "4px",
+    borderRadius: radiusPx.sm,
     paddingLeft: "40px !important",
   },
   "& .MuiPickersInputBase-sectionsContainer": {
@@ -45,7 +46,7 @@ export const getDatePickerStyle = (theme: Theme) => ({
   },
   "& .MuiOutlinedInput-root": {
     backgroundColor: theme.palette.background.paper,
-    borderRadius: "4px",
+    borderRadius: radiusPx.sm,
   },
   // Hover state for MUI v8 DatePicker
   "& .MuiPickersOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline": {
@@ -92,7 +93,7 @@ export const DatePickerStyle = {
   },
   "& .MuiPickersOutlinedInput-root": {
     backgroundColor: "background.main",
-    borderRadius: "4px",
+    borderRadius: radiusPx.sm,
     paddingLeft: "40px !important",
   },
   "& .MuiPickersInputBase-sectionsContainer": {
@@ -110,13 +111,13 @@ export const DatePickerStyle = {
   },
   "& .MuiOutlinedInput-root": {
     backgroundColor: "background.main",
-    borderRadius: "4px",
+    borderRadius: radiusPx.sm,
   },
   "& .MuiPickersOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline": {
-    borderColor: "#5FA896 !important",
+    borderColor: `${vwPalette.brand.primary} !important`,
   },
   "& .MuiPickersOutlinedInput-root:hover fieldset": {
-    borderColor: "#5FA896 !important",
+    borderColor: `${vwPalette.brand.primary} !important`,
   },
   "& .MuiPickersOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline": {
     borderColor: "brand.primary !important",

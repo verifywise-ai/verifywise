@@ -23,6 +23,8 @@ import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
 import { Tooltip as MuiTooltip } from "@mui/material";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import palette from "../../../themes/palette";
+import { chartTheme } from "../../../themes/chartTheme";
+import { palette as vwPalette } from "../../../themes/palette";
 import {
   sectionTitleSx,
   useCardSx,
@@ -252,21 +254,30 @@ export default function MCPAuditLogPage() {
                 </Stack>
                 <ResponsiveContainer width="100%" height={160}>
                   <BarChart data={toolStats} barSize={32} layout="horizontal">
-                    <CartesianGrid strokeDasharray="3 3" stroke="#eee" vertical={false} />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={vwPalette.border.light}
+                      vertical={false}
+                    />
                     <XAxis
                       dataKey="tool_name"
-                      tick={{ fontSize: 11, fill: "#888" }}
+                      tick={{ fontSize: 11, fill: vwPalette.text.accent }}
                       tickLine={false}
                       axisLine={false}
                     />
                     <YAxis
-                      tick={{ fontSize: 11, fill: "#888" }}
+                      tick={{ fontSize: 11, fill: vwPalette.text.accent }}
                       tickLine={false}
                       axisLine={false}
                       allowDecimals={false}
                     />
                     <Tooltip contentStyle={chartTooltipStyle} />
-                    <Bar dataKey="count" name="Calls" fill="#5C8A7D" radius={[3, 3, 0, 0]} />
+                    <Bar
+                      dataKey="count"
+                      name="Calls"
+                      fill={chartTheme.bars.primary}
+                      radius={[3, 3, 0, 0]}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </Box>
@@ -285,15 +296,19 @@ export default function MCPAuditLogPage() {
                 </Stack>
                 <ResponsiveContainer width="100%" height={160}>
                   <BarChart data={toolStats} barSize={32} layout="horizontal">
-                    <CartesianGrid strokeDasharray="3 3" stroke="#eee" vertical={false} />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={vwPalette.border.light}
+                      vertical={false}
+                    />
                     <XAxis
                       dataKey="tool_name"
-                      tick={{ fontSize: 11, fill: "#888" }}
+                      tick={{ fontSize: 11, fill: vwPalette.text.accent }}
                       tickLine={false}
                       axisLine={false}
                     />
                     <YAxis
-                      tick={{ fontSize: 11, fill: "#888" }}
+                      tick={{ fontSize: 11, fill: vwPalette.text.accent }}
                       tickLine={false}
                       axisLine={false}
                       tickFormatter={(v) => `${v}ms`}
@@ -305,7 +320,7 @@ export default function MCPAuditLogPage() {
                     <Bar
                       dataKey="avg_latency_ms"
                       name="Avg Latency"
-                      fill="#7986CB"
+                      fill={chartTheme.bars.secondary}
                       radius={[3, 3, 0, 0]}
                     />
                   </BarChart>

@@ -12,13 +12,15 @@ import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.cont
 import { useProfilePhotoFetch } from "../../../application/hooks/useProfilePhotoFetch";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { User } from "../../../domain/types/User";
+import { radiusPx, palette as vwPalette } from "../../themes/palette";
 
 // Create markdown styles with theme. Tables follow the VerifyWise list
 // conventions (thin borders, subtle header fill, 13/12px type) so an
 // inline GFM table from the LLM reads like a native VW table rather
 // than raw browser defaults.
 const createMarkdownStyles = (theme: Theme) => {
-  const borderColor = theme.palette.border?.light ?? theme.palette.divider ?? "#e5e5e5";
+  const borderColor =
+    theme.palette.border?.light ?? theme.palette.divider ?? vwPalette.border.light;
   const headerBg = theme.palette.background.alt ?? "rgba(0, 0, 0, 0.03)";
 
   return {
@@ -40,7 +42,7 @@ const createMarkdownStyles = (theme: Theme) => {
     tableWrapper: {
       overflowX: "auto" as const,
       margin: "8px 0",
-      borderRadius: "4px",
+      borderRadius: radiusPx.sm,
       border: `1px solid ${borderColor}`,
     } as React.CSSProperties,
     table: {
@@ -293,11 +295,13 @@ const CopyButton: FC<{ bubbleRef: React.RefObject<HTMLDivElement | null> }> = ({
         "gap": "4px",
         "cursor": "pointer",
         "color": copied
-          ? (theme.palette.success?.main ?? "#4CAF50")
+          ? (theme.palette.success?.main ?? vwPalette.status.success.strong)
           : (theme.palette.text.tertiary ?? theme.palette.text.disabled),
         "ml": 0.5,
         "&:hover": {
-          color: copied ? (theme.palette.success?.main ?? "#4CAF50") : theme.palette.text.primary,
+          color: copied
+            ? (theme.palette.success?.main ?? vwPalette.status.success.strong)
+            : theme.palette.text.primary,
         },
       }}
       aria-label="Copy response"
@@ -375,7 +379,7 @@ const ThinkingIndicator: FC = () => {
         sx={{
           backgroundColor: theme.palette.background.fill ?? theme.palette.grey[100],
           padding: "12px 16px",
-          borderRadius: 3,
+          borderRadius: radiusPx.md,
           borderTopLeftRadius: 1,
         }}
       >
@@ -452,7 +456,7 @@ const AssistantBody: FC<{
           border: `1px solid ${theme.palette.border?.light ?? theme.palette.divider}`,
           color: theme.palette.text.primary,
           padding: "10px 14px",
-          borderRadius: 3,
+          borderRadius: radiusPx.md,
           borderTopLeftRadius: 1,
           fontSize: theme.typography.body2.fontSize,
           lineHeight: 1.7,
@@ -547,7 +551,7 @@ const CustomMessageComponent: FC = () => {
               backgroundColor: theme.palette.primary.main,
               color: theme.palette.primary.contrastText,
               padding: "10px 14px",
-              borderRadius: 3,
+              borderRadius: radiusPx.md,
               borderTopRightRadius: 1,
               fontSize: theme.typography.body2.fontSize,
               lineHeight: 1.7,

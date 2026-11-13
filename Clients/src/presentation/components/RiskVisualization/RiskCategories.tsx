@@ -7,6 +7,8 @@ import { ButtonToggle } from "../button-toggle";
 import { IRiskCategoriesProps } from "../../types/interfaces/i.risk";
 import { ICategoryGroup } from "../../../domain/interfaces/i.categoryGroup";
 import { User } from "../../../domain/types/User";
+import { palette, radiusPx } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 
 const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, onRiskSelect }) => {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
@@ -28,11 +30,11 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
   }, []);
 
   const getRiskLevelColor = (riskLevel: number): string => {
-    if (riskLevel >= 16) return "#C63622"; // Very High - Dark Red
-    if (riskLevel >= 12) return "#D68B61"; // High - Orange Red
-    if (riskLevel >= 8) return "#D6B971"; // Medium - Orange
-    if (riskLevel >= 4) return "#52AB43"; // Low - Light Green
-    return "#B8D39C"; // Very Low - Very Light Green
+    if (riskLevel >= 16) return chartTheme.riskSummary.veryHigh;
+    if (riskLevel >= 12) return chartTheme.riskSummary.high;
+    if (riskLevel >= 8) return chartTheme.riskSummary.medium;
+    if (riskLevel >= 4) return chartTheme.riskSummary.low;
+    return chartTheme.riskSummary.veryLow;
   };
 
   const getRiskLevelFromString = (level: string | number): number => {
@@ -121,7 +123,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
           p: 4,
           textAlign: "center",
           backgroundColor: "background.accent",
-          borderRadius: 2,
+          borderRadius: radiusPx.sm,
           border: "1px solid status.default.border",
         }}
       >
@@ -145,7 +147,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
           mb: 3,
         }}
       >
-        <Typography variant="h6" sx={{ fontWeight: 600, color: "#111827" }}>
+        <Typography variant="h6" sx={{ fontWeight: 600, color: palette.text.primary }}>
           Risk Categories Analysis
         </Typography>
 
@@ -178,7 +180,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
                 elevation={0}
                 sx={{
                   border: "1px solid status.default.border",
-                  borderRadius: 2,
+                  borderRadius: radiusPx.sm,
                   overflow: "hidden",
                   borderLeft: `4px solid ${criticalLevel.color}`,
                 }}
@@ -204,7 +206,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
                     <Box sx={{ flex: 1 }}>
                       <Typography
                         variant="subtitle2"
-                        sx={{ fontWeight: 600, color: "#111827", mb: 1 }}
+                        sx={{ fontWeight: 600, color: palette.text.primary, mb: 1 }}
                       >
                         {category.name}
                       </Typography>
@@ -230,7 +232,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
                           color: "white",
                           fontSize: 10,
                           height: 18,
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                         }}
                       />
                     )}
@@ -243,7 +245,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
                           color: "white",
                           fontSize: 10,
                           height: 18,
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                         }}
                       />
                     )}
@@ -256,7 +258,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
                           color: "white",
                           fontSize: 10,
                           height: 18,
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                         }}
                       />
                     )}
@@ -269,7 +271,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
                           color: "white",
                           fontSize: 10,
                           height: 18,
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                         }}
                       />
                     )}
@@ -282,7 +284,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
                           color: "white",
                           fontSize: 10,
                           height: 18,
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                         }}
                       />
                     )}
@@ -314,7 +316,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
                         >
                           <Typography
                             variant="body2"
-                            sx={{ fontWeight: 600, color: "#111827", mb: 1 }}
+                            sx={{ fontWeight: 600, color: palette.text.primary, mb: 1 }}
                           >
                             {risk.risk_name}
                           </Typography>
@@ -336,7 +338,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
                                 color: "white",
                                 fontSize: 10,
                                 height: 18,
-                                borderRadius: "4px",
+                                borderRadius: radiusPx.sm,
                               }}
                             />
                             {risk.risk_owner && (

@@ -20,7 +20,13 @@ import {
   useGovernancePreferences,
   useUpdatePreferences,
 } from "../../../../application/hooks/useGovernanceOs";
-import { border as borderPalette, background, text, brand } from "../../../themes/palette";
+import {
+  border as borderPalette,
+  background,
+  text,
+  brand,
+  radiusPx,
+} from "../../../themes/palette";
 import { useCan } from "../../../../application/hooks/useCan";
 
 const FRAMEWORK_NAMES: Record<number, string> = {
@@ -110,7 +116,7 @@ const GovernanceSettings: React.FC = () => {
               justifyContent: "space-between",
               p: "16px",
               border: `1px solid ${borderPalette.dark}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
             }}
           >
@@ -159,7 +165,7 @@ const GovernanceSettings: React.FC = () => {
             sx={{
               p: "16px",
               border: `1px solid ${borderPalette.dark}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
             }}
           >
@@ -238,7 +244,7 @@ const GovernanceSettings: React.FC = () => {
             sx={{
               p: "16px",
               border: `1px solid ${borderPalette.dark}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
             }}
           >
@@ -289,7 +295,7 @@ const GovernanceSettings: React.FC = () => {
             sx={{
               p: "16px",
               border: `1px solid ${borderPalette.dark}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
             }}
           >

@@ -30,7 +30,7 @@ import {
   PMMResponseSave,
 } from "../../../../domain/types/PostMarketMonitoring";
 import { AlertState } from "../../../../application/interfaces/appStates";
-import { brand } from "../../../themes/palette";
+import { brand, radiusPx } from "../../../themes/palette";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { displayFormattedTime } from "../../../tools/isoDateToString";
 
@@ -229,7 +229,7 @@ const MonitoringForm: React.FC = () => {
   const cardStyle = {
     backgroundColor: theme.palette.background.main,
     border: `1px solid ${theme.palette.border.dark}`,
-    borderRadius: "4px",
+    borderRadius: radiusPx.sm,
     padding: "24px",
   };
 
@@ -388,7 +388,7 @@ const MonitoringForm: React.FC = () => {
                         "border": flaggedQuestions.has(question.id!)
                           ? `1px solid ${theme.palette.status.error.text}`
                           : `1px solid ${theme.palette.border.dark}`,
-                        "borderRadius": "4px",
+                        "borderRadius": radiusPx.sm,
                         "backgroundColor": flaggedQuestions.has(question.id!)
                           ? theme.palette.status.error.bg
                           : "transparent",
@@ -451,7 +451,7 @@ const MonitoringForm: React.FC = () => {
                         sx={{
                           backgroundColor: theme.palette.status.warning.bg,
                           border: `1px solid ${theme.palette.status.warning.border}`,
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                           padding: "12px",
                         }}
                       >

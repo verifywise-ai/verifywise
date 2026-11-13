@@ -1,7 +1,7 @@
-import { background } from "../../../themes/palette";
+import { background, palette as vwPalette } from "../../../themes/palette";
 
 export const infoCardStyle = {
-  border: `1px solid #d0d5dd`,
+  border: `1px solid ${vwPalette.border.dark}`,
   borderRadius: 2,
   background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
   minWidth: 228,
@@ -12,7 +12,7 @@ export const infoCardStyle = {
 
 export const infoCardTitleStyle = {
   fontSize: 13,
-  color: "#8594AC",
+  color: vwPalette.text.accent,
   pb: "2px",
   textWrap: "wrap",
 };
@@ -20,5 +20,5 @@ export const infoCardTitleStyle = {
 export const infoCardbodyStyle = {
   fontSize: 16,
   fontWeight: 600,
-  color: "#2D3748",
+  color: vwPalette.text.secondary,
 };

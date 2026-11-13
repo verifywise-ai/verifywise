@@ -32,6 +32,7 @@ import type { StandardColumn } from "../../../../domain/types/standardTable";
 import { useCustomFieldDefinitions } from "../../../../application/hooks/useCustomFields";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { formatCustomFieldValue } from "../../CustomFieldsSection/formatCustomFieldValue";
+import { palette } from "../../../themes/palette";
 
 const titleOfTableColumns: StandardColumn[] = [
   { id: "risk_description", label: "risk description", sortable: true },
@@ -225,7 +226,7 @@ const RiskTable: React.FC<IRiskTableProps> = ({
                   ...singleTheme.tableStyles.primary.body.row,
                   ...(row.is_deleted && {
                     opacity: 0.7,
-                    backgroundColor: theme.palette.action?.hover || "#fafafa",
+                    backgroundColor: theme.palette.action?.hover || palette.background.alt,
                   }),
                 }}
                 onClick={() => onEdit(row.risk_id!)}
@@ -236,7 +237,10 @@ const RiskTable: React.FC<IRiskTableProps> = ({
                     maxWidth: 300,
                     whiteSpace: "normal",
                     wordBreak: "break-word",
-                    backgroundColor: sortConfig.key === "risk_description" ? "#e8e8e8" : "#fafafa",
+                    backgroundColor:
+                      sortConfig.key === "risk_description"
+                        ? palette.border.light
+                        : palette.background.alt,
                   }}
                 >
                   <Tooltip title={row.risk_description} arrow placement="top">
@@ -292,7 +296,9 @@ const RiskTable: React.FC<IRiskTableProps> = ({
                         projectTitles.trim() === "" ||
                         projectTitles === "null"
                       ) {
-                        return <span style={{ color: "#888", fontStyle: "normal" }}>-</span>;
+                        return (
+                          <span style={{ color: palette.text.accent, fontStyle: "normal" }}>-</span>
+                        );
                       }
 
                       const projects = projectTitles
@@ -302,7 +308,9 @@ const RiskTable: React.FC<IRiskTableProps> = ({
 
                       // If no valid projects after filtering, show dash
                       if (projects.length === 0) {
-                        return <span style={{ color: "#888", fontStyle: "normal" }}>-</span>;
+                        return (
+                          <span style={{ color: palette.text.accent, fontStyle: "normal" }}>-</span>
+                        );
                       }
 
                       const displayCount = 1;
@@ -346,7 +354,7 @@ const RiskTable: React.FC<IRiskTableProps> = ({
                             {showMore && (
                               <span
                                 style={{
-                                  color: "#888",
+                                  color: palette.text.accent,
                                   marginLeft: 4,
                                   fontWeight: 500,
                                 }}

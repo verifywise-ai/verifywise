@@ -31,6 +31,7 @@ import { PolicyContentEditor } from "./PolicyEditor/PolicyContentEditor";
 import { PolicyHeader } from "./PolicyEditor/PolicyHeader";
 import { PolicyMetadataSidebar } from "./PolicyEditor/PolicyMetadataSidebar";
 import { PolicyReviewPanel } from "./PolicyEditor/PolicyReviewPanel";
+import { radiusPx } from "../../themes/palette";
 
 // ── Component ─────────────────────────────────────────────────────────
 export default function PolicyEditorPage() {
@@ -450,7 +451,7 @@ export default function PolicyEditorPage() {
             textAlign: "center",
             border: "1px solid",
             borderColor: "border.dark",
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
           }}
         >
           <Typography sx={{ color: "text.secondary", mb: 2 }}>{loadError}</Typography>

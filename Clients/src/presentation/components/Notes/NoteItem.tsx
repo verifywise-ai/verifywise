@@ -33,6 +33,7 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import ConfirmationModal from "../Dialogs/ConfirmationModal";
 import { useProfilePhotoFetch } from "../../../application/hooks/useProfilePhotoFetch";
+import { radiusPx } from "../../themes/palette";
 
 dayjs.extend(relativeTime);
 
@@ -163,7 +164,7 @@ const NoteItem: React.FC<NoteItemProps> = ({ note, onEdit, onDelete, canEdit, ca
       sx={{
         "backgroundColor": theme.palette.background.paper,
         "border": `1px solid ${theme.palette.border.light}`,
-        "borderRadius": "4px",
+        "borderRadius": radiusPx.sm,
         "transition": "all 0.2s ease-in-out",
         "&:hover": {
           borderColor: theme.palette.primary.main,

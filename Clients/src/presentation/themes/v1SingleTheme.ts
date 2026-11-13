@@ -5,11 +5,25 @@
 
 import { alertStyles } from "./alerts";
 import { tableStyles } from "./tables";
-import { brand, button as buttonTokens } from "./palette";
+import {
+  brand,
+  button as buttonTokens,
+  background,
+  border,
+  icon,
+  status,
+  text,
+  radiusPx,
+  riskMark,
+  primitives,
+} from "./palette";
+import { isClassicUi } from "./uiStyle";
+
+const classicUi = isClassicUi();
 
 const textColors = {
-  theme: "#0f604d",
-  error: "#DB504A",
+  theme: classicUi ? "#0f604d" : brand.primaryDark,
+  error: classicUi ? "#DB504A" : status.error.text,
 };
 
 const effects = {
@@ -54,16 +68,28 @@ const primaryButton = buttonTokens.primary;
 const secondaryButton = buttonTokens.secondary;
 
 // Standardized color palette (success, warning, error, info)
-const colors = {
-  success: "#059669",
-  successHover: "#047857",
-  warning: "#D97706",
-  warningHover: "#B45309",
-  error: "#DB504A",
-  errorHover: "#B91C1C",
-  info: "#3B82F6",
-  infoHover: "#2563EB",
-};
+const colors = classicUi
+  ? {
+      success: "#059669",
+      successHover: "#047857",
+      warning: "#D97706",
+      warningHover: "#B45309",
+      error: "#DB504A",
+      errorHover: "#B91C1C",
+      info: "#3B82F6",
+      infoHover: "#2563EB",
+    }
+  : {
+      // Base is the solid mark, hover the darker text tone of the same signal.
+      success: status.success.strong,
+      successHover: status.success.text,
+      warning: riskMark.high,
+      warningHover: status.warning.text,
+      error: riskMark.critical,
+      errorHover: status.error.text,
+      info: primitives.series.sky,
+      infoHover: status.info.text,
+    };
 
 // Flash indicator colors for table row updates
 const flashColors = {
@@ -72,12 +98,20 @@ const flashColors = {
 };
 
 // Table colors for consistent styling
-const tableColors = {
-  rowHover: "#f5f5f5",
-  rowAlternate: "#fafbfc",
-  sortedColumn: "#f5f5f5",
-  sortedColumnFirst: "#e8e8e8",
-};
+// Phase 1: no zebra stripes; hover and sorted column use the raised greys.
+const tableColors = classicUi
+  ? {
+      rowHover: "#f5f5f5",
+      rowAlternate: "#fafbfc",
+      sortedColumn: "#f5f5f5",
+      sortedColumnFirst: "#e8e8e8",
+    }
+  : {
+      rowHover: background.alt,
+      rowAlternate: background.main,
+      sortedColumn: background.alt,
+      sortedColumnFirst: background.hover,
+    };
 
 const buttons = {
   // Primary buttons - main actions
@@ -88,7 +122,7 @@ const buttons = {
       "color": primaryButton.contained.text.default,
       "boxShadow": "none",
       "textTransform": "inherit",
-      "borderRadius": "4px",
+      "borderRadius": radiusPx.sm,
       "border": "none",
       "fontWeight": 500,
       "transition": "all 0.2s ease",
@@ -108,7 +142,7 @@ const buttons = {
       "border": `1px solid ${primaryButton.outlined.border.default}`,
       "boxShadow": "none",
       "textTransform": "inherit",
-      "borderRadius": "4px",
+      "borderRadius": radiusPx.sm,
       "fontWeight": 500,
       "transition": "all 0.2s ease",
       "&:hover": {
@@ -128,7 +162,7 @@ const buttons = {
       "border": "none",
       "boxShadow": "none",
       "textTransform": "inherit",
-      "borderRadius": "4px",
+      "borderRadius": radiusPx.sm,
       "fontWeight": 500,
       "transition": "all 0.2s ease",
       "&:hover": {
@@ -148,7 +182,7 @@ const buttons = {
       "color": secondaryButton.contained.text.default,
       "boxShadow": "none",
       "textTransform": "inherit",
-      "borderRadius": "4px",
+      "borderRadius": radiusPx.sm,
       "border": "none",
       "fontWeight": 500,
       "transition": "all 0.2s ease",
@@ -168,7 +202,7 @@ const buttons = {
       "border": `1px solid ${secondaryButton.outlined.border.default}`,
       "boxShadow": "none",
       "textTransform": "inherit",
-      "borderRadius": "4px",
+      "borderRadius": radiusPx.sm,
       "fontWeight": 500,
       "transition": "all 0.2s ease",
       "&:hover": {
@@ -183,7 +217,7 @@ const buttons = {
       "border": "none",
       "boxShadow": "none",
       "textTransform": "inherit",
-      "borderRadius": "4px",
+      "borderRadius": radiusPx.sm,
       "fontWeight": 500,
       "transition": "all 0.2s ease",
       "&:hover": {
@@ -196,10 +230,10 @@ const buttons = {
     contained: {
       ...buttonSizes.medium,
       "backgroundColor": colors.success,
-      "color": "#fff",
+      "color": text.inverse,
       "boxShadow": "none",
       "textTransform": "inherit",
-      "borderRadius": "4px",
+      "borderRadius": radiusPx.sm,
       "border": "none",
       "fontWeight": 500,
       "transition": "all 0.2s ease",
@@ -219,7 +253,7 @@ const buttons = {
       "border": `1px solid ${colors.success}`,
       "boxShadow": "none",
       "textTransform": "inherit",
-      "borderRadius": "4px",
+      "borderRadius": radiusPx.sm,
       "fontWeight": 500,
       "transition": "all 0.2s ease",
       "&:hover": {
@@ -234,7 +268,7 @@ const buttons = {
       "border": "none",
       "boxShadow": "none",
       "textTransform": "inherit",
-      "borderRadius": "4px",
+      "borderRadius": radiusPx.sm,
       "fontWeight": 500,
       "transition": "all 0.2s ease",
       "&:hover": {
@@ -247,10 +281,10 @@ const buttons = {
     contained: {
       ...buttonSizes.medium,
       "backgroundColor": colors.warning,
-      "color": "#fff",
+      "color": text.inverse,
       "boxShadow": "none",
       "textTransform": "inherit",
-      "borderRadius": "4px",
+      "borderRadius": radiusPx.sm,
       "border": "none",
       "fontWeight": 500,
       "transition": "all 0.2s ease",
@@ -266,7 +300,7 @@ const buttons = {
       "border": `1px solid ${colors.warning}`,
       "boxShadow": "none",
       "textTransform": "inherit",
-      "borderRadius": "4px",
+      "borderRadius": radiusPx.sm,
       "fontWeight": 500,
       "transition": "all 0.2s ease",
       "&:hover": {
@@ -281,7 +315,7 @@ const buttons = {
       "border": "none",
       "boxShadow": "none",
       "textTransform": "inherit",
-      "borderRadius": "4px",
+      "borderRadius": radiusPx.sm,
       "fontWeight": 500,
       "transition": "all 0.2s ease",
       "&:hover": {
@@ -294,10 +328,10 @@ const buttons = {
     contained: {
       ...buttonSizes.medium,
       "backgroundColor": colors.error,
-      "color": "#fff",
+      "color": text.inverse,
       "boxShadow": "none",
       "textTransform": "inherit",
-      "borderRadius": "4px",
+      "borderRadius": radiusPx.sm,
       "border": "none",
       "fontWeight": 500,
       "transition": "all 0.2s ease",
@@ -317,7 +351,7 @@ const buttons = {
       "border": `1px solid ${colors.error}`,
       "boxShadow": "none",
       "textTransform": "inherit",
-      "borderRadius": "4px",
+      "borderRadius": radiusPx.sm,
       "fontWeight": 500,
       "transition": "all 0.2s ease",
       "&:hover": {
@@ -332,7 +366,7 @@ const buttons = {
       "border": "none",
       "boxShadow": "none",
       "textTransform": "inherit",
-      "borderRadius": "4px",
+      "borderRadius": radiusPx.sm,
       "fontWeight": 500,
       "transition": "all 0.2s ease",
       "&:hover": {
@@ -345,10 +379,10 @@ const buttons = {
     contained: {
       ...buttonSizes.medium,
       "backgroundColor": colors.info,
-      "color": "#fff",
+      "color": text.inverse,
       "boxShadow": "none",
       "textTransform": "inherit",
-      "borderRadius": "4px",
+      "borderRadius": radiusPx.sm,
       "border": "none",
       "fontWeight": 500,
       "transition": "all 0.2s ease",
@@ -364,7 +398,7 @@ const buttons = {
       "border": `1px solid ${colors.info}`,
       "boxShadow": "none",
       "textTransform": "inherit",
-      "borderRadius": "4px",
+      "borderRadius": radiusPx.sm,
       "fontWeight": 500,
       "transition": "all 0.2s ease",
       "&:hover": {
@@ -379,7 +413,7 @@ const buttons = {
       "border": "none",
       "boxShadow": "none",
       "textTransform": "inherit",
-      "borderRadius": "4px",
+      "borderRadius": radiusPx.sm,
       "fontWeight": 500,
       "transition": "all 0.2s ease",
       "&:hover": {
@@ -391,12 +425,12 @@ const buttons = {
 
 const textStyles = {
   pageTitle: {
-    color: "#1A1919",
+    color: classicUi ? "#1A1919" : text.primary,
     fontSize: fontSizes.large,
     fontWeight: 600,
   },
   pageDescription: {
-    color: "#344054",
+    color: text.secondary,
     fontSize: fontSizes.medium,
   },
 };
@@ -412,7 +446,7 @@ const dropDownStyles = {
         display: "none",
       },
     },
-    "& li:hover": { borderRadius: 4 },
+    "& li:hover": { borderRadius: radiusPx.sm },
     "boxShadow": shadowEffect.primary,
   },
 };
@@ -426,7 +460,7 @@ const iconButtons = {
     outlineOffset: 1,
   },
   "& svg path": {
-    stroke: "#667085",
+    stroke: icon.default,
   },
   "&:hover": {
     backgroundColor: "transparent",
@@ -437,11 +471,11 @@ const iconButtonsRectangle = {
   "height": "34px",
   "width": "34px",
   "padding": "8px",
-  "borderRadius": "4px",
-  "border": "1px solid #E2E4E9",
-  "backgroundColor": "#ffffff",
-  "iconColor": "#667085",
-  "iconColorDisabled": "#d1d5db",
+  "borderRadius": radiusPx.sm,
+  "border": `1px solid ${classicUi ? "#E2E4E9" : border.dark}`,
+  "backgroundColor": background.main,
+  "iconColor": icon.default,
+  "iconColorDisabled": classicUi ? "#d1d5db" : text.disabled,
   "&:focus:not(:focus-visible)": {
     outline: "none",
   },
@@ -450,14 +484,14 @@ const iconButtonsRectangle = {
     outlineOffset: 1,
   },
   "& svg path": {
-    stroke: "#667085",
+    stroke: icon.default,
   },
   "&:hover": {
-    backgroundColor: "#f9fafb",
+    backgroundColor: classicUi ? "#f9fafb" : background.hover,
   },
   "&:disabled": {
     backgroundColor: "transparent",
-    borderColor: "#E2E4E9",
+    borderColor: classicUi ? "#E2E4E9" : border.dark,
   },
 };
 
@@ -466,7 +500,7 @@ const singleTheme = {
   shadowEffect,
   textTransform: "inherit",
   buttons,
-  borderRadius: "4px",
+  borderRadius: radiusPx.sm,
   fontSizes,
   textStyles,
   tableStyles,

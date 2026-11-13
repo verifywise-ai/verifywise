@@ -2,7 +2,7 @@ import { useRef, useState } from "react";
 import { Box, Typography } from "@mui/material";
 import { FileUp, Loader2 } from "lucide-react";
 import { CustomizableButton } from "../../components/button/customizable-button";
-import { border, status } from "../../themes/palette";
+import { border, status, radiusPx } from "../../themes/palette";
 
 /** Largest file the server accepts for prefill (10 MB). */
 const MAX_BYTES = 10 * 1024 * 1024;
@@ -61,7 +61,7 @@ export function VendorPrefillCard({
         mb: "24px",
         p: "16px",
         border: `1px solid ${border.dark}`,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         display: "flex",
         flexDirection: "column",
         gap: "8px",

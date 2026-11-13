@@ -3,7 +3,7 @@ import { AlertCircle } from "lucide-react";
 import Chip from "../../../components/Chip";
 import StandardTableHead from "../../../components/Table/StandardTableHead";
 import VWAvatar from "../../../components/Avatar/VWAvatar";
-import { border, palette } from "../../../themes/palette";
+import { border, palette, radiusPx } from "../../../themes/palette";
 import { useTranslation } from "../../../../application/hooks/useTranslation";
 import type {
   AiAppAssessmentStatus,
@@ -144,7 +144,7 @@ export function CountSummary({
                     py: 4,
                     px: 6,
                     border: `1px solid ${isError ? palette.status.error.border : border.light}`,
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     backgroundColor: isError ? red[50] : "transparent",
                   }
                 : undefined
@@ -227,7 +227,7 @@ export function RowIssuesTable({
           maxHeight: "300px",
           overflow: "auto",
           border: `1px solid ${isError ? palette.status.error.border : border.light}`,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           ...(isError
             ? {
                 "& .MuiTableCell-head": { backgroundColor: red[50] },

@@ -1,6 +1,6 @@
 import { useState } from "react";
 import { Box, Typography, LinearProgress, Stack } from "@mui/material";
-import { status, text as textColors, border, background } from "../../themes/palette";
+import { status, text as textColors, border, background, radiusPx } from "../../themes/palette";
 import { useTranslation } from "../../../application/hooks/useTranslation";
 import { fill } from "../../../i18n/fill";
 import { CustomizableButton } from "../button/customizable-button";
@@ -66,10 +66,10 @@ function CoverageBar({
         aria-label={label}
         sx={{
           "height": 6,
-          "borderRadius": 3,
+          "borderRadius": radiusPx.md,
           "backgroundColor": background.hover,
           "& .MuiLinearProgress-bar": {
-            borderRadius: 3,
+            borderRadius: radiusPx.md,
             backgroundColor: color.text,
           },
         }}
@@ -99,7 +99,7 @@ export default function EvidenceGapChart({ data, isLoading }: EvidenceGapChartPr
           p: 3,
           textAlign: "center",
           backgroundColor: background.accent,
-          borderRadius: 2,
+          borderRadius: radiusPx.sm,
           border: `1px solid ${border.light}`,
         }}
       >
@@ -118,7 +118,7 @@ export default function EvidenceGapChart({ data, isLoading }: EvidenceGapChartPr
     <Box
       sx={{
         p: 2,
-        borderRadius: 2,
+        borderRadius: radiusPx.sm,
         border: `1px solid ${border.light}`,
         backgroundColor: background.main,
       }}

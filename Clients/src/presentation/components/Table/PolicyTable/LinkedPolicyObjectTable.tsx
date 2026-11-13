@@ -31,7 +31,7 @@ import { EmptyState } from "../../EmptyState";
 import TablePaginationActions from "../../TablePagination";
 import { paginationStyle } from "../styles";
 import { useUserMap } from "../../../../../src/presentation/hooks/userMap";
-import { text } from "../../../themes/palette";
+import { text, palette as vwPalette } from "../../../themes/palette";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 
 interface LinkedPolicyObjectsTableProps {
@@ -280,8 +280,8 @@ const LinkedPolicyObjectsTable: React.FC<LinkedPolicyObjectsTableProps> = ({
                   sx={{
                     ...cellStyle,
                     backgroundColor: sortConfig?.key?.toLowerCase().includes("title")
-                      ? "#e8e8e8"
-                      : "#fafafa",
+                      ? vwPalette.border.light
+                      : vwPalette.background.alt,
                   }}
                 >
                   <TruncatedCell value={row.title} />

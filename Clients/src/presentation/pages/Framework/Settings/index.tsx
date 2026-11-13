@@ -20,7 +20,13 @@ import {
 } from "../../../../application/repository/entity.repository";
 import Alert from "../../../components/Alert";
 import CustomizableToast from "../../../components/Toast";
-import { background, border as borderPalette, text } from "../../../themes/palette";
+import {
+  background,
+  border as borderPalette,
+  text,
+  palette as vwPalette,
+  radiusPx,
+} from "../../../themes/palette";
 import { fontSize, fontWeight, textStyles } from "../../../themes/typography";
 
 interface FrameworkSettingsProps {
@@ -239,7 +245,7 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
             sx={{
               background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
               border: `1px solid ${borderPalette.dark}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: "24px",
               display: "flex",
               justifyContent: "space-between",
@@ -320,7 +326,7 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
                 sx={{
                   background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
                   border: `1px solid ${borderPalette.dark}`,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   p: "24px",
                   display: "flex",
                   flexDirection: "column",
@@ -337,8 +343,8 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
                         display: "flex",
                         alignItems: "center",
                         gap: 0.5,
-                        backgroundColor: "#E6F4EE",
-                        borderRadius: "4px",
+                        backgroundColor: vwPalette.accent.teal.bg,
+                        borderRadius: radiusPx.sm,
                         px: 1.5,
                         py: 0.5,
                         fontSize: 13,
@@ -352,7 +358,7 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
                   )}
                 </Box>
 
-                <Typography sx={{ fontSize: 13, color: "#666666", mb: "auto" }}>
+                <Typography sx={{ fontSize: 13, color: vwPalette.text.tertiary, mb: "auto" }}>
                   {fw.description}
                 </Typography>
 
@@ -368,11 +374,11 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
                       }}
                       sx={{
                         "minWidth": 100,
-                        "borderColor": "#F87171",
-                        "color": "#DC2626",
+                        "borderColor": vwPalette.status.error.border,
+                        "color": vwPalette.riskMark.critical,
                         "&:hover": {
-                          borderColor: "#EF4444",
-                          backgroundColor: "#FEF2F2",
+                          borderColor: vwPalette.riskMark.critical,
+                          backgroundColor: vwPalette.status.error.bg,
                         },
                       }}
                     />
@@ -386,7 +392,7 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
                         "minWidth": 100,
                         "backgroundColor": "brand.primary",
                         "color": "background.main",
-                        "&:hover": { backgroundColor: "#0e5c47" },
+                        "&:hover": { backgroundColor: vwPalette.brand.primaryHover },
                       }}
                     />
                   )}

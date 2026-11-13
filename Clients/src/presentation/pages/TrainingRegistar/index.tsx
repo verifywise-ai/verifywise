@@ -29,7 +29,8 @@ import { GroupBy } from "../../components/Table/GroupBy";
 import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { ExportMenu } from "../../components/Table/ExportMenu";
-import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
+import { FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
@@ -702,8 +703,12 @@ const Training: React.FC = () => {
   );
 
   // FilterBy - Initialize hook
-  const { filterData: filterTrainingData, handleFilterChange: handleTrainingFilterChange } =
-    useFilterBy<TrainingRegistarModel>(getTrainingFieldValue);
+  const {
+    filterData: filterTrainingData,
+    handleFilterChange: handleTrainingFilterChange,
+    conditions: trainingFilterConditions,
+    logic: trainingFilterLogic,
+  } = useFilterBy<TrainingRegistarModel>(getTrainingFieldValue);
 
   // Evidence filter
   const evidenceFilterColumns: FilterColumn[] = useMemo(() => {
@@ -738,8 +743,12 @@ const Training: React.FC = () => {
     [],
   );
 
-  const { filterData: filterEvidenceData, handleFilterChange: handleEvidenceFilterChange } =
-    useFilterBy<EvidenceHubModel>(getEvidenceFieldValue);
+  const {
+    filterData: filterEvidenceData,
+    handleFilterChange: handleEvidenceFilterChange,
+    conditions: evidenceFilterConditions,
+    logic: evidenceFilterLogic,
+  } = useFilterBy<EvidenceHubModel>(getEvidenceFieldValue);
 
   // Filtered trainings using FilterBy and search
   const filteredTraining = useMemo(() => {
@@ -995,9 +1004,13 @@ const Training: React.FC = () => {
           >
             {/* Left side: FilterBy, GroupBy, Search */}
             <Stack direction="row" spacing={2} alignItems="center">
-              <FilterBy
+              <TableFilter
                 columns={trainingFilterColumns}
                 onFilterChange={handleTrainingFilterChange}
+                defaultConditions={trainingFilterConditions}
+                defaultLogic={trainingFilterLogic}
+                data={trainingData}
+                getFieldValue={getTrainingFieldValue}
               />
 
               <GroupBy
@@ -1076,9 +1089,13 @@ const Training: React.FC = () => {
             sx={{ gap: "20px" }}
           >
             <Stack direction="row" spacing={2} alignItems="center">
-              <FilterBy
+              <TableFilter
                 columns={evidenceFilterColumns}
                 onFilterChange={handleEvidenceFilterChange}
+                defaultConditions={evidenceFilterConditions}
+                defaultLogic={evidenceFilterLogic}
+                data={evidenceHubData}
+                getFieldValue={getEvidenceFieldValue}
               />
               <GroupBy
                 options={[

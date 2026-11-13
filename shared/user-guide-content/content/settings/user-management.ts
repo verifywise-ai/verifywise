@@ -284,6 +284,24 @@ export const userManagementContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'interface-style',
+      level: 3,
+      text: 'Interface style',
+    },
+    {
+      type: 'paragraph',
+      text: 'VerifyWise has a new look: updated colours, icons, corners and tabs. If you prefer the previous look, pick Classic under Interface style. The classic look stays available until January 2027.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Two things work differently in the new look. Tables filter with chips above the list: click a chip, pick a value, and click the chip again to change or clear it. The classic look keeps the Filter button. Click a column heading to sort by it: one click sorts ascending, a second sorts descending, a third restores the original order. Group and Columns are the same in both looks.',
+    },
+    {
+      type: 'paragraph',
+      text: 'This setting applies straight away and reloads the page; you don\'t need to click Save. It is kept in this browser, so set it again on another browser or device.',
+    },
+    {
+      type: 'heading',
       id: 'faq',
       level: 2,
       text: 'Frequently asked questions',

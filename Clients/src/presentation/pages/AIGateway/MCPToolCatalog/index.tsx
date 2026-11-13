@@ -21,6 +21,7 @@ import { CustomizableButton } from "../../../components/button/customizable-butt
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { getGatewayErrorText } from "../../../../application/utils/apiErrorReason";
 import palette from "../../../themes/palette";
+import { palette as vwPalette, radiusPx } from "../../../themes/palette";
 import { cameFromMcpServers, useCardSx } from "../shared";
 import MCPTable from "../MCPTable";
 import CustomizableSkeleton from "../../../components/Skeletons";
@@ -57,9 +58,21 @@ const RISK_LEVEL_ITEMS = [
 ];
 
 const RISK_COLORS: Record<string, { bg: string; text: string; border: string }> = {
-  low: { bg: "#ECFDF3", text: "#027A48", border: "#A6F4C5" },
-  medium: { bg: "#FFFAEB", text: "#B54708", border: "#FEDF89" },
-  high: { bg: "#FEF3F2", text: "#B42318", border: "#FECDCA" },
+  low: {
+    bg: vwPalette.status.success.bg,
+    text: vwPalette.status.success.text,
+    border: vwPalette.status.success.border,
+  },
+  medium: {
+    bg: vwPalette.status.warning.bg,
+    text: vwPalette.risk.high.text,
+    border: vwPalette.status.warning.border,
+  },
+  high: {
+    bg: vwPalette.accent.red.bg,
+    text: vwPalette.status.error.text,
+    border: vwPalette.status.error.border,
+  },
 };
 
 // ─── Component ───────────────────────────────────────────────────────────────
@@ -227,7 +240,7 @@ export default function MCPToolCatalogPage() {
           alignItems: "center",
           height: 22,
           px: "8px",
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           border: `1px solid ${colors.border}`,
           backgroundColor: colors.bg,
           fontSize: 11,
@@ -412,7 +425,7 @@ export default function MCPToolCatalogPage() {
               sx={{
                 p: "12px 16px",
                 bgcolor: palette.background.alt,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 border: `1px solid ${palette.border.light}`,
               }}
             >
@@ -463,18 +476,20 @@ export default function MCPToolCatalogPage() {
               gap="6px"
               sx={{
                 p: "8px 12px",
-                bgcolor: "#FFFAEB",
-                borderRadius: "4px",
-                border: "1px solid #FEDF89",
+                bgcolor: vwPalette.status.warning.bg,
+                borderRadius: radiusPx.sm,
+                border: `1px solid ${vwPalette.status.warning.border}`,
               }}
             >
               <ShieldAlert
                 size={14}
                 strokeWidth={1.5}
-                color="#B54708"
+                color={vwPalette.risk.high.text}
                 style={{ flexShrink: 0, marginTop: 2 }}
               />
-              <Typography sx={{ fontSize: 12, color: "#93370D", lineHeight: 1.5 }}>
+              <Typography
+                sx={{ fontSize: 12, color: vwPalette.status.warning.text, lineHeight: 1.5 }}
+              >
                 This tool is marked as high risk. Consider requiring approval so a person reviews it
                 before it runs.
               </Typography>

@@ -26,6 +26,7 @@ import { Project } from "../../../../../domain/types/Project";
 import { useSearchParams } from "react-router";
 import { TabFilterBar } from "../../../../components/FrameworkFilter/TabFilterBar";
 import { StatsCard } from "../../../../components/Cards/StatsCard";
+import { palette } from "../../../../themes/palette";
 
 const ISO27001Annex = ({
   project,
@@ -368,8 +369,8 @@ const ISO27001Annex = ({
               const count = filteredControlsCountMemo[annex.id ?? 0];
               const chipColor =
                 count !== undefined && count > 0
-                  ? { bg: "#E6F4EA", color: "status.success.text" }
-                  : { bg: "#FFF8E1", color: "#795548" };
+                  ? { bg: palette.status.success.bg, color: "status.success.text" }
+                  : { bg: palette.risk.medium.bg, color: palette.risk.medium.text };
               return (
                 <Stack key={annex.id} sx={styles.container}>
                   <Accordion

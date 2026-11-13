@@ -6,6 +6,7 @@ import Chip from "../../../components/Chip";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import { EmptyState } from "../../../components/EmptyState";
 import palette from "../../../themes/palette";
+import { radiusPx } from "../../../themes/palette";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import { displayFormattedTime } from "../../../tools/isoDateToString";
 
@@ -79,7 +80,7 @@ export default function RunDetailDrawer({ runId, onClose }: RunDetailDrawerProps
               key={i}
               sx={{
                 border: `1px solid ${palette.border.dark}`,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 p: "12px",
               }}
             >

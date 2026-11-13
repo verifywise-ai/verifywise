@@ -14,7 +14,7 @@ import {
 } from "../../../application/repository/deepEval.repository";
 import { useCan, usePermissionsSettled } from "../../../application/hooks/useCan";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 import { LLM_PROVIDERS as ALL_LLM_PROVIDERS } from "./llmProviders";
 import ArenaSettingSection from "./ArenaSettingSection";
 
@@ -340,7 +340,7 @@ export default function OrgSettings() {
           <Box
             sx={{
               p: "4px",
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               backgroundColor: palette.status.warning.bg,
               border: `1px solid ${palette.status.warning.border}`,
               display: "flex",
@@ -384,7 +384,7 @@ export default function OrgSettings() {
                     p: "8px",
                     gap: "8px",
                     border: `1px solid ${theme.palette.divider}`,
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     backgroundColor: theme.palette.background.paper,
                   }}
                 >

@@ -18,7 +18,7 @@ import {
 } from "../../../pages/AgentDiscovery/agentLabels";
 import { useUserNames } from "../../../pages/AgentDiscovery/useUserNames";
 import { useLinkedModelLabel } from "../../../pages/AgentDiscovery/useLinkedModelLabel";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 
 interface ReviewAgentModalProps {
   isOpen: boolean;
@@ -264,7 +264,7 @@ const ReviewAgentModal: React.FC<ReviewAgentModalProps> = ({
               <Box
                 sx={{
                   p: "12px",
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   border: `1px solid ${palette.border.light}`,
                   backgroundColor: palette.background.accent,
                   fontSize: 12,

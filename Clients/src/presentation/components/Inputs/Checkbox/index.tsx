@@ -18,6 +18,7 @@ import { FormControlLabel, Checkbox as MuiCheckbox, useTheme } from "@mui/materi
 import "./index.css";
 
 import { CheckboxProps } from "../../../types/widget.types";
+import { palette } from "../../../themes/palette";
 
 // Soft unchecked square icon with thin border
 function SoftSquare({ size = 24 }: { size?: number }) {
@@ -36,7 +37,7 @@ function SoftSquare({ size = 24 }: { size?: number }) {
         width="18"
         height="18"
         rx="4"
-        stroke="#D0D5DD"
+        stroke={palette.border.dark}
         strokeWidth="1.5"
         fill="white"
       />

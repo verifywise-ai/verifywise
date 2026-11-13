@@ -33,7 +33,7 @@ import { useAuth } from "../../../../application/hooks/useAuth";
 import { ApiTokenModel } from "../../../../domain/models/Common/apiToken/apiToken.model";
 import LLMKeys from "../LLMKeys";
 import { getSelectStyles } from "../../../utils/inputStyles";
-import { brand } from "../../../themes/palette";
+import { brand, palette as vwPalette, radiusPx } from "../../../themes/palette";
 
 interface AlertState {
   variant: "success" | "info" | "warning" | "error";
@@ -276,7 +276,7 @@ const ApiKeys = ({ showLlmKeys = true }: ApiKeysProps) => {
             <Typography sx={{ fontSize: 15, fontWeight: 600, color: "text.black" }}>
               API Keys
             </Typography>
-            <Typography sx={{ fontSize: 13, color: "#666666", mt: 0.5, mb: 3 }}>
+            <Typography sx={{ fontSize: 13, color: vwPalette.text.tertiary, mt: 0.5, mb: 3 }}>
               Manage your API keys for programmatic access to VerifyWise features
             </Typography>
           </Box>
@@ -290,7 +290,7 @@ const ApiKeys = ({ showLlmKeys = true }: ApiKeysProps) => {
               sx={{
                 "backgroundColor": "brand.primary",
                 "color": "background.main",
-                "&:hover": { backgroundColor: "#0e5c47" },
+                "&:hover": { backgroundColor: vwPalette.brand.primaryHover },
               }}
             />
           )}
@@ -304,10 +304,10 @@ const ApiKeys = ({ showLlmKeys = true }: ApiKeysProps) => {
           <Box
             sx={{
               border: "2px dashed status.default.border",
-              borderRadius: "12px",
+              borderRadius: radiusPx.xl,
               p: 6,
               textAlign: "center",
-              backgroundColor: "#fafbfc",
+              backgroundColor: vwPalette.background.alt,
             }}
           >
             <Box
@@ -315,7 +315,7 @@ const ApiKeys = ({ showLlmKeys = true }: ApiKeysProps) => {
                 width: 56,
                 height: 56,
                 borderRadius: "50%",
-                backgroundColor: "#f0fdf4",
+                backgroundColor: vwPalette.status.success.bg,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -328,7 +328,7 @@ const ApiKeys = ({ showLlmKeys = true }: ApiKeysProps) => {
             <Typography sx={{ fontSize: 15, fontWeight: 600, color: "text.black", mb: 1 }}>
               No API keys yet
             </Typography>
-            <Typography sx={{ fontSize: 13, color: "#666666", mb: 3 }}>
+            <Typography sx={{ fontSize: 13, color: vwPalette.text.tertiary, mb: 3 }}>
               Create your first API key to enable programmatic access to your account
             </Typography>
             <CustomizableButton
@@ -340,7 +340,7 @@ const ApiKeys = ({ showLlmKeys = true }: ApiKeysProps) => {
               sx={{
                 "backgroundColor": "brand.primary",
                 "color": "background.main",
-                "&:hover": { backgroundColor: "#0e5c47" },
+                "&:hover": { backgroundColor: vwPalette.brand.primaryHover },
               }}
             />
           </Box>
@@ -352,10 +352,11 @@ const ApiKeys = ({ showLlmKeys = true }: ApiKeysProps) => {
                   onMouseEnter={() => setHoveredTokenId(token.id)}
                   onMouseLeave={() => setHoveredTokenId(null)}
                   sx={{
-                    border: "1.5px solid #eaecf0",
-                    borderRadius: "4px",
+                    border: `1.5px solid ${vwPalette.border.light}`,
+                    borderRadius: radiusPx.sm,
                     p: 4,
-                    backgroundColor: hoveredTokenId === token.id ? "#f8fffe" : "background.main",
+                    backgroundColor:
+                      hoveredTokenId === token.id ? vwPalette.background.alt : "background.main",
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
@@ -388,7 +389,7 @@ const ApiKeys = ({ showLlmKeys = true }: ApiKeysProps) => {
                           "fontWeight": 500,
                           "fontSize": "11px",
                           "height": "20px",
-                          "borderRadius": "4px",
+                          "borderRadius": radiusPx.sm,
                           "& .MuiChip-label": {
                             padding: "0 8px",
                             textTransform: "uppercase",
@@ -396,8 +397,8 @@ const ApiKeys = ({ showLlmKeys = true }: ApiKeysProps) => {
                           },
                         }}
                       />
-                      <Typography sx={{ fontSize: 12, color: "#999999" }}>•</Typography>
-                      <Typography sx={{ fontSize: 12, color: "#999999" }}>
+                      <Typography sx={{ fontSize: 12, color: vwPalette.text.accent }}>•</Typography>
+                      <Typography sx={{ fontSize: 12, color: vwPalette.text.accent }}>
                         Created{" "}
                         <Typography
                           component="span"
@@ -410,8 +411,8 @@ const ApiKeys = ({ showLlmKeys = true }: ApiKeysProps) => {
                           {token.getFormattedCreatedDate()}
                         </Typography>
                       </Typography>
-                      <Typography sx={{ fontSize: 12, color: "#999999" }}>•</Typography>
-                      <Typography sx={{ fontSize: 12, color: "#999999" }}>
+                      <Typography sx={{ fontSize: 12, color: vwPalette.text.accent }}>•</Typography>
+                      <Typography sx={{ fontSize: 12, color: vwPalette.text.accent }}>
                         {token.isExpired() ? "Expired" : "Expires"}{" "}
                         <Typography
                           component="span"
@@ -424,8 +425,8 @@ const ApiKeys = ({ showLlmKeys = true }: ApiKeysProps) => {
                           {token.getFormattedExpiryDate()}
                         </Typography>
                       </Typography>
-                      <Typography sx={{ fontSize: 12, color: "#999999" }}>•</Typography>
-                      <Typography sx={{ fontSize: 12, color: "#999999" }}>
+                      <Typography sx={{ fontSize: 12, color: vwPalette.text.accent }}>•</Typography>
+                      <Typography sx={{ fontSize: 12, color: vwPalette.text.accent }}>
                         Last used{" "}
                         <Typography
                           component="span"
@@ -452,11 +453,11 @@ const ApiKeys = ({ showLlmKeys = true }: ApiKeysProps) => {
                         title="Revoke key"
                         aria-label="Revoke key"
                         sx={{
-                          "color": "#B54708",
+                          "color": vwPalette.risk.high.text,
                           "opacity": hoveredTokenId === token.id ? 1 : 0.6,
                           "transition": "opacity 0.2s ease-in-out",
                           "&:hover": {
-                            backgroundColor: "#FFFAEB",
+                            backgroundColor: vwPalette.status.warning.bg,
                           },
                           "&:disabled": {
                             opacity: 0.3,
@@ -476,11 +477,11 @@ const ApiKeys = ({ showLlmKeys = true }: ApiKeysProps) => {
                       title="Delete key"
                       aria-label="Delete key"
                       sx={{
-                        "color": "#DC2626",
+                        "color": vwPalette.riskMark.critical,
                         "opacity": hoveredTokenId === token.id ? 1 : 0.6,
                         "transition": "opacity 0.2s ease-in-out",
                         "&:hover": {
-                          backgroundColor: "#FEF2F2",
+                          backgroundColor: vwPalette.status.error.bg,
                         },
                         "&:disabled": {
                           opacity: 0.3,
@@ -554,12 +555,14 @@ const ApiKeys = ({ showLlmKeys = true }: ApiKeysProps) => {
           proceedButtonVariant="contained"
           TitleFontSize={0}
           confirmBtnSx={{
-            "backgroundColor": isCreateButtonDisabled ? "#ccc" : "brand.primary",
-            "color": isCreateButtonDisabled ? "#666" : "background.main",
+            "backgroundColor": isCreateButtonDisabled ? vwPalette.border.dark : "brand.primary",
+            "color": isCreateButtonDisabled ? vwPalette.text.tertiary : "background.main",
             "cursor": isCreateButtonDisabled ? "not-allowed" : "pointer",
             "opacity": isCreateButtonDisabled ? 0.6 : 1,
             "&:hover": {
-              backgroundColor: isCreateButtonDisabled ? "#ccc" : "#0e5c47",
+              backgroundColor: isCreateButtonDisabled
+                ? vwPalette.border.dark
+                : vwPalette.brand.primaryHover,
             },
           }}
         />
@@ -589,7 +592,7 @@ const ApiKeys = ({ showLlmKeys = true }: ApiKeysProps) => {
               zIndex: 1300,
               backgroundColor: "white",
               padding: "16px",
-              borderRadius: "8px",
+              borderRadius: radiusPx.lg,
               boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
               maxWidth: "440px",
               width: "100%",
@@ -604,9 +607,9 @@ const ApiKeys = ({ showLlmKeys = true }: ApiKeysProps) => {
               <Box>
                 <Box
                   sx={{
-                    backgroundColor: "#ecfdf3",
+                    backgroundColor: vwPalette.status.success.bg,
                     border: "1.5px solid brand.primary",
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     p: 2.5,
                     display: "flex",
                     justifyContent: "space-between",
@@ -630,11 +633,12 @@ const ApiKeys = ({ showLlmKeys = true }: ApiKeysProps) => {
                     onClick={() => handleCopyToken(newlyCreatedToken, -1)}
                     disableRipple
                     sx={{
-                      "color": copiedTokenId === -1 ? "brand.primary" : "#666666",
-                      "backgroundColor": copiedTokenId === -1 ? "#f0fdf4" : "transparent",
+                      "color": copiedTokenId === -1 ? "brand.primary" : vwPalette.text.tertiary,
+                      "backgroundColor":
+                        copiedTokenId === -1 ? vwPalette.status.success.bg : "transparent",
                       "transition": "all 0.2s ease-in-out",
                       "&:hover": {
-                        backgroundColor: "#f0fdf4",
+                        backgroundColor: vwPalette.status.success.bg,
                         color: "brand.primary",
                       },
                     }}
@@ -679,7 +683,7 @@ const ApiKeys = ({ showLlmKeys = true }: ApiKeysProps) => {
                   "backgroundColor": "brand.primary",
                   "color": "background.main",
                   "px": "32px",
-                  "&:hover": { backgroundColor: "#0e5c47" },
+                  "&:hover": { backgroundColor: vwPalette.brand.primaryHover },
                 }}
                 onClick={handleCloseCreateModal}
               />

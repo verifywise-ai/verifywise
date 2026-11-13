@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Box, keyframes } from "@mui/material";
 import { useTipManager } from "../../../application/hooks/useTipManager";
 import InfoBox from "../InfoBox";
+import { radiusPx, palette as vwPalette } from "../../themes/palette";
 
 interface TipBoxProps {
   entityName: string;
@@ -70,12 +71,12 @@ const TipBox = ({ entityName }: TipBoxProps) => {
             top: -8,
             right: 16,
             backgroundColor: "background.surface",
-            border: "1px solid #E5E5E5",
-            borderRadius: "4px",
+            border: `1px solid ${vwPalette.border.light}`,
+            borderRadius: radiusPx.sm,
             padding: "2px 8px",
             fontSize: 10,
             fontWeight: 500,
-            color: "#999",
+            color: vwPalette.text.accent,
             zIndex: 1,
           }}
         >
@@ -90,8 +91,8 @@ const TipBox = ({ entityName }: TipBoxProps) => {
         onDismiss={handleDismiss}
         disableInternalStorage={true}
         disableAnimation={true}
-        backgroundColor="linear-gradient(135deg, #EFF6FF 0%, #F8FBFF 100%)"
-        borderColor="#DBEAFE"
+        backgroundColor={`linear-gradient(135deg, ${vwPalette.status.info.bg} 0%, ${vwPalette.background.alt} 100%)`}
+        borderColor={vwPalette.status.info.border}
       />
     </Box>
   );

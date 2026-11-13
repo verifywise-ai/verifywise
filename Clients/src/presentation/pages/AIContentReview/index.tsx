@@ -14,7 +14,7 @@ import {
 import { Sparkles, CheckCircle, Clock, BarChart3 } from "lucide-react";
 import { VisibilityChips } from "../../components/VisibilityToggle";
 import type { VisibilityFilterValue } from "../../components/VisibilityToggle";
-import { text as textColors, brand } from "../../themes/palette";
+import { text as textColors, brand, radiusPx } from "../../themes/palette";
 import { cardStyles } from "../../themes/components";
 import Chip from "../../components/Chip";
 import AIContentReviewPanel from "../../components/AIContentReviewPanel";
@@ -173,10 +173,10 @@ export default function AIContentReview() {
                 value={reviewRate}
                 sx={{
                   "height": 6,
-                  "borderRadius": 3,
+                  "borderRadius": radiusPx.md,
                   "backgroundColor": theme.palette.background.hover,
                   "& .MuiLinearProgress-bar": {
-                    borderRadius: 3,
+                    borderRadius: radiusPx.md,
                     backgroundColor: brand.primary,
                   },
                 }}

@@ -6,7 +6,12 @@ import {
   rejectConfirmation,
 } from "../../../application/repository/aiConfirmation.repository";
 import { dispatchAiActionCompleted } from "../../../application/events/aiActionEvents";
-import { status as statusColors, brand } from "../../themes/palette";
+import {
+  status as statusColors,
+  brand,
+  palette as vwPalette,
+  radiusPx,
+} from "../../themes/palette";
 
 interface ConfirmationResult {
   confirmation_required: true;
@@ -93,7 +98,7 @@ const ConfirmationToolUI: FC<{ result?: unknown }> = ({ result }) => {
     <Box
       sx={{
         border: `1px solid ${config.border}`,
-        borderRadius: "8px",
+        borderRadius: radiusPx.lg,
         backgroundColor: config.bg,
         p: "12px",
         my: 1,
@@ -116,7 +121,7 @@ const ConfirmationToolUI: FC<{ result?: unknown }> = ({ result }) => {
       </Stack>
 
       {/* Description */}
-      <Typography sx={{ fontSize: 13, color: "#344054", mb: 1, lineHeight: 1.5 }}>
+      <Typography sx={{ fontSize: 13, color: vwPalette.text.secondary, mb: 1, lineHeight: 1.5 }}>
         {data.description}
       </Typography>
 
@@ -125,13 +130,16 @@ const ConfirmationToolUI: FC<{ result?: unknown }> = ({ result }) => {
         <Box
           sx={{
             backgroundColor: "rgba(255,255,255,0.6)",
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             p: "8px",
             mb: 1,
           }}
         >
           {Object.entries(data.params_summary).map(([key, value]) => (
-            <Typography key={key} sx={{ fontSize: 11, color: "#475467", fontFamily: "monospace" }}>
+            <Typography
+              key={key}
+              sx={{ fontSize: 11, color: vwPalette.text.tertiary, fontFamily: "monospace" }}
+            >
               <Box component="span" sx={{ fontWeight: 600 }}>
                 {key}:
               </Box>{" "}
@@ -161,7 +169,7 @@ const ConfirmationToolUI: FC<{ result?: unknown }> = ({ result }) => {
               "fontSize": 12,
               "fontWeight": 500,
               "backgroundColor": brand.primary,
-              "borderRadius": "4px",
+              "borderRadius": radiusPx.sm,
               "boxShadow": "none",
               "&:hover": { backgroundColor: brand.primaryHover, boxShadow: "none" },
             }}
@@ -184,10 +192,10 @@ const ConfirmationToolUI: FC<{ result?: unknown }> = ({ result }) => {
               "textTransform": "none",
               "fontSize": 12,
               "fontWeight": 500,
-              "borderColor": "#D0D5DD",
-              "color": "#475467",
-              "borderRadius": "4px",
-              "&:hover": { backgroundColor: "#F9FAFB" },
+              "borderColor": vwPalette.border.dark,
+              "color": vwPalette.text.tertiary,
+              "borderRadius": radiusPx.sm,
+              "&:hover": { backgroundColor: vwPalette.background.alt },
             }}
           >
             Reject
@@ -206,8 +214,10 @@ const ConfirmationToolUI: FC<{ result?: unknown }> = ({ result }) => {
       )}
       {resolution === "rejected" && (
         <Stack direction="row" alignItems="center" spacing={0.5} mt={1}>
-          <X size={14} style={{ color: "#475467" }} />
-          <Typography sx={{ fontSize: 12, fontWeight: 500, color: "#475467" }}>Rejected</Typography>
+          <X size={14} style={{ color: vwPalette.text.tertiary }} />
+          <Typography sx={{ fontSize: 12, fontWeight: 500, color: vwPalette.text.tertiary }}>
+            Rejected
+          </Typography>
         </Stack>
       )}
       {resolution === "error" && errorMsg && (

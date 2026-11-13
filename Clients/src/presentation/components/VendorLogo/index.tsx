@@ -2,7 +2,8 @@ import React, { useState } from "react";
 import { Box, Typography, Avatar } from "@mui/material";
 import { Building2 } from "lucide-react";
 import { getBrandFetchUrl } from "../../../config/brandfetch.config";
-import { text, background } from "../../themes/palette";
+import { text, background, palette as vwPalette, radiusPx } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 
 interface VendorLogoProps {
   /** Vendor's website URL or domain */
@@ -19,20 +20,9 @@ interface VendorLogoProps {
  * Vibrant color palette for avatar backgrounds
  * Each vendor gets a consistent color based on their name
  */
-const COLOR_PALETTE = [
-  { bg: "#EF4444", text: `${background.main}` }, // Red
-  { bg: "#F59E0B", text: `${background.main}` }, // Amber
-  { bg: "#10B981", text: `${background.main}` }, // Emerald
-  { bg: "#3B82F6", text: `${background.main}` }, // Blue
-  { bg: "#8B5CF6", text: `${background.main}` }, // Violet
-  { bg: "#EC4899", text: `${background.main}` }, // Pink
-  { bg: "#06B6D4", text: `${background.main}` }, // Cyan
-  { bg: "#F97316", text: `${background.main}` }, // Orange
-  { bg: "#14B8A6", text: `${background.main}` }, // Teal
-  { bg: "#6366F1", text: `${background.main}` }, // Indigo
-  { bg: "#A855F7", text: `${background.main}` }, // Purple
-  { bg: "#84CC16", text: `${background.main}` }, // Lime
-];
+
+// Avatars use the chart series (never a risk or status colour); classic keeps its 12 colours.
+const COLOR_PALETTE = chartTheme.avatars.map((bg) => ({ bg, text: `${background.main}` }));
 
 /**
  * Generates a consistent color for a vendor based on their name
@@ -109,7 +99,7 @@ const VendorLogo: React.FC<VendorLogoProps> = ({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            borderRadius: "6px",
+            borderRadius: radiusPx.md,
             border: "1px solid status.default.border",
             backgroundColor: "background.main",
             overflow: "hidden",
@@ -165,7 +155,7 @@ const VendorLogo: React.FC<VendorLogoProps> = ({
           sx={{
             fontSize: 14,
             fontWeight: 400,
-            color: "#111827",
+            color: vwPalette.text.primary,
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",

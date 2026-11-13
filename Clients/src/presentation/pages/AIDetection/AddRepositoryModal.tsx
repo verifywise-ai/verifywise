@@ -38,6 +38,7 @@ import { generateWebhookSecret } from "../../../application/repository/aiDetecti
 import { useWebhookConfig } from "../../../application/hooks/useWebhookConfig";
 import { useTranslation } from "../../../application/hooks/useTranslation";
 import { fill } from "../../../i18n/fill";
+import { radiusPx } from "../../themes/palette";
 import {
   formatUtcTimeInLocal,
   isWholeNumber,
@@ -345,7 +346,7 @@ export default function AddRepositoryModal({
           role="status"
           sx={{
             p: "8px 12px",
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             border: `1px solid ${theme.palette.status.warning.border}`,
             backgroundColor: theme.palette.status.warning.bg,
           }}

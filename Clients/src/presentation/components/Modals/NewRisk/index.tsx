@@ -52,6 +52,7 @@ import { VendorModel } from "../../../../domain/models/Common/vendor/vendor.mode
 import { ExistingRisk } from "../../../../domain/interfaces/i.vendor";
 import { Framework } from "../../../../domain/types/Framework";
 import RiskLevel from "../../RiskLevel";
+import { radiusPx } from "../../../themes/palette";
 
 interface AddNewRiskProps {
   isOpen: boolean;
@@ -584,7 +585,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
           sx={{
             "width": "100%",
             "& .MuiChip-root": {
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
             },
           }}
           disabled={frameworksLoading || isEditingDisabled}

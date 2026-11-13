@@ -15,7 +15,7 @@ import {
 } from "lucide-react";
 import StandardModal from "../../../../components/Modals/StandardModal";
 import { IFolderTreeNode, IVirtualFolder } from "../../../../../domain/interfaces/i.virtualFolder";
-import { text, brand } from "../../../../themes/palette";
+import { text, brand, palette as vwPalette, radiusPx } from "../../../../themes/palette";
 
 interface AssignToFolderModalProps {
   isOpen: boolean;
@@ -70,7 +70,7 @@ const FolderCheckItem: React.FC<FolderCheckItemProps> = ({
           "padding": "8px 12px",
           "paddingLeft": `${12 + level * 20}px`,
           "cursor": "pointer",
-          "borderRadius": "4px",
+          "borderRadius": radiusPx.sm,
           "&:hover": {
             backgroundColor: "background.accent",
           },
@@ -270,9 +270,9 @@ export const AssignToFolderModal: React.FC<AssignToFolderModalProps> = ({
           sx={{
             maxHeight: "400px",
             overflow: "auto",
-            border: "1px solid #E0E4E9",
-            borderRadius: "4px",
-            backgroundColor: "#FAFBFC",
+            border: `1px solid ${vwPalette.border.light}`,
+            borderRadius: radiusPx.sm,
+            backgroundColor: vwPalette.background.alt,
           }}
         >
           {folders.length === 0 ? (
@@ -310,12 +310,12 @@ export const AssignToFolderModal: React.FC<AssignToFolderModalProps> = ({
           <Box
             sx={{
               padding: "8px 12px",
-              backgroundColor: "#FEF3C7",
-              borderRadius: "4px",
-              border: "1px solid #FCD34D",
+              backgroundColor: vwPalette.risk.medium.bg,
+              borderRadius: radiusPx.sm,
+              border: `1px solid ${vwPalette.riskMark.medium}`,
             }}
           >
-            <Typography sx={{ fontSize: 12, color: "#92400E" }}>
+            <Typography sx={{ fontSize: 12, color: vwPalette.status.warning.text }}>
               No changes have been made.
             </Typography>
           </Box>

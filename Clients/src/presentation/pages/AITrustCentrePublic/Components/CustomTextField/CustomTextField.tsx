@@ -1,7 +1,7 @@
 // src/presentation/components/CustomTextField.tsx
 import React from "react";
 import { Box, Typography, Skeleton, TextField } from "@mui/material";
-import { brand, background } from "../../../../themes/palette";
+import { brand, background, palette as vwPalette } from "../../../../themes/palette";
 
 interface CustomTextFieldProps {
   label: string;
@@ -16,7 +16,7 @@ const CustomTextField: React.FC<CustomTextFieldProps> = ({ label, value, loading
     </Typography>
     <Box
       sx={{
-        border: "1px solid #EEEEEE",
+        border: `1px solid ${vwPalette.border.light}`,
         borderRadius: 1,
         p: 2,
         minHeight: 140,

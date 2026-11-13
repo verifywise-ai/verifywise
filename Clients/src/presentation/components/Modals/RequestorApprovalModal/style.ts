@@ -1,4 +1,5 @@
 import { Theme } from "@mui/material";
+import { palette } from "../../../themes/palette";
 
 export const asideMenu = {
   flexShrink: 0,
@@ -166,7 +167,7 @@ export const stepContainerStyle = {
 export const stepDateStyle = {
   fontSize: 12,
   fontWeight: 400,
-  color: "#999999",
+  color: palette.text.accent,
 };
 
 export const stepTitleStyle = {
@@ -176,7 +177,7 @@ export const stepTitleStyle = {
 
 export const stepDividerStyle = {
   borderRightWidth: "0.5px",
-  borderColor: "#E0E0E0",
+  borderColor: palette.border.light,
   mt: 4,
   ml: 5,
   mr: 12,
@@ -195,7 +196,7 @@ export const approverNameStyle = {
 export const commentLabelStyle = {
   fontWeight: 600,
   fontSize: 12,
-  color: "#999999",
+  color: palette.text.accent,
 };
 
 export const commentTextStyle = {

@@ -3,7 +3,18 @@ import { Button, Stack, Popover, Box, Typography } from "@mui/material";
 import { X, Rows3 } from "lucide-react";
 import Select from "../Inputs/Select";
 import { ButtonToggle } from "../button-toggle";
-import { text, border as borderPalette, status } from "../../themes/palette";
+import {
+  text,
+  border as borderPalette,
+  status,
+  palette as vwPalette,
+  radiusPx,
+} from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
+import { isClassicUi } from "../../themes/uiStyle";
+
+// Phase 1 draws the button with a hairline border and 2px corners; classic keeps its look.
+const classic = isClassicUi();
 
 export interface GroupByOption {
   id: string;
@@ -27,8 +38,8 @@ export const GroupBadge: React.FC<{ count: number }> = ({ count }) => (
       width: "18px",
       height: "18px",
       borderRadius: "50%",
-      backgroundColor: "#dcfce7",
-      color: "#166534",
+      backgroundColor: chartTheme.countBadge.group.bg,
+      color: chartTheme.countBadge.group.text,
       fontSize: "11px",
       fontWeight: 600,
       marginLeft: "6px",
@@ -199,18 +210,19 @@ export const GroupBy: React.FC<GroupByProps> = ({
           "fontWeight": 500,
           "padding": "6px 12px",
           "textTransform": "none",
-          "color": "#374151",
-          "borderColor": `${borderPalette.dark}`,
+          "color": vwPalette.text.secondary,
+          "borderColor": classic ? `${borderPalette.dark}` : borderPalette.light,
+          ...(classic ? {} : { borderRadius: radiusPx.sm }),
           "height": "34px",
           "minWidth": selectedGroup ? "110px" : "80px",
-          "backgroundColor": open ? "#f0fdf4" : "transparent",
+          "backgroundColor": open ? vwPalette.status.success.bg : "transparent",
           "&:hover": {
             borderColor: `${text.muted}`,
-            backgroundColor: "#f0fdf4",
+            backgroundColor: vwPalette.status.success.bg,
           },
         }}
       >
-        <Rows3 size={16} color="#10b981" style={{ marginRight: "6px" }} />
+        <Rows3 size={16} color={vwPalette.status.success.strong} style={{ marginRight: "6px" }} />
         Group
         {selectedGroup && <GroupBadge count={1} />}
       </Button>
@@ -234,7 +246,7 @@ export const GroupBy: React.FC<GroupByProps> = ({
               padding: "16px",
               minWidth: "480px",
               boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
-              borderRadius: "8px",
+              borderRadius: radiusPx.lg,
             },
           },
         }}

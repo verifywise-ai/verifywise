@@ -1,47 +1,49 @@
+import { palette } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 export const RISK_LABELS = {
   low: {
     text: "Low risk",
-    color: "#2E7D32", // darker green
+    color: palette.status.success.text, // darker green
   },
   medium: {
     text: "Medium risk",
-    color: "#8D6E63", // darker brown (instead of washed yellow)
+    color: chartTheme.riskLabel.medium,
   },
   high: {
     text: "High risk",
-    color: "#E65100", // deep orange
+    color: chartTheme.riskLabel.high,
   },
   critical: {
     text: "Very high risk",
-    color: "#B71C1C", // stronger red
+    color: chartTheme.riskLabel.critical,
   },
   noRisk: {
     text: "Very Low risk",
-    color: "#33691E", // deep green
+    color: chartTheme.riskLabel.veryLow,
   },
   negligible: {
     text: "Negligible",
-    color: "#33691E",
+    color: chartTheme.riskLabel.veryLow,
   },
   minor: {
     text: "Minor",
-    color: "#2E7D32",
+    color: palette.status.success.text,
   },
   moderate: {
     text: "Moderate",
-    color: "#8D6E63",
+    color: chartTheme.riskLabel.medium,
   },
   major: {
     text: "Major",
-    color: "#E65100",
+    color: chartTheme.riskLabel.high,
   },
   catastrophic: {
     text: "Catastrophic",
-    color: "#B71C1C",
+    color: chartTheme.riskLabel.critical,
   },
   overdue: {
     text: "Overdue",
-    color: "#B71C1C", // use same color as critical/catastrophic
+    color: chartTheme.riskLabel.critical,
   },
 };
 

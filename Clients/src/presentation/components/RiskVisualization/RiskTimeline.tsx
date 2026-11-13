@@ -4,6 +4,8 @@ import { format } from "date-fns";
 import { IRiskTimelineProps } from "../../types/interfaces/i.risk";
 import { ITimelineEvent } from "../../../domain/interfaces/i.widget";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
+import { palette, radiusPx } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 
 const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => {
   const formatDate = useFormattedDate();
@@ -21,11 +23,11 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
   };
 
   const getRiskLevelColor = (riskLevel: number): string => {
-    if (riskLevel >= 16) return "#C63622"; // Very High - Dark Red
-    if (riskLevel >= 12) return "#D68B61"; // High - Orange Red
-    if (riskLevel >= 8) return "#D6B971"; // Medium - Orange
-    if (riskLevel >= 4) return "#52AB43"; // Low - Light Green
-    return "#B8D39C"; // Very Low - Very Light Green
+    if (riskLevel >= 16) return chartTheme.riskSummary.veryHigh;
+    if (riskLevel >= 12) return chartTheme.riskSummary.high;
+    if (riskLevel >= 8) return chartTheme.riskSummary.medium;
+    if (riskLevel >= 4) return chartTheme.riskSummary.low;
+    return chartTheme.riskSummary.veryLow;
   };
 
   const getRiskLevelLabel = (riskLevel: number): string => {
@@ -102,7 +104,7 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
           p: 4,
           textAlign: "center",
           backgroundColor: "background.accent",
-          borderRadius: 2,
+          borderRadius: radiusPx.sm,
           border: "1px solid status.default.border",
         }}
       >
@@ -118,7 +120,7 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h6" sx={{ fontWeight: 600, color: "#111827", mb: 3 }}>
+      <Typography variant="h6" sx={{ fontWeight: 600, color: palette.text.primary, mb: 3 }}>
         Risk Timeline Analysis
       </Typography>
 
@@ -144,7 +146,7 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
                   variant="subtitle2"
                   sx={{
                     fontWeight: 600,
-                    color: "#374151",
+                    color: palette.text.secondary,
                     backgroundColor: "background.hover",
                     px: 2,
                     py: 1,
@@ -198,7 +200,7 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
                       flex: 1,
                       backgroundColor: "background.main",
                       border: "1px solid status.default.border",
-                      borderRadius: 2,
+                      borderRadius: radiusPx.sm,
                       p: 3,
                       transition: "all 0.2s ease-in-out",
                       borderLeft: `4px solid ${getRiskLevelColor(event.riskLevel)}`,
@@ -219,12 +221,12 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
 
                     <Typography
                       variant="subtitle2"
-                      sx={{ fontWeight: 600, color: "#111827", mb: 1 }}
+                      sx={{ fontWeight: 600, color: palette.text.primary, mb: 1 }}
                     >
                       {event.title}
                     </Typography>
 
-                    <Typography variant="body2" sx={{ color: "#4B5563", mb: 2 }}>
+                    <Typography variant="body2" sx={{ color: palette.text.tertiary, mb: 2 }}>
                       {event.description}
                     </Typography>
 
@@ -237,7 +239,7 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
                           color: getRiskLevelColor(event.riskLevel),
                           fontWeight: 500,
                           fontSize: 11,
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                           border: `1px solid ${getRiskLevelColor(event.riskLevel)}40`,
                         }}
                       />

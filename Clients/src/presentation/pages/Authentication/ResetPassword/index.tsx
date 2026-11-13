@@ -13,7 +13,7 @@ import { handleAlert } from "../../../../application/tools/alertUtils";
 import { AlertProps } from "../../../types/alert.types";
 import singleTheme from "../../../themes/v1SingleTheme";
 import Field from "../../../components/Inputs/Field";
-import { text, border as borderPalette } from "../../../themes/palette";
+import { text, border as borderPalette, radiusPx } from "../../../themes/palette";
 
 import Alert from "../../../components/Alert";
 
@@ -113,7 +113,7 @@ const ResetPassword = () => {
             display: "flex",
             justifyContent: "center",
             alignItems: "center",
-            borderRadius: "12px",
+            borderRadius: radiusPx.xl,
             border: `2px solid ${borderPalette.light}`,
             gap: theme.spacing(12),
           }}

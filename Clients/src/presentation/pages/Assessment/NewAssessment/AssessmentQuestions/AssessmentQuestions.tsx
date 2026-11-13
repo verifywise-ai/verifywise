@@ -7,7 +7,13 @@ import { Info as GreyCircleInfoIcon } from "lucide-react";
 import RichTextEditor from "../../../../components/RichTextEditor";
 import { priorities, PriorityLevel } from "../priorities";
 import { Topic } from "../../../../../application/hooks/useAssessmentAnswers";
-import { text, background, border as borderPalette } from "../../../../themes/palette";
+import {
+  text,
+  background,
+  border as borderPalette,
+  palette as vwPalette,
+  radiusPx,
+} from "../../../../themes/palette";
 
 interface AssessmentQuestionsProps {
   assessmentsValues: Topic[];
@@ -68,11 +74,11 @@ const AssessmentQuestions = ({
                 p={5}
                 display="flex"
                 alignItems="center"
-                bgcolor={"#FBFAFA"}
+                bgcolor={vwPalette.background.alt}
                 sx={{
                   border: `1px solid ${borderPalette.dark}`,
                   borderBottom: "none",
-                  borderRadius: "4px 4px 0 0",
+                  borderRadius: `${radiusPx.sm} ${radiusPx.sm} 0 0`,
                   gap: 4,
                   justifyContent: "space-between",
                 }}
@@ -127,7 +133,7 @@ const AssessmentQuestions = ({
                 }}
                 bodySx={{
                   "borderColor": "border.dark",
-                  "borderRadius": "0 0 4px 4px",
+                  "borderRadius": `0 0 ${radiusPx.sm} ${radiusPx.sm}`,
                   "& .ProseMirror > p": {
                     margin: 0,
                   },
@@ -146,16 +152,16 @@ const AssessmentQuestions = ({
                   variant="contained"
                   sx={{
                     "mt": 2,
-                    "borderRadius": 2,
+                    "borderRadius": radiusPx.sm,
                     "minWidth": 155, // ✅ minimum width
                     "height": 25,
                     "fontSize": 11,
-                    "border": "1px solid #d0d5dd",
+                    "border": `1px solid ${vwPalette.border.dark}`,
                     "backgroundColor": "white",
                     "color": "text.secondary",
                     "&:hover": {
                       backgroundColor: "background.accent",
-                      border: "1px solid #d0d5dd",
+                      border: `1px solid ${vwPalette.border.dark}`,
                     },
                   }}
                   disableRipple={theme.components?.MuiButton?.defaultProps?.disableRipple}

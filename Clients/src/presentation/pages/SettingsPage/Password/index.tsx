@@ -11,7 +11,7 @@ import { Save as SaveIcon } from "lucide-react";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import CustomizableToast from "../../../components/Toast"; // Import CustomizableToast
 import { updatePassword } from "../../../../application/repository/user.repository";
-import { brand, background } from "../../../themes/palette";
+import { brand, background, radiusPx } from "../../../themes/palette";
 
 const PasswordForm: React.FC = () => {
   const theme = useTheme();
@@ -188,7 +188,7 @@ const PasswordForm: React.FC = () => {
           height="300px"
           minWidth={"100%"}
           minHeight={300}
-          sx={{ borderRadius: 2 }}
+          sx={{ borderRadius: radiusPx.sm }}
         />
       )}
       {alert.visible && (

@@ -46,7 +46,7 @@ import {
   type PublicFormRef,
 } from "../../../application/repository/intakeForm.repository";
 import { FormDesignSettings, DEFAULT_DESIGN_SETTINGS } from "../IntakeFormBuilder/types";
-import { brand } from "../../themes/palette";
+import { brand, palette as vwPalette, radiusPx } from "../../themes/palette";
 
 /**
  * Public form data structure
@@ -103,7 +103,7 @@ function GradientBanner({
       sx={{
         background: gradient,
         minHeight: height,
-        borderRadius: "12px 12px 0 0",
+        borderRadius: `${radiusPx.xl} ${radiusPx.xl} 0 0`,
         display: "flex",
         flexDirection: "column",
         justifyContent: "flex-end",
@@ -118,7 +118,7 @@ function GradientBanner({
             width: 56,
             height: 56,
             backgroundColor: "background.main",
-            borderRadius: "10px",
+            borderRadius: radiusPx.lgPlus,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
@@ -152,7 +152,7 @@ function PoweredByFooter() {
     <Typography
       sx={{
         textAlign: "center",
-        color: "#b0b8c4",
+        color: vwPalette.text.accent,
         fontSize: "12px",
         mt: 4,
         pb: 4,
@@ -539,7 +539,7 @@ export function PublicIntakeForm() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: "#fafafa",
+          backgroundColor: vwPalette.background.alt,
         }}
       >
         <Typography
@@ -570,7 +570,7 @@ export function PublicIntakeForm() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: "#fafafa",
+          backgroundColor: vwPalette.background.alt,
           p: 3,
         }}
       >
@@ -579,18 +579,18 @@ export function PublicIntakeForm() {
             p: 4,
             maxWidth: 500,
             textAlign: "center",
-            borderRadius: "12px",
+            borderRadius: radiusPx.xl,
             backgroundColor: "background.main",
             boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
           }}
         >
           <Typography
             component="h1"
-            sx={{ fontWeight: 600, color: "#1e293b", fontSize: "18px", mb: 2 }}
+            sx={{ fontWeight: 600, color: vwPalette.text.primary, fontSize: "18px", mb: 2 }}
           >
             Form unavailable
           </Typography>
-          <Typography sx={{ color: "#64748b", fontSize: "14px" }}>{error}</Typography>
+          <Typography sx={{ color: vwPalette.text.icon, fontSize: "14px" }}>{error}</Typography>
         </Box>
       </Box>
     );
@@ -655,10 +655,10 @@ export function PublicIntakeForm() {
             sx={{
               flex: 1,
               minWidth: 0,
-              borderRadius: "12px",
+              borderRadius: radiusPx.xl,
               overflow: "hidden",
               backgroundColor: "background.main",
-              border: "1px solid #d0d5dd",
+              border: `1px solid ${vwPalette.border.dark}`,
               boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
             }}
           >
@@ -694,11 +694,16 @@ export function PublicIntakeForm() {
               <Box sx={{ p: "32px" }}>
                 <Typography
                   component="h2"
-                  sx={{ fontWeight: 600, color: "#1e293b", mb: "8px", fontSize: "16px" }}
+                  sx={{
+                    fontWeight: 600,
+                    color: vwPalette.text.primary,
+                    mb: "8px",
+                    fontSize: "16px",
+                  }}
                 >
                   Risk classification
                 </Typography>
-                <Typography sx={{ fontSize: "13px", color: "#475569", mb: "24px" }}>
+                <Typography sx={{ fontSize: "13px", color: vwPalette.text.tertiary, mb: "24px" }}>
                   Answer these questions about the AI system first. They follow the EU AI Act.
                 </Typography>
                 {error && (
@@ -707,16 +712,22 @@ export function PublicIntakeForm() {
                       mb: "24px",
                       p: "12px 16px",
                       fontSize: "13px",
-                      borderRadius: "8px",
-                      border: "1px solid #fecaca",
-                      backgroundColor: "#fef2f2",
+                      borderRadius: radiusPx.lg,
+                      border: `1px solid ${vwPalette.status.error.border}`,
+                      backgroundColor: vwPalette.status.error.bg,
                       display: "flex",
                       alignItems: "center",
                       gap: "10px",
                     }}
                   >
-                    <AlertCircle size={18} color="#ef4444" style={{ flexShrink: 0 }} />
-                    <Typography sx={{ fontSize: "13px", color: "#991b1b" }}>{error}</Typography>
+                    <AlertCircle
+                      size={18}
+                      color={vwPalette.riskMark.critical}
+                      style={{ flexShrink: 0 }}
+                    />
+                    <Typography sx={{ fontSize: "13px", color: vwPalette.status.error.text }}>
+                      {error}
+                    </Typography>
                   </Box>
                 )}
                 <EuAiActQuestionnaire
@@ -787,16 +798,16 @@ export function PublicIntakeForm() {
                       mb: 3,
                       p: "12px 16px",
                       fontSize: "13px",
-                      borderRadius: "8px",
-                      border: "1px solid #bfdbfe",
-                      backgroundColor: "#eff6ff",
+                      borderRadius: radiusPx.lg,
+                      border: `1px solid ${vwPalette.status.info.border}`,
+                      backgroundColor: vwPalette.status.info.bg,
                       display: "flex",
                       alignItems: "center",
                       gap: "10px",
                     }}
                   >
-                    <Info size={18} color="#3b82f6" style={{ flexShrink: 0 }} />
-                    <Typography sx={{ fontSize: "13px", color: "#1e40af" }}>
+                    <Info size={18} color={vwPalette.status.info.text} style={{ flexShrink: 0 }} />
+                    <Typography sx={{ fontSize: "13px", color: vwPalette.status.info.text }}>
                       Your previous submission data has been pre-filled. You can update and
                       resubmit.
                     </Typography>
@@ -810,16 +821,22 @@ export function PublicIntakeForm() {
                       mb: 3,
                       p: "12px 16px",
                       fontSize: "13px",
-                      borderRadius: "8px",
-                      border: "1px solid #fecaca",
-                      backgroundColor: "#fef2f2",
+                      borderRadius: radiusPx.lg,
+                      border: `1px solid ${vwPalette.status.error.border}`,
+                      backgroundColor: vwPalette.status.error.bg,
                       display: "flex",
                       alignItems: "center",
                       gap: "10px",
                     }}
                   >
-                    <AlertCircle size={18} color="#ef4444" style={{ flexShrink: 0 }} />
-                    <Typography sx={{ fontSize: "13px", color: "#991b1b" }}>{error}</Typography>
+                    <AlertCircle
+                      size={18}
+                      color={vwPalette.riskMark.critical}
+                      style={{ flexShrink: 0 }}
+                    />
+                    <Typography sx={{ fontSize: "13px", color: vwPalette.status.error.text }}>
+                      {error}
+                    </Typography>
                   </Box>
                 )}
 
@@ -830,7 +847,7 @@ export function PublicIntakeForm() {
                       component="h2"
                       sx={{
                         fontWeight: 600,
-                        color: "#1e293b",
+                        color: vwPalette.text.primary,
                         mb: 2,
                         fontSize: "16px",
                       }}
@@ -864,7 +881,7 @@ export function PublicIntakeForm() {
                       </Box>
                     </Box>
 
-                    <Box sx={{ my: 4, borderTop: "1px solid #e2e8f0" }} />
+                    <Box sx={{ my: 4, borderTop: `1px solid ${vwPalette.border.light}` }} />
                   </>
                 )}
 
@@ -975,7 +992,7 @@ export function PublicIntakeForm() {
                     "backgroundColor": ds.colorTheme,
                     "fontSize": "15px",
                     "fontWeight": 600,
-                    "borderRadius": "8px",
+                    "borderRadius": radiusPx.lg,
                     "textTransform": "none",
                     "boxShadow": "none",
                     "&:hover": {
@@ -983,7 +1000,7 @@ export function PublicIntakeForm() {
                       boxShadow: `0 2px 8px ${ds.colorTheme}40`,
                     },
                     "&:disabled": {
-                      backgroundColor: "#cbd5e1",
+                      backgroundColor: vwPalette.border.dark,
                       color: "background.main",
                     },
                     "& .MuiButton-startIcon": {

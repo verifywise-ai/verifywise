@@ -17,6 +17,7 @@ import CustomAxios from "../../../infrastructure/api/customAxios";
 import { evalModelsService, type SavedModel } from "../../../infrastructure/api/evalModelsService";
 import * as ProviderIcons from "../../components/ProviderIcons";
 import palette from "../../themes/palette";
+import { palette as vwPalette, radiusPx } from "../../themes/palette";
 
 interface Message {
   role: "user" | "assistant";
@@ -354,7 +355,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
             "gap": "8px",
             "background": "none",
             "border": `1px solid ${palette.border.light}`,
-            "borderRadius": "8px",
+            "borderRadius": radiusPx.lg,
             "px": "12px",
             "py": "7px",
             "cursor": "pointer",
@@ -377,7 +378,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
             sx: {
               mt: "4px",
               minWidth: 260,
-              borderRadius: "8px",
+              borderRadius: radiusPx.lg,
               border: `1px solid ${palette.border.light}`,
               boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
             },
@@ -477,7 +478,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
               }}
               sx={{
                 "color": palette.text.tertiary,
-                "borderRadius": "6px",
+                "borderRadius": radiusPx.md,
                 "p": "6px",
                 "&:hover": {
                   backgroundColor: palette.background.fill,
@@ -509,7 +510,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
             sx={{
               width: 48,
               height: 48,
-              borderRadius: "12px",
+              borderRadius: radiusPx.xl,
               backgroundColor: palette.background.fill,
               border: `1px solid ${palette.border.light}`,
               display: "flex",
@@ -571,7 +572,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                             sx={{
                               maxWidth: 220,
                               maxHeight: 180,
-                              borderRadius: "12px 12px 4px 12px",
+                              borderRadius: `${radiusPx.xl} ${radiusPx.xl} ${radiusPx.sm} ${radiusPx.xl}`,
                               objectFit: "cover",
                               border: `2px solid ${palette.brand.primary}`,
                               display: "block",
@@ -585,7 +586,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                       <Box
                         sx={{
                           backgroundColor: palette.brand.primary,
-                          color: "#fff",
+                          color: vwPalette.background.main,
                           borderRadius: "18px 18px 4px 18px",
                           px: "16px",
                           py: "10px",
@@ -605,7 +606,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                     sx={{
                       width: 28,
                       height: 28,
-                      borderRadius: "8px",
+                      borderRadius: radiusPx.lg,
                       backgroundColor: palette.background.fill,
                       border: `1px solid ${palette.border.light}`,
                       display: "flex",
@@ -632,7 +633,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                       "& pre": {
                         backgroundColor: palette.background.hover,
                         p: "12px 14px",
-                        borderRadius: "6px",
+                        borderRadius: radiusPx.md,
                         overflowX: "auto",
                         fontSize: 12,
                         my: "10px",
@@ -641,7 +642,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                         backgroundColor: palette.background.hover,
                         px: "4px",
                         py: "1px",
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                         fontSize: 12,
                       },
                       "& h1,& h2,& h3": { mt: "14px", mb: "6px", fontWeight: 600 },
@@ -662,7 +663,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                 sx={{
                   width: 28,
                   height: 28,
-                  borderRadius: "8px",
+                  borderRadius: radiusPx.lg,
                   backgroundColor: palette.background.fill,
                   border: `1px solid ${palette.border.light}`,
                   display: "flex",
@@ -692,12 +693,12 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                 mt: "6px",
                 px: "14px",
                 py: "10px",
-                borderRadius: "8px",
-                border: "1px solid #FECACA",
-                backgroundColor: "#FFF5F5",
+                borderRadius: radiusPx.lg,
+                border: `1px solid ${vwPalette.status.error.border}`,
+                backgroundColor: vwPalette.accent.red.bg,
               }}
             >
-              <Typography fontSize={12} color="#DC2626">
+              <Typography fontSize={12} color={vwPalette.riskMark.critical}>
                 {error}
               </Typography>
             </Box>
@@ -722,7 +723,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
               p: "10px",
               backgroundColor: palette.background.fill,
               border: `1px solid ${palette.border.light}`,
-              borderRadius: "10px",
+              borderRadius: radiusPx.lgPlus,
             }}
           >
             {attachments.map((att, idx) => (
@@ -735,7 +736,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                   gap: "6px",
                   backgroundColor: palette.background.main,
                   border: `1px solid ${palette.border.light}`,
-                  borderRadius: "8px",
+                  borderRadius: radiusPx.lg,
                   overflow: "hidden",
                   ...(att.type === "image"
                     ? { width: 64, height: 64 }
@@ -776,7 +777,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                     "width": 18,
                     "height": 18,
                     "backgroundColor": "rgba(0,0,0,0.45)",
-                    "color": "#fff",
+                    "color": vwPalette.background.main,
                     "p": 0,
                     "&:hover": { backgroundColor: "rgba(0,0,0,0.65)" },
                   }}
@@ -794,13 +795,15 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
             "display": "flex",
             "alignItems": "center",
             "gap": "6px",
-            "border": `1.5px solid ${dictating ? "#EF4444" : palette.border.light}`,
+            "border": `1.5px solid ${dictating ? vwPalette.riskMark.critical : palette.border.light}`,
             "borderRadius": "14px",
             "px": "10px",
             "py": "8px",
             "backgroundColor": palette.background.main,
             "transition": "border-color 0.15s",
-            "&:focus-within": { borderColor: dictating ? "#EF4444" : palette.brand.primary },
+            "&:focus-within": {
+              borderColor: dictating ? vwPalette.riskMark.critical : palette.brand.primary,
+            },
           }}
         >
           {/* Attach */}
@@ -820,7 +823,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                 disabled={loading || !selectedModelId || !visionOk}
                 sx={{
                   "color": palette.text.tertiary,
-                  "borderRadius": "6px",
+                  "borderRadius": radiusPx.md,
                   "p": "4px",
                   "flexShrink": 0,
                   "&:hover": { backgroundColor: palette.background.fill },
@@ -840,7 +843,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                 onClick={toggleDictation}
                 disabled={loading || !selectedModelId}
                 sx={{
-                  "color": dictating ? "#EF4444" : palette.text.tertiary,
+                  "color": dictating ? vwPalette.riskMark.critical : palette.text.tertiary,
                   "borderRadius": "50%",
                   "p": "4px",
                   "flexShrink": 0,
@@ -892,10 +895,10 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
             disabled={!canSend}
             sx={{
               "backgroundColor": canSend ? palette.brand.primary : palette.background.fill,
-              "color": canSend ? "#fff" : palette.text.disabled,
+              "color": canSend ? vwPalette.background.main : palette.text.disabled,
               "width": 32,
               "height": 32,
-              "borderRadius": "8px",
+              "borderRadius": radiusPx.lg,
               "flexShrink": 0,
               "transition": "background-color 0.15s",
               "&:hover": {

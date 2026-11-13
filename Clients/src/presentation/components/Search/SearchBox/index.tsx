@@ -3,10 +3,14 @@ import { Box, InputBase, SxProps, Theme, useTheme } from "@mui/material";
 import { Search } from "lucide-react";
 import { ISearchBoxProps } from "../../../types/widget.types";
 import { getSearchBoxStyles } from "../../../utils/inputStyles";
-import { background, status } from "../../../themes/palette";
+import { background, status, radiusPx } from "../../../themes/palette";
+import { isClassicUi } from "../../../themes/uiStyle";
+import { useTranslation } from "../../../../application/hooks/useTranslation";
+
+const classicUi = isClassicUi();
 
 const SearchBox: React.FC<ISearchBoxProps> = ({
-  placeholder = "Search...",
+  placeholder,
   value,
   onChange,
   sx = {},
@@ -15,6 +19,8 @@ const SearchBox: React.FC<ISearchBoxProps> = ({
   fullWidth = true,
 }) => {
   const theme = useTheme();
+  const { t } = useTranslation();
+  const resolvedPlaceholder = placeholder ?? (classicUi ? "Search..." : t("Search this list"));
 
   const handleChange = (event: React.ChangeEvent<HTMLInputElement>) => {
     onChange(event.target.value);
@@ -30,6 +36,7 @@ const SearchBox: React.FC<ISearchBoxProps> = ({
     minHeight: "34px",
     maxHeight: "34px",
     boxSizing: "border-box",
+    ...(classicUi ? {} : { borderRadius: radiusPx.search }),
     width: fullWidth ? "100%" : 160,
     ...sx,
   };
@@ -47,7 +54,7 @@ const SearchBox: React.FC<ISearchBoxProps> = ({
     <Box sx={searchBoxStyle}>
       <Search size={16} style={{ color: `${status.default.text}`, marginRight: "8px" }} />
       <InputBase
-        placeholder={placeholder}
+        placeholder={resolvedPlaceholder}
         value={value}
         onChange={handleChange}
         sx={searchInputStyle}

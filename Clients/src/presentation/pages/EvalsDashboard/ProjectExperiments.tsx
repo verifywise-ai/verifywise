@@ -21,14 +21,15 @@ import PerformanceChart, {
 } from "./components/PerformanceChart";
 import type { IExperimentRow } from "../../types/interfaces/i.table";
 import SearchBox from "../../components/Search/SearchBox";
-import { FilterBy, type FilterColumn } from "../../components/Table/FilterBy";
+import { type FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { GroupBy } from "../../components/Table/GroupBy";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import HelperIcon from "../../components/HelperIcon";
 import Select from "../../components/Inputs/Select";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 import { countLabel } from "../../tools/countLabel";
 import TipBox from "../../components/TipBox";
 import { useCanCheck } from "../../../application/hooks/useCan";
@@ -505,8 +506,12 @@ export default function ProjectExperiments({
     [],
   );
 
-  const { filterData, handleFilterChange } =
-    useFilterBy<ExperimentWithMetrics>(getExperimentFieldValue);
+  const {
+    filterData,
+    handleFilterChange,
+    conditions: filterConditions,
+    logic: filterLogic,
+  } = useFilterBy<ExperimentWithMetrics>(getExperimentFieldValue);
 
   const filteredExperiments = useMemo(() => {
     const afterFilter = filterData(experiments);
@@ -649,7 +654,7 @@ export default function ProjectExperiments({
                     alignItems: "center",
                     gap: "8px",
                     p: "8px 10px",
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     backgroundColor: palette.status.success.bg,
                     border: `1px solid ${palette.status.success.border}`,
                   }}
@@ -731,7 +736,7 @@ export default function ProjectExperiments({
         sx={{
           marginBottom: "16px",
           border: `1px solid ${palette.border.dark}`,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           boxShadow: "none",
         }}
       >
@@ -816,7 +821,14 @@ export default function ProjectExperiments({
         gap="4px"
       >
         <Stack direction="row" alignItems="center" gap="4px">
-          <FilterBy columns={experimentFilterColumns} onFilterChange={handleFilterChange} />
+          <TableFilter
+            columns={experimentFilterColumns}
+            onFilterChange={handleFilterChange}
+            defaultConditions={filterConditions}
+            defaultLogic={filterLogic}
+            data={experiments}
+            getFieldValue={getExperimentFieldValue}
+          />
           <GroupBy
             options={[
               { id: "status", label: "Status" },

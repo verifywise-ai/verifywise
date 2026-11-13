@@ -3,7 +3,8 @@ import { Box, Stack, Typography, Card, CardContent, Grid, CircularProgress } fro
 import { Plus, Check } from "lucide-react";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import SearchBox from "../../components/Search/SearchBox";
-import { FilterBy, type FilterColumn } from "../../components/Table/FilterBy";
+import { type FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { GroupBy } from "../../components/Table/GroupBy";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { evalModelsService, type SavedModel } from "../../../infrastructure/api/evalModelsService";
@@ -24,7 +25,7 @@ import ModelPicker from "../../components/Inputs/ModelPicker";
 import { useProviderModels } from "../../../application/hooks/useProviderModels";
 import { useCanCheck } from "../../../application/hooks/useCan";
 import { PROVIDERS } from "../../utils/providers";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 
 // Import provider logos
 import { ReactComponent as OpenAILogo } from "../../assets/icons/openai_logo.svg";
@@ -196,7 +197,12 @@ export default function ModelsPage({ orgId, openAddModal, onAddModalConsumed }: 
     [],
   );
 
-  const { filterData, handleFilterChange } = useFilterBy<SavedModel>(getFieldValue);
+  const {
+    filterData,
+    handleFilterChange,
+    conditions: filterConditions,
+    logic: filterLogic,
+  } = useFilterBy<SavedModel>(getFieldValue);
 
   const filteredModels = useMemo(() => {
     const afterFilter = filterData(models);
@@ -338,7 +344,14 @@ export default function ModelsPage({ orgId, openAddModal, onAddModalConsumed }: 
         gap={2}
       >
         <Stack direction="row" alignItems="center" gap={2}>
-          <FilterBy columns={filterColumns} onFilterChange={handleFilterChange} />
+          <TableFilter
+            columns={filterColumns}
+            onFilterChange={handleFilterChange}
+            defaultConditions={filterConditions}
+            defaultLogic={filterLogic}
+            data={models}
+            getFieldValue={getFieldValue}
+          />
           <GroupBy
             options={[{ id: "modelProvider", label: "Provider" }]}
             onGroupChange={() => {}}
@@ -581,7 +594,7 @@ export default function ModelsPage({ orgId, openAddModal, onAddModalConsumed }: 
                   sx={{
                     p: 1.5,
                     backgroundColor: palette.status.success.bg,
-                    borderRadius: "8px",
+                    borderRadius: radiusPx.lg,
                     border: `1px solid ${palette.status.success.border}`,
                   }}
                 >

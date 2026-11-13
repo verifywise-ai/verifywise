@@ -24,7 +24,7 @@ import {
 import { StatCard } from "../../../components/Cards/StatCard";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import { Finding, VulnerabilityCheckStatus } from "../../../../domain/ai-detection/types";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import { VULNERABILITY_SETTINGS_PATH, vulnerabilityChecksRan } from "../components/governanceScore";
 import { isFindingSuppressed, VULN_TYPE_LABELS } from "./scanDetailsConfig";
 import { VulnerabilityFindingRow } from "./VulnerabilityFindingRow";
@@ -155,7 +155,7 @@ export function VulnerabilitiesTab({
           sx={{
             backgroundColor: palette.background.accent,
             border: `1px solid ${palette.border.dark}`,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             p: "16px",
             mb: vulnerabilityFindings.length > 0 ? "16px" : 0,
             display: "flex",
@@ -221,7 +221,7 @@ export function VulnerabilitiesTab({
             sx={{
               backgroundColor: palette.status.success.bg,
               border: `1px solid ${palette.status.success.border}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: "32px",
               textAlign: "center",
             }}

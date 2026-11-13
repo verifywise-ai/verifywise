@@ -27,6 +27,7 @@ import AutoCompleteField from "../../../../components/Inputs/Autocomplete";
 import { EmptyState } from "../../../../components/EmptyState";
 import singleTheme from "../../../../themes/v1SingleTheme";
 import { useAuth } from "../../../../../application/hooks/useAuth";
+import { palette } from "../../../../themes/palette";
 
 /** A user who can be elected: one per account, with every organization they belong to. */
 interface Candidate {
@@ -111,11 +112,11 @@ const ElectModal = ({ isOpen, candidates, onClose, onElected }: ElectModalProps)
             return (
               <Box component="li" key={key} {...rest} sx={{ py: 1, px: 1.5 }}>
                 <Stack spacing={0.25} sx={{ width: "100%" }}>
-                  <Typography sx={{ fontSize: 13, color: "#1c2130", fontWeight: 500 }}>
+                  <Typography sx={{ fontSize: 13, color: palette.text.primary, fontWeight: 500 }}>
                     {option.name}
                     {option.surname ? ` ${option.surname}` : ""}
                   </Typography>
-                  <Typography sx={{ fontSize: 12, color: "#666666" }}>
+                  <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
                     {option.email}
                     {option.organizationNames.length > 0
                       ? ` · ${option.organizationNames.join(", ")}`
@@ -232,7 +233,7 @@ const SuperAdmins = () => {
           <Typography sx={{ fontSize: 15, fontWeight: 600, color: "text.primary" }}>
             Super Admins
           </Typography>
-          <Typography sx={{ fontSize: 13, color: "#666666", mt: 0.5 }}>
+          <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: 0.5 }}>
             Users with cross-organization Super Admin capabilities. Only Super Admins can elect
             others.
           </Typography>

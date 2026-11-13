@@ -30,7 +30,7 @@ import { ArrowLeft, X, Settings, Upload } from "lucide-react";
 import { PageBreadcrumbs } from "../../components/breadcrumbs/PageBreadcrumbs";
 import TabBar from "../../components/TabBar";
 import { TabContext } from "@mui/lab";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 import { getDifficultyVariant } from "../../components/Table/TemplatesTable/TemplatesList";
 
 const USE_CASE_LABELS: Record<"chatbot" | "rag" | "agent", string> = {
@@ -529,7 +529,7 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
                 sx={{
                   "p": "5px",
                   "width": 380,
-                  "borderRadius": "4px",
+                  "borderRadius": radiusPx.sm,
                   "borderColor": palette.border.dark,
                   "boxShadow": "none",
                   "backgroundColor": palette.background.main,
@@ -890,7 +890,7 @@ export default function BuiltInDatasetsPage(_props: BuiltInEmbedProps) {
                             sx={{
                               p: "4px",
                               width: 380,
-                              borderRadius: "4px",
+                              borderRadius: radiusPx.sm,
                               borderColor: palette.border.dark,
                               boxShadow: "none",
                               backgroundColor: palette.background.main,

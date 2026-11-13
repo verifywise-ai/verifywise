@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import { aiTrustCenterTableCell } from "../style";
 import { ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
-import { brand, text, background } from "../../../themes/palette";
+import { brand, text, background, palette as vwPalette } from "../../../themes/palette";
 
 const SUBPROCESSORS_SORTING_KEY = "verifywise_subprocessors_sorting";
 
@@ -124,11 +124,11 @@ const Subprocessors = ({
       </Typography>
       <TableContainer
         component={Paper}
-        sx={{ border: "1px solid #EEEEEE", borderRadius: 1, boxShadow: "none" }}
+        sx={{ border: `1px solid ${vwPalette.border.light}`, borderRadius: 1, boxShadow: "none" }}
       >
         <Table>
           <TableHead>
-            <TableRow sx={{ background: "#FAFAFA" }}>
+            <TableRow sx={{ background: vwPalette.background.alt }}>
               <TableCell
                 sx={{
                   "fontWeight": 400,
@@ -150,7 +150,10 @@ const Subprocessors = ({
                     sx={{
                       display: "flex",
                       alignItems: "center",
-                      color: sortConfig.key === "company name" ? "#1976D2" : `${text.disabled}`,
+                      color:
+                        sortConfig.key === "company name"
+                          ? vwPalette.status.info.text
+                          : `${text.disabled}`,
                     }}
                   >
                     {sortConfig.key === "company name" && sortConfig.direction === "asc" && (
@@ -184,7 +187,8 @@ const Subprocessors = ({
                     sx={{
                       display: "flex",
                       alignItems: "center",
-                      color: sortConfig.key === "url" ? "#1976D2" : `${text.disabled}`,
+                      color:
+                        sortConfig.key === "url" ? vwPalette.status.info.text : `${text.disabled}`,
                     }}
                   >
                     {sortConfig.key === "url" && sortConfig.direction === "asc" && (
@@ -218,7 +222,10 @@ const Subprocessors = ({
                     sx={{
                       display: "flex",
                       alignItems: "center",
-                      color: sortConfig.key === "purpose" ? "#1976D2" : `${text.disabled}`,
+                      color:
+                        sortConfig.key === "purpose"
+                          ? vwPalette.status.info.text
+                          : `${text.disabled}`,
                     }}
                   >
                     {sortConfig.key === "purpose" && sortConfig.direction === "asc" && (
@@ -252,7 +259,10 @@ const Subprocessors = ({
                     sx={{
                       display: "flex",
                       alignItems: "center",
-                      color: sortConfig.key === "location" ? "#1976D2" : `${text.disabled}`,
+                      color:
+                        sortConfig.key === "location"
+                          ? vwPalette.status.info.text
+                          : `${text.disabled}`,
                     }}
                   >
                     {sortConfig.key === "location" && sortConfig.direction === "asc" && (
@@ -273,7 +283,10 @@ const Subprocessors = ({
                 <TableCell
                   sx={{
                     ...aiTrustCenterTableCell,
-                    backgroundColor: sortConfig.key === "company name" ? "#e8e8e8" : "#fafafa",
+                    backgroundColor:
+                      sortConfig.key === "company name"
+                        ? vwPalette.border.light
+                        : vwPalette.background.alt,
                   }}
                 >
                   <Typography variant="body2" sx={{ fontSize: 13 }}>

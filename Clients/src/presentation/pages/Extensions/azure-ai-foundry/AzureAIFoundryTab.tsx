@@ -23,6 +23,7 @@ import { colors, borderRadius, chipStyles, buttonStyles, tableStyles } from "../
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { getApiErrorReason } from "../../../../application/utils/apiErrorReason";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import { palette } from "../../../themes/palette";
 
 const SelectorVertical = (props: any) => <ChevronsUpDown size={16} {...props} />;
 
@@ -173,11 +174,13 @@ export default function AzureAIFoundryTab() {
             p: "12px 16px",
             mb: "16px",
             borderRadius: borderRadius.sm,
-            backgroundColor: "#FFF7ED",
-            border: "1px solid #FED7AA",
+            backgroundColor: palette.status.warning.bg,
+            border: `1px solid ${palette.status.warning.border}`,
           }}
         >
-          <Typography sx={{ fontSize: 13, color: "#92400E" }}>{warning}</Typography>
+          <Typography sx={{ fontSize: 13, color: palette.status.warning.text }}>
+            {warning}
+          </Typography>
         </Box>
       )}
 
@@ -287,7 +290,7 @@ export default function AzureAIFoundryTab() {
         anchor="right"
         open={!!selectedModel}
         onClose={() => setSelectedModel(null)}
-        PaperProps={{ sx: { width: 480, backgroundColor: "#FCFCFD" } }}
+        PaperProps={{ sx: { width: 480, backgroundColor: palette.background.main } }}
       >
         {selectedModel && (
           <>

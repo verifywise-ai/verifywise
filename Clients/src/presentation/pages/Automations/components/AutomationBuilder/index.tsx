@@ -41,6 +41,7 @@ import {
   TriggerTemplate,
   ActionTemplate,
 } from "../../../../../domain/types/Automation";
+import { radiusPx } from "../../../../themes/palette";
 
 // Icon mapping for trigger types
 const getTriggerIcon = (triggerType: string) => {
@@ -169,7 +170,7 @@ const AutomationBuilder: React.FC<AutomationBuilderProps> = ({
           selectedItemId === action.id
             ? `1px solid ${theme.palette.primary.main}`
             : `1px solid ${theme.palette.grey[300]}`,
-        "borderRadius": 2,
+        "borderRadius": radiusPx.sm,
         "backgroundColor": theme.palette.background.paper,
         "display": "flex",
         "alignItems": "center",
@@ -389,7 +390,7 @@ const AutomationBuilder: React.FC<AutomationBuilderProps> = ({
           },
           "&::-webkit-scrollbar-thumb": {
             background: "transparent",
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             backgroundClip: "padding-box",
           },
           "&:hover::-webkit-scrollbar-thumb": {
@@ -410,7 +411,7 @@ const AutomationBuilder: React.FC<AutomationBuilderProps> = ({
               "width": 320,
               "height": 60,
               "border": `1px dashed ${theme.palette.border.dark}`,
-              "borderRadius": 2,
+              "borderRadius": radiusPx.sm,
               "backgroundColor": theme.palette.background.paper,
               "display": "flex",
               "alignItems": "center",
@@ -489,7 +490,7 @@ const AutomationBuilder: React.FC<AutomationBuilderProps> = ({
               sx: {
                 boxShadow: "none",
                 border: `1px solid ${theme.palette.border.light}`,
-                borderRadius: 2,
+                borderRadius: radiusPx.sm,
                 width: 320,
                 py: 2,
                 px: 1,
@@ -600,7 +601,7 @@ const AutomationBuilder: React.FC<AutomationBuilderProps> = ({
                       "width": 320,
                       "height": 60,
                       "border": `1px dashed ${theme.palette.border.dark}`,
-                      "borderRadius": 2,
+                      "borderRadius": radiusPx.sm,
                       "color": theme.palette.text.secondary,
                       "backgroundColor": theme.palette.background.paper,
                       "&:hover": {
@@ -627,7 +628,7 @@ const AutomationBuilder: React.FC<AutomationBuilderProps> = ({
                   sx: {
                     boxShadow: "none",
                     border: `1px solid ${theme.palette.border.light}`,
-                    borderRadius: 2,
+                    borderRadius: radiusPx.sm,
                     width: 320,
                     py: 2,
                     px: 1,

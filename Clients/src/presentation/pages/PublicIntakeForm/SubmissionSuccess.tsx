@@ -3,6 +3,7 @@ import { Box, Typography } from "@mui/material";
 import { Edit, Hash, Clock } from "lucide-react";
 import { useEffect } from "react";
 import { CustomizableButton } from "../../components/button/customizable-button";
+import { palette, radiusPx } from "../../themes/palette";
 
 interface SubmissionState {
   submissionId: number;
@@ -50,7 +51,7 @@ export function SubmissionSuccess() {
       component="main"
       sx={{
         minHeight: "100vh",
-        backgroundColor: "#fafafa",
+        backgroundColor: palette.background.alt,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -64,7 +65,7 @@ export function SubmissionSuccess() {
         <Box
           sx={{
             backgroundColor: "background.main",
-            borderRadius: "16px 16px 0 0",
+            borderRadius: `${radiusPx.xxl} ${radiusPx.xxl} 0 0`,
             boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
             p: 4,
             textAlign: "center",
@@ -72,11 +73,11 @@ export function SubmissionSuccess() {
         >
           <Typography
             component="h1"
-            sx={{ fontSize: "22px", fontWeight: 700, color: "#1e293b", mb: 1 }}
+            sx={{ fontSize: "22px", fontWeight: 700, color: palette.text.primary, mb: 1 }}
           >
             Submission received
           </Typography>
-          <Typography sx={{ fontSize: "14px", color: "#94a3b8", mb: 0 }}>
+          <Typography sx={{ fontSize: "14px", color: palette.text.disabled, mb: 0 }}>
             {state.formName}
           </Typography>
         </Box>
@@ -92,7 +93,7 @@ export function SubmissionSuccess() {
               width: 24,
               height: 24,
               borderRadius: "50%",
-              backgroundColor: "#fafafa",
+              backgroundColor: palette.background.alt,
             }}
           />
           <Box
@@ -104,7 +105,7 @@ export function SubmissionSuccess() {
               width: 24,
               height: 24,
               borderRadius: "50%",
-              backgroundColor: "#fafafa",
+              backgroundColor: palette.background.alt,
             }}
           />
           <Box
@@ -113,7 +114,7 @@ export function SubmissionSuccess() {
               left: 12,
               right: 12,
               top: "50%",
-              borderTop: "2px dashed #e2e8f0",
+              borderTop: `2px dashed ${palette.border.light}`,
             }}
           />
         </Box>
@@ -122,7 +123,7 @@ export function SubmissionSuccess() {
         <Box
           sx={{
             backgroundColor: "background.main",
-            borderRadius: "0 0 16px 16px",
+            borderRadius: `0 0 ${radiusPx.xxl} ${radiusPx.xxl}`,
             boxShadow: "0 1px 3px rgba(0,0,0,0.06)",
             p: 4,
             pt: 2,
@@ -134,14 +135,14 @@ export function SubmissionSuccess() {
               {
                 label: "Reference",
                 value: `${state.submissionId}`,
-                icon: <Hash size={13} color="#94a3b8" />,
+                icon: <Hash size={13} color={palette.text.disabled} />,
               },
               ...(state.submitterEmail ? [{ label: "Email", value: state.submitterEmail }] : []),
               {
                 label: "Status",
                 value: "Pending review",
-                color: "#f59e0b",
-                icon: <Clock size={13} color="#f59e0b" />,
+                color: palette.riskMark.medium,
+                icon: <Clock size={13} color={palette.riskMark.medium} />,
               },
             ];
             return rows.map((row, i) => (
@@ -152,17 +153,20 @@ export function SubmissionSuccess() {
                   justifyContent: "space-between",
                   alignItems: "center",
                   py: "10px",
-                  borderBottom: i < rows.length - 1 ? "1px solid #f1f5f9" : "none",
+                  borderBottom:
+                    i < rows.length - 1 ? `1px solid ${palette.background.hover}` : "none",
                 }}
               >
-                <Typography sx={{ fontSize: "13px", color: "#94a3b8" }}>{row.label}</Typography>
+                <Typography sx={{ fontSize: "13px", color: palette.text.disabled }}>
+                  {row.label}
+                </Typography>
                 <Box sx={{ display: "flex", alignItems: "center", gap: "4px" }}>
                   {(row as any).icon}
                   <Typography
                     sx={{
                       fontSize: "13px",
                       fontWeight: 600,
-                      color: (row as any).color || "#1e293b",
+                      color: (row as any).color || palette.text.primary,
                       maxWidth: 220,
                       textAlign: "right",
                       wordBreak: "break-all",
@@ -188,7 +192,7 @@ export function SubmissionSuccess() {
                   "backgroundColor": "brand.primary",
                   "fontSize": "13px",
                   "fontWeight": 600,
-                  "borderRadius": "8px",
+                  "borderRadius": radiusPx.lg,
                   "textTransform": "none",
                   "boxShadow": "none",
                   "&:hover": { backgroundColor: "brand.primaryHover" },
@@ -198,7 +202,9 @@ export function SubmissionSuccess() {
           )}
         </Box>
 
-        <Typography sx={{ textAlign: "center", color: "#cbd5e1", fontSize: "12px", mt: 4 }}>
+        <Typography
+          sx={{ textAlign: "center", color: palette.border.dark, fontSize: "12px", mt: 4 }}
+        >
           Powered by VerifyWise
         </Typography>
       </Box>

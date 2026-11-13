@@ -3,7 +3,14 @@ import { Box, IconButton, Typography } from "@mui/material";
 import { RefreshCw } from "lucide-react";
 import Field from "../../components/Inputs/Field";
 import { getCaptcha } from "../../../application/repository/intakeForm.repository";
-import { brand, text, background, status } from "../../themes/palette";
+import {
+  brand,
+  text,
+  background,
+  status,
+  palette as vwPalette,
+  radiusPx,
+} from "../../themes/palette";
 
 /**
  * Props for MathCaptcha component
@@ -64,13 +71,15 @@ export function MathCaptcha({ value, onChange, error, refreshTrigger }: MathCapt
     <Box
       sx={{
         p: 2.5,
-        backgroundColor: "#f8fafc",
-        borderRadius: "8px",
-        border: error ? "1px solid #ef4444" : "1px solid #e2e8f0",
+        backgroundColor: vwPalette.background.alt,
+        borderRadius: radiusPx.lg,
+        border: error
+          ? `1px solid ${vwPalette.riskMark.critical}`
+          : `1px solid ${vwPalette.border.light}`,
       }}
     >
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1.5 }}>
-        <Typography sx={{ fontWeight: 500, color: "#1f2937", fontSize: "13px" }}>
+        <Typography sx={{ fontWeight: 500, color: vwPalette.text.primary, fontSize: "13px" }}>
           Security check
         </Typography>
         <IconButton
@@ -81,9 +90,9 @@ export function MathCaptcha({ value, onChange, error, refreshTrigger }: MathCapt
           size="small"
           sx={{
             "color": `${status.default.text}`,
-            "borderRadius": "6px",
+            "borderRadius": radiusPx.md,
             "p": "4px",
-            "&:hover": { color: `${brand.primary}`, backgroundColor: "#f0fdf4" },
+            "&:hover": { color: `${brand.primary}`, backgroundColor: vwPalette.status.success.bg },
           }}
         >
           <RefreshCw size={16} strokeWidth={1.5} />
@@ -95,12 +104,12 @@ export function MathCaptcha({ value, onChange, error, refreshTrigger }: MathCapt
           sx={{
             fontSize: "16px",
             fontWeight: 600,
-            color: "#1f2937",
+            color: vwPalette.text.primary,
             backgroundColor: `${background.main}`,
             px: 2,
             py: 1,
-            borderRadius: "8px",
-            border: "1px solid #e2e8f0",
+            borderRadius: radiusPx.lg,
+            border: `1px solid ${vwPalette.border.light}`,
             minWidth: 120,
             textAlign: "center",
           }}
@@ -143,7 +152,11 @@ export function MathCaptcha({ value, onChange, error, refreshTrigger }: MathCapt
         </Box>
       </Box>
 
-      {error && <Typography sx={{ color: "#ef4444", fontSize: "12px", mt: 1 }}>{error}</Typography>}
+      {error && (
+        <Typography sx={{ color: vwPalette.riskMark.critical, fontSize: "12px", mt: 1 }}>
+          {error}
+        </Typography>
+      )}
 
       <Typography sx={{ color: `${text.disabled}`, fontSize: "11px", mt: 1.5 }}>
         Please solve this simple math problem to verify you are human

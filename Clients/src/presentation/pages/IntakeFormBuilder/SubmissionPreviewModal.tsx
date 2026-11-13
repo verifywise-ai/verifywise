@@ -70,6 +70,7 @@ import {
   simulatedReviewGate,
   type PreviewRole,
 } from "../../../application/utils/intakeRouting/previewRole";
+import { palette, radiusPx } from "../../themes/palette";
 
 /** A form's routing as loaded for a simulation; the gate waits for "ready". */
 type SimulationRouting =
@@ -144,10 +145,10 @@ const POLL_LIMIT_MS = 11 * 60 * 1000;
  * Returns a color for a dimension score bar based on the score value.
  */
 function getDimensionBarColor(score: number): string {
-  if (score <= 25) return "#16a34a";
-  if (score <= 50) return "#d97706";
-  if (score <= 75) return "#ea580c";
-  return "#dc2626";
+  if (score <= 25) return palette.riskMark.low;
+  if (score <= 50) return palette.riskMark.medium;
+  if (score <= 75) return palette.riskMark.high;
+  return palette.riskMark.critical;
 }
 
 // ============================================================================
@@ -166,7 +167,7 @@ function RiskSection({ riskAssessment }: RiskSectionProps) {
         sx={{
           p: 3,
           border: `1px solid ${theme.palette.border.dark}`,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           backgroundColor: theme.palette.background.accent,
           display: "flex",
           alignItems: "center",
@@ -193,7 +194,11 @@ function RiskSection({ riskAssessment }: RiskSectionProps) {
           </Box>
         </Typography>
         {riskAssessment.llmEnhanced && (
-          <Chip label="AI-enhanced" backgroundColor="#ede9fe" textColor="#7c3aed" />
+          <Chip
+            label="AI-enhanced"
+            backgroundColor={palette.accent.purple.bg}
+            textColor={palette.accent.purple.text}
+          />
         )}
       </Box>
 
@@ -240,10 +245,10 @@ function RiskSection({ riskAssessment }: RiskSectionProps) {
           {/* Color legend */}
           <Box sx={{ display: "flex", gap: "12px", mt: "4px", flexWrap: "wrap" }}>
             {[
-              { color: "#16a34a", label: "Low (0-25)" },
-              { color: "#d97706", label: "Medium (26-50)" },
-              { color: "#ea580c", label: "High (51-75)" },
-              { color: "#dc2626", label: "Critical (76-100)" },
+              { color: palette.riskMark.low, label: "Low (0-25)" },
+              { color: palette.riskMark.medium, label: "Medium (26-50)" },
+              { color: palette.riskMark.high, label: "High (51-75)" },
+              { color: palette.riskMark.critical, label: "Critical (76-100)" },
             ].map((item) => (
               <Box key={item.label} sx={{ display: "flex", alignItems: "center", gap: "4px" }}>
                 <Box
@@ -826,7 +831,7 @@ function SubmissionPreviewModal({
             ? "Reject submission"
             : `Approve and create ${entityLabel}`
       }
-      submitButtonColor={showRejectForm ? "#c62828" : undefined}
+      submitButtonColor={showRejectForm ? palette.status.error.text : undefined}
       isSubmitting={isApproving || isRejecting}
       maxWidth="800px"
       expandedHeight
@@ -892,7 +897,7 @@ function SubmissionPreviewModal({
           <Box
             sx={{
               border: `1px solid ${theme.palette.border.dark}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: 2.5,
               backgroundColor: theme.palette.background.accent,
             }}
@@ -1007,7 +1012,7 @@ function SubmissionPreviewModal({
               <Box
                 sx={{
                   border: `1px solid ${theme.palette.border.dark}`,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   p: "20px",
                 }}
               >
@@ -1044,7 +1049,7 @@ function SubmissionPreviewModal({
             <Box
               sx={{
                 border: `1px solid ${theme.palette.border.dark}`,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 p: 2.5,
               }}
             >
@@ -1123,7 +1128,7 @@ function SubmissionPreviewModal({
             <Box
               sx={{
                 border: `1px solid ${theme.palette.border.dark}`,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 p: "20px",
               }}
             >
@@ -1279,10 +1284,10 @@ function SubmissionPreviewModal({
               ) : (
                 <Box
                   sx={{
-                    border: "1px solid #fecaca",
-                    borderRadius: "4px",
+                    border: `1px solid ${palette.status.error.border}`,
+                    borderRadius: radiusPx.sm,
                     p: 2.5,
-                    backgroundColor: "#fef2f2",
+                    backgroundColor: palette.status.error.bg,
                   }}
                 >
                   <Box
@@ -1293,7 +1298,9 @@ function SubmissionPreviewModal({
                       mb: 2,
                     }}
                   >
-                    <Typography sx={{ fontSize: "14px", fontWeight: 600, color: "#991b1b" }}>
+                    <Typography
+                      sx={{ fontSize: "14px", fontWeight: 600, color: palette.status.error.text }}
+                    >
                       Reject submission
                     </Typography>
                     <Box

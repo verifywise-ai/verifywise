@@ -28,6 +28,7 @@ import Alert from "../../components/Alert";
 import { PageBreadcrumbs } from "../../components/breadcrumbs/PageBreadcrumbs";
 import { useProjects } from "../../../application/hooks/useProjects";
 import CustomException from "../../../infrastructure/exceptions/customeException";
+import { palette } from "../../themes/palette";
 
 type AutomationSaveField = "name" | "triggerId" | "actions" | "params";
 
@@ -1743,8 +1744,7 @@ This notification was sent on {{date_and_time}}.`,
               ...(showConfigurationPanel
                 ? { borderRight: `1px solid ${theme.palette.border.dark}` }
                 : {}),
-              background:
-                "linear-gradient(135deg, rgba(100,150,255,0.08) 0%, rgba(255,255,255,0) 100%), #F9FAF9 !important",
+              background: `linear-gradient(135deg, rgba(100,150,255,0.08) 0%, rgba(255,255,255,0) 100%), ${palette.background.alt} !important`,
               position: "relative",
               overflow: "hidden",
               display: "flex",

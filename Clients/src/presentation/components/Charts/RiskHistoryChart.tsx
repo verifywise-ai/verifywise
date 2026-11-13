@@ -5,8 +5,15 @@ import { ButtonToggle } from "../button-toggle";
 import CustomizableSkeleton from "../Skeletons";
 import { TrendingUp } from "lucide-react";
 import { EmptyState } from "../EmptyState";
-import { text, background, border as borderPalette } from "../../themes/palette";
+import {
+  text,
+  background,
+  border as borderPalette,
+  palette as vwPalette,
+  radiusPx,
+} from "../../themes/palette";
 import { VWLineChart } from "./VWCharts";
+import { chartTheme } from "../../themes/chartTheme";
 
 interface RiskHistoryChartProps {
   parameter?: string;
@@ -15,38 +22,38 @@ interface RiskHistoryChartProps {
 
 // Color schemes for different risk parameters
 const SEVERITY_COLORS: Record<string, string> = {
-  Negligible: "#10B981",
-  Minor: "#84CC16",
-  Moderate: "#F59E0B",
-  Major: "#F97316",
-  Catastrophic: "#DC2626",
+  Negligible: chartTheme.riskHistory.negligible,
+  Minor: chartTheme.riskHistory.minor,
+  Moderate: vwPalette.riskMark.medium,
+  Major: chartTheme.riskHistory.major,
+  Catastrophic: vwPalette.riskMark.critical,
 };
 
 const LIKELIHOOD_COLORS: Record<string, string> = {
-  "Rare": "#10B981",
-  "Unlikely": "#84CC16",
-  "Possible": "#F59E0B",
-  "Likely": "#F97316",
-  "Almost Certain": "#DC2626",
+  "Rare": chartTheme.riskHistory.negligible,
+  "Unlikely": chartTheme.riskHistory.minor,
+  "Possible": vwPalette.riskMark.medium,
+  "Likely": chartTheme.riskHistory.major,
+  "Almost Certain": vwPalette.riskMark.critical,
 };
 
 const MITIGATION_STATUS_COLORS: Record<string, string> = {
-  "Not Started": "#94A3B8",
-  "In Progress": "#3B82F6",
-  "Completed": "#10B981",
-  "On Hold": "#F59E0B",
-  "Deferred": "#8B5CF6",
-  "Canceled": "#EF4444",
-  "Requires review": "#F97316",
+  "Not Started": vwPalette.text.disabled,
+  "In Progress": vwPalette.status.info.text,
+  "Completed": vwPalette.status.success.strong,
+  "On Hold": vwPalette.riskMark.medium,
+  "Deferred": vwPalette.accent.purple.text,
+  "Canceled": vwPalette.riskMark.critical,
+  "Requires review": chartTheme.riskHistory.major,
 };
 
 const RISK_LEVEL_COLORS: Record<string, string> = {
-  "No risk": "#10B981",
-  "Very low risk": "#84CC16",
-  "Low risk": "#FCD34D",
-  "Medium risk": "#F59E0B",
-  "High risk": "#F97316",
-  "Very high risk": "#DC2626",
+  "No risk": chartTheme.riskHistory.noRisk,
+  "Very low risk": chartTheme.riskHistory.veryLow,
+  "Low risk": chartTheme.riskHistory.low,
+  "Medium risk": vwPalette.riskMark.medium,
+  "High risk": chartTheme.riskHistory.major,
+  "Very high risk": vwPalette.riskMark.critical,
 };
 
 const TIMEFRAME_OPTIONS = [
@@ -169,7 +176,7 @@ export function RiskHistoryChart({
         sx={{
           p: 3,
           border: `1px solid ${borderPalette.light}`,
-          borderRadius: 2,
+          borderRadius: radiusPx.sm,
           height: height + 120,
           alignItems: "center",
           justifyContent: "center",
@@ -187,14 +194,16 @@ export function RiskHistoryChart({
         sx={{
           p: 3,
           border: `1px solid ${borderPalette.light}`,
-          borderRadius: 2,
+          borderRadius: radiusPx.sm,
           height: height + 120,
           alignItems: "center",
           justifyContent: "center",
           background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
         }}
       >
-        <Typography sx={{ color: "#F04438", fontSize: 14, fontWeight: 500 }}>{error}</Typography>
+        <Typography sx={{ color: vwPalette.status.error.text, fontSize: 14, fontWeight: 500 }}>
+          {error}
+        </Typography>
       </Stack>
     );
   }
@@ -210,7 +219,7 @@ export function RiskHistoryChart({
       sx={{
         p: 3,
         border: `1px solid ${borderPalette.light}`,
-        borderRadius: 2,
+        borderRadius: radiusPx.sm,
         background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
         boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.05)",
       }}

@@ -1,4 +1,4 @@
-import { accent } from "../../themes/palette";
+import { accent, radiusPx } from "../../themes/palette";
 import { Box, Stack, useTheme } from "@mui/material";
 import type { SxProps, Theme } from "@mui/material";
 
@@ -49,7 +49,7 @@ const BottomChip: React.FC<BottomChipProps> = ({ children, role, ariaLabel, sx }
             pr: theme.spacing(2),
             py: theme.spacing(6),
             boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
-            borderRadius: 2,
+            borderRadius: radiusPx.sm,
             maxWidth: "calc(100vw - 32px)",
             flexWrap: "wrap",
             rowGap: theme.spacing(1),

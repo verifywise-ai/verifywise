@@ -1,5 +1,7 @@
 import { SxProps, Theme } from "@mui/material";
 import { keyframes } from "@mui/system";
+import { palette, radiusPx } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 
 // Animation
 export const flashAnimation = keyframes`
@@ -30,10 +32,10 @@ export const commonStyles = {
 
   accordion: {
     "marginTop": "9px",
-    "border": "1px solid #d0d5dd",
+    "border": `1px solid ${palette.border.dark}`,
     "width": "100%",
     "marginLeft": "1.5px",
-    "borderRadius": "4px",
+    "borderRadius": radiusPx.sm,
     "overflow": "hidden",
     "position": "relative",
     "margin": 0,
@@ -46,7 +48,7 @@ export const commonStyles = {
   } as SxProps<Theme>,
 
   accordionSummary: {
-    backgroundColor: "#fafafa",
+    backgroundColor: palette.background.alt,
     flexDirection: "row-reverse",
   } as SxProps<Theme>,
 
@@ -57,33 +59,29 @@ export const commonStyles = {
     }) as SxProps<Theme>,
 };
 
+/** Work status (normalised to sentence case) to its `chartTheme.workStatus` key. */
+const WORK_STATUS_KEYS: Record<string, keyof typeof chartTheme.workStatus> = {
+  "Not started": "notStarted",
+  "Draft": "draft",
+  "In progress": "inProgress",
+  "Awaiting review": "awaitingReview",
+  "Awaiting approval": "awaitingApproval",
+  "Implemented": "implemented",
+  "Done": "done",
+  "Audited": "audited",
+  "Needs rework": "needsRework",
+};
+
 /**
  * Get the color associated with a status
  * @param status The status string to get the color for
- * @returns The hex color code for the status
+ * @returns The hex color code for the status; unknown statuses get the "Not started" colour
  */
 export function getStatusColor(status: string): string {
-  const normalizedStatus = status?.trim() || "Not Started";
-  switch (normalizedStatus.charAt(0).toUpperCase() + normalizedStatus.slice(1).toLowerCase()) {
-    case "Not Started":
-      return "#4B5563";
-    case "Draft":
-      return "#D97706";
-    case "In progress":
-      return "#2563EB";
-    case "Awaiting review":
-      return "#7C3AED";
-    case "Awaiting approval":
-      return "#4F46E5";
-    case "Implemented":
-      return "#059669";
-    case "Done":
-      return "#059669";
-    case "Audited":
-      return "#0D9488";
-    case "Needs rework":
-      return "#EA580C";
-    default:
-      return "#4B5563"; // Default to "Not Started" color
-  }
+  const normalizedStatus = status?.trim() || "Not started";
+  const key =
+    WORK_STATUS_KEYS[
+      normalizedStatus.charAt(0).toUpperCase() + normalizedStatus.slice(1).toLowerCase()
+    ];
+  return chartTheme.workStatus[key ?? "notStarted"];
 }

@@ -23,6 +23,7 @@ import Field from "../../../components/Inputs/Field";
 import Select from "../../../components/Inputs/Select";
 import Toggle from "../../../components/Inputs/Toggle";
 import { FileAnalysis, DatasetMetadata } from "./useFileAnalysis";
+import { radiusPx } from "../../../themes/palette";
 
 const DATASET_TYPES = [
   { _id: "Training", name: "Training" },
@@ -84,7 +85,7 @@ export default function FilePreviewAndMetadata({
       <Box
         sx={{
           border: `1px solid ${theme.palette.border.light}`,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           p: 2,
           backgroundColor: theme.palette.background.accent,
         }}
@@ -159,7 +160,7 @@ export default function FilePreviewAndMetadata({
           sx={{
             "opacity": analysis.skipped ? 0.5 : 1,
             "border": `1px solid ${theme.palette.border.light}`,
-            "borderRadius": "4px !important",
+            "borderRadius": `${radiusPx.sm} !important`,
             "overflow": "hidden",
             "boxShadow": "none",
             "&:before": { display: "none" },
@@ -279,7 +280,7 @@ export default function FilePreviewAndMetadata({
                           maxHeight: 300,
                           overflow: "auto",
                           border: `1px solid ${theme.palette.border.light}`,
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                         }}
                       >
                         <Table size="small" stickyHeader>

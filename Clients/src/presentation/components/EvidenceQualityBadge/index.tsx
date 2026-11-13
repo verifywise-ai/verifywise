@@ -1,5 +1,6 @@
 import { Box, Tooltip, Typography } from "@mui/material";
 import { status } from "../../themes/palette";
+import { radiusPx } from "../../themes/palette";
 
 export type QualityGrade = "A" | "B" | "C" | "D" | "F";
 
@@ -78,7 +79,7 @@ export default function EvidenceQualityBadge({
           backgroundColor: colors.bg,
           color: colors.text,
           border: `1px solid ${colors.border}`,
-          borderRadius: isSmall ? "4px" : "6px",
+          borderRadius: isSmall ? radiusPx.sm : radiusPx.md,
           padding: isSmall ? "2px 6px" : "4px 10px",
           cursor: isClickable ? "pointer" : "default",
           transition: "all 120ms ease",

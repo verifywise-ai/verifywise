@@ -10,7 +10,7 @@ import { useAuth } from "../../../application/hooks/useAuth";
 import { useProfilePhotoFetch } from "../../../application/hooks/useProfilePhotoFetch";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
-import { brand } from "../../themes/palette";
+import { brand, palette as vwPalette, radiusPx } from "../../themes/palette";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { displayFormattedTime } from "../../tools/isoDateToString";
 
@@ -275,14 +275,14 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
                 <Box
                   sx={{
                     padding: "4px 8px",
-                    borderRadius: "4px",
-                    backgroundColor: "#F1F8F4",
+                    borderRadius: radiusPx.sm,
+                    backgroundColor: vwPalette.background.hover,
                   }}
                 >
                   <Typography
                     sx={{
                       fontSize: 11,
-                      color: "#0D7C4F",
+                      color: vwPalette.status.success.text,
                       fontWeight: 400,
                       wordBreak: "break-word",
                     }}
@@ -298,14 +298,14 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
                       sx={{
                         flex: 1,
                         padding: "4px 8px",
-                        borderRadius: "4px",
-                        backgroundColor: "#FEF2F2",
+                        borderRadius: radiusPx.sm,
+                        backgroundColor: vwPalette.status.error.bg,
                       }}
                     >
                       <Typography
                         sx={{
                           fontSize: 11,
-                          color: "#B91C1C",
+                          color: vwPalette.status.error.text,
                           fontWeight: 400,
                           wordBreak: "break-word",
                           textDecoration: "line-through",
@@ -337,14 +337,14 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
                       sx={{
                         flex: 1,
                         padding: "4px 8px",
-                        borderRadius: "4px",
-                        backgroundColor: "#F1F8F4",
+                        borderRadius: radiusPx.sm,
+                        backgroundColor: vwPalette.background.hover,
                       }}
                     >
                       <Typography
                         sx={{
                           fontSize: 11,
-                          color: "#0D7C4F",
+                          color: vwPalette.status.success.text,
                           fontWeight: 400,
                           wordBreak: "break-word",
                         }}
@@ -385,11 +385,11 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
         <Box
           sx={{
             height: "560px",
-            border: `1px solid #E0E4E9`,
-            borderRadius: "8px",
+            border: `1px solid ${vwPalette.border.light}`,
+            borderRadius: radiusPx.lg,
             display: "flex",
             flexDirection: "column",
-            background: "linear-gradient(180deg, #FAFBFC 0%, #F8FAFB 100%)",
+            background: `linear-gradient(180deg, ${vwPalette.background.alt} 0%, ${vwPalette.background.alt} 100%)`,
             overflow: "hidden",
           }}
         >
@@ -398,7 +398,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
             sx={{
               padding: "16px",
               borderBottom: `1px solid ${theme.palette.divider}`,
-              background: "linear-gradient(180deg, #F8FAFB 0%, #F3F5F8 100%)",
+              background: `linear-gradient(180deg, ${vwPalette.background.alt} 0%, ${vwPalette.background.hover} 100%)`,
             }}
           >
             {creationInfo ? (
@@ -469,10 +469,10 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
                 },
                 "&::-webkit-scrollbar-thumb": {
                   background: "transparent",
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                 },
                 "&:hover::-webkit-scrollbar-thumb": {
-                  background: "#C1C7CD",
+                  background: vwPalette.border.dark,
                 },
                 "&::-webkit-scrollbar-thumb:hover": {
                   background: "text.muted",
@@ -481,7 +481,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
                 "scrollbarWidth": "thin",
                 "scrollbarColor": "transparent transparent",
                 "&:hover": {
-                  scrollbarColor: "#C1C7CD transparent",
+                  scrollbarColor: `${vwPalette.border.dark} transparent`,
                 },
               }}
             >
@@ -555,7 +555,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
                 background:
                   "linear-gradient(to bottom, rgba(248, 250, 251, 0) 0%, rgba(248, 250, 251, 0.8) 50%, rgba(248, 250, 251, 1) 100%)",
                 pointerEvents: "none",
-                borderRadius: "0 0 8px 8px",
+                borderRadius: `0 0 ${radiusPx.lg} ${radiusPx.lg}`,
               }}
             />
           </Box>

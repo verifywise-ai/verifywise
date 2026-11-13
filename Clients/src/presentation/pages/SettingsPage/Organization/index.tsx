@@ -30,6 +30,7 @@ import { OrganizationModel } from "../../../../domain/models/Common/organization
 import FileRetentionSection from "./FileRetentionSection";
 import UseCaseDefaultsSection from "./UseCaseDefaultsSection";
 import LifecycleCheckSection from "./LifecycleCheckSection";
+import { palette } from "../../../themes/palette";
 
 interface AlertState {
   variant: "success" | "info" | "warning" | "error";
@@ -409,12 +410,12 @@ const Organization = () => {
                   "alignItems": "center",
                   "justifyContent": "center",
                   "borderRadius": "50%",
-                  "border": "2px dashed #ddd",
-                  "backgroundColor": "#fafafa",
+                  "border": `2px dashed ${palette.border.light}`,
+                  "backgroundColor": palette.background.alt,
                   "position": "relative",
                   "overflow": "hidden",
                   "&:hover": {
-                    borderColor: "#999",
+                    borderColor: palette.border.dark,
                     backgroundColor: "background.surface",
                   },
                 }}
@@ -459,7 +460,9 @@ const Organization = () => {
                       gap: 1,
                     }}
                   >
-                    <Typography sx={{ fontSize: 10, color: "#888", textAlign: "center" }}>
+                    <Typography
+                      sx={{ fontSize: 10, color: palette.text.accent, textAlign: "center" }}
+                    >
                       {logoLoadError ? "Failed to load logo" : "Logo"}
                     </Typography>
                   </Box>
@@ -472,7 +475,7 @@ const Organization = () => {
                 sx={{
                   "fontSize": 12,
                   "textTransform": "none",
-                  "color": logoUrl ? "#666" : "#ccc",
+                  "color": logoUrl ? palette.text.tertiary : palette.border.dark,
                   "&:hover": {
                     backgroundColor: logoUrl ? "rgba(102, 102, 102, 0.04)" : "transparent",
                   },
@@ -532,7 +535,7 @@ const Organization = () => {
             <Typography
               sx={{
                 fontSize: 11,
-                color: "#666",
+                color: palette.text.tertiary,
                 textAlign: "center",
                 mt: 1,
                 lineHeight: 1.4,

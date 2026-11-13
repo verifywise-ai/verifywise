@@ -2,7 +2,7 @@ import { Box, IconButton, Popover, Stack, Tooltip, Typography, alpha } from "@mu
 import { ChevronDown, ChevronUp } from "lucide-react";
 import Field from "../../../components/Inputs/Field";
 import { CustomizableButton } from "../../../components/button/customizable-button";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 
 export interface FindReplacePopoverProps {
   anchorEl: HTMLElement | null;
@@ -45,7 +45,7 @@ export function FindReplacePopover({
         paper: {
           sx: {
             width: 340,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             border: "1px solid",
             borderColor: "border.dark",
             boxShadow: `0 4px 16px ${alpha(palette.text.black, 0.12)}`,
@@ -79,7 +79,7 @@ export function FindReplacePopover({
               size="small"
               sx={{
                 "padding": "6px",
-                "borderRadius": "4px",
+                "borderRadius": radiusPx.sm,
                 "border": "1px solid",
                 "borderColor": "border.dark",
                 "color": "text.secondary",
@@ -97,7 +97,7 @@ export function FindReplacePopover({
               size="small"
               sx={{
                 "padding": "6px",
-                "borderRadius": "4px",
+                "borderRadius": radiusPx.sm,
                 "border": "1px solid",
                 "borderColor": "border.dark",
                 "color": "text.secondary",

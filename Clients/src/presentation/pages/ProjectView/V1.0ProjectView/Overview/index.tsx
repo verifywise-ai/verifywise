@@ -32,6 +32,7 @@ import { brand } from "../../../../themes/palette";
 import { singleTheme } from "../../../../themes";
 import UseCaseLifecyclePanel from "./UseCaseLifecyclePanel";
 import LinkedAiAppsCard from "./LinkedAiAppsCard";
+import { chartTheme } from "../../../../themes/chartTheme";
 
 /**
  * A use case whose approval request is pending or rejected has every tab in the
@@ -458,37 +459,37 @@ const VWProjectOverview = ({
                       key: "Total",
                       label: "Total",
                       count: projectRisksSummary.total,
-                      color: "#4B5563",
+                      color: chartTheme.riskSummary.total,
                     },
                     {
                       key: "Very high",
                       label: "Very high",
                       count: projectRisksSummary.veryHighRisks,
-                      color: "#C63622",
+                      color: chartTheme.riskSummary.veryHigh,
                     },
                     {
                       key: "High",
                       label: "High",
                       count: projectRisksSummary.highRisks,
-                      color: "#D68B61",
+                      color: chartTheme.riskSummary.high,
                     },
                     {
                       key: "Medium",
                       label: "Medium",
                       count: projectRisksSummary.mediumRisks,
-                      color: "#D6B971",
+                      color: chartTheme.riskSummary.medium,
                     },
                     {
                       key: "Low",
                       label: "Low",
                       count: projectRisksSummary.lowRisks,
-                      color: "#52AB43",
+                      color: chartTheme.riskSummary.low,
                     },
                     {
                       key: "Very low",
                       label: "Very low",
                       count: projectRisksSummary.veryLowRisks,
-                      color: "#B8D39C",
+                      color: chartTheme.riskSummary.veryLow,
                     },
                   ] satisfies StatusTileItem[]
                 }

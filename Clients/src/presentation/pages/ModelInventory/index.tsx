@@ -73,11 +73,12 @@ import { GroupBy } from "../../components/Table/GroupBy";
 import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { ExportMenu } from "../../components/Table/ExportMenu";
-import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
+import { FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 
 import Alert from "../../components/Alert";
 import ListStateWrapper from "../../components/ListStateWrapper";
@@ -377,8 +378,12 @@ const ModelInventory: React.FC = () => {
   );
 
   // FilterBy - Initialize hook for Models tab
-  const { filterData: filterModelData, handleFilterChange: handleModelFilterChange } =
-    useFilterBy<IModelInventory>(getModelFieldValue);
+  const {
+    filterData: filterModelData,
+    handleFilterChange: handleModelFilterChange,
+    conditions: modelFilterConditions,
+    logic: modelFilterLogic,
+  } = useFilterBy<IModelInventory>(getModelFieldValue);
 
   // FilterBy - Dynamic options generators for Model Risks tab
   const getUniqueRiskOwners = useCallback(() => {
@@ -488,8 +493,12 @@ const ModelInventory: React.FC = () => {
   );
 
   // FilterBy - Initialize hook for Model Risks tab
-  const { filterData: filterModelRiskData, handleFilterChange: handleModelRiskFilterChange } =
-    useFilterBy<IModelRisk>(getModelRiskFieldValue);
+  const {
+    filterData: filterModelRiskData,
+    handleFilterChange: handleModelRiskFilterChange,
+    conditions: modelRiskFilterConditions,
+    logic: modelRiskFilterLogic,
+  } = useFilterBy<IModelRisk>(getModelRiskFieldValue);
 
   const [evidenceHubData, setEvidenceHubData] = useState<EvidenceHubModel[]>([]);
 
@@ -651,8 +660,12 @@ const ModelInventory: React.FC = () => {
   );
 
   // FilterBy - Initialize hook for Evidence Hub tab
-  const { filterData: filterEvidenceData, handleFilterChange: handleEvidenceFilterChange } =
-    useFilterBy<EvidenceHubModel>(getEvidenceFieldValue);
+  const {
+    filterData: filterEvidenceData,
+    handleFilterChange: handleEvidenceFilterChange,
+    conditions: evidenceFilterConditions,
+    logic: evidenceFilterLogic,
+  } = useFilterBy<EvidenceHubModel>(getEvidenceFieldValue);
 
   const [isEvidenceLoading, setEvidenceLoading] = useState(false);
 
@@ -2292,7 +2305,14 @@ const ModelInventory: React.FC = () => {
               {/* Left side: FilterBy + Search + GroupBy */}
               <Stack direction="row" spacing={2} alignItems="center">
                 <div data-joyride-id="model-status-filter">
-                  <FilterBy columns={modelFilterColumns} onFilterChange={handleModelFilterChange} />
+                  <TableFilter
+                    columns={modelFilterColumns}
+                    onFilterChange={handleModelFilterChange}
+                    defaultConditions={modelFilterConditions}
+                    defaultLogic={modelFilterLogic}
+                    data={modelInventoryData}
+                    getFieldValue={getModelFieldValue}
+                  />
                 </div>
 
                 <GroupBy
@@ -2343,7 +2363,7 @@ const ModelInventory: React.FC = () => {
                     "height": "34px",
                     "width": "34px",
                     "padding": "8px",
-                    "borderRadius": "4px",
+                    "borderRadius": radiusPx.sm,
                     "border": `1px solid ${palette.border.light}`,
                     "backgroundColor": palette.background.main,
                     "&:hover": {
@@ -2391,9 +2411,13 @@ const ModelInventory: React.FC = () => {
             >
               <Stack direction="row" gap={2} alignItems="center">
                 <div data-joyride-id="risk-category-filter">
-                  <FilterBy
+                  <TableFilter
                     columns={modelRiskFilterColumns}
                     onFilterChange={handleModelRiskFilterChange}
+                    defaultConditions={modelRiskFilterConditions}
+                    defaultLogic={modelRiskFilterLogic}
+                    data={modelRisksData}
+                    getFieldValue={getModelRiskFieldValue}
                   />
                 </div>
                 <GroupBy
@@ -2488,9 +2512,13 @@ const ModelInventory: React.FC = () => {
               {/* Left side: FilterBy + Search + GroupBy */}
               <Stack direction="row" spacing={2} alignItems="center">
                 <div data-joyride-id="evidence-type-filter">
-                  <FilterBy
+                  <TableFilter
                     columns={evidenceFilterColumns}
                     onFilterChange={handleEvidenceFilterChange}
+                    defaultConditions={evidenceFilterConditions}
+                    defaultLogic={evidenceFilterLogic}
+                    data={evidenceHubData}
+                    getFieldValue={getEvidenceFieldValue}
                   />
                 </div>
                 <GroupBy

@@ -25,7 +25,18 @@ import {
   Plus,
   LayoutGrid,
 } from "lucide-react";
-import { brand, background, border as borderPalette } from "../../themes/palette";
+import {
+  brand,
+  background,
+  border as borderPalette,
+  icon as iconPalette,
+  primitives,
+  text as textPalette,
+  palette as vwPalette,
+  radiusPx,
+} from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
+import { isClassicUi } from "../../themes/uiStyle";
 import { toggleSidebar } from "../../../application/redux/ui/uiSlice";
 import "../Layout/icon-shake.css";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
@@ -36,6 +47,20 @@ import { FlyingHearts } from "../FlyingHearts";
 declare const __APP_VERSION__: string;
 
 // Types for menu items
+
+const classicUi = isClassicUi();
+// Phase 1 (style guide §10): green.50 hover, green.100 selected, no border,
+// icons in icon.default. Classic keeps the grey gradient.
+const NAV_ACTIVE_BG = classicUi
+  ? `linear-gradient(135deg, ${vwPalette.background.hover} 0%, ${vwPalette.background.hover} 100%)`
+  : background.selected;
+const NAV_ACTIVE_BORDER = classicUi
+  ? `1px solid ${vwPalette.border.light}`
+  : "1px solid transparent";
+const NAV_HOVER_BG = classicUi ? vwPalette.background.alt : primitives.green[50];
+const NAV_ICON_DEFAULT = classicUi ? textPalette.tertiary : iconPalette.default;
+const NAV_ACTIVE_WEIGHT = classicUi ? 600 : 500;
+
 export interface SidebarMenuItem {
   id: string;
   label: string;
@@ -264,21 +289,14 @@ const SidebarShell: FC<SidebarShellProps> = ({
             "& .MuiListItemText-root": {
               display: collapsed ? "none" : "block",
             },
-            "background":
-              isActive && !isDisabled
-                ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
-                : "transparent",
-            "border": isActive && !isDisabled ? "1px solid #E8E8E8" : "1px solid transparent",
+            "background": isActive && !isDisabled ? NAV_ACTIVE_BG : "transparent",
+            "border": isActive && !isDisabled ? NAV_ACTIVE_BORDER : "1px solid transparent",
             "&:hover": {
-              background: isDisabled
-                ? "transparent"
-                : isActive
-                  ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
-                  : "#FAFAFA",
+              background: isDisabled ? "transparent" : isActive ? NAV_ACTIVE_BG : NAV_HOVER_BG,
               border: isDisabled
                 ? "1px solid transparent"
                 : isActive
-                  ? "1px solid #E8E8E8"
+                  ? NAV_ACTIVE_BORDER
                   : "1px solid transparent",
             },
             "&:hover svg": isDisabled
@@ -310,12 +328,12 @@ const SidebarShell: FC<SidebarShellProps> = ({
                   ? `${theme.palette.text.disabled} !important`
                   : isActive
                     ? `${brand.primary} !important`
-                    : `${theme.palette.text.tertiary} !important`,
+                    : `${NAV_ICON_DEFAULT} !important`,
                 stroke: isDisabled
                   ? `${theme.palette.text.disabled} !important`
                   : isActive
                     ? `${brand.primary} !important`
-                    : `${theme.palette.text.tertiary} !important`,
+                    : `${NAV_ICON_DEFAULT} !important`,
                 transition: "color 0.2s ease, stroke 0.2s ease",
               },
               "& svg path": {
@@ -323,7 +341,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
                   ? `${theme.palette.text.disabled} !important`
                   : isActive
                     ? `${brand.primary} !important`
-                    : `${theme.palette.text.tertiary} !important`,
+                    : `${NAV_ICON_DEFAULT} !important`,
               },
             }}
           >
@@ -334,7 +352,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
               sx={{
                 "& .MuiListItemText-primary": {
                   fontSize: "13px",
-                  fontWeight: isActive ? 600 : 400,
+                  fontWeight: isActive ? NAV_ACTIVE_WEIGHT : 400,
                   color: isDisabled
                     ? theme.palette.text.disabled
                     : isActive
@@ -361,9 +379,9 @@ const SidebarShell: FC<SidebarShellProps> = ({
                   "height": "18px",
                   "fontSize": "10px",
                   "fontWeight": 500,
-                  "backgroundColor": isActive ? "#f8fafc" : "#e2e8f0",
-                  "color": "#475569",
-                  "borderRadius": "9px",
+                  "backgroundColor": isActive ? vwPalette.background.alt : vwPalette.border.light,
+                  "color": vwPalette.text.tertiary,
+                  "borderRadius": radiusPx.pill,
                   "minWidth": "18px",
                   "maxWidth": "36px",
                   "& .MuiChip-label": {
@@ -398,21 +416,14 @@ const SidebarShell: FC<SidebarShellProps> = ({
           "& .MuiListItemText-root": {
             display: collapsed ? "none" : "block",
           },
-          "background":
-            isActive && !isDisabled
-              ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
-              : "transparent",
-          "border": isActive && !isDisabled ? "1px solid #E8E8E8" : "1px solid transparent",
+          "background": isActive && !isDisabled ? NAV_ACTIVE_BG : "transparent",
+          "border": isActive && !isDisabled ? NAV_ACTIVE_BORDER : "1px solid transparent",
           "&:hover": {
-            background: isDisabled
-              ? "transparent"
-              : isActive
-                ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
-                : "#FAFAFA",
+            background: isDisabled ? "transparent" : isActive ? NAV_ACTIVE_BG : NAV_HOVER_BG,
             border: isDisabled
               ? "1px solid transparent"
               : isActive
-                ? "1px solid #E8E8E8"
+                ? NAV_ACTIVE_BORDER
                 : "1px solid transparent",
           },
           "&:hover svg": isDisabled
@@ -445,12 +456,12 @@ const SidebarShell: FC<SidebarShellProps> = ({
                 ? `${theme.palette.text.disabled} !important`
                 : isActive
                   ? `${brand.primary} !important`
-                  : `${theme.palette.text.tertiary} !important`,
+                  : `${NAV_ICON_DEFAULT} !important`,
               stroke: isDisabled
                 ? `${theme.palette.text.disabled} !important`
                 : isActive
                   ? `${brand.primary} !important`
-                  : `${theme.palette.text.tertiary} !important`,
+                  : `${NAV_ICON_DEFAULT} !important`,
               transition: "color 0.2s ease, stroke 0.2s ease",
             },
             "& svg path": {
@@ -458,7 +469,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
                 ? `${theme.palette.text.disabled} !important`
                 : isActive
                   ? `${brand.primary} !important`
-                  : `${theme.palette.text.tertiary} !important`,
+                  : `${NAV_ICON_DEFAULT} !important`,
             },
           }}
         >
@@ -469,7 +480,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
             sx={{
               "& .MuiListItemText-primary": {
                 fontSize: "13px",
-                fontWeight: isActive ? 600 : 400,
+                fontWeight: isActive ? NAV_ACTIVE_WEIGHT : 400,
                 color: isDisabled
                   ? theme.palette.text.disabled
                   : isActive
@@ -496,9 +507,9 @@ const SidebarShell: FC<SidebarShellProps> = ({
                 "height": "18px",
                 "fontSize": "10px",
                 "fontWeight": 500,
-                "backgroundColor": isActive ? "#f8fafc" : "#e2e8f0",
-                "color": "#475569",
-                "borderRadius": "9px",
+                "backgroundColor": isActive ? vwPalette.background.alt : vwPalette.border.light,
+                "color": vwPalette.text.tertiary,
+                "borderRadius": radiusPx.pill,
                 "minWidth": "18px",
                 "maxWidth": "36px",
                 "& .MuiChip-label": {
@@ -635,7 +646,12 @@ const SidebarShell: FC<SidebarShellProps> = ({
                       },
                     }}
                   >
-                    <Heart size={14} color="#FF1493" strokeWidth={1.5} fill="#FF1493" />
+                    <Heart
+                      size={14}
+                      color={chartTheme.entity.heart}
+                      strokeWidth={1.5}
+                      fill={chartTheme.entity.heart}
+                    />
                   </IconButton>
                 </Tooltip>
               )}
@@ -680,7 +696,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
                 "opacity": 0.9,
                 "& path": { stroke: theme.palette.text.tertiary },
               },
-              "&:hover": { backgroundColor: "#F9F9F9" },
+              "&:hover": { backgroundColor: vwPalette.background.alt },
               "&:hover svg path": { stroke: brand.primary },
             }}
             onClick={() => dispatch(toggleSidebar())}
@@ -763,7 +779,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
                   maxWidth: 280,
                   maxHeight: 360,
                   boxShadow: "0 4px 16px rgba(0,0,0,0.12)",
-                  borderRadius: "8px",
+                  borderRadius: radiusPx.lg,
                   border: `1px solid ${borderPalette.light}`,
                   mt: 1,
                   overflow: "hidden",
@@ -784,7 +800,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
                     "py": 1.25,
                     "px": 2,
                     "mx": 1,
-                    "borderRadius": "6px",
+                    "borderRadius": radiusPx.md,
                     "color": theme.palette.text.secondary,
                     "cursor": "pointer",
                     "transition": "all 0.15s ease",
@@ -838,9 +854,11 @@ const SidebarShell: FC<SidebarShellProps> = ({
                               "py": 1.25,
                               "px": 2,
                               "mx": 1,
-                              "borderRadius": "6px",
+                              "borderRadius": radiusPx.md,
                               "cursor": "pointer",
-                              "backgroundColor": isSelected ? "#f0fdf4" : "transparent",
+                              "backgroundColor": isSelected
+                                ? vwPalette.status.success.bg
+                                : "transparent",
                               "borderLeft": isSelected
                                 ? `3px solid ${brand.primary}`
                                 : "3px solid transparent",
@@ -848,7 +866,9 @@ const SidebarShell: FC<SidebarShellProps> = ({
                               "fontWeight": isSelected ? 500 : 400,
                               "transition": "all 0.15s ease",
                               "&:hover": {
-                                backgroundColor: isSelected ? "#f0fdf4" : "background.hover",
+                                backgroundColor: isSelected
+                                  ? vwPalette.status.success.bg
+                                  : "background.hover",
                               },
                             }}
                           >
@@ -902,12 +922,12 @@ const SidebarShell: FC<SidebarShellProps> = ({
                     "px": 2,
                     "mx": 1,
                     "mt": projectSelector.allProjects.length === 0 ? 0.5 : 0,
-                    "borderRadius": "6px",
+                    "borderRadius": radiusPx.md,
                     "color": brand.primary,
                     "cursor": "pointer",
                     "transition": "all 0.15s ease",
                     "&:hover": {
-                      backgroundColor: "#f0fdf4",
+                      backgroundColor: vwPalette.status.success.bg,
                     },
                   }}
                 >
@@ -964,7 +984,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
                   variant="overline"
                   className="sidebar-group-header"
                   sx={{
-                    color: "#a0a0a0 !important",
+                    color: `${vwPalette.text.disabled} !important`,
                     fontSize: "11px !important",
                     fontWeight: 400,
                     letterSpacing: "0.5px",
@@ -976,9 +996,9 @@ const SidebarShell: FC<SidebarShellProps> = ({
                 </Typography>
                 {isCollapsible &&
                   (isGroupCollapsed ? (
-                    <ChevronRight size={14} color="#a0a0a0" />
+                    <ChevronRight size={14} color={vwPalette.text.disabled} />
                   ) : (
-                    <ChevronDown size={14} color="#a0a0a0" />
+                    <ChevronDown size={14} color={vwPalette.text.disabled} />
                   ))}
               </Box>
               {!isGroupCollapsed &&
@@ -1026,10 +1046,10 @@ const SidebarShell: FC<SidebarShellProps> = ({
                     disableRipple
                     sx={{
                       "height": "30px",
-                      "borderRadius": "4px",
+                      "borderRadius": radiusPx.sm,
                       "px": theme.spacing(4),
                       "mb": 0.25,
-                      "&:hover": { backgroundColor: "#F9F9F9" },
+                      "&:hover": { backgroundColor: vwPalette.background.alt },
                     }}
                   >
                     <ListItemText

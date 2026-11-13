@@ -10,7 +10,8 @@ import { ReactComponent as AddCircleOutlineIcon } from "../../assets/icons/plus-
 import CreateNewApprovalWorkflow from "../../components/Modals/NewApprovalWorkflow";
 import { ApprovalWorkflowStepModel } from "../../../domain/models/Common/approvalWorkflow/approvalWorkflowStepModel";
 import { ApprovalStatus } from "../../../domain/enums/aiApprovalWorkflow.enum";
-import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
+import { FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { SearchBox } from "../../components/Search";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
@@ -102,8 +103,12 @@ const ApprovalWorkflows: React.FC = () => {
   );
 
   // FilterBy - Initialize hook
-  const { filterData: filterWorkflowData, handleFilterChange: handleWorkflowFilterChange } =
-    useFilterBy<ApprovalWorkflowModel>(getWorkflowFieldValue);
+  const {
+    filterData: filterWorkflowData,
+    handleFilterChange: handleWorkflowFilterChange,
+    conditions: workflowFilterConditions,
+    logic: workflowFilterLogic,
+  } = useFilterBy<ApprovalWorkflowModel>(getWorkflowFieldValue);
 
   /** -------------------- FILTERING -------------------- */
   const filteredData = useMemo(() => {
@@ -344,7 +349,14 @@ const ApprovalWorkflows: React.FC = () => {
           sx={filterSearchContainer}
         >
           <Stack direction="row" spacing={2} alignItems="center">
-            <FilterBy columns={workflowFilterColumns} onFilterChange={handleWorkflowFilterChange} />
+            <TableFilter
+              columns={workflowFilterColumns}
+              onFilterChange={handleWorkflowFilterChange}
+              defaultConditions={workflowFilterConditions}
+              defaultLogic={workflowFilterLogic}
+              data={workflowData}
+              getFieldValue={getWorkflowFieldValue}
+            />
             <ColumnSelector
               columns={allWorkflowColumns}
               visibleColumns={workflowVisibleColumns}

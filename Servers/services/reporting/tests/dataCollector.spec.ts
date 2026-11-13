@@ -35,7 +35,7 @@ jest.mock("../../../utils/framework.utils", () => ({
   getAllFrameworkByIdQuery: jest.fn(),
 }));
 
-import { brand, risk, text } from "../../../tools/design-tokens/palette";
+import { brand, riskMark, text } from "../../../tools/design-tokens/palette";
 
 jest.mock("../chartUtils", () => ({
   generateRiskDistributionChart: jest.fn().mockReturnValue("<svg>bar</svg>"),
@@ -204,10 +204,10 @@ describe("dataCollector", () => {
       const medium = risksByLevel.find((r) => r.level === "Medium");
       const low = risksByLevel.find((r) => r.level === "Low");
 
-      expect(critical!.color).toBe(risk.critical.text);
-      expect(high!.color).toBe(risk.high.text);
-      expect(medium!.color).toBe(risk.medium.text);
-      expect(low!.color).toBe(risk.low.text);
+      expect(critical!.color).toBe(riskMark.critical);
+      expect(high!.color).toBe(riskMark.high);
+      expect(medium!.color).toBe(riskMark.medium);
+      expect(low!.color).toBe(riskMark.low);
     });
 
     it("should use default color for unknown risk levels", async () => {
@@ -500,11 +500,11 @@ describe("dataCollector", () => {
     // colour map was keyed "High"/"Medium", so every level missed and the
     // report's donut, bar chart and legend came out uniformly grey.
     it.each([
-      ["Very high risk", risk.critical.text],
-      ["High risk", risk.high.text],
-      ["Medium risk", risk.medium.text],
-      ["Low risk", risk.low.text],
-      ["Very low risk", risk.veryLow.text],
+      ["Very high risk", riskMark.critical],
+      ["High risk", riskMark.high],
+      ["Medium risk", riskMark.medium],
+      ["Low risk", riskMark.low],
+      ["Very low risk", riskMark.veryLow],
     ])("%s is not the grey fallback", async (level, expected) => {
       mockGetProjectRisks.mockResolvedValue([
         { id: 1, risk_name: "R", risk_level_autocalculated: level },

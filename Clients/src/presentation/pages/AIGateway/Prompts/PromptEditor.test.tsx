@@ -399,10 +399,10 @@ describe("AIGateway - PromptEditor", () => {
 
     // "staging" also appears as a chip in the page header (currentLabels for
     // the loaded version) — the drawer's copy is the last match, and its
-    // remove (X) icon button is its next sibling.
+    // remove (X) icon button sits in the same container as the chip.
     const stagingChips = screen.getAllByText("staging");
     const drawerChip = stagingChips[stagingChips.length - 1];
-    fireEvent.click(drawerChip.parentElement!.querySelector("button")!);
+    fireEvent.click(drawerChip.closest("div")!.querySelector("button")!);
 
     await waitFor(() => {
       expect(mockDelete).toHaveBeenCalledWith("/ai-gateway/prompts/1/labels/staging");

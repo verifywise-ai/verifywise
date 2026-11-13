@@ -44,6 +44,7 @@ import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { getApiErrorReason } from "../../../../application/utils/apiErrorReason";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { pageOfLabel } from "../../../components/Table/pageOfLabel";
+import { palette, radiusPx } from "../../../themes/palette";
 
 const SelectorVertical = (props: any) => <ChevronsUpDown size={16} {...props} />;
 
@@ -112,8 +113,8 @@ const GroupBadge: React.FC<{ count: number }> = ({ count }) => (
       width: "18px",
       height: "18px",
       borderRadius: "50%",
-      backgroundColor: "#dcfce7",
-      color: "#166534",
+      backgroundColor: palette.status.success.bg,
+      color: palette.status.success.text,
       fontSize: "11px",
       fontWeight: 600,
       marginLeft: "6px",
@@ -203,15 +204,18 @@ const GroupBy: React.FC<GroupByProps> = ({ options, onGroupChange }) => {
           "fontWeight": 500,
           "padding": "6px 12px",
           "textTransform": "none",
-          "color": "#374151",
-          "borderColor": "#d0d5dd",
+          "color": palette.text.secondary,
+          "borderColor": palette.border.dark,
           "height": "34px",
           "minWidth": selectedGroup ? "110px" : "80px",
-          "backgroundColor": open ? "#f0fdf4" : "transparent",
-          "&:hover": { borderColor: "#98a2b3", backgroundColor: "#f0fdf4" },
+          "backgroundColor": open ? palette.status.success.bg : "transparent",
+          "&:hover": {
+            borderColor: palette.text.disabled,
+            backgroundColor: palette.status.success.bg,
+          },
         }}
       >
-        <Layers size={16} color="#13715B" style={{ marginRight: "6px" }} />
+        <Layers size={16} color={palette.brand.primary} style={{ marginRight: "6px" }} />
         Group
         {selectedGroup && <GroupBadge count={1} />}
       </Button>
@@ -229,7 +233,7 @@ const GroupBy: React.FC<GroupByProps> = ({ options, onGroupChange }) => {
               padding: "16px",
               minWidth: "400px",
               boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
-              borderRadius: "8px",
+              borderRadius: radiusPx.lg,
             },
           },
         }}
@@ -240,7 +244,7 @@ const GroupBy: React.FC<GroupByProps> = ({ options, onGroupChange }) => {
               sx={{
                 fontSize: "12px",
                 fontWeight: 600,
-                color: "#667085",
+                color: palette.text.icon,
               }}
             >
               Group by
@@ -254,7 +258,7 @@ const GroupBy: React.FC<GroupByProps> = ({ options, onGroupChange }) => {
                 "&:hover": { opacity: 0.7 },
               }}
             >
-              <X size={16} color="#6b7280" />
+              <X size={16} color={palette.text.icon} />
             </Box>
           </Stack>
 
@@ -312,7 +316,7 @@ function GroupedTableView<T>({
               sx={{
                 fontSize: "15px",
                 fontWeight: 600,
-                color: "#374151",
+                color: palette.text.secondary,
                 marginBottom: "4px",
                 paddingLeft: "4px",
                 display: "flex",
@@ -810,9 +814,9 @@ export default function MLFlowTab() {
                         label={`${key}: ${value}`}
                         size="small"
                         sx={{
-                          backgroundColor: "#E0EAFF",
-                          color: "#0F172A",
-                          borderRadius: "4px",
+                          backgroundColor: palette.accent.indigo.bg,
+                          color: palette.text.primary,
+                          borderRadius: radiusPx.sm,
                         }}
                       />
                     ))}

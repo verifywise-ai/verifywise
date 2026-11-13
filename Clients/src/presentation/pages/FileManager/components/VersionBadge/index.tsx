@@ -6,7 +6,12 @@
  */
 
 import { Box, Typography } from "@mui/material";
-import { text, border as borderPalette } from "../../../../themes/palette";
+import {
+  text,
+  border as borderPalette,
+  palette as vwPalette,
+  radiusPx,
+} from "../../../../themes/palette";
 
 interface VersionBadgeProps {
   version?: string;
@@ -24,14 +29,22 @@ const getVersionColors = (reviewStatus?: string): VersionColorConfig => {
   switch (reviewStatus) {
     case "superseded":
       return {
-        backgroundColor: "#F2F4F7",
+        backgroundColor: vwPalette.background.hover,
         color: `${text.icon}`,
         borderColor: `${borderPalette.dark}`,
       };
     case "approved":
-      return { backgroundColor: "#ECFDF3", color: "#027A48", borderColor: "#A6F4C5" };
+      return {
+        backgroundColor: vwPalette.status.success.bg,
+        color: vwPalette.status.success.text,
+        borderColor: vwPalette.status.success.border,
+      };
     default:
-      return { backgroundColor: "#EFF8FF", color: "#175CD3", borderColor: "#B2DDFF" };
+      return {
+        backgroundColor: vwPalette.status.info.bg,
+        color: vwPalette.status.info.text,
+        borderColor: vwPalette.status.info.border,
+      };
   }
 };
 
@@ -48,7 +61,7 @@ export function VersionBadge({ version, reviewStatus, size = "small" }: VersionB
         alignItems: "center",
         px: isSmall ? 0.75 : 1,
         py: isSmall ? 0.25 : 0.5,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         backgroundColor: colors.backgroundColor,
         border: `1px solid ${colors.borderColor}`,
       }}

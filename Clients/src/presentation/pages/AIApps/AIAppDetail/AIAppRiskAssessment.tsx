@@ -4,7 +4,7 @@ import { Gauge } from "lucide-react";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import Select from "../../../components/Inputs/Select";
 import { useUpdateAiApp } from "../../../../application/hooks/useAiApps";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import Alert from "../../../components/Alert";
 import Chip from "../../../components/Chip";
 import {
@@ -96,7 +96,7 @@ export default function AIAppRiskAssessment({ appId, currentRiskScore }: AIAppRi
         sx={{
           mb: "24px",
           p: "16px",
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           backgroundColor: palette.background.accent,
           border: `1px solid ${palette.border.light}`,
         }}

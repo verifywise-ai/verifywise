@@ -10,7 +10,7 @@ import { Box, Stack, Typography } from "@mui/material";
 import { Database, Edit3, GitBranch, MessageSquare, Upload } from "lucide-react";
 import SelectableCard from "../../../components/SelectableCard";
 import ModalStandard from "../../../components/Modals/StandardModal";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import type {
   MultiTurnConversation,
   SingleTurnPrompt,
@@ -219,7 +219,7 @@ export default function CreateDatasetModals({
           </Box>
 
           {/* Format Preview */}
-          <Box sx={{ backgroundColor: palette.background.accent, borderRadius: "8px", p: 2 }}>
+          <Box sx={{ backgroundColor: palette.background.accent, borderRadius: radiusPx.lg, p: 2 }}>
             <Typography
               variant="body2"
               sx={{ fontWeight: 600, color: palette.text.secondary, mb: 1 }}

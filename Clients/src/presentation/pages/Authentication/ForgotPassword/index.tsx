@@ -13,7 +13,7 @@ import { useNavigate, useLocation } from "react-router";
 import { sendPasswordResetEmail } from "../../../../application/repository/auth.repository";
 import { AlertProps } from "../../../types/alert.types";
 import Alert from "../../../components/Alert";
-import { background, border as borderPalette } from "../../../themes/palette";
+import { background, border as borderPalette, radiusPx } from "../../../themes/palette";
 
 // Define the shape of form values
 interface FormValues {
@@ -126,7 +126,7 @@ const ForgotPassword: React.FC = () => {
               display: "flex",
               justifyContent: "center",
               alignItems: "center",
-              borderRadius: "12px",
+              borderRadius: radiusPx.xl,
               border: `2px solid ${borderPalette.light}`,
               gap: theme.spacing(12),
             }}

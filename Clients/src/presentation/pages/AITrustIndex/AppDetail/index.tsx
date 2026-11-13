@@ -19,7 +19,7 @@ import { CustomizableButton } from "../../../components/button/customizable-butt
 import { EmptyState } from "../../../components/EmptyState";
 import Chip from "../../../components/Chip";
 import { VWLink } from "../../../components/Link/VWLink";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import {
   useApp,
   useApps,
@@ -49,7 +49,7 @@ function SectionCard({ title, children }: { title: string; children: React.React
     <Box
       sx={{
         border: `1px solid ${palette.border.dark}`,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         backgroundColor: palette.background.main,
         p: "16px",
       }}
@@ -176,7 +176,7 @@ export default function AppDetail() {
           sx={{
             width: 48,
             height: 48,
-            borderRadius: "8px",
+            borderRadius: radiusPx.lg,
             border: `1px solid ${palette.border.dark}`,
             display: "flex",
             alignItems: "center",
@@ -230,7 +230,7 @@ export default function AppDetail() {
                   flex: 1,
                   height: "8px",
                   borderRadius: "999px",
-                  backgroundColor: "#E5E7EB",
+                  backgroundColor: palette.border.light,
                   overflow: "hidden",
                 }}
               >
@@ -289,10 +289,10 @@ export default function AppDetail() {
                     // Dealbreaker flags are full sentences (quoted clauses), not
                     // short labels, so they render as wrapping blocks rather than
                     // single-line chips that overflow off the card.
-                    backgroundColor: "#FFD6D6",
-                    border: "1px solid #F5B8B8",
-                    borderRadius: "4px",
-                    color: "#D32F2F",
+                    backgroundColor: palette.status.error.border,
+                    border: `1px solid ${palette.status.error.border}`,
+                    borderRadius: radiusPx.sm,
+                    color: palette.status.error.text,
                     fontSize: "13px",
                     lineHeight: 1.5,
                     p: "8px 12px",
@@ -340,7 +340,7 @@ export default function AppDetail() {
                           // gap; radius matches the chip's 4px corners so it stays
                           // squarish instead of bulging into an ellipse.
                           display: "inline-flex",
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                           border: `2px solid ${palette.text.primary}`,
                         }
                       : undefined
@@ -383,7 +383,7 @@ export default function AppDetail() {
                   key={`${h.label}-${i}`}
                   sx={{
                     border: `1px solid ${palette.border.light}`,
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     p: "12px",
                     backgroundColor: palette.background.accent,
                   }}

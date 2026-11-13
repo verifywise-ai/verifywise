@@ -26,7 +26,15 @@ import {
   setPaginationRowCount,
 } from "../../../../application/utils/paginationStorage";
 import { IEventsTableProps } from "../../../types/interfaces/i.table";
-import { status, risk, border, background } from "../../../themes/palette";
+import {
+  status,
+  risk,
+  border,
+  background,
+  palette as vwPalette,
+  radiusPx,
+} from "../../../themes/palette";
+import { chartTheme } from "../../../themes/chartTheme";
 import StatusBadge from "../../StatusBadge";
 import { pageOfLabel } from "../pageOfLabel";
 
@@ -54,13 +62,13 @@ const DEFAULT_ROWS_PER_PAGE = 10;
 // value, so they keep their literals to stay visually unchanged.
 const EVENT_TYPE_COLORS: Record<Event["event_type"], { bg: string; text: string }> = {
   Create: { bg: status.success.bg, text: status.success.text },
-  Read: { bg: "#DCEFFF", text: "#1976D2" },
-  Update: { bg: status.warning.bg, text: "#795000" },
+  Read: { bg: vwPalette.status.info.bg, text: vwPalette.status.info.text },
+  Update: { bg: status.warning.bg, text: chartTheme.pendingLabelText },
   Delete: { bg: status.error.bg, text: status.error.text },
   Error: { bg: risk.high.bg, text: risk.high.text },
 };
 
-const UNKNOWN_EVENT_TYPE_COLORS = { bg: "#E0E0E0", text: "#424242" };
+const UNKNOWN_EVENT_TYPE_COLORS = { bg: vwPalette.border.light, text: vwPalette.text.secondary };
 
 const EventTypeBadge: React.FC<{ eventType: Event["event_type"] }> = ({ eventType }) => {
   const colors = EVENT_TYPE_COLORS[eventType] ?? UNKNOWN_EVENT_TYPE_COLORS;
@@ -380,7 +388,7 @@ const EventsTable: React.FC<IEventsTableProps> = ({
         justifyContent="center"
         sx={{
           border: `1px solid ${border.light}`,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           padding: theme.spacing(15, 5),
           paddingBottom: theme.spacing(20),
           gap: theme.spacing(10),

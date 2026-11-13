@@ -12,7 +12,7 @@ import { Box, Stack, Typography } from "@mui/material";
 import { Check as CheckGreenIcon, FileSpreadsheet } from "lucide-react";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import ConfirmationModal from "../../../components/Dialogs/ConfirmationModal";
-import { background, icon } from "../../../themes/palette";
+import { background, icon, radiusPx } from "../../../themes/palette";
 import { Project } from "../../../../domain/types/Project";
 import type { ImportedFramework } from "../../../../domain/interfaces/i.frameworkImport";
 import { useImportedFrameworks } from "../../../../application/hooks/useFrameworkImport";
@@ -131,7 +131,7 @@ const ImportedFrameworksSection: React.FC<ImportedFrameworksSectionProps> = ({
                         alignItems: "center",
                         justifyContent: "center",
                         backgroundColor: background.surface,
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                         flexShrink: 0,
                       }}
                     >

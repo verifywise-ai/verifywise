@@ -6,7 +6,10 @@ import { createTabLabelWithCount } from "../../utils/tabUtils";
 import { getLucideIcon } from "../../utils/lucideIconMap";
 import type * as LucideIcons from "lucide-react";
 import VWTooltip from "../VWTooltip";
-import { brand } from "../../themes/palette";
+import VWIcon from "../VWIcon";
+import { tabIconName } from "./tabIcons";
+import { background, border, brand, icon, radiusPx, text } from "../../themes/palette";
+import { isClassicUi } from "../../themes/uiStyle";
 
 export interface TabItem {
   label: string;
@@ -46,11 +49,47 @@ export interface TabBarProps {
 }
 
 // Constants for consistent styling
-const TAB_ICON_SIZE = 14;
+const classicUi = isClassicUi();
+const TAB_ICON_SIZE = classicUi ? 14 : 15;
 const TAB_ICON_STROKE_WIDTH = 1.5;
 const TAB_ICON_OPACITY = 1;
-const TAB_GAP = "34px";
+const TAB_GAP = classicUi ? "34px" : "3px";
 const DEFAULT_INDICATOR_COLOR = `${brand.primary}`;
+
+/** 1px hairline along the bottom of the bar, drawn inside so MUI's overflow clip keeps it. */
+const BAR_LINE = `inset 0 -1px 0 ${border.light}`;
+
+/**
+ * Phase 1 tab (style guide §6): raised grey fill, hairline on three sides,
+ * 9px top corners; the selected tab is white and joins the page below.
+ */
+const phase1TabStyle = {
+  "textTransform": "none",
+  "fontSize": 13,
+  "fontWeight": 400,
+  "color": text.tertiary,
+  "alignItems": "center",
+  "justifyContent": "center",
+  "padding": "7px 14px 8px",
+  "minHeight": "20px",
+  "minWidth": "auto",
+  "backgroundColor": background.hover,
+  "border": `1px solid ${border.light}`,
+  "borderBottom": "none",
+  "borderRadius": `${radiusPx.tab} ${radiusPx.tab} 0 0`,
+  "boxShadow": BAR_LINE,
+  "&:hover": { color: text.primary },
+  "&.Mui-selected": {
+    color: text.primary,
+    fontWeight: 500,
+    backgroundColor: background.main,
+    boxShadow: "none",
+  },
+  "&.Mui-focusVisible": {
+    outline: `2px solid ${brand.primary}`,
+    outlineOffset: -2,
+  },
+} as const;
 
 /**
  * Standardized TabBar component for VerifyWise.
@@ -86,16 +125,19 @@ const TabBar: React.FC<TabBarProps> = ({
   // Memoize styles to prevent unnecessary recalculations
   const standardTabStyle = useMemo<SxProps<Theme>>(
     () => ({
-      "textTransform": "none",
-      "fontWeight": 400,
-      "alignItems": "center",
-      "justifyContent": "flex-end",
-      "padding": "16px 0 7px",
-      "minHeight": "20px",
-      "minWidth": "auto",
-      "&.Mui-selected": {
-        color: indicatorColor,
-      },
+      ...(classicUi ? {} : phase1TabStyle),
+      ...(classicUi && {
+        "textTransform": "none",
+        "fontWeight": 400,
+        "alignItems": "center",
+        "justifyContent": "flex-end",
+        "padding": "16px 0 7px",
+        "minHeight": "20px",
+        "minWidth": "auto",
+        "&.Mui-selected": {
+          color: indicatorColor,
+        },
+      }),
       ...tabSx,
     }),
     [indicatorColor, tabSx],
@@ -115,7 +157,11 @@ const TabBar: React.FC<TabBarProps> = ({
       "minHeight": "20px",
       "& .MuiTabs-flexContainer": {
         columnGap: TAB_GAP,
+        // Phase 1: first tab 10px in, bar line under the whole row.
+        ...(!classicUi && { paddingLeft: "10px", boxShadow: BAR_LINE }),
       },
+      // Phase 1 shows the selected tab by its fill, not an underline.
+      ...(!classicUi && { "& .MuiTabs-indicator": { display: "none" } }),
       // Scroll-arrow styling for scrollable variant — matches app tone.
       "& .MuiTabs-scrollButtons": {
         "width": "28px",
@@ -152,7 +198,7 @@ const TabBar: React.FC<TabBarProps> = ({
   };
 
   return (
-    <Box sx={{ borderBottom: 1, borderColor: "divider" }}>
+    <Box sx={classicUi ? { borderBottom: 1, borderColor: "divider" } : undefined}>
       <TabList
         onChange={handleChange}
         TabIndicatorProps={{ style: { backgroundColor: indicatorColor } }}
@@ -166,12 +212,17 @@ const TabBar: React.FC<TabBarProps> = ({
       >
         {tabs.map((tab) => {
           // Look up the icon in the explicit registry (tree-shakeable)
+          // Swap only a tab that already has an icon; a tab without one stays text only.
+          const vwIcon = classicUi || !tab.icon ? undefined : tabIconName(tab.label, tab.value);
           const IconComponent = tab.icon ? getLucideIcon(tab.icon) : undefined;
-          const iconElement = IconComponent ? (
+          const iconElement = vwIcon ? (
+            <VWIcon name={vwIcon} size={TAB_ICON_SIZE} color={icon.default} />
+          ) : IconComponent ? (
             <IconComponent
               size={TAB_ICON_SIZE}
               strokeWidth={TAB_ICON_STROKE_WIDTH}
               opacity={TAB_ICON_OPACITY}
+              color={classicUi ? undefined : icon.default}
             />
           ) : undefined;
 

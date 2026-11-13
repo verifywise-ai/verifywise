@@ -1,6 +1,8 @@
 import { FC, memo } from "react";
 import { Stack, Tooltip, Box, Typography, useTheme } from "@mui/material";
 import { Shield, FlaskConical, ScanSearch, Eye, Router, Crown, Gauge } from "lucide-react";
+import VWIcon, { type VWIconName } from "../VWIcon";
+import { isClassicUi } from "../../themes/uiStyle";
 import { AppModule } from "../../../application/redux/ui/uiSlice";
 import "./index.css";
 
@@ -19,6 +21,10 @@ interface ModuleItem {
   disabled?: boolean;
 }
 
+/** Phase 1 uses the VerifyWise module icons; classic keeps Lucide. */
+const railIcon = (classicIcon: React.ReactElement, name: VWIconName): React.ReactElement =>
+  isClassicUi() ? classicIcon : <VWIcon name={name} size={16} />;
+
 const modules: ModuleItem[] = [
   {
     id: "main",
@@ -28,31 +34,31 @@ const modules: ModuleItem[] = [
   },
   {
     id: "evals",
-    icon: <FlaskConical size={16} strokeWidth={1.5} />,
+    icon: railIcon(<FlaskConical size={16} strokeWidth={1.5} />, "llm-evaluations"),
     label: "LLM Evals",
     description: "Evaluate LLM quality, performance and reliability over time",
   },
   {
     id: "ai-gateway",
-    icon: <Router size={16} strokeWidth={1.5} />,
+    icon: railIcon(<Router size={16} strokeWidth={1.5} />, "ai-gateway"),
     label: "AI Gateway",
     description: "Proxy, monitor, and control LLM API usage across providers",
   },
   {
     id: "ai-trust-index",
-    icon: <Gauge size={16} strokeWidth={1.5} />,
+    icon: railIcon(<Gauge size={16} strokeWidth={1.5} />, "ai-trust-index"),
     label: "AI Trust Index",
     description: "Browse AI app risk scores and track the apps you use",
   },
   {
     id: "shadow-ai",
-    icon: <Eye size={16} strokeWidth={1.5} />,
+    icon: railIcon(<Eye size={16} strokeWidth={1.5} />, "ai-detection"),
     label: "Shadow AI",
     description: "Detect and govern unauthorized AI tool usage across your organization",
   },
   {
     id: "ai-detection",
-    icon: <ScanSearch size={16} strokeWidth={1.5} />,
+    icon: railIcon(<ScanSearch size={16} strokeWidth={1.5} />, "code"),
     label: "AI Detection",
     description: "Scan repositories to detect AI/ML libraries and frameworks",
   },

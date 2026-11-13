@@ -1,6 +1,7 @@
 import { screen } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import { LogLine } from "../index";
+import { status } from "../../../themes/palette";
 
 describe("LogLine", () => {
   it("renders the line number (1-indexed)", () => {
@@ -44,13 +45,13 @@ describe("LogLine", () => {
     renderWithProviders(<LogLine line="Operation successful" index={0} />);
     const logText = screen.getByText("Operation successful");
     expect(logText).toBeInTheDocument();
-    expect(logText).toHaveStyle({ fontWeight: 400, color: "#388e3c" });
+    expect(logText).toHaveStyle({ fontWeight: 400, color: status.success.text });
   });
 
   it("applies info styling for lines containing 'info'", () => {
     renderWithProviders(<LogLine line="[INFO] Server started" index={0} />);
     const logText = screen.getByText("[INFO] Server started");
     expect(logText).toBeInTheDocument();
-    expect(logText).toHaveStyle({ color: "#1976d2" });
+    expect(logText).toHaveStyle({ color: status.info.text });
   });
 });

@@ -50,7 +50,7 @@ import {
 } from "lucide-react";
 import "./index.css";
 import { IRichTextEditorProps } from "../../types/interfaces/i.editor";
-import { border as borderPalette } from "../../themes/palette";
+import { border as borderPalette, palette as vwPalette, radiusPx } from "../../themes/palette";
 
 const ICON_SIZE = 16;
 
@@ -378,7 +378,7 @@ const RichTextEditor: React.FC<IRichTextEditorProps> = ({
                   sx={{
                     "padding": "6px",
                     "borderRadius": "3px",
-                    "backgroundColor": isActive ? "#E0F7FA" : "transparent",
+                    "backgroundColor": isActive ? vwPalette.accent.teal.bg : "transparent",
                     "border": "1px solid",
                     "borderColor": isActive ? theme.palette.primary.main : "transparent",
                     "&:hover": {
@@ -437,7 +437,7 @@ const RichTextEditor: React.FC<IRichTextEditorProps> = ({
               alignItems: "center",
               backgroundColor: theme.palette.background.default,
               border: `1px solid ${borderPalette.dark}`,
-              borderRadius: "6px",
+              borderRadius: radiusPx.md,
               boxShadow: "0 4px 12px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.08)",
             }}
           >
@@ -513,10 +513,12 @@ const RichTextEditor: React.FC<IRichTextEditorProps> = ({
                       size="small"
                       sx={{
                         "padding": "5px",
-                        "borderRadius": "4px",
-                        "color": danger ? "#dc2626" : "#374151",
+                        "borderRadius": radiusPx.sm,
+                        "color": danger ? vwPalette.riskMark.critical : vwPalette.text.secondary,
                         "&:hover": {
-                          backgroundColor: danger ? "#fef2f2" : theme.palette.action.hover,
+                          backgroundColor: danger
+                            ? vwPalette.status.error.bg
+                            : theme.palette.action.hover,
                         },
                       }}
                     >
@@ -554,7 +556,7 @@ const RichTextEditor: React.FC<IRichTextEditorProps> = ({
           }
           .vw-tiptap-content .ProseMirror p.is-editor-empty:first-child::before {
             content: attr(data-placeholder);
-            color: #98A2B3;
+            color: ${vwPalette.text.disabled};
             pointer-events: none;
             float: left;
             height: 0;
@@ -573,7 +575,7 @@ const RichTextEditor: React.FC<IRichTextEditorProps> = ({
             min-width: 60px;
           }
           .vw-tiptap-content .ProseMirror th {
-            background-color: #f3f4f6;
+            background-color: ${vwPalette.background.hover};
             font-weight: 600;
           }
           .vw-tiptap-content .ProseMirror ul,
@@ -583,7 +585,7 @@ const RichTextEditor: React.FC<IRichTextEditorProps> = ({
             font-size: 13px;
           }
           .vw-tiptap-content .ProseMirror a {
-            color: #13715B;
+            color: ${vwPalette.brand.primary};
             text-decoration: underline;
           }
         `}

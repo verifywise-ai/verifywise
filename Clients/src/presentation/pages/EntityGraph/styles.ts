@@ -1,17 +1,24 @@
 import type { CSSProperties } from "react";
 import { SxProps, Theme } from "@mui/material";
-import { brand, text, border as borderPalette, status } from "../../themes/palette";
+import {
+  brand,
+  text,
+  border as borderPalette,
+  status,
+  palette as vwPalette,
+  radiusPx,
+} from "../../themes/palette";
 
 // Design system colors (from CLAUDE.md)
 const COLORS = {
   primary: `${brand.primary}`,
-  primaryLight: "#f0fdf4",
+  primaryLight: vwPalette.status.success.bg,
   border: `${borderPalette.dark}`,
   borderLight: `${status.default.border}`,
   textPrimary: `${text.secondary}`,
   textSecondary: `${text.icon}`,
   textTertiary: `${text.disabled}`,
-  background: "#fafafa",
+  background: vwPalette.background.alt,
 } as const;
 
 // Container styles
@@ -42,11 +49,11 @@ export const loadingTextSx: SxProps<Theme> = {
 export const loadingProgressSx: SxProps<Theme> = {
   "width": 300,
   "height": 8,
-  "borderRadius": 4,
+  "borderRadius": radiusPx.lg,
   "backgroundColor": COLORS.borderLight,
   "& .MuiLinearProgress-bar": {
     backgroundColor: COLORS.primary,
-    borderRadius: 4,
+    borderRadius: radiusPx.lg,
   },
 };
 
@@ -105,7 +112,7 @@ export const controlPanelSx: SxProps<Theme> = {
   gap: "8px",
   p: "12px",
   backgroundColor: "white",
-  borderRadius: "8px",
+  borderRadius: radiusPx.lg,
   border: `1px solid ${COLORS.border}`,
   boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
   minWidth: 280,
@@ -144,7 +151,7 @@ export const toggleButtonGroupSx: SxProps<Theme> = {
   "maxWidth": 220,
   "& .MuiToggleButton-root": {
     "border": `1px solid ${COLORS.border}`,
-    "borderRadius": "4px !important",
+    "borderRadius": `${radiusPx.sm} !important`,
     "textTransform": "none",
     "fontSize": 11,
     "py": 0.5,

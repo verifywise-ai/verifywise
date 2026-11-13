@@ -3,6 +3,7 @@ import { useTheme } from "@mui/material";
 import { PROVIDER_ICONS } from "../../components/ProviderIcons";
 import { apiServices } from "../../../infrastructure/api/networkServices";
 import palette from "../../themes/palette";
+import { palette as vwPalette } from "../../themes/palette";
 
 export const sectionTitleSx = { fontWeight: 600, fontSize: 16 };
 
@@ -16,28 +17,34 @@ export const drawerLabelSx = {
 };
 
 /** Guardrail action colors — blocked (red) and masked (amber) */
-export const GUARDRAIL_ACTION_COLORS = { blocked: "#DC2626", masked: "#D97706" } as const;
+export const GUARDRAIL_ACTION_COLORS = {
+  blocked: vwPalette.riskMark.critical,
+  masked: vwPalette.riskMark.medium,
+} as const;
 
 /** Format entity_type from DB snake_case to human-readable */
 export const formatEntityType = (t?: string | null) => (t || "Unknown").replace(/_/g, " ");
 
 /** MCP status chip colors — reused across Audit Log, Approvals, and other MCP pages */
 export const MCP_STATUS_COLORS: Record<string, { bg: string; text: string }> = {
-  success: { bg: "#ECFDF5", text: "#065F46" },
-  approved: { bg: "#ECFDF5", text: "#065F46" },
-  error: { bg: "#FEF2F2", text: "#991B1B" },
-  denied: { bg: "#FEF2F2", text: "#991B1B" },
-  blocked: { bg: "#FFF7ED", text: "#9A3412" },
-  pending: { bg: "#FFFBEB", text: "#92400E" },
-  rate_limited: { bg: "#FFFBEB", text: "#92400E" },
-  approval_required: { bg: "#F5F3FF", text: "#5B21B6" },
+  success: { bg: vwPalette.status.success.bg, text: vwPalette.status.success.text },
+  approved: { bg: vwPalette.status.success.bg, text: vwPalette.status.success.text },
+  error: { bg: vwPalette.status.error.bg, text: vwPalette.status.error.text },
+  denied: { bg: vwPalette.status.error.bg, text: vwPalette.status.error.text },
+  blocked: { bg: vwPalette.accent.orange.bg, text: vwPalette.status.warning.text },
+  pending: { bg: vwPalette.status.warning.bg, text: vwPalette.status.warning.text },
+  rate_limited: { bg: vwPalette.status.warning.bg, text: vwPalette.status.warning.text },
+  approval_required: { bg: vwPalette.accent.purple.bg, text: vwPalette.accent.purple.text },
   // Monitor-only keys: the call went through, so these use softer tones than
   // the blocked / denied / approval colours above.
   would_block: { bg: palette.status.warning.bg, text: palette.status.warning.text },
   would_need_approval: { bg: palette.status.default.bg, text: palette.status.default.text },
 } as const;
 
-export const MCP_STATUS_FALLBACK = { bg: "#F3F4F6", text: "#374151" } as const;
+export const MCP_STATUS_FALLBACK = {
+  bg: vwPalette.background.hover,
+  text: vwPalette.text.secondary,
+} as const;
 
 const MCP_STATUS_LABELS: Record<string, string> = {
   would_block: "Would block",
@@ -386,12 +393,12 @@ export const GATEWAY_URL = resolveGatewayUrl(
 );
 
 /** Color constants for code blocks and warning banners */
-export const CODE_BLOCK_BG = "#1E1E1E";
-export const CODE_BLOCK_TEXT = "#D4D4D4";
-export const WARNING_BG = "#FFFAEB";
-export const WARNING_BORDER = "#FEDF89";
-export const WARNING_TEXT = "#B54708";
-export const KEY_DISPLAY_BG = "#F9FAFB";
+export const CODE_BLOCK_BG = vwPalette.text.primary;
+export const CODE_BLOCK_TEXT = vwPalette.border.dark;
+export const WARNING_BG = vwPalette.status.warning.bg;
+export const WARNING_BORDER = vwPalette.status.warning.border;
+export const WARNING_TEXT = vwPalette.risk.high.text;
+export const KEY_DISPLAY_BG = vwPalette.background.alt;
 
 /** Full API URL for gateway requests (avoids concatenating "/api" in every file) */
 export const GATEWAY_API_URL = GATEWAY_URL + "/api";

@@ -26,6 +26,7 @@ import Select from "../../../../components/Inputs/Select";
 import DatePicker from "../../../../components/Inputs/Datepicker";
 import ChipInput from "../../../../components/Inputs/ChipInput";
 import StatusBadge from "../StatusBadge";
+import { palette, radiusPx } from "../../../../themes/palette";
 
 interface FileMetadataEditorProps {
   isOpen: boolean;
@@ -163,19 +164,23 @@ export const FileMetadataEditor: React.FC<FileMetadataEditorProps> = ({
                 alignItems: "flex-start",
                 gap: 1,
                 padding: "8px 12px",
-                backgroundColor: "#F0F9FF",
-                borderRadius: "4px",
-                border: "1px solid #B9E6FE",
+                backgroundColor: palette.status.info.bg,
+                borderRadius: radiusPx.sm,
+                border: `1px solid ${palette.status.info.border}`,
                 mt: 1,
               }}
             >
-              <Info size={14} color="#0369A1" style={{ marginTop: 2, flexShrink: 0 }} />
+              <Info
+                size={14}
+                color={palette.status.info.text}
+                style={{ marginTop: 2, flexShrink: 0 }}
+              />
               <Box>
-                <Typography sx={{ fontSize: 12, color: "#0369A1" }}>
+                <Typography sx={{ fontSize: 12, color: palette.status.info.text }}>
                   Status is controlled by the approval workflow and cannot be changed manually.
                 </Typography>
                 {file.approval_workflow_name && (
-                  <Typography sx={{ fontSize: 12, color: "#0369A1", mt: 0.5 }}>
+                  <Typography sx={{ fontSize: 12, color: palette.status.info.text, mt: 0.5 }}>
                     Workflow: <strong>{file.approval_workflow_name}</strong>
                   </Typography>
                 )}
@@ -236,8 +241,8 @@ export const FileMetadataEditor: React.FC<FileMetadataEditorProps> = ({
           sx={{
             padding: "12px",
             backgroundColor: "background.accent",
-            borderRadius: "4px",
-            border: "1px solid #E0E4E9",
+            borderRadius: radiusPx.sm,
+            border: `1px solid ${palette.border.light}`,
           }}
         >
           <Typography sx={{ fontSize: 12, color: "text.icon" }}>

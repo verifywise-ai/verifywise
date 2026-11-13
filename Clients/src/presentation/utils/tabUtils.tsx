@@ -1,5 +1,9 @@
 import { Box, SxProps, Theme } from "@mui/material";
 import { ReactNode } from "react";
+import { icon as iconTokens, primitives } from "../themes/palette";
+import { fontFamily } from "../themes/typography";
+import { isClassicUi } from "../themes/uiStyle";
+import { chartTheme } from "../themes/chartTheme";
 
 export interface TabLabelWithCountOptions {
   label: string;
@@ -15,10 +19,44 @@ export interface TabLabelWithCountOptions {
 const BADGE_MIN_WIDTH = "22px";
 const BADGE_HEIGHT = "22px";
 const BADGE_FONT_SIZE = "10px";
-const BADGE_COLOR = "#047857";
-const BADGE_BG_COLOR = "#D1FAE5";
+const BADGE_COLOR = chartTheme.controls.tabBadge.text;
+const BADGE_BG_COLOR = chartTheme.controls.tabBadge.bg;
 const BADGE_BORDER_RADIUS = "11px";
 const MAX_DISPLAY_COUNT = 99;
+
+const classicUi = isClassicUi();
+
+/** Classic: green count pill. */
+const classicBadgeSx = {
+  display: "inline-flex",
+  alignItems: "center",
+  justifyContent: "center",
+  minWidth: BADGE_MIN_WIDTH,
+  height: BADGE_HEIGHT,
+  padding: "0 6px",
+  fontSize: BADGE_FONT_SIZE,
+  fontWeight: 600,
+  color: BADGE_COLOR,
+  backgroundColor: BADGE_BG_COLOR,
+  borderRadius: BADGE_BORDER_RADIUS,
+  lineHeight: 1,
+} as const;
+
+/**
+ * Phase 1: the count is plain Geist Mono 11px, not a green pill. The hand-off
+ * names text.accent, but that is 3:1 on white; grey.500 meets 4.5:1 on white
+ * and on the raised tab grey.
+ */
+const phase1CountSx = {
+  display: "inline-flex",
+  alignItems: "center",
+  fontFamily: fontFamily.mono,
+  fontSize: "11px",
+  fontWeight: 400,
+  color: primitives.grey[500],
+  lineHeight: 1,
+  fontVariantNumeric: "tabular-nums",
+} as const;
 
 /**
  * Creates a tab label with an optional count badge.
@@ -78,7 +116,8 @@ export const createTabLabelWithCount = ({
             display: "inline-flex",
             alignItems: "center",
             marginRight: "4px",
-            opacity: 0.7,
+            opacity: classicUi ? 0.7 : 1,
+            color: classicUi ? undefined : iconTokens.default,
           }}
         >
           {icon}
@@ -89,18 +128,7 @@ export const createTabLabelWithCount = ({
         <Box
           component="span"
           sx={{
-            display: "inline-flex",
-            alignItems: "center",
-            justifyContent: "center",
-            minWidth: BADGE_MIN_WIDTH,
-            height: BADGE_HEIGHT,
-            padding: "0 6px",
-            fontSize: BADGE_FONT_SIZE,
-            fontWeight: 600,
-            color: BADGE_COLOR,
-            backgroundColor: BADGE_BG_COLOR,
-            borderRadius: BADGE_BORDER_RADIUS,
-            lineHeight: 1,
+            ...(classicUi ? classicBadgeSx : phase1CountSx),
             ...chipSx, // Allow custom overrides
           }}
         >

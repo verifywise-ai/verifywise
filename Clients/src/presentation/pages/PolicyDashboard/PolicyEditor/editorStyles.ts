@@ -1,5 +1,5 @@
 import type { GlobalStylesProps } from "@mui/material";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import { fontFamily, fontSize, fontWeight } from "../../../themes/typography";
 
 const { text, background, border, brand, accent, editor } = palette;
@@ -23,7 +23,7 @@ export const policyEditorStyles: GlobalStylesProps["styles"] = {
     "overflowY": "auto",
     "padding": "20px 24px",
     "border": "none",
-    "borderRadius": "4px",
+    "borderRadius": radiusPx.sm,
     "backgroundColor": background.main,
     "fontFamily": fontFamily.sans,
     "fontSize": fontSize.base,
@@ -51,13 +51,13 @@ export const policyEditorStyles: GlobalStylesProps["styles"] = {
       padding: "8px 16px",
       color: text.tertiary,
       backgroundColor: background.alt,
-      borderRadius: "0 4px 4px 0",
+      borderRadius: `0 ${radiusPx.sm} ${radiusPx.sm} 0`,
     },
     "& pre": {
       backgroundColor: editor.codeBlockBg,
       color: editor.codeBlockText,
       padding: "12px 16px",
-      borderRadius: "6px",
+      borderRadius: radiusPx.md,
       fontFamily: fontFamily.mono,
       fontSize: fontSize.sm,
       overflowX: "auto",
@@ -130,7 +130,7 @@ export const policyEditorStyles: GlobalStylesProps["styles"] = {
     },
     "& img": {
       maxWidth: "100%",
-      borderRadius: "8px",
+      borderRadius: radiusPx.lg,
       margin: "12px 0",
     },
     "& a": {

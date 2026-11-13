@@ -2,11 +2,12 @@ import { Box, FormControl, Stack, Typography, type Theme } from "@mui/material";
 import Checkbox from "../Inputs/Checkbox";
 import Radio from "../Inputs/Radio";
 import type { Answers, Question } from "../../../domain/types/euAiActClassification";
+import { radiusPx } from "../../themes/palette";
 
 const optionStyle = (theme: Theme) => ({
   "width": "100%",
   "border": `1px solid ${theme.palette.border.dark}`,
-  "borderRadius": "4px",
+  "borderRadius": radiusPx.sm,
   "backgroundColor": theme.palette.background.main,
   "cursor": "pointer",
   "transition": "all 0.2s ease-in-out",

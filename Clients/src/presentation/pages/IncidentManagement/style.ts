@@ -1,5 +1,5 @@
 import { Theme, SxProps } from "@mui/material/styles";
-import { brand } from "../../themes/palette";
+import { brand, palette as vwPalette, radiusPx } from "../../themes/palette";
 
 // Main page styles (index.tsx)
 export const incidentMainStack = {
@@ -75,7 +75,7 @@ export const incidentTag = {
   height: "20px",
   backgroundColor: "background.surface",
   borderRadius: 4,
-  color: "#666",
+  color: vwPalette.text.tertiary,
   margin: 0,
   fontWeight: 500,
 };
@@ -83,16 +83,16 @@ export const incidentTag = {
 export const incidentTagExtra = {
   fontSize: 11,
   height: "20px",
-  backgroundColor: "#e0e0e0",
+  backgroundColor: vwPalette.border.light,
   borderRadius: 4,
-  color: "#666",
+  color: vwPalette.text.tertiary,
   margin: 0,
   fontWeight: 500,
 };
 
 // Table row styles
 export const incidentRowHover = {
-  "&:hover": { backgroundColor: "#FBFBFB", cursor: "pointer" },
+  "&:hover": { backgroundColor: vwPalette.background.alt, cursor: "pointer" },
 };
 
 export const incidentRowDisabled = {
@@ -102,15 +102,15 @@ export const incidentRowDisabled = {
 
 // Empty / Loading states
 export const incidentLoadingContainer = () => ({
-  border: "1px solid #EEEEEE",
-  borderRadius: "4px",
+  border: `1px solid ${vwPalette.border.light}`,
+  borderRadius: radiusPx.sm,
   padding: "60px 20px",
   minHeight: 200,
 });
 
 export const incidentEmptyContainer = () => ({
-  border: "1px solid #EEEEEE",
-  borderRadius: "4px",
+  border: `1px solid ${vwPalette.border.light}`,
+  borderRadius: radiusPx.sm,
   padding: "60px 20px 80px 20px",
   gap: "20px",
   minHeight: 200,

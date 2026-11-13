@@ -5,6 +5,7 @@
 import type { CSSProperties } from "react";
 import { SxProps, Theme } from "@mui/material";
 import { textStyles } from "../../themes/typography";
+import { radiusPx } from "../../themes/palette";
 
 // The canvas needs an explicit height: ReactFlow does not size itself.
 export const pageContainerSx: SxProps<Theme> = {
@@ -20,7 +21,7 @@ export const graphWrapperSx: SxProps<Theme> = {
   minHeight: 480,
   width: "100%",
   backgroundColor: "background.accent",
-  borderRadius: "4px",
+  borderRadius: radiusPx.sm,
   border: 1,
   borderColor: "divider",
 };
@@ -68,7 +69,7 @@ export const controlPanelSx: SxProps<Theme> = {
   py: 6, // the guide's card padding: 12px 16px
   px: 8,
   bgcolor: "background.main",
-  borderRadius: "4px",
+  borderRadius: radiusPx.sm,
   border: 1,
   borderColor: "divider",
   boxShadow: (theme) => theme.boxShadow,
@@ -102,7 +103,7 @@ export const guidePanelSx: SxProps<Theme> = {
   py: 3, // 6px
   px: 5, // 10px
   bgcolor: "background.main",
-  borderRadius: "4px",
+  borderRadius: radiusPx.sm,
   border: 1,
   borderColor: "divider",
   boxShadow: (theme) => theme.boxShadow,

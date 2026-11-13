@@ -51,6 +51,7 @@ import { focusFormFieldById } from "../../../../application/utils/formValidation
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
 import { useCanCheck } from "../../../../application/hooks/useCan";
 import ReadOnlyFieldset from "../../ReadOnlyFieldset";
+import { palette, radiusPx } from "../../../themes/palette";
 
 dayjs.extend(utc);
 
@@ -715,7 +716,7 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
         popupIcon={<ChevronDown />}
         placeholder="Select capabilities"
         error={errors.capabilities}
-        sx={{ "& .MuiChip-root": { borderRadius: "4px" } }}
+        sx={{ "& .MuiChip-root": { borderRadius: radiusPx.sm } }}
       />
 
       {/* Used in Projects Section */}
@@ -748,7 +749,7 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
         popupIcon={<ChevronDown size={16} />}
         placeholder="Select projects"
         error={errors.projects}
-        sx={{ "& .MuiChip-root": { borderRadius: "4px" } }}
+        sx={{ "& .MuiChip-root": { borderRadius: radiusPx.sm } }}
       />
 
       {/* Used in Frameworks Section */}
@@ -781,7 +782,7 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
         popupIcon={<ChevronDown size={16} />}
         placeholder="Select frameworks"
         error={errors.frameworks}
-        sx={{ "& .MuiChip-root": { borderRadius: "4px" } }}
+        sx={{ "& .MuiChip-root": { borderRadius: radiusPx.sm } }}
       />
 
       <Stack direction={"row"} spacing={6}>
@@ -923,7 +924,7 @@ const NewModelInventory: FC<NewModelInventoryProps> = ({
           variant="caption"
           sx={{
             mt: 1,
-            color: "#f04438",
+            color: palette.status.error.text,
             fontWeight: 300,
             fontSize: 11,
           }}

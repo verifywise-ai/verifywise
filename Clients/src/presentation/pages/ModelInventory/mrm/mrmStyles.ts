@@ -1,4 +1,5 @@
 import { SxProps, Theme } from "@mui/material";
+import { radiusPx } from "../../../themes/palette";
 
 /**
  * Shared styles for the Model risk management sub-tabs. Uses design tokens
@@ -12,7 +13,7 @@ import { SxProps, Theme } from "@mui/material";
 
 export const mrmTableContainerStyle: SxProps<Theme> = (theme) => ({
   border: `1px solid ${theme.palette.border.dark}`,
-  borderRadius: "4px",
+  borderRadius: radiusPx.sm,
   overflow: "hidden",
 });
 
@@ -53,7 +54,7 @@ export const mrmPipelineItemStyle: SxProps<Theme> = (theme) => ({
   alignItems: "center",
   gap: "8px",
   border: `1px solid ${theme.palette.border.dark}`,
-  borderRadius: "4px",
+  borderRadius: radiusPx.sm,
   padding: "8px 12px",
   fontSize: "13px",
   color: "text.secondary",
@@ -85,7 +86,7 @@ export const mrmSubHeadingStyle: SxProps<Theme> = {
 /** Monospaced code block for endpoint URLs and example requests. */
 export const mrmCodeBlockStyle: SxProps<Theme> = (theme) => ({
   border: `1px solid ${theme.palette.border.dark}`,
-  borderRadius: "4px",
+  borderRadius: radiusPx.sm,
   backgroundColor: "background.accent",
   padding: "12px 16px",
   fontFamily: "monospace",
@@ -116,7 +117,7 @@ export const mrmCardsStyle: SxProps<Theme> = {
 /** A single summary card (label, big number, note). */
 export const mrmCardStyle: SxProps<Theme> = (theme) => ({
   border: `1px solid ${theme.palette.border.dark}`,
-  borderRadius: "4px",
+  borderRadius: radiusPx.sm,
   backgroundColor: "background.main",
   padding: "16px",
   display: "flex",
@@ -148,7 +149,7 @@ export const mrmTriggerBadgeStyle: SxProps<Theme> = (theme) => ({
   display: "inline-flex",
   alignItems: "center",
   border: `1px solid ${theme.palette.border.dark}`,
-  borderRadius: "4px",
+  borderRadius: radiusPx.sm,
   padding: "1px 8px",
   fontSize: "12px",
   color: "text.secondary",

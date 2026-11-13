@@ -20,8 +20,14 @@ describe("Chip", () => {
     expect(() => renderWithProviders(<Chip label={null as unknown as string} />)).not.toThrow();
   });
 
-  it("applies uppercase text-transform by default", () => {
+  it("renders sentence case by default (phase 1 pill)", () => {
     renderWithProviders(<Chip label="Active" />);
+    const chip = screen.getByText("Active");
+    expect(chip.closest("span")).toHaveStyle({ textTransform: "none" });
+  });
+
+  it("applies uppercase when uppercase is true", () => {
+    renderWithProviders(<Chip label="Active" uppercase />);
     const chip = screen.getByText("Active");
     expect(chip.closest("span")).toHaveStyle({ textTransform: "uppercase" });
   });

@@ -16,31 +16,32 @@ import {
   SelectChangeEvent,
 } from "@mui/material";
 import { ChevronDown, Eye, EyeOff } from "lucide-react";
+import { palette, radiusPx } from "../../themes/palette";
 
 // ============================================
 // Theme colors (matching VerifyWise theme)
 // ============================================
 const colors = {
-  primary: "#13715B",
-  primaryLight: "#13715B",
-  primaryRing: "#13715B1A",
+  primary: palette.brand.primary,
+  primaryLight: palette.brand.primary,
+  primaryRing: `${palette.brand.primary}1a`,
   border: {
-    dark: "#D0D5DD",
-    light: "#E5E7EB",
+    dark: palette.border.dark,
+    light: palette.border.light,
   },
   text: {
-    primary: "#344054",
-    secondary: "#475467",
-    tertiary: "#667085",
+    primary: palette.text.secondary,
+    secondary: palette.text.tertiary,
+    tertiary: palette.text.icon,
   },
   background: {
-    main: "#FFFFFF",
-    fill: "#F9FAFB",
-    accent: "#F3F4F6",
+    main: palette.background.main,
+    fill: palette.background.alt,
+    accent: palette.background.hover,
   },
   error: {
-    main: "#D92D20",
-    border: "#FDA29B",
+    main: palette.text.error,
+    border: palette.status.error.border,
   },
 };
 
@@ -50,7 +51,7 @@ const colors = {
 const getInputStyles = (hasError = false) => ({
   "& fieldset": {
     borderColor: hasError ? colors.error.border : colors.border.dark,
-    borderRadius: "4px",
+    borderRadius: radiusPx.sm,
     transition: "border-color 150ms ease-in-out, box-shadow 150ms ease-in-out",
   },
   "&:not(:has(.Mui-disabled)):not(:has(.Mui-focused)) .MuiOutlinedInput-root:hover fieldset": {
@@ -73,7 +74,7 @@ const getInputStyles = (hasError = false) => ({
 const getSelectStyles = (hasError = false) => ({
   "& .MuiOutlinedInput-notchedOutline": {
     borderColor: hasError ? colors.error.border : colors.border.dark,
-    borderRadius: "4px",
+    borderRadius: radiusPx.sm,
     transition: "border-color 150ms ease-in-out, box-shadow 150ms ease-in-out",
   },
   "&:not(.Mui-disabled):hover .MuiOutlinedInput-notchedOutline": {
@@ -339,7 +340,7 @@ export const VWSelect: React.FC<VWSelectProps> = ({
           disableScrollLock: true,
           PaperProps: {
             sx: {
-              "borderRadius": "4px",
+              "borderRadius": radiusPx.sm,
               "boxShadow": "0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06)",
               "mt": 1,
               "& .MuiMenuItem-root": {
@@ -377,7 +378,7 @@ export const VWSelect: React.FC<VWSelectProps> = ({
             sx={{
               fontSize: 13,
               color: colors.text.tertiary,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               margin: "4px 8px",
             }}
           >
@@ -424,7 +425,7 @@ export const VWButton: React.FC<VWButtonProps> = ({
     justifyContent: "center",
     gap: 1,
     padding: "8px 16px",
-    borderRadius: "4px",
+    borderRadius: radiusPx.sm,
     fontSize: 13,
     fontWeight: 500,
     cursor: disabled || loading ? "not-allowed" : "pointer",
@@ -438,9 +439,9 @@ export const VWButton: React.FC<VWButtonProps> = ({
   const variantStyles = {
     primary: {
       "backgroundColor": colors.primary,
-      "color": "#fff",
+      "color": palette.background.main,
       "&:hover:not(:disabled)": {
-        backgroundColor: "#0F5C4A",
+        backgroundColor: palette.brand.primaryHover,
       },
     },
     secondary: {

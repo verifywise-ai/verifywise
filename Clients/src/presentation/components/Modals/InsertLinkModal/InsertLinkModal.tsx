@@ -2,7 +2,7 @@ import React, { useState, useEffect } from "react";
 import { Dialog, DialogTitle, DialogContent, DialogActions, Typography, Box } from "@mui/material";
 import Field from "../../Inputs/Field";
 import { CustomizableButton } from "../../button/customizable-button";
-import { accent, icon, text as textPalette } from "../../../themes/palette";
+import { accent, icon, text as textPalette, radiusPx } from "../../../themes/palette";
 
 interface InsertLinkModalProps {
   open: boolean;
@@ -50,7 +50,7 @@ const InsertLinkModal: React.FC<InsertLinkModalProps> = ({
       disablePortal={false}
       sx={{ zIndex: 1400 }}
       PaperProps={{
-        sx: { borderRadius: 3, p: 1.5 },
+        sx: { borderRadius: radiusPx.md, p: 1.5 },
       }}
     >
       <DialogTitle>Insert link</DialogTitle>
@@ -62,7 +62,7 @@ const InsertLinkModal: React.FC<InsertLinkModalProps> = ({
               mb: 2,
               p: 1.5,
               backgroundColor: accent.primary.bg,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               border: `1px solid ${accent.primary.border}`,
             }}
           >

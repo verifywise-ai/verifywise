@@ -17,7 +17,7 @@ import { Plus, X } from "lucide-react";
 import type * as LucideIcons from "lucide-react";
 import { getLucideIcon } from "../../utils/lucideIconMap";
 import { brand } from "../../themes/palette";
-import { text, border, background } from "../../themes/palette";
+import { text, border, background, radiusPx } from "../../themes/palette";
 
 export interface DashboardTabConfig {
   id: string;
@@ -163,7 +163,7 @@ const DashboardTabs: React.FC<DashboardTabsProps> = ({
             "width": 28,
             "height": 28,
             "border": `1px dashed ${border.light}`,
-            "borderRadius": "6px",
+            "borderRadius": radiusPx.md,
             "color": text.secondary,
             "&:hover": { backgroundColor: background.hover, color: brand.primary },
           }}
@@ -183,7 +183,7 @@ const DashboardTabs: React.FC<DashboardTabsProps> = ({
             minWidth: 280,
             maxHeight: 400,
             mt: 1,
-            borderRadius: "8px",
+            borderRadius: radiusPx.lg,
             border: `1px solid ${border.light}`,
             boxShadow: "0px 4px 16px rgba(0, 0, 0, 0.08)",
           },

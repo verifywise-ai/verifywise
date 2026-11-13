@@ -37,7 +37,7 @@ import type {
   SuggestedRiskIgnoreReason,
 } from "../../../../domain/ai-detection/types";
 import type { RiskFormValues, MitigationFormValues } from "../../../../domain/types/riskForm.types";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import { DIMENSION_CHIP_COLORS } from "./scanDetailsConfig";
 import {
   getRiskLevelLabel,
@@ -78,7 +78,7 @@ const menuItemSx = {
   "alignItems": "center",
   "gap": "8px",
   "p": "6px 8px",
-  "borderRadius": "4px",
+  "borderRadius": radiusPx.sm,
   "cursor": "pointer",
   "&:hover": { backgroundColor: palette.background.hover },
 };
@@ -279,7 +279,7 @@ export function SuggestedRisksSection({
         data-testid={`suggested-risk-${state}`}
         sx={{
           "border": `1px solid ${palette.border.light}`,
-          "borderRadius": "4px",
+          "borderRadius": radiusPx.sm,
           "p": "8px",
           "backgroundColor": palette.background.main,
           "opacity": state === "ignored" ? 0.7 : 1,
@@ -406,7 +406,7 @@ export function SuggestedRisksSection({
         sx={{
           backgroundColor: palette.background.main,
           border: `1px solid ${palette.border.light}`,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           p: "14px 16px",
         }}
       >
@@ -489,7 +489,7 @@ export function SuggestedRisksSection({
             paper: {
               sx: {
                 mt: "4px",
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                 border: `1px solid ${palette.border.light}`,
               },

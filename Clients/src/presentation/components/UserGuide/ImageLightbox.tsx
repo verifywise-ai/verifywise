@@ -2,7 +2,7 @@ import React from "react";
 import { X } from "lucide-react";
 import { Modal, IconButton, Box, Typography } from "@mui/material";
 import { typography, spacing } from "./styles/theme";
-import { background } from "../../themes/palette";
+import { background, radiusPx } from "../../themes/palette";
 
 interface ImageLightboxProps {
   src: string;
@@ -81,7 +81,7 @@ const ImageLightbox: React.FC<ImageLightboxProps> = ({ src, alt, caption, onClos
             maxWidth: "100%",
             maxHeight: caption ? "calc(90vh - 40px)" : "90vh",
             objectFit: "contain",
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             boxShadow: "0 8px 32px rgba(0, 0, 0, 0.3)",
             cursor: "default",
           }}

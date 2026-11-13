@@ -6,12 +6,12 @@
 
 .header-icon-button:hover {
   background-color: #f4f4f4 !important;
-  color: #13715b !important;
+  color: var(--vw-brand-primary, #13715b) !important;
 }
 
 .header-icon-button.active {
-  background-color: #f9fafb;
-  color: #13715b;
+  background-color: var(--vw-background-alt, #f9fafb);
+  color: var(--vw-brand-primary, #13715b);
 }
 
 .breadcrumb-dropdown-trigger {
@@ -32,7 +32,7 @@
 
 .search-input:focus {
   outline: none;
-  border-color: #13715b;
+  border-color: var(--vw-brand-primary, #13715b);
 }
 
 .search-input::placeholder {

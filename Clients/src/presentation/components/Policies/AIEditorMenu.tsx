@@ -16,7 +16,7 @@ import {
 import { useCompletion } from "@ai-sdk/react";
 import { CustomizableButton } from "../button/customizable-button";
 import { store } from "../../../application/redux/store";
-import { text } from "../../themes/palette";
+import { text, radiusPx } from "../../themes/palette";
 
 interface AIEditorMenuProps {
   anchorEl: HTMLElement | null;
@@ -175,7 +175,7 @@ const AIEditorMenu: React.FC<AIEditorMenuProps> = ({
         "mt": 1,
         "& .MuiPopover-paper": {
           width: 300,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           border: `1px solid ${theme.palette.border.dark}`,
           boxShadow: "0 4px 16px rgba(0, 0, 0, 0.08)",
           overflow: "hidden",
@@ -211,7 +211,7 @@ const AIEditorMenu: React.FC<AIEditorMenuProps> = ({
             "display": "flex",
             "alignItems": "center",
             "p": 0.25,
-            "borderRadius": "4px",
+            "borderRadius": radiusPx.sm,
             "&:hover": { backgroundColor: theme.palette.background.accent },
           }}
         >

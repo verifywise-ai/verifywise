@@ -7,6 +7,7 @@ import VWTooltip from "../../VWTooltip";
 import { DASHBOARD_COLORS } from "../../../styles/colors";
 import { UpcomingDeadlinesCardProps } from "../../../pages/Tasks/types";
 import { getDaysUntilDue, getCountdownInfo } from "../../../pages/Tasks/utils";
+import { radiusPx } from "../../../themes/palette";
 
 export function UpcomingDeadlinesCard({ tasks }: UpcomingDeadlinesCardProps) {
   const navigate = useNavigate();
@@ -29,7 +30,7 @@ export function UpcomingDeadlinesCard({ tasks }: UpcomingDeadlinesCardProps) {
             gap: 1,
             padding: "8px 12px",
             backgroundColor: DASHBOARD_COLORS.overdueBackground,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             marginBottom: "12px",
           }}
         >

@@ -1,3 +1,4 @@
+import { palette } from "../../../../presentation/themes/palette";
 export class ApiTokenModel {
   id!: number;
   name!: string;
@@ -67,7 +68,7 @@ export class ApiTokenModel {
   }
 
   getStatusTextColor(): string {
-    if (this.isRevoked()) return "#667085";
+    if (this.isRevoked()) return palette.text.icon;
     return this.isExpired() ? "#d32f2f" : "#388e3c";
   }
 

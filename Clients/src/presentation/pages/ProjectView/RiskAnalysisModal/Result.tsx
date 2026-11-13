@@ -4,7 +4,7 @@ import { AlertCircle, AlertTriangle, Info, CheckCircle, RotateCcw, Save } from "
 import type { ClassificationResult } from "../../../../domain/types/euAiActClassification";
 import ReasonList from "../../../components/EuAiActQuestionnaire/ReasonList";
 import { CustomizableButton } from "../../../components/button/customizable-button";
-import { brand, status } from "../../../themes/palette";
+import { brand, risk, status, radiusPx, palette as vwPalette } from "../../../themes/palette";
 
 interface ResultProps {
   result: ClassificationResult;
@@ -22,15 +22,15 @@ const Results: React.FC<ResultProps> = ({ result, onRestart, onSave, isSaving })
       case "Prohibited":
         return {
           color: `${status.error.text}`,
-          bgColor: "#FFEBEE",
+          bgColor: status.error.bg,
           icon: <AlertCircle size={32} />,
           title: "Prohibited AI system",
           description: "The system falls under a prohibited practice in Article 5.",
         };
       case "High risk":
         return {
-          color: "#F57C00",
-          bgColor: "#FFF3E0",
+          color: risk.high.text,
+          bgColor: risk.high.bg,
           icon: <AlertTriangle size={32} />,
           title: "High-risk AI system",
           description:
@@ -38,16 +38,16 @@ const Results: React.FC<ResultProps> = ({ result, onRestart, onSave, isSaving })
         };
       case "Limited risk":
         return {
-          color: "#FBC02D",
-          bgColor: "#FFFDE7",
+          color: risk.medium.text,
+          bgColor: risk.medium.bg,
           icon: <Info size={32} />,
           title: "Limited risk",
           description: "This system has transparency obligations under Article 50.",
         };
       case "Minimal risk":
         return {
-          color: "#388E3C",
-          bgColor: "#E8F5E9",
+          color: risk.low.text,
+          bgColor: risk.low.bg,
           icon: <CheckCircle size={32} />,
           title: "Minimal risk",
           description: "No specific EU AI Act obligations apply beyond AI literacy.",
@@ -74,7 +74,7 @@ const Results: React.FC<ResultProps> = ({ result, onRestart, onSave, isSaving })
           bgcolor: config.bgColor,
           border: 2,
           borderColor: config.color,
-          borderRadius: 2,
+          borderRadius: radiusPx.sm,
           p: 3,
         }}
       >
@@ -118,7 +118,7 @@ const Results: React.FC<ResultProps> = ({ result, onRestart, onSave, isSaving })
               "backgroundColor": `${brand.primary}`,
               "border": `1px solid ${brand.primary}`,
               "&:hover": {
-                backgroundColor: "#0F5A48",
+                backgroundColor: vwPalette.brand.primaryHover,
               },
             }}
           />

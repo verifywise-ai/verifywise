@@ -13,7 +13,7 @@ import {
 } from "@mui/material";
 import { X as CloseIcon } from "lucide-react";
 import { useSmartPromptContext } from "../../../application/contexts/SmartPrompt.context";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 import "./index.css";
 import { useCan } from "../../../application/hooks/useCan";
 
@@ -105,7 +105,7 @@ const SmartPrompt: React.FC = () => {
           width: 360,
           maxWidth: "calc(100vw - 48px)",
           zIndex: 9998,
-          borderRadius: 3,
+          borderRadius: radiusPx.md,
           overflow: "hidden",
           border: `1px solid ${palette.border.light}`,
           backgroundColor: palette.background.main,
@@ -178,7 +178,7 @@ const SmartPrompt: React.FC = () => {
                   "textTransform": "none",
                   "fontWeight": 500,
                   "fontSize": 13,
-                  "borderRadius": 2,
+                  "borderRadius": radiusPx.sm,
                   "boxShadow": "none",
                   "backgroundColor": palette.brand.primary,
                   "&:hover": {
@@ -204,7 +204,7 @@ const SmartPrompt: React.FC = () => {
                   "textTransform": "none",
                   "fontWeight": 500,
                   "fontSize": 13,
-                  "borderRadius": 2,
+                  "borderRadius": radiusPx.sm,
                   "borderColor": palette.border.dark,
                   "color": palette.text.secondary,
                   "&:hover": {

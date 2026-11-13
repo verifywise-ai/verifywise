@@ -31,7 +31,8 @@ import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import ShadowAIOnboarding from "../../components/Modals/ShadowAIOnboarding";
 import { useNavigate } from "react-router";
 import { PERIOD_OPTIONS } from "./constants";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
+import { seriesColor } from "../../themes/chartTheme";
 
 const DEPT_COLORS = [...palette.chart];
 
@@ -140,7 +141,7 @@ export default function InsightsPage() {
           {/* Accessed tools with highest risk */}
           <DashboardCard title="Accessed tools with highest risk">
             {loading ? (
-              <Skeleton variant="rectangular" height={200} sx={{ borderRadius: "4px" }} />
+              <Skeleton variant="rectangular" height={200} sx={{ borderRadius: radiusPx.sm }} />
             ) : topRiskTools.length > 0 ? (
               <Stack gap="12px">
                 {topRiskTools.map((tool) => (
@@ -181,7 +182,7 @@ export default function InsightsPage() {
           {/* AI users by department - pie chart */}
           <DashboardCard title="AI users by department">
             {loading ? (
-              <Skeleton variant="rectangular" height={250} sx={{ borderRadius: "4px" }} />
+              <Skeleton variant="rectangular" height={250} sx={{ borderRadius: radiusPx.sm }} />
             ) : departments.length > 0 ? (
               <Stack direction="row" alignItems="center" justifyContent="center" gap="24px">
                 <VWDonutChart
@@ -202,7 +203,7 @@ export default function InsightsPage() {
                           width: 10,
                           height: 10,
                           borderRadius: "50%",
-                          backgroundColor: DEPT_COLORS[index % DEPT_COLORS.length],
+                          backgroundColor: seriesColor(index),
                           flexShrink: 0,
                         }}
                       />
@@ -224,7 +225,7 @@ export default function InsightsPage() {
           {/* Most accessed tools by events */}
           <DashboardCard title="Most accessed tools by events">
             {loading ? (
-              <Skeleton variant="rectangular" height={260} sx={{ borderRadius: "4px" }} />
+              <Skeleton variant="rectangular" height={260} sx={{ borderRadius: radiusPx.sm }} />
             ) : toolsByEvents.length > 0 ? (
               <>
                 <VWBarChart
@@ -256,7 +257,7 @@ export default function InsightsPage() {
           {/* Most accessed tools by users */}
           <DashboardCard title="Most accessed tools by users">
             {loading ? (
-              <Skeleton variant="rectangular" height={260} sx={{ borderRadius: "4px" }} />
+              <Skeleton variant="rectangular" height={260} sx={{ borderRadius: radiusPx.sm }} />
             ) : toolsByUsers.length > 0 ? (
               <VWBarChart
                 data={toolsByUsers}

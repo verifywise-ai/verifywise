@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, Box, Typography, Tooltip, useTheme } from "@mui/material";
 import { Info } from "lucide-react";
 import { cardStyles } from "../../../themes";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -39,8 +39,8 @@ export function StatCard({
       sx={{
         ...(cardStyles.base(theme) as Record<string, unknown>),
         "background": active
-          ? `linear-gradient(135deg, ${palette.background.accent} 0%, #F1F5F9 100%)`
-          : "linear-gradient(135deg, #FEFFFE 0%, #F8F9FA 100%)",
+          ? `linear-gradient(135deg, ${palette.background.accent} 0%, ${palette.background.hover} 100%)`
+          : `linear-gradient(135deg, ${palette.background.main} 0%, ${palette.background.alt} 100%)`,
         "border": active
           ? `1.5px solid ${palette.brand.primary}`
           : `1.5px solid ${palette.border.light}`,
@@ -51,11 +51,11 @@ export function StatCard({
         "display": "flex",
         "flexDirection": "column",
         "boxSizing": "border-box",
-        "borderRadius": "8px",
+        "borderRadius": radiusPx.lg,
         "overflow": "hidden",
         ...(onClick && { cursor: "pointer" }),
         "&:hover": {
-          background: `linear-gradient(135deg, ${palette.background.accent} 0%, #F1F5F9 100%)`,
+          background: `linear-gradient(135deg, ${palette.background.accent} 0%, ${palette.background.hover} 100%)`,
           borderColor: palette.border.dark,
         },
       }}

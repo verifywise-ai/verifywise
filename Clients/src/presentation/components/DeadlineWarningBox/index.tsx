@@ -5,7 +5,7 @@ import { useAuth } from "../../../application/hooks/useAuth";
 import useDeadlineWarnings from "../../../application/hooks/useDeadlineWarnings";
 import { SNOOZE_OPTIONS } from "../../../application/config/deadlineConfig";
 import { getSnoozeExpiry, setSnooze } from "../../../application/utils/deadlineSnooze";
-import { status, background, text } from "../../themes/palette";
+import { status, background, text, radiusPx } from "../../themes/palette";
 
 /**
  * Banner shown on the Tasks page when the organization has overdue or
@@ -79,7 +79,7 @@ const DeadlineWarningBox = () => {
         px: 2,
         backgroundColor: palette.bg,
         border: `1px solid ${palette.border}`,
-        borderRadius: 2,
+        borderRadius: radiusPx.sm,
       }}
     >
       <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0 }}>
@@ -131,7 +131,7 @@ const DeadlineWarningBox = () => {
             sx: {
               minWidth: "160px",
               boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
-              borderRadius: "8px",
+              borderRadius: radiusPx.lg,
               mt: 1,
             },
           },

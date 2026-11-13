@@ -6,7 +6,7 @@ import {
   SxProps,
   Theme,
 } from "@mui/material";
-import { brand } from "../../themes/palette";
+import { brand, palette as vwPalette, radiusPx } from "../../themes/palette";
 
 /**
  * Extended props interface for the Button component
@@ -65,14 +65,14 @@ const Button = memo(
     // Define default styles using theme values
     const defaultStyles: SxProps<Theme> = {
       "mt": 2,
-      "borderRadius": 2,
+      "borderRadius": radiusPx.sm,
       "width": "fit-content",
       "minHeight": 25,
       "height": "auto", // More flexible height
       "fontSize": 11,
       "px": 2, // Horizontal padding for better spacing
       "py": 0.5, // Vertical padding for better text spacing
-      "border": `1px solid ${theme.palette.primary.main || "#13715B"}`,
+      "border": `1px solid ${theme.palette.primary.main || vwPalette.brand.primary}`,
       "backgroundColor": theme.palette.primary.main || brand.primary,
       "color": theme.palette.primary.contrastText || "white",
       "textTransform": "none", // Prevent uppercase transformation
@@ -87,15 +87,15 @@ const Button = memo(
 
       // Hover effects
       "&:hover": {
-        backgroundColor: theme.palette.primary.dark || "#0f5d4a",
-        borderColor: theme.palette.primary.dark || "#0f5d4a",
+        backgroundColor: theme.palette.primary.dark || vwPalette.brand.primaryHover,
+        borderColor: theme.palette.primary.dark || vwPalette.brand.primaryHover,
         transform: "translateY(-1px)",
         boxShadow: theme.shadows[2],
       },
 
       // Focus effects for accessibility
       "&:focus": {
-        outline: `2px solid ${theme.palette.primary.main || "#13715B"}`,
+        outline: `2px solid ${theme.palette.primary.main || vwPalette.brand.primary}`,
         outlineOffset: "2px",
       },
 

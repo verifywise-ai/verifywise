@@ -1,6 +1,8 @@
 import { useState, useEffect } from "react";
 import { Box, Typography, IconButton, useTheme, keyframes } from "@mui/material";
 import { X, Info, AlertCircle } from "lucide-react";
+import { note, radiusPx } from "../../themes/palette";
+import { isClassicUi } from "../../themes/uiStyle";
 
 // Fade-out animation
 const fadeOut = keyframes`
@@ -13,6 +15,8 @@ const fadeOut = keyframes`
     transform: translateY(-8px);
   }
 `;
+
+const classicUi = isClassicUi();
 
 interface InfoBoxProps {
   message: string;
@@ -54,6 +58,8 @@ function InfoBox({
   };
 
   const { Icon, color } = iconConfig[variant];
+  // Phase 1: explanations (info) use the amber note; warnings keep their look.
+  const useNote = !classicUi && variant === "info";
 
   // Check if this info box has been dismissed before (only if using internal storage)
   useEffect(() => {
@@ -103,12 +109,12 @@ function InfoBox({
         alignItems: "center",
         justifyContent: "space-between",
         fontSize: 13,
-        color: theme.palette.text.secondary,
-        background: backgroundColor || theme.palette.background.paper,
-        px: 4,
-        py: 3.5,
-        borderRadius: 0.5,
-        border: `1px solid ${borderColor || theme.palette.divider}`,
+        color: useNote ? note.text : theme.palette.text.secondary,
+        background: useNote ? note.bg : backgroundColor || theme.palette.background.paper,
+        ...(useNote
+          ? { padding: "10px 12px", borderRadius: radiusPx.sm }
+          : { px: 4, py: 3.5, borderRadius: 0.5 }),
+        border: `1px solid ${useNote ? note.border : borderColor || theme.palette.divider}`,
         gap: 2,
         animation: !disableAnimation && isClosing ? `${fadeOut} 0.3s ease-out forwards` : "none",
       }}
@@ -121,7 +127,7 @@ function InfoBox({
               sx={{
                 fontSize: 13,
                 fontWeight: 600,
-                color: theme.palette.text.primary,
+                color: useNote ? note.text : theme.palette.text.primary,
                 lineHeight: 1.5,
               }}
             >
@@ -131,7 +137,7 @@ function InfoBox({
           <Typography
             sx={{
               fontSize: 13,
-              color: theme.palette.text.secondary,
+              color: useNote ? note.text : theme.palette.text.secondary,
               lineHeight: 1.5,
             }}
           >

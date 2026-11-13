@@ -35,7 +35,7 @@ import {
   useColumnVisibility,
   ColumnConfig,
 } from "../../../../application/hooks/useColumnVisibility";
-import { background } from "../../../themes/palette";
+import { background, palette as vwPalette } from "../../../themes/palette";
 
 interface FormData {
   info?: {
@@ -81,8 +81,8 @@ const SubprocessorTableRow: React.FC<{
             textTransform: "none !important",
             backgroundColor:
               sortConfig?.key && sortConfig.key.toLowerCase().includes("company name")
-                ? "#e8e8e8"
-                : "#fafafa",
+                ? vwPalette.border.light
+                : vwPalette.background.alt,
             maxWidth: "200px",
             width: "200px",
           }}

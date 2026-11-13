@@ -18,6 +18,7 @@ import React, { useState, useEffect } from "react";
 import { Box, Stack, TextField, Typography, useTheme } from "@mui/material";
 import { Send as SendIcon, Save as SaveIcon } from "lucide-react";
 import { CustomizableButton } from "../button/customizable-button";
+import { palette, radiusPx } from "../../themes/palette";
 
 interface NoteComposerProps {
   onSubmit: (content: string) => void;
@@ -68,7 +69,7 @@ const NoteComposer: React.FC<NoteComposerProps> = ({
       sx={{
         "backgroundColor": theme.palette.background.paper,
         "border": `1px solid ${theme.palette.border.light}`,
-        "borderRadius": "4px",
+        "borderRadius": radiusPx.sm,
         "padding": theme.spacing(3),
         "transition": `border-color 0.2s ease-in-out, box-shadow 0.2s ease-in-out`,
         "&:focus-within": {
@@ -150,11 +151,11 @@ const NoteComposer: React.FC<NoteComposerProps> = ({
                 sx={{
                   "minWidth": "80px",
                   "height": "34px",
-                  "border": "1px solid #d0d5dd",
+                  "border": `1px solid ${palette.border.dark}`,
                   "color": "text.secondary",
                   "&:hover": {
                     backgroundColor: "background.accent",
-                    border: "1px solid #d0d5dd",
+                    border: `1px solid ${palette.border.dark}`,
                   },
                 }}
               />

@@ -108,7 +108,7 @@ function extractApprovalValidationErrors(error: unknown): ValidationFieldError[]
   )?.response?.data;
   return collect(axiosBody?.data?.errors ?? axiosBody?.errors);
 }
-import { accent, background, status, text } from "../../../themes/palette";
+import { accent, background, status, text, radiusPx } from "../../../themes/palette";
 
 const getWorkflowChipProps = (value: string) => {
   const styles: Record<string, { bg: string; color: string }> = {
@@ -153,7 +153,7 @@ const getWorkflowChipProps = (value: string) => {
       "fontSize": "11px",
       "textTransform": "uppercase",
       "letterSpacing": "0.5px",
-      "borderRadius": "4px",
+      "borderRadius": radiusPx.sm,
       "height": "22px",
       "& .MuiChip-label": {
         padding: "0 8px",
@@ -839,7 +839,7 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
                       sx={{
                         backgroundColor: "background.accent",
                         border: "1px solid status.default.border",
-                        borderRadius: "8px",
+                        borderRadius: radiusPx.lg,
                         padding: "16px",
                       }}
                     >

@@ -12,7 +12,7 @@ import { CustomizableButton } from "../../../components/button/customizable-butt
 import Chip from "../../../components/Chip";
 import { RiskScoreCard } from "../components/RiskScoreCard";
 import { ScanResponse } from "../../../../domain/ai-detection/types";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 
 function formatDuration(ms?: number): string {
   if (!ms) return "-";
@@ -149,7 +149,7 @@ export function ScanDetailsHeader({
             p: 2,
             backgroundColor: palette.status.error.bg,
             border: `1px solid ${palette.status.error.border}`,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             display: "flex",
             alignItems: "flex-start",
             gap: 2,

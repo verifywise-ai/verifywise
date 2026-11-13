@@ -19,6 +19,7 @@ import {
   LIFECYCLE_STAGES,
   LIFECYCLE_STAGE_LABELS,
 } from "../../../domain/enums/lifecycleStage.enum";
+import { radiusPx } from "../../themes/palette";
 
 /**
  * Use case lifecycle widgets (#5187): counts per stage, going live / retired
@@ -45,9 +46,14 @@ const mutedSx = { fontSize: 12, color: "text.secondary" };
 function Bar({ value, max }: { value: number; max: number }) {
   const width = max > 0 ? Math.max(4, Math.round((value / max) * 100)) : 0;
   return (
-    <Box sx={{ flex: 1, height: "6px", borderRadius: "4px", bgcolor: "action.hover" }}>
+    <Box sx={{ flex: 1, height: "6px", borderRadius: radiusPx.sm, bgcolor: "action.hover" }}>
       <Box
-        sx={{ width: `${width}%`, height: "100%", borderRadius: "4px", bgcolor: "primary.main" }}
+        sx={{
+          width: `${width}%`,
+          height: "100%",
+          borderRadius: radiusPx.sm,
+          bgcolor: "primary.main",
+        }}
       />
     </Box>
   );

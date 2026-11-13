@@ -31,7 +31,7 @@ import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 import {
   getExperiment,
   getLogs,
@@ -62,6 +62,7 @@ import {
 } from "./metricLabels";
 import { countLabel } from "../../tools/countLabel";
 import { Link as RouterLink } from "react-router";
+import { fontFamily } from "../../themes/typography";
 
 // Preprocess LaTeX delimiters to work with remark-math
 const preprocessLatex = (text: string): string => {
@@ -131,20 +132,20 @@ const MarkdownRenderer = ({ content }: { content: string }) => {
           backgroundColor: palette.background.hover,
           px: "1.5px",
           py: "0.5px",
-          borderRadius: "4px",
-          fontFamily: "'Fira Code', monospace",
+          borderRadius: radiusPx.sm,
+          fontFamily: fontFamily.mono,
           fontSize: 12,
-          color: "#0f766e",
+          color: palette.accent.teal.text,
         },
         "& pre": {
-          "backgroundColor": "#1e293b",
-          "borderRadius": "6px",
+          "backgroundColor": palette.text.primary,
+          "borderRadius": radiusPx.md,
           "p": "4px",
           "my": "3px",
           "overflow": "auto",
           "& code": {
             backgroundColor: "transparent",
-            color: "#e2e8f0",
+            color: palette.border.light,
             p: 0,
           },
         },
@@ -700,7 +701,7 @@ export default function ExperimentDetailContent({
       <Box
         sx={{
           p: "12px",
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           background:
             experiment.status === "completed"
               ? `linear-gradient(135deg, ${palette.status.success.bg} 0%, ${palette.status.success.bg} 100%)`
@@ -1384,7 +1385,7 @@ export default function ExperimentDetailContent({
                   "overflow": "hidden",
                   "background": `linear-gradient(135deg, ${palette.background.main} 0%, ${palette.background.accent} 100%)`,
                   "border": `1px solid ${palette.border.dark}`,
-                  "borderRadius": "4px",
+                  "borderRadius": radiusPx.sm,
                   "transition": "all 0.2s ease",
                   "&:hover": {
                     "background": `linear-gradient(135deg, ${palette.background.accent} 0%, ${palette.background.hover} 100%)`,
@@ -1595,7 +1596,7 @@ export default function ExperimentDetailContent({
                 sx={{
                   overflow: "hidden",
                   border: `1px solid ${palette.border.dark}`,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                 }}
               >
                 <Box sx={{ overflowX: "auto" }}>
@@ -1930,7 +1931,7 @@ export default function ExperimentDetailContent({
                                   flex: 1,
                                   backgroundColor: palette.accent.purple.bg,
                                   border: `1px solid ${palette.accent.purple.border}`,
-                                  borderRadius: "8px",
+                                  borderRadius: radiusPx.lg,
                                   p: "5px",
                                   overflowY: "auto",
                                 }}
@@ -1955,7 +1956,7 @@ export default function ExperimentDetailContent({
                                           sx={{
                                             maxWidth: "85%",
                                             p: "3px",
-                                            borderRadius: "12px",
+                                            borderRadius: radiusPx.xl,
                                             backgroundColor: isUser
                                               ? palette.status.success.bg
                                               : palette.status.info.bg,
@@ -1990,7 +1991,7 @@ export default function ExperimentDetailContent({
                                     mt: "4px",
                                     p: "3px",
                                     backgroundColor: palette.status.warning.bg,
-                                    borderRadius: "6px",
+                                    borderRadius: radiusPx.md,
                                     border: `1px solid ${palette.status.warning.border}`,
                                   }}
                                 >
@@ -2035,7 +2036,7 @@ export default function ExperimentDetailContent({
                                     pl: "8px",
                                     backgroundColor: palette.background.accent,
                                     border: `1px solid ${palette.border.light}`,
-                                    borderRadius: "8px",
+                                    borderRadius: radiusPx.lg,
                                     maxHeight: "120px",
                                     overflowY: "auto",
                                   }}
@@ -2071,7 +2072,7 @@ export default function ExperimentDetailContent({
                                     pl: "8px",
                                     backgroundColor: palette.background.accent,
                                     border: `1px solid ${palette.border.light}`,
-                                    borderRadius: "8px",
+                                    borderRadius: radiusPx.lg,
                                     overflowY: "auto",
                                   }}
                                 >
@@ -2124,7 +2125,7 @@ export default function ExperimentDetailContent({
                                       key={metricName}
                                       sx={{
                                         p: "4px",
-                                        borderRadius: "6px",
+                                        borderRadius: radiusPx.md,
                                         backgroundColor: palette.background.main,
                                         border: `1px solid ${palette.border.light}`,
                                         borderLeft: `3px solid ${statusColor}`,
@@ -2220,7 +2221,7 @@ export default function ExperimentDetailContent({
                             mt: "4px",
                             p: "4px",
                             backgroundColor: palette.status.error.bg,
-                            borderRadius: "6px",
+                            borderRadius: radiusPx.md,
                             border: `1px solid ${palette.status.error.border}`,
                           }}
                         >

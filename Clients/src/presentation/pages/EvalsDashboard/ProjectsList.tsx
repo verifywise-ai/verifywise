@@ -40,7 +40,8 @@ import { EmptyState } from "../../components/EmptyState";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import SearchBox from "../../components/Search/SearchBox";
-import { FilterBy, type FilterColumn } from "../../components/Table/FilterBy";
+import { type FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { GroupBy } from "../../components/Table/GroupBy";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import {
@@ -55,7 +56,7 @@ import singleTheme from "../../themes/v1SingleTheme";
 import type { DeepEvalProject } from "./types";
 import { useCanCheck } from "../../../application/hooks/useCan";
 import { useArenaSetting } from "../../../application/hooks/useArenaSetting";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 
 const columns: StandardColumn[] = [
   { id: "name", label: "Name", minWidth: "180px", sortable: true, align: "left" },
@@ -113,7 +114,12 @@ export default function ProjectsList() {
     }
   }, []);
 
-  const { filterData, handleFilterChange } = useFilterBy<DeepEvalProject>(getFieldValue);
+  const {
+    filterData,
+    handleFilterChange,
+    conditions: filterConditions,
+    logic: filterLogic,
+  } = useFilterBy<DeepEvalProject>(getFieldValue);
 
   const filteredProjects = useMemo(() => {
     const afterFilter = filterData(projects);
@@ -383,7 +389,7 @@ export default function ProjectsList() {
                 "fontSize": "11px",
                 "height": "20px",
                 "minWidth": "20px",
-                "borderRadius": "10px",
+                "borderRadius": radiusPx.pill,
                 "& .MuiChip-label": {
                   padding: "0 6px",
                 },
@@ -402,7 +408,14 @@ export default function ProjectsList() {
         gap={2}
       >
         <Stack direction="row" alignItems="center" gap={2}>
-          <FilterBy columns={filterColumns} onFilterChange={handleFilterChange} />
+          <TableFilter
+            columns={filterColumns}
+            onFilterChange={handleFilterChange}
+            defaultConditions={filterConditions}
+            defaultLogic={filterLogic}
+            data={projects}
+            getFieldValue={getFieldValue}
+          />
           <GroupBy options={[{ id: "useCase", label: "Use case" }]} onGroupChange={() => {}} />
           <SearchBox
             placeholder="Search projects..."
@@ -519,7 +532,7 @@ export default function ProjectsList() {
                           "fontWeight": 500,
                           "fontSize": "12px",
                           "height": "24px",
-                          "borderRadius": "4px",
+                          "borderRadius": radiusPx.sm,
                           "& .MuiChip-icon": {
                             color: "inherit",
                             marginLeft: "8px",
@@ -560,7 +573,7 @@ export default function ProjectsList() {
                           fontSize: "12px",
                           height: "22px",
                           minWidth: "32px",
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                         }}
                       />
                     </TableCell>

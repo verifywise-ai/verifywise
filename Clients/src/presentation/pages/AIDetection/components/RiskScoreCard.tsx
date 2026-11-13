@@ -35,7 +35,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cardStyles } from "../../../themes";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import {
   RiskGrade,
   RiskScoreDetails,
@@ -72,7 +72,7 @@ function getGradeColor(grade: RiskGrade | null): string {
     case "C":
       return palette.status.warning.text;
     case "D":
-      return "#E65100";
+      return palette.riskMark.high;
     case "F":
       return palette.status.error.text;
     default:
@@ -115,7 +115,7 @@ function RiskStatCard({
       onMouseLeave={() => setIsHovered(false)}
       sx={{
         ...(cardStyles.base(theme) as Record<string, unknown>),
-        "background": "linear-gradient(135deg, #FEFFFE 0%, #F8F9FA 100%)",
+        "background": `linear-gradient(135deg, ${palette.background.main} 0%, ${palette.background.alt} 100%)`,
         "border": `1px solid ${palette.border.light}`,
         "height": "100%",
         "minHeight": "80px",
@@ -124,10 +124,10 @@ function RiskStatCard({
         "display": "flex",
         "flexDirection": "column",
         "boxSizing": "border-box",
-        "borderRadius": "8px",
+        "borderRadius": radiusPx.lg,
         "overflow": "hidden",
         "&:hover": {
-          background: `linear-gradient(135deg, ${palette.background.accent} 0%, #F1F5F9 100%)`,
+          background: `linear-gradient(135deg, ${palette.background.accent} 0%, ${palette.background.hover} 100%)`,
           borderColor: palette.border.dark,
         },
       }}
@@ -390,9 +390,9 @@ export function RiskScoreCard({
         elevation={0}
         sx={{
           ...(cardStyles.base(theme) as Record<string, unknown>),
-          background: "linear-gradient(135deg, #FEFFFE 0%, #F8F9FA 100%)",
+          background: `linear-gradient(135deg, ${palette.background.main} 0%, ${palette.background.alt} 100%)`,
           border: `1px solid ${palette.border.light}`,
-          borderRadius: "8px",
+          borderRadius: radiusPx.lg,
           mb: "16px",
         }}
       >
@@ -474,7 +474,7 @@ export function RiskScoreCard({
           elevation={0}
           sx={{
             ...(cardStyles.base(theme) as Record<string, unknown>),
-            "background": "linear-gradient(135deg, #FEFFFE 0%, #F8F9FA 100%)",
+            "background": `linear-gradient(135deg, ${palette.background.main} 0%, ${palette.background.alt} 100%)`,
             "border": `1px solid ${palette.border.light}`,
             "height": "100%",
             "position": "relative",
@@ -482,10 +482,10 @@ export function RiskScoreCard({
             "display": "flex",
             "flexDirection": "column",
             "boxSizing": "border-box",
-            "borderRadius": "8px",
+            "borderRadius": radiusPx.lg,
             "overflow": "hidden",
             "&:hover": {
-              background: `linear-gradient(135deg, ${palette.background.accent} 0%, #F1F5F9 100%)`,
+              background: `linear-gradient(135deg, ${palette.background.accent} 0%, ${palette.background.hover} 100%)`,
               borderColor: palette.border.dark,
             },
           }}
@@ -579,11 +579,11 @@ export function RiskScoreCard({
                               value={dim.score}
                               sx={{
                                 "height": 4,
-                                "borderRadius": 2,
+                                "borderRadius": radiusPx.sm,
                                 "backgroundColor": palette.border.light,
                                 "& .MuiLinearProgress-bar": {
                                   backgroundColor: barColor,
-                                  borderRadius: 2,
+                                  borderRadius: radiusPx.sm,
                                 },
                               }}
                             />
@@ -619,9 +619,9 @@ export function RiskScoreCard({
           elevation={0}
           sx={{
             ...(cardStyles.base(theme) as Record<string, unknown>),
-            background: "linear-gradient(135deg, #FEFFFE 0%, #F8F9FA 100%)",
+            background: `linear-gradient(135deg, ${palette.background.main} 0%, ${palette.background.alt} 100%)`,
             border: `1px solid ${palette.border.light}`,
-            borderRadius: "8px",
+            borderRadius: radiusPx.lg,
             mt: "16px",
           }}
         >

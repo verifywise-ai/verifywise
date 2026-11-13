@@ -24,7 +24,7 @@ import {
 import { ChevronDown as WhiteDownArrowIcon } from "lucide-react";
 import { getStatusColor } from "../../pages/ISO/style";
 import { IStatusDropdownProps } from "../../../domain/interfaces/i.widget";
-import { text, background } from "../../themes/palette";
+import { text, background, radiusPx } from "../../themes/palette";
 
 const STATUS_OPTIONS = [
   "Not started",
@@ -150,7 +150,7 @@ const StatusDropdown: React.FC<IStatusDropdownProps> = ({
         "fontSize": fontSize,
         "backgroundColor": statusColor,
         "color": `${background.main}`,
-        "borderRadius": "4px",
+        "borderRadius": radiusPx.sm,
         "& .MuiSelect-select": {
           padding: padding,
           display: "flex",

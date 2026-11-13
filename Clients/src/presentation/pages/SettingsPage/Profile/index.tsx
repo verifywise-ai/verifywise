@@ -33,6 +33,7 @@ import { useAuth } from "../../../../application/hooks/useAuth";
 import { useProfilePhotoFetch } from "../../../../application/hooks/useProfilePhotoFetch";
 import Avatar from "../../../components/Avatar/VWAvatar";
 import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
+import { palette, radiusPx } from "../../../themes/palette";
 
 /**
  * ProfileForm component for managing user profile information.
@@ -491,7 +492,7 @@ const ProfileForm: React.FC = () => {
             height="300px"
             minWidth={"100%"}
             minHeight={300}
-            sx={{ borderRadius: 2 }}
+            sx={{ borderRadius: radiusPx.sm }}
           />
         )}
 
@@ -600,7 +601,7 @@ const ProfileForm: React.FC = () => {
           </Stack>
         )}
 
-        <Divider sx={{ borderColor: "#C2C2C2", mt: theme.spacing(3) }} />
+        <Divider sx={{ borderColor: palette.border.dark, mt: theme.spacing(3) }} />
 
         {loading && (
           <CustomizableSkeleton
@@ -609,7 +610,7 @@ const ProfileForm: React.FC = () => {
             height="200px"
             minWidth={"100%"}
             minHeight={200}
-            sx={{ borderRadius: 2 }}
+            sx={{ borderRadius: radiusPx.sm }}
           />
         )}
 
@@ -639,9 +640,9 @@ const ProfileForm: React.FC = () => {
                   sx={{
                     width: { xs: "100%", sm: theme.spacing(80) },
                     mb: theme.spacing(4),
-                    backgroundColor: "#DB504A",
+                    backgroundColor: palette.riskMark.critical,
                     color: "background.main",
-                    border: `1px solid ${isAdmin ? "#C2C2C2" : "#DB504A"}`,
+                    border: `1px solid ${isAdmin ? palette.border.dark : palette.riskMark.critical}`,
                     gap: 2,
                   }}
                   icon={<DeleteIcon size={16} />}
@@ -684,12 +685,12 @@ const ProfileForm: React.FC = () => {
               "alignItems": "center",
               "justifyContent": "center",
               "borderRadius": "50%",
-              "border": "2px dashed #ddd",
-              "backgroundColor": "#fafafa",
+              "border": `2px dashed ${palette.border.light}`,
+              "backgroundColor": palette.background.alt,
               "position": "relative",
               "overflow": "hidden",
               "&:hover": {
-                borderColor: "#999",
+                borderColor: palette.border.dark,
                 backgroundColor: "background.surface",
               },
             }}
@@ -726,7 +727,7 @@ const ProfileForm: React.FC = () => {
             sx={{
               "fontSize": 12,
               "textTransform": "none",
-              "color": imageUrl ? "#666" : "#ccc",
+              "color": imageUrl ? palette.text.tertiary : palette.border.dark,
               "&:hover": {
                 backgroundColor: imageUrl ? "rgba(102, 102, 102, 0.04)" : "transparent",
               },
@@ -786,7 +787,7 @@ const ProfileForm: React.FC = () => {
         <Typography
           sx={{
             fontSize: 11,
-            color: "#666",
+            color: palette.text.tertiary,
             textAlign: "center",
             mt: 1,
             lineHeight: 1.4,

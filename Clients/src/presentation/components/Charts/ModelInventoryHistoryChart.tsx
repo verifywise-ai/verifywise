@@ -6,7 +6,13 @@ import { ButtonToggle } from "../button-toggle";
 import CustomizableSkeleton from "../Skeletons";
 import { TrendingUp } from "lucide-react";
 import { EmptyState } from "../EmptyState";
-import { text, background, border as borderPalette } from "../../themes/palette";
+import {
+  text,
+  background,
+  border as borderPalette,
+  palette as vwPalette,
+  radiusPx,
+} from "../../themes/palette";
 import { VWLineChart } from "./VWCharts";
 
 interface ModelInventoryHistoryChartProps {
@@ -15,11 +21,11 @@ interface ModelInventoryHistoryChartProps {
 }
 
 const STATUS_COLORS: Record<string, string> = {
-  [ModelInventoryStatus.APPROVED]: "#10B981",
-  [ModelInventoryStatus.PENDING]: "#F59E0B",
-  [ModelInventoryStatus.RESTRICTED]: "#EF4444",
-  [ModelInventoryStatus.BLOCKED]: "#DC2626",
-  [ModelInventoryStatus.RETIRED]: "#9E9E9E",
+  [ModelInventoryStatus.APPROVED]: vwPalette.status.success.strong,
+  [ModelInventoryStatus.PENDING]: vwPalette.riskMark.medium,
+  [ModelInventoryStatus.RESTRICTED]: vwPalette.riskMark.critical,
+  [ModelInventoryStatus.BLOCKED]: vwPalette.riskMark.critical,
+  [ModelInventoryStatus.RETIRED]: vwPalette.text.disabled,
 };
 
 const TIMEFRAME_OPTIONS = [
@@ -118,7 +124,7 @@ export function ModelInventoryHistoryChart({
         sx={{
           p: 3,
           border: `1px solid ${borderPalette.light}`,
-          borderRadius: 2,
+          borderRadius: radiusPx.sm,
           height: height + 120,
           alignItems: "center",
           justifyContent: "center",
@@ -136,14 +142,16 @@ export function ModelInventoryHistoryChart({
         sx={{
           p: 3,
           border: `1px solid ${borderPalette.light}`,
-          borderRadius: 2,
+          borderRadius: radiusPx.sm,
           height: height + 120,
           alignItems: "center",
           justifyContent: "center",
           background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
         }}
       >
-        <Typography sx={{ color: "#F04438", fontSize: 14, fontWeight: 500 }}>{error}</Typography>
+        <Typography sx={{ color: vwPalette.status.error.text, fontSize: 14, fontWeight: 500 }}>
+          {error}
+        </Typography>
       </Stack>
     );
   }
@@ -159,7 +167,7 @@ export function ModelInventoryHistoryChart({
       sx={{
         p: 3,
         border: `1px solid ${borderPalette.light}`,
-        borderRadius: 2,
+        borderRadius: radiusPx.sm,
         background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
         boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.05)",
       }}

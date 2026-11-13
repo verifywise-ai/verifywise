@@ -8,12 +8,13 @@
 
 import type { CSSProperties } from "react";
 import { SxProps, Theme } from "@mui/material";
+import { palette } from "../../themes/palette";
 
 // Container styles - uses theme-compatible neutral background
 export const graphContainerStyle: CSSProperties = {
   width: "100%",
   height: "100%",
-  backgroundColor: "#fafafa", // theme.palette.grey[50] equivalent
+  backgroundColor: palette.background.alt, // theme.palette.grey[50] equivalent
 };
 
 // Loading state styles

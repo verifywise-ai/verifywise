@@ -5,7 +5,7 @@ import { getEntityById } from "../../../../application/repository/entity.reposit
 import { getStatusColor } from "../../ISO/style";
 import { pluralizeEntityType } from "../../../tools/pluralizeEntityType";
 import { isCompletedStatus } from "../../../../domain/types/Status";
-import { background, border as borderPalette, icon, text } from "../../../themes/palette";
+import { background, border as borderPalette, icon, text, radiusPx } from "../../../themes/palette";
 import { textStyles } from "../../../themes/typography";
 
 interface GenericFrameworkOverviewCardProps {
@@ -166,7 +166,7 @@ const GenericFrameworkOverviewCard = ({
           textAlign: "center",
           py: 4,
           backgroundColor: "background.accent",
-          borderRadius: 2,
+          borderRadius: radiusPx.sm,
           border: `1px solid ${borderPalette.dark}`,
         }}
       >
@@ -203,7 +203,7 @@ const GenericFrameworkOverviewCard = ({
             key={section.id}
             sx={{
               border: `1px solid ${borderPalette.dark}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               overflow: "hidden",
               backgroundColor: "background.main",
             }}
@@ -239,7 +239,7 @@ const GenericFrameworkOverviewCard = ({
                     "display": "flex",
                     "alignItems": "center",
                     "p": "4px",
-                    "borderRadius": "4px",
+                    "borderRadius": radiusPx.sm,
                     "&:hover": {
                       backgroundColor: "rgba(0, 0, 0, 0.04)",
                     },

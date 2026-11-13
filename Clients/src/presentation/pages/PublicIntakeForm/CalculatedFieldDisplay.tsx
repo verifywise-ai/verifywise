@@ -1,6 +1,7 @@
 import { Box, Typography } from "@mui/material";
 import type { FormField } from "../IntakeFormBuilder/types";
 import { formatCalculatedValue } from "../../../application/utils/intakeAnswerFormat";
+import { radiusPx, palette as vwPalette } from "../../themes/palette";
 
 interface CalculatedFieldDisplayProps {
   field: FormField;
@@ -20,7 +21,7 @@ export function CalculatedFieldDisplay({
     <Box>
       <Typography
         id={labelId}
-        sx={{ fontSize: "14px", color: "#334155", fontWeight: 500, mb: "6px" }}
+        sx={{ fontSize: "14px", color: vwPalette.text.secondary, fontWeight: 500, mb: "6px" }}
       >
         {field.label}
       </Typography>
@@ -34,22 +35,26 @@ export function CalculatedFieldDisplay({
           display: "flex",
           alignItems: "center",
           px: "12px",
-          border: "1px solid #e2e8f0",
-          borderRadius: "4px",
-          backgroundColor: "#f8fafc",
+          border: `1px solid ${vwPalette.border.light}`,
+          borderRadius: radiusPx.sm,
+          backgroundColor: vwPalette.background.alt,
           fontSize: "14px",
-          color: "#0f172a",
+          color: vwPalette.text.primary,
         }}
       >
         {formatCalculatedValue(value, field)}
       </Box>
       {value === null && missingLabel && (
-        <Typography sx={{ fontSize: "12px", color: "#94a3b8", mt: "4px", lineHeight: 1.4 }}>
+        <Typography
+          sx={{ fontSize: "12px", color: vwPalette.text.disabled, mt: "4px", lineHeight: 1.4 }}
+        >
           {`Fill in ${missingLabel} to calculate`}
         </Typography>
       )}
       {field.helpText && (
-        <Typography sx={{ fontSize: "12px", color: "#94a3b8", mt: "4px", lineHeight: 1.4 }}>
+        <Typography
+          sx={{ fontSize: "12px", color: vwPalette.text.disabled, mt: "4px", lineHeight: 1.4 }}
+        >
           {field.helpText}
         </Typography>
       )}

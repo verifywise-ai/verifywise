@@ -28,6 +28,7 @@ import { formatBytes } from "../../../../application/tools/fileUtil";
 import { getFileErrorMessage } from "../../../../application/utils/fileErrorHandler.utils";
 import { secureLogError } from "../../../../application/utils/secureLogger.utils"; // SECURITY: No PII
 import SelectComponent from "../../Inputs/Select";
+import { radiusPx } from "../../../themes/palette";
 
 // Constants (DRY + Maintainability)
 const UPLOAD_CONTEXT = "FileManagerUpload";
@@ -416,7 +417,7 @@ const FileManagerUploadModal: React.FC<FileManagerUploadModalProps> = ({
             onDrop={handleDrop}
             sx={{
               border: `2px dashed ${isDragging ? theme.palette.primary.main : theme.palette.grey[300]}`,
-              borderRadius: "8px",
+              borderRadius: radiusPx.lg,
               padding: "32px",
               textAlign: "center",
               backgroundColor: isDragging ? theme.palette.primary.light : theme.palette.grey[50],
@@ -466,7 +467,7 @@ const FileManagerUploadModal: React.FC<FileManagerUploadModalProps> = ({
                 color: theme.palette.text.secondary,
                 backgroundColor: theme.palette.background.fill,
                 padding: "12px 16px",
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 border: `1px solid ${theme.palette.border.light}`,
               }}
             >
@@ -516,7 +517,7 @@ const FileManagerUploadModal: React.FC<FileManagerUploadModalProps> = ({
                       color: theme.palette.text.secondary,
                       backgroundColor: theme.palette.background.accent,
                       padding: "8px 12px",
-                      borderRadius: "4px",
+                      borderRadius: radiusPx.sm,
                     }}
                   >
                     <Info size={14} color={theme.palette.primary.main} />
@@ -534,7 +535,7 @@ const FileManagerUploadModal: React.FC<FileManagerUploadModalProps> = ({
                   color: theme.palette.text.secondary,
                   backgroundColor: theme.palette.background.fill,
                   padding: "12px 16px",
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   border: `1px solid ${theme.palette.border.light}`,
                 }}
               >
@@ -563,7 +564,7 @@ const FileManagerUploadModal: React.FC<FileManagerUploadModalProps> = ({
                     key={index}
                     sx={{
                       border: `1px solid ${theme.palette.grey[300]}`,
-                      borderRadius: "4px",
+                      borderRadius: radiusPx.sm,
                       mb: 1,
                       backgroundColor: theme.palette.grey[50],
                     }}

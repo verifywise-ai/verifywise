@@ -42,7 +42,8 @@ import { useCanCheck, useCan } from "../../../application/hooks/useCan";
 import { GroupBy } from "../../components/Table/GroupBy";
 import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
-import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
+import { FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
@@ -63,6 +64,7 @@ import type {
   IVirtualFolder,
   IVirtualFolderInput,
 } from "../../../domain/interfaces/i.virtualFolder";
+import { palette, radiusPx } from "../../themes/palette";
 
 type PolicyColumnKey =
   "title" | "status" | "next_review" | "author" | "last_updated" | "updated_by" | "actions";
@@ -456,8 +458,12 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
   );
 
   // FilterBy - Initialize hook
-  const { filterData: filterPolicyData, handleFilterChange: handlePolicyFilterChange } =
-    useFilterBy<PolicyManagerModel>(getPolicyFieldValue);
+  const {
+    filterData: filterPolicyData,
+    handleFilterChange: handlePolicyFilterChange,
+    conditions: policyFilterConditions,
+    logic: policyFilterLogic,
+  } = useFilterBy<PolicyManagerModel>(getPolicyFieldValue);
 
   // ✅ Filter + search using FilterBy
   const filteredPolicies = useMemo(() => {
@@ -628,7 +634,14 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
           <Stack direction="row" spacing={2} alignItems="center">
             {/* FilterBy */}
             <div data-joyride-id="policy-status-filter">
-              <FilterBy columns={policyFilterColumns} onFilterChange={handlePolicyFilterChange} />
+              <TableFilter
+                columns={policyFilterColumns}
+                onFilterChange={handlePolicyFilterChange}
+                defaultConditions={policyFilterConditions}
+                defaultLogic={policyFilterLogic}
+                data={policies}
+                getFieldValue={getPolicyFieldValue}
+              />
             </div>
 
             {/* Group By */}
@@ -669,10 +682,12 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
                 sx={{
                   "color": folderSidebarOpen ? "brand.primary" : "text.muted",
                   "padding": "4px",
-                  "borderRadius": "4px",
-                  "backgroundColor": folderSidebarOpen ? "#E6F4F1" : "transparent",
+                  "borderRadius": radiusPx.sm,
+                  "backgroundColor": folderSidebarOpen ? palette.accent.teal.bg : "transparent",
                   "&:hover": {
-                    backgroundColor: folderSidebarOpen ? "#D1EDE6" : "#F2F4F7",
+                    backgroundColor: folderSidebarOpen
+                      ? palette.brand.primaryLight
+                      : palette.background.hover,
                   },
                 }}
               >
@@ -711,9 +726,9 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
               sx={{
                 "width": folderSidebarCollapsed ? 48 : 260,
                 "minWidth": folderSidebarCollapsed ? 48 : 260,
-                "backgroundColor": "#FAFBFC",
-                "border": "1px solid #d0d5dd",
-                "borderRadius": "4px",
+                "backgroundColor": palette.background.alt,
+                "border": `1px solid ${palette.border.dark}`,
+                "borderRadius": radiusPx.sm,
                 "overflow": "hidden",
                 "transition": "width 200ms ease, min-width 200ms ease",
                 // Override FolderTree's internal borderRight since this wrapper already has a full border

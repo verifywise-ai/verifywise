@@ -23,7 +23,7 @@ import {
 import { Trash2 } from "lucide-react";
 import dayjs from "dayjs";
 import StandardModal from "../../../components/Modals/StandardModal";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import {
   listSuppressions,
   deleteSuppression,
@@ -113,7 +113,7 @@ function SuppressionRulesTab({ onMessage }: SuppressionRulesTabProps) {
           textAlign: "center",
           py: 8,
           border: `1px dashed ${palette.border.dark}`,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           backgroundColor: palette.background.main,
         }}
       >
@@ -138,7 +138,7 @@ function SuppressionRulesTab({ onMessage }: SuppressionRulesTabProps) {
       <TableContainer
         sx={{
           border: `1px solid ${palette.border.light}`,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           backgroundColor: palette.background.main,
         }}
       >
@@ -198,7 +198,7 @@ function SuppressionRulesTab({ onMessage }: SuppressionRulesTabProps) {
         }
         onSubmit={handleDelete}
         submitButtonText="Delete"
-        submitButtonColor="#c62828"
+        submitButtonColor={palette.status.error.text}
         isSubmitting={isDeleting}
       />
     </Box>

@@ -20,6 +20,7 @@ import {
   useEmailAvailability,
   EmailAvailabilityStatus,
 } from "../../../../application/hooks/useEmailAvailability";
+import { palette, radiusPx } from "../../../themes/palette";
 
 const ROLE_SELECT_ITEMS = ROLE_OPTIONS.map((r) => ({ _id: r.value, name: r.label }));
 
@@ -44,8 +45,8 @@ interface Props {
 
 function EmailAdornment({ status }: { status: EmailAvailabilityStatus }) {
   if (status === "checking") return <CircularProgress size={14} thickness={5} />;
-  if (status === "available") return <Check size={16} color="#16a34a" />;
-  if (status === "existing") return <Info size={16} color="#475467" />;
+  if (status === "available") return <Check size={16} color={palette.status.success.text} />;
+  if (status === "existing") return <Info size={16} color={palette.text.tertiary} />;
   return null;
 }
 
@@ -162,8 +163,8 @@ const UserFormFields = ({
                 textTransform: "none",
                 height: 34,
                 fontSize: "13px",
-                borderRadius: "4px",
-                borderColor: "#d0d5dd",
+                borderRadius: radiusPx.sm,
+                borderColor: palette.border.dark,
                 color: "text.primary",
               }}
             >

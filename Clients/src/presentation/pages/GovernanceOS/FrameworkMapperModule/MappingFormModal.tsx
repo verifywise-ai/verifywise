@@ -6,7 +6,13 @@ import {
   IGovernanceControlMapping,
   MappingStrength,
 } from "../../../../domain/interfaces/i.governanceOs";
-import { border as borderPalette, background, text, accent } from "../../../themes/palette";
+import {
+  border as borderPalette,
+  background,
+  text,
+  accent,
+  radiusPx,
+} from "../../../themes/palette";
 
 interface MappingFormModalProps {
   open: boolean;
@@ -119,7 +125,7 @@ const MappingFormModal: React.FC<MappingFormModalProps> = ({
                   "alignItems": "center",
                   "height": 24,
                   "px": "10px",
-                  "borderRadius": "4px",
+                  "borderRadius": radiusPx.sm,
                   "fontSize": 12,
                   "cursor": "pointer",
                   "fontWeight": sourceFrameworkId === fw.id ? 600 : 400,
@@ -176,7 +182,7 @@ const MappingFormModal: React.FC<MappingFormModalProps> = ({
                   "alignItems": "center",
                   "height": 24,
                   "px": "10px",
-                  "borderRadius": "4px",
+                  "borderRadius": radiusPx.sm,
                   "fontSize": 12,
                   "cursor": "pointer",
                   "fontWeight": targetFrameworkId === fw.id ? 600 : 400,
@@ -233,7 +239,7 @@ const MappingFormModal: React.FC<MappingFormModalProps> = ({
                   "alignItems": "center",
                   "height": 24,
                   "px": "10px",
-                  "borderRadius": "4px",
+                  "borderRadius": radiusPx.sm,
                   "fontSize": 12,
                   "cursor": "pointer",
                   "textTransform": "capitalize",

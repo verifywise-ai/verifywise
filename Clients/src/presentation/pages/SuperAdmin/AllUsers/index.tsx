@@ -35,6 +35,7 @@ import Select from "../../../components/Inputs/Select";
 import singleTheme from "../../../themes/v1SingleTheme";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { getSelectStyles } from "../../../utils/inputStyles";
+import { palette, radiusPx } from "../../../themes/palette";
 
 /** Removes the user from this row's organization only. */
 const RemoveUserModal = ({
@@ -211,7 +212,9 @@ const EditUserModal = ({
             {target?.last_login ? formatDate(target.last_login) : "Never"}
           </Typography>
         </Stack>
-        {error && <Typography sx={{ fontSize: 13, color: "#D32F2F" }}>{error}</Typography>}
+        {error && (
+          <Typography sx={{ fontSize: 13, color: palette.status.error.text }}>{error}</Typography>
+        )}
       </Stack>
     </StandardModal>
   );
@@ -339,7 +342,9 @@ const InviteUserModal = ({
           getOptionValue={(item: { _id: string | number }) => item._id}
           sx={{ width: "100%" }}
         />
-        {error && <Typography sx={{ fontSize: 13, color: "#D32F2F" }}>{error}</Typography>}
+        {error && (
+          <Typography sx={{ fontSize: 13, color: palette.status.error.text }}>{error}</Typography>
+        )}
       </Stack>
     </StandardModal>
   );
@@ -459,7 +464,7 @@ const AllUsers = () => {
             textTransform: "none",
             height: 34,
             fontSize: "13px",
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
           }}
         >
           Invite user
@@ -559,7 +564,7 @@ const AllUsers = () => {
                         ...tableStyles.header.cell,
                         "cursor": "pointer",
                         "userSelect": "none",
-                        "&:hover": { color: "#1d2939" },
+                        "&:hover": { color: palette.text.primary },
                       }}
                       onClick={() => handleSort(field)}
                     >
@@ -577,7 +582,10 @@ const AllUsers = () => {
             </TableHead>
             <TableBody>
               {filteredUsers.map((user) => {
-                const colors = ROLE_COLORS[user.role_name] || { bg: "#f3f4f6", text: "#6b7280" };
+                const colors = ROLE_COLORS[user.role_name] || {
+                  bg: palette.background.hover,
+                  text: palette.text.icon,
+                };
                 return (
                   <TableRow
                     key={`${user.id}-${user.organization_id}`}
@@ -591,14 +599,14 @@ const AllUsers = () => {
                             width: 28,
                             height: 28,
                             borderRadius: "50%",
-                            backgroundColor: "#f3f4f6",
+                            backgroundColor: palette.background.hover,
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
                             flexShrink: 0,
                             fontSize: 12,
                             fontWeight: 600,
-                            color: "#6b7280",
+                            color: palette.text.icon,
                           }}
                         >
                           {user.name?.[0]?.toUpperCase() || "?"}
@@ -625,7 +633,7 @@ const AllUsers = () => {
                           alignItems: "center",
                           px: 1,
                           py: 0.25,
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                           fontSize: 12,
                           fontWeight: 500,
                           backgroundColor: colors.bg,
@@ -646,12 +654,12 @@ const AllUsers = () => {
                         }}
                         sx={{
                           ...tableStyles.body.button,
-                          "color": "#dc2626",
-                          "borderColor": "#fecaca",
+                          "color": palette.riskMark.critical,
+                          "borderColor": palette.status.error.border,
                           "&:hover": {
-                            backgroundColor: "#dc2626",
-                            color: "#fff",
-                            border: "1px solid #dc2626",
+                            backgroundColor: palette.riskMark.critical,
+                            color: palette.background.main,
+                            border: `1px solid ${palette.riskMark.critical}`,
                           },
                         }}
                       >

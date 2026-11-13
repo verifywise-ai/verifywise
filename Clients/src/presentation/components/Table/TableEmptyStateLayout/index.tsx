@@ -1,7 +1,8 @@
 import type { FC, ReactNode } from "react";
-import { Stack, Table, TableContainer } from "@mui/material";
+import { Stack, Table } from "@mui/material";
 import type { SxProps, Theme } from "@mui/material";
 import singleTheme from "../../../themes/v1SingleTheme";
+import ScrollableTableContainer from "../ScrollableTableContainer";
 
 interface TableEmptyStateLayoutProps {
   /** Table head element (TableHead or header component) */
@@ -12,6 +13,8 @@ interface TableEmptyStateLayoutProps {
   gap?: number;
   tableSx?: SxProps<Theme>;
   tableContainerSx?: SxProps<Theme>;
+  /** Accessible name of the scrollable header region. Default "Columns" */
+  ariaLabel?: string;
 }
 
 /**
@@ -24,11 +27,14 @@ export const TableEmptyStateLayout: FC<TableEmptyStateLayoutProps> = ({
   gap = 4,
   tableSx = singleTheme.tableStyles.primary.frame,
   tableContainerSx,
+  ariaLabel = "Columns",
 }) => (
   <Stack spacing={gap} sx={{ width: "100%" }}>
-    <TableContainer sx={tableContainerSx}>
+    {/* A header row wider than its card scrolls sideways, and with no rows there is
+        nothing inside to focus, so the region itself takes focus while it overflows. */}
+    <ScrollableTableContainer sx={tableContainerSx} ariaLabel={ariaLabel}>
       <Table sx={tableSx}>{header}</Table>
-    </TableContainer>
+    </ScrollableTableContainer>
     {children}
   </Stack>
 );

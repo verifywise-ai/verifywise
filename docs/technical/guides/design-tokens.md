@@ -8,13 +8,19 @@ This guide documents the design tokens, theme configuration, and visual standard
 
 ```
 shared/design-tokens/
-├── primitives.ts      # Color scale hex
-└── palette.ts         # Semantic tokens built from those scales
+├── primitives.ts      # Color scale hex (phase 1 restyle values)
+├── palette.ts         # Semantic tokens built from those scales
+└── classic/           # The pre-restyle values, client only; delete at the January 2027 cutover
+    ├── primitives.ts
+    └── palette.ts
 
 Clients/src/presentation/themes/
 ├── index.ts           # Central export hub
 ├── light.ts           # Main MUI theme configuration
-├── palette.ts         # Re-exports shared/design-tokens/palette.ts
+├── palette.ts         # Hands out the active set (phase 1 or classic) with the same shape
+├── uiStyle.ts         # Which look is active: localStorage `vw-ui-style`, read once at load
+├── chartTheme.ts      # One chart theme: series order, risk and status marks, grid
+├── cssVars.ts         # Writes tokens to :root as --vw-* custom properties for .css files
 ├── typography.ts      # Font scale and textStyles
 ├── v1SingleTheme.ts   # Standardized patterns
 ├── theme.d.ts         # TypeScript type definitions
@@ -23,6 +29,27 @@ Clients/src/presentation/themes/
 ├── alerts.ts          # Alert status styles
 └── tables.ts          # Table-specific styles
 ```
+
+## Phase 1 restyle and the classic look
+
+The phase 1 restyle (hand-off of 12 Nov 2026) changed colours, type, corners, icons and the tab bar, with no change to layout. The classic look stays selectable until the January 2027 cutover.
+
+- **Switch.** Settings → Preferences → Interface style. `themes/uiStyle.ts` reads `localStorage["vw-ui-style"]` once when the app loads (`"classic"` or anything else, which means phase 1). Changing it saves and reloads, because tokens are module-level constants used in hundreds of files. Code that must differ between the looks branches on `isClassicUi()`.
+- **Two token sets, one shape.** `shared/design-tokens/` holds the phase 1 values; `shared/design-tokens/classic/` holds the previous values extended to the same exports. The client entry `themes/palette.ts` picks one and widens literal hex types to `string`. Raw scales for the active set come from `themes/index.ts` (`grey`, `green`, ... `signalGreen`, `series`).
+- **Backend.** Emails and PDF reports compile only the top-level files, so they always use the phase 1 values.
+- **New tokens.** `riskMark` (solid marks for dots, bars and slices; risk text colours are for words on a tint), `stage` (step bars), `score` (0–100 spectrum), `part` (Record/Track/Enforce, **on hold until the phase 2 sidebar**), `radius` / `radiusPx` (`sm` 2px, `md` / `lg` / `lgPlus` / `xl` / `xxl` 2px (classic 6px / 8px / 10px / 12px / 16px), `search` 8px, `tab` 9px, `pill`; classic `sm` is 4px).
+- **Charts.** Use `chartTheme` (`themes/chartTheme.ts`): `series` in fixed order for categories (fold past nine into Other), `single` for one measure, `risk.*` and `status.*` marks, `riskSummary` / `statusSummary` for count cards.
+- **CSS files.** Use `var(--vw-<token>, <fallback hex>)`; `themes/cssVars.ts` sets the variables and `data-ui-style` on `<html>` so a rule can be scoped to one look.
+- **Icons.** `components/VWIcon` holds the VerifyWise icon set (sidebar, app switcher, settings). Keep Lucide for small UI icons such as chevrons, close and search.
+- **No hex in screens.** Use a token; for a value with no token, use the nearest one. `noHexInScreens.test.ts` scans the string literals (not comments; `rgb()`, `rgba()` and `hsl()` are out of scope) in `src/presentation/pages|components|utils/**/*.ts(x)` and fails on a hex colour. The exceptions live in `themes/hexAllowList.ts`: the StyleGuide folder, the IntakeFormBuilder `DesignPanel`, one exact literal in `WhatsNewSection`, and the LLM provider brand colours in `utils/providers`. Add to the list only for a colour the user picks or that documents a colour, never to skip a token.
+- **Named colour maps.** For a colour that is not a series, use a look-aware map in `chartTheme.ts`: `entity`, `action` (`{ fill, hover, border }`), `entityTypes`, `fileTypes`, `medal`, `bars`, `providers` (with `providerFallback`), `contestants`, `tiles`, `menuIcons`, `confetti`, `avatars`, `lines`, `workStatus` (status dots via `getStatusColor`; phase 1 In progress = `riskMark.medium`), `statusBreakdown` (framework status donut), `tipAccents` (empty-state tips), `progress` (progress bars, read through `scoreColor`), `controls` (input hover border, classic tab count pill, delete button). `chartThemeNamed.test.ts` pins every classic value to the colour it had before the restyle. New code takes a named map and never indexes `chart[n]`.
+- **Radius.** `radiusPx.md`, `radiusPx.lg`, `radiusPx.lgPlus`, `radiusPx.xl` and `radiusPx.xxl` sit beside `sm`, `search`, `tab` and `pill` (classic 6px, 8px, 10px for icon tiles, 12px for modals and menus, 16px for modal bodies; phase 1 2px). Pick the token whose classic value equals the old px, so classic stays the same. Count badges whose radius is half their height use `pill`. The email card is 2px.
+- **Table sort.** Clicking a heading cycles ascending, descending, original order (`useStandardTable`). Phase 1 shows ↑ or ↓ after the label and sets `aria-sort`. Table body cells use tabular numerals in phase 1.
+- **Search box.** Phase 1 placeholder is "Search this list" and the radius is `radiusPx.search`.
+- **Filters.** Use `components/Table/TableFilter.tsx` for every new table, not `FilterBy`. It renders `FilterBy` in classic and `FilterChips` in phase 1, with the same `FilterColumn[]` and `onFilterChange(conditions, "and")` contract. Pass `data` and `getFieldValue` to show counts on the chips, and `defaultConditions={conditions}` and `defaultLogic={logic}` from `useFilterBy` so the filter still shows its values (and, in classic, its and/or logic) after a tab switch remounts it. Counts are faceted: an option's count is the rows that pass the other set chips and that option. The page's search box and summary cards filter outside the chips, so the counts do not reflect them. For a multi-valued field (a vendor's use cases, a task's assignees) return an array from `getFieldValue`: `is` then means "includes", `is not` means "does not include", and a row counts once under each value it holds. Mark a column `serverFiltered` when the page refetches rows for the picked value; once a value is picked, its menu lists every option without counts. Match rows with `application/utils/filterConditions.ts`. Group and Columns stay in both looks. `FrameworkFilter/TabFilterBar` still uses `FilterBy`.
+- **Stage steps.** `components/StageSteps` draws a lifecycle stage as four bars in phase 1 (order: in review, planned, live, retired). It is used in `LifecycleTabs/LifecyclePanel`.
+- **Tab icons.** In phase 1 `TabBar` adds an icon from `TabBar/tabIcons.ts` (`TAB_ICON_BY_LABEL`, matched on the label, then on the tab value). Add a tab's icon there.
+- **Note colour.** The `note` token (phase 1: `#FFF8E6` fill, `#EBBE72` border, `#5C3F08` text) tints `InfoBox` (info variant) and `EmptyStateTip` in phase 1.
 
 `shared/design-tokens/primitives.ts` holds the scale hex. `shared/design-tokens/palette.ts` builds brand, button, text, icon, background, border, and status from those scales. The client `palette.ts` re-exports the shared palette, so existing screen imports stay valid. Email and PDF rendering can import the shared modules.
 
@@ -46,12 +73,14 @@ function App() {
 
 ### Brand Colors
 
+Phase 1 values; classic values are in `shared/design-tokens/classic/`.
+
 | Token                            | Value     | Usage                            |
 | -------------------------------- | --------- | -------------------------------- |
-| `brand.primary` / `primary.main` | `#13715B` | Primary actions, links, emphasis |
-| `brand.primaryHover`             | `#0F5A47` | Hover state for primary          |
-| `brand.primaryLight`             | `#E6F0EC` | Light backgrounds, highlights    |
-| `brand.primaryDark`              | `#10614D` | Dark variant                     |
+| `brand.primary` / `primary.main` | `#14715B` | Primary actions, links, emphasis |
+| `brand.primaryHover`             | `#075443` | Hover state for primary          |
+| `brand.primaryLight`             | `#D9F2E9` | Light backgrounds, selected      |
+| `brand.primaryDark`              | `#075443` | Dark variant                     |
 
 ### Button Colors
 
@@ -116,8 +145,8 @@ Icon strokes. They read the color scales directly and do not alias text tokens.
 
 | Token          | Value     | Usage           |
 | -------------- | --------- | --------------- |
-| `border.dark`  | `#D0D5DD` | Default borders |
-| `border.light` | `#E5E7EB` | Subtle borders  |
+| `border.dark`  | `#D1D5D5` | Inputs, stronger borders |
+| `border.light` | `#E4E6E6` | Hairline: cards, tables, tabs |
 
 ### Status Colors
 
@@ -272,13 +301,15 @@ sx={{
 ### Border Radius
 
 ```typescript
-// Standard border radius
-borderRadius: "4px"; // Primary standard
+import { radiusPx } from "../themes/palette";
 
-// Using theme
-borderRadius: theme.shape.borderRadius; // 4px
-borderRadius: theme.spacing(1.5); // 12px for modals
+borderRadius: radiusPx.sm; // 2px (classic 4px): buttons, cards, inputs, menus, modals
+borderRadius: radiusPx.search; // 8px: the search field above a table
+borderRadius: `${radiusPx.tab} ${radiusPx.tab} 0 0`; // 9px top corners of a tab
+borderRadius: radiusPx.pill; // pills, filter chips, link chips
 ```
+
+In `sx`, a bare number is multiplied by `theme.shape.borderRadius` (2), so `borderRadius: 4` renders 8px. Use `radiusPx` instead of numbers.
 
 ### Border Styles
 

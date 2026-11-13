@@ -37,6 +37,7 @@ import { User } from "../../../../domain/types/User";
 import { FileData } from "../../../../domain/types/File";
 import { attachFilesToEntity } from "../../../../application/repository/file.repository";
 import { useCanCheck } from "../../../../application/hooks/useCan";
+import { radiusPx } from "../../../themes/palette";
 
 const FRAMEWORK_TYPE = "nist_ai_rmf";
 const ENTITY_TYPE = "subcategory";
@@ -335,7 +336,7 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                 border: `1px solid ${theme.palette.border.light}`,
                 padding: "10px",
                 backgroundColor: "background.accent",
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
               }}
             >
               <Typography fontSize={13}>
@@ -374,7 +375,7 @@ const NISTAIRMFDrawerDialog: React.FC<NISTAIRMFDrawerProps> = ({
                     minHeight: "34px",
                   },
                   "& .MuiChip-root": {
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     height: "22px",
                     margin: "1px 2px",
                     fontSize: "13px",

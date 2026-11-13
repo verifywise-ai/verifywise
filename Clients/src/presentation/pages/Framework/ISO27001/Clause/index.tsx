@@ -27,6 +27,7 @@ import { Project } from "../../../../../domain/types/Project";
 import { useModalKeyHandling } from "../../../../../application/hooks/useModalKeyHandling";
 import { TabFilterBar } from "../../../../components/FrameworkFilter/TabFilterBar";
 import { StatsCard } from "../../../../components/Cards/StatsCard";
+import { palette } from "../../../../themes/palette";
 
 const ISO27001Clause = ({
   project,
@@ -367,15 +368,15 @@ const ISO27001Clause = ({
                     flexDirection: "row",
                     alignItems: "center",
                     padding: "10px 16px",
-                    backgroundColor: "#fafbfc",
-                    borderBottom: "1px solid #eaecf0",
+                    backgroundColor: palette.background.alt,
+                    borderBottom: `1px solid ${palette.border.light}`,
                   }}
                 >
                   <Typography
                     fontSize={11}
                     fontWeight={600}
                     sx={{
-                      color: "#57606a",
+                      color: palette.text.tertiary,
                       textTransform: "uppercase",
                       letterSpacing: "0.04em",
                     }}
@@ -406,7 +407,7 @@ const ISO27001Clause = ({
                           top: "50%",
                           width: "12px",
                           height: "1px",
-                          backgroundColor: "#c9d1d9",
+                          backgroundColor: palette.border.dark,
                         },
                       }
                     : {}),
@@ -506,8 +507,8 @@ const ISO27001Clause = ({
           const count = filteredSubClausesCountMemo[clause.id ?? 0];
           const chipColor =
             count !== undefined && count > 0
-              ? { bg: "#E6F4EA", color: "status.success.text" }
-              : { bg: "#FFF8E1", color: "#795548" };
+              ? { bg: palette.status.success.bg, color: "status.success.text" }
+              : { bg: palette.risk.medium.bg, color: palette.risk.medium.text };
           return (
             <Stack key={clause.id} sx={styles.container}>
               <Accordion

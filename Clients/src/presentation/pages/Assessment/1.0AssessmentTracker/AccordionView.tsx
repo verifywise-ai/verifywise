@@ -22,7 +22,7 @@ import { useAuth } from "../../../../application/hooks/useAuth";
 import { handleAlert } from "../../../../application/tools/alertUtils";
 import Alert from "../../../components/Alert";
 import { AlertProps } from "../../../types/alert.types";
-import { background } from "../../../themes/palette";
+import { background, palette as vwPalette, radiusPx } from "../../../themes/palette";
 
 interface AccordionViewProps {
   subtopics: Array<Subtopic & { questions?: Question[] }>;
@@ -77,7 +77,7 @@ const EUAIActStatusDropdown = ({
           fontSize: 12,
           fontWeight: 500,
           padding: "4px 8px",
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           cursor: disabled ? "default" : "pointer",
           display: "flex",
           alignItems: "center",
@@ -110,7 +110,8 @@ const EUAIActStatusDropdown = ({
               sx={{
                 fontSize: 13,
                 minWidth: "150px",
-                backgroundColor: status === currentStatus ? "#f0f0f0" : "transparent",
+                backgroundColor:
+                  status === currentStatus ? vwPalette.background.hover : "transparent",
               }}
             >
               {status}
@@ -225,7 +226,7 @@ const AccordionView = ({
           "fontSize": 12,
           "fontWeight": 500,
           "height": 24,
-          "borderRadius": "4px",
+          "borderRadius": radiusPx.sm,
           "textTransform": "capitalize",
           "& .MuiChip-label": { px: "8px" },
           "marginRight": "8px",
@@ -295,7 +296,9 @@ const AccordionView = ({
               <AccordionSummary
                 sx={{
                   ...styles.accordionSummary,
-                  borderBottom: expandedSet.has(subtopic.id ?? 0) ? "1px solid #d0d5dd" : "none",
+                  borderBottom: expandedSet.has(subtopic.id ?? 0)
+                    ? `1px solid ${vwPalette.border.dark}`
+                    : "none",
                 }}
               >
                 {/* Arrow Icon */}
@@ -318,7 +321,7 @@ const AccordionView = ({
                       sx={{
                         height: "20px",
                         fontSize: "12px",
-                        backgroundColor: "#f0f0f0",
+                        backgroundColor: vwPalette.background.hover,
                         color: "text.secondary",
                       }}
                     />
@@ -364,7 +367,7 @@ const AccordionView = ({
                   ))
                 ) : (
                   <Box sx={{ padding: "16px" }}>
-                    <Typography sx={{ fontSize: 13, color: "#666" }}>
+                    <Typography sx={{ fontSize: 13, color: vwPalette.text.tertiary }}>
                       No questions match the selected filters
                     </Typography>
                   </Box>

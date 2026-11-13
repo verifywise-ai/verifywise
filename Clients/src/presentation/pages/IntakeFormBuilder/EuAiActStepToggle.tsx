@@ -1,5 +1,6 @@
 import { Box, Typography, useTheme } from "@mui/material";
 import Checkbox from "../../components/Inputs/Checkbox";
+import { radiusPx } from "../../themes/palette";
 
 interface EuAiActStepToggleProps {
   entityType: string;
@@ -58,7 +59,7 @@ const EuAiActStepToggle = ({
               color: theme.palette.status.warning.text,
               backgroundColor: theme.palette.status.warning.bg,
               border: `1px solid ${theme.palette.status.warning.border}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: "8px",
               mt: "8px",
             }}

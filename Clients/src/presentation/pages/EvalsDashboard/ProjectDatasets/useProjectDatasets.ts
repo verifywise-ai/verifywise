@@ -197,8 +197,12 @@ export function useProjectDatasets({ orgId }: UseProjectDatasetsArgs) {
   );
 
   // useFilterBy hook for templates
-  const { filterData: filterTemplateData, handleFilterChange: handleTemplateFilterChange } =
-    useFilterBy<TemplateWithCategory>(getTemplateFieldValue);
+  const {
+    filterData: filterTemplateData,
+    handleFilterChange: handleTemplateFilterChange,
+    conditions: templateFilterConditions,
+    logic: templateFilterLogic,
+  } = useFilterBy<TemplateWithCategory>(getTemplateFieldValue);
 
   // Filtered templates (sorting and pagination handled by TemplatesTable component)
   const filteredAndSortedTemplates = useMemo(() => {
@@ -318,7 +322,12 @@ export function useProjectDatasets({ orgId }: UseProjectDatasetsArgs) {
     [],
   );
 
-  const { filterData, handleFilterChange } = useFilterBy<BuiltInDataset>(getFieldValue);
+  const {
+    filterData,
+    handleFilterChange,
+    conditions: filterConditions,
+    logic: filterLogic,
+  } = useFilterBy<BuiltInDataset>(getFieldValue);
 
   const filteredDatasets = useMemo(() => {
     const afterFilter = filterData(datasets);
@@ -606,6 +615,8 @@ export function useProjectDatasets({ orgId }: UseProjectDatasetsArgs) {
     setSearchTerm,
     filterColumns,
     handleFilterChange,
+    filterConditions,
+    filterLogic,
     handleDatasetsGroupChange,
     filteredDatasets,
     groupedDatasets,
@@ -615,7 +626,10 @@ export function useProjectDatasets({ orgId }: UseProjectDatasetsArgs) {
     templateGroups,
     flattenedTemplates,
     templateFilterColumns,
+    getTemplateFieldValue,
     handleTemplateFilterChange,
+    templateFilterConditions,
+    templateFilterLogic,
     templateSearchTerm,
     setTemplateSearchTerm,
     filteredAndSortedTemplates,

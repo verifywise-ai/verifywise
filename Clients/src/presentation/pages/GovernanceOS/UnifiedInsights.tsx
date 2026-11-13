@@ -20,7 +20,7 @@ import { createTask } from "../../../application/repository/task.repository";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import { ITask } from "../../../domain/interfaces/i.task";
 import { TaskPriority, TaskStatus } from "../../../domain/enums/task.enum";
-import { background, text, brand } from "../../themes/palette";
+import { background, text, brand, radiusPx } from "../../themes/palette";
 
 const UnifiedInsights = () => {
   const { projects, userId, organizationId } = useContext(VerifyWiseContext);
@@ -168,7 +168,7 @@ const UnifiedInsights = () => {
         <Box
           sx={{
             border: `1px solid ${brand.primary}`,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             p: "16px",
             background: `linear-gradient(135deg, ${background.main} 0%, ${alpha(brand.primary, 0.06)} 100%)`,
           }}

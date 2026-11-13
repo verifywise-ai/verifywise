@@ -30,6 +30,7 @@ import {
   ISO_REPORT_TYPES,
 } from "../../../../components/Reporting/GenerateReport/constants";
 import { Project, FrameworkValues } from "../../../../../application/interfaces/appStates";
+import { radiusPx } from "../../../../themes/palette";
 
 interface ConfigurationPanelProps {
   selectedItem: Trigger | Action | null;
@@ -407,7 +408,7 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
                       Array.isArray(value) && value.includes(option.value)
                         ? theme.palette.primary.contrastText
                         : theme.palette.text.primary,
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     padding: "4px 4px",
                     height: "auto",
                   }}
@@ -886,7 +887,7 @@ const ConfigurationPanel: React.FC<ConfigurationPanelProps> = ({
           },
           "&::-webkit-scrollbar-thumb": {
             background: "transparent",
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             backgroundClip: "padding-box",
           },
           "&:hover::-webkit-scrollbar-thumb": {

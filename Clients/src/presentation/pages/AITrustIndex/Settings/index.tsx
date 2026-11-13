@@ -15,7 +15,7 @@ import AutoCompleteField from "../../../components/Inputs/Autocomplete";
 import { Lock } from "lucide-react";
 import { EmptyState } from "../../../components/EmptyState";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import { useSettings, useUpdateSettings } from "../../../../application/hooks/useAiTrustIndex";
 import useUsers from "../../../../application/hooks/useUsers";
 import { useAuth } from "../../../../application/hooks/useAuth";
@@ -144,7 +144,7 @@ export default function Settings() {
           <Box
             sx={{
               border: `1px solid ${palette.border.dark}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               backgroundColor: palette.background.accent,
               p: "12px 16px",
             }}

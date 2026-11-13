@@ -1,5 +1,11 @@
 import { Theme } from "@mui/material";
-import { text, background, border as borderPalette } from "../../../themes/palette";
+import {
+  text,
+  background,
+  border as borderPalette,
+  radiusPx,
+  palette as vwPalette,
+} from "../../../themes/palette";
 
 export const addNewStep = {
   "gap": "8px",
@@ -20,8 +26,8 @@ export const stepNumberStyle = {
   justifyContent: "center",
   alignItems: "center",
   gap: "12px",
-  background: "#11725B",
-  borderRadius: "12px",
+  background: vwPalette.brand.primary,
+  borderRadius: radiusPx.pill,
   color: `${background.main}`,
   fontSize: "14px",
   fontWeight: 600,
@@ -69,7 +75,7 @@ export const approverAutocompleteStyle = (theme: Theme) => ({
     paddingBottom: "3.8px !important",
   },
   "& .MuiChip-root": {
-    borderRadius: "4px",
+    borderRadius: radiusPx.sm,
     height: "24px",
     fontSize: "13px",
   },

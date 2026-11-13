@@ -15,6 +15,7 @@ import { sectionTitleSx, useCardSx, MCP_STATUS_COLORS, MCP_STATUS_FALLBACK } fro
 import MCPTable from "../MCPTable";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import palette from "../../../themes/palette";
+import { palette as vwPalette } from "../../../themes/palette";
 import CustomizableSkeleton from "../../../components/Skeletons";
 
 interface Approval {
@@ -289,8 +290,8 @@ export default function MCPApprovalsPage() {
                               variant="contained"
                               startIcon={<CheckCircle size={14} />}
                               sx={{
-                                "backgroundColor": "#065F46",
-                                "&:hover": { backgroundColor: "#047857" },
+                                "backgroundColor": vwPalette.brand.primaryHover,
+                                "&:hover": { backgroundColor: vwPalette.brand.primary },
                               }}
                             />
                             <CustomizableButton
@@ -305,11 +306,11 @@ export default function MCPApprovalsPage() {
                               variant="outlined"
                               startIcon={<XCircle size={14} />}
                               sx={{
-                                "color": "#991B1B",
-                                "borderColor": "#FCA5A5",
+                                "color": vwPalette.status.error.text,
+                                "borderColor": vwPalette.status.error.border,
                                 "&:hover": {
-                                  backgroundColor: "#FEF2F2",
-                                  borderColor: "#991B1B",
+                                  backgroundColor: vwPalette.status.error.bg,
+                                  borderColor: vwPalette.status.error.text,
                                 },
                               }}
                             />
@@ -340,7 +341,7 @@ export default function MCPApprovalsPage() {
                       {item.arguments && Object.keys(item.arguments).length > 0 && (
                         <Box
                           sx={{
-                            backgroundColor: "#F9FAFB",
+                            backgroundColor: vwPalette.background.alt,
                             borderRadius: 1,
                             p: 1,
                             fontFamily: "monospace",

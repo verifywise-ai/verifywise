@@ -41,8 +41,10 @@ import { useTableGrouping, useGroupByState } from "../../../application/hooks/us
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { ExportMenu } from "../../components/Table/ExportMenu";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
-import { FilterBy, FilterColumn, FilterCondition } from "../../components/Table/FilterBy";
+import { FilterColumn, FilterCondition } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
+import type { FilterFieldValue } from "../../../application/utils/filterConditions";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import { Project } from "../../../domain/types/Project";
 import { useQueryClient } from "@tanstack/react-query";
@@ -51,6 +53,7 @@ import type { HeatMapCellRef } from "../../types/interfaces/i.risk";
 import VendorRiskInsights from "./VendorRiskInsights";
 import { matchesHeatCell } from "./VendorRiskInsights/HeatMapSection";
 import ListStateWrapper from "../../components/ListStateWrapper";
+import { chartTheme } from "../../themes/chartTheme";
 
 // Constants
 const REDIRECT_DELAY_MS = 2000;
@@ -219,6 +222,8 @@ const Vendors = () => {
         id: "project_id",
         label: "Use case",
         type: "select" as const,
+        // The vendor API is queried for the picked use case.
+        serverFiltered: true,
         options: projects.map((project: Project) => ({
           value: project.id.toString(),
           label: project.project_title,
@@ -285,12 +290,11 @@ const Vendors = () => {
 
   // FilterBy - Field value getter for Vendors tab
   const getVendorFieldValue = useCallback(
-    (item: VendorModel, fieldId: string): string | number | Date | null | undefined => {
+    (item: VendorModel, fieldId: string): FilterFieldValue => {
       switch (fieldId) {
         case "project_id":
-          // Vendors can belong to multiple projects - check if selected project is in the array
-          // Return the first project id as string for matching, or use a custom approach
-          return item.projects?.map((p) => p.toString()).join(",");
+          // A vendor can belong to several use cases: "is" matches any of them.
+          return item.projects?.map((p) => p.toString()) ?? [];
         case "vendor_name":
           return item.vendor_name;
         case "review_status":
@@ -313,8 +317,12 @@ const Vendors = () => {
   );
 
   // FilterBy - Initialize hook for Vendors tab
-  const { filterData: filterVendorData, handleFilterChange: handleVendorFilterChangeBase } =
-    useFilterBy<VendorModel>(getVendorFieldValue);
+  const {
+    filterData: filterVendorData,
+    handleFilterChange: handleVendorFilterChangeBase,
+    conditions: vendorFilterConditions,
+    logic: vendorFilterLogic,
+  } = useFilterBy<VendorModel>(getVendorFieldValue);
 
   // Wrapper to extract project_id from filter conditions and update API filter
   const handleVendorFilterChange = useCallback(
@@ -372,6 +380,8 @@ const Vendors = () => {
         id: "project_id",
         label: "Use case",
         type: "select" as const,
+        // The vendor API is queried for the picked use case.
+        serverFiltered: true,
         options: projects.map((project: Project) => ({
           value: project.id.toString(),
           label: project.project_title,
@@ -422,31 +432,32 @@ const Vendors = () => {
   );
 
   // FilterBy - Field value getter for Vendor Risks tab
-  const getVendorRiskFieldValue = useCallback(
-    (item: any, fieldId: string): string | number | Date | null | undefined => {
-      switch (fieldId) {
-        case "project_id":
-          return item.project_id?.toString();
-        case "risk_description":
-          return item.risk_description;
-        case "vendor_id":
-          return item.vendor_id?.toString();
-        case "risk_severity":
-          return item.risk_severity;
-        case "risk_level":
-          return item.risk_level;
-        case "action_owner":
-          return item.action_owner?.toString();
-        default:
-          return null;
-      }
-    },
-    [],
-  );
+  const getVendorRiskFieldValue = useCallback((item: any, fieldId: string): FilterFieldValue => {
+    switch (fieldId) {
+      case "project_id":
+        return item.project_id?.toString();
+      case "risk_description":
+        return item.risk_description;
+      case "vendor_id":
+        return item.vendor_id?.toString();
+      case "risk_severity":
+        return item.risk_severity;
+      case "risk_level":
+        return item.risk_level;
+      case "action_owner":
+        return item.action_owner?.toString();
+      default:
+        return null;
+    }
+  }, []);
 
   // FilterBy - Initialize hook for Vendor Risks tab
-  const { filterData: filterVendorRiskData, handleFilterChange: handleVendorRiskFilterChangeBase } =
-    useFilterBy<any>(getVendorRiskFieldValue);
+  const {
+    filterData: filterVendorRiskData,
+    handleFilterChange: handleVendorRiskFilterChangeBase,
+    conditions: vendorRiskFilterConditions,
+    logic: vendorRiskFilterLogic,
+  } = useFilterBy<any>(getVendorRiskFieldValue);
 
   // Wrapper to extract project_id from filter conditions and update API filter for vendor risks
   const handleVendorRiskFilterChange = useCallback(
@@ -459,18 +470,25 @@ const Vendors = () => {
         setSelectedProjectId("all");
       }
 
-      // Sync selected risk level card with filter conditions
-      const riskLevelCondition = conditions.find((c) => c.columnId === "risk_level");
-      if (riskLevelCondition && riskLevelCondition.operator === "is" && riskLevelCondition.value) {
-        setSelectedRiskLevel(riskLevelCondition.value);
-      } else {
-        setSelectedRiskLevel(null);
+      // Move the risk level card only when the risk level condition changes,
+      // so picking another filter keeps the card the user selected.
+      const levelOf = (list: FilterCondition[]) => {
+        const c = list.find((condition) => condition.columnId === "risk_level");
+        return c ? `${c.operator}|${c.value}` : "";
+      };
+      if (levelOf(conditions) !== levelOf(vendorRiskFilterConditions)) {
+        const riskLevelCondition = conditions.find((c) => c.columnId === "risk_level");
+        setSelectedRiskLevel(
+          riskLevelCondition?.operator === "is" && riskLevelCondition.value
+            ? riskLevelCondition.value
+            : null,
+        );
       }
 
       // Pass to base handler for client-side filtering
       handleVendorRiskFilterChangeBase(conditions, logic);
     },
-    [handleVendorRiskFilterChangeBase],
+    [vendorRiskFilterConditions, handleVendorRiskFilterChangeBase],
   );
 
   // Handle risk card click to filter vendor risks by risk level
@@ -1061,31 +1079,41 @@ const Vendors = () => {
           <StatusTileCards
             items={
               [
-                { key: "Total", label: "Total", count: vendorRisksSummary.total, color: "#4B5563" },
+                {
+                  key: "Total",
+                  label: "Total",
+                  count: vendorRisksSummary.total,
+                  color: chartTheme.riskSummary.total,
+                },
                 {
                   key: "Very high",
                   label: "Very high",
                   count: vendorRisksSummary.veryHighRisks,
-                  color: "#C63622",
+                  color: chartTheme.riskSummary.veryHigh,
                 },
                 {
                   key: "High",
                   label: "High",
                   count: vendorRisksSummary.highRisks,
-                  color: "#D68B61",
+                  color: chartTheme.riskSummary.high,
                 },
                 {
                   key: "Medium",
                   label: "Medium",
                   count: vendorRisksSummary.mediumRisks,
-                  color: "#D6B971",
+                  color: chartTheme.riskSummary.medium,
                 },
-                { key: "Low", label: "Low", count: vendorRisksSummary.lowRisks, color: "#52AB43" },
+                {
+                  key: "Low",
+                  label: "Low",
+                  count: vendorRisksSummary.lowRisks,
+                  color: chartTheme.riskSummary.low,
+                },
                 {
                   key: "Very low",
                   label: "Very low",
                   count: vendorRisksSummary.veryLowRisks,
-                  color: "#B8D39C",
+                  color: chartTheme.riskSummary.veryLow,
                 },
               ] satisfies StatusTileItem[]
             }
@@ -1153,7 +1181,14 @@ const Vendors = () => {
           <Stack spacing={2}>
             <Stack direction="row" justifyContent="space-between" alignItems="center">
               <Stack direction="row" gap={2} alignItems="center">
-                <FilterBy columns={vendorFilterColumns} onFilterChange={handleVendorFilterChange} />
+                <TableFilter
+                  columns={vendorFilterColumns}
+                  onFilterChange={handleVendorFilterChange}
+                  defaultConditions={vendorFilterConditions}
+                  defaultLogic={vendorFilterLogic}
+                  data={vendors}
+                  getFieldValue={getVendorFieldValue}
+                />
                 <GroupBy
                   options={[
                     { id: "review_status", label: "Status" },
@@ -1228,9 +1263,13 @@ const Vendors = () => {
                     borderRadius: theme.shape.borderRadius,
                   }}
                 />
-                <FilterBy
+                <TableFilter
                   columns={vendorRiskFilterColumns}
                   onFilterChange={handleVendorRiskFilterChange}
+                  defaultConditions={vendorRiskFilterConditions}
+                  defaultLogic={vendorRiskFilterLogic}
+                  data={vendorRisks}
+                  getFieldValue={getVendorRiskFieldValue}
                 />
                 <GroupBy
                   options={[

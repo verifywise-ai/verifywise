@@ -12,9 +12,15 @@ describe("StatusBadge", () => {
     expect(screen.getByText("High")).toBeInTheDocument();
   });
 
-  it("renders uppercase by default", () => {
+  it("renders sentence case by default (phase 1 pill)", () => {
     renderWithTheme(<StatusBadge label="critical" variant="critical" />);
-    const badge = screen.getByText("critical");
+    const badge = screen.getByText("critical").parentElement;
+    expect(badge).toHaveStyle("text-transform: none");
+  });
+
+  it("renders uppercase when uppercase is true", () => {
+    renderWithTheme(<StatusBadge label="critical" variant="critical" uppercase />);
+    const badge = screen.getByText("critical").parentElement;
     expect(badge).toHaveStyle("text-transform: uppercase");
   });
 
@@ -26,11 +32,11 @@ describe("StatusBadge", () => {
 
   it("renders small and medium sizes", () => {
     const { unmount } = renderWithTheme(<StatusBadge label="Small" variant="info" size="small" />);
-    expect(screen.getByText("Small")).toHaveStyle("height: 24px");
+    expect(screen.getByText("Small").parentElement).toHaveStyle("height: 24px");
     unmount();
 
     renderWithTheme(<StatusBadge label="Medium" variant="info" size="medium" />);
-    expect(screen.getByText("Medium")).toHaveStyle("height: 34px");
+    expect(screen.getByText("Medium").parentElement).toHaveStyle("height: 34px");
   });
 
   it("renders an icon when provided", () => {

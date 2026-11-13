@@ -21,7 +21,16 @@ import {
   getPaginationRowCount,
   setPaginationRowCount,
 } from "../../../../application/utils/paginationStorage";
-import { text, status, risk, border, background } from "../../../themes/palette";
+import {
+  text,
+  status,
+  risk,
+  border,
+  background,
+  palette as vwPalette,
+  radiusPx,
+} from "../../../themes/palette";
+import { chartTheme } from "../../../themes/chartTheme";
 import StatusBadge from "../../StatusBadge";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { pageOfLabel } from "../pageOfLabel";
@@ -107,15 +116,15 @@ const parseLogLine = (line: string, index: number): ParsedLogEntry | null => {
 const STATE_COLORS: Record<string, { bg: string; text: string }> = {
   successful: { bg: status.success.bg, text: status.success.text },
   success: { bg: status.success.bg, text: status.success.text },
-  processing: { bg: status.warning.bg, text: "#795000" },
+  processing: { bg: status.warning.bg, text: chartTheme.pendingLabelText },
   error: { bg: status.error.bg, text: status.error.text },
-  info: { bg: "#DCEFFF", text: "#1976D2" },
+  info: { bg: vwPalette.status.info.bg, text: vwPalette.status.info.text },
   warn: { bg: risk.high.bg, text: risk.high.text },
   warning: { bg: risk.high.bg, text: risk.high.text },
-  debug: { bg: "#F3E5F5", text: "#6A1B9A" },
+  debug: { bg: vwPalette.accent.purple.bg, text: vwPalette.accent.purple.text },
 };
 
-const UNKNOWN_STATE_COLORS = { bg: "#E0E0E0", text: "#424242" };
+const UNKNOWN_STATE_COLORS = { bg: vwPalette.border.light, text: vwPalette.text.secondary };
 
 const StateBadge: React.FC<{ state: string }> = ({ state }) => {
   const colors = STATE_COLORS[state.toLowerCase()] ?? UNKNOWN_STATE_COLORS;
@@ -434,7 +443,7 @@ const LogsTable: React.FC<LogsTableProps> = ({ data, isLoading = false, paginate
         justifyContent="center"
         sx={{
           border: `1px solid ${border.dark}`,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           padding: theme.spacing(15, 5),
           paddingBottom: theme.spacing(20),
           gap: theme.spacing(10),
@@ -456,7 +465,7 @@ const LogsTable: React.FC<LogsTableProps> = ({ data, isLoading = false, paginate
           sx={{
             ...singleTheme.tableStyles.primary.frame,
             ...(paginated && {
-              borderRadius: "4px 4px 0 0",
+              borderRadius: `${radiusPx.sm} ${radiusPx.sm} 0 0`,
               borderBottom: "none",
             }),
           }}

@@ -30,8 +30,15 @@ import { ExportMenu } from "../../components/Table/ExportMenu";
 import { GroupBy } from "../../components/Table/GroupBy";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
-import { FilterBy, FilterColumn, FilterCondition } from "../../components/Table/FilterBy";
+import { FilterColumn, FilterCondition } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
+import {
+  getRiskFieldValue,
+  riskLevelCardAfterFilterChange,
+  RISK_LEVEL_OPTIONS,
+  SEVERITY_OPTIONS,
+} from "./riskFilters";
 import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import { useEntityChangeHistory } from "../../../application/hooks/useEntityChangeHistory";
@@ -54,6 +61,7 @@ import {
   riskMenuItemRecommendedBadgeStyle,
 } from "./style";
 import { text } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 
 /**
  * Set initial loading status for all CRUD process
@@ -188,25 +196,13 @@ const RiskManagement = () => {
         id: "severity",
         label: "Severity",
         type: "select" as const,
-        options: [
-          { value: "Very High", label: "Very High" },
-          { value: "High", label: "High" },
-          { value: "Medium", label: "Medium" },
-          { value: "Low", label: "Low" },
-          { value: "Very Low", label: "Very Low" },
-        ],
+        options: SEVERITY_OPTIONS,
       },
       {
         id: "risk_level",
         label: "Risk level",
         type: "select" as const,
-        options: [
-          { value: "Very High", label: "Very High" },
-          { value: "High", label: "High" },
-          { value: "Medium", label: "Medium" },
-          { value: "Low", label: "Low" },
-          { value: "Very Low", label: "Very Low" },
-        ],
+        options: RISK_LEVEL_OPTIONS,
       },
       {
         id: "mitigation_status",
@@ -243,53 +239,25 @@ const RiskManagement = () => {
     [getUniqueOwners],
   );
 
-  // Get field value for filtering
-  const getRiskFieldValue = useCallback(
-    (risk: RiskModel, fieldId: string): string | number | Date | null | undefined => {
-      switch (fieldId) {
-        case "risk_name":
-          return risk.risk_name;
-        case "risk_description":
-          return risk.risk_description;
-        case "severity":
-          return risk.severity;
-        case "risk_level":
-          return risk.current_risk_level || risk.risk_level_autocalculated;
-        case "mitigation_status":
-          return risk.mitigation_status;
-        case "risk_owner":
-          return risk.risk_owner?.toString();
-        case "impact":
-          return risk.impact;
-        case "deadline":
-          return risk.deadline;
-        case "date_of_assessment":
-          return risk.date_of_assessment;
-        default:
-          return null;
-      }
-    },
-    [],
-  );
-
-  const { filterData, handleFilterChange: handleFilterByChangeBase } =
-    useFilterBy<RiskModel>(getRiskFieldValue);
+  const {
+    filterData,
+    handleFilterChange: handleFilterByChangeBase,
+    conditions: filterConditions,
+    logic: filterLogic,
+  } = useFilterBy<RiskModel>(getRiskFieldValue);
 
   // Wrapper to sync selected risk level card with filter conditions
   const handleFilterByChange = useCallback(
     (conditions: FilterCondition[], logic: "and" | "or") => {
-      // Sync selected risk level card with filter conditions
-      const riskLevelCondition = conditions.find((c) => c.columnId === "risk_level");
-      if (riskLevelCondition && riskLevelCondition.operator === "is" && riskLevelCondition.value) {
-        setSelectedRiskLevel(riskLevelCondition.value);
-      } else {
-        setSelectedRiskLevel(null);
-      }
+      // Move the risk level card only when the risk level condition changes,
+      // so picking another filter keeps the card the user selected.
+      const card = riskLevelCardAfterFilterChange(filterConditions, conditions);
+      if (card !== undefined) setSelectedRiskLevel(card);
 
       // Pass to base handler for client-side filtering
       handleFilterByChangeBase(conditions, logic);
     },
-    [handleFilterByChangeBase],
+    [filterConditions, handleFilterByChangeBase],
   );
 
   // Handle risk card click to filter risks by risk level
@@ -733,21 +701,41 @@ const RiskManagement = () => {
         <StatusTileCards
           items={
             [
-              { key: "Total", label: "Total", count: risksSummary.total, color: "#4B5563" },
+              {
+                key: "Total",
+                label: "Total",
+                count: risksSummary.total,
+                color: chartTheme.riskSummary.total,
+              },
               {
                 key: "Very high",
                 label: "Very high",
                 count: risksSummary.veryHighRisks,
-                color: "#C63622",
+                color: chartTheme.riskSummary.veryHigh,
               },
-              { key: "High", label: "High", count: risksSummary.highRisks, color: "#D68B61" },
-              { key: "Medium", label: "Medium", count: risksSummary.mediumRisks, color: "#D6B971" },
-              { key: "Low", label: "Low", count: risksSummary.lowRisks, color: "#52AB43" },
+              {
+                key: "High",
+                label: "High",
+                count: risksSummary.highRisks,
+                color: chartTheme.riskSummary.high,
+              },
+              {
+                key: "Medium",
+                label: "Medium",
+                count: risksSummary.mediumRisks,
+                color: chartTheme.riskSummary.medium,
+              },
+              {
+                key: "Low",
+                label: "Low",
+                count: risksSummary.lowRisks,
+                color: chartTheme.riskSummary.low,
+              },
               {
                 key: "Very low",
                 label: "Very low",
                 count: risksSummary.veryLowRisks,
-                color: "#B8D39C",
+                color: chartTheme.riskSummary.veryLow,
               },
             ] satisfies StatusTileItem[]
           }
@@ -781,7 +769,14 @@ const RiskManagement = () => {
         <Stack direction="row" justifyContent="space-between" alignItems="flex-end">
           <Box sx={riskFilterRowStyle}>
             <div data-joyride-id="risk-filters">
-              <FilterBy columns={filterColumns} onFilterChange={handleFilterByChange} />
+              <TableFilter
+                columns={filterColumns}
+                onFilterChange={handleFilterByChange}
+                defaultConditions={filterConditions}
+                defaultLogic={filterLogic}
+                data={projectRisks}
+                getFieldValue={getRiskFieldValue}
+              />
             </div>
             <GroupBy
               options={[

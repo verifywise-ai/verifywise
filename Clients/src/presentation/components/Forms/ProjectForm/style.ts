@@ -1,4 +1,11 @@
-import { brand, text, background, border as borderPalette } from "../../../themes/palette";
+import {
+  brand,
+  text,
+  background,
+  border as borderPalette,
+  palette as vwPalette,
+  radiusPx,
+} from "../../../themes/palette";
 export const textfieldStyle = {
   "backgroundColor": `${background.main}`,
   "& input": {
@@ -19,7 +26,7 @@ export const datePickerStyle = {
 export const teamMembersSxStyle = {
   "width": "100%",
   "& .MuiChip-root": {
-    borderRadius: "4px",
+    borderRadius: radiusPx.sm,
   },
 };
 
@@ -29,7 +36,7 @@ export const teamMembersSlotProps = {
       "& .MuiAutocomplete-listbox": {
         "& .MuiAutocomplete-option": {
           fontSize: "13px",
-          color: "#1c2130",
+          color: vwPalette.text.primary,
           paddingLeft: "9px",
           paddingRight: "9px",
         },
@@ -54,18 +61,18 @@ export const radioGroupStyle = {
 export const radioOptionStyle = {
   "width": "100%",
   "padding": "16px",
-  "border": "1px solid #E4E7EC",
-  "borderRadius": "4px",
+  "border": `1px solid ${vwPalette.border.light}`,
+  "borderRadius": radiusPx.sm,
   "backgroundColor": `${background.main}`,
   "cursor": "pointer",
   "transition": "all 0.2s ease-in-out",
   "&:hover": {
     borderColor: `${brand.primary}`,
-    backgroundColor: "#F9F9F9",
+    backgroundColor: vwPalette.background.alt,
   },
   "&.selected": {
     borderColor: `${brand.primary}`,
-    backgroundColor: "#F0F9F6",
+    backgroundColor: vwPalette.background.fill,
   },
 };
 
@@ -82,7 +89,7 @@ export const backButtonStyle = {
   "color": `${text.secondary}`,
   "gap": 2,
   "&:hover": {
-    backgroundColor: "#F9F9F9",
+    backgroundColor: vwPalette.background.alt,
     border: `1px solid ${borderPalette.dark}`,
   },
 };

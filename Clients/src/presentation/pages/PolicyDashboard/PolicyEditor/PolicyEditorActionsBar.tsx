@@ -10,7 +10,7 @@ import {
   Upload,
 } from "lucide-react";
 import { CustomizableButton } from "../../../components/button/customizable-button";
-import { brand, palette } from "../../../themes/palette";
+import { brand, palette, radiusPx } from "../../../themes/palette";
 import { textStyles } from "../../../themes/typography";
 
 /** History active fill — brand-tinted chrome for the sidebar toggle. */
@@ -70,7 +70,7 @@ export function PolicyEditorActionsBar({
             backgroundColor: palette.status.error.bg,
             px: 1.5,
             py: 0.75,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
           }}
         >
           {exportError}
@@ -85,7 +85,7 @@ export function PolicyEditorActionsBar({
             sx={{
               "color": isHistorySidebarOpen ? brand.primary : palette.text.muted,
               "padding": "4px",
-              "borderRadius": "4px",
+              "borderRadius": radiusPx.sm,
               "backgroundColor": isHistorySidebarOpen ? HISTORY_ACTIVE_BG : "transparent",
               "&:hover": {
                 backgroundColor: isHistorySidebarOpen
@@ -142,7 +142,7 @@ export function PolicyEditorActionsBar({
               paper: {
                 sx: {
                   mt: 0.5,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   border: `1px solid ${palette.border.light}`,
                   boxShadow: `0 4px 12px ${alpha(palette.text.black, 0.08)}`,
                   minWidth: 140,
@@ -181,7 +181,7 @@ export function PolicyEditorActionsBar({
                   "border": "none",
                   "background": "none",
                   "cursor": "pointer",
-                  "borderRadius": "4px",
+                  "borderRadius": radiusPx.sm,
                   ...textStyles.caption,
                   "color": "text.secondary",
                   "width": "100%",

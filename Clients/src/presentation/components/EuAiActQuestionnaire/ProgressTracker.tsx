@@ -1,5 +1,5 @@
 import { Box, Stack, Typography, useTheme, LinearProgress } from "@mui/material";
-import { background } from "../../themes/palette";
+import { background, radiusPx } from "../../themes/palette";
 
 interface ProgressTrackerProps {
   currentStep: number;
@@ -36,7 +36,7 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({ currentStep, totalSte
           sx={{
             px: 2,
             py: 0.5,
-            borderRadius: 2,
+            borderRadius: radiusPx.sm,
             bgcolor: `${background.main}`,
             border: 1,
             borderColor: theme.palette.primary.main,
@@ -61,11 +61,11 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({ currentStep, totalSte
           value={percentage}
           sx={{
             "height": 8,
-            "borderRadius": 4,
+            "borderRadius": radiusPx.lg,
             "backgroundColor": theme.palette.grey[200],
             "& .MuiLinearProgress-bar": {
               backgroundColor: theme.palette.primary.main,
-              borderRadius: 4,
+              borderRadius: radiusPx.lg,
               transition: "all 0.3s ease-in-out",
             },
           }}

@@ -3,7 +3,7 @@
 /* List styling */
 .content-list li {
   font-size: 13px;
-  color: #1a1a1a;
+  color: var(--vw-text-primary, #1a1a1a);
   line-height: 1.3;
   margin-bottom: 8px;
 }
@@ -27,7 +27,7 @@
 }
 
 .article-link-item:hover .link-title {
-  color: #13715b;
+  color: var(--vw-brand-primary, #13715b);
 }
 
 .article-link-item .arrow-icon {
@@ -36,5 +36,5 @@
 
 .article-link-item:hover .arrow-icon {
   transform: translateX(4px);
-  color: #13715b;
+  color: var(--vw-brand-primary, #13715b);
 }

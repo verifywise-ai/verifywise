@@ -3,7 +3,12 @@ import { useState, ReactNode } from "react";
 import { Stack, Typography, Box } from "@mui/material";
 import { ArrowRight as RightArrow } from "lucide-react";
 import { useNavigate } from "react-router";
-import { background, border as borderPalette } from "../../../themes/palette";
+import {
+  background,
+  border as borderPalette,
+  palette as vwPalette,
+  radiusPx,
+} from "../../../themes/palette";
 
 interface HeaderCardProps {
   title: string;
@@ -52,7 +57,7 @@ export function DashboardHeaderCard({
     <Stack
       sx={{
         "border": `1px solid ${borderPalette.dark}`,
-        "borderRadius": 2,
+        "borderRadius": radiusPx.sm,
         "background": `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
         "width": "100%",
         "padding": "8px 36px 14px 14px",
@@ -62,7 +67,7 @@ export function DashboardHeaderCard({
         "transition": "all 0.2s ease",
         "&:hover": isClickable
           ? {
-              background: `linear-gradient(135deg, ${background.accent} 0%, #f1f5f9 100%)`,
+              background: `linear-gradient(135deg, ${background.accent} 0%, ${vwPalette.background.hover} 100%)`,
               borderColor: `${borderPalette.dark}`,
             }
           : {},
@@ -74,7 +79,7 @@ export function DashboardHeaderCard({
       <Typography
         sx={{
           fontSize: 13,
-          color: "#8594AC",
+          color: vwPalette.text.accent,
           pb: "2px",
           whiteSpace: "nowrap",
           overflow: "hidden",
@@ -90,7 +95,7 @@ export function DashboardHeaderCard({
           minHeight: 32,
           fontWeight: 600,
           fontSize: 15,
-          color: "#1f2937",
+          color: vwPalette.text.primary,
           wordBreak: "break-word",
         }}
       >
@@ -103,7 +108,7 @@ export function DashboardHeaderCard({
             position: "absolute",
             top: 10,
             right: 10,
-            color: "#A9B3C5",
+            color: vwPalette.text.accent,
           }}
         >
           {icon}

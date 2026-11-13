@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Box, Popover, Typography } from "@mui/material";
 import { ChevronDown, FileText, Building2 } from "lucide-react";
 import { CustomizableButton } from "../../../components/button/customizable-button";
-import { brand, background } from "../../../themes/palette";
+import { brand, background, radiusPx, palette as vwPalette } from "../../../themes/palette";
 import GenerateReportPopup from "../../../components/Reporting/GenerateReport";
 import ReportStatus from "./ReportStatus";
 import { styles } from "./styles";
@@ -76,7 +76,9 @@ const GenerateReport: React.FC<GenerateReportProps> = ({ onReportGenerated }) =>
             sx={{
               ...styles.buttonStyle,
               width: "fit-content",
-              border: isDisabled ? "1px solid #dddddd" : `1px solid ${brand.primary}`,
+              border: isDisabled
+                ? `1px solid ${vwPalette.border.light}`
+                : `1px solid ${brand.primary}`,
             }}
           >
             Generate report
@@ -99,7 +101,7 @@ const GenerateReport: React.FC<GenerateReportProps> = ({ onReportGenerated }) =>
           sx={{
             "mt": 1,
             "& .MuiPopover-paper": {
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)",
               overflow: "visible",
               backgroundColor: `${background.main}`,
@@ -137,7 +139,7 @@ const GenerateReport: React.FC<GenerateReportProps> = ({ onReportGenerated }) =>
                   sx={{
                     "background":
                       "linear-gradient(135deg, rgba(252, 252, 252, 1) 0%, rgba(248, 248, 248, 1) 100%)",
-                    "borderRadius": "4px",
+                    "borderRadius": radiusPx.sm,
                     "padding": "20px 16px",
                     "cursor": "pointer",
                     "display": "flex",

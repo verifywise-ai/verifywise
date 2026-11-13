@@ -36,7 +36,7 @@ import { Command as CommandType, CommandContext } from "../../../application/com
 import { useWiseSearch, getEntityDisplayName } from "../../../application/hooks/useWiseSearch";
 import { SearchResult } from "../../../application/types/search.types";
 import "./styles.css";
-import { background } from "../../themes/palette";
+import { background, palette as vwPalette, radiusPx } from "../../themes/palette";
 
 interface CommandPaletteProps {
   open: boolean;
@@ -90,8 +90,8 @@ function WiseSearchWelcomeBanner({ onDismiss }: { onDismiss: () => void }) {
     <Box
       className="wise-search-banner"
       sx={{
-        background: "linear-gradient(135deg, #1a1a1f 0%, #252530 100%)",
-        borderRadius: "8px",
+        background: `linear-gradient(135deg, ${vwPalette.text.primary} 0%, ${vwPalette.text.secondary} 100%)`,
+        borderRadius: radiusPx.lg,
         padding: "16px 20px",
         margin: "8px",
         marginBottom: "12px",
@@ -149,7 +149,7 @@ function WiseSearchWelcomeBanner({ onDismiss }: { onDismiss: () => void }) {
                 "fontSize": "12px",
                 "fontWeight": 500,
                 "padding": "6px 16px",
-                "borderRadius": "4px",
+                "borderRadius": radiusPx.sm,
                 "textTransform": "none",
                 "&:hover": {
                   backgroundColor: "rgba(255, 255, 255, 0.15)",
@@ -172,7 +172,7 @@ function WiseSearchWelcomeBanner({ onDismiss }: { onDismiss: () => void }) {
             "display": "flex",
             "alignItems": "center",
             "justifyContent": "center",
-            "borderRadius": "4px",
+            "borderRadius": radiusPx.sm,
             "color": "rgba(255, 255, 255, 0.5)",
             "&:hover": {
               backgroundColor: "rgba(255, 255, 255, 0.1)",
@@ -639,16 +639,21 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                   gap: 1,
                   padding: "6px 12px",
                   borderTop: "1px solid",
-                  borderTopColor: "var(--filter-border, #e5e5e5)",
+                  borderTopColor: `var(--filter-border, ${vwPalette.border.light})`,
                   borderBottom: "1px solid",
-                  borderBottomColor: "var(--filter-border, #e5e5e5)",
-                  background: "var(--filter-bg, #fafafa)",
+                  borderBottomColor: `var(--filter-border, ${vwPalette.border.light})`,
+                  background: `var(--filter-bg, ${vwPalette.background.alt})`,
                   minHeight: "36px",
                 }}
               >
-                <Filter size={14} color="#999" />
+                <Filter size={14} color={vwPalette.text.accent} />
                 <Typography
-                  sx={{ fontSize: "12px", color: "#999", whiteSpace: "nowrap", userSelect: "none" }}
+                  sx={{
+                    fontSize: "12px",
+                    color: vwPalette.text.accent,
+                    whiteSpace: "nowrap",
+                    userSelect: "none",
+                  }}
                 >
                   Evidence Status:
                 </Typography>
@@ -670,11 +675,11 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                       "background": reviewStatus ? "rgba(19, 113, 91, 0.1)" : "transparent",
                       "border": "1px solid",
                       "borderColor": reviewStatus ? "rgba(19, 113, 91, 0.3)" : "rgba(0,0,0,0.12)",
-                      "borderRadius": "4px",
+                      "borderRadius": radiusPx.sm,
                       "padding": "3px 8px",
                       "cursor": "pointer",
                       "fontSize": "12px",
-                      "color": reviewStatus ? "brand.primary" : "#666",
+                      "color": reviewStatus ? "brand.primary" : vwPalette.text.tertiary,
                       "fontWeight": reviewStatus ? 500 : 400,
                       "whiteSpace": "nowrap",
                       "transition": "all 0.15s ease",
@@ -715,8 +720,8 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                         left: 0,
                         marginTop: "4px",
                         background: "var(--dropdown-bg, background.main)",
-                        border: "1px solid var(--filter-border, #e5e5e5)",
-                        borderRadius: "6px",
+                        border: `1px solid var(--filter-border, ${vwPalette.border.light})`,
+                        borderRadius: radiusPx.md,
                         boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
                         zIndex: 10,
                         minWidth: "180px",
@@ -751,7 +756,10 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                                   : "transparent",
                               "cursor": "pointer",
                               "fontSize": "13px",
-                              "color": isSelected || isHighlighted ? "brand.primary" : "#666",
+                              "color":
+                                isSelected || isHighlighted
+                                  ? "brand.primary"
+                                  : vwPalette.text.tertiary,
                               "fontWeight": isSelected ? 500 : 400,
                               "textAlign": "left",
                               "transition": "all 0.1s ease",
@@ -763,7 +771,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                               },
                               "&:not(:last-child)": {
                                 borderBottom: "1px solid",
-                                borderBottomColor: "var(--filter-border, #f0f0f0)",
+                                borderBottomColor: `var(--filter-border, ${vwPalette.background.hover})`,
                               },
                             }}
                           >
@@ -793,10 +801,10 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                       "padding": "2px",
                       "cursor": "pointer",
                       "borderRadius": "3px",
-                      "color": "#999",
+                      "color": vwPalette.text.accent,
                       "&:hover": {
                         background: "rgba(0,0,0,0.06)",
-                        color: "#666",
+                        color: vwPalette.text.tertiary,
                       },
                     }}
                     aria-label="Clear review status filter"
@@ -823,7 +831,9 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                     }}
                   >
                     <CircularProgress size={20} sx={{ color: "brand.primary" }} />
-                    <Typography sx={{ ml: 2, color: "#666" }}>Searching...</Typography>
+                    <Typography sx={{ ml: 2, color: vwPalette.text.tertiary }}>
+                      Searching...
+                    </Typography>
                   </Box>
                 )}
 
@@ -838,7 +848,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                         gap: 1,
                       }}
                     >
-                      <Search size={24} color="#999" />
+                      <Search size={24} color={vwPalette.text.accent} />
                       <Typography color="text.secondary">
                         {search
                           ? `No results found for "${search}"${reviewStatus ? ` with status "${REVIEW_STATUS_OPTIONS.find((o) => o.value === reviewStatus)?.label}"` : ""}`
@@ -865,7 +875,10 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                         alignItems: "center",
                       }}
                     >
-                      <Typography variant="caption" sx={{ color: "#999", fontWeight: 400 }}>
+                      <Typography
+                        variant="caption"
+                        sx={{ color: vwPalette.text.accent, fontWeight: 400 }}
+                      >
                         {actualTotalCount} result{actualTotalCount !== 1 ? "s" : ""} found
                         {reviewStatus && (
                           <Typography
@@ -906,7 +919,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                               >
                                 <Box
                                   sx={{
-                                    color: "#7B9A7A",
+                                    color: vwPalette.text.accent,
                                     opacity: 0.8,
                                     display: "flex",
                                     alignItems: "center",
@@ -924,7 +937,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                                 <Box
                                   className="command-item-chevron"
                                   sx={{
-                                    color: "#999",
+                                    color: vwPalette.text.accent,
                                     display: "flex",
                                     alignItems: "center",
                                     opacity: 0,
@@ -966,7 +979,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                             >
                               <Clock
                                 size={16}
-                                color="#7B9A7A"
+                                color={vwPalette.text.accent}
                                 opacity={0.8}
                                 style={{ marginRight: "4px" }}
                               />
@@ -986,11 +999,11 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                                   "display": "flex",
                                   "alignItems": "center",
                                   "justifyContent": "center",
-                                  "borderRadius": "4px",
-                                  "color": "#999",
+                                  "borderRadius": radiusPx.sm,
+                                  "color": vwPalette.text.accent,
                                   "&:hover": {
                                     background: "rgba(0, 0, 0, 0.05)",
-                                    color: "#666",
+                                    color: vwPalette.text.tertiary,
                                   },
                                 }}
                                 aria-label={`Remove "${recent.query}" from recent searches`}
@@ -1044,7 +1057,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                                 {command.icon && (
                                   <Box
                                     sx={{
-                                      color: "#7B9A7A",
+                                      color: vwPalette.text.accent,
                                       opacity: 0.8,
                                       display: "flex",
                                       alignItems: "center",
@@ -1067,7 +1080,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                                     variant="caption"
                                     sx={{
                                       marginLeft: "auto",
-                                      color: "#999",
+                                      color: vwPalette.text.accent,
                                       opacity: 0.8,
                                     }}
                                     aria-label={`Description: ${command.description}`}
@@ -1087,7 +1100,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                                         sx={{
                                           backgroundColor: "rgba(0, 0, 0, 0.1)",
                                           padding: "2px 6px",
-                                          borderRadius: "4px",
+                                          borderRadius: radiusPx.sm,
                                           fontSize: "11px",
                                         }}
                                         aria-hidden="true"
@@ -1100,7 +1113,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                                 <Box
                                   className="command-item-chevron"
                                   sx={{
-                                    color: "#999",
+                                    color: vwPalette.text.accent,
                                     display: "flex",
                                     alignItems: "center",
                                     opacity: 0,
@@ -1142,7 +1155,9 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                     <ArrowUp size={10} />
                     <ArrowDown size={10} />
                   </Box>
-                  <Typography sx={{ fontSize: "10px", color: "#666" }}>Navigate</Typography>
+                  <Typography sx={{ fontSize: "10px", color: vwPalette.text.tertiary }}>
+                    Navigate
+                  </Typography>
                 </Box>
 
                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
@@ -1152,7 +1167,9 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                   >
                     <CornerDownLeft size={10} />
                   </Box>
-                  <Typography sx={{ fontSize: "10px", color: "#666" }}>Select</Typography>
+                  <Typography sx={{ fontSize: "10px", color: vwPalette.text.tertiary }}>
+                    Select
+                  </Typography>
                 </Box>
 
                 <Box sx={{ display: "flex", alignItems: "center", gap: 0.5 }}>
@@ -1163,16 +1180,22 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                   >
                     <X size={10} />
                   </Box>
-                  <Typography sx={{ fontSize: "10px", color: "#666" }}>or</Typography>
+                  <Typography sx={{ fontSize: "10px", color: vwPalette.text.tertiary }}>
+                    or
+                  </Typography>
                   <Box className="command-footer-key">esc</Box>
-                  <Typography sx={{ fontSize: "10px", color: "#666" }}>to close</Typography>
+                  <Typography sx={{ fontSize: "10px", color: vwPalette.text.tertiary }}>
+                    to close
+                  </Typography>
                 </Box>
 
                 <Box sx={{ marginLeft: "auto", display: "flex", alignItems: "center", gap: 0.5 }}>
-                  <Typography sx={{ fontSize: "10px", color: "#666" }}>You can use</Typography>
+                  <Typography sx={{ fontSize: "10px", color: vwPalette.text.tertiary }}>
+                    You can use
+                  </Typography>
                   <Box className="command-footer-key">{isMac ? "⌘" : "Ctrl"}</Box>
                   <Box className="command-footer-key">K</Box>
-                  <Typography sx={{ fontSize: "10px", color: "#666" }}>
+                  <Typography sx={{ fontSize: "10px", color: vwPalette.text.tertiary }}>
                     to easily open Wise Search
                   </Typography>
                 </Box>

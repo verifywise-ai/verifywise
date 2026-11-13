@@ -5,7 +5,7 @@ import Toggle from "../Inputs/Toggle";
 import Checkbox from "../Inputs/Checkbox";
 import Field from "../Inputs/Field";
 import ManageShareLinks from "./ManageShareLinks";
-import { brand, text, background } from "../../themes/palette";
+import { brand, text, background, radiusPx, palette as vwPalette } from "../../themes/palette";
 
 /**
  * Configuration for share view settings
@@ -163,7 +163,7 @@ const ShareViewDropdown: React.FC<ShareViewDropdownProps> = ({
       sx={{
         "marginTop": "8px",
         "& .MuiPopover-paper": {
-          borderRadius: "8px",
+          borderRadius: radiusPx.lg,
           boxShadow: "0 8px 24px rgba(0, 0, 0, 0.15)",
           overflow: "visible",
           backgroundColor: `${background.main}`,
@@ -207,7 +207,7 @@ const ShareViewDropdown: React.FC<ShareViewDropdownProps> = ({
                 variant="body2"
                 sx={{
                   fontSize: "13px",
-                  color: "#666",
+                  color: vwPalette.text.tertiary,
                   lineHeight: 1.4,
                   marginTop: "8px",
                 }}
@@ -265,7 +265,7 @@ const ShareViewDropdown: React.FC<ShareViewDropdownProps> = ({
                         color: `${background.main}`,
                         fontSize: "12px",
                         padding: "6px 12px",
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                       },
                     },
                   }}
@@ -293,7 +293,7 @@ const ShareViewDropdown: React.FC<ShareViewDropdownProps> = ({
                         color: `${background.main}`,
                         fontSize: "12px",
                         padding: "6px 12px",
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                       },
                     },
                   }}
@@ -321,7 +321,7 @@ const ShareViewDropdown: React.FC<ShareViewDropdownProps> = ({
                         color: `${background.main}`,
                         fontSize: "12px",
                         padding: "6px 12px",
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                       },
                     },
                   }}
@@ -426,7 +426,7 @@ const SettingItem: React.FC<SettingItemProps> = ({ label, checked, onChange, hel
           onChange={onChange}
           sx={{
             "& svg": {
-              color: checked ? "brand.primary" : "#d1d5db",
+              color: checked ? "brand.primary" : vwPalette.border.dark,
             },
           }}
         />
@@ -442,7 +442,7 @@ const SettingItem: React.FC<SettingItemProps> = ({ label, checked, onChange, hel
               color: "background.main",
               fontSize: "12px",
               padding: "6px 12px",
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
             },
           },
           arrow: {
