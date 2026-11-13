@@ -100,8 +100,6 @@ const DEFAULT_MAX_CRITICAL = 0;
 
 const DELIVERY_STATUS_TEXT: Record<WebhookDeliveryStatus, string> = {
   ok: "Received",
-  invalid_signature: "Rejected: the secret in GitHub does not match",
-  secret_missing: "Rejected: no secret was set",
   error: "Received, but the scan could not start",
 };
 
@@ -586,7 +584,7 @@ export default function AddRepositoryModal({
 
               {isEditing && editingRepository?.ci_enabled && (
                 <Typography variant="caption" sx={captionSx} data-testid="last-webhook-delivery">
-                  {lastDeliveryAt && lastDeliveryStatus
+                  {lastDeliveryAt && lastDeliveryStatus && DELIVERY_STATUS_TEXT[lastDeliveryStatus]
                     ? fill(t("Last delivery: {time}. {status}"), {
                         time: lastDeliveryAt,
                         status: t(DELIVERY_STATUS_TEXT[lastDeliveryStatus]),

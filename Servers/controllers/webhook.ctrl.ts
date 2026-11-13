@@ -20,11 +20,12 @@ import {
   handlePushEvent,
   handlePullRequestEvent,
 } from "../services/webhook.service";
-import logger from "../utils/logger/fileLogger";
+import logger, { logStructured } from "../utils/logger/fileLogger";
 
 /**
- * Store the outcome of a delivery on the repository, for the "Last delivery"
- * line in the repository settings. Never fails the webhook response.
+ * Store the outcome of a signature-verified delivery on the repository, for
+ * the "Last delivery" line in the repository settings. Only called after the
+ * HMAC check passes. Never fails the webhook response.
  */
 async function recordDelivery(
   repo: { id?: number; organization_id: number },
@@ -102,13 +103,25 @@ export async function githubWebhookController(req: Request, res: Response): Prom
     }
 
     // 6. Verify HMAC signature
+    // Unverified requests never write to the repository row: anyone who knows
+    // the public URL could otherwise overwrite the last verified delivery.
     if (!repo.webhook_secret) {
-      await recordDelivery(repo, "secret_missing");
+      logStructured(
+        "error",
+        `webhook rejected for repository ${repo.id}: no secret configured`,
+        "githubWebhookController",
+        "webhook.ctrl.ts",
+      );
       return res.status(200).json({ message: req.t!("Webhook secret not configured") });
     }
 
     if (!verifyGitHubSignature(rawBody, signature, repo.webhook_secret)) {
-      await recordDelivery(repo, "invalid_signature");
+      logStructured(
+        "error",
+        `webhook rejected for repository ${repo.id}: signature did not verify`,
+        "githubWebhookController",
+        "webhook.ctrl.ts",
+      );
       return res.status(401).json(STATUS_CODE[401](req.t!("Invalid signature")));
     }
 

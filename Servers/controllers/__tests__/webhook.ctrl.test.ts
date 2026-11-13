@@ -15,6 +15,7 @@ jest.mock("../../services/webhook.service", () => ({
 jest.mock("../../utils/logger/fileLogger", () => ({
   __esModule: true,
   default: { info: jest.fn(), error: jest.fn() },
+  logStructured: jest.fn(),
 }));
 
 jest.mock("../../utils/statusCode.utils", () => ({
@@ -464,21 +465,35 @@ describe("githubWebhookController", () => {
       expect(mockRecordDelivery).toHaveBeenCalledWith(9, 4, "ok");
     });
 
-    it("records an invalid signature", async () => {
+    it("does not write the delivery status for a bad signature", async () => {
       mockGetRepo.mockResolvedValue(repo);
       mockVerifySig.mockReturnValue(false);
+      const res = createRes();
 
-      await githubWebhookController(pushReq() as Request, createRes() as Response);
+      await githubWebhookController(pushReq() as Request, res as Response);
 
-      expect(mockRecordDelivery).toHaveBeenCalledWith(9, 4, "invalid_signature");
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(mockRecordDelivery).not.toHaveBeenCalled();
     });
 
-    it("records a missing secret", async () => {
+    it("does not write the delivery status for an unsigned request", async () => {
+      mockGetRepo.mockResolvedValue(repo);
+      const req = pushReq();
+      delete req.headers["x-hub-signature-256"];
+      const res = createRes();
+
+      await githubWebhookController(req as Request, res as Response);
+
+      expect(res.status).toHaveBeenCalledWith(401);
+      expect(mockRecordDelivery).not.toHaveBeenCalled();
+    });
+
+    it("does not write the delivery status when no secret is configured", async () => {
       mockGetRepo.mockResolvedValue({ ...repo, webhook_secret: null });
 
       await githubWebhookController(pushReq() as Request, createRes() as Response);
 
-      expect(mockRecordDelivery).toHaveBeenCalledWith(9, 4, "secret_missing");
+      expect(mockRecordDelivery).not.toHaveBeenCalled();
     });
 
     it("records an error when a verified delivery fails to process", async () => {

@@ -94,8 +94,8 @@ export interface RepositoriesResponse {
   };
 }
 
-/** Outcome of the most recent GitHub webhook delivery */
-export type WebhookDeliveryStatus = "ok" | "invalid_signature" | "secret_missing" | "error";
+/** Outcome of the most recent signature-verified GitHub webhook delivery */
+export type WebhookDeliveryStatus = "ok" | "error";
 
 /** Where GitHub should send webhooks, from the deployment's public address */
 export interface WebhookConfig {

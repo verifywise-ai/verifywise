@@ -92,7 +92,7 @@ export const repositoriesContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'GitHub sends a test delivery when you add the webhook. To check that it arrived, open the repository with the pencil icon: under the webhook secret, **Last delivery** shows when GitHub last reached VerifyWise and whether the delivery was accepted. A rejected delivery with a mismatched secret means the secret in GitHub differs from the one in VerifyWise.',
+      text: 'GitHub sends a test delivery when you add the webhook. To check that it arrived, open the repository with the pencil icon: under the webhook secret, **Last delivery** shows when GitHub last reached VerifyWise and whether the scan started. Only deliveries signed with the right secret are shown. If GitHub reports deliveries but **Last delivery** does not change, check that the secret in GitHub matches the one in VerifyWise.',
     },
     {
       type: 'callout',

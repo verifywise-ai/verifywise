@@ -146,8 +146,8 @@ ai_detection_repositories
 ├── github_token_id (INTEGER)
 ├── webhook_secret (VARCHAR(255))            -- HMAC secret for GitHub deliveries
 ├── ci_enabled, ci_min_score, ci_max_critical, ci_post_comments, ci_status_checks
-├── last_webhook_at (TIMESTAMPTZ)            -- most recent GitHub delivery
-├── last_webhook_status (VARCHAR(30))        -- ok | invalid_signature | secret_missing | error
+├── last_webhook_at (TIMESTAMPTZ)            -- most recent verified GitHub delivery
+├── last_webhook_status (VARCHAR(30))        -- ok | error
 ├── created_by (INTEGER NOT NULL)
 ├── created_at (TIMESTAMPTZ)
 └── updated_at (TIMESTAMPTZ)
@@ -478,7 +478,7 @@ The repositories page allows registering repos for recurring scans:
 - **Setup:** creating a repository with `ci_enabled: true`, or turning CI/CD on for a repository without a secret, generates `webhook_secret` server-side (`generateWebhookSecret`). The add/edit modal then shows a "Connect GitHub" step with the URL, the secret and the GitHub steps.
 - **Webhook URL:** `buildGitHubWebhookUrl(FRONTEND_URL)` in `services/webhook.service.ts` returns `${FRONTEND_URL}/api/webhooks/github` (deployments proxy `/api/` from the app's public host). `is_public` is false when `FRONTEND_URL` is missing or points at localhost or a private IPv4 range; the modal then warns that GitHub must be able to reach the address.
 - **Events:** `push` to the default branch starts a full scan; `pull_request` with action `opened`, `synchronize` or `reopened` starts an incremental scan; `ping` is acknowledged. Everything else is ignored.
-- **Delivery tracking:** `webhook.ctrl.ts` writes `last_webhook_at` / `last_webhook_status` for the matched repository (`recordWebhookDeliveryQuery`, scoped by id and organization): `ok` for a verified delivery, `invalid_signature`, `secret_missing`, or `error` when a verified delivery fails to process. Recording never fails the response to GitHub.
+- **Delivery tracking:** `webhook.ctrl.ts` writes `last_webhook_at` / `last_webhook_status` for the matched repository (`recordWebhookDeliveryQuery`, scoped by id and organization) only after the HMAC signature verifies: `ok`, or `error` when processing fails. Unsigned, bad-signature and no-secret requests are logged and never written, so an unauthenticated caller cannot overwrite the status. The route is rate-limited (`webhookLimiter`, 100/min). Recording never fails the response to GitHub.
 - **Results:** `githubStatusReporter.ts` posts a commit status ("VerifyWise AI Detection") and, for pull requests, a comment, using the organization's GitHub token, after a webhook-triggered scan completes.
 
 ## Detection Patterns

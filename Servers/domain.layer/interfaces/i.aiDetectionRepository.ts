@@ -21,13 +21,12 @@ export type ScheduleFrequency = "daily" | "weekly" | "monthly";
 export type TriggerType = "manual" | "scheduled" | "webhook";
 
 /**
- * Outcome of the most recent GitHub webhook delivery for a repository.
- * - ok: signature verified and the event was handled (or ignored on purpose)
- * - invalid_signature: the signature did not match the stored secret
- * - secret_missing: CI/CD is on but no secret has been generated yet
- * - error: the delivery was verified but processing failed
+ * Outcome of the most recent signature-verified GitHub webhook delivery.
+ * Unverified requests are never recorded.
+ * - ok: the event was handled (or ignored on purpose, e.g. another branch)
+ * - error: processing failed after the signature verified
  */
-export type WebhookDeliveryStatus = "ok" | "invalid_signature" | "secret_missing" | "error";
+export type WebhookDeliveryStatus = "ok" | "error";
 
 // ============================================================================
 // Repository Record

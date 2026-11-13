@@ -1,9 +1,9 @@
 "use strict";
 
 /**
- * Records the most recent GitHub webhook delivery per registered repository,
- * so the repository settings can show whether GitHub is reaching VerifyWise
- * and whether the signature matched.
+ * Records the most recent signature-verified GitHub webhook delivery per
+ * registered repository, so the repository settings can show whether GitHub
+ * is reaching VerifyWise. Unverified requests are never written.
  *
  * ai_detection_repositories is already organization-scoped (organization_id),
  * so these columns inherit its tenant isolation.

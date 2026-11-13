@@ -372,13 +372,13 @@ describe("AddRepositoryModal", () => {
         editingRepository={{
           ...editingRepository,
           last_webhook_at: "2026-11-12T10:00:00Z",
-          last_webhook_status: "invalid_signature",
+          last_webhook_status: "error",
         }}
       />,
     );
 
     expect(screen.getByTestId("last-webhook-delivery")).toHaveTextContent(
-      /Rejected: the secret in GitHub does not match/,
+      /Received, but the scan could not start/,
     );
   });
 

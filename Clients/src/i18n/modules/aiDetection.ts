@@ -345,9 +345,6 @@ export const de: Record<string, string> = {
   "Copy webhook URL": "Webhook-URL kopieren",
   "Copy webhook secret": "Webhook-Geheimnis kopieren",
   "Received": "Empfangen",
-  "Rejected: the secret in GitHub does not match":
-    "Abgelehnt: Das Geheimnis in GitHub stimmt nicht überein",
-  "Rejected: no secret was set": "Abgelehnt: Es war kein Geheimnis festgelegt",
   "Received, but the scan could not start": "Empfangen, aber der Scan konnte nicht starten",
   "In your GitHub repository, open Settings → Webhooks → Add webhook.":
     "Öffnen Sie in Ihrem GitHub-Repository Settings → Webhooks → Add webhook.",
@@ -715,9 +712,6 @@ export const fr: Record<string, string> = {
   "Copy webhook URL": "Copier l'URL du webhook",
   "Copy webhook secret": "Copier le secret du webhook",
   "Received": "Reçu",
-  "Rejected: the secret in GitHub does not match":
-    "Refusé : le secret dans GitHub ne correspond pas",
-  "Rejected: no secret was set": "Refusé : aucun secret n'était défini",
   "Received, but the scan could not start": "Reçu, mais l'analyse n'a pas pu démarrer",
   "In your GitHub repository, open Settings → Webhooks → Add webhook.":
     "Dans votre dépôt GitHub, ouvrez Settings → Webhooks → Add webhook.",
@@ -1089,8 +1083,6 @@ export const es: Record<string, string> = {
   "Copy webhook URL": "Copiar URL del webhook",
   "Copy webhook secret": "Copiar secreto del webhook",
   "Received": "Recibido",
-  "Rejected: the secret in GitHub does not match": "Rechazado: el secreto en GitHub no coincide",
-  "Rejected: no secret was set": "Rechazado: no había ningún secreto definido",
   "Received, but the scan could not start": "Recibido, pero el escaneo no pudo iniciarse",
   "In your GitHub repository, open Settings → Webhooks → Add webhook.":
     "En su repositorio de GitHub, abra Settings → Webhooks → Add webhook.",
