@@ -3,10 +3,13 @@ import { Box, InputBase, SxProps, Theme, useTheme } from "@mui/material";
 import { Search } from "lucide-react";
 import { ISearchBoxProps } from "../../../types/widget.types";
 import { getSearchBoxStyles } from "../../../utils/inputStyles";
-import { background, status } from "../../../themes/palette";
+import { background, status, radiusPx } from "../../../themes/palette";
+import { isClassicUi } from "../../../themes/uiStyle";
+
+const classicUi = isClassicUi();
 
 const SearchBox: React.FC<ISearchBoxProps> = ({
-  placeholder = "Search...",
+  placeholder = classicUi ? "Search..." : "Search this list",
   value,
   onChange,
   sx = {},
@@ -30,6 +33,7 @@ const SearchBox: React.FC<ISearchBoxProps> = ({
     minHeight: "34px",
     maxHeight: "34px",
     boxSizing: "border-box",
+    ...(classicUi ? {} : { borderRadius: radiusPx.search }),
     width: fullWidth ? "100%" : 160,
     ...sx,
   };
