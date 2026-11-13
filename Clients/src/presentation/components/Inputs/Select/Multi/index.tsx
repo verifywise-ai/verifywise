@@ -16,6 +16,7 @@ import { useState } from "react";
 import "./index.css";
 import { ChevronDown } from "lucide-react";
 import { radiusPx } from "../../../../themes/palette";
+import { isClassicUi } from "../../../../themes/uiStyle";
 
 interface CustomizableMultiSelectProps {
   label: string;
@@ -131,7 +132,8 @@ function CustomizableMultiSelect({
                 e.stopPropagation();
               }}
               sx={{
-                "borderRadius": radiusPx.lg,
+                // Phase 1: value chips are fully round like every pill; classic keeps 8px.
+                "borderRadius": isClassicUi() ? radiusPx.lg : radiusPx.pill,
                 "height": 24,
                 "fontSize": 12,
                 "backgroundColor": theme.palette.background.accent,

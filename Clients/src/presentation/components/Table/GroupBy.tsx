@@ -10,6 +10,10 @@ import {
   palette as vwPalette,
   radiusPx,
 } from "../../themes/palette";
+import { isClassicUi } from "../../themes/uiStyle";
+
+// Phase 1 draws the button with a hairline border and 2px corners; classic keeps its look.
+const classic = isClassicUi();
 
 export interface GroupByOption {
   id: string;
@@ -206,7 +210,8 @@ export const GroupBy: React.FC<GroupByProps> = ({
           "padding": "6px 12px",
           "textTransform": "none",
           "color": vwPalette.text.secondary,
-          "borderColor": `${borderPalette.dark}`,
+          "borderColor": classic ? `${borderPalette.dark}` : borderPalette.light,
+          ...(classic ? {} : { borderRadius: radiusPx.sm }),
           "height": "34px",
           "minWidth": selectedGroup ? "110px" : "80px",
           "backgroundColor": open ? vwPalette.status.success.bg : "transparent",

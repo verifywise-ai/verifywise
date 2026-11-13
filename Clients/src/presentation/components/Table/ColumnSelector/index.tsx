@@ -32,6 +32,10 @@ import {
   palette as vwPalette,
   radiusPx,
 } from "../../../themes/palette";
+import { isClassicUi } from "../../../themes/uiStyle";
+
+// Phase 1 draws the button with a hairline border; classic keeps the darker one.
+const buttonBorder = isClassicUi() ? borderPalette.dark : borderPalette.light;
 
 interface ColumnSelectorProps<TKey extends string = string> {
   /** All available column configurations */
@@ -85,7 +89,7 @@ export function ColumnSelector<TKey extends string = string>({
           "minWidth": 100,
           "padding": "6px 12px",
           "borderRadius": radiusPx.sm,
-          "border": variant === "outlined" ? `1px solid ${borderPalette.dark}` : undefined,
+          "border": variant === "outlined" ? `1px solid ${buttonBorder}` : undefined,
           "backgroundColor": variant === "outlined" ? "white" : undefined,
           "color": `${text.secondary}`,
           "fontSize": 13,
