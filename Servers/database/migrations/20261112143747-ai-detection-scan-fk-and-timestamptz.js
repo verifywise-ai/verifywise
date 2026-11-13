@@ -22,14 +22,20 @@
  *        raw query, which Sequelize serialises in the Node process's local
  *        time zone. The offset in that literal is discarded by a TIMESTAMP
  *        column, so they hold server-local wall time.
- *    The local offset is not recorded anywhere, so it is recovered per row:
- *    started_at is written within milliseconds of created_at, and
- *    completed_at in the same UPDATE as updated_at (both UTC). The difference,
- *    rounded to 15 minutes, is the writer's UTC offset at that moment (this
- *    also follows DST). Offsets beyond +/-14h are treated as 0. Both columns
- *    are shifted to UTC wall time, then every column is converted with
- *    AT TIME ZONE 'UTC'. On servers that run in UTC the offset is 0 and
+ *    The local offset is not recorded anywhere, so it is recovered per row
+ *    from started_at - created_at: started_at is written when the scan
+ *    starts, moments after created_at (UTC), and created_at is never updated.
+ *    The difference, rounded to 15 minutes, is the writer's UTC offset at
+ *    that moment (this also follows DST). Offsets beyond +/-14h are treated
+ *    as 0. Both columns are shifted by it, then every column is converted
+ *    with AT TIME ZONE 'UTC'. On servers that run in UTC the offset is 0 and
  *    nothing shifts.
+ *    Rows without started_at are not shifted. updated_at is not a usable
+ *    reference for completed_at: it is written again after completion (risk
+ *    scoring, cache cleanup), so completed_at - updated_at would be a wrong
+ *    offset. Every scan that runs writes started_at first, so a row without
+ *    it is rare, and leaving it unshifted is off by at most the server's UTC
+ *    offset, never by an arbitrary amount.
  *
  * 3. Severity. LLM vulnerability findings kept their severity only inside
  *    ai_detection_vulnerability_details.vulnerability_details, so the
@@ -126,12 +132,9 @@ module.exports = {
           `WITH offsets AS (
              SELECT
                id,
-               ROUND(EXTRACT(EPOCH FROM COALESCE(
-                 started_at - created_at,
-                 completed_at - updated_at
-               )) / 900) * 900 AS offset_seconds
+               ROUND(EXTRACT(EPOCH FROM started_at - created_at) / 900) * 900 AS offset_seconds
              FROM ${SCHEMA}.ai_detection_scans
-             WHERE started_at IS NOT NULL OR completed_at IS NOT NULL
+             WHERE started_at IS NOT NULL
            )
            UPDATE ${SCHEMA}.ai_detection_scans s
            SET

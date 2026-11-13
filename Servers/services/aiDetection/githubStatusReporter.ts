@@ -123,8 +123,8 @@ export interface ThresholdEvaluation {
  * Evaluate a completed scan against the repository's CI thresholds.
  *
  * - The governance score (`risk_score`) is 0–100 where 100 is safest (AGRS).
- *   The gate fails when the score is BELOW `ci_min_score`; a score equal to
- *   the minimum passes.
+ *   The gate fails when the score, rounded to the whole number shown in the
+ *   status, is BELOW `ci_min_score`; a score equal to the minimum passes.
  * - `ci_max_critical` limits the number of critical findings, as counted by
  *   `countCriticalFindingsQuery` (severity "critical" or a hardcoded secret,
  *   excluding suppressed, accepted-risk and fixed findings). It is not the
@@ -163,8 +163,10 @@ export function evaluateThresholds(
     };
   }
 
+  // Compare the whole-number score that is shown, so the message can never
+  // read "70 is below the minimum of 70" for a stored 69.6.
   const displayScore = Math.round(score);
-  const scoreBelowMinimum = score < repo.ci_min_score;
+  const scoreBelowMinimum = displayScore < repo.ci_min_score;
   const criticalExceeded = criticalCount > repo.ci_max_critical;
   const criticalLabel = criticalCount === 1 ? "critical finding" : "critical findings";
   const exceedVerb = criticalCount === 1 ? "exceeds" : "exceed";

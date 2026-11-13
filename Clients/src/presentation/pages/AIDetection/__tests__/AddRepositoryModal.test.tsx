@@ -156,7 +156,7 @@ describe("AddRepositoryModal", () => {
     fireEvent.click(screen.getAllByRole("switch")[1]);
 
     expect(screen.getByLabelText("Webhook URL")).toBeInTheDocument();
-    expect(screen.getByLabelText("Risk score threshold")).toBeInTheDocument();
+    expect(screen.getByLabelText("Minimum governance score")).toBeInTheDocument();
     expect(screen.getByLabelText("Max critical findings")).toBeInTheDocument();
   });
 

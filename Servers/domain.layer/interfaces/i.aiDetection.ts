@@ -230,6 +230,8 @@ export interface IFinding {
   mitigation?: string | null;
   data_flow_summary?: string | null;
   vulnerability_details?: Record<string, unknown> | null;
+  // Severity (vulnerability and model security findings)
+  severity?: FindingSeverity | null;
   // Incremental scan fields
   finding_status?: FindingStatus;
   created_at?: Date;

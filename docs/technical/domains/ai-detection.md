@@ -59,9 +59,10 @@ scoring config tables used `TIMESTAMP` with mixed contents: columns set with `NO
 held UTC wall time (Sequelize runs sessions at `+00:00`), while `started_at` and
 `completed_at`, bound from a JS `Date` in a raw query, held the Node server's local
 wall time. The UI therefore showed scans hours off. The migration recovers each
-row's offset (`started_at - created_at`, else `completed_at - updated_at`, rounded to
-15 minutes), shifts those two columns to UTC and converts every column with
-`AT TIME ZONE 'UTC'`. `updateScanProgressQuery` now binds `started_at` /
+row's offset from `started_at - created_at` (rounded to 15 minutes), shifts those two
+columns to UTC and converts every column with `AT TIME ZONE 'UTC'`. Rows without
+`started_at` are not shifted: `updated_at` is rewritten after completion (risk
+scoring, cache cleanup), so it cannot anchor `completed_at`. `updateScanProgressQuery` now binds `started_at` /
 `completed_at` as ISO strings, so the stored instant does not depend on the process
 or session time zone.
 
@@ -105,9 +106,20 @@ Findings are merged before insert by `mergeDuplicateFindings`
 compared case-insensitively. Some libraries appear twice in the pattern catalogue
 (for example `qdrant` as a vector database library and `Qdrant` as a RAG component,
 `crewai` and `CrewAI`), and both entries match the same import. The merged finding
-keeps the capitalised display name and its description, unions the file lists (by
-path and line) and recomputes `file_count`, and keeps the higher confidence and risk
-level. A scan's `findings_count` is the number of rows stored after this merge.
+keeps the capitalised display name with its finding type, category and description,
+unions the file lists (by path and line) and recomputes `file_count`, and keeps the
+higher confidence and risk level. It keeps the highest severity, and the description,
+mitigation, vulnerability details and CWE/OWASP fields of the variant that supplied
+it. Model security findings go through the same merge in
+`createModelSecurityFindingsBatchQuery`. A scan's `findings_count` is the number of
+rows stored after this merge.
+
+Suppression rules are matched against each variant before the merge, and the merged
+finding is suppressed when any variant was. Exact rules on `name` and `provider`
+compare case-insensitively, like the merge key, so a rule on `qdrant` keeps matching
+the stored `Qdrant` finding. Incremental scans carry a baseline finding's suppression
+forward while its rule is still active, along with its severity and vulnerability
+details.
 
 ### Vulnerability Details Table
 
@@ -677,7 +689,7 @@ the stored score.
 
 | Result | When | Example description |
 |--------|------|---------------------|
-| `failure` | `risk_score < ci_min_score` (score is 0–100, higher is safer; equal passes) | `Governance score 62 is below the minimum of 70` |
+| `failure` | `round(risk_score) < ci_min_score` (score is 0–100, higher is safer; equal passes) | `Governance score 62 is below the minimum of 70` |
 | `failure` | critical findings `> ci_max_critical` | `3 critical findings exceed the limit of 0` |
 | `success` | both thresholds pass | `Governance score 85 (minimum 70), 0 critical findings (limit 0)` |
 | `error` | scan not completed, no governance score (scoring failed), or the critical count could not be read | `Governance score is not available, so thresholds could not be evaluated` |
@@ -689,11 +701,15 @@ block). Model security findings write `severity` in
 `createFindingsBatchQuery` (the analyzer sets `severity` on the input). Before
 `20261112143747` vulnerability severity was stored only in
 `ai_detection_vulnerability_details.vulnerability_details`, so the migration backfills
-empty severities from that JSON and the count query also matches
-`vulnerability_details->>'severity' = 'critical'`. Findings that are suppressed, have
-governance status `suppressed` or `accepted_risk`, or are `fixed` in an incremental
-scan are not counted, matching what the governance score excludes. The total
-`findings_count` is not used for the gate.
+empty severities from that JSON; incremental scans carry severity forward with the
+baseline finding. Findings that are suppressed or have governance status `suppressed`
+or `accepted_risk` are not counted, as the governance score also leaves them out.
+Findings marked `fixed` by an incremental scan are not counted either, although the
+score still includes them. The total `findings_count` is not used for the gate.
+
+The score comparison uses the whole-number score shown in the status, so a stored
+69.6 is shown as 70 and passes a minimum of 70. A webhook scan that fails or is
+cancelled is reported as `error`, so a required check does not stay pending.
 
 ### Token Management
 

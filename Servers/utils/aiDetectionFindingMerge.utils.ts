@@ -22,6 +22,38 @@ import {
   RiskLevel,
 } from "../domain.layer/interfaces/i.aiDetection";
 
+/**
+ * The fields the merge reads or writes. Library, vulnerability and model
+ * security finding inputs all fit this shape (model security inputs use their
+ * own finding_type and carry CWE/OWASP fields, listed in SEVERITY_DETAIL_FIELDS).
+ */
+export interface MergeableFindingInput extends Omit<
+  ICreateFindingInput,
+  "finding_type" | "severity"
+> {
+  finding_type: string;
+  severity?: FindingSeverity | null;
+}
+
+/**
+ * Fields that explain a finding's severity. They are taken from the variant
+ * that supplied the highest severity, so the stored record never pairs a
+ * "critical" severity with the details of a lower-severity variant.
+ */
+const SEVERITY_DETAIL_FIELDS = [
+  "description",
+  "mitigation",
+  "data_flow_summary",
+  "vulnerability_details",
+  "cwe_id",
+  "cwe_name",
+  "owasp_ml_id",
+  "owasp_ml_name",
+  "threat_type",
+  "operator_name",
+  "module_name",
+] as const;
+
 const LEVEL_RANK: Record<string, number> = { low: 0, medium: 1, high: 2, critical: 3 };
 
 function normalise(value: string | null | undefined): string {
@@ -38,13 +70,17 @@ function isDisplayName(name: string): boolean {
   return name !== name.toLowerCase();
 }
 
+function rank(level: string | null | undefined): number {
+  return level ? (LEVEL_RANK[level] ?? -1) : -1;
+}
+
 function higherLevel<T extends ConfidenceLevel | RiskLevel | FindingSeverity>(
   a: T | undefined,
   b: T | undefined,
 ): T | undefined {
   if (!a) return b;
   if (!b) return a;
-  return (LEVEL_RANK[b] ?? -1) > (LEVEL_RANK[a] ?? -1) ? b : a;
+  return rank(b) > rank(a) ? b : a;
 }
 
 function mergeFilePaths(a: IFilePath[] = [], b: IFilePath[] = []): IFilePath[] {
@@ -69,9 +105,14 @@ function mergeStatus(
   return "fixed";
 }
 
-function mergePair(target: ICreateFindingInput, incoming: ICreateFindingInput): void {
+function mergePair(target: MergeableFindingInput, incoming: MergeableFindingInput): void {
+  const targetFields = target as unknown as Record<string, unknown>;
+  const incomingFields = incoming as unknown as Record<string, unknown>;
+
+  // The curated display name brings its own identity: type, category and copy.
   if (!isDisplayName(target.name) && isDisplayName(incoming.name)) {
     target.name = incoming.name;
+    target.finding_type = incoming.finding_type;
     target.description = incoming.description ?? target.description;
     target.documentation_url = incoming.documentation_url ?? target.documentation_url;
     target.category = incoming.category ?? target.category;
@@ -83,8 +124,18 @@ function mergePair(target: ICreateFindingInput, incoming: ICreateFindingInput): 
 
   target.confidence = higherLevel(target.confidence, incoming.confidence) ?? target.confidence;
   target.risk_level = higherLevel(target.risk_level, incoming.risk_level);
-  target.severity =
-    higherLevel(target.severity ?? undefined, incoming.severity ?? undefined) ?? null;
+
+  // The variant with the highest severity also supplies the details explaining it.
+  if (rank(incoming.severity) > rank(target.severity)) {
+    target.severity = incoming.severity;
+    for (const field of SEVERITY_DETAIL_FIELDS) {
+      targetFields[field] = incomingFields[field] ?? targetFields[field];
+    }
+  } else {
+    target.mitigation = target.mitigation ?? incoming.mitigation;
+    target.data_flow_summary = target.data_flow_summary ?? incoming.data_flow_summary;
+    target.vulnerability_details = target.vulnerability_details ?? incoming.vulnerability_details;
+  }
 
   target.file_paths = mergeFilePaths(target.file_paths, incoming.file_paths);
   target.file_count = target.file_paths.length;
@@ -94,25 +145,24 @@ function mergePair(target: ICreateFindingInput, incoming: ICreateFindingInput): 
   target.license_risk = target.license_risk ?? incoming.license_risk;
   target.license_source = target.license_source ?? incoming.license_source;
 
-  target.mitigation = target.mitigation ?? incoming.mitigation;
-  target.data_flow_summary = target.data_flow_summary ?? incoming.data_flow_summary;
-  target.vulnerability_details = target.vulnerability_details ?? incoming.vulnerability_details;
-
   target.finding_status = mergeStatus(target.finding_status, incoming.finding_status);
 
-  // Suppressed only when every merged variant was suppressed.
-  if (target.suppressed !== true || incoming.suppressed !== true) {
-    target.suppressed = false;
-    target.suppression_rule_id = null;
+  // Suppressed when any variant was. Suppression rules are matched against each
+  // variant before the merge, so a rule written for one spelling or category
+  // ("qdrant", "Vector Databases") keeps the merged finding suppressed.
+  if (target.suppressed !== true && incoming.suppressed === true) {
+    target.suppressed = true;
+    target.suppression_rule_id = incoming.suppression_rule_id ?? null;
   }
 }
 
 /**
  * Merge finding inputs that share scan, name and provider (case-insensitive).
- * File lists are unioned (by path and line) and file_count recomputed.
+ * File lists are unioned (by path and line) and file_count recomputed; the
+ * higher confidence, risk level and severity are kept.
  * Inputs are not mutated; order of first appearance is kept.
  */
-export function mergeDuplicateFindings<T extends ICreateFindingInput>(inputs: T[]): T[] {
+export function mergeDuplicateFindings<T extends MergeableFindingInput>(inputs: T[]): T[] {
   const merged = new Map<string, T>();
   for (const input of inputs) {
     const key = findingMergeKey(input);

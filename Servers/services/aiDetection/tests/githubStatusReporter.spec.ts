@@ -441,8 +441,22 @@ describe("githubStatusReporter", () => {
     });
 
     it("parses NUMERIC scores returned as strings", () => {
-      expect(evaluateThresholds(scan("69.60"), repo, 0).state).toBe("failure");
+      expect(evaluateThresholds(scan("62.00"), repo, 0).state).toBe("failure");
       expect(evaluateThresholds(scan("70.00"), repo, 0).state).toBe("success");
+    });
+
+    it("compares the rounded score it displays, so the message never contradicts the result", () => {
+      // 69.6 is shown as 70, and 70 meets a minimum of 70
+      const rounded = evaluateThresholds(scan("69.60"), repo, 0);
+      expect(rounded.state).toBe("success");
+      expect(rounded.description).toBe(
+        "Governance score 70 (minimum 70), 0 critical findings (limit 2)",
+      );
+
+      // 69.4 is shown as 69, below the minimum
+      const below = evaluateThresholds(scan("69.40"), repo, 0);
+      expect(below.state).toBe("failure");
+      expect(below.description).toBe("Governance score 69 is below the minimum of 70");
     });
 
     it("reports error when the score is missing", () => {

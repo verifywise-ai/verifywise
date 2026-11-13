@@ -109,20 +109,109 @@ describe("mergeDuplicateFindings", () => {
     expect(result[0].finding_status).toBeUndefined();
   });
 
-  it("keeps a merged finding suppressed only when every variant was suppressed", () => {
+  it("keeps a merged finding suppressed when any variant was suppressed", () => {
+    // A rule on "qdrant" matches the package-name variant before the merge;
+    // the stored "Qdrant" finding must stay suppressed.
     const partly = mergeDuplicateFindings([
       finding({ suppressed: true, suppression_rule_id: 4 }),
       finding({ name: "Qdrant", suppressed: false }),
     ]);
-    expect(partly[0].suppressed).toBe(false);
-    expect(partly[0].suppression_rule_id).toBeNull();
+    expect(partly[0].name).toBe("Qdrant");
+    expect(partly[0].suppressed).toBe(true);
+    expect(partly[0].suppression_rule_id).toBe(4);
 
-    const fully = mergeDuplicateFindings([
-      finding({ suppressed: true, suppression_rule_id: 4 }),
-      finding({ name: "Qdrant", suppressed: true, suppression_rule_id: 4 }),
+    const second = mergeDuplicateFindings([
+      finding({ name: "Qdrant" }),
+      finding({ suppressed: true, suppression_rule_id: 7 }),
     ]);
-    expect(fully[0].suppressed).toBe(true);
-    expect(fully[0].suppression_rule_id).toBe(4);
+    expect(second[0].suppressed).toBe(true);
+    expect(second[0].suppression_rule_id).toBe(7);
+
+    const none = mergeDuplicateFindings([finding({}), finding({ name: "Qdrant" })]);
+    expect(none[0].suppressed).toBeUndefined();
+  });
+
+  it("takes the finding type with the display name, so type and category agree", () => {
+    const result = mergeDuplicateFindings([
+      finding({ finding_type: "library", category: "Vector Databases" }),
+      finding({ name: "Qdrant", finding_type: "rag_component", category: "RAG Components" }),
+    ]);
+    expect(result[0].finding_type).toBe("rag_component");
+    expect(result[0].category).toBe("RAG Components");
+
+    const displayFirst = mergeDuplicateFindings([
+      finding({ name: "Qdrant", finding_type: "rag_component", category: "RAG Components" }),
+      finding({ finding_type: "library", category: "Vector Databases" }),
+    ]);
+    expect(displayFirst[0].finding_type).toBe("rag_component");
+    expect(displayFirst[0].category).toBe("RAG Components");
+  });
+
+  it("takes vulnerability details from the variant with the highest severity", () => {
+    const result = mergeDuplicateFindings([
+      finding({
+        severity: "medium",
+        description: "Medium description",
+        mitigation: "Medium mitigation",
+        vulnerability_details: { severity: "medium", owasp: "LLM01" },
+      }),
+      finding({
+        severity: "critical",
+        description: "Critical description",
+        mitigation: "Critical mitigation",
+        vulnerability_details: { severity: "critical", owasp: "LLM01" },
+      }),
+    ]);
+    expect(result[0].severity).toBe("critical");
+    expect(result[0].description).toBe("Critical description");
+    expect(result[0].mitigation).toBe("Critical mitigation");
+    expect(result[0].vulnerability_details).toEqual({ severity: "critical", owasp: "LLM01" });
+  });
+
+  it("keeps the first variant's details when severities are equal or lower", () => {
+    const result = mergeDuplicateFindings([
+      finding({ severity: "high", mitigation: "First", vulnerability_details: { a: 1 } }),
+      finding({ severity: "low", mitigation: "Second", vulnerability_details: { a: 2 } }),
+    ]);
+    expect(result[0].severity).toBe("high");
+    expect(result[0].mitigation).toBe("First");
+    expect(result[0].vulnerability_details).toEqual({ a: 1 });
+  });
+
+  it("merges model security inputs, keeping the highest severity and its CWE", () => {
+    const base = {
+      scan_id: 1,
+      finding_type: "model_security" as const,
+      category: "Model security",
+      name: "Pickle deserialization",
+      provider: "pickle",
+      confidence: "high" as const,
+      cwe_name: "",
+      owasp_ml_id: "ML06",
+      owasp_ml_name: "AI supply chain attacks",
+      threat_type: "code_execution",
+      operator_name: "",
+      module_name: "",
+    };
+    const result = mergeDuplicateFindings([
+      {
+        ...base,
+        severity: "high" as const,
+        cwe_id: "CWE-1",
+        file_paths: [{ path: "a.pkl", line_number: null, matched_text: "x" }],
+      },
+      {
+        ...base,
+        name: "pickle deserialization",
+        severity: "critical" as const,
+        cwe_id: "CWE-502",
+        file_paths: [{ path: "b.pkl", line_number: null, matched_text: "y" }],
+      },
+    ]);
+    expect(result).toHaveLength(1);
+    expect(result[0].severity).toBe("critical");
+    expect(result[0].cwe_id).toBe("CWE-502");
+    expect(result[0].file_count).toBe(2);
   });
 
   it("does not mutate its inputs", () => {

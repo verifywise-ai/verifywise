@@ -675,24 +675,10 @@ export async function createModelSecurityFindingsBatchQuery(
   validateOrganizationId(organizationId);
   if (inputs.length === 0) return 0;
 
-  // Deduplication safety check - PostgreSQL ON CONFLICT fails if same row appears twice in batch
-  // Key is (scan_id, name, provider) - must match the unique constraint
-  const deduplicatedMap = new Map<string, ICreateModelSecurityFindingInput>();
-  for (const input of inputs) {
-    const normalizedProvider = input.provider || "NULL";
-    const key = `${input.scan_id}::${input.name}::${normalizedProvider}`;
-    const existing = deduplicatedMap.get(key);
-    if (existing) {
-      // Merge file paths
-      const existingPaths = existing.file_paths || [];
-      const newPaths = input.file_paths || [];
-      existing.file_paths = [...existingPaths, ...newPaths];
-      existing.file_count = existing.file_paths.length;
-    } else {
-      deduplicatedMap.set(key, { ...input });
-    }
-  }
-  const deduplicatedInputs = Array.from(deduplicatedMap.values());
+  // PostgreSQL ON CONFLICT fails if the same row appears twice in one batch.
+  // Same case-insensitive (scan_id, name, provider) merge as library findings;
+  // the highest severity and the CWE/OWASP details that go with it are kept.
+  const deduplicatedInputs = mergeDuplicateFindings(inputs);
 
   // Use single INSERT with multiple VALUES
   const values = deduplicatedInputs.map((_input, index) => {
@@ -1057,14 +1043,17 @@ export async function getFindingsSummaryQuery(
  *
  * A finding is critical when its severity is "critical" or it is a hardcoded
  * secret (finding_type "secret", which carries no severity but is always a
- * release blocker). Severity is read from the finding row (written by
- * createFindingsBatchQuery for LLM vulnerability findings and by
- * createModelSecurityFindingsBatchQuery for model security findings) and,
- * for vulnerability rows stored before severity was persisted, from
- * ai_detection_vulnerability_details.vulnerability_details->>'severity'.
- * Findings that are suppressed, marked as accepted risk, or fixed in an
- * incremental scan are not counted, matching what the governance score
- * excludes.
+ * release blocker). Severity is read from the finding row, which every write
+ * path fills: createFindingsBatchQuery for LLM vulnerability findings and for
+ * findings carried forward by incremental scans, and
+ * createModelSecurityFindingsBatchQuery for model security findings. Rows
+ * stored before severity was persisted were backfilled by migration
+ * 20261112143747.
+ *
+ * Suppressed and accepted-risk findings are not counted, as the governance
+ * score also leaves them out. Findings marked fixed by an incremental scan are
+ * not counted either (their code was deleted), although the score still
+ * includes them.
  *
  * @param scanId - Scan ID
  * @param organizationId - Organization ID for multi-tenancy
@@ -1078,15 +1067,9 @@ export async function countCriticalFindingsQuery(
   const query = `
     SELECT COUNT(*) AS count
     FROM ai_detection_findings f
-    LEFT JOIN ai_detection_vulnerability_details vd
-      ON vd.finding_id = f.id AND vd.organization_id = f.organization_id
     WHERE f.scan_id = :scanId
       AND f.organization_id = :organizationId
-      AND (
-        f.severity = 'critical'
-        OR vd.vulnerability_details->>'severity' = 'critical'
-        OR f.finding_type = 'secret'
-      )
+      AND (f.severity = 'critical' OR f.finding_type = 'secret')
       AND COALESCE(f.suppressed, FALSE) = FALSE
       AND COALESCE(f.governance_status, '') NOT IN ('suppressed', 'accepted_risk')
       AND COALESCE(f.finding_status, '') <> 'fixed';
@@ -1534,7 +1517,8 @@ export async function getLatestCompletedFullScanQuery(
 }
 
 /**
- * Get all findings from a baseline scan for carry-forward logic.
+ * Get all findings from a baseline scan for carry-forward logic, with their
+ * vulnerability details, so carried findings keep severity and details.
  *
  * @param baselineScanId - The baseline scan ID
  * @param organizationId - Organization ID for multi-tenancy
@@ -1551,10 +1535,13 @@ export async function getBaselineFindingsQuery(
   // on pathological scans. Anything above the cap is treated as an error
   // (mirrors getAllFindingsForExportQuery).
   const results = await sequelize.query<IFinding>(
-    `SELECT * FROM ai_detection_findings
-     WHERE scan_id = :baselineScanId
-       AND organization_id = :organizationId
-     ORDER BY id ASC
+    `SELECT f.*, vd.mitigation, vd.data_flow_summary, vd.vulnerability_details
+     FROM ai_detection_findings f
+     LEFT JOIN ai_detection_vulnerability_details vd
+       ON vd.finding_id = f.id AND vd.organization_id = f.organization_id
+     WHERE f.scan_id = :baselineScanId
+       AND f.organization_id = :organizationId
+     ORDER BY f.id ASC
      LIMIT :maxFindings`,
     {
       replacements: {

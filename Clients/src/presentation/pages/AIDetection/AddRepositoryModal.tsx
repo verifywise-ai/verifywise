@@ -421,13 +421,13 @@ export default function AddRepositoryModal({
               {/* Thresholds */}
               <Stack direction="row" spacing={4}>
                 <Field
-                  label="Risk score threshold"
+                  label="Minimum governance score"
                   type="number"
                   value={String(ciMinScore)}
                   onChange={(e) =>
                     setCiMinScore(Math.max(0, Math.min(100, Number(e.target.value))))
                   }
-                  helperText="Scans scoring above this will fail the check"
+                  helperText="PR checks fail when the score is below this"
                   sx={{ flex: 1 }}
                 />
                 <Field
@@ -435,7 +435,7 @@ export default function AddRepositoryModal({
                   type="number"
                   value={String(ciMaxCritical)}
                   onChange={(e) => setCiMaxCritical(Math.max(0, Number(e.target.value)))}
-                  helperText="Scans with more findings will fail"
+                  helperText="PR checks fail when a scan has more critical findings than this"
                   sx={{ flex: 1 }}
                 />
               </Stack>
