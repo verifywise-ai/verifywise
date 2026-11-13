@@ -326,6 +326,11 @@ export const de: Record<string, string> = {
   "Token is valid": "Token ist gültig",
   "Vulnerabilities": "Schwachstellen",
   "Weighing risk dimensions": "Risikodimensionen abwägen",
+  "Minimum governance score": "Minimaler Governance-Score",
+  "PR checks fail when a scan has more critical findings than this":
+    "PR-Prüfungen schlagen fehl, wenn ein Scan mehr kritische Befunde als diesen Wert hat",
+  "PR checks fail when the score is below this":
+    "PR-Prüfungen schlagen fehl, wenn der Score unter diesem Wert liegt",
 };
 
 export const fr: Record<string, string> = {
@@ -654,6 +659,11 @@ export const fr: Record<string, string> = {
   "Token is valid": "Le jeton est valide",
   "Vulnerabilities": "Vulnérabilités",
   "Weighing risk dimensions": "Pondération des dimensions de risque",
+  "Minimum governance score": "Score de gouvernance minimal",
+  "PR checks fail when a scan has more critical findings than this":
+    "Les vérifications de PR échouent si une analyse a plus de résultats critiques que cette valeur",
+  "PR checks fail when the score is below this":
+    "Les vérifications de PR échouent si le score est inférieur à cette valeur",
 };
 
 export const es: Record<string, string> = {
@@ -986,4 +996,9 @@ export const es: Record<string, string> = {
   "Token is valid": "El token es válido",
   "Vulnerabilities": "Vulnerabilidades",
   "Weighing risk dimensions": "Ponderación de las dimensiones de riesgo",
+  "Minimum governance score": "Puntuación de gobernanza mínima",
+  "PR checks fail when a scan has more critical findings than this":
+    "Las comprobaciones de PR fallan si un escaneo tiene más hallazgos críticos que este valor",
+  "PR checks fail when the score is below this":
+    "Las comprobaciones de PR fallan si la puntuación está por debajo de este valor",
 };
