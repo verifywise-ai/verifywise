@@ -90,6 +90,25 @@ describe("SecurityFindingsTab", () => {
     expect(screen.getByText("Low")).toBeInTheDocument();
   });
 
+  it("says no model files were found even with a severity filter active", () => {
+    render(
+      <SecurityFindingsTab
+        summary={{ ...summary, total: 0, model_files_scanned: 0 }}
+        findings={[]}
+        page={1}
+        totalPages={1}
+        onPageChange={vi.fn()}
+        severityFilter="high"
+        onSeverityFilterChange={vi.fn()}
+        repositoryOwner="acme"
+        repositoryName="widgets"
+      />,
+    );
+
+    expect(screen.getByText("No model files found in this repository")).toBeInTheDocument();
+    expect(screen.queryByText("No high severity findings")).toBeNull();
+  });
+
   it("toggles the severity filter when a summary card is clicked", () => {
     const onSeverityFilterChange = vi.fn();
     render(

@@ -228,6 +228,14 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     testFile: "eu-ai-act-classifications.isolation.test.ts",
   },
   {
+    // AI Detection review decisions kept per repository, and what was done with
+    // a scan's suggested risks. Routes are nested under a scan, so a hand-written file covers them.
+    name: "ai_detection_decisions",
+    tables: ["ai_detection_governance_decisions", "ai_detection_suggested_risk_actions"],
+    baseRoute: "/api/ai-detection/scans",
+    testFile: "ai-detection-decisions.isolation.test.ts",
+  },
+  {
     name: "file_change_history",
     tables: ["file_change_history"],
     baseRoute: "/api/file-change-history",

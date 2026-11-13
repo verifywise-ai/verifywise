@@ -15,7 +15,8 @@ export interface TabItem {
   label: string;
   value: string;
   icon?: keyof typeof LucideIcons;
-  count?: number;
+  /** A number, or a short marker such as "–" when the count is not known */
+  count?: number | string;
   isLoading?: boolean;
   disabled?: boolean;
   /** Optional tooltip shown on hover to explain the tab's purpose */

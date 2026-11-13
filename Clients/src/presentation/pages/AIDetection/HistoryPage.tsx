@@ -60,6 +60,7 @@ import { Scan, ScansResponse, ScanStatus } from "../../../domain/ai-detection/ty
 import { useAIDetectionSidebarContext } from "../../../application/contexts/AIDetectionSidebar.context";
 import { palette, radiusPx } from "../../themes/palette";
 import { pageOfLabel } from "../../components/Table/pageOfLabel";
+import { isScorePartial, partialScoreLabel } from "./components/governanceScore";
 
 function getGradeColor(grade: string | null | undefined): string {
   switch (grade) {
@@ -97,7 +98,7 @@ const SelectorVertical = (props: React.SVGAttributes<SVGSVGElement>) => (
 const TABLE_COLUMNS = [
   { id: "repository", label: "REPOSITORY", sortable: true },
   { id: "status", label: "STATUS", sortable: true },
-  { id: "risk_score", label: "RISK SCORE", sortable: true },
+  { id: "risk_score", label: "GOVERNANCE SCORE", sortable: true },
   { id: "findings", label: "FINDINGS", sortable: true },
   { id: "files", label: "FILES SCANNED", sortable: true },
   { id: "duration", label: "DURATION", sortable: true },
@@ -564,7 +565,7 @@ export default function HistoryPage() {
     },
     {
       id: "risk_score",
-      label: "RISK SCORE",
+      label: "GOVERNANCE SCORE",
       render: (scan: Scan) => {
         if (scan.status !== "completed" || scan.risk_score == null) {
           return <Typography sx={{ fontSize: "13px", color: palette.text.accent }}>-</Typography>;
@@ -589,6 +590,17 @@ export default function HistoryPage() {
             <Typography sx={{ fontSize: "13px", fontWeight: 500, fontFamily: "monospace" }}>
               {Math.round(scan.risk_score)}
             </Typography>
+            {isScorePartial(scan.vulnerability_check_status) && (
+              <Tooltip
+                title={partialScoreLabel(scan.vulnerability_check_status) ?? ""}
+                arrow
+                placement="top"
+              >
+                <Typography sx={{ fontSize: "13px", color: palette.status.warning.text }}>
+                  Partial
+                </Typography>
+              </Tooltip>
+            )}
           </Box>
         );
       },

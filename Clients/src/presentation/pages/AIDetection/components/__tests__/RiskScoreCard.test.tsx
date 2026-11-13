@@ -27,9 +27,8 @@ describe("RiskScoreCard", () => {
       <RiskScoreCard score={null} grade={null} details={null} calculatedAt={null} />,
     );
 
-    expect(
-      screen.getByText(/No risk score has been calculated for this scan yet/),
-    ).toBeInTheDocument();
+    expect(screen.getByText("Governance score")).toBeInTheDocument();
+    expect(screen.getByText(/This scan has no governance score yet/)).toBeInTheDocument();
   });
 
   it("renders overall score, grade and dimensions-at-risk cards for a scored scan", () => {
@@ -118,7 +117,7 @@ describe("RiskScoreCard", () => {
     expect(screen.getByText(/A{10,}/)).toBeInTheDocument();
   });
 
-  it("shows a step progress dialog while recalculating", () => {
+  it("shows an inline calculating state instead of a blocking dialog", () => {
     renderWithProviders(
       <RiskScoreCard
         score={null}
@@ -129,6 +128,81 @@ describe("RiskScoreCard", () => {
       />,
     );
 
-    expect(screen.getByText("Recalculating risk score")).toBeInTheDocument();
+    expect(screen.getByText("Calculating governance score…")).toBeInTheDocument();
+    expect(screen.queryByRole("dialog")).toBeNull();
+  });
+
+  it("marks the score partial when vulnerability checks were off, keeping the grade", () => {
+    renderWithProviders(
+      <RiskScoreCard
+        score={95}
+        grade="A"
+        details={makeDetails()}
+        calculatedAt={null}
+        vulnerabilityCheckStatus="off"
+      />,
+    );
+
+    expect(screen.getByText("Partial: vulnerability checks off")).toBeInTheDocument();
+    expect(screen.getByText("Grade (partial)")).toBeInTheDocument();
+    expect(screen.getByText("A — Excellent")).toBeInTheDocument();
+    expect(screen.getByRole("link", { name: "Open vulnerability settings" })).toHaveAttribute(
+      "href",
+      "/ai-detection/settings?tab=risk-scoring",
+    );
+  });
+
+  it.each([
+    ["failed", "Partial: vulnerability checks didn't finish"],
+    ["incremental", "Partial: changed files not checked for vulnerabilities"],
+  ] as const)("explains a partial score when checks were %s", (status, label) => {
+    renderWithProviders(
+      <RiskScoreCard
+        score={95}
+        grade="A"
+        details={makeDetails()}
+        calculatedAt={null}
+        vulnerabilityCheckStatus={status}
+      />,
+    );
+
+    expect(screen.getByText(label)).toBeInTheDocument();
+  });
+
+  it("does not mark the score partial when vulnerability checks ran", () => {
+    renderWithProviders(
+      <RiskScoreCard
+        score={95}
+        grade="A"
+        details={makeDetails()}
+        calculatedAt={null}
+        vulnerabilityCheckStatus="ran"
+      />,
+    );
+
+    expect(screen.queryByText(/^Partial:/)).toBeNull();
+    expect(screen.getByText("Grade")).toBeInTheDocument();
+  });
+
+  it("says when AI analysis is still running or did not finish", () => {
+    const { rerender } = renderWithProviders(
+      <RiskScoreCard
+        score={80}
+        grade="B"
+        details={makeDetails({ llm_status: "pending" })}
+        calculatedAt={null}
+      />,
+    );
+    expect(screen.getByText(/AI analysis is running/)).toBeInTheDocument();
+
+    rerender(
+      <RiskScoreCard
+        score={80}
+        grade="B"
+        details={makeDetails({ llm_status: "failed" })}
+        calculatedAt={null}
+      />,
+    );
+    expect(screen.getByText(/AI analysis didn't finish/)).toBeInTheDocument();
   });
 });

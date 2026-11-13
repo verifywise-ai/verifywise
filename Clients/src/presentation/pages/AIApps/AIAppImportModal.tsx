@@ -168,7 +168,7 @@ export default function AIAppImportModal({ onClose }: AIAppImportModalProps) {
           </>
         ) : (
           <>
-            <Stack direction="row" gap="8px" alignItems="center" flexWrap="wrap">
+            <Stack direction="row" gap="8px" alignItems="center" flexWrap="wrap" mb={4}>
               <CustomizableButton
                 text="Download template"
                 variant="outlined"
@@ -215,9 +215,17 @@ export default function AIAppImportModal({ onClose }: AIAppImportModalProps) {
               <>
                 <CountSummary
                   items={[
-                    { label: t("To create"), value: toCreate },
-                    { label: t("To skip, already in your inventory"), value: skipped.length },
-                    { label: t("Rows with errors"), value: errors.length },
+                    { label: t("To create"), value: toCreate, bordered: true },
+                    {
+                      label: t("To skip, already in your inventory"),
+                      value: skipped.length,
+                      bordered: true,
+                    },
+                    {
+                      label: t("Rows with errors"),
+                      value: errors.length,
+                      bordered: true,
+                    },
                   ]}
                 />
 
@@ -233,17 +241,20 @@ export default function AIAppImportModal({ onClose }: AIAppImportModalProps) {
                 )}
 
                 {errors.length > 0 && (
-                  <RowIssuesTable
-                    title={t("Fix these rows, then choose the file again")}
-                    headers={[t("Row"), t("Field"), t("Message")]}
-                    rows={errors}
-                  />
+                  <Box sx={{ mt: 8 }}>
+                    <RowIssuesTable
+                      title={t("Fix these rows, then choose the file again")}
+                      headers={[t("Row"), t("Field"), t("Message")]}
+                      rows={errors}
+                    />
+                  </Box>
                 )}
 
                 {skipped.length > 0 && (
                   <RowIssuesTable
                     title={t("Rows that will be skipped")}
                     headers={[t("Row"), t("AI app"), t("Reason")]}
+                    tone="neutral"
                     rows={skipped.map((item) => ({
                       row: item.row,
                       field: item.name,

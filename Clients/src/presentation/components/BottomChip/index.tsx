@@ -1,3 +1,4 @@
+import { accent, radiusPx } from "../../themes/palette";
 import { Box, Stack, useTheme } from "@mui/material";
 import type { SxProps, Theme } from "@mui/material";
 
@@ -25,7 +26,7 @@ const BottomChip: React.FC<BottomChipProps> = ({ children, role, ariaLabel, sx }
         position: "fixed",
         left: 0,
         right: 0,
-        bottom: theme.spacing(6),
+        bottom: theme.spacing(24),
         display: "flex",
         justifyContent: "center",
         zIndex: 1200,
@@ -40,14 +41,15 @@ const BottomChip: React.FC<BottomChipProps> = ({ children, role, ariaLabel, sx }
         alignItems="center"
         sx={[
           {
+            background: accent.primary.bg,
+            border: `1px solid ${accent.primary.border}`,
             pointerEvents: "auto",
             gap: theme.spacing(3),
-            pl: theme.spacing(6),
-            pr: theme.spacing(4),
-            py: theme.spacing(2),
-            backgroundColor: theme.palette.background.main,
-            border: `1px solid ${theme.palette.border.light}`,
-            borderRadius: 999,
+            pl: theme.spacing(8),
+            pr: theme.spacing(2),
+            py: theme.spacing(6),
+            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+            borderRadius: radiusPx.sm,
             maxWidth: "calc(100vw - 32px)",
             flexWrap: "wrap",
             rowGap: theme.spacing(1),

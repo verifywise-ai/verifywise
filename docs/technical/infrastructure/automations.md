@@ -447,7 +447,7 @@ CREATE INDEX idx_automation_execution_logs_triggered_at
 
 ### Seeded Triggers
 
-26 triggers are seeded in `Servers/database/migrations/20260226234301-public-schema-tables.js`:
+26 triggers are seeded in `Servers/database/migrations/20260226234301-public-schema-tables.js`, and 3 AI Detection triggers in `20261112143741-ai-detection-notifications-and-triggers.js` (29 in all):
 
 | Key pattern | Entities | Event name | Description |
 |-------------|----------|------------|-------------|
@@ -456,6 +456,11 @@ CREATE INDEX idx_automation_execution_logs_triggered_at
 | `<entity>_deleted` | same 8 entities | `<entity>.deleted` | Record deleted |
 | `vendor_review_date_approaching` | vendor | `vendor.review_date_approaching` | Review date within threshold |
 | `scheduled_report` | — | `report.scheduled` | Scheduled report generation |
+| `ai_detection_scan_completed` | AI Detection scan | `ai_detection.scan_completed` | Scan finished |
+| `ai_detection_high_risk_finding` | AI Detection scan | `ai_detection.high_risk_finding` | Scan has high-risk findings (exposed secrets included) the previous scan of the repository did not have |
+| `ai_detection_scan_failed` | AI Detection scan | `ai_detection.scan_failed` | Scan failed |
+
+The AI Detection triggers are fired by `services/aiDetection/scanNotifications.ts`, which enqueues every active automation of the trigger (template variables are listed in [AI Detection](../domains/ai-detection.md#automations-triggers)).
 
 ### Seeded Actions
 

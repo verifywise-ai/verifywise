@@ -43,6 +43,7 @@ ai_detection_scans
 ├── risk_score_grade (VARCHAR(2))
 ├── risk_score_details (JSONB)
 ├── risk_score_calculated_at (TIMESTAMPTZ)
+├── vulnerability_check_status (VARCHAR(32), nullable: ran | off | failed | incremental; NULL on older scans)
 ├── started_at (TIMESTAMPTZ)
 ├── completed_at (TIMESTAMPTZ)
 ├── duration_ms (INTEGER)
@@ -53,13 +54,26 @@ ai_detection_scans
 └── updated_at (TIMESTAMPTZ)
 ```
 
+All AI Detection timestamps are `TIMESTAMPTZ`. Until migration
+`20261112143747-ai-detection-scan-fk-and-timestamptz` the scans, findings and risk
+scoring config tables used `TIMESTAMP` with mixed contents: columns set with `NOW()`
+held UTC wall time (Sequelize runs sessions at `+00:00`), while `started_at` and
+`completed_at`, bound from a JS `Date` in a raw query, held the Node server's local
+wall time. The UI therefore showed scans hours off. The migration recovers each
+row's offset from `started_at - created_at` (rounded to 15 minutes), shifts those two
+columns to UTC and converts every column with `AT TIME ZONE 'UTC'`. Rows without
+`started_at` are not shifted: `updated_at` is rewritten after completion (risk
+scoring, cache cleanup), so it cannot anchor `completed_at`. `updateScanProgressQuery` now binds `started_at` /
+`completed_at` as ISO strings, so the stored instant does not depend on the process
+or session time zone.
+
 ### Findings Table
 
 ```
 ai_detection_findings
 ├── id (PK, SERIAL)
 ├── organization_id (INTEGER NOT NULL)
-├── scan_id (FK → ai_detection_scans, CASCADE DELETE)
+├── scan_id (FK → ai_detection_scans, ON DELETE CASCADE, `fk_ai_detection_findings_scan`)
 ├── finding_type (VARCHAR(100) NOT NULL)
 ├── category (VARCHAR(100) NOT NULL)
 ├── name (VARCHAR(255) NOT NULL)
@@ -73,14 +87,95 @@ ai_detection_findings
 ├── license_id, license_name, license_risk, license_source
 ├── governance_status (VARCHAR(20))
 ├── governance_updated_at, governance_updated_by
-├── severity, cwe_id, cwe_name (security fields)
+├── severity (critical/high/medium/low; model security and LLM vulnerability findings), cwe_id, cwe_name
 ├── owasp_ml_id, owasp_ml_name (ML security)
 ├── threat_type, operator_name, module_name
 └── created_at (TIMESTAMPTZ)
 
 Constraints:
-└── UNIQUE(scan_id, name, provider)
+├── UNIQUE(scan_id, name, provider)
+└── FOREIGN KEY(scan_id) → ai_detection_scans(id) ON DELETE CASCADE
 ```
+
+The scan FK was added in `20261112143747`, which first deleted findings whose scan no
+longer existed (left behind by earlier scan deletes). `deleteScanQuery` also deletes
+the scan's findings explicitly before the scan. Vulnerability details cascade from
+findings (`finding_id` FK).
+
+Findings are merged before insert by `mergeDuplicateFindings`
+(`utils/aiDetectionFindingMerge.utils.ts`), keyed on scan, name and provider
+compared case-insensitively. Some libraries appear twice in the pattern catalogue
+(for example `qdrant` as a vector database library and `Qdrant` as a RAG component,
+`crewai` and `CrewAI`), and both entries match the same import. The merged finding
+keeps the capitalised display name with its finding type, category and description,
+unions the file lists (by path and line) and recomputes `file_count`, and keeps the
+higher confidence and risk level. It keeps the highest severity, and the description,
+mitigation, vulnerability details and CWE/OWASP fields of the variant that supplied
+it. Model security findings go through the same merge in
+`createModelSecurityFindingsBatchQuery`. A scan's `findings_count` is the number of
+rows stored after this merge.
+
+Suppression rules are matched against each variant before the merge. The merge fails
+closed: the merged finding is suppressed only when its most severe variant was (at
+equal severity, only when every variant was), so a rule written for a low-severity
+variant never hides a critical one from the score or the CI gate. Exact rules on
+`name` and `provider` compare case-insensitively, like the merge key, so a rule on
+`qdrant` matches every case variant and keeps the stored `Qdrant` finding suppressed.
+Incremental scans carry a baseline finding's severity and vulnerability details
+forward, but not its suppression: every finding is matched against the current rules,
+so an edited or deleted rule stops applying on the next scan.
+
+### Governance Decisions Table
+
+The latest governance status set for a finding on the repository's latest completed scan, stored per repository so it survives rescans.
+
+```
+ai_detection_governance_decisions
+├── id (PK, SERIAL)
+├── organization_id (INTEGER NOT NULL, RLS tenant_isolation)
+├── repository_key (VARCHAR(512))      -- LOWER(owner || '/' || name)
+├── finding_type (VARCHAR(100))
+├── finding_name_key (VARCHAR(255))    -- LOWER(name)
+├── provider_key (VARCHAR(100))        -- LOWER(COALESCE(provider, ''))
+├── governance_status (VARCHAR(20))    -- reviewed | approved | flagged | suppressed | accepted_risk
+├── risk_rank (SMALLINT)               -- GREATEST(risk_level rank 1-3, severity rank 1-4) when decided
+├── file_paths (TEXT[])                -- distinct file paths of the decided finding (no line numbers)
+├── source_scan_id (FK → ai_detection_scans, SET NULL)
+├── decided_by (FK → users, SET NULL)
+└── decided_at (TIMESTAMPTZ)
+
+Constraints:
+└── UNIQUE(organization_id, repository_key, finding_type, finding_name_key, provider_key)
+```
+
+- `PATCH .../governance` (legacy and v1) always updates the finding. The stored decision is written (or, for `null`, deleted) only when the scan is the repository's **latest completed scan** (`completed_at DESC NULLS LAST, id DESC`); on an older scan only that scan's finding changes. The check runs in the same transaction as the write, under a per-repository advisory lock (`pg_advisory_xact_lock`) that decision application takes too. v1 answers `decision_scope: "repository" | "scan"`; the v1 findings list answers `is_latest_scan`, and the Scan details page shows a note on older scans.
+- Both writes run in a transaction opened by `beginOrganizationTransaction`, which binds `app.current_org` (`set_config(..., true)`) as its first statement: a transaction a service opens itself does not inherit the request's RLS transaction.
+- Scan completion (full and incremental) runs `applyGovernanceDecisionsToScanQuery` (`utils/aiDetectionDecisions.utils.ts`) **after** the scan's transaction commits, in its own transaction (organization bound first, then the repository lock), and before the risk score is calculated. A failure is logged and the scan stays completed with its findings unreviewed. Findings of the new scan with no status get the matching decision, keeping the original `governance_updated_by`/`_at`.
+- **Reset rules** (the finding arrives unreviewed instead): the finding's risk rank is now higher than `risk_rank`; or, for path-scoped types (`secret`, `model_security` and the vulnerability types), its file paths are not a subset of the decision's `file_paths`. Library-like findings (libraries, API calls, models, RAG, agents) are not path-scoped: their paths are only the places a dependency is used, so a new import keeps the decision. `flagged` is always applied.
+- The migration backfills one decision per identity from existing findings: the most recently changed finding (`governance_updated_at`) decides, including a cleared one, so a clear after an approval leaves no decision. Backfilled decisions get the decided finding's file paths.
+
+### Suggested Risk Actions Table
+
+What a user did with an LLM-suggested risk on a scan.
+
+```
+ai_detection_suggested_risk_actions
+├── id (PK, SERIAL)
+├── organization_id (INTEGER NOT NULL, RLS tenant_isolation)
+├── scan_id (FK → ai_detection_scans, CASCADE)
+├── suggestion_key (VARCHAR(255))      -- LOWER(TRIM(risk_name))
+├── risk_name (VARCHAR(500))
+├── action (VARCHAR(20))               -- added | ignored
+├── risk_id (FK → risks, SET NULL)     -- set when added
+├── ignore_reason (VARCHAR(50))        -- already_added | not_real_risk
+├── acted_by (FK → users, SET NULL)
+└── acted_at (TIMESTAMPTZ)
+
+Constraints:
+└── UNIQUE(organization_id, scan_id, suggestion_key)
+```
+
+Adding goes through `POST /v1/ai-detection/scans/:scanId/suggested-risks/risks`: the risk is created through `createRiskService` (same validation as `POST /projectRisks`, needs `aiDetection.edit` and `risks.edit`) and the `added` action is written in the same transaction, under an advisory lock on (organization, scan, suggestion key). A suggestion linked to a live risk is refused with 409 and `risk_id`; nothing is created. The post-commit steps of a normal risk create run after (`runRiskCreatedSideEffects` in `risks.ctrl.ts`). If the risk is later deleted (`risks.is_deleted`), the list returns `risk_deleted: true` and the suggestion can be added again. Ignoring takes the same lock. Only ignored actions can be deleted (undo).
 
 ### Vulnerability Details Table
 
@@ -104,7 +199,7 @@ Constraints:
 ai_detection_vulnerability_config
 ├── id (PK, SERIAL)
 ├── organization_id (INTEGER NOT NULL, UNIQUE)
-├── vulnerability_scan_enabled (BOOLEAN, default: false)
+├── vulnerability_scan_enabled (BOOLEAN, nullable: NULL = not chosen = off)
 ├── vulnerability_types_enabled (JSONB)
 ├── updated_by (INTEGER)
 └── updated_at (TIMESTAMPTZ)
@@ -142,8 +237,12 @@ ai_detection_repositories
 ├── schedule_minute (INTEGER)
 ├── next_scan_at (TIMESTAMPTZ)
 ├── last_scan_at (TIMESTAMPTZ)
-├── last_scan_id (INTEGER)
+├── last_scan_id (INTEGER, FK → ai_detection_scans, ON DELETE SET NULL)
 ├── github_token_id (INTEGER)
+├── webhook_secret (VARCHAR(255))            -- HMAC secret for GitHub deliveries
+├── ci_enabled, ci_min_score, ci_max_critical, ci_post_comments, ci_status_checks
+├── last_webhook_at (TIMESTAMPTZ)            -- most recent verified GitHub delivery
+├── last_webhook_status (VARCHAR(30))        -- ok | error
 ├── created_by (INTEGER NOT NULL)
 ├── created_at (TIMESTAMPTZ)
 └── updated_at (TIMESTAMPTZ)
@@ -221,7 +320,7 @@ type FindingType =
 ### Governance Status
 
 ```typescript
-type GovernanceStatus = 'reviewed' | 'approved' | 'flagged' | null;
+type GovernanceStatus = 'reviewed' | 'approved' | 'flagged' | 'suppressed' | 'accepted_risk' | null;
 ```
 
 ## API Endpoints
@@ -245,8 +344,16 @@ type GovernanceStatus = 'reviewed' | 'approved' | 'flagged' | null;
 | GET | `/ai-detection/scans/:scanId/findings` | Get findings (paginated) |
 | GET | `/ai-detection/scans/:scanId/security-findings` | Security threats |
 | GET | `/ai-detection/scans/:scanId/security-summary` | Security summary |
-| PATCH | `/ai-detection/scans/:scanId/findings/:findingId/governance` | Update governance |
+| PATCH | `/ai-detection/scans/:scanId/findings/:findingId/governance` | Update governance (frozen response shape; also stores the repository-level decision on the latest scan) |
 | GET | `/ai-detection/scans/:scanId/governance-summary` | Governance stats |
+| GET | `/v1/ai-detection/scans/:scanId/suggested-risks/actions` | Added/ignored suggested risks for the scan |
+| GET | `/v1/ai-detection/scans/:scanId/findings` | Findings with `governance_updated_by_name`, plus `is_latest_scan` |
+| PATCH | `/v1/ai-detection/scans/:scanId/findings/:findingId/governance` | Update governance; answers who set it (null once cleared) and `decision_scope` |
+| POST | `/v1/ai-detection/scans/:scanId/suggested-risks/risks` | Create a risk from a suggestion and link it (body as `POST /projectRisks` plus `suggestion_name`); 409 with `risk_id` if already linked |
+| PUT | `/v1/ai-detection/scans/:scanId/suggested-risks/actions` | Ignore a suggestion: `{ risk_name, action: "ignored", reason }` |
+| DELETE | `/v1/ai-detection/scans/:scanId/suggested-risks/actions/:actionId` | Restore an ignored suggestion |
+
+Only the v1 findings response includes `governance_updated_by_name` (joined from `users`) and `is_latest_scan`; the legacy routes keep their response shapes. The UI shows the status control, Ignore, Restore and Add to risk register only to users with `aiDetection.edit` (Add also needs `risks.edit`).
 
 ### Analysis & Export
 
@@ -277,6 +384,9 @@ type GovernanceStatus = 'reviewed' | 'approved' | 'flagged' | null;
 | DELETE | `/ai-detection/repositories/:id` | Delete repository | Admin |
 | POST | `/ai-detection/repositories/:id/scan` | Trigger scan for repo | Admin, Editor |
 | GET | `/ai-detection/repositories/:id/scans` | Get repo scan history | All |
+| POST | `/ai-detection/repositories/:id/webhook-secret` | Regenerate the webhook secret | Admin, Editor |
+| GET | `/v1/ai-detection-repositories/webhook-config` | Public webhook URL (`webhook_url`, `is_public`); optional `api_base_url` query = the app's absolute API base | All |
+| POST | `/webhooks/github` | GitHub webhook receiver (HMAC, no JWT) | Public |
 
 ### Start Scan Request
 
@@ -361,7 +471,9 @@ Candidates from phase 1 are sent to an LLM with type-specific rubric prompts:
 ### Vulnerability Settings
 
 Per-organization configuration in `ai_detection_vulnerability_config`:
-- Toggle vulnerability scanning on/off
+- Toggle vulnerability scanning on/off. The checks send code snippets to the LLM provider, so they need explicit consent: NULL means "not chosen", which is off. The effective value (`resolveVulnerabilityScanEnabled` in `utils/aiDetectionRiskScoring.utils.ts`) is on only when the stored value is `true` and the risk scoring config has `llm_enabled` and an `llm_key_id`. The API returns the effective value plus `vulnerability_scan_explicit`. `PATCH` only stores the toggle while LLM analysis is on, so saving other settings never turns "not chosen" into a choice.
+- Consent is tied to the provider: a `PATCH` that changes `llm_key_id` (including clearing it, which the Settings page does when LLM analysis is turned off) or turns `llm_enabled` from false to true resets `vulnerability_scan_enabled` to NULL in the same transaction (`shouldResetVulnerabilityConsent` in `upsertRiskScoringConfigQuery`), unless the same request sets `vulnerability_scan_enabled` explicitly. This holds for every API client; no MCP tool writes this config. The Settings page asks again (consent dialog) on such a save when the toggle would be on. Editing the LLM key itself (`PATCH /api/llm-keys/:id`) to another provider or endpoint URL also resets a `true` consent to NULL for the organization using that key, in the key update's transaction (`resetVulnerabilityConsentOnProviderChangeQuery`); model-only or API-key-only edits keep it.
+- Each scan records `vulnerability_check_status` (`runVulnerabilityChecks` in `services/aiDetection/vulnerabilityAnalyzer.ts` for full scans): `ran` (every file pre-filtered and every LLM call finished; findings may be zero), `off` (not chosen, off, no key, or every type disabled), `failed` (scan cancelled during the checks, key couldn't be resolved, or any LLM call threw; findings from types that finished are kept), `incremental` (incremental scan with checks on: changed files weren't checked, vulnerability findings for unchanged files carry over from the last full scan). An incremental scan records `off` when the org's checks are off. The UI shows a neutral "not checked" state instead of a clean result, and marks the governance score partial, for anything but `ran`
 - Enable/disable individual vulnerability types via `vulnerability_types_enabled` JSONB field
 - Managed through the settings page and `PATCH /ai-detection/risk-scoring/config`
 
@@ -377,7 +489,11 @@ After scan completes, `crossReferenceFindings()` links vulnerability findings to
 
 ### Overview
 
-Calculates a 0–100 risk score across 5 governance dimensions, with an A–F letter grade. Optionally enhanced by LLM for contextual analysis.
+Calculates a 0–100 score across 5 governance dimensions (higher = safer), with an A–F letter grade. The UI calls it the **governance score**; API and DB names keep `risk_score`. Optionally enhanced by LLM for contextual analysis.
+
+**When it runs:** `scoreCompletedScan()` in `aiDetection.service.ts` stores the rule-based score as the last step of every completed scan (manual, scheduled, webhook; full and incremental), after the findings transaction commits and before the in-memory progress reports `completed` and before the GitHub status report. A scoring failure is logged and never fails the scan (the score stays NULL; "Recalculate score" fills it in). `POST /scans/:id/risk-score/recalculate` uses the same path.
+
+**LLM enhancement is background work:** `calculateAndStoreRiskScore()` stores the rule-based score with `risk_score_details.llm_status = "pending"` and an `llm_run_id`, returns it, then runs the LLM call (2-minute timeout). The result replaces the stored score only while `llm_run_id` still matches (a newer recalculation wins), with `llm_status` `done` or `failed`. `getScan` reports a `pending` older than 10 minutes as `failed` (covers a restart). The scan details page and the scan page's completion card poll every 5 s while `pending` and show the final score when it finishes. While the stored analysis is `pending` (and not stale), `POST /scans/:id/risk-score/recalculate` returns 409 without recalculating: a new run would start a second paid LLM call and orphan the running one. The Recalculate button is disabled meanwhile. `llm_status` is `off` when LLM analysis isn't configured or there are no findings; older scores have no `llm_status`.
 
 ### Dimensions
 
@@ -466,6 +582,58 @@ The repositories page allows registering repos for recurring scans:
 - Calculates `next_scan_at` before triggering scan to prevent reprocessing
 - Handles stale scan recovery (marks scans stuck >30 minutes as failed)
 
+## Notifications
+
+`services/aiDetection/scanNotifications.ts` announces the end of every scan. `executeScan` and `executeIncrementalScan` call it once, fire-and-forget (`void`, never awaited):
+
+- `notifyAiDetectionScanFinished(scanId, organizationId)` as the last step after the completed status is committed and `scoreCompletedScan` has stored the governance score (full and incremental paths). Nothing after it can fail the scan, so a scan is never announced as completed and then rewritten as failed.
+- `notifyAiDetectionScanFailed(scanId, organizationId)` in the failure handler, and from the scheduled scan check (`scheduledScanProcessor.ts`) for every scan id `markStaleScansFailed` returns (scans stuck after a crash or restart). A cancelled scan is not announced.
+
+The notifier never throws, and each channel (in-app write, email, automation enqueue) is isolated, so a notification failure cannot fail a scan or block the other channels.
+
+| Event | In-app | Email | Recipients |
+|-------|--------|-------|------------|
+| Scan completed | "Scan of owner/repo finished: 7 findings, grade B" (`ai_detection_scan_completed`) | No | Triggering user |
+| Scan needs attention (see below) | `ai_detection_scan_attention` | Yes (`ai-detection-scan-alert.mjml`) | Triggering user + org Admins |
+| Scan failed, manual | "Scan of owner/repo failed: <reason>" (`ai_detection_scan_failed`) | No (the user sees it on screen) | Triggering user |
+| Scan failed, scheduled or webhook | Same | Yes | Triggering user + org Admins |
+
+- **Triggering user** is `ai_detection_scans.triggered_by`. Scheduled and webhook scans run as the repository's `created_by`, so that user is the triggering user for them.
+- **Recipients** come from `organization_members` (the triggering user plus `role_id = 1`), de-duplicated, and only while they are still members of the organization. This is the same "owner plus every Admin" rule the deadline escalation sweep uses.
+- **Needs attention** compares the scan with the previous completed scan of the same repository (any scan mode). It fires when there are new exposed secrets, new high-risk findings (`risk_level = 'high'`, matched on finding type + name + provider), or a lower governance grade. On a repository's first scan every high-risk finding counts as new. One notice per recipient per scan lists every reason.
+  - This scan's side counts only findings that still count: not suppressed by a rule, not suppressed or accepted by a reviewer, not marked `fixed`. The previous scan's side (`getPreviousScanFindingsQuery`) keeps suppressed and accepted findings, because those decisions are stored per finding row and are not copied to the next scan; a finding accepted on the previous scan is therefore not "new" on this one. Revisit once reviewer decisions carry over to new scans.
+  - A scan stores one row per name and provider, with every file it was found in, and a vulnerability finding's name only carries the file's basename (`Prompt injection: index.ts`). A secret or vulnerability the previous scan had counts again when it appears in a file the previous scan did not list; the notice names it with the new paths (`AWS key (deploy/prod.env)`).
+  - Vulnerability findings (`VULNERABILITY_FINDING_TYPES`) are compared only when both scans have `vulnerability_check_status = 'ran'`. An incremental, failed or off run does not check every file, so its missing vulnerabilities would otherwise look new on the next full run.
+- **Score.** The notices use the rule-based governance score that `scoreCompletedScan` stores before the notifier runs. Optional LLM analysis can adjust the score later; the notices are not re-sent. If scoring failed, the notices leave the grade out and the grade-drop check is skipped. The rule-based write also stores `risk_score_details.rule_grade`, and the LLM write keeps it, so the grade-drop check compares this scan's rule-based grade with the previous scan's `rule_grade` even when that scan was LLM-adjusted. Scores stored before `rule_grade` existed fall back to comparing the stored grades only when neither or both are LLM-adjusted (`llm_enhanced`). `previous_grade` in the notices and Automations is the grade that was compared.
+- **Findings count** in the notices and `{{scan.findings_count}}` is `ai_detection_scans.findings_count`, the number the scan page shows. The high-risk and secret counts use the counted findings (same filter as the score).
+- **Announced once.** Before sending, the notifier claims the scan with `UPDATE ai_detection_scans SET notified_at = NOW() WHERE id = :id AND organization_id = :orgId AND status = :status AND notified_at IS NULL RETURNING id` (`claimScanNotificationQuery`). Only the call that wins sends anything, so a retry or a concurrent call cannot repeat notices or Automations. The claim comes first: if the notifier then fails, the scan stays unannounced rather than announced twice.
+- **Failure reason** is the first line of `error_message`, capped at 200 characters, with any credentials in a URL removed.
+- **Language.** In-app titles, messages and email subjects are passed as keys (`titleKey`, `messageKey`, `subjectKey`) and translated by `sendInAppNotification` into each recipient's language (`Servers/locales`), read once per recipient. Email bodies are English, like the other notification emails.
+- **Stale scans.** A scan stuck in `pending`/`cloning`/`scanning` for 30 minutes (crash or restart) is marked failed by `markStaleScansFailed` and announced as a failed scan, best-effort: an announcement error is logged and never fails the scheduled check. That notice does not take the `notified_at` claim (`claim: false`): the sweep's `UPDATE ... RETURNING` returns each scan once, and a scan that was only slow and later completes still claims and announces its completion.
+
+### Automations triggers
+
+Three triggers, seeded by `20261112143741-ai-detection-notifications-and-triggers.js` and linked to `send_email`:
+
+| Key | Fires |
+|-----|-------|
+| `ai_detection_scan_completed` | Every completed scan |
+| `ai_detection_high_risk_finding` | A completed scan with new high-risk findings (exposed secrets included) |
+| `ai_detection_scan_failed` | Every failed scan (manual, scheduled or webhook) |
+
+Every active automation of the trigger runs (not only the first). Template variables (`utils/automation/aiDetection.automation.utils.ts`): `{{scan.repository}}`, `{{scan.url}}`, `{{scan.id}}`, `{{scan.status}}`, `{{scan.trigger}}`, `{{scan.findings_count}}`, `{{scan.high_risk_count}}`, `{{scan.secret_count}}`, `{{scan.grade}}`, `{{scan.score}}`, `{{scan.previous_grade}}`, `{{scan.new_high_risk_count}}`, `{{scan.new_high_risk_findings}}` (first 10 names), `{{scan.new_secret_count}}`, `{{scan.error}}`, `{{date_and_time}}` (UTC, for example "Nov 13, 2026, 14:00 UTC"; the email's sent time uses the same format). A grade or score that could not be calculated reads "Not calculated".
+
+## CI/CD Webhooks
+
+- **Setup:** creating a repository with `ci_enabled: true`, or turning CI/CD on for a repository without a secret, generates `webhook_secret` server-side (`generateWebhookSecret`). The add/edit modal then shows a "Connect GitHub" step with the URL, the secret and the GitHub steps.
+- **Secret exposure:** `webhook_secret` is never part of a read response. `toRepositoryResponse` (`utils/aiDetectionRepository.utils.ts`) strips it from list, get and update responses and adds `has_webhook_secret`. The secret is returned only once, to the editor whose request generated it: the create response, the update response that turned CI/CD on and generated it, and `POST /:id/webhook-secret`. Anyone with read access (Auditors included) would otherwise be able to sign forged deliveries. The edit modal shows "A webhook secret is set" with a "Regenerate secret" button; a regenerated secret is shown once. This was fixed in place on the legacy routes as a security bug fix; the change is additive for clients except that `webhook_secret` no longer appears on reads.
+- **Null CI/CD fields:** on `POST`/`PATCH /ai-detection/repositories`, a `ci_*` field sent as `null` means its default (`ci_enabled` false, `ci_min_score` 70, `ci_max_critical` 0, `ci_post_comments` and `ci_status_checks` true), as older clients send it (`applyCiDefaults`). Absent fields are left unchanged on update.
+- **Webhook URL:** `getPublicBaseUrl` (`utils/publicUrl.utils.ts`) picks the API's public address: `API_PUBLIC_URL` when set, then the app's absolute `VITE_APP_API_BASE_URL` (sent as `api_base_url`) when it is on a public host, then `FRONTEND_URL` (deployments proxy `/api/` from the app's public host), then the app's private address as a last resort. There is no localhost default. `buildGitHubWebhookUrl` in `services/webhook.service.ts` appends `/api/webhooks/github` (a base already ending in `/api` is accepted). `is_public` (`isPublicHostname`) is false for a missing address, loopback (`127/8`, `::1`), `0.0.0.0`, private (`10/8`, `172.16/12`, `192.168/16`, `fc00::/7`), link-local (`169.254/16`, `fe80::/10`), carrier-grade NAT (`100.64/10`), single-label hosts and `.local`/`.localhost`/`.internal`/`.lan`/`.home.arpa` names (`host.docker.internal`); the modal then warns that GitHub must be able to reach the address. Set `API_PUBLIC_URL` when the API is served on a different host from the app. The modal fetches the config only once CI/CD is on, cached for an hour (`useWebhookConfig`).
+- **Matching a delivery:** `getRepositoriesForWebhookQuery` returns every enabled, CI-enabled repository with the payload's owner/name, compared case-insensitively (GitHub names are case-insensitive), across organizations (the endpoint has no tenant context; capped at 50 rows). The signature is checked against each candidate's secret with a constant-time compare, and the delivery is processed for every repository whose secret verifies. Secrets are random per repository, so in practice that is the one organization that set up the webhook; if two ever verify, each is handled and recorded on its own row.
+- **Events:** `push` to the default branch starts a full scan; `pull_request` with action `opened`, `synchronize` or `reopened` starts an incremental scan; `ping` is acknowledged. Everything else is ignored.
+- **Delivery tracking:** `webhook.ctrl.ts` writes `last_webhook_at` / `last_webhook_status` for each verified repository (`recordWebhookDeliveryQuery`, scoped by id and organization) only after the HMAC signature verifies: `ok`, or `error` when processing fails. Unsigned, bad-signature and no-secret requests are logged and never written, so an unauthenticated caller cannot overwrite the status. The route is rate-limited (`webhookLimiter`, 100/min). Recording never fails the response to GitHub.
+- **Results:** `githubStatusReporter.ts` posts a commit status ("VerifyWise AI Detection") and, for pull requests, a comment, using the organization's GitHub token, after a webhook-triggered scan completes.
+
 ## Detection Patterns
 
 ### Supported Technologies (100+)
@@ -552,21 +720,25 @@ __pycache__, dist, build, target
    └── Store confirmed findings with vulnerability details
 
 7. Finding Aggregation
-   ├── Deduplicate by name + provider
+   ├── Deduplicate by name + provider (case-insensitive) + finding type
+   ├── Merge case variants of one library (see Findings Table)
    └── Aggregate file paths per finding
 
 8. Cross-referencing
    └── Link vulnerability findings to overlapping non-vulnerability findings
 
-9. Risk Score Calculation
-   ├── Calculate dimension scores from all findings
-   ├── Optional LLM enhancement
-   └── Store score, grade, and details on scan record
+9. Database Insert
+   └── Batch insert findings, then mark the scan completed
 
-10. Database Insert
-    └── Batch insert findings
+10. Governance Score Calculation (after the findings commit, before completion is reported)
+    ├── Calculate dimension scores from all findings and store score, grade, details
+    └── Optional LLM enhancement continues in the background (llm_status: pending → done | failed)
 
-11. Cleanup
+11. Report and announce
+    ├── Report webhook-triggered scans to GitHub from the stored row, which has the score (see CI status checks)
+    └── Announce the scan (see Notifications)
+
+12. Cleanup
     └── Remove temp clone directory
 ```
 
@@ -635,6 +807,42 @@ useEffect(() => {
 ```
 
 ## GitHub Integration
+
+### CI status checks (`githubStatusReporter.ts`)
+
+Webhook-triggered scans report back to GitHub when the repository has
+`ci_status_checks` (commit status, context "VerifyWise AI Detection") and/or
+`ci_post_comments` (PR comment). `executeScan` and `executeIncrementalScan` in
+`aiDetection.service.ts` await `scoreCompletedScan` first and only then call
+`reportStoredScanToGitHub`, which re-reads the scan row, so the check always reads
+the stored rule-based score. Failed and cancelled scans are reported too
+(`error`), so a required check never stays pending.
+
+`evaluateThresholds(scan, repo, criticalCount)`:
+
+| Result | When | Example description |
+|--------|------|---------------------|
+| `failure` | `round(risk_score) < ci_min_score` (score is 0–100, higher is safer; equal passes) | `Governance score 62 is below the minimum of 70` |
+| `failure` | critical findings `> ci_max_critical` | `3 critical findings exceed the limit of 0` |
+| `success` | both thresholds pass | `Governance score 85 (minimum 70), 0 critical findings (limit 0)` |
+| `error` | scan not completed, no governance score (scoring failed), or the critical count could not be read | `Governance score is not available, so thresholds could not be evaluated` |
+
+A critical finding (`countCriticalFindingsQuery`) is one with `severity = 'critical'`
+or `finding_type = 'secret'` (hardcoded credentials carry no severity but always
+block). Model security findings write `severity` in
+`createModelSecurityFindingsBatchQuery`; LLM vulnerability findings write it in
+`createFindingsBatchQuery` (the analyzer sets `severity` on the input). Before
+`20261112143747` vulnerability severity was stored only in
+`ai_detection_vulnerability_details.vulnerability_details`, so the migration backfills
+empty severities from that JSON; incremental scans carry severity forward with the
+baseline finding. Findings that are suppressed or have governance status `suppressed`
+or `accepted_risk` are not counted, as the governance score also leaves them out.
+Findings marked `fixed` by an incremental scan are not counted either, although the
+score still includes them. The total `findings_count` is not used for the gate.
+
+The score comparison uses the whole-number score shown in the status, so a stored
+69.6 is shown as 70 and passes a minimum of 70. A webhook scan that fails or is
+cancelled is reported as `error`, so a required check does not stay pending.
 
 ### Token Management
 
@@ -713,6 +921,9 @@ The system maps findings to EU AI Act articles:
 | `services/aiDetection/vulnerabilityPreFilter.ts` | Regex pre-filter for vulnerability candidates |
 | `services/aiDetection/vulnerabilityAnalyzer.ts` | LLM deep analysis of vulnerability candidates |
 | `services/aiDetection/scheduledScanProcessor.ts` | BullMQ worker for recurring scans |
+| `services/aiDetection/scanNotifications.ts` | In-app, email and Automations notices when a scan ends |
+| `utils/aiDetectionNotification.utils.ts` | Queries for the scan notifier (previous scan, recipients, dedup) |
+| `utils/automation/aiDetection.automation.utils.ts` | Template variables for the AI Detection triggers |
 | `config/llmVulnerabilityPatterns.ts` | OWASP LLM Top 10 regex patterns and LLM rubrics |
 | `config/riskScoringConfig.ts` | Risk scoring dimensions, penalties, grades |
 | `config/aiDetectionPatterns.ts` | 100+ AI/ML detection patterns |
@@ -720,6 +931,8 @@ The system maps findings to EU AI Act articles:
 | `routes/aiDetectionRepository.route.ts` | Repository management routes |
 | `utils/aiDetection.utils.ts` | Scan and finding database queries |
 | `utils/aiDetectionRiskScoring.utils.ts` | Risk scoring database queries |
+| `utils/aiDetectionDecisions.utils.ts` | Governance decisions across scans, suggested risk actions |
+| `services/aiDetectionSuggestedRisks.service.ts` | Suggested risk add/ignore/restore rules |
 | `domain.layer/interfaces/i.aiDetection.ts` | Type definitions |
 
 ### Frontend

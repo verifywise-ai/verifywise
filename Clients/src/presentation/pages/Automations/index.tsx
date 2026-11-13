@@ -521,6 +521,12 @@ const AutomationsPage: React.FC = () => {
           return "Incident change automation";
         case "vendor_review_date_approaching":
           return "Vendor review automation";
+        case "ai_detection_scan_completed":
+          return "AI Detection scan automation";
+        case "ai_detection_high_risk_finding":
+          return "AI Detection high-risk automation";
+        case "ai_detection_scan_failed":
+          return "AI Detection failed scan automation";
         case "scheduled_report":
           return "Scheduled report automation";
         default:
@@ -859,6 +865,49 @@ Review Details:
 • Assigned Reviewer: {{reviewer}}
 
 Please complete the review by the scheduled date.
+
+This notification was sent on {{date_and_time}}.`;
+          break;
+        case "ai_detection_scan_completed":
+          configuration.subject = "Scan of {{scan.repository}} finished";
+          configuration.body = `An AI Detection scan finished.
+
+Scan details:
+• Repository: {{scan.repository}}
+• Findings: {{scan.findings_count}}
+• High-risk findings: {{scan.high_risk_count}}
+• Exposed secrets: {{scan.secret_count}}
+• Governance grade: {{scan.grade}} (score {{scan.score}})
+• Previous grade: {{scan.previous_grade}}
+• Started by: {{scan.trigger}}
+
+View the scan: {{scan.url}}
+
+This notification was sent on {{date_and_time}}.`;
+          break;
+        case "ai_detection_high_risk_finding":
+          configuration.subject = "New high-risk findings in {{scan.repository}}";
+          configuration.body = `An AI Detection scan found high-risk findings that the previous scan of this repository did not have.
+
+• Repository: {{scan.repository}}
+• New high-risk findings: {{scan.new_high_risk_count}}
+• New exposed secrets: {{scan.new_secret_count}}
+• Findings: {{scan.new_high_risk_findings}}
+• Governance grade: {{scan.grade}}
+
+View the scan: {{scan.url}}
+
+This notification was sent on {{date_and_time}}.`;
+          break;
+        case "ai_detection_scan_failed":
+          configuration.subject = "Scan of {{scan.repository}} failed";
+          configuration.body = `An AI Detection scan could not finish.
+
+• Repository: {{scan.repository}}
+• Reason: {{scan.error}}
+• Started by: {{scan.trigger}}
+
+View the scan: {{scan.url}}
 
 This notification was sent on {{date_and_time}}.`;
           break;

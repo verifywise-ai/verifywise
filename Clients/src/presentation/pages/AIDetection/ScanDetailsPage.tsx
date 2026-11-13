@@ -27,12 +27,18 @@ import Toggle from "../../components/Inputs/Toggle";
 import AIDepGraphModal from "../../components/AIDepGraphModal";
 import { palette, radiusPx } from "../../themes/palette";
 import { useScanDetails } from "./ScanDetails/useScanDetails";
+import { useCan } from "../../../application/hooks/useCan";
+import { useTranslation } from "../../../application/hooks/useTranslation";
 import { ScanDetailsHeader } from "./ScanDetails/ScanDetailsHeader";
 import { SuggestedRisksSection } from "./ScanDetails/SuggestedRisksSection";
 import { FindingsTabPanel } from "./ScanDetails/FindingsTabPanel";
 import { SecurityFindingsTab } from "./ScanDetails/SecurityFindingsTab";
 import { ComplianceTab } from "./ScanDetails/ComplianceTab";
 import { VulnerabilitiesTab } from "./ScanDetails/VulnerabilitiesTab";
+import { hasNoModelFiles, vulnerabilityChecksRan } from "./components/governanceScore";
+
+/** Tab badge when a check didn't run, so "0" never reads as "checked, none found" */
+const NOT_CHECKED_BADGE = "–";
 
 // ============================================================================
 // Main Component
@@ -42,6 +48,7 @@ export default function ScanDetailsPage() {
   const {
     scanId,
     scan,
+    isLatestScan,
     isLoading,
     activeTab,
     handleTabChange,
@@ -73,6 +80,8 @@ export default function ScanDetailsPage() {
     handleExportAIBOM,
     navigate,
   } = useScanDetails();
+  const { t } = useTranslation();
+  const canEditStatus = useCan("aiDetection.edit");
 
   if (isLoading && !scan) {
     return (
@@ -97,6 +106,12 @@ export default function ScanDetailsPage() {
       </PageHeaderExtended>
     );
   }
+
+  const vulnerabilitiesChecked = vulnerabilityChecksRan(
+    scan.scan.vulnerability_check_status,
+    vulnerabilityFindings.length,
+  );
+  const noModelFiles = hasNoModelFiles(securitySummary);
 
   return (
     <PageHeaderExtended
@@ -124,11 +139,25 @@ export default function ScanDetailsPage() {
         onExport={handleExportAIBOM}
       />
 
+      {/* Older scan: status changes are not kept for later scans */}
+      {canEditStatus && isLatestScan === false && (
+        <Alert
+          variant="info"
+          isToast={false}
+          body={t(
+            "This is not the repository's latest scan. Status changes here apply to this scan only and are not kept in later scans.",
+          )}
+        />
+      )}
+
       {/* Suggested Risks - only when LLM suggestions exist */}
       {scan.scan.status === "completed" &&
         scan.scan.risk_score_details?.llm_suggested_risks &&
         scan.scan.risk_score_details.llm_suggested_risks.length > 0 && (
           <SuggestedRisksSection
+            scanId={scanId}
+            repositoryOwner={scan.scan.repository_owner}
+            repositoryName={scan.scan.repository_name}
             suggestions={scan.scan.risk_score_details.llm_suggested_risks}
             onSuccess={() => showAlert("success", "Risk added to risk register")}
             onError={(message) => showAlert("error", message)}
@@ -185,16 +214,22 @@ export default function ScanDetailsPage() {
               label: "Vulnerabilities",
               value: "vulnerabilities",
               icon: "ShieldAlert",
-              count: vulnerabilityFindings.length,
-              tooltip:
-                "LLM-specific vulnerabilities (prompt injection, PII exposure, excessive agency, jailbreak risk)",
+              count:
+                vulnerabilitiesChecked || vulnerabilityFindings.length > 0
+                  ? vulnerabilityFindings.length
+                  : NOT_CHECKED_BADGE,
+              tooltip: vulnerabilitiesChecked
+                ? "LLM-specific vulnerabilities (prompt injection, PII exposure, excessive agency, jailbreak risk)"
+                : "Vulnerability checks didn't run for this scan",
             },
             {
               label: "Security",
               value: "security",
               icon: "Shield",
-              count: securitySummary?.total || 0,
-              tooltip: "Security vulnerabilities in AI dependencies",
+              count: noModelFiles ? NOT_CHECKED_BADGE : securitySummary?.total || 0,
+              tooltip: noModelFiles
+                ? "No model files found in this repository"
+                : "Security vulnerabilities in AI dependencies",
             },
             {
               label: "Compliance",
@@ -554,6 +589,7 @@ export default function ScanDetailsPage() {
             scanId={scanId}
             repositoryOwner={scan.scan.repository_owner}
             repositoryName={scan.scan.repository_name}
+            vulnerabilityCheckStatus={scan.scan.vulnerability_check_status}
             onStatusMessage={showAlert}
           />
         )}

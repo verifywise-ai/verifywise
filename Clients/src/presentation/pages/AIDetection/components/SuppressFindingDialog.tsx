@@ -115,7 +115,7 @@ function SuppressFindingDialog({
       isOpen={isOpen}
       onClose={handleClose}
       title="Suppress finding"
-      description="Create a rule that hides matching findings from future scans and excludes them from risk scores."
+      description="Create a rule that hides matching findings from future scans and excludes them from governance scores."
       onSubmit={handleSubmit}
       submitButtonText="Suppress"
       isSubmitting={isSubmitting}

@@ -251,6 +251,80 @@ export async function getRiskById(req: Request, res: Response): Promise<any> {
   }
 }
 
+/**
+ * What follows a committed risk creation: the event log entry, the portfolio
+ * snapshot (FAIR risks), the risk link recompute and the risk owner's
+ * notification. Shared by every HTTP route that creates a risk from a
+ * request body, so they behave the same.
+ */
+export async function runRiskCreatedSideEffects(
+  newProjectRisk: Awaited<ReturnType<typeof createRiskService>>,
+  req: Request,
+): Promise<void> {
+  logStructured(
+    "successful",
+    `project risk created: ${newProjectRisk.risk_name}`,
+    "createProjectRisk",
+    "projectRisks.ctrl.ts",
+  );
+  await logEvent(
+    "Create",
+    `Project risk created: ${newProjectRisk.risk_name}`,
+    req.userId!,
+    req.organizationId!,
+  );
+
+  // Record portfolio snapshot if quantitative fields were provided (fire-and-forget)
+  if (newProjectRisk.ale_estimate != null) {
+    recordPortfolioSnapshot(req.organizationId!).catch((err) =>
+      logger.error("Failed to record portfolio snapshot:", err),
+    );
+  }
+
+  // Recompute this risk's stored links (fire-and-forget)
+  enqueueRiskLinkRecompute(req.organizationId!, newProjectRisk.id!).catch((err) =>
+    logger.error("Failed to enqueue risk link recompute:", err),
+  );
+
+  // Send risk owner assignment notification (fire-and-forget)
+  if (newProjectRisk.risk_owner) {
+    const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
+    const assignerName = await getUserNameById(req.userId!);
+
+    // Get project name for context (use first associated project if available)
+    let projectName: string | undefined;
+    const projects = req.body.projects || [];
+    if (projects.length > 0) {
+      const projectResult = await sequelize.query<{ project_title: string }>(
+        `SELECT project_title FROM projects WHERE id = :projectId AND organization_id = :organizationId`,
+        {
+          replacements: { projectId: projects[0], organizationId: req.organizationId! },
+          type: QueryTypes.SELECT,
+        },
+      );
+      projectName = projectResult[0]?.project_title;
+    }
+
+    notifyUserAssigned(
+      req.organizationId!,
+      newProjectRisk.risk_owner,
+      {
+        entityType: "project_risk",
+        entityId: newProjectRisk.id!,
+        entityName: newProjectRisk.risk_name,
+        roleType: "Risk Owner",
+        entityUrl: `/risk-management?riskId=${newProjectRisk.id}`,
+      },
+      assignerName,
+      baseUrl,
+      {
+        projectName,
+        description: newProjectRisk.risk_description,
+      },
+    ).catch((err) => logger.error("Failed to send risk owner notification:", err));
+  }
+}
+
 export async function createRisk(req: Request, res: Response): Promise<any> {
   const transaction = await sequelize.transaction();
   const riskData = req.body;
@@ -270,68 +344,7 @@ export async function createRisk(req: Request, res: Response): Promise<any> {
 
     if (newProjectRisk) {
       await transaction.commit();
-      logStructured(
-        "successful",
-        `project risk created: ${newProjectRisk.risk_name}`,
-        "createProjectRisk",
-        "projectRisks.ctrl.ts",
-      );
-      await logEvent(
-        "Create",
-        `Project risk created: ${newProjectRisk.risk_name}`,
-        req.userId!,
-        req.organizationId!,
-      );
-
-      // Record portfolio snapshot if quantitative fields were provided (fire-and-forget)
-      if (newProjectRisk.ale_estimate != null) {
-        recordPortfolioSnapshot(req.organizationId!).catch((err) =>
-          console.error("Failed to record portfolio snapshot:", err),
-        );
-      }
-
-      // Recompute this risk's stored links (fire-and-forget)
-      enqueueRiskLinkRecompute(req.organizationId!, newProjectRisk.id!).catch((err) =>
-        console.error("Failed to enqueue risk link recompute:", err),
-      );
-
-      // Send risk owner assignment notification (fire-and-forget)
-      if (newProjectRisk.risk_owner) {
-        const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
-        const assignerName = await getUserNameById(req.userId!);
-
-        // Get project name for context (use first associated project if available)
-        let projectName: string | undefined;
-        const projects = req.body.projects || [];
-        if (projects.length > 0) {
-          const projectResult = await sequelize.query<{ project_title: string }>(
-            `SELECT project_title FROM projects WHERE id = :projectId AND organization_id = :organizationId`,
-            {
-              replacements: { projectId: projects[0], organizationId: req.organizationId! },
-              type: QueryTypes.SELECT,
-            },
-          );
-          projectName = projectResult[0]?.project_title;
-        }
-
-        notifyUserAssigned(
-          req.organizationId!,
-          newProjectRisk.risk_owner,
-          {
-            entityType: "project_risk",
-            entityId: newProjectRisk.id!,
-            entityName: newProjectRisk.risk_name,
-            roleType: "Risk Owner",
-            entityUrl: `/risk-management?riskId=${newProjectRisk.id}`,
-          },
-          assignerName,
-          baseUrl,
-          {
-            projectName,
-            description: newProjectRisk.risk_description,
-          },
-        ).catch((err) => console.error("Failed to send risk owner notification:", err));
-      }
+      await runRiskCreatedSideEffects(newProjectRisk, req);
 
       return res.status(201).json(STATUS_CODE[201](newProjectRisk));
     }

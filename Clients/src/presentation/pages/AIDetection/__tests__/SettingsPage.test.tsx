@@ -322,6 +322,209 @@ describe("SettingsPage", () => {
     });
   });
 
+  it("opens the risk scoring tab from ?tab=risk-scoring", async () => {
+    renderWithProviders(<SettingsPage />, { route: "/ai-detection/settings?tab=risk-scoring" });
+
+    await waitFor(() => {
+      expect(screen.getByText("Total: 100%")).toBeInTheDocument();
+    });
+  });
+
+  it("does not turn vulnerability detection on by itself when LLM analysis is turned on", async () => {
+    renderWithProviders(<SettingsPage />, { route: "/ai-detection/settings?tab=risk-scoring" });
+
+    await waitFor(() => {
+      expect(screen.getByText("Total: 100%")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getAllByRole("switch")[0]);
+
+    await waitFor(() => {
+      expect(screen.getAllByRole("switch")[0]).toBeChecked();
+    });
+    expect(screen.getAllByRole("switch")[1]).not.toBeChecked();
+  });
+
+  describe("asking before code is sent to the LLM provider", () => {
+    const renderUnchosenWithKey = async () => {
+      mockGetLLMKeys.mockResolvedValue({ data: { data: [openAIKey] } });
+      mockGetRiskScoringConfig.mockResolvedValue(
+        makeRiskConfig({ llm_enabled: true, llm_key_id: openAIKey.id }),
+      );
+      mockUpdateRiskScoringConfig.mockImplementation(async (body) =>
+        makeRiskConfig({
+          llm_enabled: true,
+          llm_key_id: openAIKey.id,
+          vulnerability_scan_enabled: body.vulnerability_scan_enabled,
+          vulnerability_scan_explicit: true,
+        }),
+      );
+      renderWithProviders(<SettingsPage />, { route: "/ai-detection/settings?tab=risk-scoring" });
+      await waitFor(() => {
+        expect(screen.getByText("Total: 100%")).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+      await waitFor(() => {
+        expect(screen.getByText("Turn on vulnerability checks?")).toBeInTheDocument();
+      });
+    };
+
+    it("asks first and saves nothing until the admin chooses", async () => {
+      await renderUnchosenWithKey();
+
+      expect(
+        screen.getByText(
+          "Vulnerability checks send code snippets from scanned files to your LLM provider.",
+        ),
+      ).toBeInTheDocument();
+      expect(screen.getByText("Snippets would be sent using the key OpenAI.")).toBeInTheDocument();
+      expect(mockUpdateRiskScoringConfig).not.toHaveBeenCalled();
+    });
+
+    it("saves an explicit off when the admin keeps checks off", async () => {
+      await renderUnchosenWithKey();
+      fireEvent.click(screen.getByRole("button", { name: "Keep checks off" }));
+
+      await waitFor(() => {
+        expect(mockUpdateRiskScoringConfig).toHaveBeenCalledTimes(1);
+      });
+      expect(mockUpdateRiskScoringConfig.mock.calls[0][0].vulnerability_scan_enabled).toBe(false);
+    });
+
+    it("saves an explicit on when the admin turns checks on", async () => {
+      await renderUnchosenWithKey();
+      fireEvent.click(screen.getByRole("button", { name: "Turn on vulnerability checks" }));
+
+      await waitFor(() => {
+        expect(mockUpdateRiskScoringConfig).toHaveBeenCalledTimes(1);
+      });
+      expect(mockUpdateRiskScoringConfig.mock.calls[0][0].vulnerability_scan_enabled).toBe(true);
+    });
+
+    it("does not ask again once a choice is stored", async () => {
+      mockGetLLMKeys.mockResolvedValue({ data: { data: [openAIKey] } });
+      mockGetRiskScoringConfig.mockResolvedValue(
+        makeRiskConfig({
+          llm_enabled: true,
+          llm_key_id: openAIKey.id,
+          vulnerability_scan_enabled: false,
+          vulnerability_scan_explicit: true,
+        }),
+      );
+      mockUpdateRiskScoringConfig.mockResolvedValue(makeRiskConfig());
+      renderWithProviders(<SettingsPage />, { route: "/ai-detection/settings?tab=risk-scoring" });
+      await waitFor(() => {
+        expect(screen.getByText("Total: 100%")).toBeInTheDocument();
+      });
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      await waitFor(() => {
+        expect(mockUpdateRiskScoringConfig).toHaveBeenCalledTimes(1);
+      });
+      expect(screen.queryByText("Turn on vulnerability checks?")).not.toBeInTheDocument();
+    });
+  });
+
+  describe("asking again when consent no longer covers the provider", () => {
+    const renderWithStoredConsent = async (overrides: Partial<RiskScoringConfig>) => {
+      mockGetLLMKeys.mockResolvedValue({ data: { data: [openAIKey, anthropicKey] } });
+      mockGetRiskScoringConfig.mockResolvedValue(
+        makeRiskConfig({
+          llm_enabled: true,
+          llm_key_id: openAIKey.id,
+          vulnerability_scan_enabled: true,
+          vulnerability_scan_explicit: true,
+          ...overrides,
+        }),
+      );
+      mockUpdateRiskScoringConfig.mockImplementation(async (body) =>
+        makeRiskConfig({
+          llm_enabled: body.llm_enabled,
+          llm_key_id: body.llm_key_id,
+          vulnerability_scan_enabled: body.vulnerability_scan_enabled ?? false,
+          vulnerability_scan_explicit: body.vulnerability_scan_enabled !== undefined,
+        }),
+      );
+      renderWithProviders(<SettingsPage />, { route: "/ai-detection/settings?tab=risk-scoring" });
+      await waitFor(() => {
+        expect(screen.getByText("Total: 100%")).toBeInTheDocument();
+      });
+    };
+
+    it("asks again when the LLM key changes", async () => {
+      await renderWithStoredConsent({});
+      fireEvent.mouseDown(screen.getByRole("combobox"));
+      fireEvent.click(await screen.findByRole("option", { name: "Anthropic — claude-x" }));
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      await waitFor(() => {
+        expect(screen.getByText("Turn on vulnerability checks?")).toBeInTheDocument();
+      });
+      expect(
+        screen.getByText("Snippets would be sent using the key Anthropic."),
+      ).toBeInTheDocument();
+      expect(mockUpdateRiskScoringConfig).not.toHaveBeenCalled();
+    });
+
+    it("asks again when LLM analysis is turned back on with checks on", async () => {
+      // The API resolves the toggle to off while LLM analysis is off
+      await renderWithStoredConsent({ llm_enabled: false, vulnerability_scan_enabled: false });
+      fireEvent.click(screen.getAllByRole("switch")[0]);
+      await waitFor(() => {
+        expect(screen.getAllByRole("switch")[1]).not.toBeDisabled();
+      });
+      fireEvent.click(screen.getAllByRole("switch")[1]);
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      await waitFor(() => {
+        expect(screen.getByText("Turn on vulnerability checks?")).toBeInTheDocument();
+      });
+      expect(mockUpdateRiskScoringConfig).not.toHaveBeenCalled();
+    });
+
+    it("keeps consent without asking when the key is unchanged", async () => {
+      await renderWithStoredConsent({});
+      fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+      await waitFor(() => {
+        expect(mockUpdateRiskScoringConfig).toHaveBeenCalledTimes(1);
+      });
+      expect(screen.queryByText("Turn on vulnerability checks?")).not.toBeInTheDocument();
+      expect(mockUpdateRiskScoringConfig.mock.calls[0][0].vulnerability_scan_enabled).toBe(true);
+    });
+  });
+
+  it("keeps an explicit 'off' choice when LLM analysis is turned on", async () => {
+    mockGetRiskScoringConfig.mockResolvedValue(
+      makeRiskConfig({ vulnerability_scan_enabled: false, vulnerability_scan_explicit: true }),
+    );
+    renderWithProviders(<SettingsPage />, { route: "/ai-detection/settings?tab=risk-scoring" });
+
+    await waitFor(() => {
+      expect(screen.getByText("Total: 100%")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getAllByRole("switch")[0]);
+
+    await waitFor(() => {
+      expect(screen.getAllByRole("switch")[0]).toBeChecked();
+    });
+    expect(screen.getAllByRole("switch")[1]).not.toBeChecked();
+  });
+
+  it("does not send the vulnerability toggle while LLM analysis is off", async () => {
+    mockUpdateRiskScoringConfig.mockResolvedValue(makeRiskConfig());
+    renderWithProviders(<SettingsPage />, { route: "/ai-detection/settings?tab=risk-scoring" });
+
+    await waitFor(() => {
+      expect(screen.getByText("Total: 100%")).toBeInTheDocument();
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Save" }));
+
+    await waitFor(() => {
+      expect(mockUpdateRiskScoringConfig).toHaveBeenCalled();
+    });
+    expect(mockUpdateRiskScoringConfig.mock.calls[0][0].vulnerability_scan_enabled).toBeUndefined();
+  });
+
   it("switches to the suppression rules tab", async () => {
     renderWithProviders(<SettingsPage />);
 

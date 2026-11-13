@@ -122,7 +122,7 @@ function SuppressionRulesTab({ onMessage }: SuppressionRulesTabProps) {
         </Typography>
         <Typography sx={{ fontSize: 13, color: palette.text.tertiary, maxWidth: 480, mx: "auto" }}>
           Create rules from any finding's row menu on the scan results page. Matching findings will
-          be hidden from future scans and excluded from risk scores.
+          be hidden from future scans and excluded from governance scores.
         </Typography>
       </Box>
     );
