@@ -35,6 +35,7 @@ import {
   IRiskScoreDetails,
   GovernanceStatus,
   IUpdateGovernanceStatusResponse,
+  IFinding,
   RiskGrade,
 } from "../domain.layer/interfaces/i.aiDetection";
 import {
@@ -65,6 +66,12 @@ import {
   getBaselineFindingsQuery,
 } from "../utils/aiDetection.utils";
 import { getActiveSuppressionsQuery } from "../utils/aiDetectionSuppression.utils";
+import {
+  applyGovernanceDecisionsToScanQuery,
+  deleteGovernanceDecisionQuery,
+  getUserDisplayNameQuery,
+  upsertGovernanceDecisionQuery,
+} from "../utils/aiDetectionDecisions.utils";
 import { applySuppressions } from "./aiDetection/suppressionMatcher";
 import {
   AI_DETECTION_PATTERNS,
@@ -1556,6 +1563,8 @@ async function executeIncrementalScan(
       const suppressionRules = await getActiveSuppressionsQuery(ctx.organizationId);
       applySuppressions(allFindings, suppressionRules);
       await createFindingsBatchQuery(allFindings, ctx.organizationId, transaction);
+      // Carry review decisions made on earlier scans of this repository
+      await applyGovernanceDecisionsToScanQuery(scanId, ctx.organizationId, transaction);
     }
 
     // Complete scan
@@ -2113,6 +2122,9 @@ async function executeScan(
         );
       }
 
+      // Carry review decisions made on earlier scans of this repository
+      await applyGovernanceDecisionsToScanQuery(scanId, ctx.organizationId, transaction);
+
       // Mark scan as completed (include both library and security findings)
       const deduplicatedSecurityCount =
         modelSecurityFindings.length > 0
@@ -2356,6 +2368,7 @@ export async function getScanFindings(
       governance_status: f.governance_status,
       governance_updated_at: f.governance_updated_at?.toISOString(),
       governance_updated_by: f.governance_updated_by,
+      governance_updated_by_name: f.governance_updated_by_name ?? null,
       // License information
       license_id: f.license_id,
       license_name: f.license_name,
@@ -2786,24 +2799,53 @@ export async function updateFindingGovernanceStatus(
     );
   }
 
-  // Update the finding
-  const updatedFinding = await updateFindingGovernanceStatusQuery(
-    findingId,
-    scanId,
-    governanceStatus,
-    ctx.userId,
-    ctx.organizationId,
-  );
+  // Update the finding and the stored decision together, so later scans of
+  // this repository inherit the same status (or none, when it was cleared).
+  const transaction = await sequelize.transaction();
+  let updatedFinding: IFinding | null;
+  try {
+    updatedFinding = await updateFindingGovernanceStatusQuery(
+      findingId,
+      scanId,
+      governanceStatus,
+      ctx.userId,
+      ctx.organizationId,
+      transaction,
+    );
 
-  if (!updatedFinding) {
-    throw new NotFoundException(`Finding ${findingId} not found in scan ${scanId}`);
+    if (!updatedFinding) {
+      throw new NotFoundException(`Finding ${findingId} not found in scan ${scanId}`);
+    }
+
+    if (governanceStatus) {
+      await upsertGovernanceDecisionQuery(
+        findingId,
+        scanId,
+        governanceStatus,
+        ctx.userId,
+        ctx.organizationId,
+        transaction,
+      );
+    } else {
+      await deleteGovernanceDecisionQuery(findingId, scanId, ctx.organizationId, transaction);
+    }
+
+    await transaction.commit();
+  } catch (error) {
+    await transaction.rollback();
+    throw error;
   }
+
+  const updatedAt = updatedFinding.governance_updated_at
+    ? new Date(updatedFinding.governance_updated_at).toISOString()
+    : new Date().toISOString();
 
   return {
     id: updatedFinding.id!,
     governance_status: governanceStatus,
-    governance_updated_at: new Date().toISOString(),
-    governance_updated_by: ctx.userId,
+    governance_updated_at: governanceStatus ? updatedAt : null,
+    governance_updated_by: governanceStatus ? ctx.userId : null,
+    governance_updated_by_name: governanceStatus ? await getUserDisplayNameQuery(ctx.userId) : null,
   };
 }
 

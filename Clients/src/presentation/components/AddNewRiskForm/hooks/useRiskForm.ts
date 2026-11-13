@@ -616,7 +616,7 @@ export function useRiskForm(props: AddNewRiskFormProps): UseRiskFormReturn {
               );
             }
           }
-          onSuccess();
+          onSuccess(newRiskId);
           if (cfFlushFailed) {
             return;
           }

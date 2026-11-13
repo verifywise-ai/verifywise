@@ -17,7 +17,10 @@ import {
   getScanSecurityFindings,
   getScanSecuritySummary,
   getScanStatus,
+  getSuggestedRiskActions,
   pollScanStatus,
+  recordSuggestedRiskAction,
+  restoreSuggestedRisk,
   recalculateRiskScore,
   startScan,
   updateFindingGovernanceStatus,
@@ -1188,6 +1191,51 @@ describe("Test AI Detection Repository", () => {
       vi.mocked(apiServices.patch).mockRejectedValueOnce(new Error("API Error"));
 
       await expect(updateRiskScoringConfig(config, signal)).rejects.toThrow("API Error");
+    });
+  });
+
+  describe("suggested risk actions", () => {
+    const actions = [{ id: 1, action: "ignored" }];
+
+    it("lists the actions for a scan", async () => {
+      vi.mocked(apiServices.get).mockResolvedValue({
+        data: { data: actions },
+        status: 200,
+        statusText: "OK",
+      });
+      await expect(getSuggestedRiskActions(7)).resolves.toEqual(actions);
+      expect(apiServices.get).toHaveBeenCalledWith(
+        "/v1/ai-detection/scans/7/suggested-risks/actions",
+        { signal: undefined },
+      );
+    });
+
+    it("records an action with PUT", async () => {
+      vi.mocked(apiServices.put).mockResolvedValue({
+        data: { data: actions },
+        status: 200,
+        statusText: "OK",
+      });
+      const input = { risk_name: "X", action: "added" as const, risk_id: 42 };
+      await expect(recordSuggestedRiskAction(7, input)).resolves.toEqual(actions);
+      expect(apiServices.put).toHaveBeenCalledWith(
+        "/v1/ai-detection/scans/7/suggested-risks/actions",
+        input,
+        { signal: undefined },
+      );
+    });
+
+    it("restores an ignored suggestion with DELETE", async () => {
+      vi.mocked(apiServices.delete).mockResolvedValue({
+        data: { data: [] },
+        status: 200,
+        statusText: "OK",
+      });
+      await expect(restoreSuggestedRisk(7, 5)).resolves.toEqual([]);
+      expect(apiServices.delete).toHaveBeenCalledWith(
+        "/v1/ai-detection/scans/7/suggested-risks/actions/5",
+        { signal: undefined },
+      );
     });
   });
 });

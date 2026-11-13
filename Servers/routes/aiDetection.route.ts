@@ -166,9 +166,9 @@ router.delete(
 
 /**
  * @route   PATCH /ai-detection/scans/:scanId/findings/:findingId/governance
- * @desc    Update governance status for a finding
+ * @desc    Update governance status for a finding. The status is also stored for the repository and applied to the same finding in later scans.
  * @access  Private - Admin, Editor
- * @body    { governance_status: "reviewed" | "approved" | "flagged" | null }
+ * @body    { governance_status: "reviewed" | "approved" | "flagged" | "suppressed" | "accepted_risk" | null }
  */
 router.patch(
   "/scans/:scanId/findings/:findingId/governance",

@@ -82,6 +82,56 @@ Constraints:
 └── UNIQUE(scan_id, name, provider)
 ```
 
+### Governance Decisions Table
+
+The latest governance status set for a finding, stored per repository so it survives rescans.
+
+```
+ai_detection_governance_decisions
+├── id (PK, SERIAL)
+├── organization_id (INTEGER NOT NULL, RLS tenant_isolation)
+├── repository_key (VARCHAR(512))      -- LOWER(owner || '/' || name)
+├── finding_type (VARCHAR(100))
+├── finding_name_key (VARCHAR(255))    -- LOWER(name)
+├── provider_key (VARCHAR(100))        -- LOWER(COALESCE(provider, ''))
+├── governance_status (VARCHAR(20))    -- reviewed | approved | flagged | suppressed | accepted_risk
+├── risk_rank (SMALLINT)               -- GREATEST(risk_level rank 1-3, severity rank 1-4) when decided
+├── source_scan_id (FK → ai_detection_scans, SET NULL)
+├── decided_by (FK → users, SET NULL)
+└── decided_at (TIMESTAMPTZ)
+
+Constraints:
+└── UNIQUE(organization_id, repository_key, finding_type, finding_name_key, provider_key)
+```
+
+- `PATCH .../governance` updates the finding and upserts the decision in one transaction; clearing the status (`null`) deletes the decision.
+- Scan completion (full and incremental, inside the completion transaction, before the risk score is calculated) runs `applyGovernanceDecisionsToScanQuery` (`utils/aiDetectionDecisions.utils.ts`): findings of the new scan with no status get the matching decision, keeping the original `governance_updated_by`/`_at`.
+- **Reset rule:** a decision is not applied when the finding's risk rank is now higher than `risk_rank` (the risk rose since the review), so it shows as unreviewed. `flagged` is always applied.
+- The migration backfills one decision per identity from existing findings (most recent `governance_updated_at` wins).
+
+### Suggested Risk Actions Table
+
+What a user did with an LLM-suggested risk on a scan.
+
+```
+ai_detection_suggested_risk_actions
+├── id (PK, SERIAL)
+├── organization_id (INTEGER NOT NULL, RLS tenant_isolation)
+├── scan_id (FK → ai_detection_scans, CASCADE)
+├── suggestion_key (VARCHAR(255))      -- LOWER(TRIM(risk_name))
+├── risk_name (VARCHAR(500))
+├── action (VARCHAR(20))               -- added | ignored
+├── risk_id (FK → risks, SET NULL)     -- set when added
+├── ignore_reason (VARCHAR(50))        -- already_added | not_real_risk
+├── acted_by (FK → users, SET NULL)
+└── acted_at (TIMESTAMPTZ)
+
+Constraints:
+└── UNIQUE(organization_id, scan_id, suggestion_key)
+```
+
+Adding is refused (409) while the suggestion is linked to a live risk; if that risk is deleted (`risks.is_deleted`), the list returns `risk_deleted: true` and the suggestion can be added again. Only ignored actions can be deleted (undo).
+
 ### Vulnerability Details Table
 
 ```
@@ -221,7 +271,7 @@ type FindingType =
 ### Governance Status
 
 ```typescript
-type GovernanceStatus = 'reviewed' | 'approved' | 'flagged' | null;
+type GovernanceStatus = 'reviewed' | 'approved' | 'flagged' | 'suppressed' | 'accepted_risk' | null;
 ```
 
 ## API Endpoints
@@ -245,8 +295,13 @@ type GovernanceStatus = 'reviewed' | 'approved' | 'flagged' | null;
 | GET | `/ai-detection/scans/:scanId/findings` | Get findings (paginated) |
 | GET | `/ai-detection/scans/:scanId/security-findings` | Security threats |
 | GET | `/ai-detection/scans/:scanId/security-summary` | Security summary |
-| PATCH | `/ai-detection/scans/:scanId/findings/:findingId/governance` | Update governance |
+| PATCH | `/ai-detection/scans/:scanId/findings/:findingId/governance` | Update governance (also stores the repository-level decision) |
 | GET | `/ai-detection/scans/:scanId/governance-summary` | Governance stats |
+| GET | `/v1/ai-detection/scans/:scanId/suggested-risks/actions` | Added/ignored suggested risks for the scan |
+| PUT | `/v1/ai-detection/scans/:scanId/suggested-risks/actions` | Record `{ risk_name, action: "added", risk_id }` or `{ risk_name, action: "ignored", reason }` |
+| DELETE | `/v1/ai-detection/scans/:scanId/suggested-risks/actions/:actionId` | Restore an ignored suggestion |
+
+Findings responses include `governance_updated_by_name` (joined from `users`).
 
 ### Analysis & Export
 
@@ -720,6 +775,8 @@ The system maps findings to EU AI Act articles:
 | `routes/aiDetectionRepository.route.ts` | Repository management routes |
 | `utils/aiDetection.utils.ts` | Scan and finding database queries |
 | `utils/aiDetectionRiskScoring.utils.ts` | Risk scoring database queries |
+| `utils/aiDetectionDecisions.utils.ts` | Governance decisions across scans, suggested risk actions |
+| `services/aiDetectionSuggestedRisks.service.ts` | Suggested risk add/ignore/restore rules |
 | `domain.layer/interfaces/i.aiDetection.ts` | Type definitions |
 
 ### Frontend

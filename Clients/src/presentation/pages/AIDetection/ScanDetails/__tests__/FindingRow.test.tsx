@@ -217,13 +217,87 @@ describe("FindingRow", () => {
       />,
     );
 
-    const iconButtons = screen.getAllByRole("button");
-    fireEvent.click(iconButtons[iconButtons.length - 1]);
+    fireEvent.click(screen.getByRole("button", { name: "Change status" }));
 
-    const approvedOption = await screen.findByText("Approved");
-    fireEvent.click(approvedOption);
+    // The status chip on the row and the menu option both read "Approved"; the menu renders last
+    const approvedOptions = await screen.findAllByText("Approved");
+    fireEvent.click(approvedOptions[approvedOptions.length - 1]);
 
     expect(mockUpdateFindingGovernanceStatus).not.toHaveBeenCalled();
+  });
+
+  it("shows the status with who set it and when", () => {
+    render(
+      <FindingRow
+        finding={{
+          ...baseFinding,
+          governance_status: "accepted_risk",
+          governance_updated_by_name: "Ada Lovelace",
+          governance_updated_at: "2026-11-03T10:00:00.000Z",
+        }}
+        repositoryOwner="acme"
+        repositoryName="widgets"
+        scanId={7}
+      />,
+    );
+
+    const status = screen.getByTestId("finding-governance-status");
+    expect(status).toHaveTextContent("Accepted risk");
+    expect(status).toHaveTextContent(/by Ada Lovelace · \S+/);
+  });
+
+  it("shows no status chip for an unreviewed finding", () => {
+    render(
+      <FindingRow finding={baseFinding} repositoryOwner="acme" repositoryName="w" scanId={7} />,
+    );
+    expect(screen.queryByTestId("finding-governance-status")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Set status" })).toBeInTheDocument();
+  });
+
+  it("shows the saved status and its author after a change", async () => {
+    mockUpdateFindingGovernanceStatus.mockResolvedValue({
+      id: 1,
+      governance_status: "flagged",
+      governance_updated_at: "2026-11-12T09:00:00.000Z",
+      governance_updated_by: 3,
+      governance_updated_by_name: "Grace Hopper",
+    });
+    render(
+      <FindingRow finding={baseFinding} repositoryOwner="acme" repositoryName="w" scanId={7} />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Set status" }));
+    fireEvent.click(await screen.findByText("Flagged"));
+
+    const status = await screen.findByTestId("finding-governance-status");
+    expect(status).toHaveTextContent("Flagged");
+    expect(status).toHaveTextContent("by Grace Hopper");
+  });
+
+  it("removes the status chip when the status is cleared", async () => {
+    mockUpdateFindingGovernanceStatus.mockResolvedValue({
+      id: 1,
+      governance_status: null,
+      governance_updated_at: null,
+      governance_updated_by: null,
+      governance_updated_by_name: null,
+    });
+    render(
+      <FindingRow
+        finding={{ ...baseFinding, governance_status: "reviewed" }}
+        repositoryOwner="acme"
+        repositoryName="w"
+        scanId={7}
+      />,
+    );
+    expect(screen.getByTestId("finding-governance-status")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Change status" }));
+    fireEvent.click(await screen.findByText("Clear status"));
+
+    await waitFor(() =>
+      expect(screen.queryByTestId("finding-governance-status")).not.toBeInTheDocument(),
+    );
   });
 
   it("does not link file paths when repositoryOwner/repositoryName are missing", () => {

@@ -48,7 +48,8 @@ export interface AddNewRiskFormCorePropsBase {
   popupStatus: "new" | "edit";
   initialRiskValues?: RiskFormValues;
   initialMitigationValues?: MitigationFormValues;
-  onSuccess: () => void;
+  /** Called after a save; on create it receives the new risk's id when the API returned one. */
+  onSuccess: (createdRiskId?: number) => void;
   onError?: (message: string) => void;
   onLoading?: (message: string) => void;
   users?: User[];

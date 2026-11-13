@@ -8,13 +8,14 @@ import { useState } from "react";
 import { Box, Collapse, IconButton, Tooltip, Typography } from "@mui/material";
 import { ChevronDown, ChevronRight, EyeOff, FileCode, MoreHorizontal, Scale } from "lucide-react";
 import Chip from "../../../components/Chip";
-import { updateFindingGovernanceStatus } from "../../../../application/repository/aiDetection.repository";
 import SuppressFindingDialog from "../components/SuppressFindingDialog";
 import { Finding, GovernanceStatus } from "../../../../domain/ai-detection/types";
 import { palette } from "../../../themes/palette";
 import { getProviderIcon } from "./providerIcons";
 import { FilePathItem } from "./FilePathItem";
 import { FindingRowGovernancePopover } from "./FindingRowGovernancePopover";
+import { FindingGovernanceStatus } from "./FindingGovernanceStatus";
+import { useFindingGovernance } from "./useFindingGovernance";
 import {
   CONFIDENCE_CHIP_VARIANT,
   CONFIDENCE_TOOLTIPS,
@@ -46,46 +47,21 @@ export function FindingRow({
   onStatusMessage,
 }: FindingRowProps) {
   const [expanded, setExpanded] = useState(false);
-  const [governanceAnchor, setGovernanceAnchor] = useState<HTMLElement | null>(null);
-  const [localStatus, setLocalStatus] = useState<GovernanceStatus | null>(
-    finding.governance_status || null,
-  );
-  const [isUpdating, setIsUpdating] = useState(false);
+  const {
+    anchorEl: governanceAnchor,
+    openMenu: handleGovernanceClick,
+    closeMenu: handleGovernanceClose,
+    governance,
+    isUpdating,
+    changeStatus: handleStatusChange,
+  } = useFindingGovernance({ finding, scanId, onGovernanceChange, onStatusMessage });
+  const localStatus = governance.status;
   const [suppressDialogOpen, setSuppressDialogOpen] = useState(false);
 
   const getFileUrl = (filePath: string, lineNumber: number | null): string | null => {
     if (!repositoryOwner || !repositoryName) return null;
     const baseUrl = `https://github.com/${repositoryOwner}/${repositoryName}/blob/HEAD/${filePath}`;
     return lineNumber ? `${baseUrl}#L${lineNumber}` : baseUrl;
-  };
-
-  const handleGovernanceClick = (event: React.MouseEvent<HTMLElement>) => {
-    event.stopPropagation();
-    setGovernanceAnchor(event.currentTarget);
-  };
-
-  const handleGovernanceClose = () => {
-    setGovernanceAnchor(null);
-  };
-
-  const handleStatusChange = async (newStatus: GovernanceStatus | null) => {
-    handleGovernanceClose();
-    if (newStatus === localStatus) return;
-
-    setIsUpdating(true);
-    try {
-      await updateFindingGovernanceStatus(scanId, finding.id, newStatus);
-      setLocalStatus(newStatus);
-      onGovernanceChange?.(finding.id, newStatus);
-      const statusLabel = newStatus ? GOVERNANCE_STATUS_CONFIG[newStatus].label : "unreviewed";
-      onStatusMessage?.("success", `Status updated to ${statusLabel}`);
-    } catch {
-      // Revert to original status on failure
-      setLocalStatus(finding.governance_status || null);
-      onStatusMessage?.("error", "Failed to update governance status");
-    } finally {
-      setIsUpdating(false);
-    }
   };
 
   const StatusIcon = localStatus ? GOVERNANCE_STATUS_CONFIG[localStatus].icon : MoreHorizontal;
@@ -100,7 +76,7 @@ export function FindingRow({
         borderRadius: "4px",
         mb: "8px",
         backgroundColor: palette.background.main,
-        opacity: isFindingSuppressed(finding) ? 0.6 : 1,
+        opacity: isFindingSuppressed({ ...finding, governance_status: localStatus }) ? 0.6 : 1,
       }}
     >
       {/* Header */}
@@ -131,19 +107,14 @@ export function FindingRow({
                 {finding.description}
               </Typography>
             )}
+            <FindingGovernanceStatus {...governance} />
           </Box>
         </Box>
 
         <Box sx={{ display: "flex", alignItems: "center", gap: "8px" }}>
-          {/* Suppressed Badge */}
-          {isFindingSuppressed(finding) && (
-            <Tooltip
-              title={
-                finding.suppressed ? "Matched a suppression rule" : "Manually marked as suppressed"
-              }
-              arrow
-              placement="top"
-            >
+          {/* Suppression rule badge (a manual "Suppressed" status shows as the status chip) */}
+          {finding.suppressed === true && (
+            <Tooltip title="Matched a suppression rule" arrow placement="top">
               <Box
                 sx={{
                   px: "8px",
@@ -269,17 +240,12 @@ export function FindingRow({
             </Typography>
           </Box>
           {/* Governance Status Button */}
-          <Tooltip
-            title={
-              localStatus ? `Status: ${GOVERNANCE_STATUS_CONFIG[localStatus].label}` : "Set status"
-            }
-            arrow
-            placement="top"
-          >
+          <Tooltip title={localStatus ? "Change status" : "Set status"} arrow placement="top">
             <IconButton
               size="small"
               onClick={handleGovernanceClick}
               disabled={isUpdating}
+              aria-label={localStatus ? "Change status" : "Set status"}
               sx={{
                 "border": `1px solid ${palette.border.light}`,
                 "borderRadius": "4px",

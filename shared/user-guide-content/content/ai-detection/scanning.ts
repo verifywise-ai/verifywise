@@ -157,7 +157,7 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'You can assign a governance status to any library finding to track your review. Click the status icon on a row to change it:',
+      text: 'You can give a finding a governance status to record your review. This works on the Libraries, API calls, Secrets, Models, RAG, Agents and Vulnerabilities tabs. Click the square status button at the right end of a row (it shows "…" until a status is set, then the status icon) and pick a status:',
     },
     {
       type: 'bullet-list',
@@ -165,7 +165,31 @@ export const scanningContent: ArticleContent = {
         { bold: 'Reviewed', text: 'Finding has been examined but no decision made yet' },
         { bold: 'Approved', text: 'Usage is authorized and compliant with organization policies' },
         { bold: 'Flagged', text: 'Requires attention or is not approved for use' },
+        { bold: 'Suppressed', text: 'Not relevant; the row is dimmed and the finding is left out of the score' },
+        { bold: 'Accepted risk', text: 'The risk is known and accepted; the row stays as it is, but the finding is left out of the score' },
       ],
+    },
+    {
+      type: 'paragraph',
+      text: 'The same menu has **Clear status** to remove a status and **Create suppression rule…** to suppress matching findings in future scans automatically.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Once set, the status shows as a chip under the finding name, followed by who set it and when (for example "Approved · by Ada Lovelace · 03-11-2026", with the date in your date format).',
+    },
+    {
+      type: 'heading',
+      id: 'status-across-scans',
+      level: 3,
+      text: 'Statuses carry over to later scans',
+    },
+    {
+      type: 'paragraph',
+      text: 'A status is saved for the repository, not just for one scan. When a later scan of the same repository (full or incremental) finds the same finding again, meaning the same finding type, name and provider, ignoring upper and lower case, the finding gets the saved status with the original reviewer and date, before the new scan\'s score is calculated. Changing or clearing the status on any scan updates what later scans inherit; the latest change wins.',
+    },
+    {
+      type: 'paragraph',
+      text: 'One exception: if the finding has become riskier since the review (its risk level or security severity is higher than when the status was set), the status is not carried over and the finding shows as unreviewed so someone looks at it again. A **Flagged** status is always carried over. Statuses are never copied between organizations or between different repositories.',
     },
     {
       type: 'image',

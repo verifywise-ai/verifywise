@@ -822,9 +822,11 @@ export async function getFindingsForScanQuery(
   `;
 
   const dataQuery = `
-    SELECT f.*, vd.mitigation, vd.data_flow_summary, vd.vulnerability_details
+    SELECT f.*, vd.mitigation, vd.data_flow_summary, vd.vulnerability_details,
+      NULLIF(TRIM(CONCAT(gu.name, ' ', COALESCE(gu.surname, ''))), '') AS governance_updated_by_name
     FROM ai_detection_findings f
     LEFT JOIN ai_detection_vulnerability_details vd ON vd.finding_id = f.id AND vd.organization_id = f.organization_id
+    LEFT JOIN users gu ON gu.id = f.governance_updated_by
     ${whereClause}
     ORDER BY
       CASE f.confidence
@@ -1150,6 +1152,7 @@ export async function clearScanCachePathQuery(
  * @param governanceStatus - New governance status (or null to clear)
  * @param userId - User making the update
  * @param organizationId - Organization ID for multi-tenancy
+ * @param transaction - Optional transaction
  * @returns Updated finding or null if not found
  */
 export async function updateFindingGovernanceStatusQuery(
@@ -1158,6 +1161,7 @@ export async function updateFindingGovernanceStatusQuery(
   governanceStatus: GovernanceStatus | null,
   userId: number,
   organizationId: number,
+  transaction?: Transaction,
 ): Promise<IFinding | null> {
   validateOrganizationId(organizationId);
   const query = `
@@ -1179,6 +1183,7 @@ export async function updateFindingGovernanceStatusQuery(
       organizationId,
     },
     type: QueryTypes.UPDATE,
+    transaction,
   });
 
   return (results as unknown as IFinding[][])[0]?.[0] || null;

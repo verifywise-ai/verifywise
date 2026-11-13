@@ -15,6 +15,7 @@ import {
 } from "../../../../domain/ai-detection/types";
 import { DimensionKey } from "../../../../domain/ai-detection/riskScoringTypes";
 import { palette } from "../../../themes/palette";
+import type { ChipVariant } from "../../../types/interfaces/i.chip";
 
 export type TabValue =
   | "libraries"
@@ -131,16 +132,27 @@ export const SEVERITY_TOOLTIPS: Record<SecuritySeverity, string> = {
 
 export const GOVERNANCE_STATUS_CONFIG: Record<
   GovernanceStatus,
-  { label: string; color: string; icon: React.ElementType }
+  { label: string; color: string; icon: React.ElementType; chipVariant: ChipVariant }
 > = {
-  reviewed: { label: "Reviewed", color: palette.status.info.text, icon: Eye },
-  approved: { label: "Approved", color: palette.status.success.text, icon: ThumbsUp },
-  flagged: { label: "Flagged", color: palette.status.error.text, icon: Flag },
-  suppressed: { label: "Suppressed", color: palette.text.tertiary, icon: EyeOff },
+  reviewed: { label: "Reviewed", color: palette.status.info.text, icon: Eye, chipVariant: "info" },
+  approved: {
+    label: "Approved",
+    color: palette.status.success.text,
+    icon: ThumbsUp,
+    chipVariant: "success",
+  },
+  flagged: { label: "Flagged", color: palette.status.error.text, icon: Flag, chipVariant: "error" },
+  suppressed: {
+    label: "Suppressed",
+    color: palette.text.tertiary,
+    icon: EyeOff,
+    chipVariant: "default",
+  },
   accepted_risk: {
     label: "Accepted risk",
     color: palette.status.warning.text,
     icon: ShieldCheck,
+    chipVariant: "warning",
   },
 };
 

@@ -30,6 +30,8 @@ import {
   VULNERABILITY_FINDING_TYPES,
   SuppressionRule,
   CreateSuppressionRequest,
+  SuggestedRiskAction,
+  RecordSuggestedRiskActionRequest,
 } from "../../domain/ai-detection/types";
 import {
   RiskScore,
@@ -639,4 +641,60 @@ export async function deleteSuppression(id: number, signal?: AbortSignal): Promi
   await apiServices.delete<{ data: { id: number } }>(`${BASE_URL}/suppressions/${id}`, {
     signal,
   });
+}
+
+// ============================================================================
+// Suggested Risk Actions
+// ============================================================================
+
+/** These endpoints are on API v1; the legacy /ai-detection router is frozen. */
+const V1_BASE_URL = "/v1/ai-detection";
+
+/**
+ * List what was done with a scan's suggested risks (added to the risk register or ignored).
+ */
+export async function getSuggestedRiskActions(
+  scanId: number,
+  signal?: AbortSignal,
+): Promise<SuggestedRiskAction[]> {
+  const response = await apiServices.get<{ data: SuggestedRiskAction[] }>(
+    `${V1_BASE_URL}/scans/${scanId}/suggested-risks/actions`,
+    { signal },
+  );
+  return response.data.data;
+}
+
+/**
+ * Record that a suggested risk was added to the risk register or ignored.
+ *
+ * @returns All actions for the scan after the change
+ */
+export async function recordSuggestedRiskAction(
+  scanId: number,
+  input: RecordSuggestedRiskActionRequest,
+  signal?: AbortSignal,
+): Promise<SuggestedRiskAction[]> {
+  const response = await apiServices.put<{ data: SuggestedRiskAction[] }>(
+    `${V1_BASE_URL}/scans/${scanId}/suggested-risks/actions`,
+    input,
+    { signal },
+  );
+  return response.data.data;
+}
+
+/**
+ * Restore an ignored suggested risk.
+ *
+ * @returns All actions for the scan after the change
+ */
+export async function restoreSuggestedRisk(
+  scanId: number,
+  actionId: number,
+  signal?: AbortSignal,
+): Promise<SuggestedRiskAction[]> {
+  const response = await apiServices.delete<{ data: SuggestedRiskAction[] }>(
+    `${V1_BASE_URL}/scans/${scanId}/suggested-risks/actions/${actionId}`,
+    { signal },
+  );
+  return response.data.data;
 }

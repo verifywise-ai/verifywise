@@ -106,6 +106,8 @@ export interface Finding {
   governance_status?: GovernanceStatus | null;
   governance_updated_at?: string;
   governance_updated_by?: number;
+  /** Name of the user who set the status (may be from an earlier scan of the repository). */
+  governance_updated_by_name?: string | null;
   // License information
   license_id?: string | null;
   license_name?: string | null;
@@ -392,9 +394,33 @@ export interface UpdateGovernanceStatusRequest {
 export interface UpdateGovernanceStatusResponse {
   id: number;
   governance_status: GovernanceStatus | null;
-  governance_updated_at: string;
-  governance_updated_by: number;
+  governance_updated_at: string | null;
+  governance_updated_by: number | null;
+  governance_updated_by_name: string | null;
 }
+
+/** Why a suggested risk was ignored. */
+export type SuggestedRiskIgnoreReason = "already_added" | "not_real_risk";
+
+/** What a user did with one LLM-suggested risk on a scan. */
+export interface SuggestedRiskAction {
+  id: number;
+  scan_id: number;
+  suggestion_key: string;
+  risk_name: string;
+  action: "added" | "ignored";
+  risk_id: number | null;
+  ignore_reason: SuggestedRiskIgnoreReason | null;
+  acted_by: number | null;
+  acted_by_name: string | null;
+  acted_at: string;
+  /** True when the risk created from this suggestion was deleted since. */
+  risk_deleted: boolean;
+}
+
+export type RecordSuggestedRiskActionRequest =
+  | { risk_name: string; action: "added"; risk_id: number }
+  | { risk_name: string; action: "ignored"; reason: SuggestedRiskIgnoreReason };
 
 // ============================================================================
 // Statistics Types

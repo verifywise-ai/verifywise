@@ -589,7 +589,7 @@ export async function getSecuritySummaryController(req: Request, res: Response):
  * Update governance status for a finding
  *
  * PATCH /ai-detection/scans/:scanId/findings/:findingId/governance
- * Body: { governance_status: "reviewed" | "approved" | "flagged" | null }
+ * Body: { governance_status: "reviewed" | "approved" | "flagged" | "suppressed" | "accepted_risk" | null }
  */
 export async function updateGovernanceStatusController(
   req: Request,

@@ -28,6 +28,35 @@ export const de: Record<string, string> = {
   "API calls": "API-Aufrufe",
   "Below 70 threshold": "Unter Schwelle 70",
   "Clear status": "Status löschen",
+  "Added to risk register": "Zum Risikoregister hinzugefügt",
+  "All suggested risks for this scan have been handled.":
+    "Alle vorgeschlagenen Risiken dieses Scans wurden bearbeitet.",
+  "Matched a suppression rule": "Entspricht einer Unterdrückungsregel",
+  "View risk": "Risiko anzeigen",
+  "Show added": "Hinzugefügte anzeigen",
+  "Hide added": "Hinzugefügte ausblenden",
+  "Show ignored": "Ignorierte anzeigen",
+  "Hide ignored": "Ignorierte ausblenden",
+  "Change status": "Status ändern",
+  "Set status": "Status festlegen",
+  "Kept on this finding in later scans of the repository.":
+    "Bleibt bei späteren Scans des Repositorys für diesen Fund erhalten.",
+  "Kept on this finding in later scans of the repository unless its risk level rises.":
+    "Bleibt bei späteren Scans des Repositorys für diesen Fund erhalten, sofern sein Risikoniveau nicht steigt.",
+  "by {name}": "von {name}",
+  "Ignored: {reason}": "Ignoriert: {reason}",
+  "{added} added to the risk register, {ignored} ignored":
+    "{added} zum Risikoregister hinzugefügt, {ignored} ignoriert",
+  "This suggestion is already in the risk register":
+    "Dieser Vorschlag ist bereits im Risikoregister",
+  "Failed to check the suggested risk. Try again.":
+    "Das vorgeschlagene Risiko konnte nicht geprüft werden. Versuchen Sie es erneut.",
+  "The risk was added, but it could not be linked to this suggestion":
+    "Das Risiko wurde hinzugefügt, konnte aber nicht mit diesem Vorschlag verknüpft werden",
+  "Failed to ignore the suggestion": "Der Vorschlag konnte nicht ignoriert werden",
+  "Failed to restore the suggestion": "Der Vorschlag konnte nicht wiederhergestellt werden",
+  "Failed to load what was done with the suggested risks":
+    "Der Bearbeitungsstand der vorgeschlagenen Risiken konnte nicht geladen werden",
   "Day of month": "Tag des Monats",
   "Day of week": "Wochentag",
   "Dimensions at risk": "Gefährdete Dimensionen",
@@ -355,6 +384,35 @@ export const fr: Record<string, string> = {
   "API calls": "Appels API",
   "Below 70 threshold": "Sous le seuil de 70",
   "Clear status": "Effacer le statut",
+  "Added to risk register": "Ajouté au registre des risques",
+  "All suggested risks for this scan have been handled.":
+    "Tous les risques suggérés pour cette analyse ont été traités.",
+  "Matched a suppression rule": "Correspond à une règle de suppression",
+  "View risk": "Voir le risque",
+  "Show added": "Afficher les ajoutés",
+  "Hide added": "Masquer les ajoutés",
+  "Show ignored": "Afficher les ignorés",
+  "Hide ignored": "Masquer les ignorés",
+  "Change status": "Modifier le statut",
+  "Set status": "Définir le statut",
+  "Kept on this finding in later scans of the repository.":
+    "Conservé sur ce résultat lors des analyses ultérieures du dépôt.",
+  "Kept on this finding in later scans of the repository unless its risk level rises.":
+    "Conservé sur ce résultat lors des analyses ultérieures du dépôt, sauf si son niveau de risque augmente.",
+  "by {name}": "par {name}",
+  "Ignored: {reason}": "Ignoré : {reason}",
+  "{added} added to the risk register, {ignored} ignored":
+    "{added} ajouté(s) au registre des risques, {ignored} ignoré(s)",
+  "This suggestion is already in the risk register":
+    "Cette suggestion figure déjà dans le registre des risques",
+  "Failed to check the suggested risk. Try again.":
+    "Impossible de vérifier le risque suggéré. Réessayez.",
+  "The risk was added, but it could not be linked to this suggestion":
+    "Le risque a été ajouté, mais n'a pas pu être lié à cette suggestion",
+  "Failed to ignore the suggestion": "Impossible d'ignorer la suggestion",
+  "Failed to restore the suggestion": "Impossible de restaurer la suggestion",
+  "Failed to load what was done with the suggested risks":
+    "Impossible de charger le suivi des risques suggérés",
   "Day of month": "Jour du mois",
   "Day of week": "Jour de la semaine",
   "Dimensions at risk": "Dimensions à risque",
@@ -683,6 +741,35 @@ export const es: Record<string, string> = {
   "API calls": "Llamadas a la API",
   "Below 70 threshold": "Por debajo del umbral de 70",
   "Clear status": "Borrar estado",
+  "Added to risk register": "Añadido al registro de riesgos",
+  "All suggested risks for this scan have been handled.":
+    "Se han gestionado todos los riesgos sugeridos de este análisis.",
+  "Matched a suppression rule": "Coincide con una regla de supresión",
+  "View risk": "Ver riesgo",
+  "Show added": "Mostrar añadidos",
+  "Hide added": "Ocultar añadidos",
+  "Show ignored": "Mostrar ignorados",
+  "Hide ignored": "Ocultar ignorados",
+  "Change status": "Cambiar estado",
+  "Set status": "Establecer estado",
+  "Kept on this finding in later scans of the repository.":
+    "Se mantiene en este hallazgo en los análisis posteriores del repositorio.",
+  "Kept on this finding in later scans of the repository unless its risk level rises.":
+    "Se mantiene en este hallazgo en los análisis posteriores del repositorio, salvo que su nivel de riesgo aumente.",
+  "by {name}": "por {name}",
+  "Ignored: {reason}": "Ignorado: {reason}",
+  "{added} added to the risk register, {ignored} ignored":
+    "{added} añadido(s) al registro de riesgos, {ignored} ignorado(s)",
+  "This suggestion is already in the risk register":
+    "Esta sugerencia ya está en el registro de riesgos",
+  "Failed to check the suggested risk. Try again.":
+    "No se pudo comprobar el riesgo sugerido. Inténtelo de nuevo.",
+  "The risk was added, but it could not be linked to this suggestion":
+    "El riesgo se añadió, pero no se pudo vincular a esta sugerencia",
+  "Failed to ignore the suggestion": "No se pudo ignorar la sugerencia",
+  "Failed to restore the suggestion": "No se pudo restaurar la sugerencia",
+  "Failed to load what was done with the suggested risks":
+    "No se pudo cargar lo realizado con los riesgos sugeridos",
   "Day of month": "Día del mes",
   "Day of week": "Día de la semana",
   "Dimensions at risk": "Dimensiones en riesgo",

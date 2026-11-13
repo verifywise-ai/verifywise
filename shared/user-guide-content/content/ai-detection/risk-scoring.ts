@@ -158,17 +158,35 @@ export const riskScoringContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The review notes field gets filled in automatically with a reference to the scan and the findings behind the suggestion.',
+      text: 'The review notes field gets filled in automatically with a reference to the scan (for example "Suggested by AI Detection scan #12 (acme/app).") and the findings behind the suggestion.',
+    },
+    {
+      type: 'paragraph',
+      text: 'After you save, the suggestion is linked to the new risk and saved on the scan, so it stays handled after a reload. A suggestion that is already linked to a risk can\'t be added again. If that risk is later deleted, the suggestion is offered again.',
     },
     {
       type: 'heading',
       id: 'dismissing-suggestions',
       level: 3,
-      text: 'Dismissing suggestions',
+      text: 'Ignoring suggestions',
     },
     {
       type: 'paragraph',
-      text: 'Click **Ignore** on a suggestion to dismiss it. Pick a reason ("Not relevant" or "Already mitigated") from the dropdown. Dismissed suggestions are hidden but don\'t affect the score.',
+      text: 'Click **Ignore** on a suggestion and pick a reason: "This has already been added before" or "This is not a real risk". The reason is saved with the suggestion. Ignoring a suggestion doesn\'t change the score.',
+    },
+    {
+      type: 'heading',
+      id: 'handled-suggestions',
+      level: 3,
+      text: 'Added and ignored suggestions',
+    },
+    {
+      type: 'paragraph',
+      text: 'Handled suggestions are summarised in one line, such as "2 added to the risk register, 1 ignored". Click **Show added** to see the added ones, each marked "Added to risk register" with a **View risk** link that opens the risk. Click **Show ignored** to see the ignored ones with their reason; click **Restore** to bring an ignored suggestion back to the list.',
+    },
+    {
+      type: 'paragraph',
+      text: 'This record belongs to the scan. A new scan of the same repository gets its own suggestions, so check the risk register before adding one that looks familiar.',
     },
     {
       type: 'heading',

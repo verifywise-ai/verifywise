@@ -7930,6 +7930,8 @@ tags:
   -
     name: 'v1: V1/Ai Apps'
   -
+    name: 'v1: V1/Ai Detection'
+  -
     name: 'v1: V1/Dashboard'
   -
     name: 'v1: V1/Groups'
@@ -28776,6 +28778,47 @@ paths:
       tags:
         - 'v1: Intake submissions'
       operationId: approveSubmissionV1
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-detection/scans/{scanId}/suggested-risks/actions':
+    get:
+      summary: 'List Suggested Risk Actions Controller'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Detection'
+      operationId: listSuggestedRiskActionsController
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Record Suggested Risk Action Controller'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Detection'
+      operationId: recordSuggestedRiskActionController
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-detection/scans/{scanId}/suggested-risks/actions/{actionId}':
+    delete:
+      summary: 'Delete Suggested Risk Action Controller'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Detection'
+      operationId: deleteSuggestedRiskActionController
       security:
         -
           bearerAuth: []

@@ -129,6 +129,9 @@ export default function ScanDetailsPage() {
         scan.scan.risk_score_details?.llm_suggested_risks &&
         scan.scan.risk_score_details.llm_suggested_risks.length > 0 && (
           <SuggestedRisksSection
+            scanId={scanId}
+            repositoryOwner={scan.scan.repository_owner}
+            repositoryName={scan.scan.repository_name}
             suggestions={scan.scan.risk_score_details.llm_suggested_risks}
             onSuccess={() => showAlert("success", "Risk added to risk register")}
             onError={(message) => showAlert("error", message)}
