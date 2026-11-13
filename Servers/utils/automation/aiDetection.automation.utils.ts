@@ -35,6 +35,21 @@ export interface IAiDetectionScanSummary {
 const NOT_CALCULATED = "Not calculated";
 const MAX_LISTED_FINDINGS = 10;
 
+/**
+ * "Nov 13, 2026, 14:00 UTC": a timestamp for emails and Automations, in UTC
+ * and labelled, since the server's zone means nothing to the reader.
+ */
+export const formatUtcTimestamp = (date: Date = new Date()): string =>
+  `${new Intl.DateTimeFormat("en-US", {
+    timeZone: "UTC",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+    hourCycle: "h23",
+  }).format(date)} UTC`;
+
 /** Names joined for a template, capped so an email body stays readable. */
 export const listFindingNames = (names: string[]): string => {
   if (names.length === 0) return "None";
@@ -67,9 +82,6 @@ export function buildAiDetectionScanReplacements(
     "scan.new_high_risk_findings": listFindingNames(summary.newHighRiskNames),
     "scan.new_secret_count": summary.newSecretNames.length,
     "scan.error": summary.errorMessage ?? "",
-    date_and_time: new Date().toLocaleString("en-US", {
-      dateStyle: "long",
-      timeStyle: "short",
-    }),
+    date_and_time: formatUtcTimestamp(),
   };
 }

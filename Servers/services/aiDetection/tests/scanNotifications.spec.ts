@@ -10,6 +10,7 @@ import {
   newHighRiskFindings,
   newFindingLabel,
   isGradeDrop,
+  previousGradeToCompare,
   sameScoreBasis,
   shortFailureReason,
 } from "../scanNotifications";
@@ -26,7 +27,10 @@ import {
 } from "../../../utils/aiDetectionNotification.utils";
 import { sendInAppNotification } from "../../inAppNotification.service";
 import { enqueueAutomationAction } from "../../automations/automationProducer";
-import { buildAiDetectionScanReplacements } from "../../../utils/automation/aiDetection.automation.utils";
+import {
+  buildAiDetectionScanReplacements,
+  formatUtcTimestamp,
+} from "../../../utils/automation/aiDetection.automation.utils";
 import { IScan, IRiskScoreDetails } from "../../../domain.layer/interfaces/i.aiDetection";
 import { getUserLanguage } from "../../../utils/userPreference.utils";
 import { translate } from "../../../utils/i18n.utils";
@@ -97,10 +101,11 @@ const secret = (name: string, paths: string[] = [".env"]) =>
     provider: null,
     finding_type: "secret",
     risk_level: "high",
-    secret_paths: paths,
+    paths,
   });
 
-const llmDetails = (llm_enhanced: boolean) => ({ llm_enhanced }) as unknown as IRiskScoreDetails;
+const llmDetails = (llm_enhanced: boolean, rule_grade?: string) =>
+  ({ llm_enhanced, ...(rule_grade ? { rule_grade } : {}) }) as unknown as IRiskScoreDetails;
 
 const triggerer: IScanRecipient = { id: 5, name: "Ada", isTriggeredBy: true, isAdmin: false };
 const admin: IScanRecipient = { id: 9, name: "Grace", isTriggeredBy: false, isAdmin: true };
@@ -151,16 +156,15 @@ describe("notifyAiDetectionScanFinished", () => {
       user_id: 5,
       type: "ai_detection_scan_completed",
       titleKey: "Scan finished",
-      messageKey: "Scan of {repository} finished: 1 finding, grade {grade}",
+      messageKey: "Scan of {repository} finished: {count} findings, grade {grade}",
       entity_type: "ai_detection_scan",
       entity_id: 42,
       action_url: "/ai-detection/scans/42",
     });
-    // The count is the counted findings, not scan.findings_count (7, which
-    // includes suppressed and accepted ones).
+    // The scan's own findings_count (7), as on the scan page the notice links to.
     expect(rendered(input)).toEqual({
       title: "Scan finished",
-      message: "Scan of acme/app finished: 1 finding, grade B",
+      message: "Scan of acme/app finished: 7 findings, grade B",
     });
     expect(sendEmail).toBeUndefined();
     expect(mockClaim).toHaveBeenCalledWith(42, ORG, "completed");
@@ -194,6 +198,11 @@ describe("notifyAiDetectionScanFinished", () => {
     });
     expect(email.variables.action_url).toMatch(/\/ai-detection\/scans\/42$/);
     expect(email.variables.details_html).toContain("AWS key");
+    // The secret is listed once, under secrets only.
+    expect(email.variables.details_html).toMatch(
+      /New high-risk findings<\/td><td class="data-value">eval</,
+    );
+    expect(email.variables.fired_at).toMatch(/^[A-Z][a-z]{2} \d{1,2}, \d{4}, \d{2}:\d{2} UTC$/);
   });
 
   it("does not count a high-risk finding the previous scan already had", async () => {
@@ -219,7 +228,7 @@ describe("notifyAiDetectionScanFinished", () => {
 
     expect(mockScan).toHaveBeenCalledTimes(1);
     expect(rendered(mockSend.mock.calls[0][1]).message).toBe(
-      "Scan of acme/app finished: 0 findings, grade B",
+      "Scan of acme/app finished: 7 findings, grade B",
     );
   });
 
@@ -310,7 +319,36 @@ describe("notifyAiDetectionScanFinished", () => {
     expect(sentTo("ai_detection_scan_attention")).toEqual([]);
   });
 
-  it("skips the grade-drop check when the previous grade is LLM-adjusted and this one is not yet", async () => {
+  it("compares the previous scan's rule-based grade, kept through its LLM adjustment", async () => {
+    mockScan.mockResolvedValue(
+      scan({ risk_score_grade: "C", risk_score_details: llmDetails(false, "C") }),
+    );
+    // Shown as A after LLM analysis, but its rule-based grade was B.
+    mockPrevious.mockResolvedValue(
+      scan({ id: 41, risk_score_grade: "A", risk_score_details: llmDetails(true, "B") }),
+    );
+
+    await notifyAiDetectionScanFinished(42, ORG);
+
+    expect(rendered(attentionCall()![1]).message).toBe(
+      "Scan of acme/app needs attention: governance grade dropped from B to C",
+    );
+  });
+
+  it("reports no drop when the rule-based grades are equal, whatever the LLM-adjusted one was", async () => {
+    mockScan.mockResolvedValue(
+      scan({ risk_score_grade: "C", risk_score_details: llmDetails(false, "C") }),
+    );
+    mockPrevious.mockResolvedValue(
+      scan({ id: 41, risk_score_grade: "A", risk_score_details: llmDetails(true, "C") }),
+    );
+
+    await notifyAiDetectionScanFinished(42, ORG);
+
+    expect(sentTo("ai_detection_scan_attention")).toEqual([]);
+  });
+
+  it("skips the grade-drop check when an older LLM-adjusted previous score has no rule grade", async () => {
     mockScan.mockResolvedValue(
       scan({ risk_score_grade: "D", risk_score_details: llmDetails(false) }),
     );
@@ -332,6 +370,30 @@ describe("notifyAiDetectionScanFinished", () => {
     // The triggering user gets two notices but one lookup.
     expect(mockLanguage.mock.calls.map(([id]) => id).sort()).toEqual([5, 9]);
     expect(mockSend.mock.calls.every(([, input]) => input.lang === "en")).toBe(true);
+  });
+
+  it("reports a known vulnerability in a new file, with the new path", async () => {
+    const vuln = (paths: string[]) =>
+      finding({
+        name: "Prompt injection: index.ts",
+        provider: "LLM01",
+        finding_type: "prompt_injection",
+        risk_level: "high",
+        paths,
+      });
+    mockScan.mockResolvedValue(scan({ vulnerability_check_status: "ran" }));
+    mockPrevious.mockResolvedValue(scan({ id: 41, vulnerability_check_status: "ran" }));
+    mockFindings.mockImplementation(async (scanId: number) =>
+      scanId === 42 ? [vuln(["src/a/index.ts", "src/b/index.ts"])] : [vuln(["src/a/index.ts"])],
+    );
+
+    await notifyAiDetectionScanFinished(42, ORG);
+
+    const [, input, , email] = attentionCall()!;
+    expect(rendered(input).message).toBe(
+      "Scan of acme/app needs attention: 1 new high-risk finding",
+    );
+    expect(email.variables.details_html).toContain("Prompt injection: index.ts (src/b/index.ts)");
   });
 
   it("sends nothing for a scan that did not complete", async () => {
@@ -469,6 +531,15 @@ describe("notifyAiDetectionScanFailed", () => {
     expect(sentTo("ai_detection_scan_failed")).toEqual([5, 9]);
   });
 
+  it("announces a stale-swept scan without taking the notified_at claim", async () => {
+    mockScan.mockResolvedValue(scan({ status: "failed", error_message: "Scan timed out" }));
+
+    await notifyAiDetectionScanFailed(42, ORG, { claim: false });
+
+    expect(mockClaim).not.toHaveBeenCalled();
+    expect(sentTo("ai_detection_scan_failed")).toEqual([5]);
+  });
+
   it("says nothing about a cancelled scan or one already announced", async () => {
     mockScan.mockResolvedValue(scan({ status: "cancelled" }));
     await notifyAiDetectionScanFailed(42, ORG);
@@ -519,6 +590,41 @@ describe("helpers", () => {
     // First scan: every high-risk finding counts, vulnerabilities included, no path detail.
     expect(newHighRiskFindings(current, null).map(newFindingLabel)).toEqual(["Key", "v"]);
     expect(newHighRiskFindings([secret("Key", ["a.env"])], previous)).toEqual([]);
+  });
+
+  it("previousGradeToCompare prefers the stored rule grade and falls back to the same basis", () => {
+    const current = { risk_score_details: llmDetails(false, "C") };
+    expect(
+      previousGradeToCompare(current, {
+        risk_score_grade: "A",
+        risk_score_details: llmDetails(true, "B"),
+      }),
+    ).toBe("B");
+    // Older previous score without a rule grade.
+    expect(
+      previousGradeToCompare(current, {
+        risk_score_grade: "A",
+        risk_score_details: llmDetails(true),
+      }),
+    ).toBeNull();
+    expect(
+      previousGradeToCompare(current, {
+        risk_score_grade: "B",
+        risk_score_details: llmDetails(false),
+      }),
+    ).toBe("B");
+    // This scan's LLM write already landed: compare stored grades on the same basis.
+    expect(
+      previousGradeToCompare(
+        { risk_score_details: llmDetails(true, "C") },
+        { risk_score_grade: "A", risk_score_details: llmDetails(true, "B") },
+      ),
+    ).toBe("A");
+  });
+
+  it("formatUtcTimestamp is UTC and labelled", () => {
+    expect(formatUtcTimestamp(new Date("2026-11-13T00:05:00Z"))).toBe("Nov 13, 2026, 00:05 UTC");
+    expect(formatUtcTimestamp(new Date("2026-11-13T14:00:00Z"))).toBe("Nov 13, 2026, 14:00 UTC");
   });
 
   it("sameScoreBasis compares LLM-adjusted grades only with LLM-adjusted ones", () => {

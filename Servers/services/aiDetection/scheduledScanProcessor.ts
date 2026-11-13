@@ -77,15 +77,14 @@ export async function processScheduledAiDetectionScans(): Promise<void> {
         // Recover stale scans stuck in active states (server crash/restart)
         const staleIds = await markStaleScansFailed(orgId, STALE_SCAN_TIMEOUT_MINUTES);
         if (staleIds.length > 0) {
-          console.log(
-            `[ScheduledScan] Org ${orgId}: marked ${staleIds.length} stale scan(s) as failed`,
-          );
           logger.warn(`Marked ${staleIds.length} stale scan(s) as failed for org ${orgId}`);
           // These scans never reached the failure handler, so announce them
           // here. Best-effort and not awaited: the notifier never throws, and
-          // the catch keeps any surprise out of the scheduler.
+          // the catch keeps any surprise out of the scheduler. No notified_at
+          // claim: this UPDATE ... RETURNING already returns each scan once,
+          // and a scan that was only slow can still announce its completion.
           for (const scanId of staleIds) {
-            notifyAiDetectionScanFailed(scanId, orgId).catch((err) => {
+            notifyAiDetectionScanFailed(scanId, orgId, { claim: false }).catch((err) => {
               logger.error(`Failed to announce stale scan ${scanId} for org ${orgId}:`, err);
             });
           }

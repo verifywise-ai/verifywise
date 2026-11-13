@@ -16,7 +16,8 @@
  *     org Admin (the deadline sweep's recipient rule) when, compared with the
  *     previous completed scan of the same repository, the scan has new exposed
  *     secrets (a new secret, or a known one in a new file), new high-risk
- *     findings, or a lower governance grade. On a repository's first scan
+ *     findings (a vulnerability also counts in a new file), or a lower
+ *     governance grade. On a repository's first scan
  *     every high-risk finding counts as new. Vulnerability findings are only
  *     compared when both scans ran the vulnerability checks on every file.
  *   - Failure email, to the same recipients, only for scheduled and webhook
@@ -28,10 +29,10 @@
  * The rule-based governance score is stored before the completed notifier
  * runs (optional LLM analysis may adjust it later; the notices use the score
  * stored at completion). Scoring can fail: then the notices leave the grade
- * out and the grade-drop check is skipped. The grade-drop check is also
- * skipped when one scan's grade is LLM-adjusted and the other's is not (the
- * usual case while this scan's LLM analysis is still running): those grades
- * are not comparable, and the previous scan's rule-based grade is not stored.
+ * out and the grade-drop check is skipped. Grades are compared on the
+ * rule-based basis: the previous scan's `risk_score_details.rule_grade`,
+ * which survives its LLM adjustment. Older scores have no rule_grade; then
+ * the stored grades are compared only when neither or both are LLM-adjusted.
  *
  * The notifier never throws and each channel is isolated: a failed email,
  * in-app write or enqueue is logged and the others still run, and nothing here
@@ -39,7 +40,10 @@
  * notifier claims it by setting ai_detection_scans.notified_at in one
  * conditional UPDATE, and only the call that wins the claim sends anything.
  * Scans that the scheduler marks failed as stale (crash or restart) are
- * announced through notifyAiDetectionScanFailed too.
+ * announced through notifyAiDetectionScanFailed with `claim: false`: the
+ * sweep's UPDATE ... RETURNING hands each scan over once, and leaving
+ * notified_at free lets a scan that was only slow still announce its
+ * completion.
  */
 
 import logger from "../../utils/logger/fileLogger";
@@ -56,6 +60,7 @@ import {
 } from "../../utils/aiDetectionNotification.utils";
 import {
   buildAiDetectionScanReplacements,
+  formatUtcTimestamp,
   IAiDetectionScanSummary,
   listFindingNames,
 } from "../../utils/automation/aiDetection.automation.utils";
@@ -97,7 +102,10 @@ const findingKey = (f: IScanFindingKey) => `${f.finding_type}::${f.name}::${f.pr
 
 const isHighRisk = (f: IScanFindingKey) => f.risk_level === "high";
 
-/** A new high-risk finding; `addedPaths` is set for a known secret found in new files. */
+const isPathTracked = (f: IScanFindingKey) =>
+  f.finding_type === "secret" || VULNERABILITY_TYPES.has(f.finding_type);
+
+/** A new high-risk finding; `addedPaths` is set for a known secret or vulnerability in new files. */
 export interface INewHighRiskFinding extends IScanFindingKey {
   addedPaths: string[] | null;
 }
@@ -106,9 +114,10 @@ export interface INewHighRiskFinding extends IScanFindingKey {
  * High-risk findings (secrets included) of `current` that `previous` did not
  * have as high-risk. With no previous scan every high-risk finding is new.
  *
- * - A secret the previous scan had counts again when it is in a file the
- *   previous scan did not list: a scan keeps one row per secret name and
- *   provider, so a second leak of the same kind is only visible as a new path.
+ * - A secret or vulnerability the previous scan had counts again when it is
+ *   in a file the previous scan did not list: a scan keeps one row per name
+ *   and provider (a vulnerability's name only has the file's basename), so a
+ *   second one of the same kind is only visible as a new path.
  * - Vulnerability findings count only with `compareVulnerabilities` (both
  *   scans ran the checks on every file). Otherwise a vulnerability missing
  *   from a scan that skipped or did not finish the checks would look new.
@@ -122,7 +131,7 @@ export function newHighRiskFindings(
   for (const finding of previous ?? []) {
     if (!isHighRisk(finding)) continue;
     const paths = known.get(findingKey(finding)) ?? new Set<string>();
-    for (const path of finding.secret_paths ?? []) paths.add(path);
+    for (const path of finding.paths ?? []) paths.add(path);
     known.set(findingKey(finding), paths);
   }
 
@@ -136,8 +145,8 @@ export function newHighRiskFindings(
       }
       const knownPaths = known.get(key);
       if (knownPaths) {
-        if (finding.finding_type !== "secret") continue;
-        const added = [...new Set(finding.secret_paths ?? [])].filter((p) => !knownPaths.has(p));
+        if (!isPathTracked(finding)) continue;
+        const added = [...new Set(finding.paths ?? [])].filter((p) => !knownPaths.has(p));
         if (added.length === 0) continue;
         result.set(key, { ...finding, addedPaths: added });
         continue;
@@ -148,7 +157,7 @@ export function newHighRiskFindings(
   return [...result.values()];
 }
 
-/** "AWS key" for a new finding, "AWS key (config/prod.env)" for a known secret in new files. */
+/** "AWS key" for a new finding, "AWS key (config/prod.env)" for a known one in new files. */
 export function newFindingLabel(finding: INewHighRiskFinding): string {
   if (!finding.addedPaths || finding.addedPaths.length === 0) return finding.name;
   const shown = finding.addedPaths.slice(0, MAX_LISTED_PATHS).join(", ");
@@ -157,11 +166,8 @@ export function newFindingLabel(finding: INewHighRiskFinding): string {
 }
 
 /**
- * Whether two scans' grades are on the same basis. The notifier sees this
- * scan's rule-based grade (its LLM analysis, if any, is still running), while
- * a previous scan's stored grade may include the LLM adjustment (up to
- * LLM_ADJUSTMENT_CAP per dimension). Only the adjusted dimension scores are
- * stored, so the previous rule-based grade cannot be rebuilt.
+ * Whether two scans' stored grades are on the same basis: either both or
+ * neither include the LLM adjustment (up to LLM_ADJUSTMENT_CAP per dimension).
  */
 export function sameScoreBasis(
   current: Pick<IScan, "risk_score_details">,
@@ -171,6 +177,23 @@ export function sameScoreBasis(
     Boolean(current.risk_score_details?.llm_enhanced) ===
     Boolean(previous.risk_score_details?.llm_enhanced)
   );
+}
+
+/**
+ * The previous grade to compare `current`'s grade with, or null when the two
+ * are not comparable. The notifier normally sees this scan's rule-based grade
+ * (its LLM analysis, if any, is still running), so the previous scan's
+ * rule-based grade (`rule_grade`, kept through its LLM write) is the match.
+ * Without a rule_grade (older scores), or if this scan's LLM write already
+ * landed, the stored grades are compared only on the same basis.
+ */
+export function previousGradeToCompare(
+  current: Pick<IScan, "risk_score_details">,
+  previous: Pick<IScan, "risk_score_details" | "risk_score_grade">,
+): string | null {
+  const previousRuleGrade = previous.risk_score_details?.rule_grade;
+  if (previousRuleGrade && !current.risk_score_details?.llm_enhanced) return previousRuleGrade;
+  return sameScoreBasis(current, previous) ? (previous.risk_score_grade ?? null) : null;
 }
 
 /** True when both grades are known and `current` is worse than `previous`. */
@@ -310,6 +333,7 @@ async function sendAttention(
   organizationId: number,
   recipients: IScanRecipient[],
   summary: IAiDetectionScanSummary,
+  newHighRisk: INewHighRiskFinding[],
   languages: Map<number, string>,
 ): Promise<void> {
   const englishReasons = attentionReasons(summary).join(", ");
@@ -324,12 +348,7 @@ async function sendAttention(
   if (summary.newSecretNames.length > 0) {
     details.push(["New exposed secrets", listFindingNames(summary.newSecretNames)]);
   }
-  // newHighRiskNames includes the secrets; take each secret out once.
-  const otherNew = [...summary.newHighRiskNames];
-  for (const secret of summary.newSecretNames) {
-    const index = otherNew.indexOf(secret);
-    if (index >= 0) otherNew.splice(index, 1);
-  }
+  const otherNew = newHighRisk.filter((f) => f.finding_type !== "secret").map(newFindingLabel);
   if (otherNew.length > 0) details.push(["New high-risk findings", listFindingNames(otherNew)]);
   if (summary.gradeDropped) {
     details.push(["Governance grade", `${summary.previousGrade} to ${summary.grade}`]);
@@ -370,7 +389,7 @@ async function sendAttention(
               summary_text: englishReasons,
               details_html: detailRows(details),
               trigger_label: TRIGGER_LABELS[summary.triggeredByType] ?? summary.triggeredByType,
-              fired_at: new Date().toLocaleString("en-US"),
+              fired_at: formatUtcTimestamp(),
               action_url: summary.url,
             },
           },
@@ -402,7 +421,8 @@ export async function notifyAiDetectionScanFinished(
         scan.vulnerability_check_status === "ran" && previous?.vulnerability_check_status === "ran",
     });
     const grade = scan.risk_score_grade ?? null;
-    const previousGrade = previous?.risk_score_grade ?? null;
+    const comparedGrade = previous ? previousGradeToCompare(scan, previous) : null;
+    const previousGrade = comparedGrade ?? previous?.risk_score_grade ?? null;
 
     const summary: IAiDetectionScanSummary = {
       scanId,
@@ -410,14 +430,14 @@ export async function notifyAiDetectionScanFinished(
       status: "completed",
       triggeredByType: scan.triggered_by_type || "manual",
       url: `${frontendUrl()}${scanActionUrl(scanId)}`,
-      findingsCount: findings.length,
+      // The scan's own count, so the notice matches the scan page it links to.
+      findingsCount: Number(scan.findings_count ?? findings.length),
       highRiskCount: findings.filter(isHighRisk).length,
       secretCount: findings.filter((f) => f.finding_type === "secret").length,
       score: scan.risk_score != null ? Number(scan.risk_score) : null,
       grade,
       previousGrade,
-      gradeDropped:
-        previous !== null && sameScoreBasis(scan, previous) && isGradeDrop(previousGrade, grade),
+      gradeDropped: isGradeDrop(comparedGrade, grade),
       newHighRiskNames: newHighRisk.map(newFindingLabel),
       newSecretNames: newHighRisk.filter((f) => f.finding_type === "secret").map(newFindingLabel),
       isFirstScan: previous === null,
@@ -449,7 +469,7 @@ export async function notifyAiDetectionScanFinished(
     }
 
     if (attentionRecipients.length > 0) {
-      await sendAttention(organizationId, attentionRecipients, summary, languages);
+      await sendAttention(organizationId, attentionRecipients, summary, newHighRisk, languages);
     }
 
     await isolated("ai_detection_scan_completed automations", scanId, () =>
@@ -470,15 +490,25 @@ export async function notifyAiDetectionScanFinished(
 /**
  * Announce a failed scan. A cancelled scan is not announced. Never throws;
  * safe to call without awaiting.
+ *
+ * `claim: false` is for the stale-scan sweep only: its UPDATE ... RETURNING
+ * already hands each scan over once, and a scan the sweep caught that was
+ * only slow must still be able to claim and announce its completion.
  */
 export async function notifyAiDetectionScanFailed(
   scanId: number,
   organizationId: number,
+  options: { claim?: boolean } = {},
 ): Promise<void> {
   try {
     const scan = await getScanByIdQuery(scanId, organizationId);
     if (!scan || scan.status !== "failed") return;
-    if (!(await claimScanNotificationQuery(scanId, organizationId, "failed"))) return;
+    if (
+      options.claim !== false &&
+      !(await claimScanNotificationQuery(scanId, organizationId, "failed"))
+    ) {
+      return;
+    }
 
     const triggeredByType = scan.triggered_by_type || "manual";
     const unattended = UNATTENDED_TRIGGERS.has(triggeredByType);
@@ -540,7 +570,7 @@ export async function notifyAiDetectionScanFailed(
                     summary_text: reason,
                     details_html: "",
                     trigger_label: TRIGGER_LABELS[triggeredByType] ?? triggeredByType,
-                    fired_at: new Date().toLocaleString("en-US"),
+                    fired_at: formatUtcTimestamp(),
                     action_url: summary.url,
                   },
                 }

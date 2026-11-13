@@ -6,7 +6,7 @@
 
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../database/db";
-import { IScan } from "../domain.layer/interfaces/i.aiDetection";
+import { IScan, VULNERABILITY_FINDING_TYPES } from "../domain.layer/interfaces/i.aiDetection";
 
 /** The fields of a finding the notifier compares and reports. */
 export interface IScanFindingKey {
@@ -15,18 +15,23 @@ export interface IScanFindingKey {
   finding_type: string;
   risk_level: string | null;
   /**
-   * Distinct file paths of an exposed secret (null for other finding types).
-   * A scan stores one row per secret name and provider with every file it was
-   * found in, so a second leak of the same kind shows up only as a new path.
+   * Distinct file paths of an exposed secret or a vulnerability finding (null
+   * for other finding types). A scan stores one row per name and provider with
+   * every file it was found in, and a vulnerability's name only carries the
+   * file's basename, so a second leak or vulnerability of the same kind shows
+   * up only as a new path.
    */
-  secret_paths?: string[] | null;
+  paths?: string[] | null;
 }
 
-/** Distinct `file_paths[].path` values of a secret finding, null for any other type. */
-const SECRET_PATHS_SQL = `CASE WHEN finding_type = 'secret' AND jsonb_typeof(file_paths) = 'array'
+/** Finding types whose new files count as new findings (see IScanFindingKey.paths). */
+const PATH_TRACKED_TYPES = ["secret", ...VULNERABILITY_FINDING_TYPES];
+
+/** Distinct `file_paths[].path` values of a path-tracked finding, null for any other type. */
+const PATHS_SQL = `CASE WHEN finding_type IN (:pathTrackedTypes) AND jsonb_typeof(file_paths) = 'array'
             THEN ARRAY(SELECT DISTINCT e->>'path' FROM jsonb_array_elements(file_paths) e
                         WHERE e->>'path' IS NOT NULL)
-          END AS secret_paths`;
+          END AS paths`;
 
 /** One action row of an active automation, as the other triggers read it. */
 export interface IAutomationActionRow {
@@ -78,14 +83,17 @@ export async function getCountedScanFindingsQuery(
   organizationId: number,
 ): Promise<IScanFindingKey[]> {
   return sequelize.query<IScanFindingKey>(
-    `SELECT name, provider, finding_type, risk_level, ${SECRET_PATHS_SQL}
+    `SELECT name, provider, finding_type, risk_level, ${PATHS_SQL}
        FROM ai_detection_findings
       WHERE organization_id = :organizationId
         AND scan_id = :scanId
         AND COALESCE(suppressed, FALSE) = FALSE
         AND COALESCE(governance_status, '') NOT IN ('suppressed', 'accepted_risk')
         AND COALESCE(finding_status, 'active') <> 'fixed'`,
-    { replacements: { organizationId, scanId }, type: QueryTypes.SELECT },
+    {
+      replacements: { organizationId, scanId, pathTrackedTypes: PATH_TRACKED_TYPES },
+      type: QueryTypes.SELECT,
+    },
   );
 }
 
@@ -106,12 +114,15 @@ export async function getPreviousScanFindingsQuery(
   organizationId: number,
 ): Promise<IScanFindingKey[]> {
   return sequelize.query<IScanFindingKey>(
-    `SELECT name, provider, finding_type, risk_level, ${SECRET_PATHS_SQL}
+    `SELECT name, provider, finding_type, risk_level, ${PATHS_SQL}
        FROM ai_detection_findings
       WHERE organization_id = :organizationId
         AND scan_id = :scanId
         AND COALESCE(finding_status, 'active') <> 'fixed'`,
-    { replacements: { organizationId, scanId }, type: QueryTypes.SELECT },
+    {
+      replacements: { organizationId, scanId, pathTrackedTypes: PATH_TRACKED_TYPES },
+      type: QueryTypes.SELECT,
+    },
   );
 }
 

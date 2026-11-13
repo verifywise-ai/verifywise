@@ -522,7 +522,7 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Findings that are suppressed or marked as accepted risk in the new scan are left out, and a finding the previous scan already had is not reported again, even if someone accepted it there. If the governance score could not be calculated, or only one of the two scans has an AI-adjusted score, the notification does not compare grades. Cancelled scans send nothing. A scan that stops after a server restart is reported as failed.',
+      text: 'Findings that are suppressed or marked as accepted risk in the new scan are left out, and a finding the previous scan already had is not reported again, even if someone accepted it there. Grades are compared before any AI adjustment, so both scans are measured the same way. If the governance score could not be calculated, the notification leaves the grade out. Cancelled scans send nothing. A scan that stops after a server restart is reported as failed.',
     },
     {
       type: 'callout',

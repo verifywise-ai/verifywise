@@ -1584,6 +1584,7 @@ async function executeIncrementalScan(
 
   // Store all findings in a single transaction
   const transaction = await sequelize.transaction();
+  let committed = false;
   try {
     const allFindings = [...newFindingInputs, ...carriedForwardInputs];
 
@@ -1615,6 +1616,7 @@ async function executeIncrementalScan(
     );
 
     await transaction.commit();
+    committed = true;
 
     const scan = await getScanByIdQuery(scanId, ctx.organizationId);
     if (scan) {
@@ -1630,7 +1632,6 @@ async function executeIncrementalScan(
     });
 
     invalidateAIDetectionStatsCache(ctx.organizationId).catch(() => {});
-    void notifyAiDetectionScanFinished(scanId, ctx.organizationId);
 
     if (scan) {
       // Report to GitHub for webhook-triggered scans (fire-and-forget)
@@ -1638,8 +1639,14 @@ async function executeIncrementalScan(
         logger.error(`Failed to report scan #${scanId} to GitHub:`, err);
       });
     }
+
+    // Last step: once announced (notified_at claimed), a later failure here
+    // would mark the scan failed but could no longer announce it.
+    void notifyAiDetectionScanFinished(scanId, ctx.organizationId);
   } catch (error) {
-    await transaction.rollback();
+    // A committed transaction cannot be rolled back; rolling it back would
+    // throw and hide the original error.
+    if (!committed) await transaction.rollback();
     throw error;
   }
 }
@@ -1982,6 +1989,7 @@ async function executeScan(
 
     // Store findings in database
     const transaction = await sequelize.transaction();
+    let committed = false;
     try {
       // Deduplicate findings by name+provider+findingType+modelName to avoid ON CONFLICT errors
       // Each finding type is kept separate (library, api_call, secret, model_ref, rag_component, agent)
@@ -2136,6 +2144,7 @@ async function executeScan(
       );
 
       await transaction.commit();
+      committed = true;
 
       await scoreCompletedScan(scanId, `${owner}/${repo}`, ctx);
 
@@ -2157,7 +2166,6 @@ async function executeScan(
       invalidateAIDetectionStatsCache(ctx.organizationId).catch(() => {
         // Silently ignore cache invalidation errors
       });
-      void notifyAiDetectionScanFinished(scanId, ctx.organizationId);
 
       // Report to GitHub for webhook-triggered scans (fire-and-forget)
       const completedScan = await getScanByIdQuery(scanId, ctx.organizationId);
@@ -2166,8 +2174,14 @@ async function executeScan(
           logger.error(`Failed to report scan #${scanId} to GitHub:`, err);
         });
       }
+
+      // Last step: once announced (notified_at claimed), a later failure here
+      // would mark the scan failed but could no longer announce it.
+      void notifyAiDetectionScanFinished(scanId, ctx.organizationId);
     } catch (error) {
-      await transaction.rollback();
+      // A committed transaction cannot be rolled back; rolling it back would
+      // throw and hide the original error.
+      if (!committed) await transaction.rollback();
       throw error;
     }
   } catch (error) {

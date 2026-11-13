@@ -80,6 +80,12 @@ export interface RiskScoreDetails {
   llm_status?: LlmAnalysisStatus;
   /** Ties a background LLM write to the rule-based run that started it */
   llm_run_id?: string;
+  /**
+   * The rule-based grade before any LLM adjustment. Kept on the LLM write so
+   * scans can be compared on the same basis (scan notifications' grade-drop
+   * check). Absent on scores stored before it was recorded.
+   */
+  rule_grade?: RiskGrade;
 }
 
 export interface RiskScoreResult {
@@ -687,6 +693,7 @@ async function calculateRuleBasedScore(
     llm_suggested_risks: null,
     llm_status: runLlm ? "pending" : "off",
     ...(runLlm ? { llm_run_id: randomUUID() } : {}),
+    rule_grade: grade,
   };
 
   await updateScanRiskScoreQuery(scanId, overallScore, grade, details, ctx.organizationId);
@@ -760,6 +767,8 @@ async function applyLLMAnalysis(
     llm_suggested_risks: llmResult.suggested_risks,
     llm_status: "done",
     llm_run_id: runId,
+    // The LLM write replaces the whole details object: carry the rule-based grade over.
+    rule_grade: rule.result.details.rule_grade,
   };
 
   await updateScanRiskScoreQuery(scanId, overallScore, grade, details, ctx.organizationId, runId);

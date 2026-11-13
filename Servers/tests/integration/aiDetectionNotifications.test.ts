@@ -209,12 +209,24 @@ describe("AI Detection scan notifications (database)", () => {
       type: "secret",
       paths: [".env", "deploy/prod.env", ".env"],
     });
+    await insertFinding(orgA, scan, {
+      name: "Prompt injection: index.ts",
+      type: "prompt_injection",
+      paths: ["src/a/index.ts", "src/b/index.ts"],
+    });
 
     const baseline = await getPreviousScanFindingsQuery(scan, orgA);
-    expect(baseline.map((f) => f.name).sort()).toEqual(["AWS key", "accepted", "rule"]);
+    expect(baseline.map((f) => f.name).sort()).toEqual([
+      "AWS key",
+      "Prompt injection: index.ts",
+      "accepted",
+      "rule",
+    ]);
+    const injection = baseline.find((f) => f.name === "Prompt injection: index.ts")!;
+    expect([...injection.paths!].sort()).toEqual(["src/a/index.ts", "src/b/index.ts"]);
     const awsKey = baseline.find((f) => f.name === "AWS key")!;
-    expect([...awsKey.secret_paths!].sort()).toEqual([".env", "deploy/prod.env"]);
-    expect(baseline.find((f) => f.name === "accepted")!.secret_paths).toBeNull();
+    expect([...awsKey.paths!].sort()).toEqual([".env", "deploy/prod.env"]);
+    expect(baseline.find((f) => f.name === "accepted")!.paths).toBeNull();
     // Another organization's scan id returns nothing.
     expect(await getPreviousScanFindingsQuery(scan, orgB)).toEqual([]);
   });
@@ -269,7 +281,7 @@ describe("AI Detection scan notifications (database)", () => {
     expect(ids).toEqual([stale]);
     expect(await markStaleScansFailed(orgB, 30)).toEqual([]);
 
-    await notifyAiDetectionScanFailed(stale, orgA);
+    await notifyAiDetectionScanFailed(stale, orgA, { claim: false });
 
     const notices = await notificationsFor(orgA, stale);
     expect(notices.map((r) => [r.user_id, r.type]).sort()).toEqual(
@@ -278,7 +290,41 @@ describe("AI Detection scan notifications (database)", () => {
         [editorA, "ai_detection_scan_failed"],
       ].sort(),
     );
-    expect(await notifiedAt(orgA, stale)).not.toBeNull();
+    // The sweep's notice leaves the claim free.
+    expect(await notifiedAt(orgA, stale)).toBeNull();
+  });
+
+  it("still announces the completion of a scan the sweep marked stale while it was running", async () => {
+    const rows = await sequelize.query<{ id: number }>(
+      `INSERT INTO ai_detection_scans
+         (organization_id, repository_url, repository_owner, repository_name, status, triggered_by,
+          triggered_by_type, updated_at)
+       VALUES (:orgId, 'https://github.com/acme/app', 'acme', 'app', 'scanning', :editorA,
+          'manual', NOW() - INTERVAL '2 hours')
+       RETURNING id`,
+      { replacements: { orgId: orgA, editorA }, type: QueryTypes.SELECT },
+    );
+    const slow = rows[0].id;
+
+    expect(await markStaleScansFailed(orgA, 30)).toEqual([slow]);
+    await notifyAiDetectionScanFailed(slow, orgA, { claim: false });
+
+    // The scan was only slow: executeScan now writes it completed.
+    await sequelize.query(
+      `UPDATE ai_detection_scans SET status = 'completed', completed_at = NOW(), findings_count = 0
+        WHERE id = :slow AND organization_id = :orgId`,
+      { replacements: { slow, orgId: orgA } },
+    );
+    await notifyAiDetectionScanFinished(slow, orgA);
+
+    const notices = await notificationsFor(orgA, slow);
+    expect(notices.map((r) => [r.user_id, r.type]).sort()).toEqual(
+      [
+        [editorA, "ai_detection_scan_completed"],
+        [editorA, "ai_detection_scan_failed"],
+      ].sort(),
+    );
+    expect(await notifiedAt(orgA, slow)).not.toBeNull();
   });
 
   it("resolves recipients to members of the organization only", async () => {

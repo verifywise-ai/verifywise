@@ -389,6 +389,12 @@ export interface IRiskScoreDetails {
   llm_status?: LlmAnalysisStatus;
   /** Ties a background LLM write to the rule-based run that started it */
   llm_run_id?: string;
+  /**
+   * The rule-based grade before any LLM adjustment. Kept on the LLM write so
+   * scans can be compared on the same basis (scan notifications' grade-drop
+   * check). Absent on scores stored before it was recorded.
+   */
+  rule_grade?: RiskGrade;
 }
 
 /**

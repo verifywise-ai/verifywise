@@ -115,10 +115,11 @@ describe("scheduledScanProcessor", () => {
       await processScheduledAiDetectionScans();
 
       expect(mockMarkStale).toHaveBeenCalledWith(1, 30);
+      // No notified_at claim, so a scan that was only slow can still announce completion.
       expect(mockNotifyFailed.mock.calls).toEqual([
-        [101, 1],
-        [102, 1],
-        [103, 1],
+        [101, 1, { claim: false }],
+        [102, 1, { claim: false }],
+        [103, 1, { claim: false }],
       ]);
     });
 
