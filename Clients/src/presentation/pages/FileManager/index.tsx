@@ -931,7 +931,7 @@ const FileManager: React.FC = (): JSX.Element => {
                     width: 48,
                     height: 48,
                     borderRadius: "50%",
-                    backgroundColor: "#FEE2E2",
+                    backgroundColor: palette.status.error.bg,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",

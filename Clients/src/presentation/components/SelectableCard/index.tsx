@@ -67,8 +67,8 @@ const SelectableCard = ({
       "backgroundColor": disabled
         ? `${background.accent}`
         : isSelected
-          ? accentColor === "#6366F1"
-            ? "#EEF2FF"
+          ? accentColor === vwPalette.chart[0]
+            ? vwPalette.accent.indigo.bg
             : vwPalette.status.success.bg
           : `${background.main}`,
       "opacity": disabled ? 0.6 : 1,
@@ -81,8 +81,8 @@ const SelectableCard = ({
         : {
             borderColor: accentColor,
             backgroundColor: isSelected
-              ? accentColor === "#6366F1"
-                ? "#EEF2FF"
+              ? accentColor === vwPalette.chart[0]
+                ? vwPalette.accent.indigo.bg
                 : vwPalette.status.success.bg
               : `${background.accent}`,
           },

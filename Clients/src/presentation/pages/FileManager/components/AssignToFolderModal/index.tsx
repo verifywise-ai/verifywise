@@ -310,12 +310,12 @@ export const AssignToFolderModal: React.FC<AssignToFolderModalProps> = ({
           <Box
             sx={{
               padding: "8px 12px",
-              backgroundColor: "#FEF3C7",
+              backgroundColor: vwPalette.risk.medium.bg,
               borderRadius: radiusPx.sm,
-              border: "1px solid #FCD34D",
+              border: `1px solid ${vwPalette.riskMark.medium}`,
             }}
           >
-            <Typography sx={{ fontSize: 12, color: "#92400E" }}>
+            <Typography sx={{ fontSize: 12, color: vwPalette.status.warning.text }}>
               No changes have been made.
             </Typography>
           </Box>

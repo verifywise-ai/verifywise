@@ -186,8 +186,8 @@ export default function PlaygroundPage() {
                     gap: "8px",
                     p: "12px 16px",
                     borderRadius: radiusPx.sm,
-                    border: "1px solid #FEDF89",
-                    bgcolor: "#FFFAEB",
+                    border: `1px solid ${vwPalette.status.warning.border}`,
+                    bgcolor: vwPalette.status.warning.bg,
                     mb: "8px",
                   }}
                 >
@@ -201,7 +201,7 @@ export default function PlaygroundPage() {
                     <Typography fontSize={13} fontWeight={500} color={vwPalette.risk.high.text}>
                       Setup required
                     </Typography>
-                    <Typography fontSize={12} color="#93370D" mt="2px">
+                    <Typography fontSize={12} color={vwPalette.status.warning.text} mt="2px">
                       The playground needs at least one active endpoint.{" "}
                       <Link
                         to="/ai-gateway/settings"

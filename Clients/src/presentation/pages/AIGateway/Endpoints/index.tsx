@@ -300,8 +300,8 @@ export default function EndpointsPage() {
                 gap: "8px",
                 p: "12px 16px",
                 borderRadius: radiusPx.sm,
-                border: "1px solid #FEDF89",
-                bgcolor: "#FFFAEB",
+                border: `1px solid ${vwPalette.status.warning.border}`,
+                bgcolor: vwPalette.status.warning.bg,
                 mb: "8px",
               }}
             >
@@ -315,7 +315,7 @@ export default function EndpointsPage() {
                 <Typography fontSize={13} fontWeight={500} color={vwPalette.risk.high.text}>
                   No API keys configured
                 </Typography>
-                <Typography fontSize={12} color="#93370D" mt="2px">
+                <Typography fontSize={12} color={vwPalette.status.warning.text} mt="2px">
                   You need at least one LLM provider API key before you can create an endpoint.{" "}
                   <Link
                     to="/ai-gateway/settings"

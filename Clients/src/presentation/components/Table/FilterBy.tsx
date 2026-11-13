@@ -196,8 +196,8 @@ const FilterBadge: React.FC<{ count: number }> = ({ count }) => (
       width: "18px",
       height: "18px",
       borderRadius: "50%",
-      backgroundColor: "#dbeafe",
-      color: "#1e40af",
+      backgroundColor: vwPalette.status.info.bg,
+      color: vwPalette.status.info.text,
       fontSize: "11px",
       fontWeight: 600,
       marginLeft: "6px",
@@ -511,10 +511,10 @@ export const FilterBy: React.FC<FilterByProps> = ({
           "borderColor": "border.dark",
           "height": "34px",
           "minWidth": activeFilterCount > 0 ? "100px" : "80px",
-          "backgroundColor": open ? "#eff6ff" : "transparent",
+          "backgroundColor": open ? vwPalette.status.info.bg : "transparent",
           "&:hover": {
             borderColor: "text.muted",
-            backgroundColor: "#eff6ff",
+            backgroundColor: vwPalette.status.info.bg,
           },
         }}
       >

@@ -148,7 +148,10 @@ const Resources = ({
                     sx={{
                       display: "flex",
                       alignItems: "center",
-                      color: sortConfig.key === "document name" ? "#1976D2" : `${text.disabled}`,
+                      color:
+                        sortConfig.key === "document name"
+                          ? vwPalette.status.info.text
+                          : `${text.disabled}`,
                     }}
                   >
                     {sortConfig.key === "document name" && sortConfig.direction === "asc" && (

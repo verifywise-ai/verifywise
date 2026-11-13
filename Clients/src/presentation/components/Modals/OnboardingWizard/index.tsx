@@ -177,19 +177,23 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           sx={{
             background: isDark
               ? `linear-gradient(135deg, ${vwPalette.border.light} 0%, ${vwPalette.border.dark} 100%)`
-              : "linear-gradient(135deg, #1a1f2e 0%, #2d3548 100%)",
+              : `linear-gradient(135deg, ${vwPalette.text.primary} 0%, ${vwPalette.text.secondary} 100%)`,
             padding: "32px 32px 28px",
           }}
         >
           <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
             <Stack spacing={0}>
               <Stack direction="row" alignItems="center" spacing={1}>
-                <BadgeIcon size={18} color={isDark ? "#b52180" : "#4ADE80"} strokeWidth={2} />
+                <BadgeIcon
+                  size={18}
+                  color={isDark ? vwPalette.accent.pink.text : vwPalette.status.success.strong}
+                  strokeWidth={2}
+                />
                 <Typography
                   sx={{
                     fontSize: 13,
                     fontWeight: 600,
-                    color: isDark ? "#b52180" : "#4ADE80",
+                    color: isDark ? vwPalette.accent.pink.text : vwPalette.status.success.strong,
                     textTransform: "uppercase",
                     letterSpacing: 1.2,
                   }}
@@ -213,7 +217,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 <Typography
                   sx={{
                     ...textStyles.body,
-                    color: isDark ? "#6b5c47" : text.accent,
+                    color: isDark ? vwPalette.text.tertiary : text.accent,
                     mt: 0.5,
                   }}
                 >
@@ -238,13 +242,13 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               }}
               sx={{
                 "cursor": "pointer",
-                "color": isDark ? "#9b8b74" : icon.default,
+                "color": isDark ? vwPalette.text.accent : icon.default,
                 "display": "flex",
                 "alignItems": "center",
                 "padding": "4px",
                 "borderRadius": radiusPx.sm,
                 "&:hover": {
-                  color: isDark ? "#6b5c47" : grey[300],
+                  color: isDark ? vwPalette.text.tertiary : grey[300],
                   bgcolor: isDark ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.05)",
                 },
               }}
@@ -312,7 +316,9 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                         width: 16,
                         height: 16,
                         borderRadius: "50%",
-                        bgcolor: isDark ? "#b52180" : "#4ADE80",
+                        bgcolor: isDark
+                          ? vwPalette.accent.pink.text
+                          : vwPalette.status.success.strong,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -332,14 +338,14 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                       fontWeight: isActive ? 600 : isDone ? 500 : 400,
                       color: isDone
                         ? isDark
-                          ? "#b52180"
-                          : "#4ADE80"
+                          ? vwPalette.accent.pink.text
+                          : vwPalette.status.success.strong
                         : isActive
                           ? isDark
                             ? "text.black"
                             : "background.main"
                           : isDark
-                            ? "#6b5c47"
+                            ? vwPalette.text.tertiary
                             : text.accent,
                     }}
                   >

@@ -150,7 +150,10 @@ const Subprocessors = ({
                     sx={{
                       display: "flex",
                       alignItems: "center",
-                      color: sortConfig.key === "company name" ? "#1976D2" : `${text.disabled}`,
+                      color:
+                        sortConfig.key === "company name"
+                          ? vwPalette.status.info.text
+                          : `${text.disabled}`,
                     }}
                   >
                     {sortConfig.key === "company name" && sortConfig.direction === "asc" && (
@@ -184,7 +187,8 @@ const Subprocessors = ({
                     sx={{
                       display: "flex",
                       alignItems: "center",
-                      color: sortConfig.key === "url" ? "#1976D2" : `${text.disabled}`,
+                      color:
+                        sortConfig.key === "url" ? vwPalette.status.info.text : `${text.disabled}`,
                     }}
                   >
                     {sortConfig.key === "url" && sortConfig.direction === "asc" && (
@@ -218,7 +222,10 @@ const Subprocessors = ({
                     sx={{
                       display: "flex",
                       alignItems: "center",
-                      color: sortConfig.key === "purpose" ? "#1976D2" : `${text.disabled}`,
+                      color:
+                        sortConfig.key === "purpose"
+                          ? vwPalette.status.info.text
+                          : `${text.disabled}`,
                     }}
                   >
                     {sortConfig.key === "purpose" && sortConfig.direction === "asc" && (
@@ -252,7 +259,10 @@ const Subprocessors = ({
                     sx={{
                       display: "flex",
                       alignItems: "center",
-                      color: sortConfig.key === "location" ? "#1976D2" : `${text.disabled}`,
+                      color:
+                        sortConfig.key === "location"
+                          ? vwPalette.status.info.text
+                          : `${text.disabled}`,
                     }}
                   >
                     {sortConfig.key === "location" && sortConfig.direction === "asc" && (

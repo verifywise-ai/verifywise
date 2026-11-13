@@ -555,7 +555,8 @@ const SidebarWrapper: React.FC<SidebarWrapperProps> = ({
           style={{
             width: isResizing ? 2 : 1,
             height: "100%",
-            backgroundColor: isResizing || isHoveringHandle ? "#4CAF93" : colors.border.default,
+            backgroundColor:
+              isResizing || isHoveringHandle ? palette.brand.primary : colors.border.default,
             transition: isResizing ? "none" : "all 150ms ease",
             position: "relative",
           }}

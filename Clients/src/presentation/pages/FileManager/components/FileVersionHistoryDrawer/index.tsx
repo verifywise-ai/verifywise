@@ -272,9 +272,9 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
           <Box
             sx={{
               padding: "12px",
-              backgroundColor: "#FEF3F2",
+              backgroundColor: vwPalette.accent.red.bg,
               borderRadius: radiusPx.sm,
-              border: "1px solid #FECDCA",
+              border: `1px solid ${vwPalette.status.error.border}`,
               mb: 2,
             }}
           >
@@ -306,7 +306,9 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
                     "padding": "10px 12px",
                     "borderRadius": radiusPx.sm,
                     "backgroundColor": isCurrent ? vwPalette.status.success.bg : "transparent",
-                    "border": isCurrent ? "1px solid #BBF7D0" : "1px solid transparent",
+                    "border": isCurrent
+                      ? `1px solid ${vwPalette.status.success.border}`
+                      : "1px solid transparent",
                     "&:hover": {
                       backgroundColor: isCurrent
                         ? vwPalette.status.success.bg
@@ -335,7 +337,7 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
                         width: 8,
                         height: 8,
                         borderRadius: "50%",
-                        backgroundColor: isCurrent ? "#16A34A" : "border.dark",
+                        backgroundColor: isCurrent ? vwPalette.status.success.text : "border.dark",
                         flexShrink: 0,
                       }}
                     />
@@ -358,11 +360,11 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
                             sx={{
                               fontSize: 10,
                               fontWeight: 500,
-                              color: "#16A34A",
+                              color: vwPalette.status.success.text,
                               backgroundColor: vwPalette.status.success.bg,
                               padding: "1px 6px",
                               borderRadius: radiusPx.sm,
-                              border: "1px solid #BBF7D0",
+                              border: `1px solid ${vwPalette.status.success.border}`,
                               whiteSpace: "nowrap",
                             }}
                           >
@@ -509,7 +511,7 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
                             <Typography
                               sx={{
                                 fontSize: 10,
-                                color: "#B91C1C",
+                                color: vwPalette.status.error.text,
                                 textDecoration: "line-through",
                                 maxWidth: 100,
                                 overflow: "hidden",
@@ -530,7 +532,7 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
                             <Typography
                               sx={{
                                 fontSize: 10,
-                                color: "#0D7C4F",
+                                color: vwPalette.status.success.text,
                                 fontWeight: 500,
                                 maxWidth: 100,
                                 overflow: "hidden",

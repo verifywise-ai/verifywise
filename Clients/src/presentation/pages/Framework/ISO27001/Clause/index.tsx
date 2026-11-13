@@ -376,7 +376,7 @@ const ISO27001Clause = ({
                     fontSize={11}
                     fontWeight={600}
                     sx={{
-                      color: "#57606a",
+                      color: palette.text.tertiary,
                       textTransform: "uppercase",
                       letterSpacing: "0.04em",
                     }}
@@ -407,7 +407,7 @@ const ISO27001Clause = ({
                           top: "50%",
                           width: "12px",
                           height: "1px",
-                          backgroundColor: "#c9d1d9",
+                          backgroundColor: palette.border.dark,
                         },
                       }
                     : {}),

@@ -295,11 +295,13 @@ const CopyButton: FC<{ bubbleRef: React.RefObject<HTMLDivElement | null> }> = ({
         "gap": "4px",
         "cursor": "pointer",
         "color": copied
-          ? (theme.palette.success?.main ?? "#4CAF50")
+          ? (theme.palette.success?.main ?? vwPalette.status.success.strong)
           : (theme.palette.text.tertiary ?? theme.palette.text.disabled),
         "ml": 0.5,
         "&:hover": {
-          color: copied ? (theme.palette.success?.main ?? "#4CAF50") : theme.palette.text.primary,
+          color: copied
+            ? (theme.palette.success?.main ?? vwPalette.status.success.strong)
+            : theme.palette.text.primary,
         },
       }}
       aria-label="Copy response"

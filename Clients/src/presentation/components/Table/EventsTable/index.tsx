@@ -61,8 +61,8 @@ const DEFAULT_ROWS_PER_PAGE = 10;
 // value, so they keep their literals to stay visually unchanged.
 const EVENT_TYPE_COLORS: Record<Event["event_type"], { bg: string; text: string }> = {
   Create: { bg: status.success.bg, text: status.success.text },
-  Read: { bg: "#DCEFFF", text: "#1976D2" },
-  Update: { bg: status.warning.bg, text: "#795000" },
+  Read: { bg: vwPalette.status.info.bg, text: vwPalette.status.info.text },
+  Update: { bg: status.warning.bg, text: vwPalette.risk.medium.text },
   Delete: { bg: status.error.bg, text: status.error.text },
   Error: { bg: risk.high.bg, text: risk.high.text },
 };

@@ -412,7 +412,7 @@ const AITrustCenterSettings: React.FC = () => {
                   "position": "relative",
                   "overflow": "hidden",
                   "&:hover": {
-                    borderColor: "#999",
+                    borderColor: vwPalette.border.dark,
                     backgroundColor: `${background.surface}`,
                   },
                 }}
@@ -468,7 +468,9 @@ const AITrustCenterSettings: React.FC = () => {
                         justifyContent: "center",
                       }}
                     >
-                      <Typography sx={{ fontSize: 12, color: "#666", fontWeight: 600 }}>
+                      <Typography
+                        sx={{ fontSize: 12, color: vwPalette.text.tertiary, fontWeight: 600 }}
+                      >
                         L
                       </Typography>
                     </Box>
@@ -534,7 +536,7 @@ const AITrustCenterSettings: React.FC = () => {
               <Typography
                 sx={{
                   fontSize: 11,
-                  color: "#666",
+                  color: vwPalette.text.tertiary,
                   textAlign: "left",
                   lineHeight: 1.4,
                 }}

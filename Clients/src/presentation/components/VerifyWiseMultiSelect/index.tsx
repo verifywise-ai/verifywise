@@ -53,7 +53,7 @@ const VerifyWiseMultiSelect: React.FC<VerifyWiseMultiSelectProps> = ({
   // Standardized color palette
   const colors = {
     primary: `${brand.primary}`,
-    primaryHover: "#0f604d",
+    primaryHover: vwPalette.brand.primaryHover,
     secondary: `${status.default.text}`,
     secondaryHover: vwPalette.text.tertiary,
     background: `${background.surface}`,

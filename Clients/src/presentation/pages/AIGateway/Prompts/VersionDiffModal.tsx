@@ -53,15 +53,15 @@ function diffMessages(a: Message[], b: Message[]): DiffRow[] {
 
 const STATUS_COLORS: Record<DiffStatus, string> = {
   added: vwPalette.status.success.bg,
-  removed: "#FEF3F2",
-  changed: "#FFFAEB",
+  removed: vwPalette.accent.red.bg,
+  changed: vwPalette.status.warning.bg,
   unchanged: "transparent",
 };
 
 const STATUS_BORDERS: Record<DiffStatus, string> = {
-  added: "#A6F4C5",
-  removed: "#FECDCA",
-  changed: "#FDE68A",
+  added: vwPalette.status.success.border,
+  removed: vwPalette.status.error.border,
+  changed: vwPalette.risk.medium.border,
   unchanged: palette.border.light,
 };
 
@@ -129,7 +129,7 @@ function ConfigDiff({ a, b }: { a: Version; b: Version }) {
             <strong>{c.field}:</strong>{" "}
             <span style={{ color: vwPalette.status.error.text }}>{c.from}</span>
             {" → "}
-            <span style={{ color: "#027A48" }}>{c.to}</span>
+            <span style={{ color: vwPalette.status.success.text }}>{c.to}</span>
           </Typography>
         ))}
       </Stack>

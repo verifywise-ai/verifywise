@@ -19,6 +19,7 @@ import { Info } from "lucide-react";
 import { ResponsiveContainer, LineChart, Line } from "recharts";
 import palette from "../../themes/palette";
 import { palette as vwPalette, radiusPx } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 
 // ─── 1. ChartCard ──────────────────────────────────────────────────────────
 
@@ -245,38 +246,24 @@ export const chartTooltipStyle = {
 
 /** Consistent color mapping for LLM providers across all charts. */
 export const PROVIDER_COLORS: Record<string, string> = {
-  openai: "#10A37F",
-  anthropic: "#D4A574",
-  gemini: "#4285F4",
-  google: "#4285F4",
-  mistral: "#FF7000",
-  xai: "#1DA1F2",
-  bedrock: "#FF9900",
-  azure: "#0078D4",
-  together_ai: "#6366F1",
+  openai: chartTheme.series[3],
+  anthropic: chartTheme.series[4],
+  gemini: chartTheme.series[7],
+  google: chartTheme.series[7],
+  mistral: chartTheme.series[2],
+  xai: chartTheme.series[0],
+  bedrock: chartTheme.series[8],
+  azure: chartTheme.series[5],
+  together_ai: chartTheme.series[9],
   openrouter: vwPalette.accent.purple.text,
   fireworks_ai: vwPalette.riskMark.critical,
-  deepinfra: "#06B6D4",
-  cohere: "#39B89D",
+  deepinfra: chartTheme.series[1],
+  cohere: chartTheme.series[6],
   replicate: vwPalette.text.primary,
 };
 
 /** Get provider color — falls back to chart palette by index. */
 export const getProviderColor = (provider: string, index: number = 0): string => {
   const p = provider.toLowerCase().replace(/[^a-z_]/g, "");
-  return (
-    PROVIDER_COLORS[p] ||
-    [
-      "#13715B",
-      "#3B82F6",
-      "#F59E0B",
-      "#EF4444",
-      "#8B5CF6",
-      "#06B6D4",
-      "#EC4899",
-      "#14B8A6",
-      "#F97316",
-      "#6366F1",
-    ][index % 10]
-  );
+  return PROVIDER_COLORS[p] || chartTheme.series[index % chartTheme.series.length];
 };

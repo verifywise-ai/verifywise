@@ -207,7 +207,7 @@ const ShareViewDropdown: React.FC<ShareViewDropdownProps> = ({
                 variant="body2"
                 sx={{
                   fontSize: "13px",
-                  color: "#666",
+                  color: vwPalette.text.tertiary,
                   lineHeight: 1.4,
                   marginTop: "8px",
                 }}

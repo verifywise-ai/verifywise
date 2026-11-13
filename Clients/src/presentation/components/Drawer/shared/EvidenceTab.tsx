@@ -100,7 +100,7 @@ const EvidenceTab: React.FC<EvidenceTabProps> = ({
               </Typography>
             )}
             {pendingAttachFiles.length > 0 && (
-              <Typography sx={{ fontSize: 11, color: "#4C7BF4" }}>
+              <Typography sx={{ fontSize: 11, color: vwPalette.status.info.text }}>
                 {`+${pendingAttachFiles.length} pending attach`}
               </Typography>
             )}
@@ -197,7 +197,7 @@ const EvidenceTab: React.FC<EvidenceTabProps> = ({
 
       {uploadFiles.length > 0 && (
         <Stack spacing={1}>
-          <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#92400E" }}>
+          <Typography sx={{ fontSize: 12, fontWeight: 600, color: vwPalette.status.warning.text }}>
             Pending upload
           </Typography>
           {uploadFiles.map((file) => (
@@ -220,7 +220,7 @@ const EvidenceTab: React.FC<EvidenceTabProps> = ({
                     sx={{
                       fontSize: 13,
                       fontWeight: 500,
-                      color: "#92400E",
+                      color: vwPalette.status.warning.text,
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
@@ -229,7 +229,7 @@ const EvidenceTab: React.FC<EvidenceTabProps> = ({
                     {file.fileName}
                   </Typography>
                   {file.size && (
-                    <Typography sx={{ fontSize: 11, color: "#B45309" }}>
+                    <Typography sx={{ fontSize: 11, color: vwPalette.status.warning.text }}>
                       {(file.size / 1024).toFixed(1)} KB
                     </Typography>
                   )}
@@ -240,7 +240,7 @@ const EvidenceTab: React.FC<EvidenceTabProps> = ({
                   size="small"
                   onClick={() => handleDeleteUploadFile(file.id.toString())}
                   sx={{
-                    "color": "#92400E",
+                    "color": vwPalette.status.warning.text,
                     "&:hover": {
                       color: "status.error.main",
                       backgroundColor: "rgba(211, 47, 47, 0.08)",
@@ -257,7 +257,7 @@ const EvidenceTab: React.FC<EvidenceTabProps> = ({
 
       {pendingAttachFiles.length > 0 && (
         <Stack spacing={1}>
-          <Typography sx={{ fontSize: 12, fontWeight: 600, color: "#4C7BF4" }}>
+          <Typography sx={{ fontSize: 12, fontWeight: 600, color: vwPalette.status.info.text }}>
             Pending attach
           </Typography>
           {pendingAttachFiles.map((file) => (
@@ -268,19 +268,19 @@ const EvidenceTab: React.FC<EvidenceTabProps> = ({
                 alignItems: "center",
                 justifyContent: "space-between",
                 padding: "10px 12px",
-                border: "1px solid #DBEAFE",
+                border: `1px solid ${vwPalette.status.info.border}`,
                 borderRadius: radiusPx.sm,
-                backgroundColor: "#EFF6FF",
+                backgroundColor: vwPalette.status.info.bg,
               }}
             >
               <Box sx={{ display: "flex", gap: 1.5, flex: 1, minWidth: 0 }}>
-                <FileIcon size={18} color="#4C7BF4" />
+                <FileIcon size={18} color={vwPalette.status.info.text} />
                 <Box sx={{ minWidth: 0, flex: 1 }}>
                   <Typography
                     sx={{
                       fontSize: 13,
                       fontWeight: 500,
-                      color: "#1E40AF",
+                      color: vwPalette.status.info.text,
                       overflow: "hidden",
                       textOverflow: "ellipsis",
                       whiteSpace: "nowrap",
@@ -295,7 +295,7 @@ const EvidenceTab: React.FC<EvidenceTabProps> = ({
                   size="small"
                   onClick={() => handleRemovePendingAttach(file.id.toString())}
                   sx={{
-                    "color": "#4C7BF4",
+                    "color": vwPalette.status.info.text,
                     "&:hover": {
                       color: "status.error.text",
                       backgroundColor: "rgba(211, 47, 47, 0.08)",

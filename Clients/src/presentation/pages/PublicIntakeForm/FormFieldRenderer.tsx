@@ -453,7 +453,9 @@ export function FormFieldRenderer({ field, control, errors, tone }: FormFieldRen
                                 ? vwPalette.status.success.bg
                                 : "transparent",
                               "&:hover": {
-                                backgroundColor: isChecked ? "#dcfce7" : vwPalette.background.alt,
+                                backgroundColor: isChecked
+                                  ? vwPalette.status.success.bg
+                                  : vwPalette.background.alt,
                               },
                               "borderBottom": `1px solid ${vwPalette.background.hover}`,
                               "&:last-child": { borderBottom: "none" },

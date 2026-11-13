@@ -118,7 +118,7 @@ const ManageShareLinks: React.FC<ManageShareLinksProps> = ({
           variant="body2"
           sx={{
             fontSize: "13px",
-            color: "#666",
+            color: vwPalette.text.tertiary,
           }}
         >
           No share links created yet. Enable share view to create one.
@@ -190,7 +190,7 @@ const ManageShareLinks: React.FC<ManageShareLinksProps> = ({
                   variant="body2"
                   sx={{
                     fontSize: "12px",
-                    color: "#666",
+                    color: vwPalette.text.tertiary,
                     mb: 0.5,
                   }}
                 >
@@ -200,7 +200,7 @@ const ManageShareLinks: React.FC<ManageShareLinksProps> = ({
                   variant="body2"
                   sx={{
                     fontSize: "11px",
-                    color: "#999",
+                    color: vwPalette.text.accent,
                     fontFamily: "monospace",
                     wordBreak: "break-all",
                   }}

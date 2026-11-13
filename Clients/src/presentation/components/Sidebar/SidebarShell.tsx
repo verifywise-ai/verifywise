@@ -645,7 +645,12 @@ const SidebarShell: FC<SidebarShellProps> = ({
                       },
                     }}
                   >
-                    <Heart size={14} color="#FF1493" strokeWidth={1.5} fill="#FF1493" />
+                    <Heart
+                      size={14}
+                      color={vwPalette.chart[1]}
+                      strokeWidth={1.5}
+                      fill={vwPalette.chart[1]}
+                    />
                   </IconButton>
                 </Tooltip>
               )}

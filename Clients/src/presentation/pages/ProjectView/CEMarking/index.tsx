@@ -222,7 +222,7 @@ const getStatusBgColor = (stepStatus: ConformityStepStatus): string => {
     case ConformityStepStatus.Completed:
       return `${green[500]}20`;
     case ConformityStepStatus.InProgress:
-      return "#3B82F620";
+      return `${vwPalette.chart[0]}20`;
     case ConformityStepStatus.NotStarted:
       return `${status.default.text}20`;
     case ConformityStepStatus.NotNeeded:

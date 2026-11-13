@@ -70,7 +70,7 @@ const AITrustCentrePublic: React.FC = () => {
         sx={{
           width: "100%",
           height: 180,
-          background: data?.info?.header_color || "#D6E4F9",
+          background: data?.info?.header_color || palette.accent.indigo.bg,
           position: "relative",
           px: 10,
         }}

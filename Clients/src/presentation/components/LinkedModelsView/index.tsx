@@ -36,13 +36,16 @@ function StatusBadge({ status }: { status: ModelInventoryStatus }) {
       color: palette.status.success.text,
     },
     [ModelInventoryStatus.PENDING]: { bg: palette.risk.medium.bg, color: palette.risk.medium.text },
-    [ModelInventoryStatus.RESTRICTED]: { bg: "#FFE5D0", color: "#E64A19" },
+    [ModelInventoryStatus.RESTRICTED]: {
+      bg: palette.status.warning.bg,
+      color: palette.status.warning.text,
+    },
     [ModelInventoryStatus.BLOCKED]: {
       bg: palette.status.error.border,
       color: palette.status.error.text,
     },
     [ModelInventoryStatus.REJECTED]: { bg: palette.background.hover, color: palette.text.tertiary },
-    [ModelInventoryStatus.RETIRED]: { bg: palette.background.hover, color: "#546E7A" },
+    [ModelInventoryStatus.RETIRED]: { bg: palette.background.hover, color: palette.text.tertiary },
   };
 
   const style = statusStyles[status] || { bg: palette.border.light, color: palette.text.secondary };

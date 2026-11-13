@@ -367,7 +367,7 @@ const NISTAIRMFGovern = ({
                     fontSize={12}
                     sx={{
                       mt: 1,
-                      color: "#666",
+                      color: palette.text.tertiary,
                       lineHeight: 1.4,
                       fontWeight: 400,
                     }}
@@ -474,7 +474,7 @@ const NISTAIRMFGovern = ({
                       fontSize={12}
                       sx={{
                         mt: 1,
-                        color: "#666",
+                        color: palette.text.tertiary,
                         lineHeight: 1.4,
                         fontWeight: 400,
                       }}

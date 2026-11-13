@@ -36,10 +36,10 @@ const EntityDetailsSection: React.FC<EntityDetailsSectionProps> = ({ details }) 
 
   // Deleted entity message styles
   const deletedMessageStyles = {
-    backgroundColor: "#FDECEA",
+    backgroundColor: vwPalette.accent.red.bg,
     padding: "12px",
     borderRadius: radiusPx.md,
-    border: "1px solid #F5C6CB",
+    border: `1px solid ${vwPalette.status.error.border}`,
   };
 
   const renderFieldValue = (field: DetailFieldConfig) => {

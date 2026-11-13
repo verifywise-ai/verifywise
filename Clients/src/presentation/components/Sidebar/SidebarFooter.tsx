@@ -295,21 +295,23 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                   "borderRadius": theme.shape.borderRadius,
                   "px": theme.spacing(4),
                   "background": hasDemoData
-                    ? "linear-gradient(135deg, #FEF3F2 0%, #FEE4E2 100%)"
-                    : `linear-gradient(135deg, ${vwPalette.status.success.bg} 0%, #D1FADF 100%)`,
-                  "border": hasDemoData ? "1px solid #FECDCA" : "1px solid #A6F4C5",
+                    ? `linear-gradient(135deg, ${vwPalette.accent.red.bg} 0%, ${vwPalette.status.error.bg} 100%)`
+                    : `linear-gradient(135deg, ${vwPalette.status.success.bg} 0%, ${vwPalette.status.success.bg} 100%)`,
+                  "border": hasDemoData
+                    ? `1px solid ${vwPalette.status.error.border}`
+                    : `1px solid ${vwPalette.status.success.border}`,
                   "&:hover": {
                     background: hasDemoData
-                      ? "linear-gradient(135deg, #FEE4E2 0%, #FECDCA 100%)"
-                      : "linear-gradient(135deg, #D1FADF 0%, #A6F4C5 100%)",
+                      ? `linear-gradient(135deg, ${vwPalette.status.error.bg} 0%, ${vwPalette.status.error.border} 100%)`
+                      : `linear-gradient(135deg, ${vwPalette.status.success.bg} 0%, ${vwPalette.status.success.border} 100%)`,
                   },
                   "&:hover svg.demo-icon": {
                     color: hasDemoData
                       ? `${vwPalette.status.error.text} !important`
-                      : "#027A48 !important",
+                      : `${vwPalette.status.success.text} !important`,
                     stroke: hasDemoData
                       ? `${vwPalette.status.error.text} !important`
-                      : "#027A48 !important",
+                      : `${vwPalette.status.success.text} !important`,
                   },
                 }}
               >
@@ -322,8 +324,8 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                     "width": "16px",
                     "mr": 0,
                     "& svg": {
-                      color: hasDemoData ? "#D92D20" : "#039855",
-                      stroke: hasDemoData ? "#D92D20" : "#039855",
+                      color: hasDemoData ? vwPalette.text.error : vwPalette.status.success.text,
+                      stroke: hasDemoData ? vwPalette.text.error : vwPalette.status.success.strong,
                       transition: "color 0.2s ease, stroke 0.2s ease",
                     },
                   }}
@@ -341,7 +343,9 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                         "& .MuiListItemText-primary": {
                           fontSize: "13px",
                           fontWeight: 500,
-                          color: hasDemoData ? vwPalette.status.error.text : "#027A48",
+                          color: hasDemoData
+                            ? vwPalette.status.error.text
+                            : vwPalette.status.success.text,
                         },
                       }}
                     >
@@ -403,21 +407,23 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                 "borderRadius": theme.shape.borderRadius,
                 "px": theme.spacing(4),
                 "background": hasDemoData
-                  ? "linear-gradient(135deg, #FEF3F2 0%, #FEE4E2 100%)"
-                  : `linear-gradient(135deg, ${vwPalette.status.success.bg} 0%, #D1FADF 100%)`,
-                "border": hasDemoData ? "1px solid #FECDCA" : "1px solid #A6F4C5",
+                  ? `linear-gradient(135deg, ${vwPalette.accent.red.bg} 0%, ${vwPalette.status.error.bg} 100%)`
+                  : `linear-gradient(135deg, ${vwPalette.status.success.bg} 0%, ${vwPalette.status.success.bg} 100%)`,
+                "border": hasDemoData
+                  ? `1px solid ${vwPalette.status.error.border}`
+                  : `1px solid ${vwPalette.status.success.border}`,
                 "&:hover": {
                   background: hasDemoData
-                    ? "linear-gradient(135deg, #FEE4E2 0%, #FECDCA 100%)"
-                    : "linear-gradient(135deg, #D1FADF 0%, #A6F4C5 100%)",
+                    ? `linear-gradient(135deg, ${vwPalette.status.error.bg} 0%, ${vwPalette.status.error.border} 100%)`
+                    : `linear-gradient(135deg, ${vwPalette.status.success.bg} 0%, ${vwPalette.status.success.border} 100%)`,
                 },
                 "&:hover svg.demo-icon": {
                   color: hasDemoData
                     ? `${vwPalette.status.error.text} !important`
-                    : "#027A48 !important",
+                    : `${vwPalette.status.success.text} !important`,
                   stroke: hasDemoData
                     ? `${vwPalette.status.error.text} !important`
-                    : "#027A48 !important",
+                    : `${vwPalette.status.success.text} !important`,
                 },
               }}
             >
@@ -430,8 +436,8 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                   "width": "16px",
                   "mr": 0,
                   "& svg": {
-                    color: hasDemoData ? "#D92D20" : "#039855",
-                    stroke: hasDemoData ? "#D92D20" : "#039855",
+                    color: hasDemoData ? vwPalette.text.error : vwPalette.status.success.text,
+                    stroke: hasDemoData ? vwPalette.text.error : vwPalette.status.success.strong,
                     transition: "color 0.2s ease, stroke 0.2s ease",
                   },
                 }}
@@ -448,7 +454,9 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                     "& .MuiListItemText-primary": {
                       fontSize: "13px",
                       fontWeight: 500,
-                      color: hasDemoData ? vwPalette.status.error.text : "#027A48",
+                      color: hasDemoData
+                        ? vwPalette.status.error.text
+                        : vwPalette.status.success.text,
                     },
                   }}
                 >

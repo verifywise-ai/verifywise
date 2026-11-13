@@ -87,8 +87,8 @@ const Button = memo(
 
       // Hover effects
       "&:hover": {
-        backgroundColor: theme.palette.primary.dark || "#0f5d4a",
-        borderColor: theme.palette.primary.dark || "#0f5d4a",
+        backgroundColor: theme.palette.primary.dark || vwPalette.brand.primaryHover,
+        borderColor: theme.palette.primary.dark || vwPalette.brand.primaryHover,
         transform: "translateY(-1px)",
         boxShadow: theme.shadows[2],
       },

@@ -78,7 +78,7 @@ function getGradeColor(grade: RiskGrade | null): string {
     case "C":
       return palette.status.warning.text;
     case "D":
-      return "#E65100";
+      return palette.riskMark.high;
     case "F":
       return palette.status.error.text;
     default:

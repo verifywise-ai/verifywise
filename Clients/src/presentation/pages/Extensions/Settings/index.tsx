@@ -211,8 +211,8 @@ export default function ExtensionSettingsPage() {
       ) : error ? (
         <Box
           sx={{
-            border: `1px solid ${theme.palette.status.error?.border ?? theme.palette.status.error?.main ?? "#F5B8B8"}`,
-            bgcolor: theme.palette.status.error?.bg ?? "#FFF1F1",
+            border: `1px solid ${theme.palette.status.error?.border ?? theme.palette.status.error?.main ?? palette.status.error.border}`,
+            bgcolor: theme.palette.status.error?.bg ?? palette.accent.red.bg,
             borderRadius: radiusPx.sm,
             p: "12px 16px",
           }}
@@ -274,8 +274,8 @@ export default function ExtensionSettingsPage() {
                   feedback.severity === "success"
                     ? theme.palette.status.success.bg
                     : feedback.severity === "error"
-                      ? (theme.palette.status.error?.bg ?? "#FFF1F1")
-                      : (theme.palette.status.info?.bg ?? "#EFF6FF"),
+                      ? (theme.palette.status.error?.bg ?? palette.accent.red.bg)
+                      : (theme.palette.status.info?.bg ?? palette.status.info.bg),
                 borderRadius: radiusPx.sm,
                 p: "12px 16px",
               }}
@@ -288,7 +288,7 @@ export default function ExtensionSettingsPage() {
                       ? theme.palette.status.success.text
                       : feedback.severity === "error"
                         ? (theme.palette.status.error?.text ?? palette.status.error.text)
-                        : (theme.palette.status.info?.text ?? "#1D4ED8"),
+                        : (theme.palette.status.info?.text ?? palette.status.info.text),
                 }}
               >
                 {feedback.message}
@@ -385,7 +385,7 @@ export default function ExtensionSettingsPage() {
       ) : (
         <Box
           sx={{
-            border: `1px solid ${theme.palette.status.warning?.border ?? "#F5E6B8"}`,
+            border: `1px solid ${theme.palette.status.warning?.border ?? palette.risk.medium.border}`,
             bgcolor: theme.palette.status.warning?.bg ?? palette.risk.medium.bg,
             borderRadius: radiusPx.sm,
             p: "12px 16px",

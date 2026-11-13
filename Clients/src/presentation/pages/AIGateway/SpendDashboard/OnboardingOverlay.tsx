@@ -68,7 +68,7 @@ interface OnboardingOverlayProps {
 function ArchDiagram() {
   const cardBase = {
     background: `linear-gradient(180deg, ${vwPalette.background.main} 0%, ${vwPalette.background.alt} 100%)`,
-    border: `0.5px solid #c0c5cc`,
+    border: `0.5px solid ${vwPalette.border.dark}`,
     borderRadius: radiusPx.sm,
     p: "14px 18px",
     boxShadow: "0 1px 3px rgba(16,24,40,0.05)",
@@ -249,28 +249,28 @@ function ArchDiagram() {
         <FeatureRow
           icon={<Gauge size={12} strokeWidth={1.8} />}
           label="Rate limiting"
-          colorScheme={{ bg: "#eff8ff", color: "#1570EF" }}
+          colorScheme={{ bg: vwPalette.status.info.bg, color: vwPalette.status.info.text }}
         />
         <FeatureRow
           icon={<Wallet size={12} strokeWidth={1.8} />}
           label="Budget controls"
-          colorScheme={{ bg: "#eff8ff", color: "#1570EF" }}
+          colorScheme={{ bg: vwPalette.status.info.bg, color: vwPalette.status.info.text }}
         />
         <FeatureRow
           icon={<GitBranch size={12} strokeWidth={1.8} />}
           label="Fallback chains"
-          colorScheme={{ bg: "#eff8ff", color: "#1570EF" }}
+          colorScheme={{ bg: vwPalette.status.info.bg, color: vwPalette.status.info.text }}
         />
         <SectionLabel>Governance</SectionLabel>
         <FeatureRow
           icon={<Lock size={12} strokeWidth={1.8} />}
           label="Role-based access"
-          colorScheme={{ bg: "#fffaeb", color: vwPalette.risk.high.text }}
+          colorScheme={{ bg: vwPalette.status.warning.bg, color: vwPalette.risk.high.text }}
         />
         <FeatureRow
           icon={<History size={12} strokeWidth={1.8} />}
           label="Audit trail"
-          colorScheme={{ bg: "#fffaeb", color: vwPalette.risk.high.text }}
+          colorScheme={{ bg: vwPalette.status.warning.bg, color: vwPalette.risk.high.text }}
         />
       </Box>
 

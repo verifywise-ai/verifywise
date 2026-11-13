@@ -51,9 +51,11 @@ export function InfoCard({
               "color": isActionActive ? `${brand.primary}` : `${text.muted}`,
               "padding": "4px",
               "borderRadius": radiusPx.sm,
-              "backgroundColor": isActionActive ? "#E6F4F1" : "transparent",
+              "backgroundColor": isActionActive ? vwPalette.accent.teal.bg : "transparent",
               "&:hover": {
-                backgroundColor: isActionActive ? "#D1EDE6" : vwPalette.background.hover,
+                backgroundColor: isActionActive
+                  ? vwPalette.brand.primaryLight
+                  : vwPalette.background.hover,
               },
             }}
           >

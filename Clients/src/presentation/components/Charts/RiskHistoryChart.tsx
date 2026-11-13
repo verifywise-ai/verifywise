@@ -13,6 +13,7 @@ import {
   radiusPx,
 } from "../../themes/palette";
 import { VWLineChart } from "./VWCharts";
+import { chartTheme } from "../../themes/chartTheme";
 
 interface RiskHistoryChartProps {
   parameter?: string;
@@ -21,18 +22,18 @@ interface RiskHistoryChartProps {
 
 // Color schemes for different risk parameters
 const SEVERITY_COLORS: Record<string, string> = {
-  Negligible: vwPalette.status.success.strong,
-  Minor: "#84CC16",
+  Negligible: chartTheme.risk.veryLow,
+  Minor: chartTheme.risk.low,
   Moderate: vwPalette.riskMark.medium,
-  Major: "#F97316",
+  Major: chartTheme.risk.high,
   Catastrophic: vwPalette.riskMark.critical,
 };
 
 const LIKELIHOOD_COLORS: Record<string, string> = {
-  "Rare": vwPalette.status.success.strong,
-  "Unlikely": "#84CC16",
+  "Rare": chartTheme.risk.veryLow,
+  "Unlikely": chartTheme.risk.low,
   "Possible": vwPalette.riskMark.medium,
-  "Likely": "#F97316",
+  "Likely": chartTheme.risk.high,
   "Almost Certain": vwPalette.riskMark.critical,
 };
 
@@ -43,15 +44,15 @@ const MITIGATION_STATUS_COLORS: Record<string, string> = {
   "On Hold": vwPalette.riskMark.medium,
   "Deferred": vwPalette.accent.purple.text,
   "Canceled": vwPalette.riskMark.critical,
-  "Requires review": "#F97316",
+  "Requires review": chartTheme.risk.high,
 };
 
 const RISK_LEVEL_COLORS: Record<string, string> = {
-  "No risk": vwPalette.status.success.strong,
-  "Very low risk": "#84CC16",
-  "Low risk": "#FCD34D",
+  "No risk": chartTheme.status.neutral,
+  "Very low risk": chartTheme.risk.veryLow,
+  "Low risk": chartTheme.risk.low,
   "Medium risk": vwPalette.riskMark.medium,
-  "High risk": "#F97316",
+  "High risk": chartTheme.risk.high,
   "Very high risk": vwPalette.riskMark.critical,
 };
 

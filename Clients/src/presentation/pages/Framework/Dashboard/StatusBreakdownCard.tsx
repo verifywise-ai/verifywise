@@ -10,6 +10,7 @@ import {
   palette as vwPalette,
   radiusPx,
 } from "../../../themes/palette";
+import { chartTheme } from "../../../themes/chartTheme";
 import { VWDonutChart } from "../../../components/Charts/VWCharts";
 
 interface FrameworkData {
@@ -66,11 +67,11 @@ interface StatusData {
 
 const STATUS_COLORS = [
   `${text.disabled}`,
-  "#D1D5DB",
-  "#F59E0B",
-  "#3B82F6",
+  chartTheme.status.pending,
+  vwPalette.riskMark.medium,
+  chartTheme.status.info,
   `${brand.primary}`,
-  "#EA580C",
+  vwPalette.riskMark.high,
 ];
 
 const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {

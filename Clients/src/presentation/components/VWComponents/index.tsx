@@ -24,7 +24,7 @@ import { palette, radiusPx } from "../../themes/palette";
 const colors = {
   primary: palette.brand.primary,
   primaryLight: palette.brand.primary,
-  primaryRing: "#13715B1A",
+  primaryRing: `${palette.brand.primary}1a`,
   border: {
     dark: palette.border.dark,
     light: palette.border.light,
@@ -40,8 +40,8 @@ const colors = {
     accent: palette.background.hover,
   },
   error: {
-    main: "#D92D20",
-    border: "#FDA29B",
+    main: palette.text.error,
+    border: palette.status.error.border,
   },
 };
 
@@ -441,7 +441,7 @@ export const VWButton: React.FC<VWButtonProps> = ({
       "backgroundColor": colors.primary,
       "color": palette.background.main,
       "&:hover:not(:disabled)": {
-        backgroundColor: "#0F5C4A",
+        backgroundColor: palette.brand.primaryHover,
       },
     },
     secondary: {

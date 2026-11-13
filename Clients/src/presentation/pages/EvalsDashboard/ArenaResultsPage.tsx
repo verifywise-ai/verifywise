@@ -95,7 +95,7 @@ const MarkdownRenderer = ({ content }: { content: string }) => {
           borderRadius: radiusPx.sm,
           fontFamily: fontFamily.mono,
           fontSize: 12,
-          color: "#0f766e",
+          color: palette.accent.teal.text,
         },
         "& pre": {
           "backgroundColor": palette.text.primary,
@@ -202,12 +202,12 @@ interface ArenaResults {
 
 // Contestant colors
 const COLORS = [
-  { main: "#3b82f6", light: "#eff6ff", text: "#1e40af" },
-  { main: "#ef4444", light: "#fef2f2", text: "#991b1b" },
-  { main: "#10b981", light: "#ecfdf5", text: "#065f46" },
-  { main: "#f59e0b", light: "#fffbeb", text: "#92400e" },
-  { main: "#8b5cf6", light: "#f5f3ff", text: "#5b21b6" },
-  { main: "#ec4899", light: "#fdf2f8", text: "#9d174d" },
+  { main: palette.chart[0], light: palette.accent.indigo.bg, text: palette.accent.indigo.text },
+  { main: palette.chart[1], light: palette.accent.pink.bg, text: palette.accent.pink.text },
+  { main: palette.chart[2], light: palette.accent.amber.bg, text: palette.accent.amber.text },
+  { main: palette.chart[3], light: palette.accent.teal.bg, text: palette.accent.teal.text },
+  { main: palette.chart[4], light: palette.accent.orange.bg, text: palette.accent.orange.text },
+  { main: palette.chart[5], light: palette.accent.purple.bg, text: palette.accent.purple.text },
 ];
 
 const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBack }) => {
@@ -387,9 +387,11 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
           p: "12px",
           borderRadius: radiusPx.sm,
           background: isCompleted
-            ? "linear-gradient(135deg, #fef9c3 0%, #fde047 100%)"
+            ? `linear-gradient(135deg, ${palette.accent.amber.bg} 0%, ${palette.accent.amber.border} 100%)`
             : palette.background.accent,
-          border: isCompleted ? "1px solid #facc15" : `1px solid ${palette.border.dark}`,
+          border: isCompleted
+            ? `1px solid ${palette.accent.amber.border}`
+            : `1px solid ${palette.border.dark}`,
           mb: 2,
         }}
       >
@@ -401,7 +403,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                 sx={{
                   fontSize: 10,
                   fontWeight: 600,
-                  color: isCompleted ? "#a16207" : palette.text.disabled,
+                  color: isCompleted ? palette.accent.amber.text : palette.text.disabled,
                   textTransform: "uppercase",
                   letterSpacing: 0.5,
                 }}
@@ -412,13 +414,16 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                 sx={{
                   fontSize: 18,
                   fontWeight: 700,
-                  color: isCompleted ? "#713f12" : palette.text.tertiary,
+                  color: isCompleted ? palette.accent.amber.text : palette.text.tertiary,
                 }}
               >
                 {results.results?.winner || "—"}
               </Typography>
               <Typography
-                sx={{ fontSize: 11, color: isCompleted ? "#a16207" : palette.text.disabled }}
+                sx={{
+                  fontSize: 11,
+                  color: isCompleted ? palette.accent.amber.text : palette.text.disabled,
+                }}
               >
                 {isCompleted && results.results?.winner
                   ? `${winCounts[results.results.winner] || 0} of ${totalRounds} rounds won`
@@ -433,7 +438,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
               <Typography
                 sx={{
                   fontSize: 9,
-                  color: isCompleted ? "#a16207" : palette.text.disabled,
+                  color: isCompleted ? palette.accent.amber.text : palette.text.disabled,
                   textTransform: "uppercase",
                 }}
               >
@@ -443,7 +448,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                 sx={{
                   fontSize: 12,
                   fontWeight: 600,
-                  color: isCompleted ? "#713f12" : palette.text.secondary,
+                  color: isCompleted ? palette.accent.amber.text : palette.text.secondary,
                 }}
               >
                 {results.judgeModel || "gpt-4o"}
@@ -453,7 +458,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
               <Typography
                 sx={{
                   fontSize: 9,
-                  color: isCompleted ? "#a16207" : palette.text.disabled,
+                  color: isCompleted ? palette.accent.amber.text : palette.text.disabled,
                   textTransform: "uppercase",
                 }}
               >
@@ -463,7 +468,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                 sx={{
                   fontSize: 12,
                   fontWeight: 600,
-                  color: isCompleted ? "#713f12" : palette.text.secondary,
+                  color: isCompleted ? palette.accent.amber.text : palette.text.secondary,
                 }}
               >
                 {totalRounds}
@@ -473,7 +478,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
               <Typography
                 sx={{
                   fontSize: 9,
-                  color: isCompleted ? "#a16207" : palette.text.disabled,
+                  color: isCompleted ? palette.accent.amber.text : palette.text.disabled,
                   textTransform: "uppercase",
                 }}
               >
@@ -483,7 +488,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                 sx={{
                   fontSize: 12,
                   fontWeight: 600,
-                  color: isCompleted ? "#713f12" : palette.text.secondary,
+                  color: isCompleted ? palette.accent.amber.text : palette.text.secondary,
                 }}
               >
                 {results.createdAt && results.completedAt
@@ -639,7 +644,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                                   px: 0.75,
                                   py: 0.25,
                                   borderRadius: radiusPx.sm,
-                                  background: `linear-gradient(135deg, #fbbf24 0%, ${palette.riskMark.medium} 100%)`,
+                                  background: `linear-gradient(135deg, ${palette.riskMark.medium} 0%, ${palette.riskMark.medium} 100%)`,
                                 }}
                               >
                                 <Trophy size={10} color={palette.background.main} />
@@ -1088,7 +1093,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                                 px: 1,
                                 py: 0.5,
                                 borderRadius: radiusPx.sm,
-                                background: `linear-gradient(135deg, #fbbf24 0%, ${palette.riskMark.medium} 100%)`,
+                                background: `linear-gradient(135deg, ${palette.riskMark.medium} 0%, ${palette.riskMark.medium} 100%)`,
                                 flexShrink: 0,
                               }}
                             >

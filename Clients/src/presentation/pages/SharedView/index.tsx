@@ -156,7 +156,7 @@ const SharedView: React.FC = () => {
                 width: 64,
                 height: 64,
                 borderRadius: "50%",
-                backgroundColor: "#FFEBEE",
+                backgroundColor: palette.status.error.bg,
                 mb: 2,
               }}
             >
@@ -226,7 +226,7 @@ const SharedView: React.FC = () => {
             borderRadius: "12px",
             fontSize: "12px",
             fontWeight: 500,
-            backgroundColor: value ? "#E8F5E9" : "#FFEBEE",
+            backgroundColor: value ? palette.status.success.bg : palette.status.error.bg,
             color: value ? palette.status.success.text : palette.status.error.text,
           }}
         >
@@ -238,12 +238,15 @@ const SharedView: React.FC = () => {
     // Status - show with badge
     if (key === "status") {
       const statusColors: { [key: string]: { bg: string; text: string } } = {
-        "Approved": { bg: "#E8F5E9", text: palette.status.success.text },
-        "Pending": { bg: "#FFF3E0", text: "#E65100" },
-        "Rejected": { bg: "#FFEBEE", text: palette.status.error.text },
+        "Approved": { bg: palette.status.success.bg, text: palette.status.success.text },
+        "Pending": { bg: palette.status.warning.bg, text: palette.status.warning.text },
+        "Rejected": { bg: palette.status.error.bg, text: palette.status.error.text },
         "Under Review": { bg: palette.status.info.bg, text: palette.status.info.text },
       };
-      const colorScheme = statusColors[value] || { bg: "background.surface", text: "#666" };
+      const colorScheme = statusColors[value] || {
+        bg: "background.surface",
+        text: palette.text.tertiary,
+      };
       return (
         <Box
           component="span"
@@ -412,7 +415,7 @@ const SharedView: React.FC = () => {
                   <TableBody>
                     {Object.entries(data).map(([key, value]) => (
                       <TableRow key={key} hover>
-                        <TableCell sx={{ fontWeight: 500, color: "#666" }}>
+                        <TableCell sx={{ fontWeight: 500, color: palette.text.tertiary }}>
                           {key
                             .split("_")
                             .map((word) => word.charAt(0).toUpperCase() + word.slice(1))

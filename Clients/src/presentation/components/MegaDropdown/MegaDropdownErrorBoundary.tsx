@@ -48,7 +48,7 @@ class MegaDropdownErrorBoundary extends Component<
           startIcon={<Plus size={14} />}
           disabled
           sx={{
-            background: `linear-gradient(135deg, ${palette.status.success.strong} 0%, #059669 100%)`,
+            background: `linear-gradient(135deg, ${palette.status.success.strong} 0%, ${palette.status.success.strong} 100%)`,
             color: "white",
             fontWeight: 500,
             fontSize: "13px",

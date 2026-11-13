@@ -40,26 +40,27 @@ const formatTimestamp = (
   return formatDate(dateStr, { includeTime: true });
 };
 
-// Provider color mapping for chips. Values with an identical palette token use
-// it; the rest are provider-specific shades with no token and stay literal.
+// Provider chips: one accent family per provider (tint, border and text come from the accent
+// tokens), so a provider colour is never read as a risk or a status.
 const getProviderColor = (provider: string): { bg: string; text: string } => {
+  const tone = (a: { bg: string; text: string }) => ({ bg: a.bg, text: a.text });
   const colors: Record<string, { bg: string; text: string }> = {
-    openai: { bg: "#E8F5E9", text: vwPalette.status.success.text },
-    anthropic: { bg: "#FFF3E0", text: "#E65100" },
-    google: { bg: accent.blue.bg, text: accent.blue.text },
-    mistral: { bg: "#F3E5F5", text: "#7B1FA2" },
-    ollama: { bg: vwPalette.background.hover, text: "#37474F" },
-    huggingface: { bg: accent.amber.bg, text: "#F57F17" },
+    openai: tone(accent.teal),
+    anthropic: tone(accent.cocoa),
+    google: tone(accent.blue),
+    mistral: tone(accent.purple),
+    ollama: { bg: vwPalette.background.hover, text: vwPalette.text.secondary },
+    huggingface: tone(accent.amber),
     xai: { bg: vwPalette.background.alt, text: vwPalette.text.primary },
-    bedrock: { bg: "#FFF3E0", text: "#FF6F00" },
-    meta: { bg: "#E8F0FE", text: "#1A56DB" },
-    deepseek: { bg: "#EDE8FD", text: "#5B21B6" },
-    microsoft: { bg: accent.blue.bg, text: "#0369A1" },
-    cohere: { bg: "#FFF3E0", text: "#B45309" },
-    perplexity: { bg: vwPalette.status.success.bg, text: "#15803D" },
-    nvidia: { bg: vwPalette.status.success.bg, text: "#166534" },
-    qwen: { bg: "#FFF7ED", text: "#C2410C" },
-    moonshot: { bg: "#F5F3FF", text: "#6D28D9" },
+    bedrock: tone(accent.orange),
+    meta: tone(accent.indigo),
+    deepseek: tone(accent.purple),
+    microsoft: tone(accent.blue),
+    cohere: tone(accent.orange),
+    perplexity: tone(accent.teal),
+    nvidia: tone(accent.teal),
+    qwen: tone(accent.pink),
+    moonshot: tone(accent.indigo),
   };
   return (
     colors[provider.toLowerCase()] || { bg: `${background.surface}`, text: vwPalette.text.tertiary }

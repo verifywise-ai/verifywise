@@ -28,6 +28,7 @@ import {
   ComplianceProgress,
 } from "../../../../application/interfaces/iprogress";
 import StaleMarker from "../../LifecycleTabs/StaleMarker";
+import { palette } from "../../../themes/palette";
 
 function ProjectCardSkeleton() {
   return (
@@ -265,7 +266,7 @@ export const ProjectCard = React.memo(function ProjectCard({
                     })
                   }
                   sx={{
-                    "color": "#014576",
+                    "color": palette.status.info.text,
                     "textDecoration": "none",
                     "cursor": "pointer",
                     "display": "flex",
@@ -305,7 +306,7 @@ export const ProjectCard = React.memo(function ProjectCard({
                     })
                   }
                   sx={{
-                    "color": "#014576",
+                    "color": palette.status.info.text,
                     "textDecoration": "none",
                     "cursor": "pointer",
                     "display": "flex",
@@ -377,7 +378,7 @@ export const ProjectCard = React.memo(function ProjectCard({
                       })
                     }
                     sx={{
-                      "color": "#014576",
+                      "color": palette.status.info.text,
                       "textDecoration": "none",
                       "cursor": "pointer",
                       "display": "flex",
@@ -417,7 +418,7 @@ export const ProjectCard = React.memo(function ProjectCard({
                       })
                     }
                     sx={{
-                      "color": "#014576",
+                      "color": palette.status.info.text,
                       "textDecoration": "none",
                       "cursor": "pointer",
                       "display": "flex",

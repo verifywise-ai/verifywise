@@ -440,7 +440,7 @@ const LLMKeys = () => {
               sx={{
                 "backgroundColor": `${brand.primary}`,
                 "color": `${background.main}`,
-                "&:hover": { backgroundColor: "#0e5c47" },
+                "&:hover": { backgroundColor: vwPalette.brand.primaryHover },
               }}
             />
           )}
@@ -489,7 +489,7 @@ const LLMKeys = () => {
               sx={{
                 "backgroundColor": `${brand.primary}`,
                 "color": `${background.main}`,
-                "&:hover": { backgroundColor: "#0e5c47" },
+                "&:hover": { backgroundColor: vwPalette.brand.primaryHover },
               }}
             />
           </Box>

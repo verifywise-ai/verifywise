@@ -223,8 +223,8 @@ export default function AuditLedger() {
           message="Every change made on the platform is recorded as an append-only, hash-chained entry. Each entry's cryptographic hash depends on the previous one, so any modification or deletion would break the chain. Click 'Verify chain' to confirm that no entries have been altered or removed since they were recorded."
           storageKey="audit-ledger-info"
           variant="info"
-          backgroundColor={`linear-gradient(135deg, #EFF6FF 0%, ${vwPalette.background.alt} 100%)`}
-          borderColor="#DBEAFE"
+          backgroundColor={`linear-gradient(135deg, ${vwPalette.status.info.bg} 0%, ${vwPalette.background.alt} 100%)`}
+          borderColor={vwPalette.status.info.border}
         />
       )}
 

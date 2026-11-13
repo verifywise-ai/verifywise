@@ -31,7 +31,7 @@ import {
 } from "lucide-react";
 import { CustomizableButton } from "../button/customizable-button";
 import singleTheme from "../../themes/v1SingleTheme";
-import { text, status, palette as vwPalette, radiusPx } from "../../themes/palette";
+import { text, status, primitives, palette as vwPalette, radiusPx } from "../../themes/palette";
 
 // Types
 export interface UploadFile {
@@ -113,8 +113,8 @@ const BasicModalCancelButtonStyle = {
 
 const BasicModalDeleteButtonStyle = {
   "fontSize": 13,
-  "backgroundColor": "#DB504A",
-  "border": "1px solid #DB504A",
+  "backgroundColor": vwPalette.riskMark.critical,
+  "border": `1px solid ${vwPalette.riskMark.critical}`,
   "boxShadow": "none",
   "borderRadius": radiusPx.sm,
   "&:hover": {
@@ -225,20 +225,20 @@ const Uploader: React.FC<UploaderProps> = ({
           label: "Completed",
           icon: CheckIcon,
           backgroundColor: vwPalette.status.success.bg,
-          color: "#027A48",
+          color: vwPalette.status.success.text,
         };
       case "uploading":
         return {
           label: `Uploading ${file.progress}%`,
           icon: PendingIcon,
-          backgroundColor: "#F0F9FF",
-          color: "#026AA2",
+          backgroundColor: vwPalette.status.info.bg,
+          color: vwPalette.status.info.text,
         };
       case "error":
         return {
           label: file.error || "Failed",
           icon: ErrorIcon,
-          backgroundColor: "#FEF3F2",
+          backgroundColor: vwPalette.accent.red.bg,
           color: vwPalette.riskMark.critical,
         };
       default:
@@ -521,7 +521,7 @@ const Uploader: React.FC<UploaderProps> = ({
       transition: "opacity 0.2s ease",
     },
     "&:hover": {
-      "borderColor": "#5FA896",
+      "borderColor": primitives.green[400],
       "backgroundColor": "rgba(19, 113, 91, 0.02)",
       "&::before": { opacity: 1 },
     },
@@ -737,14 +737,14 @@ const Uploader: React.FC<UploaderProps> = ({
                             <Avatar
                               sx={{
                                 backgroundColor: file.type.startsWith("image/")
-                                  ? "#FEF3C7"
+                                  ? vwPalette.accent.amber.bg
                                   : file.type.includes("pdf")
-                                    ? "#DBEAFE"
+                                    ? vwPalette.accent.blue.bg
                                     : "background.hover",
                                 color: file.type.startsWith("image/")
-                                  ? "#D97706"
+                                  ? vwPalette.accent.amber.text
                                   : file.type.includes("pdf")
-                                    ? "#2563EB"
+                                    ? vwPalette.accent.blue.text
                                     : "status.default.text",
                                 width: 40,
                                 height: 40,

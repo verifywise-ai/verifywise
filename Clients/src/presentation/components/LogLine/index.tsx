@@ -16,35 +16,35 @@ export function LogLine({ line, index }: LogLineProps) {
     if (lowerLine.includes("error")) {
       return {
         color: `${status.error.text}`,
-        backgroundColor: "#ffebee",
+        backgroundColor: status.error.bg,
         fontWeight: 600,
       };
     }
     if (lowerLine.includes("warn")) {
       return {
-        color: "#f57c00",
-        backgroundColor: "#fff3e0",
+        color: status.warning.text,
+        backgroundColor: status.warning.bg,
         fontWeight: 500,
       };
     }
     if (lowerLine.includes("success") || lowerLine.includes("successful")) {
       return {
-        color: "#388e3c",
-        backgroundColor: "#e8f5e8",
+        color: status.success.text,
+        backgroundColor: status.success.bg,
         fontWeight: 400,
       };
     }
     if (lowerLine.includes("info")) {
       return {
-        color: "#1976d2",
+        color: status.info.text,
         backgroundColor: vwPalette.status.info.bg,
         fontWeight: 400,
       };
     }
     if (lowerLine.includes("debug")) {
       return {
-        color: "#6a1b9a",
-        backgroundColor: "#f3e5f5",
+        color: vwPalette.accent.purple.text,
+        backgroundColor: vwPalette.accent.purple.bg,
         fontWeight: 400,
       };
     }

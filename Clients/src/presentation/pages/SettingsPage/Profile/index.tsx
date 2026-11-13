@@ -640,9 +640,9 @@ const ProfileForm: React.FC = () => {
                   sx={{
                     width: { xs: "100%", sm: theme.spacing(80) },
                     mb: theme.spacing(4),
-                    backgroundColor: "#DB504A",
+                    backgroundColor: palette.riskMark.critical,
                     color: "background.main",
-                    border: `1px solid ${isAdmin ? palette.border.dark : "#DB504A"}`,
+                    border: `1px solid ${isAdmin ? palette.border.dark : palette.riskMark.critical}`,
                     gap: 2,
                   }}
                   icon={<DeleteIcon size={16} />}
@@ -690,7 +690,7 @@ const ProfileForm: React.FC = () => {
               "position": "relative",
               "overflow": "hidden",
               "&:hover": {
-                borderColor: "#999",
+                borderColor: palette.border.dark,
                 backgroundColor: "background.surface",
               },
             }}
@@ -727,7 +727,7 @@ const ProfileForm: React.FC = () => {
             sx={{
               "fontSize": 12,
               "textTransform": "none",
-              "color": imageUrl ? "#666" : palette.border.dark,
+              "color": imageUrl ? palette.text.tertiary : palette.border.dark,
               "&:hover": {
                 backgroundColor: imageUrl ? "rgba(102, 102, 102, 0.04)" : "transparent",
               },
@@ -787,7 +787,7 @@ const ProfileForm: React.FC = () => {
         <Typography
           sx={{
             fontSize: 11,
-            color: "#666",
+            color: palette.text.tertiary,
             textAlign: "center",
             mt: 1,
             lineHeight: 1.4,

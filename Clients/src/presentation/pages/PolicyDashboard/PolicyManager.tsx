@@ -671,9 +671,11 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
                   "color": folderSidebarOpen ? "brand.primary" : "text.muted",
                   "padding": "4px",
                   "borderRadius": radiusPx.sm,
-                  "backgroundColor": folderSidebarOpen ? "#E6F4F1" : "transparent",
+                  "backgroundColor": folderSidebarOpen ? palette.accent.teal.bg : "transparent",
                   "&:hover": {
-                    backgroundColor: folderSidebarOpen ? "#D1EDE6" : palette.background.hover,
+                    backgroundColor: folderSidebarOpen
+                      ? palette.brand.primaryLight
+                      : palette.background.hover,
                   },
                 }}
               >

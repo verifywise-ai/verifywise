@@ -2,13 +2,31 @@ import { type FC, useRef, useState, useEffect, useCallback } from "react";
 import { Box, Typography, useTheme } from "@mui/material";
 import type { LucideIcon } from "lucide-react";
 import { ChevronRight } from "lucide-react";
-import { radiusPx } from "../../themes/palette";
+import { accent as accentTokens, background, radiusPx } from "../../themes/palette";
 
 /** Three accent palettes that rotate per-tip */
 const ACCENT_PALETTES = [
-  { bg: "#ECFDF3", bgHover: "#D1FADF", icon: "#039855", border: "#A6F4C5", expandBg: "#F6FEF9" },
-  { bg: "#EFF8FF", bgHover: "#D1E9FF", icon: "#1570EF", border: "#84CAFF", expandBg: "#F5FAFF" },
-  { bg: "#FFFAEB", bgHover: "#FEF0C7", icon: "#DC6803", border: "#FEDF89", expandBg: "#FFFCF5" },
+  {
+    bg: accentTokens.teal.bg,
+    bgHover: accentTokens.teal.border,
+    icon: accentTokens.teal.text,
+    border: accentTokens.teal.border,
+    expandBg: background.main,
+  },
+  {
+    bg: accentTokens.blue.bg,
+    bgHover: accentTokens.blue.border,
+    icon: accentTokens.blue.text,
+    border: accentTokens.blue.border,
+    expandBg: background.main,
+  },
+  {
+    bg: accentTokens.amber.bg,
+    bgHover: accentTokens.amber.border,
+    icon: accentTokens.amber.text,
+    border: accentTokens.amber.border,
+    expandBg: background.main,
+  },
 ] as const;
 
 interface EmptyStateTipProps {

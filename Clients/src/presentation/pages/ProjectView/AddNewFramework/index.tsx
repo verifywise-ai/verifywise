@@ -222,7 +222,7 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
                       }}
                       sx={{
                         "minWidth": "100px",
-                        "borderColor": "#F87171",
+                        "borderColor": vwPalette.status.error.border,
                         "color": accent.red.text,
                         "fontWeight": 600,
                         "textTransform": "none",

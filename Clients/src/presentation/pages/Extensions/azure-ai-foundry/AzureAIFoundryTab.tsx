@@ -174,11 +174,13 @@ export default function AzureAIFoundryTab() {
             p: "12px 16px",
             mb: "16px",
             borderRadius: borderRadius.sm,
-            backgroundColor: "#FFF7ED",
-            border: "1px solid #FED7AA",
+            backgroundColor: palette.status.warning.bg,
+            border: `1px solid ${palette.status.warning.border}`,
           }}
         >
-          <Typography sx={{ fontSize: 13, color: "#92400E" }}>{warning}</Typography>
+          <Typography sx={{ fontSize: 13, color: palette.status.warning.text }}>
+            {warning}
+          </Typography>
         </Box>
       )}
 

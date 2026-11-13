@@ -343,7 +343,7 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
                         display: "flex",
                         alignItems: "center",
                         gap: 0.5,
-                        backgroundColor: "#E6F4EE",
+                        backgroundColor: vwPalette.accent.teal.bg,
                         borderRadius: radiusPx.sm,
                         px: 1.5,
                         py: 0.5,
@@ -374,7 +374,7 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
                       }}
                       sx={{
                         "minWidth": 100,
-                        "borderColor": "#F87171",
+                        "borderColor": vwPalette.status.error.border,
                         "color": vwPalette.riskMark.critical,
                         "&:hover": {
                           borderColor: vwPalette.riskMark.critical,
@@ -392,7 +392,7 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
                         "minWidth": 100,
                         "backgroundColor": "brand.primary",
                         "color": "background.main",
-                        "&:hover": { backgroundColor: "#0e5c47" },
+                        "&:hover": { backgroundColor: vwPalette.brand.primaryHover },
                       }}
                     />
                   )}

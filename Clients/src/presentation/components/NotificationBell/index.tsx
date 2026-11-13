@@ -88,9 +88,9 @@ const getNotificationColor = (type: string): string => {
     training_due_soon: vwPalette.riskMark.medium, // Amber
     training_overdue: vwPalette.riskMark.critical, // Red
     vendor_review_due: vwPalette.riskMark.medium, // Amber
-    file_uploaded: "#6366F1", // Indigo
-    comment_added: "#6366F1", // Indigo
-    mention: "#EC4899", // Pink
+    file_uploaded: vwPalette.chart[0], // Indigo
+    comment_added: vwPalette.chart[0], // Indigo
+    mention: vwPalette.chart[1], // Pink
     system: vwPalette.text.icon, // Slate
   };
   return colors[type] || vwPalette.text.icon;
@@ -312,7 +312,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ sx }) => {
     "borderRadius": radiusPx.sm,
     "transition": "all 0.2s ease",
     "backgroundColor": "transparent",
-    "color": "#666",
+    "color": vwPalette.text.tertiary,
     "border": `1px solid ${vwPalette.border.light}`,
     "&:hover": {
       backgroundColor: "rgba(0, 0, 0, 0.04)",
@@ -590,13 +590,13 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ sx }) => {
               px: 2,
               py: 1,
               borderTop: "1px solid status.default.border",
-              backgroundColor: "#FEF3C7",
+              backgroundColor: vwPalette.risk.medium.bg,
             }}
           >
             <Typography
               sx={{
                 fontSize: "11px",
-                color: "#92400E",
+                color: vwPalette.status.warning.text,
                 display: "flex",
                 alignItems: "center",
                 gap: 0.5,

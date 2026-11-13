@@ -56,9 +56,9 @@ const TABS = [
 
 const SEVERITY_COLORS: Record<string, string> = {
   critical: vwPalette.riskMark.critical,
-  high: "#EA580C",
-  medium: "#D97706",
-  low: "#2563EB",
+  high: vwPalette.riskMark.high,
+  medium: vwPalette.riskMark.medium,
+  low: vwPalette.riskMark.low,
 };
 
 /** Metadata for each risk condition — description + human-readable threshold labels */

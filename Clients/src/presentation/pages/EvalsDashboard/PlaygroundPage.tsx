@@ -694,8 +694,8 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                 px: "14px",
                 py: "10px",
                 borderRadius: radiusPx.lg,
-                border: "1px solid #FECACA",
-                backgroundColor: "#FFF5F5",
+                border: `1px solid ${vwPalette.status.error.border}`,
+                backgroundColor: vwPalette.accent.red.bg,
               }}
             >
               <Typography fontSize={12} color={vwPalette.riskMark.critical}>

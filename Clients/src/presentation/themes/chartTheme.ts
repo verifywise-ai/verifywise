@@ -22,6 +22,7 @@ import {
   background,
   accent,
   risk as riskTokens,
+  score,
 } from "./palette";
 import { isClassicUi } from "./uiStyle";
 
@@ -121,6 +122,15 @@ export const seriesColor = (index: number): string => {
   const i = Math.max(index, 0);
   if (classicUi) return series[i % series.length];
   return series[Math.min(i, series.length - 1)];
+};
+
+/**
+ * Colour for a 0 to 100 completion or score value, red at 0 to green at 100.
+ * Same spectrum in both looks. Always show the value beside it.
+ */
+export const scoreColor = (value: number): string => {
+  const step = Math.round(Math.min(Math.max(value, 0), 100) / 10);
+  return score[step];
 };
 
 export default chartTheme;

@@ -114,7 +114,7 @@ function ButtonShowcase() {
             component="button"
             aria-label="Integrations"
             sx={{
-              "background": `linear-gradient(135deg, ${palette.accent.purple.text} 0%, #7C3AED 100%)`,
+              "background": `linear-gradient(135deg, ${palette.accent.purple.text} 0%, ${palette.accent.purple.text} 100%)`,
               "color": "white",
               "fontWeight": 500,
               "fontSize": "12px",
@@ -128,7 +128,7 @@ function ButtonShowcase() {
               "boxShadow": "0 2px 4px rgba(139, 92, 246, 0.2)",
               "cursor": "pointer",
               "&:hover": {
-                background: "linear-gradient(135deg, #7C3AED 0%, #6D28D9 100%)",
+                background: `linear-gradient(135deg, ${palette.accent.purple.text} 0%, ${palette.accent.purple.text} 100%)`,
                 boxShadow: "0 4px 8px rgba(139, 92, 246, 0.3)",
               },
               "transition": "all 0.2s ease",
@@ -140,7 +140,7 @@ function ButtonShowcase() {
             component="button"
             aria-label="Automations"
             sx={{
-              "background": "linear-gradient(135deg, #FB923C 0%, #F97316 100%)",
+              "background": `linear-gradient(135deg, ${palette.riskMark.high} 0%, ${palette.riskMark.high} 100%)`,
               "color": "white",
               "fontWeight": 500,
               "fontSize": "12px",
@@ -154,7 +154,7 @@ function ButtonShowcase() {
               "boxShadow": "0 2px 4px rgba(251, 146, 60, 0.2)",
               "cursor": "pointer",
               "&:hover": {
-                background: "linear-gradient(135deg, #F97316 0%, #EA580C 100%)",
+                background: `linear-gradient(135deg, ${palette.riskMark.high} 0%, ${palette.riskMark.high} 100%)`,
                 boxShadow: "0 4px 8px rgba(251, 146, 60, 0.3)",
               },
               "transition": "all 0.2s ease",

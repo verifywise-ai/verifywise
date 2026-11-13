@@ -46,7 +46,7 @@ import { useInvalidateEvidenceGaps } from "../../../../application/hooks/useEvid
 import { useCanCheck } from "../../../../application/hooks/useCan";
 import { HistorySidebar } from "../../Common/HistorySidebar";
 import { useQueryClient } from "@tanstack/react-query";
-import { radiusPx } from "../../../themes/palette";
+import { radiusPx, palette as vwPalette } from "../../../themes/palette";
 
 const FRAMEWORK_TYPE = "iso_42001";
 const ENTITY_TYPE = "annex_category";
@@ -389,7 +389,7 @@ const VWISO42001AnnexDrawerDialog = ({
           <Stack gap="15px">
             <Stack
               sx={{
-                border: "1px solid #eee",
+                border: `1px solid ${vwPalette.border.light}`,
                 padding: "10px",
                 backgroundColor: "background.accent",
                 borderRadius: radiusPx.sm,

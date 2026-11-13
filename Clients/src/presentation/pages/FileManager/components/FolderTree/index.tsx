@@ -218,7 +218,7 @@ const FolderItem: React.FC<FolderItemProps> = ({
               onClick={handleDelete}
               sx={{
                 "padding": "2px",
-                "&:hover": { backgroundColor: "#FEE2E2" },
+                "&:hover": { backgroundColor: vwPalette.status.error.bg },
               }}
               title="Delete folder"
               aria-label={`Delete folder ${folder.name}`}

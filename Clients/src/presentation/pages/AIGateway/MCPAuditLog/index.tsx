@@ -253,7 +253,11 @@ export default function MCPAuditLogPage() {
                 </Stack>
                 <ResponsiveContainer width="100%" height={160}>
                   <BarChart data={toolStats} barSize={32} layout="horizontal">
-                    <CartesianGrid strokeDasharray="3 3" stroke="#eee" vertical={false} />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={vwPalette.border.light}
+                      vertical={false}
+                    />
                     <XAxis
                       dataKey="tool_name"
                       tick={{ fontSize: 11, fill: vwPalette.text.accent }}
@@ -267,7 +271,12 @@ export default function MCPAuditLogPage() {
                       allowDecimals={false}
                     />
                     <Tooltip contentStyle={chartTooltipStyle} />
-                    <Bar dataKey="count" name="Calls" fill="#5C8A7D" radius={[3, 3, 0, 0]} />
+                    <Bar
+                      dataKey="count"
+                      name="Calls"
+                      fill={vwPalette.chart[3]}
+                      radius={[3, 3, 0, 0]}
+                    />
                   </BarChart>
                 </ResponsiveContainer>
               </Box>
@@ -286,7 +295,11 @@ export default function MCPAuditLogPage() {
                 </Stack>
                 <ResponsiveContainer width="100%" height={160}>
                   <BarChart data={toolStats} barSize={32} layout="horizontal">
-                    <CartesianGrid strokeDasharray="3 3" stroke="#eee" vertical={false} />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke={vwPalette.border.light}
+                      vertical={false}
+                    />
                     <XAxis
                       dataKey="tool_name"
                       tick={{ fontSize: 11, fill: vwPalette.text.accent }}
@@ -306,7 +319,7 @@ export default function MCPAuditLogPage() {
                     <Bar
                       dataKey="avg_latency_ms"
                       name="Avg Latency"
-                      fill="#7986CB"
+                      fill={vwPalette.chart[0]}
                       radius={[3, 3, 0, 0]}
                     />
                   </BarChart>

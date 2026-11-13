@@ -113,8 +113,8 @@ const GroupBadge: React.FC<{ count: number }> = ({ count }) => (
       width: "18px",
       height: "18px",
       borderRadius: "50%",
-      backgroundColor: "#dcfce7",
-      color: "#166534",
+      backgroundColor: palette.status.success.bg,
+      color: palette.status.success.text,
       fontSize: "11px",
       fontWeight: 600,
       marginLeft: "6px",
@@ -814,7 +814,7 @@ export default function MLFlowTab() {
                         label={`${key}: ${value}`}
                         size="small"
                         sx={{
-                          backgroundColor: "#E0EAFF",
+                          backgroundColor: palette.accent.indigo.bg,
                           color: palette.text.primary,
                           borderRadius: radiusPx.sm,
                         }}

@@ -23,6 +23,7 @@ import {
 } from "../../../components/Cards/InfoCard/style";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { palette, radiusPx } from "../../../themes/palette";
+import { scoreColor } from "../../../themes/chartTheme";
 
 interface JiraData {
   id?: string;
@@ -113,13 +114,7 @@ const groupStatsCardRate = {
 
 // Get progress bar color based on percentage
 const getProgressColor = (value: number): string => {
-  if (value <= 10) return "#FF4500";
-  if (value <= 20) return "#FF4500";
-  if (value <= 30) return "#FFA500";
-  if (value <= 40) return "#FFD700";
-  if (value <= 50) return "#E9F14F";
-  if (value <= 60) return "#CDDD24";
-  if (value <= 70) return "#64E730";
+  if (value <= 70) return scoreColor(value);
   if (value <= 80) return palette.brand.primary;
   if (value <= 90) return palette.brand.primary;
   return palette.brand.primary;
@@ -426,7 +421,7 @@ export const JiraUseCaseOverview: React.FC<JiraUseCaseOverviewProps> = ({ projec
               label="Missing in Jira"
               size="small"
               title={formatDate(new Date(missingInJiraSince))}
-              sx={{ backgroundColor: "#FEF3F2", color: palette.status.error.text }}
+              sx={{ backgroundColor: palette.accent.red.bg, color: palette.status.error.text }}
             />
           )}
         </Box>

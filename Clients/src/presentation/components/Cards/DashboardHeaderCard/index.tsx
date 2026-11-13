@@ -108,7 +108,7 @@ export function DashboardHeaderCard({
             position: "absolute",
             top: 10,
             right: 10,
-            color: "#A9B3C5",
+            color: vwPalette.text.accent,
           }}
         >
           {icon}

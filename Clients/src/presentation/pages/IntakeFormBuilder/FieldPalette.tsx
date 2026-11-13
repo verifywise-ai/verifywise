@@ -34,7 +34,7 @@ import {
   LLMSuggestedQuestion,
 } from "../../../application/repository/intakeForm.repository";
 import { CustomizableButton } from "../../components/button/customizable-button";
-import { radiusPx } from "../../themes/palette";
+import { radiusPx, palette as vwPalette } from "../../themes/palette";
 
 // Sparkle shimmer animation
 const sparkleShimmer = keyframes`
@@ -582,12 +582,12 @@ export const SuggestedQuestionsPanel = forwardRef<
                   : `${sparkleIdle} 3s ease-in-out infinite`,
               }}
             >
-              <Sparkles size={14} color="#7c3aed" />
+              <Sparkles size={14} color={vwPalette.accent.purple.text} />
             </Box>
             <Typography
               sx={{
                 fontWeight: 600,
-                color: "#7c3aed",
+                color: vwPalette.accent.purple.text,
                 fontSize: "13px",
                 ...(isSparkleAnimating
                   ? { animation: `${sparkleShimmer} 0.8s ease-in-out 3` }

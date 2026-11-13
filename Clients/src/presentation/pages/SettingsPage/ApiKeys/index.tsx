@@ -290,7 +290,7 @@ const ApiKeys = ({ showLlmKeys = true }: ApiKeysProps) => {
               sx={{
                 "backgroundColor": "brand.primary",
                 "color": "background.main",
-                "&:hover": { backgroundColor: "#0e5c47" },
+                "&:hover": { backgroundColor: vwPalette.brand.primaryHover },
               }}
             />
           )}
@@ -340,7 +340,7 @@ const ApiKeys = ({ showLlmKeys = true }: ApiKeysProps) => {
               sx={{
                 "backgroundColor": "brand.primary",
                 "color": "background.main",
-                "&:hover": { backgroundColor: "#0e5c47" },
+                "&:hover": { backgroundColor: vwPalette.brand.primaryHover },
               }}
             />
           </Box>
@@ -457,7 +457,7 @@ const ApiKeys = ({ showLlmKeys = true }: ApiKeysProps) => {
                           "opacity": hoveredTokenId === token.id ? 1 : 0.6,
                           "transition": "opacity 0.2s ease-in-out",
                           "&:hover": {
-                            backgroundColor: "#FFFAEB",
+                            backgroundColor: vwPalette.status.warning.bg,
                           },
                           "&:disabled": {
                             opacity: 0.3,
@@ -556,11 +556,13 @@ const ApiKeys = ({ showLlmKeys = true }: ApiKeysProps) => {
           TitleFontSize={0}
           confirmBtnSx={{
             "backgroundColor": isCreateButtonDisabled ? vwPalette.border.dark : "brand.primary",
-            "color": isCreateButtonDisabled ? "#666" : "background.main",
+            "color": isCreateButtonDisabled ? vwPalette.text.tertiary : "background.main",
             "cursor": isCreateButtonDisabled ? "not-allowed" : "pointer",
             "opacity": isCreateButtonDisabled ? 0.6 : 1,
             "&:hover": {
-              backgroundColor: isCreateButtonDisabled ? vwPalette.border.dark : "#0e5c47",
+              backgroundColor: isCreateButtonDisabled
+                ? vwPalette.border.dark
+                : vwPalette.brand.primaryHover,
             },
           }}
         />
@@ -681,7 +683,7 @@ const ApiKeys = ({ showLlmKeys = true }: ApiKeysProps) => {
                   "backgroundColor": "brand.primary",
                   "color": "background.main",
                   "px": "32px",
-                  "&:hover": { backgroundColor: "#0e5c47" },
+                  "&:hover": { backgroundColor: vwPalette.brand.primaryHover },
                 }}
                 onClick={handleCloseCreateModal}
               />

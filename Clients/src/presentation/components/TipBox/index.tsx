@@ -76,7 +76,7 @@ const TipBox = ({ entityName }: TipBoxProps) => {
             padding: "2px 8px",
             fontSize: 10,
             fontWeight: 500,
-            color: "#999",
+            color: vwPalette.text.accent,
             zIndex: 1,
           }}
         >
@@ -91,8 +91,8 @@ const TipBox = ({ entityName }: TipBoxProps) => {
         onDismiss={handleDismiss}
         disableInternalStorage={true}
         disableAnimation={true}
-        backgroundColor={`linear-gradient(135deg, #EFF6FF 0%, ${vwPalette.background.alt} 100%)`}
-        borderColor="#DBEAFE"
+        backgroundColor={`linear-gradient(135deg, ${vwPalette.status.info.bg} 0%, ${vwPalette.background.alt} 100%)`}
+        borderColor={vwPalette.status.info.border}
       />
     </Box>
   );

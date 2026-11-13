@@ -90,9 +90,9 @@ const getFileIcon = (mimetype?: string) => {
       return <Image size={48} color={vwPalette.status.info.text} />;
     case "office":
       if (mimetype?.includes("spreadsheetml")) {
-        return <FileSpreadsheet size={48} color="#217346" />;
+        return <FileSpreadsheet size={48} color={vwPalette.status.success.text} />;
       }
-      return <FileText size={48} color="#2B579A" />;
+      return <FileText size={48} color={vwPalette.accent.indigo.text} />;
     default:
       return <FileText size={48} color={status.default.text} />;
   }
@@ -523,8 +523,8 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
         <Box
           sx={{
             padding: "8px 20px",
-            backgroundColor: "#FEF3F2",
-            borderBottom: "1px solid #FECDCA",
+            backgroundColor: vwPalette.accent.red.bg,
+            borderBottom: `1px solid ${vwPalette.status.error.border}`,
           }}
         >
           <Typography sx={{ fontSize: 13, color: vwPalette.status.error.text }}>

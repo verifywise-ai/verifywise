@@ -5,6 +5,7 @@ import { IRiskTimelineProps } from "../../types/interfaces/i.risk";
 import { ITimelineEvent } from "../../../domain/interfaces/i.widget";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { palette, radiusPx } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 
 const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => {
   const formatDate = useFormattedDate();
@@ -22,11 +23,11 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
   };
 
   const getRiskLevelColor = (riskLevel: number): string => {
-    if (riskLevel >= 16) return "#C63622"; // Very High - Dark Red
-    if (riskLevel >= 12) return "#D68B61"; // High - Orange Red
-    if (riskLevel >= 8) return "#D6B971"; // Medium - Orange
-    if (riskLevel >= 4) return "#52AB43"; // Low - Light Green
-    return "#B8D39C"; // Very Low - Very Light Green
+    if (riskLevel >= 16) return chartTheme.riskSummary.veryHigh;
+    if (riskLevel >= 12) return chartTheme.riskSummary.high;
+    if (riskLevel >= 8) return chartTheme.riskSummary.medium;
+    if (riskLevel >= 4) return chartTheme.riskSummary.low;
+    return chartTheme.riskSummary.veryLow;
   };
 
   const getRiskLevelLabel = (riskLevel: number): string => {

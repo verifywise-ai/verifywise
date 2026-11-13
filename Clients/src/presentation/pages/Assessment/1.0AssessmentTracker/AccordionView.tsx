@@ -367,7 +367,7 @@ const AccordionView = ({
                   ))
                 ) : (
                   <Box sx={{ padding: "16px" }}>
-                    <Typography sx={{ fontSize: 13, color: "#666" }}>
+                    <Typography sx={{ fontSize: 13, color: vwPalette.text.tertiary }}>
                       No questions match the selected filters
                     </Typography>
                   </Box>

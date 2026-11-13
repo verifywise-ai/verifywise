@@ -1,6 +1,6 @@
 import React from "react";
 import { Stack, Typography } from "@mui/material";
-import { radiusPx } from "../../../themes/palette";
+import { radiusPx, palette as vwPalette } from "../../../themes/palette";
 
 interface StructInfoPanelsProps {
   summary?: string | null;
@@ -25,7 +25,7 @@ const StructInfoPanels: React.FC<StructInfoPanelsProps> = ({
       {summary && (
         <Stack
           sx={{
-            border: "1px solid #eee",
+            border: `1px solid ${vwPalette.border.light}`,
             padding: "12px",
             backgroundColor: "background.accent",
             borderRadius: radiusPx.sm,
@@ -34,7 +34,7 @@ const StructInfoPanels: React.FC<StructInfoPanelsProps> = ({
           <Typography fontSize={13} sx={{ marginBottom: "8px" }}>
             <strong>{summaryLabel}:</strong>
           </Typography>
-          <Typography fontSize={13} color="#666">
+          <Typography fontSize={13} color={vwPalette.text.tertiary}>
             {summary}
           </Typography>
         </Stack>
@@ -43,9 +43,9 @@ const StructInfoPanels: React.FC<StructInfoPanelsProps> = ({
       {questions && questions.length > 0 && (
         <Stack
           sx={{
-            border: "1px solid #e8d5d5",
+            border: `1px solid ${vwPalette.accent.red.border}`,
             padding: "12px",
-            backgroundColor: "#fef5f5",
+            backgroundColor: vwPalette.accent.red.bg,
             borderRadius: radiusPx.sm,
           }}
         >
@@ -54,7 +54,12 @@ const StructInfoPanels: React.FC<StructInfoPanelsProps> = ({
           </Typography>
           <Stack spacing={1}>
             {questions.map((q, idx) => (
-              <Typography key={idx} fontSize={12} color="#666" sx={{ pl: 1, position: "relative" }}>
+              <Typography
+                key={idx}
+                fontSize={12}
+                color={vwPalette.text.tertiary}
+                sx={{ pl: 1, position: "relative" }}
+              >
                 • {q}
               </Typography>
             ))}
@@ -65,9 +70,9 @@ const StructInfoPanels: React.FC<StructInfoPanelsProps> = ({
       {evidenceExamples && evidenceExamples.length > 0 && (
         <Stack
           sx={{
-            border: "1px solid #d5e8d5",
+            border: `1px solid ${vwPalette.status.success.border}`,
             padding: "12px",
-            backgroundColor: "#f5fef5",
+            backgroundColor: vwPalette.status.success.bg,
             borderRadius: radiusPx.sm,
           }}
         >
@@ -76,7 +81,12 @@ const StructInfoPanels: React.FC<StructInfoPanelsProps> = ({
           </Typography>
           <Stack spacing={1}>
             {evidenceExamples.map((ex, idx) => (
-              <Typography key={idx} fontSize={12} color="#666" sx={{ pl: 1, position: "relative" }}>
+              <Typography
+                key={idx}
+                fontSize={12}
+                color={vwPalette.text.tertiary}
+                sx={{ pl: 1, position: "relative" }}
+              >
                 • {ex}
               </Typography>
             ))}

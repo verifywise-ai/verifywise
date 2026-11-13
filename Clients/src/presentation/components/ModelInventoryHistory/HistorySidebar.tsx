@@ -282,7 +282,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
                   <Typography
                     sx={{
                       fontSize: 11,
-                      color: "#0D7C4F",
+                      color: vwPalette.status.success.text,
                       fontWeight: 400,
                       wordBreak: "break-word",
                     }}
@@ -305,7 +305,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
                       <Typography
                         sx={{
                           fontSize: 11,
-                          color: "#B91C1C",
+                          color: vwPalette.status.error.text,
                           fontWeight: 400,
                           wordBreak: "break-word",
                           textDecoration: "line-through",
@@ -344,7 +344,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
                       <Typography
                         sx={{
                           fontSize: 11,
-                          color: "#0D7C4F",
+                          color: vwPalette.status.success.text,
                           fontWeight: 400,
                           wordBreak: "break-word",
                         }}
@@ -472,7 +472,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
                   borderRadius: radiusPx.sm,
                 },
                 "&:hover::-webkit-scrollbar-thumb": {
-                  background: "#C1C7CD",
+                  background: vwPalette.border.dark,
                 },
                 "&::-webkit-scrollbar-thumb:hover": {
                   background: "text.muted",
@@ -481,7 +481,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
                 "scrollbarWidth": "thin",
                 "scrollbarColor": "transparent transparent",
                 "&:hover": {
-                  scrollbarColor: "#C1C7CD transparent",
+                  scrollbarColor: `${vwPalette.border.dark} transparent`,
                 },
               }}
             >

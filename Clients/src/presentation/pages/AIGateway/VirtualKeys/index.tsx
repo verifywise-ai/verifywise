@@ -341,8 +341,8 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
                   gap: "8px",
                   p: "12px 16px",
                   borderRadius: radiusPx.sm,
-                  border: "1px solid #FEDF89",
-                  bgcolor: "#FFFAEB",
+                  border: `1px solid ${vwPalette.status.warning.border}`,
+                  bgcolor: vwPalette.status.warning.bg,
                   mb: "8px",
                 }}
               >
@@ -356,7 +356,7 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
                   <Typography fontSize={13} fontWeight={500} color={vwPalette.risk.high.text}>
                     No endpoints configured
                   </Typography>
-                  <Typography fontSize={12} color="#93370D" mt="2px">
+                  <Typography fontSize={12} color={vwPalette.status.warning.text} mt="2px">
                     Virtual keys route requests through endpoints. You need at least one active
                     endpoint before creating a virtual key.{" "}
                     <Link
@@ -488,7 +488,7 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
                               budgetPct >= 100
                                 ? palette.status.error.text
                                 : budgetPct >= 80
-                                  ? palette.status.warning?.text || "#F79009"
+                                  ? palette.status.warning?.text || vwPalette.riskMark.high
                                   : palette.brand.primary,
                             borderRadius: radiusPx.sm,
                             transition: "width 0.3s",

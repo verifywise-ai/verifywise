@@ -290,7 +290,7 @@ export default function AppDetail() {
                     // short labels, so they render as wrapping blocks rather than
                     // single-line chips that overflow off the card.
                     backgroundColor: palette.status.error.border,
-                    border: "1px solid #F5B8B8",
+                    border: `1px solid ${palette.status.error.border}`,
                     borderRadius: radiusPx.sm,
                     color: palette.status.error.text,
                     fontSize: "13px",

@@ -290,8 +290,8 @@ export default function MCPApprovalsPage() {
                               variant="contained"
                               startIcon={<CheckCircle size={14} />}
                               sx={{
-                                "backgroundColor": "#065F46",
-                                "&:hover": { backgroundColor: "#047857" },
+                                "backgroundColor": vwPalette.brand.primaryHover,
+                                "&:hover": { backgroundColor: vwPalette.brand.primary },
                               }}
                             />
                             <CustomizableButton
@@ -306,11 +306,11 @@ export default function MCPApprovalsPage() {
                               variant="outlined"
                               startIcon={<XCircle size={14} />}
                               sx={{
-                                "color": "#991B1B",
-                                "borderColor": "#FCA5A5",
+                                "color": vwPalette.status.error.text,
+                                "borderColor": vwPalette.status.error.border,
                                 "&:hover": {
                                   backgroundColor: vwPalette.status.error.bg,
-                                  borderColor: "#991B1B",
+                                  borderColor: vwPalette.status.error.text,
                                 },
                               }}
                             />

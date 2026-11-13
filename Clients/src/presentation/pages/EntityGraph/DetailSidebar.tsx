@@ -733,7 +733,7 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({ entity, onClose, onNaviga
             "backgroundColor": "brand.primary",
             "textTransform": "none",
             "height": 34,
-            "&:hover": { backgroundColor: "#0f5a48" },
+            "&:hover": { backgroundColor: vwPalette.brand.primaryHover },
           }}
         >
           Go to {entityTypeLabels[entity.entityType].toLowerCase()}

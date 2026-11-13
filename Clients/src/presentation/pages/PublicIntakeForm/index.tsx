@@ -152,7 +152,7 @@ function PoweredByFooter() {
     <Typography
       sx={{
         textAlign: "center",
-        color: "#b0b8c4",
+        color: vwPalette.text.accent,
         fontSize: "12px",
         mt: 4,
         pb: 4,
@@ -713,7 +713,7 @@ export function PublicIntakeForm() {
                       p: "12px 16px",
                       fontSize: "13px",
                       borderRadius: radiusPx.lg,
-                      border: "1px solid #fecaca",
+                      border: `1px solid ${vwPalette.status.error.border}`,
                       backgroundColor: vwPalette.status.error.bg,
                       display: "flex",
                       alignItems: "center",
@@ -725,7 +725,9 @@ export function PublicIntakeForm() {
                       color={vwPalette.riskMark.critical}
                       style={{ flexShrink: 0 }}
                     />
-                    <Typography sx={{ fontSize: "13px", color: "#991b1b" }}>{error}</Typography>
+                    <Typography sx={{ fontSize: "13px", color: vwPalette.status.error.text }}>
+                      {error}
+                    </Typography>
                   </Box>
                 )}
                 <EuAiActQuestionnaire
@@ -797,15 +799,15 @@ export function PublicIntakeForm() {
                       p: "12px 16px",
                       fontSize: "13px",
                       borderRadius: radiusPx.lg,
-                      border: "1px solid #bfdbfe",
-                      backgroundColor: "#eff6ff",
+                      border: `1px solid ${vwPalette.status.info.border}`,
+                      backgroundColor: vwPalette.status.info.bg,
                       display: "flex",
                       alignItems: "center",
                       gap: "10px",
                     }}
                   >
                     <Info size={18} color={vwPalette.status.info.text} style={{ flexShrink: 0 }} />
-                    <Typography sx={{ fontSize: "13px", color: "#1e40af" }}>
+                    <Typography sx={{ fontSize: "13px", color: vwPalette.status.info.text }}>
                       Your previous submission data has been pre-filled. You can update and
                       resubmit.
                     </Typography>
@@ -820,7 +822,7 @@ export function PublicIntakeForm() {
                       p: "12px 16px",
                       fontSize: "13px",
                       borderRadius: radiusPx.lg,
-                      border: "1px solid #fecaca",
+                      border: `1px solid ${vwPalette.status.error.border}`,
                       backgroundColor: vwPalette.status.error.bg,
                       display: "flex",
                       alignItems: "center",
@@ -832,7 +834,9 @@ export function PublicIntakeForm() {
                       color={vwPalette.riskMark.critical}
                       style={{ flexShrink: 0 }}
                     />
-                    <Typography sx={{ fontSize: "13px", color: "#991b1b" }}>{error}</Typography>
+                    <Typography sx={{ fontSize: "13px", color: vwPalette.status.error.text }}>
+                      {error}
+                    </Typography>
                   </Box>
                 )}
 

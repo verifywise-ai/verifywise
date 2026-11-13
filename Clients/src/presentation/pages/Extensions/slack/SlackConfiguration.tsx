@@ -27,10 +27,10 @@ import { palette } from "../../../themes/palette";
 
 const colors = {
   primary: palette.brand.primary,
-  primaryHover: "#0F5A47",
+  primaryHover: palette.brand.primaryHover,
   primaryLight: "rgba(19, 113, 91, 0.08)",
   successLight: "rgba(5, 150, 105, 0.1)",
-  error: "#DB504A",
+  error: palette.text.error,
   errorLight: "rgba(219, 80, 74, 0.1)",
   textPrimary: palette.text.primary,
   textSecondary: palette.text.secondary,

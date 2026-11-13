@@ -171,7 +171,9 @@ export function ComparisonStrip({
       <Cell
         value={vsAvg === null ? "—" : `${vsAvg >= 0 ? "+" : ""}${vsAvg}`}
         label="vs category average"
-        accent={vsAvg !== null ? (vsAvg >= 0 ? palette.brand.primary : "#C2683B") : undefined}
+        accent={
+          vsAvg !== null ? (vsAvg >= 0 ? palette.brand.primary : palette.riskMark.high) : undefined
+        }
       />
     </Stack>
   );

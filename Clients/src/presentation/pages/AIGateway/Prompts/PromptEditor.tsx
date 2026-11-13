@@ -788,12 +788,12 @@ export default function PromptEditorPage() {
                     py: "2px",
                     borderRadius: radiusPx.sm,
                     border: `1px solid ${palette.border.light}`,
-                    bgcolor: "#F0F9FF",
+                    bgcolor: vwPalette.status.info.bg,
                     cursor: "default",
                   }}
                 >
-                  <Link2 size={11} strokeWidth={1.5} color="#0284C7" />
-                  <Typography fontSize={11} color="#0284C7" fontWeight={500}>
+                  <Link2 size={11} strokeWidth={1.5} color={vwPalette.status.info.text} />
+                  <Typography fontSize={11} color={vwPalette.status.info.text} fontWeight={500}>
                     @{ref}
                   </Typography>
                 </Box>
@@ -921,7 +921,10 @@ export default function PromptEditorPage() {
                           fontSize: 13,
                           lineHeight: 1.6,
                           whiteSpace: "pre-wrap",
-                          bgcolor: cm.role === "user" ? "#EEF4FF" : vwPalette.background.alt,
+                          bgcolor:
+                            cm.role === "user"
+                              ? vwPalette.status.info.bg
+                              : vwPalette.background.alt,
                           color: vwPalette.text.secondary,
                         }}
                       >
@@ -1006,7 +1009,7 @@ export default function PromptEditorPage() {
                     "width": 34,
                     "height": 34,
                     "alignSelf": "flex-end",
-                    "&:hover": { bgcolor: "#0F5A47" },
+                    "&:hover": { bgcolor: vwPalette.brand.primaryHover },
                     "&:disabled": {
                       bgcolor: vwPalette.border.light,
                       color: vwPalette.text.disabled,

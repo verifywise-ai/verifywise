@@ -2,6 +2,7 @@ import type { FC } from "react";
 import { useEffect, useState } from "react";
 import { Box } from "@mui/material";
 import { keyframes } from "@mui/system";
+import { chartTheme } from "../../themes/chartTheme";
 
 // Keyframe animation for hearts flying from bottom to top
 const flyUp = keyframes`
@@ -37,20 +38,7 @@ interface Heart {
   size: number;
 }
 
-const colors = [
-  "#FF1493", // Deep Pink
-  "#FF69B4", // Hot Pink
-  "#9D4EDD", // Purple
-  "#06FFA5", // Mint Green
-  "#FFD60A", // Yellow
-  "#FF006E", // Pink
-  "#FB5607", // Orange
-  "#3A86FF", // Blue
-  "#8338EC", // Purple
-  "#FFBE0B", // Gold
-  "#FF006E", // Magenta
-  "#06FFA5", // Cyan
-];
+const colors = chartTheme.series.slice(0, 9);
 
 interface FlyingHeartsProps {
   onComplete?: () => void;

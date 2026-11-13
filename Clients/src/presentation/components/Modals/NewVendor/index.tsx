@@ -52,7 +52,7 @@ import {
   calculateVendorRiskScore,
   getRiskScoreColor,
 } from "../../../../domain/utils/vendorScorecard.utils";
-import { radiusPx } from "../../../themes/palette";
+import { radiusPx, palette as vwPalette } from "../../../themes/palette";
 
 const initialState = {
   vendorName: "",
@@ -699,7 +699,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
                   >
                     <Typography
                       sx={{
-                        color: "#16C784",
+                        color: vwPalette.status.success.text,
                         fontSize: "12px",
                         lineHeight: 1.8,
                       }}

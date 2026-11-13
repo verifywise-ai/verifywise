@@ -13,7 +13,7 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { displayFormattedTime } from "../../../tools/isoDateToString";
-import { radiusPx } from "../../../themes/palette";
+import { radiusPx, palette as vwPalette } from "../../../themes/palette";
 
 dayjs.extend(relativeTime);
 
@@ -551,7 +551,7 @@ export function HistorySidebar({
               "scrollbarWidth": "thin",
               "scrollbarColor": "transparent transparent",
               "&:hover": {
-                scrollbarColor: "#C1C7CD transparent",
+                scrollbarColor: `${vwPalette.border.dark} transparent`,
               },
             }}
           >

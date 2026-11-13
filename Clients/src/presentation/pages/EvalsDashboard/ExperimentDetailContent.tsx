@@ -135,7 +135,7 @@ const MarkdownRenderer = ({ content }: { content: string }) => {
           borderRadius: radiusPx.sm,
           fontFamily: fontFamily.mono,
           fontSize: 12,
-          color: "#0f766e",
+          color: palette.accent.teal.text,
         },
         "& pre": {
           "backgroundColor": palette.text.primary,

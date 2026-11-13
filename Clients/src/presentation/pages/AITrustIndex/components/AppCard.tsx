@@ -154,7 +154,7 @@ export default function AppCard({
               <AlertTriangle
                 size={14}
                 strokeWidth={1.5}
-                color="#B23B3B"
+                color={palette.status.error.text}
                 aria-label="Dealbreaker flag"
                 style={{ flexShrink: 0 }}
               />

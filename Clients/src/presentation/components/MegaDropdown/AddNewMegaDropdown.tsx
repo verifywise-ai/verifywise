@@ -12,6 +12,7 @@ import {
   Plus,
 } from "lucide-react";
 import { brand, background, palette as vwPalette, radiusPx } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 
 /**
  * Represents a single item in the mega dropdown menu
@@ -33,62 +34,62 @@ const items: MegaDropdownItem[] = [
   {
     id: "use-case",
     label: "Use case",
-    icon: <FolderTree size={20} strokeWidth={1.5} color="#81C784" />,
+    icon: <FolderTree size={20} strokeWidth={1.5} color={chartTheme.series[0]} />,
     path: "/overview",
     state: { openCreateModal: true },
   },
   {
     id: "vendor",
     label: "Vendor",
-    icon: <Building size={20} strokeWidth={1.5} color="#64B5F6" />,
+    icon: <Building size={20} strokeWidth={1.5} color={chartTheme.series[1]} />,
     path: "/vendors",
     state: { openCreateModal: true },
   },
   {
     id: "model",
     label: "Model",
-    icon: <ListIcon size={20} strokeWidth={1.5} color="#BA68C8" />,
+    icon: <ListIcon size={20} strokeWidth={1.5} color={chartTheme.series[2]} />,
     path: "/model-inventory",
     state: { openCreateModal: true },
   },
   {
     id: "risk",
     label: "Risk",
-    icon: <AlertTriangle size={20} strokeWidth={1.5} color="#FFB74D" />,
+    icon: <AlertTriangle size={20} strokeWidth={1.5} color={chartTheme.series[3]} />,
     path: "/risk-management",
     state: { openCreateModal: true },
   },
   {
     id: "policy",
     label: "Policy",
-    icon: <Shield size={20} strokeWidth={1.5} color="#7986CB" />,
+    icon: <Shield size={20} strokeWidth={1.5} color={chartTheme.series[4]} />,
     path: "/policies/new",
   },
   {
     id: "vendor-risk",
     label: "Vendor risk",
-    icon: <Building size={20} strokeWidth={1.5} color="#E57373" />,
+    icon: <Building size={20} strokeWidth={1.5} color={chartTheme.series[5]} />,
     path: "/vendors/risks",
     state: { openCreateModal: true },
   },
   {
     id: "model-risk",
     label: "Model risk",
-    icon: <AlertTriangle size={20} strokeWidth={1.5} color="#F06292" />,
+    icon: <AlertTriangle size={20} strokeWidth={1.5} color={chartTheme.series[6]} />,
     path: "/model-inventory/model-risks",
     state: { openCreateModal: true },
   },
   {
     id: "training",
     label: "Training",
-    icon: <GraduationCap size={20} strokeWidth={1.5} color="#4DD0E1" />,
+    icon: <GraduationCap size={20} strokeWidth={1.5} color={chartTheme.series[7]} />,
     path: "/training",
     state: { openCreateModal: true },
   },
   {
     id: "ai-incident",
     label: "Incident",
-    icon: <AlertCircle size={20} strokeWidth={1.5} color="#FF8A65" />,
+    icon: <AlertCircle size={20} strokeWidth={1.5} color={chartTheme.series[8]} />,
     path: "/ai-incident-managements",
     state: { openCreateModal: true },
   },
@@ -147,7 +148,7 @@ const AddNewMegaDropdown: React.FC<AddNewMegaDropdownProps> = ({ buttonLabel = "
           "textTransform": "none",
           "boxShadow": "none",
           "&:hover": {
-            background: "#0f5f4c",
+            background: vwPalette.brand.primaryHover,
             boxShadow: "none",
           },
           "transition": "background 0.2s ease",

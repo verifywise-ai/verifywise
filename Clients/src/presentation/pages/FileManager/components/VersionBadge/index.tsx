@@ -36,11 +36,15 @@ const getVersionColors = (reviewStatus?: string): VersionColorConfig => {
     case "approved":
       return {
         backgroundColor: vwPalette.status.success.bg,
-        color: "#027A48",
-        borderColor: "#A6F4C5",
+        color: vwPalette.status.success.text,
+        borderColor: vwPalette.status.success.border,
       };
     default:
-      return { backgroundColor: "#EFF8FF", color: "#175CD3", borderColor: "#B2DDFF" };
+      return {
+        backgroundColor: vwPalette.status.info.bg,
+        color: vwPalette.status.info.text,
+        borderColor: vwPalette.status.info.border,
+      };
   }
 };
 

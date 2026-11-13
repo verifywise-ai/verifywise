@@ -41,15 +41,15 @@ const entityIcons: Record<EntityType, LucideIcon> = {
 };
 
 export const riskLevelColors: Record<string, string> = {
-  "Low": "#4caf50",
-  "Medium": "#ff9800",
-  "High": "#f44336",
-  "Critical": "#9c27b0",
-  "Very low risk": "#4caf50",
-  "Low risk": "#8bc34a",
-  "Medium risk": "#ff9800",
-  "High risk": "#f44336",
-  "Very high risk": "#9c27b0",
+  "Low": vwPalette.riskMark.low,
+  "Medium": vwPalette.riskMark.medium,
+  "High": vwPalette.riskMark.high,
+  "Critical": vwPalette.riskMark.critical,
+  "Very low risk": vwPalette.riskMark.veryLow,
+  "Low risk": vwPalette.riskMark.low,
+  "Medium risk": vwPalette.riskMark.medium,
+  "High risk": vwPalette.riskMark.high,
+  "Very high risk": vwPalette.riskMark.critical,
 };
 
 const EntityNode: React.FC<NodeProps> = ({ data, sourcePosition, targetPosition }) => {
@@ -77,7 +77,7 @@ const EntityNode: React.FC<NodeProps> = ({ data, sourcePosition, targetPosition 
     <VWTooltip header={nodeData.label} content={tooltipContent} placement="top" maxWidth={400}>
       <Box
         sx={{
-          "backgroundColor": nodeData.isHighlighted ? "#fffbeb" : "white",
+          "backgroundColor": nodeData.isHighlighted ? vwPalette.status.warning.bg : "white",
           "border": nodeData.isHighlighted
             ? `3px solid ${vwPalette.riskMark.medium}`
             : `2px solid ${nodeData.color}`,

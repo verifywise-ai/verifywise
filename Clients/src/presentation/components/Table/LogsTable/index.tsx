@@ -115,12 +115,12 @@ const parseLogLine = (line: string, index: number): ParsedLogEntry | null => {
 const STATE_COLORS: Record<string, { bg: string; text: string }> = {
   successful: { bg: status.success.bg, text: status.success.text },
   success: { bg: status.success.bg, text: status.success.text },
-  processing: { bg: status.warning.bg, text: "#795000" },
+  processing: { bg: status.warning.bg, text: vwPalette.risk.medium.text },
   error: { bg: status.error.bg, text: status.error.text },
-  info: { bg: "#DCEFFF", text: "#1976D2" },
+  info: { bg: vwPalette.status.info.bg, text: vwPalette.status.info.text },
   warn: { bg: risk.high.bg, text: risk.high.text },
   warning: { bg: risk.high.bg, text: risk.high.text },
-  debug: { bg: "#F3E5F5", text: "#6A1B9A" },
+  debug: { bg: vwPalette.accent.purple.bg, text: vwPalette.accent.purple.text },
 };
 
 const UNKNOWN_STATE_COLORS = { bg: vwPalette.border.light, text: vwPalette.text.secondary };

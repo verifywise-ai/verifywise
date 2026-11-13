@@ -3,7 +3,7 @@ import { X as ClearIcon } from "lucide-react";
 import { FC } from "react";
 import { useModalKeyHandling } from "../../../application/hooks/useModalKeyHandling";
 import { IPopupProps } from "../../types/widget.types";
-import { text } from "../../themes/palette";
+import { text, palette as vwPalette } from "../../themes/palette";
 
 const Popup: FC<IPopupProps> = ({
   popupId,
@@ -29,11 +29,11 @@ const Popup: FC<IPopupProps> = ({
       "height": 34,
       "fontSize": 13,
       "textTransform": "inherit",
-      "backgroundColor": "#4C7DE7",
+      "backgroundColor": vwPalette.chart[0],
       "boxShadow": "none",
       "borderRadius": 2,
-      "border": "1px solid #175CD3",
-      "&:hover": { boxShadow: "none", backgroundColor: "#175CD3 " },
+      "border": `1px solid ${vwPalette.status.info.text}`,
+      "&:hover": { boxShadow: "none", backgroundColor: `${vwPalette.status.info.text} ` },
       "display": "none",
     },
     closePopupButton: {
@@ -62,9 +62,9 @@ const Popup: FC<IPopupProps> = ({
       "borderRadius": 2,
       "maxHeight": 34,
       "textTransform": "inherit",
-      "backgroundColor": "#4C7DE7",
+      "backgroundColor": vwPalette.chart[0],
       "boxShadow": "none",
-      "border": "1px solid #175CD3",
+      "border": `1px solid ${vwPalette.status.info.text}`,
       "ml": "auto",
       "mr": 0,
       "mt": "30px",

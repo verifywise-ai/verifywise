@@ -739,7 +739,7 @@ export default function ModelsPage() {
                                 : i === 1
                                   ? vwPalette.background.alt
                                   : i === 2
-                                    ? "#FFFBEB"
+                                    ? vwPalette.status.warning.bg
                                     : i < 10
                                       ? `${palette.background.alt}`
                                       : "transparent",
@@ -755,11 +755,11 @@ export default function ModelsPage() {
                             }}
                           >
                             {i === 0 ? (
-                              <Trophy size={14} strokeWidth={1.5} color="#D4AF37" />
+                              <Trophy size={14} strokeWidth={1.5} color={vwPalette.chart[2]} />
                             ) : i === 1 ? (
                               <Medal size={14} strokeWidth={1.5} color={vwPalette.text.disabled} />
                             ) : i === 2 ? (
-                              <Award size={14} strokeWidth={1.5} color="#CD7F32" />
+                              <Award size={14} strokeWidth={1.5} color={vwPalette.chart[4]} />
                             ) : (
                               <Typography
                                 sx={{ fontSize: 12, color: palette.text.disabled, fontWeight: 600 }}

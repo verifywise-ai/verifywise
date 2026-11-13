@@ -653,8 +653,8 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
                                                 {action.error_message && (
                                                   <Box
                                                     sx={{
-                                                      backgroundColor: "#FFF5F5",
-                                                      border: "1px solid #FED7D7",
+                                                      backgroundColor: vwPalette.accent.red.bg,
+                                                      border: `1px solid ${vwPalette.accent.red.border}`,
                                                       borderRadius: radiusPx.sm,
                                                       padding: "8px 12px",
                                                       mt: 1,
@@ -712,7 +712,7 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
                                             : log.status === "failure"
                                               ? vwPalette.status.error.border
                                               : vwPalette.risk.medium.bg,
-                                        border: `1px solid ${log.status === "success" ? vwPalette.status.success.text : log.status === "failure" ? vwPalette.status.error.text : "#795000"}`,
+                                        border: `1px solid ${log.status === "success" ? vwPalette.status.success.text : log.status === "failure" ? vwPalette.status.error.text : vwPalette.risk.medium.text}`,
                                       }}
                                     >
                                       <Stack direction="row" alignItems="center" spacing={2}>
@@ -721,7 +721,10 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
                                         ) : log.status === "failure" ? (
                                           <XCircle size={20} color={status.error.text} />
                                         ) : (
-                                          <AlertCircle size={20} color="#795000" />
+                                          <AlertCircle
+                                            size={20}
+                                            color={vwPalette.risk.medium.text}
+                                          />
                                         )}
                                         <Box>
                                           <Typography
@@ -733,7 +736,7 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
                                                   ? "status.success.text"
                                                   : log.status === "failure"
                                                     ? "status.error.text"
-                                                    : "#795000",
+                                                    : vwPalette.risk.medium.text,
                                             }}
                                           >
                                             Overall Result:{" "}
@@ -744,7 +747,11 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
                                           </Typography>
                                           {log.status === "partial_success" && (
                                             <Typography
-                                              sx={{ fontSize: 12, color: "#795000", mt: 0.5 }}
+                                              sx={{
+                                                fontSize: 12,
+                                                color: vwPalette.risk.medium.text,
+                                                mt: 0.5,
+                                              }}
                                             >
                                               Some actions completed successfully, but others failed
                                             </Typography>

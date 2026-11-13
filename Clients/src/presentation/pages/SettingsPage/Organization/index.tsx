@@ -415,7 +415,7 @@ const Organization = () => {
                   "position": "relative",
                   "overflow": "hidden",
                   "&:hover": {
-                    borderColor: "#999",
+                    borderColor: palette.border.dark,
                     backgroundColor: "background.surface",
                   },
                 }}
@@ -475,7 +475,7 @@ const Organization = () => {
                 sx={{
                   "fontSize": 12,
                   "textTransform": "none",
-                  "color": logoUrl ? "#666" : palette.border.dark,
+                  "color": logoUrl ? palette.text.tertiary : palette.border.dark,
                   "&:hover": {
                     backgroundColor: logoUrl ? "rgba(102, 102, 102, 0.04)" : "transparent",
                   },
@@ -535,7 +535,7 @@ const Organization = () => {
             <Typography
               sx={{
                 fontSize: 11,
-                color: "#666",
+                color: palette.text.tertiary,
                 textAlign: "center",
                 mt: 1,
                 lineHeight: 1.4,

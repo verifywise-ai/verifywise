@@ -378,7 +378,7 @@ const RichTextEditor: React.FC<IRichTextEditorProps> = ({
                   sx={{
                     "padding": "6px",
                     "borderRadius": "3px",
-                    "backgroundColor": isActive ? "#E0F7FA" : "transparent",
+                    "backgroundColor": isActive ? vwPalette.accent.teal.bg : "transparent",
                     "border": "1px solid",
                     "borderColor": isActive ? theme.palette.primary.main : "transparent",
                     "&:hover": {

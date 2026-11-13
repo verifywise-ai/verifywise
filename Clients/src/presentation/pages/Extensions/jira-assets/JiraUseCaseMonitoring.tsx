@@ -48,8 +48,8 @@ export const JiraUseCaseMonitoring: React.FC<JiraUseCaseMonitoringProps> = () =>
             display: "flex",
             alignItems: "flex-start",
             gap: 1.5,
-            backgroundColor: "#EFF6FF",
-            border: "1px solid #BFDBFE",
+            backgroundColor: palette.status.info.bg,
+            border: `1px solid ${palette.status.info.border}`,
             borderRadius: radiusPx.sm,
             p: 2,
             maxWidth: 450,
@@ -60,7 +60,7 @@ export const JiraUseCaseMonitoring: React.FC<JiraUseCaseMonitoringProps> = () =>
             color={palette.status.info.text}
             style={{ flexShrink: 0, marginTop: 2 }}
           />
-          <Typography sx={{ fontSize: 13, color: "#1E40AF" }}>
+          <Typography sx={{ fontSize: 13, color: palette.status.info.text }}>
             To configure post-market monitoring for this AI system, update the monitoring attributes
             in JIRA Assets. Changes will sync automatically.
           </Typography>

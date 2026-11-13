@@ -58,13 +58,13 @@ const CustomModal: React.FC<ICustomModalProps> = ({
   const buttonStyle = {
     "fontSize": 13,
     "textTransform": "capitalize",
-    "backgroundColor": "#4C7DE7",
+    "backgroundColor": vwPalette.chart[0],
     "boxShadow": "none",
     "borderRadius": radiusPx.sm,
-    "border": "1px solid #175CD3",
+    "border": `1px solid ${vwPalette.status.info.text}`,
     "&:hover": {
       boxShadow: "none",
-      backgroundColor: "#175CD3 ",
+      backgroundColor: `${vwPalette.status.info.text} `,
     },
   };
 
@@ -231,7 +231,7 @@ const CustomModal: React.FC<ICustomModalProps> = ({
               ...buttonStyle,
               "width": 68,
               "&:hover": {
-                backgroundColor: "#175CD3 ",
+                backgroundColor: `${vwPalette.status.info.text} `,
               },
             }}
             disableRipple

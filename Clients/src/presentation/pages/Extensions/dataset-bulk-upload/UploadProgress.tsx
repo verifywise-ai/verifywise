@@ -50,7 +50,7 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
             "borderRadius": "3px",
             "backgroundColor": vwPalette.border.light,
             "& .MuiLinearProgress-bar": {
-              backgroundColor: errorCount > 0 ? "#DC6803" : "brand.primary",
+              backgroundColor: errorCount > 0 ? vwPalette.riskMark.high : "brand.primary",
               borderRadius: "3px",
             },
           }}
@@ -66,10 +66,10 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
             size="small"
             variant="outlined"
             sx={{
-              "color": "#079455",
-              "borderColor": "#079455",
+              "color": vwPalette.status.success.text,
+              "borderColor": vwPalette.status.success.text,
               "backgroundColor": vwPalette.status.success.bg,
-              "& .MuiChip-icon": { color: "#079455" },
+              "& .MuiChip-icon": { color: vwPalette.status.success.text },
             }}
           />
           {errorCount > 0 && (
@@ -80,8 +80,8 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
               variant="outlined"
               sx={{
                 "color": vwPalette.status.error.text,
-                "borderColor": "#FDA29B",
-                "backgroundColor": "#F9ECED",
+                "borderColor": vwPalette.status.error.border,
+                "backgroundColor": vwPalette.accent.red.bg,
                 "& .MuiChip-icon": { color: vwPalette.status.error.text },
               }}
             />
@@ -102,7 +102,7 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
               borderRadius: radiusPx.md,
               backgroundColor:
                 result.status === "error"
-                  ? "#F9ECED"
+                  ? vwPalette.accent.red.bg
                   : result.status === "success"
                     ? vwPalette.status.success.bg
                     : "background.accent",
@@ -122,7 +122,9 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
                 style={{ animation: `${spin} 1s linear infinite` }}
               />
             )}
-            {result.status === "success" && <CheckCircle2 size={16} color="#079455" />}
+            {result.status === "success" && (
+              <CheckCircle2 size={16} color={vwPalette.status.success.text} />
+            )}
             {result.status === "error" && (
               <Stack direction="row" alignItems="center" spacing={0.5}>
                 <XCircle size={16} color={vwPalette.status.error.text} />

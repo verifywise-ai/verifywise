@@ -12,10 +12,10 @@ import {
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 const statusColorMap: Record<string, string> = {
-  completed: "#4caf50",
-  running: "#ff9800",
+  completed: palette.status.success.strong,
+  running: palette.riskMark.medium,
   pending: palette.text.disabled,
-  failed: "#f44336",
+  failed: palette.riskMark.critical,
 };
 
 function hasFailedMetrics(eval_: ModelEvaluation): boolean {
@@ -176,7 +176,7 @@ export default function ModelEvaluationsTab() {
                   <Stack direction="row" alignItems="center" spacing={0.5}>
                     <Typography sx={{ fontSize: "13px" }}>{getKeyResult(e)}</Typography>
                     {hasFailedMetrics(e) && (
-                      <AlertTriangle size={14} color="#f44336" strokeWidth={1.5} />
+                      <AlertTriangle size={14} color={palette.text.error} strokeWidth={1.5} />
                     )}
                   </Stack>
                 </td>

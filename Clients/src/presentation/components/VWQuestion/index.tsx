@@ -248,7 +248,7 @@ const QuestionFrame = ({ question, setRefreshKey, currentProjectId }: IQuestionP
             sx={{
               backgroundColor:
                 priorities[(question.priority_level || "low priority") as PriorityLevel]?.color ||
-                "#666",
+                vwPalette.text.tertiary,
               color: "background.main",
               borderRadius: theme.shape.borderRadius,
             }}

@@ -44,31 +44,41 @@ const Risks: FC<RiskData & { sx?: SxProps<Theme> | undefined }> = ({
   return (
     <Stack direction="row" justifyContent="space-between" sx={{ ...styles.stack, ...sx }}>
       <Stack sx={styles.stackItem}>
-        <Typography sx={{ color: "#C63622", ...styles.stackItemText }}>Very high risks</Typography>
+        <Typography sx={{ color: palette.risk.critical.text, ...styles.stackItemText }}>
+          Very high risks
+        </Typography>
         <Typography sx={{ color: theme.palette.text.secondary, ...styles.stackItemText }}>
           {veryHighRisks}
         </Typography>
       </Stack>
       <Stack sx={styles.stackItem}>
-        <Typography sx={{ color: "#D68B61", ...styles.stackItemText }}>High risks</Typography>
+        <Typography sx={{ color: palette.risk.high.text, ...styles.stackItemText }}>
+          High risks
+        </Typography>
         <Typography sx={{ color: theme.palette.text.secondary, ...styles.stackItemText }}>
           {highRisks}
         </Typography>
       </Stack>
       <Stack sx={styles.stackItem}>
-        <Typography sx={{ color: "#D6B971", ...styles.stackItemText }}>Medium risks</Typography>
+        <Typography sx={{ color: palette.risk.medium.text, ...styles.stackItemText }}>
+          Medium risks
+        </Typography>
         <Typography sx={{ color: theme.palette.text.secondary, ...styles.stackItemText }}>
           {mediumRisks}
         </Typography>
       </Stack>
       <Stack sx={styles.stackItem}>
-        <Typography sx={{ color: "#B8D39C", ...styles.stackItemText }}>Low risks</Typography>
+        <Typography sx={{ color: palette.risk.low.text, ...styles.stackItemText }}>
+          Low risks
+        </Typography>
         <Typography sx={{ color: theme.palette.text.secondary, ...styles.stackItemText }}>
           {lowRisks}
         </Typography>
       </Stack>
       <Stack sx={{ p: "15px", width: 124 }}>
-        <Typography sx={{ color: "#52AB43", ...styles.stackItemText }}>Very low risks</Typography>
+        <Typography sx={{ color: palette.risk.veryLow.text, ...styles.stackItemText }}>
+          Very low risks
+        </Typography>
         <Typography sx={{ color: theme.palette.text.secondary, ...styles.stackItemText }}>
           {veryLowRisks}
         </Typography>

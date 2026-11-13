@@ -398,7 +398,7 @@ const Organizations = () => {
                         sx={{
                           ...tableStyles.body.button,
                           "color": palette.riskMark.critical,
-                          "borderColor": "#fecaca",
+                          "borderColor": palette.status.error.border,
                           "&:hover": {
                             backgroundColor: palette.riskMark.critical,
                             color: palette.background.main,

@@ -24,7 +24,7 @@ export const CustomStepWrapper: React.FC<ICustomStepWrapperProps> = ({
     <Box
       {...tooltipProps}
       sx={{
-        background: `linear-gradient(135deg, ${vwPalette.text.primary} 0%, #252530 100%)`,
+        background: `linear-gradient(135deg, ${vwPalette.text.primary} 0%, ${vwPalette.text.secondary} 100%)`,
         borderRadius: radiusPx.sm,
         padding: "24px",
         position: "relative",

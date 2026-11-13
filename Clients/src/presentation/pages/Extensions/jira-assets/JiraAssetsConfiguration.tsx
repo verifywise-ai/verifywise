@@ -843,7 +843,10 @@ export const JiraAssetsConfiguration: React.FC = () => {
             "textTransform": "none",
             "fontSize": "13px",
             "fontWeight": 500,
-            "&:hover": { borderColor: "#0F5A47", backgroundColor: "rgba(19, 113, 91, 0.04)" },
+            "&:hover": {
+              borderColor: palette.brand.primaryHover,
+              backgroundColor: "rgba(19, 113, 91, 0.04)",
+            },
             "&:disabled": { borderColor: palette.border.dark, color: palette.text.disabled },
           }}
         >
@@ -871,7 +874,7 @@ export const JiraAssetsConfiguration: React.FC = () => {
             "textTransform": "none",
             "fontSize": "13px",
             "fontWeight": 500,
-            "&:hover": { backgroundColor: "#0F5A47" },
+            "&:hover": { backgroundColor: palette.brand.primaryHover },
             "&:disabled": { backgroundColor: palette.border.dark },
           }}
         >
@@ -1004,7 +1007,7 @@ export const JiraAssetsConfiguration: React.FC = () => {
                   "backgroundColor": palette.brand.primary,
                   "textTransform": "none",
                   "fontSize": "13px",
-                  "&:hover": { backgroundColor: "#0F5A47" },
+                  "&:hover": { backgroundColor: palette.brand.primaryHover },
                   "&:disabled": { backgroundColor: palette.border.dark },
                 }}
               >

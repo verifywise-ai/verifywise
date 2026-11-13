@@ -13,16 +13,17 @@ import { palette, radiusPx } from "../../../themes/palette";
 
 function ratioColor(r: number): string {
   if (r >= 0.75) return palette.brand.primary;
-  if (r >= 0.5) return "#2E8B6F";
-  if (r >= 0.3) return "#C8941E";
-  if (r > 0) return "#C2683B";
-  return "#B23B3B";
+  if (r >= 0.5) return palette.riskMark.low;
+  if (r >= 0.3) return palette.riskMark.medium;
+  if (r > 0) return palette.riskMark.high;
+  return palette.riskMark.critical;
 }
 
 function dot(award: string, subFlag?: string): { color: string; label: string } {
   if (award === "full") return { color: palette.brand.primary, label: AWARD_LABELS.full };
-  if (award === "half") return { color: "#C8941E", label: AWARD_LABELS.half };
-  if (subFlag === "ADVERSE") return { color: "#B23B3B", label: SUBFLAG_LABELS.ADVERSE };
+  if (award === "half") return { color: palette.riskMark.medium, label: AWARD_LABELS.half };
+  if (subFlag === "ADVERSE")
+    return { color: palette.riskMark.critical, label: SUBFLAG_LABELS.ADVERSE };
   if (subFlag === "NA") return { color: palette.text.disabled, label: SUBFLAG_LABELS.NA };
   return { color: palette.border.dark, label: SUBFLAG_LABELS.SILENT };
 }
@@ -145,9 +146,9 @@ export function ScoreBreakdown({
         {(
           [
             [palette.brand.primary, "Disclosed"],
-            ["#C8941E", "Partial"],
+            [palette.riskMark.medium, "Partial"],
             [palette.border.dark, "Silent"],
-            ["#B23B3B", "Adverse"],
+            [palette.riskMark.critical, "Adverse"],
             [palette.text.disabled, "Not applicable"],
           ] as [string, string][]
         ).map(([c, l]) => (

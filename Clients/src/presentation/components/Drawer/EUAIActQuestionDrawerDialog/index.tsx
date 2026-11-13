@@ -389,7 +389,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
             {displayQuestion?.question && (
               <Stack
                 sx={{
-                  border: "1px solid #eee",
+                  border: `1px solid ${palette.border.light}`,
                   padding: "12px",
                   backgroundColor: "background.accent",
                   borderRadius: radiusPx.sm,
@@ -407,16 +407,16 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
             {displayQuestion?.hint && (
               <Stack
                 sx={{
-                  border: "1px solid #d5e8d5",
+                  border: `1px solid ${palette.status.success.border}`,
                   padding: "12px",
-                  backgroundColor: "#f5fef5",
+                  backgroundColor: palette.status.success.bg,
                   borderRadius: radiusPx.sm,
                 }}
               >
                 <Typography fontSize={13} sx={{ marginBottom: "8px", fontWeight: 600 }}>
                   Hint:
                 </Typography>
-                <Typography fontSize={13} color="#666">
+                <Typography fontSize={13} color={palette.text.tertiary}>
                   {displayQuestion.hint}
                 </Typography>
               </Stack>
@@ -466,8 +466,8 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                     height: 24,
                     padding: "4px 12px",
                     borderRadius: radiusPx.sm,
-                    background: `linear-gradient(180deg, ${palette.status.success.bg} 0%, #D4E8DB 100%)`,
-                    border: "1px solid #B8DCC5",
+                    background: `linear-gradient(180deg, ${palette.status.success.bg} 0%, ${palette.status.success.bg} 100%)`,
+                    border: `1px solid ${palette.status.success.border}`,
                     color: "primary.main",
                     fontSize: 11,
                     fontWeight: 600,
