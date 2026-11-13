@@ -325,7 +325,15 @@ describe("FindingRow", () => {
       decision_scope: "scan",
     });
     const onStatusMessage = vi.fn();
-    render(<FindingRow finding={baseFinding} scanId={7} onStatusMessage={onStatusMessage} />);
+    render(
+      <FindingRow
+        finding={baseFinding}
+        repositoryOwner="acme"
+        repositoryName="widgets"
+        scanId={7}
+        onStatusMessage={onStatusMessage}
+      />,
+    );
 
     fireEvent.click(screen.getByRole("button", { name: "Set status" }));
     fireEvent.click(await screen.findByText("Approved"));
@@ -343,6 +351,8 @@ describe("FindingRow", () => {
     render(
       <FindingRow
         finding={{ ...baseFinding, governance_status: "approved" }}
+        repositoryOwner="acme"
+        repositoryName="widgets"
         scanId={7}
         onStatusMessage={vi.fn()}
       />,
