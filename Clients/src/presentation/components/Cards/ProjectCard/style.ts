@@ -13,12 +13,12 @@ export const projectCardStyle = {
   minWidth: 300,
   width: "100%",
   maxWidth: "100&",
-  background: "linear-gradient(135deg, #FEFFFE 0%, #F8F9FA 100%)",
+  background: `linear-gradient(135deg, ${vwPalette.background.main} 0%, ${vwPalette.background.alt} 100%)`,
 };
 
 export const projectCardTitleStyle = {
   fontSize: 13,
-  color: "#2D3748",
+  color: vwPalette.text.secondary,
   fontWeight: 600,
 };
 

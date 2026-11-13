@@ -737,7 +737,7 @@ export default function ModelsPage() {
                               i === 0
                                 ? vwPalette.status.success.bg
                                 : i === 1
-                                  ? "#F8FAFC"
+                                  ? vwPalette.background.alt
                                   : i === 2
                                     ? "#FFFBEB"
                                     : i < 10
@@ -757,7 +757,7 @@ export default function ModelsPage() {
                             {i === 0 ? (
                               <Trophy size={14} strokeWidth={1.5} color="#D4AF37" />
                             ) : i === 1 ? (
-                              <Medal size={14} strokeWidth={1.5} color="#9CA3AF" />
+                              <Medal size={14} strokeWidth={1.5} color={vwPalette.text.disabled} />
                             ) : i === 2 ? (
                               <Award size={14} strokeWidth={1.5} color="#CD7F32" />
                             ) : (

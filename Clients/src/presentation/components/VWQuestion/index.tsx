@@ -203,7 +203,7 @@ const QuestionFrame = ({ question, setRefreshKey, currentProjectId }: IQuestionP
           padding: 5,
           justifyContent: "space-between",
           alignItems: "center",
-          backgroundColor: "#FBFAFA",
+          backgroundColor: vwPalette.background.alt,
           border: `1px solid ${borderPalette.dark}`,
           borderBottom: "none",
           borderRadius: `${theme.shape.borderRadius}px ${theme.shape.borderRadius}px 0 0`,

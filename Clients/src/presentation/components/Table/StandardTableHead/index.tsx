@@ -9,6 +9,7 @@ import type {
   SortConfig,
   StandardColumn,
 } from "../../../../domain/types/standardTable";
+import { isClassicUi } from "../../../themes/uiStyle";
 
 interface StandardTableHeadProps {
   columns: StandardColumn[];
@@ -96,7 +97,9 @@ const StandardTableHead: React.FC<StandardTableHeadProps> = memo(
                     variant="body2"
                     sx={{
                       fontWeight: 500,
-                      fontSize: "13px",
+                      // Phase 1: the 11px header with 0.07em tracking (style guide §7).
+                      fontSize: isClassicUi() ? "13px" : "11px",
+                      letterSpacing: isClassicUi() ? "normal" : "0.07em",
                       color: sortConfig.key === column.id ? "primary.main" : "inherit",
                     }}
                   >

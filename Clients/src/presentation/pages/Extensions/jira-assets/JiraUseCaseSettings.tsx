@@ -248,7 +248,7 @@ export const JiraUseCaseSettings: React.FC<JiraUseCaseSettingsProps> = ({ projec
             "& .MuiChip-icon": { color: palette.status.info.text },
           }}
         />
-        <Typography sx={{ fontSize: 13, color: "#6B7280" }}>
+        <Typography sx={{ fontSize: 13, color: palette.text.icon }}>
           This use case is imported from JIRA and is read-only
         </Typography>
       </Box>
@@ -264,7 +264,7 @@ export const JiraUseCaseSettings: React.FC<JiraUseCaseSettingsProps> = ({ projec
             {rows.map(({ key, value, hasValue }) => renderRow(key, value, hasValue))}
           </Box>
         ) : (
-          <Typography sx={{ color: "#6B7280", fontStyle: "italic" }}>
+          <Typography sx={{ color: palette.text.icon, fontStyle: "italic" }}>
             No attributes available
           </Typography>
         )}

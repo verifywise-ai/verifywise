@@ -16,7 +16,7 @@ export const colors = {
   primaryLight: "rgba(19, 113, 91, 0.08)",
 
   // Secondary neutral — matches v1SingleTheme colors.secondary
-  secondary: "#6B7280",
+  secondary: vwPalette.text.icon,
   secondaryHover: vwPalette.text.tertiary,
 
   // Status: success — matches themes/palette.ts status.success
@@ -42,19 +42,19 @@ export const colors = {
   // Text — matches themes/palette.ts text.*
   textPrimary: vwPalette.text.primary,
   textSecondary: vwPalette.text.secondary,
-  textTertiary: "#667085",
-  textDisabled: "#9CA3AF",
+  textTertiary: vwPalette.text.icon,
+  textDisabled: vwPalette.text.disabled,
 
   // Backgrounds — matches themes/palette.ts background.*
-  background: "#ffffff",
+  background: vwPalette.background.main,
   backgroundSecondary: vwPalette.background.alt,
-  backgroundHover: "#f5f5f5",
+  backgroundHover: vwPalette.background.hover,
 
   // Borders — matches themes/palette.ts border.light/dark
   border: vwPalette.border.light,
   borderLight: vwPalette.border.light,
 
-  white: "#ffffff",
+  white: vwPalette.background.main,
   disabled: vwPalette.border.light,
 };
 

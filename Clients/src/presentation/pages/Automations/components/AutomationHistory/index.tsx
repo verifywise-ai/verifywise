@@ -351,7 +351,7 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
                       onClick={() => toggleRow(log.id)}
                       sx={{
                         ...singleTheme.tableStyles.primary.body.row,
-                        "&:hover": { backgroundColor: "#FBFBFB", cursor: "pointer" },
+                        "&:hover": { backgroundColor: vwPalette.background.alt, cursor: "pointer" },
                         "& td": {
                           borderBottom: `1px solid ${vwPalette.border.light}`,
                         },
@@ -491,7 +491,7 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
                                             <Typography
                                               sx={{
                                                 fontSize: 13,
-                                                color: "#2D3748",
+                                                color: vwPalette.text.secondary,
                                                 wordBreak: "break-word",
                                               }}
                                             >
@@ -609,7 +609,7 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
                                                     sx={{
                                                       fontSize: 13,
                                                       fontWeight: 600,
-                                                      color: "#2D3748",
+                                                      color: vwPalette.text.secondary,
                                                     }}
                                                   >
                                                     {formatActionType(action.action_type)}
@@ -675,8 +675,8 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
                                                 {!action.error_message && action.result_data && (
                                                   <Box
                                                     sx={{
-                                                      backgroundColor: "#F7FAFC",
-                                                      border: "1px solid #E2E8F0",
+                                                      backgroundColor: vwPalette.background.alt,
+                                                      border: `1px solid ${vwPalette.border.light}`,
                                                       borderRadius: radiusPx.sm,
                                                       padding: "8px 12px",
                                                       mt: 1,
@@ -685,7 +685,7 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
                                                     <Typography
                                                       sx={{
                                                         fontSize: 11,
-                                                        color: "#4A5568",
+                                                        color: vwPalette.text.tertiary,
                                                         fontFamily: "monospace",
                                                       }}
                                                     >

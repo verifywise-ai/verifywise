@@ -448,7 +448,7 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
             sx={{
               fontSize: 16,
               fontWeight: 600,
-              color: "#101828",
+              color: vwPalette.text.primary,
               overflow: "hidden",
               textOverflow: "ellipsis",
               whiteSpace: "nowrap",

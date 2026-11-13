@@ -24,7 +24,7 @@ const STATUS_COLORS: Record<string, string> = {
   [ModelInventoryStatus.PENDING]: vwPalette.riskMark.medium,
   [ModelInventoryStatus.RESTRICTED]: vwPalette.riskMark.critical,
   [ModelInventoryStatus.BLOCKED]: vwPalette.riskMark.critical,
-  [ModelInventoryStatus.RETIRED]: "#9E9E9E",
+  [ModelInventoryStatus.RETIRED]: vwPalette.text.disabled,
 };
 
 const TIMEFRAME_OPTIONS = [

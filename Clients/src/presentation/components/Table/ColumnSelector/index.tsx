@@ -130,7 +130,7 @@ export function ColumnSelector<TKey extends string = string>({
             sx={{
               fontSize: 13,
               fontWeight: 600,
-              color: "#101828",
+              color: vwPalette.text.primary,
               mb: 0.5,
             }}
           >

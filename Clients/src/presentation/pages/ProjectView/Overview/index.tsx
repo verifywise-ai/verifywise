@@ -77,7 +77,7 @@ const Overview: FC<OverviewProps> = memo(({ projectRisksSummary }) => {
       value: {
         fontSize: 16,
         fontWeight: 600,
-        color: "#2D3748",
+        color: vwPalette.text.secondary,
       },
     }),
     [theme],

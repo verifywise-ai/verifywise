@@ -23,6 +23,7 @@ import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
 import { Tooltip as MuiTooltip } from "@mui/material";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import palette from "../../../themes/palette";
+import { palette as vwPalette } from "../../../themes/palette";
 import {
   sectionTitleSx,
   useCardSx,
@@ -255,12 +256,12 @@ export default function MCPAuditLogPage() {
                     <CartesianGrid strokeDasharray="3 3" stroke="#eee" vertical={false} />
                     <XAxis
                       dataKey="tool_name"
-                      tick={{ fontSize: 11, fill: "#888" }}
+                      tick={{ fontSize: 11, fill: vwPalette.text.accent }}
                       tickLine={false}
                       axisLine={false}
                     />
                     <YAxis
-                      tick={{ fontSize: 11, fill: "#888" }}
+                      tick={{ fontSize: 11, fill: vwPalette.text.accent }}
                       tickLine={false}
                       axisLine={false}
                       allowDecimals={false}
@@ -288,12 +289,12 @@ export default function MCPAuditLogPage() {
                     <CartesianGrid strokeDasharray="3 3" stroke="#eee" vertical={false} />
                     <XAxis
                       dataKey="tool_name"
-                      tick={{ fontSize: 11, fill: "#888" }}
+                      tick={{ fontSize: 11, fill: vwPalette.text.accent }}
                       tickLine={false}
                       axisLine={false}
                     />
                     <YAxis
-                      tick={{ fontSize: 11, fill: "#888" }}
+                      tick={{ fontSize: 11, fill: vwPalette.text.accent }}
                       tickLine={false}
                       axisLine={false}
                       tickFormatter={(v) => `${v}ms`}

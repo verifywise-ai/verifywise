@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { CustomStepWrapper } from "./CustomStep";
 import { Global } from "@emotion/react";
 import { IPageTourProps } from "../../types/interfaces/i.tour";
-import { brand, radiusPx } from "../../themes/palette";
+import { brand, radiusPx, palette as vwPalette } from "../../themes/palette";
 
 const PageTour: React.FC<IPageTourProps> = ({ steps, run, onFinish, tourKey }) => {
   const [shouldRun, setShouldRun] = useState(false);
@@ -49,7 +49,7 @@ const PageTour: React.FC<IPageTourProps> = ({ steps, run, onFinish, tourKey }) =
           // polygon uses `fill="currentColor"`, so drive it via `color` and
           // match the tooltip card's top-left gradient colour (#1f1f23).
           ".react-joyride__arrow": {
-            color: "#1f1f23 !important",
+            color: `${vwPalette.text.primary} !important`,
           },
           ".react-joyride__arrow polygon": {
             fill: "currentColor !important",

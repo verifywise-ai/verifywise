@@ -556,7 +556,7 @@ const RichTextEditor: React.FC<IRichTextEditorProps> = ({
           }
           .vw-tiptap-content .ProseMirror p.is-editor-empty:first-child::before {
             content: attr(data-placeholder);
-            color: #98A2B3;
+            color: ${vwPalette.text.disabled};
             pointer-events: none;
             float: left;
             height: 0;
@@ -575,7 +575,7 @@ const RichTextEditor: React.FC<IRichTextEditorProps> = ({
             min-width: 60px;
           }
           .vw-tiptap-content .ProseMirror th {
-            background-color: #f3f4f6;
+            background-color: ${vwPalette.background.hover};
             font-weight: 600;
           }
           .vw-tiptap-content .ProseMirror ul,

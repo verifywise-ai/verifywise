@@ -276,7 +276,7 @@ const AssignmentStatusCard = ({ frameworksData }: AssignmentStatusCardProps) => 
       {/* Content Section */}
       <Box
         sx={{
-          background: "linear-gradient(135deg, #FEFFFE 0%, #F8F9FA 100%)",
+          background: `linear-gradient(135deg, ${palette.background.main} 0%, ${palette.background.alt} 100%)`,
           p: "16px",
         }}
       >

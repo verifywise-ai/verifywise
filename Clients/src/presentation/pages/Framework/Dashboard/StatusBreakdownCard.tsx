@@ -179,7 +179,7 @@ const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {
     return (
       <Box
         sx={{
-          background: "linear-gradient(135deg, #FEFFFE 0%, #F8F9FA 100%)",
+          background: `linear-gradient(135deg, ${vwPalette.background.main} 0%, ${vwPalette.background.alt} 100%)`,
           border: `1px solid ${borderPalette.dark}`,
           borderRadius: radiusPx.sm,
           p: "16px",
@@ -216,7 +216,7 @@ const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {
       {/* Content Section */}
       <Box
         sx={{
-          background: "linear-gradient(135deg, #FEFFFE 0%, #F8F9FA 100%)",
+          background: `linear-gradient(135deg, ${vwPalette.background.main} 0%, ${vwPalette.background.alt} 100%)`,
           p: "16px",
         }}
       >

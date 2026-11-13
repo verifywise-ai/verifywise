@@ -90,7 +90,7 @@ function WiseSearchWelcomeBanner({ onDismiss }: { onDismiss: () => void }) {
     <Box
       className="wise-search-banner"
       sx={{
-        background: "linear-gradient(135deg, #1a1a1f 0%, #252530 100%)",
+        background: `linear-gradient(135deg, ${vwPalette.text.primary} 0%, #252530 100%)`,
         borderRadius: "8px",
         padding: "16px 20px",
         margin: "8px",
@@ -639,9 +639,9 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                   gap: 1,
                   padding: "6px 12px",
                   borderTop: "1px solid",
-                  borderTopColor: "var(--filter-border, #e5e5e5)",
+                  borderTopColor: `var(--filter-border, ${vwPalette.border.light})`,
                   borderBottom: "1px solid",
-                  borderBottomColor: "var(--filter-border, #e5e5e5)",
+                  borderBottomColor: `var(--filter-border, ${vwPalette.border.light})`,
                   background: `var(--filter-bg, ${vwPalette.background.alt})`,
                   minHeight: "36px",
                 }}
@@ -715,7 +715,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                         left: 0,
                         marginTop: "4px",
                         background: "var(--dropdown-bg, background.main)",
-                        border: "1px solid var(--filter-border, #e5e5e5)",
+                        border: `1px solid var(--filter-border, ${vwPalette.border.light})`,
                         borderRadius: "6px",
                         boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
                         zIndex: 10,
@@ -763,7 +763,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                               },
                               "&:not(:last-child)": {
                                 borderBottom: "1px solid",
-                                borderBottomColor: "var(--filter-border, #f0f0f0)",
+                                borderBottomColor: `var(--filter-border, ${vwPalette.background.hover})`,
                               },
                             }}
                           >

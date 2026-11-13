@@ -586,7 +586,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                       <Box
                         sx={{
                           backgroundColor: palette.brand.primary,
-                          color: "#fff",
+                          color: vwPalette.background.main,
                           borderRadius: "18px 18px 4px 18px",
                           px: "16px",
                           py: "10px",
@@ -777,7 +777,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                     "width": 18,
                     "height": 18,
                     "backgroundColor": "rgba(0,0,0,0.45)",
-                    "color": "#fff",
+                    "color": vwPalette.background.main,
                     "p": 0,
                     "&:hover": { backgroundColor: "rgba(0,0,0,0.65)" },
                   }}
@@ -895,7 +895,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
             disabled={!canSend}
             sx={{
               "backgroundColor": canSend ? palette.brand.primary : palette.background.fill,
-              "color": canSend ? "#fff" : palette.text.disabled,
+              "color": canSend ? vwPalette.background.main : palette.text.disabled,
               "width": 32,
               "height": 32,
               "borderRadius": "8px",

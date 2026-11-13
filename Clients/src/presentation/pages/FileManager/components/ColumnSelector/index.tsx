@@ -100,7 +100,7 @@ export const ColumnSelector: React.FC<ColumnSelectorProps> = ({
             sx={{
               fontSize: 13,
               fontWeight: 600,
-              color: "#101828",
+              color: vwPalette.text.primary,
               mb: 1,
             }}
           >

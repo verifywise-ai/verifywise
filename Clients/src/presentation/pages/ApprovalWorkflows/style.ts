@@ -13,7 +13,7 @@ export const filterSearchContainer = {
 
 // Table row styles
 export const workflowRowHover = {
-  "&:hover": { backgroundColor: "#FBFBFB", cursor: "pointer" },
+  "&:hover": { backgroundColor: vwPalette.background.alt, cursor: "pointer" },
 };
 
 export const workflowTableRowDeletingStyle = {

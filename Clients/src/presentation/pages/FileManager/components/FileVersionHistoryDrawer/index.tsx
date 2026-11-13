@@ -216,7 +216,7 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
             sx={{
               fontSize: 16,
               fontWeight: 600,
-              color: "#101828",
+              color: vwPalette.text.primary,
             }}
           >
             Version history

@@ -229,7 +229,7 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
                   sx={{
                     ...singleTheme.tableStyles.primary.body.row,
                     "&:hover": {
-                      backgroundColor: "#FBFBFB",
+                      backgroundColor: palette.background.alt,
                       cursor: "pointer",
                     },
                   }}

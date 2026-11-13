@@ -8,6 +8,7 @@ import {
   text,
   chart,
   radiusPx,
+  palette as vwPalette,
 } from "../../../themes/palette";
 
 interface MappingMatrixViewProps {
@@ -58,7 +59,7 @@ const MappingMatrixView: React.FC<MappingMatrixViewProps> = ({ mappings, onCellC
   const getTextColor = (count: number, max: number) => {
     if (max === 0) return text.tertiary;
     const intensity = count / max;
-    return intensity > 0.5 ? "#fff" : text.primary;
+    return intensity > 0.5 ? vwPalette.background.main : text.primary;
   };
 
   return (

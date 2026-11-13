@@ -307,7 +307,7 @@ const ApiKeys = ({ showLlmKeys = true }: ApiKeysProps) => {
               borderRadius: "12px",
               p: 6,
               textAlign: "center",
-              backgroundColor: "#fafbfc",
+              backgroundColor: vwPalette.background.alt,
             }}
           >
             <Box
@@ -355,7 +355,8 @@ const ApiKeys = ({ showLlmKeys = true }: ApiKeysProps) => {
                     border: `1.5px solid ${vwPalette.border.light}`,
                     borderRadius: radiusPx.sm,
                     p: 4,
-                    backgroundColor: hoveredTokenId === token.id ? "#f8fffe" : "background.main",
+                    backgroundColor:
+                      hoveredTokenId === token.id ? vwPalette.background.alt : "background.main",
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
@@ -554,12 +555,12 @@ const ApiKeys = ({ showLlmKeys = true }: ApiKeysProps) => {
           proceedButtonVariant="contained"
           TitleFontSize={0}
           confirmBtnSx={{
-            "backgroundColor": isCreateButtonDisabled ? "#ccc" : "brand.primary",
+            "backgroundColor": isCreateButtonDisabled ? vwPalette.border.dark : "brand.primary",
             "color": isCreateButtonDisabled ? "#666" : "background.main",
             "cursor": isCreateButtonDisabled ? "not-allowed" : "pointer",
             "opacity": isCreateButtonDisabled ? 0.6 : 1,
             "&:hover": {
-              backgroundColor: isCreateButtonDisabled ? "#ccc" : "#0e5c47",
+              backgroundColor: isCreateButtonDisabled ? vwPalette.border.dark : "#0e5c47",
             },
           }}
         />

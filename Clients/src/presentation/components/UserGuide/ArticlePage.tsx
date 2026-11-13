@@ -40,6 +40,7 @@ const iconMap: Record<IconName, LucideIcon> = {
 import type { TocItem } from "@user-guide-content/contentTypes";
 import { colors, typography, spacing, border } from "./styles/theme";
 import "./ArticlePage.css";
+import { palette } from "../../themes/palette";
 
 type Mode = "web" | "in-app";
 
@@ -241,10 +242,10 @@ const ArticlePage: React.FC<ArticlePageProps> = ({
             >
               <div
                 style={{
-                  backgroundColor: isInApp ? "#f0f2f5" : "transparent",
+                  backgroundColor: isInApp ? palette.background.hover : "transparent",
                   borderRadius: isInApp ? border.radius : 0,
                   padding: isInApp ? spacing.md : 0,
-                  border: isInApp ? "1px solid #e0e3e8" : "none",
+                  border: isInApp ? `1px solid ${palette.border.light}` : "none",
                 }}
               >
                 <span

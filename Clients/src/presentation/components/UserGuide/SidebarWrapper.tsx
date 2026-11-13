@@ -24,6 +24,7 @@ import { getGuideTargetForLocation } from "./guideRouteMap";
 import { useLocation } from "react-router";
 import { useOverlayAccessibility } from "../../../application/hooks/useOverlayAccessibility";
 import "./SidebarWrapper.css";
+import { palette } from "../../themes/palette";
 
 type Tab = "user-guide" | "advisor" | "help" | "whats-new";
 
@@ -568,7 +569,7 @@ const SidebarWrapper: React.FC<SidebarWrapperProps> = ({
                 top: mouseY - 10,
                 width: 3,
                 height: 20,
-                backgroundColor: "#555",
+                backgroundColor: palette.text.tertiary,
                 borderRadius: 1,
               }}
             />

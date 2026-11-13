@@ -123,7 +123,7 @@ const STATE_COLORS: Record<string, { bg: string; text: string }> = {
   debug: { bg: "#F3E5F5", text: "#6A1B9A" },
 };
 
-const UNKNOWN_STATE_COLORS = { bg: vwPalette.border.light, text: "#424242" };
+const UNKNOWN_STATE_COLORS = { bg: vwPalette.border.light, text: vwPalette.text.secondary };
 
 const StateBadge: React.FC<{ state: string }> = ({ state }) => {
   const colors = STATE_COLORS[state.toLowerCase()] ?? UNKNOWN_STATE_COLORS;

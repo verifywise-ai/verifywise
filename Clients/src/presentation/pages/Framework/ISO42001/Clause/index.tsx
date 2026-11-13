@@ -372,7 +372,7 @@ const ISO42001Clause = ({
                     flexDirection: "row",
                     alignItems: "center",
                     padding: "10px 16px",
-                    backgroundColor: "#fafbfc",
+                    backgroundColor: vwPalette.background.alt,
                     borderBottom: `1px solid ${vwPalette.border.light}`,
                   }}
                 >

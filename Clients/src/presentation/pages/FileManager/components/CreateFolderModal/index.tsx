@@ -202,7 +202,8 @@ export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
                   "borderRadius": radiusPx.sm,
                   "backgroundColor": c,
                   "cursor": "pointer",
-                  "border": color === c ? "2px solid #101828" : "2px solid transparent",
+                  "border":
+                    color === c ? `2px solid ${palette.text.primary}` : "2px solid transparent",
                   "transition": "border-color 0.15s ease",
                   "&:hover": {
                     opacity: 0.8,

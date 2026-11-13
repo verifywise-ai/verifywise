@@ -353,7 +353,7 @@ const Organizations = () => {
                         ...tableStyles.header.cell,
                         "cursor": "pointer",
                         "userSelect": "none",
-                        "&:hover": { color: "#1d2939" },
+                        "&:hover": { color: palette.text.primary },
                       }}
                       onClick={() => handleSort(field)}
                     >
@@ -401,7 +401,7 @@ const Organizations = () => {
                           "borderColor": "#fecaca",
                           "&:hover": {
                             backgroundColor: palette.riskMark.critical,
-                            color: "#fff",
+                            color: palette.background.main,
                             border: `1px solid ${palette.riskMark.critical}`,
                           },
                         }}

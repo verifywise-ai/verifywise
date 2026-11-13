@@ -350,7 +350,7 @@ export default function PromptsPage() {
                       </Typography>
                     </Box>
                   </TableCell>
-                  <TableCell style={{ ...body.cell, color: "#475467" }}>
+                  <TableCell style={{ ...body.cell, color: palette.text.tertiary }}>
                     {formatDate(p.updated_at)}
                   </TableCell>
                   <TableCell style={{ ...body.cell, width: 48, minWidth: 48 }}>

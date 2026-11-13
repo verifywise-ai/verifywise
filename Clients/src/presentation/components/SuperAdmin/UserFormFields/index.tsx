@@ -46,7 +46,7 @@ interface Props {
 function EmailAdornment({ status }: { status: EmailAvailabilityStatus }) {
   if (status === "checking") return <CircularProgress size={14} thickness={5} />;
   if (status === "available") return <Check size={16} color="#16a34a" />;
-  if (status === "existing") return <Info size={16} color="#475467" />;
+  if (status === "existing") return <Info size={16} color={palette.text.tertiary} />;
   return null;
 }
 

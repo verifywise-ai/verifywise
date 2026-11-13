@@ -393,7 +393,7 @@ const AITrustCenterSettings: React.FC = () => {
           {/* Company Logo Row */}
           <Box>
             <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Company logo</Typography>
-            <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+            <Typography sx={{ fontSize: 12, color: vwPalette.text.accent, whiteSpace: "nowrap" }}>
               This logo will be shown in the AI Trust Center page
             </Typography>
           </Box>
@@ -407,7 +407,7 @@ const AITrustCenterSettings: React.FC = () => {
                   "alignItems": "center",
                   "justifyContent": "center",
                   "borderRadius": 2,
-                  "border": "2px dashed #ddd",
+                  "border": `2px dashed ${vwPalette.border.light}`,
                   "backgroundColor": vwPalette.background.alt,
                   "position": "relative",
                   "overflow": "hidden",
@@ -472,7 +472,9 @@ const AITrustCenterSettings: React.FC = () => {
                         L
                       </Typography>
                     </Box>
-                    <Typography sx={{ fontSize: 10, color: "#888", textAlign: "center" }}>
+                    <Typography
+                      sx={{ fontSize: 10, color: vwPalette.text.accent, textAlign: "center" }}
+                    >
                       {logoLoadError ? "Failed to load logo" : "Logo"}
                     </Typography>
                   </Box>
@@ -545,7 +547,7 @@ const AITrustCenterSettings: React.FC = () => {
           {/* Header Color Row */}
           <Box>
             <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Header color</Typography>
-            <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+            <Typography sx={{ fontSize: 12, color: vwPalette.text.accent, whiteSpace: "nowrap" }}>
               Select or customize your top header color
             </Typography>
           </Box>
@@ -602,7 +604,7 @@ const AITrustCenterSettings: React.FC = () => {
           {/* Trust Center Title Row */}
           <Box>
             <Typography sx={{ fontSize: 13, fontWeight: 500 }}>Trust center title</Typography>
-            <Typography sx={{ fontSize: 12, color: "#888", whiteSpace: "nowrap" }}>
+            <Typography sx={{ fontSize: 12, color: vwPalette.text.accent, whiteSpace: "nowrap" }}>
               This title will be shown in the AI Trust Center page
             </Typography>
           </Box>
@@ -635,8 +637,8 @@ const AITrustCenterSettings: React.FC = () => {
         <CustomizableButton
           sx={{
             ...styles.saveButton,
-            backgroundColor: hasUnsavedChanges ? `${brand.primary}` : "#ccc",
-            border: `1px solid ${hasUnsavedChanges ? vwPalette.brand.primary : "#ccc"}`,
+            backgroundColor: hasUnsavedChanges ? `${brand.primary}` : vwPalette.border.dark,
+            border: `1px solid ${hasUnsavedChanges ? vwPalette.brand.primary : vwPalette.border.dark}`,
           }}
           icon={<SaveIcon size={16} />}
           variant="contained"

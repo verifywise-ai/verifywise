@@ -240,7 +240,7 @@ export function AiRiskSuggestions({ onRiskSaved }: AiRiskSuggestionsProps) {
           sx={{
             width: "100%",
             mt: 2,
-            background: "linear-gradient(135deg, #FEFFFE 0%, #F8F9FA 100%)",
+            background: `linear-gradient(135deg, ${palette.background.main} 0%, ${palette.background.alt} 100%)`,
             border: `1px solid ${palette.border.light}`,
             borderRadius: "8px",
             p: "14px 16px",

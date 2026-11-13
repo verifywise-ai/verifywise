@@ -14,7 +14,7 @@ import useFormattedDate from "../../../application/hooks/useFormattedDate";
 const statusColorMap: Record<string, string> = {
   completed: "#4caf50",
   running: "#ff9800",
-  pending: "#9e9e9e",
+  pending: palette.text.disabled,
   failed: "#f44336",
 };
 
@@ -167,8 +167,8 @@ export default function ModelEvaluationsTab() {
                 <td>
                   <Chip
                     label={e.status}
-                    backgroundColor={`${statusColorMap[e.status] || "#9e9e9e"}20`}
-                    textColor={statusColorMap[e.status] || "#9e9e9e"}
+                    backgroundColor={`${statusColorMap[e.status] || palette.text.disabled}20`}
+                    textColor={statusColorMap[e.status] || palette.text.disabled}
                     size="small"
                   />
                 </td>

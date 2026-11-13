@@ -22,13 +22,25 @@
   border: none;
 }
 
-.MuiTable-root .MuiTableHead-root .MuiTableCell-root,
 .MuiTable-root .MuiTableBody-root .MuiTableCell-root {
   font-size: 13px;
 }
+/* Header values come from themes/cssVars.ts so they follow the interface style. */
 .MuiTable-root .MuiTableHead-root .MuiTableCell-root {
-  padding: 12px 10px;
-  font-weight: 400;
+  font-size: var(--vw-table-head-size, 13px);
+  padding: var(--vw-table-head-padding, 12px 10px);
+  font-weight: var(--vw-table-head-weight, 400);
+  letter-spacing: var(--vw-table-head-tracking, normal);
+}
+/* Phase 1: many tables wrap header labels in a Typography with its own size;
+   let the label take the 11px header size and tracking from the cell. */
+:root[data-ui-style="phase1"]
+  .MuiTable-root
+  .MuiTableHead-root
+  .MuiTableCell-root
+  .MuiTypography-root {
+  font-size: inherit;
+  letter-spacing: inherit;
 }
 .MuiTable-root .MuiTableHead-root span {
   display: inline-block;

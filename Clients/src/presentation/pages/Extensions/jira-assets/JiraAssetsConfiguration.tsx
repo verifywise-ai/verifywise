@@ -844,7 +844,7 @@ export const JiraAssetsConfiguration: React.FC = () => {
             "fontSize": "13px",
             "fontWeight": 500,
             "&:hover": { borderColor: "#0F5A47", backgroundColor: "rgba(19, 113, 91, 0.04)" },
-            "&:disabled": { borderColor: palette.border.dark, color: "#98a2b3" },
+            "&:disabled": { borderColor: palette.border.dark, color: palette.text.disabled },
           }}
         >
           {connectionStatus === "testing" ? (

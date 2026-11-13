@@ -566,8 +566,8 @@ const AITrustCenterOverview: React.FC = () => {
         <CustomizableButton
           sx={{
             ...styles.saveButton,
-            backgroundColor: hasUnsavedChanges ? "brand.primary" : "#ccc",
-            border: `1px solid ${hasUnsavedChanges ? palette.brand.primary : "#ccc"}`,
+            backgroundColor: hasUnsavedChanges ? "brand.primary" : palette.border.dark,
+            border: `1px solid ${hasUnsavedChanges ? palette.brand.primary : palette.border.dark}`,
           }}
           icon={<SaveIcon size={16} />}
           variant="contained"

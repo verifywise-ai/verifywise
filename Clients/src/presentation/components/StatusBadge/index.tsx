@@ -8,6 +8,9 @@ import {
 } from "../../types/interfaces/i.chip";
 import { background, status, risk, radiusPx } from "../../themes/palette";
 import { fontSize, fontWeight } from "../../themes/typography";
+import { isClassicUi } from "../../themes/uiStyle";
+
+const classicUi = isClassicUi();
 
 /**
  * Color mappings for all chip variants
@@ -267,7 +270,7 @@ const StatusBadge: React.FC<IStatusBadgeProps> = ({
   label,
   variant,
   size = "small",
-  uppercase = true,
+  uppercase,
   backgroundColor,
   textColor,
   icon,
@@ -281,6 +284,51 @@ const StatusBadge: React.FC<IStatusBadgeProps> = ({
 
   // Create border color (very slightly darker than background)
   const borderColor = darkenColor(colors.backgroundColor, 6);
+
+  // Phase 1 pill (style guide §5): flat tint, fully round, 11px / 500,
+  // sentence case, a 6px dot in the text colour. Classic keeps the
+  // uppercase gradient chip.
+  if (!classicUi) {
+    return (
+      <Box
+        component="span"
+        sx={{
+          display: "inline-flex",
+          alignItems: "center",
+          gap: "5px",
+          height,
+          padding: "1px 8px",
+          borderRadius: radiusPx.pill,
+          backgroundColor: colors.backgroundColor,
+          color: colors.textColor,
+          fontSize: fontSize.caption,
+          fontWeight: fontWeight.medium,
+          textTransform: uppercase ? "uppercase" : "none",
+          whiteSpace: "nowrap",
+          lineHeight: 1,
+        }}
+      >
+        {icon ? (
+          <Box component="span" sx={{ display: "inline-flex", alignItems: "center" }}>
+            {icon}
+          </Box>
+        ) : (
+          <Box
+            component="span"
+            aria-hidden
+            sx={{
+              width: "6px",
+              height: "6px",
+              borderRadius: "50%",
+              backgroundColor: "currentColor",
+              flexShrink: 0,
+            }}
+          />
+        )}
+        {label}
+      </Box>
+    );
+  }
 
   return (
     <Box
@@ -298,7 +346,7 @@ const StatusBadge: React.FC<IStatusBadgeProps> = ({
         color: colors.textColor,
         fontSize: fontSize.caption,
         fontWeight: fontWeight.regular,
-        textTransform: uppercase ? "uppercase" : "none",
+        textTransform: (uppercase ?? true) ? "uppercase" : "none",
         whiteSpace: "nowrap",
         lineHeight: 1,
       }}

@@ -64,9 +64,11 @@ export function MathCaptcha({ value, onChange, error, refreshTrigger }: MathCapt
     <Box
       sx={{
         p: 2.5,
-        backgroundColor: "#f8fafc",
+        backgroundColor: vwPalette.background.alt,
         borderRadius: "8px",
-        border: error ? `1px solid ${vwPalette.riskMark.critical}` : "1px solid #e2e8f0",
+        border: error
+          ? `1px solid ${vwPalette.riskMark.critical}`
+          : `1px solid ${vwPalette.border.light}`,
       }}
     >
       <Box sx={{ display: "flex", alignItems: "center", justifyContent: "space-between", mb: 1.5 }}>
@@ -100,7 +102,7 @@ export function MathCaptcha({ value, onChange, error, refreshTrigger }: MathCapt
             px: 2,
             py: 1,
             borderRadius: "8px",
-            border: "1px solid #e2e8f0",
+            border: `1px solid ${vwPalette.border.light}`,
             minWidth: 120,
             textAlign: "center",
           }}

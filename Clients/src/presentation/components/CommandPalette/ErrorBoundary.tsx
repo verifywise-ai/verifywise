@@ -1,6 +1,6 @@
 import React, { Component, ReactNode } from "react";
 import { Box, Typography, Alert } from "@mui/material";
-import { background } from "../../themes/palette";
+import { background, palette as vwPalette } from "../../themes/palette";
 
 interface CommandPaletteErrorBoundaryProps {
   children: ReactNode;
@@ -84,7 +84,7 @@ class CommandPaletteErrorBoundary extends Component<
               width: "100%",
               maxWidth: "640px",
               overflow: "hidden",
-              border: "1px solid #e5e5e5",
+              border: `1px solid ${vwPalette.border.light}`,
               padding: "24px",
             }}
           >

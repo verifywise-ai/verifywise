@@ -138,14 +138,14 @@ const MarkdownRenderer = ({ content }: { content: string }) => {
           color: "#0f766e",
         },
         "& pre": {
-          "backgroundColor": "#1e293b",
+          "backgroundColor": palette.text.primary,
           "borderRadius": "6px",
           "p": "4px",
           "my": "3px",
           "overflow": "auto",
           "& code": {
             backgroundColor: "transparent",
-            color: "#e2e8f0",
+            color: palette.border.light,
             p: 0,
           },
         },

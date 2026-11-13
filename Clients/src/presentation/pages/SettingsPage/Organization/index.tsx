@@ -410,7 +410,7 @@ const Organization = () => {
                   "alignItems": "center",
                   "justifyContent": "center",
                   "borderRadius": "50%",
-                  "border": "2px dashed #ddd",
+                  "border": `2px dashed ${palette.border.light}`,
                   "backgroundColor": palette.background.alt,
                   "position": "relative",
                   "overflow": "hidden",
@@ -460,7 +460,9 @@ const Organization = () => {
                       gap: 1,
                     }}
                   >
-                    <Typography sx={{ fontSize: 10, color: "#888", textAlign: "center" }}>
+                    <Typography
+                      sx={{ fontSize: 10, color: palette.text.accent, textAlign: "center" }}
+                    >
                       {logoLoadError ? "Failed to load logo" : "Logo"}
                     </Typography>
                   </Box>
@@ -473,7 +475,7 @@ const Organization = () => {
                 sx={{
                   "fontSize": 12,
                   "textTransform": "none",
-                  "color": logoUrl ? "#666" : "#ccc",
+                  "color": logoUrl ? "#666" : palette.border.dark,
                   "&:hover": {
                     backgroundColor: logoUrl ? "rgba(102, 102, 102, 0.04)" : "transparent",
                   },

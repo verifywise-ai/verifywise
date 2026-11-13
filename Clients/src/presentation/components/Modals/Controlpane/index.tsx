@@ -123,7 +123,7 @@ const CustomModal: React.FC<ICustomModalProps> = ({
             {responseMessage}
           </Typography>
         )}
-        <Divider sx={{ borderColor: "#C2C2C2", mt: theme.spacing(3) }} />
+        <Divider sx={{ borderColor: vwPalette.border.dark, mt: theme.spacing(3) }} />
 
         <Box sx={{ width: "100%", bgcolor: vwPalette.background.main }}>
           <Tabs

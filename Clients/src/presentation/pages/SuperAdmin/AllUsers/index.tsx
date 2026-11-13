@@ -564,7 +564,7 @@ const AllUsers = () => {
                         ...tableStyles.header.cell,
                         "cursor": "pointer",
                         "userSelect": "none",
-                        "&:hover": { color: "#1d2939" },
+                        "&:hover": { color: palette.text.primary },
                       }}
                       onClick={() => handleSort(field)}
                     >
@@ -582,7 +582,10 @@ const AllUsers = () => {
             </TableHead>
             <TableBody>
               {filteredUsers.map((user) => {
-                const colors = ROLE_COLORS[user.role_name] || { bg: "#f3f4f6", text: "#6b7280" };
+                const colors = ROLE_COLORS[user.role_name] || {
+                  bg: palette.background.hover,
+                  text: palette.text.icon,
+                };
                 return (
                   <TableRow
                     key={`${user.id}-${user.organization_id}`}
@@ -596,14 +599,14 @@ const AllUsers = () => {
                             width: 28,
                             height: 28,
                             borderRadius: "50%",
-                            backgroundColor: "#f3f4f6",
+                            backgroundColor: palette.background.hover,
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
                             flexShrink: 0,
                             fontSize: 12,
                             fontWeight: 600,
-                            color: "#6b7280",
+                            color: palette.text.icon,
                           }}
                         >
                           {user.name?.[0]?.toUpperCase() || "?"}
@@ -655,7 +658,7 @@ const AllUsers = () => {
                           "borderColor": "#fecaca",
                           "&:hover": {
                             backgroundColor: palette.riskMark.critical,
-                            color: "#fff",
+                            color: palette.background.main,
                             border: `1px solid ${palette.riskMark.critical}`,
                           },
                         }}

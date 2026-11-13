@@ -62,7 +62,7 @@ export function DashboardHeaderCard({
         "transition": "all 0.2s ease",
         "&:hover": isClickable
           ? {
-              background: `linear-gradient(135deg, ${background.accent} 0%, #f1f5f9 100%)`,
+              background: `linear-gradient(135deg, ${background.accent} 0%, ${vwPalette.background.hover} 100%)`,
               borderColor: `${borderPalette.dark}`,
             }
           : {},

@@ -296,7 +296,9 @@ const RiskTable: React.FC<IRiskTableProps> = ({
                         projectTitles.trim() === "" ||
                         projectTitles === "null"
                       ) {
-                        return <span style={{ color: "#888", fontStyle: "normal" }}>-</span>;
+                        return (
+                          <span style={{ color: palette.text.accent, fontStyle: "normal" }}>-</span>
+                        );
                       }
 
                       const projects = projectTitles
@@ -306,7 +308,9 @@ const RiskTable: React.FC<IRiskTableProps> = ({
 
                       // If no valid projects after filtering, show dash
                       if (projects.length === 0) {
-                        return <span style={{ color: "#888", fontStyle: "normal" }}>-</span>;
+                        return (
+                          <span style={{ color: palette.text.accent, fontStyle: "normal" }}>-</span>
+                        );
                       }
 
                       const displayCount = 1;
@@ -350,7 +354,7 @@ const RiskTable: React.FC<IRiskTableProps> = ({
                             {showMore && (
                               <span
                                 style={{
-                                  color: "#888",
+                                  color: palette.text.accent,
                                   marginLeft: 4,
                                   fontWeight: 500,
                                 }}

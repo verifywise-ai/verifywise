@@ -83,7 +83,7 @@ const columnStyle = {
 };
 
 const projectRiskSection = {
-  color: "#1A1919",
+  color: palette.text.primary,
   fontWeight: 600,
   mb: "10px",
   fontSize: 16,
@@ -107,7 +107,7 @@ const groupStatsCardFrame = {
 };
 
 const groupStatsCardRate = {
-  color: "#2D3748",
+  color: palette.text.secondary,
   fontSize: 26,
 };
 

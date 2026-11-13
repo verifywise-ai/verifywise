@@ -41,7 +41,7 @@ export const createProjectFormStyles = {
         borderColor: "none",
       },
       "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-        borderColor: "#888",
+        borderColor: vwPalette.text.accent,
         borderWidth: "1px",
       },
     },

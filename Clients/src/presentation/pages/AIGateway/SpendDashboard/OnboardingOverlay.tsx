@@ -67,7 +67,7 @@ interface OnboardingOverlayProps {
 
 function ArchDiagram() {
   const cardBase = {
-    background: "linear-gradient(180deg, #ffffff 0%, #fafbfc 100%)",
+    background: `linear-gradient(180deg, ${vwPalette.background.main} 0%, ${vwPalette.background.alt} 100%)`,
     border: `0.5px solid #c0c5cc`,
     borderRadius: radiusPx.sm,
     p: "14px 18px",
@@ -217,7 +217,7 @@ function ArchDiagram() {
           flex: 1,
           maxWidth: 320,
           borderColor: `${palette.brand.primary}28`,
-          background: "linear-gradient(180deg, #ffffff 0%, #f7fdfb 100%)",
+          background: `linear-gradient(180deg, ${vwPalette.background.main} 0%, ${vwPalette.background.alt} 100%)`,
         }}
       >
         <Typography

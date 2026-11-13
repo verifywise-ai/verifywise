@@ -214,7 +214,7 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({ entity, onClose, onNaviga
             sx={{
               fontSize: 16,
               fontWeight: 600,
-              color: "#101828",
+              color: vwPalette.text.primary,
               wordBreak: "break-word",
               whiteSpace: "normal",
               overflow: "visible",

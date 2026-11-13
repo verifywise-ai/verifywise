@@ -19,7 +19,7 @@ export const Card = styled(Box)(({ theme }) => ({
 }));
 
 export const Title = styled(Typography)(({ theme }) => ({
-  color: "#2D3748",
+  color: palette.text.secondary,
   fontWeight: 600,
   marginBottom: "10px",
   fontSize: theme.typography.fontSize,

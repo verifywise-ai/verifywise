@@ -38,7 +38,7 @@ import { WelcomeVideoPlayer } from "../../components/FeatureVideos/WelcomeVideo"
 import { VideoPlayerModal } from "../../components/FeatureVideos/player/VideoPlayerModal";
 import { buildExploreConfig } from "../../components/FeatureVideos/shared/buildExploreConfig";
 import { EXPLORE_VIDEO_DATA } from "../../components/FeatureVideos/exploreVideos";
-import { background, border, brand, radiusPx } from "../../themes/palette";
+import { background, border, brand, radiusPx, palette as vwPalette } from "../../themes/palette";
 
 // ── Keyframe animations ──
 const fadeInUp = keyframes`
@@ -1214,7 +1214,7 @@ const StartHere = () => {
                     "textDecoration": "none",
                     "color": "inherit",
                     "&:hover": {
-                      "background": "#F9F9F9",
+                      "background": vwPalette.background.alt,
                       "& .resource-icon svg": {
                         stroke: brand.primary,
                       },
@@ -1272,7 +1272,7 @@ const StartHere = () => {
                   "cursor": "pointer",
                   "transition": "all 0.2s ease",
                   "&:hover": {
-                    "background": "#F9F9F9",
+                    "background": vwPalette.background.alt,
                     "& .whatsnew-icon svg": {
                       stroke: brand.primary,
                     },

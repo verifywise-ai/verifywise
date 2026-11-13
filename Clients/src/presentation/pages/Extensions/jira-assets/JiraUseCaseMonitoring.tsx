@@ -24,20 +24,20 @@ export const JiraUseCaseMonitoring: React.FC<JiraUseCaseMonitoringProps> = () =>
             width: 80,
             height: 80,
             borderRadius: "50%",
-            backgroundColor: "#f3f4f6",
+            backgroundColor: palette.background.hover,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
           }}
         >
-          <ClipboardCheck size={40} color="#9ca3af" />
+          <ClipboardCheck size={40} color={palette.text.disabled} />
         </Box>
 
         <Box sx={{ textAlign: "center" }}>
           <Typography sx={{ fontSize: 18, fontWeight: 600, color: palette.text.secondary, mb: 1 }}>
             Post-Market Monitoring
           </Typography>
-          <Typography sx={{ fontSize: 14, color: "#6b7280", maxWidth: 450 }}>
+          <Typography sx={{ fontSize: 14, color: palette.text.icon, maxWidth: 450 }}>
             Post-market monitoring is managed through your JIRA workflow. This use case was imported
             from JIRA Assets and monitoring data should be tracked in your JIRA instance.
           </Typography>

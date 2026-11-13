@@ -31,13 +31,13 @@ const colors = {
   },
   text: {
     primary: palette.text.secondary,
-    secondary: "#475467",
-    tertiary: "#667085",
+    secondary: palette.text.tertiary,
+    tertiary: palette.text.icon,
   },
   background: {
-    main: "#FFFFFF",
+    main: palette.background.main,
     fill: palette.background.alt,
-    accent: "#F3F4F6",
+    accent: palette.background.hover,
   },
   error: {
     main: "#D92D20",
@@ -439,7 +439,7 @@ export const VWButton: React.FC<VWButtonProps> = ({
   const variantStyles = {
     primary: {
       "backgroundColor": colors.primary,
-      "color": "#fff",
+      "color": palette.background.main,
       "&:hover:not(:disabled)": {
         backgroundColor: "#0F5C4A",
       },

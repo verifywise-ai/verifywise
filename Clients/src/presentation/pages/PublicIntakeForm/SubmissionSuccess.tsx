@@ -73,11 +73,11 @@ export function SubmissionSuccess() {
         >
           <Typography
             component="h1"
-            sx={{ fontSize: "22px", fontWeight: 700, color: "#1e293b", mb: 1 }}
+            sx={{ fontSize: "22px", fontWeight: 700, color: palette.text.primary, mb: 1 }}
           >
             Submission received
           </Typography>
-          <Typography sx={{ fontSize: "14px", color: "#94a3b8", mb: 0 }}>
+          <Typography sx={{ fontSize: "14px", color: palette.text.disabled, mb: 0 }}>
             {state.formName}
           </Typography>
         </Box>
@@ -114,7 +114,7 @@ export function SubmissionSuccess() {
               left: 12,
               right: 12,
               top: "50%",
-              borderTop: "2px dashed #e2e8f0",
+              borderTop: `2px dashed ${palette.border.light}`,
             }}
           />
         </Box>
@@ -135,7 +135,7 @@ export function SubmissionSuccess() {
               {
                 label: "Reference",
                 value: `${state.submissionId}`,
-                icon: <Hash size={13} color="#94a3b8" />,
+                icon: <Hash size={13} color={palette.text.disabled} />,
               },
               ...(state.submitterEmail ? [{ label: "Email", value: state.submitterEmail }] : []),
               {
@@ -153,17 +153,20 @@ export function SubmissionSuccess() {
                   justifyContent: "space-between",
                   alignItems: "center",
                   py: "10px",
-                  borderBottom: i < rows.length - 1 ? "1px solid #f1f5f9" : "none",
+                  borderBottom:
+                    i < rows.length - 1 ? `1px solid ${palette.background.hover}` : "none",
                 }}
               >
-                <Typography sx={{ fontSize: "13px", color: "#94a3b8" }}>{row.label}</Typography>
+                <Typography sx={{ fontSize: "13px", color: palette.text.disabled }}>
+                  {row.label}
+                </Typography>
                 <Box sx={{ display: "flex", alignItems: "center", gap: "4px" }}>
                   {(row as any).icon}
                   <Typography
                     sx={{
                       fontSize: "13px",
                       fontWeight: 600,
-                      color: (row as any).color || "#1e293b",
+                      color: (row as any).color || palette.text.primary,
                       maxWidth: 220,
                       textAlign: "right",
                       wordBreak: "break-all",
@@ -199,7 +202,9 @@ export function SubmissionSuccess() {
           )}
         </Box>
 
-        <Typography sx={{ textAlign: "center", color: "#cbd5e1", fontSize: "12px", mt: 4 }}>
+        <Typography
+          sx={{ textAlign: "center", color: palette.border.dark, fontSize: "12px", mt: 4 }}
+        >
           Powered by VerifyWise
         </Typography>
       </Box>

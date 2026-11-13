@@ -209,7 +209,10 @@ const GroupBy: React.FC<GroupByProps> = ({ options, onGroupChange }) => {
           "height": "34px",
           "minWidth": selectedGroup ? "110px" : "80px",
           "backgroundColor": open ? palette.status.success.bg : "transparent",
-          "&:hover": { borderColor: "#98a2b3", backgroundColor: palette.status.success.bg },
+          "&:hover": {
+            borderColor: palette.text.disabled,
+            backgroundColor: palette.status.success.bg,
+          },
         }}
       >
         <Layers size={16} color={palette.brand.primary} style={{ marginRight: "6px" }} />
@@ -241,7 +244,7 @@ const GroupBy: React.FC<GroupByProps> = ({ options, onGroupChange }) => {
               sx={{
                 fontSize: "12px",
                 fontWeight: 600,
-                color: "#667085",
+                color: palette.text.icon,
               }}
             >
               Group by
@@ -255,7 +258,7 @@ const GroupBy: React.FC<GroupByProps> = ({ options, onGroupChange }) => {
                 "&:hover": { opacity: 0.7 },
               }}
             >
-              <X size={16} color="#6b7280" />
+              <X size={16} color={palette.text.icon} />
             </Box>
           </Stack>
 
@@ -812,7 +815,7 @@ export default function MLFlowTab() {
                         size="small"
                         sx={{
                           backgroundColor: "#E0EAFF",
-                          color: "#0F172A",
+                          color: palette.text.primary,
                           borderRadius: radiusPx.sm,
                         }}
                       />

@@ -232,8 +232,8 @@ const Users = () => {
             <TableBody>
               {filteredUsers.map((user) => {
                 const colors = ROLE_COLORS[user.role_name] || {
-                  bg: "#f3f4f6",
-                  text: "#6b7280",
+                  bg: palette.background.hover,
+                  text: palette.text.icon,
                 };
                 return (
                   <TableRow key={user.id} sx={tableStyles.body.row}>
@@ -244,14 +244,14 @@ const Users = () => {
                             width: 28,
                             height: 28,
                             borderRadius: "50%",
-                            backgroundColor: "#f3f4f6",
+                            backgroundColor: palette.background.hover,
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
                             flexShrink: 0,
                             fontSize: 12,
                             fontWeight: 600,
-                            color: "#6b7280",
+                            color: palette.text.icon,
                           }}
                         >
                           {user.name?.[0]?.toUpperCase() || "?"}
@@ -299,7 +299,7 @@ const Users = () => {
                           "borderColor": "#fecaca",
                           "&:hover": {
                             backgroundColor: palette.riskMark.critical,
-                            color: "#fff",
+                            color: palette.background.main,
                             border: `1px solid ${palette.riskMark.critical}`,
                           },
                         }}
@@ -351,7 +351,10 @@ const Users = () => {
                 ) : (
                   invitations.map((inv) => {
                     const roleName = inv.role_name || "—";
-                    const colors = ROLE_COLORS[roleName] || { bg: "#f3f4f6", text: "#6b7280" };
+                    const colors = ROLE_COLORS[roleName] || {
+                      bg: palette.background.hover,
+                      text: palette.text.icon,
+                    };
                     return (
                       <TableRow key={inv.id} sx={tableStyles.body.row}>
                         <TableCell sx={tableStyles.body.cell}>

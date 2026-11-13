@@ -50,7 +50,7 @@ export const NODE_TYPE_COLORS: Record<DependencyNodeType, string> = {
   secret: palette.riskMark.critical, // Red
   rag: palette.status.success.strong, // Emerald
   agent: "#6366f1", // Indigo
-  repository: "#64748b", // Slate
+  repository: palette.text.icon, // Slate
 };
 
 // Node type labels
@@ -85,5 +85,5 @@ export const RISK_LEVEL_COLORS: Record<RiskLevel, string> = {
 export const CONFIDENCE_COLORS: Record<ConfidenceLevel, string> = {
   high: palette.status.success.strong,
   medium: palette.riskMark.medium,
-  low: "#94a3b8",
+  low: palette.text.disabled,
 };

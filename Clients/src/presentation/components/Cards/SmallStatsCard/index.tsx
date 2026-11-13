@@ -20,7 +20,7 @@ export function SmallStatsCard({
         <Typography sx={{ fontSize: 13, color: palette.text.accent }}>
           {attributeTitle} completion rate
         </Typography>
-        <Typography sx={{ fontSize: 16, color: "#2D3748", fontWeight: 700 }}>
+        <Typography sx={{ fontSize: 16, color: palette.text.secondary, fontWeight: 700 }}>
           {Math.floor(rate * 100)}%
         </Typography>
       </Stack>

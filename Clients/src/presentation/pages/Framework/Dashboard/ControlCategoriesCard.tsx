@@ -34,7 +34,14 @@ import {
   type SubClauseData,
   type ClauseData,
 } from "../../../../application/utils/frameworkDataUtils";
-import { background, border as borderPalette, icon, text, radiusPx } from "../../../themes/palette";
+import {
+  background,
+  border as borderPalette,
+  icon,
+  text,
+  radiusPx,
+  palette as vwPalette,
+} from "../../../themes/palette";
 import { textStyles } from "../../../themes/typography";
 
 interface ControlCategoriesCardProps {
@@ -336,7 +343,7 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
                 {/* Header Section */}
                 <Box
                   sx={{
-                    backgroundColor: "#F1F3F4",
+                    backgroundColor: vwPalette.background.hover,
                     p: "10px 16px",
                     borderBottom: `1px solid ${borderPalette.dark}`,
                     display: "flex",

@@ -99,7 +99,7 @@ const SectionNav: FC<SectionNavProps> = ({
               "cursor": isDisabled ? "not-allowed" : "pointer",
               "background":
                 isActive && !isDisabled
-                  ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
+                  ? `linear-gradient(135deg, ${vwPalette.background.hover} 0%, ${vwPalette.background.hover} 100%)`
                   : "transparent",
               "border":
                 isActive && !isDisabled
@@ -109,7 +109,7 @@ const SectionNav: FC<SectionNavProps> = ({
                 background: isDisabled
                   ? "transparent"
                   : isActive
-                    ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
+                    ? `linear-gradient(135deg, ${vwPalette.background.hover} 0%, ${vwPalette.background.hover} 100%)`
                     : vwPalette.background.alt,
                 border: isDisabled
                   ? "1px solid transparent"

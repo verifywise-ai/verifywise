@@ -1002,12 +1002,15 @@ export default function PromptEditorPage() {
                   disabled={isSending || !selectedEndpoint}
                   sx={{
                     "bgcolor": vwPalette.brand.primary,
-                    "color": "#fff",
+                    "color": vwPalette.background.main,
                     "width": 34,
                     "height": 34,
                     "alignSelf": "flex-end",
                     "&:hover": { bgcolor: "#0F5A47" },
-                    "&:disabled": { bgcolor: "#E4E7EC", color: "#98A2B3" },
+                    "&:disabled": {
+                      bgcolor: vwPalette.border.light,
+                      color: vwPalette.text.disabled,
+                    },
                   }}
                 >
                   <Send size={14} strokeWidth={1.5} />
@@ -1217,7 +1220,8 @@ export default function PromptEditorPage() {
                       v.version === currentVersion
                         ? `1px solid ${vwPalette.brand.primary}`
                         : `1px solid ${palette.border.light}`,
-                    "bgcolor": v.version === currentVersion ? "#F6FEF9" : "background.paper",
+                    "bgcolor":
+                      v.version === currentVersion ? vwPalette.background.alt : "background.paper",
                     "&:hover": {
                       bgcolor:
                         v.version === currentVersion ? vwPalette.status.success.bg : "action.hover",

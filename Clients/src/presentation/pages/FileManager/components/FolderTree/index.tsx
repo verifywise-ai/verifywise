@@ -120,7 +120,7 @@ const FolderItem: React.FC<FolderItemProps> = ({
           "borderRadius": radiusPx.sm,
           "backgroundColor": isSelected ? vwPalette.background.fill : "transparent",
           "&:hover": {
-            backgroundColor: isSelected ? vwPalette.background.fill : "#F0F2F5",
+            backgroundColor: isSelected ? vwPalette.background.fill : vwPalette.background.hover,
           },
           "transition": "background-color 0.15s ease",
         }}
@@ -291,7 +291,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
         width: collapsed ? "48px" : "240px",
         minWidth: collapsed ? "48px" : "200px",
         borderRight: `1px solid ${vwPalette.border.light}`,
-        backgroundColor: "#FAFBFC",
+        backgroundColor: vwPalette.background.alt,
         alignSelf: "stretch",
         overflow: "hidden",
         transition: "width 300ms ease, min-width 300ms ease",
@@ -413,7 +413,9 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
                     selectedFolder === "all" ? vwPalette.background.fill : "transparent",
                   "&:hover": {
                     backgroundColor:
-                      selectedFolder === "all" ? vwPalette.background.fill : "#F0F2F5",
+                      selectedFolder === "all"
+                        ? vwPalette.background.fill
+                        : vwPalette.background.hover,
                   },
                   "marginBottom": "4px",
                 }}
@@ -450,7 +452,9 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
                         : "transparent",
                     "&:hover": {
                       backgroundColor:
-                        selectedFolder === "uncategorized" ? vwPalette.background.fill : "#F0F2F5",
+                        selectedFolder === "uncategorized"
+                          ? vwPalette.background.fill
+                          : vwPalette.background.hover,
                     },
                     "marginBottom": showExpired ? "4px" : "8px",
                   }}
@@ -487,7 +491,9 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
                       selectedFolder === "expired" ? vwPalette.background.fill : "transparent",
                     "&:hover": {
                       backgroundColor:
-                        selectedFolder === "expired" ? vwPalette.background.fill : "#F0F2F5",
+                        selectedFolder === "expired"
+                          ? vwPalette.background.fill
+                          : vwPalette.background.hover,
                     },
                     "marginBottom": "8px",
                   }}

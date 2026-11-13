@@ -136,7 +136,10 @@ const ConfirmationToolUI: FC<{ result?: unknown }> = ({ result }) => {
           }}
         >
           {Object.entries(data.params_summary).map(([key, value]) => (
-            <Typography key={key} sx={{ fontSize: 11, color: "#475467", fontFamily: "monospace" }}>
+            <Typography
+              key={key}
+              sx={{ fontSize: 11, color: vwPalette.text.tertiary, fontFamily: "monospace" }}
+            >
               <Box component="span" sx={{ fontWeight: 600 }}>
                 {key}:
               </Box>{" "}
@@ -190,7 +193,7 @@ const ConfirmationToolUI: FC<{ result?: unknown }> = ({ result }) => {
               "fontSize": 12,
               "fontWeight": 500,
               "borderColor": vwPalette.border.dark,
-              "color": "#475467",
+              "color": vwPalette.text.tertiary,
               "borderRadius": radiusPx.sm,
               "&:hover": { backgroundColor: vwPalette.background.alt },
             }}
@@ -211,8 +214,10 @@ const ConfirmationToolUI: FC<{ result?: unknown }> = ({ result }) => {
       )}
       {resolution === "rejected" && (
         <Stack direction="row" alignItems="center" spacing={0.5} mt={1}>
-          <X size={14} style={{ color: "#475467" }} />
-          <Typography sx={{ fontSize: 12, fontWeight: 500, color: "#475467" }}>Rejected</Typography>
+          <X size={14} style={{ color: vwPalette.text.tertiary }} />
+          <Typography sx={{ fontSize: 12, fontWeight: 500, color: vwPalette.text.tertiary }}>
+            Rejected
+          </Typography>
         </Stack>
       )}
       {resolution === "error" && errorMsg && (

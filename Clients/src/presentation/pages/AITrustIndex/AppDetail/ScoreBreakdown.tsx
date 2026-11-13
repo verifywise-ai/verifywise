@@ -23,7 +23,7 @@ function dot(award: string, subFlag?: string): { color: string; label: string } 
   if (award === "full") return { color: palette.brand.primary, label: AWARD_LABELS.full };
   if (award === "half") return { color: "#C8941E", label: AWARD_LABELS.half };
   if (subFlag === "ADVERSE") return { color: "#B23B3B", label: SUBFLAG_LABELS.ADVERSE };
-  if (subFlag === "NA") return { color: "#98A2B3", label: SUBFLAG_LABELS.NA };
+  if (subFlag === "NA") return { color: palette.text.disabled, label: SUBFLAG_LABELS.NA };
   return { color: palette.border.dark, label: SUBFLAG_LABELS.SILENT };
 }
 
@@ -148,7 +148,7 @@ export function ScoreBreakdown({
             ["#C8941E", "Partial"],
             [palette.border.dark, "Silent"],
             ["#B23B3B", "Adverse"],
-            ["#98A2B3", "Not applicable"],
+            [palette.text.disabled, "Not applicable"],
           ] as [string, string][]
         ).map(([c, l]) => (
           <Stack key={l} direction="row" alignItems="center" gap="6px">

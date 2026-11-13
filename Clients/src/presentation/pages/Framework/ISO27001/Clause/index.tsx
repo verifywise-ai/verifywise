@@ -368,7 +368,7 @@ const ISO27001Clause = ({
                     flexDirection: "row",
                     alignItems: "center",
                     padding: "10px 16px",
-                    backgroundColor: "#fafbfc",
+                    backgroundColor: palette.background.alt,
                     borderBottom: `1px solid ${palette.border.light}`,
                   }}
                 >

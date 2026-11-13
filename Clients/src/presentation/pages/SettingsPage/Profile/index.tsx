@@ -601,7 +601,7 @@ const ProfileForm: React.FC = () => {
           </Stack>
         )}
 
-        <Divider sx={{ borderColor: "#C2C2C2", mt: theme.spacing(3) }} />
+        <Divider sx={{ borderColor: palette.border.dark, mt: theme.spacing(3) }} />
 
         {loading && (
           <CustomizableSkeleton
@@ -642,7 +642,7 @@ const ProfileForm: React.FC = () => {
                     mb: theme.spacing(4),
                     backgroundColor: "#DB504A",
                     color: "background.main",
-                    border: `1px solid ${isAdmin ? "#C2C2C2" : "#DB504A"}`,
+                    border: `1px solid ${isAdmin ? palette.border.dark : "#DB504A"}`,
                     gap: 2,
                   }}
                   icon={<DeleteIcon size={16} />}
@@ -685,7 +685,7 @@ const ProfileForm: React.FC = () => {
               "alignItems": "center",
               "justifyContent": "center",
               "borderRadius": "50%",
-              "border": "2px dashed #ddd",
+              "border": `2px dashed ${palette.border.light}`,
               "backgroundColor": palette.background.alt,
               "position": "relative",
               "overflow": "hidden",
@@ -727,7 +727,7 @@ const ProfileForm: React.FC = () => {
             sx={{
               "fontSize": 12,
               "textTransform": "none",
-              "color": imageUrl ? "#666" : "#ccc",
+              "color": imageUrl ? "#666" : palette.border.dark,
               "&:hover": {
                 backgroundColor: imageUrl ? "rgba(102, 102, 102, 0.04)" : "transparent",
               },

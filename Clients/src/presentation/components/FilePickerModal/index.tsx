@@ -25,6 +25,7 @@ import {
 import { FileData } from "../../../domain/types/File";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { FileExpiryChip } from "../FileExpiryChip";
+import { palette } from "../../themes/palette";
 
 interface FilePickerModalProps {
   open: boolean;
@@ -42,7 +43,7 @@ const getFileIcon = (filename: string) => {
     return <ImageIcon size={20} color="#1E88E5" />;
   if (["doc", "docx", "txt", "rtf"].includes(ext)) return <FileIcon size={20} color="#00ACC1" />;
   if (["xls", "xlsx", "csv"].includes(ext)) return <FileIcon size={20} color="#43A047" />;
-  return <DefaultFileIcon size={20} color="#757575" />;
+  return <DefaultFileIcon size={20} color={palette.text.icon} />;
 };
 
 const formatFileSize = (bytes?: number): string => {

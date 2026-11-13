@@ -1,5 +1,11 @@
 import { SxProps, Theme } from "@mui/material";
-import { text, background, border as borderPalette, radiusPx } from "../../../themes/palette";
+import {
+  text,
+  background,
+  border as borderPalette,
+  radiusPx,
+  palette as vwPalette,
+} from "../../../themes/palette";
 
 /**
  * Shared styles for Framework Dashboard cards
@@ -21,7 +27,7 @@ export const frameworkDashboardCardStyles = {
    * Card header section style
    */
   cardHeader: {
-    backgroundColor: "#F1F3F4",
+    backgroundColor: vwPalette.background.hover,
     p: "10px 16px",
     borderBottom: `1px solid ${borderPalette.dark}`,
   } as SxProps<Theme>,
@@ -41,7 +47,7 @@ export const frameworkDashboardCardStyles = {
    * Card content section with gradient background
    */
   cardContentWithGradient: {
-    background: "linear-gradient(135deg, #FEFFFE 0%, #F8F9FA 100%)",
+    background: `linear-gradient(135deg, ${vwPalette.background.main} 0%, ${vwPalette.background.alt} 100%)`,
     p: "16px",
   } as SxProps<Theme>,
 
@@ -58,7 +64,7 @@ export const frameworkDashboardCardStyles = {
    * Category box header
    */
   categoryBoxHeader: {
-    backgroundColor: "#F1F3F4",
+    backgroundColor: vwPalette.background.hover,
     p: "10px 16px",
     borderBottom: `1px solid ${borderPalette.dark}`,
   } as SxProps<Theme>,

@@ -33,7 +33,7 @@ interface ChartCardProps {
 export const ChartCard: React.FC<ChartCardProps> = ({ title, tooltip, children, flex = 1, sx }) => (
   <Box
     sx={{
-      background: `linear-gradient(180deg, ${palette.background.main} 0%, #F8FAFB 100%)`,
+      background: `linear-gradient(180deg, ${palette.background.main} 0%, ${vwPalette.background.alt} 100%)`,
       border: `1.5px solid ${palette.border.light}`,
       borderRadius: radiusPx.sm,
       p: "16px",

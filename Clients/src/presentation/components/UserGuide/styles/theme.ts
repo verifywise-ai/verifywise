@@ -118,7 +118,7 @@ export const chipStyles = {
   },
   // File/code chips (light gray)
   code: {
-    backgroundColor: "#f1f3f4",
+    backgroundColor: vwPalette.background.hover,
     color: "#5f6368",
     padding: "2px 8px",
     borderRadius: radiusPx.sm,

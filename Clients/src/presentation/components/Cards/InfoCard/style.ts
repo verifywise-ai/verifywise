@@ -20,5 +20,5 @@ export const infoCardTitleStyle = {
 export const infoCardbodyStyle = {
   fontSize: 16,
   fontWeight: 600,
-  color: "#2D3748",
+  color: vwPalette.text.secondary,
 };

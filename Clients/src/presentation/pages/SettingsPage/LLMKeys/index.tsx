@@ -457,7 +457,7 @@ const LLMKeys = () => {
               borderRadius: "12px",
               p: 6,
               textAlign: "center",
-              backgroundColor: "#fafbfc",
+              backgroundColor: vwPalette.background.alt,
             }}
           >
             <Box
@@ -504,7 +504,8 @@ const LLMKeys = () => {
                     border: `1.5px solid ${borderPalette.light}`,
                     borderRadius: radiusPx.sm,
                     p: 4,
-                    backgroundColor: hoveredKeyId === key.id ? "#f8fffe" : `${background.main}`,
+                    backgroundColor:
+                      hoveredKeyId === key.id ? vwPalette.background.alt : `${background.main}`,
                     display: "flex",
                     justifyContent: "space-between",
                     alignItems: "center",
@@ -680,7 +681,7 @@ const LLMKeys = () => {
                     "transition": "all 0.15s ease",
                     "&:hover": {
                       borderColor: `${brand.primary}`,
-                      backgroundColor: "#f8fffe",
+                      backgroundColor: vwPalette.background.alt,
                     },
                   }}
                 >

@@ -1,4 +1,4 @@
-import { border as borderPalette, radiusPx } from "../../../themes/palette";
+import { border as borderPalette, radiusPx, palette as vwPalette } from "../../../themes/palette";
 export const GroupStatsCardFrame = {
   display: "flex",
   flexDirection: "row",
@@ -16,6 +16,6 @@ export const GroupStatsCardFrame = {
 };
 
 export const GroupStatsCardRate = {
-  color: "#2D3748",
+  color: vwPalette.text.secondary,
   fontSize: 26,
 };

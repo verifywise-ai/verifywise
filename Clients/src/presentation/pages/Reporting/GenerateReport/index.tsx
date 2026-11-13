@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Box, Popover, Typography } from "@mui/material";
 import { ChevronDown, FileText, Building2 } from "lucide-react";
 import { CustomizableButton } from "../../../components/button/customizable-button";
-import { brand, background, radiusPx } from "../../../themes/palette";
+import { brand, background, radiusPx, palette as vwPalette } from "../../../themes/palette";
 import GenerateReportPopup from "../../../components/Reporting/GenerateReport";
 import ReportStatus from "./ReportStatus";
 import { styles } from "./styles";
@@ -76,7 +76,9 @@ const GenerateReport: React.FC<GenerateReportProps> = ({ onReportGenerated }) =>
             sx={{
               ...styles.buttonStyle,
               width: "fit-content",
-              border: isDisabled ? "1px solid #dddddd" : `1px solid ${brand.primary}`,
+              border: isDisabled
+                ? `1px solid ${vwPalette.border.light}`
+                : `1px solid ${brand.primary}`,
             }}
           >
             Generate report

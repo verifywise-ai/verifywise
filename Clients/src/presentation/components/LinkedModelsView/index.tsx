@@ -41,11 +41,11 @@ function StatusBadge({ status }: { status: ModelInventoryStatus }) {
       bg: palette.status.error.border,
       color: palette.status.error.text,
     },
-    [ModelInventoryStatus.REJECTED]: { bg: "#F5F5F5", color: "#616161" },
-    [ModelInventoryStatus.RETIRED]: { bg: "#ECEFF1", color: "#546E7A" },
+    [ModelInventoryStatus.REJECTED]: { bg: palette.background.hover, color: palette.text.tertiary },
+    [ModelInventoryStatus.RETIRED]: { bg: palette.background.hover, color: "#546E7A" },
   };
 
-  const style = statusStyles[status] || { bg: palette.border.light, color: "#424242" };
+  const style = statusStyles[status] || { bg: palette.border.light, color: palette.text.secondary };
 
   return (
     <span

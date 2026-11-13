@@ -89,7 +89,7 @@ const MarkdownRenderer = ({ content }: { content: string }) => {
         "& ul, & ol": { pl: 2.5, mb: 1 },
         "& li": { mb: 0.5 },
         "& code": {
-          backgroundColor: "#f1f5f9",
+          backgroundColor: palette.background.hover,
           px: 0.75,
           py: 0.25,
           borderRadius: radiusPx.sm,
@@ -98,14 +98,14 @@ const MarkdownRenderer = ({ content }: { content: string }) => {
           color: "#0f766e",
         },
         "& pre": {
-          "backgroundColor": "#1e293b",
+          "backgroundColor": palette.text.primary,
           "borderRadius": "6px",
           "p": 2,
           "my": 1.5,
           "overflow": "auto",
           "& code": {
             backgroundColor: "transparent",
-            color: "#e2e8f0",
+            color: palette.border.light,
             p: 0,
           },
         },

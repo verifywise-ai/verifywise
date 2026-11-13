@@ -586,11 +586,11 @@ export function PublicIntakeForm() {
         >
           <Typography
             component="h1"
-            sx={{ fontWeight: 600, color: "#1e293b", fontSize: "18px", mb: 2 }}
+            sx={{ fontWeight: 600, color: vwPalette.text.primary, fontSize: "18px", mb: 2 }}
           >
             Form unavailable
           </Typography>
-          <Typography sx={{ color: "#64748b", fontSize: "14px" }}>{error}</Typography>
+          <Typography sx={{ color: vwPalette.text.icon, fontSize: "14px" }}>{error}</Typography>
         </Box>
       </Box>
     );
@@ -694,11 +694,16 @@ export function PublicIntakeForm() {
               <Box sx={{ p: "32px" }}>
                 <Typography
                   component="h2"
-                  sx={{ fontWeight: 600, color: "#1e293b", mb: "8px", fontSize: "16px" }}
+                  sx={{
+                    fontWeight: 600,
+                    color: vwPalette.text.primary,
+                    mb: "8px",
+                    fontSize: "16px",
+                  }}
                 >
                   Risk classification
                 </Typography>
-                <Typography sx={{ fontSize: "13px", color: "#475569", mb: "24px" }}>
+                <Typography sx={{ fontSize: "13px", color: vwPalette.text.tertiary, mb: "24px" }}>
                   Answer these questions about the AI system first. They follow the EU AI Act.
                 </Typography>
                 {error && (
@@ -838,7 +843,7 @@ export function PublicIntakeForm() {
                       component="h2"
                       sx={{
                         fontWeight: 600,
-                        color: "#1e293b",
+                        color: vwPalette.text.primary,
                         mb: 2,
                         fontSize: "16px",
                       }}
@@ -872,7 +877,7 @@ export function PublicIntakeForm() {
                       </Box>
                     </Box>
 
-                    <Box sx={{ my: 4, borderTop: "1px solid #e2e8f0" }} />
+                    <Box sx={{ my: 4, borderTop: `1px solid ${vwPalette.border.light}` }} />
                   </>
                 )}
 
@@ -991,7 +996,7 @@ export function PublicIntakeForm() {
                       boxShadow: `0 2px 8px ${ds.colorTheme}40`,
                     },
                     "&:disabled": {
-                      backgroundColor: "#cbd5e1",
+                      backgroundColor: vwPalette.border.dark,
                       color: "background.main",
                     },
                     "& .MuiButton-startIcon": {

@@ -301,7 +301,7 @@ export default function TestDatasetPanel({
               sx={{
                 "height": 4,
                 "borderRadius": 2,
-                "bgcolor": "#E4E7EC",
+                "bgcolor": vwPalette.border.light,
                 "& .MuiLinearProgress-bar": { bgcolor: vwPalette.brand.primary },
               }}
             />

@@ -5,7 +5,14 @@ import { Shield, Map, Gauge, Settings, ChevronRight } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { getEntityById } from "../../../../application/repository/entity.repository";
 import { getStatusColor } from "../../ISO/style";
-import { background, border as borderPalette, icon, text, radiusPx } from "../../../themes/palette";
+import {
+  background,
+  border as borderPalette,
+  icon,
+  text,
+  radiusPx,
+  palette as vwPalette,
+} from "../../../themes/palette";
 import { textStyles } from "../../../themes/typography";
 
 interface FrameworkData {
@@ -109,7 +116,7 @@ const NISTFunctionsOverviewCard = ({
             height: 12,
             borderRadius: "2px",
             backgroundColor: "status.default.border",
-            border: "1px solid #D1D5DB",
+            border: `1px solid ${vwPalette.border.dark}`,
           }}
         />
       );

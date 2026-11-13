@@ -67,7 +67,7 @@ const EVENT_TYPE_COLORS: Record<Event["event_type"], { bg: string; text: string 
   Error: { bg: risk.high.bg, text: risk.high.text },
 };
 
-const UNKNOWN_EVENT_TYPE_COLORS = { bg: vwPalette.border.light, text: "#424242" };
+const UNKNOWN_EVENT_TYPE_COLORS = { bg: vwPalette.border.light, text: vwPalette.text.secondary };
 
 const EventTypeBadge: React.FC<{ eventType: Event["event_type"] }> = ({ eventType }) => {
   const colors = EVENT_TYPE_COLORS[eventType] ?? UNKNOWN_EVENT_TYPE_COLORS;

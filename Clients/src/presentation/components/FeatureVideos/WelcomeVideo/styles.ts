@@ -1,6 +1,6 @@
 import { brand, background, palette as vwPalette } from "../../../themes/palette";
 export const COLORS = {
-  background: "#0a0a0a",
+  background: vwPalette.text.black,
   primary: `${brand.primary}`,
   primaryLight: "#1a9d7e",
   white: `${background.main}`,

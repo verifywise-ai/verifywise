@@ -3,7 +3,7 @@ import { Box, Typography } from "@mui/material";
 import { X } from "lucide-react";
 import { ICustomStepProps } from "../../../../domain/interfaces/i.customs";
 import { ICustomStepWrapperProps } from "../../../types/customs.types";
-import { background, radiusPx } from "../../../themes/palette";
+import { background, radiusPx, palette as vwPalette } from "../../../themes/palette";
 import "./CustomStep.css";
 
 export const CustomStepWrapper: React.FC<ICustomStepWrapperProps> = ({
@@ -24,7 +24,7 @@ export const CustomStepWrapper: React.FC<ICustomStepWrapperProps> = ({
     <Box
       {...tooltipProps}
       sx={{
-        background: "linear-gradient(135deg, #1f1f23 0%, #252530 100%)",
+        background: `linear-gradient(135deg, ${vwPalette.text.primary} 0%, #252530 100%)`,
         borderRadius: radiusPx.sm,
         padding: "24px",
         position: "relative",

@@ -92,7 +92,7 @@ export const incidentTagExtra = {
 
 // Table row styles
 export const incidentRowHover = {
-  "&:hover": { backgroundColor: "#FBFBFB", cursor: "pointer" },
+  "&:hover": { backgroundColor: vwPalette.background.alt, cursor: "pointer" },
 };
 
 export const incidentRowDisabled = {

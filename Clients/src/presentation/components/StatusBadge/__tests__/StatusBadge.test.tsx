@@ -12,8 +12,14 @@ describe("StatusBadge", () => {
     expect(screen.getByText("High")).toBeInTheDocument();
   });
 
-  it("renders uppercase by default", () => {
+  it("renders sentence case by default (phase 1 pill)", () => {
     renderWithTheme(<StatusBadge label="critical" variant="critical" />);
+    const badge = screen.getByText("critical");
+    expect(badge).toHaveStyle("text-transform: none");
+  });
+
+  it("renders uppercase when uppercase is true", () => {
+    renderWithTheme(<StatusBadge label="critical" variant="critical" uppercase />);
     const badge = screen.getByText("critical");
     expect(badge).toHaveStyle("text-transform: uppercase");
   });

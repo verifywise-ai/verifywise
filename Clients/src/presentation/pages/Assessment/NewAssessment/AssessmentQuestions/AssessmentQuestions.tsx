@@ -73,7 +73,7 @@ const AssessmentQuestions = ({
                 p={5}
                 display="flex"
                 alignItems="center"
-                bgcolor={"#FBFAFA"}
+                bgcolor={vwPalette.background.alt}
                 sx={{
                   border: `1px solid ${borderPalette.dark}`,
                   borderBottom: "none",

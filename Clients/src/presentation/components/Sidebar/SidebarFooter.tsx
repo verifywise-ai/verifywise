@@ -524,13 +524,13 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                   "borderRadius": theme.shape.borderRadius,
                   "px": theme.spacing(4),
                   "background": location.pathname.startsWith("/super-admin/settings")
-                    ? "linear-gradient(135deg, #ECECEC 0%, #E4E4E4 100%)"
+                    ? `linear-gradient(135deg, ${vwPalette.border.light} 0%, ${vwPalette.border.light} 100%)`
                     : "transparent",
                   "border": location.pathname.startsWith("/super-admin/settings")
-                    ? "1px solid #D8D8D8"
+                    ? `1px solid ${vwPalette.border.dark}`
                     : "1px solid transparent",
                   "&:hover": {
-                    background: "#F9F9F9",
+                    background: vwPalette.background.alt,
                     border: "1px solid transparent",
                   },
                   "&:hover svg": {
@@ -581,13 +581,13 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                 "borderRadius": theme.shape.borderRadius,
                 "px": theme.spacing(4),
                 "background": location.pathname.startsWith("/super-admin/settings")
-                  ? "linear-gradient(135deg, #ECECEC 0%, #E4E4E4 100%)"
+                  ? `linear-gradient(135deg, ${vwPalette.border.light} 0%, ${vwPalette.border.light} 100%)`
                   : "transparent",
                 "border": location.pathname.startsWith("/super-admin/settings")
-                  ? "1px solid #D8D8D8"
+                  ? `1px solid ${vwPalette.border.dark}`
                   : "1px solid transparent",
                 "&:hover": {
-                  background: "#F9F9F9",
+                  background: vwPalette.background.alt,
                   border: "1px solid transparent",
                 },
                 "&:hover svg": {
@@ -658,14 +658,18 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                   "borderRadius": theme.shape.borderRadius,
                   "px": theme.spacing(4),
                   "background": isManagementActive
-                    ? "linear-gradient(135deg, #ECECEC 0%, #E4E4E4 100%)"
+                    ? `linear-gradient(135deg, ${vwPalette.border.light} 0%, ${vwPalette.border.light} 100%)`
                     : "transparent",
-                  "border": isManagementActive ? "1px solid #D8D8D8" : "1px solid transparent",
+                  "border": isManagementActive
+                    ? `1px solid ${vwPalette.border.dark}`
+                    : "1px solid transparent",
                   "&:hover": {
                     background: isManagementActive
-                      ? "linear-gradient(135deg, #ECECEC 0%, #E4E4E4 100%)"
-                      : "#F9F9F9",
-                    border: isManagementActive ? "1px solid #D8D8D8" : "1px solid transparent",
+                      ? `linear-gradient(135deg, ${vwPalette.border.light} 0%, ${vwPalette.border.light} 100%)`
+                      : vwPalette.background.alt,
+                    border: isManagementActive
+                      ? `1px solid ${vwPalette.border.dark}`
+                      : "1px solid transparent",
                   },
                   "&:hover svg": {
                     color: `${brand.primary} !important`,
@@ -736,14 +740,18 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                 "borderRadius": theme.shape.borderRadius,
                 "px": theme.spacing(4),
                 "background": isManagementActive
-                  ? "linear-gradient(135deg, #ECECEC 0%, #E4E4E4 100%)"
+                  ? `linear-gradient(135deg, ${vwPalette.border.light} 0%, ${vwPalette.border.light} 100%)`
                   : "transparent",
-                "border": isManagementActive ? "1px solid #D8D8D8" : "1px solid transparent",
+                "border": isManagementActive
+                  ? `1px solid ${vwPalette.border.dark}`
+                  : "1px solid transparent",
                 "&:hover": {
                   background: isManagementActive
-                    ? "linear-gradient(135deg, #ECECEC 0%, #E4E4E4 100%)"
-                    : "#F9F9F9",
-                  border: isManagementActive ? "1px solid #D8D8D8" : "1px solid transparent",
+                    ? `linear-gradient(135deg, ${vwPalette.border.light} 0%, ${vwPalette.border.light} 100%)`
+                    : vwPalette.background.alt,
+                  border: isManagementActive
+                    ? `1px solid ${vwPalette.border.dark}`
+                    : "1px solid transparent",
                 },
                 "&:hover svg": {
                   color: `${brand.primary} !important`,
@@ -848,7 +856,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                   "fontSize": "13px",
                   "borderRadius": theme.shape.borderRadius,
                   "&:hover": {
-                    backgroundColor: "#F9F9F9",
+                    backgroundColor: vwPalette.background.alt,
                   },
                   "&:hover svg": {
                     color: `${brand.primary} !important`,

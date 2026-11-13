@@ -81,15 +81,15 @@ export const MicrosoftSignIn: React.FC<MicrosoftSignInProps> = ({
       sx={{
         "height": 34,
         "fontSize": "13px",
-        "backgroundColor": "#2f2f2f",
-        "color": "#ffffff",
+        "backgroundColor": palette.text.primary,
+        "color": palette.background.main,
         "boxShadow": "none",
         "textTransform": "none",
         "borderRadius": radiusPx.sm,
         "position": "relative",
         "paddingLeft": theme.spacing(6),
         "&:hover": { backgroundColor: palette.text.primary, boxShadow: "none" },
-        "&:disabled": { backgroundColor: "#cccccc", color: palette.text.tertiary },
+        "&:disabled": { backgroundColor: palette.border.dark, color: palette.text.tertiary },
       }}
       onClick={handleClick}
       disabled={disabled}

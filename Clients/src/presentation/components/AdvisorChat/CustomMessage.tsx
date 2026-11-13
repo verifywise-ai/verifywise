@@ -12,14 +12,15 @@ import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.cont
 import { useProfilePhotoFetch } from "../../../application/hooks/useProfilePhotoFetch";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { User } from "../../../domain/types/User";
-import { radiusPx } from "../../themes/palette";
+import { radiusPx, palette as vwPalette } from "../../themes/palette";
 
 // Create markdown styles with theme. Tables follow the VerifyWise list
 // conventions (thin borders, subtle header fill, 13/12px type) so an
 // inline GFM table from the LLM reads like a native VW table rather
 // than raw browser defaults.
 const createMarkdownStyles = (theme: Theme) => {
-  const borderColor = theme.palette.border?.light ?? theme.palette.divider ?? "#e5e5e5";
+  const borderColor =
+    theme.palette.border?.light ?? theme.palette.divider ?? vwPalette.border.light;
   const headerBg = theme.palette.background.alt ?? "rgba(0, 0, 0, 0.03)";
 
   return {

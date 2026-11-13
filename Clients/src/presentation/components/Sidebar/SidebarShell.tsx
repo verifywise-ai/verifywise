@@ -51,7 +51,7 @@ const classicUi = isClassicUi();
 // Phase 1 (style guide §10): green.50 hover, green.100 selected, no border,
 // icons in icon.default. Classic keeps the grey gradient.
 const NAV_ACTIVE_BG = classicUi
-  ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
+  ? `linear-gradient(135deg, ${vwPalette.background.hover} 0%, ${vwPalette.background.hover} 100%)`
   : background.selected;
 const NAV_ACTIVE_BORDER = classicUi
   ? `1px solid ${vwPalette.border.light}`
@@ -378,8 +378,8 @@ const SidebarShell: FC<SidebarShellProps> = ({
                   "height": "18px",
                   "fontSize": "10px",
                   "fontWeight": 500,
-                  "backgroundColor": isActive ? "#f8fafc" : "#e2e8f0",
-                  "color": "#475569",
+                  "backgroundColor": isActive ? vwPalette.background.alt : vwPalette.border.light,
+                  "color": vwPalette.text.tertiary,
                   "borderRadius": "9px",
                   "minWidth": "18px",
                   "maxWidth": "36px",
@@ -506,8 +506,8 @@ const SidebarShell: FC<SidebarShellProps> = ({
                 "height": "18px",
                 "fontSize": "10px",
                 "fontWeight": 500,
-                "backgroundColor": isActive ? "#f8fafc" : "#e2e8f0",
-                "color": "#475569",
+                "backgroundColor": isActive ? vwPalette.background.alt : vwPalette.border.light,
+                "color": vwPalette.text.tertiary,
                 "borderRadius": "9px",
                 "minWidth": "18px",
                 "maxWidth": "36px",
@@ -690,7 +690,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
                 "opacity": 0.9,
                 "& path": { stroke: theme.palette.text.tertiary },
               },
-              "&:hover": { backgroundColor: "#F9F9F9" },
+              "&:hover": { backgroundColor: vwPalette.background.alt },
               "&:hover svg path": { stroke: brand.primary },
             }}
             onClick={() => dispatch(toggleSidebar())}
@@ -978,7 +978,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
                   variant="overline"
                   className="sidebar-group-header"
                   sx={{
-                    color: "#a0a0a0 !important",
+                    color: `${vwPalette.text.disabled} !important`,
                     fontSize: "11px !important",
                     fontWeight: 400,
                     letterSpacing: "0.5px",
@@ -990,9 +990,9 @@ const SidebarShell: FC<SidebarShellProps> = ({
                 </Typography>
                 {isCollapsible &&
                   (isGroupCollapsed ? (
-                    <ChevronRight size={14} color="#a0a0a0" />
+                    <ChevronRight size={14} color={vwPalette.text.disabled} />
                   ) : (
-                    <ChevronDown size={14} color="#a0a0a0" />
+                    <ChevronDown size={14} color={vwPalette.text.disabled} />
                   ))}
               </Box>
               {!isGroupCollapsed &&
@@ -1043,7 +1043,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
                       "borderRadius": radiusPx.sm,
                       "px": theme.spacing(4),
                       "mb": 0.25,
-                      "&:hover": { backgroundColor: "#F9F9F9" },
+                      "&:hover": { backgroundColor: vwPalette.background.alt },
                     }}
                   >
                     <ListItemText

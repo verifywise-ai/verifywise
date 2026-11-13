@@ -36,7 +36,12 @@ export function FieldLabel({
         id={id}
         component={htmlFor ? "label" : "span"}
         htmlFor={htmlFor}
-        sx={{ fontSize: "14px", color: "#334155", fontWeight: 500, display: "block" }}
+        sx={{
+          fontSize: "14px",
+          color: vwPalette.text.secondary,
+          fontWeight: 500,
+          display: "block",
+        }}
       >
         {label}
         {required && <span style={{ color: vwPalette.riskMark.critical }}> *</span>}
@@ -67,7 +72,7 @@ export function FormFieldHint({ text }: { text?: string }) {
     <Typography
       sx={{
         fontSize: "12px",
-        color: "#94a3b8",
+        color: vwPalette.text.disabled,
         mt: "4px",
         lineHeight: 1.4,
       }}
@@ -93,7 +98,7 @@ function HelperText({ text, isError }: { text?: string; isError?: boolean }) {
     <Typography
       sx={{
         fontSize: "12px",
-        color: isError ? vwPalette.riskMark.critical : "#94a3b8",
+        color: isError ? vwPalette.riskMark.critical : vwPalette.text.disabled,
         mt: "4px",
         lineHeight: 1.4,
       }}
@@ -389,8 +394,8 @@ export function FormFieldRenderer({ field, control, errors, tone }: FormFieldRen
                                 alignItems: "center",
                                 fontSize: "12px",
                                 backgroundColor: vwPalette.status.success.bg,
-                                color: "#334155",
-                                border: "1px solid #e2e8f0",
+                                color: vwPalette.text.secondary,
+                                border: `1px solid ${vwPalette.border.light}`,
                                 borderRadius: "12px",
                                 gap: "4px",
                               }}
@@ -400,7 +405,11 @@ export function FormFieldRenderer({ field, control, errors, tone }: FormFieldRen
                                 onClick={() => {
                                   fieldProps.onChange(selectedArr.filter((v) => v !== val));
                                 }}
-                                style={{ cursor: "pointer", color: "#94a3b8", marginLeft: "2px" }}
+                                style={{
+                                  cursor: "pointer",
+                                  color: vwPalette.text.disabled,
+                                  marginLeft: "2px",
+                                }}
                               >
                                 ×
                               </span>
@@ -416,7 +425,7 @@ export function FormFieldRenderer({ field, control, errors, tone }: FormFieldRen
                       sx={{
                         border: error
                           ? `1px solid ${vwPalette.riskMark.critical}`
-                          : "1px solid #e2e8f0",
+                          : `1px solid ${vwPalette.border.light}`,
                         borderRadius: "8px",
                         maxHeight: 200,
                         overflowY: "auto",
@@ -444,9 +453,9 @@ export function FormFieldRenderer({ field, control, errors, tone }: FormFieldRen
                                 ? vwPalette.status.success.bg
                                 : "transparent",
                               "&:hover": {
-                                backgroundColor: isChecked ? "#dcfce7" : "#f8fafc",
+                                backgroundColor: isChecked ? "#dcfce7" : vwPalette.background.alt,
                               },
-                              "borderBottom": "1px solid #f1f5f9",
+                              "borderBottom": `1px solid ${vwPalette.background.hover}`,
                               "&:last-child": { borderBottom: "none" },
                             }}
                           >
@@ -468,7 +477,7 @@ export function FormFieldRenderer({ field, control, errors, tone }: FormFieldRen
                             />
                             <Typography
                               component="span"
-                              sx={{ fontSize: "14px", color: "#334155" }}
+                              sx={{ fontSize: "14px", color: vwPalette.text.secondary }}
                             >
                               {option.label}
                             </Typography>

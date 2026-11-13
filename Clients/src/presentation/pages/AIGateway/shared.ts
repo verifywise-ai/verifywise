@@ -41,7 +41,10 @@ export const MCP_STATUS_COLORS: Record<string, { bg: string; text: string }> = {
   would_need_approval: { bg: palette.status.default.bg, text: palette.status.default.text },
 } as const;
 
-export const MCP_STATUS_FALLBACK = { bg: "#F3F4F6", text: vwPalette.text.secondary } as const;
+export const MCP_STATUS_FALLBACK = {
+  bg: vwPalette.background.hover,
+  text: vwPalette.text.secondary,
+} as const;
 
 const MCP_STATUS_LABELS: Record<string, string> = {
   would_block: "Would block",
@@ -390,8 +393,8 @@ export const GATEWAY_URL = resolveGatewayUrl(
 );
 
 /** Color constants for code blocks and warning banners */
-export const CODE_BLOCK_BG = "#1E1E1E";
-export const CODE_BLOCK_TEXT = "#D4D4D4";
+export const CODE_BLOCK_BG = vwPalette.text.primary;
+export const CODE_BLOCK_TEXT = vwPalette.border.dark;
 export const WARNING_BG = "#FFFAEB";
 export const WARNING_BORDER = "#FEDF89";
 export const WARNING_TEXT = vwPalette.risk.high.text;

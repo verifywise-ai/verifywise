@@ -110,7 +110,8 @@ const EUAIActStatusDropdown = ({
               sx={{
                 fontSize: 13,
                 minWidth: "150px",
-                backgroundColor: status === currentStatus ? "#f0f0f0" : "transparent",
+                backgroundColor:
+                  status === currentStatus ? vwPalette.background.hover : "transparent",
               }}
             >
               {status}
@@ -320,7 +321,7 @@ const AccordionView = ({
                       sx={{
                         height: "20px",
                         fontSize: "12px",
-                        backgroundColor: "#f0f0f0",
+                        backgroundColor: vwPalette.background.hover,
                         color: "text.secondary",
                       }}
                     />

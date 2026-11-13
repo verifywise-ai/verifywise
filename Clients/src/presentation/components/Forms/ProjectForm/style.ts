@@ -61,14 +61,14 @@ export const radioGroupStyle = {
 export const radioOptionStyle = {
   "width": "100%",
   "padding": "16px",
-  "border": "1px solid #E4E7EC",
+  "border": `1px solid ${vwPalette.border.light}`,
   "borderRadius": radiusPx.sm,
   "backgroundColor": `${background.main}`,
   "cursor": "pointer",
   "transition": "all 0.2s ease-in-out",
   "&:hover": {
     borderColor: `${brand.primary}`,
-    backgroundColor: "#F9F9F9",
+    backgroundColor: vwPalette.background.alt,
   },
   "&.selected": {
     borderColor: `${brand.primary}`,
@@ -89,7 +89,7 @@ export const backButtonStyle = {
   "color": `${text.secondary}`,
   "gap": 2,
   "&:hover": {
-    backgroundColor: "#F9F9F9",
+    backgroundColor: vwPalette.background.alt,
     border: `1px solid ${borderPalette.dark}`,
   },
 };

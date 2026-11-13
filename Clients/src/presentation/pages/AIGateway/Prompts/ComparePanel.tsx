@@ -307,12 +307,12 @@ export default function ComparePanel({
           disabled={isSending || !selectedEndpoint || !versionA || !versionB}
           sx={{
             "bgcolor": "primary.main",
-            "color": "#fff",
+            "color": vwPalette.background.main,
             "width": 34,
             "height": 34,
             "alignSelf": "flex-end",
             "&:hover": { bgcolor: "primary.dark" },
-            "&:disabled": { bgcolor: "#E4E7EC", color: "#98A2B3" },
+            "&:disabled": { bgcolor: vwPalette.border.light, color: vwPalette.text.disabled },
           }}
         >
           <Send size={14} strokeWidth={1.5} />

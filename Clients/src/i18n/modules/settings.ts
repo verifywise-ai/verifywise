@@ -239,7 +239,7 @@ export const de: Record<string, string> = {
   "Interface style": "Darstellung",
   "Select a style": "Stil auswählen",
   "New style": "Neuer Stil",
-  Classic: "Klassisch",
+  "Classic": "Klassisch",
   "The classic look stays available until January 2027. Changing this reloads the page.":
     "Die klassische Darstellung bleibt bis Januar 2027 verfügbar. Eine Änderung lädt die Seite neu.",
   "Accordion": "Akkordeon",
@@ -750,7 +750,7 @@ export const fr: Record<string, string> = {
   "Interface style": "Style de l'interface",
   "Select a style": "Choisir un style",
   "New style": "Nouveau style",
-  Classic: "Classique",
+  "Classic": "Classique",
   "The classic look stays available until January 2027. Changing this reloads the page.":
     "L'apparence classique reste disponible jusqu'en janvier 2027. Ce changement recharge la page.",
   "Accordion": "Accordéon",
@@ -1258,7 +1258,7 @@ export const es: Record<string, string> = {
   "Interface style": "Estilo de la interfaz",
   "Select a style": "Selecciona un estilo",
   "New style": "Estilo nuevo",
-  Classic: "Clásico",
+  "Classic": "Clásico",
   "The classic look stays available until January 2027. Changing this reloads the page.":
     "El aspecto clásico seguirá disponible hasta enero de 2027. Al cambiarlo se recarga la página.",
   "Accordion": "Acordeón",

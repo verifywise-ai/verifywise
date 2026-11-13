@@ -176,7 +176,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         <Box
           sx={{
             background: isDark
-              ? `linear-gradient(135deg, ${vwPalette.border.light} 0%, #d2d2d2 100%)`
+              ? `linear-gradient(135deg, ${vwPalette.border.light} 0%, ${vwPalette.border.dark} 100%)`
               : "linear-gradient(135deg, #1a1f2e 0%, #2d3548 100%)",
             padding: "32px 32px 28px",
           }}
@@ -359,7 +359,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           direction="row"
           justifyContent="space-between"
           sx={{
-            bgcolor: "#FAFBFC",
+            bgcolor: vwPalette.background.alt,
             borderTop: `1px solid ${vwPalette.border.light}`,
             padding: "14px 32px",
           }}

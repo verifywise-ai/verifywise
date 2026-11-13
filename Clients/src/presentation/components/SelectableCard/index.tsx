@@ -99,7 +99,9 @@ const SelectableCard = ({
       >
         {title}
       </Typography>
-      <Typography sx={{ fontSize: "11px", color: disabled ? "#D1D5DB" : `${text.disabled}` }}>
+      <Typography
+        sx={{ fontSize: "11px", color: disabled ? vwPalette.border.dark : `${text.disabled}` }}
+      >
         {description}
       </Typography>
     </Box>

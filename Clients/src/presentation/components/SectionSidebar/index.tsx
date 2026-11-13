@@ -67,12 +67,12 @@ const SectionSidebar = ({
                 "padding": "0 8px",
                 "justifyContent": "flex-start",
                 "background": isActive
-                  ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
+                  ? `linear-gradient(135deg, ${palette.background.hover} 0%, ${palette.background.hover} 100%)`
                   : "transparent",
                 "border": isActive ? `1px solid ${palette.border.light}` : "1px solid transparent",
                 "&:hover": {
                   background: isActive
-                    ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
+                    ? `linear-gradient(135deg, ${palette.background.hover} 0%, ${palette.background.hover} 100%)`
                     : palette.background.alt,
                   border: isActive ? `1px solid ${palette.border.light}` : "1px solid transparent",
                 },

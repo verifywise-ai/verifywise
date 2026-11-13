@@ -1,7 +1,7 @@
 import { styled } from "@mui/material/styles";
 import { TableRow, Box } from "@mui/material";
 import singleTheme from "../../../themes/v1SingleTheme";
-import { radiusPx } from "../../../themes/palette";
+import { radiusPx, palette as vwPalette } from "../../../themes/palette";
 
 export const StyledTableRow = styled(TableRow)<{ isflashing: number }>(({ isflashing }) => ({
   "& > *": {
@@ -9,7 +9,7 @@ export const StyledTableRow = styled(TableRow)<{ isflashing: number }>(({ isflas
     transition: "background-color 0.3s ease",
   },
   "&:hover > *": {
-    backgroundColor: isflashing ? "#e3f5e6" : "#FBFBFB",
+    backgroundColor: isflashing ? "#e3f5e6" : vwPalette.background.alt,
     cursor: "pointer",
   },
 }));

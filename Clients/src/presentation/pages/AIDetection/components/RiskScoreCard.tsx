@@ -119,7 +119,7 @@ function RiskStatCard({
       onMouseLeave={() => setIsHovered(false)}
       sx={{
         ...(cardStyles.base(theme) as Record<string, unknown>),
-        "background": "linear-gradient(135deg, #FEFFFE 0%, #F8F9FA 100%)",
+        "background": `linear-gradient(135deg, ${palette.background.main} 0%, ${palette.background.alt} 100%)`,
         "border": `1px solid ${palette.border.light}`,
         "height": "100%",
         "minHeight": "80px",
@@ -131,7 +131,7 @@ function RiskStatCard({
         "borderRadius": "8px",
         "overflow": "hidden",
         "&:hover": {
-          background: `linear-gradient(135deg, ${palette.background.accent} 0%, #F1F5F9 100%)`,
+          background: `linear-gradient(135deg, ${palette.background.accent} 0%, ${palette.background.hover} 100%)`,
           borderColor: palette.border.dark,
         },
       }}
@@ -349,7 +349,7 @@ export function RiskScoreCard({
           elevation={0}
           sx={{
             ...(cardStyles.base(theme) as Record<string, unknown>),
-            background: "linear-gradient(135deg, #FEFFFE 0%, #F8F9FA 100%)",
+            background: `linear-gradient(135deg, ${palette.background.main} 0%, ${palette.background.alt} 100%)`,
             border: `1px solid ${palette.border.light}`,
             borderRadius: "8px",
             mb: 2,
@@ -421,7 +421,7 @@ export function RiskScoreCard({
           elevation={0}
           sx={{
             ...(cardStyles.base(theme) as Record<string, unknown>),
-            "background": "linear-gradient(135deg, #FEFFFE 0%, #F8F9FA 100%)",
+            "background": `linear-gradient(135deg, ${palette.background.main} 0%, ${palette.background.alt} 100%)`,
             "border": `1px solid ${palette.border.light}`,
             "height": "100%",
             "position": "relative",
@@ -432,7 +432,7 @@ export function RiskScoreCard({
             "borderRadius": "8px",
             "overflow": "hidden",
             "&:hover": {
-              background: `linear-gradient(135deg, ${palette.background.accent} 0%, #F1F5F9 100%)`,
+              background: `linear-gradient(135deg, ${palette.background.accent} 0%, ${palette.background.hover} 100%)`,
               borderColor: palette.border.dark,
             },
           }}
@@ -564,7 +564,7 @@ export function RiskScoreCard({
           elevation={0}
           sx={{
             ...(cardStyles.base(theme) as Record<string, unknown>),
-            background: "linear-gradient(135deg, #FEFFFE 0%, #F8F9FA 100%)",
+            background: `linear-gradient(135deg, ${palette.background.main} 0%, ${palette.background.alt} 100%)`,
             border: `1px solid ${palette.border.light}`,
             borderRadius: "8px",
             mt: "16px",

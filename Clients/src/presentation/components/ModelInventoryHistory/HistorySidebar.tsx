@@ -276,7 +276,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
                   sx={{
                     padding: "4px 8px",
                     borderRadius: radiusPx.sm,
-                    backgroundColor: "#F1F8F4",
+                    backgroundColor: vwPalette.background.hover,
                   }}
                 >
                   <Typography
@@ -338,7 +338,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
                         flex: 1,
                         padding: "4px 8px",
                         borderRadius: radiusPx.sm,
-                        backgroundColor: "#F1F8F4",
+                        backgroundColor: vwPalette.background.hover,
                       }}
                     >
                       <Typography
@@ -389,7 +389,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
             borderRadius: "8px",
             display: "flex",
             flexDirection: "column",
-            background: "linear-gradient(180deg, #FAFBFC 0%, #F8FAFB 100%)",
+            background: `linear-gradient(180deg, ${vwPalette.background.alt} 0%, ${vwPalette.background.alt} 100%)`,
             overflow: "hidden",
           }}
         >
@@ -398,7 +398,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
             sx={{
               padding: "16px",
               borderBottom: `1px solid ${theme.palette.divider}`,
-              background: "linear-gradient(180deg, #F8FAFB 0%, #F3F5F8 100%)",
+              background: `linear-gradient(180deg, ${vwPalette.background.alt} 0%, ${vwPalette.background.hover} 100%)`,
             }}
           >
             {creationInfo ? (

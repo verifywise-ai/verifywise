@@ -478,7 +478,7 @@ export default function ReportPage({
               </IconButton>
             </Stack>
           </Box>
-          <Box sx={{ width: "100%", height: "80vh", backgroundColor: "#525659" }}>
+          <Box sx={{ width: "100%", height: "80vh", backgroundColor: palette.text.tertiary }}>
             <iframe
               src={pdfBlobUrl}
               title="Report preview"

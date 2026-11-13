@@ -91,9 +91,9 @@ const getNotificationColor = (type: string): string => {
     file_uploaded: "#6366F1", // Indigo
     comment_added: "#6366F1", // Indigo
     mention: "#EC4899", // Pink
-    system: "#64748B", // Slate
+    system: vwPalette.text.icon, // Slate
   };
-  return colors[type] || "#64748B";
+  return colors[type] || vwPalette.text.icon;
 };
 
 interface NotificationItemProps {
@@ -313,7 +313,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ sx }) => {
     "transition": "all 0.2s ease",
     "backgroundColor": "transparent",
     "color": "#666",
-    "border": "1px solid #e5e5e5",
+    "border": `1px solid ${vwPalette.border.light}`,
     "&:hover": {
       backgroundColor: "rgba(0, 0, 0, 0.04)",
       borderColor: "border.dark",
@@ -496,7 +496,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ sx }) => {
                 px: 2,
               }}
             >
-              <Bell size={24} strokeWidth={1.5} color="#D1D5DB" />
+              <Bell size={24} strokeWidth={1.5} color={vwPalette.border.dark} />
               <Typography
                 sx={{
                   fontSize: "14px",

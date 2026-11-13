@@ -36,7 +36,7 @@ const LIKELIHOOD_COLORS: Record<string, string> = {
 };
 
 const MITIGATION_STATUS_COLORS: Record<string, string> = {
-  "Not Started": "#94A3B8",
+  "Not Started": vwPalette.text.disabled,
   "In Progress": vwPalette.status.info.text,
   "Completed": vwPalette.status.success.strong,
   "On Hold": vwPalette.riskMark.medium,

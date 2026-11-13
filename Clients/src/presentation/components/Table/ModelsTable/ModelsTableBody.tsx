@@ -48,9 +48,9 @@ const getProviderColor = (provider: string): { bg: string; text: string } => {
     anthropic: { bg: "#FFF3E0", text: "#E65100" },
     google: { bg: accent.blue.bg, text: accent.blue.text },
     mistral: { bg: "#F3E5F5", text: "#7B1FA2" },
-    ollama: { bg: "#ECEFF1", text: "#37474F" },
+    ollama: { bg: vwPalette.background.hover, text: "#37474F" },
     huggingface: { bg: accent.amber.bg, text: "#F57F17" },
-    xai: { bg: vwPalette.background.alt, text: "#212121" },
+    xai: { bg: vwPalette.background.alt, text: vwPalette.text.primary },
     bedrock: { bg: "#FFF3E0", text: "#FF6F00" },
     meta: { bg: "#E8F0FE", text: "#1A56DB" },
     deepseek: { bg: "#EDE8FD", text: "#5B21B6" },
@@ -61,7 +61,9 @@ const getProviderColor = (provider: string): { bg: string; text: string } => {
     qwen: { bg: "#FFF7ED", text: "#C2410C" },
     moonshot: { bg: "#F5F3FF", text: "#6D28D9" },
   };
-  return colors[provider.toLowerCase()] || { bg: `${background.surface}`, text: "#616161" };
+  return (
+    colors[provider.toLowerCase()] || { bg: `${background.surface}`, text: vwPalette.text.tertiary }
+  );
 };
 
 import * as ProviderIcons from "../../ProviderIcons";

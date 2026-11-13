@@ -44,7 +44,7 @@ import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { exportAuditLedger } from "../../../../application/repository/auditLedger.repository";
 import { triggerBrowserDownload } from "../../../utils/browserDownload.utils";
 import { pageOfLabel } from "../../../components/Table/pageOfLabel";
-import { radiusPx } from "../../../themes/palette";
+import { radiusPx, palette as vwPalette } from "../../../themes/palette";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const SelectorVertical = (props: any) => <ChevronsUpDown size={16} {...props} />;
@@ -223,7 +223,7 @@ export default function AuditLedger() {
           message="Every change made on the platform is recorded as an append-only, hash-chained entry. Each entry's cryptographic hash depends on the previous one, so any modification or deletion would break the chain. Click 'Verify chain' to confirm that no entries have been altered or removed since they were recorded."
           storageKey="audit-ledger-info"
           variant="info"
-          backgroundColor="linear-gradient(135deg, #EFF6FF 0%, #F8FBFF 100%)"
+          backgroundColor={`linear-gradient(135deg, #EFF6FF 0%, ${vwPalette.background.alt} 100%)`}
           borderColor="#DBEAFE"
         />
       )}

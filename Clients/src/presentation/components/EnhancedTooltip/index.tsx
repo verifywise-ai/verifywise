@@ -2,7 +2,7 @@ import type { FC, ReactNode, MouseEvent, KeyboardEvent } from "react";
 import { useState, useRef } from "react";
 import { Box, Typography, Popover, IconButton, useTheme } from "@mui/material";
 import { X } from "lucide-react";
-import { radiusPx } from "../../themes/palette";
+import { radiusPx, palette as vwPalette } from "../../themes/palette";
 
 interface EnhancedTooltipProps {
   /** The element that triggers the tooltip on hover */
@@ -98,7 +98,7 @@ export const EnhancedTooltip: FC<EnhancedTooltipProps> = ({ children, title, con
       >
         <Box
           sx={{
-            background: "linear-gradient(135deg, #1f1f23 0%, #252530 100%)",
+            background: `linear-gradient(135deg, ${vwPalette.text.primary} 0%, #252530 100%)`,
             p: 12,
             position: "relative",
             overflow: "hidden",

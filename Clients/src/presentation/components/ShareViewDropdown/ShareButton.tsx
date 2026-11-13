@@ -1,7 +1,14 @@
 import React from "react";
 import { IconButton, Tooltip } from "@mui/material";
 import { Share2 } from "lucide-react";
-import { brand, background, border as borderPalette, status, radiusPx } from "../../themes/palette";
+import {
+  brand,
+  background,
+  border as borderPalette,
+  status,
+  radiusPx,
+  palette as vwPalette,
+} from "../../themes/palette";
 
 /**
  * Props for the ShareButton component
@@ -48,7 +55,7 @@ const ShareButton: React.FC<ShareButtonProps> = ({
           borderColor: `${brand.primary}`,
         },
         "&:disabled": {
-          color: "#d1d5db",
+          color: vwPalette.border.dark,
           borderColor: `${status.default.border}`,
           backgroundColor: `${background.accent}`,
         },

@@ -272,7 +272,7 @@ export const AssignToFolderModal: React.FC<AssignToFolderModalProps> = ({
             overflow: "auto",
             border: `1px solid ${vwPalette.border.light}`,
             borderRadius: radiusPx.sm,
-            backgroundColor: "#FAFBFC",
+            backgroundColor: vwPalette.background.alt,
           }}
         >
           {folders.length === 0 ? (
