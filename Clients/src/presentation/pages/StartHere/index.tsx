@@ -536,7 +536,7 @@ const StartHere = () => {
                   }
                 }}
                 sx={{
-                  "borderRadius": "8px",
+                  "borderRadius": radiusPx.lg,
                   "padding": "20px 16px",
                   "position": "relative",
                   "overflow": "hidden",
@@ -743,7 +743,7 @@ const StartHere = () => {
                   sx={{
                     "minWidth": 196,
                     "maxWidth": 196,
-                    "borderRadius": "8px",
+                    "borderRadius": radiusPx.lg,
                     "overflow": "hidden",
                     "background": theme.palette.background.main,
                     "border": `1px solid ${theme.palette.border.light}`,
@@ -972,7 +972,7 @@ const StartHere = () => {
                   sx={{
                     "gap": "8px",
                     "p": "16px",
-                    "borderRadius": "8px",
+                    "borderRadius": radiusPx.lg,
                     "border": `1px solid ${theme.palette.border.light}`,
                     "minWidth": 160,
                     "cursor": "pointer",
@@ -1045,7 +1045,7 @@ const StartHere = () => {
           <Box
             sx={{
               "background": `linear-gradient(135deg, ${brand.primaryHover}, ${brand.primary})`,
-              "borderRadius": "8px",
+              "borderRadius": radiusPx.lg,
               "p": "16px",
               "color": "background.main",
               "position": "relative",
@@ -1188,7 +1188,7 @@ const StartHere = () => {
           sx={{
             background: theme.palette.background.main,
             border: `1px solid ${theme.palette.border.light}`,
-            borderRadius: "8px",
+            borderRadius: radiusPx.lg,
             p: "16px",
           }}
         >
@@ -1208,7 +1208,7 @@ const StartHere = () => {
                   sx={{
                     "gap": "8px",
                     "p": "8px",
-                    "borderRadius": "6px",
+                    "borderRadius": radiusPx.md,
                     "cursor": "pointer",
                     "transition": "all 0.2s ease",
                     "textDecoration": "none",
@@ -1253,7 +1253,7 @@ const StartHere = () => {
           sx={{
             background: theme.palette.background.main,
             border: `1px solid ${theme.palette.border.light}`,
-            borderRadius: "8px",
+            borderRadius: radiusPx.lg,
             p: "16px",
           }}
         >
@@ -1268,7 +1268,7 @@ const StartHere = () => {
                 sx={{
                   "gap": "8px",
                   "p": "8px",
-                  "borderRadius": "6px",
+                  "borderRadius": radiusPx.md,
                   "cursor": "pointer",
                   "transition": "all 0.2s ease",
                   "&:hover": {

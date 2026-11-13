@@ -242,7 +242,7 @@ export function AiRiskSuggestions({ onRiskSaved }: AiRiskSuggestionsProps) {
             mt: 2,
             background: `linear-gradient(135deg, ${palette.background.main} 0%, ${palette.background.alt} 100%)`,
             border: `1px solid ${palette.border.light}`,
-            borderRadius: "8px",
+            borderRadius: radiusPx.lg,
             p: "14px 16px",
           }}
         >

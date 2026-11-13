@@ -10,6 +10,7 @@ import {
   background,
   border as borderPalette,
   palette as vwPalette,
+  radiusPx,
 } from "../../themes/palette";
 import { VWLineChart } from "./VWCharts";
 
@@ -174,7 +175,7 @@ export function RiskHistoryChart({
         sx={{
           p: 3,
           border: `1px solid ${borderPalette.light}`,
-          borderRadius: 2,
+          borderRadius: radiusPx.sm,
           height: height + 120,
           alignItems: "center",
           justifyContent: "center",
@@ -192,7 +193,7 @@ export function RiskHistoryChart({
         sx={{
           p: 3,
           border: `1px solid ${borderPalette.light}`,
-          borderRadius: 2,
+          borderRadius: radiusPx.sm,
           height: height + 120,
           alignItems: "center",
           justifyContent: "center",
@@ -217,7 +218,7 @@ export function RiskHistoryChart({
       sx={{
         p: 3,
         border: `1px solid ${borderPalette.light}`,
-        borderRadius: 2,
+        borderRadius: radiusPx.sm,
         background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
         boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.05)",
       }}

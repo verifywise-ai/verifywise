@@ -1199,7 +1199,7 @@ export default function EvalsDashboard() {
           sx={{
             p: 2,
             backgroundColor: palette.status.error.bg,
-            borderRadius: "8px",
+            borderRadius: radiusPx.lg,
             border: `1px solid ${palette.status.error.border}`,
             display: "flex",
             alignItems: "center",
@@ -1608,7 +1608,7 @@ export default function EvalsDashboard() {
                 <Box
                   sx={{
                     border: `1px solid ${palette.accent.indigo.border}`,
-                    borderRadius: "8px",
+                    borderRadius: radiusPx.lg,
                     p: 3,
                     backgroundColor: palette.accent.indigo.bg,
                     display: "flex",
@@ -2391,7 +2391,7 @@ export default function EvalsDashboard() {
                         p: 2,
                         backgroundColor: palette.background.accent,
                         border: `1px solid ${palette.border.light}`,
-                        borderRadius: "8px",
+                        borderRadius: radiusPx.lg,
                       }}
                     >
                       <Typography
@@ -2679,7 +2679,7 @@ export default function EvalsDashboard() {
                       p: 2,
                       backgroundColor: palette.background.accent,
                       border: `1px solid ${palette.border.light}`,
-                      borderRadius: "8px",
+                      borderRadius: radiusPx.lg,
                     }}
                   >
                     <Typography

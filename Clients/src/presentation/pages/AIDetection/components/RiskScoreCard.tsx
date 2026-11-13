@@ -29,7 +29,7 @@ import {
 } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import { cardStyles } from "../../../themes";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import {
   RiskGrade,
   RiskScoreDetails,
@@ -128,7 +128,7 @@ function RiskStatCard({
         "display": "flex",
         "flexDirection": "column",
         "boxSizing": "border-box",
-        "borderRadius": "8px",
+        "borderRadius": radiusPx.lg,
         "overflow": "hidden",
         "&:hover": {
           background: `linear-gradient(135deg, ${palette.background.accent} 0%, ${palette.background.hover} 100%)`,
@@ -351,7 +351,7 @@ export function RiskScoreCard({
             ...(cardStyles.base(theme) as Record<string, unknown>),
             background: `linear-gradient(135deg, ${palette.background.main} 0%, ${palette.background.alt} 100%)`,
             border: `1px solid ${palette.border.light}`,
-            borderRadius: "8px",
+            borderRadius: radiusPx.lg,
             mb: 2,
           }}
         >
@@ -429,7 +429,7 @@ export function RiskScoreCard({
             "display": "flex",
             "flexDirection": "column",
             "boxSizing": "border-box",
-            "borderRadius": "8px",
+            "borderRadius": radiusPx.lg,
             "overflow": "hidden",
             "&:hover": {
               background: `linear-gradient(135deg, ${palette.background.accent} 0%, ${palette.background.hover} 100%)`,
@@ -526,11 +526,11 @@ export function RiskScoreCard({
                               value={dim.score}
                               sx={{
                                 "height": 4,
-                                "borderRadius": 2,
+                                "borderRadius": radiusPx.sm,
                                 "backgroundColor": palette.border.light,
                                 "& .MuiLinearProgress-bar": {
                                   backgroundColor: barColor,
-                                  borderRadius: 2,
+                                  borderRadius: radiusPx.sm,
                                 },
                               }}
                             />
@@ -566,7 +566,7 @@ export function RiskScoreCard({
             ...(cardStyles.base(theme) as Record<string, unknown>),
             background: `linear-gradient(135deg, ${palette.background.main} 0%, ${palette.background.alt} 100%)`,
             border: `1px solid ${palette.border.light}`,
-            borderRadius: "8px",
+            borderRadius: radiusPx.lg,
             mt: "16px",
           }}
         >

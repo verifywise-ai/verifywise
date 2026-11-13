@@ -233,7 +233,7 @@ const GroupBy: React.FC<GroupByProps> = ({ options, onGroupChange }) => {
               padding: "16px",
               minWidth: "400px",
               boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
-              borderRadius: "8px",
+              borderRadius: radiusPx.lg,
             },
           },
         }}

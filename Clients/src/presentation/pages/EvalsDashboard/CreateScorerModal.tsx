@@ -532,7 +532,7 @@ export default function CreateScorerModal({
                 key={index}
                 sx={{
                   border: `1px solid ${palette.border.dark}`,
-                  borderRadius: "6px",
+                  borderRadius: radiusPx.md,
                   overflow: "hidden",
                 }}
               >

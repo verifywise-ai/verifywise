@@ -4,7 +4,7 @@ import QuestionFrame from "../../../components/VWQuestion";
 import { Question } from "../../../../domain/types/Question";
 import { useSearchParams } from "react-router";
 import { useEffect, useState, useRef } from "react";
-import { text } from "../../../themes/palette";
+import { text, radiusPx } from "../../../themes/palette";
 
 type QuestionsProps = {
   subtopic: Subtopic;
@@ -102,7 +102,7 @@ const Questions = ({
               backgroundColor:
                 highlightedQuestionId === question.question_id ? "#e3f5e6" : "inherit",
               transition: "background-color 0.3s ease",
-              borderRadius: "8px",
+              borderRadius: radiusPx.lg,
               padding: highlightedQuestionId === question.question_id ? "8px" : "0px",
             }}
           >

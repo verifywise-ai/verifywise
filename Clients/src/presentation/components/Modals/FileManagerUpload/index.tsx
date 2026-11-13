@@ -417,7 +417,7 @@ const FileManagerUploadModal: React.FC<FileManagerUploadModalProps> = ({
             onDrop={handleDrop}
             sx={{
               border: `2px dashed ${isDragging ? theme.palette.primary.main : theme.palette.grey[300]}`,
-              borderRadius: "8px",
+              borderRadius: radiusPx.lg,
               padding: "32px",
               textAlign: "center",
               backgroundColor: isDragging ? theme.palette.primary.light : theme.palette.grey[50],

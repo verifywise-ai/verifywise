@@ -122,7 +122,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
           p: 4,
           textAlign: "center",
           backgroundColor: "background.accent",
-          borderRadius: 2,
+          borderRadius: radiusPx.sm,
           border: "1px solid status.default.border",
         }}
       >
@@ -179,7 +179,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
                 elevation={0}
                 sx={{
                   border: "1px solid status.default.border",
-                  borderRadius: 2,
+                  borderRadius: radiusPx.sm,
                   overflow: "hidden",
                   borderLeft: `4px solid ${criticalLevel.color}`,
                 }}

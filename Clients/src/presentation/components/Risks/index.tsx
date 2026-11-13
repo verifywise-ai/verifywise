@@ -2,7 +2,7 @@ import { Theme } from "@emotion/react";
 import { SxProps, Stack, Typography, useTheme } from "@mui/material";
 import { FC } from "react";
 import { RiskData } from "../../pages/ProjectView/Overview";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 
 const Risks: FC<RiskData & { sx?: SxProps<Theme> | undefined }> = ({
   veryHighRisks,
@@ -17,7 +17,7 @@ const Risks: FC<RiskData & { sx?: SxProps<Theme> | undefined }> = ({
   const styles = {
     stack: {
       border: `1px solid ${theme.palette.border.light}`,
-      borderRadius: 2,
+      borderRadius: radiusPx.sm,
       backgroundColor: theme.palette.background.main,
       minWidth: 532,
       width: "fit-content",

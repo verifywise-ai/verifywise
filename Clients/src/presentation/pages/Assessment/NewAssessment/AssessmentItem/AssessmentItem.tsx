@@ -4,7 +4,7 @@
 
 import { List, ListItem, ListItemButton, ListItemText, Typography, useTheme } from "@mui/material";
 import { Topic } from "../../../../../application/hooks/useAssessmentAnswers";
-import { background } from "../../../../themes/palette";
+import { background, radiusPx } from "../../../../themes/palette";
 
 interface AssessmentItemProps {
   assessmentsValues: Topic[];
@@ -41,7 +41,7 @@ const AssessmentItem = ({
             disableRipple
             sx={{
               paddingLeft: 4,
-              borderRadius: 2,
+              borderRadius: radiusPx.sm,
               backgroundColor: index === activeTab ? "#4C7DE7" : "transparent",
               width: 260,
               height: 40,

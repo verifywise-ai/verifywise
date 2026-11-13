@@ -1,7 +1,14 @@
 import { Box, Typography, Stack, LinearProgress } from "@mui/material";
 import { CircleDashed, CircleDot, CircleDotDashed, CircleCheck } from "lucide-react";
 import { frameworkDashboardCardStyles } from "./styles";
-import { brand, text, background, status, palette as vwPalette } from "../../../themes/palette";
+import {
+  brand,
+  text,
+  background,
+  status,
+  palette as vwPalette,
+  radiusPx,
+} from "../../../themes/palette";
 
 interface FrameworkData {
   frameworkId: number;
@@ -198,11 +205,11 @@ const FrameworkProgressCard = ({ frameworksData }: FrameworkProgressCardProps) =
                             value={percent}
                             sx={{
                               "height": 6,
-                              "borderRadius": 3,
+                              "borderRadius": radiusPx.md,
                               "backgroundColor": `${background.hover}`,
                               "& .MuiLinearProgress-bar": {
                                 backgroundColor: getProgressColor(percent),
-                                borderRadius: 3,
+                                borderRadius: radiusPx.md,
                               },
                             }}
                           />
@@ -327,11 +334,11 @@ const FrameworkProgressCard = ({ frameworksData }: FrameworkProgressCardProps) =
                     value={isISO ? clausePercent : genericPercent}
                     sx={{
                       "height": 6,
-                      "borderRadius": 3,
+                      "borderRadius": radiusPx.md,
                       "backgroundColor": `${background.hover}`,
                       "& .MuiLinearProgress-bar": {
                         backgroundColor: getProgressColor(isISO ? clausePercent : genericPercent),
-                        borderRadius: 3,
+                        borderRadius: radiusPx.md,
                       },
                     }}
                   />
@@ -397,11 +404,11 @@ const FrameworkProgressCard = ({ frameworksData }: FrameworkProgressCardProps) =
                       value={annexPercent}
                       sx={{
                         "height": 6,
-                        "borderRadius": 3,
+                        "borderRadius": radiusPx.md,
                         "backgroundColor": `${background.hover}`,
                         "& .MuiLinearProgress-bar": {
                           backgroundColor: getProgressColor(annexPercent),
-                          borderRadius: 3,
+                          borderRadius: radiusPx.md,
                         },
                       }}
                     />

@@ -259,7 +259,7 @@ export default function AIObservability() {
               key={card.label}
               sx={{
                 ...cardSx,
-                borderRadius: 2,
+                borderRadius: radiusPx.sm,
                 padding: "8px 14px 14px 14px",
               }}
             >

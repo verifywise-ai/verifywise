@@ -1,6 +1,6 @@
 import { Box, Typography, LinearProgress, Stack } from "@mui/material";
 import Chip from "../Chip";
-import { text as textColors, border, background, brand } from "../../themes/palette";
+import { text as textColors, border, background, brand, radiusPx } from "../../themes/palette";
 
 interface AIContentStatsData {
   total: number;
@@ -49,7 +49,7 @@ export default function AIContentStats({ data, isLoading }: AIContentStatsProps)
           p: 3,
           textAlign: "center",
           backgroundColor: background.accent,
-          borderRadius: 2,
+          borderRadius: radiusPx.sm,
           border: `1px solid ${border.light}`,
         }}
       >
@@ -64,7 +64,7 @@ export default function AIContentStats({ data, isLoading }: AIContentStatsProps)
     <Box
       sx={{
         p: 2,
-        borderRadius: 2,
+        borderRadius: radiusPx.sm,
         border: `1px solid ${border.light}`,
         backgroundColor: background.main,
       }}
@@ -120,10 +120,10 @@ export default function AIContentStats({ data, isLoading }: AIContentStatsProps)
           value={data.review_rate}
           sx={{
             "height": 6,
-            "borderRadius": 3,
+            "borderRadius": radiusPx.md,
             "backgroundColor": background.hover,
             "& .MuiLinearProgress-bar": {
-              borderRadius: 3,
+              borderRadius: radiusPx.md,
               backgroundColor: brand.primary,
             },
           }}

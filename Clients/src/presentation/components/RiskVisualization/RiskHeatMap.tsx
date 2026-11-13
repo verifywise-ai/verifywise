@@ -7,7 +7,7 @@ import { RiskLikelihood, RiskSeverity } from "../RiskLevel/riskValues";
 import { RiskModel } from "../../../domain/models/Common/risks/risk.model";
 import { useTranslation } from "../../../application/hooks/useTranslation";
 import { fill } from "../../../i18n/fill";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 
 /** IHeatMapCell, over whichever risk type is being plotted. */
 type HeatMapCell<T> = Omit<IHeatMapCell, "risks"> & { risks: T[] };
@@ -393,7 +393,7 @@ function RiskHeatMap<T extends HeatMapRisk = RiskModel>({
             minWidth: 200,
             p: 3,
             backgroundColor: "background.accent",
-            borderRadius: 2,
+            borderRadius: radiusPx.sm,
             border: "1px solid status.default.border",
           }}
         >
@@ -444,7 +444,7 @@ function RiskHeatMap<T extends HeatMapRisk = RiskModel>({
             transform: "translateX(-50%)",
             backgroundColor: "background.main",
             p: 2,
-            borderRadius: 2,
+            borderRadius: radiusPx.sm,
             border: "1px solid status.default.border",
             boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
           }}

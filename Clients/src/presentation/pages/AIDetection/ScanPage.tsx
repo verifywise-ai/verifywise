@@ -584,11 +584,11 @@ export default function ScanPage() {
             value={progress.progress}
             sx={{
               "height": 8,
-              "borderRadius": 4,
+              "borderRadius": radiusPx.lg,
               "backgroundColor": palette.border.light,
               "& .MuiLinearProgress-bar": {
                 backgroundColor: palette.brand.primary,
-                borderRadius: 4,
+                borderRadius: radiusPx.lg,
               },
             }}
           />

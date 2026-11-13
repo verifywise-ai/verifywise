@@ -730,7 +730,7 @@ export default function AIGatewaySettingsPage() {
                         <Box
                           sx={{
                             height: 6,
-                            borderRadius: 3,
+                            borderRadius: radiusPx.md,
                             backgroundColor: palette.border.light,
                             overflow: "hidden",
                           }}
@@ -746,7 +746,7 @@ export default function AIGatewaySettingsPage() {
                                 budget.alert_threshold_pct
                                   ? palette.status.error.text
                                   : palette.brand.primary,
-                              borderRadius: 3,
+                              borderRadius: radiusPx.md,
                               transition: "width 0.3s",
                             }}
                           />

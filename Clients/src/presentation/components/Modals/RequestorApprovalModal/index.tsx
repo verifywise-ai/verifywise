@@ -839,7 +839,7 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({ isOpen, onClose, 
                       sx={{
                         backgroundColor: "background.accent",
                         border: "1px solid status.default.border",
-                        borderRadius: "8px",
+                        borderRadius: radiusPx.lg,
                         padding: "16px",
                       }}
                     >

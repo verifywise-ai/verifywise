@@ -163,7 +163,7 @@ const ShareViewDropdown: React.FC<ShareViewDropdownProps> = ({
       sx={{
         "marginTop": "8px",
         "& .MuiPopover-paper": {
-          borderRadius: "8px",
+          borderRadius: radiusPx.lg,
           boxShadow: "0 8px 24px rgba(0, 0, 0, 0.15)",
           overflow: "visible",
           backgroundColor: `${background.main}`,

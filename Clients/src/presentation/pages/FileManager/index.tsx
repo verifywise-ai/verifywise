@@ -59,7 +59,7 @@ import { FileVersionHistoryDrawer } from "./components/FileVersionHistoryDrawer"
 // Event subscription for cross-component communication
 import { onFileApprovalChanged } from "../../../application/events/fileEvents";
 import { useCan } from "../../../application/hooks/useCan";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 
 // Constants
 const FILE_MANAGER_CONTEXT = "FileManager";
@@ -805,7 +805,7 @@ const FileManager: React.FC = (): JSX.Element => {
           display: "flex",
           gap: 0,
           border: `1px solid ${palette.border.light}`,
-          borderRadius: "8px",
+          borderRadius: radiusPx.lg,
           overflow: "hidden",
           minHeight: "600px",
         }}

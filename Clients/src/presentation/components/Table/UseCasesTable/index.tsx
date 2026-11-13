@@ -12,7 +12,7 @@ import {
 import Chip from "../../Chip";
 import ScrollableTableContainer from "../ScrollableTableContainer";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 
 export interface UseCaseRow {
   id: number;
@@ -109,11 +109,11 @@ const UseCasesTable: React.FC<UseCasesTableProps> = ({
                     sx={{
                       "width": 60,
                       "height": 4,
-                      "borderRadius": 2,
+                      "borderRadius": radiusPx.sm,
                       "backgroundColor": "status.default.border",
                       "& .MuiLinearProgress-bar": {
                         backgroundColor: "brand.primary",
-                        borderRadius: 2,
+                        borderRadius: radiusPx.sm,
                       },
                     }}
                   />

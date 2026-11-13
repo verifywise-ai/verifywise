@@ -103,7 +103,7 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
           p: 4,
           textAlign: "center",
           backgroundColor: "background.accent",
-          borderRadius: 2,
+          borderRadius: radiusPx.sm,
           border: "1px solid status.default.border",
         }}
       >
@@ -199,7 +199,7 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
                       flex: 1,
                       backgroundColor: "background.main",
                       border: "1px solid status.default.border",
-                      borderRadius: 2,
+                      borderRadius: radiusPx.sm,
                       p: 3,
                       transition: "all 0.2s ease-in-out",
                       borderLeft: `4px solid ${getRiskLevelColor(event.riskLevel)}`,

@@ -1,7 +1,7 @@
 import { Box, IconButton } from "@mui/material";
 import { Play, Pause } from "lucide-react";
 import type { FramePlayerState } from "./useFramePlayer";
-import { brand, background } from "../../../themes/palette";
+import { brand, background, radiusPx } from "../../../themes/palette";
 
 interface PlayerControlsProps {
   player: FramePlayerState;
@@ -38,7 +38,7 @@ export function PlayerControls({ player }: PlayerControlsProps) {
         sx={{
           flex: 1,
           height: 4,
-          borderRadius: 2,
+          borderRadius: radiusPx.sm,
           backgroundColor: "rgba(255,255,255,0.2)",
           cursor: "pointer",
           position: "relative",
@@ -52,7 +52,7 @@ export function PlayerControls({ player }: PlayerControlsProps) {
         <Box
           sx={{
             height: "100%",
-            borderRadius: 2,
+            borderRadius: radiusPx.sm,
             backgroundColor: `${brand.primary}`,
             width: `${player.progress * 100}%`,
             transition: "width 0.05s linear",

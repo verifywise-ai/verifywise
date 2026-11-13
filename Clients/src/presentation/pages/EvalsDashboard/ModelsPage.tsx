@@ -24,7 +24,7 @@ import ModelPicker from "../../components/Inputs/ModelPicker";
 import { useProviderModels } from "../../../application/hooks/useProviderModels";
 import { useCanCheck } from "../../../application/hooks/useCan";
 import { PROVIDERS } from "../../utils/providers";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 
 // Import provider logos
 import { ReactComponent as OpenAILogo } from "../../assets/icons/openai_logo.svg";
@@ -581,7 +581,7 @@ export default function ModelsPage({ orgId, openAddModal, onAddModalConsumed }: 
                   sx={{
                     p: 1.5,
                     backgroundColor: palette.status.success.bg,
-                    borderRadius: "8px",
+                    borderRadius: radiusPx.lg,
                     border: `1px solid ${palette.status.success.border}`,
                   }}
                 >

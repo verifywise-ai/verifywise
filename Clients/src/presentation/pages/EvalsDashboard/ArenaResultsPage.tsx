@@ -99,7 +99,7 @@ const MarkdownRenderer = ({ content }: { content: string }) => {
         },
         "& pre": {
           "backgroundColor": palette.text.primary,
-          "borderRadius": "6px",
+          "borderRadius": radiusPx.md,
           "p": 2,
           "my": 1.5,
           "overflow": "auto",
@@ -365,7 +365,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
           sx={{
             p: 3,
             mb: 4,
-            borderRadius: "8px",
+            borderRadius: radiusPx.lg,
             backgroundColor: palette.status.error.bg,
             border: `1px solid ${palette.status.error.border}`,
           }}
@@ -794,7 +794,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                             sx={{
                               height: 4,
                               backgroundColor: palette.border.light,
-                              borderRadius: 2,
+                              borderRadius: radiusPx.sm,
                               overflow: "hidden",
                             }}
                           >
@@ -803,7 +803,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                                 height: "100%",
                                 width: `${(numericScore / 10) * 100}%`,
                                 backgroundColor: color.main,
-                                borderRadius: 2,
+                                borderRadius: radiusPx.sm,
                                 transition: "width 0.3s ease",
                               }}
                             />

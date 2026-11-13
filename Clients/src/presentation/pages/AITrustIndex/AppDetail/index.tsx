@@ -176,7 +176,7 @@ export default function AppDetail() {
           sx={{
             width: 48,
             height: 48,
-            borderRadius: "8px",
+            borderRadius: radiusPx.lg,
             border: `1px solid ${palette.border.dark}`,
             display: "flex",
             alignItems: "center",

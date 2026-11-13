@@ -6,7 +6,7 @@ import Checkbox from "../../components/Inputs/Checkbox";
 import { FormField } from "../IntakeFormBuilder/types";
 import { isEmptyAnswer } from "../../../application/utils/intakeFormLogic";
 import { isWebUrl } from "../../../application/utils/webUrl";
-import { status, palette as vwPalette } from "../../themes/palette";
+import { status, palette as vwPalette, radiusPx } from "../../themes/palette";
 
 /**
  * Renders a field label.
@@ -350,7 +350,7 @@ export function FormFieldRenderer({ field, control, errors, tone }: FormFieldRen
                     sx={{
                       "width": "100%",
                       "& .MuiOutlinedInput-root": {
-                        borderRadius: "8px",
+                        borderRadius: radiusPx.lg,
                         fontSize: "15px",
                       },
                     }}
@@ -426,7 +426,7 @@ export function FormFieldRenderer({ field, control, errors, tone }: FormFieldRen
                         border: error
                           ? `1px solid ${vwPalette.riskMark.critical}`
                           : `1px solid ${vwPalette.border.light}`,
-                        borderRadius: "8px",
+                        borderRadius: radiusPx.lg,
                         maxHeight: 200,
                         overflowY: "auto",
                       }}

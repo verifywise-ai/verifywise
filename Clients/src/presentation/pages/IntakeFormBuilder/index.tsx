@@ -998,7 +998,7 @@ export function IntakeFormBuilder() {
                     transform: "translate(-50%, -50%)",
                     display: "flex",
                     border: `1px solid ${theme.palette.border.dark}`,
-                    borderRadius: "6px",
+                    borderRadius: radiusPx.md,
                     overflow: "hidden",
                   }}
                 >

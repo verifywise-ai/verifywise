@@ -3,7 +3,13 @@ import { Button, Stack, Popover, Box, Typography } from "@mui/material";
 import { X, Rows3 } from "lucide-react";
 import Select from "../Inputs/Select";
 import { ButtonToggle } from "../button-toggle";
-import { text, border as borderPalette, status, palette as vwPalette } from "../../themes/palette";
+import {
+  text,
+  border as borderPalette,
+  status,
+  palette as vwPalette,
+  radiusPx,
+} from "../../themes/palette";
 
 export interface GroupByOption {
   id: string;
@@ -234,7 +240,7 @@ export const GroupBy: React.FC<GroupByProps> = ({
               padding: "16px",
               minWidth: "480px",
               boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
-              borderRadius: "8px",
+              borderRadius: radiusPx.lg,
             },
           },
         }}

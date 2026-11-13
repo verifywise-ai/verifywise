@@ -7,7 +7,7 @@ import {
   useUpdateShareLink,
   useDeleteShareLink,
 } from "../../../application/hooks/useShare";
-import { brand, text, background, palette as vwPalette } from "../../themes/palette";
+import { brand, text, background, palette as vwPalette, radiusPx } from "../../themes/palette";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 /**
@@ -170,7 +170,7 @@ const ManageShareLinks: React.FC<ManageShareLinksProps> = ({
             key={shareLink.id}
             sx={{
               border: `1px solid ${vwPalette.border.light}`,
-              borderRadius: "6px",
+              borderRadius: radiusPx.md,
               p: 1.5,
               backgroundColor: shareLink.is_enabled
                 ? `${background.main}`

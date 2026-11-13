@@ -565,7 +565,7 @@ const Framework = () => {
             textAlign: "center",
             py: 8,
             backgroundColor: "background.accent",
-            borderRadius: 2,
+            borderRadius: radiusPx.sm,
             border: "1px solid status.default.border",
           }}
         >

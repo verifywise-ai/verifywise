@@ -3,7 +3,14 @@ import { Box, IconButton, Typography } from "@mui/material";
 import { RefreshCw } from "lucide-react";
 import Field from "../../components/Inputs/Field";
 import { getCaptcha } from "../../../application/repository/intakeForm.repository";
-import { brand, text, background, status, palette as vwPalette } from "../../themes/palette";
+import {
+  brand,
+  text,
+  background,
+  status,
+  palette as vwPalette,
+  radiusPx,
+} from "../../themes/palette";
 
 /**
  * Props for MathCaptcha component
@@ -65,7 +72,7 @@ export function MathCaptcha({ value, onChange, error, refreshTrigger }: MathCapt
       sx={{
         p: 2.5,
         backgroundColor: vwPalette.background.alt,
-        borderRadius: "8px",
+        borderRadius: radiusPx.lg,
         border: error
           ? `1px solid ${vwPalette.riskMark.critical}`
           : `1px solid ${vwPalette.border.light}`,
@@ -83,7 +90,7 @@ export function MathCaptcha({ value, onChange, error, refreshTrigger }: MathCapt
           size="small"
           sx={{
             "color": `${status.default.text}`,
-            "borderRadius": "6px",
+            "borderRadius": radiusPx.md,
             "p": "4px",
             "&:hover": { color: `${brand.primary}`, backgroundColor: vwPalette.status.success.bg },
           }}
@@ -101,7 +108,7 @@ export function MathCaptcha({ value, onChange, error, refreshTrigger }: MathCapt
             backgroundColor: `${background.main}`,
             px: 2,
             py: 1,
-            borderRadius: "8px",
+            borderRadius: radiusPx.lg,
             border: `1px solid ${vwPalette.border.light}`,
             minWidth: 120,
             textAlign: "center",

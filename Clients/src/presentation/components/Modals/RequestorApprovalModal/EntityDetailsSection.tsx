@@ -15,7 +15,7 @@ import {
   EntityTypeConfig,
   DetailFieldConfig,
 } from "./entityTypeConfig";
-import { background, status, palette as vwPalette } from "../../../themes/palette";
+import { background, status, palette as vwPalette, radiusPx } from "../../../themes/palette";
 
 interface EntityDetailsSectionProps {
   details: Record<string, any>;
@@ -30,7 +30,7 @@ const EntityDetailsSection: React.FC<EntityDetailsSectionProps> = ({ details }) 
   const containerStyles = {
     backgroundColor: `${background.accent}`,
     border: `1px solid ${status.default.border}`,
-    borderRadius: "8px",
+    borderRadius: radiusPx.lg,
     padding: "16px",
   };
 
@@ -38,7 +38,7 @@ const EntityDetailsSection: React.FC<EntityDetailsSectionProps> = ({ details }) 
   const deletedMessageStyles = {
     backgroundColor: "#FDECEA",
     padding: "12px",
-    borderRadius: "6px",
+    borderRadius: radiusPx.md,
     border: "1px solid #F5C6CB",
   };
 

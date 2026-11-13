@@ -6,7 +6,7 @@
 import React from "react";
 import { Box, Typography, Stack } from "@mui/material";
 import { ClipboardCheck, Info } from "lucide-react";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 
 interface JiraUseCaseMonitoringProps {
   project: {
@@ -50,7 +50,7 @@ export const JiraUseCaseMonitoring: React.FC<JiraUseCaseMonitoringProps> = () =>
             gap: 1.5,
             backgroundColor: "#EFF6FF",
             border: "1px solid #BFDBFE",
-            borderRadius: 2,
+            borderRadius: radiusPx.sm,
             p: 2,
             maxWidth: 450,
           }}

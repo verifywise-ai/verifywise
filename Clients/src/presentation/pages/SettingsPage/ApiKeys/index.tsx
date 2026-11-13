@@ -590,7 +590,7 @@ const ApiKeys = ({ showLlmKeys = true }: ApiKeysProps) => {
               zIndex: 1300,
               backgroundColor: "white",
               padding: "16px",
-              borderRadius: "8px",
+              borderRadius: radiusPx.lg,
               boxShadow: "0 4px 8px rgba(0, 0, 0, 0.1)",
               maxWidth: "440px",
               width: "100%",

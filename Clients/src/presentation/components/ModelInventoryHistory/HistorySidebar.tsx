@@ -386,7 +386,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
           sx={{
             height: "560px",
             border: `1px solid ${vwPalette.border.light}`,
-            borderRadius: "8px",
+            borderRadius: radiusPx.lg,
             display: "flex",
             flexDirection: "column",
             background: `linear-gradient(180deg, ${vwPalette.background.alt} 0%, ${vwPalette.background.alt} 100%)`,

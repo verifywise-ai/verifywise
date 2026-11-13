@@ -113,7 +113,7 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
             sx={{
               width: compact ? 28 : 32,
               height: compact ? 28 : 32,
-              borderRadius: "6px",
+              borderRadius: radiusPx.md,
               backgroundColor: isSelected ? `${brand.primary}` : `${background.hover}`,
               display: "flex",
               alignItems: "center",

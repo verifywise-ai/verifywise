@@ -31,7 +31,7 @@ export function ColorPickerPopover({ editor, anchorEl, onClose }: ColorPickerPop
         paper: {
           sx: {
             p: 1.5,
-            borderRadius: "6px",
+            borderRadius: radiusPx.md,
             border: "1px solid",
             borderColor: border.dark,
             boxShadow: `0 4px 12px ${alpha(text.black, 0.1)}`,

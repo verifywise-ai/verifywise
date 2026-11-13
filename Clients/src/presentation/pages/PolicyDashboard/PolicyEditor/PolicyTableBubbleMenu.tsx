@@ -125,7 +125,7 @@ export function PolicyTableBubbleMenu({ editor }: PolicyTableBubbleMenuProps) {
           backgroundColor: background.main,
           border: "1px solid",
           borderColor: border.dark,
-          borderRadius: "6px",
+          borderRadius: radiusPx.md,
           boxShadow: `0 4px 12px ${alpha(text.black, 0.12)}, 0 1px 3px ${alpha(text.black, 0.08)}`,
         }}
       >

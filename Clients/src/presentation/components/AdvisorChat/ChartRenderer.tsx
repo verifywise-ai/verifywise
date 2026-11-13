@@ -13,6 +13,7 @@ import {
 } from "recharts";
 import { VWDonutChart, vwTooltipStyle, axisTick, axisLine, gridStroke } from "../Charts/VWCharts";
 import palette from "../../themes/palette";
+import { radiusPx } from "../../themes/palette";
 import { seriesColor } from "../../themes/chartTheme";
 
 interface ChartData {
@@ -212,7 +213,7 @@ const ChartRendererComponent: FC<ChartRendererProps> = ({ chartData }) => {
         bgcolor: "background.paper",
         border: 1,
         borderColor: "divider",
-        borderRadius: 2,
+        borderRadius: radiusPx.sm,
         width: "100%",
       }}
     >

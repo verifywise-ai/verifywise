@@ -174,7 +174,7 @@ const NISTFunctionsOverviewCard = ({
           textAlign: "center",
           py: 4,
           backgroundColor: "background.accent",
-          borderRadius: 2,
+          borderRadius: radiusPx.sm,
           border: `1px solid ${borderPalette.dark}`,
         }}
       >

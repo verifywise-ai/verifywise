@@ -205,7 +205,7 @@ const AddNewMegaDropdown: React.FC<AddNewMegaDropdownProps> = ({ buttonLabel = "
                 }
               }}
               sx={{
-                "borderRadius": "8px",
+                "borderRadius": radiusPx.lg,
                 "padding": "12px 8px",
                 "cursor": "pointer",
                 "display": "flex",

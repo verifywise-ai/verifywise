@@ -549,7 +549,7 @@ const Uploader: React.FC<UploaderProps> = ({
           width: "100%",
           maxWidth: 800,
           mx: "auto",
-          borderRadius: "8px",
+          borderRadius: radiusPx.lg,
           background: "background.main",
           border: `1px solid ${vwPalette.border.light}`,
           boxShadow: "none",
@@ -699,11 +699,11 @@ const Uploader: React.FC<UploaderProps> = ({
                 value={overallProgress}
                 sx={{
                   "height": 6,
-                  "borderRadius": 3,
+                  "borderRadius": radiusPx.md,
                   "backgroundColor": "background.hover",
                   "& .MuiLinearProgress-bar": {
                     backgroundColor: singleTheme.buttons.primary.contained.backgroundColor,
-                    borderRadius: 3,
+                    borderRadius: radiusPx.md,
                     transition: "all 0.2s ease",
                   },
                 }}
@@ -810,12 +810,12 @@ const Uploader: React.FC<UploaderProps> = ({
                                     value={file.progress}
                                     sx={{
                                       "height": 4,
-                                      "borderRadius": 2,
+                                      "borderRadius": radiusPx.sm,
                                       "backgroundColor": "background.hover",
                                       "& .MuiLinearProgress-bar": {
                                         backgroundColor:
                                           singleTheme.buttons.primary.contained.backgroundColor,
-                                        borderRadius: 2,
+                                        borderRadius: radiusPx.sm,
                                       },
                                     }}
                                   />

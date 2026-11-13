@@ -355,7 +355,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
             "gap": "8px",
             "background": "none",
             "border": `1px solid ${palette.border.light}`,
-            "borderRadius": "8px",
+            "borderRadius": radiusPx.lg,
             "px": "12px",
             "py": "7px",
             "cursor": "pointer",
@@ -378,7 +378,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
             sx: {
               mt: "4px",
               minWidth: 260,
-              borderRadius: "8px",
+              borderRadius: radiusPx.lg,
               border: `1px solid ${palette.border.light}`,
               boxShadow: "0 4px 20px rgba(0,0,0,0.08)",
             },
@@ -478,7 +478,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
               }}
               sx={{
                 "color": palette.text.tertiary,
-                "borderRadius": "6px",
+                "borderRadius": radiusPx.md,
                 "p": "6px",
                 "&:hover": {
                   backgroundColor: palette.background.fill,
@@ -633,7 +633,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                       "& pre": {
                         backgroundColor: palette.background.hover,
                         p: "12px 14px",
-                        borderRadius: "6px",
+                        borderRadius: radiusPx.md,
                         overflowX: "auto",
                         fontSize: 12,
                         my: "10px",
@@ -693,7 +693,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                 mt: "6px",
                 px: "14px",
                 py: "10px",
-                borderRadius: "8px",
+                borderRadius: radiusPx.lg,
                 border: "1px solid #FECACA",
                 backgroundColor: "#FFF5F5",
               }}
@@ -736,7 +736,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                   gap: "6px",
                   backgroundColor: palette.background.main,
                   border: `1px solid ${palette.border.light}`,
-                  borderRadius: "8px",
+                  borderRadius: radiusPx.lg,
                   overflow: "hidden",
                   ...(att.type === "image"
                     ? { width: 64, height: 64 }
@@ -823,7 +823,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                 disabled={loading || !selectedModelId || !visionOk}
                 sx={{
                   "color": palette.text.tertiary,
-                  "borderRadius": "6px",
+                  "borderRadius": radiusPx.md,
                   "p": "4px",
                   "flexShrink": 0,
                   "&:hover": { backgroundColor: palette.background.fill },

@@ -22,7 +22,14 @@ import dayjs, { Dayjs } from "dayjs";
 import { Info as GreyCircleInfoIcon } from "lucide-react";
 import { cardStyles } from "../../../themes";
 import { green, yellow } from "../../../themes";
-import { background, border, status, text, palette as vwPalette } from "../../../themes/palette";
+import {
+  background,
+  border,
+  status,
+  text,
+  palette as vwPalette,
+  radiusPx,
+} from "../../../themes/palette";
 import {
   CEMarkingData,
   ConformityStepStatus,
@@ -912,11 +919,11 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                   }
                   sx={{
                     "height": 8,
-                    "borderRadius": 4,
+                    "borderRadius": radiusPx.lg,
                     "backgroundColor": "background.hover",
                     "& .MuiLinearProgress-bar": {
                       backgroundColor: yellow[600],
-                      borderRadius: 4,
+                      borderRadius: radiusPx.lg,
                     },
                   }}
                 />
@@ -952,11 +959,11 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                   }
                   sx={{
                     "height": 8,
-                    "borderRadius": 4,
+                    "borderRadius": radiusPx.lg,
                     "backgroundColor": "background.hover",
                     "& .MuiLinearProgress-bar": {
                       backgroundColor: yellow[600],
-                      borderRadius: 4,
+                      borderRadius: radiusPx.lg,
                     },
                   }}
                 />
@@ -1006,11 +1013,11 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
               value={(data.completedStepsCount / data.totalStepsCount) * 100}
               sx={{
                 "height": 6,
-                "borderRadius": 3,
+                "borderRadius": radiusPx.md,
                 "backgroundColor": "background.hover",
                 "& .MuiLinearProgress-bar": {
                   backgroundColor: yellow[600],
-                  borderRadius: 3,
+                  borderRadius: radiusPx.md,
                 },
               }}
             />

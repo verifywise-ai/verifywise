@@ -147,7 +147,7 @@ const Preferences: React.FC = () => {
           height="300px"
           minWidth={"100%"}
           minHeight={300}
-          sx={{ borderRadius: 2 }}
+          sx={{ borderRadius: radiusPx.sm }}
         />
       )}
       {alert.visible && (

@@ -139,7 +139,7 @@ const MarkdownRenderer = ({ content }: { content: string }) => {
         },
         "& pre": {
           "backgroundColor": palette.text.primary,
-          "borderRadius": "6px",
+          "borderRadius": radiusPx.md,
           "p": "4px",
           "my": "3px",
           "overflow": "auto",
@@ -1931,7 +1931,7 @@ export default function ExperimentDetailContent({
                                   flex: 1,
                                   backgroundColor: palette.accent.purple.bg,
                                   border: `1px solid ${palette.accent.purple.border}`,
-                                  borderRadius: "8px",
+                                  borderRadius: radiusPx.lg,
                                   p: "5px",
                                   overflowY: "auto",
                                 }}
@@ -1991,7 +1991,7 @@ export default function ExperimentDetailContent({
                                     mt: "4px",
                                     p: "3px",
                                     backgroundColor: palette.status.warning.bg,
-                                    borderRadius: "6px",
+                                    borderRadius: radiusPx.md,
                                     border: `1px solid ${palette.status.warning.border}`,
                                   }}
                                 >
@@ -2036,7 +2036,7 @@ export default function ExperimentDetailContent({
                                     pl: "8px",
                                     backgroundColor: palette.background.accent,
                                     border: `1px solid ${palette.border.light}`,
-                                    borderRadius: "8px",
+                                    borderRadius: radiusPx.lg,
                                     maxHeight: "120px",
                                     overflowY: "auto",
                                   }}
@@ -2072,7 +2072,7 @@ export default function ExperimentDetailContent({
                                     pl: "8px",
                                     backgroundColor: palette.background.accent,
                                     border: `1px solid ${palette.border.light}`,
-                                    borderRadius: "8px",
+                                    borderRadius: radiusPx.lg,
                                     overflowY: "auto",
                                   }}
                                 >
@@ -2125,7 +2125,7 @@ export default function ExperimentDetailContent({
                                       key={metricName}
                                       sx={{
                                         p: "4px",
-                                        borderRadius: "6px",
+                                        borderRadius: radiusPx.md,
                                         backgroundColor: palette.background.main,
                                         border: `1px solid ${palette.border.light}`,
                                         borderLeft: `3px solid ${statusColor}`,
@@ -2221,7 +2221,7 @@ export default function ExperimentDetailContent({
                             mt: "4px",
                             p: "4px",
                             backgroundColor: palette.status.error.bg,
-                            borderRadius: "6px",
+                            borderRadius: radiusPx.md,
                             border: `1px solid ${palette.status.error.border}`,
                           }}
                         >

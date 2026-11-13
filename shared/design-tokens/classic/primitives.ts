@@ -190,6 +190,8 @@ export const part = {
 /** Corner radius in px. Today everything is 4px. */
 export const radius = {
   sm: 4,
+  md: 6,
+  lg: 8,
   search: 4,
   tab: 4,
   pill: 999,

@@ -33,7 +33,7 @@ import { useAuth } from "../../../../application/hooks/useAuth";
 import { useProfilePhotoFetch } from "../../../../application/hooks/useProfilePhotoFetch";
 import Avatar from "../../../components/Avatar/VWAvatar";
 import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 
 /**
  * ProfileForm component for managing user profile information.
@@ -492,7 +492,7 @@ const ProfileForm: React.FC = () => {
             height="300px"
             minWidth={"100%"}
             minHeight={300}
-            sx={{ borderRadius: 2 }}
+            sx={{ borderRadius: radiusPx.sm }}
           />
         )}
 
@@ -610,7 +610,7 @@ const ProfileForm: React.FC = () => {
             height="200px"
             minWidth={"100%"}
             minHeight={200}
-            sx={{ borderRadius: 2 }}
+            sx={{ borderRadius: radiusPx.sm }}
           />
         )}
 

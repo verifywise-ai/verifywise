@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { Box, Typography, Stack, IconButton, Alert } from "@mui/material";
 import { Upload, X, FileSpreadsheet } from "lucide-react";
-import { brand, text, palette as vwPalette } from "../../../themes/palette";
+import { brand, text, palette as vwPalette, radiusPx } from "../../../themes/palette";
 
 const MAX_FILES = 20;
 const MAX_SIZE = 30 * 1024 * 1024; // 30MB
@@ -106,7 +106,7 @@ export default function FileDropZone({ files, onFilesChange }: FileDropZoneProps
         sx={{
           "border": "1.5px dashed",
           "borderColor": dragOver ? "brand.primary" : "border.dark",
-          "borderRadius": "8px",
+          "borderRadius": radiusPx.lg,
           "p": "32px",
           "textAlign": "center",
           "cursor": "pointer",
@@ -163,7 +163,7 @@ export default function FileDropZone({ files, onFilesChange }: FileDropZoneProps
               alignItems="center"
               sx={{
                 p: "8px 12px",
-                borderRadius: "6px",
+                borderRadius: radiusPx.md,
                 backgroundColor: "background.accent",
                 gap: "8px",
               }}

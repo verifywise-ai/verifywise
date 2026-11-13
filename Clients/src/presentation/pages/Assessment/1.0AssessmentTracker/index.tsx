@@ -25,7 +25,7 @@ import { Project } from "../../../../domain/types/Project";
 import { Question } from "../../../../domain/types/Question";
 import { Subtopic } from "../../../../domain/types/Subtopic";
 import { useSearchParams } from "react-router";
-import { brand, background } from "../../../themes/palette";
+import { brand, background, radiusPx } from "../../../themes/palette";
 
 const AssessmentTracker = ({
   project,
@@ -178,7 +178,7 @@ const AssessmentTracker = ({
           sx={{
             padding: 1,
             paddingLeft: 4,
-            borderRadius: 2,
+            borderRadius: radiusPx.sm,
             backgroundColor: index === activeTab ? `${brand.primary}` : "transparent",
             width: "100%",
             textWrap: "wrap",

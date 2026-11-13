@@ -15,6 +15,7 @@ import {
 import { useState } from "react";
 import "./index.css";
 import { ChevronDown } from "lucide-react";
+import { radiusPx } from "../../../../themes/palette";
 
 interface CustomizableMultiSelectProps {
   label: string;
@@ -130,7 +131,7 @@ function CustomizableMultiSelect({
                 e.stopPropagation();
               }}
               sx={{
-                "borderRadius": 4,
+                "borderRadius": radiusPx.lg,
                 "height": 24,
                 "fontSize": 12,
                 "backgroundColor": theme.palette.background.accent,

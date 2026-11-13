@@ -23,7 +23,7 @@ import {
 import { extractUserToken } from "../../../../application/tools/extractToken";
 import { getAuthToken } from "../../../../application/redux/auth/getAuthToken";
 import { useLogoFetch } from "../../../../application/hooks/useLogoFetch";
-import { brand, text, background, palette as vwPalette } from "../../../themes/palette";
+import { brand, text, background, palette as vwPalette, radiusPx } from "../../../themes/palette";
 
 const AITrustCenterSettings: React.FC = () => {
   const styles = useStyles();
@@ -406,7 +406,7 @@ const AITrustCenterSettings: React.FC = () => {
                   "display": "flex",
                   "alignItems": "center",
                   "justifyContent": "center",
-                  "borderRadius": 2,
+                  "borderRadius": radiusPx.sm,
                   "border": `2px dashed ${vwPalette.border.light}`,
                   "backgroundColor": vwPalette.background.alt,
                   "position": "relative",

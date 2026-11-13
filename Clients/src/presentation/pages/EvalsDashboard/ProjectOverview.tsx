@@ -70,7 +70,7 @@ const StatCard: React.FC<StatCardProps> = ({ title, value, Icon, subtitle }) => 
         "display": "flex",
         "flexDirection": "column",
         "boxSizing": "border-box",
-        "borderRadius": "8px",
+        "borderRadius": radiusPx.lg,
         "overflow": "hidden",
         "&:hover": {
           background: `linear-gradient(135deg, ${palette.background.accent} 0%, ${palette.background.hover} 100%)`,

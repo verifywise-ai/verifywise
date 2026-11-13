@@ -91,7 +91,7 @@ function WiseSearchWelcomeBanner({ onDismiss }: { onDismiss: () => void }) {
       className="wise-search-banner"
       sx={{
         background: `linear-gradient(135deg, ${vwPalette.text.primary} 0%, #252530 100%)`,
-        borderRadius: "8px",
+        borderRadius: radiusPx.lg,
         padding: "16px 20px",
         margin: "8px",
         marginBottom: "12px",
@@ -716,7 +716,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                         marginTop: "4px",
                         background: "var(--dropdown-bg, background.main)",
                         border: `1px solid var(--filter-border, ${vwPalette.border.light})`,
-                        borderRadius: "6px",
+                        borderRadius: radiusPx.md,
                         boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
                         zIndex: 10,
                         minWidth: "180px",

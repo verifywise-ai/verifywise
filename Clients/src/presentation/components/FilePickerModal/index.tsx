@@ -25,7 +25,7 @@ import {
 import { FileData } from "../../../domain/types/File";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { FileExpiryChip } from "../FileExpiryChip";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 
 interface FilePickerModalProps {
   open: boolean;
@@ -182,7 +182,7 @@ export const FilePickerModal: FC<FilePickerModalProps> = ({
           sx={{
             "& .MuiOutlinedInput-root": {
               "backgroundColor": theme.palette.background.accent,
-              "borderRadius": "8px",
+              "borderRadius": radiusPx.lg,
               "fontSize": theme.typography.fontSize,
               "& fieldset": {
                 borderColor: theme.palette.border.light,
@@ -247,7 +247,7 @@ export const FilePickerModal: FC<FilePickerModalProps> = ({
             maxHeight: "320px",
             overflowY: "auto",
             border: `1px solid ${theme.palette.border.light}`,
-            borderRadius: "8px",
+            borderRadius: radiusPx.lg,
             backgroundColor: theme.palette.background.main,
           }}
         >

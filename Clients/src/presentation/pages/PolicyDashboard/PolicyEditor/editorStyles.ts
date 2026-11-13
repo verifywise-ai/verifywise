@@ -57,7 +57,7 @@ export const policyEditorStyles: GlobalStylesProps["styles"] = {
       backgroundColor: editor.codeBlockBg,
       color: editor.codeBlockText,
       padding: "12px 16px",
-      borderRadius: "6px",
+      borderRadius: radiusPx.md,
       fontFamily: fontFamily.mono,
       fontSize: fontSize.sm,
       overflowX: "auto",
@@ -130,7 +130,7 @@ export const policyEditorStyles: GlobalStylesProps["styles"] = {
     },
     "& img": {
       maxWidth: "100%",
-      borderRadius: "8px",
+      borderRadius: radiusPx.lg,
       margin: "12px 0",
     },
     "& a": {

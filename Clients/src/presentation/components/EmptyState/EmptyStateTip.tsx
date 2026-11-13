@@ -2,6 +2,7 @@ import { type FC, useRef, useState, useEffect, useCallback } from "react";
 import { Box, Typography, useTheme } from "@mui/material";
 import type { LucideIcon } from "lucide-react";
 import { ChevronRight } from "lucide-react";
+import { radiusPx } from "../../themes/palette";
 
 /** Three accent palettes that rotate per-tip */
 const ACCENT_PALETTES = [
@@ -69,7 +70,7 @@ const EmptyStateTip: FC<EmptyStateTipProps> = ({ icon: Icon, title, description,
       ref={detailsRef}
       sx={{
         border: `1px solid ${theme.palette.border.light}`,
-        borderRadius: "6px",
+        borderRadius: radiusPx.md,
         overflow: "hidden",
         transition: "border-color 200ms ease",
       }}

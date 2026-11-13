@@ -179,7 +179,7 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
           <Box
             sx={{
               border: `1px solid ${vwPalette.border.light}`,
-              borderRadius: 2,
+              borderRadius: radiusPx.sm,
               background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
               minWidth: 228,
               flex: 1,
@@ -235,7 +235,7 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
           <Box
             sx={{
               border: `1px solid ${vwPalette.border.light}`,
-              borderRadius: 2,
+              borderRadius: radiusPx.sm,
               background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
               minWidth: 228,
               flex: 1,
@@ -268,7 +268,7 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
           <Box
             sx={{
               border: `1px solid ${vwPalette.border.light}`,
-              borderRadius: 2,
+              borderRadius: radiusPx.sm,
               background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
               minWidth: 228,
               flex: 1,
@@ -575,7 +575,7 @@ const AutomationHistory: React.FC<AutomationHistoryProps> = ({ automationId }) =
                                               sx={{
                                                 flex: 1,
                                                 border: `1px solid ${vwPalette.border.light}`,
-                                                borderRadius: "8px",
+                                                borderRadius: radiusPx.lg,
                                                 padding: "12px 16px",
                                                 backgroundColor: vwPalette.background.alt,
                                               }}

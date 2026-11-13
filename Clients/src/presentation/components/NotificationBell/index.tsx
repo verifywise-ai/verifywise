@@ -376,7 +376,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ sx }) => {
             width: 360,
             maxHeight: 480,
             boxShadow: "0 4px 20px rgba(0, 0, 0, 0.12)",
-            borderRadius: "8px",
+            borderRadius: radiusPx.lg,
             border: "1px solid status.default.border",
             mt: 1,
             overflow: "hidden",

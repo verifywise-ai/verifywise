@@ -4,7 +4,7 @@ import { AlertCircle, AlertTriangle, Info, CheckCircle, RotateCcw, Save } from "
 import type { ClassificationResult } from "../../../../domain/types/euAiActClassification";
 import ReasonList from "../../../components/EuAiActQuestionnaire/ReasonList";
 import { CustomizableButton } from "../../../components/button/customizable-button";
-import { brand, status } from "../../../themes/palette";
+import { brand, status, radiusPx } from "../../../themes/palette";
 
 interface ResultProps {
   result: ClassificationResult;
@@ -74,7 +74,7 @@ const Results: React.FC<ResultProps> = ({ result, onRestart, onSave, isSaving })
           bgcolor: config.bgColor,
           border: 2,
           borderColor: config.color,
-          borderRadius: 2,
+          borderRadius: radiusPx.sm,
           p: 3,
         }}
       >

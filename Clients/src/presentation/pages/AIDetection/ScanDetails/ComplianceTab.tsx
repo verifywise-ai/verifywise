@@ -382,7 +382,7 @@ export function ComplianceTab({ complianceData, complianceLoading }: ComplianceT
                                       key={type}
                                       sx={{
                                         backgroundColor: palette.background.accent,
-                                        borderRadius: "6px",
+                                        borderRadius: radiusPx.md,
                                         p: "12px",
                                       }}
                                     >

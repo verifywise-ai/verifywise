@@ -27,6 +27,7 @@ import {
   getControlByIdAndProject,
   getControlsByControlCategoryId,
 } from "../../../../application/repository/control_eu_act.repository";
+import { radiusPx } from "../../../themes/palette";
 
 interface Column {
   name: string;
@@ -344,7 +345,7 @@ const ControlsTable: React.FC<ControlsTableProps> = ({
                             value={completionPercentage}
                             sx={{
                               "height": 8,
-                              "borderRadius": 4,
+                              "borderRadius": radiusPx.lg,
                               "backgroundColor": "status.default.border",
                               "& .MuiLinearProgress-bar": {
                                 backgroundColor: getProgressColor(completionPercentage),

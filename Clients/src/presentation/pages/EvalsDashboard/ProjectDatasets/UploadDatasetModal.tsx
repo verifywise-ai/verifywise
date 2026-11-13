@@ -10,7 +10,7 @@ import { Download, Upload } from "lucide-react";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import Chip from "../../../components/Chip";
 import ModalStandard from "../../../components/Modals/StandardModal";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import {
   getExampleDatasetPayload,
   type ExampleTurnType,
@@ -263,7 +263,7 @@ export default function UploadDatasetModal({
             sx={{
               backgroundColor: palette.background.accent,
               border: `1px solid ${palette.border.dark}`,
-              borderRadius: "6px",
+              borderRadius: radiusPx.md,
               p: 2,
               fontFamily: "monospace",
               fontSize: "11px",
@@ -339,7 +339,7 @@ export default function UploadDatasetModal({
                 mt: 1.5,
                 p: 1.5,
                 backgroundColor: palette.accent.purple.bg,
-                borderRadius: "6px",
+                borderRadius: radiusPx.md,
                 border: `1px solid ${palette.accent.purple.border}`,
               }}
             >

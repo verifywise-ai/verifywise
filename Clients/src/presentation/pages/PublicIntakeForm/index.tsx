@@ -46,7 +46,7 @@ import {
   type PublicFormRef,
 } from "../../../application/repository/intakeForm.repository";
 import { FormDesignSettings, DEFAULT_DESIGN_SETTINGS } from "../IntakeFormBuilder/types";
-import { brand, palette as vwPalette } from "../../themes/palette";
+import { brand, palette as vwPalette, radiusPx } from "../../themes/palette";
 
 /**
  * Public form data structure
@@ -712,7 +712,7 @@ export function PublicIntakeForm() {
                       mb: "24px",
                       p: "12px 16px",
                       fontSize: "13px",
-                      borderRadius: "8px",
+                      borderRadius: radiusPx.lg,
                       border: "1px solid #fecaca",
                       backgroundColor: vwPalette.status.error.bg,
                       display: "flex",
@@ -796,7 +796,7 @@ export function PublicIntakeForm() {
                       mb: 3,
                       p: "12px 16px",
                       fontSize: "13px",
-                      borderRadius: "8px",
+                      borderRadius: radiusPx.lg,
                       border: "1px solid #bfdbfe",
                       backgroundColor: "#eff6ff",
                       display: "flex",
@@ -819,7 +819,7 @@ export function PublicIntakeForm() {
                       mb: 3,
                       p: "12px 16px",
                       fontSize: "13px",
-                      borderRadius: "8px",
+                      borderRadius: radiusPx.lg,
                       border: "1px solid #fecaca",
                       backgroundColor: vwPalette.status.error.bg,
                       display: "flex",
@@ -988,7 +988,7 @@ export function PublicIntakeForm() {
                     "backgroundColor": ds.colorTheme,
                     "fontSize": "15px",
                     "fontWeight": 600,
-                    "borderRadius": "8px",
+                    "borderRadius": radiusPx.lg,
                     "textTransform": "none",
                     "boxShadow": "none",
                     "&:hover": {

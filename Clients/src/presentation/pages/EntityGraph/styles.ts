@@ -6,6 +6,7 @@ import {
   border as borderPalette,
   status,
   palette as vwPalette,
+  radiusPx,
 } from "../../themes/palette";
 
 // Design system colors (from CLAUDE.md)
@@ -48,11 +49,11 @@ export const loadingTextSx: SxProps<Theme> = {
 export const loadingProgressSx: SxProps<Theme> = {
   "width": 300,
   "height": 8,
-  "borderRadius": 4,
+  "borderRadius": radiusPx.lg,
   "backgroundColor": COLORS.borderLight,
   "& .MuiLinearProgress-bar": {
     backgroundColor: COLORS.primary,
-    borderRadius: 4,
+    borderRadius: radiusPx.lg,
   },
 };
 
@@ -111,7 +112,7 @@ export const controlPanelSx: SxProps<Theme> = {
   gap: "8px",
   p: "12px",
   backgroundColor: "white",
-  borderRadius: "8px",
+  borderRadius: radiusPx.lg,
   border: `1px solid ${COLORS.border}`,
   boxShadow: "0 1px 3px rgba(0,0,0,0.1)",
   minWidth: 280,

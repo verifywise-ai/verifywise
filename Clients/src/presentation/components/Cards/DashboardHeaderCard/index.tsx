@@ -3,7 +3,12 @@ import { useState, ReactNode } from "react";
 import { Stack, Typography, Box } from "@mui/material";
 import { ArrowRight as RightArrow } from "lucide-react";
 import { useNavigate } from "react-router";
-import { background, border as borderPalette, palette as vwPalette } from "../../../themes/palette";
+import {
+  background,
+  border as borderPalette,
+  palette as vwPalette,
+  radiusPx,
+} from "../../../themes/palette";
 
 interface HeaderCardProps {
   title: string;
@@ -52,7 +57,7 @@ export function DashboardHeaderCard({
     <Stack
       sx={{
         "border": `1px solid ${borderPalette.dark}`,
-        "borderRadius": 2,
+        "borderRadius": radiusPx.sm,
         "background": `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
         "width": "100%",
         "padding": "8px 36px 14px 14px",

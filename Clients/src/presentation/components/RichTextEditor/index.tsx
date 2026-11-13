@@ -437,7 +437,7 @@ const RichTextEditor: React.FC<IRichTextEditorProps> = ({
               alignItems: "center",
               backgroundColor: theme.palette.background.default,
               border: `1px solid ${borderPalette.dark}`,
-              borderRadius: "6px",
+              borderRadius: radiusPx.md,
               boxShadow: "0 4px 12px rgba(0,0,0,0.12), 0 1px 3px rgba(0,0,0,0.08)",
             }}
           >

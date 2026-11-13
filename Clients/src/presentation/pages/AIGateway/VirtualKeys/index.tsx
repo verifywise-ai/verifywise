@@ -474,7 +474,7 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
                         sx={{
                           mt: "6px",
                           height: 4,
-                          borderRadius: 2,
+                          borderRadius: radiusPx.sm,
                           backgroundColor: palette.border.light,
                           overflow: "hidden",
                           maxWidth: 200,
@@ -490,7 +490,7 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
                                 : budgetPct >= 80
                                   ? palette.status.warning?.text || "#F79009"
                                   : palette.brand.primary,
-                            borderRadius: 2,
+                            borderRadius: radiusPx.sm,
                             transition: "width 0.3s",
                           }}
                         />

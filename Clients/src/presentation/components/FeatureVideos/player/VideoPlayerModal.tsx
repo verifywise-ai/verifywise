@@ -5,7 +5,7 @@ import { X } from "lucide-react";
 import { useFramePlayer } from "./useFramePlayer";
 import { PlayerControls } from "./PlayerControls";
 import { VideoComposition, calcTotalFrames, type VideoConfig } from "./VideoComposition";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 
 const enterAnim = keyframes`
   0% { opacity: 0; transform: scale(0.85) translateY(30px); }
@@ -110,7 +110,7 @@ export function VideoPlayerModal({ open, onClose, config }: VideoPlayerModalProp
           position: "relative",
           width: "min(960px, 90vw)",
           aspectRatio: "16/9",
-          borderRadius: "8px",
+          borderRadius: radiusPx.lg,
           overflow: "hidden",
           backgroundColor: palette.text.black,
           outline: "none",

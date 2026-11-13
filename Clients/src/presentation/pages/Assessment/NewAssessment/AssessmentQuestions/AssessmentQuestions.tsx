@@ -12,6 +12,7 @@ import {
   background,
   border as borderPalette,
   palette as vwPalette,
+  radiusPx,
 } from "../../../../themes/palette";
 
 interface AssessmentQuestionsProps {
@@ -151,7 +152,7 @@ const AssessmentQuestions = ({
                   variant="contained"
                   sx={{
                     "mt": 2,
-                    "borderRadius": 2,
+                    "borderRadius": radiusPx.sm,
                     "minWidth": 155, // ✅ minimum width
                     "height": 25,
                     "fontSize": 11,

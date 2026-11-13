@@ -203,7 +203,7 @@ const StandardModal: React.FC<StandardModalProps> = ({
           maxWidth: "calc(100vw - 48px)",
           maxHeight: "calc(100vh - 48px)",
           backgroundColor: "background.main",
-          borderRadius: "8px",
+          borderRadius: radiusPx.lg,
           overflow: "hidden",
           transition: "max-width 300ms cubic-bezier(0.4, 0, 0.2, 1)",
         }}

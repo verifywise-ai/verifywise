@@ -7,6 +7,7 @@ import {
   background,
   brand,
   accent,
+  radiusPx,
 } from "../../themes/palette";
 import Chip from "../Chip";
 import AIContentBadge from "../AIContentBadge";
@@ -36,7 +37,7 @@ export default function AIContentReviewPanel({
   return (
     <Box
       sx={{
-        borderRadius: "8px",
+        borderRadius: radiusPx.lg,
         border: `1px solid ${borderPalette.dark}`,
         background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
         overflow: "hidden",
@@ -107,7 +108,7 @@ export default function AIContentReviewPanel({
               sx={{
                 backgroundColor: accent.primary.bg,
                 border: `1px solid ${accent.primary.border}`,
-                borderRadius: "8px",
+                borderRadius: radiusPx.lg,
                 px: 2,
                 py: 0.75,
               }}
@@ -126,7 +127,7 @@ export default function AIContentReviewPanel({
               sx={{
                 backgroundColor: accent.primary.bg,
                 border: `1px solid ${accent.primary.border}`,
-                borderRadius: "8px",
+                borderRadius: radiusPx.lg,
                 px: 2,
                 py: 0.75,
               }}
@@ -145,7 +146,7 @@ export default function AIContentReviewPanel({
               sx={{
                 backgroundColor: accent.primary.bg,
                 border: `1px solid ${accent.primary.border}`,
-                borderRadius: "8px",
+                borderRadius: radiusPx.lg,
                 px: 2,
                 py: 0.75,
               }}
@@ -164,7 +165,7 @@ export default function AIContentReviewPanel({
               sx={{
                 backgroundColor: accent.primary.bg,
                 border: `1px solid ${accent.primary.border}`,
-                borderRadius: "8px",
+                borderRadius: radiusPx.lg,
                 px: 2,
                 py: 0.75,
               }}
@@ -185,7 +186,7 @@ export default function AIContentReviewPanel({
               px: 2.5,
               py: 2,
               backgroundColor: background.accent,
-              borderRadius: "8px",
+              borderRadius: radiusPx.lg,
               borderLeft: `4px solid ${brand.primary}`,
             }}
           >
@@ -212,7 +213,7 @@ export default function AIContentReviewPanel({
               px: 2,
               py: 1.5,
               backgroundColor: accent.primary.bg,
-              borderRadius: "8px",
+              borderRadius: radiusPx.lg,
               border: `1px solid ${accent.primary.border}`,
             }}
           >
@@ -240,7 +241,7 @@ export default function AIContentReviewPanel({
                 "& .MuiInputBase-root": { fontSize: 13 },
                 "& .MuiInputBase-input": { py: 1.5, lineHeight: 1.6 },
                 "& .MuiOutlinedInput-root": {
-                  "borderRadius": "8px",
+                  "borderRadius": radiusPx.lg,
                   "& fieldset": { borderColor: borderPalette.light },
                   "&:hover fieldset": { borderColor: borderPalette.dark },
                   "&.Mui-focused fieldset": { borderColor: brand.primary },
@@ -256,7 +257,7 @@ export default function AIContentReviewPanel({
                   "textTransform": "none",
                   "fontSize": 13,
                   "fontWeight": 600,
-                  "borderRadius": "8px",
+                  "borderRadius": radiusPx.lg,
                   "backgroundColor": brand.primary,
                   "boxShadow": "none",
                   "px": 3.5,
@@ -274,7 +275,7 @@ export default function AIContentReviewPanel({
                   "textTransform": "none",
                   "fontSize": 13,
                   "fontWeight": 500,
-                  "borderRadius": "8px",
+                  "borderRadius": radiusPx.lg,
                   "borderColor": borderPalette.dark,
                   "color": textColors.secondary,
                   "px": 3.5,
@@ -292,7 +293,7 @@ export default function AIContentReviewPanel({
                   "textTransform": "none",
                   "fontSize": 13,
                   "fontWeight": 500,
-                  "borderRadius": "8px",
+                  "borderRadius": radiusPx.lg,
                   "borderColor": borderPalette.dark,
                   "color": textColors.secondary,
                   "px": 3.5,

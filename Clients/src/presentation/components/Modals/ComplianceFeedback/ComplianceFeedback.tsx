@@ -7,7 +7,7 @@ import { AlertProps } from "../../../types/alert.types";
 import { handleAlert } from "../../../../application/tools/alertUtils";
 import { FileData } from "../../../../domain/types/File";
 import { IAuditorFeedbackProps } from "../../../types/interfaces/i.editor";
-import { text, background, border as borderPalette } from "../../../themes/palette";
+import { text, background, border as borderPalette, radiusPx } from "../../../themes/palette";
 
 const parseFileData = (file: FileData | string): FileData => {
   if (typeof file === "string") {
@@ -112,7 +112,7 @@ const AuditorFeedback: React.FC<IAuditorFeedbackProps> = ({
           variant="contained"
           sx={{
             "mt": 2,
-            "borderRadius": 2,
+            "borderRadius": radiusPx.sm,
             "minWidth": 155, // minimum width
             "height": 25,
             "fontSize": 11,

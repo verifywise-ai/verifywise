@@ -17,7 +17,7 @@ import AuditRiskPopup from "../RiskPopup/AuditRiskPopup";
 import { updateEUAIActAnswerById } from "../../../application/repository/question.repository";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { IQuestionProps } from "../../../domain/interfaces/i.question";
-import { border as borderPalette, palette as vwPalette } from "../../themes/palette";
+import { border as borderPalette, palette as vwPalette, radiusPx } from "../../themes/palette";
 
 /**
  * QuestionFrame Component
@@ -362,7 +362,7 @@ const QuestionFrame = ({ question, setRefreshKey, currentProjectId }: IQuestionP
               variant="contained"
               sx={{
                 "mt": 2,
-                "borderRadius": 2,
+                "borderRadius": radiusPx.sm,
                 "width": 155,
                 "height": 25,
                 "fontSize": 11,

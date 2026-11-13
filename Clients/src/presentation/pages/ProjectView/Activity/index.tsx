@@ -228,7 +228,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
           "marginBottom": "32px",
           "padding": "16px",
           "backgroundColor": background.main,
-          "borderRadius": "8px",
+          "borderRadius": radiusPx.lg,
           "border": `1px solid ${border.dark}`,
           "&:last-child": {
             marginBottom: 0,

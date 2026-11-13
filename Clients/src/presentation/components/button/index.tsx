@@ -6,7 +6,7 @@ import {
   SxProps,
   Theme,
 } from "@mui/material";
-import { brand, palette as vwPalette } from "../../themes/palette";
+import { brand, palette as vwPalette, radiusPx } from "../../themes/palette";
 
 /**
  * Extended props interface for the Button component
@@ -65,7 +65,7 @@ const Button = memo(
     // Define default styles using theme values
     const defaultStyles: SxProps<Theme> = {
       "mt": 2,
-      "borderRadius": 2,
+      "borderRadius": radiusPx.sm,
       "width": "fit-content",
       "minHeight": 25,
       "height": "auto", // More flexible height

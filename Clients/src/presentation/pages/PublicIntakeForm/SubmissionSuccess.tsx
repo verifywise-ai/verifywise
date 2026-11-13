@@ -3,7 +3,7 @@ import { Box, Typography } from "@mui/material";
 import { Edit, Hash, Clock } from "lucide-react";
 import { useEffect } from "react";
 import { CustomizableButton } from "../../components/button/customizable-button";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 
 interface SubmissionState {
   submissionId: number;
@@ -192,7 +192,7 @@ export function SubmissionSuccess() {
                   "backgroundColor": "brand.primary",
                   "fontSize": "13px",
                   "fontWeight": 600,
-                  "borderRadius": "8px",
+                  "borderRadius": radiusPx.lg,
                   "textTransform": "none",
                   "boxShadow": "none",
                   "&:hover": { backgroundColor: "brand.primaryHover" },

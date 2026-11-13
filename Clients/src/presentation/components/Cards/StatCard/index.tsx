@@ -2,7 +2,7 @@ import { useState } from "react";
 import { Card, CardContent, Box, Typography, Tooltip, useTheme } from "@mui/material";
 import { Info } from "lucide-react";
 import { cardStyles } from "../../../themes";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import type { LucideIcon } from "lucide-react";
 import type { ReactNode } from "react";
 
@@ -51,7 +51,7 @@ export function StatCard({
         "display": "flex",
         "flexDirection": "column",
         "boxSizing": "border-box",
-        "borderRadius": "8px",
+        "borderRadius": radiusPx.lg,
         "overflow": "hidden",
         ...(onClick && { cursor: "pointer" }),
         "&:hover": {

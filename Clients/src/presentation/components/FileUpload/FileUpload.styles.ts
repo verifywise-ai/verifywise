@@ -52,7 +52,7 @@ export const DragDropArea = styled("div", {
   "flexDirection": "column",
   "justifyContent": "center",
   "gap": 4,
-  "borderRadius": "8px",
+  "borderRadius": radiusPx.lg,
   "backgroundColor": "background.main",
   "transition": "height 0.3s ease",
   "overflowY": "auto",

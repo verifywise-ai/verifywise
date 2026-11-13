@@ -377,7 +377,7 @@ const ThinkingIndicator: FC = () => {
         sx={{
           backgroundColor: theme.palette.background.fill ?? theme.palette.grey[100],
           padding: "12px 16px",
-          borderRadius: 3,
+          borderRadius: radiusPx.md,
           borderTopLeftRadius: 1,
         }}
       >
@@ -454,7 +454,7 @@ const AssistantBody: FC<{
           border: `1px solid ${theme.palette.border?.light ?? theme.palette.divider}`,
           color: theme.palette.text.primary,
           padding: "10px 14px",
-          borderRadius: 3,
+          borderRadius: radiusPx.md,
           borderTopLeftRadius: 1,
           fontSize: theme.typography.body2.fontSize,
           lineHeight: 1.7,
@@ -549,7 +549,7 @@ const CustomMessageComponent: FC = () => {
               backgroundColor: theme.palette.primary.main,
               color: theme.palette.primary.contrastText,
               padding: "10px 14px",
-              borderRadius: 3,
+              borderRadius: radiusPx.md,
               borderTopRightRadius: 1,
               fontSize: theme.typography.body2.fontSize,
               lineHeight: 1.7,

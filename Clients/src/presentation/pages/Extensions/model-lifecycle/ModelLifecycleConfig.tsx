@@ -139,7 +139,7 @@ const vwAccordionSummary = {
 
 const vwDialog = {
   "& .MuiDialog-paper": {
-    borderRadius: "8px",
+    borderRadius: radiusPx.lg,
   },
 };
 
@@ -904,7 +904,7 @@ export default function ModelLifecycleConfig() {
               <Box
                 sx={{
                   border: `1px dashed ${border.dark}`,
-                  borderRadius: 2,
+                  borderRadius: radiusPx.sm,
                   p: 8,
                   backgroundColor: VW_COLORS.bgMain,
                 }}

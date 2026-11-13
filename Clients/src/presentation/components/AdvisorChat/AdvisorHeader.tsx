@@ -6,7 +6,7 @@ import { useAdvisorConversationSafe } from "../../../application/contexts/Adviso
 import { formatRelativeDate } from "../../../application/utils/dateFormatter";
 import VWTooltip from "../VWTooltip";
 import ConfirmationModal from "../Dialogs/ConfirmationModal";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 
 interface AdvisorHeaderProps {
   pageContext?: AdvisorDomain;
@@ -170,7 +170,7 @@ const AdvisorHeaderComponent = ({ pageContext }: AdvisorHeaderProps) => {
             width: 320,
             maxHeight: 480,
             boxShadow: "0 4px 20px rgba(0, 0, 0, 0.12)",
-            borderRadius: "8px",
+            borderRadius: radiusPx.lg,
             border: "1px solid",
             borderColor: "background.hover",
             mt: 1,

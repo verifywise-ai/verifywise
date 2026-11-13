@@ -1363,7 +1363,7 @@ const NewControlPane = ({
                           onClick={() => evidenceFileInputRef.current?.click()}
                           disabled={isEditingDisabled}
                           sx={{
-                            "borderRadius": 2,
+                            "borderRadius": radiusPx.sm,
                             "width": 155,
                             "height": 25,
                             "fontSize": 11,
@@ -1384,7 +1384,7 @@ const NewControlPane = ({
                           onClick={() => setShowEvidenceFilePicker(true)}
                           disabled={isEditingDisabled}
                           sx={{
-                            "borderRadius": 2,
+                            "borderRadius": radiusPx.sm,
                             "width": 155,
                             "height": 25,
                             "fontSize": 11,
@@ -1739,7 +1739,7 @@ const NewControlPane = ({
                           onClick={() => feedbackFileInputRef.current?.click()}
                           disabled={isAuditingDisabled}
                           sx={{
-                            "borderRadius": 2,
+                            "borderRadius": radiusPx.sm,
                             "width": 155,
                             "height": 25,
                             "fontSize": 11,
@@ -1760,7 +1760,7 @@ const NewControlPane = ({
                           onClick={() => setShowFeedbackFilePicker(true)}
                           disabled={isAuditingDisabled}
                           sx={{
-                            "borderRadius": 2,
+                            "borderRadius": radiusPx.sm,
                             "width": 155,
                             "height": 25,
                             "fontSize": 11,
@@ -2102,7 +2102,7 @@ const NewControlPane = ({
                       <Button
                         variant="contained"
                         sx={{
-                          "borderRadius": 2,
+                          "borderRadius": radiusPx.sm,
                           "width": 155,
                           "height": 25,
                           "fontSize": 11,

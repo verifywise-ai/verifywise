@@ -38,7 +38,7 @@ import {
 import VWIcon from "../VWIcon";
 import { isClassicUi } from "../../themes/uiStyle";
 import Avatar from "../Avatar/VWAvatar";
-import { brand, text, background, palette as vwPalette } from "../../themes/palette";
+import { brand, text, background, palette as vwPalette, radiusPx } from "../../themes/palette";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import { storageService } from "../../../infrastructure/storage";
 import { ROLES } from "../../../application/constants/roles";
@@ -1017,7 +1017,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
               position: "absolute",
               bottom: "80px",
               left: collapsed ? "30px" : "30px",
-              borderRadius: "8px",
+              borderRadius: radiusPx.lg,
               boxShadow: "0 12px 24px rgba(0,0,0,0.15)",
               border: `1px solid ${theme.palette.divider}`,
               backgroundColor: "transparent",
@@ -1029,7 +1029,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
             ref={drawerRef}
             sx={{
               "backgroundColor": theme.palette.background.main,
-              "borderRadius": "8px",
+              "borderRadius": radiusPx.lg,
               "border": `1px solid ${theme.palette.divider}`,
               "overflow": "hidden",
               "p": 1,

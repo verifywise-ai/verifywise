@@ -16,7 +16,7 @@ import { CustomizableButton } from "../../../components/button/customizable-butt
 import Select from "../../../components/Inputs/Select";
 import Field from "../../../components/Inputs/Field";
 import palette from "../../../themes/palette";
-import { palette as vwPalette } from "../../../themes/palette";
+import { palette as vwPalette, radiusPx } from "../../../themes/palette";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { resolveMessageVariables, streamPromptTest, StreamPromptTestResult } from "../shared";
 
@@ -300,7 +300,7 @@ export default function TestDatasetPanel({
               value={progress}
               sx={{
                 "height": 4,
-                "borderRadius": 2,
+                "borderRadius": radiusPx.sm,
                 "bgcolor": vwPalette.border.light,
                 "& .MuiLinearProgress-bar": { bgcolor: vwPalette.brand.primary },
               }}

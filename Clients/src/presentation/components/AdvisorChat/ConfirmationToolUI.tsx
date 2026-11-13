@@ -98,7 +98,7 @@ const ConfirmationToolUI: FC<{ result?: unknown }> = ({ result }) => {
     <Box
       sx={{
         border: `1px solid ${config.border}`,
-        borderRadius: "8px",
+        borderRadius: radiusPx.lg,
         backgroundColor: config.bg,
         p: "12px",
         my: 1,

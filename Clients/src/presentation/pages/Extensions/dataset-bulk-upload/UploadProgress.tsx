@@ -1,7 +1,7 @@
 import { Box, Typography, Stack, LinearProgress, Chip } from "@mui/material";
 import { keyframes } from "@mui/system";
 import { CheckCircle2, XCircle, Loader2, FileSpreadsheet } from "lucide-react";
-import { brand, text, palette as vwPalette } from "../../../themes/palette";
+import { brand, text, palette as vwPalette, radiusPx } from "../../../themes/palette";
 
 const spin = keyframes`
   from { transform: rotate(0deg); }
@@ -99,7 +99,7 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
             spacing={1}
             sx={{
               p: "10px 12px",
-              borderRadius: "6px",
+              borderRadius: radiusPx.md,
               backgroundColor:
                 result.status === "error"
                   ? "#F9ECED"

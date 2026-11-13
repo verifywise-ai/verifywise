@@ -139,7 +139,7 @@ const StepperModal: React.FC<StepperModalProps> = ({
           "minWidth": "600px",
           "maxWidth": maxWidth,
           "backgroundColor": "background.main",
-          "borderRadius": "8px",
+          "borderRadius": radiusPx.lg,
           "overflow": "hidden",
           "&:focus": {
             outline: "none",

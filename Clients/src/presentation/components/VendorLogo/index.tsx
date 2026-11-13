@@ -2,7 +2,7 @@ import React, { useState } from "react";
 import { Box, Typography, Avatar } from "@mui/material";
 import { Building2 } from "lucide-react";
 import { getBrandFetchUrl } from "../../../config/brandfetch.config";
-import { text, background, palette as vwPalette } from "../../themes/palette";
+import { text, background, palette as vwPalette, radiusPx } from "../../themes/palette";
 import { chartTheme } from "../../themes/chartTheme";
 import { isClassicUi } from "../../themes/uiStyle";
 
@@ -116,7 +116,7 @@ const VendorLogo: React.FC<VendorLogoProps> = ({
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
-            borderRadius: "6px",
+            borderRadius: radiusPx.md,
             border: "1px solid status.default.border",
             backgroundColor: "background.main",
             overflow: "hidden",
