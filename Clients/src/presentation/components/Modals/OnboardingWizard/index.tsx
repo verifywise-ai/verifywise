@@ -166,7 +166,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         className="onboarding-wizard"
         sx={{
           width,
-          borderRadius: "12px",
+          borderRadius: radiusPx.xl,
           overflow: "hidden",
           outline: "none",
           boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",

@@ -15,17 +15,19 @@ describe("radiusPx", () => {
     window.localStorage.removeItem("vw-ui-style");
   });
 
-  it("phase 1 collapses md and lg to 2px", async () => {
+  it("phase 1 collapses md, lg and xl to 2px", async () => {
     const radiusPx = await loadRadiusPx();
     expect(radiusPx.sm).toBe("2px");
     expect(radiusPx.md).toBe("2px");
     expect(radiusPx.lg).toBe("2px");
+    expect(radiusPx.xl).toBe("2px");
   });
 
-  it("classic keeps the 6px and 8px corners", async () => {
+  it("classic keeps the 6px, 8px and 12px corners", async () => {
     const radiusPx = await loadRadiusPx("classic");
     expect(radiusPx.sm).toBe("4px");
     expect(radiusPx.md).toBe("6px");
     expect(radiusPx.lg).toBe("8px");
+    expect(radiusPx.xl).toBe("12px");
   });
 });

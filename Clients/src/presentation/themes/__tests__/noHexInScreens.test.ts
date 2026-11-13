@@ -1,6 +1,6 @@
 /**
  * Screens use tokens, not hex. Scans every .ts and .tsx file under
- * `presentation/pages` and `presentation/components` (not `__tests__`, test or
+ * `presentation/pages`, `presentation/components` and `presentation/utils` (not `__tests__`, test or
  * `.d.ts` files) for `#rgb`, `#rgba`, `#rrggbb` and `#rrggbbaa` in code:
  * string literals, template text and JSX text. Comments are ignored.
  *
@@ -14,7 +14,7 @@ import { describe, expect, it } from "vitest";
 import { HEX_ALLOW_LIST } from "../hexAllowList";
 
 const PRESENTATION = path.resolve(__dirname, "../..");
-const ROOTS = ["pages", "components"];
+const ROOTS = ["pages", "components", "utils"];
 const HEX = /#[0-9a-fA-F]{3,8}\b/g;
 
 function collect(dir: string, out: string[] = []): string[] {

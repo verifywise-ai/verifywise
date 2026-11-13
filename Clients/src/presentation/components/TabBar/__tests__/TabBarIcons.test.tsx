@@ -34,7 +34,12 @@ describe("TabBar icons", () => {
     expect(svg).not.toBeNull();
     expect(svg).toHaveAttribute("width", "15");
     expect(lucideIn("Overview")).toBeNull();
-    expect(vwIconIn("Guardrail logs")).not.toBeNull();
+  });
+
+  it("phase 1 adds no icon to a tab that had none, even with a mapped label", async () => {
+    await renderBar();
+    const tab = screen.getByRole("tab", { name: /guardrail logs/i });
+    expect(tab.querySelector("svg")).toBeNull();
   });
 
   it("phase 1 keeps the Lucide icon when no icon is mapped", async () => {

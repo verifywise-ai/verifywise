@@ -37,7 +37,11 @@ export const status = {
   default: { bg: grey[100], text: grey[500], border: grey[200] },
 } as const;
 
-/** Tip and notice banners (explanations only; errors and success keep status). */
+/**
+ * Tip and notice banners (explanations only; errors and success keep status).
+ * Classic banners do not read this token: they keep their own colours
+ * (InfoBox and EmptyStateTip read it in phase 1 only). It exists so both palettes share one shape.
+ */
 export const note = { bg: blue[50], border: blue[100], text: grey[700] } as const;
 
 export const risk = {

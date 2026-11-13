@@ -24,6 +24,7 @@ import {
   accent,
   risk as riskTokens,
   score,
+  note,
 } from "./palette";
 import { isClassicUi } from "./uiStyle";
 
@@ -62,6 +63,23 @@ const CLASSIC_LINES = [
   "#C026D3",
   "#65A30D",
   "#0284C7",
+] as const;
+
+/**
+ * The classic look's progress-bar colours, one per 10% band (0-10% is the
+ * first, 91-100% the last). Phase 1 uses the 11-step `score` spectrum.
+ */
+const CLASSIC_PROGRESS = [
+  "#FF4500",
+  "#FF4500",
+  "#FFA500",
+  "#FFD700",
+  "#E9F14F",
+  "#CDDD24",
+  "#64E730",
+  "#32CD32",
+  "#228B22",
+  "#008000",
 ] as const;
 
 /** Pick by look: `classic` keeps today's colour, `phase1` is the deliberate phase 1 token. */
@@ -217,6 +235,71 @@ export const chartTheme = {
     ],
     chart.slice(0, 9),
   ),
+  /**
+   * Work status dots (StatusDropdown, framework dashboard cards). Phase 1:
+   * In progress is the Medium signal (user decision), Needs rework the High
+   * signal, done states the success green; the others take distinct series
+   * hues so no two non-done states look alike.
+   */
+  workStatus: {
+    notStarted: byLook("#475467", text.tertiary),
+    draft: byLook("#D97706", primitives.series.violet),
+    inProgress: byLook("#2563EB", riskMark.medium),
+    awaitingReview: byLook("#7C3AED", primitives.series.sky),
+    awaitingApproval: byLook("#4F46E5", primitives.series.indigo),
+    implemented: byLook("#059669", statusTokens.success.strong),
+    done: byLook("#059669", statusTokens.success.strong),
+    audited: byLook("#0D9488", primitives.series.teal),
+    needsRework: byLook("#EA580C", riskMark.high),
+  },
+  /**
+   * Status donut on the framework dashboard, in the order Not started, Draft,
+   * In progress, Awaiting review, Implemented, Needs rework. Phase 1 matches
+   * the status dots (`workStatus`).
+   */
+  statusBreakdown: byLook(
+    ["#9CA3AF", "#D1D5DB", "#F59E0B", "#3B82F6", "#13715B", "#EA580C"],
+    [
+      text.tertiary,
+      primitives.series.violet,
+      riskMark.medium,
+      primitives.series.sky,
+      statusTokens.success.strong,
+      riskMark.high,
+    ],
+  ),
+  /** Icon tile accents for the collapsible empty-state tips; phase 1 shows every tip as an amber note. */
+  tipAccents: byLook(
+    [
+      { bg: "#ECFDF3", icon: "#039855", border: "#A6F4C5" },
+      { bg: "#EFF8FF", icon: "#1570EF", border: "#84CAFF" },
+      { bg: "#FFFAEB", icon: "#DC6803", border: "#FEDF89" },
+    ],
+    [
+      { bg: note.bg, icon: note.text, border: note.border },
+      { bg: note.bg, icon: note.text, border: note.border },
+      { bg: note.bg, icon: note.text, border: note.border },
+    ],
+  ),
+  /**
+   * Shared form controls. `inputHoverBorder` is the hover border of every
+   * input and search box built with `utils/inputStyles`; `tabBadge` is the
+   * classic green count pill on tabs (phase 1 shows a plain count instead).
+   */
+  controls: {
+    inputHoverBorder: byLook("#5FA896", accent.primary.border),
+    tabBadge: {
+      text: byLook("#047857", accent.primary.text),
+      bg: byLook("#D1FAE5", accent.primary.bg),
+    },
+    /** Destructive confirm button in the basic modal: fill and a darker hover. */
+    dangerButton: {
+      bg: byLook("#DB504A", riskMark.critical),
+      hover: byLook("#C23C34", primitives.red[700]),
+    },
+  },
+  /** Progress-bar colours, low to high (see `scoreColor`). */
+  progress: byLook(CLASSIC_PROGRESS, score),
   /** A chart with a single measure. */
   single: brand.primary,
   /** Risk tiers as solid marks (dots, bars, slices). */
@@ -312,11 +395,13 @@ export const seriesColor = (index: number): string => {
 
 /**
  * Colour for a 0 to 100 completion or score value, red at 0 to green at 100.
- * Same spectrum in both looks. Always show the value beside it.
+ * Phase 1 rounds to the nearest of 11 `score` steps; classic keeps its old
+ * 10% bands (0-10%, 11-20%, ... 91-100%). Always show the value beside it.
  */
 export const scoreColor = (value: number): string => {
-  const step = Math.round(Math.min(Math.max(value, 0), 100) / 10);
-  return score[step];
+  const clamped = Math.min(Math.max(value, 0), 100);
+  if (classicUi) return CLASSIC_PROGRESS[Math.max(Math.ceil(clamped / 10) - 1, 0)];
+  return score[Math.round(clamped / 10)];
 };
 
 export default chartTheme;

@@ -239,6 +239,7 @@ export const radius = {
   sm: 2, // buttons, cards, inputs, menus, modals, table wrappers, segmented controls
   md: 2, // classic 6px corners (inner panels, callouts): 2px in phase 1
   lg: 2, // classic 8px corners (large panels): 2px in phase 1
+  xl: 2, // classic 12px corners (modals, menus): 2px in phase 1
   search: 8, // the search field above a table
   tab: 9, // top corners of a tab in the tab bar (bottom corners square)
   pill: 999, // pills, filter chips, link chips

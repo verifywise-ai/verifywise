@@ -1,6 +1,6 @@
 import React, { Component, ReactNode } from "react";
 import { Box, Typography, Alert } from "@mui/material";
-import { background, palette as vwPalette } from "../../themes/palette";
+import { background, palette as vwPalette, radiusPx } from "../../themes/palette";
 
 interface CommandPaletteErrorBoundaryProps {
   children: ReactNode;
@@ -79,7 +79,7 @@ class CommandPaletteErrorBoundary extends Component<
             aria-modal="true"
             sx={{
               background: `${background.main}`,
-              borderRadius: "12px",
+              borderRadius: radiusPx.xl,
               boxShadow: "0 16px 70px rgba(0, 0, 0, 0.2)",
               width: "100%",
               maxWidth: "640px",

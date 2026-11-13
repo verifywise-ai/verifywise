@@ -211,7 +211,8 @@ const TabBar: React.FC<TabBarProps> = ({
       >
         {tabs.map((tab) => {
           // Look up the icon in the explicit registry (tree-shakeable)
-          const vwIcon = classicUi ? undefined : tabIconName(tab.label, tab.value);
+          // Swap only a tab that already has an icon; a tab without one stays text only.
+          const vwIcon = classicUi || !tab.icon ? undefined : tabIconName(tab.label, tab.value);
           const IconComponent = tab.icon ? getLucideIcon(tab.icon) : undefined;
           const iconElement = vwIcon ? (
             <VWIcon name={vwIcon} size={TAB_ICON_SIZE} color={icon.default} />

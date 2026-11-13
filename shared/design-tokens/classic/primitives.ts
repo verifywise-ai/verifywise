@@ -192,6 +192,7 @@ export const radius = {
   sm: 4,
   md: 6,
   lg: 8,
+  xl: 12,
   search: 4,
   tab: 4,
   pill: 999,

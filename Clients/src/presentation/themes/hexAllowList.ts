@@ -1,6 +1,6 @@
 /**
  * Screen files that may hold hex colours. Everything else under
- * `presentation/pages` and `presentation/components` uses a token
+ * `presentation/pages`, `presentation/components` and `presentation/utils` uses a token
  * (see `noHexInScreens.test.ts`).
  *
  * `file` is a path relative to `src/presentation`; a trailing slash allows a
@@ -29,5 +29,10 @@ export const HEX_ALLOW_LIST: readonly HexAllowListEntry[] = [
     file: "components/UserGuide/WhatsNewSection.tsx",
     literal: "#306",
     reason: "Release-note prose naming React error #306. It is an issue number, not a colour.",
+  },
+  {
+    file: "utils/providers/index.ts",
+    reason:
+      "LLM provider brand colours shown beside each provider's logo. They identify a third-party brand, so they stay the same in both looks.",
   },
 ];

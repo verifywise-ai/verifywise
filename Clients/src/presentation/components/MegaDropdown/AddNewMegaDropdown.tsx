@@ -173,7 +173,7 @@ const AddNewMegaDropdown: React.FC<AddNewMegaDropdownProps> = ({ buttonLabel = "
         sx={{
           "mt": 1,
           "& .MuiPopover-paper": {
-            borderRadius: "12px",
+            borderRadius: radiusPx.xl,
             boxShadow: "0 4px 20px rgba(0, 0, 0, 0.15)",
             overflow: "hidden",
             backgroundColor: `${background.main}`,

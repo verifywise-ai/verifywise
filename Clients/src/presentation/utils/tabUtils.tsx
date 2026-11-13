@@ -3,6 +3,7 @@ import { ReactNode } from "react";
 import { icon as iconTokens, primitives } from "../themes/palette";
 import { fontFamily } from "../themes/typography";
 import { isClassicUi } from "../themes/uiStyle";
+import { chartTheme } from "../themes/chartTheme";
 
 export interface TabLabelWithCountOptions {
   label: string;
@@ -17,8 +18,8 @@ export interface TabLabelWithCountOptions {
 const BADGE_MIN_WIDTH = "22px";
 const BADGE_HEIGHT = "22px";
 const BADGE_FONT_SIZE = "10px";
-const BADGE_COLOR = "#047857";
-const BADGE_BG_COLOR = "#D1FAE5";
+const BADGE_COLOR = chartTheme.controls.tabBadge.text;
+const BADGE_BG_COLOR = chartTheme.controls.tabBadge.bg;
 const BADGE_BORDER_RADIUS = "11px";
 const MAX_DISPLAY_COUNT = 99;
 

@@ -2,47 +2,14 @@ import { type FC, useRef, useState, useEffect, useCallback } from "react";
 import { Box, Typography, useTheme } from "@mui/material";
 import type { LucideIcon } from "lucide-react";
 import { ChevronRight } from "lucide-react";
-import { accent as accentTokens, background, note, radiusPx } from "../../themes/palette";
+import { note, radiusPx } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 import { isClassicUi } from "../../themes/uiStyle";
 
-/** Three accent palettes that rotate per-tip */
-const CLASSIC_ACCENT_PALETTES = [
-  {
-    bg: accentTokens.teal.bg,
-    bgHover: accentTokens.teal.border,
-    icon: accentTokens.teal.text,
-    border: accentTokens.teal.border,
-    expandBg: background.main,
-  },
-  {
-    bg: accentTokens.blue.bg,
-    bgHover: accentTokens.blue.border,
-    icon: accentTokens.blue.text,
-    border: accentTokens.blue.border,
-    expandBg: background.main,
-  },
-  {
-    bg: accentTokens.amber.bg,
-    bgHover: accentTokens.amber.border,
-    icon: accentTokens.amber.text,
-    border: accentTokens.amber.border,
-    expandBg: background.main,
-  },
-] as const;
-
-/** Phase 1: every tip is an amber note, whatever its position. */
-const NOTE_PALETTE = {
-  bg: note.bg,
-  bgHover: note.border,
-  icon: note.text,
-  border: note.border,
-  expandBg: note.bg,
-} as const;
+/** Accent palettes that rotate per tip (classic: green, blue, amber; phase 1: all amber notes). */
+const ACCENT_PALETTES = chartTheme.tipAccents;
 
 const classicUi = isClassicUi();
-const ACCENT_PALETTES = classicUi
-  ? CLASSIC_ACCENT_PALETTES
-  : ([NOTE_PALETTE, NOTE_PALETTE, NOTE_PALETTE] as const);
 
 interface EmptyStateTipProps {
   icon: LucideIcon;
@@ -138,7 +105,7 @@ const EmptyStateTip: FC<EmptyStateTipProps> = ({ icon: Icon, title, description,
             justifyContent: "center",
             width: 30,
             height: 30,
-            borderRadius: "6px",
+            borderRadius: radiusPx.md,
             backgroundColor: accent.bg,
             border: `1px solid ${accent.border}40`,
             flexShrink: 0,

@@ -157,7 +157,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
         aria-modal="true"
         sx={{
           backgroundColor: background.main,
-          borderRadius: "12px",
+          borderRadius: radiusPx.xl,
           boxShadow: "0 20px 60px rgba(0, 0, 0, 0.2)",
           width: "100%",
           maxWidth: "520px",

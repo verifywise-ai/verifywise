@@ -1,6 +1,7 @@
 import { SxProps, Theme } from "@mui/material";
 import { keyframes } from "@mui/system";
 import { palette, radiusPx } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 
 // Animation
 export const flashAnimation = keyframes`
@@ -58,33 +59,29 @@ export const commonStyles = {
     }) as SxProps<Theme>,
 };
 
+/** Work status (normalised to sentence case) to its `chartTheme.workStatus` key. */
+const WORK_STATUS_KEYS: Record<string, keyof typeof chartTheme.workStatus> = {
+  "Not started": "notStarted",
+  "Draft": "draft",
+  "In progress": "inProgress",
+  "Awaiting review": "awaitingReview",
+  "Awaiting approval": "awaitingApproval",
+  "Implemented": "implemented",
+  "Done": "done",
+  "Audited": "audited",
+  "Needs rework": "needsRework",
+};
+
 /**
  * Get the color associated with a status
  * @param status The status string to get the color for
- * @returns The hex color code for the status
+ * @returns The hex color code for the status; unknown statuses get the "Not started" colour
  */
 export function getStatusColor(status: string): string {
-  const normalizedStatus = status?.trim() || "Not Started";
-  switch (normalizedStatus.charAt(0).toUpperCase() + normalizedStatus.slice(1).toLowerCase()) {
-    case "Not Started":
-      return palette.text.tertiary;
-    case "Draft":
-      return palette.text.accent;
-    case "In progress":
-      return palette.riskMark.medium;
-    case "Awaiting review":
-      return palette.status.info.text;
-    case "Awaiting approval":
-      return palette.accent.indigo.text;
-    case "Implemented":
-      return palette.status.success.text;
-    case "Done":
-      return palette.status.success.text;
-    case "Audited":
-      return palette.accent.teal.text;
-    case "Needs rework":
-      return palette.riskMark.high;
-    default:
-      return palette.text.tertiary; // Default to "Not Started" color
-  }
+  const normalizedStatus = status?.trim() || "Not started";
+  const key =
+    WORK_STATUS_KEYS[
+      normalizedStatus.charAt(0).toUpperCase() + normalizedStatus.slice(1).toLowerCase()
+    ];
+  return chartTheme.workStatus[key ?? "notStarted"];
 }

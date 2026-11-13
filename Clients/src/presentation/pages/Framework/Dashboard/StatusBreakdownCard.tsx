@@ -3,7 +3,6 @@ import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { frameworkDashboardCardStyles } from "./styles";
 import {
-  brand,
   text,
   border as borderPalette,
   status,
@@ -65,14 +64,7 @@ interface StatusData {
   "needs rework": number;
 }
 
-const STATUS_COLORS = [
-  `${text.disabled}`,
-  chartTheme.status.pending,
-  vwPalette.riskMark.medium,
-  chartTheme.status.info,
-  `${brand.primary}`,
-  vwPalette.riskMark.high,
-];
+const STATUS_COLORS = chartTheme.statusBreakdown;
 
 const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {
   const [clauseStatusData, setClauseStatusData] = useState<Map<number, StatusData>>(new Map());

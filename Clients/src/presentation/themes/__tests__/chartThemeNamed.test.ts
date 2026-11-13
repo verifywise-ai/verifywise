@@ -25,6 +25,11 @@ const MAPS = [
   "confetti",
   "avatars",
   "lines",
+  "workStatus",
+  "tipAccents",
+  "progress",
+  "controls",
+  "statusBreakdown",
 ] as const;
 
 const isColour = (v: unknown) => typeof v === "string" && /^#[0-9a-fA-F]{6}$/.test(v);
@@ -172,6 +177,52 @@ const CLASSIC_ORIGINALS: [string, string][] = [
   ["lines[12]", "#C026D3"],
   ["lines[13]", "#65A30D"],
   ["lines[14]", "#0284C7"],
+  // getStatusColor in pages/ISO/style.ts at ba592b3ec
+  ["workStatus.notStarted", "#475467"],
+  ["workStatus.draft", "#D97706"],
+  ["workStatus.inProgress", "#2563EB"],
+  ["workStatus.awaitingReview", "#7C3AED"],
+  ["workStatus.awaitingApproval", "#4F46E5"],
+  ["workStatus.implemented", "#059669"],
+  ["workStatus.done", "#059669"],
+  ["workStatus.audited", "#0D9488"],
+  ["workStatus.needsRework", "#EA580C"],
+  // components/EmptyState/EmptyStateTip.tsx at ba592b3ec
+  ["tipAccents[0].bg", "#ECFDF3"],
+  ["tipAccents[0].icon", "#039855"],
+  ["tipAccents[0].border", "#A6F4C5"],
+  ["tipAccents[1].bg", "#EFF8FF"],
+  ["tipAccents[1].icon", "#1570EF"],
+  ["tipAccents[1].border", "#84CAFF"],
+  ["tipAccents[2].bg", "#FFFAEB"],
+  ["tipAccents[2].icon", "#DC6803"],
+  ["tipAccents[2].border", "#FEDF89"],
+  // getProgressColor in ProjectCard/ProgressBar and ControlsTable at ba592b3ec
+  ["progress[0]", "#FF4500"],
+  ["progress[1]", "#FF4500"],
+  ["progress[2]", "#FFA500"],
+  ["progress[3]", "#FFD700"],
+  ["progress[4]", "#E9F14F"],
+  ["progress[5]", "#CDDD24"],
+  ["progress[6]", "#64E730"],
+  ["progress[7]", "#32CD32"],
+  ["progress[8]", "#228B22"],
+  ["progress[9]", "#008000"],
+  // utils/inputStyles.ts and utils/tabUtils.tsx at ba592b3ec
+  ["controls.inputHoverBorder", "#5FA896"],
+  ["controls.tabBadge.text", "#047857"],
+  ["controls.tabBadge.bg", "#D1FAE5"],
+  // components/Modals/Basic/style.ts at ba592b3ec
+  ["controls.dangerButton.bg", "#DB504A"],
+  ["controls.dangerButton.hover", "#C23C34"],
+  // STATUS_COLORS in pages/Framework/Dashboard/StatusBreakdownCard.tsx at ba592b3ec
+  // (text.disabled and brand.primary resolved to their classic hex)
+  ["statusBreakdown[0]", "#9CA3AF"],
+  ["statusBreakdown[1]", "#D1D5DB"],
+  ["statusBreakdown[2]", "#F59E0B"],
+  ["statusBreakdown[3]", "#3B82F6"],
+  ["statusBreakdown[4]", "#13715B"],
+  ["statusBreakdown[5]", "#EA580C"],
 ];
 
 describe("chartTheme named colour maps", () => {
@@ -231,5 +282,94 @@ describe("chartTheme named colour maps", () => {
       expect(c.light).toBe(families[i].bg);
       expect(c.text).toBe(families[i].text);
     });
+  });
+
+  it("keeps distinct work status colours in phase 1, with In progress on the Medium signal", async () => {
+    const t = await loadChartTheme();
+    const { riskMark, brand, part } = await import("../palette");
+    const ws = t.workStatus;
+    expect(ws.inProgress).toBe(riskMark.medium);
+    expect(ws.needsRework).toBe(riskMark.high);
+    const notDone = [
+      ws.notStarted,
+      ws.draft,
+      ws.inProgress,
+      ws.awaitingReview,
+      ws.awaitingApproval,
+      ws.audited,
+      ws.needsRework,
+    ];
+    expect(new Set(notDone).size).toBe(notDone.length);
+    expect(notDone).not.toContain(ws.done);
+    const risky = Object.values(riskMark);
+    expect(risky).not.toContain(ws.draft);
+    expect(risky).not.toContain(ws.awaitingReview);
+    const forbidden = [
+      brand.primary,
+      ...Object.values(part).flatMap((family) => Object.values(family)),
+    ];
+    Object.values(ws).forEach((colour) => expect(forbidden).not.toContain(colour));
+  });
+
+  it("colours the phase 1 status donut like the status dots", async () => {
+    const t = await loadChartTheme();
+    const ws = t.workStatus;
+    expect(t.statusBreakdown).toEqual([
+      ws.notStarted,
+      ws.draft,
+      ws.inProgress,
+      ws.awaitingReview,
+      ws.implemented,
+      ws.needsRework,
+    ]);
+  });
+
+  it("maps a status string to its colour in both looks (getStatusColor)", async () => {
+    vi.resetModules();
+    window.localStorage.setItem("vw-ui-style", "classic");
+    const classicFn = (await import("../../pages/ISO/style")).getStatusColor;
+    expect(classicFn("In Progress")).toBe("#2563EB");
+    expect(classicFn("draft")).toBe("#D97706");
+    expect(classicFn("")).toBe("#475467");
+    expect(classicFn("something else")).toBe("#475467");
+
+    const t = await loadChartTheme();
+    const phase1Fn = (await import("../../pages/ISO/style")).getStatusColor;
+    expect(phase1Fn("In progress")).toBe(t.workStatus.inProgress);
+    expect(phase1Fn("Awaiting review")).toBe(t.workStatus.awaitingReview);
+  });
+
+  it("gives the phase 1 delete button a darker hover than its fill", async () => {
+    const t = await loadChartTheme();
+    const { riskMark, primitives } = await import("../palette");
+    expect(t.controls.dangerButton.bg).toBe(riskMark.critical);
+    expect(t.controls.dangerButton.hover).toBe(primitives.red[700]);
+    expect(t.controls.dangerButton.hover).not.toBe(t.controls.dangerButton.bg);
+  });
+
+  it("scoreColor keeps the classic 10% bands and the phase 1 score steps", async () => {
+    vi.resetModules();
+    window.localStorage.setItem("vw-ui-style", "classic");
+    const classic = (await import("../chartTheme")).scoreColor;
+    expect([0, 10, 11, 25, 50, 70, 71, 90, 91, 100].map(classic)).toEqual([
+      "#FF4500",
+      "#FF4500",
+      "#FF4500",
+      "#FFA500",
+      "#E9F14F",
+      "#64E730",
+      "#32CD32",
+      "#228B22",
+      "#008000",
+      "#008000",
+    ]);
+
+    vi.resetModules();
+    window.localStorage.removeItem("vw-ui-style");
+    const { scoreColor } = await import("../chartTheme");
+    const { score } = await import("../palette");
+    expect(scoreColor(0)).toBe(score[0]);
+    expect(scoreColor(46)).toBe(score[5]);
+    expect(scoreColor(100)).toBe(score[10]);
   });
 });

@@ -1,4 +1,5 @@
-import { radiusPx, palette as vwPalette } from "../../../themes/palette";
+import { radiusPx } from "../../../themes/palette";
+import { chartTheme } from "../../../themes/chartTheme";
 export const BasicModalCancelButtonStyle = {
   "minWidth": 100,
   "textTransform": "capitalize",
@@ -14,15 +15,15 @@ export const BasicModalCancelButtonStyle = {
 export const BasicModalDeleteButtonStyle = {
   "minWidth": 160,
   "fontSize": 13,
-  "backgroundColor": vwPalette.riskMark.critical,
-  "border": `1px solid ${vwPalette.riskMark.critical}`,
+  "backgroundColor": chartTheme.controls.dangerButton.bg,
+  "border": `1px solid ${chartTheme.controls.dangerButton.bg}`,
   "boxShadow": "none",
   "borderRadius": radiusPx.sm,
   "padding": "8px 16px",
   "textTransform": "capitalize",
   "&:hover": {
     boxShadow: "none",
-    backgroundColor: vwPalette.riskMark.critical,
-    borderColor: vwPalette.riskMark.critical,
+    backgroundColor: chartTheme.controls.dangerButton.hover,
+    borderColor: chartTheme.controls.dangerButton.hover,
   },
 };
