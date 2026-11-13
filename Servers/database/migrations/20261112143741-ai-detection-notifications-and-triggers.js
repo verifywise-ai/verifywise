@@ -11,11 +11,15 @@
  *    notifier also uses that pair to make sure a scan is announced once).
  * 3. Seed three Automations triggers and link each to the `send_email` action,
  *    the same way the consolidated public-schema migration links the others.
+ * 4. Add `ai_detection_scans.notified_at`: the notifier claims a scan by
+ *    setting it (`UPDATE ... WHERE notified_at IS NULL RETURNING id`) before
+ *    sending anything, so a retry or a concurrent call announces a scan once.
  *
  * Postgres 12+ allows `ALTER TYPE ... ADD VALUE`. Enum values are not removed
  * on down: that needs the type recreated and every column using it migrated.
  * Down removes the triggers only when no automation uses them, because
- * automations.trigger_id is ON DELETE RESTRICT and an automation is user data.
+ * automations.trigger_id is ON DELETE RESTRICT and an automation is user data,
+ * and drops `notified_at`.
  */
 
 const NOTIFICATION_TYPES = [
@@ -59,6 +63,11 @@ module.exports = {
         ON CONFLICT DO NOTHING;`,
         { transaction, replacements: { keys: TRIGGER_KEYS } },
       );
+      await queryInterface.sequelize.query(
+        `ALTER TABLE verifywise.ai_detection_scans
+          ADD COLUMN IF NOT EXISTS notified_at TIMESTAMPTZ NULL;`,
+        { transaction },
+      );
       await transaction.commit();
     } catch (error) {
       await transaction.rollback();
@@ -80,6 +89,10 @@ module.exports = {
       await queryInterface.sequelize.query(
         `DELETE FROM verifywise.automation_triggers t WHERE ${unused};`,
         { transaction, replacements: { keys: TRIGGER_KEYS } },
+      );
+      await queryInterface.sequelize.query(
+        `ALTER TABLE verifywise.ai_detection_scans DROP COLUMN IF EXISTS notified_at;`,
+        { transaction },
       );
       await transaction.commit();
     } catch (error) {

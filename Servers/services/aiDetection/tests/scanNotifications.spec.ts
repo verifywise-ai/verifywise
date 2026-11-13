@@ -1,37 +1,44 @@
 /**
- * AI Detection scan notifier: who gets what, a missing score, de-duplication,
- * failure isolation, and the Automations triggers it fires.
+ * AI Detection scan notifier: who gets what, a missing score, the new-finding
+ * and grade comparisons, the announce-once claim, failure isolation, and the
+ * Automations triggers it fires.
  */
 
 import {
   notifyAiDetectionScanFinished,
   notifyAiDetectionScanFailed,
   newHighRiskFindings,
+  newFindingLabel,
   isGradeDrop,
+  sameScoreBasis,
   shortFailureReason,
 } from "../scanNotifications";
 import { getScanByIdQuery } from "../../../utils/aiDetection.utils";
 import {
+  claimScanNotificationQuery,
   getActiveAutomationActionsQuery,
   getCountedScanFindingsQuery,
   getPreviousCompletedScanQuery,
+  getPreviousScanFindingsQuery,
   getScanRecipientsQuery,
-  hasScanNotificationQuery,
   IScanFindingKey,
   IScanRecipient,
 } from "../../../utils/aiDetectionNotification.utils";
 import { sendInAppNotification } from "../../inAppNotification.service";
 import { enqueueAutomationAction } from "../../automations/automationProducer";
 import { buildAiDetectionScanReplacements } from "../../../utils/automation/aiDetection.automation.utils";
-import { IScan } from "../../../domain.layer/interfaces/i.aiDetection";
+import { IScan, IRiskScoreDetails } from "../../../domain.layer/interfaces/i.aiDetection";
+import { getUserLanguage } from "../../../utils/userPreference.utils";
+import { translate } from "../../../utils/i18n.utils";
 
 jest.mock("../../../utils/aiDetection.utils", () => ({ getScanByIdQuery: jest.fn() }));
 jest.mock("../../../utils/aiDetectionNotification.utils", () => ({
+  claimScanNotificationQuery: jest.fn(),
   getActiveAutomationActionsQuery: jest.fn(),
   getCountedScanFindingsQuery: jest.fn(),
   getPreviousCompletedScanQuery: jest.fn(),
+  getPreviousScanFindingsQuery: jest.fn(),
   getScanRecipientsQuery: jest.fn(),
-  hasScanNotificationQuery: jest.fn(),
 }));
 jest.mock("../../inAppNotification.service", () => ({
   sendInAppNotification: jest.fn(),
@@ -51,9 +58,11 @@ jest.mock("../../../utils/logger/fileLogger", () => ({
 const mockScan = getScanByIdQuery as jest.Mock;
 const mockAutomations = getActiveAutomationActionsQuery as jest.Mock;
 const mockFindings = getCountedScanFindingsQuery as jest.Mock;
+const mockPreviousFindings = getPreviousScanFindingsQuery as jest.Mock;
 const mockPrevious = getPreviousCompletedScanQuery as jest.Mock;
 const mockRecipients = getScanRecipientsQuery as jest.Mock;
-const mockDedup = hasScanNotificationQuery as jest.Mock;
+const mockClaim = claimScanNotificationQuery as jest.Mock;
+const mockLanguage = getUserLanguage as jest.Mock;
 const mockSend = sendInAppNotification as jest.Mock;
 const mockEnqueue = enqueueAutomationAction as jest.Mock;
 
@@ -82,8 +91,16 @@ const finding = (overrides: Partial<IScanFindingKey> = {}): IScanFindingKey => (
   ...overrides,
 });
 
-const secret = (name: string) =>
-  finding({ name, provider: null, finding_type: "secret", risk_level: "high" });
+const secret = (name: string, paths: string[] = [".env"]) =>
+  finding({
+    name,
+    provider: null,
+    finding_type: "secret",
+    risk_level: "high",
+    secret_paths: paths,
+  });
+
+const llmDetails = (llm_enhanced: boolean) => ({ llm_enhanced }) as unknown as IRiskScoreDetails;
 
 const triggerer: IScanRecipient = { id: 5, name: "Ada", isTriggeredBy: true, isAdmin: false };
 const admin: IScanRecipient = { id: 9, name: "Grace", isTriggeredBy: false, isAdmin: true };
@@ -92,12 +109,28 @@ const admin: IScanRecipient = { id: 9, name: "Grace", isTriggeredBy: false, isAd
 const sentTo = (type: string) =>
   mockSend.mock.calls.filter(([, input]) => input.type === type).map(([, input]) => input.user_id);
 
+/** Title and message as the recipient reads them (keys translated like sendInAppNotification does). */
+const rendered = (input: any) => ({
+  title: input.titleKey ? translate(input.lang, input.titleKey, input.titleVars) : input.title,
+  message: input.messageKey
+    ? translate(input.lang, input.messageKey, input.messageVars)
+    : input.message,
+});
+
+const attentionCall = () =>
+  mockSend.mock.calls.find(([, i]) => i.type === "ai_detection_scan_attention");
+
 beforeEach(() => {
   jest.clearAllMocks();
   mockScan.mockResolvedValue(scan());
-  mockDedup.mockResolvedValue(false);
+  mockClaim.mockResolvedValue(true);
   mockPrevious.mockResolvedValue(null);
   mockFindings.mockResolvedValue([]);
+  // By default the previous scan's findings are what the counted query returns for it.
+  mockPreviousFindings.mockImplementation((scanId: number, org: number) =>
+    mockFindings(scanId, org),
+  );
+  mockLanguage.mockResolvedValue("en");
   mockRecipients.mockResolvedValue([triggerer, admin]);
   mockAutomations.mockResolvedValue([]);
   mockSend.mockResolvedValue({});
@@ -117,13 +150,20 @@ describe("notifyAiDetectionScanFinished", () => {
     expect(input).toMatchObject({
       user_id: 5,
       type: "ai_detection_scan_completed",
-      title: "Scan finished",
-      message: "Scan of acme/app finished: 7 findings, grade B",
+      titleKey: "Scan finished",
+      messageKey: "Scan of {repository} finished: 1 finding, grade {grade}",
       entity_type: "ai_detection_scan",
       entity_id: 42,
       action_url: "/ai-detection/scans/42",
     });
+    // The count is the counted findings, not scan.findings_count (7, which
+    // includes suppressed and accepted ones).
+    expect(rendered(input)).toEqual({
+      title: "Scan finished",
+      message: "Scan of acme/app finished: 1 finding, grade B",
+    });
     expect(sendEmail).toBeUndefined();
+    expect(mockClaim).toHaveBeenCalledWith(42, ORG, "completed");
   });
 
   it("emails the triggering user and every admin once each about new secrets, new high-risk findings and a grade drop", async () => {
@@ -140,10 +180,10 @@ describe("notifyAiDetectionScanFinished", () => {
     await notifyAiDetectionScanFinished(42, ORG);
 
     expect(sentTo("ai_detection_scan_attention")).toEqual([5, 9]);
-    const [, input, sendEmail, email] = mockSend.mock.calls.find(
-      ([, i]) => i.type === "ai_detection_scan_attention",
-    )!;
-    expect(input.message).toBe(
+    const [, input, sendEmail, email] = attentionCall()!;
+    expect(input.titleKey).toBe("Scan needs attention");
+    expect(input.messageKey).toBe("Scan of {repository} needs attention: {reasons}");
+    expect(rendered(input).message).toBe(
       "Scan of acme/app needs attention: 1 new exposed secret, 1 new high-risk finding, governance grade dropped from B to D",
     );
     expect(sendEmail).toBe(true);
@@ -170,9 +210,7 @@ describe("notifyAiDetectionScanFinished", () => {
 
     await notifyAiDetectionScanFinished(42, ORG);
 
-    const [, , , email] = mockSend.mock.calls.find(
-      ([, i]) => i.type === "ai_detection_scan_attention",
-    )!;
+    const [, , , email] = attentionCall()!;
     expect(email.variables.intro_text).toContain("first scan");
   });
 
@@ -180,8 +218,8 @@ describe("notifyAiDetectionScanFinished", () => {
     await notifyAiDetectionScanFinished(42, ORG);
 
     expect(mockScan).toHaveBeenCalledTimes(1);
-    expect(mockSend.mock.calls[0][1].message).toBe(
-      "Scan of acme/app finished: 7 findings, grade B",
+    expect(rendered(mockSend.mock.calls[0][1]).message).toBe(
+      "Scan of acme/app finished: 0 findings, grade B",
     );
   });
 
@@ -190,23 +228,110 @@ describe("notifyAiDetectionScanFinished", () => {
       scan({ risk_score: null, risk_score_grade: null, findings_count: 1 }),
     );
     mockPrevious.mockResolvedValue(scan({ id: 41, risk_score_grade: "A" }));
+    mockFindings.mockResolvedValue([finding()]);
 
     await notifyAiDetectionScanFinished(42, ORG);
 
     expect(mockSend).toHaveBeenCalledTimes(1);
-    expect(mockSend.mock.calls[0][1].message).toBe("Scan of acme/app finished: 1 finding");
+    expect(rendered(mockSend.mock.calls[0][1]).message).toBe(
+      "Scan of acme/app finished: 1 finding",
+    );
   });
 
-  it("sends nothing for a scan that was already announced", async () => {
-    mockDedup.mockResolvedValue(true);
+  it("sends nothing, and reads nothing further, when another call already claimed the scan", async () => {
+    mockClaim.mockResolvedValue(false);
     mockAutomations.mockResolvedValue([
       { automation_id: 3, action_key: "send_email", params: { subject: "s", body: "b" } },
     ]);
 
     await notifyAiDetectionScanFinished(42, ORG);
 
+    expect(mockClaim).toHaveBeenCalledWith(42, ORG, "completed");
+    expect(mockFindings).not.toHaveBeenCalled();
     expect(mockSend).not.toHaveBeenCalled();
     expect(mockEnqueue).not.toHaveBeenCalled();
+  });
+
+  it("does not report a finding the previous scan had, even if a reviewer accepted it there", async () => {
+    mockPrevious.mockResolvedValue(scan({ id: 41 }));
+    // The counted findings of the previous scan would leave the accepted one
+    // out; the baseline query keeps it.
+    mockFindings.mockImplementation(async (scanId: number) =>
+      scanId === 42 ? [finding({ name: "eval", risk_level: "high" })] : [],
+    );
+    mockPreviousFindings.mockResolvedValue([finding({ name: "eval", risk_level: "high" })]);
+
+    await notifyAiDetectionScanFinished(42, ORG);
+
+    expect(mockPreviousFindings).toHaveBeenCalledWith(41, ORG);
+    expect(mockFindings).not.toHaveBeenCalledWith(41, ORG);
+    expect(sentTo("ai_detection_scan_attention")).toEqual([]);
+  });
+
+  it("compares vulnerability findings only when both scans ran the vulnerability checks", async () => {
+    const injection = finding({
+      name: "prompt",
+      finding_type: "prompt_injection",
+      risk_level: "high",
+    });
+    mockFindings.mockImplementation(async (scanId: number) => (scanId === 42 ? [injection] : []));
+
+    // The previous scan was incremental: its missing vulnerability is not news.
+    mockScan.mockResolvedValue(scan({ vulnerability_check_status: "ran" }));
+    mockPrevious.mockResolvedValue(scan({ id: 41, vulnerability_check_status: "incremental" }));
+    await notifyAiDetectionScanFinished(42, ORG);
+    expect(sentTo("ai_detection_scan_attention")).toEqual([]);
+
+    mockSend.mockClear();
+    mockPrevious.mockResolvedValue(scan({ id: 41, vulnerability_check_status: "ran" }));
+    await notifyAiDetectionScanFinished(42, ORG);
+    expect(sentTo("ai_detection_scan_attention")).toEqual([5, 9]);
+  });
+
+  it("reports a known secret found in a new file, with the new path", async () => {
+    mockPrevious.mockResolvedValue(scan({ id: 41 }));
+    mockFindings.mockImplementation(async (scanId: number) =>
+      scanId === 42 ? [secret("AWS key", [".env", "deploy/prod.env"])] : [secret("AWS key")],
+    );
+
+    await notifyAiDetectionScanFinished(42, ORG);
+
+    const [, input, , email] = attentionCall()!;
+    expect(rendered(input).message).toBe("Scan of acme/app needs attention: 1 new exposed secret");
+    expect(email.variables.details_html).toContain("AWS key (deploy/prod.env)");
+  });
+
+  it("does not report a known secret in the same files", async () => {
+    mockPrevious.mockResolvedValue(scan({ id: 41 }));
+    mockFindings.mockResolvedValue([secret("AWS key", [".env"])]);
+
+    await notifyAiDetectionScanFinished(42, ORG);
+
+    expect(sentTo("ai_detection_scan_attention")).toEqual([]);
+  });
+
+  it("skips the grade-drop check when the previous grade is LLM-adjusted and this one is not yet", async () => {
+    mockScan.mockResolvedValue(
+      scan({ risk_score_grade: "D", risk_score_details: llmDetails(false) }),
+    );
+    mockPrevious.mockResolvedValue(
+      scan({ id: 41, risk_score_grade: "B", risk_score_details: llmDetails(true) }),
+    );
+
+    await notifyAiDetectionScanFinished(42, ORG);
+
+    expect(sentTo("ai_detection_scan_attention")).toEqual([]);
+  });
+
+  it("reads each recipient's language once and passes it on", async () => {
+    mockScan.mockResolvedValue(scan({ risk_score_grade: "D" }));
+    mockPrevious.mockResolvedValue(scan({ id: 41, risk_score_grade: "B" }));
+
+    await notifyAiDetectionScanFinished(42, ORG);
+
+    // The triggering user gets two notices but one lookup.
+    expect(mockLanguage.mock.calls.map(([id]) => id).sort()).toEqual([5, 9]);
+    expect(mockSend.mock.calls.every(([, input]) => input.lang === "en")).toBe(true);
   });
 
   it("sends nothing for a scan that did not complete", async () => {
@@ -276,7 +401,6 @@ describe("notifyAiDetectionScanFinished", () => {
     );
 
     jest.clearAllMocks();
-    mockDedup.mockResolvedValue(false);
     mockFindings.mockResolvedValue([finding({ name: "eval", risk_level: "high" })]);
     await notifyAiDetectionScanFinished(42, ORG);
 
@@ -311,9 +435,14 @@ describe("notifyAiDetectionScanFailed", () => {
 
     expect(sentTo("ai_detection_scan_failed")).toEqual([5, 9]);
     const [, input, sendEmail, email] = mockSend.mock.calls[0];
-    expect(input.message).toBe(
+    expect(input).toMatchObject({
+      titleKey: "Scan failed",
+      messageKey: "Scan of {repository} failed: {reason}",
+    });
+    expect(rendered(input).message).toBe(
       "Scan of acme/app failed: Clone failed for https://github.com/acme/app",
     );
+    expect(mockClaim).toHaveBeenCalledWith(42, ORG, "failed");
     expect(sendEmail).toBe(true);
     expect(email.subjectKey).toBe("Scan of {repository} failed");
     expect(mockEnqueue).toHaveBeenCalledWith(
@@ -343,9 +472,10 @@ describe("notifyAiDetectionScanFailed", () => {
   it("says nothing about a cancelled scan or one already announced", async () => {
     mockScan.mockResolvedValue(scan({ status: "cancelled" }));
     await notifyAiDetectionScanFailed(42, ORG);
+    expect(mockClaim).not.toHaveBeenCalled();
 
     mockScan.mockResolvedValue(scan({ status: "failed" }));
-    mockDedup.mockResolvedValue(true);
+    mockClaim.mockResolvedValue(false);
     await notifyAiDetectionScanFailed(42, ORG);
 
     expect(mockSend).not.toHaveBeenCalled();
@@ -374,6 +504,30 @@ describe("helpers", () => {
       "eval/Other",
     ]);
     expect(newHighRiskFindings(current, null)).toHaveLength(3);
+  });
+
+  it("newHighRiskFindings reports a known secret only for new paths, and gates vulnerabilities", () => {
+    const vuln = finding({ name: "v", finding_type: "pii_exposure", risk_level: "high" });
+    const previous = [secret("Key", ["a.env"])];
+    const current = [secret("Key", ["a.env", "b.env", "c.env", "d.env", "e.env"]), vuln];
+
+    const found = newHighRiskFindings(current, previous);
+    expect(found.map(newFindingLabel)).toEqual(["Key (b.env, c.env, d.env and 1 more)"]);
+    expect(
+      newHighRiskFindings(current, previous, { compareVulnerabilities: true }).map((f) => f.name),
+    ).toEqual(["Key", "v"]);
+    // First scan: every high-risk finding counts, vulnerabilities included, no path detail.
+    expect(newHighRiskFindings(current, null).map(newFindingLabel)).toEqual(["Key", "v"]);
+    expect(newHighRiskFindings([secret("Key", ["a.env"])], previous)).toEqual([]);
+  });
+
+  it("sameScoreBasis compares LLM-adjusted grades only with LLM-adjusted ones", () => {
+    const rule = { risk_score_details: llmDetails(false) };
+    const llm = { risk_score_details: llmDetails(true) };
+    expect(sameScoreBasis(rule, rule)).toBe(true);
+    expect(sameScoreBasis(llm, llm)).toBe(true);
+    expect(sameScoreBasis(rule, llm)).toBe(false);
+    expect(sameScoreBasis({ risk_score_details: null }, rule)).toBe(true);
   });
 
   it("isGradeDrop needs both grades and a worse one", () => {
@@ -455,6 +609,13 @@ describe("migration 20261112143741-ai-detection-notifications-and-triggers", () 
     const link = sql.find((s) => s.query.includes("automation_triggers_actions"))!;
     expect(link.query).toContain("a.key = 'send_email'");
     expect(link.options.replacements.keys).toHaveLength(3);
+    expect(all).toMatch(/ai_detection_scans\s+ADD COLUMN IF NOT EXISTS notified_at TIMESTAMPTZ/);
     expect(transaction.commit).toHaveBeenCalled();
+
+    sql.length = 0;
+    await migration.down(queryInterface);
+    expect(sql.map((s) => s.query).join("\n")).toContain(
+      "ai_detection_scans DROP COLUMN IF EXISTS notified_at",
+    );
   });
 });

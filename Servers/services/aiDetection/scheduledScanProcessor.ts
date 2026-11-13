@@ -21,6 +21,7 @@ import {
 } from "../../utils/aiDetectionRepository.utils";
 import { getActiveScanForRepoQuery, markStaleScansFailed } from "../../utils/aiDetection.utils";
 import { startScan } from "../aiDetection.service";
+import { notifyAiDetectionScanFailed } from "./scanNotifications";
 import { IServiceContext } from "../../domain.layer/interfaces/i.aiDetection";
 import { ScheduleFrequency } from "../../domain.layer/interfaces/i.aiDetectionRepository";
 import redisClient from "../../database/redis";
@@ -74,10 +75,20 @@ export async function processScheduledAiDetectionScans(): Promise<void> {
 
       try {
         // Recover stale scans stuck in active states (server crash/restart)
-        const staleCount = await markStaleScansFailed(orgId, STALE_SCAN_TIMEOUT_MINUTES);
-        if (staleCount > 0) {
-          console.log(`[ScheduledScan] Org ${orgId}: marked ${staleCount} stale scan(s) as failed`);
-          logger.warn(`Marked ${staleCount} stale scan(s) as failed for org ${orgId}`);
+        const staleIds = await markStaleScansFailed(orgId, STALE_SCAN_TIMEOUT_MINUTES);
+        if (staleIds.length > 0) {
+          console.log(
+            `[ScheduledScan] Org ${orgId}: marked ${staleIds.length} stale scan(s) as failed`,
+          );
+          logger.warn(`Marked ${staleIds.length} stale scan(s) as failed for org ${orgId}`);
+          // These scans never reached the failure handler, so announce them
+          // here. Best-effort and not awaited: the notifier never throws, and
+          // the catch keeps any surprise out of the scheduler.
+          for (const scanId of staleIds) {
+            notifyAiDetectionScanFailed(scanId, orgId).catch((err) => {
+              logger.error(`Failed to announce stale scan ${scanId} for org ${orgId}:`, err);
+            });
+          }
         }
 
         const dueRepos = await getRepositoriesDueForScanQuery(orgId);

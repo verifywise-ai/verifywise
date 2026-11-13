@@ -84,6 +84,8 @@ export interface IScan {
   risk_score_details?: IRiskScoreDetails | null;
   risk_score_calculated_at?: Date | null;
   vulnerability_check_status?: VulnerabilityCheckStatus | null;
+  /** When the scan's end was announced (services/aiDetection/scanNotifications.ts); NULL until then. */
+  notified_at?: Date | null;
   // Incremental scan fields
   scan_mode?: ScanMode;
   base_commit_sha?: string | null;

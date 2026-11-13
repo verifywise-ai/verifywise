@@ -154,7 +154,7 @@ Sent by `services/aiDetection/scanNotifications.ts` when a scan ends. Entity typ
 | `ai_detection_scan_attention` | New exposed secrets, new high-risk findings, or a lower governance grade than the previous scan of the repository | In-app + Email | Triggering user + org Admins |
 | `ai_detection_scan_failed` | Scan failed (not cancelled) | In-app; also Email for scheduled and webhook scans | Triggering user; plus org Admins for scheduled and webhook scans |
 
-A scan is announced once: the in-app rows for the scan are the dedup record. The platform has no per-user email opt-out, so these emails go to every recipient listed.
+A scan is announced once: the notifier claims it by setting `ai_detection_scans.notified_at` in one conditional UPDATE before sending anything. Scans marked failed as stale after a crash or restart are announced too. The platform has no per-user email opt-out, so these emails go to every recipient listed.
 
 #### Deadline escalation dedup
 

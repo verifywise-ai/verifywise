@@ -514,7 +514,7 @@ export const scanningContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'New exposed secrets', text: 'The scan found secrets that the previous scan of the same repository did not have.' },
+        { bold: 'New exposed secrets', text: 'The scan found secrets that the previous scan of the same repository did not have, or a known secret in a file where the previous scan did not find it.' },
         { bold: 'New high-risk findings', text: 'The scan found high-risk findings that the previous scan of the same repository did not have. On the first scan of a repository, every high-risk finding counts as new.' },
         { bold: 'Lower governance grade', text: 'The grade is worse than the previous scan of the repository.' },
         { bold: 'Failed scheduled or webhook scan', text: 'Nobody was watching the scan run, so the failure is emailed. A failed scan you started yourself shows on screen and in the bell menu only.' },
@@ -522,7 +522,7 @@ export const scanningContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Suppressed findings and findings marked as accepted risk are left out of these comparisons. If the governance score could not be calculated, the notification leaves the grade out. Cancelled scans send nothing.',
+      text: 'Findings that are suppressed or marked as accepted risk in the new scan are left out, and a finding the previous scan already had is not reported again, even if someone accepted it there. If the governance score could not be calculated, or only one of the two scans has an AI-adjusted score, the notification does not compare grades. Cancelled scans send nothing. A scan that stops after a server restart is reported as failed.',
     },
     {
       type: 'callout',

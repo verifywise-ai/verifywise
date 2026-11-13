@@ -1417,12 +1417,12 @@ export async function getAIDetectionStatsQuery(organizationId: number): Promise<
  *
  * @param organizationId - Organization ID for multi-tenancy
  * @param timeoutMinutes - Minutes after which an active scan is considered stale (default: 30)
- * @returns Number of scans marked as failed
+ * @returns Ids of the scans marked as failed (the caller announces each)
  */
 export async function markStaleScansFailed(
   organizationId: number,
   timeoutMinutes: number = 30,
-): Promise<number> {
+): Promise<number[]> {
   validateOrganizationId(organizationId);
 
   const results = await sequelize.query<{ id: number }>(
@@ -1440,7 +1440,7 @@ export async function markStaleScansFailed(
     },
   );
 
-  return results.length;
+  return results.map((row) => Number(row.id));
 }
 
 // ============================================================================

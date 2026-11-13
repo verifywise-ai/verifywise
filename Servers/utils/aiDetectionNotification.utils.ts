@@ -14,7 +14,19 @@ export interface IScanFindingKey {
   provider: string | null;
   finding_type: string;
   risk_level: string | null;
+  /**
+   * Distinct file paths of an exposed secret (null for other finding types).
+   * A scan stores one row per secret name and provider with every file it was
+   * found in, so a second leak of the same kind shows up only as a new path.
+   */
+  secret_paths?: string[] | null;
 }
+
+/** Distinct `file_paths[].path` values of a secret finding, null for any other type. */
+const SECRET_PATHS_SQL = `CASE WHEN finding_type = 'secret' AND jsonb_typeof(file_paths) = 'array'
+            THEN ARRAY(SELECT DISTINCT e->>'path' FROM jsonb_array_elements(file_paths) e
+                        WHERE e->>'path' IS NOT NULL)
+          END AS secret_paths`;
 
 /** One action row of an active automation, as the other triggers read it. */
 export interface IAutomationActionRow {
@@ -39,7 +51,7 @@ export async function getPreviousCompletedScanQuery(
         AND repository_name = :repo
         AND status = 'completed'
         AND id <> :scanId
-        AND (CAST(:completedAt AS timestamp) IS NULL OR completed_at <= CAST(:completedAt AS timestamp))
+        AND (CAST(:completedAt AS timestamptz) IS NULL OR completed_at <= CAST(:completedAt AS timestamptz))
       ORDER BY completed_at DESC, id DESC
       LIMIT 1`,
     {
@@ -66,12 +78,38 @@ export async function getCountedScanFindingsQuery(
   organizationId: number,
 ): Promise<IScanFindingKey[]> {
   return sequelize.query<IScanFindingKey>(
-    `SELECT name, provider, finding_type, risk_level
+    `SELECT name, provider, finding_type, risk_level, ${SECRET_PATHS_SQL}
        FROM ai_detection_findings
       WHERE organization_id = :organizationId
         AND scan_id = :scanId
         AND COALESCE(suppressed, FALSE) = FALSE
         AND COALESCE(governance_status, '') NOT IN ('suppressed', 'accepted_risk')
+        AND COALESCE(finding_status, 'active') <> 'fixed'`,
+    { replacements: { organizationId, scanId }, type: QueryTypes.SELECT },
+  );
+}
+
+/**
+ * Every finding of the previous scan, the baseline "what did we already
+ * know" for the new-finding check. Unlike getCountedScanFindingsQuery it keeps
+ * rule-suppressed, suppressed and accepted findings: those decisions are
+ * stored per finding row and are not copied to the next scan, so filtering
+ * them here would report a finding someone already accepted as new. Findings
+ * an incremental scan marked fixed are left out, so one that comes back counts
+ * as new.
+ *
+ * TODO: revisit once reviewer decisions carry over to new scans; the
+ * comparison may then be able to use the counted findings on both sides.
+ */
+export async function getPreviousScanFindingsQuery(
+  scanId: number,
+  organizationId: number,
+): Promise<IScanFindingKey[]> {
+  return sequelize.query<IScanFindingKey>(
+    `SELECT name, provider, finding_type, risk_level, ${SECRET_PATHS_SQL}
+       FROM ai_detection_findings
+      WHERE organization_id = :organizationId
+        AND scan_id = :scanId
         AND COALESCE(finding_status, 'active') <> 'fixed'`,
     { replacements: { organizationId, scanId }, type: QueryTypes.SELECT },
   );
@@ -121,23 +159,25 @@ export async function getScanRecipientsQuery(
 }
 
 /**
- * Whether this scan was already announced. The notifier's own in-app rows
- * are the record (entity ai_detection_scan + the scan id), so a second call
- * for the same scan sends nothing.
+ * Claim the right to announce a scan: sets `notified_at` only if it is still
+ * NULL and the scan has the expected status, in one statement. Returns true
+ * for the single caller that wins; a retry or a concurrent call gets false
+ * and must send nothing.
  */
-export async function hasScanNotificationQuery(
-  organizationId: number,
+export async function claimScanNotificationQuery(
   scanId: number,
-  types: string[],
+  organizationId: number,
+  status: "completed" | "failed",
 ): Promise<boolean> {
-  const rows = await sequelize.query(
-    `SELECT 1 FROM notifications
-      WHERE organization_id = :organizationId
-        AND entity_type = 'ai_detection_scan'
-        AND entity_id = :scanId
-        AND type::text IN (:types)
-      LIMIT 1`,
-    { replacements: { organizationId, scanId, types }, type: QueryTypes.SELECT },
+  const rows = await sequelize.query<{ id: number }>(
+    `UPDATE ai_detection_scans
+        SET notified_at = NOW()
+      WHERE id = :scanId
+        AND organization_id = :organizationId
+        AND status = :status
+        AND notified_at IS NULL
+      RETURNING id`,
+    { replacements: { organizationId, scanId, status }, type: QueryTypes.SELECT },
   );
   return rows.length > 0;
 }

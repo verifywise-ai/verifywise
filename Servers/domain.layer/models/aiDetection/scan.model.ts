@@ -108,6 +108,13 @@ export class ScanModel extends Model<ScanModel> implements IScan {
   })
   cache_path?: string;
 
+  /** Set once when the scan's end is announced; see services/aiDetection/scanNotifications.ts. */
+  @Column({
+    type: DataType.DATE,
+    allowNull: true,
+  })
+  notified_at?: Date | null;
+
   @Column({
     type: DataType.DATE,
     defaultValue: DataType.NOW,

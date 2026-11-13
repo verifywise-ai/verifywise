@@ -3,8 +3,8 @@ jest.setTimeout(60000);
 /**
  * AI Detection scan notifier against a migrated database: the notifier's
  * queries, the new notification enum values and Automations triggers, the
- * per-scan dedup, and tenant isolation of the previous-scan and recipient
- * lookups.
+ * notified_at claim, stale-scan announcements, and tenant isolation of the
+ * previous-scan and recipient lookups.
  */
 
 import { QueryTypes } from "sequelize";
@@ -18,11 +18,13 @@ import {
   notifyAiDetectionScanFailed,
 } from "../../services/aiDetection/scanNotifications";
 import {
+  claimScanNotificationQuery,
   getCountedScanFindingsQuery,
   getPreviousCompletedScanQuery,
+  getPreviousScanFindingsQuery,
   getScanRecipientsQuery,
 } from "../../utils/aiDetectionNotification.utils";
-import { getScanByIdQuery } from "../../utils/aiDetection.utils";
+import { getScanByIdQuery, markStaleScansFailed } from "../../utils/aiDetection.utils";
 
 async function insertScan(
   orgId: number,
@@ -68,13 +70,15 @@ async function insertFinding(
     risk?: string;
     suppressed?: boolean;
     governance?: string | null;
+    paths?: string[];
   },
 ): Promise<void> {
   await sequelize.query(
     `INSERT INTO ai_detection_findings
        (organization_id, scan_id, finding_type, name, provider, risk_level, confidence,
-        suppressed, governance_status, file_count)
-     VALUES (:orgId, :scanId, :type, :name, 'OpenAI', :risk, 'high', :suppressed, :governance, 1)`,
+        suppressed, governance_status, file_count, file_paths)
+     VALUES (:orgId, :scanId, :type, :name, 'OpenAI', :risk, 'high', :suppressed, :governance, 1,
+        CAST(:filePaths AS jsonb))`,
     {
       replacements: {
         orgId,
@@ -84,9 +88,24 @@ async function insertFinding(
         risk: f.risk ?? "high",
         suppressed: f.suppressed ?? false,
         governance: f.governance ?? null,
+        filePaths: JSON.stringify(
+          (f.paths ?? ["src/app.ts"]).map((path) => ({
+            path,
+            line_number: 1,
+            matched_text: "x",
+          })),
+        ),
       },
     },
   );
+}
+
+async function notifiedAt(orgId: number, scanId: number): Promise<Date | null> {
+  const rows = await sequelize.query<{ notified_at: Date | null }>(
+    `SELECT notified_at FROM ai_detection_scans WHERE id = :scanId AND organization_id = :orgId`,
+    { replacements: { orgId, scanId }, type: QueryTypes.SELECT },
+  );
+  return rows[0]?.notified_at ?? null;
 }
 
 async function addAutomation(orgId: number, triggerKey: string): Promise<void> {
@@ -181,6 +200,87 @@ describe("AI Detection scan notifications (database)", () => {
     expect(names).toEqual(["kept"]);
   });
 
+  it("keeps reviewer decisions in the previous-scan baseline and lists secret paths", async () => {
+    const scan = await insertScan(orgA, editorA, { completedAt: "2026-11-12T12:00:00Z" });
+    await insertFinding(orgA, scan, { name: "accepted", governance: "accepted_risk" });
+    await insertFinding(orgA, scan, { name: "rule", suppressed: true });
+    await insertFinding(orgA, scan, {
+      name: "AWS key",
+      type: "secret",
+      paths: [".env", "deploy/prod.env", ".env"],
+    });
+
+    const baseline = await getPreviousScanFindingsQuery(scan, orgA);
+    expect(baseline.map((f) => f.name).sort()).toEqual(["AWS key", "accepted", "rule"]);
+    const awsKey = baseline.find((f) => f.name === "AWS key")!;
+    expect([...awsKey.secret_paths!].sort()).toEqual([".env", "deploy/prod.env"]);
+    expect(baseline.find((f) => f.name === "accepted")!.secret_paths).toBeNull();
+    // Another organization's scan id returns nothing.
+    expect(await getPreviousScanFindingsQuery(scan, orgB)).toEqual([]);
+  });
+
+  it("does not report a finding accepted on the previous scan as new", async () => {
+    const first = await insertScan(orgA, editorA, {
+      completedAt: "2026-11-10T12:00:00Z",
+      grade: "B",
+    });
+    await insertFinding(orgA, first, { name: "eval", governance: "accepted_risk" });
+    const second = await insertScan(orgA, editorA, {
+      completedAt: "2026-11-12T12:00:00Z",
+      grade: "B",
+    });
+    await insertFinding(orgA, second, { name: "eval" });
+
+    await notifyAiDetectionScanFinished(second, orgA);
+
+    const rows = await notificationsFor(orgA, second);
+    expect(rows.map((r) => r.type)).toEqual(["ai_detection_scan_completed"]);
+    expect(email).not.toHaveBeenCalled();
+  });
+
+  it("claims a scan once, only in its own organization and with the expected status", async () => {
+    const scan = await insertScan(orgA, editorA, { completedAt: "2026-11-12T12:00:00Z" });
+
+    expect(await claimScanNotificationQuery(scan, orgB, "completed")).toBe(false);
+    expect(await claimScanNotificationQuery(scan, orgA, "failed")).toBe(false);
+    expect(await notifiedAt(orgA, scan)).toBeNull();
+
+    const claims = await Promise.all([
+      claimScanNotificationQuery(scan, orgA, "completed"),
+      claimScanNotificationQuery(scan, orgA, "completed"),
+    ]);
+    expect(claims.filter(Boolean)).toHaveLength(1);
+    expect(await notifiedAt(orgA, scan)).not.toBeNull();
+  });
+
+  it("announces a scan the scheduler marks failed as stale", async () => {
+    const rows = await sequelize.query<{ id: number }>(
+      `INSERT INTO ai_detection_scans
+         (organization_id, repository_url, repository_owner, repository_name, status, triggered_by,
+          triggered_by_type, updated_at)
+       VALUES (:orgId, 'https://github.com/acme/app', 'acme', 'app', 'scanning', :editorA,
+          'scheduled', NOW() - INTERVAL '2 hours')
+       RETURNING id`,
+      { replacements: { orgId: orgA, editorA }, type: QueryTypes.SELECT },
+    );
+    const stale = rows[0].id;
+
+    const ids = await markStaleScansFailed(orgA, 30);
+    expect(ids).toEqual([stale]);
+    expect(await markStaleScansFailed(orgB, 30)).toEqual([]);
+
+    await notifyAiDetectionScanFailed(stale, orgA);
+
+    const notices = await notificationsFor(orgA, stale);
+    expect(notices.map((r) => [r.user_id, r.type]).sort()).toEqual(
+      [
+        [adminA, "ai_detection_scan_failed"],
+        [editorA, "ai_detection_scan_failed"],
+      ].sort(),
+    );
+    expect(await notifiedAt(orgA, stale)).not.toBeNull();
+  });
+
   it("resolves recipients to members of the organization only", async () => {
     const withEditor = await getScanRecipientsQuery(orgA, editorA);
     expect(withEditor.map((r) => [r.id, r.isTriggeredBy, r.isAdmin]).sort()).toEqual(
@@ -229,6 +329,8 @@ describe("AI Detection scan notifications (database)", () => {
       "acme/app D",
       "acme/app D",
     ]);
+
+    expect(await notifiedAt(orgA, second)).not.toBeNull();
 
     await notifyAiDetectionScanFinished(second, orgA);
     expect(await notificationsFor(orgA, second)).toHaveLength(3);
