@@ -6,7 +6,7 @@ import Checkbox from "../../components/Inputs/Checkbox";
 import { FormField } from "../IntakeFormBuilder/types";
 import { isEmptyAnswer } from "../../../application/utils/intakeFormLogic";
 import { isWebUrl } from "../../../application/utils/webUrl";
-import { status } from "../../themes/palette";
+import { status, palette as vwPalette } from "../../themes/palette";
 
 /**
  * Renders a field label.
@@ -39,7 +39,7 @@ export function FieldLabel({
         sx={{ fontSize: "14px", color: "#334155", fontWeight: 500, display: "block" }}
       >
         {label}
-        {required && <span style={{ color: "#ef4444" }}> *</span>}
+        {required && <span style={{ color: vwPalette.riskMark.critical }}> *</span>}
       </Typography>
     </Box>
   );
@@ -93,7 +93,7 @@ function HelperText({ text, isError }: { text?: string; isError?: boolean }) {
     <Typography
       sx={{
         fontSize: "12px",
-        color: isError ? "#ef4444" : "#94a3b8",
+        color: isError ? vwPalette.riskMark.critical : "#94a3b8",
         mt: "4px",
         lineHeight: 1.4,
       }}
@@ -388,7 +388,7 @@ export function FormFieldRenderer({ field, control, errors, tone }: FormFieldRen
                                 display: "inline-flex",
                                 alignItems: "center",
                                 fontSize: "12px",
-                                backgroundColor: "#f0fdf4",
+                                backgroundColor: vwPalette.status.success.bg,
                                 color: "#334155",
                                 border: "1px solid #e2e8f0",
                                 borderRadius: "12px",
@@ -414,7 +414,9 @@ export function FormFieldRenderer({ field, control, errors, tone }: FormFieldRen
                       role="group"
                       aria-labelledby={labelId}
                       sx={{
-                        border: error ? "1px solid #ef4444" : "1px solid #e2e8f0",
+                        border: error
+                          ? `1px solid ${vwPalette.riskMark.critical}`
+                          : "1px solid #e2e8f0",
                         borderRadius: "8px",
                         maxHeight: 200,
                         overflowY: "auto",
@@ -438,7 +440,9 @@ export function FormFieldRenderer({ field, control, errors, tone }: FormFieldRen
                               "px": "12px",
                               "py": "8px",
                               "cursor": "pointer",
-                              "backgroundColor": isChecked ? "#f0fdf4" : "transparent",
+                              "backgroundColor": isChecked
+                                ? vwPalette.status.success.bg
+                                : "transparent",
                               "&:hover": {
                                 backgroundColor: isChecked ? "#dcfce7" : "#f8fafc",
                               },

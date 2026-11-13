@@ -50,7 +50,7 @@ import {
 } from "lucide-react";
 import "./index.css";
 import { IRichTextEditorProps } from "../../types/interfaces/i.editor";
-import { border as borderPalette } from "../../themes/palette";
+import { border as borderPalette, palette as vwPalette, radiusPx } from "../../themes/palette";
 
 const ICON_SIZE = 16;
 
@@ -513,10 +513,12 @@ const RichTextEditor: React.FC<IRichTextEditorProps> = ({
                       size="small"
                       sx={{
                         "padding": "5px",
-                        "borderRadius": "4px",
-                        "color": danger ? "#dc2626" : "#374151",
+                        "borderRadius": radiusPx.sm,
+                        "color": danger ? vwPalette.riskMark.critical : vwPalette.text.secondary,
                         "&:hover": {
-                          backgroundColor: danger ? "#fef2f2" : theme.palette.action.hover,
+                          backgroundColor: danger
+                            ? vwPalette.status.error.bg
+                            : theme.palette.action.hover,
                         },
                       }}
                     >
@@ -583,7 +585,7 @@ const RichTextEditor: React.FC<IRichTextEditorProps> = ({
             font-size: 13px;
           }
           .vw-tiptap-content .ProseMirror a {
-            color: #13715B;
+            color: ${vwPalette.brand.primary};
             text-decoration: underline;
           }
         `}

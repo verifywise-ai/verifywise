@@ -16,7 +16,7 @@ import { useProfilePhotoFetch } from "../../../../application/hooks/useProfilePh
 import { EntityType, getEntityHistoryConfig } from "../../../../config/changeHistory.config";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
-import { brand, border, background, icon, text, accent } from "../../../themes/palette";
+import { brand, border, background, icon, text, accent, radiusPx } from "../../../themes/palette";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { displayFormattedTime } from "../../../tools/isoDateToString";
 
@@ -304,7 +304,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
                 <Box
                   sx={{
                     padding: "8px 12px",
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     backgroundColor: accent.primary.bg,
                   }}
                 >
@@ -317,7 +317,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
                       sx={{
                         flex: 1,
                         padding: "8px 12px",
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                         backgroundColor: accent.red.bg,
                       }}
                     >
@@ -344,7 +344,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
                       sx={{
                         flex: 1,
                         padding: "8px 12px",
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                         backgroundColor: accent.primary.bg,
                       }}
                     >
@@ -460,7 +460,7 @@ const Activity: React.FC<ActivityProps> = ({ entityType, entityId }) => {
             padding: "12px 16px",
             marginBottom: "24px",
             backgroundColor: background.alt,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             border: `1px solid ${border.dark}`,
           }}
         >

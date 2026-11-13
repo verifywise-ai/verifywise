@@ -32,7 +32,7 @@ import { CustomizableButton } from "../../button/customizable-button";
 import RichTextEditor from "../../RichTextEditor";
 import StandardModal from "../../Modals/StandardModal";
 import { FilePickerModal } from "../../FilePickerModal";
-import { accent, background, border, status, text } from "../../../themes/palette";
+import { accent, background, border, status, text, radiusPx } from "../../../themes/palette";
 
 import NotesTab from "../../Notes/NotesTab";
 import { HistorySidebar } from "../../Common/HistorySidebar";
@@ -1033,7 +1033,7 @@ const NewControlPane = ({
                   border: `1px solid ${border.light}`,
                   padding: "12px",
                   backgroundColor: background.alt,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                 }}
               >
                 <Typography
@@ -1211,7 +1211,7 @@ const NewControlPane = ({
                       border: `1px solid ${border.light}`,
                       padding: "12px",
                       backgroundColor: background.alt,
-                      borderRadius: "4px",
+                      borderRadius: radiusPx.sm,
                     }}
                   >
                     <Typography
@@ -1450,7 +1450,7 @@ const NewControlPane = ({
                                 "justifyContent": "space-between",
                                 "padding": "10px 12px",
                                 "border": `1px solid ${border.light}`,
-                                "borderRadius": "4px",
+                                "borderRadius": radiusPx.sm,
                                 "backgroundColor": "background.main",
                                 "&:hover": {
                                   backgroundColor: "background.accent",
@@ -1550,7 +1550,7 @@ const NewControlPane = ({
                                   justifyContent: "space-between",
                                   padding: "10px 12px",
                                   border: `1px solid ${accent.amber.border}`,
-                                  borderRadius: "4px",
+                                  borderRadius: radiusPx.sm,
                                   backgroundColor: accent.amber.bg,
                                 }}
                               >
@@ -1628,7 +1628,7 @@ const NewControlPane = ({
                                   justifyContent: "space-between",
                                   padding: "10px 12px",
                                   border: `1px solid ${accent.blue.border}`,
-                                  borderRadius: "4px",
+                                  borderRadius: radiusPx.sm,
                                   backgroundColor: accent.blue.bg,
                                 }}
                               >
@@ -1827,7 +1827,7 @@ const NewControlPane = ({
                                 "justifyContent": "space-between",
                                 "padding": "10px 12px",
                                 "border": `1px solid ${border.light}`,
-                                "borderRadius": "4px",
+                                "borderRadius": radiusPx.sm,
                                 "backgroundColor": "background.main",
                                 "&:hover": {
                                   backgroundColor: "background.accent",
@@ -1927,7 +1927,7 @@ const NewControlPane = ({
                                   justifyContent: "space-between",
                                   padding: "10px 12px",
                                   border: `1px solid ${accent.amber.border}`,
-                                  borderRadius: "4px",
+                                  borderRadius: radiusPx.sm,
                                   backgroundColor: accent.amber.bg,
                                 }}
                               >
@@ -2005,7 +2005,7 @@ const NewControlPane = ({
                                   justifyContent: "space-between",
                                   padding: "10px 12px",
                                   border: `1px solid ${accent.blue.border}`,
-                                  borderRadius: "4px",
+                                  borderRadius: radiusPx.sm,
                                   backgroundColor: accent.blue.bg,
                                 }}
                               >
@@ -2158,7 +2158,7 @@ const NewControlPane = ({
                                 "justifyContent": "space-between",
                                 "padding": "10px 12px",
                                 "border": `1px solid ${border.light}`,
-                                "borderRadius": "4px",
+                                "borderRadius": radiusPx.sm,
                                 "backgroundColor": "background.main",
                                 "&:hover": {
                                   backgroundColor: "background.accent",

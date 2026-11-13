@@ -1,7 +1,14 @@
-import { brand, text, background, border as borderPalette } from "../../../themes/palette";
+import {
+  brand,
+  text,
+  background,
+  border as borderPalette,
+  palette as vwPalette,
+  radiusPx,
+} from "../../../themes/palette";
 export const projectCardStyle = {
   border: `1px solid ${borderPalette.dark}`,
-  borderRadius: "4px",
+  borderRadius: radiusPx.sm,
   padding: "16px",
   minWidth: 300,
   width: "100%",
@@ -22,7 +29,7 @@ export const frameworkLogo = {
 };
 
 export const progressStyle = {
-  color: "#8594AC",
+  color: vwPalette.text.accent,
   fontSize: 11,
   fontWeight: 400,
 };
@@ -34,7 +41,7 @@ export const projectCardSpecsStyle = {
   alignItems: "center",
 };
 
-export const projectCardSpecKeyStyle = { fontSize: 11, color: "#8594AC" };
+export const projectCardSpecKeyStyle = { fontSize: 11, color: vwPalette.text.accent };
 
 export const projectCardSpecValueStyle = { fontSize: 13, color: `${text.secondary}` };
 
@@ -58,7 +65,7 @@ export const euAiActChipStyle = {
   "fontWeight": 600,
   "fontSize": 11,
   "height": 28,
-  "borderRadius": "4px",
+  "borderRadius": radiusPx.sm,
   "mb": 1,
   "textTransform": "none",
   "minWidth": "auto",
@@ -87,7 +94,7 @@ export const iso42001ChipStyle = {
   "fontWeight": 600,
   "fontSize": 11,
   "height": 28,
-  "borderRadius": "4px",
+  "borderRadius": radiusPx.sm,
   "mb": 1,
   "textTransform": "none",
   "minWidth": "auto",

@@ -6,7 +6,7 @@ import {
   SxProps,
   Theme,
 } from "@mui/material";
-import { brand } from "../../themes/palette";
+import { brand, palette as vwPalette } from "../../themes/palette";
 
 /**
  * Extended props interface for the Button component
@@ -72,7 +72,7 @@ const Button = memo(
       "fontSize": 11,
       "px": 2, // Horizontal padding for better spacing
       "py": 0.5, // Vertical padding for better text spacing
-      "border": `1px solid ${theme.palette.primary.main || "#13715B"}`,
+      "border": `1px solid ${theme.palette.primary.main || vwPalette.brand.primary}`,
       "backgroundColor": theme.palette.primary.main || brand.primary,
       "color": theme.palette.primary.contrastText || "white",
       "textTransform": "none", // Prevent uppercase transformation
@@ -95,7 +95,7 @@ const Button = memo(
 
       // Focus effects for accessibility
       "&:focus": {
-        outline: `2px solid ${theme.palette.primary.main || "#13715B"}`,
+        outline: `2px solid ${theme.palette.primary.main || vwPalette.brand.primary}`,
         outlineOffset: "2px",
       },
 

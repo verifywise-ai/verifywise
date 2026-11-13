@@ -15,7 +15,7 @@ import StandardModal from "../../../components/Modals/StandardModal";
 import useUsers from "../../../../application/hooks/useUsers";
 import { SuggestedRisk, DIMENSION_LABELS } from "../../../../domain/ai-detection/riskScoringTypes";
 import type { RiskFormValues, MitigationFormValues } from "../../../../domain/types/riskForm.types";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import { DIMENSION_CHIP_COLORS } from "./scanDetailsConfig";
 import {
   getRiskLevelLabel,
@@ -153,7 +153,7 @@ export function SuggestedRisksSection({
                   key={index}
                   sx={{
                     "border": `1px solid ${palette.border.light}`,
-                    "borderRadius": "4px",
+                    "borderRadius": radiusPx.sm,
                     "p": "8px",
                     "backgroundColor": palette.background.main,
                     "&:hover": { borderColor: palette.border.dark },
@@ -276,7 +276,7 @@ export function SuggestedRisksSection({
             paper: {
               sx: {
                 mt: 0.5,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
                 border: `1px solid ${palette.border.light}`,
               },
@@ -291,7 +291,7 @@ export function SuggestedRisksSection({
                 "alignItems": "center",
                 "gap": "8px",
                 "p": "6px 8px",
-                "borderRadius": "4px",
+                "borderRadius": radiusPx.sm,
                 "cursor": "pointer",
                 "&:hover": { backgroundColor: palette.background.hover },
               }}
@@ -307,7 +307,7 @@ export function SuggestedRisksSection({
                 "alignItems": "center",
                 "gap": "8px",
                 "p": "6px 8px",
-                "borderRadius": "4px",
+                "borderRadius": radiusPx.sm,
                 "cursor": "pointer",
                 "&:hover": { backgroundColor: palette.background.hover },
               }}

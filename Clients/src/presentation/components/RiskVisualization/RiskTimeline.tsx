@@ -4,6 +4,7 @@ import { format } from "date-fns";
 import { IRiskTimelineProps } from "../../types/interfaces/i.risk";
 import { ITimelineEvent } from "../../../domain/interfaces/i.widget";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
+import { palette, radiusPx } from "../../themes/palette";
 
 const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => {
   const formatDate = useFormattedDate();
@@ -118,7 +119,7 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h6" sx={{ fontWeight: 600, color: "#111827", mb: 3 }}>
+      <Typography variant="h6" sx={{ fontWeight: 600, color: palette.text.primary, mb: 3 }}>
         Risk Timeline Analysis
       </Typography>
 
@@ -144,7 +145,7 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
                   variant="subtitle2"
                   sx={{
                     fontWeight: 600,
-                    color: "#374151",
+                    color: palette.text.secondary,
                     backgroundColor: "background.hover",
                     px: 2,
                     py: 1,
@@ -219,12 +220,12 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
 
                     <Typography
                       variant="subtitle2"
-                      sx={{ fontWeight: 600, color: "#111827", mb: 1 }}
+                      sx={{ fontWeight: 600, color: palette.text.primary, mb: 1 }}
                     >
                       {event.title}
                     </Typography>
 
-                    <Typography variant="body2" sx={{ color: "#4B5563", mb: 2 }}>
+                    <Typography variant="body2" sx={{ color: palette.text.tertiary, mb: 2 }}>
                       {event.description}
                     </Typography>
 
@@ -237,7 +238,7 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
                           color: getRiskLevelColor(event.riskLevel),
                           fontWeight: 500,
                           fontSize: 11,
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                           border: `1px solid ${getRiskLevelColor(event.riskLevel)}40`,
                         }}
                       />

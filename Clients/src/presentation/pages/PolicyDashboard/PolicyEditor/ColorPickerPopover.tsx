@@ -1,6 +1,6 @@
 import { Box, Popover, alpha } from "@mui/material";
 import type { Editor } from "@tiptap/react";
-import { palette, userTextColors } from "../../../themes/palette";
+import { palette, userTextColors, radiusPx } from "../../../themes/palette";
 
 const { border, text } = palette;
 
@@ -50,7 +50,7 @@ export function ColorPickerPopover({ editor, anchorEl, onClose }: ColorPickerPop
             sx={{
               "width": 24,
               "height": 24,
-              "borderRadius": "4px",
+              "borderRadius": radiusPx.sm,
               "backgroundColor": c,
               "cursor": "pointer",
               "border": `1px solid ${alpha(text.black, 0.1)}`,

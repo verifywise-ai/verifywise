@@ -13,7 +13,14 @@ import Select from "../Inputs/Select";
 import GovernanceTooltip from "./GovernanceTooltip";
 import { CustomizableButton } from "../button/customizable-button";
 import { IGovernanceScenario } from "../../../domain/interfaces/i.governanceOs";
-import { border as borderPalette, background, text, accent, brand } from "../../themes/palette";
+import {
+  border as borderPalette,
+  background,
+  text,
+  accent,
+  brand,
+  radiusPx,
+} from "../../themes/palette";
 
 const FRAMEWORK_OPTIONS = [
   { id: 1, name: "EU AI Act" },
@@ -125,7 +132,7 @@ const WhatIfSimulator: React.FC<WhatIfSimulatorProps> = ({
     <Box
       sx={{
         border: `1px solid ${borderPalette.dark}`,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         p: "16px",
         background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
       }}
@@ -174,7 +181,7 @@ const WhatIfSimulator: React.FC<WhatIfSimulatorProps> = ({
           <Box
             sx={{
               border: `1px solid ${borderPalette.light}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: "16px",
               background: background.main,
             }}
@@ -202,7 +209,7 @@ const WhatIfSimulator: React.FC<WhatIfSimulatorProps> = ({
           <Box
             sx={{
               border: `1px solid ${borderPalette.light}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: "16px",
               background: background.main,
             }}
@@ -226,7 +233,7 @@ const WhatIfSimulator: React.FC<WhatIfSimulatorProps> = ({
                     "alignItems": "center",
                     "height": 24,
                     "px": "10px",
-                    "borderRadius": "4px",
+                    "borderRadius": radiusPx.sm,
                     "fontSize": 12,
                     "cursor": "pointer",
                     "fontWeight": secondaryIds.includes(fw.id) ? 500 : 400,
@@ -259,7 +266,7 @@ const WhatIfSimulator: React.FC<WhatIfSimulatorProps> = ({
           <Box
             sx={{
               border: `1px solid ${borderPalette.light}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: "16px",
               background: background.main,
             }}
@@ -283,7 +290,7 @@ const WhatIfSimulator: React.FC<WhatIfSimulatorProps> = ({
                     "alignItems": "center",
                     "height": 24,
                     "px": "10px",
-                    "borderRadius": "4px",
+                    "borderRadius": radiusPx.sm,
                     "fontSize": 12,
                     "cursor": "pointer",
                     "fontWeight": supplementaryIds.includes(fw.id) ? 500 : 400,
@@ -340,7 +347,7 @@ const WhatIfSimulator: React.FC<WhatIfSimulatorProps> = ({
           <Box
             sx={{
               border: `1px solid ${borderPalette.light}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: "16px",
               background: background.main,
             }}
@@ -400,11 +407,11 @@ const WhatIfSimulator: React.FC<WhatIfSimulatorProps> = ({
               value={result.estimatedCoveragePercent}
               sx={{
                 "height": 8,
-                "borderRadius": "4px",
+                "borderRadius": radiusPx.sm,
                 "backgroundColor": background.hover,
                 "& .MuiLinearProgress-bar": {
                   backgroundColor: brand.primary,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                 },
               }}
             />
@@ -432,7 +439,7 @@ const WhatIfSimulator: React.FC<WhatIfSimulatorProps> = ({
                           alignItems: "center",
                           height: 20,
                           px: "8px",
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                           fontSize: 11,
                           fontWeight: 500,
                           textTransform: "capitalize",
@@ -474,7 +481,14 @@ const MetricBox: React.FC<{
   description: string;
 }> = ({ label, value, header, description }) => (
   <GovernanceTooltip header={header} description={description}>
-    <Box sx={{ textAlign: "center", p: "12px", background: background.hover, borderRadius: "4px" }}>
+    <Box
+      sx={{
+        textAlign: "center",
+        p: "12px",
+        background: background.hover,
+        borderRadius: radiusPx.sm,
+      }}
+    >
       <Typography sx={{ fontSize: 18, fontWeight: 600, color: brand.primary }}>{value}</Typography>
       <Typography sx={{ fontSize: 11, color: text.muted }}>{label}</Typography>
     </Box>

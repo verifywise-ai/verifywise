@@ -26,6 +26,7 @@ import Select from "../../../../components/Inputs/Select";
 import DatePicker from "../../../../components/Inputs/Datepicker";
 import ChipInput from "../../../../components/Inputs/ChipInput";
 import StatusBadge from "../StatusBadge";
+import { palette, radiusPx } from "../../../../themes/palette";
 
 interface FileMetadataEditorProps {
   isOpen: boolean;
@@ -164,7 +165,7 @@ export const FileMetadataEditor: React.FC<FileMetadataEditorProps> = ({
                 gap: 1,
                 padding: "8px 12px",
                 backgroundColor: "#F0F9FF",
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 border: "1px solid #B9E6FE",
                 mt: 1,
               }}
@@ -236,8 +237,8 @@ export const FileMetadataEditor: React.FC<FileMetadataEditorProps> = ({
           sx={{
             padding: "12px",
             backgroundColor: "background.accent",
-            borderRadius: "4px",
-            border: "1px solid #E0E4E9",
+            borderRadius: radiusPx.sm,
+            border: `1px solid ${palette.border.light}`,
           }}
         >
           <Typography sx={{ fontSize: 12, color: "text.icon" }}>

@@ -2,7 +2,7 @@ import { FC, ReactNode } from "react";
 import { List, ListItemButton, ListItemIcon, ListItemText } from "@mui/material";
 import { useTheme } from "@mui/material";
 import { Link as RouterLink } from "react-router";
-import { brand } from "../../themes/palette";
+import { brand, palette as vwPalette } from "../../themes/palette";
 
 /**
  * A single item in a {@link SectionNav}.
@@ -101,17 +101,20 @@ const SectionNav: FC<SectionNavProps> = ({
                 isActive && !isDisabled
                   ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
                   : "transparent",
-              "border": isActive && !isDisabled ? "1px solid #E8E8E8" : "1px solid transparent",
+              "border":
+                isActive && !isDisabled
+                  ? `1px solid ${vwPalette.border.light}`
+                  : "1px solid transparent",
               "&:hover": {
                 background: isDisabled
                   ? "transparent"
                   : isActive
                     ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
-                    : "#FAFAFA",
+                    : vwPalette.background.alt,
                 border: isDisabled
                   ? "1px solid transparent"
                   : isActive
-                    ? "1px solid #E8E8E8"
+                    ? `1px solid ${vwPalette.border.light}`
                     : "1px solid transparent",
               },
               "&:hover svg": isDisabled

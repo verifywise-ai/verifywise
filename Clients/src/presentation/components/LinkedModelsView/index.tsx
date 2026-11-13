@@ -20,6 +20,7 @@ import { EmptyState } from "../EmptyState";
 import { TableEmptyStateLayout } from "../Table/TableEmptyStateLayout";
 import { VWLink } from "../Link";
 import InfoBox from "../InfoBox";
+import { palette, radiusPx } from "../../themes/palette";
 
 const TABLE_COLUMNS = [
   { id: "provider", label: "PROVIDER" },
@@ -30,15 +31,21 @@ const TABLE_COLUMNS = [
 
 function StatusBadge({ status }: { status: ModelInventoryStatus }) {
   const statusStyles = {
-    [ModelInventoryStatus.APPROVED]: { bg: "#E6F4EA", color: "#138A5E" },
-    [ModelInventoryStatus.PENDING]: { bg: "#FFF8E1", color: "#795548" },
+    [ModelInventoryStatus.APPROVED]: {
+      bg: palette.status.success.bg,
+      color: palette.status.success.text,
+    },
+    [ModelInventoryStatus.PENDING]: { bg: palette.risk.medium.bg, color: palette.risk.medium.text },
     [ModelInventoryStatus.RESTRICTED]: { bg: "#FFE5D0", color: "#E64A19" },
-    [ModelInventoryStatus.BLOCKED]: { bg: "#FFD6D6", color: "#D32F2F" },
+    [ModelInventoryStatus.BLOCKED]: {
+      bg: palette.status.error.border,
+      color: palette.status.error.text,
+    },
     [ModelInventoryStatus.REJECTED]: { bg: "#F5F5F5", color: "#616161" },
     [ModelInventoryStatus.RETIRED]: { bg: "#ECEFF1", color: "#546E7A" },
   };
 
-  const style = statusStyles[status] || { bg: "#E0E0E0", color: "#424242" };
+  const style = statusStyles[status] || { bg: palette.border.light, color: "#424242" };
 
   return (
     <span
@@ -46,7 +53,7 @@ function StatusBadge({ status }: { status: ModelInventoryStatus }) {
         backgroundColor: style.bg,
         color: style.color,
         padding: "4px 8px",
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         fontWeight: 500,
         fontSize: 11,
         textTransform: "uppercase",

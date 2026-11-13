@@ -57,7 +57,7 @@ import {
 } from "../../../application/repository/aiDetection.repository";
 import { Scan, ScansResponse, ScanStatus } from "../../../domain/ai-detection/types";
 import { useAIDetectionSidebarContext } from "../../../application/contexts/AIDetectionSidebar.context";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 import { pageOfLabel } from "../../components/Table/pageOfLabel";
 
 function getGradeColor(grade: string | null | undefined): string {
@@ -571,7 +571,7 @@ export default function HistoryPage() {
               sx={{
                 px: 0.75,
                 py: 0.25,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 backgroundColor: `${color}14`,
                 border: `1px solid ${color}30`,
               }}
@@ -773,7 +773,7 @@ export default function HistoryPage() {
           <TableContainer
             sx={{
               backgroundColor: palette.background.main,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               overflow: "hidden",
             }}
           >

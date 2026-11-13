@@ -48,6 +48,7 @@ import {
   summaryMessage,
 } from "./batching";
 import { useCan } from "../../../../application/hooks/useCan";
+import { palette } from "../../../themes/palette";
 
 /** A panel message: the text, then each count with its own label (each translatable). */
 function MessageBody({ message }: { message: PanelMessage }) {
@@ -686,7 +687,11 @@ export const JiraAssetsConfiguration: React.FC = () => {
       </Typography>
 
       {/* Step 1: Connection Settings */}
-      <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 2, color: "#344054" }}>
+      <Typography
+        variant="subtitle2"
+        fontWeight={600}
+        sx={{ mb: 2, color: palette.text.secondary }}
+      >
         Step 1: Connection Settings
       </Typography>
 
@@ -833,13 +838,13 @@ export const JiraAssetsConfiguration: React.FC = () => {
             (!localConfig.api_token && !localConfig.has_api_token)
           }
           sx={{
-            "borderColor": "#13715B",
-            "color": "#13715B",
+            "borderColor": palette.brand.primary,
+            "color": palette.brand.primary,
             "textTransform": "none",
             "fontSize": "13px",
             "fontWeight": 500,
             "&:hover": { borderColor: "#0F5A47", backgroundColor: "rgba(19, 113, 91, 0.04)" },
-            "&:disabled": { borderColor: "#d0d5dd", color: "#98a2b3" },
+            "&:disabled": { borderColor: palette.border.dark, color: "#98a2b3" },
           }}
         >
           {connectionStatus === "testing" ? (
@@ -862,12 +867,12 @@ export const JiraAssetsConfiguration: React.FC = () => {
             (!localConfig.api_token && !localConfig.has_api_token)
           }
           sx={{
-            "backgroundColor": "#13715B",
+            "backgroundColor": palette.brand.primary,
             "textTransform": "none",
             "fontSize": "13px",
             "fontWeight": 500,
             "&:hover": { backgroundColor: "#0F5A47" },
-            "&:disabled": { backgroundColor: "#d0d5dd" },
+            "&:disabled": { backgroundColor: palette.border.dark },
           }}
         >
           {isSaving ? (
@@ -884,7 +889,11 @@ export const JiraAssetsConfiguration: React.FC = () => {
       <Divider sx={{ my: 3 }} />
 
       {/* Step 2: Schema & Object Type Selection */}
-      <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 2, color: "#344054" }}>
+      <Typography
+        variant="subtitle2"
+        fontWeight={600}
+        sx={{ mb: 2, color: palette.text.secondary }}
+      >
         Step 2: Select Schema & Object Type
       </Typography>
 
@@ -926,7 +935,11 @@ export const JiraAssetsConfiguration: React.FC = () => {
       <Divider sx={{ my: 3 }} />
 
       {/* Step 3: Sync Settings */}
-      <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 2, color: "#344054" }}>
+      <Typography
+        variant="subtitle2"
+        fontWeight={600}
+        sx={{ mb: 2, color: palette.text.secondary }}
+      >
         Step 3: Sync Settings
       </Typography>
 
@@ -962,7 +975,11 @@ export const JiraAssetsConfiguration: React.FC = () => {
           {/* Import & Sync */}
           <Box sx={{ display: "flex", justifyContent: "space-between", alignItems: "center" }}>
             <Box>
-              <Typography variant="subtitle2" fontWeight={600} sx={{ color: "#344054" }}>
+              <Typography
+                variant="subtitle2"
+                fontWeight={600}
+                sx={{ color: palette.text.secondary }}
+              >
                 Import & Sync
               </Typography>
               <Typography variant="body2" fontSize={12} color="text.secondary">
@@ -984,11 +1001,11 @@ export const JiraAssetsConfiguration: React.FC = () => {
                 onClick={() => loadJiraObjects()}
                 disabled={isImporting || isLoadingObjects}
                 sx={{
-                  "backgroundColor": "#13715B",
+                  "backgroundColor": palette.brand.primary,
                   "textTransform": "none",
                   "fontSize": "13px",
                   "&:hover": { backgroundColor: "#0F5A47" },
-                  "&:disabled": { backgroundColor: "#d0d5dd" },
+                  "&:disabled": { backgroundColor: palette.border.dark },
                 }}
               >
                 {isLoadingObjects ? "Loading..." : "Import"}
@@ -1073,7 +1090,7 @@ export const JiraAssetsConfiguration: React.FC = () => {
               >
                 <Table size="small" stickyHeader>
                   <TableHead>
-                    <TableRow sx={{ backgroundColor: "#f9fafb" }}>
+                    <TableRow sx={{ backgroundColor: palette.background.alt }}>
                       <TableCell padding="checkbox" />
                       <TableCell sx={{ fontWeight: 600, fontSize: "12px" }}>Key</TableCell>
                       <TableCell sx={{ fontWeight: 600, fontSize: "12px" }}>Name</TableCell>
@@ -1140,7 +1157,11 @@ export const JiraAssetsConfiguration: React.FC = () => {
                   mb: 1,
                 }}
               >
-                <Typography variant="subtitle2" fontWeight={600} sx={{ color: "#344054" }}>
+                <Typography
+                  variant="subtitle2"
+                  fontWeight={600}
+                  sx={{ color: palette.text.secondary }}
+                >
                   <span>Missing in Jira</span> <span>({missingUseCases.length})</span>
                 </Typography>
                 <CustomizableButton
@@ -1189,7 +1210,10 @@ export const JiraAssetsConfiguration: React.FC = () => {
                 <Table size="small" stickyHeader>
                   <TableHead>
                     <TableRow>
-                      <TableCell padding="checkbox" sx={{ backgroundColor: "#f9fafb" }}>
+                      <TableCell
+                        padding="checkbox"
+                        sx={{ backgroundColor: palette.background.alt }}
+                      >
                         <Checkbox
                           size="small"
                           checked={
@@ -1206,17 +1230,29 @@ export const JiraAssetsConfiguration: React.FC = () => {
                         />
                       </TableCell>
                       <TableCell
-                        sx={{ fontWeight: 600, fontSize: "12px", backgroundColor: "#f9fafb" }}
+                        sx={{
+                          fontWeight: 600,
+                          fontSize: "12px",
+                          backgroundColor: palette.background.alt,
+                        }}
                       >
                         Key
                       </TableCell>
                       <TableCell
-                        sx={{ fontWeight: 600, fontSize: "12px", backgroundColor: "#f9fafb" }}
+                        sx={{
+                          fontWeight: 600,
+                          fontSize: "12px",
+                          backgroundColor: palette.background.alt,
+                        }}
                       >
                         Name
                       </TableCell>
                       <TableCell
-                        sx={{ fontWeight: 600, fontSize: "12px", backgroundColor: "#f9fafb" }}
+                        sx={{
+                          fontWeight: 600,
+                          fontSize: "12px",
+                          backgroundColor: palette.background.alt,
+                        }}
                       >
                         Missing since
                       </TableCell>
@@ -1283,7 +1319,11 @@ export const JiraAssetsConfiguration: React.FC = () => {
           {/* Imported Use Cases Table */}
           {importedUseCases.length > 0 && (
             <Box sx={{ mt: 3 }}>
-              <Typography variant="subtitle2" fontWeight={600} sx={{ mb: 1.5, color: "#344054" }}>
+              <Typography
+                variant="subtitle2"
+                fontWeight={600}
+                sx={{ mb: 1.5, color: palette.text.secondary }}
+              >
                 Imported Use Cases
               </Typography>
               <TableContainer
@@ -1298,22 +1338,38 @@ export const JiraAssetsConfiguration: React.FC = () => {
                   <TableHead>
                     <TableRow>
                       <TableCell
-                        sx={{ fontWeight: 600, fontSize: "12px", backgroundColor: "#f9fafb" }}
+                        sx={{
+                          fontWeight: 600,
+                          fontSize: "12px",
+                          backgroundColor: palette.background.alt,
+                        }}
                       >
                         UC-ID
                       </TableCell>
                       <TableCell
-                        sx={{ fontWeight: 600, fontSize: "12px", backgroundColor: "#f9fafb" }}
+                        sx={{
+                          fontWeight: 600,
+                          fontSize: "12px",
+                          backgroundColor: palette.background.alt,
+                        }}
                       >
                         Name
                       </TableCell>
                       <TableCell
-                        sx={{ fontWeight: 600, fontSize: "12px", backgroundColor: "#f9fafb" }}
+                        sx={{
+                          fontWeight: 600,
+                          fontSize: "12px",
+                          backgroundColor: palette.background.alt,
+                        }}
                       >
                         JIRA Key
                       </TableCell>
                       <TableCell
-                        sx={{ fontWeight: 600, fontSize: "12px", backgroundColor: "#f9fafb" }}
+                        sx={{
+                          fontWeight: 600,
+                          fontSize: "12px",
+                          backgroundColor: palette.background.alt,
+                        }}
                       >
                         Status
                       </TableCell>

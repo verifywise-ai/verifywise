@@ -27,6 +27,7 @@ import { Project } from "../../../../../domain/types/Project";
 import { useModalKeyHandling } from "../../../../../application/hooks/useModalKeyHandling";
 import { TabFilterBar } from "../../../../components/FrameworkFilter/TabFilterBar";
 import { StatsCard } from "../../../../components/Cards/StatsCard";
+import { palette } from "../../../../themes/palette";
 
 const ISO27001Clause = ({
   project,
@@ -368,7 +369,7 @@ const ISO27001Clause = ({
                     alignItems: "center",
                     padding: "10px 16px",
                     backgroundColor: "#fafbfc",
-                    borderBottom: "1px solid #eaecf0",
+                    borderBottom: `1px solid ${palette.border.light}`,
                   }}
                 >
                   <Typography
@@ -506,8 +507,8 @@ const ISO27001Clause = ({
           const count = filteredSubClausesCountMemo[clause.id ?? 0];
           const chipColor =
             count !== undefined && count > 0
-              ? { bg: "#E6F4EA", color: "status.success.text" }
-              : { bg: "#FFF8E1", color: "#795548" };
+              ? { bg: palette.status.success.bg, color: "status.success.text" }
+              : { bg: palette.risk.medium.bg, color: palette.risk.medium.text };
           return (
             <Stack key={clause.id} sx={styles.container}>
               <Accordion

@@ -18,6 +18,7 @@ import { Tooltip as MuiTooltip } from "@mui/material";
 import { Info } from "lucide-react";
 import { ResponsiveContainer, LineChart, Line } from "recharts";
 import palette from "../../themes/palette";
+import { palette as vwPalette, radiusPx } from "../../themes/palette";
 
 // ─── 1. ChartCard ──────────────────────────────────────────────────────────
 
@@ -34,7 +35,7 @@ export const ChartCard: React.FC<ChartCardProps> = ({ title, tooltip, children, 
     sx={{
       background: `linear-gradient(180deg, ${palette.background.main} 0%, #F8FAFB 100%)`,
       border: `1.5px solid ${palette.border.light}`,
-      borderRadius: "4px",
+      borderRadius: radiusPx.sm,
       p: "16px",
       boxShadow: "none",
       flex,
@@ -253,11 +254,11 @@ export const PROVIDER_COLORS: Record<string, string> = {
   bedrock: "#FF9900",
   azure: "#0078D4",
   together_ai: "#6366F1",
-  openrouter: "#8B5CF6",
-  fireworks_ai: "#EF4444",
+  openrouter: vwPalette.accent.purple.text,
+  fireworks_ai: vwPalette.riskMark.critical,
   deepinfra: "#06B6D4",
   cohere: "#39B89D",
-  replicate: "#1A1A1A",
+  replicate: vwPalette.text.primary,
 };
 
 /** Get provider color — falls back to chart palette by index. */

@@ -46,7 +46,7 @@ import {
   type PublicFormRef,
 } from "../../../application/repository/intakeForm.repository";
 import { FormDesignSettings, DEFAULT_DESIGN_SETTINGS } from "../IntakeFormBuilder/types";
-import { brand } from "../../themes/palette";
+import { brand, palette as vwPalette } from "../../themes/palette";
 
 /**
  * Public form data structure
@@ -539,7 +539,7 @@ export function PublicIntakeForm() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: "#fafafa",
+          backgroundColor: vwPalette.background.alt,
         }}
       >
         <Typography
@@ -570,7 +570,7 @@ export function PublicIntakeForm() {
           display: "flex",
           alignItems: "center",
           justifyContent: "center",
-          backgroundColor: "#fafafa",
+          backgroundColor: vwPalette.background.alt,
           p: 3,
         }}
       >
@@ -658,7 +658,7 @@ export function PublicIntakeForm() {
               borderRadius: "12px",
               overflow: "hidden",
               backgroundColor: "background.main",
-              border: "1px solid #d0d5dd",
+              border: `1px solid ${vwPalette.border.dark}`,
               boxShadow: "0 1px 3px rgba(0,0,0,0.08)",
             }}
           >
@@ -709,13 +709,17 @@ export function PublicIntakeForm() {
                       fontSize: "13px",
                       borderRadius: "8px",
                       border: "1px solid #fecaca",
-                      backgroundColor: "#fef2f2",
+                      backgroundColor: vwPalette.status.error.bg,
                       display: "flex",
                       alignItems: "center",
                       gap: "10px",
                     }}
                   >
-                    <AlertCircle size={18} color="#ef4444" style={{ flexShrink: 0 }} />
+                    <AlertCircle
+                      size={18}
+                      color={vwPalette.riskMark.critical}
+                      style={{ flexShrink: 0 }}
+                    />
                     <Typography sx={{ fontSize: "13px", color: "#991b1b" }}>{error}</Typography>
                   </Box>
                 )}
@@ -795,7 +799,7 @@ export function PublicIntakeForm() {
                       gap: "10px",
                     }}
                   >
-                    <Info size={18} color="#3b82f6" style={{ flexShrink: 0 }} />
+                    <Info size={18} color={vwPalette.status.info.text} style={{ flexShrink: 0 }} />
                     <Typography sx={{ fontSize: "13px", color: "#1e40af" }}>
                       Your previous submission data has been pre-filled. You can update and
                       resubmit.
@@ -812,13 +816,17 @@ export function PublicIntakeForm() {
                       fontSize: "13px",
                       borderRadius: "8px",
                       border: "1px solid #fecaca",
-                      backgroundColor: "#fef2f2",
+                      backgroundColor: vwPalette.status.error.bg,
                       display: "flex",
                       alignItems: "center",
                       gap: "10px",
                     }}
                   >
-                    <AlertCircle size={18} color="#ef4444" style={{ flexShrink: 0 }} />
+                    <AlertCircle
+                      size={18}
+                      color={vwPalette.riskMark.critical}
+                      style={{ flexShrink: 0 }}
+                    />
                     <Typography sx={{ fontSize: "13px", color: "#991b1b" }}>{error}</Typography>
                   </Box>
                 )}

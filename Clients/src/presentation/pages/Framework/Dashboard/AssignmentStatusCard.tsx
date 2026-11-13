@@ -9,6 +9,7 @@ import {
   createErrorLogData,
   type BaseFrameworkData,
 } from "../../../../application/utils/frameworkDataUtils";
+import { palette } from "../../../themes/palette";
 
 /**
  * Assignment Status Card Component
@@ -255,10 +256,13 @@ const AssignmentStatusCard = ({ frameworksData }: AssignmentStatusCardProps) => 
   const getAssignmentIcon = (done: number, total: number) => {
     if (total === 0) return <CircleDashed size={14} style={{ color: "text.disabled" }} />;
     const percentage = (done / total) * 100;
-    if (percentage === 0) return <CircleDashed size={14} style={{ color: "#DC2626" }} />;
-    if (percentage < 30) return <CircleDashed size={14} style={{ color: "#DC2626" }} />;
+    if (percentage === 0)
+      return <CircleDashed size={14} style={{ color: palette.riskMark.critical }} />;
+    if (percentage < 30)
+      return <CircleDashed size={14} style={{ color: palette.riskMark.critical }} />;
     if (percentage < 60) return <CircleDot size={14} style={{ color: "#EA580C" }} />;
-    if (percentage < 85) return <CircleDotDashed size={14} style={{ color: "#F59E0B" }} />;
+    if (percentage < 85)
+      return <CircleDotDashed size={14} style={{ color: palette.riskMark.medium }} />;
     if (percentage < 100) return <CircleDotDashed size={14} style={{ color: "brand.primary" }} />;
     return <CircleCheck size={14} style={{ color: "brand.primary" }} />;
   };
@@ -279,7 +283,7 @@ const AssignmentStatusCard = ({ frameworksData }: AssignmentStatusCardProps) => 
         <Typography
           sx={{
             fontSize: 12,
-            color: "#666666",
+            color: palette.text.tertiary,
             mb: 6,
             lineHeight: "16px",
           }}
@@ -348,7 +352,7 @@ const AssignmentStatusCard = ({ frameworksData }: AssignmentStatusCardProps) => 
                             alignItems: "center",
                           }}
                         >
-                          <Typography sx={{ fontSize: 12, color: "#666666" }}>
+                          <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
                             {func.label}
                           </Typography>
                           <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
@@ -359,11 +363,18 @@ const AssignmentStatusCard = ({ frameworksData }: AssignmentStatusCardProps) => 
                             <Typography sx={{ fontSize: 12, color: "text.black", fontWeight: 500 }}>
                               /
                             </Typography>
-                            <Typography sx={{ fontSize: 12, color: "#999999", fontWeight: 500 }}>
+                            <Typography
+                              sx={{ fontSize: 12, color: palette.text.accent, fontWeight: 500 }}
+                            >
                               {data.total}
                             </Typography>
                             <Typography
-                              sx={{ fontSize: 12, color: "#666666", fontWeight: 400, ml: 1 }}
+                              sx={{
+                                fontSize: 12,
+                                color: palette.text.tertiary,
+                                fontWeight: 400,
+                                ml: 1,
+                              }}
                             >
                               assigned
                             </Typography>
@@ -416,7 +427,9 @@ const AssignmentStatusCard = ({ frameworksData }: AssignmentStatusCardProps) => 
                         alignItems: "center",
                       }}
                     >
-                      <Typography sx={{ fontSize: 12, color: "#666666" }}>Requirements</Typography>
+                      <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+                        Requirements
+                      </Typography>
                       <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                         {getAssignmentIcon(generic.assigned, generic.total)}
                         <Typography sx={{ fontSize: 12, color: "text.black", fontWeight: 500 }}>
@@ -425,10 +438,19 @@ const AssignmentStatusCard = ({ frameworksData }: AssignmentStatusCardProps) => 
                         <Typography sx={{ fontSize: 12, color: "text.black", fontWeight: 500 }}>
                           /
                         </Typography>
-                        <Typography sx={{ fontSize: 12, color: "#999999", fontWeight: 500 }}>
+                        <Typography
+                          sx={{ fontSize: 12, color: palette.text.accent, fontWeight: 500 }}
+                        >
                           {generic.total}
                         </Typography>
-                        <Typography sx={{ fontSize: 12, color: "#666666", fontWeight: 400, ml: 1 }}>
+                        <Typography
+                          sx={{
+                            fontSize: 12,
+                            color: palette.text.tertiary,
+                            fontWeight: 400,
+                            ml: 1,
+                          }}
+                        >
                           assigned
                         </Typography>
                       </Box>
@@ -468,7 +490,7 @@ const AssignmentStatusCard = ({ frameworksData }: AssignmentStatusCardProps) => 
                   >
                     {framework.frameworkName}
                   </Typography>
-                  <Typography sx={{ fontSize: 12, color: "#666666" }}>
+                  <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
                     Loading assignment data...
                   </Typography>
 
@@ -513,7 +535,7 @@ const AssignmentStatusCard = ({ frameworksData }: AssignmentStatusCardProps) => 
                       alignItems: "center",
                     }}
                   >
-                    <Typography sx={{ fontSize: 12, color: "#666666" }}>
+                    <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
                       {/* Use appropriate terminology based on framework type */}
                       {isISO27001 || isISO42001 ? "Clauses" : "Requirements"}
                     </Typography>
@@ -526,10 +548,14 @@ const AssignmentStatusCard = ({ frameworksData }: AssignmentStatusCardProps) => 
                       <Typography sx={{ fontSize: 12, color: "text.black", fontWeight: 500 }}>
                         /
                       </Typography>
-                      <Typography sx={{ fontSize: 12, color: "#999999", fontWeight: 500 }}>
+                      <Typography
+                        sx={{ fontSize: 12, color: palette.text.accent, fontWeight: 500 }}
+                      >
                         {counts.clauseTotal}
                       </Typography>
-                      <Typography sx={{ fontSize: 12, color: "#666666", fontWeight: 400, ml: 1 }}>
+                      <Typography
+                        sx={{ fontSize: 12, color: palette.text.tertiary, fontWeight: 400, ml: 1 }}
+                      >
                         assigned
                       </Typography>
                     </Box>
@@ -543,7 +569,9 @@ const AssignmentStatusCard = ({ frameworksData }: AssignmentStatusCardProps) => 
                       alignItems: "center",
                     }}
                   >
-                    <Typography sx={{ fontSize: 12, color: "#666666" }}>Annexes</Typography>
+                    <Typography sx={{ fontSize: 12, color: palette.text.tertiary }}>
+                      Annexes
+                    </Typography>
                     <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
                       {/* Status icon with color-coded completion indicator */}
                       {getAssignmentIcon(counts.annexAssigned, counts.annexTotal)}
@@ -553,10 +581,14 @@ const AssignmentStatusCard = ({ frameworksData }: AssignmentStatusCardProps) => 
                       <Typography sx={{ fontSize: 12, color: "text.black", fontWeight: 500 }}>
                         /
                       </Typography>
-                      <Typography sx={{ fontSize: 12, color: "#999999", fontWeight: 500 }}>
+                      <Typography
+                        sx={{ fontSize: 12, color: palette.text.accent, fontWeight: 500 }}
+                      >
                         {counts.annexTotal}
                       </Typography>
-                      <Typography sx={{ fontSize: 12, color: "#666666", fontWeight: 400, ml: 1 }}>
+                      <Typography
+                        sx={{ fontSize: 12, color: palette.text.tertiary, fontWeight: 400, ml: 1 }}
+                      >
                         assigned
                       </Typography>
                     </Box>

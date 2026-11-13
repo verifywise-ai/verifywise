@@ -5,7 +5,7 @@ import Toggle from "../Inputs/Toggle";
 import Checkbox from "../Inputs/Checkbox";
 import Field from "../Inputs/Field";
 import ManageShareLinks from "./ManageShareLinks";
-import { brand, text, background } from "../../themes/palette";
+import { brand, text, background, radiusPx } from "../../themes/palette";
 
 /**
  * Configuration for share view settings
@@ -265,7 +265,7 @@ const ShareViewDropdown: React.FC<ShareViewDropdownProps> = ({
                         color: `${background.main}`,
                         fontSize: "12px",
                         padding: "6px 12px",
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                       },
                     },
                   }}
@@ -293,7 +293,7 @@ const ShareViewDropdown: React.FC<ShareViewDropdownProps> = ({
                         color: `${background.main}`,
                         fontSize: "12px",
                         padding: "6px 12px",
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                       },
                     },
                   }}
@@ -321,7 +321,7 @@ const ShareViewDropdown: React.FC<ShareViewDropdownProps> = ({
                         color: `${background.main}`,
                         fontSize: "12px",
                         padding: "6px 12px",
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                       },
                     },
                   }}
@@ -442,7 +442,7 @@ const SettingItem: React.FC<SettingItemProps> = ({ label, checked, onChange, hel
               color: "background.main",
               fontSize: "12px",
               padding: "6px 12px",
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
             },
           },
           arrow: {

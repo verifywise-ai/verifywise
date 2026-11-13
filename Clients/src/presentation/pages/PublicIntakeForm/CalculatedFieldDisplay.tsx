@@ -1,6 +1,7 @@
 import { Box, Typography } from "@mui/material";
 import type { FormField } from "../IntakeFormBuilder/types";
 import { formatCalculatedValue } from "../../../application/utils/intakeAnswerFormat";
+import { radiusPx } from "../../themes/palette";
 
 interface CalculatedFieldDisplayProps {
   field: FormField;
@@ -35,7 +36,7 @@ export function CalculatedFieldDisplay({
           alignItems: "center",
           px: "12px",
           border: "1px solid #e2e8f0",
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           backgroundColor: "#f8fafc",
           fontSize: "14px",
           color: "#0f172a",

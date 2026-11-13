@@ -17,7 +17,7 @@ import AuditRiskPopup from "../RiskPopup/AuditRiskPopup";
 import { updateEUAIActAnswerById } from "../../../application/repository/question.repository";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { IQuestionProps } from "../../../domain/interfaces/i.question";
-import { border as borderPalette } from "../../themes/palette";
+import { border as borderPalette, palette as vwPalette } from "../../themes/palette";
 
 /**
  * QuestionFrame Component
@@ -303,13 +303,13 @@ const QuestionFrame = ({ question, setRefreshKey, currentProjectId }: IQuestionP
             variant="contained"
             sx={{
               "minWidth": 155, // minimum width
-              "border": "1px solid #d0d5dd",
+              "border": `1px solid ${vwPalette.border.dark}`,
               "backgroundColor": "white",
               "color": "text.secondary",
               "flexShrink": 0, //  prevent shrinking in flex layouts
               "&:hover": {
                 backgroundColor: "background.accent",
-                border: "1px solid #d0d5dd",
+                border: `1px solid ${vwPalette.border.dark}`,
               },
             }}
             disableRipple
@@ -366,12 +366,12 @@ const QuestionFrame = ({ question, setRefreshKey, currentProjectId }: IQuestionP
                 "width": 155,
                 "height": 25,
                 "fontSize": 11,
-                "border": "1px solid #d0d5dd",
+                "border": `1px solid ${vwPalette.border.dark}`,
                 "backgroundColor": "white",
                 "color": "text.secondary",
                 "&:hover": {
                   backgroundColor: "background.accent",
-                  border: "1px solid #d0d5dd",
+                  border: `1px solid ${vwPalette.border.dark}`,
                 },
               }}
               disableRipple

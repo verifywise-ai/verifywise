@@ -1,40 +1,41 @@
 import { palette } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 
 // Dashboard color palette — sourced from unified palette
 export const COLORS = {
-  // Risk levels
-  critical: palette.risk.critical.text,
-  high: palette.risk.high.text,
-  medium: palette.risk.medium.text,
-  low: palette.risk.low.text,
-  veryLow: palette.risk.veryLow.text,
+  // Risk levels (solid marks)
+  critical: chartTheme.risk.critical,
+  high: chartTheme.risk.high,
+  medium: chartTheme.risk.medium,
+  low: chartTheme.risk.low,
+  veryLow: chartTheme.risk.veryLow,
 
   // State colors
-  completed: palette.status.success.text,
-  approved: palette.status.success.text,
-  inProgress: palette.status.warning.text,
-  pending: palette.status.default.text,
+  completed: chartTheme.status.success,
+  approved: chartTheme.status.success,
+  inProgress: chartTheme.status.warning,
+  pending: chartTheme.status.neutral,
   draft: palette.text.accent,
-  archived: palette.status.default.text,
+  archived: chartTheme.status.neutral,
 
   // Framework status colors
   implemented: palette.brand.primary,
-  awaitingReview: palette.status.info.text,
-  awaitingApproval: palette.accent.purple.text,
-  needsRework: palette.accent.orange.text,
-  notStarted: palette.status.default.text,
+  awaitingReview: chartTheme.status.info,
+  awaitingApproval: chartTheme.status.purple,
+  needsRework: chartTheme.status.orange,
+  notStarted: chartTheme.status.neutral,
 
   // Incident colors
-  open: palette.status.error.text,
-  investigating: palette.status.warning.text,
-  mitigated: palette.status.info.text,
-  closed: palette.status.success.text,
-  suspended: palette.accent.purple.text,
-  emergencyAction: palette.risk.high.text,
+  open: chartTheme.status.error,
+  investigating: chartTheme.status.warning,
+  mitigated: chartTheme.status.info,
+  closed: chartTheme.status.success,
+  suspended: chartTheme.status.purple,
+  emergencyAction: chartTheme.risk.high,
 
   // Model lifecycle colors
-  restricted: palette.accent.orange.text,
-  blocked: palette.status.error.text,
+  restricted: chartTheme.status.orange,
+  blocked: chartTheme.status.error,
 
   // UI colors
   primary: palette.brand.primary,
@@ -72,8 +73,8 @@ export const getVendorRiskData = (distribution: {
   { label: "Very High", value: distribution.veryHigh || 0, color: COLORS.critical },
   { label: "High", value: distribution.high || 0, color: COLORS.high },
   { label: "Medium", value: distribution.medium || 0, color: COLORS.medium },
-  { label: "Low", value: distribution.low || 0, color: COLORS.veryLow },
-  { label: "Very Low", value: distribution.veryLow || 0, color: COLORS.low },
+  { label: "Low", value: distribution.low || 0, color: COLORS.low },
+  { label: "Very Low", value: distribution.veryLow || 0, color: COLORS.veryLow },
 ];
 
 export const getModelRiskData = (distribution: {

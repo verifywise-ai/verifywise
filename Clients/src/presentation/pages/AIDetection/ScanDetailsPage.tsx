@@ -25,7 +25,7 @@ import TabBar from "../../components/TabBar";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import Toggle from "../../components/Inputs/Toggle";
 import AIDepGraphModal from "../../components/AIDepGraphModal";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 import { useScanDetails } from "./ScanDetails/useScanDetails";
 import { ScanDetailsHeader } from "./ScanDetails/ScanDetailsHeader";
 import { SuggestedRisksSection } from "./ScanDetails/SuggestedRisksSection";
@@ -287,7 +287,7 @@ export default function ScanDetailsPage() {
                 sx={{
                   backgroundColor: palette.background.main,
                   border: `1px solid ${palette.border.dark}`,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   p: 4,
                   textAlign: "center",
                 }}
@@ -328,7 +328,7 @@ export default function ScanDetailsPage() {
                   p: 4,
                   textAlign: "center",
                   backgroundColor: palette.background.accent,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   mt: "8px",
                 }}
               >
@@ -369,7 +369,7 @@ export default function ScanDetailsPage() {
                   p: 4,
                   textAlign: "center",
                   backgroundColor: palette.background.accent,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   mt: "8px",
                 }}
               >
@@ -411,7 +411,7 @@ export default function ScanDetailsPage() {
                   p: 4,
                   textAlign: "center",
                   backgroundColor: palette.background.accent,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   mt: "8px",
                 }}
               >
@@ -458,7 +458,7 @@ export default function ScanDetailsPage() {
                   p: 4,
                   textAlign: "center",
                   backgroundColor: palette.background.accent,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   mt: "8px",
                 }}
               >
@@ -498,7 +498,7 @@ export default function ScanDetailsPage() {
                   textAlign: "center",
                   backgroundColor: palette.status.success.bg,
                   border: `1px solid ${palette.status.success.border}`,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   mt: "8px",
                 }}
               >

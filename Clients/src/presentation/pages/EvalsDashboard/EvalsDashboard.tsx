@@ -70,7 +70,7 @@ import { Collapse, IconButton, CircularProgress } from "@mui/material";
 import VWChip from "../../components/Chip";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import SelectableCard from "../../components/SelectableCard";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 
 // Import provider logos
 import { ReactComponent as FolderFilledIcon } from "../../assets/icons/folder_filled.svg";
@@ -1273,7 +1273,7 @@ export default function EvalsDashboard() {
               sx={{
                 background: palette.background.main,
                 border: `1px solid ${palette.border.dark}`,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 p: "20px 24px",
                 boxShadow: "none",
               }}
@@ -1382,7 +1382,7 @@ export default function EvalsDashboard() {
                         <Box
                           sx={{
                             border: `1.5px solid ${palette.border.light}`,
-                            borderRadius: "4px",
+                            borderRadius: radiusPx.sm,
                             p: 2,
                             pl: 2.5,
                             backgroundColor: palette.background.main,
@@ -1561,7 +1561,7 @@ export default function EvalsDashboard() {
               sx={{
                 background: palette.background.main,
                 border: `1px solid ${palette.border.dark}`,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 p: "20px 24px",
                 boxShadow: "none",
                 mt: 3,
@@ -1678,7 +1678,7 @@ export default function EvalsDashboard() {
                       <Box
                         sx={{
                           border: `1.5px solid ${palette.border.light}`,
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                           p: 2,
                           pl: 2.5,
                           backgroundColor: palette.background.main,
@@ -1784,7 +1784,7 @@ export default function EvalsDashboard() {
                   sx={{
                     background: palette.background.main,
                     border: `1px solid ${palette.border.dark}`,
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     boxShadow: "none",
                     overflow: "hidden",
                   }}
@@ -2275,7 +2275,7 @@ export default function EvalsDashboard() {
                                 top: 6,
                                 left: 6,
                                 backgroundColor: palette.status.success.bg,
-                                borderRadius: "4px",
+                                borderRadius: radiusPx.sm,
                                 px: 0.75,
                                 py: 0.25,
                               }}

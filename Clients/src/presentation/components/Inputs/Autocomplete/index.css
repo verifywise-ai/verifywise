@@ -12,7 +12,7 @@
 }
 
 .MuiAutocomplete-root .MuiAutocomplete-inputRoot::-webkit-scrollbar-thumb {
-  background-color: #d0d5dd;
+  background-color: var(--vw-border-dark, #d0d5dd);
   border-radius: 3px;
 }
 

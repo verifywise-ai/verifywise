@@ -51,7 +51,7 @@ import {
   useSortedRows,
   SortableTableHead,
 } from "./constants";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { pageOfLabel } from "../../components/Table/pageOfLabel";
 
@@ -425,7 +425,7 @@ export default function UserActivityPage() {
 
         {/* Content */}
         {loading ? (
-          <Skeleton variant="rectangular" height={300} sx={{ borderRadius: "4px" }} />
+          <Skeleton variant="rectangular" height={300} sx={{ borderRadius: radiusPx.sm }} />
         ) : !hasData ? (
           <EmptyState
             icon={Users}

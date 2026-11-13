@@ -15,7 +15,7 @@ import { CustomizableButton } from "../../components/button/customizable-button"
 import { getStatusChip, getModeChip } from "./biasAuditHelpers";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import { triggerBrowserDownload } from "../../utils/browserDownload.utils";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 import {
   getBiasAuditResults,
   getBiasAuditStatus,
@@ -57,7 +57,7 @@ function ResultsTable({
     <Box
       sx={{
         border: `1px solid ${theme.palette.border.dark}`,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         mb: "16px",
         overflow: "hidden",
       }}
@@ -197,7 +197,7 @@ function FairnessMetricsTableView({ table }: { table: FairnessMetricsTable }) {
     <Box
       sx={{
         border: `1px solid ${theme.palette.border.dark}`,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         mb: "16px",
         overflow: "hidden",
       }}
@@ -342,7 +342,7 @@ function ScoreDistributionView({ table }: { table: ScoreDistributionTable }) {
     <Box
       sx={{
         border: `1px solid ${theme.palette.border.dark}`,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         mb: "16px",
         overflow: "hidden",
       }}
@@ -552,7 +552,7 @@ export default function BiasAuditDetail({ auditId, onBack }: BiasAuditDetailProp
             "display": "flex",
             "alignItems": "center",
             "p": 0.5,
-            "borderRadius": "4px",
+            "borderRadius": radiusPx.sm,
             "&:hover": { backgroundColor: theme.palette.action.hover },
           }}
         >
@@ -647,7 +647,7 @@ export default function BiasAuditDetail({ auditId, onBack }: BiasAuditDetailProp
         <Box
           sx={{
             border: `1px solid ${palette.status.error.border}`,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             p: 3,
             backgroundColor: palette.status.error.bg,
           }}
@@ -724,7 +724,7 @@ export default function BiasAuditDetail({ auditId, onBack }: BiasAuditDetailProp
           <Box
             sx={{
               border: `1px solid ${theme.palette.border.dark}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: 2,
               mb: "16px",
               backgroundColor: palette.background.accent,

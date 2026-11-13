@@ -17,7 +17,7 @@ import { History, ChevronDown, ChevronUp, ChevronRight } from "lucide-react";
 import Chip from "../../../components/Chip";
 import { friaRepository } from "../../../../application/repository/fria.repository";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
-import { brand, background, border, status, accent } from "../../../themes/palette";
+import { brand, background, border, status, accent, radiusPx } from "../../../themes/palette";
 
 // The diff helpers below are pure, so the preference-aware formatter is passed
 // in rather than read from a hook they cannot call.
@@ -571,7 +571,7 @@ const FriaVersionHistory = ({
                             sx={{
                               backgroundColor: background.main,
                               border: `1px solid ${border.dark}`,
-                              borderRadius: "4px",
+                              borderRadius: radiusPx.sm,
                               overflow: "hidden",
                               maxHeight: 320,
                               overflowY: "auto",
@@ -601,7 +601,7 @@ const FriaVersionHistory = ({
       variant="outlined"
       sx={{
         borderColor: border.dark,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         boxShadow: "none",
         overflow: "hidden",
       }}

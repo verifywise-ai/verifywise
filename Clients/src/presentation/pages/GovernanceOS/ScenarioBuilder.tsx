@@ -32,7 +32,7 @@ import {
   IRecommendationRequest,
   IGovernanceScenario,
 } from "../../../domain/interfaces/i.governanceOs";
-import { border as borderPalette, background } from "../../themes/palette";
+import { border as borderPalette, background, radiusPx } from "../../themes/palette";
 import ScenarioFormModal from "./ScenarioBuilderModule/ScenarioFormModal";
 import ActivationWizard from "../../components/GovernanceOS/ActivationWizard";
 import WhatIfSimulator from "../../components/GovernanceOS/WhatIfSimulator";
@@ -188,7 +188,7 @@ const ScenarioBuilder = () => {
       <Box
         sx={{
           border: `1px solid ${borderPalette.dark}`,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           p: "16px",
           background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
         }}

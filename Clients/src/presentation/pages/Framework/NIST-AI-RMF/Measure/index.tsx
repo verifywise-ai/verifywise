@@ -23,6 +23,7 @@ import NISTAIRMFDrawerDialog from "../../../../components/Drawer/NISTAIRMFDashbo
 import { NISTAIRMFFunction } from "../types";
 import { TabFilterBar } from "../../../../components/FrameworkFilter/TabFilterBar";
 import { StatsCard } from "../../../../components/Cards/StatsCard";
+import { palette } from "../../../../themes/palette";
 
 interface NISTAIRMFMeasureProps {
   project: Project;
@@ -358,7 +359,7 @@ const NISTAIRMFMeasure = ({
               )}
             >
               <Stack sx={{ flex: 1, pr: 2 }}>
-                <Typography fontSize={13} fontWeight={600} color="#1a1a1a">
+                <Typography fontSize={13} fontWeight={600} color={palette.text.primary}>
                   {category.title} {category.index}.{index + 1}
                 </Typography>
                 {subcategory.description && (
@@ -412,7 +413,7 @@ const NISTAIRMFMeasure = ({
           mb: 3,
           fontSize: 15,
           fontWeight: 600,
-          color: "#1a1a1a",
+          color: palette.text.primary,
         }}
       >
         NIST AI RMF - Measure categories
@@ -460,7 +461,7 @@ const NISTAIRMFMeasure = ({
                   <Typography
                     fontSize={13}
                     fontWeight={600}
-                    color="#1a1a1a"
+                    color={palette.text.primary}
                     sx={{ lineHeight: 1.3 }}
                   >
                     {category.title}

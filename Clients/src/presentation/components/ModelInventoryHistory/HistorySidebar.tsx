@@ -10,7 +10,7 @@ import { useAuth } from "../../../application/hooks/useAuth";
 import { useProfilePhotoFetch } from "../../../application/hooks/useProfilePhotoFetch";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
-import { brand } from "../../themes/palette";
+import { brand, palette as vwPalette, radiusPx } from "../../themes/palette";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { displayFormattedTime } from "../../tools/isoDateToString";
 
@@ -275,7 +275,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
                 <Box
                   sx={{
                     padding: "4px 8px",
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     backgroundColor: "#F1F8F4",
                   }}
                 >
@@ -298,8 +298,8 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
                       sx={{
                         flex: 1,
                         padding: "4px 8px",
-                        borderRadius: "4px",
-                        backgroundColor: "#FEF2F2",
+                        borderRadius: radiusPx.sm,
+                        backgroundColor: vwPalette.status.error.bg,
                       }}
                     >
                       <Typography
@@ -337,7 +337,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
                       sx={{
                         flex: 1,
                         padding: "4px 8px",
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                         backgroundColor: "#F1F8F4",
                       }}
                     >
@@ -385,7 +385,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
         <Box
           sx={{
             height: "560px",
-            border: `1px solid #E0E4E9`,
+            border: `1px solid ${vwPalette.border.light}`,
             borderRadius: "8px",
             display: "flex",
             flexDirection: "column",
@@ -469,7 +469,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
                 },
                 "&::-webkit-scrollbar-thumb": {
                   background: "transparent",
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                 },
                 "&:hover::-webkit-scrollbar-thumb": {
                   background: "#C1C7CD",

@@ -11,7 +11,7 @@ import Chip from "../../../components/Chip";
 import { updateFindingGovernanceStatus } from "../../../../application/repository/aiDetection.repository";
 import SuppressFindingDialog from "../components/SuppressFindingDialog";
 import { Finding, GovernanceStatus } from "../../../../domain/ai-detection/types";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import { getProviderIcon } from "./providerIcons";
 import { FilePathItem } from "./FilePathItem";
 import { FindingRowGovernancePopover } from "./FindingRowGovernancePopover";
@@ -97,7 +97,7 @@ export function FindingRow({
     <Box
       sx={{
         border: `1px solid ${palette.border.light}`,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         mb: "8px",
         backgroundColor: palette.background.main,
         opacity: isFindingSuppressed(finding) ? 0.6 : 1,
@@ -148,7 +148,7 @@ export function FindingRow({
                 sx={{
                   px: "8px",
                   py: "2px",
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   backgroundColor: palette.background.accent,
                   border: `1px solid ${palette.border.light}`,
                   display: "flex",
@@ -172,7 +172,7 @@ export function FindingRow({
                 sx={{
                   px: "8px",
                   py: "2px",
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   backgroundColor: RISK_LEVEL_CONFIG[finding.risk_level].bgColor,
                   border: `1px solid ${RISK_LEVEL_CONFIG[finding.risk_level].color}20`,
                 }}
@@ -210,7 +210,7 @@ export function FindingRow({
                 sx={{
                   px: "8px",
                   py: "2px",
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   backgroundColor:
                     LICENSE_RISK_CONFIG[finding.license_risk]?.bgColor || palette.status.default.bg,
                   border: `1px solid ${LICENSE_RISK_CONFIG[finding.license_risk]?.color || palette.text.tertiary}20`,
@@ -282,7 +282,7 @@ export function FindingRow({
               disabled={isUpdating}
               sx={{
                 "border": `1px solid ${palette.border.light}`,
-                "borderRadius": "4px",
+                "borderRadius": radiusPx.sm,
                 "p": "4px",
                 "&:hover": { backgroundColor: palette.background.hover },
               }}
@@ -322,7 +322,7 @@ export function FindingRow({
               maxHeight: 200,
               overflow: "auto",
               backgroundColor: palette.background.accent,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: 1,
             }}
           >

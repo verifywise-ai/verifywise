@@ -44,6 +44,7 @@ import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { exportAuditLedger } from "../../../../application/repository/auditLedger.repository";
 import { triggerBrowserDownload } from "../../../utils/browserDownload.utils";
 import { pageOfLabel } from "../../../components/Table/pageOfLabel";
+import { radiusPx } from "../../../themes/palette";
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 const SelectorVertical = (props: any) => <ChevronsUpDown size={16} {...props} />;
@@ -176,7 +177,7 @@ export default function AuditLedger() {
       <Box
         sx={{
           border: `1px solid ${theme.palette.border.light}`,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           p: "16px",
           backgroundColor: theme.palette.background.main,
           display: "flex",
@@ -205,7 +206,7 @@ export default function AuditLedger() {
             color: theme.palette.text.accent,
             backgroundColor: theme.palette.background.alt,
             border: `1px solid ${theme.palette.border.light}`,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             px: "16px",
             py: "12px",
           }}
@@ -238,7 +239,7 @@ export default function AuditLedger() {
             sx={{
               px: "16px",
               py: "12px",
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               border: `1px solid ${theme.palette.border.light}`,
               backgroundColor: verifyBanner.bg,
             }}

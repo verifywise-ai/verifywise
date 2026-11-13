@@ -2,7 +2,7 @@ import React, { useState, useRef } from "react";
 import { Box, Typography, Menu, MenuItem, useTheme } from "@mui/material";
 import { ChevronDown, Eye } from "lucide-react";
 import Checkbox from "../Inputs/Checkbox";
-import { brand, background, status } from "../../themes/palette";
+import { brand, background, status, palette as vwPalette, radiusPx } from "../../themes/palette";
 
 export interface VerifyWiseMultiSelectOption {
   value: string;
@@ -55,7 +55,7 @@ const VerifyWiseMultiSelect: React.FC<VerifyWiseMultiSelectProps> = ({
     primary: `${brand.primary}`,
     primaryHover: "#0f604d",
     secondary: `${status.default.text}`,
-    secondaryHover: "#4B5563",
+    secondaryHover: vwPalette.text.tertiary,
     background: `${background.surface}`,
   };
 
@@ -72,7 +72,7 @@ const VerifyWiseMultiSelect: React.FC<VerifyWiseMultiSelectProps> = ({
           "minHeight": height || 32,
           "backgroundColor": colors.secondary, // Consistent secondary color
           "color": `${background.main}`,
-          "borderRadius": "4px",
+          "borderRadius": radiusPx.sm,
           "border": "none",
           "display": "flex",
           "alignItems": "center",

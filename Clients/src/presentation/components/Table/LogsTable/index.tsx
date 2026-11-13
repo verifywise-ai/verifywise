@@ -21,7 +21,15 @@ import {
   getPaginationRowCount,
   setPaginationRowCount,
 } from "../../../../application/utils/paginationStorage";
-import { text, status, risk, border, background } from "../../../themes/palette";
+import {
+  text,
+  status,
+  risk,
+  border,
+  background,
+  palette as vwPalette,
+  radiusPx,
+} from "../../../themes/palette";
 import StatusBadge from "../../StatusBadge";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { pageOfLabel } from "../pageOfLabel";
@@ -115,7 +123,7 @@ const STATE_COLORS: Record<string, { bg: string; text: string }> = {
   debug: { bg: "#F3E5F5", text: "#6A1B9A" },
 };
 
-const UNKNOWN_STATE_COLORS = { bg: "#E0E0E0", text: "#424242" };
+const UNKNOWN_STATE_COLORS = { bg: vwPalette.border.light, text: "#424242" };
 
 const StateBadge: React.FC<{ state: string }> = ({ state }) => {
   const colors = STATE_COLORS[state.toLowerCase()] ?? UNKNOWN_STATE_COLORS;
@@ -434,7 +442,7 @@ const LogsTable: React.FC<LogsTableProps> = ({ data, isLoading = false, paginate
         justifyContent="center"
         sx={{
           border: `1px solid ${border.dark}`,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           padding: theme.spacing(15, 5),
           paddingBottom: theme.spacing(20),
           gap: theme.spacing(10),

@@ -22,7 +22,7 @@ import dayjs, { Dayjs } from "dayjs";
 import { Info as GreyCircleInfoIcon } from "lucide-react";
 import { cardStyles } from "../../../themes";
 import { green, yellow } from "../../../themes";
-import { background, border, status, text } from "../../../themes/palette";
+import { background, border, status, text, palette as vwPalette } from "../../../themes/palette";
 import {
   CEMarkingData,
   ConformityStepStatus,
@@ -200,7 +200,7 @@ const getStatusColor = (stepStatus: ConformityStepStatus): string => {
     case ConformityStepStatus.Completed:
       return green[500];
     case ConformityStepStatus.InProgress:
-      return "#3B82F6";
+      return vwPalette.status.info.text;
     case ConformityStepStatus.NotStarted:
       return status.default.text;
     case ConformityStepStatus.NotNeeded:

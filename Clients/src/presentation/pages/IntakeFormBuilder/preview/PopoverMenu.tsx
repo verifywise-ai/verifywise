@@ -3,6 +3,7 @@ import { Box, Popover, Typography, useTheme } from "@mui/material";
 import { Check, ChevronDown } from "lucide-react";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import { outlinedButtonSx } from "./previewStyles";
+import { radiusPx } from "../../../themes/palette";
 
 interface MenuOptionProps {
   label: string;
@@ -30,7 +31,7 @@ export const MenuOption = ({ label, description, selected, onSelect }: MenuOptio
         "alignItems": "center",
         "gap": "8px",
         "p": "8px 12px",
-        "borderRadius": "4px",
+        "borderRadius": radiusPx.sm,
         "cursor": "pointer",
         "&:hover, &:focus-visible": {
           backgroundColor: theme.palette.background.accent,
@@ -92,7 +93,7 @@ export const PopoverMenu = ({ text, testId, startIcon, children }: PopoverMenuPr
               p: "4px",
               minWidth: 240,
               border: `1px solid ${theme.palette.border.dark}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               boxShadow: theme.boxShadow,
             },
           },

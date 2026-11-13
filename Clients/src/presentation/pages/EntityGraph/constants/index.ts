@@ -1,5 +1,5 @@
 import type { EntityType } from "../EntityNode";
-import { brand } from "../../../themes/palette";
+import { brand, palette as vwPalette } from "../../../themes/palette";
 
 // Entity type colors following VerifyWise design system
 export const entityColors: Record<EntityType, string> = {
@@ -9,7 +9,7 @@ export const entityColors: Record<EntityType, string> = {
   vendor: "#9c27b0", // Purple
   evidence: "#ff9800", // Orange
   framework: "#607d8b", // Blue grey
-  user: "#795548", // Brown
+  user: vwPalette.risk.medium.text, // Brown
 };
 
 // Risk level priority for coloring

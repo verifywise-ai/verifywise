@@ -3,7 +3,13 @@ import { Stack, TextField, Typography, Box } from "@mui/material";
 import StandardModal from "../../../components/Modals/StandardModal";
 import GovernanceTooltip from "../../../components/GovernanceOS/GovernanceTooltip";
 import { IGovernanceScenario } from "../../../../domain/interfaces/i.governanceOs";
-import { border as borderPalette, background, text, accent } from "../../../themes/palette";
+import {
+  border as borderPalette,
+  background,
+  text,
+  accent,
+  radiusPx,
+} from "../../../themes/palette";
 
 interface ScenarioFormModalProps {
   open: boolean;
@@ -166,7 +172,7 @@ const ScenarioFormModal: React.FC<ScenarioFormModalProps> = ({
                   "alignItems": "center",
                   "height": 24,
                   "px": "10px",
-                  "borderRadius": "4px",
+                  "borderRadius": radiusPx.sm,
                   "fontSize": 12,
                   "cursor": "pointer",
                   "textTransform": "capitalize",
@@ -209,7 +215,7 @@ const ScenarioFormModal: React.FC<ScenarioFormModalProps> = ({
                   "alignItems": "center",
                   "height": 24,
                   "px": "10px",
-                  "borderRadius": "4px",
+                  "borderRadius": radiusPx.sm,
                   "fontSize": 12,
                   "cursor": "pointer",
                   "backgroundColor": region === reg ? accent.indigo.bg : background.hover,
@@ -254,7 +260,7 @@ const ScenarioFormModal: React.FC<ScenarioFormModalProps> = ({
                     "alignItems": "center",
                     "height": 24,
                     "px": "10px",
-                    "borderRadius": "4px",
+                    "borderRadius": radiusPx.sm,
                     "fontSize": 12,
                     "cursor": "pointer",
                     "fontWeight": isPrimary ? 600 : 400,

@@ -4,7 +4,7 @@ import { X, Filter, Plus } from "lucide-react";
 import Select from "../Inputs/Select";
 import Field from "../Inputs/Field";
 import { VWLink } from "../Link/VWLink";
-import { brand, status } from "../../themes/palette";
+import { brand, status, palette as vwPalette, radiusPx } from "../../themes/palette";
 
 // Column type determines available operators and value input type
 export type FilterColumnType = "select" | "text" | "date";
@@ -131,7 +131,7 @@ const LogicToggle: React.FC<{
         display: "flex",
         border: "1px solid",
         borderColor: "divider",
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         overflow: "hidden",
         height: "30px",
         bgcolor: "action.hover",
@@ -216,7 +216,7 @@ const WhereBadge: React.FC = () => (
       justifyContent: "center",
       height: "34px",
       width: LOGIC_CONTROL_WIDTH,
-      borderRadius: "4px",
+      borderRadius: radiusPx.sm,
       backgroundColor: "#f1f5f9",
       color: "#475569",
       fontSize: "11px",
@@ -507,7 +507,7 @@ export const FilterBy: React.FC<FilterByProps> = ({
           "fontWeight": 500,
           "padding": "6px 12px",
           "textTransform": "none",
-          "color": "#374151",
+          "color": vwPalette.text.secondary,
           "borderColor": "border.dark",
           "height": "34px",
           "minWidth": activeFilterCount > 0 ? "100px" : "80px",
@@ -518,7 +518,7 @@ export const FilterBy: React.FC<FilterByProps> = ({
           },
         }}
       >
-        <Filter size={16} color="#3b82f6" style={{ marginRight: "6px" }} />
+        <Filter size={16} color={vwPalette.status.info.text} style={{ marginRight: "6px" }} />
         Filter
         {activeFilterCount > 0 && <FilterBadge count={activeFilterCount} />}
       </Button>
@@ -542,7 +542,7 @@ export const FilterBy: React.FC<FilterByProps> = ({
               padding: "16px",
               minWidth: "700px",
               boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
             },
           },
         }}
@@ -608,7 +608,7 @@ export const FilterBy: React.FC<FilterByProps> = ({
                 "letterSpacing": "0.5px",
                 "cursor": "pointer",
                 "&:hover": {
-                  color: "#374151",
+                  color: vwPalette.text.secondary,
                 },
               }}
             >

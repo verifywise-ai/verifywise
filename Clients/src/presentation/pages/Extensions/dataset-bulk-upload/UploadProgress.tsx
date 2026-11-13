@@ -1,7 +1,7 @@
 import { Box, Typography, Stack, LinearProgress, Chip } from "@mui/material";
 import { keyframes } from "@mui/system";
 import { CheckCircle2, XCircle, Loader2, FileSpreadsheet } from "lucide-react";
-import { brand, text } from "../../../themes/palette";
+import { brand, text, palette as vwPalette } from "../../../themes/palette";
 
 const spin = keyframes`
   from { transform: rotate(0deg); }
@@ -48,7 +48,7 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
           sx={{
             "height": 6,
             "borderRadius": "3px",
-            "backgroundColor": "#E0E4E9",
+            "backgroundColor": vwPalette.border.light,
             "& .MuiLinearProgress-bar": {
               backgroundColor: errorCount > 0 ? "#DC6803" : "brand.primary",
               borderRadius: "3px",
@@ -68,7 +68,7 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
             sx={{
               "color": "#079455",
               "borderColor": "#079455",
-              "backgroundColor": "#ECFDF3",
+              "backgroundColor": vwPalette.status.success.bg,
               "& .MuiChip-icon": { color: "#079455" },
             }}
           />
@@ -79,10 +79,10 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
               size="small"
               variant="outlined"
               sx={{
-                "color": "#F04438",
+                "color": vwPalette.status.error.text,
                 "borderColor": "#FDA29B",
                 "backgroundColor": "#F9ECED",
-                "& .MuiChip-icon": { color: "#F04438" },
+                "& .MuiChip-icon": { color: vwPalette.status.error.text },
               }}
             />
           )}
@@ -104,7 +104,7 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
                 result.status === "error"
                   ? "#F9ECED"
                   : result.status === "success"
-                    ? "#ECFDF3"
+                    ? vwPalette.status.success.bg
                     : "background.accent",
             }}
           >
@@ -125,8 +125,8 @@ export default function UploadProgress({ results, totalFiles }: UploadProgressPr
             {result.status === "success" && <CheckCircle2 size={16} color="#079455" />}
             {result.status === "error" && (
               <Stack direction="row" alignItems="center" spacing={0.5}>
-                <XCircle size={16} color="#F04438" />
-                <Typography sx={{ fontSize: 12, color: "#F04438" }}>
+                <XCircle size={16} color={vwPalette.status.error.text} />
+                <Typography sx={{ fontSize: 12, color: vwPalette.status.error.text }}>
                   {result.error || "Failed"}
                 </Typography>
               </Stack>

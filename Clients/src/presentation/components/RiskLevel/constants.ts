@@ -1,7 +1,8 @@
+import { palette } from "../../themes/palette";
 export const RISK_LABELS = {
   low: {
     text: "Low risk",
-    color: "#2E7D32", // darker green
+    color: palette.status.success.text, // darker green
   },
   medium: {
     text: "Medium risk",
@@ -25,7 +26,7 @@ export const RISK_LABELS = {
   },
   minor: {
     text: "Minor",
-    color: "#2E7D32",
+    color: palette.status.success.text,
   },
   moderate: {
     text: "Moderate",

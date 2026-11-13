@@ -10,7 +10,7 @@ import { UserDateFormat } from "../../../../domain/enums/userDateFormat.enum";
 import { updateCurrentUserPreferences } from "../../../../application/repository/userPreferences.repository";
 import Select from "../../../components/Inputs/Select";
 import Toggle from "../../../components/Inputs/Toggle";
-import { brand, text } from "../../../themes/palette";
+import { brand, text, radiusPx } from "../../../themes/palette";
 import { setLanguage, getLanguage } from "../../../../i18n/domTranslator";
 import type { Lang } from "../../../../i18n/translations";
 import { textStyles } from "../../../themes/typography";
@@ -194,7 +194,9 @@ const Preferences: React.FC = () => {
                 onChange={(event) => setUiStyle(event.target.value as UiStyle)}
                 items={INTERFACE_STYLE_OPTIONS}
               />
-              <Typography sx={{ ...textStyles.bodySmall, color: text.tertiary, mt: theme.spacing(2) }}>
+              <Typography
+                sx={{ ...textStyles.bodySmall, color: text.tertiary, mt: theme.spacing(2) }}
+              >
                 {INTERFACE_STYLE_DESCRIPTION}
               </Typography>
             </Box>
@@ -207,7 +209,7 @@ const Preferences: React.FC = () => {
               <Box
                 sx={{
                   border: `1px solid ${theme.palette.border.light}`,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   p: theme.spacing(8),
                   backgroundColor: theme.palette.background.main,
                   display: "flex",

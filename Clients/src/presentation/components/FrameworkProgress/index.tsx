@@ -1,5 +1,6 @@
 import type { FC } from "react";
 import { Box, Stack, Typography, LinearProgress, useTheme } from "@mui/material";
+import { palette } from "../../themes/palette";
 
 interface FrameworkProgressProps {
   name: string;
@@ -43,7 +44,11 @@ export const FrameworkProgress: FC<FrameworkProgressProps> = ({
           "backgroundColor": theme.palette.border.light,
           "& .MuiLinearProgress-bar": {
             backgroundColor:
-              progress >= 80 ? "#10B981" : progress >= 50 ? "#F59E0B" : theme.palette.primary.main,
+              progress >= 80
+                ? palette.status.success.strong
+                : progress >= 50
+                  ? palette.riskMark.medium
+                  : theme.palette.primary.main,
             borderRadius: 3,
           },
         }}

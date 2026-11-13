@@ -2,6 +2,7 @@ import { useState } from "react";
 import { Box, keyframes } from "@mui/material";
 import { useTipManager } from "../../../application/hooks/useTipManager";
 import InfoBox from "../InfoBox";
+import { radiusPx } from "../../themes/palette";
 
 interface TipBoxProps {
   entityName: string;
@@ -71,7 +72,7 @@ const TipBox = ({ entityName }: TipBoxProps) => {
             right: 16,
             backgroundColor: "background.surface",
             border: "1px solid #E5E5E5",
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             padding: "2px 8px",
             fontSize: 10,
             fontWeight: 500,

@@ -44,6 +44,7 @@ import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { getApiErrorReason } from "../../../../application/utils/apiErrorReason";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { pageOfLabel } from "../../../components/Table/pageOfLabel";
+import { palette, radiusPx } from "../../../themes/palette";
 
 const SelectorVertical = (props: any) => <ChevronsUpDown size={16} {...props} />;
 
@@ -203,15 +204,15 @@ const GroupBy: React.FC<GroupByProps> = ({ options, onGroupChange }) => {
           "fontWeight": 500,
           "padding": "6px 12px",
           "textTransform": "none",
-          "color": "#374151",
-          "borderColor": "#d0d5dd",
+          "color": palette.text.secondary,
+          "borderColor": palette.border.dark,
           "height": "34px",
           "minWidth": selectedGroup ? "110px" : "80px",
-          "backgroundColor": open ? "#f0fdf4" : "transparent",
-          "&:hover": { borderColor: "#98a2b3", backgroundColor: "#f0fdf4" },
+          "backgroundColor": open ? palette.status.success.bg : "transparent",
+          "&:hover": { borderColor: "#98a2b3", backgroundColor: palette.status.success.bg },
         }}
       >
-        <Layers size={16} color="#13715B" style={{ marginRight: "6px" }} />
+        <Layers size={16} color={palette.brand.primary} style={{ marginRight: "6px" }} />
         Group
         {selectedGroup && <GroupBadge count={1} />}
       </Button>
@@ -312,7 +313,7 @@ function GroupedTableView<T>({
               sx={{
                 fontSize: "15px",
                 fontWeight: 600,
-                color: "#374151",
+                color: palette.text.secondary,
                 marginBottom: "4px",
                 paddingLeft: "4px",
                 display: "flex",
@@ -812,7 +813,7 @@ export default function MLFlowTab() {
                         sx={{
                           backgroundColor: "#E0EAFF",
                           color: "#0F172A",
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                         }}
                       />
                     ))}

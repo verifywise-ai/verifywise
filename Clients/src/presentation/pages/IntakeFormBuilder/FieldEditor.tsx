@@ -43,6 +43,7 @@ import {
 import type { ICustomFieldDefinition } from "../../../domain/interfaces/i.customField";
 import { FormulaEditor } from "./FormulaEditor";
 import { EditorSection } from "./EditorSection";
+import { radiusPx } from "../../themes/palette";
 
 // The public form shows a placeholder only in these inputs; a dropdown always
 // reads "Select an option".
@@ -163,7 +164,7 @@ function OptionsEditor({ options, onChange }: OptionsEditorProps) {
               gap: "8px",
               p: "8px",
               backgroundColor: theme.palette.background.accent,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               border: `1px solid ${theme.palette.border.dark}`,
             }}
           >
@@ -202,7 +203,7 @@ function OptionsEditor({ options, onChange }: OptionsEditorProps) {
                   onClick={() => handleRemoveOption(index)}
                   sx={{
                     "p": "4px",
-                    "borderRadius": "4px",
+                    "borderRadius": radiusPx.sm,
                     "color": theme.palette.status.error.text,
                     "&:hover": { backgroundColor: theme.palette.status.error.bg },
                     "&.Mui-disabled": { color: theme.palette.text.accent, opacity: 0.3 },
@@ -520,7 +521,7 @@ export function FieldEditor({
               "display": "flex",
               "alignItems": "center",
               "p": "4px",
-              "borderRadius": "4px",
+              "borderRadius": radiusPx.sm,
               "&:hover": { backgroundColor: theme.palette.background.accent },
             }}
           >
@@ -615,7 +616,7 @@ export function FieldEditor({
                             "cursor": !guidanceLoading && hasGuidanceLabel ? "pointer" : "default",
                             "opacity": !hasGuidanceLabel ? 0.4 : 1,
                             "color": theme.palette.primary.main,
-                            "borderRadius": "4px",
+                            "borderRadius": radiusPx.sm,
                             "px": "6px",
                             "py": "2px",
                             "&:hover": hasGuidanceLabel

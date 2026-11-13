@@ -20,6 +20,8 @@ import { displayFormattedTime } from "../../../tools/isoDateToString";
 import { lowerIsBetter } from "../metricScore";
 import { palette } from "../../../themes/palette";
 import { metricLabel as sharedMetricLabel } from "../metricLabels";
+import { chartTheme } from "../../../themes/chartTheme";
+import { isClassicUi } from "../../../themes/uiStyle";
 
 export type TimeRange = "7d" | "30d" | "100d" | "all";
 
@@ -36,7 +38,7 @@ interface PerformanceChartProps {
 }
 
 // 15 distinct colors for the chart - no repetition
-const CHART_COLORS = [
+const CLASSIC_CHART_COLORS = [
   "#2563EB", // Blue
   "#DC2626", // Red
   "#16A34A", // Green
@@ -53,6 +55,11 @@ const CHART_COLORS = [
   "#65A30D", // Lime
   "#0284C7", // Sky
 ];
+
+// Phase 1: the nine chart series in fixed order; runs past nine keep the old tail.
+const CHART_COLORS = isClassicUi()
+  ? CLASSIC_CHART_COLORS
+  : [...chartTheme.series.slice(0, 9), ...CLASSIC_CHART_COLORS.slice(9)];
 
 // Legend and tooltip label. Lower is better metrics (bias, toxicity, hallucination) share
 // the 0-100% axis with the rest, so say which way is good: 0% is the best score for them.

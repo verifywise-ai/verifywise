@@ -20,6 +20,7 @@ import {
   useEmailAvailability,
   EmailAvailabilityStatus,
 } from "../../../../application/hooks/useEmailAvailability";
+import { palette, radiusPx } from "../../../themes/palette";
 
 const ROLE_SELECT_ITEMS = ROLE_OPTIONS.map((r) => ({ _id: r.value, name: r.label }));
 
@@ -162,8 +163,8 @@ const UserFormFields = ({
                 textTransform: "none",
                 height: 34,
                 fontSize: "13px",
-                borderRadius: "4px",
-                borderColor: "#d0d5dd",
+                borderRadius: radiusPx.sm,
+                borderColor: palette.border.dark,
                 color: "text.primary",
               }}
             >

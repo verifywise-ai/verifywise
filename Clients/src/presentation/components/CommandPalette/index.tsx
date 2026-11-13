@@ -36,7 +36,7 @@ import { Command as CommandType, CommandContext } from "../../../application/com
 import { useWiseSearch, getEntityDisplayName } from "../../../application/hooks/useWiseSearch";
 import { SearchResult } from "../../../application/types/search.types";
 import "./styles.css";
-import { background } from "../../themes/palette";
+import { background, palette as vwPalette, radiusPx } from "../../themes/palette";
 
 interface CommandPaletteProps {
   open: boolean;
@@ -149,7 +149,7 @@ function WiseSearchWelcomeBanner({ onDismiss }: { onDismiss: () => void }) {
                 "fontSize": "12px",
                 "fontWeight": 500,
                 "padding": "6px 16px",
-                "borderRadius": "4px",
+                "borderRadius": radiusPx.sm,
                 "textTransform": "none",
                 "&:hover": {
                   backgroundColor: "rgba(255, 255, 255, 0.15)",
@@ -172,7 +172,7 @@ function WiseSearchWelcomeBanner({ onDismiss }: { onDismiss: () => void }) {
             "display": "flex",
             "alignItems": "center",
             "justifyContent": "center",
-            "borderRadius": "4px",
+            "borderRadius": radiusPx.sm,
             "color": "rgba(255, 255, 255, 0.5)",
             "&:hover": {
               backgroundColor: "rgba(255, 255, 255, 0.1)",
@@ -642,7 +642,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                   borderTopColor: "var(--filter-border, #e5e5e5)",
                   borderBottom: "1px solid",
                   borderBottomColor: "var(--filter-border, #e5e5e5)",
-                  background: "var(--filter-bg, #fafafa)",
+                  background: `var(--filter-bg, ${vwPalette.background.alt})`,
                   minHeight: "36px",
                 }}
               >
@@ -670,7 +670,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                       "background": reviewStatus ? "rgba(19, 113, 91, 0.1)" : "transparent",
                       "border": "1px solid",
                       "borderColor": reviewStatus ? "rgba(19, 113, 91, 0.3)" : "rgba(0,0,0,0.12)",
-                      "borderRadius": "4px",
+                      "borderRadius": radiusPx.sm,
                       "padding": "3px 8px",
                       "cursor": "pointer",
                       "fontSize": "12px",
@@ -986,7 +986,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                                   "display": "flex",
                                   "alignItems": "center",
                                   "justifyContent": "center",
-                                  "borderRadius": "4px",
+                                  "borderRadius": radiusPx.sm,
                                   "color": "#999",
                                   "&:hover": {
                                     background: "rgba(0, 0, 0, 0.05)",
@@ -1087,7 +1087,7 @@ export function CommandPalette({ open, onOpenChange }: CommandPaletteProps) {
                                         sx={{
                                           backgroundColor: "rgba(0, 0, 0, 0.1)",
                                           padding: "2px 6px",
-                                          borderRadius: "4px",
+                                          borderRadius: radiusPx.sm,
                                           fontSize: "11px",
                                         }}
                                         aria-hidden="true"

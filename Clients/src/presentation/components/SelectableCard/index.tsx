@@ -1,7 +1,14 @@
 import React from "react";
 import { Box, Typography } from "@mui/material";
 import { Check } from "lucide-react";
-import { brand, text, background, status } from "../../themes/palette";
+import {
+  brand,
+  text,
+  background,
+  status,
+  palette as vwPalette,
+  radiusPx,
+} from "../../themes/palette";
 
 export interface SelectableCardProps {
   /** Whether this card is currently selected */
@@ -55,14 +62,14 @@ const SelectableCard = ({
         : isSelected
           ? accentColor
           : `${status.default.border}`,
-      "borderRadius": "4px",
+      "borderRadius": radiusPx.sm,
       "cursor": disabled ? "not-allowed" : "pointer",
       "backgroundColor": disabled
         ? `${background.accent}`
         : isSelected
           ? accentColor === "#6366F1"
             ? "#EEF2FF"
-            : "#F0FDF4"
+            : vwPalette.status.success.bg
           : `${background.main}`,
       "opacity": disabled ? 0.6 : 1,
       "display": "flex",
@@ -76,7 +83,7 @@ const SelectableCard = ({
             backgroundColor: isSelected
               ? accentColor === "#6366F1"
                 ? "#EEF2FF"
-                : "#F0FDF4"
+                : vwPalette.status.success.bg
               : `${background.accent}`,
           },
     }}
@@ -84,7 +91,11 @@ const SelectableCard = ({
     {icon}
     <Box sx={{ flex: 1 }}>
       <Typography
-        sx={{ fontSize: "13px", fontWeight: 500, color: disabled ? `${text.disabled}` : "#374151" }}
+        sx={{
+          fontSize: "13px",
+          fontWeight: 500,
+          color: disabled ? `${text.disabled}` : vwPalette.text.secondary,
+        }}
       >
         {title}
       </Typography>

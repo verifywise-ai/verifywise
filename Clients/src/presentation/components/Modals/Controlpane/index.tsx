@@ -5,7 +5,7 @@ import React, { useState } from "react";
 import DropDowns from "../../Inputs/Dropdowns";
 import AuditorFeedback from "../ComplianceFeedback/ComplianceFeedback";
 import { ICustomModalProps } from "../../../../domain/interfaces/i.customs";
-import { border as borderPalette } from "../../../themes/palette";
+import { border as borderPalette, palette as vwPalette, radiusPx } from "../../../themes/palette";
 
 const CustomModal: React.FC<ICustomModalProps> = ({
   isOpen,
@@ -60,7 +60,7 @@ const CustomModal: React.FC<ICustomModalProps> = ({
     "textTransform": "capitalize",
     "backgroundColor": "#4C7DE7",
     "boxShadow": "none",
-    "borderRadius": "4px",
+    "borderRadius": radiusPx.sm,
     "border": "1px solid #175CD3",
     "&:hover": {
       boxShadow: "none",
@@ -125,7 +125,7 @@ const CustomModal: React.FC<ICustomModalProps> = ({
         )}
         <Divider sx={{ borderColor: "#C2C2C2", mt: theme.spacing(3) }} />
 
-        <Box sx={{ width: "100%", bgcolor: "#FCFCFD" }}>
+        <Box sx={{ width: "100%", bgcolor: vwPalette.background.main }}>
           <Tabs
             value={selectedTab}
             onChange={handleSelectedTab}
@@ -151,8 +151,8 @@ const CustomModal: React.FC<ICustomModalProps> = ({
             display: "flex",
             flexDirection: "row",
             justifyContent: "flex-start",
-            borderRadius: "4px",
-            border: "1px solid #eaecf0",
+            borderRadius: radiusPx.sm,
+            border: `1px solid ${vwPalette.border.light}`,
             width: "fit-content",
           }}
         >

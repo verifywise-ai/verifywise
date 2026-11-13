@@ -31,7 +31,7 @@ import ReactMarkdown from "react-markdown";
 import remarkMath from "remark-math";
 import rehypeKatex from "rehype-katex";
 import "katex/dist/katex.min.css";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 import {
   getExperiment,
   getLogs,
@@ -132,7 +132,7 @@ const MarkdownRenderer = ({ content }: { content: string }) => {
           backgroundColor: palette.background.hover,
           px: "1.5px",
           py: "0.5px",
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           fontFamily: fontFamily.mono,
           fontSize: 12,
           color: "#0f766e",
@@ -701,7 +701,7 @@ export default function ExperimentDetailContent({
       <Box
         sx={{
           p: "12px",
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           background:
             experiment.status === "completed"
               ? `linear-gradient(135deg, ${palette.status.success.bg} 0%, ${palette.status.success.bg} 100%)`
@@ -1385,7 +1385,7 @@ export default function ExperimentDetailContent({
                   "overflow": "hidden",
                   "background": `linear-gradient(135deg, ${palette.background.main} 0%, ${palette.background.accent} 100%)`,
                   "border": `1px solid ${palette.border.dark}`,
-                  "borderRadius": "4px",
+                  "borderRadius": radiusPx.sm,
                   "transition": "all 0.2s ease",
                   "&:hover": {
                     "background": `linear-gradient(135deg, ${palette.background.accent} 0%, ${palette.background.hover} 100%)`,
@@ -1596,7 +1596,7 @@ export default function ExperimentDetailContent({
                 sx={{
                   overflow: "hidden",
                   border: `1px solid ${palette.border.dark}`,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                 }}
               >
                 <Box sx={{ overflowX: "auto" }}>

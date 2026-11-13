@@ -30,6 +30,7 @@ import { RISK_FORM_FIELD_ORDER } from "../../../constants/formValidationFieldMap
 import { createFieldBlurHandler } from "../../../../application/utils/formValidationFocus";
 import { checkStringValidation } from "../../../../application/validations/stringValidation";
 import selectValidation from "../../../../application/validations/selectValidation";
+import { radiusPx } from "../../../themes/palette";
 
 // Layout constants
 const LAYOUT = {
@@ -327,7 +328,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                 sx={{
                   "width": "100%",
                   "& .MuiChip-root": {
-                    "borderRadius": "4px",
+                    "borderRadius": radiusPx.sm,
                     "& .MuiChip-deleteIcon": {
                       display: "flex",
                     },
@@ -409,7 +410,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                 sx={{
                   "width": "100%",
                   "& .MuiChip-root": {
-                    "borderRadius": "4px",
+                    "borderRadius": radiusPx.sm,
                     "& .MuiChip-deleteIcon": {
                       display: "flex",
                     },
@@ -546,7 +547,7 @@ const RiskSection: FC<RiskSectionProps> = ({
                 sx={{
                   "flex": 1,
                   "& .MuiChip-root": {
-                    "borderRadius": "4px",
+                    "borderRadius": radiusPx.sm,
                     "& .MuiChip-deleteIcon": {
                       display: riskValues.riskCategory.length === 1 ? "none" : "flex",
                     },

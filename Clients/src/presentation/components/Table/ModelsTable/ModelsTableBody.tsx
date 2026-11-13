@@ -13,7 +13,15 @@ import { Trash2, MoreVertical } from "lucide-react";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { ModelRow } from "./index";
 import { CustomizableButton } from "../../button/customizable-button";
-import { text, background, border as borderPalette, status, accent } from "../../../themes/palette";
+import {
+  text,
+  background,
+  border as borderPalette,
+  status,
+  accent,
+  palette as vwPalette,
+  radiusPx,
+} from "../../../themes/palette";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 
 interface ModelsTableBodyProps {
@@ -36,20 +44,20 @@ const formatTimestamp = (
 // it; the rest are provider-specific shades with no token and stay literal.
 const getProviderColor = (provider: string): { bg: string; text: string } => {
   const colors: Record<string, { bg: string; text: string }> = {
-    openai: { bg: "#E8F5E9", text: "#2E7D32" },
+    openai: { bg: "#E8F5E9", text: vwPalette.status.success.text },
     anthropic: { bg: "#FFF3E0", text: "#E65100" },
     google: { bg: accent.blue.bg, text: accent.blue.text },
     mistral: { bg: "#F3E5F5", text: "#7B1FA2" },
     ollama: { bg: "#ECEFF1", text: "#37474F" },
     huggingface: { bg: accent.amber.bg, text: "#F57F17" },
-    xai: { bg: "#FAFAFA", text: "#212121" },
+    xai: { bg: vwPalette.background.alt, text: "#212121" },
     bedrock: { bg: "#FFF3E0", text: "#FF6F00" },
     meta: { bg: "#E8F0FE", text: "#1A56DB" },
     deepseek: { bg: "#EDE8FD", text: "#5B21B6" },
     microsoft: { bg: accent.blue.bg, text: "#0369A1" },
     cohere: { bg: "#FFF3E0", text: "#B45309" },
-    perplexity: { bg: "#F0FDF4", text: "#15803D" },
-    nvidia: { bg: "#F0FDF4", text: "#166534" },
+    perplexity: { bg: vwPalette.status.success.bg, text: "#15803D" },
+    nvidia: { bg: vwPalette.status.success.bg, text: "#166534" },
     qwen: { bg: "#FFF7ED", text: "#C2410C" },
     moonshot: { bg: "#F5F3FF", text: "#6D28D9" },
   };
@@ -260,7 +268,7 @@ const ModelsTableBody: React.FC<ModelsTableBodyProps> = ({
                   alignItems: "center",
                   gap: "6px",
                   backgroundColor: directColors.bg,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   px: "8px",
                   py: "3px",
                 }}
@@ -326,7 +334,7 @@ const ModelsTableBody: React.FC<ModelsTableBodyProps> = ({
         sx={{
           "& .MuiPopover-paper": {
             minWidth: 120,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             border: `1px solid ${borderPalette.dark}`,
             boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
             overflow: "hidden",
@@ -350,7 +358,7 @@ const ModelsTableBody: React.FC<ModelsTableBodyProps> = ({
                 "backgroundColor": "transparent",
                 "justifyContent": "flex-start",
                 "&:hover": {
-                  backgroundColor: "#FEF2F2",
+                  backgroundColor: vwPalette.status.error.bg,
                   borderColor: status.error.text,
                 },
               }}

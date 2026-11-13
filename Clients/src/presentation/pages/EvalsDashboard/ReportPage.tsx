@@ -38,7 +38,7 @@ import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import type { ReportConfig } from "./types";
 import CustomAxios from "../../../infrastructure/api/customAxios";
 import { getAllExperiments } from "../../../application/repository/deepEval.repository";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 import singleTheme from "../../themes/v1SingleTheme";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { useTranslation } from "../../../application/hooks/useTranslation";
@@ -390,7 +390,7 @@ export default function ReportPage({
           sx={{
             mb: "18px",
             p: "12px",
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             backgroundColor: palette.status.warning.bg,
             border: `1px solid ${palette.status.warning.border}`,
             display: "flex",
@@ -416,7 +416,7 @@ export default function ReportPage({
             px: "16px",
             backgroundColor: palette.background.main,
             border: `1px solid ${palette.border.dark}`,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
           }}
         >
           <CircularProgress size={32} sx={{ color: palette.brand.primary }} />
@@ -445,7 +445,7 @@ export default function ReportPage({
             mb: "18px",
             background: palette.background.main,
             border: `1px solid ${palette.border.dark}`,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             overflow: "hidden",
           }}
         >
@@ -637,7 +637,7 @@ export default function ReportPage({
         sx={{
           "& .MuiPopover-paper": {
             minWidth: 140,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             border: `1px solid ${palette.border.dark}`,
             boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
             overflow: "hidden",

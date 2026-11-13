@@ -24,6 +24,7 @@ import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtende
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { getGatewayErrorText } from "../../../../application/utils/apiErrorReason";
 import palette from "../../../themes/palette";
+import { palette as vwPalette, radiusPx } from "../../../themes/palette";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import {
   sectionTitleSx,
@@ -339,7 +340,7 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
                   alignItems: "flex-start",
                   gap: "8px",
                   p: "12px 16px",
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   border: "1px solid #FEDF89",
                   bgcolor: "#FFFAEB",
                   mb: "8px",
@@ -348,17 +349,20 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
                 <TriangleAlert
                   size={16}
                   strokeWidth={1.5}
-                  color="#B54708"
+                  color={vwPalette.risk.high.text}
                   style={{ flexShrink: 0, marginTop: 1 }}
                 />
                 <Box>
-                  <Typography fontSize={13} fontWeight={500} color="#B54708">
+                  <Typography fontSize={13} fontWeight={500} color={vwPalette.risk.high.text}>
                     No endpoints configured
                   </Typography>
                   <Typography fontSize={12} color="#93370D" mt="2px">
                     Virtual keys route requests through endpoints. You need at least one active
                     endpoint before creating a virtual key.{" "}
-                    <Link to="/ai-gateway/endpoints" style={{ color: "#B54708", fontWeight: 500 }}>
+                    <Link
+                      to="/ai-gateway/endpoints"
+                      style={{ color: vwPalette.risk.high.text, fontWeight: 500 }}
+                    >
                       Go to Endpoints
                     </Link>{" "}
                     to set one up.
@@ -398,7 +402,7 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
                 sx={{
                   p: "12px 16px",
                   border: `1px solid ${palette.border.dark}`,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                 }}
               >
                 <Stack direction="row" alignItems="center" gap="12px" flex={1} minWidth={0}>
@@ -613,7 +617,7 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
               p: "12px 16px",
               backgroundColor: KEY_DISPLAY_BG,
               border: `1px solid ${palette.border.dark}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               fontFamily: "monospace",
               fontSize: 13,
               wordBreak: "break-all",
@@ -640,7 +644,7 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
               p: "12px 16px",
               backgroundColor: WARNING_BG,
               border: `1px solid ${WARNING_BORDER}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
             }}
           >
             <Typography sx={{ fontSize: 12, color: WARNING_TEXT, fontWeight: 500 }}>
@@ -654,7 +658,7 @@ export default function AIGatewayVirtualKeysPage({ embedded }: { embedded?: bool
               sx={{
                 p: "12px 16px",
                 backgroundColor: CODE_BLOCK_BG,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 fontFamily: "monospace",
                 fontSize: 12,
                 color: CODE_BLOCK_TEXT,
@@ -707,7 +711,9 @@ response = client.chat.completions.create(
                 Generate API keys for developers to use the gateway from their code.
               </Typography>
               {!loading && endpointCount === 0 && (
-                <Typography sx={{ fontSize: 12, color: "#B54708", fontWeight: 500, mt: "4px" }}>
+                <Typography
+                  sx={{ fontSize: 12, color: vwPalette.risk.high.text, fontWeight: 500, mt: "4px" }}
+                >
                   Create at least one endpoint before generating virtual keys.
                 </Typography>
               )}

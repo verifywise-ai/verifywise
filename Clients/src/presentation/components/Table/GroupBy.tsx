@@ -3,7 +3,7 @@ import { Button, Stack, Popover, Box, Typography } from "@mui/material";
 import { X, Rows3 } from "lucide-react";
 import Select from "../Inputs/Select";
 import { ButtonToggle } from "../button-toggle";
-import { text, border as borderPalette, status } from "../../themes/palette";
+import { text, border as borderPalette, status, palette as vwPalette } from "../../themes/palette";
 
 export interface GroupByOption {
   id: string;
@@ -199,18 +199,18 @@ export const GroupBy: React.FC<GroupByProps> = ({
           "fontWeight": 500,
           "padding": "6px 12px",
           "textTransform": "none",
-          "color": "#374151",
+          "color": vwPalette.text.secondary,
           "borderColor": `${borderPalette.dark}`,
           "height": "34px",
           "minWidth": selectedGroup ? "110px" : "80px",
-          "backgroundColor": open ? "#f0fdf4" : "transparent",
+          "backgroundColor": open ? vwPalette.status.success.bg : "transparent",
           "&:hover": {
             borderColor: `${text.muted}`,
-            backgroundColor: "#f0fdf4",
+            backgroundColor: vwPalette.status.success.bg,
           },
         }}
       >
-        <Rows3 size={16} color="#10b981" style={{ marginRight: "6px" }} />
+        <Rows3 size={16} color={vwPalette.status.success.strong} style={{ marginRight: "6px" }} />
         Group
         {selectedGroup && <GroupBadge count={1} />}
       </Button>

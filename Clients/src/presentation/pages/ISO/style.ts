@@ -1,5 +1,6 @@
 import { SxProps, Theme } from "@mui/material";
 import { keyframes } from "@mui/system";
+import { palette, radiusPx } from "../../themes/palette";
 
 // Animation
 export const flashAnimation = keyframes`
@@ -30,10 +31,10 @@ export const commonStyles = {
 
   accordion: {
     "marginTop": "9px",
-    "border": "1px solid #d0d5dd",
+    "border": `1px solid ${palette.border.dark}`,
     "width": "100%",
     "marginLeft": "1.5px",
-    "borderRadius": "4px",
+    "borderRadius": radiusPx.sm,
     "overflow": "hidden",
     "position": "relative",
     "margin": 0,
@@ -46,7 +47,7 @@ export const commonStyles = {
   } as SxProps<Theme>,
 
   accordionSummary: {
-    backgroundColor: "#fafafa",
+    backgroundColor: palette.background.alt,
     flexDirection: "row-reverse",
   } as SxProps<Theme>,
 
@@ -66,7 +67,7 @@ export function getStatusColor(status: string): string {
   const normalizedStatus = status?.trim() || "Not Started";
   switch (normalizedStatus.charAt(0).toUpperCase() + normalizedStatus.slice(1).toLowerCase()) {
     case "Not Started":
-      return "#4B5563";
+      return palette.text.tertiary;
     case "Draft":
       return "#D97706";
     case "In progress":
@@ -84,6 +85,6 @@ export function getStatusColor(status: string): string {
     case "Needs rework":
       return "#EA580C";
     default:
-      return "#4B5563"; // Default to "Not Started" color
+      return palette.text.tertiary; // Default to "Not Started" color
   }
 }

@@ -25,7 +25,7 @@ import AppSwitcher from "../../components/AppSwitcher";
 import { ContextSidebar } from "../../components/ContextSidebar";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { storageService } from "../../../infrastructure/storage";
-import { status } from "../../themes/palette";
+import { status, palette as vwPalette } from "../../themes/palette";
 
 interface DashboardProps {
   reloadTrigger: boolean;
@@ -278,7 +278,11 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
                 className="home-layout"
                 flexDirection="row"
                 gap={0}
-                sx={{ backgroundColor: "#FCFCFD", height: "100vh", overflow: "hidden" }}
+                sx={{
+                  backgroundColor: vwPalette.background.main,
+                  height: "100vh",
+                  overflow: "hidden",
+                }}
               >
                 <AppSwitcher
                   activeModule={activeModule}

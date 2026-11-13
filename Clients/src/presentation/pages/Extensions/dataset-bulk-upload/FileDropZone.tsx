@@ -1,7 +1,7 @@
 import { useCallback, useRef, useState } from "react";
 import { Box, Typography, Stack, IconButton, Alert } from "@mui/material";
 import { Upload, X, FileSpreadsheet } from "lucide-react";
-import { brand, text } from "../../../themes/palette";
+import { brand, text, palette as vwPalette } from "../../../themes/palette";
 
 const MAX_FILES = 20;
 const MAX_SIZE = 30 * 1024 * 1024; // 30MB
@@ -110,9 +110,9 @@ export default function FileDropZone({ files, onFilesChange }: FileDropZoneProps
           "p": "32px",
           "textAlign": "center",
           "cursor": "pointer",
-          "backgroundColor": dragOver ? "#F2F4F7" : "#FCFCFD",
+          "backgroundColor": dragOver ? vwPalette.background.hover : vwPalette.background.main,
           "transition": "all 0.2s",
-          "&:hover": { borderColor: "brand.primary", backgroundColor: "#F2F4F7" },
+          "&:hover": { borderColor: "brand.primary", backgroundColor: vwPalette.background.hover },
         }}
       >
         <Upload size={32} color={text.icon} />

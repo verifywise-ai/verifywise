@@ -45,7 +45,7 @@ import {
 import dayjs, { Dayjs } from "dayjs";
 import PMMQuestionEditor from "./QuestionEditor";
 import { AlertState } from "../../../../application/interfaces/appStates";
-import { brand } from "../../../themes/palette";
+import { brand, radiusPx } from "../../../themes/palette";
 
 // Notification hour dropdown items (0-23)
 const notificationHourItems = Array.from({ length: 24 }, (_, i) => ({
@@ -97,7 +97,7 @@ const SortableQuestionItem: React.FC<SortableQuestionItemProps> = ({
         backgroundColor: isDragging
           ? theme.palette.background.main
           : theme.palette.background.accent,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         border: `1px solid ${isDragging ? theme.palette.primary.main : theme.palette.border.light}`,
         gap: 2,
         cursor: isDragging ? "grabbing" : "default",
@@ -150,7 +150,7 @@ const SortableQuestionItem: React.FC<SortableQuestionItemProps> = ({
           sx={{
             "cursor": disabled ? "not-allowed" : "pointer",
             "padding": "4px",
-            "borderRadius": "4px",
+            "borderRadius": radiusPx.sm,
             "display": "flex",
             "opacity": disabled ? 0.5 : 1,
             "&:hover": { backgroundColor: disabled ? "transparent" : theme.palette.border.light },
@@ -179,7 +179,7 @@ const SortableQuestionItem: React.FC<SortableQuestionItemProps> = ({
             sx={{
               "cursor": disabled ? "not-allowed" : "pointer",
               "padding": "4px",
-              "borderRadius": "4px",
+              "borderRadius": radiusPx.sm,
               "display": "flex",
               "opacity": disabled ? 0.5 : 1,
               "&:hover": {
@@ -491,7 +491,7 @@ const PostMarketMonitoring: React.FC = () => {
   const cardStyle = {
     backgroundColor: theme.palette.background.main,
     border: `1px solid ${theme.palette.border.dark}`,
-    borderRadius: "4px",
+    borderRadius: radiusPx.sm,
     padding: "24px",
   };
 

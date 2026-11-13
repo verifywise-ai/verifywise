@@ -38,7 +38,7 @@ import { WelcomeVideoPlayer } from "../../components/FeatureVideos/WelcomeVideo"
 import { VideoPlayerModal } from "../../components/FeatureVideos/player/VideoPlayerModal";
 import { buildExploreConfig } from "../../components/FeatureVideos/shared/buildExploreConfig";
 import { EXPLORE_VIDEO_DATA } from "../../components/FeatureVideos/exploreVideos";
-import { background, border, brand } from "../../themes/palette";
+import { background, border, brand, radiusPx } from "../../themes/palette";
 
 // ── Keyframe animations ──
 const fadeInUp = keyframes`
@@ -504,7 +504,7 @@ const StartHere = () => {
               iconBackground={brand.primaryLight}
               sx={{
                 p: "12px 16px",
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 border: `1px solid ${border.dark}`,
                 backgroundColor: background.accent,
               }}
@@ -643,7 +643,7 @@ const StartHere = () => {
                       alignItems: "center",
                       gap: "4px",
                       backgroundColor: "rgba(0,0,0,0.5)",
-                      borderRadius: "4px",
+                      borderRadius: radiusPx.sm,
                       padding: "3px 8px",
                     }}
                   >
@@ -1146,7 +1146,7 @@ const StartHere = () => {
                       "gap": "8px",
                       "animation": `${fadeInUp} 0.3s ease-out ${0.6 + i * 0.08}s both`,
                       "cursor": !done && step.path ? "pointer" : "default",
-                      "borderRadius": "4px",
+                      "borderRadius": radiusPx.sm,
                       "p": "2px 4px",
                       "mx": "-4px",
                       "transition": "background 0.2s",

@@ -18,6 +18,7 @@ import {
 import { Download, ShieldX } from "lucide-react";
 import { ENV_VARs } from "../../../../env.vars";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
+import { palette } from "../../themes/palette";
 
 /**
  * SharedView page component for displaying publicly shared data
@@ -159,14 +160,14 @@ const SharedView: React.FC = () => {
                 mb: 2,
               }}
             >
-              <ShieldX size={32} color="#C62828" />
+              <ShieldX size={32} color={palette.status.error.text} />
             </Box>
             <Typography
               variant="h6"
               component="h1"
               sx={{
                 fontWeight: 600,
-                color: "#C62828",
+                color: palette.status.error.text,
                 mb: 1,
               }}
             >
@@ -226,7 +227,7 @@ const SharedView: React.FC = () => {
             fontSize: "12px",
             fontWeight: 500,
             backgroundColor: value ? "#E8F5E9" : "#FFEBEE",
-            color: value ? "#2E7D32" : "#C62828",
+            color: value ? palette.status.success.text : palette.status.error.text,
           }}
         >
           {value ? "Yes" : "No"}
@@ -237,10 +238,10 @@ const SharedView: React.FC = () => {
     // Status - show with badge
     if (key === "status") {
       const statusColors: { [key: string]: { bg: string; text: string } } = {
-        "Approved": { bg: "#E8F5E9", text: "#2E7D32" },
+        "Approved": { bg: "#E8F5E9", text: palette.status.success.text },
         "Pending": { bg: "#FFF3E0", text: "#E65100" },
-        "Rejected": { bg: "#FFEBEE", text: "#C62828" },
-        "Under Review": { bg: "#E3F2FD", text: "#1565C0" },
+        "Rejected": { bg: "#FFEBEE", text: palette.status.error.text },
+        "Under Review": { bg: palette.status.info.bg, text: palette.status.info.text },
       };
       const colorScheme = statusColors[value] || { bg: "background.surface", text: "#666" };
       return (
@@ -343,8 +344,8 @@ const SharedView: React.FC = () => {
         <Paper sx={{ overflow: "hidden" }}>
           <Toolbar
             sx={{
-              backgroundColor: "#fafafa",
-              borderBottom: "1px solid #e0e0e0",
+              backgroundColor: palette.background.alt,
+              borderBottom: `1px solid ${palette.border.light}`,
               minHeight: "48px !important",
             }}
           >

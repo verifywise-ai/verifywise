@@ -8,7 +8,7 @@ import { Box, Popover, Typography } from "@mui/material";
 import { EyeOff, MoreHorizontal } from "lucide-react";
 import { GovernanceStatus } from "../../../../domain/ai-detection/types";
 import { GOVERNANCE_STATUS_CONFIG } from "./scanDetailsConfig";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 
 interface FindingRowGovernancePopoverProps {
   anchorEl: HTMLElement | null;
@@ -36,7 +36,7 @@ export function FindingRowGovernancePopover({
         paper: {
           sx: {
             mt: 0.5,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             boxShadow: "0 4px 6px -1px rgb(0 0 0 / 0.1)",
             border: `1px solid ${palette.border.light}`,
           },
@@ -58,7 +58,7 @@ export function FindingRowGovernancePopover({
               "alignItems": "center",
               "gap": 1,
               "p": "6px 8px",
-              "borderRadius": "4px",
+              "borderRadius": radiusPx.sm,
               "cursor": "pointer",
               "backgroundColor": localStatus === status ? palette.background.hover : "transparent",
               "&:hover": { backgroundColor: palette.background.hover },
@@ -78,7 +78,7 @@ export function FindingRowGovernancePopover({
                 "alignItems": "center",
                 "gap": 1,
                 "p": "6px 8px",
-                "borderRadius": "4px",
+                "borderRadius": radiusPx.sm,
                 "cursor": "pointer",
                 "&:hover": { backgroundColor: palette.background.hover },
               }}
@@ -98,7 +98,7 @@ export function FindingRowGovernancePopover({
             "alignItems": "center",
             "gap": 1,
             "p": "6px 8px",
-            "borderRadius": "4px",
+            "borderRadius": radiusPx.sm,
             "cursor": "pointer",
             "&:hover": { backgroundColor: palette.background.hover },
           }}

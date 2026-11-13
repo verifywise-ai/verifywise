@@ -5,6 +5,6 @@
 }
 
 .help-card:hover {
-  border-color: #13715b;
+  border-color: var(--vw-brand-primary, #13715b);
   box-shadow: 0 2px 8px rgba(16, 24, 40, 0.06);
 }

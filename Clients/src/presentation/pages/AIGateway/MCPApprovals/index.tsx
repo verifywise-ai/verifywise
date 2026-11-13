@@ -15,6 +15,7 @@ import { sectionTitleSx, useCardSx, MCP_STATUS_COLORS, MCP_STATUS_FALLBACK } fro
 import MCPTable from "../MCPTable";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import palette from "../../../themes/palette";
+import { palette as vwPalette } from "../../../themes/palette";
 import CustomizableSkeleton from "../../../components/Skeletons";
 
 interface Approval {
@@ -308,7 +309,7 @@ export default function MCPApprovalsPage() {
                                 "color": "#991B1B",
                                 "borderColor": "#FCA5A5",
                                 "&:hover": {
-                                  backgroundColor: "#FEF2F2",
+                                  backgroundColor: vwPalette.status.error.bg,
                                   borderColor: "#991B1B",
                                 },
                               }}
@@ -340,7 +341,7 @@ export default function MCPApprovalsPage() {
                       {item.arguments && Object.keys(item.arguments).length > 0 && (
                         <Box
                           sx={{
-                            backgroundColor: "#F9FAFB",
+                            backgroundColor: vwPalette.background.alt,
                             borderRadius: 1,
                             p: 1,
                             fontFamily: "monospace",

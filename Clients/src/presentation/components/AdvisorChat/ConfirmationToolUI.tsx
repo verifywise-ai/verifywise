@@ -6,7 +6,12 @@ import {
   rejectConfirmation,
 } from "../../../application/repository/aiConfirmation.repository";
 import { dispatchAiActionCompleted } from "../../../application/events/aiActionEvents";
-import { status as statusColors, brand } from "../../themes/palette";
+import {
+  status as statusColors,
+  brand,
+  palette as vwPalette,
+  radiusPx,
+} from "../../themes/palette";
 
 interface ConfirmationResult {
   confirmation_required: true;
@@ -116,7 +121,7 @@ const ConfirmationToolUI: FC<{ result?: unknown }> = ({ result }) => {
       </Stack>
 
       {/* Description */}
-      <Typography sx={{ fontSize: 13, color: "#344054", mb: 1, lineHeight: 1.5 }}>
+      <Typography sx={{ fontSize: 13, color: vwPalette.text.secondary, mb: 1, lineHeight: 1.5 }}>
         {data.description}
       </Typography>
 
@@ -125,7 +130,7 @@ const ConfirmationToolUI: FC<{ result?: unknown }> = ({ result }) => {
         <Box
           sx={{
             backgroundColor: "rgba(255,255,255,0.6)",
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             p: "8px",
             mb: 1,
           }}
@@ -161,7 +166,7 @@ const ConfirmationToolUI: FC<{ result?: unknown }> = ({ result }) => {
               "fontSize": 12,
               "fontWeight": 500,
               "backgroundColor": brand.primary,
-              "borderRadius": "4px",
+              "borderRadius": radiusPx.sm,
               "boxShadow": "none",
               "&:hover": { backgroundColor: brand.primaryHover, boxShadow: "none" },
             }}
@@ -184,10 +189,10 @@ const ConfirmationToolUI: FC<{ result?: unknown }> = ({ result }) => {
               "textTransform": "none",
               "fontSize": 12,
               "fontWeight": 500,
-              "borderColor": "#D0D5DD",
+              "borderColor": vwPalette.border.dark,
               "color": "#475467",
-              "borderRadius": "4px",
-              "&:hover": { backgroundColor: "#F9FAFB" },
+              "borderRadius": radiusPx.sm,
+              "&:hover": { backgroundColor: vwPalette.background.alt },
             }}
           >
             Reject

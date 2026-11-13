@@ -51,6 +51,7 @@ import type { HeatMapCellRef } from "../../types/interfaces/i.risk";
 import VendorRiskInsights from "./VendorRiskInsights";
 import { matchesHeatCell } from "./VendorRiskInsights/HeatMapSection";
 import ListStateWrapper from "../../components/ListStateWrapper";
+import { chartTheme } from "../../themes/chartTheme";
 
 // Constants
 const REDIRECT_DELAY_MS = 2000;
@@ -1061,31 +1062,41 @@ const Vendors = () => {
           <StatusTileCards
             items={
               [
-                { key: "Total", label: "Total", count: vendorRisksSummary.total, color: "#4B5563" },
+                {
+                  key: "Total",
+                  label: "Total",
+                  count: vendorRisksSummary.total,
+                  color: chartTheme.riskSummary.total,
+                },
                 {
                   key: "Very high",
                   label: "Very high",
                   count: vendorRisksSummary.veryHighRisks,
-                  color: "#C63622",
+                  color: chartTheme.riskSummary.veryHigh,
                 },
                 {
                   key: "High",
                   label: "High",
                   count: vendorRisksSummary.highRisks,
-                  color: "#D68B61",
+                  color: chartTheme.riskSummary.high,
                 },
                 {
                   key: "Medium",
                   label: "Medium",
                   count: vendorRisksSummary.mediumRisks,
-                  color: "#D6B971",
+                  color: chartTheme.riskSummary.medium,
                 },
-                { key: "Low", label: "Low", count: vendorRisksSummary.lowRisks, color: "#52AB43" },
+                {
+                  key: "Low",
+                  label: "Low",
+                  count: vendorRisksSummary.lowRisks,
+                  color: chartTheme.riskSummary.low,
+                },
                 {
                   key: "Very low",
                   label: "Very low",
                   count: vendorRisksSummary.veryLowRisks,
-                  color: "#B8D39C",
+                  color: chartTheme.riskSummary.veryLow,
                 },
               ] satisfies StatusTileItem[]
             }

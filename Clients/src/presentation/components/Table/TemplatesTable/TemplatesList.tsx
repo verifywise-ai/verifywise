@@ -1,6 +1,6 @@
 import { Box, Typography, Chip, Stack, Divider } from "@mui/material";
 import { Check, FileText } from "lucide-react";
-import { brand, text, background, status, accent } from "../../../themes/palette";
+import { brand, text, background, status, accent, radiusPx } from "../../../themes/palette";
 
 // Re-export TemplateRow from this file to avoid circular dependency
 export interface TemplateRow {
@@ -98,7 +98,7 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
           "p": compact ? "2px" : "3px",
           "border": "1px solid",
           "borderColor": isSelected ? `${brand.primary}` : `${status.default.border}`,
-          "borderRadius": "4px",
+          "borderRadius": radiusPx.sm,
           "cursor": "pointer",
           "backgroundColor": isSelected ? `${brand.primaryLight}` : `${background.main}`,
           "transition": "all 0.15s ease",
@@ -167,7 +167,7 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
                 height: compact ? "18px" : "20px",
                 fontSize: compact ? "9px" : "10px",
                 fontWeight: 500,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 ...getCategoryStyles(template.category),
               }}
             />
@@ -184,7 +184,7 @@ const TemplatesList: React.FC<TemplatesListProps> = ({
                 "height": compact ? "18px" : "20px",
                 "fontSize": compact ? "9px" : "10px",
                 "fontWeight": 500,
-                "borderRadius": "4px",
+                "borderRadius": radiusPx.sm,
                 "& .MuiChip-label": { px: "1.5px" },
               }}
             />

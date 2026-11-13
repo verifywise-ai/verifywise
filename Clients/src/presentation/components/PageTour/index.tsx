@@ -3,7 +3,7 @@ import React, { useEffect, useState } from "react";
 import { CustomStepWrapper } from "./CustomStep";
 import { Global } from "@emotion/react";
 import { IPageTourProps } from "../../types/interfaces/i.tour";
-import { brand } from "../../themes/palette";
+import { brand, radiusPx } from "../../themes/palette";
 
 const PageTour: React.FC<IPageTourProps> = ({ steps, run, onFinish, tourKey }) => {
   const [shouldRun, setShouldRun] = useState(false);
@@ -120,7 +120,7 @@ const PageTour: React.FC<IPageTourProps> = ({ steps, run, onFinish, tourKey }) =
               backgroundColor: "transparent",
             },
             tooltip: {
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
             },
             tooltipContainer: {
               textAlign: "left",

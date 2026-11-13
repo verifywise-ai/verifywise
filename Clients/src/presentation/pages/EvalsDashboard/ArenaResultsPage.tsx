@@ -27,7 +27,7 @@ import "katex/dist/katex.min.css";
 import { getArenaComparisonResults } from "../../../application/repository/deepEval.repository";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import StandardModal from "../../components/Modals/StandardModal";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 
 // Provider icons
 import { ReactComponent as OpenAILogo } from "../../assets/icons/openai_logo.svg";
@@ -92,7 +92,7 @@ const MarkdownRenderer = ({ content }: { content: string }) => {
           backgroundColor: "#f1f5f9",
           px: 0.75,
           py: 0.25,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           fontFamily: fontFamily.mono,
           fontSize: 12,
           color: "#0f766e",
@@ -385,7 +385,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
       <Box
         sx={{
           p: "12px",
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           background: isCompleted
             ? "linear-gradient(135deg, #fef9c3 0%, #fde047 100%)"
             : palette.background.accent,
@@ -505,7 +505,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
           elevation={0}
           sx={{
             border: `1px solid ${palette.border.light}`,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             overflow: "hidden",
           }}
         >
@@ -610,7 +610,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                             sx={{
                               width: 24,
                               height: 24,
-                              borderRadius: "4px",
+                              borderRadius: radiusPx.sm,
                               backgroundColor: palette.background.accent,
                               border: `1px solid ${palette.border.light}`,
                               display: "flex",
@@ -638,8 +638,8 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                                   gap: 0.25,
                                   px: 0.75,
                                   py: 0.25,
-                                  borderRadius: "4px",
-                                  background: "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
+                                  borderRadius: radiusPx.sm,
+                                  background: `linear-gradient(135deg, #fbbf24 0%, ${palette.riskMark.medium} 100%)`,
                                 }}
                               >
                                 <Trophy size={10} color={palette.background.main} />
@@ -740,7 +740,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                   key={criterion}
                   sx={{
                     p: "8px",
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     backgroundColor: palette.background.accent,
                     border: `1px solid ${palette.border.light}`,
                   }}
@@ -840,7 +840,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                 sx={{
                   "p": "12px",
                   "border": `1px solid ${palette.border.light}`,
-                  "borderRadius": "4px",
+                  "borderRadius": radiusPx.sm,
                   "backgroundColor": palette.background.main,
                   "cursor": "pointer",
                   "transition": "all 0.2s ease",
@@ -992,7 +992,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                   sx={{
                     p: "12px",
                     backgroundColor: palette.background.accent,
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     border: `1px solid ${palette.border.light}`,
                   }}
                 >
@@ -1034,9 +1034,9 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                         key={cIdx}
                         sx={{
                           p: "12px",
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                           border: isRoundWinner
-                            ? `2px solid #f59e0b`
+                            ? `2px solid ${palette.riskMark.medium}`
                             : `1px solid ${palette.border.light}`,
                           backgroundColor: palette.background.main,
                           minWidth: 0,
@@ -1053,7 +1053,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                               sx={{
                                 width: 22,
                                 height: 22,
-                                borderRadius: "4px",
+                                borderRadius: radiusPx.sm,
                                 backgroundColor: palette.background.accent,
                                 border: `1px solid ${palette.border.light}`,
                                 display: "flex",
@@ -1087,8 +1087,8 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                                 gap: 0.25,
                                 px: 1,
                                 py: 0.5,
-                                borderRadius: "4px",
-                                background: "linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%)",
+                                borderRadius: radiusPx.sm,
+                                background: `linear-gradient(135deg, #fbbf24 0%, ${palette.riskMark.medium} 100%)`,
                                 flexShrink: 0,
                               }}
                             >
@@ -1119,7 +1119,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                                     gap: 0.5,
                                     px: 1,
                                     py: 0.25,
-                                    borderRadius: "4px",
+                                    borderRadius: radiusPx.sm,
                                     backgroundColor:
                                       score >= 8
                                         ? palette.status.success.bg
@@ -1187,7 +1187,7 @@ const ArenaResultsPage: React.FC<ArenaResultsPageProps> = ({ comparisonId, onBac
                   sx={{
                     p: "12px",
                     backgroundColor: palette.background.accent,
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     border: `1px solid ${palette.border.light}`,
                   }}
                 >

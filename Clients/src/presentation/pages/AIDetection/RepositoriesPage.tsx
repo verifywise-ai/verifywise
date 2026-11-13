@@ -49,7 +49,7 @@ import {
 } from "../../../domain/ai-detection/repositoryTypes";
 import { useAIDetectionSidebarContext } from "../../../application/contexts/AIDetectionSidebar.context";
 import AddRepositoryModal from "./AddRepositoryModal";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 import singleTheme from "../../themes/v1SingleTheme";
 import { keyframes } from "@mui/system";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
@@ -396,7 +396,7 @@ export default function RepositoriesPage() {
         <TableContainer
           sx={{
             backgroundColor: palette.background.main,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             overflow: "hidden",
           }}
         >

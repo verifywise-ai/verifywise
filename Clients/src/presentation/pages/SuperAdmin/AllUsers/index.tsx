@@ -35,6 +35,7 @@ import Select from "../../../components/Inputs/Select";
 import singleTheme from "../../../themes/v1SingleTheme";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { getSelectStyles } from "../../../utils/inputStyles";
+import { palette, radiusPx } from "../../../themes/palette";
 
 /** Removes the user from this row's organization only. */
 const RemoveUserModal = ({
@@ -211,7 +212,9 @@ const EditUserModal = ({
             {target?.last_login ? formatDate(target.last_login) : "Never"}
           </Typography>
         </Stack>
-        {error && <Typography sx={{ fontSize: 13, color: "#D32F2F" }}>{error}</Typography>}
+        {error && (
+          <Typography sx={{ fontSize: 13, color: palette.status.error.text }}>{error}</Typography>
+        )}
       </Stack>
     </StandardModal>
   );
@@ -339,7 +342,9 @@ const InviteUserModal = ({
           getOptionValue={(item: { _id: string | number }) => item._id}
           sx={{ width: "100%" }}
         />
-        {error && <Typography sx={{ fontSize: 13, color: "#D32F2F" }}>{error}</Typography>}
+        {error && (
+          <Typography sx={{ fontSize: 13, color: palette.status.error.text }}>{error}</Typography>
+        )}
       </Stack>
     </StandardModal>
   );
@@ -459,7 +464,7 @@ const AllUsers = () => {
             textTransform: "none",
             height: 34,
             fontSize: "13px",
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
           }}
         >
           Invite user
@@ -625,7 +630,7 @@ const AllUsers = () => {
                           alignItems: "center",
                           px: 1,
                           py: 0.25,
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                           fontSize: 12,
                           fontWeight: 500,
                           backgroundColor: colors.bg,
@@ -646,12 +651,12 @@ const AllUsers = () => {
                         }}
                         sx={{
                           ...tableStyles.body.button,
-                          "color": "#dc2626",
+                          "color": palette.riskMark.critical,
                           "borderColor": "#fecaca",
                           "&:hover": {
-                            backgroundColor: "#dc2626",
+                            backgroundColor: palette.riskMark.critical,
                             color: "#fff",
-                            border: "1px solid #dc2626",
+                            border: `1px solid ${palette.riskMark.critical}`,
                           },
                         }}
                       >

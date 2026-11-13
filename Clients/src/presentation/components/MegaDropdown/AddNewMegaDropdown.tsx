@@ -11,7 +11,7 @@ import {
   AlertCircle,
   Plus,
 } from "lucide-react";
-import { brand, background } from "../../themes/palette";
+import { brand, background, palette as vwPalette, radiusPx } from "../../themes/palette";
 
 /**
  * Represents a single item in the mega dropdown menu
@@ -143,7 +143,7 @@ const AddNewMegaDropdown: React.FC<AddNewMegaDropdownProps> = ({ buttonLabel = "
           "height": "34px",
           "minHeight": "34px",
           "padding": "0 12px",
-          "borderRadius": "4px",
+          "borderRadius": radiusPx.sm,
           "textTransform": "none",
           "boxShadow": "none",
           "&:hover": {
@@ -214,7 +214,10 @@ const AddNewMegaDropdown: React.FC<AddNewMegaDropdownProps> = ({ buttonLabel = "
                 "justifyContent": "center",
                 "gap": 1,
                 "backgroundColor": hoveredItem === item.id ? "background.surface" : "transparent",
-                "border": hoveredItem === item.id ? "1px solid #e0e0e0" : "1px solid transparent",
+                "border":
+                  hoveredItem === item.id
+                    ? `1px solid ${vwPalette.border.light}`
+                    : "1px solid transparent",
                 "transition": "all 0.15s ease",
                 "minWidth": "90px",
                 "position": "relative",
@@ -243,7 +246,7 @@ const AddNewMegaDropdown: React.FC<AddNewMegaDropdownProps> = ({ buttonLabel = "
                 sx={{
                   fontWeight: 400,
                   fontSize: "12px",
-                  color: "#1a1a1a",
+                  color: vwPalette.text.primary,
                   textAlign: "center",
                   lineHeight: 1.2,
                 }}

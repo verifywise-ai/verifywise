@@ -38,6 +38,7 @@ import {
   TriggerTemplate,
   ActionTemplate,
 } from "../../../../../domain/types/Automation";
+import { radiusPx } from "../../../../themes/palette";
 
 // Icon mapping for trigger types
 const getTriggerIcon = (triggerType: string) => {
@@ -380,7 +381,7 @@ const AutomationBuilder: React.FC<AutomationBuilderProps> = ({
           },
           "&::-webkit-scrollbar-thumb": {
             background: "transparent",
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             backgroundClip: "padding-box",
           },
           "&:hover::-webkit-scrollbar-thumb": {

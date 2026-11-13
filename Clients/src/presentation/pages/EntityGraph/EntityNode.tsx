@@ -12,7 +12,7 @@ import {
   type LucideIcon,
 } from "lucide-react";
 import VWTooltip from "../../components/VWTooltip";
-import { text } from "../../themes/palette";
+import { text, palette as vwPalette, radiusPx } from "../../themes/palette";
 
 export type EntityType =
   "useCase" | "model" | "risk" | "vendor" | "evidence" | "framework" | "user";
@@ -78,8 +78,10 @@ const EntityNode: React.FC<NodeProps> = ({ data, sourcePosition, targetPosition 
       <Box
         sx={{
           "backgroundColor": nodeData.isHighlighted ? "#fffbeb" : "white",
-          "border": nodeData.isHighlighted ? "3px solid #f59e0b" : `2px solid ${nodeData.color}`,
-          "borderRadius": "4px",
+          "border": nodeData.isHighlighted
+            ? `3px solid ${vwPalette.riskMark.medium}`
+            : `2px solid ${nodeData.color}`,
+          "borderRadius": radiusPx.sm,
           "padding": "8px 12px",
           "minWidth": minWidth,
           "maxWidth": maxWidth,
@@ -111,7 +113,7 @@ const EntityNode: React.FC<NodeProps> = ({ data, sourcePosition, targetPosition 
           <Box
             sx={{
               backgroundColor: nodeData.color,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: 0.5,
               display: "flex",
               alignItems: "center",

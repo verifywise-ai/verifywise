@@ -47,6 +47,7 @@ import { getEntityById } from "../../../../application/repository/entity.reposit
 import { attachFilesToEntity } from "../../../../application/repository/file.repository";
 import { getAssessmentTopicById } from "../../../../application/repository/assesment.repository";
 import { useCanCheck } from "../../../../application/hooks/useCan";
+import { palette, radiusPx } from "../../../themes/palette";
 
 const FRAMEWORK_TYPE = "eu_ai_act";
 const ENTITY_TYPE = "assessment";
@@ -391,7 +392,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                   border: "1px solid #eee",
                   padding: "12px",
                   backgroundColor: "background.accent",
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                 }}
               >
                 <Typography fontSize={13} sx={{ marginBottom: "8px" }}>
@@ -409,7 +410,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                   border: "1px solid #d5e8d5",
                   padding: "12px",
                   backgroundColor: "#f5fef5",
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                 }}
               >
                 <Typography fontSize={13} sx={{ marginBottom: "8px", fontWeight: 600 }}>
@@ -438,7 +439,7 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                         justifyContent: "center",
                         height: 24,
                         padding: "4px 12px",
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                         background: `linear-gradient(180deg, ${gradientTop} 0%, ${gradientBottom} 100%)`,
                         border: `1px solid ${borderColor}`,
                         color: colors.text,
@@ -464,8 +465,8 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                     justifyContent: "center",
                     height: 24,
                     padding: "4px 12px",
-                    borderRadius: "4px",
-                    background: "linear-gradient(180deg, #E6F4EA 0%, #D4E8DB 100%)",
+                    borderRadius: radiusPx.sm,
+                    background: `linear-gradient(180deg, ${palette.status.success.bg} 0%, #D4E8DB 100%)`,
                     border: "1px solid #B8DCC5",
                     color: "primary.main",
                     fontSize: 11,

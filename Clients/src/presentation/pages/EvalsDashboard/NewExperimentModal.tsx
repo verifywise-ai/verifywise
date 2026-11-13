@@ -33,7 +33,7 @@ import ModelPicker from "../../components/Inputs/ModelPicker";
 import Checkbox from "../../components/Inputs/Checkbox";
 import Alert from "../../components/Alert";
 import Chip from "../../components/Chip";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 import {
   createExperiment,
   listMyDatasets,
@@ -1482,7 +1482,7 @@ export default function NewExperimentModal({
                         sx={{
                           mt: "8px",
                           p: "8px 10px",
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                           backgroundColor: palette.status.warning.bg,
                           border: `1px solid ${palette.status.warning.text}`,
                         }}
@@ -1517,7 +1517,7 @@ export default function NewExperimentModal({
                       px: "16px",
                       textAlign: "center",
                       border: `1px dashed ${palette.border.dark}`,
-                      borderRadius: "4px",
+                      borderRadius: radiusPx.sm,
                     }}
                   >
                     <Sparkles size={32} color={palette.border.dark} style={{ marginBottom: 8 }} />
@@ -1774,7 +1774,7 @@ export default function NewExperimentModal({
                             sx={{
                               p: "8px 10px",
                               backgroundColor: palette.status.success.bg,
-                              borderRadius: "4px",
+                              borderRadius: radiusPx.sm,
                               border: `1px solid ${palette.status.success.border}`,
                             }}
                           >
@@ -1824,7 +1824,7 @@ export default function NewExperimentModal({
                   p: "8px",
                   textAlign: "center",
                   border: `1px solid ${palette.border.dark}`,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   backgroundColor: palette.background.accent,
                 }}
               >
@@ -1862,7 +1862,7 @@ export default function NewExperimentModal({
                 <Box
                   sx={{
                     p: "8px",
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     backgroundColor: palette.status.success.bg,
                     border: `1px solid ${palette.status.success.border}`,
                     display: "flex",
@@ -2022,7 +2022,7 @@ export default function NewExperimentModal({
                 sx={{
                   p: "12px",
                   border: `1px solid ${palette.border.light}`,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   backgroundColor: palette.background.accent,
                 }}
               >
@@ -2458,7 +2458,7 @@ export default function NewExperimentModal({
                 sx={{
                   mt: "16px",
                   p: "8px",
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   backgroundColor: palette.status.success.bg,
                   border: `1px solid ${palette.status.success.border}`,
                   display: "flex",
@@ -2541,7 +2541,7 @@ export default function NewExperimentModal({
               gap: "4px",
               px: "6px",
               py: "2px",
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               backgroundColor:
                 config.taskType === "agent"
                   ? palette.accent.purple.bg

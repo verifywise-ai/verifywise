@@ -10,7 +10,7 @@ import {
 } from "@mui/material";
 import Chip from "../../../components/Chip";
 import VWAvatar from "../../../components/Avatar/VWAvatar";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import { useTranslation } from "../../../../application/hooks/useTranslation";
 import type {
   AiAppAssessmentStatus,
@@ -149,7 +149,7 @@ export function RowIssuesTable({
           maxHeight: "220px",
           overflow: "auto",
           border: `1px solid ${palette.border.dark}`,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
         }}
       >
         <Table size="small" stickyHeader>

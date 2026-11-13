@@ -26,7 +26,7 @@ import { RiskModel } from "../../../../domain/models/Common/risks/risk.model";
 import { User } from "../../../../domain/types/User";
 import Chip from "../../Chip";
 import ProjectRiskLinkedPolicies from "../../../components/ProjectRiskMitigation/ProjectRiskLinkedPolicies";
-import { text } from "../../../themes/palette";
+import { text, palette as vwPalette } from "../../../themes/palette";
 import { formatCustomFieldValue } from "../../CustomFieldsSection/formatCustomFieldValue";
 
 function getDummyEvent() {
@@ -160,7 +160,7 @@ const VWProjectRisksTableBody = ({
                   ...singleTheme.tableStyles.primary.body.row,
                   ...(row.is_deleted && {
                     opacity: 0.7,
-                    backgroundColor: theme.palette.action?.hover || "#fafafa",
+                    backgroundColor: theme.palette.action?.hover || vwPalette.background.alt,
                   }),
                 }}
                 onClick={(e) => handleEditRisk(row, e)}
@@ -204,8 +204,8 @@ const VWProjectRisksTableBody = ({
                       flashRow === row.id
                         ? singleTheme.flashColors.background
                         : sortConfig.key === "risk_name"
-                          ? "#e8e8e8"
-                          : "#fafafa",
+                          ? vwPalette.border.light
+                          : vwPalette.background.alt,
                   }}
                 >
                   {row.risk_name

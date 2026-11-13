@@ -2,7 +2,14 @@ import { Box, Typography, Stack, IconButton } from "@mui/material";
 import { useEffect, useState } from "react";
 import { ChevronLeft, ChevronRight } from "lucide-react";
 import { frameworkDashboardCardStyles } from "./styles";
-import { brand, text, border as borderPalette, status } from "../../../themes/palette";
+import {
+  brand,
+  text,
+  border as borderPalette,
+  status,
+  palette as vwPalette,
+  radiusPx,
+} from "../../../themes/palette";
 import { VWDonutChart } from "../../../components/Charts/VWCharts";
 
 interface FrameworkData {
@@ -174,7 +181,7 @@ const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {
         sx={{
           background: "linear-gradient(135deg, #FEFFFE 0%, #F8F9FA 100%)",
           border: `1px solid ${borderPalette.dark}`,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           p: "16px",
           display: "flex",
           justifyContent: "center",
@@ -182,7 +189,9 @@ const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {
           minHeight: "300px",
         }}
       >
-        <Typography sx={{ fontSize: 13, color: "#666666" }}>Loading status data...</Typography>
+        <Typography sx={{ fontSize: 13, color: vwPalette.text.tertiary }}>
+          Loading status data...
+        </Typography>
       </Box>
     );
   }
@@ -266,7 +275,7 @@ const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {
                     >
                       {framework.frameworkName}
                     </Typography>
-                    <Typography sx={{ fontSize: 12, color: "#666666" }}>
+                    <Typography sx={{ fontSize: 12, color: vwPalette.text.tertiary }}>
                       No status data available
                     </Typography>
 
@@ -343,7 +352,7 @@ const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {
                                 backgroundColor: item.color,
                               }}
                             />
-                            <Typography sx={{ fontSize: 12, color: "#666666" }}>
+                            <Typography sx={{ fontSize: 12, color: vwPalette.text.tertiary }}>
                               {item.label}
                             </Typography>
                           </Box>
@@ -412,7 +421,7 @@ const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {
                     {framework.frameworkName}
                   </Typography>
                   {genericTotal === 0 ? (
-                    <Typography sx={{ fontSize: 12, color: "#666666" }}>
+                    <Typography sx={{ fontSize: 12, color: vwPalette.text.tertiary }}>
                       No status data available
                     </Typography>
                   ) : (
@@ -454,7 +463,7 @@ const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {
                                   backgroundColor: item.color,
                                 }}
                               />
-                              <Typography sx={{ fontSize: 12, color: "#666666" }}>
+                              <Typography sx={{ fontSize: 12, color: vwPalette.text.tertiary }}>
                                 {item.label}
                               </Typography>
                             </Box>
@@ -541,7 +550,7 @@ const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {
                       </IconButton>
                     </Box>
                   </Box>
-                  <Typography sx={{ fontSize: 12, color: "#666666" }}>
+                  <Typography sx={{ fontSize: 12, color: vwPalette.text.tertiary }}>
                     No status data available
                   </Typography>
 
@@ -644,7 +653,7 @@ const StatusBreakdownCard = ({ frameworksData }: StatusBreakdownCardProps) => {
                               backgroundColor: item.color,
                             }}
                           />
-                          <Typography sx={{ fontSize: 12, color: "#666666" }}>
+                          <Typography sx={{ fontSize: 12, color: vwPalette.text.tertiary }}>
                             {item.label}
                           </Typography>
                         </Box>

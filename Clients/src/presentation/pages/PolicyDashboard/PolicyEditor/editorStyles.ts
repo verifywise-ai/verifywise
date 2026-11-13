@@ -1,5 +1,5 @@
 import type { GlobalStylesProps } from "@mui/material";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import { fontFamily, fontSize, fontWeight } from "../../../themes/typography";
 
 const { text, background, border, brand, accent, editor } = palette;
@@ -23,7 +23,7 @@ export const policyEditorStyles: GlobalStylesProps["styles"] = {
     "overflowY": "auto",
     "padding": "20px 24px",
     "border": "none",
-    "borderRadius": "4px",
+    "borderRadius": radiusPx.sm,
     "backgroundColor": background.main,
     "fontFamily": fontFamily.sans,
     "fontSize": fontSize.base,

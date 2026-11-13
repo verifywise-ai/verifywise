@@ -29,7 +29,7 @@ import { PageHeader } from "../../components/Layout/PageHeader";
 import HelperIcon from "../../components/HelperIcon";
 import TipBox from "../../components/TipBox";
 import { useCanCheck } from "../../../application/hooks/useCan";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { experimentPromptCount } from "./experimentPromptCount";
 import { countLabel } from "../../tools/countLabel";
@@ -475,7 +475,7 @@ export default function ProjectOverview({
           <Box
             sx={{
               border: `1px solid ${palette.border.dark}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               backgroundColor: palette.background.main,
               textAlign: "center",
               py: "8px",

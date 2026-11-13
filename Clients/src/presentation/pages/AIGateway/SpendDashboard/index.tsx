@@ -42,7 +42,7 @@ import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtende
 import { EmptyState } from "../../../components/EmptyState";
 import EmptyStateTip from "../../../components/EmptyState/EmptyStateTip";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
-import palette, { chart as chartPalette } from "../../../themes/palette";
+import palette, { chart as chartPalette, radiusPx } from "../../../themes/palette";
 import { sectionTitleSx, useCardSx, GUARDRAIL_ACTION_COLORS, formatEntityType } from "../shared";
 import { useUserGuideSidebarContext } from "../../../components/UserGuide/UserGuideSidebarContext";
 import MockDashboard from "./MockDashboard";
@@ -276,7 +276,7 @@ export default function SpendDashboardPage() {
         <Box
           sx={{
             position: "relative",
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             overflow: "hidden",
             border: `1.5px dashed ${palette.border.dark}`,
           }}
@@ -490,7 +490,7 @@ export default function SpendDashboardPage() {
                           alignItems="center"
                           sx={{
                             p: "22px 14px",
-                            borderRadius: "4px",
+                            borderRadius: radiusPx.sm,
                             border: `1px solid ${palette.border.light}`,
                             position: "relative",
                             overflow: "hidden",
@@ -607,7 +607,7 @@ export default function SpendDashboardPage() {
                           alignItems="center"
                           sx={{
                             p: "22px 14px",
-                            borderRadius: "4px",
+                            borderRadius: radiusPx.sm,
                             border: `1px solid ${palette.border.light}`,
                             position: "relative",
                             overflow: "hidden",
@@ -1055,7 +1055,7 @@ export default function SpendDashboardPage() {
                   alignItems="center"
                   sx={{
                     p: "8px 12px",
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     border: `1px solid ${palette.border.light}`,
                   }}
                 >
@@ -1170,7 +1170,7 @@ export default function SpendDashboardPage() {
                         alignItems="center"
                         sx={{
                           "p": "4px 8px",
-                          "borderRadius": "4px",
+                          "borderRadius": radiusPx.sm,
                           "&:hover": { backgroundColor: palette.background.alt },
                         }}
                       >
@@ -1234,7 +1234,7 @@ export default function SpendDashboardPage() {
                         alignItems="center"
                         sx={{
                           "p": "4px 8px",
-                          "borderRadius": "4px",
+                          "borderRadius": radiusPx.sm,
                           "&:hover": { backgroundColor: palette.background.alt },
                         }}
                       >

@@ -7,7 +7,14 @@ import {
 } from "../../../application/hooks/useGovernanceOs";
 import GovernanceTooltip from "./GovernanceTooltip";
 import { CustomizableButton } from "../button/customizable-button";
-import { border as borderPalette, background, text, brand, status } from "../../themes/palette";
+import {
+  border as borderPalette,
+  background,
+  text,
+  brand,
+  status,
+  radiusPx,
+} from "../../themes/palette";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 const ActivationHistory: React.FC = () => {
@@ -32,7 +39,7 @@ const ActivationHistory: React.FC = () => {
       <Box
         sx={{
           border: `1px dashed ${borderPalette.light}`,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           p: "16px",
           background: background.main,
         }}
@@ -51,7 +58,7 @@ const ActivationHistory: React.FC = () => {
     <Box
       sx={{
         border: `1px solid ${borderPalette.dark}`,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         p: "16px",
         background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
       }}
@@ -74,7 +81,7 @@ const ActivationHistory: React.FC = () => {
                 alignItems: "center",
                 justifyContent: "space-between",
                 p: "12px",
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 border: `1px solid ${borderPalette.light}`,
                 background: isActive ? alpha(brand.primary, 0.04) : background.main,
               }}
@@ -94,7 +101,7 @@ const ActivationHistory: React.FC = () => {
                       alignItems: "center",
                       height: 20,
                       px: 1,
-                      borderRadius: "4px",
+                      borderRadius: radiusPx.sm,
                       fontSize: 11,
                       fontWeight: isActive ? 500 : 400,
                       backgroundColor: isActive ? status.success.bg : background.hover,

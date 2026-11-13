@@ -15,6 +15,7 @@ import {
   IFolderTreeNode,
   FOLDER_COLORS,
 } from "../../../../../domain/interfaces/i.virtualFolder";
+import { palette, radiusPx } from "../../../../themes/palette";
 
 interface CreateFolderModalProps {
   isOpen: boolean;
@@ -144,7 +145,7 @@ export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
               color: "text.secondary",
             }}
           >
-            Folder name <span style={{ color: "#EF4444" }}>*</span>
+            Folder name <span style={{ color: palette.riskMark.critical }}>*</span>
           </Typography>
           <Field
             autoFocus
@@ -198,7 +199,7 @@ export const CreateFolderModal: React.FC<CreateFolderModalProps> = ({
                 sx={{
                   "width": 28,
                   "height": 28,
-                  "borderRadius": "4px",
+                  "borderRadius": radiusPx.sm,
                   "backgroundColor": c,
                   "cursor": "pointer",
                   "border": color === c ? "2px solid #101828" : "2px solid transparent",

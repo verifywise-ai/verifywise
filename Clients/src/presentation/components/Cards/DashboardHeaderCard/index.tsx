@@ -3,7 +3,7 @@ import { useState, ReactNode } from "react";
 import { Stack, Typography, Box } from "@mui/material";
 import { ArrowRight as RightArrow } from "lucide-react";
 import { useNavigate } from "react-router";
-import { background, border as borderPalette } from "../../../themes/palette";
+import { background, border as borderPalette, palette as vwPalette } from "../../../themes/palette";
 
 interface HeaderCardProps {
   title: string;
@@ -74,7 +74,7 @@ export function DashboardHeaderCard({
       <Typography
         sx={{
           fontSize: 13,
-          color: "#8594AC",
+          color: vwPalette.text.accent,
           pb: "2px",
           whiteSpace: "nowrap",
           overflow: "hidden",
@@ -90,7 +90,7 @@ export function DashboardHeaderCard({
           minHeight: 32,
           fontWeight: 600,
           fontSize: 15,
-          color: "#1f2937",
+          color: vwPalette.text.primary,
           wordBreak: "break-word",
         }}
       >

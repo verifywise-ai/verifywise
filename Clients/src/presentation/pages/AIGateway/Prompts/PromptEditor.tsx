@@ -56,6 +56,7 @@ import CustomizableSkeleton from "../../../components/Skeletons";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import palette from "../../../themes/palette";
+import { palette as vwPalette, radiusPx } from "../../../themes/palette";
 import {
   useCardSx,
   useGatewayModels,
@@ -112,7 +113,7 @@ function SortableMessageBlock({
           px: "16px",
           py: "8px",
           borderBottom: `1px solid ${palette.border.light}`,
-          bgcolor: "#F9FAFB",
+          bgcolor: vwPalette.background.alt,
         }}
       >
         <Box
@@ -131,7 +132,7 @@ function SortableMessageBlock({
             fontSize: 13,
             fontWeight: 600,
             textTransform: "uppercase",
-            color: "#344054",
+            color: vwPalette.text.secondary,
             cursor: "pointer",
             outline: "none",
           }}
@@ -649,7 +650,7 @@ export default function PromptEditorPage() {
           flex: 1,
           overflow: "hidden",
           border: `1px solid ${palette.border.light}`,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
         }}
       >
         {/* ─── LEFT: Editor ──────────────────────────────────────── */}
@@ -785,7 +786,7 @@ export default function PromptEditorPage() {
                     gap: "4px",
                     px: "8px",
                     py: "2px",
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     border: `1px solid ${palette.border.light}`,
                     bgcolor: "#F0F9FF",
                     cursor: "default",
@@ -822,8 +823,11 @@ export default function PromptEditorPage() {
                   "cursor": "pointer",
                   "fontSize": 12,
                   "fontWeight": testTab === tab ? 600 : 400,
-                  "color": testTab === tab ? "#13715B" : "text.secondary",
-                  "borderBottom": testTab === tab ? "2px solid #13715B" : "2px solid transparent",
+                  "color": testTab === tab ? vwPalette.brand.primary : "text.secondary",
+                  "borderBottom":
+                    testTab === tab
+                      ? `2px solid ${vwPalette.brand.primary}`
+                      : "2px solid transparent",
                   "&:hover": { bgcolor: "action.hover" },
                 }}
               >
@@ -913,12 +917,12 @@ export default function PromptEditorPage() {
                           maxWidth: "85%",
                           px: "16px",
                           py: "12px",
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                           fontSize: 13,
                           lineHeight: 1.6,
                           whiteSpace: "pre-wrap",
-                          bgcolor: cm.role === "user" ? "#EEF4FF" : "#F9FAFB",
-                          color: "#344054",
+                          bgcolor: cm.role === "user" ? "#EEF4FF" : vwPalette.background.alt,
+                          color: vwPalette.text.secondary,
                         }}
                       >
                         {cm.content || (isSending && idx === chatMessages.length - 1 ? "..." : "")}
@@ -997,7 +1001,7 @@ export default function PromptEditorPage() {
                   onClick={handleSendTest}
                   disabled={isSending || !selectedEndpoint}
                   sx={{
-                    "bgcolor": "#13715B",
+                    "bgcolor": vwPalette.brand.primary,
                     "color": "#fff",
                     "width": 34,
                     "height": 34,
@@ -1066,7 +1070,7 @@ export default function PromptEditorPage() {
               max={2}
               step={0.1}
               valueLabelDisplay="auto"
-              sx={{ color: "#13715B" }}
+              sx={{ color: vwPalette.brand.primary }}
             />
           </Box>
           <Box>
@@ -1208,14 +1212,15 @@ export default function PromptEditorPage() {
                   sx={{
                     "p": "16px",
                     "cursor": "pointer",
-                    "borderRadius": "4px",
+                    "borderRadius": radiusPx.sm,
                     "border":
                       v.version === currentVersion
-                        ? "1px solid #13715B"
+                        ? `1px solid ${vwPalette.brand.primary}`
                         : `1px solid ${palette.border.light}`,
                     "bgcolor": v.version === currentVersion ? "#F6FEF9" : "background.paper",
                     "&:hover": {
-                      bgcolor: v.version === currentVersion ? "#ECFDF3" : "action.hover",
+                      bgcolor:
+                        v.version === currentVersion ? vwPalette.status.success.bg : "action.hover",
                     },
                     "transition": "background-color 150ms ease",
                   }}

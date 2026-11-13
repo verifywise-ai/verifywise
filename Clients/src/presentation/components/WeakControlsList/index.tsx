@@ -9,6 +9,7 @@ import {
   text as textColors,
   border as borderPalette,
   background,
+  radiusPx,
 } from "../../themes/palette";
 
 interface WeakControl {
@@ -109,7 +110,7 @@ export default function WeakControlsList({
           "&::-webkit-scrollbar-track": { backgroundColor: "transparent" },
           "&::-webkit-scrollbar-thumb": {
             "backgroundColor": background.hover,
-            "borderRadius": "4px",
+            "borderRadius": radiusPx.sm,
             "&:hover": { backgroundColor: textColors.muted },
           },
         }}
@@ -129,7 +130,7 @@ export default function WeakControlsList({
                 key={`${ctrl.control_id}-${i}`}
                 sx={{
                   "padding": "12px 16px",
-                  "borderRadius": "4px",
+                  "borderRadius": radiusPx.sm,
                   "border": `1px solid ${borderPalette.light}`,
                   "backgroundColor": background.main,
                   "transition": "background-color 0.2s ease, border-color 0.2s ease",
@@ -152,7 +153,7 @@ export default function WeakControlsList({
                       sx={{
                         width: 28,
                         height: 28,
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                         backgroundColor: priority.colors.bg,
                         border: `1px solid ${priority.colors.border}`,
                         display: "flex",
@@ -200,11 +201,11 @@ export default function WeakControlsList({
                   value={ctrl.overall_score}
                   sx={{
                     "height": 4,
-                    "borderRadius": "4px",
+                    "borderRadius": radiusPx.sm,
                     "mb": recs.length > 0 ? "8px" : 0,
                     "backgroundColor": background.hover,
                     "& .MuiLinearProgress-bar": {
-                      borderRadius: "4px",
+                      borderRadius: radiusPx.sm,
                       backgroundColor: getScoreColor(ctrl.overall_score),
                     },
                   }}

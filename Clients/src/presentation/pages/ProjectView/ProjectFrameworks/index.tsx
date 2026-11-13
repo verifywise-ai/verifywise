@@ -23,7 +23,7 @@ import { useCanCheck } from "../../../../application/hooks/useCan";
 import { TabFilterBar } from "../../../components/FrameworkFilter/TabFilterBar";
 import { useSearchParams } from "react-router";
 import useUsers from "../../../../application/hooks/useUsers";
-import { text } from "../../../themes/palette";
+import { text, palette as vwPalette } from "../../../themes/palette";
 
 export const FRAMEWORK_IDS = {
   EU_AI_ACT: 1,
@@ -314,7 +314,7 @@ const ProjectFrameworks = ({
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             </svg>
           </Box>
-          <Box sx={{ fontSize: 18, fontWeight: 600, color: "#374151", mb: 1 }}>
+          <Box sx={{ fontSize: 18, fontWeight: 600, color: vwPalette.text.secondary, mb: 1 }}>
             No frameworks installed
           </Box>
           <Box sx={{ fontSize: 14, color: "status.default.text", maxWidth: 400, mb: 3 }}>
@@ -586,7 +586,7 @@ const ProjectFrameworks = ({
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             </svg>
           </Box>
-          <Box sx={{ fontSize: 18, fontWeight: 600, color: "#374151", mb: 1 }}>
+          <Box sx={{ fontSize: 18, fontWeight: 600, color: vwPalette.text.secondary, mb: 1 }}>
             No frameworks installed
           </Box>
           <Box sx={{ fontSize: 14, color: "status.default.text", maxWidth: 400, mb: 3 }}>

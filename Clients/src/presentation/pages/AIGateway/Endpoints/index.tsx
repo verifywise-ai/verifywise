@@ -25,6 +25,7 @@ import StandardModal from "../../../components/Modals/StandardModal";
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import palette from "../../../themes/palette";
+import { palette as vwPalette, radiusPx } from "../../../themes/palette";
 import { useCardSx, ProviderIcon, useGatewayModels, slugify } from "../shared";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import CustomizableSkeleton from "../../../components/Skeletons";
@@ -298,7 +299,7 @@ export default function EndpointsPage() {
                 alignItems: "flex-start",
                 gap: "8px",
                 p: "12px 16px",
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 border: "1px solid #FEDF89",
                 bgcolor: "#FFFAEB",
                 mb: "8px",
@@ -307,16 +308,19 @@ export default function EndpointsPage() {
               <TriangleAlert
                 size={16}
                 strokeWidth={1.5}
-                color="#B54708"
+                color={vwPalette.risk.high.text}
                 style={{ flexShrink: 0, marginTop: 1 }}
               />
               <Box>
-                <Typography fontSize={13} fontWeight={500} color="#B54708">
+                <Typography fontSize={13} fontWeight={500} color={vwPalette.risk.high.text}>
                   No API keys configured
                 </Typography>
                 <Typography fontSize={12} color="#93370D" mt="2px">
                   You need at least one LLM provider API key before you can create an endpoint.{" "}
-                  <Link to="/ai-gateway/settings" style={{ color: "#B54708", fontWeight: 500 }}>
+                  <Link
+                    to="/ai-gateway/settings"
+                    style={{ color: vwPalette.risk.high.text, fontWeight: 500 }}
+                  >
                     Go to Settings
                   </Link>{" "}
                   to add your OpenAI, Anthropic, or other provider keys.
@@ -368,7 +372,7 @@ export default function EndpointsPage() {
                   sx={{
                     "p": "12px 16px",
                     "border": `1px solid ${palette.border.dark}`,
-                    "borderRadius": "4px",
+                    "borderRadius": radiusPx.sm,
                     "cursor": "pointer",
                     "&:hover": { bgcolor: "action.hover" },
                   }}
@@ -516,7 +520,7 @@ export default function EndpointsPage() {
               sx={{
                 p: "8px 12px",
                 bgcolor: palette.background.accent,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 border: `1px solid ${palette.border.light}`,
               }}
             >

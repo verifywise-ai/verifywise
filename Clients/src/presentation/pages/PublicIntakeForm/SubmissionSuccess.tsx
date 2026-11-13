@@ -3,6 +3,7 @@ import { Box, Typography } from "@mui/material";
 import { Edit, Hash, Clock } from "lucide-react";
 import { useEffect } from "react";
 import { CustomizableButton } from "../../components/button/customizable-button";
+import { palette } from "../../themes/palette";
 
 interface SubmissionState {
   submissionId: number;
@@ -50,7 +51,7 @@ export function SubmissionSuccess() {
       component="main"
       sx={{
         minHeight: "100vh",
-        backgroundColor: "#fafafa",
+        backgroundColor: palette.background.alt,
         display: "flex",
         flexDirection: "column",
         alignItems: "center",
@@ -92,7 +93,7 @@ export function SubmissionSuccess() {
               width: 24,
               height: 24,
               borderRadius: "50%",
-              backgroundColor: "#fafafa",
+              backgroundColor: palette.background.alt,
             }}
           />
           <Box
@@ -104,7 +105,7 @@ export function SubmissionSuccess() {
               width: 24,
               height: 24,
               borderRadius: "50%",
-              backgroundColor: "#fafafa",
+              backgroundColor: palette.background.alt,
             }}
           />
           <Box
@@ -140,8 +141,8 @@ export function SubmissionSuccess() {
               {
                 label: "Status",
                 value: "Pending review",
-                color: "#f59e0b",
-                icon: <Clock size={13} color="#f59e0b" />,
+                color: palette.riskMark.medium,
+                icon: <Clock size={13} color={palette.riskMark.medium} />,
               },
             ];
             return rows.map((row, i) => (

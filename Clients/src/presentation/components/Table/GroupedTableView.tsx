@@ -2,6 +2,7 @@ import React from "react";
 import { Box, Stack, Typography } from "@mui/material";
 import { GroupBadge } from "./GroupBy";
 import { GroupedData } from "../../../application/hooks/useTableGrouping";
+import { palette } from "../../themes/palette";
 
 interface GroupedTableViewProps<T> {
   groupedData: GroupedData<T>[] | null;
@@ -50,7 +51,7 @@ export function GroupedTableView<T>({
               sx={{
                 fontSize: "15px",
                 fontWeight: 600,
-                color: "#374151",
+                color: palette.text.secondary,
                 marginBottom: "4px",
                 paddingLeft: "4px",
                 display: "flex",

@@ -13,7 +13,13 @@ import {
   ResponsiveContainer,
 } from "recharts";
 import { vwTooltipStyle, ChartOutlineWrapper } from "../../Charts/VWCharts";
-import { text, background, border as borderPalette } from "../../../themes/palette";
+import {
+  text,
+  background,
+  border as borderPalette,
+  palette as vwPalette,
+  radiusPx,
+} from "../../../themes/palette";
 
 interface TaskRadarCardProps {
   overdue: number;
@@ -22,9 +28,9 @@ interface TaskRadarCardProps {
 }
 
 const BAR_COLORS: Record<string, string> = {
-  "Overdue": "#EF4444",
-  "Due soon": "#F59E0B",
-  "Upcoming": "#10B981",
+  "Overdue": vwPalette.riskMark.critical,
+  "Due soon": vwPalette.riskMark.medium,
+  "Upcoming": vwPalette.status.success.strong,
 };
 
 export function TaskRadarCard({ overdue, due, upcoming }: TaskRadarCardProps) {
@@ -41,7 +47,7 @@ export function TaskRadarCard({ overdue, due, upcoming }: TaskRadarCardProps) {
     <Stack
       sx={{
         "border": `1px solid ${borderPalette.dark}`,
-        "borderRadius": "4px",
+        "borderRadius": radiusPx.sm,
         "background": `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
         "width": "100%",
         "padding": "16px",

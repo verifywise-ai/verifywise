@@ -22,7 +22,7 @@ import {
   getAllLlmApiKeys,
   type LLMApiKey,
 } from "../../../application/repository/deepEval.repository";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 
 interface ChoiceScore {
   label: string;
@@ -127,7 +127,7 @@ function ScoreInput({ value, onChange }: { value: number; onChange: (val: number
           textAlign: "center",
         },
         "& .MuiOutlinedInput-root": {
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
         },
       }}
     />

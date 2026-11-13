@@ -1,7 +1,7 @@
 import { useMemo } from "react";
 import { Box, Typography, Tooltip, Stack } from "@mui/material";
 import { ShieldCheck, ShieldAlert, ShieldX, ShieldOff } from "lucide-react";
-import { status, text as textColors, background } from "../../themes/palette";
+import { status, text as textColors, background, radiusPx } from "../../themes/palette";
 import Chip from "../Chip";
 import CustomizableSkeleton from "../Skeletons";
 import { EmptyState } from "../EmptyState";
@@ -126,7 +126,7 @@ export default function ReadinessHeatmap({
           "&::-webkit-scrollbar-track": { backgroundColor: "transparent" },
           "&::-webkit-scrollbar-thumb": {
             "backgroundColor": background.hover,
-            "borderRadius": "4px",
+            "borderRadius": radiusPx.sm,
             "&:hover": { backgroundColor: textColors.muted },
           },
         }}
@@ -154,7 +154,7 @@ export default function ReadinessHeatmap({
                   sx={{
                     "width": 36,
                     "height": 36,
-                    "borderRadius": "4px",
+                    "borderRadius": radiusPx.sm,
                     "backgroundColor": colors.bg,
                     "border": `1px solid ${colors.border}`,
                     "display": "flex",

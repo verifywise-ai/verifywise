@@ -1,4 +1,4 @@
-import { brand, text, background } from "../../themes/palette";
+import { brand, text, background, palette as vwPalette, radiusPx } from "../../themes/palette";
 export const textfieldStyle = {
   "backgroundColor": `${background.main}`,
   "& input": {
@@ -18,9 +18,9 @@ export const styles = {
   },
   container: {
     width: "100%",
-    backgroundColor: "#FCFCFD",
+    backgroundColor: vwPalette.background.main,
     padding: 10,
-    borderRadius: "4px",
+    borderRadius: radiusPx.sm,
     gap: 10,
     justifyContent: "space-between",
     minHeight: "520px",

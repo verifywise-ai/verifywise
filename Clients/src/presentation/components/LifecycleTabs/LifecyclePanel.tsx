@@ -8,7 +8,7 @@ import DatePicker from "../Inputs/Datepicker";
 import Alert from "../Alert";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { LIFECYCLE_STAGE_LABELS, LifecycleStage } from "../../../domain/enums/lifecycleStage.enum";
-import { border } from "../../themes/palette";
+import { border, radiusPx } from "../../themes/palette";
 import { lifecycleLabelSx, lifecycleValueSx } from "./lifecyclePanelStyles";
 
 const STAGE_VARIANT = {
@@ -103,7 +103,7 @@ const LifecyclePanel = ({
       data-testid={testId}
       sx={{
         border: `1px solid ${border.dark}`,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         p: "16px",
         mb: "24px",
         backgroundColor: "background.main",

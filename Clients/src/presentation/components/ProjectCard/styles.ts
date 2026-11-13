@@ -4,6 +4,7 @@
 
 import { Box, Button, Typography } from "@mui/material";
 import { styled } from "@mui/material/styles";
+import { palette } from "../../themes/palette";
 
 export const Card = styled(Box)(({ theme }) => ({
   display: "flex",
@@ -44,7 +45,7 @@ export const Btn = styled(Button)(({ theme }) => ({
 
 export const styles = {
   subtitle: {
-    color: "#8594AC",
+    color: palette.text.accent,
     fontSize: 11,
   },
   imageBox: {
@@ -53,7 +54,7 @@ export const styles = {
     borderRadius: 2,
   },
   imageTitle: {
-    color: "#8594AC",
+    color: palette.text.accent,
     fontSize: 12,
     ml: 2,
   },
@@ -69,7 +70,7 @@ export const styles = {
     mt: 5,
   },
   progressBarTitle: {
-    color: "#8594AC",
+    color: palette.text.accent,
     fontSize: 11,
     mb: 10,
     mt: 1,

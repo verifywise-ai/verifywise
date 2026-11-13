@@ -12,7 +12,7 @@ import {
   SecuritySeverity,
   SecuritySummary,
 } from "../../../../domain/ai-detection/types";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import { SecurityFindingRow } from "./SecurityFindingRow";
 
 interface SecurityFindingsTabProps {
@@ -60,7 +60,7 @@ export function SecurityFindingsTab({
             sx={{
               backgroundColor: palette.background.main,
               border: `1px solid ${palette.border.dark}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: 2,
               textAlign: "center",
             }}
@@ -76,7 +76,7 @@ export function SecurityFindingsTab({
             sx={{
               backgroundColor: palette.status.error.bg,
               border: `1px solid ${palette.status.error.border}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: 2,
               textAlign: "center",
               cursor: "pointer",
@@ -101,7 +101,7 @@ export function SecurityFindingsTab({
             sx={{
               backgroundColor: palette.risk.high.bg,
               border: `1px solid ${palette.risk.high.border}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: 2,
               textAlign: "center",
               cursor: "pointer",
@@ -123,7 +123,7 @@ export function SecurityFindingsTab({
             sx={{
               backgroundColor: palette.status.warning.bg,
               border: `1px solid ${palette.status.warning.border}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: 2,
               textAlign: "center",
               cursor: "pointer",
@@ -146,7 +146,7 @@ export function SecurityFindingsTab({
             sx={{
               backgroundColor: palette.status.info.bg,
               border: `1px solid ${palette.status.info.border}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: 2,
               textAlign: "center",
               cursor: "pointer",
@@ -178,7 +178,7 @@ export function SecurityFindingsTab({
             sx={{
               backgroundColor: palette.status.success.bg,
               border: `1px solid ${palette.status.success.border}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: 4,
               textAlign: "center",
             }}

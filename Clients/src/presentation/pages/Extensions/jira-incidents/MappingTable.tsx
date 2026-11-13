@@ -8,6 +8,7 @@ import {
   useTheme,
 } from "@mui/material";
 import { VWSelect } from "../../../components/VWComponents";
+import { radiusPx } from "../../../themes/palette";
 
 interface MappingTableProps {
   sourceHeader: string;
@@ -37,7 +38,7 @@ export function MappingTable({
     <>
       <Table
         size="small"
-        sx={{ border: `1px solid ${theme.palette.border.dark}`, borderRadius: "4px" }}
+        sx={{ border: `1px solid ${theme.palette.border.dark}`, borderRadius: radiusPx.sm }}
       >
         <TableHead>
           <TableRow>

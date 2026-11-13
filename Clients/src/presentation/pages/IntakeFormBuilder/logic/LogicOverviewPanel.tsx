@@ -5,6 +5,7 @@ import type { SchemaLogicError } from "../../../../application/utils/intakeFormL
 import type { FormField, FormRouting } from "../types";
 import type { RoutingReviewer } from "../routing/RoutingSettingsSection";
 import { buildLogicOverview, MISSING_FIELD, type ConditionText } from "./logicOverview";
+import { radiusPx } from "../../../themes/palette";
 
 interface LogicOverviewPanelProps {
   fields: FormField[];
@@ -56,7 +57,7 @@ export function LogicOverviewPanel({
         "gap": "4px",
         "p": "8px 10px",
         "border": `1px solid ${errors.length > 0 ? theme.palette.status.error.text : theme.palette.border.dark}`,
-        "borderRadius": "4px",
+        "borderRadius": radiusPx.sm,
         "cursor": "pointer",
         "&:hover": { backgroundColor: theme.palette.background.accent },
       }}
@@ -82,7 +83,7 @@ export function LogicOverviewPanel({
           "&:focus-visible": {
             outline: `2px solid ${theme.palette.primary.main}`,
             outlineOffset: "2px",
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
           },
         }}
       >

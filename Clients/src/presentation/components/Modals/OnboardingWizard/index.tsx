@@ -25,7 +25,7 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Box, Modal, Stack, Typography } from "@mui/material";
 import { LucideIcon, Shield, Check, X } from "lucide-react";
 import { CustomizableButton } from "../../button/customizable-button";
-import { border, icon, text } from "../../../themes/palette";
+import { border, icon, text, palette as vwPalette, radiusPx } from "../../../themes/palette";
 import { textStyles, fontSize } from "../../../themes/typography";
 import { grey } from "../../../themes";
 
@@ -176,7 +176,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         <Box
           sx={{
             background: isDark
-              ? "linear-gradient(135deg, #e0e0e0 0%, #d2d2d2 100%)"
+              ? `linear-gradient(135deg, ${vwPalette.border.light} 0%, #d2d2d2 100%)`
               : "linear-gradient(135deg, #1a1f2e 0%, #2d3548 100%)",
             padding: "32px 32px 28px",
           }}
@@ -242,7 +242,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 "display": "flex",
                 "alignItems": "center",
                 "padding": "4px",
-                "borderRadius": "4px",
+                "borderRadius": radiusPx.sm,
                 "&:hover": {
                   color: isDark ? "#6b5c47" : grey[300],
                   bgcolor: isDark ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.05)",
@@ -319,7 +319,11 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                         flexShrink: 0,
                       }}
                     >
-                      <Check size={10} color={isDark ? "#e0e0e0" : grey[900]} strokeWidth={3} />
+                      <Check
+                        size={10}
+                        color={isDark ? vwPalette.border.light : grey[900]}
+                        strokeWidth={3}
+                      />
                     </Box>
                   )}
                   <Typography
@@ -356,7 +360,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           justifyContent="space-between"
           sx={{
             bgcolor: "#FAFBFC",
-            borderTop: "1px solid #E0E4E9",
+            borderTop: `1px solid ${vwPalette.border.light}`,
             padding: "14px 32px",
           }}
         >

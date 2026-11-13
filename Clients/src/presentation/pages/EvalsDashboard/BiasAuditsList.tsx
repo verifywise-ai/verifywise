@@ -37,7 +37,7 @@ import NewBiasAuditModal from "./NewBiasAuditModal";
 import { getStatusChip, getModeChip } from "./biasAuditHelpers";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import singleTheme from "../../themes/v1SingleTheme";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 import {
   listBiasAudits,
   deleteBiasAudit,
@@ -382,7 +382,7 @@ export default function BiasAuditsList({ orgId, onViewAudit }: BiasAuditsListPro
                           alignItems: "center",
                           px: "8px",
                           py: "2px",
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                           backgroundColor: palette.status.success.bg,
                           color: palette.status.success.text,
                           fontSize: "12px",

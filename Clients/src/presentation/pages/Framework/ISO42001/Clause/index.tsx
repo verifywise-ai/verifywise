@@ -26,7 +26,7 @@ import { useCanCheck } from "../../../../../application/hooks/useCan";
 import { Project } from "../../../../../domain/types/Project";
 import { TabFilterBar } from "../../../../components/FrameworkFilter/TabFilterBar";
 import { StatsCard } from "../../../../components/Cards/StatsCard";
-import { text } from "../../../../themes/palette";
+import { text, palette as vwPalette } from "../../../../themes/palette";
 import { textStyles } from "../../../../themes/typography";
 
 const ISO42001Clause = ({
@@ -373,7 +373,7 @@ const ISO42001Clause = ({
                     alignItems: "center",
                     padding: "10px 16px",
                     backgroundColor: "#fafbfc",
-                    borderBottom: "1px solid #eaecf0",
+                    borderBottom: `1px solid ${vwPalette.border.light}`,
                   }}
                 >
                   <Typography
@@ -515,8 +515,8 @@ const ISO42001Clause = ({
           const count = filteredSubClausesCountMemo[clause.id ?? 0];
           const chipColor =
             count !== undefined && count > 0
-              ? { bg: "#E6F4EA", color: "status.success.text" }
-              : { bg: "#FFF8E1", color: "#795548" };
+              ? { bg: vwPalette.status.success.bg, color: "status.success.text" }
+              : { bg: vwPalette.risk.medium.bg, color: vwPalette.risk.medium.text };
           return (
             <Stack key={clause.id} sx={styles.container}>
               <Accordion

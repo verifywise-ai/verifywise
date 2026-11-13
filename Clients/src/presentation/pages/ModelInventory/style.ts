@@ -1,6 +1,6 @@
 /* eslint-disable @typescript-eslint/no-unused-vars */
 import { Theme, SxProps } from "@mui/material/styles";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 
 // Main page styles (index.tsx)
 export const mainStackStyle = {
@@ -108,14 +108,14 @@ export const tableRowDeletingStyle = {
 
 export const loadingContainerStyle = (_: Theme) => ({
   border: `1px solid ${palette.border.light}`,
-  borderRadius: "4px",
+  borderRadius: radiusPx.sm,
   padding: "60px 20px",
   minHeight: 200,
 });
 
 export const emptyStateContainerStyle = (_: Theme) => ({
   border: `1px solid ${palette.border.light}`,
-  borderRadius: "4px",
+  borderRadius: radiusPx.sm,
   padding: "60px 20px 80px 20px",
   gap: "20px",
   minHeight: 200,

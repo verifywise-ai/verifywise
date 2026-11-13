@@ -1,5 +1,6 @@
 import React from "react";
 import { Stack, Typography } from "@mui/material";
+import { radiusPx } from "../../../themes/palette";
 
 interface StructInfoPanelsProps {
   summary?: string | null;
@@ -27,7 +28,7 @@ const StructInfoPanels: React.FC<StructInfoPanelsProps> = ({
             border: "1px solid #eee",
             padding: "12px",
             backgroundColor: "background.accent",
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
           }}
         >
           <Typography fontSize={13} sx={{ marginBottom: "8px" }}>
@@ -45,7 +46,7 @@ const StructInfoPanels: React.FC<StructInfoPanelsProps> = ({
             border: "1px solid #e8d5d5",
             padding: "12px",
             backgroundColor: "#fef5f5",
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
           }}
         >
           <Typography fontSize={13} sx={{ marginBottom: "8px", fontWeight: 600 }}>
@@ -67,7 +68,7 @@ const StructInfoPanels: React.FC<StructInfoPanelsProps> = ({
             border: "1px solid #d5e8d5",
             padding: "12px",
             backgroundColor: "#f5fef5",
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
           }}
         >
           <Typography fontSize={13} sx={{ marginBottom: "8px", fontWeight: 600 }}>

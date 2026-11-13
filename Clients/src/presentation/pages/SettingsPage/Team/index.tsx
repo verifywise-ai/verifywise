@@ -54,6 +54,7 @@ interface AlertState {
 import Alert from "../../../components/Alert";
 import { pageOfLabel } from "../../../components/Table/pageOfLabel";
 import InviteLinkModal from "./InviteLinkModal";
+import { palette } from "../../../themes/palette";
 
 interface FallbackLinkState {
   link: string;
@@ -491,7 +492,7 @@ const TeamManagement: React.FC = (): JSX.Element => {
         >
           Team members
         </Typography>
-        <Typography sx={{ fontSize: 13, color: "#666666", mb: 2 }}>
+        <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mb: 2 }}>
           Invite people and set each member's role. Admins manage the whole workspace and its
           settings. Editors can create and edit governance records. Reviewers can review and approve
           or reject. Auditors have read-only access.
@@ -624,8 +625,8 @@ const TeamManagement: React.FC = (): JSX.Element => {
                                 ...singleTheme.tableStyles.primary.body.cell,
                                 backgroundColor:
                                   sortConfig.key && sortConfig.key.toLowerCase().includes("name")
-                                    ? "#e8e8e8"
-                                    : "#fafafa",
+                                    ? palette.border.light
+                                    : palette.background.alt,
                               }}
                             >
                               {[member.name, member.surname].filter(Boolean).join(" ")}

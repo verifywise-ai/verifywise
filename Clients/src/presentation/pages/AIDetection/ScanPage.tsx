@@ -53,7 +53,7 @@ import {
   AIDetectionStats,
 } from "../../../domain/ai-detection/types";
 import { useAIDetectionSidebarContext } from "../../../application/contexts/AIDetectionSidebar.context";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 
 type ScanState = "idle" | "scanning" | "completed" | "failed";
 
@@ -375,7 +375,12 @@ export default function ScanPage() {
           }}
         >
           {[1, 2, 3, 4, 5, 6].map((i) => (
-            <Skeleton key={i} variant="rectangular" height={90} sx={{ borderRadius: "4px" }} />
+            <Skeleton
+              key={i}
+              variant="rectangular"
+              height={90}
+              sx={{ borderRadius: radiusPx.sm }}
+            />
           ))}
         </Box>
       )}
@@ -538,7 +543,7 @@ export default function ScanPage() {
                 p: 2,
                 backgroundColor: palette.status.error.bg,
                 border: `1px solid ${palette.status.error.border}`,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 display: "flex",
                 alignItems: "center",
                 gap: 1,
@@ -559,7 +564,7 @@ export default function ScanPage() {
           sx={{
             backgroundColor: palette.background.main,
             border: `1px solid ${palette.border.dark}`,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             p: "8px",
           }}
         >
@@ -621,7 +626,7 @@ export default function ScanPage() {
           sx={{
             backgroundColor: palette.background.main,
             border: `1px solid ${palette.border.dark}`,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             p: "8px",
           }}
         >
@@ -648,7 +653,7 @@ export default function ScanPage() {
               sx={{
                 p: 2,
                 backgroundColor: palette.background.accent,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 textAlign: "center",
               }}
             >
@@ -663,7 +668,7 @@ export default function ScanPage() {
               sx={{
                 p: 2,
                 backgroundColor: palette.background.accent,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 textAlign: "center",
               }}
             >
@@ -680,7 +685,7 @@ export default function ScanPage() {
               sx={{
                 p: 2,
                 backgroundColor: palette.background.accent,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 textAlign: "center",
               }}
             >
@@ -716,7 +721,7 @@ export default function ScanPage() {
           sx={{
             backgroundColor: palette.background.main,
             border: `1px solid ${palette.status.error.border}`,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             p: 3,
           }}
         >

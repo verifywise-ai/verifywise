@@ -1,5 +1,5 @@
 import { Theme } from "@mui/material/styles";
-import { background } from "../../themes/palette";
+import { background, palette as vwPalette, radiusPx } from "../../themes/palette";
 
 export const createProjectFormStyles = {
   formContainer: {
@@ -46,7 +46,7 @@ export const createProjectFormStyles = {
       },
     },
     "& .MuiChip-root": {
-      borderRadius: "4px",
+      borderRadius: radiusPx.sm,
     },
   }),
 
@@ -77,7 +77,7 @@ export const createProjectFormStyles = {
         "& .MuiAutocomplete-listbox": {
           "& .MuiAutocomplete-option": {
             fontSize: "13px",
-            color: "#1c2130",
+            color: vwPalette.text.primary,
             paddingLeft: "9px",
             paddingRight: "9px",
           },
@@ -96,7 +96,7 @@ export const createProjectFormStyles = {
 
   errorText: {
     mt: 4,
-    color: "#f04438",
+    color: vwPalette.status.error.text,
     fontWeight: 300,
   },
 

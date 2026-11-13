@@ -86,6 +86,7 @@ import ReviewTimeField, { getReviewDaysError, type ReviewTimeStatus } from "./Re
 import { DEFAULT_REVIEW_DAYS } from "../../../domain/intake/reviewTime";
 import Chip from "../../components/Chip";
 import { PageBreadcrumbs } from "../../components/breadcrumbs/PageBreadcrumbs";
+import { palette, radiusPx } from "../../themes/palette";
 
 // ============================================================================
 // Helpers
@@ -977,8 +978,8 @@ export function IntakeFormBuilder() {
                             : "Type: Model inventory"
                       }
                       uppercase={false}
-                      backgroundColor="#E3F2FD"
-                      textColor="#1565C0"
+                      backgroundColor={palette.status.info.bg}
+                      textColor={palette.status.info.text}
                     />
                     {isDirty && (
                       <Typography sx={{ color: theme.palette.text.accent, fontSize: "11px" }}>
@@ -1063,7 +1064,7 @@ export function IntakeFormBuilder() {
                             "display": "flex",
                             "alignItems": "center",
                             "p": 0.5,
-                            "borderRadius": "4px",
+                            "borderRadius": radiusPx.sm,
                             "&:hover": { backgroundColor: theme.palette.background.accent },
                           }}
                         >
@@ -1320,7 +1321,7 @@ export function IntakeFormBuilder() {
                                   <Typography
                                     sx={{
                                       fontSize: 11,
-                                      color: "#DC2626",
+                                      color: palette.riskMark.critical,
                                       fontWeight: 500,
                                       mb: "2px",
                                     }}
@@ -1377,7 +1378,7 @@ export function IntakeFormBuilder() {
                                   <Typography
                                     sx={{
                                       fontSize: 11,
-                                      color: "#DC2626",
+                                      color: palette.riskMark.critical,
                                       fontWeight: 500,
                                       mb: "2px",
                                     }}
@@ -1494,7 +1495,7 @@ export function IntakeFormBuilder() {
                               "fontSize": 13,
                               "minHeight": 34,
                               "backgroundColor": theme.palette.background.main,
-                              "borderRadius": "4px",
+                              "borderRadius": radiusPx.sm,
                               "& .MuiOutlinedInput-input": {
                                 paddingTop: "6px",
                                 paddingBottom: "6px",
@@ -1668,7 +1669,7 @@ export function IntakeFormBuilder() {
         }}
         onSubmit={confirmDeleteField}
         submitButtonText="Delete"
-        submitButtonColor="#c62828"
+        submitButtonColor={palette.status.error.text}
         maxWidth="440px"
         fitContent
       />

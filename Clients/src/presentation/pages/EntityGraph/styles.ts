@@ -1,17 +1,23 @@
 import type { CSSProperties } from "react";
 import { SxProps, Theme } from "@mui/material";
-import { brand, text, border as borderPalette, status } from "../../themes/palette";
+import {
+  brand,
+  text,
+  border as borderPalette,
+  status,
+  palette as vwPalette,
+} from "../../themes/palette";
 
 // Design system colors (from CLAUDE.md)
 const COLORS = {
   primary: `${brand.primary}`,
-  primaryLight: "#f0fdf4",
+  primaryLight: vwPalette.status.success.bg,
   border: `${borderPalette.dark}`,
   borderLight: `${status.default.border}`,
   textPrimary: `${text.secondary}`,
   textSecondary: `${text.icon}`,
   textTertiary: `${text.disabled}`,
-  background: "#fafafa",
+  background: vwPalette.background.alt,
 } as const;
 
 // Container styles

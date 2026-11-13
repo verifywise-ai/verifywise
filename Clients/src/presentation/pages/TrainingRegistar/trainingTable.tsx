@@ -28,6 +28,7 @@ import StandardTablePagination from "../../components/Table/StandardTablePaginat
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { useTranslation } from "../../../application/hooks/useTranslation";
 import type { TrainingAssignmentSummary } from "../../../application/repository/trainingAssignment.repository";
+import { palette } from "../../themes/palette";
 
 const TABLE_COLUMNS: StandardColumn[] = [
   { id: "training_name", label: "TRAINING NAME", sortable: true },
@@ -242,7 +243,10 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
                         ...singleTheme.tableStyles.primary.body.cell,
                         cursor: "pointer",
                         textTransform: "none !important",
-                        backgroundColor: sortConfig.key === "training_name" ? "#e8e8e8" : "#fafafa",
+                        backgroundColor:
+                          sortConfig.key === "training_name"
+                            ? palette.border.light
+                            : palette.background.alt,
                       }}
                     >
                       {training.training_name}

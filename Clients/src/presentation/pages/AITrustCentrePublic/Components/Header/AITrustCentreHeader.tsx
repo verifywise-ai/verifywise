@@ -3,6 +3,7 @@ import { Box, Stack, Typography, CircularProgress } from "@mui/material";
 import { VWLink } from "../../../../components/Link";
 import axios from "axios";
 import { ENV_VARs } from "../../../../../../env.vars";
+import { palette } from "../../../../themes/palette";
 
 interface AITrustCentreHeaderProps {
   data: any;
@@ -47,7 +48,7 @@ const AITrustCentreHeader: React.FC<AITrustCentreHeaderProps> = ({ data, hash })
         backgroundColor: "white",
         padding: 6,
         borderRadius: 1,
-        border: "1px solid #E0E0E0",
+        border: `1px solid ${palette.border.light}`,
         width: "80%",
       }}
     >

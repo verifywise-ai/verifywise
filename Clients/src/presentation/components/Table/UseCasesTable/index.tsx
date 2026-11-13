@@ -12,6 +12,7 @@ import {
 } from "@mui/material";
 import Chip from "../../Chip";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import { palette } from "../../../themes/palette";
 
 export interface UseCaseRow {
   id: number;
@@ -98,7 +99,7 @@ const UseCasesTable: React.FC<UseCasesTableProps> = ({
                 onRowClick?.(useCase.id);
               }}
             >
-              <TableCell sx={{ fontSize: 13, color: "#1F2937", ...bodyCellStyle }}>
+              <TableCell sx={{ fontSize: 13, color: palette.text.primary, ...bodyCellStyle }}>
                 {useCase.name}
               </TableCell>
               <TableCell sx={bodyCellStyle}>

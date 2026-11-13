@@ -77,7 +77,7 @@ import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 
 import Alert from "../../components/Alert";
 import ListStateWrapper from "../../components/ListStateWrapper";
@@ -2343,7 +2343,7 @@ const ModelInventory: React.FC = () => {
                     "height": "34px",
                     "width": "34px",
                     "padding": "8px",
-                    "borderRadius": "4px",
+                    "borderRadius": radiusPx.sm,
                     "border": `1px solid ${palette.border.light}`,
                     "backgroundColor": palette.background.main,
                     "&:hover": {

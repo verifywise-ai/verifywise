@@ -6,7 +6,7 @@
 }
 
 .back-link:hover {
-  color: #13715b;
+  color: var(--vw-brand-primary, #13715b);
 }
 
 /* Article row hover */
@@ -15,7 +15,7 @@
 }
 
 .article-row:hover {
-  background-color: #f9fafb;
+  background-color: var(--vw-background-alt, #f9fafb);
 }
 
 .article-row .arrow-icon {
@@ -23,5 +23,5 @@
 }
 
 .article-row:hover .arrow-icon {
-  color: #13715b;
+  color: var(--vw-brand-primary, #13715b);
 }

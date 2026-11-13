@@ -22,6 +22,7 @@ import Field from "../../../components/Inputs/Field";
 import Select from "../../../components/Inputs/Select";
 import StandardModal from "../../../components/Modals/StandardModal";
 import palette from "../../../themes/palette";
+import { palette as vwPalette, radiusPx } from "../../../themes/palette";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { getGatewayErrorText } from "../../../../application/utils/apiErrorReason";
 import { validateApiKeyFormat } from "../../../../application/utils/apiKeyValidation";
@@ -68,7 +69,7 @@ function ArchDiagram() {
   const cardBase = {
     background: "linear-gradient(180deg, #ffffff 0%, #fafbfc 100%)",
     border: `0.5px solid #c0c5cc`,
-    borderRadius: "4px",
+    borderRadius: radiusPx.sm,
     p: "14px 18px",
     boxShadow: "0 1px 3px rgba(16,24,40,0.05)",
   };
@@ -76,7 +77,7 @@ function ArchDiagram() {
   const featureIconBase = {
     width: 26,
     height: 26,
-    borderRadius: "4px",
+    borderRadius: radiusPx.sm,
     display: "flex",
     alignItems: "center",
     justifyContent: "center",
@@ -139,7 +140,7 @@ function ArchDiagram() {
         textTransform: "uppercase",
         letterSpacing: "1px",
         color: palette.text.disabled,
-        borderTop: `0.5px solid #f2f4f7`,
+        borderTop: `0.5px solid ${vwPalette.background.hover}`,
         pt: "4px",
         mt: "6px",
         mb: "2px",
@@ -183,7 +184,7 @@ function ArchDiagram() {
           sx={{
             background: palette.background.accent,
             border: `0.5px solid ${palette.border.light}`,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             p: "6px 10px",
           }}
         >
@@ -193,7 +194,7 @@ function ArchDiagram() {
             sx={{
               fontSize: 10,
               color: palette.text.tertiary,
-              background: "#f2f4f7",
+              background: vwPalette.background.hover,
               px: "5px",
               py: "1px",
               borderRadius: "3px",
@@ -237,12 +238,12 @@ function ArchDiagram() {
         <FeatureRow
           icon={<Fingerprint size={12} strokeWidth={1.8} />}
           label="PII detection"
-          colorScheme={{ bg: "#ecfdf3", color: "#13715B" }}
+          colorScheme={{ bg: vwPalette.status.success.bg, color: vwPalette.brand.primary }}
         />
         <FeatureRow
           icon={<ShieldCheck size={12} strokeWidth={1.8} />}
           label="Content filter"
-          colorScheme={{ bg: "#ecfdf3", color: "#13715B" }}
+          colorScheme={{ bg: vwPalette.status.success.bg, color: vwPalette.brand.primary }}
         />
         <SectionLabel>Traffic controls</SectionLabel>
         <FeatureRow
@@ -264,12 +265,12 @@ function ArchDiagram() {
         <FeatureRow
           icon={<Lock size={12} strokeWidth={1.8} />}
           label="Role-based access"
-          colorScheme={{ bg: "#fffaeb", color: "#B54708" }}
+          colorScheme={{ bg: "#fffaeb", color: vwPalette.risk.high.text }}
         />
         <FeatureRow
           icon={<History size={12} strokeWidth={1.8} />}
           label="Audit trail"
-          colorScheme={{ bg: "#fffaeb", color: "#B54708" }}
+          colorScheme={{ bg: "#fffaeb", color: vwPalette.risk.high.text }}
         />
       </Box>
 
@@ -344,7 +345,7 @@ function ChecklistItem({ label, done, onClick }: ChecklistItemProps) {
       onClick={() => isClickable && onClick()}
       sx={{
         "cursor": isClickable ? "pointer" : "default",
-        "borderRadius": "4px",
+        "borderRadius": radiusPx.sm,
         "px": "2px",
         "py": "2px",
         "&:hover": isClickable ? { "& .checklist-label": { textDecoration: "underline" } } : {},
@@ -872,7 +873,7 @@ export default function OnboardingOverlay({
               sx={{
                 p: "8px 12px",
                 bgcolor: palette.background.accent,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 border: `1px solid ${palette.border.light}`,
               }}
             >
@@ -933,7 +934,7 @@ export default function OnboardingOverlay({
               p: "12px 16px",
               backgroundColor: KEY_DISPLAY_BG,
               border: `1px solid ${palette.border.dark}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               fontFamily: "monospace",
               fontSize: 13,
               wordBreak: "break-all",
@@ -959,7 +960,7 @@ export default function OnboardingOverlay({
               p: "12px 16px",
               backgroundColor: WARNING_BG,
               border: `1px solid ${WARNING_BORDER}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
             }}
           >
             <Typography sx={{ fontSize: 12, color: WARNING_TEXT, fontWeight: 500 }}>
@@ -972,7 +973,7 @@ export default function OnboardingOverlay({
               sx={{
                 p: "12px 16px",
                 backgroundColor: CODE_BLOCK_BG,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 fontFamily: "monospace",
                 fontSize: 12,
                 color: CODE_BLOCK_TEXT,
@@ -1013,7 +1014,7 @@ response = client.chat.completions.create(
               sx={{
                 p: "12px 16px",
                 backgroundColor: CODE_BLOCK_BG,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 fontFamily: "monospace",
                 fontSize: 12,
                 color: CODE_BLOCK_TEXT,
@@ -1068,7 +1069,7 @@ print(response.choices[0].message.content)`}
                   p: "12px 16px",
                   backgroundColor: palette.background.accent,
                   border: `1px solid ${palette.border.light}`,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   fontSize: 13,
                   lineHeight: 1.6,
                   whiteSpace: "pre-wrap",

@@ -63,6 +63,7 @@ import type {
   IVirtualFolder,
   IVirtualFolderInput,
 } from "../../../domain/interfaces/i.virtualFolder";
+import { palette, radiusPx } from "../../themes/palette";
 
 type PolicyColumnKey =
   "title" | "status" | "next_review" | "author" | "last_updated" | "updated_by" | "actions";
@@ -669,10 +670,10 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
                 sx={{
                   "color": folderSidebarOpen ? "brand.primary" : "text.muted",
                   "padding": "4px",
-                  "borderRadius": "4px",
+                  "borderRadius": radiusPx.sm,
                   "backgroundColor": folderSidebarOpen ? "#E6F4F1" : "transparent",
                   "&:hover": {
-                    backgroundColor: folderSidebarOpen ? "#D1EDE6" : "#F2F4F7",
+                    backgroundColor: folderSidebarOpen ? "#D1EDE6" : palette.background.hover,
                   },
                 }}
               >
@@ -712,8 +713,8 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
                 "width": folderSidebarCollapsed ? 48 : 260,
                 "minWidth": folderSidebarCollapsed ? 48 : 260,
                 "backgroundColor": "#FAFBFC",
-                "border": "1px solid #d0d5dd",
-                "borderRadius": "4px",
+                "border": `1px solid ${palette.border.dark}`,
+                "borderRadius": radiusPx.sm,
                 "overflow": "hidden",
                 "transition": "width 200ms ease, min-width 200ms ease",
                 // Override FolderTree's internal borderRight since this wrapper already has a full border

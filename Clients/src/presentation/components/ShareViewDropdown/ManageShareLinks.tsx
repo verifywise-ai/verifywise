@@ -7,7 +7,7 @@ import {
   useUpdateShareLink,
   useDeleteShareLink,
 } from "../../../application/hooks/useShare";
-import { brand, text, background } from "../../themes/palette";
+import { brand, text, background, palette as vwPalette } from "../../themes/palette";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 /**
@@ -169,7 +169,7 @@ const ManageShareLinks: React.FC<ManageShareLinksProps> = ({
           <Box
             key={shareLink.id}
             sx={{
-              border: "1px solid #e0e0e0",
+              border: `1px solid ${vwPalette.border.light}`,
               borderRadius: "6px",
               p: 1.5,
               backgroundColor: shareLink.is_enabled
@@ -221,7 +221,7 @@ const ManageShareLinks: React.FC<ManageShareLinksProps> = ({
                 alignItems: "center",
                 mt: 1,
                 pt: 1,
-                borderTop: "1px solid #e0e0e0",
+                borderTop: `1px solid ${vwPalette.border.light}`,
               }}
             >
               <Box sx={{ display: "flex", gap: 0.5 }}>
@@ -264,7 +264,7 @@ const ManageShareLinks: React.FC<ManageShareLinksProps> = ({
                   onClick={() => handleDeleteLink(shareLink.id)}
                   sx={{
                     "p": 0.5,
-                    "color": "#dc2626",
+                    "color": vwPalette.riskMark.critical,
                     "&:hover": {
                       backgroundColor: "rgba(220, 38, 38, 0.1)",
                     },

@@ -2,6 +2,7 @@ import { Theme } from "@emotion/react";
 import { SxProps, Stack, Typography, useTheme } from "@mui/material";
 import { FC } from "react";
 import { RiskData } from "../../pages/ProjectView/Overview";
+import { palette } from "../../themes/palette";
 
 const Risks: FC<RiskData & { sx?: SxProps<Theme> | undefined }> = ({
   veryHighRisks,
@@ -28,7 +29,7 @@ const Risks: FC<RiskData & { sx?: SxProps<Theme> | undefined }> = ({
       "&:after": {
         content: `""`,
         position: "absolute",
-        backgroundColor: "#EEEEEE",
+        backgroundColor: palette.border.light,
         top: "13px",
         right: 0,
         width: "1px",

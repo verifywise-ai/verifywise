@@ -31,7 +31,7 @@ import { ArenaRow } from "./index";
 import ConfirmationModal from "../../Dialogs/ConfirmationModal";
 import { CustomizableButton } from "../../button/customizable-button";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
-import { accent, border, brand, status, text } from "../../../themes/palette";
+import { accent, border, brand, status, text, radiusPx } from "../../../themes/palette";
 
 interface ArenaTableBodyProps {
   rows: ArenaRow[];
@@ -302,7 +302,7 @@ const ArenaTableBody: React.FC<ArenaTableBodyProps> = ({
         sx={{
           "& .MuiPopover-paper": {
             minWidth: 140,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             border: `1px solid ${border.dark}`,
             boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
             overflow: "hidden",

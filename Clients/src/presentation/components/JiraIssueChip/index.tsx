@@ -4,6 +4,7 @@ import type {
   JiraIncidentLink,
   LinkState,
 } from "../../../application/repository/jiraIncidents.repository";
+import { radiusPx } from "../../themes/palette";
 
 const STATE_LABELS: Partial<Record<LinkState, string>> = {
   error: "Sync error",
@@ -43,7 +44,7 @@ export default function JiraIssueChip({ link }: { link: JiraIncidentLink }) {
         "height": "22px",
         "px": "6px",
         "border": `1px solid ${theme.palette.border.dark}`,
-        "borderRadius": "4px",
+        "borderRadius": radiusPx.sm,
         "fontSize": "12px",
         "lineHeight": 1,
         "whiteSpace": "nowrap",

@@ -30,7 +30,7 @@ import Chip from "../../../../components/Chip";
 import StatusBadge from "../StatusBadge";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
-import { text } from "../../../../themes/palette";
+import { text, palette as vwPalette, radiusPx } from "../../../../themes/palette";
 import useFormattedDate from "../../../../../application/hooks/useFormattedDate";
 
 dayjs.extend(relativeTime);
@@ -208,7 +208,7 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
           alignItems: "center",
           justifyContent: "space-between",
           padding: "16px 20px",
-          borderBottom: "1px solid #E0E4E9",
+          borderBottom: `1px solid ${vwPalette.border.light}`,
         }}
       >
         <Box>
@@ -273,12 +273,14 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
             sx={{
               padding: "12px",
               backgroundColor: "#FEF3F2",
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               border: "1px solid #FECDCA",
               mb: 2,
             }}
           >
-            <Typography sx={{ fontSize: 12, color: "#B42318" }}>{versionsError}</Typography>
+            <Typography sx={{ fontSize: 12, color: vwPalette.status.error.text }}>
+              {versionsError}
+            </Typography>
           </Box>
         ) : versions.length === 0 ? (
           <Box
@@ -302,11 +304,13 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
                   key={version.id}
                   sx={{
                     "padding": "10px 12px",
-                    "borderRadius": "4px",
-                    "backgroundColor": isCurrent ? "#F0FDF4" : "transparent",
+                    "borderRadius": radiusPx.sm,
+                    "backgroundColor": isCurrent ? vwPalette.status.success.bg : "transparent",
                     "border": isCurrent ? "1px solid #BBF7D0" : "1px solid transparent",
                     "&:hover": {
-                      backgroundColor: isCurrent ? "#F0FDF4" : "background.accent",
+                      backgroundColor: isCurrent
+                        ? vwPalette.status.success.bg
+                        : "background.accent",
                     },
                     "position": "relative",
                   }}
@@ -320,7 +324,7 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
                         bottom: -1,
                         width: 1,
                         height: 8,
-                        backgroundColor: "#E0E4E9",
+                        backgroundColor: vwPalette.border.light,
                       }}
                     />
                   )}
@@ -355,9 +359,9 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
                               fontSize: 10,
                               fontWeight: 500,
                               color: "#16A34A",
-                              backgroundColor: "#F0FDF4",
+                              backgroundColor: vwPalette.status.success.bg,
                               padding: "1px 6px",
-                              borderRadius: "4px",
+                              borderRadius: radiusPx.sm,
                               border: "1px solid #BBF7D0",
                               whiteSpace: "nowrap",
                             }}
@@ -464,8 +468,8 @@ export const FileVersionHistoryDrawer: React.FC<FileVersionHistoryDrawerProps> =
                   sx={{
                     padding: "10px 12px",
                     backgroundColor: "background.accent",
-                    borderRadius: "4px",
-                    border: "1px solid #F2F4F7",
+                    borderRadius: radiusPx.sm,
+                    border: `1px solid ${vwPalette.background.hover}`,
                   }}
                 >
                   <Stack

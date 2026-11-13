@@ -1,6 +1,7 @@
 import { Stack, Typography, Box } from "@mui/material";
 import { descCardbodyStyle, infoCardStyle, infoCardTitleStyle } from "../DescriptionCard/style";
 import { ReactNode } from "react";
+import { palette } from "../../../themes/palette";
 
 interface TeamCardProps {
   title: string;
@@ -21,7 +22,7 @@ export function TeamCard({
             position: "absolute",
             top: 8,
             right: 8,
-            color: "#8594AC",
+            color: palette.text.accent,
             opacity: 0.7,
           }}
         >

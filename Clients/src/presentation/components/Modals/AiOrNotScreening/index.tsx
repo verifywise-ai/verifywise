@@ -11,7 +11,7 @@ import {
 import { CheckCircle2, AlertTriangle } from "lucide-react";
 import StepperModal from "../StepperModal";
 import { CustomizableButton } from "../../button/customizable-button";
-import { brand } from "../../../themes/palette";
+import { brand, radiusPx } from "../../../themes/palette";
 
 interface AiOrNotScreeningProps {
   isOpen: boolean;
@@ -137,7 +137,7 @@ const AiOrNotScreening: React.FC<AiOrNotScreeningProps> = ({
       key={key}
       sx={{
         padding: "8px",
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         backgroundColor: answers[key] !== null ? theme.palette.background.fill : "transparent",
       }}
     >
@@ -168,7 +168,7 @@ const AiOrNotScreening: React.FC<AiOrNotScreeningProps> = ({
       <Box
         sx={{
           padding: "8px",
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           backgroundColor: theme.palette.background.fill,
           border: `1px solid ${theme.palette.border.light}`,
         }}
@@ -239,7 +239,7 @@ const AiOrNotScreening: React.FC<AiOrNotScreeningProps> = ({
           <Box
             sx={{
               padding: "8px",
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               backgroundColor: theme.palette.status.warning.bg,
               border: `1px solid ${theme.palette.status.warning.border}`,
             }}
@@ -307,7 +307,7 @@ const AiOrNotScreening: React.FC<AiOrNotScreeningProps> = ({
           <Box
             sx={{
               padding: "8px",
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               backgroundColor: theme.palette.status.success.bg,
               border: `1px solid ${theme.palette.status.success.border}`,
             }}
@@ -348,7 +348,7 @@ const AiOrNotScreening: React.FC<AiOrNotScreeningProps> = ({
         <Box
           sx={{
             padding: "8px",
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             backgroundColor: theme.palette.status.warning.bg,
             border: `1px solid ${theme.palette.status.warning.border}`,
           }}

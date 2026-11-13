@@ -23,23 +23,24 @@ import { SlidersHorizontal, Trash2, ToggleLeft, ToggleRight, MessageSquare, X } 
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { ENV_VARs } from "../../../../../env.vars";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import { palette } from "../../../themes/palette";
 
 const colors = {
-  primary: "#13715B",
+  primary: palette.brand.primary,
   primaryHover: "#0F5A47",
   primaryLight: "rgba(19, 113, 91, 0.08)",
   successLight: "rgba(5, 150, 105, 0.1)",
   error: "#DB504A",
   errorLight: "rgba(219, 80, 74, 0.1)",
   textPrimary: "#1A1919",
-  textSecondary: "#344054",
+  textSecondary: palette.text.secondary,
   textTertiary: "#667085",
   background: "#ffffff",
-  backgroundSecondary: "#f9fafb",
+  backgroundSecondary: palette.background.alt,
   backgroundHover: "#f5f5f5",
-  border: "#d0d5dd",
-  borderLight: "#e5e7eb",
-  disabled: "#E5E7EB",
+  border: palette.border.dark,
+  borderLight: palette.border.light,
+  disabled: palette.border.light,
 };
 const typography = { sizes: { sm: "12px", md: "13px" }, weights: { medium: 500, semibold: 600 } };
 const borderRadius = { sm: "4px", md: "8px", lg: "12px", full: "9999px" };
@@ -266,7 +267,9 @@ export default function SlackConfiguration() {
                             backgroundColor: workspace.is_active
                               ? colors.successLight
                               : "rgba(107, 114, 128, 0.1)",
-                            color: workspace.is_active ? "#13715B" : colors.textTertiary,
+                            color: workspace.is_active
+                              ? palette.brand.primary
+                              : colors.textTertiary,
                           }}
                         >
                           <Box
@@ -275,7 +278,7 @@ export default function SlackConfiguration() {
                               height: 6,
                               borderRadius: "50%",
                               backgroundColor: workspace.is_active
-                                ? "#13715B"
+                                ? palette.brand.primary
                                 : colors.textTertiary,
                             }}
                           />

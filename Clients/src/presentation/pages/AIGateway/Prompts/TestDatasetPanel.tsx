@@ -16,6 +16,7 @@ import { CustomizableButton } from "../../../components/button/customizable-butt
 import Select from "../../../components/Inputs/Select";
 import Field from "../../../components/Inputs/Field";
 import palette from "../../../themes/palette";
+import { palette as vwPalette } from "../../../themes/palette";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { resolveMessageVariables, streamPromptTest, StreamPromptTestResult } from "../shared";
 
@@ -288,7 +289,7 @@ export default function TestDatasetPanel({
               icon={<Trash2 size={13} strokeWidth={1.5} />}
               onClick={deleteDataset}
               variant="text"
-              sx={{ height: 30, fontSize: 12, color: "#B42318" }}
+              sx={{ height: 30, fontSize: 12, color: vwPalette.status.error.text }}
             />
           )}
         </Box>
@@ -301,7 +302,7 @@ export default function TestDatasetPanel({
                 "height": 4,
                 "borderRadius": 2,
                 "bgcolor": "#E4E7EC",
-                "& .MuiLinearProgress-bar": { bgcolor: "#13715B" },
+                "& .MuiLinearProgress-bar": { bgcolor: vwPalette.brand.primary },
               }}
             />
             <Typography fontSize={11} color="text.secondary" mt={0.5}>

@@ -27,6 +27,7 @@ import type { StandardColumn } from "../../../domain/types/standardTable";
 import StandardTableHead from "../../components/Table/StandardTableHead";
 import StandardTablePagination from "../../components/Table/StandardTablePagination";
 import { TableEmptyStateLayout } from "../../components/Table/TableEmptyStateLayout";
+import { palette } from "../../themes/palette";
 
 dayjs.extend(utc);
 
@@ -186,7 +187,10 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
                         ...cellStyle,
                         width: "110px",
                         maxWidth: "110px",
-                        backgroundColor: sortConfig.key === "incident_id" ? "#e8e8e8" : "#fafafa",
+                        backgroundColor:
+                          sortConfig.key === "incident_id"
+                            ? palette.border.light
+                            : palette.background.alt,
                       }}
                     >
                       {jiraLinks?.get(incident.id) ? (

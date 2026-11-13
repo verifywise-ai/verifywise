@@ -18,6 +18,7 @@ import { useTranslation } from "../../../application/hooks/useTranslation";
 import { fill } from "../../../i18n/fill";
 import type { RiskInheritanceNodeData } from "./types";
 import { ENTITY_TYPE_COLORS } from "./types";
+import { radiusPx } from "../../themes/palette";
 
 // Mirror EntityNode: truncate long names, full name in the tooltip.
 const MAX_NAME_LENGTH = 30;
@@ -50,7 +51,7 @@ const RiskNode: React.FC<NodeProps> = ({ data, selected }) => {
           // Selected takes the interactive-card treatment: border to primary,
           // the elevated shadow. The entity-type colour still reads on the handles.
           "border": `2px solid ${selected ? theme.palette.primary.main : color}`,
-          "borderRadius": "4px",
+          "borderRadius": radiusPx.sm,
           "padding": "8px 12px",
           "minWidth": 130,
           "maxWidth": 220,

@@ -50,7 +50,7 @@
 }
 
 .MuiPaper-root + .MuiPagination-root {
-  border-radius: 4px;
+  border-radius: var(--vw-radius-sm, 4px);
   padding: 16px 24px;
 }
 .MuiPaper-root + .MuiPagination-root ul {

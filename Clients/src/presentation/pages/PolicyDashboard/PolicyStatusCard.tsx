@@ -1,6 +1,8 @@
 import React from "react";
 import { StatusTileCards, StatusTileItem } from "../../components/Cards/StatusTileCards";
 import { PolicyStatusCardProps } from "../../types/interfaces/i.policy";
+import { palette } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 
 const PolicyStatusCard: React.FC<PolicyStatusCardProps> = ({
   policies,
@@ -8,12 +10,12 @@ const PolicyStatusCard: React.FC<PolicyStatusCardProps> = ({
   selectedStatus,
 }) => {
   const statusLevels = [
-    { key: "Draft", label: "Draft", color: "#9E9E9E" },
-    { key: "Under Review", label: "Under review", color: "#FF9800" },
-    { key: "Approved", label: "Approved", color: "#4CAF50" },
-    { key: "Published", label: "Published", color: "#2196F3" },
-    { key: "Archived", label: "Archived", color: "#757575" },
-    { key: "Deprecated", label: "Deprecated", color: "#F44336" },
+    { key: "Draft", label: "Draft", color: chartTheme.statusSummary.neutral },
+    { key: "Under Review", label: "Under review", color: chartTheme.statusSummary.warning },
+    { key: "Approved", label: "Approved", color: chartTheme.statusSummary.success },
+    { key: "Published", label: "Published", color: chartTheme.statusSummary.info },
+    { key: "Archived", label: "Archived", color: chartTheme.statusSummary.neutralDark },
+    { key: "Deprecated", label: "Deprecated", color: chartTheme.statusSummary.error },
   ];
 
   const items: StatusTileItem[] = [
@@ -22,7 +24,7 @@ const PolicyStatusCard: React.FC<PolicyStatusCardProps> = ({
       key: "total",
       label: "Total",
       count: policies.length,
-      color: "#4B5563",
+      color: palette.text.tertiary,
     },
     // Then status cards
     ...statusLevels.map((level) => ({

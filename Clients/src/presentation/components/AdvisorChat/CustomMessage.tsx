@@ -12,6 +12,7 @@ import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.cont
 import { useProfilePhotoFetch } from "../../../application/hooks/useProfilePhotoFetch";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { User } from "../../../domain/types/User";
+import { radiusPx } from "../../themes/palette";
 
 // Create markdown styles with theme. Tables follow the VerifyWise list
 // conventions (thin borders, subtle header fill, 13/12px type) so an
@@ -40,7 +41,7 @@ const createMarkdownStyles = (theme: Theme) => {
     tableWrapper: {
       overflowX: "auto" as const,
       margin: "8px 0",
-      borderRadius: "4px",
+      borderRadius: radiusPx.sm,
       border: `1px solid ${borderColor}`,
     } as React.CSSProperties,
     table: {

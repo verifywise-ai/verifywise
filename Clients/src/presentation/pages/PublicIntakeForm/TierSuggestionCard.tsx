@@ -6,6 +6,7 @@ import type {
   TierExplanationPoint,
   TierSuggestion,
 } from "../../../application/repository/intakeTierSuggestion.repository";
+import { radiusPx } from "../../themes/palette";
 
 export const MAX_TIER_CONTEXT_CHARS = 1000;
 
@@ -85,7 +86,7 @@ export function TierSuggestionCard({
         mb: "24px",
         p: "16px",
         border,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         display: "flex",
         flexDirection: "column",
         gap: "12px",
@@ -248,7 +249,7 @@ export function TierSuggestionCard({
               fontSize: "13px",
               p: "8px",
               border,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               resize: "vertical",
             }}
           />

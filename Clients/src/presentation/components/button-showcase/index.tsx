@@ -15,6 +15,7 @@ import {
 import { CustomizableButton } from "../button/customizable-button";
 import VerifyWiseMultiSelect from "../VerifyWiseMultiSelect";
 import ViewToggle from "../ViewToggle";
+import { palette, radiusPx } from "../../themes/palette";
 
 function ButtonShowcase() {
   const theme = useTheme();
@@ -62,7 +63,7 @@ function ButtonShowcase() {
               "fontSize": 13,
               "backgroundColor": theme.palette.primary.main,
               "color": theme.palette.primary.contrastText,
-              "borderRadius": "4px",
+              "borderRadius": radiusPx.sm,
               "display": "flex",
               "alignItems": "center",
               "padding": "6px 12px",
@@ -113,7 +114,7 @@ function ButtonShowcase() {
             component="button"
             aria-label="Integrations"
             sx={{
-              "background": "linear-gradient(135deg, #8B5CF6 0%, #7C3AED 100%)",
+              "background": `linear-gradient(135deg, ${palette.accent.purple.text} 0%, #7C3AED 100%)`,
               "color": "white",
               "fontWeight": 500,
               "fontSize": "12px",
@@ -121,7 +122,7 @@ function ButtonShowcase() {
               "minHeight": "30px",
               "maxHeight": "30px",
               "padding": "0 14px",
-              "borderRadius": "4px",
+              "borderRadius": radiusPx.sm,
               "border": "none",
               "textTransform": "none",
               "boxShadow": "0 2px 4px rgba(139, 92, 246, 0.2)",
@@ -147,7 +148,7 @@ function ButtonShowcase() {
               "minHeight": "30px",
               "maxHeight": "30px",
               "padding": "0 14px",
-              "borderRadius": "4px",
+              "borderRadius": radiusPx.sm,
               "border": "none",
               "textTransform": "none",
               "boxShadow": "0 2px 4px rgba(251, 146, 60, 0.2)",
@@ -364,7 +365,7 @@ function ButtonShowcase() {
                   sx={{
                     height: 30,
                     width: 100,
-                    backgroundColor: "#8B5CF6",
+                    backgroundColor: palette.accent.purple.text,
                     color: "white",
                     display: "flex",
                     alignItems: "center",

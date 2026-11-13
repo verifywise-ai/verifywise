@@ -55,7 +55,7 @@ import singleTheme from "../../themes/v1SingleTheme";
 import type { DeepEvalProject } from "./types";
 import { useCanCheck } from "../../../application/hooks/useCan";
 import { useArenaSetting } from "../../../application/hooks/useArenaSetting";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 
 const columns: StandardColumn[] = [
   { id: "name", label: "Name", minWidth: "180px", sortable: true, align: "left" },
@@ -519,7 +519,7 @@ export default function ProjectsList() {
                           "fontWeight": 500,
                           "fontSize": "12px",
                           "height": "24px",
-                          "borderRadius": "4px",
+                          "borderRadius": radiusPx.sm,
                           "& .MuiChip-icon": {
                             color: "inherit",
                             marginLeft: "8px",
@@ -560,7 +560,7 @@ export default function ProjectsList() {
                           fontSize: "12px",
                           height: "22px",
                           minWidth: "32px",
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                         }}
                       />
                     </TableCell>

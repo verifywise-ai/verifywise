@@ -1,6 +1,6 @@
 import type { FormRouting } from "../../../domain/types/intakeRouting";
 import { IntakeFormStatus, IntakeEntityType } from "../../../domain/intake/enums";
-import { brand } from "../../themes/palette";
+import { brand, palette as vwPalette } from "../../themes/palette";
 import { GEOGRAPHY_ITEMS } from "../../../application/constants/geography";
 import {
   RISK_DIMENSIONS,
@@ -106,7 +106,7 @@ export const DEFAULT_DESIGN_SETTINGS: FormDesignSettings = {
   format: "narrow",
   alignment: "center",
   colorTheme: `${brand.primary}`,
-  backgroundColor: "#fafafa",
+  backgroundColor: vwPalette.background.alt,
   logoUrl: "",
   fontFamily: "Inter",
   collectContactInfo: true,

@@ -22,7 +22,7 @@ import {
 } from "lucide-react";
 import { StatCard } from "../../../components/Cards/StatCard";
 import { Finding } from "../../../../domain/ai-detection/types";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import { isFindingSuppressed, VULN_TYPE_LABELS } from "./scanDetailsConfig";
 import { VulnerabilityFindingRow } from "./VulnerabilityFindingRow";
 
@@ -139,7 +139,7 @@ export function VulnerabilitiesTab({
           sx={{
             backgroundColor: palette.status.success.bg,
             border: `1px solid ${palette.status.success.border}`,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             p: 4,
             textAlign: "center",
           }}

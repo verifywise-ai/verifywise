@@ -32,6 +32,8 @@ import {
   icon as iconPalette,
   primitives,
   text as textPalette,
+  palette as vwPalette,
+  radiusPx,
 } from "../../themes/palette";
 import { isClassicUi } from "../../themes/uiStyle";
 import { toggleSidebar } from "../../../application/redux/ui/uiSlice";
@@ -51,8 +53,10 @@ const classicUi = isClassicUi();
 const NAV_ACTIVE_BG = classicUi
   ? "linear-gradient(135deg, #F7F7F7 0%, #F2F2F2 100%)"
   : background.selected;
-const NAV_ACTIVE_BORDER = classicUi ? "1px solid #E8E8E8" : "1px solid transparent";
-const NAV_HOVER_BG = classicUi ? "#FAFAFA" : primitives.green[50];
+const NAV_ACTIVE_BORDER = classicUi
+  ? `1px solid ${vwPalette.border.light}`
+  : "1px solid transparent";
+const NAV_HOVER_BG = classicUi ? vwPalette.background.alt : primitives.green[50];
 const NAV_ICON_DEFAULT = classicUi ? textPalette.tertiary : iconPalette.default;
 const NAV_ACTIVE_WEIGHT = classicUi ? 600 : 500;
 
@@ -846,7 +850,9 @@ const SidebarShell: FC<SidebarShellProps> = ({
                               "mx": 1,
                               "borderRadius": "6px",
                               "cursor": "pointer",
-                              "backgroundColor": isSelected ? "#f0fdf4" : "transparent",
+                              "backgroundColor": isSelected
+                                ? vwPalette.status.success.bg
+                                : "transparent",
                               "borderLeft": isSelected
                                 ? `3px solid ${brand.primary}`
                                 : "3px solid transparent",
@@ -854,7 +860,9 @@ const SidebarShell: FC<SidebarShellProps> = ({
                               "fontWeight": isSelected ? 500 : 400,
                               "transition": "all 0.15s ease",
                               "&:hover": {
-                                backgroundColor: isSelected ? "#f0fdf4" : "background.hover",
+                                backgroundColor: isSelected
+                                  ? vwPalette.status.success.bg
+                                  : "background.hover",
                               },
                             }}
                           >
@@ -913,7 +921,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
                     "cursor": "pointer",
                     "transition": "all 0.15s ease",
                     "&:hover": {
-                      backgroundColor: "#f0fdf4",
+                      backgroundColor: vwPalette.status.success.bg,
                     },
                   }}
                 >
@@ -1032,7 +1040,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
                     disableRipple
                     sx={{
                       "height": "30px",
-                      "borderRadius": "4px",
+                      "borderRadius": radiusPx.sm,
                       "px": theme.spacing(4),
                       "mb": 0.25,
                       "&:hover": { backgroundColor: "#F9F9F9" },

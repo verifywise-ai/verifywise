@@ -7,7 +7,7 @@
 import { Box, Typography } from "@mui/material";
 import SectionLabel from "./SectionLabel";
 import { Upload } from "lucide-react";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import { readDataset, uploadDataset } from "../../../../application/repository/deepEval.repository";
 import type { DatasetPrompt, UserDataset } from "./newExperimentConfig";
 import { validateDatasetFileContent } from "./datasetUpload";
@@ -48,7 +48,7 @@ export default function DatasetUploadZone({
           "p": "8px",
           "border": "1px dashed",
           "borderColor": uploading ? palette.brand.primary : palette.border.dark,
-          "borderRadius": "4px",
+          "borderRadius": radiusPx.sm,
           "backgroundColor": palette.background.accent,
           "cursor": uploading ? "wait" : "pointer",
           "transition": "all 0.15s ease",

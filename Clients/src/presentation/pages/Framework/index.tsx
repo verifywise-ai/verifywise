@@ -55,7 +55,7 @@ import NISTAIRMFMap from "./NIST-AI-RMF/Map";
 import NISTAIRMFMeasure from "./NIST-AI-RMF/Measure";
 import NISTAIRMFManage from "./NIST-AI-RMF/Manage";
 import GenericFramework from "./Generic";
-import { brand, border as borderPalette, icon } from "../../themes/palette";
+import { brand, border as borderPalette, icon, radiusPx } from "../../themes/palette";
 import GovernanceIntelligenceContextBar from "../../components/GovernanceOS/GovernanceIntelligenceContextBar";
 import { storageService } from "../../../infrastructure/storage";
 import { textStyles } from "../../themes/typography";
@@ -860,7 +860,7 @@ const Framework = () => {
                   sx={{
                     "mt": 1,
                     "& .MuiPopover-paper": {
-                      borderRadius: "4px",
+                      borderRadius: radiusPx.sm,
                       boxShadow: "0 8px 24px rgba(0, 0, 0, 0.12)",
                       border: `1px solid ${borderPalette.dark}`,
                       overflow: "visible",
@@ -981,7 +981,7 @@ const Framework = () => {
                         alignItems="center"
                         sx={{
                           border: `1px solid ${borderPalette.dark}`,
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                           padding: "16px",
                         }}
                       >

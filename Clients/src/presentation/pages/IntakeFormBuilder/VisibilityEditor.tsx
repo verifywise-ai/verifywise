@@ -12,6 +12,7 @@ import {
   type ConditionOperator,
   type Visibility,
 } from "../../../application/utils/intakeFormLogic";
+import { radiusPx } from "../../themes/palette";
 
 const SYMBOLS: Partial<Record<ConditionOperator, string>> = {
   eq: "=",
@@ -153,7 +154,7 @@ export function VisibilityEditor({
               gap: "8px",
               p: "8px",
               border: `1px solid ${theme.palette.border.dark}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
             }}
           >
             <Box sx={{ display: "flex", alignItems: "flex-end", gap: "8px" }}>

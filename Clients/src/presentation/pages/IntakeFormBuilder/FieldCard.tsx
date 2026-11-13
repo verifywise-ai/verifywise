@@ -9,6 +9,7 @@ import {
   describeFormula,
   formatCalculatedValue,
 } from "../../../application/utils/intakeAnswerFormat";
+import { radiusPx } from "../../themes/palette";
 
 const TYPE_LABELS: Record<FieldType, string> = {
   text: "Short text",
@@ -269,7 +270,7 @@ function FieldPreview({ field }: { field: FormField }) {
               alignItems: "center",
               px: "12px",
               border: `1px solid ${theme.palette.border.dark}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               backgroundColor: theme.palette.background.accent,
               fontSize: "13px",
               color: theme.palette.text.accent,
@@ -336,7 +337,7 @@ export function FieldCard({
           : isSelected
             ? `1px solid ${theme.palette.border.dark}`
             : "1px solid transparent",
-        "borderRadius": "4px",
+        "borderRadius": radiusPx.sm,
         "cursor": "pointer",
         "transition": "border-color 0.15s ease",
         "p": "15px",
@@ -387,7 +388,7 @@ export function FieldCard({
           gap: "2px",
           backgroundColor: theme.palette.background.main,
           border: `1px solid ${theme.palette.border.dark}`,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           px: "2px",
           py: "1px",
           opacity: isSelected ? 1 : 0,

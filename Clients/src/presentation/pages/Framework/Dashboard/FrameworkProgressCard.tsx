@@ -1,7 +1,7 @@
 import { Box, Typography, Stack, LinearProgress } from "@mui/material";
 import { CircleDashed, CircleDot, CircleDotDashed, CircleCheck } from "lucide-react";
 import { frameworkDashboardCardStyles } from "./styles";
-import { brand, text, background, status } from "../../../themes/palette";
+import { brand, text, background, status, palette as vwPalette } from "../../../themes/palette";
 
 interface FrameworkData {
   frameworkId: number;
@@ -46,17 +46,19 @@ const FrameworkProgressCard = ({ frameworksData }: FrameworkProgressCardProps) =
   };
 
   const getProgressColor = (percentage: number) => {
-    if (percentage < 30) return "#DC2626"; // Red
+    if (percentage < 30) return vwPalette.riskMark.critical; // Red
     if (percentage < 60) return "#EA580C"; // Orange
-    if (percentage < 85) return "#F59E0B"; // Yellow
+    if (percentage < 85) return vwPalette.riskMark.medium; // Yellow
     return `${brand.primary}`; // Green
   };
 
   const getProgressIcon = (percentage: number) => {
     if (percentage === 0) return <CircleDashed size={14} style={{ color: `${text.disabled}` }} />;
-    if (percentage < 30) return <CircleDashed size={14} style={{ color: "#DC2626" }} />;
+    if (percentage < 30)
+      return <CircleDashed size={14} style={{ color: vwPalette.riskMark.critical }} />;
     if (percentage < 60) return <CircleDot size={14} style={{ color: "#EA580C" }} />;
-    if (percentage < 85) return <CircleDotDashed size={14} style={{ color: "#F59E0B" }} />;
+    if (percentage < 85)
+      return <CircleDotDashed size={14} style={{ color: vwPalette.riskMark.medium }} />;
     if (percentage < 100)
       return <CircleDotDashed size={14} style={{ color: `${brand.primary}` }} />;
     return <CircleCheck size={14} style={{ color: `${brand.primary}` }} />;
@@ -76,7 +78,7 @@ const FrameworkProgressCard = ({ frameworksData }: FrameworkProgressCardProps) =
         <Typography
           sx={{
             fontSize: 12,
-            color: "#666666",
+            color: vwPalette.text.tertiary,
             mb: 6,
             lineHeight: "16px",
           }}
@@ -143,7 +145,7 @@ const FrameworkProgressCard = ({ frameworksData }: FrameworkProgressCardProps) =
                               mb: 1,
                             }}
                           >
-                            <Typography sx={{ fontSize: 12, color: "#666666" }}>
+                            <Typography sx={{ fontSize: 12, color: vwPalette.text.tertiary }}>
                               {func.label}
                             </Typography>
                             <Box
@@ -164,7 +166,9 @@ const FrameworkProgressCard = ({ frameworksData }: FrameworkProgressCardProps) =
                               >
                                 /
                               </Typography>
-                              <Typography sx={{ fontSize: 12, color: "#999999", fontWeight: 500 }}>
+                              <Typography
+                                sx={{ fontSize: 12, color: vwPalette.text.accent, fontWeight: 500 }}
+                              >
                                 {data.total}
                               </Typography>
                             </Box>
@@ -180,7 +184,8 @@ const FrameworkProgressCard = ({ frameworksData }: FrameworkProgressCardProps) =
                               <Typography
                                 sx={{
                                   fontSize: 12,
-                                  color: percent === 100 ? `${brand.primary}` : "#666666",
+                                  color:
+                                    percent === 100 ? `${brand.primary}` : vwPalette.text.tertiary,
                                   fontWeight: 500,
                                 }}
                               >
@@ -271,7 +276,7 @@ const FrameworkProgressCard = ({ frameworksData }: FrameworkProgressCardProps) =
                       mb: 1,
                     }}
                   >
-                    <Typography sx={{ fontSize: 12, color: "#666666" }}>
+                    <Typography sx={{ fontSize: 12, color: vwPalette.text.tertiary }}>
                       {isISO ? "Clauses" : "Requirements"}
                     </Typography>
                     <Box
@@ -288,7 +293,9 @@ const FrameworkProgressCard = ({ frameworksData }: FrameworkProgressCardProps) =
                       <Typography sx={{ fontSize: 12, color: `${text.black}`, fontWeight: 500 }}>
                         /
                       </Typography>
-                      <Typography sx={{ fontSize: 12, color: "#999999", fontWeight: 500 }}>
+                      <Typography
+                        sx={{ fontSize: 12, color: vwPalette.text.accent, fontWeight: 500 }}
+                      >
                         {isISO ? clauseTotal : genericTotal}
                       </Typography>
                     </Box>
@@ -307,7 +314,7 @@ const FrameworkProgressCard = ({ frameworksData }: FrameworkProgressCardProps) =
                           color:
                             (isISO ? clausePercent : genericPercent) === 100
                               ? `${brand.primary}`
-                              : "#666666",
+                              : vwPalette.text.tertiary,
                           fontWeight: 500,
                         }}
                       >
@@ -341,7 +348,9 @@ const FrameworkProgressCard = ({ frameworksData }: FrameworkProgressCardProps) =
                         mb: 1,
                       }}
                     >
-                      <Typography sx={{ fontSize: 12, color: "#666666" }}>Annexes</Typography>
+                      <Typography sx={{ fontSize: 12, color: vwPalette.text.tertiary }}>
+                        Annexes
+                      </Typography>
                       <Box
                         sx={{
                           display: "flex",
@@ -356,7 +365,9 @@ const FrameworkProgressCard = ({ frameworksData }: FrameworkProgressCardProps) =
                         <Typography sx={{ fontSize: 12, color: `${text.black}`, fontWeight: 500 }}>
                           /
                         </Typography>
-                        <Typography sx={{ fontSize: 12, color: "#999999", fontWeight: 500 }}>
+                        <Typography
+                          sx={{ fontSize: 12, color: vwPalette.text.accent, fontWeight: 500 }}
+                        >
                           {annexTotal}
                         </Typography>
                       </Box>
@@ -372,7 +383,8 @@ const FrameworkProgressCard = ({ frameworksData }: FrameworkProgressCardProps) =
                         <Typography
                           sx={{
                             fontSize: 12,
-                            color: annexPercent === 100 ? `${brand.primary}` : "#666666",
+                            color:
+                              annexPercent === 100 ? `${brand.primary}` : vwPalette.text.tertiary,
                             fontWeight: 500,
                           }}
                         >

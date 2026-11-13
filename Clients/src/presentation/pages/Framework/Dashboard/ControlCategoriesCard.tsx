@@ -34,7 +34,7 @@ import {
   type SubClauseData,
   type ClauseData,
 } from "../../../../application/utils/frameworkDataUtils";
-import { background, border as borderPalette, icon, text } from "../../../themes/palette";
+import { background, border as borderPalette, icon, text, radiusPx } from "../../../themes/palette";
 import { textStyles } from "../../../themes/typography";
 
 interface ControlCategoriesCardProps {
@@ -328,7 +328,7 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
                 key={category.id}
                 sx={{
                   border: `1px solid ${borderPalette.dark}`,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   overflow: "hidden",
                   backgroundColor: "background.main",
                 }}
@@ -365,7 +365,7 @@ const ControlCategoriesCard = ({ frameworksData, onNavigate }: ControlCategories
                         "display": "flex",
                         "alignItems": "center",
                         "p": "4px",
-                        "borderRadius": "4px",
+                        "borderRadius": radiusPx.sm,
                         "&:hover": {
                           backgroundColor: "rgba(0, 0, 0, 0.04)",
                         },

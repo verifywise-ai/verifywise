@@ -1,5 +1,5 @@
 import { Theme } from "@mui/material";
-import { text, background, border as borderPalette } from "../../../themes/palette";
+import { text, background, border as borderPalette, radiusPx } from "../../../themes/palette";
 
 export const addNewStep = {
   "gap": "8px",
@@ -69,7 +69,7 @@ export const approverAutocompleteStyle = (theme: Theme) => ({
     paddingBottom: "3.8px !important",
   },
   "& .MuiChip-root": {
-    borderRadius: "4px",
+    borderRadius: radiusPx.sm,
     height: "24px",
     fontSize: "13px",
   },

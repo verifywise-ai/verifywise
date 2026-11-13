@@ -7,7 +7,7 @@ import React, { useState } from "react";
 import { Box, Stack, Typography } from "@mui/material";
 import AIDetectionOnboarding from "../../components/Modals/AIDetectionOnboarding";
 import { CustomizableButton } from "../../components/button/customizable-button";
-import { brand, status } from "../../themes/palette";
+import { brand, status, palette as vwPalette } from "../../themes/palette";
 
 const WizardShowcase: React.FC = () => {
   const [isOpen, setIsOpen] = useState(false);
@@ -15,7 +15,7 @@ const WizardShowcase: React.FC = () => {
   return (
     <Box sx={{ padding: "40px", maxWidth: 800, margin: "0 auto" }}>
       <Stack spacing={2} sx={{ mb: 4 }}>
-        <Typography sx={{ fontSize: 24, fontWeight: 700, color: "#111827" }}>
+        <Typography sx={{ fontSize: 24, fontWeight: 700, color: vwPalette.text.primary }}>
           AI Detection onboarding wizard
         </Typography>
         <Typography sx={{ fontSize: 14, color: `${status.default.text}` }}>

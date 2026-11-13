@@ -6,6 +6,7 @@ import { CustomizableButton } from "../../components/button/customizable-button"
 import { EmptyState } from "../../components/EmptyState";
 import { apiServices } from "../../../infrastructure/api/networkServices";
 import palette from "../../themes/palette";
+import { radiusPx } from "../../themes/palette";
 import CustomizableSkeleton from "../../components/Skeletons";
 import {
   MCP_STATUS_COLORS,
@@ -92,7 +93,7 @@ export default function MCPInvocationDrawer({ logId, open, onClose }: Invocation
     whiteSpace: "pre-wrap" as const,
     bgcolor: KEY_DISPLAY_BG,
     p: "12px",
-    borderRadius: "4px",
+    borderRadius: radiusPx.sm,
     overflow: "auto",
     m: 0,
   };
@@ -160,7 +161,7 @@ export default function MCPInvocationDrawer({ logId, open, onClose }: Invocation
             <Box
               sx={{
                 p: "12px",
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 border: `1px solid ${palette.status.warning.border}`,
                 backgroundColor: palette.status.warning.bg,
               }}

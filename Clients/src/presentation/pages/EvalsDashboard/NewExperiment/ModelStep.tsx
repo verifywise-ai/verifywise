@@ -11,7 +11,7 @@ import SectionLabel from "./SectionLabel";
 import { Check } from "lucide-react";
 import type { RefObject } from "react";
 import Select from "../../../components/Inputs/Select";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import type { ModelInfo } from "../../../utils/providers";
 import type { SavedModel } from "../../../../infrastructure/api/evalModelsService";
 import type { ProviderType } from "./newExperimentConfig";
@@ -218,7 +218,7 @@ export default function ModelStep({
                     "py": "10px",
                     "minHeight": "40px",
                     "boxSizing": "border-box",
-                    "borderRadius": "4px",
+                    "borderRadius": radiusPx.sm,
                     "border": `1px solid ${isSelected ? palette.brand.primary : palette.border.light}`,
                     "backgroundColor": isSelected ? palette.brand.primaryLight : "transparent",
                     "cursor": "pointer",

@@ -4,6 +4,7 @@ import { Info } from "lucide-react";
 import VWTooltip from "../../../components/VWTooltip";
 import { SCORE_BANDS } from "../../../../application/utils/intakeScoring/scoreMath";
 import type { NumberKey } from "./RoutingSettingsSection";
+import { radiusPx } from "../../../themes/palette";
 
 // What each number does, as decided by laneFor (Servers/services/intakeRouting/
 // routingRules.ts) and the second-review pick in approveSubmission.
@@ -89,7 +90,7 @@ const RoutingFieldInfo = ({ field }: RoutingFieldInfoProps) => {
           "border": "none",
           "background": "none",
           "cursor": "help",
-          "borderRadius": "4px",
+          "borderRadius": radiusPx.sm,
           "&:focus-visible": { outline: `2px solid ${theme.palette.primary.main}` },
         }}
       >

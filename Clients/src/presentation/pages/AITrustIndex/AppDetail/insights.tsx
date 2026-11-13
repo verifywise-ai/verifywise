@@ -7,7 +7,7 @@ import { Link as RouterLink } from "react-router";
 import type { TrustIndexAppData } from "../shared";
 import { faviconUrl } from "../shared";
 import { INDICATOR_GAP_LABELS, type IndicatorMap } from "../rubric";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 
 /**
  * Favicon for a related app that falls back to the app's initial when the icon
@@ -93,7 +93,7 @@ export function WatchOuts({ indicators }: { indicators?: IndicatorMap | null }) 
     <Box
       sx={{
         border: `1px solid ${palette.border.dark}`,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         p: "16px",
         backgroundColor: palette.background.accent,
       }}
@@ -155,7 +155,11 @@ export function ComparisonStrip({
   return (
     <Stack
       direction="row"
-      sx={{ border: `1px solid ${palette.border.dark}`, borderRadius: "4px", overflow: "hidden" }}
+      sx={{
+        border: `1px solid ${palette.border.dark}`,
+        borderRadius: radiusPx.sm,
+        overflow: "hidden",
+      }}
     >
       <Cell value={`#${rank}`} label={`of ${total} apps ranked`} />
       <Box sx={{ width: "1px", backgroundColor: palette.border.dark }} />
@@ -211,7 +215,7 @@ export function RelatedApps({
               gap="8px"
               sx={{
                 "border": `1px solid ${palette.border.dark}`,
-                "borderRadius": "4px",
+                "borderRadius": radiusPx.sm,
                 "p": "8px",
                 "backgroundColor": palette.background.main,
                 "&:hover": { backgroundColor: palette.background.accent },

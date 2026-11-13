@@ -28,7 +28,7 @@
 
 import React, { useId } from "react";
 import { Modal, Stack, Box, Typography, Step, Stepper, StepLabel } from "@mui/material";
-import { background, border, text } from "../../../themes/palette";
+import { background, border, text, radiusPx } from "../../../themes/palette";
 import { X as CloseIcon } from "lucide-react";
 import { CustomizableButton } from "../../button/customizable-button";
 
@@ -208,7 +208,7 @@ const StepperModal: React.FC<StepperModalProps> = ({
                   "display": "flex",
                   "alignItems": "center",
                   "padding": "4px",
-                  "borderRadius": "4px",
+                  "borderRadius": radiusPx.sm,
                   "&:hover": {
                     backgroundColor: background.surface,
                   },

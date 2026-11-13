@@ -9,6 +9,7 @@ import SelectComponent from "../../Inputs/Select";
 import Field from "../../Inputs/Field";
 import { EvidenceHubModel } from "../../../../domain/models/Common/evidenceHub/evidenceHub.model";
 import { getAllEntities } from "../../../../application/repository/entity.repository";
+import { radiusPx } from "../../../themes/palette";
 
 export interface FileResponse {
   id: string | number;
@@ -258,7 +259,7 @@ const NewTrainingEvidence: FC<NewTrainingEvidenceProps> = ({
                       padding: "8px 12px",
                       border: "1px solid",
                       borderColor: "border.light",
-                      borderRadius: "4px",
+                      borderRadius: radiusPx.sm,
                     }}
                   >
                     <Typography
@@ -294,7 +295,7 @@ const NewTrainingEvidence: FC<NewTrainingEvidenceProps> = ({
                   fontSize: 12,
                   border: "1px dashed",
                   borderColor: "border.light",
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                 }}
               >
                 No files uploaded yet.

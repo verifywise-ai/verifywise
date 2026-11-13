@@ -27,6 +27,7 @@ import { CustomizableButton } from "../../../components/button/customizable-butt
 import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtended";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import palette from "../../../themes/palette";
+import { palette as vwPalette, radiusPx } from "../../../themes/palette";
 import { sectionTitleSx, useCardSx, ProviderIcon } from "../shared";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import { EmptyState } from "../../../components/EmptyState";
@@ -338,7 +339,7 @@ export default function ModelsPage() {
                         gap: "4px",
                         px: "8px",
                         height: "34px",
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                         cursor: "pointer",
                         border: `1px solid ${active ? palette.brand.primary : palette.border.dark}`,
                         backgroundColor: active ? `${palette.brand.primary}10` : "transparent",
@@ -734,7 +735,7 @@ export default function ModelsPage() {
                             "borderBottom": `1px solid ${palette.border.light}`,
                             "backgroundColor":
                               i === 0
-                                ? "#F0FDF4"
+                                ? vwPalette.status.success.bg
                                 : i === 1
                                   ? "#F8FAFC"
                                   : i === 2
@@ -799,7 +800,7 @@ export default function ModelsPage() {
                                   color: palette.brand.primary,
                                   fontWeight: 600,
                                   border: `1px solid ${palette.brand.primary}40`,
-                                  borderRadius: "4px",
+                                  borderRadius: radiusPx.sm,
                                   px: "4px",
                                   py: "1px",
                                   whiteSpace: "nowrap",
@@ -928,7 +929,7 @@ export default function ModelsPage() {
                               gap: "4px",
                               px: "8px",
                               height: "28px",
-                              borderRadius: "4px",
+                              borderRadius: radiusPx.sm,
                               cursor: "pointer",
                               border: `1px solid ${selected ? palette.brand.primary : palette.border.dark}`,
                               backgroundColor: selected
@@ -968,7 +969,7 @@ export default function ModelsPage() {
                           }}
                           sx={{
                             "p": "6px 8px",
-                            "borderRadius": "4px",
+                            "borderRadius": radiusPx.sm,
                             "cursor": "pointer",
                             "&:hover": { backgroundColor: palette.background.alt },
                             "backgroundColor": compareIds.includes(m.id)
@@ -1167,7 +1168,9 @@ export default function ModelsPage() {
                                       : isNo
                                         ? palette.text.disabled
                                         : palette.text.primary,
-                                    backgroundColor: isBest ? "#F0FDF4" : "transparent",
+                                    backgroundColor: isBest
+                                      ? vwPalette.status.success.bg
+                                      : "transparent",
                                     fontWeight: isBest ? 600 : 400,
                                   }}
                                 >

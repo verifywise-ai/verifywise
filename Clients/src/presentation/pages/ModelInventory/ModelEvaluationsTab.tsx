@@ -3,7 +3,7 @@ import { Box, Stack, Typography, Alert as MuiAlert } from "@mui/material";
 import { FlaskConical, AlertTriangle } from "lucide-react";
 import Chip from "../../components/Chip";
 import CustomizableSkeleton from "../../components/Skeletons";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 import {
   getAllModelEvaluations,
   type ModelEvaluation,
@@ -107,7 +107,7 @@ export default function ModelEvaluationsTab() {
         <MuiAlert
           severity="warning"
           icon={<AlertTriangle size={16} strokeWidth={1.5} />}
-          sx={{ mb: "16px", fontSize: "13px", borderRadius: "4px" }}
+          sx={{ mb: "16px", fontSize: "13px", borderRadius: radiusPx.sm }}
         >
           {flaggedCount} evaluation{flaggedCount !== 1 ? "s" : ""} flagged a potential risk.
           Consider adding {flaggedCount !== 1 ? "these" : "this"} to the risk register.

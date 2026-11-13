@@ -35,6 +35,8 @@ import {
   text,
   status,
   accent,
+  palette as vwPalette,
+  radiusPx,
 } from "../../../themes/palette";
 import {
   useMappings,
@@ -87,7 +89,7 @@ const ModuleCard: React.FC<ModuleCardProps> = ({
       onMouseLeave={() => setIsHovered(false)}
       sx={{
         "cursor": disabled ? "default" : "pointer",
-        "borderRadius": "4px",
+        "borderRadius": radiusPx.sm,
         "border": `1px solid ${borderPalette.dark}`,
         "background": `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
         "opacity": disabled ? 0.6 : 1,
@@ -110,7 +112,7 @@ const ModuleCard: React.FC<ModuleCardProps> = ({
               justifyContent: "center",
               width: 40,
               height: 40,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               backgroundColor: alpha(color, 0.08),
               color: color,
             }}
@@ -129,7 +131,9 @@ const ModuleCard: React.FC<ModuleCardProps> = ({
             />
           )}
         </Stack>
-        <Typography sx={{ mt: "12px", fontSize: 14, fontWeight: 600, color: "#1F2937" }}>
+        <Typography
+          sx={{ mt: "12px", fontSize: 14, fontWeight: 600, color: vwPalette.text.primary }}
+        >
           {title}
         </Typography>
         <Typography sx={{ fontSize: 13, color: text.secondary, mt: 0.5, display: "block" }}>
@@ -317,7 +321,7 @@ const GovernanceHub: React.FC = () => {
           <Box
             sx={{
               border: `1px solid ${brand.primary}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: "16px",
               background: `linear-gradient(135deg, ${background.main} 0%, ${alpha(brand.primary, 0.06)} 100%)`,
             }}
@@ -411,7 +415,7 @@ const GovernanceHub: React.FC = () => {
           <Box
             sx={{
               border: `1px dashed ${borderPalette.light}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: "16px",
               background: background.main,
             }}
@@ -460,12 +464,12 @@ const GovernanceHub: React.FC = () => {
               <Box
                 sx={{
                   p: "12px 14px 14px 14px",
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   border: `1px solid ${borderPalette.dark}`,
                   background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
                 }}
               >
-                <Typography sx={{ fontSize: 13, color: "#8594AC", mb: "2px" }}>
+                <Typography sx={{ fontSize: 13, color: vwPalette.text.accent, mb: "2px" }}>
                   Avg Coverage
                 </Typography>
                 <Typography
@@ -478,12 +482,12 @@ const GovernanceHub: React.FC = () => {
                   value={coverageStats.avg}
                   sx={{
                     "height": 4,
-                    "borderRadius": "4px",
+                    "borderRadius": radiusPx.sm,
                     "mt": 1,
                     "backgroundColor": background.hover,
                     "& .MuiLinearProgress-bar": {
                       backgroundColor: coverageColor,
-                      borderRadius: "4px",
+                      borderRadius: radiusPx.sm,
                     },
                   }}
                 />
@@ -497,12 +501,12 @@ const GovernanceHub: React.FC = () => {
               <Box
                 sx={{
                   p: "12px 14px 14px 14px",
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   border: `1px solid ${borderPalette.dark}`,
                   background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
                 }}
               >
-                <Typography sx={{ fontSize: 13, color: "#8594AC", mb: "2px" }}>
+                <Typography sx={{ fontSize: 13, color: vwPalette.text.accent, mb: "2px" }}>
                   Total Gaps
                 </Typography>
                 <Typography
@@ -527,12 +531,12 @@ const GovernanceHub: React.FC = () => {
               <Box
                 sx={{
                   p: "12px 14px 14px 14px",
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   border: `1px solid ${borderPalette.dark}`,
                   background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
                 }}
               >
-                <Typography sx={{ fontSize: 13, color: "#8594AC", mb: "2px" }}>
+                <Typography sx={{ fontSize: 13, color: vwPalette.text.accent, mb: "2px" }}>
                   Active Frameworks
                 </Typography>
                 <Typography
@@ -553,12 +557,12 @@ const GovernanceHub: React.FC = () => {
               <Box
                 sx={{
                   p: "12px 14px 14px 14px",
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   border: `1px solid ${borderPalette.dark}`,
                   background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
                 }}
               >
-                <Typography sx={{ fontSize: 13, color: "#8594AC", mb: "2px" }}>
+                <Typography sx={{ fontSize: 13, color: vwPalette.text.accent, mb: "2px" }}>
                   Total Mappings
                 </Typography>
                 <Typography
@@ -664,7 +668,7 @@ const GovernanceHub: React.FC = () => {
           <Box
             sx={{
               border: `1px solid ${borderPalette.dark}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: "16px",
               background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
             }}
@@ -691,7 +695,7 @@ const GovernanceHub: React.FC = () => {
                     "alignItems": "center",
                     "justifyContent": "space-between",
                     "p": "12px",
-                    "borderRadius": "4px",
+                    "borderRadius": radiusPx.sm,
                     "border": `1px solid ${borderPalette.light}`,
                     "background": background.main,
                     "&:hover": { background: background.accent },
@@ -708,7 +712,7 @@ const GovernanceHub: React.FC = () => {
                         alignItems: "center",
                         height: 20,
                         px: "8px",
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                         fontSize: 11,
                         fontWeight: 500,
                         backgroundColor: status.warning.bg,

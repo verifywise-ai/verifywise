@@ -42,7 +42,7 @@ import {
   getOfficeFileLabel,
 } from "../../../../../application/utils/officePreview.utils";
 import { useIsAdmin } from "../../../../../application/hooks/useIsAdmin";
-import { status } from "../../../../themes/palette";
+import { status, palette as vwPalette, radiusPx } from "../../../../themes/palette";
 import useFormattedDate from "../../../../../application/hooks/useFormattedDate";
 import { FileExpiryChip } from "../../../../components/FileExpiryChip";
 import {
@@ -85,9 +85,9 @@ const getFileIcon = (mimetype?: string) => {
   const type = getPreviewType(mimetype);
   switch (type) {
     case "pdf":
-      return <FileType size={48} color="#EF4444" />;
+      return <FileType size={48} color={vwPalette.riskMark.critical} />;
     case "image":
-      return <Image size={48} color="#3B82F6" />;
+      return <Image size={48} color={vwPalette.status.info.text} />;
     case "office":
       if (mimetype?.includes("spreadsheetml")) {
         return <FileSpreadsheet size={48} color="#217346" />;
@@ -280,8 +280,8 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
             alignItems: "center",
             height: 300,
             backgroundColor: "background.accent",
-            borderRadius: "4px",
-            border: "1px solid #E0E4E9",
+            borderRadius: radiusPx.sm,
+            border: `1px solid ${vwPalette.border.light}`,
           }}
         >
           {getFileIcon(file?.mimetype)}
@@ -300,8 +300,8 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
             alignItems: "center",
             height: 300,
             backgroundColor: "background.accent",
-            borderRadius: "4px",
-            border: "1px solid #E0E4E9",
+            borderRadius: radiusPx.sm,
+            border: `1px solid ${vwPalette.border.light}`,
           }}
         >
           {getFileIcon(file?.mimetype)}
@@ -323,8 +323,8 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
           sx={{
             width: "100%",
             height: 400,
-            border: "1px solid #E0E4E9",
-            borderRadius: "4px",
+            border: `1px solid ${vwPalette.border.light}`,
+            borderRadius: radiusPx.sm,
           }}
           title={file?.filename}
         />
@@ -341,8 +341,8 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
             width: "100%",
             maxHeight: 400,
             objectFit: "contain",
-            border: "1px solid #E0E4E9",
-            borderRadius: "4px",
+            border: `1px solid ${vwPalette.border.light}`,
+            borderRadius: radiusPx.sm,
             backgroundColor: "background.accent",
           }}
         />
@@ -359,8 +359,8 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
             overflow: "auto",
             padding: 2,
             backgroundColor: "background.accent",
-            border: "1px solid #E0E4E9",
-            borderRadius: "4px",
+            border: `1px solid ${vwPalette.border.light}`,
+            borderRadius: radiusPx.sm,
             fontSize: 12,
             fontFamily: "monospace",
             whiteSpace: "pre-wrap",
@@ -383,8 +383,8 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
               width: "100%",
               maxHeight: 400,
               objectFit: "contain",
-              border: "1px solid #E0E4E9",
-              borderRadius: "4px",
+              border: `1px solid ${vwPalette.border.light}`,
+              borderRadius: radiusPx.sm,
               backgroundColor: "background.accent",
             }}
           />
@@ -425,7 +425,7 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
           alignItems: "center",
           justifyContent: "space-between",
           padding: "16px 20px",
-          borderBottom: "1px solid #E0E4E9",
+          borderBottom: `1px solid ${vwPalette.border.light}`,
         }}
       >
         <Box sx={{ display: "flex", alignItems: "center", gap: 1, minWidth: 0, flex: 1 }}>
@@ -527,7 +527,9 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
             borderBottom: "1px solid #FECDCA",
           }}
         >
-          <Typography sx={{ fontSize: 13, color: "#B42318" }}>{downloadError}</Typography>
+          <Typography sx={{ fontSize: 13, color: vwPalette.status.error.text }}>
+            {downloadError}
+          </Typography>
         </Box>
       )}
 
@@ -637,7 +639,7 @@ export const FilePreviewPanel: React.FC<FilePreviewPanelProps> = ({
                         label={tag}
                         size="small"
                         sx={{
-                          backgroundColor: "#F2F4F7",
+                          backgroundColor: vwPalette.background.hover,
                           color: "text.secondary",
                           fontSize: "11px",
                           height: 22,

@@ -19,7 +19,8 @@ import {
   EnhancedRiskSummary,
   RiskTrend,
 } from "../../../../domain/interfaces/i.riskSummary";
-import { status, border as borderPalette } from "../../../themes/palette";
+import { status, border as borderPalette, palette as vwPalette } from "../../../themes/palette";
+import { chartTheme } from "../../../themes/chartTheme";
 
 interface RisksCardProps {
   risksSummary: risksSummary | EnhancedRiskSummary;
@@ -44,7 +45,7 @@ export function RisksCard({ risksSummary, onCardClick, selectedLevel }: RisksCar
       return (
         <Typography sx={trendIndicator}>
           <TrendingUpRedIcon size={16} style={trendIconUp} />
-          <span style={{ color: "#EF4444" }}>+{trend.change}</span>
+          <span style={{ color: vwPalette.riskMark.critical }}>+{trend.change}</span>
         </Typography>
       );
     }
@@ -52,7 +53,7 @@ export function RisksCard({ risksSummary, onCardClick, selectedLevel }: RisksCar
     return (
       <Typography sx={trendIndicator}>
         <TrendingDownGreenIcon size={16} style={trendIconDown} />
-        <span style={{ color: "#10B981" }}>-{Math.abs(trend.change)}</span>
+        <span style={{ color: vwPalette.status.success.strong }}>-{Math.abs(trend.change)}</span>
       </Typography>
     );
   };
@@ -86,42 +87,42 @@ export function RisksCard({ risksSummary, onCardClick, selectedLevel }: RisksCar
       key: "total",
       label: "Total",
       value: risksSummary.total,
-      color: "#4B5563",
+      color: chartTheme.riskSummary.total,
       trend: undefined,
     },
     {
       key: "veryHigh",
       label: "Very high",
       value: risksSummary.veryHighRisks,
-      color: "#C63622",
+      color: chartTheme.riskSummary.veryHigh,
       trend: enhancedSummary.trends?.veryHighTrend,
     },
     {
       key: "high",
       label: "High",
       value: risksSummary.highRisks,
-      color: "#D68B61",
+      color: chartTheme.riskSummary.high,
       trend: enhancedSummary.trends?.highTrend,
     },
     {
       key: "medium",
       label: "Medium",
       value: risksSummary.mediumRisks,
-      color: "#D6B971",
+      color: chartTheme.riskSummary.medium,
       trend: enhancedSummary.trends?.mediumTrend,
     },
     {
       key: "low",
       label: "Low",
       value: risksSummary.lowRisks,
-      color: "#52AB43",
+      color: chartTheme.riskSummary.low,
       trend: enhancedSummary.trends?.lowTrend,
     },
     {
       key: "veryLow",
       label: "Very low",
       value: risksSummary.veryLowRisks,
-      color: "#B8D39C",
+      color: chartTheme.riskSummary.veryLow,
       trend: enhancedSummary.trends?.veryLowTrend,
     },
   ];

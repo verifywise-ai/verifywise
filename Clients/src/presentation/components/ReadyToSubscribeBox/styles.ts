@@ -1,12 +1,12 @@
 import { Theme } from "@mui/material";
-import { text, background } from "../../themes/palette";
+import { text, background, radiusPx } from "../../themes/palette";
 
 // Define styles as constants to improve readability and reusability
 const getStyles = (theme: Theme) => ({
   container: {
     width: "90%",
     backgroundColor: "#28A745",
-    borderRadius: "4px",
+    borderRadius: radiusPx.sm,
   },
   stack: {
     padding: "15px",
@@ -30,7 +30,7 @@ const getStyles = (theme: Theme) => ({
     backgroundColor: theme.palette.background.main,
     color: `${text.secondary}`,
     padding: "4px",
-    borderRadius: "4px",
+    borderRadius: radiusPx.sm,
   },
 });
 

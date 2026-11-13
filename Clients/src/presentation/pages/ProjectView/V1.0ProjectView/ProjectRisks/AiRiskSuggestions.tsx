@@ -36,7 +36,7 @@ import {
   mapFreeformSuggestionToMitigationForm,
   RISK_SUGGESTION_SOURCE_LABELS,
 } from "../../../../components/AddNewRiskForm/riskSuggestionMappers";
-import { palette } from "../../../../themes/palette";
+import { palette, radiusPx } from "../../../../themes/palette";
 
 type SuggestionItem =
   | { kind: "matched"; key: string; entry: MatchedCatalogRisk }
@@ -293,7 +293,7 @@ export function AiRiskSuggestions({ onRiskSaved }: AiRiskSuggestionsProps) {
                     key={item.key}
                     sx={{
                       "border": `1px solid ${palette.border.light}`,
-                      "borderRadius": "4px",
+                      "borderRadius": radiusPx.sm,
                       "p": "8px",
                       "backgroundColor": palette.background.main,
                       "&:hover": { borderColor: palette.border.dark },

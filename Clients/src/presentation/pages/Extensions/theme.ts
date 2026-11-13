@@ -1,3 +1,4 @@
+import { palette as vwPalette } from "../../themes/palette";
 /**
  * Style tokens for the Extensions folder.
  *
@@ -10,51 +11,51 @@
 
 export const colors = {
   // Primary — matches themes/palette.ts brand.primary
-  primary: "#13715B",
+  primary: vwPalette.brand.primary,
   primaryHover: "#0F5A47",
   primaryLight: "rgba(19, 113, 91, 0.08)",
 
   // Secondary neutral — matches v1SingleTheme colors.secondary
   secondary: "#6B7280",
-  secondaryHover: "#4B5563",
+  secondaryHover: vwPalette.text.tertiary,
 
   // Status: success — matches themes/palette.ts status.success
   success: "#079455",
   successHover: "#047857",
-  successLight: "#E6F4EA",
+  successLight: vwPalette.status.success.bg,
 
   // Status: warning — matches themes/palette.ts status.warning
   warning: "#B45309",
   warningHover: "#92400E",
-  warningLight: "#FFF8E1",
+  warningLight: vwPalette.risk.medium.bg,
 
   // Status: error — matches themes/palette.ts status.error
-  error: "#D32F2F",
+  error: vwPalette.status.error.text,
   errorHover: "#B91C1C",
-  errorLight: "#FFD6D6",
+  errorLight: vwPalette.status.error.border,
 
   // Status: info — matches themes/palette.ts status.info
-  info: "#1565C0",
+  info: vwPalette.status.info.text,
   infoHover: "#0D47A1",
-  infoLight: "#E3F2FD",
+  infoLight: vwPalette.status.info.bg,
 
   // Text — matches themes/palette.ts text.*
-  textPrimary: "#1c2130",
-  textSecondary: "#344054",
+  textPrimary: vwPalette.text.primary,
+  textSecondary: vwPalette.text.secondary,
   textTertiary: "#667085",
   textDisabled: "#9CA3AF",
 
   // Backgrounds — matches themes/palette.ts background.*
   background: "#ffffff",
-  backgroundSecondary: "#f9fafb",
+  backgroundSecondary: vwPalette.background.alt,
   backgroundHover: "#f5f5f5",
 
   // Borders — matches themes/palette.ts border.light/dark
-  border: "#eaecf0",
-  borderLight: "#eaecf0",
+  border: vwPalette.border.light,
+  borderLight: vwPalette.border.light,
 
   white: "#ffffff",
-  disabled: "#E5E7EB",
+  disabled: vwPalette.border.light,
 };
 
 export const typography = {
@@ -234,7 +235,7 @@ export const chipStyles = {
   warning: { backgroundColor: colors.warningLight, color: colors.warning },
   error: { backgroundColor: colors.errorLight, color: colors.error },
   info: { backgroundColor: colors.infoLight, color: colors.info },
-  neutral: { backgroundColor: "rgba(107, 114, 128, 0.1)", color: "#4b5563" },
+  neutral: { backgroundColor: "rgba(107, 114, 128, 0.1)", color: vwPalette.text.tertiary },
 };
 
 export const modalStyles = {

@@ -17,6 +17,7 @@ import CustomAxios from "../../../infrastructure/api/customAxios";
 import { evalModelsService, type SavedModel } from "../../../infrastructure/api/evalModelsService";
 import * as ProviderIcons from "../../components/ProviderIcons";
 import palette from "../../themes/palette";
+import { palette as vwPalette, radiusPx } from "../../themes/palette";
 
 interface Message {
   role: "user" | "assistant";
@@ -641,7 +642,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                         backgroundColor: palette.background.hover,
                         px: "4px",
                         py: "1px",
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                         fontSize: 12,
                       },
                       "& h1,& h2,& h3": { mt: "14px", mb: "6px", fontWeight: 600 },
@@ -697,7 +698,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                 backgroundColor: "#FFF5F5",
               }}
             >
-              <Typography fontSize={12} color="#DC2626">
+              <Typography fontSize={12} color={vwPalette.riskMark.critical}>
                 {error}
               </Typography>
             </Box>
@@ -794,13 +795,15 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
             "display": "flex",
             "alignItems": "center",
             "gap": "6px",
-            "border": `1.5px solid ${dictating ? "#EF4444" : palette.border.light}`,
+            "border": `1.5px solid ${dictating ? vwPalette.riskMark.critical : palette.border.light}`,
             "borderRadius": "14px",
             "px": "10px",
             "py": "8px",
             "backgroundColor": palette.background.main,
             "transition": "border-color 0.15s",
-            "&:focus-within": { borderColor: dictating ? "#EF4444" : palette.brand.primary },
+            "&:focus-within": {
+              borderColor: dictating ? vwPalette.riskMark.critical : palette.brand.primary,
+            },
           }}
         >
           {/* Attach */}
@@ -840,7 +843,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                 onClick={toggleDictation}
                 disabled={loading || !selectedModelId}
                 sx={{
-                  "color": dictating ? "#EF4444" : palette.text.tertiary,
+                  "color": dictating ? vwPalette.riskMark.critical : palette.text.tertiary,
                   "borderRadius": "50%",
                   "p": "4px",
                   "flexShrink": 0,

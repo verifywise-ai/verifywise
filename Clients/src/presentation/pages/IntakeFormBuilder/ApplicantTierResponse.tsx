@@ -1,6 +1,7 @@
 import { Box, Typography, useTheme } from "@mui/material";
 import { useQuery } from "@tanstack/react-query";
 import { getSubmissionTierSuggestionResponse } from "../../../application/repository/intakeTierSuggestion.repository";
+import { radiusPx } from "../../themes/palette";
 
 /**
  * What the applicant said about the risk level suggested to them before they
@@ -21,7 +22,7 @@ const ApplicantTierResponse = ({ submissionId }: { submissionId: number }) => {
       data-testid="applicant-tier-response"
       sx={{
         border: `1px solid ${theme.palette.border.dark}`,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         p: "12px 16px",
         display: "flex",
         flexDirection: "column",

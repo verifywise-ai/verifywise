@@ -1,13 +1,14 @@
 // Shared color palette for dashboard components
-import { brand, text, background, border, status, risk } from "../themes/palette";
+import { brand, text, background, border, status, risk, accent } from "../themes/palette";
+import { chartTheme } from "../themes/chartTheme";
 
 export const DASHBOARD_COLORS = {
   // Status/severity colors
-  critical: risk.critical.text,
-  high: risk.high.text,
-  medium: risk.medium.text,
-  low: risk.low.text,
-  veryLow: risk.veryLow.text,
+  critical: chartTheme.risk.critical,
+  high: chartTheme.risk.high,
+  medium: chartTheme.risk.medium,
+  low: chartTheme.risk.low,
+  veryLow: chartTheme.risk.veryLow,
 
   // State colors
   completed: status.success.text,
@@ -20,7 +21,7 @@ export const DASHBOARD_COLORS = {
   // Framework status colors
   implemented: brand.primary,
   awaitingReview: status.info.text,
-  awaitingApproval: "#8B5CF6",
+  awaitingApproval: chartTheme.status.purple,
   needsRework: risk.high.text,
   notStarted: text.disabled,
 
@@ -29,11 +30,11 @@ export const DASHBOARD_COLORS = {
   investigating: status.warning.text,
   mitigated: status.info.text,
   closed: status.success.text,
-  suspended: "#5E35B1",
+  suspended: chartTheme.status.purple,
   emergencyAction: risk.high.text,
 
   // Model lifecycle colors
-  restricted: "#F97316",
+  restricted: chartTheme.status.orange,
   blocked: status.error.text,
 
   // Deadline/urgency colors
@@ -45,8 +46,8 @@ export const DASHBOARD_COLORS = {
   dueThisWeekBackground: status.warning.bg,
   dueNextWeek: status.info.text,
   dueNextWeekBackground: status.info.bg,
-  dueThisMonth: "#7c3aed",
-  dueThisMonthBackground: "#f5f3ff",
+  dueThisMonth: accent.purple.text,
+  dueThisMonthBackground: accent.purple.bg,
   dueLater: status.default.text,
   dueLaterBackground: background.accent,
   noDueDate: text.disabled,

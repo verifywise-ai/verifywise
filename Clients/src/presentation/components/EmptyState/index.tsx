@@ -3,6 +3,7 @@ import { Box, Stack, Typography, useTheme } from "@mui/material";
 import type { LucideIcon } from "lucide-react";
 import { Inbox } from "lucide-react";
 import EmptyIllustration from "./EmptyIllustration";
+import { radiusPx } from "../../themes/palette";
 
 interface EmptyStateProps {
   /**
@@ -63,7 +64,7 @@ export const EmptyState: FC<EmptyStateProps> = ({
         ...(fillContainer && { height: "100%" }),
         ...(showBorder && {
           border: `1px dashed ${theme.palette.border.dark}`,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           backgroundColor: theme.palette.background.main,
         }),
         ...(fillContainer

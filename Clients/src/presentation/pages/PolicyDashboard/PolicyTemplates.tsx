@@ -44,6 +44,7 @@ import type {
   PolicyTemplate,
   PolicyTemplateOrigin,
 } from "../../../domain/interfaces/i.policyTemplate";
+import { radiusPx } from "../../themes/palette";
 
 // Define table headers in the format expected by CustomizablePolicyTable
 const tableHeaders = [
@@ -397,7 +398,7 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
                         <Chip
                           label="System"
                           size="small"
-                          sx={{ fontSize: "11px", height: "20px", borderRadius: "4px" }}
+                          sx={{ fontSize: "11px", height: "20px", borderRadius: radiusPx.sm }}
                         />
                       ) : (
                         policy.id

@@ -1,6 +1,7 @@
 import { styled } from "@mui/material/styles";
 import { TableRow, Box } from "@mui/material";
 import singleTheme from "../../../themes/v1SingleTheme";
+import { radiusPx } from "../../../themes/palette";
 
 export const StyledTableRow = styled(TableRow)<{ isflashing: number }>(({ isflashing }) => ({
   "& > *": {
@@ -45,7 +46,7 @@ export const styles = {
   progressBar: (theme: import("@mui/material/styles").Theme) => ({
     width: "100px",
     height: "5px",
-    borderRadius: "4px",
+    borderRadius: radiusPx.sm,
     backgroundColor: theme.palette.grey[200],
   }),
 

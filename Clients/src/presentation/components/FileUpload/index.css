@@ -9,7 +9,7 @@
   flex-direction: column;
   align-items: center;
   justify-content: space-between;
-  background-color: #f9fafb;
+  background-color: var(--vw-background-alt, #f9fafb);
 }
 
 /* Styling for the drag-and-drop area */
@@ -36,7 +36,7 @@
 .file-upload-button {
   width: 120px;
   height: 40px;
-  background-color: #3b82f6;
+  background-color: var(--vw-status-info-text, #3b82f6);
   color: white;
   font-size: 14px;
   font-weight: 500;

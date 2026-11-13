@@ -2,7 +2,9 @@ import React, { useState } from "react";
 import { Box, Typography, Avatar } from "@mui/material";
 import { Building2 } from "lucide-react";
 import { getBrandFetchUrl } from "../../../config/brandfetch.config";
-import { text, background } from "../../themes/palette";
+import { text, background, palette as vwPalette } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
+import { isClassicUi } from "../../themes/uiStyle";
 
 interface VendorLogoProps {
   /** Vendor's website URL or domain */
@@ -19,7 +21,7 @@ interface VendorLogoProps {
  * Vibrant color palette for avatar backgrounds
  * Each vendor gets a consistent color based on their name
  */
-const COLOR_PALETTE = [
+const CLASSIC_COLOR_PALETTE = [
   { bg: "#EF4444", text: `${background.main}` }, // Red
   { bg: "#F59E0B", text: `${background.main}` }, // Amber
   { bg: "#10B981", text: `${background.main}` }, // Emerald
@@ -33,6 +35,11 @@ const COLOR_PALETTE = [
   { bg: "#A855F7", text: `${background.main}` }, // Purple
   { bg: "#84CC16", text: `${background.main}` }, // Lime
 ];
+
+// Phase 1: avatars use the nine chart series (never a risk or status colour).
+const COLOR_PALETTE = isClassicUi()
+  ? CLASSIC_COLOR_PALETTE
+  : chartTheme.series.slice(0, 9).map((bg) => ({ bg, text: `${background.main}` }));
 
 /**
  * Generates a consistent color for a vendor based on their name
@@ -165,7 +172,7 @@ const VendorLogo: React.FC<VendorLogoProps> = ({
           sx={{
             fontSize: 14,
             fontWeight: 400,
-            color: "#111827",
+            color: vwPalette.text.primary,
             overflow: "hidden",
             textOverflow: "ellipsis",
             whiteSpace: "nowrap",

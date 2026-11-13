@@ -13,7 +13,7 @@ import {
   ComplianceCategory,
   ComplianceMappingResponse,
 } from "../../../../domain/ai-detection/types";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import { getProviderIcon } from "./providerIcons";
 import {
   ARTICLE_DESCRIPTIONS,
@@ -63,7 +63,7 @@ export function ComplianceTab({ complianceData, complianceLoading }: ComplianceT
               sx={{
                 backgroundColor: palette.background.main,
                 border: `1px solid ${palette.border.dark}`,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 p: 2,
                 textAlign: "center",
               }}
@@ -79,7 +79,7 @@ export function ComplianceTab({ complianceData, complianceLoading }: ComplianceT
               sx={{
                 backgroundColor: palette.status.error.bg,
                 border: `1px solid ${palette.status.error.border}`,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 p: 2,
                 textAlign: "center",
               }}
@@ -97,7 +97,7 @@ export function ComplianceTab({ complianceData, complianceLoading }: ComplianceT
               sx={{
                 backgroundColor: palette.status.warning.bg,
                 border: `1px solid ${palette.status.warning.border}`,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 p: 2,
                 textAlign: "center",
               }}
@@ -119,7 +119,7 @@ export function ComplianceTab({ complianceData, complianceLoading }: ComplianceT
                 sx={{
                   backgroundColor: palette.background.accent,
                   border: `1px solid ${palette.border.dark}`,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   p: 2,
                   textAlign: "center",
                   cursor: "help",
@@ -171,7 +171,7 @@ export function ComplianceTab({ complianceData, complianceLoading }: ComplianceT
                 sx={{
                   backgroundColor: palette.status.success.bg,
                   border: `1px solid ${palette.status.success.border}`,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   p: 4,
                   textAlign: "center",
                 }}
@@ -205,7 +205,7 @@ export function ComplianceTab({ complianceData, complianceLoading }: ComplianceT
                       key={item.id}
                       sx={{
                         border: `1px solid ${palette.border.light}`,
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                         backgroundColor: palette.background.main,
                       }}
                     >
@@ -257,7 +257,7 @@ export function ComplianceTab({ complianceData, complianceLoading }: ComplianceT
                                 sx={{
                                   px: "6px",
                                   py: "2px",
-                                  borderRadius: "4px",
+                                  borderRadius: radiusPx.sm,
                                   backgroundColor: palette.status.default.bg,
                                   display: "flex",
                                   alignItems: "center",
@@ -278,7 +278,7 @@ export function ComplianceTab({ complianceData, complianceLoading }: ComplianceT
                                   sx={{
                                     px: "6px",
                                     py: "2px",
-                                    borderRadius: "4px",
+                                    borderRadius: radiusPx.sm,
                                     backgroundColor: categoryConfig.bgColor,
                                     cursor: "help",
                                   }}
@@ -301,7 +301,7 @@ export function ComplianceTab({ complianceData, complianceLoading }: ComplianceT
                               sx={{
                                 px: "8px",
                                 py: "2px",
-                                borderRadius: "4px",
+                                borderRadius: radiusPx.sm,
                                 backgroundColor: priorityConfig.bgColor,
                                 border: `1px solid ${priorityConfig.color}20`,
                                 cursor: "help",
@@ -416,7 +416,7 @@ export function ComplianceTab({ complianceData, complianceLoading }: ComplianceT
                                             sx={{
                                               px: "8px",
                                               py: "4px",
-                                              borderRadius: "4px",
+                                              borderRadius: radiusPx.sm,
                                               backgroundColor: palette.background.main,
                                               border: `1px solid ${palette.border.light}`,
                                               display: "flex",

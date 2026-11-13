@@ -9,7 +9,7 @@ import {
 } from "lucide-react";
 import { CustomizableButton } from "../../button/customizable-button";
 import { FilePickerModal } from "../../FilePickerModal";
-import { text } from "../../../themes/palette";
+import { text, palette as vwPalette, radiusPx } from "../../../themes/palette";
 import { UseEvidenceFilesReturn } from "./useEvidenceFiles";
 import { FileExpiryChip } from "../../FileExpiryChip";
 
@@ -124,7 +124,7 @@ const EvidenceTab: React.FC<EvidenceTabProps> = ({
                 "justifyContent": "space-between",
                 "padding": "10px 12px",
                 "border": `1px solid ${theme.palette.border.light}`,
-                "borderRadius": "4px",
+                "borderRadius": radiusPx.sm,
                 "backgroundColor": "background.main",
                 "&:hover": {
                   backgroundColor: "background.accent",
@@ -139,7 +139,7 @@ const EvidenceTab: React.FC<EvidenceTabProps> = ({
                       sx={{
                         fontSize: 13,
                         fontWeight: 500,
-                        color: "#1F2937",
+                        color: vwPalette.text.primary,
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",
@@ -209,7 +209,7 @@ const EvidenceTab: React.FC<EvidenceTabProps> = ({
                 justifyContent: "space-between",
                 padding: "10px 12px",
                 border: `1px solid ${theme.palette.status.warning.border}`,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 backgroundColor: "status.warning.bg",
               }}
             >
@@ -269,7 +269,7 @@ const EvidenceTab: React.FC<EvidenceTabProps> = ({
                 justifyContent: "space-between",
                 padding: "10px 12px",
                 border: "1px solid #DBEAFE",
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 backgroundColor: "#EFF6FF",
               }}
             >

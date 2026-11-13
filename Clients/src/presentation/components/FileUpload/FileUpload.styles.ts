@@ -1,5 +1,6 @@
 import { styled } from "@mui/material/styles";
 import { Dialog, DialogContent } from "@mui/material";
+import { radiusPx } from "../../themes/palette";
 
 export const StyledDialog = styled(Dialog, {
   shouldForwardProp: (prop) => prop !== "modalHeight",
@@ -9,7 +10,7 @@ export const StyledDialog = styled(Dialog, {
   ".MuiDialog-paper": {
     width: "384px",
     height: `${modalHeight}px`,
-    borderRadius: "4px",
+    borderRadius: radiusPx.sm,
     maxHeight: "90vh",
     margin: "0 ",
     transition: "all 0.3s ease",

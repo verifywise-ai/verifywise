@@ -30,6 +30,7 @@ import { OrganizationModel } from "../../../../domain/models/Common/organization
 import FileRetentionSection from "./FileRetentionSection";
 import UseCaseDefaultsSection from "./UseCaseDefaultsSection";
 import LifecycleCheckSection from "./LifecycleCheckSection";
+import { palette } from "../../../themes/palette";
 
 interface AlertState {
   variant: "success" | "info" | "warning" | "error";
@@ -410,7 +411,7 @@ const Organization = () => {
                   "justifyContent": "center",
                   "borderRadius": "50%",
                   "border": "2px dashed #ddd",
-                  "backgroundColor": "#fafafa",
+                  "backgroundColor": palette.background.alt,
                   "position": "relative",
                   "overflow": "hidden",
                   "&:hover": {

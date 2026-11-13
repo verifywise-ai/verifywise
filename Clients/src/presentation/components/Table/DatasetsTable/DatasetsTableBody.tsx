@@ -16,7 +16,7 @@ import StatusBadge from "../../StatusBadge";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { DatasetRow } from "./index";
 import { getCategoryStyles, getDifficultyVariant } from "../TemplatesTable/TemplatesList";
-import { text, background, status } from "../../../themes/palette";
+import { text, background, status, radiusPx } from "../../../themes/palette";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 
 interface DatasetsTableBodyProps {
@@ -258,7 +258,7 @@ const DatasetsTableBody: React.FC<DatasetsTableBodyProps> = ({
         sx={{
           "& .MuiPopover-paper": {
             minWidth: 140,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             border: `1px solid ${palette.border.dark}`,
             boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
             overflow: "hidden",

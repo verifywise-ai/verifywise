@@ -69,6 +69,7 @@ import {
 } from "../../../../application/utils/highRiskRoles";
 import CustomException from "../../../../infrastructure/exceptions/customeException";
 import { applyApprovalWorkflowSelection } from "./approvalWorkflowField";
+import { radiusPx } from "../../../themes/palette";
 
 const PROJECT_STATUS_ITEMS = [
   { _id: 1, name: "Not started" },
@@ -659,7 +660,7 @@ export const ProjectForm = ({
         width: useStandardModal ? "100%" : "fit-content",
         backgroundColor: useStandardModal ? "transparent" : theme.palette.background.alt,
         padding: useStandardModal ? 0 : 10,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         gap: useStandardModal ? 6 : 8,
         ...sx,
         maxWidth: useStandardModal ? "100%" : "760px",

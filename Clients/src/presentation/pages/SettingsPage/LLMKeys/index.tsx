@@ -44,7 +44,15 @@ import { invalidateLLMKeyQueries, useLLMKeys } from "../../../../application/hoo
 import anthropicLogo from "../../../assets/icons/anthropic_logo.svg";
 import openaiLogo from "../../../assets/icons/openai_logo.svg";
 import openrouterLogo from "../../../assets/icons/openrouter_logo.svg";
-import { brand, text, background, border as borderPalette, status } from "../../../themes/palette";
+import {
+  brand,
+  text,
+  background,
+  border as borderPalette,
+  status,
+  palette as vwPalette,
+  radiusPx,
+} from "../../../themes/palette";
 
 const PROVIDER_LOGOS: Record<string, string> = {
   Anthropic: anthropicLogo,
@@ -418,7 +426,7 @@ const LLMKeys = () => {
             <Typography sx={{ fontSize: 15, fontWeight: 600, color: `${text.black}` }}>
               LLM Keys
             </Typography>
-            <Typography sx={{ fontSize: 13, color: "#666666", mt: 0.5, mb: 3 }}>
+            <Typography sx={{ fontSize: 13, color: vwPalette.text.tertiary, mt: 0.5, mb: 3 }}>
               Manage your LLM keys for access to VerifyWise Advisor.
             </Typography>
           </Box>
@@ -457,7 +465,7 @@ const LLMKeys = () => {
                 width: 56,
                 height: 56,
                 borderRadius: "50%",
-                backgroundColor: "#f0fdf4",
+                backgroundColor: vwPalette.status.success.bg,
                 display: "flex",
                 alignItems: "center",
                 justifyContent: "center",
@@ -470,7 +478,7 @@ const LLMKeys = () => {
             <Typography sx={{ fontSize: 15, fontWeight: 600, color: `${text.black}`, mb: 1 }}>
               No LLM keys yet
             </Typography>
-            <Typography sx={{ fontSize: 13, color: "#666666", mb: 3 }}>
+            <Typography sx={{ fontSize: 13, color: vwPalette.text.tertiary, mb: 3 }}>
               Add your first LLM API key to enable access to your VerifyWise Advisor.
             </Typography>
             <CustomizableButton
@@ -494,7 +502,7 @@ const LLMKeys = () => {
                   onMouseLeave={() => setHoveredKeyId(null)}
                   sx={{
                     border: `1.5px solid ${borderPalette.light}`,
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     p: 4,
                     backgroundColor: hoveredKeyId === key.id ? "#f8fffe" : `${background.main}`,
                     display: "flex",
@@ -531,14 +539,18 @@ const LLMKeys = () => {
                       </Typography>
                     </Box>
                     <Box sx={{ display: "flex", gap: 2, alignItems: "center" }}>
-                      <Typography sx={{ fontSize: 12, color: "#666666" }}>{key.model}</Typography>
+                      <Typography sx={{ fontSize: 12, color: vwPalette.text.tertiary }}>
+                        {key.model}
+                      </Typography>
                       {key.name === "Custom" && key.url && (
                         <>
-                          <Typography sx={{ fontSize: 12, color: "#999999" }}>•</Typography>
+                          <Typography sx={{ fontSize: 12, color: vwPalette.text.accent }}>
+                            •
+                          </Typography>
                           <Typography
                             sx={{
                               fontSize: 12,
-                              color: "#999999",
+                              color: vwPalette.text.accent,
                               maxWidth: 300,
                               overflow: "hidden",
                               textOverflow: "ellipsis",
@@ -549,8 +561,8 @@ const LLMKeys = () => {
                           </Typography>
                         </>
                       )}
-                      <Typography sx={{ fontSize: 12, color: "#999999" }}>•</Typography>
-                      <Typography sx={{ fontSize: 12, color: "#999999" }}>
+                      <Typography sx={{ fontSize: 12, color: vwPalette.text.accent }}>•</Typography>
+                      <Typography sx={{ fontSize: 12, color: vwPalette.text.accent }}>
                         Added {key.getFormattedCreatedDate()}
                       </Typography>
                     </Box>
@@ -567,7 +579,7 @@ const LLMKeys = () => {
                         "opacity": hoveredKeyId === key.id ? 1 : 0.6,
                         "transition": "opacity 0.2s ease-in-out",
                         "&:hover": {
-                          backgroundColor: "#FEF2F2",
+                          backgroundColor: vwPalette.status.error.bg,
                         },
                         "&:disabled": {
                           opacity: 0.3,
@@ -585,11 +597,11 @@ const LLMKeys = () => {
                       disableRipple
                       disabled={isDisabled}
                       sx={{
-                        "color": "#DC2626",
+                        "color": vwPalette.riskMark.critical,
                         "opacity": hoveredKeyId === key.id ? 1 : 0.6,
                         "transition": "opacity 0.2s ease-in-out",
                         "&:hover": {
-                          backgroundColor: "#FEF2F2",
+                          backgroundColor: vwPalette.status.error.bg,
                         },
                         "&:disabled": {
                           opacity: 0.3,
@@ -634,7 +646,7 @@ const LLMKeys = () => {
                 display: "block",
               }}
             >
-              Provider <span style={{ color: "#f04438" }}>*</span>
+              Provider <span style={{ color: vwPalette.status.error.text }}>*</span>
             </Typography>
             <Box
               sx={{
@@ -654,14 +666,16 @@ const LLMKeys = () => {
                     "alignItems": "center",
                     "gap": 1,
                     "padding": "12px 8px",
-                    "borderRadius": "4px",
+                    "borderRadius": radiusPx.sm,
                     "border": "0.5px solid",
                     "borderColor":
                       formData.name === provider.name
                         ? `${brand.primary}`
                         : `${borderPalette.light}`,
                     "backgroundColor":
-                      formData.name === provider.name ? "#f0fdf4" : `${background.main}`,
+                      formData.name === provider.name
+                        ? vwPalette.status.success.bg
+                        : `${background.main}`,
                     "cursor": "pointer",
                     "transition": "all 0.15s ease",
                     "&:hover": {
@@ -698,7 +712,7 @@ const LLMKeys = () => {
                 placeholder="https://your-llm-proxy.example.com/v1"
                 isRequired
               />
-              <Typography sx={{ fontSize: 11, color: "#666666", mt: 0.5 }}>
+              <Typography sx={{ fontSize: 11, color: vwPalette.text.tertiary, mt: 0.5 }}>
                 OpenAI-compatible endpoint (LiteLLM, vLLM, Ollama, Azure OpenAI, etc.)
               </Typography>
             </Box>
@@ -715,7 +729,7 @@ const LLMKeys = () => {
                 placeholder="e.g., gpt-4, llama-3, claude-3-5-sonnet"
                 isRequired
               />
-              <Typography sx={{ fontSize: 11, color: "#666666", mt: 0.5 }}>
+              <Typography sx={{ fontSize: 11, color: vwPalette.text.tertiary, mt: 0.5 }}>
                 Enter the exact model ID supported by your endpoint
               </Typography>
             </Box>
@@ -731,7 +745,7 @@ const LLMKeys = () => {
                 isRequired
               />
               {modelOptions.length === 0 && (
-                <Typography sx={{ fontSize: 11, color: "#666666", mt: 0.5 }}>
+                <Typography sx={{ fontSize: 11, color: vwPalette.text.tertiary, mt: 0.5 }}>
                   Select a provider first to see available models
                 </Typography>
               )}
@@ -749,7 +763,7 @@ const LLMKeys = () => {
                 placeholder="e.g., claude-3-5-sonnet-20241022"
                 isRequired
               />
-              <Typography sx={{ fontSize: 11, color: "#666666", mt: 0.5 }}>
+              <Typography sx={{ fontSize: 11, color: vwPalette.text.tertiary, mt: 0.5 }}>
                 Enter the exact model ID from your provider's documentation
               </Typography>
             </Box>
@@ -767,7 +781,7 @@ const LLMKeys = () => {
             />
             {!isCustomProvider && currentProviderConfig && (
               <Box sx={{ display: "flex", alignItems: "center", gap: 0.5, mt: 0.5 }}>
-                <Typography sx={{ fontSize: 11, color: "#666666" }}>
+                <Typography sx={{ fontSize: 11, color: vwPalette.text.tertiary }}>
                   Get your API key from
                 </Typography>
                 <Link
@@ -806,7 +820,7 @@ const LLMKeys = () => {
               >
                 Custom headers
               </Typography>
-              <Typography sx={{ fontSize: 11, color: "#666666", mb: 1.5 }}>
+              <Typography sx={{ fontSize: 11, color: vwPalette.text.tertiary, mb: 1.5 }}>
                 Optional HTTP headers sent with every request (e.g., HTTP-Referer, X-Title,
                 Helicone-Auth)
               </Typography>
@@ -833,8 +847,11 @@ const LLMKeys = () => {
                       onClick={() => handleRemoveHeaderRow(index)}
                       size="small"
                       sx={{
-                        "color": "#999999",
-                        "&:hover": { color: "#DC2626", backgroundColor: "#FEF2F2" },
+                        "color": vwPalette.text.accent,
+                        "&:hover": {
+                          color: vwPalette.riskMark.critical,
+                          backgroundColor: vwPalette.status.error.bg,
+                        },
                       }}
                     >
                       <XIcon size={16} />

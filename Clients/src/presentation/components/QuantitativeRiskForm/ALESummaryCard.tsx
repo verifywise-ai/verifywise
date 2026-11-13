@@ -2,7 +2,7 @@ import { FC } from "react";
 import { Box, Stack, Typography, useTheme } from "@mui/material";
 import { IQuantitativeRiskFields } from "../../../domain/interfaces/i.quantitativeRisk";
 import { computeDerivedFields, formatCurrency, formatPercentage } from "../../tools/fairCalculator";
-import { background, border as borderPalette, text } from "../../themes/palette";
+import { background, border as borderPalette, text, radiusPx } from "../../themes/palette";
 
 interface ALESummaryCardProps {
   fields: Partial<IQuantitativeRiskFields>;
@@ -51,7 +51,7 @@ const ALESummaryCard: FC<ALESummaryCardProps> = ({ fields }) => {
         sx={{
           p: "16px",
           maxWidth: "985px",
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           border: `1px dashed ${borderPalette.light}`,
           background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
         }}
@@ -74,7 +74,7 @@ const ALESummaryCard: FC<ALESummaryCardProps> = ({ fields }) => {
       sx={{
         p: "16px",
         maxWidth: "985px",
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         border: `1px solid ${borderPalette.light}`,
         background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
         boxShadow: "0 1px 3px 0 rgba(0, 0, 0, 0.05)",

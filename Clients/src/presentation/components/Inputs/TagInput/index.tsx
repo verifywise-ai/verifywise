@@ -1,6 +1,7 @@
 import React, { useState, useCallback } from "react";
 import { Stack, Typography, Chip, TextField, Box, useTheme } from "@mui/material";
 import { X as RemoveIcon } from "lucide-react";
+import { radiusPx } from "../../../themes/palette";
 
 interface TagInputProps {
   label?: string;
@@ -107,7 +108,7 @@ function TagInput({
       <Box
         sx={{
           "border": `1px solid ${displayError ? theme.palette.status.error.text : theme.palette.border.dark}`,
-          "borderRadius": "4px",
+          "borderRadius": radiusPx.sm,
           "padding": "6px 12px",
           "display": "flex",
           "flexWrap": "wrap",

@@ -35,6 +35,7 @@ import { passwordValidation } from "../../../../application/validations/password
 import { EmailAvailabilityStatus } from "../../../../application/hooks/useEmailAvailability";
 import singleTheme from "../../../themes/v1SingleTheme";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import { palette, radiusPx } from "../../../themes/palette";
 
 const EMPTY_USER_FORM: UserFormValues = {
   email: "",
@@ -178,7 +179,7 @@ const Users = () => {
             textTransform: "none",
             height: 34,
             fontSize: "13px",
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
           }}
         >
           Add user
@@ -270,7 +271,7 @@ const Users = () => {
                           alignItems: "center",
                           px: 1,
                           py: 0.25,
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                           fontSize: 12,
                           fontWeight: 500,
                           backgroundColor: colors.bg,
@@ -294,12 +295,12 @@ const Users = () => {
                         }}
                         sx={{
                           ...tableStyles.body.button,
-                          "color": "#dc2626",
+                          "color": palette.riskMark.critical,
                           "borderColor": "#fecaca",
                           "&:hover": {
-                            backgroundColor: "#dc2626",
+                            backgroundColor: palette.riskMark.critical,
                             color: "#fff",
-                            border: "1px solid #dc2626",
+                            border: `1px solid ${palette.riskMark.critical}`,
                           },
                         }}
                       >
@@ -369,7 +370,7 @@ const Users = () => {
                               alignItems: "center",
                               px: 1,
                               py: 0.25,
-                              borderRadius: "4px",
+                              borderRadius: radiusPx.sm,
                               fontSize: 12,
                               fontWeight: 500,
                               backgroundColor: colors.bg,
@@ -424,7 +425,11 @@ const Users = () => {
             onChange={(patch) => setUserForm((prev) => ({ ...prev, ...patch }))}
             onEmailStatusChange={setEmailStatus}
           />
-          {addError && <Typography sx={{ fontSize: 13, color: "#D32F2F" }}>{addError}</Typography>}
+          {addError && (
+            <Typography sx={{ fontSize: 13, color: palette.status.error.text }}>
+              {addError}
+            </Typography>
+          )}
         </Stack>
       </StandardModal>
 

@@ -3,7 +3,7 @@ import { ReactNode } from "react";
 import { Stack, Typography, Box, IconButton, Tooltip } from "@mui/material";
 
 import { infoCardbodyStyle, infoCardStyle, infoCardTitleStyle } from "./style";
-import { brand, text } from "../../../themes/palette";
+import { brand, text, palette as vwPalette, radiusPx } from "../../../themes/palette";
 
 interface InfoCardProps {
   title: string;
@@ -32,7 +32,7 @@ export function InfoCard({
             position: "absolute",
             top: 8,
             right: 8,
-            color: "#8594AC",
+            color: vwPalette.text.accent,
             opacity: 0.7,
           }}
         >
@@ -50,10 +50,10 @@ export function InfoCard({
               "right": 4,
               "color": isActionActive ? `${brand.primary}` : `${text.muted}`,
               "padding": "4px",
-              "borderRadius": "4px",
+              "borderRadius": radiusPx.sm,
               "backgroundColor": isActionActive ? "#E6F4F1" : "transparent",
               "&:hover": {
-                backgroundColor: isActionActive ? "#D1EDE6" : "#F2F4F7",
+                backgroundColor: isActionActive ? "#D1EDE6" : vwPalette.background.hover,
               },
             }}
           >

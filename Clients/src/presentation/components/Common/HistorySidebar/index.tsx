@@ -13,6 +13,7 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { displayFormattedTime } from "../../../tools/isoDateToString";
+import { radiusPx } from "../../../themes/palette";
 
 dayjs.extend(relativeTime);
 
@@ -379,7 +380,7 @@ export function HistorySidebar({
                 <Box
                   sx={{
                     padding: "4px 8px",
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     backgroundColor: theme.palette.success.bg,
                   }}
                 >
@@ -393,7 +394,7 @@ export function HistorySidebar({
                       sx={{
                         flex: 1,
                         padding: "4px 8px",
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                         backgroundColor: theme.palette.error.bg,
                       }}
                     >
@@ -422,7 +423,7 @@ export function HistorySidebar({
                       sx={{
                         flex: 1,
                         padding: "4px 8px",
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                         backgroundColor: theme.palette.success.bg,
                       }}
                     >
@@ -453,7 +454,7 @@ export function HistorySidebar({
         sx={{
           flex: 1,
           border: `1px solid ${theme.palette.border.light}`,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           display: "flex",
           flexDirection: "column",
           background: `linear-gradient(180deg, ${theme.palette.background.alt} 0%, ${theme.palette.background.main} 100%)`,
@@ -538,7 +539,7 @@ export function HistorySidebar({
               },
               "&::-webkit-scrollbar-thumb": {
                 background: "transparent",
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
               },
               "&:hover::-webkit-scrollbar-thumb": {
                 background: theme.palette.border.dark,

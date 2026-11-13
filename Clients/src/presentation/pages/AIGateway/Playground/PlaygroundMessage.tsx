@@ -3,6 +3,7 @@ import { MessagePrimitive } from "@assistant-ui/react";
 import { Bot, User } from "lucide-react";
 import ReactMarkdown from "react-markdown";
 import palette from "../../../themes/palette";
+import { radiusPx } from "../../../themes/palette";
 
 /**
  * Shared message component for both user and assistant messages
@@ -78,7 +79,7 @@ export function PlaygroundMessage() {
               "& pre": {
                 backgroundColor: palette.background.hover,
                 p: 1.5,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 overflow: "auto",
                 fontSize: 12,
               },

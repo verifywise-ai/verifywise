@@ -34,6 +34,7 @@ import {
   useUpdateGroup,
 } from "../../../../application/hooks/useGroups";
 import type { IGroup } from "../../../../domain/interfaces/i.group";
+import { radiusPx } from "../../../themes/palette";
 
 const TABLE_COLUMNS = [
   { id: "name", label: "NAME" },
@@ -284,7 +285,7 @@ const GroupsPage: React.FC = () => {
                     <Chip
                       icon={<Users size={12} />}
                       label={`${group.member_count ?? 0}`}
-                      sx={{ fontSize: "11px", height: "20px", borderRadius: "4px" }}
+                      sx={{ fontSize: "11px", height: "20px", borderRadius: radiusPx.sm }}
                     />
                   </TableCell>
                   <TableCell sx={singleTheme.tableStyles.primary.body.cell} align="right">

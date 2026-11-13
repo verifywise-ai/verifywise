@@ -33,6 +33,7 @@ import { useAuth } from "../../../../application/hooks/useAuth";
 import { useProfilePhotoFetch } from "../../../../application/hooks/useProfilePhotoFetch";
 import Avatar from "../../../components/Avatar/VWAvatar";
 import { VerifyWiseContext } from "../../../../application/contexts/VerifyWise.context";
+import { palette } from "../../../themes/palette";
 
 /**
  * ProfileForm component for managing user profile information.
@@ -685,7 +686,7 @@ const ProfileForm: React.FC = () => {
               "justifyContent": "center",
               "borderRadius": "50%",
               "border": "2px dashed #ddd",
-              "backgroundColor": "#fafafa",
+              "backgroundColor": palette.background.alt,
               "position": "relative",
               "overflow": "hidden",
               "&:hover": {

@@ -17,6 +17,7 @@ import type { RootState } from "../../../application/redux/store";
 import { actionButtonsStyles } from "./style";
 import "./icon-shake.css";
 import { useCan } from "../../../application/hooks/useCan";
+import { radiusPx } from "../../themes/palette";
 
 interface DashboardActionButtonsProps {
   hideOnMainDashboard?: boolean;
@@ -31,7 +32,7 @@ function KeyboardBadge({ children }: { children: ReactNode }) {
         alignItems: "center",
         justifyContent: "center",
         backgroundColor: "rgba(255, 255, 255, 0.15)",
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         padding: "2px 6px",
         fontSize: "12px",
         fontWeight: 500,
@@ -118,7 +119,7 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
   const baseStyles = {
     "width": "32px",
     "height": "32px",
-    "borderRadius": "4px",
+    "borderRadius": radiusPx.sm,
     "transition": "all 0.2s ease",
     "&:hover svg": {
       animation: "icon-shake 400ms ease-in-out",

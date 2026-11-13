@@ -38,7 +38,7 @@ import {
   type LLMApiKey,
 } from "../../../application/repository/deepEval.repository";
 import { useNavigate } from "react-router";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 
 // Timing constants (in milliseconds)
 const POLLING_INTERVAL_MS = 5000;
@@ -567,7 +567,7 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
           <Box
             sx={{
               border: `2px dashed ${palette.accent.indigo.border}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: "16px",
               textAlign: "center",
               backgroundColor: palette.accent.purple.bg,
@@ -960,7 +960,7 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
                     key={index}
                     sx={{
                       p: "6px",
-                      borderRadius: "4px",
+                      borderRadius: radiusPx.sm,
                       border: "2px solid",
                       borderColor: colorScheme.border,
                       backgroundColor: colorScheme.bg,
@@ -978,7 +978,7 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
                         sx={{
                           px: "4px",
                           py: "1.5px",
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                           background: colorScheme.gradient,
                           color: palette.background.main,
                           fontSize: 12,

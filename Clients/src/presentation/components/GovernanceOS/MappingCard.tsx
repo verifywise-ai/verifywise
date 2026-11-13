@@ -5,7 +5,14 @@ import MappingStrengthBadge from "./MappingStrengthBadge";
 import GovernanceTooltip from "./GovernanceTooltip";
 import StandardModal from "../Modals/StandardModal";
 import { IMappingCardProps } from "../../../domain/interfaces/i.governanceOs";
-import { border as borderPalette, background, text, accent, status } from "../../themes/palette";
+import {
+  border as borderPalette,
+  background,
+  text,
+  accent,
+  status,
+  radiusPx,
+} from "../../themes/palette";
 
 const FRAMEWORK_NAMES: Record<number, string> = {
   1: "EU AI Act",
@@ -38,7 +45,7 @@ const MappingCard = ({ mapping, frameworkNames, onEdit, onDelete }: IMappingCard
         onClick={() => setDetailOpen(true)}
         sx={{
           "border": `1px solid ${borderPalette.light}`,
-          "borderRadius": "4px",
+          "borderRadius": radiusPx.sm,
           "p": "16px",
           "background": background.main,
           "cursor": "pointer",
@@ -76,7 +83,7 @@ const MappingCard = ({ mapping, frameworkNames, onEdit, onDelete }: IMappingCard
                 alignItems: "center",
                 height: 22,
                 px: "8px",
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 fontSize: 11,
                 textTransform: "capitalize",
                 backgroundColor: accent.primary.bg,
@@ -169,7 +176,7 @@ const MappingCard = ({ mapping, frameworkNames, onEdit, onDelete }: IMappingCard
                 sx={{
                   flex: 1,
                   p: "16px",
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   border: `1px solid ${borderPalette.light}`,
                   background: background.accent,
                 }}
@@ -191,7 +198,7 @@ const MappingCard = ({ mapping, frameworkNames, onEdit, onDelete }: IMappingCard
                 sx={{
                   flex: 1,
                   p: "16px",
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   border: `1px solid ${borderPalette.light}`,
                   background: background.accent,
                 }}
@@ -256,7 +263,7 @@ const MappingCard = ({ mapping, frameworkNames, onEdit, onDelete }: IMappingCard
                         alignItems: "center",
                         height: 24,
                         px: "10px",
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                         fontSize: 12,
                         textTransform: "capitalize",
                         backgroundColor: accent.primary.bg,

@@ -53,7 +53,7 @@ import {
   VULNERABILITY_TYPES,
   DEFAULT_VULNERABILITY_TYPES_ENABLED,
 } from "../../../domain/ai-detection/riskScoringTypes";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 
 interface ToastAlert {
   variant: "success" | "error" | "warning" | "info";
@@ -350,7 +350,7 @@ export default function SettingsPage() {
                   alignItems: "center",
                   gap: 1,
                   p: "8px",
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   backgroundColor: "rgba(19, 113, 91, 0.08)",
                   border: "1px solid rgba(19, 113, 91, 0.2)",
                 }}
@@ -436,7 +436,7 @@ export default function SettingsPage() {
               <Box
                 sx={{
                   border: `1px solid ${palette.border.dark}`,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   p: "16px",
                   display: "flex",
                   flexDirection: "column",
@@ -496,7 +496,7 @@ export default function SettingsPage() {
               <Box
                 sx={{
                   border: `1px solid ${palette.border.dark}`,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   p: "16px",
                   display: "flex",
                   flexDirection: "column",
@@ -542,7 +542,7 @@ export default function SettingsPage() {
                         key={vulnType.key}
                         sx={{
                           border: `1px solid ${palette.border.dark}`,
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                           p: "12px",
                           opacity: vulnerabilityTypesEnabled[vulnType.key] ? 1 : 0.6,
                         }}
@@ -596,7 +596,7 @@ export default function SettingsPage() {
               <Box
                 sx={{
                   border: `1px solid ${palette.border.dark}`,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   p: "16px",
                   display: "flex",
                   flexDirection: "column",

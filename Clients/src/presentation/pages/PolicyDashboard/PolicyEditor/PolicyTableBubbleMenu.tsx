@@ -12,7 +12,7 @@ import {
   ToggleLeft,
   Trash2,
 } from "lucide-react";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 
 const { text, background, border, status } = palette;
 
@@ -140,7 +140,7 @@ export function PolicyTableBubbleMenu({ editor }: PolicyTableBubbleMenuProps) {
                 size="small"
                 sx={{
                   "padding": "5px",
-                  "borderRadius": "4px",
+                  "borderRadius": radiusPx.sm,
                   "color": danger ? status.error.text : text.secondary,
                   "&:hover": {
                     backgroundColor: danger ? status.error.bg : background.hover,

@@ -1,5 +1,6 @@
 import { keyframes } from "@mui/system";
 import { SxProps, Theme } from "@mui/material";
+import { palette } from "../../../themes/palette";
 
 // Flash animation
 export const flashAnimation = keyframes`
@@ -166,7 +167,7 @@ export const useStyles = (theme: Theme): StylesType => ({
     width: "fit-content",
     gap: 2,
     backgroundColor: "brand.primary",
-    border: `1px solid #13715B`,
+    border: `1px solid ${palette.brand.primary}`,
   },
 
   // Modal styles
@@ -216,7 +217,7 @@ export const useStyles = (theme: Theme): StylesType => ({
   fileUploadButton: {
     mt: 10,
     backgroundColor: "brand.primary",
-    border: `1px solid #13715B`,
+    border: `1px solid ${palette.brand.primary}`,
     color: "background.main",
   },
 
@@ -247,7 +248,7 @@ export const useStyles = (theme: Theme): StylesType => ({
 
   modalActionButton: {
     "backgroundColor": "brand.primary",
-    "border": `1px solid #13715B`,
+    "border": `1px solid ${palette.brand.primary}`,
     "gap": 1,
     "&:hover": {
       backgroundColor: "brand.primary",

@@ -6,7 +6,7 @@ import {
   ChipVariant,
   ChipColorConfig,
 } from "../../types/interfaces/i.chip";
-import { background, status, risk } from "../../themes/palette";
+import { background, status, risk, radiusPx } from "../../themes/palette";
 import { fontSize, fontWeight } from "../../themes/typography";
 
 /**
@@ -292,7 +292,7 @@ const StatusBadge: React.FC<IStatusBadgeProps> = ({
         height,
         py: 2,
         px: 4,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         background: `linear-gradient(180deg, ${gradientTop} 0%, ${gradientBottom} 100%)`,
         border: `1px solid ${borderColor}`,
         color: colors.textColor,

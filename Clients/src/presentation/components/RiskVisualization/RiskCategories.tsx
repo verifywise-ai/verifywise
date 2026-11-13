@@ -7,6 +7,7 @@ import { ButtonToggle } from "../button-toggle";
 import { IRiskCategoriesProps } from "../../types/interfaces/i.risk";
 import { ICategoryGroup } from "../../../domain/interfaces/i.categoryGroup";
 import { User } from "../../../domain/types/User";
+import { palette, radiusPx } from "../../themes/palette";
 
 const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, onRiskSelect }) => {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
@@ -145,7 +146,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
           mb: 3,
         }}
       >
-        <Typography variant="h6" sx={{ fontWeight: 600, color: "#111827" }}>
+        <Typography variant="h6" sx={{ fontWeight: 600, color: palette.text.primary }}>
           Risk Categories Analysis
         </Typography>
 
@@ -204,7 +205,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
                     <Box sx={{ flex: 1 }}>
                       <Typography
                         variant="subtitle2"
-                        sx={{ fontWeight: 600, color: "#111827", mb: 1 }}
+                        sx={{ fontWeight: 600, color: palette.text.primary, mb: 1 }}
                       >
                         {category.name}
                       </Typography>
@@ -230,7 +231,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
                           color: "white",
                           fontSize: 10,
                           height: 18,
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                         }}
                       />
                     )}
@@ -243,7 +244,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
                           color: "white",
                           fontSize: 10,
                           height: 18,
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                         }}
                       />
                     )}
@@ -256,7 +257,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
                           color: "white",
                           fontSize: 10,
                           height: 18,
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                         }}
                       />
                     )}
@@ -269,7 +270,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
                           color: "white",
                           fontSize: 10,
                           height: 18,
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                         }}
                       />
                     )}
@@ -282,7 +283,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
                           color: "white",
                           fontSize: 10,
                           height: 18,
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                         }}
                       />
                     )}
@@ -314,7 +315,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
                         >
                           <Typography
                             variant="body2"
-                            sx={{ fontWeight: 600, color: "#111827", mb: 1 }}
+                            sx={{ fontWeight: 600, color: palette.text.primary, mb: 1 }}
                           >
                             {risk.risk_name}
                           </Typography>
@@ -336,7 +337,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
                                 color: "white",
                                 fontSize: 10,
                                 height: 18,
-                                borderRadius: "4px",
+                                borderRadius: radiusPx.sm,
                               }}
                             />
                             {risk.risk_owner && (

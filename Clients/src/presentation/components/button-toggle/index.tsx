@@ -1,12 +1,13 @@
 import React, { memo, useRef, useEffect, useState } from "react";
 import { Box, Theme, useTheme } from "@mui/material";
 import { ButtonToggleProps } from "../../types/interfaces/i.button";
+import { radiusPx } from "../../themes/palette";
 
 const frameworkTabsContainerStyle = (height: number) => ({
   position: "relative",
   display: "flex",
   border: (theme: Theme) => `1px solid ${theme.palette.divider}`,
-  borderRadius: "4px",
+  borderRadius: radiusPx.sm,
   overflow: "hidden",
   height,
   bgcolor: "action.hover",
@@ -45,7 +46,7 @@ const getSliderStyle = (position: SliderPosition) => ({
   height: "calc(100% - 4px)",
   bgcolor: "background.paper",
   border: (theme: Theme) => `1px solid ${theme.palette.divider}`,
-  borderRadius: "4px",
+  borderRadius: radiusPx.sm,
   transition: "left 0.3s cubic-bezier(0.4, 0, 0.2, 1), width 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
   left: `${position.left}px`,
   width: `${position.width}px`,

@@ -28,7 +28,7 @@ import { useTableGrouping, useGroupByState } from "../../../application/hooks/us
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import HelperIcon from "../../components/HelperIcon";
 import Select from "../../components/Inputs/Select";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 import { countLabel } from "../../tools/countLabel";
 import TipBox from "../../components/TipBox";
 import { useCanCheck } from "../../../application/hooks/useCan";
@@ -649,7 +649,7 @@ export default function ProjectExperiments({
                     alignItems: "center",
                     gap: "8px",
                     p: "8px 10px",
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     backgroundColor: palette.status.success.bg,
                     border: `1px solid ${palette.status.success.border}`,
                   }}
@@ -731,7 +731,7 @@ export default function ProjectExperiments({
         sx={{
           marginBottom: "16px",
           border: `1px solid ${palette.border.dark}`,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           boxShadow: "none",
         }}
       >

@@ -40,6 +40,7 @@ import {
 import { slugify, ProviderIcon, getLabelVariant } from "../shared";
 import singleTheme from "../../../themes/v1SingleTheme";
 import CustomizableSkeleton from "../../../components/Skeletons";
+import { palette } from "../../../themes/palette";
 
 interface Prompt {
   id: number;
@@ -199,7 +200,7 @@ export default function PromptsPage() {
       description={`Are you sure you want to delete "${deleteTarget?.name || ""}"?`}
       onSubmit={handleDelete}
       submitButtonText="Delete"
-      submitButtonColor="#c62828"
+      submitButtonColor={palette.status.error.text}
       maxWidth="480px"
     >
       <Typography fontSize={13}>

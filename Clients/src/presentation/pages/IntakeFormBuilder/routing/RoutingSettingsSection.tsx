@@ -6,6 +6,7 @@ import Field from "../../../components/Inputs/Field";
 import CustomizableMultiSelect from "../../../components/Inputs/Select/Multi";
 import type { FormRouting } from "../types";
 import RoutingFieldInfo from "./RoutingFieldInfo";
+import { radiusPx } from "../../../themes/palette";
 
 export interface RoutingReviewer {
   _id: number;
@@ -119,7 +120,7 @@ const RoutingSettingsSection = ({
     "fontSize": 13,
     "minHeight": 34,
     "backgroundColor": theme.palette.background.main,
-    "borderRadius": "4px",
+    "borderRadius": radiusPx.sm,
     "& .MuiOutlinedInput-input": { paddingTop: "6px", paddingBottom: "6px" },
   };
 

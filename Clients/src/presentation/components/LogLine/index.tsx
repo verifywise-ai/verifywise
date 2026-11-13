@@ -1,5 +1,5 @@
 import { Typography, Box, useTheme } from "@mui/material";
-import { status } from "../../themes/palette";
+import { status, palette as vwPalette } from "../../themes/palette";
 
 interface LogLineProps {
   line: string;
@@ -37,7 +37,7 @@ export function LogLine({ line, index }: LogLineProps) {
     if (lowerLine.includes("info")) {
       return {
         color: "#1976d2",
-        backgroundColor: "#e3f2fd",
+        backgroundColor: vwPalette.status.info.bg,
         fontWeight: 400,
       };
     }

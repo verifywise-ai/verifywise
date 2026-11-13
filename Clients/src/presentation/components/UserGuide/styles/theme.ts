@@ -1,4 +1,11 @@
-import { brand, background, border as borderPalette, status } from "../../../themes/palette";
+import {
+  brand,
+  background,
+  border as borderPalette,
+  status,
+  palette as vwPalette,
+  radiusPx,
+} from "../../../themes/palette";
 /**
  * Centralized Design Tokens (Single Source of Truth)
  * Use these constants throughout the app for consistent styling.
@@ -8,8 +15,8 @@ import { brand, background, border as borderPalette, status } from "../../../the
 // Colors - Text
 export const colors = {
   text: {
-    primary: "#1a1a1a",
-    secondary: "#374151",
+    primary: vwPalette.text.primary,
+    secondary: vwPalette.text.secondary,
     muted: `${status.default.text}`,
     white: `${background.main}`,
     whiteMuted: "rgba(255, 255, 255, 0.8)",
@@ -19,7 +26,7 @@ export const colors = {
     primaryDark: "#0A4A3A",
     success: "#17B26A",
     warning: "#F79009",
-    error: "#F04438",
+    error: vwPalette.status.error.text,
   },
   border: {
     default: `${borderPalette.dark}`,
@@ -27,7 +34,7 @@ export const colors = {
   background: {
     white: `${background.main}`,
     alt: `${background.accent}`,
-    code: "#1C2130",
+    code: vwPalette.text.primary,
   },
 } as const;
 
@@ -102,10 +109,10 @@ export const imageStyles = {
 export const chipStyles = {
   // URL chips (light green)
   url: {
-    backgroundColor: "#e6f4ea",
+    backgroundColor: vwPalette.status.success.bg,
     color: "#1e7e34",
     padding: "2px 8px",
-    borderRadius: "4px",
+    borderRadius: radiusPx.sm,
     fontFamily: typography.fontFamily.mono,
     fontSize: "0.9em",
   },
@@ -114,7 +121,7 @@ export const chipStyles = {
     backgroundColor: "#f1f3f4",
     color: "#5f6368",
     padding: "2px 8px",
-    borderRadius: "4px",
+    borderRadius: radiusPx.sm,
     fontFamily: typography.fontFamily.mono,
     fontSize: "0.9em",
   },

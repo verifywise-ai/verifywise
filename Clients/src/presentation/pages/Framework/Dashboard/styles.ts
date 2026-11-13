@@ -1,5 +1,5 @@
 import { SxProps, Theme } from "@mui/material";
-import { text, background, border as borderPalette } from "../../../themes/palette";
+import { text, background, border as borderPalette, radiusPx } from "../../../themes/palette";
 
 /**
  * Shared styles for Framework Dashboard cards
@@ -13,7 +13,7 @@ export const frameworkDashboardCardStyles = {
    */
   cardContainer: {
     border: `1px solid ${borderPalette.dark}`,
-    borderRadius: "4px",
+    borderRadius: radiusPx.sm,
     overflow: "hidden",
   } as SxProps<Theme>,
 
@@ -50,7 +50,7 @@ export const frameworkDashboardCardStyles = {
    */
   categoryBox: {
     border: `1px solid ${borderPalette.dark}`,
-    borderRadius: "4px",
+    borderRadius: radiusPx.sm,
     overflow: "hidden",
   } as SxProps<Theme>,
 

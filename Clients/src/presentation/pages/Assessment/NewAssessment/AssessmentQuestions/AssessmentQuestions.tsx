@@ -7,7 +7,12 @@ import { Info as GreyCircleInfoIcon } from "lucide-react";
 import RichTextEditor from "../../../../components/RichTextEditor";
 import { priorities, PriorityLevel } from "../priorities";
 import { Topic } from "../../../../../application/hooks/useAssessmentAnswers";
-import { text, background, border as borderPalette } from "../../../../themes/palette";
+import {
+  text,
+  background,
+  border as borderPalette,
+  palette as vwPalette,
+} from "../../../../themes/palette";
 
 interface AssessmentQuestionsProps {
   assessmentsValues: Topic[];
@@ -150,12 +155,12 @@ const AssessmentQuestions = ({
                     "minWidth": 155, // ✅ minimum width
                     "height": 25,
                     "fontSize": 11,
-                    "border": "1px solid #d0d5dd",
+                    "border": `1px solid ${vwPalette.border.dark}`,
                     "backgroundColor": "white",
                     "color": "text.secondary",
                     "&:hover": {
                       backgroundColor: "background.accent",
-                      border: "1px solid #d0d5dd",
+                      border: `1px solid ${vwPalette.border.dark}`,
                     },
                   }}
                   disableRipple={theme.components?.MuiButton?.defaultProps?.disableRipple}

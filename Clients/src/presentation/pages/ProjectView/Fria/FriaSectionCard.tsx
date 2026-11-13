@@ -1,7 +1,7 @@
 import { ReactNode } from "react";
 import { Box, Card, CardContent, Stack, Typography } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import { accent, border, status } from "../../../themes/palette";
+import { accent, border, status, radiusPx } from "../../../themes/palette";
 
 interface FriaSectionCardProps {
   title: string;
@@ -18,7 +18,7 @@ function FriaSectionCard({ title, subtitle, euActContent, children }: FriaSectio
       variant="outlined"
       sx={{
         borderColor: border.dark,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         boxShadow: "none",
       }}
     >
@@ -49,7 +49,7 @@ function FriaSectionCard({ title, subtitle, euActContent, children }: FriaSectio
                 padding: "8px 12px",
                 backgroundColor: accent.primary.bg,
                 border: `1px solid ${status.success.border}`,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 fontSize: 12,
                 color: theme.palette.text.secondary,
                 lineHeight: 1.6,

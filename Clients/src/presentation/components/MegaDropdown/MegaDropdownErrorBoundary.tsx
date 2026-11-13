@@ -1,6 +1,7 @@
 import React, { Component, ReactNode } from "react";
 import { Button } from "@mui/material";
 import { Plus } from "lucide-react";
+import { palette, radiusPx } from "../../themes/palette";
 
 interface MegaDropdownErrorBoundaryProps {
   children: ReactNode;
@@ -47,14 +48,14 @@ class MegaDropdownErrorBoundary extends Component<
           startIcon={<Plus size={14} />}
           disabled
           sx={{
-            background: "linear-gradient(135deg, #10B981 0%, #059669 100%)",
+            background: `linear-gradient(135deg, ${palette.status.success.strong} 0%, #059669 100%)`,
             color: "white",
             fontWeight: 500,
             fontSize: "13px",
             height: "32px",
             minHeight: "32px",
             padding: "8px 16px",
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             textTransform: "none",
             opacity: 0.6,
             cursor: "not-allowed",

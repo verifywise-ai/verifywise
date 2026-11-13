@@ -1,6 +1,6 @@
 import { Theme } from "@mui/material";
 import { CSSProperties } from "styled-components";
-import { brand, background } from "../../themes/palette";
+import { brand, background, palette as vwPalette } from "../../themes/palette";
 
 // Main page styles (index.tsx)
 export const workflowMainStack = {
@@ -143,7 +143,7 @@ export const sortIconBoxStyle = (isActive: boolean, theme?: Theme) => ({
 // Body cell styles
 export const bodyCellTitleStyle = (cellStyle: CSSProperties, isHighlighted: boolean) => ({
   ...cellStyle,
-  backgroundColor: isHighlighted ? "background.surface" : "#fafafa",
+  backgroundColor: isHighlighted ? "background.surface" : vwPalette.background.alt,
 });
 
 export const bodyCellEntityStyle = (cellStyle: CSSProperties, isHighlighted: boolean) => ({

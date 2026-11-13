@@ -4,7 +4,7 @@ import Toggle from "../../components/Inputs/Toggle";
 import Alert from "../../components/Alert";
 import { useCan } from "../../../application/hooks/useCan";
 import { useArenaSetting, useUpdateArenaSetting } from "../../../application/hooks/useArenaSetting";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 
 /**
  * LLM Evals settings section that turns Arena on or off for the organization.
@@ -35,7 +35,7 @@ export default function ArenaSettingSection() {
         sx={{
           background: palette.background.main,
           border: `1px solid ${palette.border.dark}`,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           p: "16px",
           display: "flex",
           alignItems: "center",

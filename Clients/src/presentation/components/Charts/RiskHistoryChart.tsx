@@ -5,7 +5,12 @@ import { ButtonToggle } from "../button-toggle";
 import CustomizableSkeleton from "../Skeletons";
 import { TrendingUp } from "lucide-react";
 import { EmptyState } from "../EmptyState";
-import { text, background, border as borderPalette } from "../../themes/palette";
+import {
+  text,
+  background,
+  border as borderPalette,
+  palette as vwPalette,
+} from "../../themes/palette";
 import { VWLineChart } from "./VWCharts";
 
 interface RiskHistoryChartProps {
@@ -15,38 +20,38 @@ interface RiskHistoryChartProps {
 
 // Color schemes for different risk parameters
 const SEVERITY_COLORS: Record<string, string> = {
-  Negligible: "#10B981",
+  Negligible: vwPalette.status.success.strong,
   Minor: "#84CC16",
-  Moderate: "#F59E0B",
+  Moderate: vwPalette.riskMark.medium,
   Major: "#F97316",
-  Catastrophic: "#DC2626",
+  Catastrophic: vwPalette.riskMark.critical,
 };
 
 const LIKELIHOOD_COLORS: Record<string, string> = {
-  "Rare": "#10B981",
+  "Rare": vwPalette.status.success.strong,
   "Unlikely": "#84CC16",
-  "Possible": "#F59E0B",
+  "Possible": vwPalette.riskMark.medium,
   "Likely": "#F97316",
-  "Almost Certain": "#DC2626",
+  "Almost Certain": vwPalette.riskMark.critical,
 };
 
 const MITIGATION_STATUS_COLORS: Record<string, string> = {
   "Not Started": "#94A3B8",
-  "In Progress": "#3B82F6",
-  "Completed": "#10B981",
-  "On Hold": "#F59E0B",
-  "Deferred": "#8B5CF6",
-  "Canceled": "#EF4444",
+  "In Progress": vwPalette.status.info.text,
+  "Completed": vwPalette.status.success.strong,
+  "On Hold": vwPalette.riskMark.medium,
+  "Deferred": vwPalette.accent.purple.text,
+  "Canceled": vwPalette.riskMark.critical,
   "Requires review": "#F97316",
 };
 
 const RISK_LEVEL_COLORS: Record<string, string> = {
-  "No risk": "#10B981",
+  "No risk": vwPalette.status.success.strong,
   "Very low risk": "#84CC16",
   "Low risk": "#FCD34D",
-  "Medium risk": "#F59E0B",
+  "Medium risk": vwPalette.riskMark.medium,
   "High risk": "#F97316",
-  "Very high risk": "#DC2626",
+  "Very high risk": vwPalette.riskMark.critical,
 };
 
 const TIMEFRAME_OPTIONS = [
@@ -194,7 +199,9 @@ export function RiskHistoryChart({
           background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
         }}
       >
-        <Typography sx={{ color: "#F04438", fontSize: 14, fontWeight: 500 }}>{error}</Typography>
+        <Typography sx={{ color: vwPalette.status.error.text, fontSize: 14, fontWeight: 500 }}>
+          {error}
+        </Typography>
       </Stack>
     );
   }

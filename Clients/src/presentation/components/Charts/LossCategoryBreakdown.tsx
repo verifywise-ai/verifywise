@@ -1,13 +1,14 @@
 import { Box, Stack, Typography } from "@mui/material";
 import { DASHBOARD_COLORS } from "../../styles/colors";
+import { palette, radiusPx } from "../../themes/palette";
 
 const C = DASHBOARD_COLORS;
 
 const CATEGORY_COLORS = {
-  regulatory: "#DC2626",
-  operational: "#F59E0B",
-  litigation: "#3B82F6",
-  reputational: "#8B5CF6",
+  regulatory: palette.riskMark.critical,
+  operational: palette.riskMark.medium,
+  litigation: palette.status.info.text,
+  reputational: palette.accent.purple.text,
 } as const;
 
 interface LossCategory {
@@ -57,7 +58,7 @@ export function LossCategoryBreakdown({
   return (
     <Stack gap="10px">
       {/* Stacked bar */}
-      <Stack direction="row" sx={{ height: 24, borderRadius: "4px", overflow: "hidden" }}>
+      <Stack direction="row" sx={{ height: 24, borderRadius: radiusPx.sm, overflow: "hidden" }}>
         {categories
           .filter((c) => c.value > 0)
           .map((c) => (

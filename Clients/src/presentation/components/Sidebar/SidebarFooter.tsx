@@ -38,7 +38,7 @@ import {
 import VWIcon from "../VWIcon";
 import { isClassicUi } from "../../themes/uiStyle";
 import Avatar from "../Avatar/VWAvatar";
-import { brand, text, background } from "../../themes/palette";
+import { brand, text, background, palette as vwPalette } from "../../themes/palette";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import { storageService } from "../../../infrastructure/storage";
 import { ROLES } from "../../../application/constants/roles";
@@ -296,7 +296,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                   "px": theme.spacing(4),
                   "background": hasDemoData
                     ? "linear-gradient(135deg, #FEF3F2 0%, #FEE4E2 100%)"
-                    : "linear-gradient(135deg, #ECFDF3 0%, #D1FADF 100%)",
+                    : `linear-gradient(135deg, ${vwPalette.status.success.bg} 0%, #D1FADF 100%)`,
                   "border": hasDemoData ? "1px solid #FECDCA" : "1px solid #A6F4C5",
                   "&:hover": {
                     background: hasDemoData
@@ -304,8 +304,12 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                       : "linear-gradient(135deg, #D1FADF 0%, #A6F4C5 100%)",
                   },
                   "&:hover svg.demo-icon": {
-                    color: hasDemoData ? "#B42318 !important" : "#027A48 !important",
-                    stroke: hasDemoData ? "#B42318 !important" : "#027A48 !important",
+                    color: hasDemoData
+                      ? `${vwPalette.status.error.text} !important`
+                      : "#027A48 !important",
+                    stroke: hasDemoData
+                      ? `${vwPalette.status.error.text} !important`
+                      : "#027A48 !important",
                   },
                 }}
               >
@@ -337,7 +341,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                         "& .MuiListItemText-primary": {
                           fontSize: "13px",
                           fontWeight: 500,
-                          color: hasDemoData ? "#B42318" : "#027A48",
+                          color: hasDemoData ? vwPalette.status.error.text : "#027A48",
                         },
                       }}
                     >
@@ -400,7 +404,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                 "px": theme.spacing(4),
                 "background": hasDemoData
                   ? "linear-gradient(135deg, #FEF3F2 0%, #FEE4E2 100%)"
-                  : "linear-gradient(135deg, #ECFDF3 0%, #D1FADF 100%)",
+                  : `linear-gradient(135deg, ${vwPalette.status.success.bg} 0%, #D1FADF 100%)`,
                 "border": hasDemoData ? "1px solid #FECDCA" : "1px solid #A6F4C5",
                 "&:hover": {
                   background: hasDemoData
@@ -408,8 +412,12 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                     : "linear-gradient(135deg, #D1FADF 0%, #A6F4C5 100%)",
                 },
                 "&:hover svg.demo-icon": {
-                  color: hasDemoData ? "#B42318 !important" : "#027A48 !important",
-                  stroke: hasDemoData ? "#B42318 !important" : "#027A48 !important",
+                  color: hasDemoData
+                    ? `${vwPalette.status.error.text} !important`
+                    : "#027A48 !important",
+                  stroke: hasDemoData
+                    ? `${vwPalette.status.error.text} !important`
+                    : "#027A48 !important",
                 },
               }}
             >
@@ -440,7 +448,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                     "& .MuiListItemText-primary": {
                       fontSize: "13px",
                       fontWeight: 500,
-                      color: hasDemoData ? "#B42318" : "#027A48",
+                      color: hasDemoData ? vwPalette.status.error.text : "#027A48",
                     },
                   }}
                 >

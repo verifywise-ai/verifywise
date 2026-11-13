@@ -1,5 +1,6 @@
 import { Stack } from "@mui/material";
 import { styled } from "@mui/material/styles";
+import { palette } from "../../themes/palette";
 
 export const StyledStack = styled(Stack)(({ theme }) => ({
   display: "flex",
@@ -16,7 +17,7 @@ export const StyledStack = styled(Stack)(({ theme }) => ({
 export const styles = {
   gridTitle: {
     fontSize: 12,
-    color: "#8594AC",
+    color: palette.text.accent,
     pb: 1.5,
   },
   gridValue: {

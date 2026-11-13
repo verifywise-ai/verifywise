@@ -23,7 +23,7 @@ import {
 import { extractUserToken } from "../../../../application/tools/extractToken";
 import { getAuthToken } from "../../../../application/redux/auth/getAuthToken";
 import { useLogoFetch } from "../../../../application/hooks/useLogoFetch";
-import { brand, text, background } from "../../../themes/palette";
+import { brand, text, background, palette as vwPalette } from "../../../themes/palette";
 
 const AITrustCenterSettings: React.FC = () => {
   const styles = useStyles();
@@ -408,7 +408,7 @@ const AITrustCenterSettings: React.FC = () => {
                   "justifyContent": "center",
                   "borderRadius": 2,
                   "border": "2px dashed #ddd",
-                  "backgroundColor": "#fafafa",
+                  "backgroundColor": vwPalette.background.alt,
                   "position": "relative",
                   "overflow": "hidden",
                   "&:hover": {
@@ -462,7 +462,7 @@ const AITrustCenterSettings: React.FC = () => {
                         width: 24,
                         height: 24,
                         borderRadius: "50%",
-                        backgroundColor: "#e0e0e0",
+                        backgroundColor: vwPalette.border.light,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
@@ -636,7 +636,7 @@ const AITrustCenterSettings: React.FC = () => {
           sx={{
             ...styles.saveButton,
             backgroundColor: hasUnsavedChanges ? `${brand.primary}` : "#ccc",
-            border: `1px solid ${hasUnsavedChanges ? "#13715B" : "#ccc"}`,
+            border: `1px solid ${hasUnsavedChanges ? vwPalette.brand.primary : "#ccc"}`,
           }}
           icon={<SaveIcon size={16} />}
           variant="contained"

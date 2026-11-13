@@ -46,6 +46,7 @@ import { useInvalidateEvidenceGaps } from "../../../../application/hooks/useEvid
 import { useCanCheck } from "../../../../application/hooks/useCan";
 import { HistorySidebar } from "../../Common/HistorySidebar";
 import { useQueryClient } from "@tanstack/react-query";
+import { radiusPx } from "../../../themes/palette";
 
 const FRAMEWORK_TYPE = "iso_42001";
 const ENTITY_TYPE = "annex_category";
@@ -391,7 +392,7 @@ const VWISO42001AnnexDrawerDialog = ({
                 border: "1px solid #eee",
                 padding: "10px",
                 backgroundColor: "background.accent",
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
               }}
             >
               <Typography fontSize={13}>

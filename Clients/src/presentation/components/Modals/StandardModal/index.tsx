@@ -78,7 +78,7 @@ import React, { useId } from "react";
 import { Modal, Stack, Box, Typography, IconButton } from "@mui/material";
 import { X as CloseIcon } from "lucide-react";
 import { CustomizableButton } from "../../button/customizable-button";
-import { background, border, brand, text } from "../../../themes/palette";
+import { background, border, brand, text, radiusPx } from "../../../themes/palette";
 
 interface StandardModalProps {
   /** Controls whether the modal is visible */
@@ -257,7 +257,7 @@ const StandardModal: React.FC<StandardModalProps> = ({
                     "display": "flex",
                     "alignItems": "center",
                     "padding": "4px",
-                    "borderRadius": "4px",
+                    "borderRadius": radiusPx.sm,
                     "&:hover": {
                       backgroundColor: background.hover,
                     },

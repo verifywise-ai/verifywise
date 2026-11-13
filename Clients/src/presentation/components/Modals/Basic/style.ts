@@ -1,8 +1,9 @@
+import { radiusPx } from "../../../themes/palette";
 export const BasicModalCancelButtonStyle = {
   "minWidth": 100,
   "textTransform": "capitalize",
   "fontSize": 13,
-  "borderRadius": "4px",
+  "borderRadius": radiusPx.sm,
   "padding": "8px 16px",
   "&:hover": {
     boxShadow: "none",
@@ -16,7 +17,7 @@ export const BasicModalDeleteButtonStyle = {
   "backgroundColor": "#DB504A",
   "border": "1px solid #DB504A",
   "boxShadow": "none",
-  "borderRadius": "4px",
+  "borderRadius": radiusPx.sm,
   "padding": "8px 16px",
   "textTransform": "capitalize",
   "&:hover": {

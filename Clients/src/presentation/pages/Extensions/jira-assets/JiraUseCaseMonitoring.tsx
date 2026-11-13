@@ -6,6 +6,7 @@
 import React from "react";
 import { Box, Typography, Stack } from "@mui/material";
 import { ClipboardCheck, Info } from "lucide-react";
+import { palette } from "../../../themes/palette";
 
 interface JiraUseCaseMonitoringProps {
   project: {
@@ -33,7 +34,7 @@ export const JiraUseCaseMonitoring: React.FC<JiraUseCaseMonitoringProps> = () =>
         </Box>
 
         <Box sx={{ textAlign: "center" }}>
-          <Typography sx={{ fontSize: 18, fontWeight: 600, color: "#374151", mb: 1 }}>
+          <Typography sx={{ fontSize: 18, fontWeight: 600, color: palette.text.secondary, mb: 1 }}>
             Post-Market Monitoring
           </Typography>
           <Typography sx={{ fontSize: 14, color: "#6b7280", maxWidth: 450 }}>
@@ -54,7 +55,11 @@ export const JiraUseCaseMonitoring: React.FC<JiraUseCaseMonitoringProps> = () =>
             maxWidth: 450,
           }}
         >
-          <Info size={18} color="#3B82F6" style={{ flexShrink: 0, marginTop: 2 }} />
+          <Info
+            size={18}
+            color={palette.status.info.text}
+            style={{ flexShrink: 0, marginTop: 2 }}
+          />
           <Typography sx={{ fontSize: 13, color: "#1E40AF" }}>
             To configure post-market monitoring for this AI system, update the monitoring attributes
             in JIRA Assets. Changes will sync automatically.

@@ -3,6 +3,7 @@ import { Box, Typography, IconButton, TextareaAutosize } from "@mui/material";
 import { Send, GitCompareArrows } from "lucide-react";
 import Select from "../../../components/Inputs/Select";
 import palette from "../../../themes/palette";
+import { palette as vwPalette, radiusPx } from "../../../themes/palette";
 import { resolveMessageVariables, streamPromptTest, StreamPromptTestResult } from "../shared";
 
 interface Message {
@@ -177,8 +178,8 @@ export default function ComparePanel({
             <>
               <Box
                 sx={{
-                  bgcolor: "#F9FAFB",
-                  borderRadius: "4px",
+                  bgcolor: vwPalette.background.alt,
+                  borderRadius: radiusPx.sm,
                   p: "16px",
                   fontSize: 13,
                   lineHeight: 1.6,
@@ -229,8 +230,8 @@ export default function ComparePanel({
             <>
               <Box
                 sx={{
-                  bgcolor: "#F9FAFB",
-                  borderRadius: "4px",
+                  bgcolor: vwPalette.background.alt,
+                  borderRadius: radiusPx.sm,
                   p: "16px",
                   fontSize: 13,
                   lineHeight: 1.6,

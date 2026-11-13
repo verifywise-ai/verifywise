@@ -59,6 +59,7 @@ import { FileVersionHistoryDrawer } from "./components/FileVersionHistoryDrawer"
 // Event subscription for cross-component communication
 import { onFileApprovalChanged } from "../../../application/events/fileEvents";
 import { useCan } from "../../../application/hooks/useCan";
+import { palette } from "../../themes/palette";
 
 // Constants
 const FILE_MANAGER_CONTEXT = "FileManager";
@@ -803,7 +804,7 @@ const FileManager: React.FC = (): JSX.Element => {
         sx={{
           display: "flex",
           gap: 0,
-          border: "1px solid #E0E4E9",
+          border: `1px solid ${palette.border.light}`,
           borderRadius: "8px",
           overflow: "hidden",
           minHeight: "600px",
@@ -837,7 +838,7 @@ const FileManager: React.FC = (): JSX.Element => {
           <Box
             sx={{
               padding: "12px 16px",
-              borderBottom: "1px solid #E0E4E9",
+              borderBottom: `1px solid ${palette.border.light}`,
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
@@ -877,7 +878,7 @@ const FileManager: React.FC = (): JSX.Element => {
           <Box
             sx={{
               padding: "12px 16px",
-              borderBottom: "1px solid #E0E4E9",
+              borderBottom: `1px solid ${palette.border.light}`,
               display: "flex",
               alignItems: "center",
               gap: 2,
@@ -943,7 +944,7 @@ const FileManager: React.FC = (): JSX.Element => {
                   sx={{
                     fontSize: 14,
                     fontWeight: 500,
-                    color: "#DC2626",
+                    color: palette.riskMark.critical,
                     marginBottom: 1,
                   }}
                 >

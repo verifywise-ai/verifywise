@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import { aiTrustCenterTableCell } from "../style";
 import { ChevronsUpDown, ChevronUp, ChevronDown } from "lucide-react";
-import { brand, text, background } from "../../../themes/palette";
+import { brand, text, background, palette as vwPalette } from "../../../themes/palette";
 
 const SUBPROCESSORS_SORTING_KEY = "verifywise_subprocessors_sorting";
 
@@ -124,11 +124,11 @@ const Subprocessors = ({
       </Typography>
       <TableContainer
         component={Paper}
-        sx={{ border: "1px solid #EEEEEE", borderRadius: 1, boxShadow: "none" }}
+        sx={{ border: `1px solid ${vwPalette.border.light}`, borderRadius: 1, boxShadow: "none" }}
       >
         <Table>
           <TableHead>
-            <TableRow sx={{ background: "#FAFAFA" }}>
+            <TableRow sx={{ background: vwPalette.background.alt }}>
               <TableCell
                 sx={{
                   "fontWeight": 400,
@@ -273,7 +273,10 @@ const Subprocessors = ({
                 <TableCell
                   sx={{
                     ...aiTrustCenterTableCell,
-                    backgroundColor: sortConfig.key === "company name" ? "#e8e8e8" : "#fafafa",
+                    backgroundColor:
+                      sortConfig.key === "company name"
+                        ? vwPalette.border.light
+                        : vwPalette.background.alt,
                   }}
                 >
                   <Typography variant="body2" sx={{ fontSize: 13 }}>

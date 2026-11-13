@@ -7,7 +7,7 @@ import { ReactComponent as Background } from "../../../assets/imgs/background-gr
 import { CheckCircle as Success } from "lucide-react";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { useNavigate } from "react-router";
-import { text, border as borderPalette } from "../../../themes/palette";
+import { text, border as borderPalette, palette as vwPalette } from "../../../themes/palette";
 
 const ResetPasswordContinue = () => {
   const navigate = useNavigate();
@@ -54,7 +54,7 @@ const ResetPasswordContinue = () => {
             gap: theme.spacing(12),
           }}
         >
-          <Success size={24} style={{ color: "#10B981" }} />
+          <Success size={24} style={{ color: vwPalette.status.success.strong }} />
         </Stack>
         <Stack sx={{ gap: theme.spacing(6), textAlign: "center" }}>
           <Typography sx={{ fontSize: 16, fontWeight: "bold" }}>Password reset</Typography>

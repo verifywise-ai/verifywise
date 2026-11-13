@@ -2,6 +2,7 @@ import React from "react";
 import { Stack, Typography } from "@mui/material";
 import type { ClassificationReason } from "../../../domain/types/euAiActClassification";
 import { useTranslation } from "../../../application/hooks/useTranslation";
+import { radiusPx } from "../../themes/palette";
 
 const DATE_LOCALES: Record<string, string> = {
   en: "en-GB",
@@ -30,7 +31,7 @@ const ReasonList: React.FC<{ heading: string; items: ClassificationReason[] }> =
         sx={(theme) => ({
           gap: "8px",
           border: `1px solid ${theme.palette.border.dark}`,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           padding: "12px 16px",
         })}
       >
