@@ -112,10 +112,15 @@ export const chartTheme = {
   barRadius: classicUi ? 4 : 2,
 } as const;
 
-/** Colour for the n-th category; folds anything past 9 into Other. */
+/**
+ * Colour for the n-th category. Phase 1 folds anything past series 9 into
+ * Other (never repeat series 1); classic keeps its old wrap-around.
+ */
 export const seriesColor = (index: number): string => {
-  const last = chartTheme.series.length - 1;
-  return chartTheme.series[Math.min(Math.max(index, 0), last)];
+  const series = chartTheme.series;
+  const i = Math.max(index, 0);
+  if (classicUi) return series[i % series.length];
+  return series[Math.min(i, series.length - 1)];
 };
 
 export default chartTheme;

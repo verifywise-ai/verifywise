@@ -13,7 +13,8 @@ export const COLORS = {
   // State colors
   completed: chartTheme.status.success,
   approved: chartTheme.status.success,
-  inProgress: chartTheme.status.warning,
+  // Medium, not warning: phase 1 warning is the High orange (emergencyAction).
+  inProgress: chartTheme.risk.medium,
   pending: chartTheme.status.neutral,
   draft: palette.text.accent,
   archived: chartTheme.status.neutral,
@@ -27,7 +28,7 @@ export const COLORS = {
 
   // Incident colors
   open: chartTheme.status.error,
-  investigating: chartTheme.status.warning,
+  investigating: chartTheme.risk.medium,
   mitigated: chartTheme.status.info,
   closed: chartTheme.status.success,
   suspended: chartTheme.status.purple,

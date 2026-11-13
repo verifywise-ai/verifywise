@@ -4,6 +4,7 @@ import { StatCard } from "../../../components/Cards/StatCard";
 import { ResponsiveContainer, BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip } from "recharts";
 import palette, { chart as chartPalette, radiusPx } from "../../../themes/palette";
 import { sectionTitleSx, useCardSx } from "../shared";
+import { seriesColor } from "../../../themes/chartTheme";
 
 const MOCK_BY_DAY = [
   { day: "Mar 9", total_cost: 5.24 },
@@ -143,7 +144,7 @@ export default function MockDashboard() {
                           width: 8,
                           height: 8,
                           borderRadius: "50%",
-                          backgroundColor: chartPalette[i % chartPalette.length],
+                          backgroundColor: seriesColor(i),
                           flexShrink: 0,
                         }}
                       />
@@ -226,7 +227,7 @@ export default function MockDashboard() {
                           width: 8,
                           height: 8,
                           borderRadius: "50%",
-                          backgroundColor: chartPalette[i % chartPalette.length],
+                          backgroundColor: seriesColor(i),
                           flexShrink: 0,
                         }}
                       />

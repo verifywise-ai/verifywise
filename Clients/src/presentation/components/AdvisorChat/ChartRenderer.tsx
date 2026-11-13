@@ -12,7 +12,8 @@ import {
   Line,
 } from "recharts";
 import { VWDonutChart, vwTooltipStyle, axisTick, axisLine, gridStroke } from "../Charts/VWCharts";
-import palette, { chart as chartPalette } from "../../themes/palette";
+import palette from "../../themes/palette";
+import { seriesColor } from "../../themes/chartTheme";
 
 interface ChartData {
   type: "bar" | "pie" | "table" | "donut" | "line";
@@ -83,7 +84,7 @@ const ChartRendererComponent: FC<ChartRendererProps> = ({ chartData }) => {
                     key={s.label}
                     type="linear"
                     dataKey={s.label}
-                    stroke={chartPalette[i % chartPalette.length]}
+                    stroke={seriesColor(i)}
                     strokeWidth={1.5}
                     dot={{ r: 3 }}
                     isAnimationActive={false}
@@ -141,7 +142,7 @@ const ChartRendererComponent: FC<ChartRendererProps> = ({ chartData }) => {
       case "donut": {
         const isPie = type === "pie";
         const chartData = data.map((item) => ({ name: item.label, value: item.value }));
-        const colors = data.map((item, i) => item.color || chartPalette[i % chartPalette.length]);
+        const colors = data.map((item, i) => item.color || seriesColor(i));
         return (
           <VWDonutChart
             data={chartData}

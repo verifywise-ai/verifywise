@@ -14,6 +14,8 @@ import {
   status,
   text,
   radiusPx,
+  riskMark,
+  primitives,
 } from "./palette";
 import { isClassicUi } from "./uiStyle";
 
@@ -78,13 +80,14 @@ const colors = classicUi
       infoHover: "#2563EB",
     }
   : {
+      // Base is the solid mark, hover the darker text tone of the same signal.
       success: status.success.strong,
       successHover: status.success.text,
-      warning: status.warning.text,
+      warning: riskMark.high,
       warningHover: status.warning.text,
-      error: status.error.text,
+      error: riskMark.critical,
       errorHover: status.error.text,
-      info: status.info.text,
+      info: primitives.series.sky,
       infoHover: status.info.text,
     };
 

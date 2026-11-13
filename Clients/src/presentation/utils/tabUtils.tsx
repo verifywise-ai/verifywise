@@ -1,6 +1,6 @@
 import { Box, SxProps, Theme } from "@mui/material";
 import { ReactNode } from "react";
-import { icon as iconTokens, text } from "../themes/palette";
+import { icon as iconTokens, primitives } from "../themes/palette";
 import { fontFamily } from "../themes/typography";
 import { isClassicUi } from "../themes/uiStyle";
 
@@ -40,14 +40,18 @@ const classicBadgeSx = {
   lineHeight: 1,
 } as const;
 
-/** Phase 1: the count is plain Geist Mono 11px in text.accent, not a green pill. */
+/**
+ * Phase 1: the count is plain Geist Mono 11px, not a green pill. The hand-off
+ * names text.accent, but that is 3:1 on white; grey.500 meets 4.5:1 on white
+ * and on the raised tab grey.
+ */
 const phase1CountSx = {
   display: "inline-flex",
   alignItems: "center",
   fontFamily: fontFamily.mono,
   fontSize: "11px",
   fontWeight: 400,
-  color: text.accent,
+  color: primitives.grey[500],
   lineHeight: 1,
   fontVariantNumeric: "tabular-nums",
 } as const;

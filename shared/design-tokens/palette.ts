@@ -1,7 +1,7 @@
 /**
  * PHASE 1 RESTYLE: drop-in replacement for shared/design-tokens/palette.ts
  * Same export names and shapes as today; only which scale each token points
- * at has changed (marked NEW). Hex values live in primitives.phase1.ts.
+ * at has changed (marked NEW). Hex values live in ./primitives.ts.
  *
  * Rule of thumb: colour in a table or chart means risk, status or a series,
  * nothing else. Brand green is for brand, primary actions and selection.
@@ -51,7 +51,11 @@ export const risk = {
   high: { bg: orange[100], text: orange[600], border: orange[200] },
   medium: { bg: amber[100], text: amber[600], border: amber[200] },
   // NEW: Low is signal green; Very low is neutral grey (teal is a chart colour now)
-  low: { bg: signalGreen[100], text: signalGreen[700], border: signalGreen[300] },
+  low: {
+    bg: signalGreen[100],
+    text: signalGreen[700],
+    border: signalGreen[300],
+  },
   veryLow: { bg: neutral[100], text: neutral[700], border: neutral[300] },
 } as const;
 
@@ -83,15 +87,15 @@ export const accent = {
 // For a chart with one measure, use brand green[700] instead.
 export const chart = [
   series.indigo, // 1
-  series.rose,   // 2
-  series.sand,   // 3
-  series.teal,   // 4
-  series.clay,   // 5
+  series.rose, // 2
+  series.sand, // 3
+  series.teal, // 4
+  series.clay, // 5
   series.violet, // 6
-  series.moss,   // 7
-  series.sky,    // 8
-  series.plum,   // 9
-  series.other,  // Other
+  series.moss, // 7
+  series.sky, // 8
+  series.plum, // 9
+  series.other, // Other
 ] as const;
 
 export const text = {

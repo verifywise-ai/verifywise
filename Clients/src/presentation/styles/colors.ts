@@ -13,7 +13,9 @@ export const DASHBOARD_COLORS = {
   // State colors
   completed: status.success.text,
   approved: risk.veryLow.text,
-  inProgress: status.warning.text,
+  // Medium, not warning: in phase 1 warning is the High orange, which would
+  // collide with needsRework, emergencyAction and dueToday. Classic: same amber.
+  inProgress: risk.medium.text,
   pending: text.disabled,
   draft: status.default.text,
   archived: text.disabled,
@@ -27,7 +29,7 @@ export const DASHBOARD_COLORS = {
 
   // Incident colors
   open: status.error.text,
-  investigating: status.warning.text,
+  investigating: risk.medium.text,
   mitigated: status.info.text,
   closed: status.success.text,
   suspended: chartTheme.status.purple,
@@ -42,8 +44,8 @@ export const DASHBOARD_COLORS = {
   overdueBackground: status.error.bg,
   dueToday: risk.high.text,
   dueTodayBackground: risk.high.bg,
-  dueThisWeek: status.warning.text,
-  dueThisWeekBackground: status.warning.bg,
+  dueThisWeek: risk.medium.text,
+  dueThisWeekBackground: risk.medium.bg,
   dueNextWeek: status.info.text,
   dueNextWeekBackground: status.info.bg,
   dueThisMonth: accent.purple.text,

@@ -32,6 +32,7 @@ import ShadowAIOnboarding from "../../components/Modals/ShadowAIOnboarding";
 import { useNavigate } from "react-router";
 import { PERIOD_OPTIONS } from "./constants";
 import { palette, radiusPx } from "../../themes/palette";
+import { seriesColor } from "../../themes/chartTheme";
 
 const DEPT_COLORS = [...palette.chart];
 
@@ -202,7 +203,7 @@ export default function InsightsPage() {
                           width: 10,
                           height: 10,
                           borderRadius: "50%",
-                          backgroundColor: DEPT_COLORS[index % DEPT_COLORS.length],
+                          backgroundColor: seriesColor(index),
                           flexShrink: 0,
                         }}
                       />

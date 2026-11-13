@@ -15,7 +15,7 @@
 
 /** Neutral greys, slightly green-tinted to sit with the brand. 50 = white, 900 = ink. */
 export const grey = {
-  50: "#FFFFFF",  // panel, cards
+  50: "#FFFFFF", // panel, cards
   100: "#FAFAFA", // page background
   150: "#F3F6F5", // raised: table header, hover, tab background
   200: "#E4E6E6", // hairline borders
@@ -35,7 +35,7 @@ export type GreyStep = keyof typeof grey;
 
 /** Brand green. 700 = Primary Green #14715B. Brand and UI states only, never a risk tier. */
 export const green = {
-  50: "#EFFAF6",  // hover on selectable rows and sidebar items
+  50: "#EFFAF6", // hover on selectable rows and sidebar items
   100: "#D9F2E9", // selected
   200: "#B7E3D4", // pressed
   300: "#8BCEB8",
@@ -89,7 +89,7 @@ export const orange = {
 
 export type OrangeStep = keyof typeof orange;
 
-/** Chart: Sky (series 5). Also used for neutral "info" messages. */
+/** Info messages and badge tints. Sky (series 8) is series.sky. */
 export const blue = {
   50: "#E3F2FC",
   100: "#BFE0F5",
@@ -99,7 +99,7 @@ export const blue = {
 
 export type BlueStep = keyof typeof blue;
 
-/** Chart: Indigo (series 1). */
+/** Badge tints. Indigo (series 1) is series.indigo. */
 export const indigo = {
   50: "#E4E7FA",
   100: "#C3CAF2",
@@ -109,7 +109,7 @@ export const indigo = {
 
 export type IndigoStep = keyof typeof indigo;
 
-/** Chart: Violet (series 6). */
+/** Badge tints. Violet (series 6) is series.violet. */
 export const purple = {
   50: "#ECE4F8",
   100: "#D3C3EF",
@@ -119,7 +119,7 @@ export const purple = {
 
 export type PurpleStep = keyof typeof purple;
 
-/** Chart: Teal (series 3). */
+/** Badge tints. Teal (series 4) is series.teal. */
 export const teal = {
   50: "#D8EFEE",
   100: "#A9DCDA",
@@ -129,7 +129,7 @@ export const teal = {
 
 export type TealStep = keyof typeof teal;
 
-/** Chart: Rose (series 2). */
+/** Badge tints. Rose (series 2) is series.rose. */
 export const pink = {
   50: "#FBE5EE",
   100: "#F3BFD4",
@@ -151,7 +151,7 @@ export const signalGreen = {
   700: "#17703B",
 } as const;
 
-/** Chart: Cocoa (series 4). */
+/** Badge tints (accent.cocoa). Not a chart series. */
 export const cocoa = {
   50: "#F1E6DD",
   100: "#DDC6B4",
@@ -191,8 +191,17 @@ export const series = {
  * For score bars and gauges only, e.g. a Trust Index score of 64 uses score[6].
  */
 export const score = [
-  "#DC2626", "#E65723", "#EE7B1D", "#F19416", "#EEA411", "#EAB308",
-  "#C9B925", "#A4BD34", "#7EBA43", "#59B051", "#22A55A",
+  "#DC2626",
+  "#E65723",
+  "#EE7B1D",
+  "#F19416",
+  "#EEA411",
+  "#EAB308",
+  "#C9B925",
+  "#A4BD34",
+  "#7EBA43",
+  "#59B051",
+  "#22A55A",
 ] as const;
 
 /**
@@ -202,16 +211,34 @@ export const score = [
  * Never a chart mark, pill or risk tier.
  */
 export const part = {
-  record: { solid: "#208DAA", text: "#196F86", hover: "#F1F8FB", selected: "#DCEDF3", pressed: "#C8E2EB" },
-  track: { solid: "#E09B26", text: "#85590F", hover: "#FDF7EC", selected: "#F9EBD3", pressed: "#F3DCB5" },
-  enforce: { solid: "#1D8A4C", text: "#187340", hover: "#EFF8F2", selected: "#DBEFE2", pressed: "#C3E4CF" },
+  record: {
+    solid: "#208DAA",
+    text: "#196F86",
+    hover: "#F1F8FB",
+    selected: "#DCEDF3",
+    pressed: "#C8E2EB",
+  },
+  track: {
+    solid: "#E09B26",
+    text: "#85590F",
+    hover: "#FDF7EC",
+    selected: "#F9EBD3",
+    pressed: "#F3DCB5",
+  },
+  enforce: {
+    solid: "#1D8A4C",
+    text: "#187340",
+    hover: "#EFF8F2",
+    selected: "#DBEFE2",
+    pressed: "#C3E4CF",
+  },
 } as const;
 
 /** Corner radius in px. Keep exactly these: the slight roundness of the UI Proposal. */
 export const radius = {
-  sm: 2,     // buttons, cards, inputs, menus, modals, table wrappers, segmented controls
+  sm: 2, // buttons, cards, inputs, menus, modals, table wrappers, segmented controls
   search: 8, // the search field above a table
-  tab: 9,    // top corners of a tab in the tab bar (bottom corners square)
+  tab: 9, // top corners of a tab in the tab bar (bottom corners square)
   pill: 999, // pills, filter chips, link chips
 } as const;
 

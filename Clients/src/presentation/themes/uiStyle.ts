@@ -31,14 +31,18 @@ export function isClassicUi(): boolean {
   return activeUiStyle === "classic";
 }
 
-/** Save the preference and reload so every token picks up the new set. */
-export function setUiStyle(style: UiStyle): void {
-  if (style === activeUiStyle) return;
+/**
+ * Save the preference and reload so every token picks up the new set.
+ * Returns false when the browser blocks storage, so the caller can say so.
+ */
+export function setUiStyle(style: UiStyle): boolean {
+  if (style === activeUiStyle) return true;
   try {
     window.localStorage.setItem(UI_STYLE_STORAGE_KEY, style);
   } catch {
-    // Without storage the choice cannot survive the reload; do nothing.
-    return;
+    // Without storage the choice cannot survive the reload.
+    return false;
   }
   window.location.reload();
+  return true;
 }

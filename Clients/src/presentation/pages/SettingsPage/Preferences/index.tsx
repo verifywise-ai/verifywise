@@ -22,6 +22,9 @@ const PARALLEL_AGENTS_DESCRIPTION =
 const INTERFACE_STYLE_DESCRIPTION =
   "The classic look stays available until January 2027. Changing this reloads the page.";
 
+const INTERFACE_STYLE_STORAGE_ERROR =
+  "Your browser is blocking site storage, so the interface style can't be saved. Allow site data for VerifyWise and try again.";
+
 const INTERFACE_STYLE_OPTIONS: { _id: UiStyle; name: string }[] = [
   { _id: "phase1", name: "New style" },
   { _id: "classic", name: "Classic" },
@@ -191,7 +194,17 @@ const Preferences: React.FC = () => {
                 label="Interface style"
                 placeholder="Select a style"
                 value={getUiStyle()}
-                onChange={(event) => setUiStyle(event.target.value as UiStyle)}
+                onChange={(event) => {
+                  if (!setUiStyle(event.target.value as UiStyle)) {
+                    setAlert({
+                      variant: "error",
+                      title: "Error",
+                      body: INTERFACE_STYLE_STORAGE_ERROR,
+                      isToast: true,
+                      visible: true,
+                    });
+                  }
+                }}
                 items={INTERFACE_STYLE_OPTIONS}
               />
               <Typography

@@ -278,13 +278,6 @@ const StatusBadge: React.FC<IStatusBadgeProps> = ({
   const colors = getChipColors(label, variant, backgroundColor, textColor);
   const height = SIZE_HEIGHT[size];
 
-  // Create gradient colors (very slightly darker at bottom)
-  const gradientTop = colors.backgroundColor;
-  const gradientBottom = darkenColor(colors.backgroundColor, 3);
-
-  // Create border color (very slightly darker than background)
-  const borderColor = darkenColor(colors.backgroundColor, 6);
-
   // Phase 1 pill (style guide §5): flat tint, fully round, 11px / 500,
   // sentence case, a 6px dot in the text colour. Classic keeps the
   // uppercase gradient chip.
@@ -325,10 +318,24 @@ const StatusBadge: React.FC<IStatusBadgeProps> = ({
             }}
           />
         )}
-        {label}
+        {/* Raw enum labels ("draft") show as "Draft"; the text itself is unchanged
+            so screen readers and queries see the same value. */}
+        <Box
+          component="span"
+          sx={{ "display": "inline-block", "&::first-letter": { textTransform: "uppercase" } }}
+        >
+          {label}
+        </Box>
       </Box>
     );
   }
+
+  // Create gradient colors (very slightly darker at bottom)
+  const gradientTop = colors.backgroundColor;
+  const gradientBottom = darkenColor(colors.backgroundColor, 3);
+
+  // Create border color (very slightly darker than background)
+  const borderColor = darkenColor(colors.backgroundColor, 6);
 
   return (
     <Box

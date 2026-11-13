@@ -49,6 +49,7 @@ import MockDashboard from "./MockDashboard";
 import OnboardingOverlay from "./OnboardingOverlay";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { storageService } from "../../../../infrastructure/storage";
+import { seriesColor } from "../../../themes/chartTheme";
 
 const numberFormatter = new Intl.NumberFormat("en-US");
 
@@ -519,7 +520,7 @@ export default function SpendDashboardPage() {
                                 width: 8,
                                 height: 8,
                                 borderRadius: "50%",
-                                backgroundColor: chartPalette[i % chartPalette.length],
+                                backgroundColor: seriesColor(i),
                                 flexShrink: 0,
                               }}
                             />
@@ -639,7 +640,7 @@ export default function SpendDashboardPage() {
                                 width: 8,
                                 height: 8,
                                 borderRadius: "50%",
-                                backgroundColor: chartPalette[i % chartPalette.length],
+                                backgroundColor: seriesColor(i),
                                 flexShrink: 0,
                               }}
                             />
