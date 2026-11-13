@@ -276,6 +276,11 @@ const RESOURCES = [
 
 const WHATS_NEW = [
   {
+    label: "EN 18286 explained: EU AI Act vs. ISO 42001",
+    sub: "November 6, 2026",
+    url: "https://verifywise.ai/blog/en-18286-eu-ai-act-iso-42001",
+  },
+  {
     label: "A lifecycle for every AI system you run",
     sub: "October 31, 2026",
     url: "https://verifywise.ai/blog/ai-inventory-lifecycle-and-intake",
@@ -289,11 +294,6 @@ const WHATS_NEW = [
     label: "VerifyWise 2.6: risk inheritance and evidence retention",
     sub: "October 13, 2026",
     url: "https://verifywise.ai/blog/verifywise-2-6-announcement",
-  },
-  {
-    label: "VerifyWise on the Wavestone UK Cybersecurity Startup Radar",
-    sub: "August 26, 2026",
-    url: "https://verifywise.ai/blog/verifywise-wavestone-uk-cybersecurity-startup-radar-2026",
   },
 ] as const;
 
