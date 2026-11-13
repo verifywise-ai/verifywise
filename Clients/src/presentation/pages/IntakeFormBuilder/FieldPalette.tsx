@@ -602,7 +602,7 @@ export const SuggestedQuestionsPanel = forwardRef<
                   fontSize: "11px",
                   color: theme.palette.text.accent,
                   backgroundColor: theme.palette.background.fill,
-                  borderRadius: "10px",
+                  borderRadius: radiusPx.lgPlus,
                   px: "6px",
                   py: "1px",
                   fontWeight: 500,

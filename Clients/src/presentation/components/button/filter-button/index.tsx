@@ -9,6 +9,7 @@ import React, { memo } from "react";
 import { Box, useTheme } from "@mui/material";
 import { CustomizableButton } from "../customizable-button";
 import { FilterButtonProps } from "../../../types/button.types";
+import { radiusPx } from "../../../themes/palette";
 
 const FilterIcon: React.FC<{ size?: number }> = ({ size = 18 }) => (
   <svg
@@ -66,7 +67,7 @@ const FilterButton = memo(function FilterButton({
             color: theme.palette.primary.contrastText,
             px: 1,
             py: 0.2,
-            borderRadius: "10px",
+            borderRadius: radiusPx.pill,
             fontSize: "11px",
             fontWeight: 600,
             minWidth: "20px",

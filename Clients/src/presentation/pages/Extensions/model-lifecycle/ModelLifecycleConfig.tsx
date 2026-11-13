@@ -114,7 +114,7 @@ const vwSelect = {
 
 const vwAccordion = {
   "border": `1px solid ${border.light}`,
-  "borderRadius": "4px !important",
+  "borderRadius": `${radiusPx.sm} !important`,
   "&:before": { display: "none" },
   "boxShadow": "none",
   "overflow": "hidden",

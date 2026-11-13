@@ -151,7 +151,7 @@ export const toggleButtonGroupSx: SxProps<Theme> = {
   "maxWidth": 220,
   "& .MuiToggleButton-root": {
     "border": `1px solid ${COLORS.border}`,
-    "borderRadius": "4px !important",
+    "borderRadius": `${radiusPx.sm} !important`,
     "textTransform": "none",
     "fontSize": 11,
     "py": 0.5,

@@ -84,7 +84,7 @@ export const spacing = {
 
 // Border
 export const border = {
-  radius: "4px",
+  radius: radiusPx.sm,
   default: `1px solid ${colors.border.default}`,
 } as const;
 

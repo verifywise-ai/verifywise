@@ -602,7 +602,7 @@ export const FilterBy: React.FC<FilterByProps> = ({
               mb: "-16px",
               backgroundColor: "background.accent",
               borderTop: "1px solid status.default.border",
-              borderRadius: "0 0 4px 4px",
+              borderRadius: `0 0 ${radiusPx.sm} ${radiusPx.sm}`,
             }}
           >
             <Typography

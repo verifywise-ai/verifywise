@@ -19,6 +19,7 @@ import { Download, ShieldX } from "lucide-react";
 import { ENV_VARs } from "../../../../env.vars";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { palette } from "../../themes/palette";
+import { radiusPx } from "../../themes/palette";
 
 /**
  * SharedView page component for displaying publicly shared data
@@ -223,7 +224,7 @@ const SharedView: React.FC = () => {
           sx={{
             display: "inline-block",
             padding: "4px 12px",
-            borderRadius: "12px",
+            borderRadius: radiusPx.xl,
             fontSize: "12px",
             fontWeight: 500,
             backgroundColor: value ? palette.status.success.bg : palette.status.error.bg,
@@ -253,7 +254,7 @@ const SharedView: React.FC = () => {
           sx={{
             display: "inline-block",
             padding: "4px 12px",
-            borderRadius: "12px",
+            borderRadius: radiusPx.xl,
             fontSize: "12px",
             fontWeight: 500,
             backgroundColor: colorScheme.bg,

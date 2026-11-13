@@ -493,13 +493,13 @@ const EUAIActQuestionDrawerDialog: React.FC<EUAIActQuestionDrawerProps> = ({
                 initialContent={formData.answer}
                 isEditable={!isEditingDisabled}
                 headerSx={{
-                  borderRadius: "4px 4px 0 0",
+                  borderRadius: `${radiusPx.sm} ${radiusPx.sm} 0 0`,
                   borderTop: `1px solid ${theme.palette.border.dark}`,
                   borderColor: "border.dark",
                 }}
                 bodySx={{
                   "borderColor": "border.dark",
-                  "borderRadius": "0 0 4px 4px",
+                  "borderRadius": `0 0 ${radiusPx.sm} ${radiusPx.sm}`,
                   "& .ProseMirror > p": { margin: 0 },
                 }}
               />

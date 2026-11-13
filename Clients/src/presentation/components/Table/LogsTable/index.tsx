@@ -465,7 +465,7 @@ const LogsTable: React.FC<LogsTableProps> = ({ data, isLoading = false, paginate
           sx={{
             ...singleTheme.tableStyles.primary.frame,
             ...(paginated && {
-              borderRadius: "4px 4px 0 0",
+              borderRadius: `${radiusPx.sm} ${radiusPx.sm} 0 0`,
               borderBottom: "none",
             }),
           }}

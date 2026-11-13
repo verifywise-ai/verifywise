@@ -396,7 +396,7 @@ export function FormFieldRenderer({ field, control, errors, tone }: FormFieldRen
                                 backgroundColor: vwPalette.status.success.bg,
                                 color: vwPalette.text.secondary,
                                 border: `1px solid ${vwPalette.border.light}`,
-                                borderRadius: "12px",
+                                borderRadius: radiusPx.xl,
                                 gap: "4px",
                               }}
                             >

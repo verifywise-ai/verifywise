@@ -1956,7 +1956,7 @@ export default function ExperimentDetailContent({
                                           sx={{
                                             maxWidth: "85%",
                                             p: "3px",
-                                            borderRadius: "12px",
+                                            borderRadius: radiusPx.xl,
                                             backgroundColor: isUser
                                               ? palette.status.success.bg
                                               : palette.status.info.bg,

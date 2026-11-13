@@ -11,6 +11,7 @@ import DeleteFileModal from "./DeleteFileModal";
 import getStyles from "./getStyles";
 import { FileData } from "../../../../domain/types/File";
 import { handleDownload } from "../../../../application/tools/fileDownload";
+import { radiusPx } from "../../../themes/palette";
 
 interface FileManagementDialogProps {
   /** Existing files already saved on server */
@@ -56,7 +57,7 @@ function FileListItem({
         ...styles.fileItem,
         backgroundColor: isPending ? theme.palette.warning.light : "transparent",
         border: isPending ? `1px solid ${theme.palette.warning.main}` : undefined,
-        borderRadius: isPending ? "4px" : undefined,
+        borderRadius: isPending ? radiusPx.sm : undefined,
         padding: isPending ? "8px 12px" : styles.fileItem.padding,
       }}
     >

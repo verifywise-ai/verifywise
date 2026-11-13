@@ -2,6 +2,7 @@ import { Box, Tooltip, Typography } from "@mui/material";
 import { text as textColors, accent, brand } from "../../themes/palette";
 import CustomChip from "../Chip";
 import type { BadgeType, ReviewAction } from "../../../domain/interfaces/i.aiContent";
+import { radiusPx } from "../../themes/palette";
 
 interface AIContentBadgeProps {
   badgeType: BadgeType;
@@ -94,7 +95,7 @@ export default function AIContentBadge({
             backgroundColor: config.bg,
             color: config.color,
             border: `1px solid ${config.border}`,
-            borderRadius: isSmall ? "4px" : "6px",
+            borderRadius: isSmall ? radiusPx.sm : radiusPx.md,
             padding: isSmall ? "1px 6px" : "3px 10px",
             cursor: "default",
           }}

@@ -160,7 +160,7 @@ export default function FilePreviewAndMetadata({
           sx={{
             "opacity": analysis.skipped ? 0.5 : 1,
             "border": `1px solid ${theme.palette.border.light}`,
-            "borderRadius": "4px !important",
+            "borderRadius": `${radiusPx.sm} !important`,
             "overflow": "hidden",
             "boxShadow": "none",
             "&:before": { display: "none" },

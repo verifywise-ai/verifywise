@@ -123,7 +123,7 @@ const ButtonToggle = memo(function ButtonToggle({
                 ml: 2,
                 px: 1.5,
                 py: 0.25,
-                borderRadius: "10px",
+                borderRadius: radiusPx.pill,
                 bgcolor: option.value === value ? theme.palette.grey[100] : theme.palette.grey[200],
                 color: theme.palette.text.primary,
                 fontSize: "11px",

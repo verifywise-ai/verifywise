@@ -24,6 +24,7 @@ import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { ENV_VARs } from "../../../../../env.vars";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { palette } from "../../../themes/palette";
+import { radiusPx } from "../../../themes/palette";
 
 const colors = {
   primary: palette.brand.primary,
@@ -43,7 +44,7 @@ const colors = {
   disabled: palette.border.light,
 };
 const typography = { sizes: { sm: "12px", md: "13px" }, weights: { medium: 500, semibold: 600 } };
-const borderRadius = { sm: "4px", md: "8px", lg: "12px", full: "9999px" };
+const borderRadius = { sm: radiusPx.sm, md: radiusPx.lg, lg: radiusPx.xl, full: "9999px" };
 const shadows = {
   lg: "0px 4px 24px -4px rgba(16, 24, 40, 0.08), 0px 3px 3px -3px rgba(16, 24, 40, 0.03)",
 };

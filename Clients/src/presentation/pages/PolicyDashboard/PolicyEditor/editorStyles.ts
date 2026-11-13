@@ -51,7 +51,7 @@ export const policyEditorStyles: GlobalStylesProps["styles"] = {
       padding: "8px 16px",
       color: text.tertiary,
       backgroundColor: background.alt,
-      borderRadius: "0 4px 4px 0",
+      borderRadius: `0 ${radiusPx.sm} ${radiusPx.sm} 0`,
     },
     "& pre": {
       backgroundColor: editor.codeBlockBg,

@@ -1063,7 +1063,7 @@ const CEMarking: React.FC<CEMarkingProps> = ({ projectId }) => {
                         sx={{
                           backgroundColor: getStatusBgColor(step.status),
                           color: getStatusColor(step.status),
-                          borderRadius: "4px !important",
+                          borderRadius: `${radiusPx.sm} !important`,
                           fontWeight: 600,
                           fontSize: "0.75rem",
                           textTransform: "uppercase",

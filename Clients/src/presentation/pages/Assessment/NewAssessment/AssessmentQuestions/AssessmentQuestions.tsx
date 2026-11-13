@@ -78,7 +78,7 @@ const AssessmentQuestions = ({
                 sx={{
                   border: `1px solid ${borderPalette.dark}`,
                   borderBottom: "none",
-                  borderRadius: "4px 4px 0 0",
+                  borderRadius: `${radiusPx.sm} ${radiusPx.sm} 0 0`,
                   gap: 4,
                   justifyContent: "space-between",
                 }}
@@ -133,7 +133,7 @@ const AssessmentQuestions = ({
                 }}
                 bodySx={{
                   "borderColor": "border.dark",
-                  "borderRadius": "0 0 4px 4px",
+                  "borderRadius": `0 0 ${radiusPx.sm} ${radiusPx.sm}`,
                   "& .ProseMirror > p": {
                     margin: 0,
                   },

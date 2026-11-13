@@ -572,7 +572,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                             sx={{
                               maxWidth: 220,
                               maxHeight: 180,
-                              borderRadius: "12px 12px 4px 12px",
+                              borderRadius: `${radiusPx.xl} ${radiusPx.xl} ${radiusPx.sm} ${radiusPx.xl}`,
                               objectFit: "cover",
                               border: `2px solid ${palette.brand.primary}`,
                               display: "block",

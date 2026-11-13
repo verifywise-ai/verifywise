@@ -1915,7 +1915,7 @@ export default function NewExperimentModal({
                 elevation={0}
                 sx={{
                   "border": `1px solid ${palette.accent.blue.bg}`,
-                  "borderRadius": "4px !important",
+                  "borderRadius": `${radiusPx.sm} !important`,
                   "backgroundColor": palette.accent.blue.bg,
                   "&:before": { display: "none" },
                   "&.Mui-expanded": { margin: 0 },
@@ -2081,7 +2081,7 @@ export default function NewExperimentModal({
                 elevation={0}
                 sx={{
                   "border": `1px solid ${palette.border.dark}`,
-                  "borderRadius": "4px !important",
+                  "borderRadius": `${radiusPx.sm} !important`,
                   "&:before": { display: "none" },
                   "&.Mui-expanded": { margin: 0 },
                 }}

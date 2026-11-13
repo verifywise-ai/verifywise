@@ -555,7 +555,7 @@ const HistorySidebar: React.FC<HistorySidebarProps> = ({ isOpen, modelInventoryI
                 background:
                   "linear-gradient(to bottom, rgba(248, 250, 251, 0) 0%, rgba(248, 250, 251, 0.8) 50%, rgba(248, 250, 251, 1) 100%)",
                 pointerEvents: "none",
-                borderRadius: "0 0 8px 8px",
+                borderRadius: `0 0 ${radiusPx.lg} ${radiusPx.lg}`,
               }}
             />
           </Box>
