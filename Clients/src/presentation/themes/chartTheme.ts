@@ -105,14 +105,14 @@ export const chartTheme = {
   avatars: classicUi ? CLASSIC_AVATARS : chart.slice(0, 9),
   /**
    * Line colours for a chart with up to 15 distinct measures: classic keeps its
-   * 15. Phase 1 takes the nine series, then six darker badge-family shades
+   * 15. Phase 1 takes the nine series, then a slate grey and five darker badge-family shades
    * (no risk, brand or part hue), so every measure keeps its own colour.
    */
   lines: classicUi
     ? CLASSIC_LINES
     : [
         ...chart.slice(0, 9),
-        primitives.teal[800],
+        primitives.grey[500],
         primitives.cocoa[500],
         primitives.indigo[600],
         primitives.pink[800],
