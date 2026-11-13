@@ -168,7 +168,7 @@ export default function AIAppImportModal({ onClose }: AIAppImportModalProps) {
           </>
         ) : (
           <>
-            <Stack direction="row" gap="8px" alignItems="center" flexWrap="wrap" mb={4}>
+            <Stack direction="row" gap="8px" alignItems="center" flexWrap="wrap" mb="8px">
               <CustomizableButton
                 text="Download template"
                 variant="outlined"
@@ -241,7 +241,7 @@ export default function AIAppImportModal({ onClose }: AIAppImportModalProps) {
                 )}
 
                 {errors.length > 0 && (
-                  <Box sx={{ mt: 8 }}>
+                  <Box sx={{ mt: "16px" }}>
                     <RowIssuesTable
                       title={t("Fix these rows, then choose the file again")}
                       headers={[t("Row"), t("Field"), t("Message")]}

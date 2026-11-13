@@ -127,7 +127,7 @@ export function CountSummary({
   }>;
 }) {
   return (
-    <Stack direction="row" gap={8} flexWrap="wrap">
+    <Stack direction="row" gap="16px" flexWrap="wrap">
       {items.map((item) => {
         const isError = item.tone === "error";
         return (
@@ -141,8 +141,8 @@ export function CountSummary({
                     display: "flex",
                     flexDirection: "column",
                     justifyContent: "space-between",
-                    py: 4,
-                    px: 6,
+                    py: "8px",
+                    px: "12px",
                     border: `1px solid ${isError ? palette.status.error.border : border.light}`,
                     borderRadius: radiusPx.sm,
                     backgroundColor: isError ? red[50] : "transparent",
@@ -206,7 +206,7 @@ export function RowIssuesTable({
 
   return (
     <Box>
-      <Stack direction="row" alignItems="center" gap={2} sx={{ mb: "8px" }}>
+      <Stack direction="row" alignItems="center" gap="4px" sx={{ mb: "8px" }}>
         <AlertCircle
           size={14}
           strokeWidth={2}

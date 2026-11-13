@@ -26,12 +26,12 @@ const BottomChip: React.FC<BottomChipProps> = ({ children, role, ariaLabel, sx }
         position: "fixed",
         left: 0,
         right: 0,
-        bottom: theme.spacing(24),
+        bottom: "48px",
         display: "flex",
         justifyContent: "center",
         zIndex: 1200,
         pointerEvents: "none",
-        px: theme.spacing(4),
+        px: "8px",
       }}
     >
       <Stack
@@ -41,18 +41,18 @@ const BottomChip: React.FC<BottomChipProps> = ({ children, role, ariaLabel, sx }
         alignItems="center"
         sx={[
           {
-            background: accent.primary.bg,
+            backgroundColor: accent.primary.bg,
             border: `1px solid ${accent.primary.border}`,
             pointerEvents: "auto",
-            gap: theme.spacing(3),
-            pl: theme.spacing(8),
-            pr: theme.spacing(2),
-            py: theme.spacing(6),
-            boxShadow: "0 4px 12px rgba(0, 0, 0, 0.1)",
+            gap: "6px",
+            pl: "16px",
+            pr: "4px",
+            py: "12px",
+            boxShadow: theme.boxShadow,
             borderRadius: radiusPx.sm,
             maxWidth: "calc(100vw - 32px)",
             flexWrap: "wrap",
-            rowGap: theme.spacing(1),
+            rowGap: "2px",
           },
           ...(Array.isArray(sx) ? sx : [sx]),
         ]}
