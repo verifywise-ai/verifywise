@@ -13,6 +13,19 @@ const STATUS = `COALESCE(r.mitigation_status::text, '${NOT_STARTED}')`;
 const DEADLINE = utcDateSql("r.deadline");
 
 /**
+ * Which risks need attention, whoever owns them (alias `r`). The queue source
+ * adds the owner; the Home counts strip counts it org-wide as "untreated
+ * risks". Keep the rule here so a change applies to both.
+ */
+export const RISK_NEEDS_ATTENTION_CONDITION = `
+    r.organization_id = :organizationId
+    AND r.is_deleted = false
+    AND (
+      ${STATUS} IN (:needsAttention)
+      OR (${DEADLINE} < :today AND ${STATUS} NOT IN (:finished))
+    )`;
+
+/**
  * Risks I own, not deleted, that either have not been picked up (Not Started,
  * Requires review, NULL) or are past their deadline and not Completed/Canceled.
  * Exported so tests can pin the rule.
@@ -21,13 +34,16 @@ export const RISKS_SQL = `
   SELECT r.id, r.risk_name, r.current_risk_level, ${STATUS} AS mitigation_status,
          ${DEADLINE} AS deadline, r.created_at
   FROM risks r
-  WHERE r.organization_id = :organizationId
-    AND r.risk_owner = :userId
-    AND r.is_deleted = false
-    AND (
-      ${STATUS} IN (:needsAttention)
-      OR (${DEADLINE} < :today AND ${STATUS} NOT IN (:finished))
-    )`;
+  WHERE ${RISK_NEEDS_ATTENTION_CONDITION}
+    AND r.risk_owner = :userId`;
+
+/** Binds the condition's `:organizationId`, `:today`, `:needsAttention` and `:finished`. */
+export const riskNeedsAttentionReplacements = (organizationId: number, today: string) => ({
+  organizationId,
+  today,
+  needsAttention: NEEDS_ATTENTION,
+  finished: FINISHED,
+});
 
 interface RiskRow {
   id: number;
@@ -46,11 +62,8 @@ export const risksSource: HomeQueueSource = {
   async load(ctx) {
     const rows = await sequelize.query<RiskRow>(RISKS_SQL, {
       replacements: {
-        organizationId: ctx.organizationId,
+        ...riskNeedsAttentionReplacements(ctx.organizationId, ctx.today),
         userId: ctx.userId,
-        today: ctx.today,
-        needsAttention: NEEDS_ATTENTION,
-        finished: FINISHED,
       },
       type: QueryTypes.SELECT,
     });

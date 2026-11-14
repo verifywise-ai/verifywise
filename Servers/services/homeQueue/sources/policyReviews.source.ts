@@ -6,6 +6,22 @@ import type { HomeQueueItem, HomeQueueSource } from "../../../domain.layer/inter
 const NEXT_REVIEW = dateSql("p.next_review_date");
 
 /**
+ * Which policies are due for review, whoever the reviewer is (alias `p`). The
+ * queue source adds the owner/reviewer filter; the Home counts strip counts it
+ * org-wide. Keep the rule here so a change applies to both.
+ */
+export const POLICY_REVIEW_DUE_CONDITION = `
+    p.organization_id = :organizationId
+    AND p.next_review_date IS NOT NULL
+    AND ${NEXT_REVIEW} <= :windowEnd`;
+
+/** Binds the due condition's `:organizationId` and `:windowEnd`. */
+export const policyReviewDueReplacements = (organizationId: number, today: string) => ({
+  organizationId,
+  windowEnd: addDays(today, DUE_SOON_DAYS),
+});
+
+/**
  * Policies I own or am an assigned reviewer of (join table
  * policy_manager__assigned_reviewer_ids) whose next review is within the
  * window, overdue included. Policies are hard-deleted, so there is no deleted
@@ -14,9 +30,7 @@ const NEXT_REVIEW = dateSql("p.next_review_date");
 export const POLICY_REVIEWS_SQL = `
   SELECT p.id, p.title, p.status, ${NEXT_REVIEW} AS next_review_date, p.created_at
   FROM policy_manager p
-  WHERE p.organization_id = :organizationId
-    AND p.next_review_date IS NOT NULL
-    AND ${NEXT_REVIEW} <= :windowEnd
+  WHERE ${POLICY_REVIEW_DUE_CONDITION}
     AND (
       p.policy_owner_id = :userId
       OR EXISTS (
@@ -43,9 +57,8 @@ export const policyReviewsSource: HomeQueueSource = {
   async load(ctx) {
     const rows = await sequelize.query<PolicyRow>(POLICY_REVIEWS_SQL, {
       replacements: {
-        organizationId: ctx.organizationId,
+        ...policyReviewDueReplacements(ctx.organizationId, ctx.today),
         userId: ctx.userId,
-        windowEnd: addDays(ctx.today, DUE_SOON_DAYS),
       },
       type: QueryTypes.SELECT,
     });

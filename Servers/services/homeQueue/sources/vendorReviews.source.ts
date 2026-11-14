@@ -6,6 +6,17 @@ import type { HomeQueueItem, HomeQueueSource } from "../../../domain.layer/inter
 const REVIEW_DATE = utcDateSql("v.review_date");
 
 /**
+ * Which vendors are due for review, whoever the recipient is (alias `v`). The
+ * queue source adds the recipient; the Home counts strip counts it org-wide.
+ * Keep the rule here so a change applies to both.
+ */
+export const VENDOR_REVIEW_DUE_CONDITION = `
+    v.organization_id = :organizationId
+    AND v.review_date IS NOT NULL
+    AND v.review_status IS DISTINCT FROM 'Reviewed'
+    AND ${REVIEW_DATE} <= :windowEnd`;
+
+/**
  * Mirrors the `vendor_review_due` sweep's recipient and widens its window.
  * The sweep (automationWorker.ts, the vendor_review_date_approaching loop)
  * notifies `vendor.reviewer || vendor.assignee`; so the recipient here is the
@@ -18,11 +29,14 @@ const REVIEW_DATE = utcDateSql("v.review_date");
 export const VENDOR_REVIEWS_SQL = `
   SELECT v.id, v.vendor_name, v.review_status, ${REVIEW_DATE} AS review_date, v.created_at
   FROM vendors v
-  WHERE v.organization_id = :organizationId
-    AND v.review_date IS NOT NULL
-    AND v.review_status IS DISTINCT FROM 'Reviewed'
-    AND ${REVIEW_DATE} <= :windowEnd
+  WHERE ${VENDOR_REVIEW_DUE_CONDITION}
     AND COALESCE(NULLIF(v.reviewer, 0), v.assignee) = :userId`;
+
+/** Binds the due condition's `:organizationId` and `:windowEnd`. */
+export const vendorReviewDueReplacements = (organizationId: number, today: string) => ({
+  organizationId,
+  windowEnd: addDays(today, DUE_SOON_DAYS),
+});
 
 interface VendorRow {
   id: number;
@@ -40,9 +54,8 @@ export const vendorReviewsSource: HomeQueueSource = {
   async load(ctx) {
     const rows = await sequelize.query<VendorRow>(VENDOR_REVIEWS_SQL, {
       replacements: {
-        organizationId: ctx.organizationId,
+        ...vendorReviewDueReplacements(ctx.organizationId, ctx.today),
         userId: ctx.userId,
-        windowEnd: addDays(ctx.today, DUE_SOON_DAYS),
       },
       type: QueryTypes.SELECT,
     });

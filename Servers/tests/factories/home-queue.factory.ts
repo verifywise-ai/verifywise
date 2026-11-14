@@ -183,3 +183,76 @@ export async function seedMrmFinding(orgId: number, o: SeedFindingOptions): Prom
     ),
   );
 }
+
+/** A pending approval request on step 1 waiting for `approverId` (the Approvals source's rule). */
+export async function seedPendingApproval(
+  orgId: number,
+  o: { name: string; requestedBy: number; approverId: number },
+): Promise<number> {
+  const requestId = firstId(
+    await sequelize.query(
+      `INSERT INTO approval_requests (organization_id, request_name, entity_type, status,
+                                      requested_by, current_step)
+       VALUES (:orgId, :name, 'use_case', 'Pending', :requestedBy, 1)
+       RETURNING id`,
+      { replacements: { orgId, name: o.name, requestedBy: o.requestedBy } },
+    ),
+  );
+  const stepId = firstId(
+    await sequelize.query(
+      `INSERT INTO approval_request_steps (organization_id, request_id, step_number, step_name)
+       VALUES (:orgId, :requestId, 1, 'Step')
+       RETURNING id`,
+      { replacements: { orgId, requestId } },
+    ),
+  );
+  await sequelize.query(
+    `INSERT INTO approval_request_step_approvals (organization_id, request_step_id, approver_id)
+     VALUES (:orgId, :stepId, :approverId)`,
+    { replacements: { orgId, stepId, approverId: o.approverId } },
+  );
+  return requestId;
+}
+
+/** A pending intake submission on a fresh form, with routing off (so every reviewer sees it). */
+export async function seedPendingIntake(
+  orgId: number,
+  o: { slug: string; createdBy: number },
+): Promise<number> {
+  const formId = firstId(
+    await sequelize.query(
+      `INSERT INTO intake_forms (organization_id, name, description, slug, entity_type, created_by)
+       VALUES (:orgId, :slug, '', :slug, 'use_case', :createdBy)
+       RETURNING id`,
+      { replacements: { orgId, slug: o.slug, createdBy: o.createdBy } },
+    ),
+  );
+  return firstId(
+    await sequelize.query(
+      `INSERT INTO intake_submissions (organization_id, form_id, entity_type)
+       VALUES (:orgId, :formId, 'use_case')
+       RETURNING id`,
+      { replacements: { orgId, formId } },
+    ),
+  );
+}
+
+export async function seedAiApp(orgId: number, name: string): Promise<number> {
+  return firstId(
+    await sequelize.query(
+      `INSERT INTO ai_apps (organization_id, name) VALUES (:orgId, :name) RETURNING id`,
+      { replacements: { orgId, name } },
+    ),
+  );
+}
+
+export async function seedAgent(orgId: number, externalId: string): Promise<number> {
+  return firstId(
+    await sequelize.query(
+      `INSERT INTO agent_primitives (organization_id, primitive_type, external_id, display_name)
+       VALUES (:orgId, 'agent', :externalId, :externalId)
+       RETURNING id`,
+      { replacements: { orgId, externalId } },
+    ),
+  );
+}

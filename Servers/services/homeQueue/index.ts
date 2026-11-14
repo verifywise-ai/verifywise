@@ -1,4 +1,5 @@
 import logger, { logStructured } from "../../utils/logger/fileLogger";
+import { loadHomeCounts } from "./counts";
 import { sortQueueItems } from "./sort";
 import { approvalsSource } from "./sources/approvals.source";
 import { intakeSource } from "./sources/intake.source";
@@ -31,9 +32,6 @@ export const HOME_QUEUE_SOURCES: HomeQueueSource[] = [
   mrmFindingsSource,
 ];
 
-/** Placeholder until the counts strip has its loader: no counts are reported. */
-const noCounts: CountsLoader = async () => ({});
-
 const loadCounts = async (
   counts: CountsLoader,
   ctx: HomeQueueContext,
@@ -55,7 +53,7 @@ const loadCounts = async (
 export async function getHomeQueue(
   ctx: HomeQueueContext,
   sources: HomeQueueSource[] = HOME_QUEUE_SOURCES,
-  counts: CountsLoader = noCounts,
+  counts: CountsLoader = loadHomeCounts,
 ): Promise<HomeQueueResponse> {
   const visible = sources.filter((source) => source.isVisible(ctx));
 
