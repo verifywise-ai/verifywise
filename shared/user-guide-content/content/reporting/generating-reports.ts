@@ -125,7 +125,7 @@ export const generatingReportsContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Go to the Reporting section from the sidebar under Assurance' },
+        { text: 'In the sidebar, open **Record > Evidence & reports > Reporting**' },
         { text: 'Click "Generate report" and choose "Use case report" from the dropdown menu' },
         { text: 'Select the use case from the dropdown in the modal' },
         { text: 'Choose one or more report types (you can select multiple)' },

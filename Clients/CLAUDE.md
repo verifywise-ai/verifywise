@@ -36,6 +36,8 @@ infrastructure/   → API clients, external services
 
 **Extensions:** UI in `src/presentation/pages/Extensions/` (catalog, `Settings/`, one folder per extension key). Gate every entry point with `useExtensions().isEnabled("<key>")` (`src/application/contexts/Extensions.context.tsx`). Bundled frameworks (ids 5–25) render through `pages/Framework/Generic` + `components/Drawer/GenericFrameworkDrawer`. There is no per-framework UI. See `docs/technical/infrastructure/extensions.md` and `docs/technical/guides/adding-new-framework.md`.
 
+**Sidebar navigation:** the phase 1 (default) look has one sidebar, `src/presentation/components/UnifiedSidebar/`, driven by `navConfig.ts`. A new page needs an entry in `navConfig.ts` (group, item or sub-item, route, gate, count), or an entry in `KEPT_ELSEWHERE` with the reason it stays out; `navConfig.test.ts` enforces one or the other. While the classic look exists (until January 2027), also add the page to the classic module sidebar, since classic keeps the app switcher, per-module sidebars and the footer Management popup.
+
 **Permission gating:** decide what to show from permission keys, never from the role name (a custom role can never match one). Use `useCan("vendor.edit")` or `useCanCheck()` (`src/application/hooks/useCan.ts`) with the key the server route authorizes on; add a new UI key to `BUILTIN_UI_PERMISSIONS` (`src/application/constants/permissions.ts`) and to `Servers/config/rolePermissions.config.ts` together, since `permissions.test.ts` checks they match. See `docs/technical/architecture/authentication.md`.
 
 ---

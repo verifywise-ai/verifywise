@@ -29,7 +29,7 @@ export const apiAccessContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Go to Settings from the bottom of the sidebar' },
+        { text: 'In the sidebar, open **Workspace > Settings**' },
         { text: 'Select the API keys section' },
         { text: 'View your existing keys or create new ones' },
       ],

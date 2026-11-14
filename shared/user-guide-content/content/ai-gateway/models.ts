@@ -25,8 +25,8 @@ export const aiGatewayModelsContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Click the **AI Gateway** icon in the sidebar' },
-        { text: 'Click **Models** in the secondary sidebar' },
+        { text: 'In the sidebar, open **Enforce > AI Gateway**' },
+        { text: 'Click **Models**' },
         { text: 'The page loads with the All models tab active' },
       ],
     },

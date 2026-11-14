@@ -88,7 +88,7 @@ export const llmEvalsOverviewContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Access LLM Evals by clicking the flask icon in the icon sidebar on the far left. Once inside, you\'ll see a project dropdown at the top and a navigation panel on the left:',
+      text: 'Access LLM Evals from **Enforce > LLM Evals** in the sidebar. Click it to open its pages in place. You\'ll see a project dropdown at the top of the list and these pages below it:',
     },
     {
       type: 'bullet-list',

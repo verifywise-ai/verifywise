@@ -25,7 +25,7 @@ export const organizationSettingsContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Click on Settings in the sidebar footer' },
+        { text: 'In the sidebar, open **Workspace > Settings**' },
         { text: 'Select the Organization section' },
       ],
     },

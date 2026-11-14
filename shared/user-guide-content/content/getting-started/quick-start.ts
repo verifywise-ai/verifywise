@@ -122,7 +122,7 @@ export const quickStartContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { bold: '', text: 'In the sidebar, go to **Assurance → Evidence**' },
+        { bold: '', text: 'In the sidebar, go to **Record → Evidence & reports → Evidence**' },
         { bold: '', text: 'Click **"Upload evidence"**' },
         { bold: '', text: 'Select a file (PDF, DOCX, images, etc.) and give it a title' },
         { bold: '', text: 'Add a description of what this file demonstrates' },

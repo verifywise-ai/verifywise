@@ -40,7 +40,7 @@ export const evalsSettingsContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Click **Settings** at the bottom of the LLM Evals sidebar.' },
+        { text: 'In the sidebar, open **Enforce > LLM Evals** and click **Settings**.' },
         { text: 'Click **Add API key**.' },
         { text: 'Select a provider from the list.' },
         { text: 'Paste your API key. The format is validated automatically (e.g., OpenAI keys must start with `sk-`).' },

@@ -44,7 +44,7 @@ export const trainingTrackingContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Training registry, found under Assurance in the sidebar, shows all training programs in a table. Each row is a training program with key info visible at a glance.',
+      text: 'The Training registry, found under **Enforce > Policy** in the sidebar, shows all training programs in a table. Each row is a training program with key info visible at a glance.',
     },
     {
       type: 'paragraph',

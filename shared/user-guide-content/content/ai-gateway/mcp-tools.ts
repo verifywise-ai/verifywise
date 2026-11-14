@@ -14,7 +14,7 @@ export const mcpToolsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'You\'ll find it at **AI Gateway > Agent Control > MCP Tools**.',
+      text: 'You\'ll find it at **Enforce > Agent controls > MCP tools**.',
     },
     {
       type: 'heading',
