@@ -315,9 +315,11 @@ The client decides which controls to show from the same keys, through one hook: 
 
 **Enforced on the server since #5314:** `postMarketMonitoring.edit` (post-market monitoring config and question writes), `apiKeys.admin` (API token create, revoke and delete; any super admin is still allowed), `incident.create` (`POST /ai-incident-managements`). Existing custom roles that held any `*.edit` key were granted `postMarketMonitoring.edit` and `incident.create` by migration `20261111120001`.
 
+**`aiTrustIndex.admin`** (`PUT /ai-trust-index/settings`, the AI Trust Index settings page and its sidebar entries) replaced an Admin/SuperAdmin role-name check in the controller. Custom roles could never pass that check, so no grant migration was needed; an Admin grants the key to a custom role. A pure super admin has no organization and so no settings to change.
+
 **Screen only** (the key decides what the app offers; the server does not check it): `useCase.members` (members are also saved through the project form, which Editors use), `framework.edit` and `framework.audit` (Auditors save audit fields through the same framework endpoints; the framework picker in use case settings is not role-gated), `evals.edit` (EvalServer sits behind one catch-all proxy). Their catalog descriptions say so.
 
-**Still on the built-in role name**, because the server check is a role-name check too, or no key covers it: Settings > Team, Settings > Features, Settings > MCP, AI Trust Index settings, intake review lanes and routing, file downloads (Admin only on screen; the download route needs only a login), evidence folders, the demo data menu, and the "all tasks" Admin view. `Servers/routes/__tests__/roleNameRoutes.permissions.test.ts` lists every remaining server-side role-name check with its reason and fails if one is added.
+**Still on the built-in role name**, because the server check is a role-name check too, or no key covers it: Settings > Team, Settings > Features, Settings > MCP, intake review lanes and routing, file downloads (Admin only on screen; the download route needs only a login), evidence folders, the demo data menu, and the "all tasks" Admin view. `Servers/routes/__tests__/roleNameRoutes.permissions.test.ts` lists every remaining server-side role-name check with its reason and fails if one is added.
 
 ### Core governance writes
 

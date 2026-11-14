@@ -235,19 +235,37 @@ describe("UnifiedSidebar: gates", () => {
     expect(sub("workflows", "approval-workflows")).toBeInTheDocument();
   });
 
-  it("shows Trust Index settings to Admins only", () => {
+  it("hides Trust Index settings without aiTrustIndex.admin", () => {
     renderAt("/ai-trust-index/browse");
     expect(querySub("inventory", "ati-settings")).not.toBeInTheDocument();
   });
 
-  it("shows Trust Index settings and Intake to an Admin", () => {
-    authState.userRoleName = "Admin";
+  it("shows Trust Index settings with aiTrustIndex.admin, whatever the role name", () => {
+    authState.userRoleName = "Compliance lead";
+    permissions.add("aiTrustIndex.admin");
     renderAt("/ai-trust-index/browse");
     expect(sub("inventory", "ati-settings")).toBeInTheDocument();
+  });
+
+  it("hides Trust Index settings from an Admin-named role without the key", () => {
+    authState.userRoleName = "Admin";
+    renderAt("/ai-trust-index/browse");
+    expect(querySub("inventory", "ati-settings")).not.toBeInTheDocument();
+  });
+
+  it("hides Intake without intakeForm.edit", () => {
+    renderAt("/");
+    expect(screen.queryByTestId("nav-item-intake")).not.toBeInTheDocument();
+  });
+
+  it("shows Intake with intakeForm.edit (Editors and custom roles too)", () => {
+    permissions.add("intakeForm.edit");
+    renderAt("/");
     expect(item("intake")).toBeInTheDocument();
   });
 
-  it("hides Intake from non-Admins", () => {
+  it("hides Intake from an Admin-named role without intakeForm.edit", () => {
+    authState.userRoleName = "Admin";
     renderAt("/");
     expect(screen.queryByTestId("nav-item-intake")).not.toBeInTheDocument();
   });
@@ -763,7 +781,7 @@ describe("UnifiedSidebar: routes hidden for this user", () => {
   });
 
   it("selects the sub-item, not the parent, when it is visible", () => {
-    authState.userRoleName = "Admin";
+    permissions.add("aiTrustIndex.admin");
     renderAt("/ai-trust-index/settings");
     expect(isSelected(sub("inventory", "ati-settings"))).toBe(true);
     expect(isSelected(item("inventory"))).toBe(false);

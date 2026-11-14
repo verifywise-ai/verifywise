@@ -250,7 +250,6 @@ export function ContextSidebar({
           activeTab={activeItem(trustIndexTab)}
           onTabChange={handleTrustIndexTabChange}
           trackedCount={aiTrustIndexSidebarContext?.trackedCount ?? 0}
-          isAdmin={isAdmin}
         />
       );
     }

@@ -66,6 +66,11 @@ export const ROLE_PERMISSIONS = {
     description: "Run and view AI audits",
     legacyRoles: ADMIN,
   },
+  "aiTrustIndex.admin": {
+    module: "AI Trust Index",
+    description: "Choose who receives AI Trust Index alerts",
+    legacyRoles: ADMIN,
+  },
   "aiConfirmation.admin": {
     module: "AI confirmations",
     description: "Manage AI confirmation rules",

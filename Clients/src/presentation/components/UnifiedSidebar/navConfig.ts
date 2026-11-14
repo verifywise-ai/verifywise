@@ -81,7 +81,7 @@ export const NAV_GROUPS: NavGroup[] = [
             label: "Trust Index settings",
             path: "/ai-trust-index/settings",
             section: "AI Trust Index",
-            gate: { role: "Admin" },
+            gate: { permission: "aiTrustIndex.admin" },
           },
         ],
       },
@@ -170,9 +170,8 @@ export const NAV_GROUPS: NavGroup[] = [
         label: "Intake",
         icon: "intake",
         path: "/intake-forms",
-        // Today's top-bar link checks the role name: Editors may open the
-        // routes too (intakeForm.edit), and no Admin-only key covers it.
-        gate: { role: "Admin" },
+        // Creating, editing and reviewing on the page all need intakeForm.edit.
+        gate: { permission: "intakeForm.edit" },
       },
     ],
   },

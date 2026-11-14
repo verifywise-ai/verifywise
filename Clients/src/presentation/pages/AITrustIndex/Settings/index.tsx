@@ -1,7 +1,8 @@
 /**
  * @fileoverview AI Trust Index — Settings tab.
  *
- * Admin-only configuration of who receives change-notification digests:
+ * Configuration of who receives change-notification digests, for holders of
+ * the aiTrustIndex.admin permission (Admins by default):
  * an organization-user multi-select plus free-text email entry. Changes
  * auto-save (debounced) via the settings mutation.
  *
@@ -18,7 +19,7 @@ import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtende
 import { palette, radiusPx } from "../../../themes/palette";
 import { useSettings, useUpdateSettings } from "../../../../application/hooks/useAiTrustIndex";
 import useUsers from "../../../../application/hooks/useUsers";
-import { useAuth } from "../../../../application/hooks/useAuth";
+import { useCan, usePermissionsSettled } from "../../../../application/hooks/useCan";
 import { useTrustIndexAlert } from "../useTrustIndexAlert";
 
 interface UserOption {
@@ -27,8 +28,9 @@ interface UserOption {
 }
 
 export default function Settings() {
-  const { userRoleName } = useAuth();
-  const isAdmin = userRoleName === "Admin";
+  const isAdmin = useCan("aiTrustIndex.admin");
+  // A custom role's permissions may still be loading: don't refuse it yet.
+  const permissionsSettled = usePermissionsSettled();
 
   const { data: settingsData, isLoading: settingsLoading } = useSettings();
   const { users, loading: usersLoading } = useUsers();
@@ -108,7 +110,7 @@ export default function Settings() {
     [userOptions, recipientUserIds],
   );
 
-  if (!isAdmin) {
+  if (!isAdmin && permissionsSettled) {
     return (
       <PageHeaderExtended
         title="Settings"
@@ -133,7 +135,7 @@ export default function Settings() {
       helpArticlePath="ai-trust-index/settings"
     >
       {AlertSlot}
-      {settingsLoading ? (
+      {settingsLoading || !permissionsSettled ? (
         <Box sx={{ display: "flex", justifyContent: "center", py: 6 }}>
           <CircularProgress size={24} sx={{ color: palette.brand.primary }} />
         </Box>

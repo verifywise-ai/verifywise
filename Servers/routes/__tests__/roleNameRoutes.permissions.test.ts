@@ -25,6 +25,7 @@ import evidenceHubRouter from "../evidenceHub.route";
 import useCaseOrgSettingsRouter from "../v1/useCaseOrgSettings.route";
 import postMarketMonitoringRouter from "../postMarketMonitoring.route";
 import incidentRouter from "../aiIncidentManagement.route";
+import aiTrustIndexRouter from "../aiTrustIndex.route";
 
 const permissionFor = (router: any, method: string, routePath: string) => {
   const layer = router.stack.find(
@@ -67,6 +68,9 @@ describe("routes that used role-name lists now authorize on a permission key", (
     [riskLinksRouter, "post", "/:id/acknowledge-parent-change", "riskLinks.edit", EDITOR],
     [evidenceHubRouter, "post", "/freshness-sweep", "evidence.admin", ADMIN],
     [useCaseOrgSettingsRouter, "put", "/", "organization.admin", ADMIN],
+    // Was Admin/SuperAdmin by name in the controller. A pure super admin has
+    // no organization, so the settings were never theirs to change.
+    [aiTrustIndexRouter, "put", "/settings", "aiTrustIndex.admin", ADMIN],
   ])("%#: %s %s requires %s", (router, method, routePath, key, legacyRoles) => {
     expect(permissionFor(router, method as string, routePath as string)).toEqual([key]);
     // Same built-in roles as the role-name list it replaced: no change for them.
@@ -162,10 +166,6 @@ const ROLE_NAME_ALLOWLIST: Record<string, { count: number; reason: string }> = {
   "controllers/aiGatewaySettings.ctrl.ts": {
     count: 1,
     reason: "Forwards the role to the AI Gateway, whose routes check role names (require_admin).",
-  },
-  "controllers/aiTrustIndex.ctrl.ts": {
-    count: 2,
-    reason: "AI Trust Index settings are Admin/SuperAdmin by name; no catalog key yet.",
   },
   "controllers/featureSettings.ctrl.ts": {
     count: 2,
