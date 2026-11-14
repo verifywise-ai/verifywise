@@ -54,91 +54,118 @@ const approvedWithSecond = (
 
 describe("isIntakeReviewFor", () => {
   it("pending, routing off: any holder of intakeForm.edit reviews it", () => {
-    expect(isIntakeReviewFor(ME, pending(lane("standard")), routingOff)).toBe("review");
-    expect(isIntakeReviewFor(ME, pending(), null)).toBe("review");
+    expect(isIntakeReviewFor(ME, pending(lane("standard")), routingOff, false)).toBe("review");
+    expect(isIntakeReviewFor(ME, pending(), null, false)).toBe("review");
   });
 
   it("pending, routing on, my lane: review", () => {
-    expect(isIntakeReviewFor(ME, pending(lane("senior")), routingOn)).toBe("review");
+    expect(isIntakeReviewFor(ME, pending(lane("senior")), routingOn, false)).toBe("review");
     // Senior reviewers can decide the standard lane too (laneReviewerIdsFor).
-    expect(isIntakeReviewFor(ME, pending(lane("standard")), routingOn)).toBe("review");
-    expect(isIntakeReviewFor(OTHER, pending(lane("standard")), routingOn)).toBe("review");
+    expect(isIntakeReviewFor(ME, pending(lane("standard")), routingOn, false)).toBe("review");
+    expect(isIntakeReviewFor(OTHER, pending(lane("standard")), routingOn, false)).toBe("review");
   });
 
   it("pending, routing on, another lane: not mine, even for an Admin who could override", () => {
-    expect(isIntakeReviewFor(OTHER, pending(lane("senior")), routingOn)).toBeNull();
-    expect(isIntakeReviewFor(42, pending(lane("standard")), routingOn)).toBeNull();
+    expect(isIntakeReviewFor(OTHER, pending(lane("senior")), routingOn, true)).toBeNull();
+    expect(isIntakeReviewFor(42, pending(lane("standard")), routingOn, true)).toBeNull();
   });
 
   it("pending, routing on, no lane stored yet: any holder reviews it", () => {
-    expect(isIntakeReviewFor(42, pending(null), routingOn)).toBe("review");
+    expect(isIntakeReviewFor(42, pending(null), routingOn, false)).toBe("review");
   });
 
-  it("pending, routing on, a lane with no reviewers listed: nobody is named, so not mine", () => {
+  it("pending, routing on, a lane with no reviewers named: Admins can decide it, so they see it", () => {
     const noSeniors = { ...routingOn, seniorReviewerIds: [] };
-    expect(isIntakeReviewFor(42, pending(lane("senior")), noSeniors)).toBeNull();
+    expect(isIntakeReviewFor(42, pending(lane("senior")), noSeniors, true)).toBe("review");
+  });
+
+  it("pending, routing on, a lane with no reviewers named: a non-admin editor can't decide it", () => {
+    const noSeniors = { ...routingOn, seniorReviewerIds: [] };
+    expect(isIntakeReviewFor(42, pending(lane("senior")), noSeniors, false)).toBeNull();
+  });
+
+  it("pending, routing on, a named lane: unchanged for Admins, who only see lanes naming them", () => {
+    expect(isIntakeReviewFor(42, pending(lane("senior")), routingOn, true)).toBeNull();
+    expect(isIntakeReviewFor(ME, pending(lane("senior")), routingOn, true)).toBe("review");
   });
 
   it("tolerates a form routing object stored without reviewer lists", () => {
     const partial = { enabled: true } as unknown as IFormRouting;
-    expect(isIntakeReviewFor(ME, pending(lane("senior")), partial)).toBeNull();
-    expect(isIntakeReviewFor(ME, pending(null), partial)).toBe("review");
+    expect(isIntakeReviewFor(ME, pending(lane("senior")), partial, false)).toBeNull();
+    expect(isIntakeReviewFor(ME, pending(lane("senior")), partial, true)).toBe("review");
+    expect(isIntakeReviewFor(ME, pending(null), partial, false)).toBe("review");
   });
 
   it("approved with a second review open, I am a senior reviewer: second-review", () => {
     const sub = approvedWithSecond({ status: "open", selectedAt: "2026-11-11T09:00:00.000Z" });
-    expect(isIntakeReviewFor(ME, sub, routingOn)).toBe("second-review");
+    expect(isIntakeReviewFor(ME, sub, routingOn, false)).toBe("second-review");
   });
 
   it("second review stays with senior reviewers after routing is turned off", () => {
     const sub = approvedWithSecond({ status: "open", selectedAt: "2026-11-11T09:00:00.000Z" });
-    expect(isIntakeReviewFor(ME, sub, routingOff)).toBe("second-review");
+    expect(isIntakeReviewFor(ME, sub, routingOff, false)).toBe("second-review");
   });
 
   it("second review is never shown to the first approver", () => {
     const sub = approvedWithSecond({ status: "open", selectedAt: "2026-11-11T09:00:00.000Z" }, ME);
-    expect(isIntakeReviewFor(ME, sub, routingOn)).toBeNull();
+    expect(isIntakeReviewFor(ME, sub, routingOn, false)).toBeNull();
   });
 
   it("second review is not shown to someone who is not a senior reviewer", () => {
     const sub = approvedWithSecond({ status: "open", selectedAt: "2026-11-11T09:00:00.000Z" }, ME);
-    expect(isIntakeReviewFor(OTHER, sub, routingOn)).toBeNull();
+    expect(isIntakeReviewFor(OTHER, sub, routingOn, false)).toBeNull();
   });
 
   it("a missed second review still needs resolving: second-review until resolved", () => {
     const missed = approvedWithSecond({ status: "missed", selectedAt: "2026-11-11T09:00:00.000Z" });
-    expect(isIntakeReviewFor(ME, missed, routingOn)).toBe("second-review");
+    expect(isIntakeReviewFor(ME, missed, routingOn, false)).toBe("second-review");
 
     const resolved = approvedWithSecond({
       status: "missed",
       selectedAt: "2026-11-11T09:00:00.000Z",
       resolvedAt: "2026-11-12T09:00:00.000Z",
     });
-    expect(isIntakeReviewFor(ME, resolved, routingOn)).toBeNull();
+    expect(isIntakeReviewFor(ME, resolved, routingOn, false)).toBeNull();
   });
 
   it("an agreed second review, or an approval without one, needs nobody", () => {
     const agreed = approvedWithSecond({ status: "agreed", selectedAt: "2026-11-11T09:00:00.000Z" });
-    expect(isIntakeReviewFor(ME, agreed, routingOn)).toBeNull();
+    expect(isIntakeReviewFor(ME, agreed, routingOn, false)).toBeNull();
     expect(
-      isIntakeReviewFor(ME, { status: "approved", reviewedBy: OTHER, routing: null }, routingOn),
+      isIntakeReviewFor(
+        ME,
+        { status: "approved", reviewedBy: OTHER, routing: null },
+        routingOn,
+        false,
+      ),
     ).toBeNull();
   });
 
   it("rejected or superseded: null", () => {
     expect(
-      isIntakeReviewFor(ME, { status: "rejected", reviewedBy: OTHER, routing: null }, routingOff),
+      isIntakeReviewFor(
+        ME,
+        { status: "rejected", reviewedBy: OTHER, routing: null },
+        routingOff,
+        false,
+      ),
     ).toBeNull();
     expect(
-      isIntakeReviewFor(ME, { status: "superseded", reviewedBy: null, routing: null }, routingOff),
+      isIntakeReviewFor(
+        ME,
+        { status: "superseded", reviewedBy: null, routing: null },
+        routingOff,
+        false,
+      ),
     ).toBeNull();
   });
 });
 
 describe("intakeSource", () => {
-  const ctx = (permissions: string[] = ["intakeForm.edit"]): HomeQueueContext => ({
+  const ctx = (permissions: string[] = ["intakeForm.edit"], isAdmin = false): HomeQueueContext => ({
     organizationId: 7,
     userId: ME,
+    isAdmin,
     can: (key) => permissions.includes(key),
     today: "2026-11-14",
   });
@@ -259,6 +286,31 @@ describe("intakeSource", () => {
         meta: { kind: "review", formName: "Model request", lane: null },
       },
     ]);
+  });
+
+  it("passes the caller's Admin standing through, so an unnamed lane reaches an Admin only", async () => {
+    const row = {
+      id: 21,
+      status: "pending",
+      reviewed_by: null,
+      routing: lane("senior"),
+      submitter_name: "Ana",
+      submitter_email: null,
+      created_at: "2026-11-12T00:00:00.000Z",
+      form_name: "AI use case request",
+      form_routing: { ...routingOn, seniorReviewerIds: [] },
+    };
+    query.mockResolvedValueOnce([row]);
+    expect(await intakeSource.load(ctx(["intakeForm.edit"], false))).toEqual([]);
+
+    query.mockResolvedValueOnce([row]);
+    const [item] = await intakeSource.load(ctx(["intakeForm.edit"], true));
+    expect(item).toEqual(
+      expect.objectContaining({
+        id: "intake:21",
+        meta: { kind: "review", formName: "AI use case request", lane: "senior" },
+      }),
+    );
   });
 
   it("lets a database error propagate so the runner marks the source unavailable", async () => {

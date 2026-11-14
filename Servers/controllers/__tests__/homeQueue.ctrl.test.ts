@@ -55,6 +55,16 @@ describe("getHomeQueueHandler", () => {
     expect(ctx.today).toBe("2026-11-14");
     expect(ctx.can("intakeForm.edit")).toBe(true);
     expect(ctx.can("aiApproval.admin")).toBe(false);
+    expect(ctx.isAdmin).toBe(false);
+  });
+
+  it("marks an Admin token as able to decide any intake lane", async () => {
+    (getHomeQueue as jest.Mock).mockResolvedValueOnce({ items: [], sources: {}, counts: {} });
+    (requestEffectivePermissions as jest.Mock).mockResolvedValueOnce(new Set(["intakeForm.edit"]));
+
+    await getHomeQueueHandler(mockReq({ role: "Admin" }), mockRes());
+
+    expect((getHomeQueue as jest.Mock).mock.calls[0][0].isAdmin).toBe(true);
   });
 
   it("answers an empty queue, without querying, when the token has no organization", async () => {

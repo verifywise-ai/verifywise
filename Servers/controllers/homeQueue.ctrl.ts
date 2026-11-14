@@ -30,6 +30,10 @@ export async function getHomeQueueHandler(req: Request, res: Response) {
       organizationId: req.organizationId,
       userId: req.userId!,
       can: (permissionKey) => permissions.has(permissionKey),
+      // Intake lets an Admin, by role name, decide any review lane
+      // (isAdminRequest, intakeForm.ctrl.ts); the queue mirrors it so an
+      // unnamed lane reaches exactly who can decide it.
+      isAdmin: req.role === "Admin",
       today: new Date().toISOString().slice(0, 10),
     });
     logStructured("successful", "home queue retrieved", fn, FILE);

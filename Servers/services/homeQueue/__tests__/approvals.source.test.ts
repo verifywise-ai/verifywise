@@ -17,6 +17,7 @@ const ctx: HomeQueueContext = {
   organizationId: 7,
   userId: 5,
   can: () => false,
+  isAdmin: false,
   today: "2026-11-14",
 };
 

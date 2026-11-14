@@ -12,7 +12,6 @@ export type HomeQueueSourceId =
   | "approvals"
   | "tasks"
   | "intake"
-  | "aiApprovals"
   | "risks"
   | "policyReviews"
   | "vendorReviews"
@@ -52,7 +51,6 @@ export type HomeQueueCountId =
   | "untreatedRisks"
   | "vendorReviewsDue"
   | "policyReviewsDue"
-  | "aiApprovalsWaiting"
   | "promptsBlockedMasked24h";
 
 export interface HomeQueueResponse {
@@ -72,6 +70,12 @@ export interface HomeQueueContext {
    * silently hidden from everyone who could act on it.
    */
   can: (permissionKey: PermissionKey) => boolean;
+  /**
+   * The caller may decide any intake review lane (role name "Admin", the
+   * intake controller's isAdminRequest). Used only where a decision rule is
+   * itself role-based; visibility still goes through can().
+   */
+  isAdmin: boolean;
   /** Server's UTC date, `YYYY-MM-DD`. */
   today: string;
 }

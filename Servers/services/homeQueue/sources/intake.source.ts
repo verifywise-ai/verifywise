@@ -1,7 +1,7 @@
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../../database/db";
 import { IntakeSubmissionStatus } from "../../../domain.layer/enums/intake-submission-status.enum";
-import { laneReviewerIdsFor } from "../../intakeRouting/routingRules";
+import { canDecideLane, laneReviewerIdsFor } from "../../intakeRouting/routingRules";
 import type { HomeQueueItem, HomeQueueSource } from "../../../domain.layer/interfaces/i.homeQueue";
 import type { IFormRouting } from "../../../domain.layer/interfaces/i.intakeForm";
 import type { ISubmissionRouting } from "../../../domain.layer/interfaces/i.intakeSubmission";
@@ -36,7 +36,9 @@ const secondReviewNeedsSomeone = (routing: ISubmissionRouting | null): boolean =
  * one of the lane's named reviewers (laneReviewerIdsFor, so senior reviewers
  * also cover the standard lane). An Admin who could override another lane
  * (canDecideLane) is not counted: only named reviewers see a routed
- * submission, or every Admin would see every one (spec, source 3).
+ * submission, or every Admin would see every one (spec, source 3). A routed
+ * lane with nobody named goes to whoever canDecideLane accepts (Admins), so
+ * it never waits unseen.
  *
  * Approved with a second review open, or missed and not yet resolved: mine
  * when I am a senior reviewer of the form and not the first approver. This is
@@ -47,13 +49,16 @@ export function isIntakeReviewFor(
   userId: number,
   submission: IntakeSubmissionFacts,
   formRouting: IFormRouting | null,
+  isAdmin: boolean,
 ): IntakeReviewKind | null {
   const routing = formRouting ? withLists(formRouting) : null;
 
   if (submission.status === IntakeSubmissionStatus.PENDING) {
     const lane = submission.routing?.lane ?? null;
     if (!routing?.enabled || lane === null) return "review";
-    return laneReviewerIdsFor(lane, routing).includes(userId) ? "review" : null;
+    const named = laneReviewerIdsFor(lane, routing);
+    if (named.length === 0) return canDecideLane(lane, userId, isAdmin, routing) ? "review" : null;
+    return named.includes(userId) ? "review" : null;
   }
 
   if (
@@ -132,6 +137,7 @@ export const intakeSource: HomeQueueSource = {
         ctx.userId,
         { status: row.status, reviewedBy: row.reviewed_by, routing: row.routing },
         row.form_routing,
+        ctx.isAdmin,
       );
       if (!kind) continue;
 
