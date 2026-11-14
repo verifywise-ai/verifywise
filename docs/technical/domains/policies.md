@@ -161,6 +161,10 @@ POST /policies/
 }
 ```
 
+`next_review_date` is a calendar day: clients send `"YYYY-MM-DD"` and read back the first 10 characters of the stored midnight timestamp (`toDateOnlyString` in the client), so the day does not shift with the viewer's time zone.
+
+Create requires `title` (3 to 255 characters) and a valid `status`; `tags` (up to 10 known tags), `next_review_date` and `assigned_reviewer_ids` (up to 20) are optional and checked when sent. Update checks only the fields sent. Invalid input returns `400` with `STATUS_CODE[400]({ message, errors: [{ field, message }] })`, translated; the editor shows each message under its field. An empty or missing tag list stores `{}`.
+
 Create and update accept only `title`, `content_html`, `status`, `tags`, `next_review_date`, `policy_owner_id` and `assigned_reviewer_ids`; other body fields (`is_demo`, `review_status`, `author_id`, ...) are dropped.
 
 `policy_owner_id`, `assigned_reviewer_ids`, bulk `reviewerId` and `reviewer_ids` in a review request must be members of the caller's organization, or the request returns 400 (`assertPolicyUsersInOrganization` in `utils/policyManager.utils.ts`). On update only newly named users are checked.
