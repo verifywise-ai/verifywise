@@ -17,7 +17,7 @@ export async function viewChangeNoticeHandler(req: Request, res: Response) {
 
   const id = String(req.params.id ?? "");
   if (!NOTICE_ID_RE.test(id)) {
-    return res.status(400).json(STATUS_CODE[400]("Invalid notice id"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid notice id")));
   }
   // A pure super admin has no organization, so nothing is shown to them.
   if (!req.organizationId) {
@@ -47,11 +47,11 @@ export async function setChangeNoticeDismissedHandler(req: Request, res: Respons
 
   const id = String(req.params.id ?? "");
   if (!NOTICE_ID_RE.test(id)) {
-    return res.status(400).json(STATUS_CODE[400]("Invalid notice id"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid notice id")));
   }
   const dismissed = req.body?.dismissed;
   if (typeof dismissed !== "boolean") {
-    return res.status(400).json(STATUS_CODE[400]("dismissed must be a boolean"));
+    return res.status(400).json(STATUS_CODE[400](req.t!("Dismissed must be true or false")));
   }
 
   try {
