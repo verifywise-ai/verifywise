@@ -11,7 +11,6 @@ const mocks = vi.hoisted(() => ({
   view: vi.fn(),
   mutateAsync: vi.fn(),
   openGuide: vi.fn(),
-  onboardingComplete: vi.fn(() => true),
 }));
 
 vi.mock("../../../themes/uiStyle", () => ({
@@ -21,9 +20,6 @@ vi.mock("../../../themes/uiStyle", () => ({
 vi.mock("../../../../application/hooks/useChangeNotice", () => ({
   useNoticeView: mocks.view,
   useNoticeDismiss: () => ({ mutateAsync: mocks.mutateAsync }),
-}));
-vi.mock("../../../../application/hooks/useOnboarding", () => ({
-  useOnboarding: () => ({ state: { isComplete: mocks.onboardingComplete() } }),
 }));
 vi.mock("../../UserGuide/UserGuideSidebarContext", () => ({
   useUserGuideSidebarContext: () => ({ open: mocks.openGuide }),
@@ -51,7 +47,6 @@ function NavButton({ to }: { to: string }) {
 beforeEach(() => {
   vi.clearAllMocks();
   mocks.isClassicUi.mockReturnValue(false);
-  mocks.onboardingComplete.mockReturnValue(true);
   mocks.mutateAsync.mockResolvedValue({ dismissed: true });
   resetViewDecisions();
   localStorage.clear();
@@ -66,11 +61,33 @@ describe("ChangeNotice", () => {
     expect(screen.queryByTestId("change-notice")).not.toBeInTheDocument();
   });
 
-  it("renders nothing and asks nothing while the first-login setup is pending", () => {
-    mocks.onboardingComplete.mockReturnValue(false);
-    renderWithProviders(<ChangeNotice />, { route: "/home" });
-    expect(screen.queryByTestId("change-notice")).not.toBeInTheDocument();
-    expect(mocks.view).not.toHaveBeenCalledWith(expect.any(String), true);
+  describe("while the first-login setup is pending", () => {
+    const pending = { onboardingStatus: "pending", isOrgCreator: true } as const;
+
+    beforeEach(() => {
+      answer({ [GLOBAL_ID]: true, "home-2026-11": true });
+    });
+
+    it("renders nothing and asks nothing where the setup modal opens", () => {
+      renderWithProviders(<ChangeNotice />, { route: "/home", preloadedAuth: pending });
+      expect(screen.queryByTestId("change-notice")).not.toBeInTheDocument();
+      expect(mocks.view).not.toHaveBeenCalledWith(expect.any(String), true);
+    });
+
+    it("still shows on a page where the setup modal cannot open", () => {
+      renderWithProviders(<ChangeNotice />, { route: "/vendors", preloadedAuth: pending });
+      expect(
+        screen.getByRole("heading", { name: "Welcome to the new look of VerifyWise" }),
+      ).toBeInTheDocument();
+    });
+
+    it("shows for a member who did not create the organization", () => {
+      renderWithProviders(<ChangeNotice />, {
+        route: "/home",
+        preloadedAuth: { onboardingStatus: "pending", isOrgCreator: false },
+      });
+      expect(screen.getByTestId("change-notice")).toBeInTheDocument();
+    });
   });
 
   it("renders nothing when notices are switched off", () => {

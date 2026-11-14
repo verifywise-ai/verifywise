@@ -32,8 +32,8 @@ type ContextRow = {
  * notice has no release row), and how many notice keys they hold.
  * Null when the user does not exist.
  *
- * The organization anchor is read only for a user with no state for this notice,
- * the one case decideShow uses it. It reads user_preferences of every member, and
+ * The organization anchor is read only for a user with no state for this notice
+ * and only when the notice has no release row, the one case decideShow uses it. It reads user_preferences of every member, and
  * notice state is stored per user, not per organization (spec), so a member's first
  * view in another organization they also belong to can move the anchor. Accepted:
  * a user in several organizations has one notice history.
@@ -52,7 +52,9 @@ export const getNoticeContextQuery = async (
        (SELECT u.created_at::timestamptz < r.released_at
           FROM change_notice_releases r
          WHERE r.notice_id = :id) AS created_before_release,
-       CASE WHEN up.preferences->'change_notices'->(:id) IS NULL THEN (SELECT MIN((mp.preferences->'change_notices'->(:id)->>'first_seen_at')::timestamptz)
+       CASE WHEN up.preferences->'change_notices'->(:id) IS NULL
+             AND NOT EXISTS (SELECT 1 FROM change_notice_releases r WHERE r.notice_id = :id)
+            THEN (SELECT MIN((mp.preferences->'change_notices'->(:id)->>'first_seen_at')::timestamptz)
           FROM organization_members om
           JOIN user_preferences mp ON mp.user_id = om.user_id
          WHERE om.organization_id = :organizationId) END AS org_first_seen_at

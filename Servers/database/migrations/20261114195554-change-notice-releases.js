@@ -5,11 +5,13 @@
 // them (rules.ts decideShow). One row per notice id; deployment-wide, not per
 // organization, because a release reaches every organization at once.
 //
-// On a fresh install no organization member has ever logged in, so nobody has
-// seen the previous look: the release is stored as -infinity and every account
-// counts as newer. On an upgrade it is the time this migration ran.
+// The release is the time this migration runs, or the earliest view of the
+// notice already stored if that is earlier (a deployment that served the notice
+// before this table existed). On a fresh install the migrations run before any
+// organization member exists, so every account is newer and nobody sees a notice.
 //
 // A later notice adds its id in a migration of its own, using the same INSERT.
+// changeNoticeReleases.test.ts fails when a CHANGE_NOTICES id has no release row.
 const NOTICE_IDS = [
   "new-look-2026-11",
   "home-2026-11",
@@ -31,14 +33,12 @@ module.exports = {
     await queryInterface.sequelize.query(
       `
       INSERT INTO verifywise.change_notice_releases (notice_id, released_at)
-      SELECT id,
-             CASE WHEN EXISTS (
-               SELECT 1
-                 FROM verifywise.users u
-                 JOIN verifywise.organization_members om ON om.user_id = u.id
-                WHERE u.last_login IS NOT NULL
-             ) THEN NOW() ELSE '-infinity'::timestamptz END
-        FROM unnest(ARRAY[:ids]::varchar[]) AS id
+      SELECT n.notice_key,
+             LEAST(NOW(), (
+               SELECT MIN((up.preferences->'change_notices'->(n.notice_key)->>'first_seen_at')::timestamptz)
+                 FROM verifywise.user_preferences up
+             ))
+        FROM unnest(ARRAY[:ids]::text[]) AS n(notice_key)
       ON CONFLICT (notice_id) DO NOTHING;
     `,
       { replacements: { ids: NOTICE_IDS } },

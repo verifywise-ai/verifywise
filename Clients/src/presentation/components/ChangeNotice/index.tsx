@@ -2,7 +2,8 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { useLocation } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
 import { useNoticeDismiss, useNoticeView } from "../../../application/hooks/useChangeNotice";
-import { useOnboarding } from "../../../application/hooks/useOnboarding";
+import { useSelector } from "react-redux";
+import { SETUP_MODAL_ROUTES, selectSetupPending } from "../../../application/hooks/useOnboarding";
 import type { ChangeNoticeEntry } from "../../../domain/types/changeNotice.types";
 import { isClassicUi, setUiStyle } from "../../themes/uiStyle";
 import { useUserGuideSidebarContext } from "../UserGuide/UserGuideSidebarContext";
@@ -22,14 +23,14 @@ const targetExists = (testId?: string) => findTarget(testId) !== null;
 /**
  * Tells the user what changed on the current page. The global new look card
  * goes first; a page entry is only asked about once the global one is not showing.
- * Nothing shows while the organization creator's first-login setup is pending:
- * that user is new, and the setup modal must not share the screen with a card.
+ * Nothing shows where the first-login setup modal can open while it is pending,
+ * so the modal and a card never share the screen.
  * Mounted once, in the Dashboard container.
  */
 export default function ChangeNotice() {
-  const { state: onboarding } = useOnboarding();
-  const hidden = isClassicUi() || noticesSuppressed() || !onboarding.isComplete;
   const { pathname } = useLocation();
+  const setupModalHere = useSelector(selectSetupPending) && SETUP_MODAL_ROUTES.includes(pathname);
+  const hidden = isClassicUi() || noticesSuppressed() || setupModalHere;
   const queryClient = useQueryClient();
   const { open: openGuide } = useUserGuideSidebarContext();
   const dismiss = useNoticeDismiss();

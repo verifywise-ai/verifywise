@@ -6,6 +6,13 @@ import { setOnboardingStatus as setReduxOnboardingStatus } from "../redux/auth/a
 import type { RootState } from "../redux/store";
 import { dynamicKeys, storageService } from "../../infrastructure/storage";
 
+/** Routes where App opens the SetupModal while setup is pending. */
+export const SETUP_MODAL_ROUTES: readonly string[] = ["/", "/home", "/start-here"];
+
+/** True while the organization creator's first-login setup is pending. No side effects. */
+export const selectSetupPending = (state: RootState): boolean =>
+  state.auth?.onboardingStatus === "pending" && !!state.auth?.isOrgCreator;
+
 /**
  * Decides whether App shows the SetupModal. It is shown only to the
  * organization creator while the server reports onboarding as "pending".
@@ -14,8 +21,7 @@ export const useOnboarding = () => {
   const { userId } = useAuth();
   const dispatch = useDispatch();
 
-  const serverOnboardingStatus = useSelector((state: RootState) => state.auth?.onboardingStatus);
-  const isOrgCreator = useSelector((state: RootState) => state.auth?.isOrgCreator);
+  const setupPending = useSelector(selectSetupPending);
 
   // The retired step-by-step modal saved progress per user. Nothing reads it,
   // so drop it once for each signed-in user.
@@ -24,7 +30,7 @@ export const useOnboarding = () => {
   }, [userId]);
 
   const state: OnboardingState = {
-    isComplete: !userId || serverOnboardingStatus !== "pending" || !isOrgCreator,
+    isComplete: !userId || !setupPending,
   };
 
   const completeOnboarding = useCallback(() => {

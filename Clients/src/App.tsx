@@ -36,6 +36,7 @@ import CommandPaletteErrorBoundary from "./presentation/components/CommandPalett
 import useCommandPalette from "./application/hooks/useCommandPalette";
 import useUserPreferences from "./application/hooks/useUserPreferences";
 import { SetupModal, useOnboarding } from "./presentation/components/Onboarding";
+import { SETUP_MODAL_ROUTES } from "./application/hooks/useOnboarding";
 import { isClassicUi } from "./presentation/themes/uiStyle";
 import { lazyRoute } from "./application/utils/lazyRoute";
 import {
@@ -143,7 +144,7 @@ function App() {
   // });
 
   // Onboarding should show on the dashboard (/), Home or the start-here page
-  const isOnboardingRoute = ["/", "/home", "/start-here"].includes(location.pathname);
+  const isOnboardingRoute = SETUP_MODAL_ROUTES.includes(location.pathname);
 
   // Derive modal visibility from onboarding state and current route
   // Only show modal if:

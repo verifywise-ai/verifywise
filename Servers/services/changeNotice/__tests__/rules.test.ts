@@ -85,16 +85,12 @@ describe("decideShow", () => {
     ).toBe(false);
   });
 
-  it("shows to an account that predates the release, and still applies the organization anchor", () => {
-    expect(decideShow({ ...base, createdBeforeRelease: true })).toBe(true);
-    expect(
-      decideShow({
-        ...base,
-        createdBeforeRelease: true,
-        accountCreatedAt: daysAgo(5),
-        orgFirstSeenAt: daysAgo(10),
-      }),
-    ).toBe(false);
+  it("shows to an account that predates the release, without the organization anchor", () => {
+    expect(decideShow({ ...base, createdBeforeRelease: true, orgFirstSeenAt: null })).toBe(true);
+  });
+
+  it("still refuses a new id at the key limit when the account predates the release", () => {
+    expect(decideShow({ ...base, createdBeforeRelease: true, keyCount: MAX_KEYS })).toBe(false);
   });
 
   it("keeps showing a notice the user already has state for, whatever the release says", () => {

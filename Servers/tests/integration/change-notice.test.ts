@@ -98,9 +98,11 @@ describe("change notice state against a real database", () => {
       expect(await prefsOf(userId)).toBeUndefined();
     });
 
-    it("hides from every account when the release is -infinity (fresh install)", async () => {
-      await release("-infinity");
-      expect(await view(userId, orgId, RELEASED)).toEqual({ show: false });
+    it("lets the release decide when the organization anchor would refuse", async () => {
+      await release("2999-01-01T00:00:00Z");
+      await view(userId, orgId, RELEASED);
+      const later = await createTestUser(orgId, 3, "cn-release-later@test.com", "ChangeNotice1!");
+      expect(await view(later, orgId, RELEASED)).toEqual({ show: true });
     });
 
     it("shows to an account created before the release", async () => {

@@ -7,9 +7,9 @@ A change notice is a small "What's changed" card that tells a user about a resty
 - Shown in the new look only. It is hidden in the classic look (`isClassicUi()`).
 - One card at a time. The global new look card (the entry with `global: true`) goes first. A page notice is asked about only once the global card is not showing. When the welcome card is dismissed (or the user switches back to the classic look from it), the page notice is held back only on that path (`pageDeferredAt === pathname` in `index.tsx`); the hold is cleared on the next route change, so the notice can appear on another page or on a later visit.
 - A notice stops after the user dismisses it, after 3 visits, or 90 days after the user's own first view, whichever comes first.
-- New users never see a change they never experienced. A user with no state for a notice is skipped when their account was created after the notice reached this deployment (`change_notice_releases.released_at`), or after anyone in the organization first saw it. This covers fresh installs, new organizations (including the creator who gets the demo-data setup modal) and everyone invited later. Left open: an account created before the release that never logged in before it (a pending invite) still sees the notice.
-- On a fresh install the release is stored as `-infinity`, so no account qualifies. The migration treats a deployment as fresh when no organization member has ever logged in.
-- Nothing shows while the organization creator's first-login setup modal is pending (`useOnboarding`), so the card and the modal never share the screen.
+- New users never see a change they never experienced. A user with no state for a notice is skipped when their account was created after the notice reached this deployment (`change_notice_releases.released_at`). That covers fresh installs (migrations run before any account exists), new organizations (including the creator who gets the demo-data setup modal) and everyone invited later. An account created before the release, such as a pending invite, still counts as existing.
+- `released_at` is when the migration ran, or the earliest stored view of the notice if that is earlier. A notice without a release row falls back to the older organization rule: skipped when the account is newer than anyone in the organization's first view. `changeNoticeReleases.test.ts` fails when a registry id has no release row.
+- On the routes where the first-login setup modal opens (`SETUP_MODAL_ROUTES`: `/`, `/home`, `/start-here`), nothing shows while that setup is pending (`selectSetupPending`), so the card and the modal never share the screen.
 - "Show me" highlights the sidebar item named by `showMeTestId`. The button is hidden when that element is not in the DOM.
 - Dismissing a notice offers an Undo strip for 6 seconds. Undo restores the notice. The Undo request is sent after the dismiss request for the same id has settled, so the server applies them in order. A failed dismiss keeps the card hidden for the session.
 - One view request per notice per tab session: a `sessionStorage` marker (`vw-change-notice-requested:<id>`) records it. Every session start and end (`clearSession.ts`) clears the markers, and a failed view request frees its marker so a later page load asks again.
@@ -21,7 +21,7 @@ A change notice is a small "What's changed" card that tells a user about a resty
 2. Add the de, fr and es text for every new string to `Clients/src/i18n/modules/changeNotice.ts` (English is the key). Run `cd Clients && npm run i18n:audit:strict`.
 3. Make sure the `showMeTestId` element exists (see below).
 4. Add the guide article, if any, and set `guidePath`.
-5. Add a migration that inserts the id into `change_notice_releases`, with the same INSERT as `20261114200000-change-notice-releases.js`. Without a release row, the notice falls back to the organization rule only, and the first users of a new organization would see it.
+5. Add a migration that inserts the id into `change_notice_releases`, with the same INSERT as `20261114195554-change-notice-releases.js`. `changeNoticeReleases.test.ts` fails without it.
 
 ```ts
 {
