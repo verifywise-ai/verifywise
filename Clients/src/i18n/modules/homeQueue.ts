@@ -24,6 +24,7 @@ export const de: Record<string, string> = {
   "Nothing needs you right now.": "Gerade braucht nichts Ihre Aufmerksamkeit.",
   "Nothing from this source needs you right now.":
     "Aus dieser Quelle braucht gerade nichts Ihre Aufmerksamkeit.",
+  "That request is no longer waiting on you.": "Diese Anfrage wartet nicht mehr auf Sie.",
   "Home couldn't be loaded": "Die Startseite konnte nicht geladen werden",
   "Try again in a moment.": "Versuchen Sie es gleich noch einmal.",
   "Loading your queue": "Ihre Liste wird geladen",
@@ -92,6 +93,7 @@ export const fr: Record<string, string> = {
   "Nothing needs you right now.": "Rien ne demande votre attention pour le moment.",
   "Nothing from this source needs you right now.":
     "Rien de cette source ne demande votre attention pour le moment.",
+  "That request is no longer waiting on you.": "Cette demande n'attend plus votre décision.",
   "Home couldn't be loaded": "L'accueil n'a pas pu être chargé",
   "Try again in a moment.": "Réessayez dans un instant.",
   "Loading your queue": "Chargement de votre liste",
@@ -160,6 +162,7 @@ export const es: Record<string, string> = {
   "Nothing needs you right now.": "Ahora mismo nada necesita su atención.",
   "Nothing from this source needs you right now.":
     "Ahora mismo nada de este origen necesita su atención.",
+  "That request is no longer waiting on you.": "Esa solicitud ya no está esperando su decisión.",
   "Home couldn't be loaded": "No se pudo cargar el inicio",
   "Try again in a moment.": "Vuelva a intentarlo en un momento.",
   "Loading your queue": "Cargando su lista",

@@ -4,8 +4,9 @@ import { getHomeQueue } from "../repository/homeQueue.repository";
 export const HOME_QUEUE_QUERY_KEY = ["home-queue"] as const;
 
 /**
- * The Home queue. No polling: it refreshes after a minute when the user comes
- * back to the tab, which is enough for items that change on human time.
+ * The Home queue. No polling: it reloads whenever Home mounts and, after a
+ * minute, when the user comes back to the tab. That is enough for items that
+ * change on human time.
  */
 export function useHomeQueue() {
   return useQuery({
@@ -13,5 +14,7 @@ export function useHomeQueue() {
     queryFn: getHomeQueue,
     staleTime: 60_000,
     refetchOnWindowFocus: true,
+    // Coming back to Home after finishing an item must not show it from cache.
+    refetchOnMount: "always",
   });
 }

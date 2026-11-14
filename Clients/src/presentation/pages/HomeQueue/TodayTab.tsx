@@ -112,7 +112,7 @@ const TodayTab = () => {
             sx={{ fontSize: "14px", fontWeight: 600, color: text.primary }}
           >
             {t("Needs your attention")}
-            {isLoaded && (
+            {isLoaded && unavailable.length === 0 && (
               <Box
                 component="span"
                 sx={{ marginLeft: "8px", fontWeight: 500, color: text.secondary }}

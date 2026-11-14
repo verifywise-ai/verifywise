@@ -47,7 +47,7 @@ export const homeContent: ArticleContent = {
         { source: 'Tasks', rule: 'A task assigned to you that is Open, In progress or Overdue. It shows as overdue when its due date has passed.' },
         { source: 'Intake', rule: 'A submission waiting for your first review, or an approved submission with a second review open that you are asked to do. Only people who can edit intake forms see this source. When review routing is on, a submission appears for the reviewers named on its lane.' },
         { source: 'AI risks', rule: 'A risk you own that is Not started or Requires review, or whose deadline has passed and is not Completed or Canceled.' },
-        { source: 'Policy reviews', rule: 'A policy you own or are assigned to review, with a next review date within the next 14 days or already past.' },
+        { source: 'Policy reviews', rule: 'A policy you own or are assigned to review that is not archived or deprecated, with a next review date within the next 14 days or already past.' },
         { source: 'Vendor reviews', rule: 'A vendor you are the reviewer of (or the assignee, when no reviewer is set) with a review date within the next 14 days or already past. A vendor marked Reviewed leaves the list once its review date has passed.' },
         { source: 'Incidents', rule: 'An incident assigned to you that is not Closed and not archived.' },
         { source: 'Model risk findings', rule: 'A model risk management finding you own that is not Resolved or Closed.' },
@@ -93,7 +93,7 @@ export const homeContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Home reloads when you open it or come back to the browser tab and the data is more than a minute old. After you finish an item in another page, return to Home to see it leave the list.',
+      text: 'Home reloads every time you open it, and when you come back to the browser tab and the data is more than a minute old. After you finish an item in another page, return to Home to see it leave the list.',
     },
     {
       type: 'heading',

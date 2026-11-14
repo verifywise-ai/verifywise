@@ -27,6 +27,9 @@ const repo = vi.hoisted(() => ({
 }));
 vi.mock("../../../../../application/repository/approvalRequest.repository", () => repo);
 
+const alerts = vi.hoisted(() => ({ showAlert: vi.fn() }));
+vi.mock("../../../../../application/tools/alertUtils", () => alerts);
+
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import RequestorApprovalModal from "../index";
 
@@ -89,5 +92,24 @@ describe("RequestorApprovalModal initialRequestId (Home deep link)", () => {
     );
 
     await waitFor(() => expect(repo.getApprovalRequestById).toHaveBeenCalledWith({ id: 1 }));
+    expect(alerts.showAlert).toHaveBeenCalledWith({
+      variant: "info",
+      body: "That request is no longer waiting on you.",
+      isToast: true,
+    });
+  });
+
+  it("does not show the notice when the linked request is found", async () => {
+    repo.getPendingApprovals.mockResolvedValue({
+      data: [{ id: 2, request_name: "Linked", status: "Pending" }],
+    });
+    repo.getMyApprovalRequests.mockResolvedValue({ data: [] });
+
+    renderWithProviders(
+      <RequestorApprovalModal isOpen={true} onClose={vi.fn()} initialRequestId={2} />,
+    );
+
+    await waitFor(() => expect(repo.getApprovalRequestById).toHaveBeenCalledWith({ id: 2 }));
+    expect(alerts.showAlert).not.toHaveBeenCalled();
   });
 });

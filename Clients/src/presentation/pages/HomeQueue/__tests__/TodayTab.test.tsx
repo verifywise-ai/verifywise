@@ -253,6 +253,26 @@ describe("TodayTab", () => {
     expect(screen.getByText("Approvals couldn't be loaded.")).toBeInTheDocument();
   });
 
+  it("hides the attention number while a source in scope is unavailable", () => {
+    // RESPONSE has incidents unavailable.
+    renderWithProviders(<TodayTab />);
+    const heading = screen.getByRole("heading", { name: /Needs your attention/ });
+    expect(heading).toHaveTextContent(/^Needs your attention$/);
+  });
+
+  it("shows the attention number when every source answered", () => {
+    hook.useHomeQueue.mockReturnValue(
+      queryState({
+        data: { items: [], sources: { tasks: { status: "ok", count: 0 } }, counts: {} },
+        isSuccess: true,
+      }),
+    );
+    renderWithProviders(<TodayTab />);
+    expect(screen.getByRole("heading", { name: /Needs your attention/ })).toHaveTextContent(
+      /^Needs your attention0$/,
+    );
+  });
+
   it("shows the house loading state while the queue loads", () => {
     hook.useHomeQueue.mockReturnValue(queryState({ isLoading: true }));
     renderWithProviders(<TodayTab />);

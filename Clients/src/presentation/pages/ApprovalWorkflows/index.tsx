@@ -11,6 +11,7 @@ import CreateNewApprovalWorkflow from "../../components/Modals/NewApprovalWorkfl
 import RequestorApprovalModal from "../../components/Modals/RequestorApprovalModal";
 import { useSearchParams } from "react-router";
 import { useQueryClient } from "@tanstack/react-query";
+import { useCan } from "../../../application/hooks/useCan";
 import { HOME_QUEUE_QUERY_KEY } from "../../../application/hooks/useHomeQueue";
 import { dispatchApprovalRequestsChanged } from "../../../application/events/approvalRequestEvents";
 import { ApprovalWorkflowStepModel } from "../../../domain/models/Common/approvalWorkflow/approvalWorkflowStepModel";
@@ -219,6 +220,8 @@ const ApprovalWorkflows: React.FC = () => {
   }, []);
 
   /** -------------------- WORKFLOW MODAL HANDLERS -------------------- */
+  // Saving a workflow needs this permission; approvers arriving from Home often lack it.
+  const canManageWorkflows = useCan("approvalWorkflow.admin");
   const handleNewWorkflowClick = () => setIsNewWorkflowModalOpen(true);
 
   const handleEditWorkflowClick = async (id: string) => {
@@ -399,15 +402,17 @@ const ApprovalWorkflows: React.FC = () => {
               fullWidth={false}
             />
           </Stack>
-          <Box data-joyride-id="add-workflow-button">
-            <CustomizableButton
-              variant="contained"
-              sx={addNewWorkflowButton}
-              text="Add new workflow"
-              icon={<AddCircleOutlineIcon />}
-              onClick={handleNewWorkflowClick}
-            />
-          </Box>
+          {canManageWorkflows && (
+            <Box data-joyride-id="add-workflow-button">
+              <CustomizableButton
+                variant="contained"
+                sx={addNewWorkflowButton}
+                text="Add new workflow"
+                icon={<AddCircleOutlineIcon />}
+                onClick={handleNewWorkflowClick}
+              />
+            </Box>
+          )}
         </Stack>
         {/* Approval Table */}
         <ApprovalWorkflowsTable

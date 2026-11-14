@@ -106,6 +106,9 @@ vi.mock("../../../components/Modals/RequestorApprovalModal", () => ({
     ) : null,
 }));
 
+const canMock = vi.hoisted(() => ({ useCan: vi.fn(() => true) }));
+vi.mock("../../../../application/hooks/useCan", () => canMock);
+
 import ApprovalWorkflows from "../index";
 
 const LocationProbe = () => <div data-testid="location-search">{useLocation().search}</div>;
@@ -113,6 +116,19 @@ const LocationProbe = () => <div data-testid="location-search">{useLocation().se
 describe("ApprovalWorkflows", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    canMock.useCan.mockReturnValue(true);
+  });
+
+  it("shows Add new workflow with approvalWorkflow.admin", () => {
+    renderWithProviders(<ApprovalWorkflows />);
+    expect(canMock.useCan).toHaveBeenCalledWith("approvalWorkflow.admin");
+    expect(screen.getByRole("button", { name: "Add new workflow" })).toBeInTheDocument();
+  });
+
+  it("hides Add new workflow without approvalWorkflow.admin", () => {
+    canMock.useCan.mockReturnValue(false);
+    renderWithProviders(<ApprovalWorkflows />);
+    expect(screen.queryByRole("button", { name: "Add new workflow" })).not.toBeInTheDocument();
   });
 
   it("renders without crashing", () => {
@@ -144,16 +160,19 @@ describe("ApprovalWorkflows", () => {
       const invalidate = vi.spyOn(queryClient, "invalidateQueries");
       const changed = vi.fn();
       const stop = onApprovalRequestsChanged(changed);
-      renderWithProviders(<ApprovalWorkflows />, {
-        route: "/approval-workflows?request=42",
-        queryClient,
-      });
+      try {
+        renderWithProviders(<ApprovalWorkflows />, {
+          route: "/approval-workflows?request=42",
+          queryClient,
+        });
 
-      fireEvent.click(screen.getByRole("button", { name: "Decide request" }));
+        fireEvent.click(screen.getByRole("button", { name: "Decide request" }));
 
-      expect(invalidate).toHaveBeenCalledWith({ queryKey: HOME_QUEUE_QUERY_KEY });
-      expect(changed).toHaveBeenCalledTimes(1);
-      stop();
+        expect(invalidate).toHaveBeenCalledWith({ queryKey: HOME_QUEUE_QUERY_KEY });
+        expect(changed).toHaveBeenCalledTimes(1);
+      } finally {
+        stop();
+      }
     });
 
     it("leaves the modal closed without the parameter", () => {

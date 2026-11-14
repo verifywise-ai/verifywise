@@ -53,6 +53,19 @@ describe("useHomeQueue", () => {
     expect(options.refetchOnWindowFocus).toBe(true);
   });
 
+  it("refetches when Home mounts again inside the stale window", async () => {
+    api.get.mockResolvedValue({ data: { data: RESPONSE } });
+    const { wrapper } = createWrapper();
+
+    const first = renderHook(() => useHomeQueue(), { wrapper });
+    await waitFor(() => expect(first.result.current.isSuccess).toBe(true));
+    expect(api.get).toHaveBeenCalledTimes(1);
+    first.unmount();
+
+    renderHook(() => useHomeQueue(), { wrapper });
+    await waitFor(() => expect(api.get).toHaveBeenCalledTimes(2));
+  });
+
   it("surfaces a request failure as an error", async () => {
     api.get.mockRejectedValue(new Error("network down"));
     const { wrapper } = createWrapper();

@@ -595,6 +595,12 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({
       }
       if (loadedGeneration !== loadGeneration.current) return;
       pendingInitialId.current = null;
+      // Decided meanwhile (by someone else, or by the user in another tab).
+      showAlert({
+        variant: "info",
+        body: t("That request is no longer waiting on you."),
+        isToast: true,
+      });
     }
 
     // Auto-select first item when data is loaded
