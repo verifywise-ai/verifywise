@@ -516,6 +516,33 @@ describe("dataCollector", () => {
       expect(result.sections.projectRisks!.risksByLevel[0].color).toBe(expected);
     });
 
+    it("uses the effective level: current beats inherent, null current falls back", async () => {
+      mockGetProjectRisks.mockResolvedValue([
+        {
+          id: 1,
+          risk_name: "A",
+          risk_level_autocalculated: "Low risk",
+          current_risk_level: "Very high risk",
+        },
+        {
+          id: 2,
+          risk_name: "B",
+          risk_level_autocalculated: "Medium risk",
+          current_risk_level: null,
+        },
+      ] as never);
+
+      const collector = createDataCollector(10, 1, 1, 100, 5);
+      const result = await collector.collectAllData(["projectRisks"]);
+
+      const section = result.sections.projectRisks!;
+      expect(section.risks.map((r) => r.riskLevel)).toEqual(["Very high risk", "Medium risk"]);
+      expect(section.risksByLevel.map((l) => l.level).sort()).toEqual([
+        "Medium risk",
+        "Very high risk",
+      ]);
+    });
+
     it("still falls back to grey for a level with no palette entry", async () => {
       mockGetProjectRisks.mockResolvedValue([
         { id: 1, risk_name: "R", risk_level_autocalculated: null },

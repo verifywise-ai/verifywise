@@ -53,7 +53,7 @@ export type ProjectRisk = {
   likelihood: "Rare" | "Unlikely" | "Possible" | "Likely" | "Almost Certain";
   severity: "Negligible" | "Minor" | "Moderate" | "Major" | "Critical";
   risk_level_autocalculated:
-    "No risk" | "Low risk" | "Medium risk" | "High risk" | "Very high risk";
+    "No risk" | "Very low risk" | "Low risk" | "Medium risk" | "High risk" | "Very high risk";
   review_notes: string;
   mitigation_status:
     | "Not Started"
@@ -63,7 +63,7 @@ export type ProjectRisk = {
     | "Deferred"
     | "Canceled"
     | "Requires review";
-  current_risk_level: "Very Low risk" | "Low risk" | "Medium risk" | "High risk" | "Very high risk";
+  current_risk_level: "Very low risk" | "Low risk" | "Medium risk" | "High risk" | "Very high risk";
   deadline: Date;
   mitigation_plan: string;
   implementation_strategy: string;

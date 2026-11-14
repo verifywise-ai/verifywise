@@ -1,5 +1,6 @@
 import { useEffect, useState, useCallback, useRef } from "react";
 import { getAllEntities, getEntityById } from "../repository/entity.repository";
+import { getEffectiveRiskLevel, riskLevelBucket } from "../utils/riskLevel";
 import type { ProgressStep } from "../../presentation/components/StepProgressDialog";
 import { storageService, type DashboardMetricsCache } from "../../infrastructure/storage";
 
@@ -36,6 +37,14 @@ interface MetricsCache {
 // Cache utility functions — backed by the typed StorageService (JSON, SSR/sandbox
 // safe). The "dashboardMetricsCache" registry entry owns the canonical key and the
 // one-time legacy migration.
+/** Severity shown on the recent-risks list, from the effective level. */
+const recentSeverity = (level: string): "high" | "medium" | "low" => {
+  const bucket = riskLevelBucket(level);
+  if (bucket === "veryHigh" || bucket === "high") return "high";
+  if (bucket === "low" || bucket === "veryLow") return "low";
+  return "medium";
+};
+
 const getCache = (): MetricsCache => storageService.get("dashboardMetricsCache", {});
 
 const setCache = (cache: MetricsCache): void => {
@@ -399,37 +408,21 @@ export const useDashboardMetrics = () => {
       const risksData = response.data || [];
       const risksArray = Array.isArray(risksData) ? risksData : [];
 
-      // Calculate distribution based on risk_level_autocalculated or current_risk_level
+      // Distribution by the effective level (current level, else inherent)
       const distribution = { high: 0, medium: 0, low: 0, resolved: 0 };
 
       risksArray.forEach((risk: any) => {
-        // Use current_risk_level first, fallback to risk_level_autocalculated
-        const riskLevel = (
-          risk.current_risk_level ||
-          risk.risk_level_autocalculated ||
-          ""
-        ).toLowerCase();
+        const bucket = riskLevelBucket(getEffectiveRiskLevel(risk));
 
         // Check if resolved (mitigation_status is "Completed")
         if (risk.mitigation_status === "Completed") {
           distribution.resolved++;
-        } else if (
-          riskLevel.includes("high") ||
-          riskLevel.includes("very high") ||
-          riskLevel.includes("critical")
-        ) {
+        } else if (bucket === "veryHigh" || bucket === "high") {
           distribution.high++;
-        } else if (riskLevel.includes("medium") || riskLevel.includes("moderate")) {
-          distribution.medium++;
-        } else if (
-          riskLevel.includes("low") ||
-          riskLevel.includes("very low") ||
-          riskLevel.includes("no risk") ||
-          riskLevel.includes("negligible")
-        ) {
+        } else if (bucket === "low" || bucket === "veryLow") {
           distribution.low++;
         } else {
-          // Default to medium if unknown
+          // Medium, and the default for an unknown level
           distribution.medium++;
         }
       });
@@ -440,15 +433,7 @@ export const useDashboardMetrics = () => {
         recent: risksArray.slice(0, 5).map((risk: any, index: number) => ({
           id: risk.id || index + 1,
           title: risk.risk_name || "Untitled Risk",
-          severity: (risk.current_risk_level || risk.risk_level_autocalculated || "medium")
-            .toLowerCase()
-            .includes("high")
-            ? ("high" as const)
-            : (risk.current_risk_level || risk.risk_level_autocalculated || "medium")
-                  .toLowerCase()
-                  .includes("low")
-              ? ("low" as const)
-              : ("medium" as const),
+          severity: recentSeverity(getEffectiveRiskLevel(risk)),
           created_at: risk.created_at || risk.createdAt || risk.date_of_assessment,
           project_name: risk.project_name || "General",
         })),

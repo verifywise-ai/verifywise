@@ -17,6 +17,11 @@ import { IFilterState } from "../../types/interfaces/i.filter";
 import { IRiskLoadingStatus, IRisksViewProps } from "../../types/interfaces/i.risk";
 import { useCan } from "../../../application/hooks/useCan";
 import { chartTheme } from "../../themes/chartTheme";
+import {
+  getEffectiveRiskLevel,
+  riskLevelBucket,
+  type RiskLevelBucket,
+} from "../../../application/utils/riskLevel";
 
 const initialLoadingState: IRiskLoadingStatus = {
   loading: false,
@@ -55,46 +60,13 @@ const RisksView = ({
 
   // Compute risk summary from fetched data
   const risksSummary = useMemo(() => {
-    const veryHighRisks = projectRisks.filter((risk) => {
-      const riskLevel = (
-        risk.current_risk_level ||
-        risk.risk_level_autocalculated ||
-        ""
-      ).toLowerCase();
-      return riskLevel.includes("very high");
-    }).length;
-    const highRisks = projectRisks.filter((risk) => {
-      const riskLevel = (
-        risk.current_risk_level ||
-        risk.risk_level_autocalculated ||
-        ""
-      ).toLowerCase();
-      return riskLevel.includes("high") && !riskLevel.includes("very high");
-    }).length;
-    const mediumRisks = projectRisks.filter((risk) => {
-      const riskLevel = (
-        risk.current_risk_level ||
-        risk.risk_level_autocalculated ||
-        ""
-      ).toLowerCase();
-      return riskLevel.includes("medium");
-    }).length;
-    const lowRisks = projectRisks.filter((risk) => {
-      const riskLevel = (
-        risk.current_risk_level ||
-        risk.risk_level_autocalculated ||
-        ""
-      ).toLowerCase();
-      return riskLevel.includes("low") && !riskLevel.includes("very low");
-    }).length;
-    const veryLowRisks = projectRisks.filter((risk) => {
-      const riskLevel = (
-        risk.current_risk_level ||
-        risk.risk_level_autocalculated ||
-        ""
-      ).toLowerCase();
-      return riskLevel.includes("very low") || riskLevel.includes("no risk");
-    }).length;
+    const countBucket = (bucket: RiskLevelBucket) =>
+      projectRisks.filter((risk) => riskLevelBucket(getEffectiveRiskLevel(risk)) === bucket).length;
+    const veryHighRisks = countBucket("veryHigh");
+    const highRisks = countBucket("high");
+    const mediumRisks = countBucket("medium");
+    const lowRisks = countBucket("low");
+    const veryLowRisks = countBucket("veryLow");
 
     return {
       total: veryHighRisks + highRisks + mediumRisks + lowRisks + veryLowRisks,

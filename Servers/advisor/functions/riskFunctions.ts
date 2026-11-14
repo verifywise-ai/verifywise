@@ -13,6 +13,9 @@ import { getTimeseriesForTimeframe } from "../../utils/history/riskHistory.utils
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { sequelize } from "../../database/db";
 import logger from "../../utils/logger/fileLogger";
+import { getEffectiveRiskLevel } from "../../utils/riskLevel.utils";
+
+const effectiveLevel = getEffectiveRiskLevel;
 
 const VALID_RISK_CATEGORIES = [
   "Strategic risk",
@@ -111,7 +114,7 @@ const fetchRisks = async (
       risks = risks.filter((r) => r.mitigation_status === params.mitigationStatus);
     }
     if (params.riskLevel) {
-      risks = risks.filter((r) => r.risk_level_autocalculated === params.riskLevel);
+      risks = risks.filter((r) => effectiveLevel(r) === params.riskLevel);
     }
     if (params.aiLifecyclePhase) {
       risks = risks.filter((r) => r.ai_lifecycle_phase === params.aiLifecyclePhase);
@@ -126,7 +129,7 @@ const fetchRisks = async (
     return risks.map((r) => ({
       id: r.id,
       risk_name: r.risk_name,
-      risk_level: r.risk_level_autocalculated,
+      risk_level: effectiveLevel(r),
       severity: r.severity,
       likelihood: r.likelihood,
       risk_category: r.risk_category,
@@ -234,9 +237,9 @@ const getRiskAnalytics = async (
     // 5. Risk Level Summary
     const riskLevelSummary: { [level: string]: number } = {};
     risks.forEach((risk) => {
-      if (risk.risk_level_autocalculated) {
-        riskLevelSummary[risk.risk_level_autocalculated] =
-          (riskLevelSummary[risk.risk_level_autocalculated] || 0) + 1;
+      const level = effectiveLevel(risk);
+      if (level) {
+        riskLevelSummary[level] = (riskLevelSummary[level] || 0) + 1;
       }
     });
 
@@ -290,13 +293,9 @@ const getExecutiveSummary = async (
     const totalActiveRisks = risks.length;
 
     // Count critical and high risks
-    const criticalRisks = risks.filter(
-      (r) => r.severity === "Catastrophic" || r.risk_level_autocalculated === "Very high risk",
-    ).length;
+    const criticalRisks = risks.filter((r) => effectiveLevel(r) === "Very high risk").length;
 
-    const highRisks = risks.filter(
-      (r) => r.severity === "Major" || r.risk_level_autocalculated === "High risk",
-    ).length;
+    const highRisks = risks.filter((r) => effectiveLevel(r) === "High risk").length;
 
     // Top categories (top 3)
     const categoryMap = new Map<string, number>();

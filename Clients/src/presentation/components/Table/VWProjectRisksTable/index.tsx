@@ -32,6 +32,7 @@ import EmptyStateTip from "../../EmptyState/EmptyStateTip";
 import { TableEmptyStateLayout } from "../TableEmptyStateLayout";
 import { IVWProjectRisksTable } from "../../../types/interfaces/i.risk";
 import { RiskModel } from "../../../../domain/models/Common/risks/risk.model";
+import { compareRisks } from "./riskSort";
 import { text, border } from "../../../themes/palette";
 import Checkbox from "../../Inputs/Checkbox";
 import ConfirmationModal from "../../Dialogs/ConfirmationModal";
@@ -280,108 +281,10 @@ const VWProjectRisksTable = ({
 
     const sortableRows = [...rows];
 
-    return sortableRows.sort((a: RiskModel, b: RiskModel) => {
-      // Helper functions for sorting
-      // Severity values: Negligible, Minor, Moderate, Major, Catastrophic
-      const getSeverityValue = (severity: string) => {
-        const severityLower = severity.toLowerCase();
-        if (severityLower.includes("catastrophic")) return 5;
-        if (severityLower.includes("major")) return 4;
-        if (severityLower.includes("moderate")) return 3;
-        if (severityLower.includes("minor")) return 2;
-        if (severityLower.includes("negligible")) return 1;
-        return 0;
-      };
-
-      const getLikelihoodValue = (likelihood: string) => {
-        const likelihoodLower = likelihood.toLowerCase();
-        if (likelihoodLower.includes("very high")) return 5;
-        if (likelihoodLower.includes("high")) return 4;
-        if (likelihoodLower.includes("medium")) return 3;
-        if (likelihoodLower.includes("low")) return 2;
-        if (likelihoodLower.includes("very low")) return 1;
-        return 0;
-      };
-
-      // Risk level values: No risk, Very low risk, Low risk, Medium risk, High risk, Very high risk
-      const getRiskLevelValue = (riskLevel: string) => {
-        const riskLower = riskLevel.toLowerCase();
-        if (riskLower.includes("very high")) return 6;
-        if (riskLower.includes("high")) return 5;
-        if (riskLower.includes("medium")) return 4;
-        if (riskLower.includes("low") && !riskLower.includes("very low")) return 3;
-        if (riskLower.includes("very low")) return 2;
-        if (riskLower.includes("no risk")) return 1;
-        return 0;
-      };
-
-      let aValue: string | number;
-      let bValue: string | number;
-
-      switch (sortConfig.key) {
-        case "risk_name":
-          aValue = a.risk_name.toLowerCase();
-          bValue = b.risk_name.toLowerCase();
-          break;
-
-        case "risk_owner":
-          aValue = a.risk_owner;
-          bValue = b.risk_owner;
-          break;
-
-        case "severity":
-          // Severity order: Critical > High > Medium > Low
-          aValue = getSeverityValue(a.severity);
-          bValue = getSeverityValue(b.severity);
-          break;
-
-        case "likelihood":
-          // Likelihood order: Very High > High > Medium > Low > Very Low
-          aValue = getLikelihoodValue(a.likelihood);
-          bValue = getLikelihoodValue(b.likelihood);
-          break;
-
-        case "mitigation_status":
-          aValue = a.mitigation_status.toLowerCase();
-          bValue = b.mitigation_status.toLowerCase();
-          break;
-
-        case "risk_level_autocalculated":
-          // Risk level order: Critical > High > Medium > Low
-          aValue = getRiskLevelValue(a.risk_level_autocalculated);
-          bValue = getRiskLevelValue(b.risk_level_autocalculated);
-          break;
-
-        case "deadline":
-          aValue = new Date(a.deadline).getTime();
-          bValue = new Date(b.deadline).getTime();
-          break;
-
-        case "ale_estimate":
-          aValue = a.ale_estimate ?? 0;
-          bValue = b.ale_estimate ?? 0;
-          break;
-
-        case "controls_mapping":
-          aValue = a.controls_mapping.toLowerCase();
-          bValue = b.controls_mapping.toLowerCase();
-          break;
-
-        default:
-          return 0;
-      }
-
-      // Handle string comparisons
-      if (typeof aValue === "string" && typeof bValue === "string") {
-        const comparison = aValue.localeCompare(bValue);
-        return sortConfig.direction === "asc" ? comparison : -comparison;
-      }
-
-      // Handle number comparisons
-      if (aValue < bValue) return sortConfig.direction === "asc" ? -1 : 1;
-      if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
-      return 0;
-    });
+    const direction = sortConfig.direction;
+    return sortableRows.sort((a: RiskModel, b: RiskModel) =>
+      compareRisks(a, b, sortConfig.key, direction),
+    );
   }, [rows, sortConfig]);
 
   // Ensure page is valid when rows are empty

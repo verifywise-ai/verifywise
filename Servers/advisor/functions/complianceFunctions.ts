@@ -5,6 +5,7 @@ import { QueryTypes } from "sequelize";
 import logger from "../../utils/logger/fileLogger";
 import { taskLinkReachesProjectSql } from "../../utils/taskEntityLink.utils";
 import { TaskStatus } from "../../domain.layer/enums/task-status.enum";
+import { effectiveRiskLevelSql } from "../../utils/riskLevel.utils";
 
 // --- Read Tools ---
 
@@ -286,12 +287,12 @@ const getProjectStats = async (
       sequelize.query(
         `SELECT
            COUNT(*) as total,
-           COUNT(CASE WHEN mitigation_status = 'Completed' THEN 1 END) as mitigated,
-           COUNT(CASE WHEN current_risk_level IN ('High risk', 'Very high risk') THEN 1 END) as high_risk
-         FROM risks
-         WHERE organization_id = :organization_id
-         AND (is_deleted = false OR is_deleted IS NULL)
-         AND id IN (SELECT risk_id FROM projects_risks WHERE project_id = :project_id AND organization_id = :organization_id)`,
+           COUNT(CASE WHEN r.mitigation_status = 'Completed' THEN 1 END) as mitigated,
+           COUNT(CASE WHEN lower(${effectiveRiskLevelSql("r")}) IN ('high risk', 'very high risk') THEN 1 END) as high_risk
+         FROM risks r
+         WHERE r.organization_id = :organization_id
+         AND (r.is_deleted = false OR r.is_deleted IS NULL)
+         AND r.id IN (SELECT risk_id FROM projects_risks WHERE project_id = :project_id AND organization_id = :organization_id)`,
         {
           replacements,
           type: QueryTypes.SELECT,

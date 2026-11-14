@@ -9,7 +9,7 @@ import {
   LIKELIHOOD_SCALE,
   SEVERITY_SCALE,
   RISK_CALCULATION_WEIGHTS,
-} from "../../utils/validations/riskValidation.utils";
+} from "../../utils/riskLevel.utils";
 
 export type Likelihood = "Rare" | "Unlikely" | "Possible" | "Likely" | "Almost Certain";
 export type Severity = "Negligible" | "Minor" | "Moderate" | "Major" | "Catastrophic";
@@ -54,7 +54,7 @@ export const weightedRiskScore = (l: Likelihood, s: Severity): number =>
   SEVERITY_SCALE[s] * RISK_CALCULATION_WEIGHTS.SEVERITY_WEIGHT;
 
 export function modelRiskLevelFor(l: Likelihood, s: Severity): ModelRiskLevel {
-  switch (calculateRiskLevel(s, l)) {
+  switch (calculateRiskLevel(l, s)) {
     case "Very high risk":
       return ModelRiskLevel.CRITICAL;
     case "High risk":

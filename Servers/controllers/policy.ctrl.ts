@@ -47,6 +47,8 @@ import { translateError } from "../utils/i18n.utils";
 import { roleHasPermission } from "../utils/rolePermissions.utils";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 import { sanitizeUserHtml } from "../utils/sanitization.utils";
+import { POLICY_STATUS_ENUM } from "../utils/validations/policiesValidation.utils";
+import { isReviewDateString } from "../utils/policyReviewDate.utils";
 
 /**
  * Only a reviewer assigned to the policy, or an Admin, may approve or reject
@@ -75,6 +77,62 @@ const EDITABLE_POLICY_FIELDS = [
   "policy_owner_id",
   "assigned_reviewer_ids",
 ] as const;
+
+type PolicyFieldError = { field: string; message: string };
+
+/**
+ * Field checks for create (`isCreate`: title required) and update (only the
+ * fields sent). They reject only input the database used to fail on with a
+ * 500 (P-L6): the legacy endpoint is frozen (Servers/CLAUDE.md), so a short
+ * title, duplicate tags or many reviewers are accepted as before. Returns translated, field-keyed errors the editor shows
+ * under each input.
+ */
+function policyFieldErrors(req: Request, data: Partial<IPolicy>, isCreate: boolean) {
+  const errors: PolicyFieldError[] = [];
+  const t = req.t!;
+  const { title, status, tags, next_review_date: reviewDate } = data as Record<string, unknown>;
+  if (
+    (isCreate || title !== undefined) &&
+    // title is VARCHAR(255) NOT NULL; the stored value is untrimmed.
+    (typeof title !== "string" || title.trim() === "" || title.length > 255)
+  ) {
+    errors.push({ field: "title", message: t("Enter a title of up to 255 characters") });
+  }
+  // policy_manager_status_check limits status to POLICY_STATUS_ENUM.
+  if (
+    status !== undefined &&
+    !POLICY_STATUS_ENUM.includes(status as (typeof POLICY_STATUS_ENUM)[number])
+  ) {
+    errors.push({ field: "status", message: t("Choose a valid status") });
+  }
+
+  if (tags !== undefined && (!Array.isArray(tags) || tags.some((tag) => !PolicyTagsSet.has(tag)))) {
+    errors.push({ field: "tags", message: t("Choose tags from the list") });
+  }
+  // null or "" clears the date; anything else must be YYYY-MM-DD or a full ISO timestamp.
+  if (
+    reviewDate !== undefined &&
+    reviewDate !== null &&
+    reviewDate !== "" &&
+    !isReviewDateString(reviewDate)
+  ) {
+    errors.push({ field: "next_review_date", message: t("Enter a valid next review date") });
+  }
+  return errors;
+}
+
+/** 400 body carrying field errors, in the shape other controllers use. */
+const policyValidationResponse = (errors: PolicyFieldError[]) =>
+  STATUS_CODE[400]({ message: errors[0].message, errors });
+
+/** 400 body for a ValidationException from the write path (tags, owner, reviewers). */
+const policyValidationExceptionResponse = (req: Request, error: ValidationException) =>
+  policyValidationResponse([
+    {
+      field: (error.metadata?.field as string | undefined) ?? "body",
+      message: translateError(req, error),
+    },
+  ]);
 
 function pickEditablePolicyFields(body: unknown): Partial<IPolicy> {
   const source = (body && typeof body === "object" ? body : {}) as Record<string, unknown>;
@@ -134,6 +192,12 @@ export class PolicyController {
         last_updated_by: userId,
       } as IPolicy;
 
+      const fieldErrors = policyFieldErrors(req, policyData, true);
+      if (fieldErrors.length > 0) {
+        await transaction.rollback();
+        return res.status(400).json(policyValidationResponse(fieldErrors));
+      }
+
       const policy = await createPolicyQuery(policyData, req.organizationId!, userId, transaction);
 
       if (policy) {
@@ -156,7 +220,7 @@ export class PolicyController {
     } catch (error) {
       await transaction.rollback();
       if (error instanceof ValidationException) {
-        return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+        return res.status(400).json(policyValidationExceptionResponse(req, error));
       }
       return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
     }
@@ -182,6 +246,12 @@ export class PolicyController {
         ...pickEditablePolicyFields(req.body),
         last_updated_by: userId,
       } as Partial<IPolicy>;
+
+      const fieldErrors = policyFieldErrors(req, policyData, false);
+      if (fieldErrors.length > 0) {
+        await transaction.rollback();
+        return res.status(400).json(policyValidationResponse(fieldErrors));
+      }
 
       const policy = await updatePolicyByIdQuery(
         policyId,
@@ -212,7 +282,7 @@ export class PolicyController {
     } catch (error) {
       await transaction.rollback();
       if (error instanceof ValidationException) {
-        return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+        return res.status(400).json(policyValidationExceptionResponse(req, error));
       }
       logger.error("Error updating policy:", error);
       return res.status(500).json(STATUS_CODE[500](translateError(req, error)));

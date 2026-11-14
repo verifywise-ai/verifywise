@@ -96,7 +96,9 @@ const PolicyForm: React.FC<PolicyFormProps> = ({
       if (newDate?.isValid()) {
         setFormData((prevValues: any) => ({
           ...prevValues,
-          nextReviewDate: newDate ? newDate.toISOString() : "",
+          // Date-only, from the picker's local calendar date: an ISO timestamp of
+          // local midnight is the previous day in UTC east of Greenwich (P-M1).
+          nextReviewDate: newDate ? newDate.format("YYYY-MM-DD") : "",
         }));
         clearFieldError("nextReviewDate");
       }

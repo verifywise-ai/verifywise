@@ -36,6 +36,7 @@ import {
   riskLevelCardAfterFilterChange,
   RISK_LEVEL_OPTIONS,
   SEVERITY_OPTIONS,
+  riskLevelCardKey,
 } from "./riskFilters";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import { useEntityChangeHistory } from "../../../application/hooks/useEntityChangeHistory";
@@ -57,8 +58,10 @@ import {
   riskMenuItemLogoStyle,
   riskMenuItemRecommendedBadgeStyle,
 } from "./style";
+import { getEffectiveRiskLevel } from "../../../application/utils/riskLevel";
 import { text } from "../../themes/palette";
 import { chartTheme } from "../../themes/chartTheme";
+import { riskCalendarDay, toLocalDateOnly } from "../../tools/isoDateToString";
 
 /**
  * Set initial loading status for all CRUD process
@@ -288,29 +291,12 @@ const RiskManagement = () => {
     // First apply FilterBy conditions
     let filtered = filterData(projectRisks);
 
-    // Apply card filter for risk level (using same matching logic as summary at lines 298-318)
+    // Apply card filter for risk level (same bucketing as the summary cards)
     if (selectedRiskLevel) {
-      const levelLower = selectedRiskLevel.toLowerCase();
+      const card = selectedRiskLevel.toLowerCase();
       filtered = filtered.filter((risk) => {
-        const riskLevel = (
-          risk.current_risk_level ||
-          risk.risk_level_autocalculated ||
-          ""
-        ).toLowerCase();
-        switch (levelLower) {
-          case "very high":
-            return riskLevel.includes("very high");
-          case "high":
-            return riskLevel.includes("high") && !riskLevel.includes("very high");
-          case "medium":
-            return riskLevel.includes("medium");
-          case "low":
-            return riskLevel.includes("low") && !riskLevel.includes("very low");
-          case "very low":
-            return riskLevel.includes("very low") || riskLevel.includes("no risk");
-          default:
-            return true;
-        }
+        const cardKey = riskLevelCardKey(getEffectiveRiskLevel(risk));
+        return cardKey !== null && cardKey.toLowerCase() === card;
       });
     }
 
@@ -328,46 +314,13 @@ const RiskManagement = () => {
 
   // Compute risk summary from fetched data
   const risksSummary = useMemo(() => {
-    const veryHighRisks = projectRisks.filter((risk) => {
-      const riskLevel = (
-        risk.current_risk_level ||
-        risk.risk_level_autocalculated ||
-        ""
-      ).toLowerCase();
-      return riskLevel.includes("very high");
-    }).length;
-    const highRisks = projectRisks.filter((risk) => {
-      const riskLevel = (
-        risk.current_risk_level ||
-        risk.risk_level_autocalculated ||
-        ""
-      ).toLowerCase();
-      return riskLevel.includes("high") && !riskLevel.includes("very high");
-    }).length;
-    const mediumRisks = projectRisks.filter((risk) => {
-      const riskLevel = (
-        risk.current_risk_level ||
-        risk.risk_level_autocalculated ||
-        ""
-      ).toLowerCase();
-      return riskLevel.includes("medium");
-    }).length;
-    const lowRisks = projectRisks.filter((risk) => {
-      const riskLevel = (
-        risk.current_risk_level ||
-        risk.risk_level_autocalculated ||
-        ""
-      ).toLowerCase();
-      return riskLevel.includes("low") && !riskLevel.includes("very low");
-    }).length;
-    const veryLowRisks = projectRisks.filter((risk) => {
-      const riskLevel = (
-        risk.current_risk_level ||
-        risk.risk_level_autocalculated ||
-        ""
-      ).toLowerCase();
-      return riskLevel.includes("very low") || riskLevel.includes("no risk");
-    }).length;
+    const countCard = (card: string) =>
+      projectRisks.filter((risk) => riskLevelCardKey(getEffectiveRiskLevel(risk)) === card).length;
+    const veryHighRisks = countCard("Very high");
+    const highRisks = countCard("High");
+    const mediumRisks = countCard("Medium");
+    const lowRisks = countCard("Low");
+    const veryLowRisks = countCard("Very low");
 
     return {
       total: projectRisks.length,
@@ -406,8 +359,8 @@ const RiskManagement = () => {
         severity: risk.severity || "-",
         likelihood: risk.likelihood || "-",
         mitigation_status: risk.mitigation_status || "-",
-        risk_level: risk.current_risk_level || risk.risk_level_autocalculated || "-",
-        deadline: risk.deadline || "-",
+        risk_level: getEffectiveRiskLevel(risk) || "-",
+        deadline: toLocalDateOnly(riskCalendarDay(risk.deadline)) || "-",
         controls_mapping: risk.controls_mapping || "-",
       };
     });

@@ -18,7 +18,7 @@ export const RISK_LABELS = {
     color: chartTheme.riskLabel.critical,
   },
   noRisk: {
-    text: "Very Low risk",
+    text: "Very low risk",
     color: chartTheme.riskLabel.veryLow,
   },
   negligible: {

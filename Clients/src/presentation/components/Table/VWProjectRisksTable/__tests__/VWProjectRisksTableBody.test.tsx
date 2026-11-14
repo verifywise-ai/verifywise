@@ -326,4 +326,30 @@ describe("VWProjectRisksTableBody", () => {
     renderWithContext(<VWProjectRisksTableBody {...defaultProps} />);
     expect(screen.queryByText("Evidence stale")).not.toBeInTheDocument();
   });
+
+  it("shows the effective level in the chip and the inherent level in its tooltip", async () => {
+    const rows = [
+      {
+        ...mockRows[0],
+        id: 3,
+        risk_name: "Residual risk",
+        risk_level_autocalculated: "Very high risk",
+        current_risk_level: "Low risk",
+      },
+    ] as unknown as RiskModel[];
+    const user = userEvent.setup();
+    renderWithContext(<VWProjectRisksTableBody {...defaultProps} rows={rows} />);
+    const chip = screen.getByText("Low risk");
+    expect(screen.queryByText("Very high risk")).not.toBeInTheDocument();
+    await user.hover(chip);
+    expect(await screen.findByText("Inherent level: Very high risk")).toBeInTheDocument();
+  });
+
+  it("falls back to the inherent level when there is no current level", () => {
+    const rows = [
+      { ...mockRows[0], id: 4, risk_level_autocalculated: "No risk", current_risk_level: null },
+    ] as unknown as RiskModel[];
+    renderWithContext(<VWProjectRisksTableBody {...defaultProps} rows={rows} />);
+    expect(screen.getByText("No risk")).toBeInTheDocument();
+  });
 });

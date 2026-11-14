@@ -100,4 +100,21 @@ describe("riskLevelCardAfterFilterChange", () => {
   it("clears the card when the risk level condition is removed", () => {
     expect(riskLevelCardAfterFilterChange([level("High risk"), severity], [severity])).toBeNull();
   });
+
+  it("reads the effective level: current when set, else inherent", () => {
+    const get = (r: Record<string, unknown>) =>
+      getRiskFieldValue(r as unknown as RiskModel, "risk_level");
+    expect(get({ current_risk_level: "Low risk", risk_level_autocalculated: "High risk" })).toBe(
+      "Low risk",
+    );
+    expect(get({ current_risk_level: null, risk_level_autocalculated: "High risk" })).toBe(
+      "High risk",
+    );
+  });
+
+  it("puts No risk and both Very low spellings in the very-low card", () => {
+    expect(riskLevelCardKey("No risk")).toBe("Very low");
+    expect(riskLevelCardKey("Very low risk")).toBe("Very low");
+    expect(riskLevelCardKey("Unknown")).toBeNull();
+  });
 });

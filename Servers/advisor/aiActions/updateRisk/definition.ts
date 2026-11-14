@@ -56,7 +56,7 @@ const CURRENT_RISK_LEVELS = [
   "High risk",
   "Medium risk",
   "Low risk",
-  "Very Low risk",
+  "Very low risk",
 ];
 
 export const updateRiskToolDefinition: AiActionToolDefinition = {

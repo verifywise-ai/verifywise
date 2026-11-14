@@ -19,6 +19,7 @@ import {
 } from "../domain.layer/interfaces/compliance/compliance.interface";
 import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
+import { effectiveRiskLevelSql } from "./riskLevel.utils";
 
 /**
  * Main function to calculate overall compliance score for an organization
@@ -128,21 +129,21 @@ async function getRiskManagementData(organizationId: number): Promise<RiskManage
     // assessed", which is unmitigated — SQL three-valued logic would
     // silently drop those rows from a != comparison (#3911).
     const highResult = (await sequelize.query(
-      `SELECT COUNT(*) as count FROM risks
-       WHERE organization_id = :organizationId
-       AND (is_deleted = false OR is_deleted IS NULL)
-       AND (mitigation_status IS NULL OR mitigation_status != 'Completed')
-       AND (current_risk_level = 'High risk' OR current_risk_level = 'Very high risk')`,
+      `SELECT COUNT(*) as count FROM risks r
+       WHERE r.organization_id = :organizationId
+       AND (r.is_deleted = false OR r.is_deleted IS NULL)
+       AND (r.mitigation_status IS NULL OR r.mitigation_status != 'Completed')
+       AND lower(${effectiveRiskLevelSql("r")}) IN ('high risk', 'very high risk')`,
       { type: QueryTypes.SELECT, replacements: { organizationId } },
     )) as { count: string }[];
 
     // Critical risks
     const criticalResult = (await sequelize.query(
-      `SELECT COUNT(*) as count FROM risks
-       WHERE organization_id = :organizationId
-       AND (is_deleted = false OR is_deleted IS NULL)
-       AND (mitigation_status IS NULL OR mitigation_status != 'Completed')
-       AND current_risk_level = 'Very high risk'`,
+      `SELECT COUNT(*) as count FROM risks r
+       WHERE r.organization_id = :organizationId
+       AND (r.is_deleted = false OR r.is_deleted IS NULL)
+       AND (r.mitigation_status IS NULL OR r.mitigation_status != 'Completed')
+       AND lower(${effectiveRiskLevelSql("r")}) = 'very high risk'`,
       { type: QueryTypes.SELECT, replacements: { organizationId } },
     )) as { count: string }[];
 

@@ -75,7 +75,14 @@ jest.mock("../../utils/rolePermissions.utils", () => ({
 }));
 jest.mock("../../domain.layer/exceptions/custom.exception", () => ({
   ForbiddenException: class ForbiddenException extends Error {},
-  ValidationException: class ValidationException extends Error {},
+  // Mirrors the real class: the field lands in metadata.field.
+  ValidationException: class ValidationException extends Error {
+    metadata: Record<string, unknown>;
+    constructor(message: string, field?: string) {
+      super(message);
+      this.metadata = { field };
+    }
+  },
 }));
 
 import { PolicyController } from "../policy.ctrl";
@@ -173,21 +180,23 @@ describe("policy.ctrl", () => {
   describe("createPolicy", () => {
     it("should return 201 when policy is created", async () => {
       mockCreate.mockResolvedValue({ id: 1, title: "P1" } as any);
-      const req = createReq({ body: { title: "P1", content_html: "<p>test</p>" } });
+      const req = createReq({
+        body: { title: "Policy one", status: "Draft", content_html: "<p>test</p>" },
+      });
       const res = createRes();
       await PolicyController.createPolicy(req, res);
       expect(res.status).toHaveBeenCalledWith(201);
     });
     it("should return 503 when creation returns null", async () => {
       mockCreate.mockResolvedValue(null as any);
-      const req = createReq({ body: { title: "P1" } });
+      const req = createReq({ body: { title: "Policy one", status: "Draft" } });
       const res = createRes();
       await PolicyController.createPolicy(req, res);
       expect(res.status).toHaveBeenCalledWith(503);
     });
     it("should return 500 on error", async () => {
       mockCreate.mockRejectedValue(new Error("DB error"));
-      const req = createReq({ body: { title: "P1" } });
+      const req = createReq({ body: { title: "Policy one", status: "Draft" } });
       const res = createRes();
       await PolicyController.createPolicy(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
@@ -195,12 +204,18 @@ describe("policy.ctrl", () => {
     it("passes only editable fields, dropping is_demo and review fields", async () => {
       mockCreate.mockResolvedValue({ id: 1, title: "P1" } as any);
       const req = createReq({
-        body: { title: "P1", is_demo: true, review_status: "approved", organization_id: 99 },
+        body: {
+          title: "Policy one",
+          status: "Draft",
+          is_demo: true,
+          review_status: "approved",
+          organization_id: 99,
+        },
       });
       const res = createRes();
       await PolicyController.createPolicy(req, res);
       const sent = mockCreate.mock.calls[0][0] as unknown as Record<string, unknown>;
-      expect(sent.title).toBe("P1");
+      expect(sent.title).toBe("Policy one");
       expect(sent).not.toHaveProperty("is_demo");
       expect(sent).not.toHaveProperty("review_status");
       expect(sent).not.toHaveProperty("organization_id");
@@ -209,17 +224,100 @@ describe("policy.ctrl", () => {
       mockCreate.mockRejectedValue(
         new ValidationException("Reviewers must be members of this organization"),
       );
-      const req = createReq({ body: { title: "P1", assigned_reviewer_ids: [77] } });
+      const req = createReq({
+        body: { title: "Policy one", status: "Draft", assigned_reviewer_ids: [77] },
+      });
       const res = createRes();
       await PolicyController.createPolicy(req, res);
       expect(res.status).toHaveBeenCalledWith(400);
     });
   });
 
+  describe("field validation (P-L6)", () => {
+    it("returns 400 with a field error for a missing or over-long title on create", async () => {
+      const req = createReq({ body: { title: "A".repeat(250) + " ".repeat(10) } });
+      const res = createRes();
+      await PolicyController.createPolicy(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      const body = res.json.mock.calls[0][0];
+      expect(body.data.errors.map((e: { field: string }) => e.field)).toEqual(["title"]);
+      expect(mockCreate).not.toHaveBeenCalled();
+    });
+    it("keeps accepting what the legacy endpoint accepted: a short title, no status", async () => {
+      mockCreate.mockResolvedValue({ id: 1, title: "P" } as any);
+      for (const body of [{ title: "P" }, { title: "P", status: "Published" }]) {
+        const res = createRes();
+        await PolicyController.createPolicy(createReq({ body }), res);
+        expect(res.status).toHaveBeenCalledWith(201);
+      }
+    });
+    it("returns 400 for an unknown tag and an invalid date", async () => {
+      const req = createReq({
+        body: {
+          title: "Policy one",
+          status: "Draft",
+          tags: ["Not a tag"],
+          next_review_date: "not a date",
+        },
+      });
+      const res = createRes();
+      await PolicyController.createPolicy(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      const fields = res.json.mock.calls[0][0].data.errors.map((e: { field: string }) => e.field);
+      expect(fields).toEqual(["tags", "next_review_date"]);
+    });
+    it("returns 400 for a valid date prefix followed by a malformed suffix", async () => {
+      for (const next_review_date of ["2030-01-15garbage", "2030-01-15T25:99:99"]) {
+        const req = createReq({ body: { title: "Policy one", status: "Draft", next_review_date } });
+        const res = createRes();
+        await PolicyController.createPolicy(req, res);
+        expect(res.status).toHaveBeenCalledWith(400);
+        const fields = res.json.mock.calls[0][0].data.errors.map((e: { field: string }) => e.field);
+        expect(fields).toEqual(["next_review_date"]);
+      }
+      expect(mockCreate).not.toHaveBeenCalled();
+    });
+    it("accepts a create without tags or review date", async () => {
+      mockCreate.mockResolvedValue({ id: 1, title: "Policy one" } as any);
+      const req = createReq({ body: { title: "Policy one", status: "Draft" } });
+      const res = createRes();
+      await PolicyController.createPolicy(req, res);
+      expect(res.status).toHaveBeenCalledWith(201);
+    });
+    it("checks only the fields an update sends", async () => {
+      mockGetById.mockResolvedValue([{ id: 1, title: "Policy one" }] as any);
+      const req = createReq({ params: { id: "1" }, body: { status: "" } });
+      const res = createRes();
+      await PolicyController.updatePolicy(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json.mock.calls[0][0].data.errors).toEqual([
+        { field: "status", message: "Choose a valid status" },
+      ]);
+    });
+    it("maps a write-path ValidationException to a field error", async () => {
+      mockCreate.mockRejectedValue(
+        new ValidationException(
+          "Reviewers must be members of this organization",
+          "assigned_reviewer_ids",
+        ),
+      );
+      const req = createReq({ body: { title: "Policy one", status: "Draft" } });
+      const res = createRes();
+      await PolicyController.createPolicy(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json.mock.calls[0][0].data.errors).toEqual([
+        {
+          field: "assigned_reviewer_ids",
+          message: "Reviewers must be members of this organization",
+        },
+      ]);
+    });
+  });
+
   describe("updatePolicy", () => {
     it("should return 404 when policy is not found", async () => {
       mockGetById.mockResolvedValue([] as any);
-      const req = createReq({ params: { id: "99" }, body: { title: "P2" } });
+      const req = createReq({ params: { id: "99" }, body: { title: "Policy two" } });
       const res = createRes();
       await PolicyController.updatePolicy(req, res);
       expect(res.status).toHaveBeenCalledWith(404);
@@ -227,7 +325,7 @@ describe("policy.ctrl", () => {
     it("should return 202 when policy is updated", async () => {
       mockGetById.mockResolvedValue([{ id: 1, title: "P1" }] as any);
       mockUpdate.mockResolvedValue({ id: 1, title: "P2" } as any);
-      const req = createReq({ params: { id: "1" }, body: { title: "P2" } });
+      const req = createReq({ params: { id: "1" }, body: { title: "Policy two" } });
       const res = createRes();
       await PolicyController.updatePolicy(req, res);
       expect(res.status).toHaveBeenCalledWith(202);
@@ -235,14 +333,14 @@ describe("policy.ctrl", () => {
     it("should return 404 when update returns null", async () => {
       mockGetById.mockResolvedValue([{ id: 1, title: "P1" }] as any);
       mockUpdate.mockResolvedValue(null as any);
-      const req = createReq({ params: { id: "1" }, body: { title: "P2" } });
+      const req = createReq({ params: { id: "1" }, body: { title: "Policy two" } });
       const res = createRes();
       await PolicyController.updatePolicy(req, res);
       expect(res.status).toHaveBeenCalledWith(404);
     });
     it("should return 500 on error", async () => {
       mockGetById.mockRejectedValue(new Error("DB error"));
-      const req = createReq({ params: { id: "1" }, body: { title: "P2" } });
+      const req = createReq({ params: { id: "1" }, body: { title: "Policy two" } });
       const res = createRes();
       await PolicyController.updatePolicy(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
@@ -262,7 +360,9 @@ describe("policy.ctrl", () => {
 
       // POST /policies — 201 body carries the full persisted row
       mockCreate.mockResolvedValue(persisted as any);
-      const createReqObj = createReq({ body: { title: "P1", content_html: "<p>test</p>" } });
+      const createReqObj = createReq({
+        body: { title: "Policy one", status: "Draft", content_html: "<p>test</p>" },
+      });
       const createResObj = createRes();
       await PolicyController.createPolicy(createReqObj, createResObj);
       expect(createResObj.status).toHaveBeenCalledWith(201);
@@ -278,7 +378,7 @@ describe("policy.ctrl", () => {
       // PUT /policies/:id — 202 body carries the full persisted row
       mockGetById.mockResolvedValue([{ id: 1, title: "P1" }] as any);
       mockUpdate.mockResolvedValue({ ...persisted, title: "P2" } as any);
-      const updateReqObj = createReq({ params: { id: "1" }, body: { title: "P2" } });
+      const updateReqObj = createReq({ params: { id: "1" }, body: { title: "Policy two" } });
       const updateResObj = createRes();
       await PolicyController.updatePolicy(updateReqObj, updateResObj);
       expect(updateResObj.status).toHaveBeenCalledWith(202);

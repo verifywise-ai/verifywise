@@ -134,7 +134,8 @@ const RiskSection: FC<RiskSectionProps> = ({
         return r.accepted ? "" : r.message;
       },
       potentialImpact: (v: unknown) => {
-        const r = checkStringValidation("Potential impact", v as string, 1, 256);
+        // impact is VARCHAR(255) (R-M6).
+        const r = checkStringValidation("Potential impact", v as string, 1, 255);
         return r.accepted ? "" : r.message;
       },
       reviewNotes: (v: unknown) => {
@@ -618,8 +619,8 @@ const RiskSection: FC<RiskSectionProps> = ({
               lineHeight: 1.5,
             }}
           >
-            The Risk Level is calculated by multiplying the Likelihood and Severity scores. By
-            assigning these scores, the risk level will be determined based on your inputs.
+            The risk level is a weighted score: likelihood plus three times severity, so severity
+            counts more. Pick a likelihood and a severity and the level follows from the score.
           </Typography>
         </Stack>
         <Stack sx={{ mt: `${LAYOUT.VERTICAL_GAP}px`, width: "100%", maxWidth: contentWidth }}>

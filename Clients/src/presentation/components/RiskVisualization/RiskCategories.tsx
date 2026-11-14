@@ -9,6 +9,8 @@ import { ICategoryGroup } from "../../../domain/interfaces/i.categoryGroup";
 import { User } from "../../../domain/types/User";
 import { palette, radiusPx } from "../../themes/palette";
 import { chartTheme } from "../../themes/chartTheme";
+import { getEffectiveRiskLevel, riskLevelBucket } from "../../../application/utils/riskLevel";
+import { riskLevelColor } from "./riskLevelColor";
 
 const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, onRiskSelect }) => {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
@@ -35,18 +37,6 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
     if (riskLevel >= 8) return chartTheme.riskSummary.medium;
     if (riskLevel >= 4) return chartTheme.riskSummary.low;
     return chartTheme.riskSummary.veryLow;
-  };
-
-  const getRiskLevelFromString = (level: string | number): number => {
-    if (typeof level === "number") return level;
-    const levelStr = level.trim().toLowerCase();
-    if (levelStr.includes("very high") || levelStr === "5") return 5;
-    if (levelStr.includes("high") || levelStr === "4") return 4;
-    if (levelStr.includes("medium") || levelStr === "3") return 3;
-    if (levelStr.includes("very low") || levelStr === "1") return 1;
-    if (levelStr.includes("low") || levelStr === "2") return 2;
-    const n = parseInt(levelStr, 10);
-    return Number.isFinite(n) ? n : 0;
   };
 
   // Helper function to get user name by ID
@@ -92,12 +82,9 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
         groups[category].risks.push(risk);
         groups[category].count++;
 
-        const riskLevel = getRiskLevelFromString(risk.current_risk_level);
-        if (riskLevel >= 16) groups[category].riskLevels.veryHigh++;
-        else if (riskLevel >= 12) groups[category].riskLevels.high++;
-        else if (riskLevel >= 8) groups[category].riskLevels.medium++;
-        else if (riskLevel >= 4) groups[category].riskLevels.low++;
-        else groups[category].riskLevels.veryLow++;
+        // Unknown levels count as very low, as before.
+        const bucket = riskLevelBucket(getEffectiveRiskLevel(risk)) ?? "veryLow";
+        groups[category].riskLevels[bucket]++;
       });
     });
 
@@ -330,11 +317,9 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
                           >
                             <Chip
                               size="small"
-                              label={risk.current_risk_level}
+                              label={getEffectiveRiskLevel(risk)}
                               sx={{
-                                backgroundColor: getRiskLevelColor(
-                                  getRiskLevelFromString(risk.current_risk_level),
-                                ),
+                                backgroundColor: riskLevelColor(getEffectiveRiskLevel(risk)),
                                 color: "white",
                                 fontSize: 10,
                                 height: 18,

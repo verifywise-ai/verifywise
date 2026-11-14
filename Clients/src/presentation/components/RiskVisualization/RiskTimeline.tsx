@@ -5,48 +5,24 @@ import { IRiskTimelineProps } from "../../types/interfaces/i.risk";
 import { ITimelineEvent } from "../../../domain/interfaces/i.widget";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { palette, radiusPx } from "../../themes/palette";
-import { chartTheme } from "../../themes/chartTheme";
+import { riskCalendarDay } from "../../tools/isoDateToString";
+import { getEffectiveRiskLevel } from "../../../application/utils/riskLevel";
+import { riskLevelBucketLabel, riskLevelColor } from "./riskLevelColor";
 
 const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => {
   const formatDate = useFormattedDate();
-
-  const getRiskLevelFromString = (level: string | number): number => {
-    if (typeof level === "number") return level;
-    const levelStr = level.trim().toLowerCase();
-    if (levelStr.includes("very high") || levelStr === "5") return 5;
-    if (levelStr.includes("high") || levelStr === "4") return 4;
-    if (levelStr.includes("medium") || levelStr === "3") return 3;
-    if (levelStr.includes("very low") || levelStr === "1") return 1;
-    if (levelStr.includes("low") || levelStr === "2") return 2;
-    const n = parseInt(levelStr, 10);
-    return Number.isFinite(n) ? n : 0;
-  };
-
-  const getRiskLevelColor = (riskLevel: number): string => {
-    if (riskLevel >= 16) return chartTheme.riskSummary.veryHigh;
-    if (riskLevel >= 12) return chartTheme.riskSummary.high;
-    if (riskLevel >= 8) return chartTheme.riskSummary.medium;
-    if (riskLevel >= 4) return chartTheme.riskSummary.low;
-    return chartTheme.riskSummary.veryLow;
-  };
-
-  const getRiskLevelLabel = (riskLevel: number): string => {
-    if (riskLevel >= 16) return "Very High";
-    if (riskLevel >= 12) return "High";
-    if (riskLevel >= 8) return "Medium";
-    if (riskLevel >= 4) return "Low";
-    return "Very Low";
-  };
 
   const timelineEvents = useMemo(() => {
     const events: ITimelineEvent[] = [];
 
     risks.forEach((risk) => {
       // Add creation event
-      const createdDate = risk.date_of_assessment ? new Date(risk.date_of_assessment) : new Date();
-      const riskLevelValue = getRiskLevelFromString(
-        risk.current_risk_level || risk.risk_level_autocalculated,
-      );
+      // Assessment date, else the creation date: a risk without either is
+      // placed at render time.
+      const createdDate =
+        riskCalendarDay(risk.date_of_assessment) ??
+        (risk.created_at ? new Date(risk.created_at) : new Date());
+      const riskLevelValue = getEffectiveRiskLevel(risk);
 
       events.push({
         id: `${risk.id}-created`,
@@ -54,13 +30,13 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
         type: "created",
         risk,
         title: `Risk Identified: ${risk.risk_name}`,
-        description: `New ${getRiskLevelLabel(riskLevelValue).toLowerCase()} risk identified`,
+        description: `New ${riskLevelBucketLabel(riskLevelValue).toLowerCase()} risk identified`,
         riskLevel: riskLevelValue,
       });
 
       // Add mitigation events based on mitigation status
-      if (risk.mitigation_status === "Completed" && risk.deadline) {
-        const completedDate = new Date(risk.deadline);
+      const completedDate = riskCalendarDay(risk.deadline);
+      if (risk.mitigation_status === "Completed" && completedDate) {
         events.push({
           id: `${risk.id}-mitigated`,
           date: completedDate,
@@ -185,7 +161,7 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
                       width: 16,
                       height: 16,
                       borderRadius: "50%",
-                      backgroundColor: getRiskLevelColor(event.riskLevel),
+                      backgroundColor: riskLevelColor(event.riskLevel),
                       border: "3px solid background.main",
                       boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
                       position: "relative",
@@ -203,7 +179,7 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
                       borderRadius: radiusPx.sm,
                       p: 3,
                       transition: "all 0.2s ease-in-out",
-                      borderLeft: `4px solid ${getRiskLevelColor(event.riskLevel)}`,
+                      borderLeft: `4px solid ${riskLevelColor(event.riskLevel)}`,
                     }}
                   >
                     <Box
@@ -232,15 +208,15 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
 
                     <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                       <Chip
-                        label={getRiskLevelLabel(event.riskLevel)}
+                        label={riskLevelBucketLabel(event.riskLevel)}
                         size="small"
                         sx={{
-                          backgroundColor: `${getRiskLevelColor(event.riskLevel)}20`,
-                          color: getRiskLevelColor(event.riskLevel),
+                          backgroundColor: `${riskLevelColor(event.riskLevel)}20`,
+                          color: riskLevelColor(event.riskLevel),
                           fontWeight: 500,
                           fontSize: 11,
                           borderRadius: radiusPx.sm,
-                          border: `1px solid ${getRiskLevelColor(event.riskLevel)}40`,
+                          border: `1px solid ${riskLevelColor(event.riskLevel)}40`,
                         }}
                       />
                       {event.risk.risk_owner && (

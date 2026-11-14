@@ -14,6 +14,7 @@ import {
   fetchCustomFieldsForEntities,
 } from "./customField.utils";
 import { findUsersNotInOrganization, parseReferencedIds } from "./user.utils";
+import { POLICY_REVIEW_DATE_SQL, toReviewDateValue } from "./policyReviewDate.utils";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 
 /**
@@ -109,6 +110,7 @@ export const getAllPoliciesQuery = async (organizationId: number) => {
   const result = (await sequelize.query(
     `SELECT
       pm.*,
+      ${POLICY_REVIEW_DATE_SQL},
       COALESCE(
         ARRAY_AGG(DISTINCT pmr.user_id) FILTER (WHERE pmr.user_id IS NOT NULL),
         ARRAY[]::INTEGER[]
@@ -134,8 +136,9 @@ export const getAllPoliciesQuery = async (organizationId: number) => {
 
 export const getAllPoliciesDueSoonQuery = async (organizationId: number, daysAhead: number = 7) => {
   const result = (await sequelize.query(
-    `SELECT 
+    `SELECT
         pm.*,
+        ${POLICY_REVIEW_DATE_SQL},
         array_agg(pm_rev.user_id) AS reviewer_ids
       FROM verifywise.policy_manager AS pm
       INNER JOIN verifywise.policy_manager__assigned_reviewer_ids AS pm_rev
@@ -154,10 +157,35 @@ export const getAllPoliciesDueSoonQuery = async (organizationId: number, daysAhe
   return result[0];
 };
 
-export const getPolicyByIdQuery = async (organizationId: number, id: number) => {
+/**
+ * Full names of the given users, for automation templates. Returns [] without
+ * querying when there are no ids: `IN ()` is a SQL syntax error (P-H2).
+ */
+const getReviewerNamesQuery = async (
+  reviewerIds: number[] | null | undefined,
+  transaction?: Transaction,
+): Promise<{ full_name: string }[]> => {
+  const ids = reviewerIds ?? [];
+  if (ids.length === 0) return [];
+  return (await sequelize.query(
+    `SELECT name || ' ' || surname AS full_name FROM users WHERE id IN (:reviewer_ids);`,
+    { replacements: { reviewer_ids: ids }, transaction, type: QueryTypes.SELECT },
+  )) as { full_name: string }[];
+};
+
+/**
+ * A policy with its assigned reviewer ids. Pass the transaction when reading
+ * inside a write, or the read misses the uncommitted change (P-H1).
+ */
+export const getPolicyByIdQuery = async (
+  organizationId: number,
+  id: number,
+  transaction?: Transaction,
+) => {
   const result = (await sequelize.query(
     `SELECT
       pm.*,
+      ${POLICY_REVIEW_DATE_SQL},
       COALESCE(
         ARRAY_AGG(DISTINCT pmr.user_id) FILTER (WHERE pmr.user_id IS NOT NULL),
         ARRAY[]::INTEGER[]
@@ -170,17 +198,17 @@ export const getPolicyByIdQuery = async (organizationId: number, id: number) => 
     {
       replacements: { organizationId, id },
       type: QueryTypes.SELECT,
+      transaction,
     },
   )) as any[];
 
   return result;
 };
 
-const verifyPolicyTags = (policyTags: PolicyTag[]) => {
-  for (const tag of policyTags) {
-    if (!PolicyTagsSet.has(tag)) {
-      throw new Error(`Invalid policy tag: ${tag}`);
-    }
+/** @throws ValidationException (400) for a non-array or an unknown tag, instead of a 500 (P-L6). */
+const verifyPolicyTags = (policyTags: unknown) => {
+  if (!Array.isArray(policyTags) || policyTags.some((tag) => !PolicyTagsSet.has(tag))) {
+    throw new ValidationException("Choose tags from the list", "tags", policyTags);
   }
 };
 
@@ -204,19 +232,21 @@ export const createPolicyQuery = async (
 
   // Insert policy without assigned_reviewer_ids
   const result = (await sequelize.query(
-    `INSERT INTO policy_manager (
+    `INSERT INTO policy_manager AS pm (
       organization_id, title, content_html, status, tags, next_review_date, author_id, policy_owner_id, last_updated_by, last_updated_at, is_demo
     ) VALUES (
-      :organization_id, :title, :content_html, :status, ARRAY[:tags], :next_review_date, :author_id, :policy_owner_id, :last_updated_by, :last_updated_at, :is_demo
-    ) RETURNING *`,
+      :organization_id, :title, :content_html, :status, ARRAY(SELECT jsonb_array_elements_text(CAST(:tags AS jsonb))), :next_review_date, :author_id, :policy_owner_id, :last_updated_by, :last_updated_at, :is_demo
+    ) RETURNING *, ${POLICY_REVIEW_DATE_SQL}`,
     {
       replacements: {
         organization_id: organizationId,
         title: policy.title,
         content_html: policy.content_html,
-        status: policy.status,
-        tags: policy.tags,
-        next_review_date: policy.next_review_date,
+        // New policies start as Draft when no status is sent.
+        status: policy.status ?? "Draft",
+        // JSON-bound so an empty list stores '{}' (ARRAY[] has no type, P-L6).
+        tags: JSON.stringify(policy.tags ?? []),
+        next_review_date: toReviewDateValue(policy.next_review_date),
         author_id: userId,
         policy_owner_id: ownerId,
         last_updated_by: userId,
@@ -268,16 +298,10 @@ export const createPolicyQuery = async (
   if (automations[0].length > 0) {
     const automation = automations[0][0];
     if (automation["trigger_key"] === "policy_added") {
-      const reviewer_names = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM users WHERE id IN(:reviewer_ids);`,
-        {
-          replacements: {
-            reviewer_ids: createdPolicy.assigned_reviewer_ids || [],
-          },
-          transaction,
-          type: QueryTypes.SELECT,
-        },
-      )) as { full_name: string }[];
+      const reviewer_names = await getReviewerNamesQuery(
+        createdPolicy.assigned_reviewer_ids,
+        transaction,
+      );
 
       const params = automation.params!;
 
@@ -315,7 +339,7 @@ export const updatePolicyByIdQuery = async (
   userId: number,
   transaction: Transaction,
 ) => {
-  const existingPolicy = await getPolicyByIdQuery(organizationId, id);
+  const existingPolicy = await getPolicyByIdQuery(organizationId, id, transaction);
 
   // Only newly named users are checked, so a policy whose owner or reviewer
   // has left the organization can still be saved.
@@ -357,6 +381,15 @@ export const updatePolicyByIdQuery = async (
         return true;
       }
 
+      // next_review_date is nullable: null or "" clears it.
+      if (f === "next_review_date") {
+        if (policy.next_review_date !== undefined) {
+          updatePolicy.next_review_date = toReviewDateValue(policy.next_review_date);
+          return true;
+        }
+        return false;
+      }
+
       // policy_owner_id is nullable — accept null/undefined explicitly so the caller can clear it
       if (f === "policy_owner_id") {
         if (policy.policy_owner_id !== undefined) {
@@ -368,7 +401,9 @@ export const updatePolicyByIdQuery = async (
 
       if (policy[f as keyof IPolicy] !== undefined && policy[f as keyof IPolicy]) {
         if (f === "tags") {
-          verifyPolicyTags(policy[f as keyof IPolicy] as PolicyTag[]);
+          verifyPolicyTags(policy.tags);
+          updatePolicy.tags = JSON.stringify(policy.tags);
+          return true;
         }
         updatePolicy[f as keyof IPolicy] = policy[f as keyof IPolicy];
         return true;
@@ -377,7 +412,7 @@ export const updatePolicyByIdQuery = async (
     })
     .map((f) => {
       if (f === "tags") {
-        return `${f} = ARRAY[:${f}]`;
+        return "tags = ARRAY(SELECT jsonb_array_elements_text(CAST(:tags AS jsonb)))";
       }
       return `${f} = :${f}`;
     })
@@ -448,7 +483,7 @@ export const updatePolicyByIdQuery = async (
   }
 
   // Get the updated policy with reviewer IDs
-  const updatedPolicyResult = await getPolicyByIdQuery(organizationId, id);
+  const updatedPolicyResult = await getPolicyByIdQuery(organizationId, id, transaction);
   if (!updatedPolicyResult || updatedPolicyResult.length === 0) {
     throw new Error("Policy not found after update");
   }
@@ -472,16 +507,10 @@ export const updatePolicyByIdQuery = async (
   if (automations[0].length > 0) {
     const automation = automations[0][0];
     if (automation["trigger_key"] === "policy_updated") {
-      const reviewer_names = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM users WHERE id IN(:reviewer_ids);`,
-        {
-          replacements: {
-            reviewer_ids: (updatedPolicy as any).assigned_reviewer_ids || [],
-          },
-          transaction,
-          type: QueryTypes.SELECT,
-        },
-      )) as { full_name: string }[];
+      const reviewer_names = await getReviewerNamesQuery(
+        (updatedPolicy as any).assigned_reviewer_ids,
+        transaction,
+      );
 
       const params = automation.params!;
 
@@ -517,7 +546,7 @@ export const deletePolicyByIdQuery = async (
   transaction: Transaction,
 ) => {
   // Get policy data with reviewer IDs BEFORE deleting (CASCADE will delete mappings)
-  const policyToDelete = await getPolicyByIdQuery(organizationId, id);
+  const policyToDelete = await getPolicyByIdQuery(organizationId, id, transaction);
 
   if (!policyToDelete || policyToDelete.length === 0) {
     return false;
@@ -556,16 +585,10 @@ export const deletePolicyByIdQuery = async (
   if (automations[0].length > 0) {
     const automation = automations[0][0];
     if (automation["trigger_key"] === "policy_deleted") {
-      const reviewer_names = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM users WHERE id IN(:reviewer_ids);`,
-        {
-          replacements: {
-            reviewer_ids: deletedPolicyData.assigned_reviewer_ids || [],
-          },
-          transaction,
-          type: QueryTypes.SELECT,
-        },
-      )) as { full_name: string }[];
+      const reviewer_names = await getReviewerNamesQuery(
+        deletedPolicyData.assigned_reviewer_ids,
+        transaction,
+      );
 
       const params = automation.params!;
 

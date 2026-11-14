@@ -7,6 +7,7 @@ import {
   useTheme,
   Typography,
   Stack,
+  Tooltip,
 } from "@mui/material";
 import { VWLink } from "../../Link";
 import singleTheme from "../../../themes/v1SingleTheme";
@@ -28,6 +29,8 @@ import Chip from "../../Chip";
 import ProjectRiskLinkedPolicies from "../../../components/ProjectRiskMitigation/ProjectRiskLinkedPolicies";
 import { text, palette as vwPalette } from "../../../themes/palette";
 import { formatCustomFieldValue } from "../../CustomFieldsSection/formatCustomFieldValue";
+import { riskCalendarDay } from "../../../tools/isoDateToString";
+import { getEffectiveRiskLevel } from "../../../../application/utils/riskLevel";
 
 function getDummyEvent() {
   const realEvent = new Event("click", { bubbles: true, cancelable: true });
@@ -72,6 +75,10 @@ const VWProjectRisksTableBody = ({
   selection,
 }: IVWProjectRisksTableRow) => {
   const formatDate = useFormattedDate();
+  const formatDeadline = (value: unknown) => {
+    const day = riskCalendarDay(value);
+    return day ? formatDate(day) : "NA";
+  };
   const isColVisible = (colId: string) => !visibleColumns || visibleColumns.has(colId);
   const theme = useTheme();
   const { setInputValues } = useContext(VerifyWiseContext);
@@ -298,8 +305,18 @@ const VWProjectRisksTableBody = ({
                             : "",
                     }}
                   >
-                    {row.risk_level_autocalculated ? (
-                      <Chip label={row.risk_level_autocalculated} />
+                    {getEffectiveRiskLevel(row) ? (
+                      <Tooltip
+                        title={
+                          row.risk_level_autocalculated
+                            ? `Inherent level: ${row.risk_level_autocalculated}`
+                            : ""
+                        }
+                      >
+                        <span>
+                          <Chip label={getEffectiveRiskLevel(row)} />
+                        </span>
+                      </Tooltip>
                     ) : (
                       "-"
                     )}
@@ -317,7 +334,7 @@ const VWProjectRisksTableBody = ({
                             : "",
                     }}
                   >
-                    {row.deadline ? formatDate(row.deadline.toString()) : "NA"}
+                    {formatDeadline(row.deadline)}
                   </TableCell>
                 )}
                 {isColVisible("controls_mapping") && (
