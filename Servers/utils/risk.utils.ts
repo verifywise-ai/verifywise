@@ -16,7 +16,10 @@ import {
   fetchCustomFieldsForEntities,
 } from "./customField.utils";
 import { findUsersNotInOrganization, parseReferencedIds } from "./user.utils";
-import { ValidationException } from "../domain.layer/exceptions/custom.exception";
+import {
+  NotFoundException,
+  ValidationException,
+} from "../domain.layer/exceptions/custom.exception";
 
 type Mitigation = {
   id: number;
@@ -681,7 +684,7 @@ const createProjectRiskLink = async (
   projects: number[],
   riskId: number,
   organizationId: number,
-  transaction: Transaction,
+  transaction?: Transaction,
 ): Promise<void> => {
   const projectReplacements: { [key: string]: number }[] = [];
   const placeholders = projects
@@ -696,12 +699,38 @@ const createProjectRiskLink = async (
     ...Object.assign({}, ...projectReplacements),
   };
   await sequelize.query(
-    `INSERT INTO projects_risks (project_id, risk_id, organization_id) VALUES ${placeholders}`,
+    `INSERT INTO projects_risks (project_id, risk_id, organization_id) VALUES ${placeholders}
+     ON CONFLICT (risk_id, project_id) DO NOTHING`,
     {
       replacements,
       transaction,
     },
   );
+};
+
+/**
+ * Links one live risk to one use case of the organization, through the same
+ * junction writer createRiskQuery and updateRiskByIdQuery use. A link that
+ * already exists is left as it is.
+ *
+ * @throws NotFoundException when the risk is missing, deleted or in another
+ *   organization; ValidationException when the use case is not in it.
+ */
+export const linkRiskToProjectQuery = async (
+  riskId: number,
+  projectId: number,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<void> => {
+  const risks = await sequelize.query(
+    `SELECT id FROM risks
+      WHERE id = :riskId AND organization_id = :organizationId
+        AND (is_deleted = false OR is_deleted IS NULL)`,
+    { replacements: { riskId, organizationId }, type: QueryTypes.SELECT, transaction },
+  );
+  if (risks.length === 0) throw new NotFoundException("Risk not found", "risk", riskId);
+  await assertRiskReferencesInOrganization({ projects: [projectId] }, organizationId, transaction);
+  await createProjectRiskLink([projectId], riskId, organizationId, transaction);
 };
 
 const createFrameworkRiskLink = async (
