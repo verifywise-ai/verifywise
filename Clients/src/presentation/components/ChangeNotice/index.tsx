@@ -35,6 +35,8 @@ export default function ChangeNotice() {
   const [undoId, setUndoId] = useState<string | null>(null);
   const [showMeActive, setShowMeActive] = useState(false);
   const [canShowMe, setCanShowMe] = useState(false);
+  // Path where the global card was dismissed: its page entry waits for a later visit.
+  const [pageDeferredAt, setPageDeferredAt] = useState<string | null>(null);
   const undoTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const globalId = hidden ? null : (GLOBAL_NOTICE?.id ?? null);
@@ -49,7 +51,9 @@ export default function ChangeNotice() {
     globalId === null || !globalEnabled || globalView.data !== undefined || globalView.isError;
 
   const pageEntry = useMemo(() => resolveNotice(pathname), [pathname]);
-  const pageId = !hidden && pageEntry && globalSettled && !globalShowing ? pageEntry.id : null;
+  const pageDeferred = pageDeferredAt === pathname;
+  const pageId =
+    !hidden && pageEntry && globalSettled && !globalShowing && !pageDeferred ? pageEntry.id : null;
   const pageEnabled =
     pageId !== null &&
     (mayRequestView(pageId) || queryClient.getQueryData(["change-notice", pageId]) !== undefined);
@@ -68,6 +72,7 @@ export default function ChangeNotice() {
   useEffect(() => {
     setShowMeActive(false);
     setUndoId(null);
+    setPageDeferredAt(null);
   }, [pathname]);
 
   useEffect(() => () => clearTimeout(undoTimer.current), []);
@@ -96,6 +101,7 @@ export default function ChangeNotice() {
       if (!active) return;
       const id = active.id;
       markDismissed(id, true);
+      if (id === GLOBAL_NOTICE?.id) setPageDeferredAt(pathname);
       setShowMeActive(false);
       dismiss.mutate({ id, dismissed: true });
       clearTimeout(undoTimer.current);
@@ -104,7 +110,7 @@ export default function ChangeNotice() {
         undoTimer.current = setTimeout(() => setUndoId(null), UNDO_MS);
       }
     },
-    [active, dismiss, markDismissed],
+    [active, dismiss, markDismissed, pathname],
   );
 
   const handleUndo = useCallback(() => {
@@ -127,13 +133,14 @@ export default function ChangeNotice() {
 
   const handleSwitchBack = useCallback(async () => {
     if (!active) return;
+    setPageDeferredAt(pathname);
     try {
       await dismiss.mutateAsync({ id: active.id, dismissed: true });
     } catch {
       // The choice to switch back still stands if recording the dismissal fails.
     }
     setUiStyle("classic");
-  }, [active, dismiss]);
+  }, [active, dismiss, pathname]);
 
   if (hidden) return null;
   if (!active) return undoId ? <UndoStrip onUndo={handleUndo} /> : null;

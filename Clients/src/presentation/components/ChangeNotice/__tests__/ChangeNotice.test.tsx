@@ -185,6 +185,32 @@ describe("ChangeNotice", () => {
       expect(screen.queryByTestId("change-notice-undo")).not.toBeInTheDocument();
     });
 
+    it("Keep the new look defers the page entry until the next route change", async () => {
+      renderWithProviders(
+        <>
+          <ChangeNotice />
+          <NavButton to="/ai-gateway" />
+        </>,
+        { route: "/home" },
+      );
+      answer({ [GLOBAL_ID]: true, "home-2026-11": true, "ai-gateway-2026-11": true });
+      mocks.view.mockClear();
+      fireEvent.click(screen.getByTestId("change-notice-keep"));
+
+      expect(screen.queryByTestId("change-notice")).not.toBeInTheDocument();
+      const homeCalls = mocks.view.mock.calls.filter(([id]) => id === "home-2026-11");
+      expect(homeCalls.every(([, enabled]) => enabled === false)).toBe(true);
+      expect(sessionStorage.getItem("vw-change-notice-requested:home-2026-11")).toBeNull();
+
+      fireEvent.click(screen.getByText("go /ai-gateway"));
+      expect(
+        await screen.findByRole("heading", { name: "AI Gateway is now in the sidebar" }),
+      ).toBeInTheDocument();
+      expect(
+        mocks.view.mock.calls.some(([id, enabled]) => id === "ai-gateway-2026-11" && enabled),
+      ).toBe(true);
+    });
+
     it("Switch back records the dismissal, then switches to the classic look", async () => {
       renderWithProviders(<ChangeNotice />, { route: "/home" });
       fireEvent.click(screen.getByTestId("change-notice-switch-back"));
