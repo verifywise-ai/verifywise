@@ -17,7 +17,6 @@ import {
 import { getScanByIdQuery } from "../../../utils/aiDetection.utils";
 import {
   claimScanNotificationQuery,
-  getActiveAutomationActionsQuery,
   getCountedScanFindingsQuery,
   getPreviousCompletedScanQuery,
   getPreviousScanFindingsQuery,
@@ -25,6 +24,7 @@ import {
   IScanFindingKey,
   IScanRecipient,
 } from "../../../utils/aiDetectionNotification.utils";
+import { getActiveAutomationActionsQuery } from "../../../utils/automation/automationActions.utils";
 import { sendInAppNotification } from "../../inAppNotification.service";
 import { enqueueAutomationAction } from "../../automations/automationProducer";
 import {
@@ -38,11 +38,13 @@ import { translate } from "../../../utils/i18n.utils";
 jest.mock("../../../utils/aiDetection.utils", () => ({ getScanByIdQuery: jest.fn() }));
 jest.mock("../../../utils/aiDetectionNotification.utils", () => ({
   claimScanNotificationQuery: jest.fn(),
-  getActiveAutomationActionsQuery: jest.fn(),
   getCountedScanFindingsQuery: jest.fn(),
   getPreviousCompletedScanQuery: jest.fn(),
   getPreviousScanFindingsQuery: jest.fn(),
   getScanRecipientsQuery: jest.fn(),
+}));
+jest.mock("../../../utils/automation/automationActions.utils", () => ({
+  getActiveAutomationActionsQuery: jest.fn(),
 }));
 jest.mock("../../inAppNotification.service", () => ({
   sendInAppNotification: jest.fn(),

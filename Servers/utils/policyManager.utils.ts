@@ -2,9 +2,10 @@ import { Transaction, QueryTypes } from "sequelize";
 import { sequelize } from "../database/db";
 import { IPolicy, PolicyTag, PolicyTagsSet } from "../domain.layer/interfaces/i.policy";
 import { PolicyManagerModel } from "../domain.layer/models/policy/policy.model";
-import { TenantAutomationActionModel } from "../domain.layer/models/tenantAutomationAction/tenantAutomationAction.model";
-import { replaceTemplateVariables } from "./automation/automation.utils";
-import { enqueueAutomationAction } from "../services/automations/automationProducer";
+import {
+  enqueueAutomationActions,
+  getActiveAutomationActionsQuery,
+} from "./automation/automationActions.utils";
 import {
   buildPolicyReplacements,
   buildPolicyUpdateReplacements,
@@ -279,54 +280,22 @@ export const createPolicyQuery = async (
   // Add assigned_reviewer_ids to the returned object for consistency
   createdPolicy.assigned_reviewer_ids = reviewerIds;
 
-  const automations = (await sequelize.query(
-    `SELECT
-      pat.key AS trigger_key,
-      paa.key AS action_key,
-      a.id AS automation_id,
-      aa.*
-    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'policy_added' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction },
-  )) as [
-    (TenantAutomationActionModel & {
-      trigger_key: string;
-      action_key: string;
-      automation_id: number;
-    })[],
-    number,
-  ];
-  if (automations[0].length > 0) {
-    const automation = automations[0][0];
-    if (automation["trigger_key"] === "policy_added") {
-      const reviewer_names = await getReviewerNamesQuery(
-        createdPolicy.assigned_reviewer_ids,
-        transaction,
-      );
-
-      const params = automation.params!;
-
-      // Build replacements
-      const replacements = buildPolicyReplacements({
-        ...createdPolicy,
-        reviewer_names: reviewer_names.map((r) => r.full_name).join(", "),
-      });
-
-      // Replace variables in subject and body
-      const processedParams = {
-        ...params,
-        subject: replaceTemplateVariables(params.subject || "", replacements),
-        body: replaceTemplateVariables(params.body || "", replacements),
-        automation_id: automation.automation_id,
-      };
-
-      // Enqueue with processed params
-      await enqueueAutomationAction(automation.action_key, {
-        ...processedParams,
-        organizationId,
-      });
-    } else {
-      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-    }
+  // Every action of every active automation, enqueued after commit (P-L12).
+  const actions = await getActiveAutomationActionsQuery(
+    organizationId,
+    "policy_added",
+    transaction,
+  );
+  if (actions.length > 0) {
+    const reviewerNames = await getReviewerNamesQuery(
+      createdPolicy.assigned_reviewer_ids,
+      transaction,
+    );
+    const replacements = buildPolicyReplacements({
+      ...createdPolicy,
+      reviewer_names: reviewerNames.map((r) => r.full_name).join(", "),
+    });
+    await enqueueAutomationActions(actions, replacements, organizationId, transaction);
   }
 
   return createdPolicy;
@@ -488,54 +457,22 @@ export const updatePolicyByIdQuery = async (
     throw new Error("Policy not found after update");
   }
   const updatedPolicy = updatedPolicyResult[0];
-  const automations = (await sequelize.query(
-    `SELECT
-      pat.key AS trigger_key,
-      paa.key AS action_key,
-      a.id AS automation_id,
-      aa.*
-    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'policy_updated' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction },
-  )) as [
-    (TenantAutomationActionModel & {
-      trigger_key: string;
-      action_key: string;
-      automation_id: number;
-    })[],
-    number,
-  ];
-  if (automations[0].length > 0) {
-    const automation = automations[0][0];
-    if (automation["trigger_key"] === "policy_updated") {
-      const reviewer_names = await getReviewerNamesQuery(
-        (updatedPolicy as any).assigned_reviewer_ids,
-        transaction,
-      );
-
-      const params = automation.params!;
-
-      // Build replacements
-      const replacements = buildPolicyUpdateReplacements(existingPolicy[0], {
-        ...updatedPolicy,
-        reviewer_names: reviewer_names.map((r) => r.full_name).join(", "),
-      });
-
-      // Replace variables in subject and body
-      const processedParams = {
-        ...params,
-        subject: replaceTemplateVariables(params.subject || "", replacements),
-        body: replaceTemplateVariables(params.body || "", replacements),
-        automation_id: automation.automation_id,
-      };
-
-      // Enqueue with processed params
-      await enqueueAutomationAction(automation.action_key, {
-        ...processedParams,
-        organizationId,
-      });
-    } else {
-      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-    }
+  // Every action of every active automation, enqueued after commit (P-L12).
+  const actions = await getActiveAutomationActionsQuery(
+    organizationId,
+    "policy_updated",
+    transaction,
+  );
+  if (actions.length > 0) {
+    const reviewerNames = await getReviewerNamesQuery(
+      (updatedPolicy as any).assigned_reviewer_ids,
+      transaction,
+    );
+    const replacements = buildPolicyUpdateReplacements(existingPolicy[0], {
+      ...updatedPolicy,
+      reviewer_names: reviewerNames.map((r) => r.full_name).join(", "),
+    });
+    await enqueueAutomationActions(actions, replacements, organizationId, transaction);
   }
   return updatedPolicy;
 };
@@ -566,54 +503,22 @@ export const deletePolicyByIdQuery = async (
     },
   );
 
-  const automations = (await sequelize.query(
-    `SELECT
-      pat.key AS trigger_key,
-      paa.key AS action_key,
-      a.id AS automation_id,
-      aa.*
-    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'policy_deleted' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction },
-  )) as [
-    (TenantAutomationActionModel & {
-      trigger_key: string;
-      action_key: string;
-      automation_id: number;
-    })[],
-    number,
-  ];
-  if (automations[0].length > 0) {
-    const automation = automations[0][0];
-    if (automation["trigger_key"] === "policy_deleted") {
-      const reviewer_names = await getReviewerNamesQuery(
-        deletedPolicyData.assigned_reviewer_ids,
-        transaction,
-      );
-
-      const params = automation.params!;
-
-      // Build replacements
-      const replacements = buildPolicyReplacements({
-        ...deletedPolicyData,
-        reviewer_names: reviewer_names.map((r) => r.full_name).join(", "),
-      });
-
-      // Replace variables in subject and body
-      const processedParams = {
-        ...params,
-        subject: replaceTemplateVariables(params.subject || "", replacements),
-        body: replaceTemplateVariables(params.body || "", replacements),
-        automation_id: automation.automation_id,
-      };
-
-      // Enqueue with processed params
-      await enqueueAutomationAction(automation.action_key, {
-        ...processedParams,
-        organizationId,
-      });
-    } else {
-      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-    }
+  // Every action of every active automation, enqueued after commit (P-L12).
+  const actions = await getActiveAutomationActionsQuery(
+    organizationId,
+    "policy_deleted",
+    transaction,
+  );
+  if (actions.length > 0) {
+    const reviewerNames = await getReviewerNamesQuery(
+      deletedPolicyData.assigned_reviewer_ids,
+      transaction,
+    );
+    const replacements = buildPolicyReplacements({
+      ...deletedPolicyData,
+      reviewer_names: reviewerNames.map((r) => r.full_name).join(", "),
+    });
+    await enqueueAutomationActions(actions, replacements, organizationId, transaction);
   }
 
   return true;

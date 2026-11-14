@@ -3,9 +3,11 @@ import { getEffectiveRiskLevel } from "./riskLevel.utils";
 import { sequelize } from "../database/db";
 import { Transaction, QueryTypes } from "sequelize";
 import { IRisk } from "../domain.layer/interfaces/I.risk";
-import { TenantAutomationActionModel } from "../domain.layer/models/tenantAutomationAction/tenantAutomationAction.model";
-import { replaceTemplateVariables } from "./automation/automation.utils";
-import { enqueueAutomationAction } from "../services/automations/automationProducer";
+import {
+  enqueueAutomationActions,
+  getActiveAutomationActionsQuery,
+  IAutomationActionRow,
+} from "./automation/automationActions.utils";
 import {
   BulkRiskChange,
   buildBulkRiskReplacements,
@@ -23,57 +25,20 @@ import { toRiskCalendarDate } from "./riskCalendarDate.utils";
 import { storedRiskCategories } from "./riskCategory.utils";
 import { recordProjectRiskDeletion } from "./projectRiskChangeHistory.utils";
 import { getStructureById } from "../structures";
-import logger from "./logger/fileLogger";
 import { unlinkRiskFromAllPoliciesQuery } from "./policyLinkedObject.utils";
 
-/**
- * Enqueue a risk automation. Inside a transaction the enqueue waits for the
- * commit, so a rolled-back create, edit or archive (one risk of a failed bulk
- * action) sends nothing. Without one it is enqueued at once.
- */
-const enqueueRiskAutomation = async (
-  actionKey: string,
-  data: object,
-  transaction?: Transaction,
-): Promise<void> => {
-  if (!transaction) {
-    await enqueueAutomationAction(actionKey, data);
-    return;
-  }
-  transaction.afterCommit(() => {
-    enqueueAutomationAction(actionKey, data).catch((error) =>
-      logger.error(`[risk] ${actionKey} automation enqueue after commit failed: ${error}`),
-    );
-  });
-};
-
 type RiskAutomationTrigger = "risk_added" | "risk_updated" | "risk_deleted";
-type RiskAutomation = TenantAutomationActionModel & {
-  trigger_key: string;
-  action_key: string;
-  automation_id: number;
-};
 
 /**
- * The organization's active automation for a risk trigger: the first action
- * in order, as every risk path has always used (R-L6 tracks running them all).
+ * Every active action of the organization's automations for a risk trigger,
+ * by automation, then action order (R-L6).
  */
-const findRiskAutomation = async (
+const findRiskAutomationActions = (
   triggerKey: RiskAutomationTrigger,
   organizationId: number,
   transaction?: Transaction,
-): Promise<RiskAutomation | undefined> => {
-  const automations = (await sequelize.query(
-    `SELECT
-      pat.key AS trigger_key,
-      paa.key AS action_key,
-      a.id AS automation_id,
-      aa.*
-    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = :triggerKey AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId, triggerKey }, transaction },
-  )) as [RiskAutomation[], number];
-  return automations[0][0];
-};
+): Promise<IAutomationActionRow[]> =>
+  getActiveAutomationActionsQuery(organizationId, triggerKey, transaction);
 
 /**
  * Full names ("name surname") of the given users, keyed by id, in one query.
@@ -98,27 +63,6 @@ const withUserNames = (risk: any, names: Map<number, string>) => ({
   owner_name: (risk.risk_owner && names.get(Number(risk.risk_owner))) || "",
   approver_name: (risk.risk_approval && names.get(Number(risk.risk_approval))) || "",
 });
-
-/** Fill the automation's subject and body, then enqueue it (after commit). */
-const enqueueRiskAutomationWithReplacements = async (
-  automation: RiskAutomation,
-  replacements: Record<string, any>,
-  organizationId: number,
-  transaction?: Transaction,
-): Promise<void> => {
-  const params = automation.params!;
-  await enqueueRiskAutomation(
-    automation.action_key,
-    {
-      ...params,
-      subject: replaceTemplateVariables(params.subject || "", replacements),
-      body: replaceTemplateVariables(params.body || "", replacements),
-      automation_id: automation.automation_id,
-      organizationId,
-    },
-    transaction,
-  );
-};
 
 type Mitigation = {
   id: number;
@@ -971,12 +915,12 @@ export const createRiskQuery = async (
   }
   const createdRisk = result[0];
 
-  const automation = await findRiskAutomation("risk_added", organizationId, transaction);
-  if (automation) {
+  const actions = await findRiskAutomationActions("risk_added", organizationId, transaction);
+  if (actions.length > 0) {
     const risk = createdRisk.dataValues;
     const names = await getUserFullNamesQuery([risk.risk_owner, risk.risk_approval], transaction);
-    await enqueueRiskAutomationWithReplacements(
-      automation,
+    await enqueueAutomationActions(
+      actions,
       buildRiskReplacements(withUserNames(risk, names)),
       organizationId,
       transaction,
@@ -1244,16 +1188,16 @@ export const updateRiskByIdQuery = async (
     }
   }
   const updatedRisk = result[0];
-  // A bulk action passes runAutomations: false and runs the automation once
+  // A bulk action passes runAutomations: false and runs the automations once
   // for the whole batch (enqueueBulkRiskAutomation).
-  const automation = runAutomations
-    ? await findRiskAutomation("risk_updated", organizationId, transaction)
-    : undefined;
-  if (automation) {
+  const actions = runAutomations
+    ? await findRiskAutomationActions("risk_updated", organizationId, transaction)
+    : [];
+  if (actions.length > 0) {
     const risk = updatedRisk.dataValues;
     const names = await getUserFullNamesQuery([risk.risk_owner, risk.risk_approval], transaction);
-    await enqueueRiskAutomationWithReplacements(
-      automation,
+    await enqueueAutomationActions(
+      actions,
       buildRiskUpdateReplacements(existingRisk, withUserNames(risk, names)),
       organizationId,
       transaction,
@@ -1324,18 +1268,18 @@ export const deleteRiskByIdQuery = async (
   )) as [RiskModel[], number];
   const deletedRisk = result[0][0];
   if (!deletedRisk) return null;
-  // A bulk action passes runAutomations: false and runs the automation once
+  // A bulk action passes runAutomations: false and runs the automations once
   // for the whole batch (enqueueBulkRiskAutomation).
-  const automation = runAutomations
-    ? await findRiskAutomation("risk_deleted", organizationId, transaction)
-    : undefined;
-  if (automation) {
+  const actions = runAutomations
+    ? await findRiskAutomationActions("risk_deleted", organizationId, transaction)
+    : [];
+  if (actions.length > 0) {
     const names = await getUserFullNamesQuery(
       [deletedRisk.risk_owner, deletedRisk.risk_approval],
       transaction,
     );
-    await enqueueRiskAutomationWithReplacements(
-      automation,
+    await enqueueAutomationActions(
+      actions,
       buildRiskReplacements(withUserNames(deletedRisk, names)),
       organizationId,
       transaction,
@@ -1416,11 +1360,11 @@ export const recordRiskSnapshots = async (
 };
 
 /**
- * Run a risk automation once for a whole bulk action: `risk_deleted` for an
+ * Run the risk automations once for a whole bulk action: `risk_deleted` for an
  * archive, `risk_updated` for a set owner/category. The per-risk paths run
- * with runAutomations: false, so the org gets one email per bulk action, not
- * one per risk. Uses the same automation the single path would and enqueues
- * after commit. Owner and approver names come from one query for the batch.
+ * with runAutomations: false, so each action sends once per bulk action, not
+ * once per risk. Runs every action the single path would and enqueues after
+ * commit. Owner and approver names come from one query for the batch.
  */
 export const enqueueBulkRiskAutomation = async (
   trigger: "risk_deleted" | "risk_updated",
@@ -1429,8 +1373,8 @@ export const enqueueBulkRiskAutomation = async (
   transaction: Transaction,
 ): Promise<void> => {
   if (changes.length === 0) return;
-  const automation = await findRiskAutomation(trigger, organizationId, transaction);
-  if (!automation) return;
+  const actions = await findRiskAutomationActions(trigger, organizationId, transaction);
+  if (actions.length === 0) return;
 
   const names = await getUserFullNamesQuery(
     changes.flatMap(({ before, after }) => [
@@ -1442,8 +1386,8 @@ export const enqueueBulkRiskAutomation = async (
     transaction,
   );
   const withNames = (risk: any) => withUserNames(risk, names);
-  await enqueueRiskAutomationWithReplacements(
-    automation,
+  await enqueueAutomationActions(
+    actions,
     buildBulkRiskReplacements(
       trigger,
       changes.map(({ before, after }) => ({ before: withNames(before), after: withNames(after) })),

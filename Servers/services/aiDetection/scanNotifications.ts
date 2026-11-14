@@ -50,7 +50,6 @@ import logger from "../../utils/logger/fileLogger";
 import { getScanByIdQuery } from "../../utils/aiDetection.utils";
 import {
   claimScanNotificationQuery,
-  getActiveAutomationActionsQuery,
   getCountedScanFindingsQuery,
   getPreviousCompletedScanQuery,
   getPreviousScanFindingsQuery,
@@ -65,6 +64,7 @@ import {
   listFindingNames,
 } from "../../utils/automation/aiDetection.automation.utils";
 import { replaceTemplateVariables } from "../../utils/automation/automation.utils";
+import { getActiveAutomationActionsQuery } from "../../utils/automation/automationActions.utils";
 import { escapeHtml } from "../../utils/sanitization.utils";
 import { translate } from "../../utils/i18n.utils";
 import { getUserLanguage } from "../../utils/userPreference.utils";
