@@ -213,10 +213,6 @@ const ROLE_NAME_ALLOWLIST: Record<string, { count: number; reason: string }> = {
     reason:
       "updateUserById: editing other users is Admin by name; Settings > Team matches (#5314).",
   },
-  "controllers/virtualFolder.ctrl.ts": {
-    count: 1,
-    reason: "Evidence folder management is Admin/Editor by name; no folder key yet.",
-  },
   "routes/mcp.route.ts": {
     count: 1,
     reason:

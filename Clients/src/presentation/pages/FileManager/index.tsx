@@ -64,7 +64,8 @@ import { palette, radiusPx } from "../../themes/palette";
 
 // Constants
 const FILE_MANAGER_CONTEXT = "FileManager";
-const MANAGE_ROLES = ["Admin", "Editor"];
+// Metadata editing is checked against role names on the server.
+const METADATA_ROLES = ["Admin", "Editor"];
 
 /**
  * Main component for managing files with virtual folder support.
@@ -219,7 +220,13 @@ const FileManager: React.FC = (): JSX.Element => {
   // Permission checks
   // Uploads authorize on fileManager.contribute (Admin, Editor, Reviewer).
   const isUploadAllowed = useCan("fileManager.contribute");
-  const canManageFolders = Boolean(userRoleName) && MANAGE_ROLES.includes(userRoleName);
+  // Folders are shared with the Policies page, so either edit permission
+  // creates, renames and deletes them. Filing files and bulk tagging need
+  // file.edit. Both are Admin and Editor by default.
+  const canFileIntoFolders = useCan("file.edit");
+  const canEditPolicies = useCan("policy.edit");
+  const canManageFolders = canFileIntoFolders || canEditPolicies;
+  const canEditMetadata = Boolean(userRoleName) && METADATA_ROLES.includes(userRoleName);
 
   // Fetch files with enhanced metadata
   const fetchFilesWithMetadata = useCallback(async () => {
@@ -990,12 +997,12 @@ const FileManager: React.FC = (): JSX.Element => {
                       files={data}
                       onFileDeleted={handleFileDeleted}
                       hidePagination={options?.hidePagination}
-                      onAssignToFolder={canManageFolders ? handleOpenAssignFolder : undefined}
+                      onAssignToFolder={canFileIntoFolders ? handleOpenAssignFolder : undefined}
                       onPreview={handleOpenPreview}
-                      onEditMetadata={canManageFolders ? handleOpenMetadataEditor : undefined}
+                      onEditMetadata={canEditMetadata ? handleOpenMetadataEditor : undefined}
                       onViewHistory={handleOpenVersionHistory}
                       visibleColumnKeys={visibleColumnKeys}
-                      canRunBulkActions={canManageFolders}
+                      canRunBulkActions={canFileIntoFolders}
                       onBulkActionSuccess={() => {
                         refetch();
                       }}

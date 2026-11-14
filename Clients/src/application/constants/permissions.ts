@@ -46,6 +46,7 @@ export const BUILTIN_UI_PERMISSIONS = {
   "ext.datasetBulkUpload.edit": EDITOR,
   "ext.frameworkImport.edit": EDITOR,
   "fileManager.contribute": CONTRIBUTOR,
+  "file.edit": EDITOR,
   "policyTemplate.edit": EDITOR,
   "intakeForm.edit": EDITOR,
   "agentDiscovery.admin": ADMIN,

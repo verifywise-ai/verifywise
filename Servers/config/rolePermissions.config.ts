@@ -213,7 +213,7 @@ export const ROLE_PERMISSIONS = {
   },
   "file.edit": {
     module: "Files",
-    description: "Bulk-tag files",
+    description: "Bulk-tag files and manage folders",
     legacyRoles: EDITOR,
   },
   "intakeForm.edit": {
