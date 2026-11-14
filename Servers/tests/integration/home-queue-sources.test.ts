@@ -178,6 +178,32 @@ describe("Home queue ownership sources against a real database", () => {
       expect(byName.get("I review")?.overdue).toBe(false);
     });
 
+    it("leaves Reviewed vendors out and keeps a NULL or other review status in", async () => {
+      await seedVendor(orgId, {
+        name: "reviewed overdue",
+        reviewerId: me,
+        reviewDate: dayOffset(-3),
+        reviewStatus: "Reviewed",
+      });
+      await seedVendor(orgId, {
+        name: "null status",
+        reviewerId: me,
+        reviewDate: dayOffset(-3),
+        reviewStatus: null,
+      });
+      await seedVendor(orgId, {
+        name: "follow-up status",
+        reviewerId: me,
+        reviewDate: dayOffset(2),
+        reviewStatus: "Requires follow-up",
+      });
+
+      expect((await run(vendorReviewsSource, ctx)).names).toEqual([
+        "follow-up status",
+        "null status",
+      ]);
+    });
+
     it("excludes an assignee when a reviewer is set, vendors past the window and other people's", async () => {
       await seedVendor(orgId, {
         name: "assignee, reviewer set",

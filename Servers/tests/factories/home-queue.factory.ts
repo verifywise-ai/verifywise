@@ -98,16 +98,17 @@ export interface SeedVendorOptions {
   assigneeId?: number | null;
   reviewerId?: number | null;
   reviewDate: string | null;
+  reviewStatus?: string | null;
 }
 
 export async function seedVendor(orgId: number, o: SeedVendorOptions): Promise<number> {
   return firstId(
     await sequelize.query(
       `INSERT INTO vendors (organization_id, vendor_name, vendor_provides, website,
-                            vendor_contact_person, assignee, reviewer, review_date,
+                            vendor_contact_person, assignee, reviewer, review_date, review_status,
                             created_at, updated_at)
        VALUES (:orgId, :name, 'Services', 'https://example.com', 'Contact', :assignee,
-               :reviewer, :reviewDate, NOW(), NOW())
+               :reviewer, :reviewDate, :reviewStatus, NOW(), NOW())
        RETURNING id`,
       {
         replacements: {
@@ -116,6 +117,7 @@ export async function seedVendor(orgId: number, o: SeedVendorOptions): Promise<n
           assignee: o.assigneeId ?? null,
           reviewer: o.reviewerId ?? null,
           reviewDate: noonUtc(o.reviewDate),
+          reviewStatus: o.reviewStatus ?? null,
         },
       },
     ),

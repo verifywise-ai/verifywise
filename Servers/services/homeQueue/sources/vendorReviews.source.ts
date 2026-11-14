@@ -6,20 +6,21 @@ import type { HomeQueueItem, HomeQueueSource } from "../../../domain.layer/inter
 const REVIEW_DATE = utcDateSql("v.review_date");
 
 /**
- * The `vendor_review_due` sweep's selection with a wider window. The sweep
- * (automationWorker.ts, the vendor_review_date_approaching loop) reads every
- * vendor in the org, applies no review_status or other status condition, and
+ * Mirrors the `vendor_review_due` sweep's recipient and widens its window.
+ * The sweep (automationWorker.ts, the vendor_review_date_approaching loop)
  * notifies `vendor.reviewer || vendor.assignee`; so the recipient here is the
  * reviewer, or the assignee when there is no reviewer (NULL or 0, as `||`
- * reads it), and review_status is not filtered. Only the window differs:
- * review_date <= today + 14 days, overdue included. Vendors have no soft-delete
- * flag. Exported so tests can pin the rule.
+ * reads it). Unlike the sweep, vendors whose review_status is 'Reviewed' are
+ * excluded, by product decision (2026-11-13); a NULL status stays in. Window:
+ * review_date <= today + 14 days, overdue included. Vendors have no
+ * soft-delete flag. Exported so tests can pin the rule.
  */
 export const VENDOR_REVIEWS_SQL = `
   SELECT v.id, v.vendor_name, v.review_status, ${REVIEW_DATE} AS review_date, v.created_at
   FROM vendors v
   WHERE v.organization_id = :organizationId
     AND v.review_date IS NOT NULL
+    AND v.review_status IS DISTINCT FROM 'Reviewed'
     AND ${REVIEW_DATE} <= :windowEnd
     AND COALESCE(NULLIF(v.reviewer, 0), v.assignee) = :userId`;
 
