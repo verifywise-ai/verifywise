@@ -67,6 +67,22 @@ Service names: `verifywise-backend`, `verifywise-eval-server`,
   shipping is additive.
 - Python service logs via the OTel `LoggingHandler`.
 
+### Telemetry must never fail a request
+
+`emitOtlpLog` and `recordRequestMetric` run synchronously inside request
+handling (controllers via `logStructured`, and the response `finish` hook).
+Both catch any SDK error, report it once per call site through the OTel `diag`
+logger, and drop that telemetry, so the request itself still succeeds.
+
+Keep every `@opentelemetry/*` package on the same release line. In particular,
+the `@opentelemetry/core` entry in `Servers/package.json` `overrides` (a
+security floor) must stay on the major that `resources`, `sdk-logs` and
+`sdk-metrics` require (currently `^3.1.0`). In November 2026 it was left at
+`^2.9.0` under 3.x SDKs. As a result, every login on a monitoring-enabled
+deployment returned 500 (`cleanSimpleAttributes is not a function`).
+`Servers/observability/__tests__/otel.test.ts` runs the installed packages
+together and fails on such a mismatch.
+
 ### Request correlation across services
 
 Each request gets an `x-request-id` (honored if the caller sent one, else

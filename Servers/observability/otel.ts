@@ -167,10 +167,35 @@ export function isObservabilityEnabled(): boolean {
   return Boolean(meterProvider);
 }
 
-/** Record one HTTP request's metrics. No-op when disabled. */
+/**
+ * Telemetry must never break the request it describes. The SDK is called
+ * synchronously from controllers (via logStructured) and from the response
+ * "finish" hook, so an SDK fault — e.g. mismatched @opentelemetry package
+ * versions throwing "x is not a function" — would otherwise turn every logged
+ * request into a 500. Swallow it and report each failing call site once.
+ */
+const reportedFailures = new Set<string>();
+
+function guardTelemetry(site: string, fn: () => void): void {
+  try {
+    fn();
+  } catch (err) {
+    if (reportedFailures.has(site)) return;
+    reportedFailures.add(site);
+    diag.error(
+      `[otel] ${site} failed; telemetry from it is dropped, the request is unaffected`,
+      err,
+    );
+  }
+}
+
+/** Record one HTTP request's metrics. No-op when disabled; never throws. */
 export function recordRequestMetric(attrs: Attributes, durationSeconds: number): void {
-  requestCounter?.add(1, attrs);
-  requestDuration?.record(durationSeconds, attrs);
+  if (!requestCounter && !requestDuration) return;
+  guardTelemetry("recordRequestMetric", () => {
+    requestCounter?.add(1, attrs);
+    requestDuration?.record(durationSeconds, attrs);
+  });
 }
 
 const SEVERITY_BY_LEVEL: Record<string, SeverityNumber> = {
@@ -180,14 +205,17 @@ const SEVERITY_BY_LEVEL: Record<string, SeverityNumber> = {
   error: SeverityNumber.ERROR,
 };
 
-/** Ship one log record to the central stack. No-op when disabled. */
+/** Ship one log record to the central stack. No-op when disabled; never throws. */
 export function emitOtlpLog(level: string, body: string, attributes: Attributes = {}): void {
-  if (!loggerProvider) return;
-  loggerProvider.getLogger(SERVICE_NAME).emit({
-    severityNumber: SEVERITY_BY_LEVEL[level] ?? SeverityNumber.INFO,
-    severityText: level.toUpperCase(),
-    body,
-    attributes: { "deployment.name": deploymentName, ...attributes },
+  const provider = loggerProvider;
+  if (!provider) return;
+  guardTelemetry("emitOtlpLog", () => {
+    provider.getLogger(SERVICE_NAME).emit({
+      severityNumber: SEVERITY_BY_LEVEL[level] ?? SeverityNumber.INFO,
+      severityText: level.toUpperCase(),
+      body,
+      attributes: { "deployment.name": deploymentName, ...attributes },
+    });
   });
 }
 
