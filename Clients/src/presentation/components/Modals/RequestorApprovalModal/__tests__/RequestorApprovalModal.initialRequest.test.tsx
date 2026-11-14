@@ -112,4 +112,30 @@ describe("RequestorApprovalModal initialRequestId (Home deep link)", () => {
     await waitFor(() => expect(repo.getApprovalRequestById).toHaveBeenCalledWith({ id: 2 }));
     expect(alerts.showAlert).not.toHaveBeenCalled();
   });
+
+  it("does not say the request is gone when a list failed to load", async () => {
+    repo.getPendingApprovals.mockRejectedValue(new Error("network"));
+    repo.getMyApprovalRequests.mockResolvedValue({ data: [] });
+
+    renderWithProviders(
+      <RequestorApprovalModal isOpen={true} onClose={vi.fn()} initialRequestId={2} />,
+    );
+
+    await waitFor(() => expect(repo.getPendingApprovals).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(alerts.showAlert).not.toHaveBeenCalled();
+  });
+
+  it("does not say the request is gone when the second list failed to load", async () => {
+    repo.getPendingApprovals.mockResolvedValue({ data: [] });
+    repo.getMyApprovalRequests.mockRejectedValue(new Error("network"));
+
+    renderWithProviders(
+      <RequestorApprovalModal isOpen={true} onClose={vi.fn()} initialRequestId={2} />,
+    );
+
+    await waitFor(() => expect(repo.getMyApprovalRequests).toHaveBeenCalled());
+    await new Promise((resolve) => setTimeout(resolve, 50));
+    expect(alerts.showAlert).not.toHaveBeenCalled();
+  });
 });

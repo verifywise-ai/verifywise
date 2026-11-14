@@ -11,29 +11,19 @@ export interface QueueItemText {
 }
 
 /**
- * English names of the sources (dictionary keys), in filter order. Also the
- * module named first in each item's context line.
+ * Every source in one place, in filter order: `label` is the English name (a
+ * dictionary key) shown in the filter, `module` the page named first in the
+ * item's context line. One map, so a source cannot be half-registered.
  */
-export const HOME_QUEUE_SOURCE_LABELS: Record<HomeQueueSourceId, string> = {
-  approvals: "Approvals",
-  tasks: "Tasks",
-  intake: "Intake",
-  risks: "AI risks",
-  policyReviews: "Policy reviews",
-  vendorReviews: "Vendor reviews",
-  incidents: "Incidents",
-  mrmFindings: "Model risk findings",
-};
-
-const MODULE: Record<HomeQueueSourceId, string> = {
-  approvals: "Approval workflows",
-  tasks: "Tasks",
-  intake: "Intake",
-  risks: "AI risks",
-  policyReviews: "Policy manager",
-  vendorReviews: "Vendors",
-  incidents: "Incidents",
-  mrmFindings: "Model risk management",
+export const HOME_QUEUE_SOURCES: Record<HomeQueueSourceId, { label: string; module: string }> = {
+  approvals: { label: "Approvals", module: "Approval workflows" },
+  tasks: { label: "Tasks", module: "Tasks" },
+  intake: { label: "Intake", module: "Intake" },
+  risks: { label: "AI risks", module: "AI risks" },
+  policyReviews: { label: "Policy reviews", module: "Policy manager" },
+  vendorReviews: { label: "Vendor reviews", module: "Vendors" },
+  incidents: { label: "Incidents", module: "Incidents" },
+  mrmFindings: { label: "Model risk findings", module: "Model risk management" },
 };
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -157,7 +147,8 @@ export function queueItemText(
       details = [];
   }
 
-  const module = MODULE[item.source] ? t(MODULE[item.source]) : null;
+  const moduleName = HOME_QUEUE_SOURCES[item.source]?.module;
+  const module = moduleName ? t(moduleName) : null;
   const context = [module, ...details].filter((part): part is string => Boolean(part)).join(" · ");
   return { title, context, action: t(action) };
 }

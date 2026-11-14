@@ -41,7 +41,7 @@ Not in the queue yet, with the reason: agent (MCP) approvals (no permission key 
 
 ## Counts
 
-`counts.ts` returns org-wide counts the user may see: intake waiting (`intakeForm.edit` only), agents to review, AI on the record, untreated risks, vendor reviews due, policy reviews due and prompts blocked or masked in the last 24 hours. The risk, vendor and policy counts reuse the condition constants exported by their source files, so the list and the count cannot drift apart.
+`counts.ts` returns org-wide counts the user may see: intake waiting (`intakeForm.edit` only), agents to review, AI on the record (use cases, models, AI apps and agents, leaving out agents whose review status is rejected), risks needing attention (the `untreatedRisks` count id; not started, or past their deadline and still open), vendor reviews due, policy reviews due and prompts blocked or masked in the last 24 hours. The risk, vendor and policy counts reuse the condition constants exported by their source files, so the list and the count cannot drift apart.
 
 The prompts count calls the AI Gateway (`aiGatewayRequest`, `GET /internal/guardrails/stats?period=24h`, `summary.blocked + summary.masked`) with a 2 s timeout (`GATEWAY_COUNT_TIMEOUT_MS`).
 

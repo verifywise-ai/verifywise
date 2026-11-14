@@ -6,7 +6,7 @@ import type { HomeQueueSourceId } from "../../../domain/types/homeQueue.types";
 import { useHomeQueue } from "../../../application/hooks/useHomeQueue";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { useTranslation } from "../../../application/hooks/useTranslation";
-import { getTimeBasedGreeting } from "../../../application/utils/greetings";
+import { getDaypartGreeting } from "../../../application/utils/greetings";
 import { fill } from "../../../i18n/fill";
 import Select from "../../components/Inputs/Select";
 import ListStateWrapper from "../../components/ListStateWrapper";
@@ -14,10 +14,11 @@ import { EmptyState } from "../../components/EmptyState";
 import { border, brand, radiusPx, text } from "../../themes/palette";
 import QueueItemRow from "./QueueItemRow";
 import CountsStrip from "./CountsStrip";
-import { HOME_QUEUE_SOURCE_LABELS } from "./queueItemText";
+import { HOME_QUEUE_SOURCES } from "./queueItemText";
+import { isClassicUi } from "../../themes/uiStyle";
 
 const ALL = "all";
-const SOURCE_ORDER = Object.keys(HOME_QUEUE_SOURCE_LABELS) as HomeQueueSourceId[];
+const SOURCE_ORDER = Object.keys(HOME_QUEUE_SOURCES) as HomeQueueSourceId[];
 
 const noteSx = { fontSize: "13px", color: text.secondary, padding: "10px 16px" };
 
@@ -33,7 +34,7 @@ const TodayTab = () => {
   const [filter, setFilter] = useState<string>(ALL);
 
   const firstName = userToken?.name?.trim().split(/\s+/)[0] ?? "";
-  const greeting = useMemo(() => getTimeBasedGreeting(firstName).greetingText, [firstName]);
+  const greeting = useMemo(() => getDaypartGreeting(), []);
 
   const sources = data?.sources ?? {};
   const visibleSources = SOURCE_ORDER.filter((id) => sources[id]);
@@ -51,7 +52,7 @@ const TodayTab = () => {
 
   const filterItems = [
     { _id: ALL, name: t("All") },
-    ...visibleSources.map((id) => ({ _id: id, name: t(HOME_QUEUE_SOURCE_LABELS[id]) })),
+    ...visibleSources.map((id) => ({ _id: id, name: t(HOME_QUEUE_SOURCES[id].label) })),
   ];
 
   let emptyState: ReactNode = null;
@@ -67,7 +68,7 @@ const TodayTab = () => {
           <Typography sx={{ fontSize: "13px", textAlign: "center", color: text.secondary }}>
             <Typography
               component={RouterLink}
-              to="/home?tab=get-started"
+              to={isClassicUi() ? "/start-here" : "/home?tab=get-started"}
               sx={{ fontSize: "13px", color: brand.primary }}
             >
               {t("Get started")}
@@ -158,7 +159,7 @@ const TodayTab = () => {
             {unavailable.map((id) => (
               <Typography key={id} sx={noteSx} data-testid={`home-queue-unavailable-${id}`}>
                 {fill(t("{source} couldn't be loaded."), {
-                  source: t(HOME_QUEUE_SOURCE_LABELS[id]),
+                  source: t(HOME_QUEUE_SOURCES[id].label),
                 })}
               </Typography>
             ))}

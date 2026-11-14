@@ -248,13 +248,17 @@ export async function seedAiApp(orgId: number, name: string): Promise<number> {
   );
 }
 
-export async function seedAgent(orgId: number, externalId: string): Promise<number> {
+export async function seedAgent(
+  orgId: number,
+  externalId: string,
+  reviewStatus?: string,
+): Promise<number> {
   return firstId(
     await sequelize.query(
-      `INSERT INTO agent_primitives (organization_id, primitive_type, external_id, display_name)
-       VALUES (:orgId, 'agent', :externalId, :externalId)
+      `INSERT INTO agent_primitives (organization_id, primitive_type, external_id, display_name, review_status)
+       VALUES (:orgId, 'agent', :externalId, :externalId, COALESCE(:reviewStatus, 'unreviewed'))
        RETURNING id`,
-      { replacements: { orgId, externalId } },
+      { replacements: { orgId, externalId, reviewStatus: reviewStatus ?? null } },
     ),
   );
 }

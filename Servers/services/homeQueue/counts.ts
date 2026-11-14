@@ -56,7 +56,7 @@ const intakeWaiting: CountLoader = (ctx) =>
 const agentsToReview: CountLoader = async (ctx) =>
   (await getAgentStatsQuery(ctx.organizationId)).unreviewed;
 
-/** Use cases (not the organizational project) + models + AI apps + agents. */
+/** Use cases (not the organizational project) + models + AI apps + agents (rejected ones left out). */
 const aiOnRecord: CountLoader = async (ctx) => {
   const rows = await sequelize.query<Record<"use_cases" | "models" | "ai_apps" | "agents", string>>(
     `SELECT
@@ -64,7 +64,9 @@ const aiOnRecord: CountLoader = async (ctx) => {
          WHERE organization_id = :organizationId AND is_organizational IS NOT TRUE) AS use_cases,
        (SELECT COUNT(*) FROM model_inventories WHERE organization_id = :organizationId) AS models,
        (SELECT COUNT(*) FROM ai_apps WHERE organization_id = :organizationId) AS ai_apps,
-       (SELECT COUNT(*) FROM agent_primitives WHERE organization_id = :organizationId) AS agents`,
+       (SELECT COUNT(*) FROM agent_primitives
+         WHERE organization_id = :organizationId
+           AND review_status IS DISTINCT FROM 'rejected') AS agents`,
     { replacements: { organizationId: ctx.organizationId }, type: QueryTypes.SELECT },
   );
   const row = rows[0];

@@ -38,7 +38,13 @@ vi.mock("../../../../application/tools/log.engine", () => ({
 
 // Mock child components
 vi.mock("../ApprovalWorkflowsTable", () => ({
-  default: () => <div data-testid="approval-workflows-table" />,
+  default: ({ onEdit, onArchive }: any) => (
+    <div
+      data-testid="approval-workflows-table"
+      data-can-edit={String(Boolean(onEdit))}
+      data-can-archive={String(Boolean(onArchive))}
+    />
+  ),
 }));
 
 vi.mock("../../../components/Layout/PageHeaderExtended", () => ({
@@ -129,6 +135,21 @@ describe("ApprovalWorkflows", () => {
     canMock.useCan.mockReturnValue(false);
     renderWithProviders(<ApprovalWorkflows />);
     expect(screen.queryByRole("button", { name: "Add new workflow" })).not.toBeInTheDocument();
+  });
+
+  it("passes Edit and Archive to the table with approvalWorkflow.admin", () => {
+    renderWithProviders(<ApprovalWorkflows />);
+    const table = screen.getByTestId("approval-workflows-table");
+    expect(table).toHaveAttribute("data-can-edit", "true");
+    expect(table).toHaveAttribute("data-can-archive", "true");
+  });
+
+  it("leaves Edit and Archive off the table without approvalWorkflow.admin", () => {
+    canMock.useCan.mockReturnValue(false);
+    renderWithProviders(<ApprovalWorkflows />);
+    const table = screen.getByTestId("approval-workflows-table");
+    expect(table).toHaveAttribute("data-can-edit", "false");
+    expect(table).toHaveAttribute("data-can-archive", "false");
   });
 
   it("renders without crashing", () => {

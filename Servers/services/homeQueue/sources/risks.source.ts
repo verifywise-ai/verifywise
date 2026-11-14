@@ -14,8 +14,8 @@ const DEADLINE = utcDateSql("r.deadline");
 
 /**
  * Which risks need attention, whoever owns them (alias `r`). The queue source
- * adds the owner; the Home counts strip counts it org-wide as "untreated
- * risks". Keep the rule here so a change applies to both.
+ * adds the owner; the Home counts strip counts it org-wide as "risks
+ * needing attention". Keep the rule here so a change applies to both.
  */
 export const RISK_NEEDS_ATTENTION_CONDITION = `
     r.organization_id = :organizationId

@@ -78,6 +78,8 @@ async function seedOrg(orgId: number, me: number, label: string, n: number): Pro
     await createTestProject(orgId, me, { project_title: name("use case", i) });
     await seedAiApp(orgId, name("app", i));
     await seedAgent(orgId, `${label}-agent-${i}`);
+    // Rejected agents are on neither the review count nor AI on the record.
+    await seedAgent(orgId, `${label}-rejected-agent-${i}`, "rejected");
   }
 }
 
@@ -142,7 +144,7 @@ describe("Home queue tenant isolation", () => {
     expect(a).toEqual({
       intakeWaiting: 1,
       agentsToReview: 1,
-      // use case + model (one per finding) + AI app + agent
+      // use case + model (one per finding) + AI app + agent (the rejected one is left out)
       aiOnRecord: 4,
       untreatedRisks: 1,
       vendorReviewsDue: 1,

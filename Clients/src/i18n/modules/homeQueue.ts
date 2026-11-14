@@ -63,7 +63,7 @@ export const de: Record<string, string> = {
   "Intake waiting": "Wartende Intake-Anfragen",
   "Agents to review": "Zu prüfende Agenten",
   "AI on the record": "Erfasste KI",
-  "Untreated risks": "Unbehandelte Risiken",
+  "Risks needing attention": "Risiken mit Handlungsbedarf",
   "Vendor reviews due": "Fällige Anbieterprüfungen",
   "Policy reviews due": "Fällige Richtlinienprüfungen",
   "Prompts blocked or masked (last 24 hours)":
@@ -133,7 +133,7 @@ export const fr: Record<string, string> = {
   "Intake waiting": "Demandes en attente",
   "Agents to review": "Agents à examiner",
   "AI on the record": "IA répertoriées",
-  "Untreated risks": "Risques non traités",
+  "Risks needing attention": "Risques nécessitant une action",
   "Vendor reviews due": "Revues de fournisseurs à faire",
   "Policy reviews due": "Revues de politiques à faire",
   "Prompts blocked or masked (last 24 hours)": "Prompts bloqués ou masqués (dernières 24 heures)",
@@ -201,7 +201,7 @@ export const es: Record<string, string> = {
   "Intake waiting": "Solicitudes en espera",
   "Agents to review": "Agentes por revisar",
   "AI on the record": "IA registrada",
-  "Untreated risks": "Riesgos sin tratar",
+  "Risks needing attention": "Riesgos que requieren atención",
   "Vendor reviews due": "Revisiones de proveedores pendientes",
   "Policy reviews due": "Revisiones de políticas pendientes",
   "Prompts blocked or masked (last 24 hours)":

@@ -10,6 +10,12 @@ vi.mock("../../../../application/hooks/useAuth", () => ({
   useAuth: () => ({ userToken: { name: "Ada Lovelace", email: "ada@example.com" }, userId: 1 }),
 }));
 
+const ui = vi.hoisted(() => ({ isClassicUi: vi.fn(() => false) }));
+vi.mock("../../../themes/uiStyle", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("../../../themes/uiStyle")>()),
+  isClassicUi: ui.isClassicUi,
+}));
+
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import TodayTab from "../TodayTab";
 
@@ -231,6 +237,37 @@ describe("TodayTab", () => {
       "href",
       "/home?tab=get-started",
     );
+  });
+
+  it("links Get started to the Start here page in the classic look", () => {
+    ui.isClassicUi.mockReturnValue(true);
+    try {
+      hook.useHomeQueue.mockReturnValue(
+        queryState({
+          data: { items: [], sources: { tasks: { status: "ok", count: 0 } }, counts: {} },
+          isSuccess: true,
+        }),
+      );
+      renderWithProviders(<TodayTab />);
+      expect(screen.getByRole("link", { name: "Get started" })).toHaveAttribute(
+        "href",
+        "/start-here",
+      );
+    } finally {
+      ui.isClassicUi.mockReturnValue(false);
+    }
+  });
+
+  it("greets by time of day, not with a special-day greeting that has no translation", () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 0, 1, 10, 0, 0));
+    try {
+      hook.useHomeQueue.mockReturnValue(queryState({ isLoading: true }));
+      renderWithProviders(<TodayTab />);
+      expect(screen.getByRole("heading", { level: 2 })).toHaveTextContent("Good morning, Ada");
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it("does not claim nothing needs you when a source failed", () => {

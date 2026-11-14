@@ -1,6 +1,7 @@
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../../database/db";
 import { TaskStatus } from "../../../domain.layer/enums/task-status.enum";
+import { dateSql, toIso } from "./dateOnly";
 import type { HomeQueueItem, HomeQueueSource } from "../../../domain.layer/interfaces/i.homeQueue";
 
 /**
@@ -30,7 +31,7 @@ export const tasksSource: HomeQueueSource = {
   isVisible: () => true,
   async load(ctx) {
     const rows = await sequelize.query<TaskRow>(
-      `SELECT t.id, t.title, to_char(t.due_date, 'YYYY-MM-DD') AS due_date,
+      `SELECT t.id, t.title, ${dateSql("t.due_date")} AS due_date,
               t.status, t.priority, t.created_at
        FROM tasks t
        JOIN task_assignees ta
@@ -58,7 +59,7 @@ export const tasksSource: HomeQueueSource = {
       name: t.title,
       url: `/tasks?taskId=${t.id}`,
       dueDate: t.due_date,
-      waitingSince: t.created_at ? new Date(t.created_at).toISOString() : null,
+      waitingSince: toIso(t.created_at),
       overdue: t.due_date !== null && t.due_date < ctx.today,
       meta: { status: t.status, priority: t.priority },
     }));

@@ -2,6 +2,7 @@ import { useState, useMemo, memo, useCallback, useEffect, type ReactNode } from 
 import { Stack, IconButton, Box } from "@mui/material";
 import { useNavigate, useLocation } from "react-router";
 import { useSelector } from "react-redux";
+import { useQueryClient } from "@tanstack/react-query";
 import { Search, Zap, WorkflowIcon, Package, ClipboardList } from "lucide-react";
 import VWTooltip from "../VWTooltip";
 import RequestorApprovalModal from "../Modals/RequestorApprovalModal";
@@ -16,6 +17,7 @@ import { onApprovalRequestsChanged } from "../../../application/events/approvalR
 import type { RootState } from "../../../application/redux/store";
 import { actionButtonsStyles } from "./style";
 import "./icon-shake.css";
+import { HOME_QUEUE_QUERY_KEY } from "../../../application/hooks/useHomeQueue";
 import { useCan } from "../../../application/hooks/useCan";
 import { radiusPx } from "../../themes/palette";
 
@@ -126,6 +128,9 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
 
   const [totalApprovalCount, setTotalApprovalCount] = useState(0);
 
+  // A decision made in the modal also takes the request off Home.
+  const queryClient = useQueryClient();
+
   // Function to fetch approval counts
   const fetchApprovalCounts = useCallback(async () => {
     try {
@@ -143,6 +148,11 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
       setTotalApprovalCount(0);
     }
   }, []);
+
+  const handleApprovalsRefresh = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: HOME_QUEUE_QUERY_KEY });
+    return fetchApprovalCounts();
+  }, [queryClient, fetchApprovalCounts]);
 
   // Initial fetch on mount (skip on super-admin routes — no org context)
   useEffect(() => {
@@ -287,7 +297,7 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
       <RequestorApprovalModal
         isOpen={isRequestModalOpen}
         onClose={() => setIsRequestModalOpen(false)}
-        onRefresh={fetchApprovalCounts}
+        onRefresh={handleApprovalsRefresh}
       />
     </Stack>
   );

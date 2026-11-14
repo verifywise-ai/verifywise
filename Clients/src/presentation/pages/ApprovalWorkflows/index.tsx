@@ -418,8 +418,8 @@ const ApprovalWorkflows: React.FC = () => {
         <ApprovalWorkflowsTable
           data={filteredData}
           isLoading={isLoading}
-          onEdit={handleEditWorkflowClick}
-          onArchive={handleArchiveWorkflow}
+          onEdit={canManageWorkflows ? handleEditWorkflowClick : undefined}
+          onArchive={canManageWorkflows ? handleArchiveWorkflow : undefined}
           archivedId={archivedId}
           visibleColumns={workflowVisibleColumns}
         />

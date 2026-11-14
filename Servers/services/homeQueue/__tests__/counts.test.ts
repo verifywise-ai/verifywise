@@ -104,6 +104,14 @@ describe("loadHomeCounts", () => {
     expect(counts.untreatedRisks).toBe(4);
   });
 
+  it("leaves rejected agents out of AI on the record", async () => {
+    await loadHomeCounts(ctxWith([]));
+    const sql = query.mock.calls
+      .map(([text]) => String(text))
+      .find((text) => text.includes("FROM agent_primitives"));
+    expect(sql).toContain("review_status IS DISTINCT FROM 'rejected'");
+  });
+
   it("reports null for a count whose gateway call rejects, leaving the others intact", async () => {
     gateway.mockRejectedValue(new Error("timed out"));
     const counts = await loadHomeCounts(ctxWith(["intakeForm.edit"]));

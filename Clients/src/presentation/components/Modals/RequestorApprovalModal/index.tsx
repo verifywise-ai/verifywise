@@ -458,13 +458,15 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({
           status: req.status?.toLowerCase() || "pending",
         })),
       );
+      // Only a load that finished can say a linked request is gone: after a
+      // failed fetch the lists are empty for another reason.
+      setLoadedGeneration(generation);
     } catch (error) {
       logEngine({
         type: "error",
         message: `Failed to fetch approval requests: ${error}`,
       });
     }
-    setLoadedGeneration(generation);
   };
 
   const fetchTimelineData = async (requestId: number) => {

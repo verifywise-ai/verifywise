@@ -1,6 +1,7 @@
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../../database/db";
 import { getPendingApprovalsQuery } from "../../../utils/approvalRequest.utils";
+import { toIso } from "./dateOnly";
 import type { HomeQueueItem, HomeQueueSource } from "../../../domain.layer/interfaces/i.homeQueue";
 
 /**
@@ -42,7 +43,7 @@ export const approvalsSource: HomeQueueSource = {
       name: r.request_name,
       url: `/approval-workflows?request=${r.id}`,
       dueDate: null,
-      waitingSince: r.created_at ? new Date(r.created_at).toISOString() : null,
+      waitingSince: toIso(r.created_at),
       overdue: false,
       meta: {
         stepNumber: r.current_step,

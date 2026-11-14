@@ -27,7 +27,7 @@ const COUNT_GROUPS: { part: CountPart; heading: string; counts: CountDefinition[
     part: "track",
     heading: "Track",
     counts: [
-      { id: "untreatedRisks", label: "Untreated risks", path: "/risk-management" },
+      { id: "untreatedRisks", label: "Risks needing attention", path: "/risk-management" },
       { id: "vendorReviewsDue", label: "Vendor reviews due", path: "/vendors" },
     ],
   },
