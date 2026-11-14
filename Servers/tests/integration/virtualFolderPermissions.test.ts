@@ -55,79 +55,125 @@ async function as(orgId: number, userId: number, role: string) {
   return testRequest(app);
 }
 
-async function folderAndFile(orgId: number, adminId: number) {
-  const admin = await as(orgId, adminId, "Admin");
-  const res = await admin.post("/api/virtual-folders").send({ name: `Seed ${Date.now()}` });
+type Api = Awaited<ReturnType<typeof as>>;
+
+async function newFolder(api: Api, name = `Folder ${Date.now()}-${Math.random()}`) {
+  const res = await api.post("/api/virtual-folders").send({ name });
   expect(res.status).toBe(201);
-  const fileId = await createTestFile(orgId, adminId);
-  return { folderId: res.body.data.id as number, fileId };
+  return res.body.data.id as number;
+}
+
+/** An Admin-made folder holding one file, a second file outside it, and an empty folder. */
+async function seedFolders(orgId: number, adminId: number) {
+  const admin = await as(orgId, adminId, "Admin");
+  const folderId = await newFolder(admin);
+  const emptyFolderId = await newFolder(admin);
+  const filedId = await createTestFile(orgId, adminId);
+  const looseId = await createTestFile(orgId, adminId);
+  const filed = await admin.post(`/api/virtual-folders/${folderId}/files`).send({
+    file_ids: [filedId],
+  });
+  expect(filed.status).toBe(200);
+  return { admin, folderId, emptyFolderId, filedId, looseId };
 }
 
 /** Status of each folder action for one caller. */
-async function folderActions(
-  api: Awaited<ReturnType<typeof as>>,
-  folderId: number,
-  fileId: number,
-) {
+async function folderActions(api: Api, seed: Awaited<ReturnType<typeof seedFolders>>) {
   const create = (await api.post("/api/virtual-folders").send({ name: `New ${Date.now()}` }))
     .status;
-  const rename = (await api.patch(`/api/virtual-folders/${folderId}`).send({ name: "Renamed" }))
-    .status;
-  const assign = (
-    await api.post(`/api/virtual-folders/${folderId}/files`).send({ file_ids: [fileId] })
+  const rename = (
+    await api.patch(`/api/virtual-folders/${seed.folderId}`).send({ name: "Renamed" })
   ).status;
-  const remove = (await api.delete(`/api/virtual-folders/${folderId}/files/${fileId}`)).status;
-  const setFolders = (await api.patch(`/api/files/${fileId}/folders`).send({ folder_ids: [] }))
+  const assign = (
+    await api.post(`/api/virtual-folders/${seed.folderId}/files`).send({ file_ids: [seed.looseId] })
+  ).status;
+  const remove = (await api.delete(`/api/virtual-folders/${seed.folderId}/files/${seed.filedId}`))
     .status;
-  return { create, rename, assign, remove, setFolders };
+  const setFolders = (
+    await api.patch(`/api/files/${seed.looseId}/folders`).send({ folder_ids: [seed.folderId] })
+  ).status;
+  const deleteEmpty = (await api.delete(`/api/virtual-folders/${seed.emptyFolderId}`)).status;
+  return { create, rename, assign, remove, setFolders, deleteEmpty };
 }
 
+const policyPayload = () => ({
+  title: `Folder policy ${Date.now()}`,
+  content_html: "<p>Body</p>",
+  status: "Draft",
+  tags: ["Privacy"],
+  next_review_date: "2030-01-01",
+});
+
 describe("virtual folder permissions", () => {
-  it("lets a custom role with policy.edit manage folders, but not put files in them", async () => {
+  it("lets a custom role with policy.edit manage folders, but not file documents", async () => {
     const { orgId, adminId, suffix } = await seedOrg();
     const role = await customRole(orgId, `Policy writer ${suffix}`, ["policy.edit"]);
     const userId = await createTestUser(orgId, 1, `pw-${suffix}@test.com`, "Password123!");
-    const { folderId, fileId } = await folderAndFile(orgId, adminId);
+    const seed = await seedFolders(orgId, adminId);
+    const api = await as(orgId, userId, role);
 
-    const statuses = await folderActions(await as(orgId, userId, role), folderId, fileId);
-
-    expect(statuses).toEqual({
+    expect(await folderActions(api, seed)).toEqual({
       create: 201,
       rename: 200,
       assign: 403,
       remove: 403,
       setFolders: 403,
+      deleteEmpty: 200,
     });
+    // Deleting a folder that holds a file would unfile it: file.edit only.
+    expect((await api.delete(`/api/virtual-folders/${seed.folderId}`)).status).toBe(403);
+    expect((await seed.admin.get(`/api/virtual-folders/${seed.folderId}`)).status).toBe(200);
   });
 
-  it("lets a custom role with file.edit manage folders and the files in them", async () => {
+  it("lets a custom role with file.edit manage folders and file documents", async () => {
     const { orgId, adminId, suffix } = await seedOrg();
     const role = await customRole(orgId, `File clerk ${suffix}`, ["file.edit"]);
     const userId = await createTestUser(orgId, 1, `fc-${suffix}@test.com`, "Password123!");
-    const { folderId, fileId } = await folderAndFile(orgId, adminId);
+    const seed = await seedFolders(orgId, adminId);
+    const api = await as(orgId, userId, role);
 
-    const statuses = await folderActions(await as(orgId, userId, role), folderId, fileId);
-
-    expect(statuses).toEqual({
+    expect(await folderActions(api, seed)).toEqual({
       create: 201,
       rename: 200,
       assign: 200,
       remove: 200,
       setFolders: 200,
+      deleteEmpty: 200,
     });
+    expect((await api.delete(`/api/virtual-folders/${seed.folderId}`)).status).toBe(200);
+  });
+
+  it("needs policy.edit to delete a folder that holds a policy, even in a subfolder", async () => {
+    const { orgId, adminId, suffix } = await seedOrg();
+    const role = await customRole(orgId, `File clerk ${suffix}`, ["file.edit"]);
+    const userId = await createTestUser(orgId, 1, `fc-${suffix}@test.com`, "Password123!");
+    const admin = await as(orgId, adminId, "Admin");
+    const parentId = await newFolder(admin);
+    const child = await admin
+      .post("/api/virtual-folders")
+      .send({ name: `Child ${suffix}`, parent_id: parentId });
+    expect(child.status).toBe(201);
+    const policy = await admin.post("/api/policies").send(policyPayload());
+    expect(policy.status).toBe(201);
+    const filed = await admin
+      .patch(`/api/policies/${policy.body.data.id}/folders`)
+      .send({ folder_ids: [child.body.data.id] });
+    expect(filed.status).toBe(200);
+
+    const api = await as(orgId, userId, role);
+    expect((await api.delete(`/api/virtual-folders/${parentId}`)).status).toBe(403);
+    expect((await admin.delete(`/api/virtual-folders/${parentId}`)).status).toBe(200);
   });
 
   it("refuses a custom role with neither key", async () => {
     const { orgId, adminId, suffix } = await seedOrg();
     const role = await customRole(orgId, `Reader ${suffix}`, ["risk.read"]);
     const userId = await createTestUser(orgId, 1, `rd-${suffix}@test.com`, "Password123!");
-    const { folderId, fileId } = await folderAndFile(orgId, adminId);
+    const seed = await seedFolders(orgId, adminId);
 
-    const statuses = await folderActions(await as(orgId, userId, role), folderId, fileId);
+    const statuses = await folderActions(await as(orgId, userId, role), seed);
 
-    expect(Object.values(statuses)).toEqual([403, 403, 403, 403, 403]);
-    const del = await (await as(orgId, userId, role)).delete(`/api/virtual-folders/${folderId}`);
-    expect(del.status).toBe(403);
+    expect(Object.values(statuses)).toEqual([403, 403, 403, 403, 403, 403]);
   });
 
   it("keeps the built-in roles as before: Admin and Editor manage, Reviewer and Auditor do not", async () => {

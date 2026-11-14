@@ -296,7 +296,7 @@ export const roleConfigurationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Folders in the File manager and on the Policies page follow two permissions. "Bulk-tag files and manage folders" lets a role create, rename and delete folders, and put files in them. "Create and update policies" lets a role create, rename and delete folders.',
+      text: 'Folders in the File manager and on the Policies page follow two permissions. "Bulk-tag files and manage folders" lets a role create and rename folders, and put files in them. "Create and update policies" lets a role create and rename folders. Deleting a folder also removes what is filed in it and its subfolders, so it needs "Bulk-tag files and manage folders" when files are inside and "Create and update policies" when policies are inside. An empty folder can be deleted with either.',
     },
     {
       type: 'paragraph',

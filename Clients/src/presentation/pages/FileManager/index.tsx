@@ -220,8 +220,12 @@ const FileManager: React.FC = (): JSX.Element => {
   // Permission checks
   // Uploads authorize on fileManager.contribute (Admin, Editor, Reviewer).
   const isUploadAllowed = useCan("fileManager.contribute");
-  // Folders and bulk tagging authorize on file.edit (Admin and Editor by default).
-  const canManageFolders = useCan("file.edit");
+  // Folders are shared with the Policies page, so either edit permission
+  // creates, renames and deletes them. Filing files and bulk tagging need
+  // file.edit. Both are Admin and Editor by default.
+  const canFileIntoFolders = useCan("file.edit");
+  const canEditPolicies = useCan("policy.edit");
+  const canManageFolders = canFileIntoFolders || canEditPolicies;
   const canEditMetadata = Boolean(userRoleName) && METADATA_ROLES.includes(userRoleName);
 
   // Fetch files with enhanced metadata
@@ -993,12 +997,12 @@ const FileManager: React.FC = (): JSX.Element => {
                       files={data}
                       onFileDeleted={handleFileDeleted}
                       hidePagination={options?.hidePagination}
-                      onAssignToFolder={canManageFolders ? handleOpenAssignFolder : undefined}
+                      onAssignToFolder={canFileIntoFolders ? handleOpenAssignFolder : undefined}
                       onPreview={handleOpenPreview}
                       onEditMetadata={canEditMetadata ? handleOpenMetadataEditor : undefined}
                       onViewHistory={handleOpenVersionHistory}
                       visibleColumnKeys={visibleColumnKeys}
-                      canRunBulkActions={canManageFolders}
+                      canRunBulkActions={canFileIntoFolders}
                       onBulkActionSuccess={() => {
                         refetch();
                       }}
