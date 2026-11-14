@@ -20,7 +20,7 @@ const DEADLINE = utcDateSql("r.deadline");
 export const RISKS_SQL = `
   SELECT r.id, r.risk_name, r.current_risk_level, ${STATUS} AS mitigation_status,
          ${DEADLINE} AS deadline, r.created_at
-  FROM project_risks r
+  FROM risks r
   WHERE r.organization_id = :organizationId
     AND r.risk_owner = :userId
     AND r.is_deleted = false
