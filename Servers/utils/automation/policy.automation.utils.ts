@@ -5,8 +5,12 @@ export function buildPolicyReplacements(policy: any): Record<string, any> {
     "policy.content": policy.content_html || "",
     "policy.status": policy.status || "",
     "policy.tags": Array.isArray(policy.tags) ? policy.tags.join(", ") : "",
+    // A calendar day sent as UTC midnight: format it in UTC so the day never shifts.
     "policy.next_review_date": policy.next_review_date
-      ? new Date(policy.next_review_date).toLocaleDateString("en-US", { dateStyle: "long" })
+      ? new Date(policy.next_review_date).toLocaleDateString("en-US", {
+          dateStyle: "long",
+          timeZone: "UTC",
+        })
       : "",
     "policy.author": policy.author_name || policy.author_id,
     "policy.reviewers": policy.reviewer_names || "",
@@ -19,10 +23,16 @@ export function buildPolicyReplacements(policy: any): Record<string, any> {
 
 export function buildPolicyUpdateReplacements(oldPolicy: any, newPolicy: any): Record<string, any> {
   const nextReviewDate = newPolicy.next_review_date
-    ? new Date(newPolicy.next_review_date).toLocaleDateString("en-US", { dateStyle: "long" })
+    ? new Date(newPolicy.next_review_date).toLocaleDateString("en-US", {
+        dateStyle: "long",
+        timeZone: "UTC",
+      })
     : "";
   const oldNextReviewDate = oldPolicy.next_review_date
-    ? new Date(oldPolicy.next_review_date).toLocaleDateString("en-US", { dateStyle: "long" })
+    ? new Date(oldPolicy.next_review_date).toLocaleDateString("en-US", {
+        dateStyle: "long",
+        timeZone: "UTC",
+      })
     : "";
   const tags = Array.isArray(newPolicy.tags) ? newPolicy.tags.join(", ") : "";
   const oldTags = Array.isArray(oldPolicy.tags) ? oldPolicy.tags.join(", ") : "";

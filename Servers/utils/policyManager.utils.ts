@@ -109,6 +109,7 @@ export const getAllPoliciesQuery = async (organizationId: number) => {
   const result = (await sequelize.query(
     `SELECT
       pm.*,
+      to_char(pm.next_review_date, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS next_review_date,
       COALESCE(
         ARRAY_AGG(DISTINCT pmr.user_id) FILTER (WHERE pmr.user_id IS NOT NULL),
         ARRAY[]::INTEGER[]
@@ -170,6 +171,14 @@ const getReviewerNamesQuery = async (
   )) as { full_name: string }[];
 };
 
+/*
+ * next_review_date is TIMESTAMP (no time zone) holding a calendar day at
+ * midnight. node-pg would read it as server-local midnight, so the JSON value
+ * depended on the backend's time zone (a day early east of UTC). Policy reads
+ * format it in SQL instead: always "YYYY-MM-DDT00:00:00.000Z", the value a
+ * UTC backend has always returned, on any server time zone.
+ */
+
 /**
  * A policy with its assigned reviewer ids. Pass the transaction when reading
  * inside a write, or the read misses the uncommitted change (P-H1).
@@ -182,6 +191,7 @@ export const getPolicyByIdQuery = async (
   const result = (await sequelize.query(
     `SELECT
       pm.*,
+      to_char(pm.next_review_date, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS next_review_date,
       COALESCE(
         ARRAY_AGG(DISTINCT pmr.user_id) FILTER (WHERE pmr.user_id IS NOT NULL),
         ARRAY[]::INTEGER[]
@@ -232,7 +242,7 @@ export const createPolicyQuery = async (
       organization_id, title, content_html, status, tags, next_review_date, author_id, policy_owner_id, last_updated_by, last_updated_at, is_demo
     ) VALUES (
       :organization_id, :title, :content_html, :status, ARRAY(SELECT jsonb_array_elements_text(CAST(:tags AS jsonb))), :next_review_date, :author_id, :policy_owner_id, :last_updated_by, :last_updated_at, :is_demo
-    ) RETURNING *`,
+    ) RETURNING *, to_char(next_review_date, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS next_review_date`,
     {
       replacements: {
         organization_id: organizationId,

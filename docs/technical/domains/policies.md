@@ -161,7 +161,7 @@ POST /policies/
 }
 ```
 
-`next_review_date` is a calendar day: clients send `"YYYY-MM-DD"` and read back the first 10 characters of the stored midnight timestamp (`toDateOnlyString` in the client), so the day does not shift with the viewer's time zone.
+`next_review_date` is a calendar day stored at midnight in a `TIMESTAMP` (no time zone) column. Clients send `"YYYY-MM-DD"`. Policy reads format it in SQL as `"YYYY-MM-DDT00:00:00.000Z"` (`to_char`), so the value does not depend on the backend's time zone; node-pg alone would read it as server-local midnight, a day early east of UTC. The client reads the first 10 characters (`toDateOnlyString`), and automation emails format it in UTC. Migration `20261114090000-policy-review-date-calendar-day` rounds dates the old picker stored with a time of day to the nearest midnight.
 
 The checks reject only input the database used to fail on with a 500, since the legacy endpoint is frozen. Create requires a non-empty `title` of at most 255 characters (untrimmed, it is `VARCHAR(255)`). `status` must be one of `POLICY_STATUS_ENUM` (the `policy_manager_status_check` constraint) and defaults to Draft. `tags` must be known tags; a missing or empty list stores `{}`. `next_review_date` must start with a valid `YYYY-MM-DD`; `null` or `""` stores or sets NULL. Update checks only the fields sent. Invalid input returns `400` with `STATUS_CODE[400]({ message, errors: [{ field, message }] })`, translated. The editor shows each message under its field, and a message with no field in a snackbar. History compares the review date by calendar day (`GENERIC_FORMATTERS.calendarDate`), so an unchanged date records no change on any server time zone.
 

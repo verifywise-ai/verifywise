@@ -161,6 +161,53 @@ describe("Policy save correctness", () => {
     expect(row.day).toBe("2030-01-15 00:00");
   });
 
+  it("returns the review date as the same UTC-midnight value on any server time zone (P-M1)", async () => {
+    // Run this suite with TZ east of UTC (e.g. Europe/Istanbul) to cover the bug:
+    // node-pg used to read the stored midnight as local time, a day early.
+    const ctx = await buildTenantContext();
+    const created = await ctx.request.post("/api/policies").send(policyPayload());
+    expect(created.status).toBe(201);
+    expect(created.body.data.next_review_date).toBe("2030-01-15T00:00:00.000Z");
+
+    const read = await ctx.request.get(`/api/policies/${created.body.data.id}`);
+    expect(read.body.data[0].next_review_date).toBe("2030-01-15T00:00:00.000Z");
+
+    const list = await ctx.request.get("/api/policies");
+    const listed = list.body.data.find((p: { id: number }) => p.id === created.body.data.id);
+    expect(listed.next_review_date).toBe("2030-01-15T00:00:00.000Z");
+  });
+
+  it("repairs review dates the old picker shifted (P-M1 migration)", async () => {
+    const ctx = await buildTenantContext();
+    const shiftedEast = await createPolicy(ctx);
+    const shiftedWest = await createPolicy(ctx);
+    const midnight = await createPolicy(ctx);
+    // Istanbul picked 15 Jan -> stored 14 Jan 21:00; Toronto picked 15 Jan -> 15 Jan 05:00.
+    await sequelize.query(
+      `UPDATE policy_manager SET next_review_date = CASE id
+         WHEN :east THEN TIMESTAMP '2030-01-14 21:00'
+         WHEN :west THEN TIMESTAMP '2030-01-15 05:00'
+         ELSE next_review_date END
+       WHERE id IN (:east, :west)`,
+      { replacements: { east: shiftedEast, west: shiftedWest } },
+    );
+
+    // eslint-disable-next-line @typescript-eslint/no-require-imports
+    const migration = require("../../database/migrations/20261114090000-policy-review-date-calendar-day.js");
+    await migration.up({ sequelize });
+
+    const rows = await sequelize.query<{ id: number; day: string }>(
+      `SELECT id, to_char(next_review_date, 'YYYY-MM-DD HH24:MI') AS day
+         FROM policy_manager WHERE id IN (:ids) ORDER BY id`,
+      { replacements: { ids: [shiftedEast, shiftedWest, midnight] }, type: QueryTypes.SELECT },
+    );
+    expect(rows.map((r) => r.day)).toEqual([
+      "2030-01-15 00:00",
+      "2030-01-15 00:00",
+      "2030-01-15 00:00",
+    ]);
+  });
+
   it("keeps task-list items as task items (P-M7)", async () => {
     const ctx = await buildTenantContext();
     const html =
