@@ -59,13 +59,13 @@ describe("useMitigationSection", () => {
       mitigation_plan: "Plan A",
       current_risk_level: "High",
       implementation_strategy: "Strategy A",
-      deadline: "2024-01-15T00:00:00.000Z",
+      deadline: "2024-01-15T12:00:00.000Z",
       mitigation_evidence_document: "doc.pdf",
       likelihood_mitigation: "Rare",
       risk_severity: "Catastrophic",
       risk_approval: 42,
       approval_status: "Completed",
-      date_of_assessment: "2024-02-01T00:00:00.000Z",
+      date_of_assessment: "2024-02-01T12:00:00.000Z",
     };
 
     const mapped = result.current.mapFromInputValues(inputValues);
@@ -74,13 +74,14 @@ describe("useMitigationSection", () => {
     expect(mapped.mitigationPlan).toBe("Plan A");
     expect(mapped.currentRiskLevel).toBe(2);
     expect(mapped.implementationStrategy).toBe("Strategy A");
-    expect(mapped.deadline).toBe("2024-01-15T00:00:00.000Z");
+    // A stored noon UTC opens as local midnight of that day, in any time zone.
+    expect(mapped.deadline).toBe(dayjs("2024-01-15").toISOString());
     expect(mapped.doc).toBe("doc.pdf");
     expect(mapped.likelihood).toBe(1);
     expect(mapped.riskSeverity).toBe(5);
     expect(mapped.approver).toBe(42);
     expect(mapped.approvalStatus).toBe(3);
-    expect(mapped.dateOfAssessment).toBe("2024-02-01T00:00:00.000Z");
+    expect(mapped.dateOfAssessment).toBe(dayjs("2024-02-01").toISOString());
   });
 
   it("maps Catastrophic severity to Critical in backend data", () => {
@@ -192,5 +193,20 @@ describe("useMitigationSection", () => {
       approval_status: null,
       date_of_assessment: null,
     });
+  });
+
+  it("round-trips a stored date without drifting a day (UTC+12 and beyond)", () => {
+    const { result } = renderHook(() => useMitigationSection());
+    const mapped = result.current.mapFromInputValues({
+      deadline: "2026-05-01T12:00:00.000Z",
+      date_of_assessment: "2026-05-01T12:00:00.000Z",
+    });
+    const backend = result.current.buildBackendData(mapped);
+    expect(backend.deadline).toBe("2026-05-01");
+    expect(backend.date_of_assessment).toBe("2026-05-01");
+  });
+
+  it("starts a new risk without an assessment date", () => {
+    expect(mitigationInitialState.dateOfAssessment).toBe("");
   });
 });

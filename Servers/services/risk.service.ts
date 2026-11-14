@@ -20,6 +20,7 @@ import { computeDerivedFields } from "../utils/quantitativeRisk.utils";
 import { validateQuantitativeRiskFields } from "../utils/validations/quantitativeRiskValidation.utils";
 import { ValidationError } from "../utils/validations/validation.utils";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
+import { toRiskCalendarDate } from "../utils/riskCalendarDate.utils";
 
 export type CreateRiskServiceInput = Partial<RiskModel> & {
   projects?: number[];
@@ -253,6 +254,15 @@ export async function updateRiskService(
     }
     Object.assign(updateData, computeDerivedFields(mergedFairFields));
   }
+
+  // Diff the values that will be written, not the raw request: dates are
+  // stored at noon UTC and an empty risk_name is skipped.
+  for (const field of ["deadline", "date_of_assessment"] as const) {
+    if (field in updateData) {
+      (updateData as Record<string, unknown>)[field] = toRiskCalendarDate(updateData[field]);
+    }
+  }
+  if ("risk_name" in updateData && !updateData.risk_name) delete updateData.risk_name;
 
   // 3. Diff before writing, while the stored row is still the old one.
   const changes = await trackProjectRiskChanges(existingRisk as RiskModel, updateData);

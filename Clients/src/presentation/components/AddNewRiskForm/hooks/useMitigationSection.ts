@@ -9,18 +9,10 @@ import {
   riskSeverityItems,
 } from "../projectRiskValue";
 import { Likelihood, Severity } from "../../RiskLevel/constants";
+import { riskCalendarDay } from "../../../tools/riskCalendarDate";
 
-/**
- * Safely parses a date value to ISO string format.
- * Handles string, Date objects, and falsy values.
- */
-const parseDateValue = (value: unknown): string => {
-  if (!value) return "";
-  if (typeof value === "string" || value instanceof Date) {
-    return dayjs(value).toISOString();
-  }
-  return "";
-};
+/** A stored risk date as the local midnight of its calendar day, or "" when unset. */
+const parseDateValue = (value: unknown): string => riskCalendarDay(value)?.toISOString() ?? "";
 
 /**
  * The calendar day the user picked, as "YYYY-MM-DD" in their own time zone.
@@ -43,7 +35,8 @@ export const mitigationInitialState: MitigationFormValues = {
   riskSeverity: 1 as Severity,
   approver: 0,
   approvalStatus: 0,
-  dateOfAssessment: new Date().toISOString(),
+  // Set only once approval is started, so a new risk does not look assessed.
+  dateOfAssessment: "",
 };
 
 export interface UseMitigationSectionReturn {

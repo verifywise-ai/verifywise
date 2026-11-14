@@ -1019,39 +1019,9 @@ export const updateRiskByIdQuery = async (
   ]
     .filter((f) => {
       const value = projectRisk[f as keyof RiskModel];
-      // For quantitative FAIR fields, allow null and 0 as valid update values
-      const isQuantitativeField = [
-        "event_frequency_min",
-        "event_frequency_likely",
-        "event_frequency_max",
-        "loss_regulatory_min",
-        "loss_regulatory_likely",
-        "loss_regulatory_max",
-        "loss_operational_min",
-        "loss_operational_likely",
-        "loss_operational_max",
-        "loss_litigation_min",
-        "loss_litigation_likely",
-        "loss_litigation_max",
-        "loss_reputational_min",
-        "loss_reputational_likely",
-        "loss_reputational_max",
-        "total_loss_likely",
-        "ale_estimate",
-        "control_effectiveness",
-        "residual_ale",
-        "mitigation_cost_annual",
-        "roi_percentage",
-        "benchmark_id",
-        "currency",
-      ].includes(f);
       // A key that is present is written, so a field can be cleared (R-M1).
       // risk_name is NOT NULL, so an empty name is skipped.
-      const hasValue = isQuantitativeField
-        ? value !== undefined
-        : f === "risk_name"
-          ? Boolean(value)
-          : value !== undefined;
+      const hasValue = value !== undefined && (f !== "risk_name" || Boolean(value));
       if (hasValue) {
         if (f === "risk_category") {
           // Format array for PostgreSQL

@@ -89,11 +89,12 @@ describe("Risk save correctness", () => {
     expect(row.risk_approval).toBeNull();
   });
 
-  it("keeps a risk name that is sent empty on update", async () => {
+  it("keeps a risk name that is sent empty on update, without a history entry", async () => {
     const ctx = await buildTenantContext();
     const riskId = await createRisk(ctx, { risk_name: "Keep me" });
 
     await ctx.request.put(`/api/projectRisks/${riskId}`).send({ risk_name: "" });
+    expect(await historyFields(riskId)).not.toContain("risk_name");
     const [row] = await sequelize.query<{ risk_name: string }>(
       `SELECT risk_name FROM risks WHERE id = :riskId`,
       { replacements: { riskId }, type: QueryTypes.SELECT },
@@ -170,12 +171,11 @@ describe("Risk save correctness", () => {
     row = await readRisk(riskId);
     expect(new Date(row.deadline).toISOString()).toBe("2001-03-01T12:00:00.000Z");
 
-    // An older client's local midnight lands on the picked day: 1 April from
-    // Toronto (05:00 UTC) and from Istanbul (21:00 UTC the evening before).
-    for (const sent of ["2001-04-01T05:00:00.000Z", "2001-03-31T21:00:00.000Z"]) {
+    // An explicit time from an API, MCP or older client is stored as sent.
+    for (const sent of ["2001-04-01T18:00:00.000Z", "2001-03-31T21:00:00.000Z"]) {
       await ctx.request.put(`/api/projectRisks/${riskId}`).send({ deadline: sent });
       row = await readRisk(riskId);
-      expect(new Date(row.deadline).toISOString()).toBe("2001-04-01T12:00:00.000Z");
+      expect(new Date(row.deadline).toISOString()).toBe(sent);
     }
   });
 
@@ -186,7 +186,9 @@ describe("Risk save correctness", () => {
       ["2001-01-01T05:00:00.000Z", "2001-01-01T12:00:00.000Z"], // Toronto pick
       ["2000-12-31T21:00:00.000Z", "2001-01-01T12:00:00.000Z"], // Istanbul pick
       ["2000-12-31T18:30:00.000Z", "2001-01-01T12:00:00.000Z"], // India pick
-      ["2001-01-01T12:00:00.000Z", "2001-01-01T12:00:00.000Z"], // already migrated
+      ["2000-12-31T11:00:00.000Z", "2001-01-01T12:00:00.000Z"], // New Zealand summer pick
+      ["2000-12-31T12:00:00.000Z", "2001-01-01T12:00:00.000Z"], // New Zealand winter pick
+      ["2001-01-01T10:00:00.000Z", "2001-01-01T12:00:00.000Z"], // Hawaii pick
       ["2001-01-01T14:23:41.512Z", "2001-01-01T14:23:41.512Z"], // a "now" timestamp
     ];
     const ids: number[] = [];

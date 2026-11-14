@@ -363,9 +363,10 @@ function parseRow(row: RiskImportRow): Record<string, unknown> {
     final_risk_level: row.final_risk_level ?? null,
     risk_approval: parseUserId(row.risk_approval),
     approval_status: row.approval_status ?? null,
+    // An empty cell stays empty: the import time is not an assessment date.
     date_of_assessment: row.date_of_assessment
       ? toRiskCalendarDate(new Date(row.date_of_assessment))
-      : new Date(),
+      : null,
   };
 }
 

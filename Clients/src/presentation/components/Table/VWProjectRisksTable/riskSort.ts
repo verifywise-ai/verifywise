@@ -1,4 +1,5 @@
 import { RiskModel } from "../../../../domain/models/Common/risks/risk.model";
+import { riskCalendarDay } from "../../../tools/riskCalendarDate";
 
 export type RiskSortDirection = "asc" | "desc";
 
@@ -42,7 +43,7 @@ const sortValue = (risk: RiskModel, key: string): string | number | null => {
     case "risk_level_autocalculated":
       return getRiskLevelValue(risk.risk_level_autocalculated);
     case "deadline":
-      return risk.deadline ? new Date(risk.deadline).getTime() || 0 : 0;
+      return riskCalendarDay(risk.deadline)?.getTime() ?? 0;
     case "ale_estimate":
       return risk.ale_estimate ?? 0;
     case "controls_mapping":

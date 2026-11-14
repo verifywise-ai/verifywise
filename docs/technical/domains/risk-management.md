@@ -439,7 +439,20 @@ POST /projectRisks/
   risk_category: ["Data Quality", "Security"],
   impact: "Model accuracy degradation",
   likelihood: "Likely",
-  severity: "### Field Limits
+  severity: "Major",
+  assessment_mapping: "Q1.2",
+  controls_mapping: "AC-1",
+  mitigation_plan: "Implement validation pipeline",
+  mitigation_status: "Not Started",
+  deadline: "2026-02-28",
+  projects: [1, 2],
+  frameworks: [5]
+}
+```
+
+## Validation Rules
+
+### Field Limits
 
 The validator (`middleware/validators/risks.validator.ts`) enforces the column limits, so overlong text is a 400, not a 500. The other text columns are `TEXT` and have no limit.
 
@@ -456,33 +469,25 @@ The validator (`middleware/validators/risks.validator.ts`) enforces the column l
 - `risk_name` - non-empty string (create). An empty `risk_name` on update is ignored.
 - `risk_owner` - positive user id (create)
 
-The risk form requires approver, approval status and assessment date only once one of approver or approval status is set.
+The risk form requires approver, approval status and assessment date only once an approver or an approval status is set. A new risk starts without an assessment date, and import leaves an empty assessment date empty.
 
 ### Saving and clearing fields
 
-`updateRiskByIdQuery` writes every key present in the request and leaves absent keys alone, so a partial edit does not touch the owner or log an owner change. A present key clears the field: `""` is stored on text columns, and `""`, `null` or user id `0` become `NULL` on enum, date and user columns. The form sends unset selects, dates and the approver as `null`.
+`updateRiskByIdQuery` writes every key present in the request and leaves absent keys alone, so a partial edit does not touch the owner or log an owner change. A present key clears the field: `""` is stored on text columns, and `""`, `null` or user id `0` become `NULL` on enum, date and user columns. The form sends unset selects, dates and the approver as `null`. Change history compares the values that are written.
 
 Delete is a soft delete (`is_deleted = true`). It keeps the risk's custom field values and returns 404 when the risk does not exist or is already deleted, before any automation runs.
 
 ### Calendar dates (deadline, date of assessment)
 
-`deadline` and `date_of_assessment` are `TIMESTAMP WITH TIME ZONE` but hold calendar dates. Every write stores them at 12:00 UTC on their day (`toRiskCalendarDate` in `utils/riskCalendarDate.utils.ts`), which reads as the same day from UTC-11 to UTC+11:
+`deadline` and `date_of_assessment` are `TIMESTAMP WITH TIME ZONE` but hold calendar dates. A calendar date is stored at 12:00 UTC on its day:
 
-- The form sends the picked day as `"YYYY-MM-DD"`.
-- A value that looks like a browser's local midnight (a whole quarter hour, no seconds), including 00:00 UTC from import, the advisor or an API client, moves to noon UTC on the nearest day.
-- Other timestamps (a "now" value with seconds) are stored as sent.
+- The form sends the picked day as `"YYYY-MM-DD"`. The server (`toRiskCalendarDate` in `utils/riskCalendarDate.utils.ts`) stores a date-only string, or a value at exactly 00:00 UTC (a date-only value something already parsed: import, the advisor, a JSON client), at noon UTC on that day.
+- Any other time, such as an explicit API or MCP timestamp, is stored as sent.
+- The client (`riskCalendarDay` in `Clients/src/presentation/tools/riskCalendarDate.ts`) reads exactly 12:00 UTC as that UTC date and any other value as the local date of the instant. The form and the risk table use it, so every time zone sees the same day and saving the form never moves the date.
 
-Migration `20261114120000-risk-dates-utc-noon` applied the same rule to existing rows on every deployment. A deadline therefore passes at 12:00 UTC on its day, so overdue checks (`deadline < NOW()`) fire up to 12 hours later than they did with the picker's local midnight. A local midnight from UTC+12..+14 cannot be told from UTC-12..-10 and may land a day off.
+Migration `20261114120000-risk-dates-utc-noon` rewrote existing rows on every deployment. A value that looks like a browser's local midnight (a whole quarter hour with no seconds) moved to 12:00 UTC on the UTC date of the value plus 13 hours: 00:00 to 10:45 UTC stay on their day (UTC and the Americas), 11:00 to 23:45 UTC move to the next day (New Zealand, Asia, Europe). Picks from UTC+14 and UTC-11, and whole-quarter-hour times sent on purpose through the API, can land a day off. Values with seconds were left alone.
 
-| mitigation_plan | 1000 chars |
-| implementation_strategy | 1000 chars |
-| mitigation_evidence_document | 500 chars |
-
-### Required Fields
-
-- `risk_name` - Non-empty string
-- `risk_owner` - Valid user ID
-- `risk_description` - Non-empty string
+A deadline now passes at 12:00 UTC on its day, so overdue checks (`deadline < NOW()`) fire up to 12 hours later than they did with the picker's local midnight.
 
 ### Organization references
 

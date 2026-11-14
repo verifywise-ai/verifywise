@@ -28,6 +28,7 @@ import Chip from "../../Chip";
 import ProjectRiskLinkedPolicies from "../../../components/ProjectRiskMitigation/ProjectRiskLinkedPolicies";
 import { text, palette as vwPalette } from "../../../themes/palette";
 import { formatCustomFieldValue } from "../../CustomFieldsSection/formatCustomFieldValue";
+import { riskCalendarDay } from "../../../tools/riskCalendarDate";
 
 function getDummyEvent() {
   const realEvent = new Event("click", { bubbles: true, cancelable: true });
@@ -317,7 +318,9 @@ const VWProjectRisksTableBody = ({
                             : "",
                     }}
                   >
-                    {row.deadline ? formatDate(row.deadline.toString()) : "NA"}
+                    {riskCalendarDay(row.deadline)
+                      ? formatDate(riskCalendarDay(row.deadline))
+                      : "NA"}
                   </TableCell>
                 )}
                 {isColVisible("controls_mapping") && (
