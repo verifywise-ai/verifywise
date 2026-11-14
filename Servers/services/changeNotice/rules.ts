@@ -21,6 +21,12 @@ export type DecideShowInput = {
   accountCreatedAt: Date;
   /** Earliest first_seen_at for this notice across the organization; null when nobody has seen it. */
   orgFirstSeenAt: Date | null;
+  /**
+   * Whether the account existed before the notice reached this deployment. False
+   * for accounts created after it, and for every account on a fresh install; null
+   * when no release is recorded for the notice.
+   */
+  createdBeforeRelease: boolean | null;
   /** How many notice keys the user already holds. */
   keyCount: number;
   now: Date;
@@ -30,17 +36,21 @@ export type DecideShowInput = {
  * Whether the notice should be shown on this visit. First rule to stop it wins:
  * dismissed, shown MAX_VIEWS times, or MAX_DAYS since the user first saw it.
  * A user who has never seen it is skipped when their account is newer than the
- * first time anyone in their organization saw it, or when they are at the key limit.
+ * notice's release on this deployment (they never saw what it describes), when
+ * it is newer than the first time anyone in their organization saw it, or when
+ * they are at the key limit.
  */
 export function decideShow({
   state,
   accountCreatedAt,
   orgFirstSeenAt,
+  createdBeforeRelease,
   keyCount,
   now,
 }: DecideShowInput): boolean {
   if (!state) {
     if (keyCount >= MAX_KEYS) return false;
+    if (createdBeforeRelease === false) return false;
     return !orgFirstSeenAt || accountCreatedAt.getTime() <= orgFirstSeenAt.getTime();
   }
   if (state.dismissed_at) return false;

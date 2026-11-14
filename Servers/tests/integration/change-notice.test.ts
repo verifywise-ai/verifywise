@@ -77,6 +77,38 @@ describe("change notice state against a real database", () => {
     expect(await view(earlier, orgId)).toEqual({ show: true });
   });
 
+  describe("release on this deployment", () => {
+    const RELEASED = "release-test";
+    const release = (at: string) =>
+      sequelize.query(
+        `INSERT INTO change_notice_releases (notice_id, released_at) VALUES (:id, :at::timestamptz)
+         ON CONFLICT (notice_id) DO UPDATE SET released_at = EXCLUDED.released_at`,
+        { replacements: { id: RELEASED, at } },
+      );
+
+    afterEach(async () => {
+      await sequelize.query(`DELETE FROM change_notice_releases WHERE notice_id = :id`, {
+        replacements: { id: RELEASED },
+      });
+    });
+
+    it("hides from an account created after the release, even as the organization's first viewer", async () => {
+      await release("2000-01-01T00:00:00Z");
+      expect(await view(userId, orgId, RELEASED)).toEqual({ show: false });
+      expect(await prefsOf(userId)).toBeUndefined();
+    });
+
+    it("hides from every account when the release is -infinity (fresh install)", async () => {
+      await release("-infinity");
+      expect(await view(userId, orgId, RELEASED)).toEqual({ show: false });
+    });
+
+    it("shows to an account created before the release", async () => {
+      await release("2999-01-01T00:00:00Z");
+      expect(await view(userId, orgId, RELEASED)).toEqual({ show: true });
+    });
+  });
+
   it("keeps existing preference keys and other notices", async () => {
     await sequelize.query(
       `INSERT INTO user_preferences (user_id, preferences)
