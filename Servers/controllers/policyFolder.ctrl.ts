@@ -19,6 +19,11 @@ import {
   bulkUpdatePolicyFoldersQuery,
 } from "../utils/policyFolder.utils";
 import { sequelize } from "../database/db";
+import { QueryTypes } from "sequelize";
+import {
+  ForbiddenException,
+  ValidationException,
+} from "../domain.layer/exceptions/custom.exception";
 import { isPureSuperAdmin, requestHasPermission } from "../utils/rolePermissions.utils";
 
 import { translateError } from "../utils/i18n.utils";
@@ -94,6 +99,19 @@ export const updatePolicyFolders = async (req: Request, res: Response): Promise<
       return res.status(400).json(STATUS_CODE[400](req.t!("Folder IDs array is required")));
     }
 
+    const policyRows = await sequelize.query(
+      `SELECT id FROM policy_manager WHERE id = :policyId AND organization_id = :organizationId`,
+      {
+        replacements: { policyId, organizationId: req.organizationId! },
+        type: QueryTypes.SELECT,
+        transaction,
+      },
+    );
+    if (policyRows.length === 0) {
+      await transaction.rollback();
+      return res.status(404).json(STATUS_CODE[404](null));
+    }
+
     await bulkUpdatePolicyFoldersQuery(
       req.organizationId!,
       policyId,
@@ -102,12 +120,18 @@ export const updatePolicyFolders = async (req: Request, res: Response): Promise<
       transaction,
     );
 
-    const updatedFolders = await getPolicyFoldersQuery(req.organizationId!, policyId);
+    const updatedFolders = await getPolicyFoldersQuery(req.organizationId!, policyId, transaction);
 
     await transaction.commit();
     return res.status(200).json(STATUS_CODE[200](updatedFolders));
   } catch (error) {
     await transaction.rollback();
+    if (error instanceof ValidationException) {
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+    }
+    if (error instanceof ForbiddenException) {
+      return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
+    }
     console.error("Error updating policy folders:", error);
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }

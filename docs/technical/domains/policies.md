@@ -161,6 +161,12 @@ POST /policies/
 }
 ```
 
+Create and update accept only `title`, `content_html`, `status`, `tags`, `next_review_date`, `policy_owner_id` and `assigned_reviewer_ids`; other body fields (`is_demo`, `review_status`, `author_id`, ...) are dropped.
+
+`policy_owner_id`, `assigned_reviewer_ids`, bulk `reviewerId` and `reviewer_ids` in a review request must be members of the caller's organization, or the request returns 400 (`assertPolicyUsersInOrganization` in `utils/policyManager.utils.ts`). On update only newly named users are checked.
+
+Folder assignment (`PATCH /policies/:id/folders`) returns 404 for another organization's policy and 403 for another organization's folder. Reading a policy's folders joins folders on the organization.
+
 ## Rich Text Editor
 
 ### TipTap Integration
@@ -252,6 +258,8 @@ POST /policy-linked/:policyId/linked-objects
   object_ids: [1, 2, 3, 4]
 }
 ```
+
+`object_type` must be `risk` (ids from `risks`) or `evidence` (ids from `files`), otherwise 400. The policy must belong to the caller's organization (404) and so must every object (403). Ids already linked are skipped. The response is 201 with `linked: <count>` when something was linked, 200 with `linked: 0` when everything was already linked.
 
 ## Change History
 

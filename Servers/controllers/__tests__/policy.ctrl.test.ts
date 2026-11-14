@@ -11,6 +11,7 @@ jest.mock("../../utils/policyManager.utils", () => ({
   bulkArchivePoliciesQuery: jest.fn(),
   bulkSetPoliciesReviewerQuery: jest.fn(),
   bulkSetPoliciesTagsQuery: jest.fn(),
+  assertPolicyUsersInOrganization: jest.fn(),
 }));
 jest.mock("../../utils/bulkAction.utils", () => ({
   parseBulkIds: jest.fn((ids: number[]) => ids),
@@ -87,8 +88,14 @@ import {
 } from "../../utils/policyManager.utils";
 import { generatePolicyPDF } from "../../services/policies/policyExporter";
 import { convertDocxToHtml } from "../../services/policies/policyImporter";
-import { ForbiddenException } from "../../domain.layer/exceptions/custom.exception";
-import { updatePolicyReviewStatusQuery } from "../../utils/policyManager.utils";
+import {
+  ForbiddenException,
+  ValidationException,
+} from "../../domain.layer/exceptions/custom.exception";
+import {
+  updatePolicyReviewStatusQuery,
+  assertPolicyUsersInOrganization,
+} from "../../utils/policyManager.utils";
 
 const mockGetAll = getAllPoliciesQuery as jest.MockedFunction<typeof getAllPoliciesQuery>;
 const mockGetById = getPolicyByIdQuery as jest.MockedFunction<typeof getPolicyByIdQuery>;
@@ -184,6 +191,28 @@ describe("policy.ctrl", () => {
       const res = createRes();
       await PolicyController.createPolicy(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
+    });
+    it("passes only editable fields, dropping is_demo and review fields", async () => {
+      mockCreate.mockResolvedValue({ id: 1, title: "P1" } as any);
+      const req = createReq({
+        body: { title: "P1", is_demo: true, review_status: "approved", organization_id: 99 },
+      });
+      const res = createRes();
+      await PolicyController.createPolicy(req, res);
+      const sent = mockCreate.mock.calls[0][0] as unknown as Record<string, unknown>;
+      expect(sent.title).toBe("P1");
+      expect(sent).not.toHaveProperty("is_demo");
+      expect(sent).not.toHaveProperty("review_status");
+      expect(sent).not.toHaveProperty("organization_id");
+    });
+    it("should return 400 when an owner or reviewer is outside the organization", async () => {
+      mockCreate.mockRejectedValue(
+        new ValidationException("Reviewers must be members of this organization"),
+      );
+      const req = createReq({ body: { title: "P1", assigned_reviewer_ids: [77] } });
+      const res = createRes();
+      await PolicyController.createPolicy(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
     });
   });
 
@@ -392,6 +421,25 @@ describe("policy.ctrl", () => {
       const res = createRes();
       await PolicyController.requestReview(req, res);
       expect(res.status).toHaveBeenCalledWith(404);
+    });
+    it("should return 400 when a reviewer id is not a positive integer", async () => {
+      mockGetById.mockResolvedValue([{ id: 1, title: "P1", author_id: 1 }] as any);
+      const req = createReq({ params: { id: "1" }, body: { reviewer_ids: ["x"] } });
+      const res = createRes();
+      await PolicyController.requestReview(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(updatePolicyReviewStatusQuery).not.toHaveBeenCalled();
+    });
+    it("should return 400 and notify no one when a reviewer is outside the organization", async () => {
+      mockGetById.mockResolvedValue([{ id: 1, title: "P1", author_id: 1 }] as any);
+      (assertPolicyUsersInOrganization as jest.Mock<any>).mockRejectedValueOnce(
+        new ValidationException("Reviewers must be members of this organization"),
+      );
+      const req = createReq({ params: { id: "1" }, body: { reviewer_ids: [77] } });
+      const res = createRes();
+      await PolicyController.requestReview(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(updatePolicyReviewStatusQuery).not.toHaveBeenCalled();
     });
     it("should return 200 on success", async () => {
       mockGetById.mockResolvedValue([{ id: 1, title: "P1", author_id: 1 }] as any);

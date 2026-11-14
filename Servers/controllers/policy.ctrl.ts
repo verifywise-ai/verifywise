@@ -16,6 +16,7 @@ import {
   bulkArchivePoliciesQuery,
   bulkSetPoliciesReviewerQuery,
   bulkSetPoliciesTagsQuery,
+  assertPolicyUsersInOrganization,
 } from "../utils/policyManager.utils";
 import { parseBulkIds, assertOrgOwnsIds, withBulkTransaction } from "../utils/bulkAction.utils";
 import {
@@ -60,6 +61,33 @@ async function canDecideReview(req: Request, policy: any): Promise<boolean> {
   return reviewerIds.includes(req.userId!);
 }
 
+/**
+ * The fields a caller may set on create and update. Everything else in the
+ * body (is_demo, review_status, author_id, organization_id, ...) is dropped,
+ * so a client cannot mark a real policy as demo data. HTML is sanitized.
+ */
+const EDITABLE_POLICY_FIELDS = [
+  "title",
+  "content_html",
+  "status",
+  "tags",
+  "next_review_date",
+  "policy_owner_id",
+  "assigned_reviewer_ids",
+] as const;
+
+function pickEditablePolicyFields(body: unknown): Partial<IPolicy> {
+  const source = (body && typeof body === "object" ? body : {}) as Record<string, unknown>;
+  const picked: Record<string, unknown> = {};
+  for (const field of EDITABLE_POLICY_FIELDS) {
+    if (source[field] !== undefined) picked[field] = source[field];
+  }
+  if (picked.content_html !== undefined) {
+    picked.content_html = sanitizeUserHtml(picked.content_html);
+  }
+  return picked as Partial<IPolicy>;
+}
+
 export class PolicyController {
   // Get all policies
   static async getAllPolicies(req: Request, res: Response) {
@@ -94,10 +122,7 @@ export class PolicyController {
     try {
       const userId = req.userId!;
       const policyData = {
-        ...req.body,
-        ...(req.body?.content_html !== undefined && {
-          content_html: sanitizeUserHtml(req.body.content_html),
-        }),
+        ...pickEditablePolicyFields(req.body),
         author_id: userId,
         last_updated_by: userId,
       } as IPolicy;
@@ -123,6 +148,9 @@ export class PolicyController {
       return res.status(503).json(STATUS_CODE[503]({}));
     } catch (error) {
       await transaction.rollback();
+      if (error instanceof ValidationException) {
+        return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+      }
       return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
     }
   }
@@ -144,10 +172,7 @@ export class PolicyController {
       const existingPolicy = existingPolicyResult[0];
 
       const policyData = {
-        ...req.body,
-        ...(req.body?.content_html !== undefined && {
-          content_html: sanitizeUserHtml(req.body.content_html),
-        }),
+        ...pickEditablePolicyFields(req.body),
         last_updated_by: userId,
       } as Partial<IPolicy>;
 
@@ -179,6 +204,9 @@ export class PolicyController {
       return res.status(404).json(STATUS_CODE[404]({}));
     } catch (error) {
       await transaction.rollback();
+      if (error instanceof ValidationException) {
+        return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+      }
       logger.error("Error updating policy:", error);
       return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
     }
@@ -366,6 +394,20 @@ export class PolicyController {
       }
       const policy = policyResult[0] as any;
 
+      const reviewerIds = reviewer_ids.map(Number);
+      if (reviewerIds.some((rid: number) => !Number.isInteger(rid) || rid <= 0)) {
+        await transaction.rollback();
+        return res
+          .status(400)
+          .json(STATUS_CODE[400](req.t!("reviewer_ids must be positive integers")));
+      }
+      await assertPolicyUsersInOrganization(
+        reviewerIds,
+        "reviewer_ids",
+        req.organizationId!,
+        transaction,
+      );
+
       // Update review status to pending_review
       await updatePolicyReviewStatusQuery(
         req.organizationId!,
@@ -414,6 +456,9 @@ export class PolicyController {
       return res.status(200).json(STATUS_CODE[200](updatedPolicy?.[0] || null));
     } catch (error) {
       await transaction.rollback();
+      if (error instanceof ValidationException) {
+        return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+      }
       logger.error("Error requesting policy review:", error);
       return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
     }

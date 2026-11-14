@@ -705,7 +705,7 @@ For each page/screen the following subsections describe: routes, user-facing fea
 | Component | `Clients/src/presentation/pages/PolicyDashboard/PoliciesDashboard.tsx`, `PolicyEditorPage.tsx` |
 | Tabs | Policies, Templates. |
 | Features | Policy table with status/progress, search, filters; create/edit policy editor with rich text, AI editor menu, version history, approval workflow, linked policies/evidence/risks selectors; policy templates table. |
-| Key components | `PolicyTable`, `PolicyForm`, `AIEditorMenu`, `RichTextEditor`, `RichTextRenderer`, `LinkedPoliciesTable`, `LinkedPolicyModal`, `LinkEvidenceSelectorModal`, `LinkRiskSelectorModal`. |
+| Key components | `PolicyTable`, `PolicyForm`, `RichTextEditor`, `RichTextRenderer`, `LinkedPoliciesTable`, `LinkedPolicyModal`, `LinkEvidenceSelectorModal`, `LinkRiskSelectorModal`. |
 | Access | Main sidebar → Policy manager. |
 | e2e tests | `Clients/e2e/policies.spec.ts`, `Clients/e2e/policy-editor.spec.ts` |
 | Unit tests | `Clients/src/presentation/pages/PolicyDashboard/**/*.test.tsx`, `Clients/src/presentation/components/Policies/**/*.test.tsx`, `Clients/src/presentation/components/RichTextEditor/__tests__/*.test.tsx` |

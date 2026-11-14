@@ -15,6 +15,8 @@ import {
   deleteAllCustomFieldValuesForEntityQuery,
   fetchCustomFieldsForEntities,
 } from "./customField.utils";
+import { findUsersNotInOrganization } from "./user.utils";
+import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 
 type Mitigation = {
   id: number;
@@ -54,6 +56,86 @@ export const validateRiskProjectsQuery = async (
     }
   }
   return true;
+};
+
+const positiveIds = (values: Array<number | null | undefined>): number[] =>
+  Array.from(new Set(values.map((v) => Number(v)).filter((v) => Number.isInteger(v) && v > 0)));
+
+/**
+ * Tenant guard for the ids a risk points at. Owner and approver must be
+ * members of the organization, linked use cases must belong to it, and
+ * framework ids must exist (frameworks are a global catalog).
+ *
+ * Every risk write path (REST, MCP, advisor, intake, AI detection, demo seed)
+ * goes through createRiskQuery / updateRiskByIdQuery, which call this.
+ *
+ * @throws ValidationException naming the first offending field.
+ */
+export const assertRiskReferencesInOrganization = async (
+  refs: {
+    risk_owner?: number | null;
+    risk_approval?: number | null;
+    projects?: number[];
+    frameworks?: number[];
+  },
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<void> => {
+  const isOutside = async (id: number | null | undefined): Promise<boolean> => {
+    const ids = positiveIds([id]);
+    if (ids.length === 0) return false;
+    const outside = await findUsersNotInOrganization(ids, organizationId, transaction ?? null);
+    return outside.length > 0;
+  };
+  if (await isOutside(refs.risk_owner)) {
+    throw new ValidationException(
+      "The risk owner must be a member of this organization",
+      "risk_owner",
+      refs.risk_owner,
+    );
+  }
+  if (await isOutside(refs.risk_approval)) {
+    throw new ValidationException(
+      "The risk approver must be a member of this organization",
+      "risk_approval",
+      refs.risk_approval,
+    );
+  }
+
+  const projectIds = positiveIds(refs.projects ?? []);
+  if (projectIds.length > 0) {
+    const rows = (await sequelize.query(
+      `SELECT id FROM projects WHERE organization_id = :organizationId AND id IN (:ids)`,
+      {
+        replacements: { organizationId, ids: projectIds },
+        type: QueryTypes.SELECT,
+        transaction,
+      },
+    )) as { id: number }[];
+    if (rows.length !== projectIds.length) {
+      throw new ValidationException(
+        "Linked use cases must belong to this organization",
+        "projects",
+        refs.projects,
+      );
+    }
+  }
+
+  const frameworkIds = positiveIds(refs.frameworks ?? []);
+  if (frameworkIds.length > 0) {
+    const rows = (await sequelize.query(`SELECT id FROM frameworks WHERE id IN (:ids)`, {
+      replacements: { ids: frameworkIds },
+      type: QueryTypes.SELECT,
+      transaction,
+    })) as { id: number }[];
+    if (rows.length !== frameworkIds.length) {
+      throw new ValidationException(
+        "One or more linked frameworks do not exist",
+        "frameworks",
+        refs.frameworks,
+      );
+    }
+  }
 };
 
 export const getAllRisksQuery = async (
@@ -656,6 +738,8 @@ export const createRiskQuery = async (
   organizationId: number,
   transaction: Transaction,
 ): Promise<RiskModel> => {
+  await assertRiskReferencesInOrganization(projectRisk, organizationId, transaction);
+
   const result = await sequelize.query(
     `INSERT INTO risks (
       organization_id, risk_name, risk_owner, ai_lifecycle_phase, risk_description,
@@ -850,6 +934,24 @@ export const updateRiskByIdQuery = async (
   transaction: Transaction,
 ): Promise<RiskModel | null> => {
   const existingRisk = await getRiskByIdQuery(id, organizationId, true);
+  // Unchanged owner/approver are not re-checked, so a risk whose owner has
+  // left the organization can still be edited.
+  await assertRiskReferencesInOrganization(
+    {
+      risk_owner:
+        Number(projectRisk.risk_owner) !== Number(existingRisk?.risk_owner)
+          ? projectRisk.risk_owner
+          : undefined,
+      risk_approval:
+        Number(projectRisk.risk_approval) !== Number(existingRisk?.risk_approval)
+          ? projectRisk.risk_approval
+          : undefined,
+      projects: projectRisk.projects,
+      frameworks: projectRisk.frameworks,
+    },
+    organizationId,
+    transaction,
+  );
   const updateProjectRisk: Partial<Record<keyof RiskModel, any>> & { organizationId?: number } = {};
   const setClause = [
     "risk_name",

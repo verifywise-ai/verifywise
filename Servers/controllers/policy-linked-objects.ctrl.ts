@@ -7,10 +7,21 @@ import {
   getAllPolicyLinkedObjectsQuery,
   getPolicyLinkedObjectByIdQuery,
 } from "../utils/policyLinkedObject.utils";
-import { Transaction } from "sequelize";
+import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../database/db";
+import { assertOrgOwnsIds, parseBulkIds } from "../utils/bulkAction.utils";
+import {
+  ForbiddenException,
+  ValidationException,
+} from "../domain.layer/exceptions/custom.exception";
 
 import { translateError } from "../utils/i18n.utils";
+
+/** The object types a policy can link to, and the table each id lives in. */
+const LINKABLE_OBJECT_TABLES = new Map<string, string>([
+  ["risk", "risks"],
+  ["evidence", "files"],
+]);
 /**
  * GET /policies/:policyId/linked-objects
  */
@@ -144,7 +155,7 @@ export async function createLinkedObject(req: Request, res: Response) {
   const policyId = parseInt(
     Array.isArray(req.params.policyId) ? req.params.policyId[0] : req.params.policyId,
   );
-  const { object_type, object_id, object_ids } = req.body;
+  const { object_type, object_id, object_ids } = req.body ?? {};
 
   logger.debug(`🔗 Linking ${object_type} to policy ${policyId}`);
 
@@ -152,27 +163,69 @@ export async function createLinkedObject(req: Request, res: Response) {
 
   try {
     const tenant = req.organizationId!;
+
+    const table = LINKABLE_OBJECT_TABLES.get(String(object_type));
+    if (!table) {
+      return res.status(400).json(STATUS_CODE[400](req.t!("object_type must be risk or evidence")));
+    }
+    // Single id (old clients) and/or a list (new clients), de-duplicated.
+    const requestedIds = parseBulkIds(
+      [
+        ...(object_id !== undefined && object_id !== null ? [object_id] : []),
+        ...(Array.isArray(object_ids) ? object_ids : []),
+      ],
+      { field: "object_ids" },
+    );
+
     transaction = await sequelize.transaction();
 
-    // Handle single insert (old)
-    if (object_id) {
-      await createPolicyLinkedObjectQuery(policyId, object_type, object_id, tenant, transaction);
+    const policyRows = await sequelize.query(
+      `SELECT id FROM policy_manager WHERE id = :policyId AND organization_id = :organizationId`,
+      { replacements: { policyId, organizationId: tenant }, type: QueryTypes.SELECT, transaction },
+    );
+    if (policyRows.length === 0) {
+      await transaction.rollback();
+      return res.status(404).json(STATUS_CODE[404](null));
     }
 
-    // Handle bulk insert (new)
-    if (Array.isArray(object_ids)) {
-      for (const id of object_ids) {
-        await createPolicyLinkedObjectQuery(policyId, object_type, id, tenant, transaction);
-      }
+    await assertOrgOwnsIds({ table, ids: requestedIds, organizationId: tenant, transaction });
+
+    const existingRows = (await sequelize.query(
+      `SELECT object_id FROM policy_linked_objects
+       WHERE organization_id = :organizationId AND policy_id = :policyId
+         AND object_type = :objectType AND object_id IN (:ids)`,
+      {
+        replacements: {
+          organizationId: tenant,
+          policyId,
+          objectType: object_type,
+          ids: requestedIds,
+        },
+        type: QueryTypes.SELECT,
+        transaction,
+      },
+    )) as { object_id: number }[];
+    const alreadyLinked = new Set(existingRows.map((r) => Number(r.object_id)));
+    const newIds = requestedIds.filter((id) => !alreadyLinked.has(id));
+
+    for (const id of newIds) {
+      await createPolicyLinkedObjectQuery(policyId, object_type, id, tenant, transaction);
     }
 
     await transaction.commit();
 
-    return res.status(201).json({
+    return res.status(newIds.length > 0 ? 201 : 200).json({
       message: req.t!("Linked successfully"),
+      linked: newIds.length,
     });
   } catch (error: any) {
     if (transaction) await transaction.rollback();
+    if (error instanceof ValidationException) {
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+    }
+    if (error instanceof ForbiddenException) {
+      return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
+    }
     logger.error("❌ Error in createLinkedObject:", error);
     return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }

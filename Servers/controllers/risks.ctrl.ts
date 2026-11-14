@@ -10,6 +10,7 @@ import {
   bulkSetProjectRisksOwnerQuery,
   bulkSetProjectRisksCategoryQuery,
   bulkArchiveProjectRisksQuery,
+  assertRiskReferencesInOrganization,
   PROJECT_RISK_CATEGORIES_SET,
 } from "../utils/risk.utils";
 import { sequelize } from "../database/db";
@@ -337,6 +338,8 @@ export async function createRisk(req: Request, res: Response): Promise<any> {
         ...riskData,
         projects: req.body.projects || [],
         frameworks: req.body.frameworks || [],
+        // Only the demo seed creates demo risks; "Delete demo data" removes them.
+        is_demo: false,
       },
       { userId: req.userId!, organizationId: req.organizationId! },
       transaction,
@@ -764,6 +767,11 @@ export async function bulkUpdateProjectRisks(req: Request, res: Response): Promi
         });
 
         if (action === "set_owner") {
+          await assertRiskReferencesInOrganization(
+            { risk_owner: ownerId },
+            req.organizationId!,
+            transaction,
+          );
           await bulkSetProjectRisksOwnerQuery(req.organizationId!, ids, ownerId!, transaction);
         } else if (action === "set_category") {
           await bulkSetProjectRisksCategoryQuery(

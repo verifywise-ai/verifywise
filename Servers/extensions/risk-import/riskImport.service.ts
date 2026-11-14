@@ -1,6 +1,7 @@
 import ExcelJS from "exceljs";
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
+import { findUsersNotInOrganization } from "../../utils/user.utils";
 import {
   AI_LIFECYCLE_PHASES,
   calculateRiskLevel,
@@ -375,6 +376,29 @@ export async function importRisks(
     // +2 accounts for the header row (row 1) plus 1-based indexing.
     errors.push(...validateRow(row, i + 2));
   });
+
+  // Owner and approver must be members of the importing organization.
+  const userFields = ["risk_owner", "risk_approval"] as const;
+  const referencedUserIds = rows.flatMap((row) =>
+    userFields.map((field) => parseUserId(row[field])).filter((id): id is number => id !== null),
+  );
+  const outsideUserIds = new Set(
+    await findUsersNotInOrganization(referencedUserIds, organizationId),
+  );
+  if (outsideUserIds.size > 0) {
+    rows.forEach((row, i) => {
+      for (const field of userFields) {
+        const id = parseUserId(row[field]);
+        if (id !== null && outsideUserIds.has(id)) {
+          errors.push({
+            row: i + 2,
+            field,
+            message: "User must be a member of this organization",
+          });
+        }
+      }
+    });
+  }
 
   if (errors.length > 0) {
     return {

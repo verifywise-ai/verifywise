@@ -13,6 +13,34 @@ import {
   deleteAllCustomFieldValuesForEntityQuery,
   fetchCustomFieldsForEntities,
 } from "./customField.utils";
+import { findUsersNotInOrganization } from "./user.utils";
+import { ValidationException } from "../domain.layer/exceptions/custom.exception";
+
+/**
+ * Tenant guard for policy owners and reviewers: every id must be a member of
+ * the organization, so names and notifications never cross tenants.
+ *
+ * @throws ValidationException when any id belongs to no member of the organization.
+ */
+export const assertPolicyUsersInOrganization = async (
+  userIds: Array<number | string | null | undefined>,
+  field: "policy_owner_id" | "assigned_reviewer_ids" | "reviewer_ids" | "reviewerId",
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<void> => {
+  const ids = userIds.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0);
+  if (ids.length === 0) return;
+  const outside = await findUsersNotInOrganization(ids, organizationId, transaction ?? null);
+  if (outside.length === 0) return;
+  if (field === "policy_owner_id") {
+    throw new ValidationException(
+      "The policy owner must be a member of this organization",
+      field,
+      outside,
+    );
+  }
+  throw new ValidationException("Reviewers must be members of this organization", field, outside);
+};
 
 export type PolicyReviewStatus = "pending_review" | "approved" | "changes_requested";
 
@@ -139,6 +167,13 @@ export const createPolicyQuery = async (
 
   const ownerId = policy.policy_owner_id ?? null;
   const reviewerIds = (policy.assigned_reviewer_ids || []).filter((id) => id !== ownerId);
+  await assertPolicyUsersInOrganization([ownerId], "policy_owner_id", organizationId, transaction);
+  await assertPolicyUsersInOrganization(
+    reviewerIds,
+    "assigned_reviewer_ids",
+    organizationId,
+    transaction,
+  );
 
   // Insert policy without assigned_reviewer_ids
   const result = (await sequelize.query(
@@ -254,6 +289,31 @@ export const updatePolicyByIdQuery = async (
   transaction: Transaction,
 ) => {
   const existingPolicy = await getPolicyByIdQuery(organizationId, id);
+
+  // Only newly named users are checked, so a policy whose owner or reviewer
+  // has left the organization can still be saved.
+  const existingRow = (existingPolicy?.[0] ?? {}) as Partial<IPolicy>;
+  if (
+    policy.policy_owner_id !== undefined &&
+    Number(policy.policy_owner_id) !== Number(existingRow.policy_owner_id)
+  ) {
+    await assertPolicyUsersInOrganization(
+      [policy.policy_owner_id],
+      "policy_owner_id",
+      organizationId,
+      transaction,
+    );
+  }
+  if (policy.assigned_reviewer_ids) {
+    const alreadyAssigned = new Set((existingRow.assigned_reviewer_ids || []).map(Number));
+    await assertPolicyUsersInOrganization(
+      policy.assigned_reviewer_ids.filter((rid) => !alreadyAssigned.has(Number(rid))),
+      "assigned_reviewer_ids",
+      organizationId,
+      transaction,
+    );
+  }
+
   const updatePolicy: Partial<Record<keyof IPolicy, any>> & { organizationId?: number } = {};
   const setClause = [
     "title",
@@ -565,6 +625,7 @@ export const bulkSetPoliciesReviewerQuery = async (
   transaction: Transaction,
 ): Promise<void> => {
   if (ids.length === 0) return;
+  await assertPolicyUsersInOrganization([reviewerId], "reviewerId", organizationId, transaction);
 
   await sequelize.query(
     `DELETE FROM policy_manager__assigned_reviewer_ids

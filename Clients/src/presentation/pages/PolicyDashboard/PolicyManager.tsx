@@ -93,7 +93,8 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
   const deletePolicyMutation = useDeletePolicy();
   const [flashRowId, setFlashRowId] = useState<number | null>(null);
   const can = useCanCheck();
-  const canRunBulkActions = can("policy.edit");
+  // policy.edit gates bulk actions and folder actions (create folder, assign to folder).
+  const canEditPolicies = can("policy.edit");
   // "Save as template" writes a template, so it follows the template routes' key.
   const canManageTemplates = useCan("policyTemplate.edit");
 
@@ -700,7 +701,7 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
               filename="policy-manager"
               title="Policy Manager"
             />
-            {canRunBulkActions && (
+            {canEditPolicies && (
               <Box data-joyride-id="add-policy-button">
                 <CustomizableButton
                   variant="contained"
@@ -748,7 +749,7 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
                   setCreateFolderOpen(true);
                 }}
                 loading={foldersLoading}
-                canManage
+                canManage={canEditPolicies}
                 collapsed={folderSidebarCollapsed}
                 onToggleCollapse={() => setFolderSidebarCollapsed((p) => !p)}
                 allLabel="All policies"
@@ -820,12 +821,12 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
                     onOpen={handleOpen}
                     onDelete={handleDelete}
                     onLinkedObjects={handleLinkedObject}
-                    onAssignToFolder={handleAssignToFolder}
+                    onAssignToFolder={canEditPolicies ? handleAssignToFolder : undefined}
                     onSaveAsTemplate={canManageTemplates ? handleSaveAsTemplate : undefined}
                     hidePagination={options?.hidePagination}
                     flashRowId={flashRowId}
                     visibleColumns={visibleColumns}
-                    canRunBulkActions={canRunBulkActions}
+                    canRunBulkActions={canEditPolicies}
                     onBulkActionSuccess={(action, count) => {
                       handleAlert({
                         variant: "success",
