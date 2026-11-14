@@ -1,4 +1,8 @@
-import { riskCalendarDateFromCell, toRiskCalendarDate } from "../riskCalendarDate.utils";
+import {
+  isInvalidDateCell,
+  riskCalendarDateFromCell,
+  toRiskCalendarDate,
+} from "../riskCalendarDate.utils";
 
 const iso = (value: unknown) => (value instanceof Date ? value.toISOString() : value);
 
@@ -48,11 +52,9 @@ describe("riskCalendarDateFromCell", () => {
     expect(iso(riskCalendarDateFromCell("Tue, 5 May 2026"))).toBe("2026-05-05T12:00:00.000Z");
   });
 
-  it("turns a number cell into a date, as validation reads it", () => {
-    const midnight = Date.UTC(2026, 4, 1);
-    expect(iso(riskCalendarDateFromCell(midnight))).toBe("2026-05-01T12:00:00.000Z");
-    const later = Date.UTC(2026, 4, 1, 18);
-    expect(iso(riskCalendarDateFromCell(later))).toBe("2026-05-01T18:00:00.000Z");
+  it("reads a year or year-month as that day in UTC, whatever the server time zone", () => {
+    expect(iso(riskCalendarDateFromCell("2026"))).toBe("2026-01-01T12:00:00.000Z");
+    expect(iso(riskCalendarDateFromCell("2026-05"))).toBe("2026-05-01T12:00:00.000Z");
   });
 
   it("follows toRiskCalendarDate for ISO text and date cells", () => {
@@ -65,5 +67,19 @@ describe("riskCalendarDateFromCell", () => {
 
   it("passes unparseable text through for validation", () => {
     expect(riskCalendarDateFromCell("someday")).toBe("someday");
+  });
+});
+
+describe("isInvalidDateCell", () => {
+  it("refuses number cells, such as an Excel serial or a typed year", () => {
+    expect(isInvalidDateCell(46022)).toBe(true);
+    expect(isInvalidDateCell(2026)).toBe(true);
+  });
+
+  it("accepts parseable text and dates, and refuses text that does not parse", () => {
+    expect(isInvalidDateCell("2026-05-01")).toBe(false);
+    expect(isInvalidDateCell("Thu 1 Oct 2026")).toBe(false);
+    expect(isInvalidDateCell(new Date("2026-05-01"))).toBe(false);
+    expect(isInvalidDateCell("someday")).toBe(true);
   });
 });

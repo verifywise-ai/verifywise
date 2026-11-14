@@ -12,7 +12,7 @@ import {
   RISK_SEVERITY_VALUES,
   SEVERITY_VALUES,
 } from "./risks.enums";
-import { riskCalendarDateFromCell } from "../../utils/riskCalendarDate.utils";
+import { isInvalidDateCell, riskCalendarDateFromCell } from "../../utils/riskCalendarDate.utils";
 
 /**
  * Server-side risk-import extension logic. Two entry points:
@@ -317,14 +317,14 @@ function validateRow(row: RiskImportRow, rowIndex: number): RiskImportError[] {
       message: `Invalid risk severity. Must be one of: ${RISK_SEVERITY_VALUES.join(", ")}`,
     });
   }
-  if (row.deadline && Number.isNaN(new Date(row.deadline).getTime())) {
+  if (row.deadline && isInvalidDateCell(row.deadline)) {
     errors.push({
       row: rowIndex,
       field: "deadline",
       message: "Invalid deadline date format. Use YYYY-MM-DD",
     });
   }
-  if (row.date_of_assessment && Number.isNaN(new Date(row.date_of_assessment).getTime())) {
+  if (row.date_of_assessment && isInvalidDateCell(row.date_of_assessment)) {
     errors.push({
       row: rowIndex,
       field: "date_of_assessment",

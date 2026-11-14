@@ -97,6 +97,17 @@ describe("MitigationSection approval errors", () => {
     expect(screen.queryByText(serverErrors.approver)).not.toBeInTheDocument();
   });
 
+  it("keeps a server error on a date of assessment that is still filled in", () => {
+    const started = { ...filled, approver: 7, approvalStatus: 1, dateOfAssessment: "2026-13-01" };
+    const serverErrors = { dateOfAssessment: "Date of assessment is not a valid date." };
+    const { rerender } = renderSection(started, serverErrors);
+
+    rerender({ ...started, approver: 0, approvalStatus: 0 }, serverErrors);
+
+    expect(screen.getByText(serverErrors.dateOfAssessment)).toBeInTheDocument();
+  });
+
+  // Relies on serverErrors not being a dependency of the clearing effect.
   it("shows a server error on an approval field that arrives while approval is off", () => {
     const { rerender } = renderSection(filled);
     const serverErrors = { dateOfAssessment: "Date of assessment is not a valid date." };
