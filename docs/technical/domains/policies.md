@@ -348,9 +348,14 @@ and compliance, People and organization, Industry packs.
 
 ### Review Reminders
 
-Slack notifications sent 7 days before `next_review_date` to:
-- Policy author
-- Organization admins
+One daily sweep, `policy_review_reminder_sweep` at 08:00 (`services/automations/actions/policyReviewReminderSweep.ts`), reminds people of a policy's review twice: once when `next_review_date` comes within 7 days (`POLICY_DUE_SOON`) and once when it has passed (`POLICY_OVERDUE`). Days are compared by calendar day (`next_review_date::date` against `CURRENT_DATE`, UTC). Archived and Deprecated policies are skipped.
+
+- **Recipients** (`findPolicyRemindersDueQuery`): the policy owner and the assigned reviewers, each once; when none of them is still a member of the organization, the author. Only current members are told, and a policy with nobody to tell is skipped.
+- **Channels** (`notifyPolicyReviewReminder`): email (`policy-review-reminder.mjml`) first, then the in-app notice; title, message and subject are i18n keys, the email body stays English. For a recipient with a Slack webhook on the "Policy reminders and status" route, also a Slack message; Slack is best-effort.
+- **Once per kind**: `policy_manager.due_soon_reminded_at` / `overdue_reminded_at` (migration `20261114171013-policy-review-reminder-stamps`) are stamped only when every recipient's email and in-app notice went out. Otherwise the policy is retried the next day, recipients already told included. Moving the review date to another day (policy update or advisor update) clears both stamps; saving the same day keeps them.
+- **Replaced jobs**: the 08:00 `send_policy_due_soon_notification` email job and the 09:00 `slack-notification-policy` Slack job. Startup removes their Redis schedulers (`removeRetiredPolicyDueSoonScheduler`, `removeRetiredSlackPolicyScheduler`); a job of either name still queued completes without sending.
+
+The policy renewal workflow (`services/workflows/definitions/policyRenewal.workflow.ts`, 30 days ahead, author only) is separate and unchanged.
 
 ## Key Files
 

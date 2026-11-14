@@ -1,13 +1,14 @@
 export * from "../services/slack/slackProducer";
 
-import { scheduleDailyNotification } from "../services/slack/slackProducer";
+import { removeRetiredSlackPolicyScheduler } from "../services/slack/slackProducer";
 import logger from "../utils/logger/fileLogger";
 import {
   scheduleReportNotification,
   scheduleVendorReviewDateNotification,
   schedulePMMHourlyCheck,
   scheduleShadowAiJobs,
-  schedulePolicyDueSoonNotification,
+  removeRetiredPolicyDueSoonScheduler,
+  schedulePolicyReviewReminderSweep,
   scheduleAgentDiscoverySync,
   scheduleAiDetectionScanCheck,
   scheduleAiGatewayRiskDetection,
@@ -48,9 +49,7 @@ export async function addAllJobs(): Promise<void> {
   // bullmq v6 is stricter about obliterate/scheduler state and may throw in
   // constrained CI environments. Schedule each job independently so one failing
   // scheduler cannot take down the whole server startup sequence.
-  await safeSchedule("daily-notification", scheduleDailyNotification);
   await safeSchedule("vendor-review-date-notification", scheduleVendorReviewDateNotification);
-  await safeSchedule("policy-due-soon-notification", schedulePolicyDueSoonNotification);
   await safeSchedule("report-notification", scheduleReportNotification);
   await safeSchedule("pmm-hourly-check", schedulePMMHourlyCheck);
   await safeSchedule("shadow-ai-jobs", scheduleShadowAiJobs);
@@ -71,6 +70,10 @@ export async function addAllJobs(): Promise<void> {
   await safeSchedule("file-expiry-sweep", scheduleFileExpirySweep); // non-obliterating — safe to run after the obliterating schedulers
   await safeSchedule("intake-confirmation-sweep", scheduleIntakeConfirmationSweep); // non-obliterating — safe to run after the obliterating schedulers
   await safeSchedule("lifecycle-confirmation-sweep", scheduleLifecycleConfirmationSweep); // non-obliterating — safe to run after the obliterating schedulers
+  await safeSchedule("policy-review-reminder-sweep", schedulePolicyReviewReminderSweep); // non-obliterating — safe to run after the obliterating schedulers
+  // The two jobs the sweep replaced. Their schedulers persist in Redis.
+  await safeSchedule("retired-policy-due-soon-notification", removeRetiredPolicyDueSoonScheduler);
+  await safeSchedule("retired-slack-policy-notification", removeRetiredSlackPolicyScheduler);
   await safeSchedule("training-assignment-reminder-sweep", scheduleTrainingAssignmentReminderSweep); // non-obliterating — safe to run after the obliterating schedulers
   await safeSchedule("evidence-freshness-sweep", scheduleEvidenceFreshnessSweep); // non-obliterating — safe to run after the obliterating schedulers
   await safeSchedule("deadline-escalation-sweep", scheduleDeadlineEscalationSweep); // non-obliterating — safe to run after the obliterating schedulers

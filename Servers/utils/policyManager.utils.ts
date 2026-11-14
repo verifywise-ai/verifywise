@@ -1,7 +1,6 @@
 import { Transaction, QueryTypes } from "sequelize";
 import { sequelize } from "../database/db";
 import { IPolicy, PolicyTag, PolicyTagsSet } from "../domain.layer/interfaces/i.policy";
-import { PolicyManagerModel } from "../domain.layer/models/policy/policy.model";
 import {
   enqueueAutomationActions,
   getActiveAutomationActionsQuery,
@@ -15,7 +14,11 @@ import {
   fetchCustomFieldsForEntities,
 } from "./customField.utils";
 import { findUsersNotInOrganization, parseReferencedIds } from "./user.utils";
-import { POLICY_REVIEW_DATE_SQL, toReviewDateValue } from "./policyReviewDate.utils";
+import {
+  CLEAR_REVIEW_REMINDERS_ON_DATE_CHANGE_SQL,
+  POLICY_REVIEW_DATE_SQL,
+  toReviewDateValue,
+} from "./policyReviewDate.utils";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 
 /**
@@ -135,27 +138,95 @@ export const getAllPoliciesQuery = async (organizationId: number) => {
   return result;
 };
 
-export const getAllPoliciesDueSoonQuery = async (organizationId: number, daysAhead: number = 7) => {
-  const result = (await sequelize.query(
-    `SELECT
-        pm.*,
-        ${POLICY_REVIEW_DATE_SQL},
-        array_agg(pm_rev.user_id) AS reviewer_ids
-      FROM verifywise.policy_manager AS pm
-      INNER JOIN verifywise.policy_manager__assigned_reviewer_ids AS pm_rev
-        ON pm.id = pm_rev.policy_manager_id
-      WHERE pm.organization_id = :organizationId
-        AND pm.next_review_date IS NOT NULL
-        AND pm.next_review_date <= NOW() + INTERVAL '${daysAhead} days'
-        AND pm.next_review_date >= NOW()
-      GROUP BY pm.id
-      ORDER BY pm.next_review_date ASC;`,
-    {
-      replacements: { organizationId },
-    },
-  )) as [(PolicyManagerModel & { reviewer_ids: number[] })[], number];
+export type PolicyReminderKind = "due_soon" | "overdue";
 
-  return result[0];
+export interface PolicyReminderDue {
+  id: number;
+  title: string;
+  /** The review day, "YYYY-MM-DD". */
+  review_date: string;
+  kind: PolicyReminderKind;
+  recipient_ids: number[];
+}
+
+/** Days before the review date in which a policy counts as due soon. */
+export const POLICY_REVIEW_DUE_SOON_DAYS = 7;
+
+const POLICY_REMINDER_COLUMNS: Record<PolicyReminderKind, string> = {
+  due_soon: "due_soon_reminded_at",
+  overdue: "overdue_reminded_at",
+};
+
+const isOrgMember = (userIdSql: string) => `EXISTS (
+  SELECT 1 FROM organization_members om
+   WHERE om.organization_id = pm.organization_id AND om.user_id = ${userIdSql}
+)`;
+
+/**
+ * Policies of the organization with a review reminder waiting (P-H3, P-M2):
+ * not retired, review day within the next seven days or passed, and that
+ * kind not sent yet. The review date is a calendar day stored at midnight, so
+ * it is compared by day against CURRENT_DATE, as the training sweep does.
+ *
+ * Recipients are the owner and the assigned reviewers who are still members
+ * of the organization; when there is none, the author, if still a member. A
+ * policy nobody can be told about is not returned.
+ */
+export const findPolicyRemindersDueQuery = async (
+  organizationId: number,
+): Promise<PolicyReminderDue[]> => {
+  return (await sequelize.query(
+    `SELECT due.id, due.title, due.review_date, due.kind, due.recipient_ids
+       FROM (
+         SELECT pm.id, pm.title,
+                to_char(pm.next_review_date, 'YYYY-MM-DD') AS review_date,
+                CASE WHEN pm.next_review_date::date < CURRENT_DATE
+                     THEN 'overdue' ELSE 'due_soon' END AS kind,
+                COALESCE(
+                  (SELECT array_agg(assigned.user_id ORDER BY assigned.user_id)
+                     FROM (
+                       SELECT pm.policy_owner_id AS user_id
+                       UNION
+                       SELECT r.user_id
+                         FROM policy_manager__assigned_reviewer_ids r
+                        WHERE r.organization_id = pm.organization_id
+                          AND r.policy_manager_id = pm.id
+                     ) assigned
+                    WHERE ${isOrgMember("assigned.user_id")}),
+                  (SELECT ARRAY[pm.author_id] WHERE ${isOrgMember("pm.author_id")})
+                ) AS recipient_ids
+           FROM policy_manager pm
+          WHERE pm.organization_id = :organizationId
+            AND pm.status IS DISTINCT FROM 'Archived'
+            AND pm.status IS DISTINCT FROM 'Deprecated'
+            AND pm.next_review_date IS NOT NULL
+            AND (
+              (pm.next_review_date::date < CURRENT_DATE AND pm.overdue_reminded_at IS NULL)
+              OR (
+                pm.next_review_date::date BETWEEN CURRENT_DATE
+                  AND CURRENT_DATE + ${POLICY_REVIEW_DUE_SOON_DAYS}
+                AND pm.due_soon_reminded_at IS NULL
+              )
+            )
+       ) due
+      WHERE due.recipient_ids IS NOT NULL
+      ORDER BY due.id`,
+    { replacements: { organizationId }, type: QueryTypes.SELECT },
+  )) as PolicyReminderDue[];
+};
+
+/** Record that the reminder of this kind went out for the policy. */
+export const markPolicyReminderSentQuery = async (
+  id: number,
+  kind: PolicyReminderKind,
+  organizationId: number,
+): Promise<void> => {
+  await sequelize.query(
+    `UPDATE policy_manager
+        SET ${POLICY_REMINDER_COLUMNS[kind]} = now()
+      WHERE organization_id = :organizationId AND id = :id`,
+    { replacements: { organizationId, id } },
+  );
 };
 
 /**
@@ -382,6 +453,9 @@ export const updatePolicyByIdQuery = async (
     .map((f) => {
       if (f === "tags") {
         return "tags = ARRAY(SELECT jsonb_array_elements_text(CAST(:tags AS jsonb)))";
+      }
+      if (f === "next_review_date") {
+        return `next_review_date = :next_review_date, ${CLEAR_REVIEW_REMINDERS_ON_DATE_CHANGE_SQL}`;
       }
       return `${f} = :${f}`;
     })

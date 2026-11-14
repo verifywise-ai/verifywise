@@ -1,0 +1,117 @@
+import { getAllOrganizationsQuery } from "../../../utils/organization.utils";
+import {
+  findPolicyRemindersDueQuery,
+  markPolicyReminderSentQuery,
+  PolicyReminderDue,
+} from "../../../utils/policyManager.utils";
+import { formatReviewDate } from "../../../utils/policyReviewDate.utils";
+import { notifyPolicyReviewReminder } from "../../inAppNotification.service";
+import { sendSlackNotification } from "../../slack/slackNotificationService";
+import { SlackNotificationRoutingType } from "../../../domain.layer/enums/slack.enum";
+import logger from "../../../utils/logger/fileLogger";
+
+/**
+ * Daily policy review reminder sweep (P-H3, P-M2). Replaces the old 8 AM email
+ * job and the 9 AM Slack job, which reminded only some of the people involved,
+ * never about an overdue review, and again every day.
+ *
+ * Tells a policy's owner and reviewers once when its review date comes within
+ * seven days, and once when it passes (recipients are chosen by
+ * findPolicyRemindersDueQuery). The policy's *_reminded_at column is stamped
+ * only when every recipient's email and in-app notice went out. If any of
+ * them failed, the policy stays unstamped and the whole policy is retried the
+ * next day: the ones already told get it again, which is better than someone
+ * never being told. Slack is a best-effort extra and never blocks the stamp.
+ * One policy's failure does not stop the rest, and one organization's failure
+ * does not stop the others.
+ */
+
+export interface PolicyReviewReminderSweepSummary {
+  organization_id: number;
+  candidates: number;
+  notified: number;
+}
+
+/** Same routing and wording as the retired Slack job, for both kinds. */
+const sendSlackReminder = async (userId: number, reminder: PolicyReminderDue): Promise<void> => {
+  const date = formatReviewDate(reminder.review_date);
+  try {
+    await sendSlackNotification(
+      { userId, routingType: SlackNotificationRoutingType.POLICY_REMINDERS_AND_STATUS },
+      {
+        title: "Policy review reminder",
+        message:
+          reminder.kind === "overdue"
+            ? `The review of policy "${reminder.title}" was due on ${date}.`
+            : `The review of policy "${reminder.title}" is due on ${date}.`,
+      },
+    );
+  } catch (error) {
+    logger.warn(
+      `Policy review Slack reminder failed for policy ${reminder.id}, user ${userId}: ${
+        error instanceof Error ? error.message : String(error)
+      }`,
+    );
+  }
+};
+
+export async function runPolicyReviewReminderSweep(
+  organizationId: number,
+): Promise<PolicyReviewReminderSweepSummary> {
+  const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
+  const reminders = await findPolicyRemindersDueQuery(organizationId);
+
+  let notified = 0;
+  for (const reminder of reminders) {
+    let allSent = true;
+    for (const userId of reminder.recipient_ids) {
+      try {
+        await notifyPolicyReviewReminder(
+          organizationId,
+          Number(userId),
+          { id: reminder.id, title: reminder.title, reviewDate: reminder.review_date },
+          reminder.kind,
+          baseUrl,
+        );
+      } catch (error) {
+        allSent = false;
+        logger.error(
+          `❌ Policy review reminder failed for policy ${reminder.id}, user ${userId} (org ${organizationId}):`,
+          error,
+        );
+      }
+      await sendSlackReminder(Number(userId), reminder);
+    }
+
+    if (!allSent) continue;
+    try {
+      await markPolicyReminderSentQuery(reminder.id, reminder.kind, organizationId);
+      notified += 1;
+    } catch (error) {
+      logger.error(
+        `❌ Could not stamp the ${reminder.kind} reminder of policy ${reminder.id} (org ${organizationId}):`,
+        error,
+      );
+    }
+  }
+
+  return { organization_id: organizationId, candidates: reminders.length, notified };
+}
+
+/** BullMQ entry point: every organization, each isolated from the others. */
+export async function runPolicyReviewReminderSweepAllOrgs(): Promise<void> {
+  const organizations = await getAllOrganizationsQuery();
+  for (const org of organizations) {
+    if (org.id === undefined || org.id === null) continue;
+    try {
+      const summary = await runPolicyReviewReminderSweep(org.id);
+      if (summary.candidates > 0) {
+        logger.info(
+          `Policy review reminder sweep org ${org.id}: candidates=${summary.candidates} notified=${summary.notified}`,
+        );
+      }
+    } catch (error) {
+      logger.error(`❌ Policy review reminder sweep failed for org ${org.id}:`, error);
+    }
+  }
+}

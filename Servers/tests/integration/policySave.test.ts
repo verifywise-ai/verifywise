@@ -16,7 +16,7 @@ jest.mock("../../services/automations/automationProducer", () => ({
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
 import { cleanupDatabase, createTestUser } from "./helpers";
-import { getAllPoliciesDueSoonQuery } from "../../utils/policyManager.utils";
+import { findPolicyRemindersDueQuery } from "../../utils/policyManager.utils";
 import { buildTenantContext, TenantContext } from "./tenant-isolation/tenantIsolation.harness";
 
 const policyPayload = (extra: Record<string, unknown> = {}) => ({
@@ -182,7 +182,7 @@ describe("Policy save correctness", () => {
     expect(listed.next_review_date).toBe("2030-01-15T00:00:00.000Z");
   });
 
-  it("returns the same review date from the due-soon query used by reminders (P-M1)", async () => {
+  it("returns the same review date from the query used by review reminders (P-M1)", async () => {
     const ctx = await buildTenantContext();
     const soon = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
     const reviewer = await createUserInOrg(ctx.orgId);
@@ -191,9 +191,44 @@ describe("Policy save correctness", () => {
       assigned_reviewer_ids: [reviewer],
     });
 
-    const due = await getAllPoliciesDueSoonQuery(ctx.orgId);
-    const row = due.find((p: { id: number }) => p.id === policyId);
-    expect(row?.next_review_date).toBe(`${soon}T00:00:00.000Z`);
+    const due = await findPolicyRemindersDueQuery(ctx.orgId);
+    const row = due.find((p) => p.id === policyId);
+    expect(row?.review_date).toBe(soon);
+    expect(row?.kind).toBe("due_soon");
+    expect(row?.recipient_ids).toContain(reviewer);
+  });
+
+  it("restarts review reminders only when the review moves to another day (P-H3)", async () => {
+    const ctx = await buildTenantContext();
+    const policyId = await createPolicy(ctx);
+    const stamp = () =>
+      sequelize.query(
+        `UPDATE policy_manager SET due_soon_reminded_at = now(), overdue_reminded_at = now()
+          WHERE id = :policyId`,
+        { replacements: { policyId } },
+      );
+    const stamps = async () =>
+      (
+        await sequelize.query<{ due_soon: boolean; overdue: boolean }>(
+          `SELECT due_soon_reminded_at IS NOT NULL AS due_soon,
+                  overdue_reminded_at IS NOT NULL AS overdue
+             FROM policy_manager WHERE id = :policyId`,
+          { replacements: { policyId }, type: QueryTypes.SELECT },
+        )
+      )[0];
+
+    await stamp();
+    const same = await ctx.request
+      .put(`/api/policies/${policyId}`)
+      .send({ next_review_date: "2030-01-15T00:00:00.000Z" });
+    expect(same.status).toBe(202);
+    expect(await stamps()).toEqual({ due_soon: true, overdue: true });
+
+    const moved = await ctx.request
+      .put(`/api/policies/${policyId}`)
+      .send({ next_review_date: "2030-02-01" });
+    expect(moved.status).toBe(202);
+    expect(await stamps()).toEqual({ due_soon: false, overdue: false });
   });
 
   it("repairs review dates the old picker shifted (P-M1 migration)", async () => {
