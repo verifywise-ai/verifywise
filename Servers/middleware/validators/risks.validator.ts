@@ -1,5 +1,6 @@
 import { body, param } from "express-validator";
 import { handleValidationErrors } from "../validate.middleware";
+import { normalizeCurrentRiskLevel } from "../../utils/riskLevel.utils";
 
 const AI_LIFECYCLE_PHASES = [
   "Problem definition & planning",
@@ -23,7 +24,7 @@ const RISK_LEVELS = [
   "Very high risk",
 ];
 const CURRENT_RISK_LEVELS = [
-  "Very Low risk",
+  "Very low risk",
   "Low risk",
   "Medium risk",
   "High risk",
@@ -131,6 +132,8 @@ const optionalRiskBodyFields = [
     .withMessage(`mitigation_status must be one of: ${MITIGATION_STATUSES.join(", ")}`),
   body("current_risk_level")
     .optional({ nullable: true })
+    // The legacy "Very Low risk" spelling is still accepted; store the new one.
+    .customSanitizer(normalizeCurrentRiskLevel)
     .isIn(CURRENT_RISK_LEVELS)
     .withMessage(`current_risk_level must be one of: ${CURRENT_RISK_LEVELS.join(", ")}`),
   body("deadline")

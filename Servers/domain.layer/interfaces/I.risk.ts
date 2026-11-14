@@ -28,7 +28,7 @@ export interface IRisk {
     | "Deferred"
     | "Canceled"
     | "Requires review";
-  current_risk_level: "Very Low risk" | "Low risk" | "Medium risk" | "High risk" | "Very high risk";
+  current_risk_level: "Very low risk" | "Low risk" | "Medium risk" | "High risk" | "Very high risk";
   deadline: Date;
   mitigation_plan: string;
   implementation_strategy: string;

@@ -452,7 +452,7 @@ the window-event listener picks up the refresh signal.
 - **The `current_risk_level` enum is DB-form, not label-form.** The
   UI dropdown shows "Critical/High/Medium/Low/No Risk" labels, but
   the underlying column values are "Very high risk/High risk/
-  Medium risk/Low risk/Very Low risk". The Zod schema and tool
+  Medium risk/Low risk/Very low risk". The Zod schema and tool
   definition use the DB-form values — the frontend's display layer
   maps them to the label form.
 - **Risk level is server-computed.** The UI form computes

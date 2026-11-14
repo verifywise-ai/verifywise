@@ -4,8 +4,8 @@
 // mapSeverityMIT/IBM exactly (pinned by catalogMapperParity.test.ts).
 import { ModelRiskCategory } from "../../domain.layer/enums/model-risk-category.enum";
 import { ModelRiskLevel } from "../../domain.layer/enums/model-risk-level.enum";
+import { calculateRiskLevel } from "../../utils/riskLevel.utils";
 import {
-  calculateRiskLevel,
   LIKELIHOOD_SCALE,
   SEVERITY_SCALE,
   RISK_CALCULATION_WEIGHTS,
@@ -54,7 +54,7 @@ export const weightedRiskScore = (l: Likelihood, s: Severity): number =>
   SEVERITY_SCALE[s] * RISK_CALCULATION_WEIGHTS.SEVERITY_WEIGHT;
 
 export function modelRiskLevelFor(l: Likelihood, s: Severity): ModelRiskLevel {
-  switch (calculateRiskLevel(s, l)) {
+  switch (calculateRiskLevel(l, s)) {
     case "Very high risk":
       return ModelRiskLevel.CRITICAL;
     case "High risk":

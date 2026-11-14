@@ -16,7 +16,7 @@
  */
 
 import { updateRiskByIdQuery, getRiskByIdQuery } from "../../../utils/risk.utils";
-import { calculateRiskLevel } from "../../../utils/validations/riskValidation.utils";
+import { calculateRiskLevel, normalizeCurrentRiskLevel } from "../../../utils/riskLevel.utils";
 import type { AiActionExecuteContext, AiActionExecuteResult } from "../types";
 import type { AgentUpdateRiskInput } from "./schema";
 
@@ -48,7 +48,7 @@ export async function executeUpdateRisk(
   // a re-derived one that matches.
   const recomputedLevel =
     severityChanged || likelihoodChanged
-      ? (calculateRiskLevel(effectiveSeverity, effectiveLikelihood) as
+      ? (calculateRiskLevel(effectiveLikelihood, effectiveSeverity) as
           "No risk" | "Very low risk" | "Low risk" | "Medium risk" | "High risk" | "Very high risk")
       : undefined;
 
@@ -68,7 +68,8 @@ export async function executeUpdateRisk(
   if (input.risk_owner !== undefined) partial.risk_owner = input.risk_owner;
   if (input.mitigation_status !== undefined) partial.mitigation_status = input.mitigation_status;
   if (input.mitigation_plan !== undefined) partial.mitigation_plan = input.mitigation_plan;
-  if (input.current_risk_level !== undefined) partial.current_risk_level = input.current_risk_level;
+  if (input.current_risk_level !== undefined)
+    partial.current_risk_level = normalizeCurrentRiskLevel(input.current_risk_level);
   if (input.implementation_strategy !== undefined)
     partial.implementation_strategy = input.implementation_strategy;
   if (input.deadline !== undefined) partial.deadline = new Date(input.deadline);

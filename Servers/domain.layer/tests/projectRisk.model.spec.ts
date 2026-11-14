@@ -62,7 +62,7 @@ class TestProjectRiskModel {
     | "Canceled"
     | "Requires review";
   current_risk_level!:
-    "Very Low risk" | "Low risk" | "Medium risk" | "High risk" | "Very high risk";
+    "Very low risk" | "Low risk" | "Medium risk" | "High risk" | "Very high risk";
   deadline!: Date;
   mitigation_plan!: string;
   implementation_strategy!: string;

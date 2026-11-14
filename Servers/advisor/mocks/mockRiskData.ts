@@ -184,7 +184,7 @@ export const mockRisks: IRisk[] = [
     risk_level_autocalculated: "Very low risk",
     review_notes: "On hold pending other priorities",
     mitigation_status: "On Hold",
-    current_risk_level: "Very Low risk",
+    current_risk_level: "Very low risk",
     deadline: createFutureDate(90),
     mitigation_plan: "Code linting improvements",
     implementation_strategy: "Automated linting",

@@ -70,7 +70,8 @@ export const CurrentRiskLevel = z.enum([
   "High risk",
   "Medium risk",
   "Low risk",
-  "Very Low risk",
+  "Very low risk",
+  "Very Low risk", // legacy spelling, normalized before save
 ]);
 
 /** ISO date string (YYYY-MM-DD or full ISO datetime). The form sends ISO strings. */

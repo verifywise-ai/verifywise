@@ -4,7 +4,6 @@ import { sequelize } from "../../database/db";
 import { findUsersNotInOrganization } from "../../utils/user.utils";
 import {
   AI_LIFECYCLE_PHASES,
-  calculateRiskLevel,
   CURRENT_RISK_LEVEL_VALUES,
   LIKELIHOOD_VALUES,
   MITIGATION_STATUS_VALUES,
@@ -12,6 +11,7 @@ import {
   RISK_SEVERITY_VALUES,
   SEVERITY_VALUES,
 } from "./risks.enums";
+import { calculateRiskLevel, normalizeCurrentRiskLevel } from "../../utils/riskLevel.utils";
 import { isInvalidDateCell, riskCalendarDateFromCell } from "../../utils/riskCalendarDate.utils";
 
 /**
@@ -296,7 +296,10 @@ function validateRow(row: RiskImportRow, rowIndex: number): RiskImportError[] {
       message: `Invalid mitigation status. Must be one of: ${MITIGATION_STATUS_VALUES.join(", ")}`,
     });
   }
-  if (row.current_risk_level && !inEnum(row.current_risk_level, CURRENT_RISK_LEVEL_VALUES)) {
+  if (
+    row.current_risk_level &&
+    !inEnum(normalizeCurrentRiskLevel(row.current_risk_level), CURRENT_RISK_LEVEL_VALUES)
+  ) {
     errors.push({
       row: rowIndex,
       field: "current_risk_level",
@@ -354,7 +357,7 @@ function parseRow(row: RiskImportRow): Record<string, unknown> {
     risk_level_autocalculated: calculateRiskLevel(row.likelihood ?? null, row.severity ?? null),
     review_notes: row.review_notes ?? null,
     mitigation_status: row.mitigation_status ?? null,
-    current_risk_level: row.current_risk_level ?? null,
+    current_risk_level: normalizeCurrentRiskLevel(row.current_risk_level) ?? null,
     deadline: row.deadline ? riskCalendarDateFromCell(row.deadline) : null,
     mitigation_plan: row.mitigation_plan ?? null,
     implementation_strategy: row.implementation_strategy ?? null,

@@ -85,7 +85,7 @@ components:
           enum: [Not Started, In Progress, Completed, On Hold, Deferred, Canceled, Requires review]
         current_risk_level:
           type: string
-          enum: [Very Low risk, Low risk, Medium risk, High risk, Very high risk]
+          enum: [Very low risk, Low risk, Medium risk, High risk, Very high risk]
         deadline:
           type: string
           format: date-time

@@ -13,6 +13,7 @@ import {
   ValidationError,
 } from "./validation.utils";
 import { validateRiskFrameworksQuery, validateRiskProjectsQuery } from "../risk.utils";
+import { calculateRiskLevel, normalizeCurrentRiskLevel } from "../riskLevel.utils";
 
 /**
  * Validation constants for risks
@@ -466,33 +467,6 @@ export const RISK_CALCULATION_WEIGHTS = {
 } as const;
 
 /**
- * Calculates risk level based on severity and likelihood using weighted formula
- * Formula: (likelihood × 1) + (severity × 3)
- * This matches the frontend RiskCalculator implementation
- */
-export const calculateRiskLevel = (severity: string, likelihood: string): string => {
-  const likelihoodValue = LIKELIHOOD_SCALE[likelihood as keyof typeof LIKELIHOOD_SCALE] || 1;
-  const severityValue = SEVERITY_SCALE[severity as keyof typeof SEVERITY_SCALE] || 1;
-
-  const score =
-    likelihoodValue * RISK_CALCULATION_WEIGHTS.LIKELIHOOD_WEIGHT +
-    severityValue * RISK_CALCULATION_WEIGHTS.SEVERITY_WEIGHT;
-
-  // Map score to risk level (consistent with frontend)
-  if (score <= 4) {
-    return "Very low risk";
-  } else if (score <= 8) {
-    return "Low risk";
-  } else if (score <= 12) {
-    return "Medium risk";
-  } else if (score <= 16) {
-    return "High risk";
-  } else {
-    return "Very high risk";
-  }
-};
-
-/**
  * Validates that risk level is consistent with severity and likelihood
  */
 export const validateRiskLevelConsistency = (
@@ -500,9 +474,9 @@ export const validateRiskLevelConsistency = (
   likelihood: string,
   riskLevel?: string,
 ): ValidationResult => {
-  const expectedRiskLevel = calculateRiskLevel(severity, likelihood);
+  const expectedRiskLevel = calculateRiskLevel(likelihood, severity);
 
-  if (riskLevel && riskLevel !== expectedRiskLevel) {
+  if (riskLevel && expectedRiskLevel && riskLevel !== expectedRiskLevel) {
     return {
       isValid: false,
       message: `Risk level "${riskLevel}" is not consistent with severity "${severity}" and likelihood "${likelihood}". Expected: "${expectedRiskLevel}"`,
@@ -530,8 +504,8 @@ export const validateCurrentRiskLevel = (
     "High risk",
     "Very high risk",
   ];
-  const originalIndex = riskLevels.indexOf(originalRiskLevel);
-  const currentIndex = riskLevels.indexOf(currentRiskLevel);
+  const originalIndex = riskLevels.indexOf(normalizeCurrentRiskLevel(originalRiskLevel));
+  const currentIndex = riskLevels.indexOf(normalizeCurrentRiskLevel(currentRiskLevel));
 
   if (originalIndex === -1 || currentIndex === -1) {
     return { isValid: true }; // Skip validation if levels not found

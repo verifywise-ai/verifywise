@@ -229,7 +229,7 @@ describe("update_risk", () => {
     );
 
     // The stored "Major" is 4, "Rare" is 1, so 1 + 12 = 13 -> High risk. Had
-    // the stored severity been dropped, 1 + 3 = 4 -> Very low risk.
+    // the stored severity been dropped, 1 + 3 = 4 -> No risk.
     expect(mockUpdate.mock.calls[0][1].risk_level_autocalculated).toBe("High risk");
   });
 

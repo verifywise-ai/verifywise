@@ -49,7 +49,7 @@ export const RISK_LEVEL_VALUES = [
 ] as const;
 
 export const CURRENT_RISK_LEVEL_VALUES = [
-  "Very Low risk",
+  "Very low risk",
   "Low risk",
   "Medium risk",
   "High risk",
@@ -83,39 +83,3 @@ export const RISK_CATEGORY_VALUES = [
   "Data privacy risk",
   "Health and safety risk",
 ] as const;
-
-const LIKELIHOOD_SCORE: Record<string, number> = {
-  Rare: 1,
-  Unlikely: 2,
-  Possible: 3,
-  Likely: 4,
-  "Almost Certain": 5,
-};
-
-const SEVERITY_SCORE: Record<string, number> = {
-  Negligible: 1,
-  Minor: 2,
-  Moderate: 3,
-  Major: 4,
-  Catastrophic: 5,
-};
-
-/**
- * score = (likelihood * 1) + (severity * 3), then bucket → risk level.
- * Matches the UI's calculation used elsewhere in the risk module.
- */
-export function calculateRiskLevel(
-  likelihood: string | null,
-  severity: string | null,
-): string | null {
-  if (!likelihood || !severity) return null;
-  const l = LIKELIHOOD_SCORE[likelihood];
-  const s = SEVERITY_SCORE[severity];
-  if (!l || !s) return null;
-  const score = l * 1 + s * 3;
-  if (score <= 4) return "Very low risk";
-  if (score <= 8) return "Low risk";
-  if (score <= 12) return "Medium risk";
-  if (score <= 16) return "High risk";
-  return "Very high risk";
-}

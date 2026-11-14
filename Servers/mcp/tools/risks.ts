@@ -24,7 +24,7 @@ import {
   PROJECT_RISK_CATEGORIES,
 } from "../../utils/risk.utils";
 import { createRiskService, updateRiskService } from "../../services/risk.service";
-import { calculateRiskLevel } from "../../utils/validations/riskValidation.utils";
+import { calculateRiskLevel, normalizeCurrentRiskLevel } from "../../utils/riskLevel.utils";
 import { enqueueRiskLinkRecompute } from "../../services/automations/automationProducer";
 import { notifyUserAssigned } from "../../services/inAppNotification.service";
 import { getUserByIdQuery } from "../../utils/user.utils";
@@ -45,7 +45,8 @@ const MITIGATION_STATUSES = [
   "Requires review",
 ] as const;
 const CURRENT_RISK_LEVELS = [
-  "Very Low risk",
+  "Very low risk",
+  "Very Low risk", // legacy spelling, normalized before save
   "Low risk",
   "Medium risk",
   "High risk",
@@ -207,7 +208,7 @@ const createRisk: ToolDef = {
     // Derived server-side from the same helper the AI action executor uses, so
     // the stored level can never disagree with the likelihood and severity
     // beside it.
-    const riskLevel = calculateRiskLevel(args.severity, args.likelihood);
+    const riskLevel = calculateRiskLevel(args.likelihood, args.severity);
 
     const transaction = await sequelize.transaction();
     let risk;
@@ -231,7 +232,7 @@ const createRisk: ToolDef = {
           risk_owner: args.riskOwner,
           mitigation_status: args.mitigationStatus,
           mitigation_plan: args.mitigationPlan,
-          current_risk_level: args.currentRiskLevel,
+          current_risk_level: normalizeCurrentRiskLevel(args.currentRiskLevel),
           deadline: args.deadline ? new Date(args.deadline) : undefined,
           review_notes: args.reviewNotes,
           projects: args.useCaseIds ?? [],
@@ -320,7 +321,8 @@ const updateRisk: ToolDef = {
     if (args.impact !== undefined) input.impact = args.impact;
     if (args.mitigationStatus !== undefined) input.mitigation_status = args.mitigationStatus;
     if (args.mitigationPlan !== undefined) input.mitigation_plan = args.mitigationPlan;
-    if (args.currentRiskLevel !== undefined) input.current_risk_level = args.currentRiskLevel;
+    if (args.currentRiskLevel !== undefined)
+      input.current_risk_level = normalizeCurrentRiskLevel(args.currentRiskLevel);
     if (args.deadline !== undefined) input.deadline = new Date(args.deadline);
     if (args.reviewNotes !== undefined) input.review_notes = args.reviewNotes;
 
@@ -336,10 +338,11 @@ const updateRisk: ToolDef = {
     // against whichever value is not being changed.
     let riskLevel: string | undefined;
     if (args.likelihood !== undefined || args.severity !== undefined) {
-      riskLevel = calculateRiskLevel(
-        args.severity ?? existing.severity,
-        args.likelihood ?? existing.likelihood,
-      );
+      riskLevel =
+        calculateRiskLevel(
+          args.likelihood ?? existing.likelihood,
+          args.severity ?? existing.severity,
+        ) ?? undefined;
       input.risk_level_autocalculated = riskLevel;
     }
 
