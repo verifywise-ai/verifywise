@@ -114,6 +114,7 @@ export const getNISTAIRMFSubcategoryRisksQuery = async (
      INNER JOIN nist_ai_rmf_subcategories__risks nsr
        ON pr.organization_id = nsr.organization_id AND pr.id = nsr.projects_risks_id
      WHERE nsr.organization_id = :organizationId AND nsr.nist_ai_rmf_subcategory_id = :subcategoryId
+       AND pr.is_deleted = false
      ORDER BY pr.id ASC`,
     {
       replacements: { organizationId, subcategoryId },

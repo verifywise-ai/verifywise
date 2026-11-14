@@ -166,6 +166,23 @@ describe("dataCollector", () => {
       expect(result.sections.projectRisks!.risksByLevel.length).toBe(2);
     });
 
+    it("reports the inherent severity as impact, not the residual risk_severity", async () => {
+      mockGetProjectRisks.mockResolvedValue([
+        {
+          id: 1,
+          risk_name: "Risk 1",
+          risk_level_autocalculated: "High risk",
+          severity: "Catastrophic",
+          risk_severity: "Minor",
+        },
+      ] as any);
+
+      const collector = createDataCollector(10, 1, 1, 100, 5);
+      const result = await collector.collectAllData(["projectRisks"]);
+
+      expect(result.sections.projectRisks!.risks[0].impact).toBe("Catastrophic");
+    });
+
     it("should collect all sections when 'all' is specified", async () => {
       mockGetProjectRisks.mockResolvedValue([]);
 

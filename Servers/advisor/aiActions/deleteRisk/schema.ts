@@ -5,7 +5,7 @@
  * `reason` for audit context. No other fields — the deletion itself is
  * binary.
  *
- * The underlying query (`deleteRiskByIdQuery`) is a SOFT delete —
+ * The underlying query (`archiveRiskQuery`) is a SOFT delete —
  * `is_deleted = true, deleted_at = NOW()` on the row. Nothing is
  * physically removed. The Phase 2 rule engine will eventually let
  * Admins auto-approve soft deletes but require extra confirmation for

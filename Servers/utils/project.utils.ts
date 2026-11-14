@@ -1168,7 +1168,7 @@ export const calculateProjectRisks = async (
     `SELECT ${effectiveRiskLevelSql("r")} AS risk_level_autocalculated, count(*) AS count
      FROM risks r
      JOIN projects_risks pr ON r.id = pr.risk_id AND pr.organization_id = :organizationId
-     WHERE r.organization_id = :organizationId AND pr.project_id = :project_id
+     WHERE r.organization_id = :organizationId AND r.is_deleted = false AND pr.project_id = :project_id
      GROUP BY ${effectiveRiskLevelSql("r")}`,
     {
       replacements: { organizationId, project_id },

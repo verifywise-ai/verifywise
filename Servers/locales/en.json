@@ -1,7 +1,10 @@
 {
   "\"{title}\" has not been confirmed as live since {since}. Confirm it, or retire it if it is no longer in use.": "\"{title}\" has not been confirmed as live since {since}. Confirm it, or retire it if it is no longer in use.",
+  "{assigner} assigned you as Risk Owner for {count} risks: {names}": "{assigner} assigned you as Risk Owner for {count} risks: {names}",
+  "{assigner} assigned you as Risk Owner for {count} risks: {names} and {more} more": "{assigner} assigned you as Risk Owner for {count} risks: {names} and {more} more",
   "{count} new exposed secrets": "{count} new exposed secrets",
   "{count} new high-risk findings": "{count} new high-risk findings",
+  "{count} risks were assigned to you": "{count} risks were assigned to you",
   "{days} days": "{days} days",
   "{days} days overdue": "{days} days overdue",
   "{field} must be a list of ids": "{field} must be a list of ids",

@@ -186,6 +186,7 @@ export async function getImplLinkedRisksQuery(
         AND pr.id = jr.projects_risks_id
       WHERE jr.organization_id = :organizationId
         AND jr.${tables.risksImplCol} = :implId
+        AND pr.is_deleted = false
       ORDER BY pr.id ASC;`,
     {
       replacements: { organizationId, implId },

@@ -349,13 +349,17 @@ const VWProjectRisksTable = ({
   const [pendingCategories, setPendingCategories] = useState<string[]>([]);
 
   const bulkMutation = useBulkUpdateProjectRisks({
-    onSuccess: (payload) => {
+    onSuccess: (payload, result) => {
       clearSelection();
       setOwnerDialogOpen(false);
       setCategoryDialogOpen(false);
       setPendingOwnerId("");
       setPendingCategories([]);
-      onBulkActionSuccess?.(payload.action, payload.ids.length);
+      // Risks that already had the value, or were archived, are not counted.
+      onBulkActionSuccess?.(
+        payload.action,
+        result?.changed ?? result?.updated ?? payload.ids.length,
+      );
     },
   });
 
@@ -412,7 +416,7 @@ const VWProjectRisksTable = ({
         disabled: bulkMutation.isPending,
         confirm: {
           title: `Archive ${selectionCount} project risk${selectionCount === 1 ? "" : "s"}?`,
-          body: "Archived risks are soft-deleted: they are hidden from the active risk register but remain available for audit history.",
+          body: "Archived risks are removed from the risk register, reports and linked policies. Their change history is kept.",
           confirmLabel: "Archive",
           danger: true,
         },

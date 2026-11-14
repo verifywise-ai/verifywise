@@ -736,7 +736,7 @@ export class ReportDataCollector {
         name: risk.risk_name || "Unnamed Risk",
         description: risk.risk_description || "",
         riskLevel: getEffectiveRiskLevel(risk) || "Unknown",
-        impact: risk.risk_severity || "Unknown",
+        impact: risk.severity || "Unknown",
         likelihood: risk.likelihood || "Unknown",
         // `risks` carries both columns and they are orthogonal — a risk can be
         // mitigation_status 'Completed' while approval_status is 'Rejected'.
@@ -766,6 +766,7 @@ export class ReportDataCollector {
          FROM risks risk
          LEFT JOIN users u ON risk.risk_owner = u.id
         WHERE risk.organization_id = :organizationId
+          AND risk.is_deleted = false
         ORDER BY risk.id`,
       { replacements: { organizationId: this.organizationId }, type: QueryTypes.SELECT },
     )) as any[];
@@ -793,6 +794,7 @@ export class ReportDataCollector {
          JOIN projects_risks pr ON risk.id = pr.risk_id AND pr.organization_id = :organizationId
          LEFT JOIN users u ON risk.risk_owner = u.id
         WHERE risk.organization_id = :organizationId
+          AND risk.is_deleted = false
           AND pr.project_id = ANY(ARRAY[:scopedProjectIds]::INTEGER[])
         ORDER BY risk.id`,
       {
@@ -1368,6 +1370,8 @@ export class ReportDataCollector {
                ON nsr.nist_ai_rmf_subcategory_id = ns.id
               AND nsr.organization_id = ns.organization_id
         LEFT JOIN risks r ON r.id = nsr.projects_risks_id
+               AND r.organization_id = nsr.organization_id
+               AND r.is_deleted = false
         WHERE ns.organization_id = :organizationId AND ns.projects_frameworks_id = :projectFrameworkId
         ORDER BY ss.function, cs.order_no, ss.order_no
       `;

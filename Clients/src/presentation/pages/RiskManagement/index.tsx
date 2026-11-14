@@ -348,8 +348,7 @@ const RiskManagement = () => {
 
   // Prepare export data - format the data for export
   const exportData = useMemo(() => {
-    const dataToExport = filteredRisks.length > 0 ? filteredRisks : projectRisks;
-    return dataToExport.map((risk: RiskModel) => {
+    return filteredRisks.map((risk: RiskModel) => {
       const ownerUser = users.find((user) => user.id === risk.risk_owner);
       const ownerName = ownerUser ? `${ownerUser.name} ${ownerUser.surname}` : "-";
 
@@ -364,7 +363,7 @@ const RiskManagement = () => {
         controls_mapping: risk.controls_mapping || "-",
       };
     });
-  }, [filteredRisks, projectRisks, users]);
+  }, [filteredRisks, users]);
 
   const fetchProjectRisks = useCallback(async (filter: "active" | "deleted" | "all" = "active") => {
     try {
@@ -560,16 +559,7 @@ const RiskManagement = () => {
         routeUrl: `/projectRisks/${riskId}`,
       });
       if (response.status === 200) {
-        // Delete the risk from all linked policies
-        try {
-          await deleteEntityById({
-            routeUrl: `/policy-linked/risk/${riskId}/unlink-all`,
-          });
-        } catch (linkedError) {
-          console.error("Error deleting risk from linked policies", linkedError);
-          handleToast("warning", "Risk deleted but failed to remove from some linked policies.");
-        }
-
+        // The server drops the archived risk's policy links itself.
         // Set current pagination number after deleting the risk
         const rowsPerPage = 5;
         const rowCount = projectRisks.slice(

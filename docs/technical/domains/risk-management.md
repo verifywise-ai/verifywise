@@ -398,7 +398,7 @@ risk linked only via `answers_eu__risks` is still a `gap`.
 | GET | `/projectRisks/by-frameworkid/:id` | Get by framework |
 | POST | `/projectRisks/` | Create risk |
 | PUT | `/projectRisks/:id` | Update risk |
-| DELETE | `/projectRisks/:id` | Delete risk (soft) |
+| DELETE | `/projectRisks/:id` | Archive risk (soft delete) |
 
 ### Vendor Risks
 
@@ -430,6 +430,32 @@ risk linked only via `answers_eu__risks` is still a `gap`.
 | GET | `/riskHistory/timeseries` | Get trend data |
 | GET | `/riskHistory/current-counts` | Get distribution |
 | POST | `/riskHistory/snapshot` | Create snapshot |
+
+### Archiving and bulk actions
+
+Archiving a risk (single, bulk or through the AI advisor) goes through one server path. In one transaction it soft-deletes the risk, records a deletion entry in its change history, runs the "risk deleted" automation (once per bulk action, see below) and removes the risk from every policy it was linked to. The client no longer sends a separate unlink request. `DELETE /policy-linked/risk/:riskId/unlink-all` still exists for API callers.
+
+Bulk "set owner" and "set category" go through the single-edit path, so each changed risk still gets its change-history entries. Risks that already hold the value are skipped and not counted.
+
+Bulk archive, set owner and set category run the organization's automation once per bulk action, not once per risk: the per-risk paths take `runAutomations: false` and the controller calls `enqueueBulkRiskAutomation` ("risk deleted" for archive, "risk updated" for the edits) with the changed risks. With one changed risk the variables are exactly those of a single edit or delete. With several, `{{risk.name}}` is "<n> risks: <names>" (10 names, then "and <k> more"), `{{risk.id}}` is empty, every other variable keeps its value only when all the changed risks share it (for example `{{risk.owner}}` after set owner) and is empty otherwise, and `{{changes_summary}}` has one line per risk such as "• Risk A: Owner: Ann → Bo" (50 lines, then "• and <k> more"). Owner and approver names come from one query for the batch.
+
+A bulk set owner that gives the new owner two or more risks sends one in-app notification and one assignment email, "<n> risks were assigned to you", listing the risks (20, then "and <k> more") with a link to the risk list (`notifyUserAssignedMany`). With one changed risk the owner gets the usual single-risk notice.
+
+`PATCH /projectRisks/bulk` answers `{ updated, changed, action }`. `updated` keeps its original meaning, the number of ids sent; `changed` is the number of risks actually archived or edited. The risk table reports `changed`. The risk added, updated and deleted automations are enqueued after the transaction commits, so a bulk action that rolls back sends none, and the owner notice is sent after the commit too. A bulk action records the risk history snapshots once, after its loop.
+
+Removing a use case or framework from a risk removes the risk's mappings in every framework of that use case: EU AI Act, ISO 42001, ISO 27001, NIST AI RMF, the 21 bundled frameworks, custom frameworks and imported frameworks.
+
+### Archived risks are excluded from
+
+- use-case and organization reports (DOCX and PDF), including the NIST section
+- use-case risk totals, which the advisor and the MCP use-case tool also use
+- ISO 42001 subclause and annex risk panels, generic framework control panels and imported-framework control panels
+- the advisor's readiness risk count
+- the post-market monitoring cycle snapshot, which counts the use case's active risks by risk level (high = High or Very high, medium = Medium, low = Low, Very low or No risk)
+
+The report's Severity column shows the inherent severity, not the post-mitigation severity.
+
+The risk register export uses the filtered list. With a filter or search that matches nothing, the export is empty and the export button is disabled.
 
 ## Risk History Tracking
 

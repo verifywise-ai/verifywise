@@ -1,7 +1,10 @@
 {
   "\"{title}\" has not been confirmed as live since {since}. Confirm it, or retire it if it is no longer in use.": "„{title}“ wurde seit {since} nicht als aktiv bestätigt. Bestätigen Sie es oder setzen Sie es außer Betrieb, wenn es nicht mehr verwendet wird.",
+  "{assigner} assigned you as Risk Owner for {count} risks: {names}": "{assigner} hat Sie als Risikoverantwortlichen für {count} Risiken zugewiesen: {names}",
+  "{assigner} assigned you as Risk Owner for {count} risks: {names} and {more} more": "{assigner} hat Sie als Risikoverantwortlichen für {count} Risiken zugewiesen: {names} und {more} weitere",
   "{count} new exposed secrets": "{count} neue offengelegte Geheimnisse",
   "{count} new high-risk findings": "{count} neue Befunde mit hohem Risiko",
+  "{count} risks were assigned to you": "Ihnen wurden {count} Risiken zugewiesen",
   "{days} days": "{days} Tage",
   "{days} days overdue": "vor {days} Tagen",
   "{field} must be a list of ids": "{field} muss eine Liste von IDs sein",

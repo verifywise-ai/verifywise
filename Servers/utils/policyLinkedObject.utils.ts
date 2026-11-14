@@ -206,3 +206,19 @@ export const deletePolicyLinkedObjectQuery = async (
 
   return result[0];
 };
+
+/**
+ * Unlink one risk from every policy in the organization. Used when a risk is
+ * archived and by DELETE /policy-linked/risk/:riskId.
+ */
+export const unlinkRiskFromAllPoliciesQuery = async (
+  riskId: number,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<void> => {
+  await sequelize.query(
+    `DELETE FROM policy_linked_objects
+      WHERE organization_id = :organizationId AND object_type = 'risk' AND object_id = :riskId`,
+    { replacements: { organizationId, riskId }, transaction },
+  );
+};

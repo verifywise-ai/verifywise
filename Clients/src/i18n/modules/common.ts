@@ -4791,8 +4791,8 @@ export const de: Record<string, string> = {
     "Wird dem ausgewählten Ordner hinzugefügt; bestehende Zuordnungen bleiben erhalten.",
   "Archived policies will be moved out of the active list. You can still find them via the Archived status filter.":
     'Archivierte Richtlinien werden aus der aktiven Liste entfernt. Sie sind weiterhin über den Statusfilter "Archiviert" abrufbar.',
-  "Archived risks are soft-deleted: they are hidden from the active risk register but remain available for audit history.":
-    "Archivierte Risiken werden weich gelöscht: Sie werden aus dem aktiven Risikoregister ausgeblendet, bleiben aber für die Audit-Historie verfügbar.",
+  "Archived risks are removed from the risk register, reports and linked policies. Their change history is kept.":
+    "Archivierte Risiken werden aus dem Risikoregister, aus Berichten und aus verknüpften Richtlinien entfernt. Ihr Änderungsverlauf bleibt erhalten.",
   "Assign reviewer": "Prüfer zuweisen",
   "Bulk actions": "Massenaktionen",
   "Clear selection": "Auswahl aufheben",
@@ -10382,8 +10382,8 @@ export const fr: Record<string, string> = {
     "Ajoute au dossier sélectionné ; les affectations existantes sont conservées.",
   "Archived policies will be moved out of the active list. You can still find them via the Archived status filter.":
     "Les politiques archivées seront retirées de la liste active. Vous pourrez toujours les retrouver via le filtre de statut Archivé.",
-  "Archived risks are soft-deleted: they are hidden from the active risk register but remain available for audit history.":
-    "Les risques archivés sont supprimés en douceur : ils sont masqués du registre des risques actifs mais restent disponibles dans l'historique d'audit.",
+  "Archived risks are removed from the risk register, reports and linked policies. Their change history is kept.":
+    "Les risques archivés sont retirés du registre des risques, des rapports et des politiques associées. Leur historique des modifications est conservé.",
   "Assign reviewer": "Attribuer un relecteur",
   "Bulk actions": "Actions groupées",
   "Clear selection": "Effacer la sélection",
@@ -15987,8 +15987,8 @@ export const es: Record<string, string> = {
     "Se añade a la carpeta elegida; se conservan las asignaciones existentes.",
   "Archived policies will be moved out of the active list. You can still find them via the Archived status filter.":
     "Las políticas archivadas se retirarán de la lista activa. Aún podrás encontrarlas mediante el filtro de estado Archivado.",
-  "Archived risks are soft-deleted: they are hidden from the active risk register but remain available for audit history.":
-    "Los riesgos archivados se eliminan de forma reversible: quedan ocultos del registro de riesgos activo, pero siguen disponibles para el historial de auditoría.",
+  "Archived risks are removed from the risk register, reports and linked policies. Their change history is kept.":
+    "Los riesgos archivados se eliminan del registro de riesgos, de los informes y de las políticas vinculadas. Su historial de cambios se conserva.",
   "Replaces existing categories. Leave empty to clear.":
     "Sustituye las categorías existentes. Déjalo vacío para borrarlas.",
   "Replaces existing tags. Leave empty to clear.":

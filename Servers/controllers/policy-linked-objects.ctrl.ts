@@ -6,6 +6,7 @@ import {
   getAllPolicyLinkedObjectsQuery,
   getPolicyLinkedObjectByIdQuery,
   linkObjectsToPolicyQuery,
+  unlinkRiskFromAllPoliciesQuery,
 } from "../utils/policyLinkedObject.utils";
 import { Transaction } from "sequelize";
 import { sequelize } from "../database/db";
@@ -222,14 +223,7 @@ export async function deleteRiskFromAllPolicies(req: Request, res: Response) {
     const organizationId = req.organizationId!;
     transaction = await sequelize.transaction();
 
-    await sequelize.query(
-      `DELETE FROM policy_linked_objects
-       WHERE organization_id = :organizationId AND object_id = :riskId AND object_type = 'risk'`,
-      {
-        replacements: { organizationId, riskId },
-        transaction,
-      },
-    );
+    await unlinkRiskFromAllPoliciesQuery(riskId, organizationId, transaction);
 
     await transaction.commit();
 

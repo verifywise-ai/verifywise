@@ -248,6 +248,21 @@ export const riskAssessmentContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'archiving-and-bulk-edits',
+      level: 2,
+      text: 'Archiving, bulk edits and export',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Archiving', text: 'Archiving a risk, one at a time, in bulk or through the AI advisor, removes it from the risk register, from reports and from every policy it was linked to. Its change history keeps a deletion entry. Archived risks no longer count towards use case totals, framework control panels or post-market monitoring cycle snapshots' },
+        { bold: 'Bulk owner and category', text: 'Setting the owner or category on several risks records change history on each changed risk. A new owner gets one notification listing the risks assigned to them, and automations run once for the whole bulk action, with a summary of the changes. Risks that already have the value are skipped' },
+        { bold: 'Removing a use case or framework', text: 'When you remove a use case or framework from a risk, the risk\'s links to controls in every framework of that use case are removed too' },
+        { bold: 'Export', text: 'Export includes the risks that match your current filters and search. If nothing matches, there is nothing to export and the export button is disabled' },
+      ],
+    },
+    {
+      type: 'heading',
       id: 'risk-tracking',
       level: 2,
       text: 'Risk tracking',

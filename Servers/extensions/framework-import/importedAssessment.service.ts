@@ -784,6 +784,7 @@ export async function getImplLinkedRisksQuery(
        JOIN ${spec.risksTable} jr
          ON r.organization_id = jr.organization_id AND r.id = jr.projects_risks_id
       WHERE jr.organization_id = :organizationId AND jr.${spec.risksImplCol} = :implId
+        AND r.is_deleted = false
       ORDER BY r.id ASC;`,
     { replacements: { organizationId, implId }, type: QueryTypes.SELECT, transaction },
   )) as Array<Record<string, unknown>>;
@@ -801,6 +802,7 @@ async function assertRisksInProject(
     `SELECT pr.risk_id
        FROM projects_risks pr
        JOIN risks r ON r.id = pr.risk_id AND r.organization_id = pr.organization_id
+                    AND r.is_deleted = false
       WHERE pr.organization_id = :organizationId
         AND pr.project_id = :projectId
         AND pr.risk_id IN (:riskIds);`,
