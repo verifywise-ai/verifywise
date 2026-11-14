@@ -1,5 +1,5 @@
 /**
- * @fileoverview Templates tab: toolbar (filter/group/search) and built-in templates table.
+ * @fileoverview Templates tab: toolbar (filter/search) and built-in templates table.
  *
  * @module pages/EvalsDashboard/ProjectDatasets/TemplatesTab
  */
@@ -8,7 +8,6 @@ import { Box, Stack } from "@mui/material";
 import SearchBox from "../../../components/Search/SearchBox";
 import { type FilterColumn, type FilterCondition } from "../../../components/Table/FilterBy";
 import { TableFilter } from "../../../components/Table/TableFilter";
-import { GroupBy } from "../../../components/Table/GroupBy";
 import TemplatesTable from "../../../components/Table/TemplatesTable";
 import type { BuiltInDataset, TemplateWithCategory } from "./types";
 import type { FilterFieldValue } from "../../../../application/utils/filterConditions";
@@ -62,13 +61,6 @@ export default function TemplatesTab({
           onFilterChange={onFilterChange}
           data={filterRows}
           getFieldValue={getFilterFieldValue}
-        />
-        <GroupBy
-          options={[
-            { id: "category", label: "Category" },
-            { id: "difficulty", label: "Difficulty" },
-          ]}
-          onGroupChange={() => {}}
         />
         <SearchBox
           placeholder="Search templates..."

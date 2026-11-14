@@ -17,15 +17,6 @@ vi.mock("../../../../application/hooks/useShare", () => ({
   useUpdateShareLink: () => ({ mutateAsync: vi.fn() }),
 }));
 
-vi.mock("../../../../application/hooks/useTableGrouping", () => ({
-  useTableGrouping: () => [],
-  useGroupByState: () => ({
-    groupBy: null,
-    groupSortOrder: "asc",
-    handleGroupChange: vi.fn(),
-  }),
-}));
-
 vi.mock("../../../../application/hooks/useFilterBy", () => ({
   useFilterBy: () => ({
     filterData: (data: unknown[]) => data,
@@ -109,18 +100,12 @@ vi.mock("../../../components/ShareViewDropdown", () => ({
 vi.mock("../../../components/PluginSlot", () => ({
   PluginSlot: () => null,
 }));
-vi.mock("../../../components/Table/GroupedTableView", () => ({
-  GroupedTableView: ({ ungroupedData, renderTable }: any) => renderTable(ungroupedData, {}),
-}));
 vi.mock("../../../components/Table/ExportMenu", () => ({
   ExportMenu: () => <div data-testid="export-menu" />,
 }));
 vi.mock("../../../components/Table/FilterBy", () => ({
   FilterBy: () => <div data-testid="filter-by" />,
   FilterColumn: {},
-}));
-vi.mock("../../../components/Table/GroupBy", () => ({
-  GroupBy: () => <div data-testid="group-by" />,
 }));
 vi.mock("../../../components/Table/ColumnSelector", () => ({
   ColumnSelector: () => <div data-testid="column-selector" />,

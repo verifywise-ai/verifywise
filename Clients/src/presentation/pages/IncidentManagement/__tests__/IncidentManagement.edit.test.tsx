@@ -44,10 +44,6 @@ vi.mock("../../../../application/hooks/useAuth", () => ({
 vi.mock("../../../../application/hooks/useFilterBy", () => ({
   useFilterBy: () => ({ filterData: (data: unknown[]) => data, handleFilterChange: vi.fn() }),
 }));
-vi.mock("../../../../application/hooks/useTableGrouping", () => ({
-  useTableGrouping: () => [],
-  useGroupByState: () => ({ groupBy: null, groupSortOrder: "asc", handleGroupChange: vi.fn() }),
-}));
 vi.mock("../../../../application/hooks/useColumnVisibility", () => ({
   useColumnVisibility: () => ({
     visibleColumns: new Set(["incident_id", "status", "actions"]),
@@ -57,12 +53,6 @@ vi.mock("../../../../application/hooks/useColumnVisibility", () => ({
   }),
 }));
 vi.mock("../../../../application/tools/log.engine", () => ({ logEngine: vi.fn() }));
-vi.mock("../../../components/Table/GroupedTableView", () => ({
-  GroupedTableView: ({ ungroupedData, renderTable }: any) => (
-    <div>{renderTable(ungroupedData || [])}</div>
-  ),
-}));
-vi.mock("../../../components/Table/GroupBy", () => ({ GroupBy: () => null }));
 vi.mock("../../../components/Table/FilterBy", () => ({ FilterBy: () => null }));
 vi.mock("../../../components/Table/ExportMenu", () => ({ ExportMenu: () => null }));
 vi.mock("../../../components/Table/ColumnSelector", () => ({ ColumnSelector: () => null }));

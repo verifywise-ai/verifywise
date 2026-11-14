@@ -1,6 +1,6 @@
 /**
- * Review focus 2: grouping a chip-filtered table groups only the filtered rows.
- * Real useFilterBy, TableFilter (phase 1 chips), useTableGrouping and GroupedTableView.
+ * A status chip filters the model inventory table down to the matching rows.
+ * Real useFilterBy and TableFilter (phase 1 chips).
  */
 import { screen, waitFor, fireEvent, within } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
@@ -100,13 +100,6 @@ vi.mock("../../../components/PluginSlot", () => ({
 vi.mock("../../../components/Table/ExportMenu", () => ({
   ExportMenu: () => <div data-testid="export-menu" />,
 }));
-// GroupBy's own popover is covered by its tests; this stub groups by provider.
-vi.mock("../../../components/Table/GroupBy", () => ({
-  GroupBy: ({ onGroupChange }: any) => (
-    <button onClick={() => onGroupChange("provider", "asc")}>group-by-provider</button>
-  ),
-  GroupBadge: ({ count }: { count: number }) => <span>({count})</span>,
-}));
 vi.mock("../../../components/Table/ColumnSelector", () => ({
   ColumnSelector: () => <div data-testid="column-selector" />,
 }));
@@ -196,7 +189,7 @@ const models = [
   },
 ];
 
-describe("ModelInventory filter chips with grouping", () => {
+describe("ModelInventory filter chips", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     mockGetAllEntities.mockImplementation(({ routeUrl }: { routeUrl: string }) =>
@@ -210,7 +203,7 @@ describe("ModelInventory filter chips with grouping", () => {
     vi.restoreAllMocks();
   });
 
-  it("groups only the rows the status chip lets through", async () => {
+  it("shows only the rows the status chip lets through", async () => {
     renderWithProviders(<ModelInventory />);
     await waitFor(() => expect(screen.getByText("GPT-4o")).toBeInTheDocument());
 
@@ -226,16 +219,10 @@ describe("ModelInventory filter chips with grouping", () => {
     await waitFor(() => expect(screen.queryByText("GPT-4o")).not.toBeInTheDocument());
     expect(screen.getByTestId("filter-chip-status")).toHaveTextContent("Status: Approved");
 
-    fireEvent.click(screen.getByText("group-by-provider"));
-
-    const tables = await screen.findAllByTestId("model-inventory-table");
-    expect(tables).toHaveLength(2);
-    const rows = tables.map((t) =>
-      within(t)
-        .getAllByText(/GPT|Claude/)
-        .map((n) => n.textContent),
-    );
-    expect(rows.flat().sort()).toEqual(["Claude", "GPT-4"]);
-    expect(screen.queryByText("GPT-4o")).not.toBeInTheDocument();
+    const table = screen.getByTestId("model-inventory-table");
+    const rows = within(table)
+      .getAllByText(/GPT|Claude/)
+      .map((n) => n.textContent);
+    expect(rows.sort()).toEqual(["Claude", "GPT-4"]);
   });
 });

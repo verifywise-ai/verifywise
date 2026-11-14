@@ -280,15 +280,6 @@ const UnifiedSidebar: FC<UnifiedSidebarProps> = ({
             onClick: () => navigate(`/ai-detection/scans/${scan.id}`),
           })),
         };
-      case "recentTools":
-        return {
-          title: "Recent tools",
-          items: (shadowAi?.recentTools ?? []).map((tool) => ({
-            id: String(tool.id),
-            name: tool.name,
-            onClick: () => navigate(`/shadow-ai/tools/${tool.id}`),
-          })),
-        };
       default:
         return null;
     }
@@ -304,9 +295,10 @@ const UnifiedSidebar: FC<UnifiedSidebarProps> = ({
           <Typography
             key={`section-${sub.section}`}
             sx={{
+              // Darker and heavier than the items so the group names stand out.
               fontSize: "11px",
-              fontWeight: 500,
-              color: textPalette.tertiary,
+              fontWeight: 600,
+              color: textPalette.primary,
               pl: SUB_ITEM_INDENT,
               pt: "8px",
               pb: "2px",

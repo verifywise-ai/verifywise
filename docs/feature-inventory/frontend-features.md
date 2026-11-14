@@ -554,7 +554,7 @@ For each page/screen the following subsections describe: routes, user-facing fea
 | Routes | `/model-inventory`, `/model-inventory/model-risks`, `/model-inventory/evidence-hub`, `/model-inventory/model-risk-management`, `/model-inventory/model-risk-management/:mrmTab`, `/model-inventory/model-risk-management/settings/:settingsSection`, `/model-inventory/models/:id`, `/model-inventory/:pluginTab` |
 | Component | `Clients/src/presentation/pages/ModelInventory/index.tsx` |
 | Tabs | Models, Model risks, Evidence hub, Evaluations, Model risk management, plus extension tabs (MLflow, Azure AI Foundry). |
-| Features | Model table with status cards, search, filters, grouping, column visibility, export; add/edit model modal (`NewModelInventory`); model-risk table with add/edit modal (`NewModelRisk`); evidence hub table with upload/edit modal (`EvidenceHub`) and file preview; model evaluations; model-risk management (MRM) with overview, tiering, validation, findings, monitoring, settings sub-tabs; model lifecycle detail page; share view dropdown. |
+| Features | Model table with status cards, search, filters, column visibility, export; add/edit model modal (`NewModelInventory`); model-risk table with add/edit modal (`NewModelRisk`); evidence hub table with upload/edit modal (`EvidenceHub`) and file preview; model evaluations; model-risk management (MRM) with overview, tiering, validation, findings, monitoring, settings sub-tabs; model lifecycle detail page; share view dropdown. |
 | Key components | `ModelInventoryTable`, `ModelRisksTable`, `EvidenceHubTable`, `DatasetSummary`, `ModelInventorySummary`, `ModelRiskSummary`, `AnalyticsDrawer`, `NewModelInventory`, `NewModelRisk`, `EvidenceHub`, `FilePreviewPanel`, `ModelEvaluationsTab`, `ModelRiskManagementTab`, `ShareViewDropdown`, `MLFlowTab`, `AzureAIFoundryTab`. |
 | Access | Main sidebar → Model inventory. |
 | e2e tests | `Clients/e2e/model-inventory.spec.ts` |
@@ -582,7 +582,7 @@ For each page/screen the following subsections describe: routes, user-facing fea
 |-----------|-------|
 | Routes | `/datasets` |
 | Component | `Clients/src/presentation/pages/Datasets/index.tsx` |
-| Features | Dataset table with status summary cards, search, filters, grouping, column visibility; add/edit dataset modal (`NewDataset`); delete; bulk upload extension (`BulkUploadButton`/`BulkUploadModal`). |
+| Features | Dataset table with status summary cards, search, filters, column visibility; add/edit dataset modal (`NewDataset`); delete; bulk upload extension (`BulkUploadButton`/`BulkUploadModal`). |
 | Key components | `DatasetTable`, `DatasetSummary`, `NewDataset`, `BulkUploadButton`, `BulkUploadModal`. |
 | Access | Main sidebar → Datasets. |
 | e2e tests | `Clients/e2e/datasets.spec.ts` |
@@ -689,8 +689,8 @@ For each page/screen the following subsections describe: routes, user-facing fea
 | Routes | `/vendors`, `/vendors/risks` |
 | Component | `Clients/src/presentation/pages/Vendors/index.tsx` |
 | Tabs | Vendor list, Vendor risks. |
-| Features | Vendor table with status tile cards, search, filters (`FilterBy`), grouping, column visibility, export; create/edit vendor modal (`NewVendor`); vendor-risk table with create/edit modal (`NewRisk`); delete actions; project filter; scorecard column. |
-| Key components | `TableWithPlaceholder`, `RisksTable`, `NewVendor`, `NewRisk`, `StatusTileCards`, `FilterBy`, `GroupBy`, `ColumnSelector`, `ExportMenu`. |
+| Features | Vendor table with status tile cards, search, filters (`FilterBy`), column visibility, export; create/edit vendor modal (`NewVendor`); vendor-risk table with create/edit modal (`NewRisk`); delete actions; project filter; scorecard column. |
+| Key components | `TableWithPlaceholder`, `RisksTable`, `NewVendor`, `NewRisk`, `StatusTileCards`, `FilterBy`, `ColumnSelector`, `ExportMenu`. |
 | Access | Main sidebar → Vendors; dashboard stat cards. |
 | e2e tests | `Clients/e2e/vendors.spec.ts` |
 | Unit tests | `Clients/src/presentation/pages/Vendors/**/*.test.tsx`, `Clients/src/presentation/components/Modals/NewVendor/__tests__/*.test.tsx` |

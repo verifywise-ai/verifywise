@@ -36,7 +36,7 @@ const SearchBox: React.FC<ISearchBoxProps> = ({
     minHeight: "34px",
     maxHeight: "34px",
     boxSizing: "border-box",
-    ...(classicUi ? {} : { borderRadius: radiusPx.search }),
+    ...(classicUi ? {} : { borderRadius: radiusPx.sm }),
     width: fullWidth ? "100%" : 160,
     ...sx,
   };

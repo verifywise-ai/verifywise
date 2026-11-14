@@ -55,15 +55,6 @@ vi.mock("../../../../application/hooks/useMultipleOnScreen", () => ({
   }),
 }));
 
-vi.mock("../../../../application/hooks/useTableGrouping", () => ({
-  useTableGrouping: () => [],
-  useGroupByState: () => ({
-    groupBy: null,
-    groupSortOrder: "asc",
-    handleGroupChange: vi.fn(),
-  }),
-}));
-
 vi.mock("../../../../application/hooks/useFilterBy", () => ({
   useFilterBy: () => ({
     filterData: (data: unknown[]) => data,
@@ -111,16 +102,6 @@ vi.mock("../../../components/Table/WithPlaceholder/index", () => ({
 
 vi.mock("../../../components/Table/RisksTable", () => ({
   default: () => <div data-testid="risk-table" />,
-}));
-
-vi.mock("../../../components/Table/GroupedTableView", () => ({
-  GroupedTableView: ({ ungroupedData, renderTable }: any) => (
-    <div data-testid="grouped-table-view">{renderTable(ungroupedData, {})}</div>
-  ),
-}));
-
-vi.mock("../../../components/Table/GroupBy", () => ({
-  GroupBy: () => <div data-testid="group-by" />,
 }));
 
 vi.mock("../../../components/Table/ExportMenu", () => ({
@@ -201,6 +182,6 @@ describe("Vendors", () => {
     renderWithProviders(<Vendors />, { route: "/vendors" });
 
     expect(screen.queryByText("Failed to load vendors. Please try again later.")).toBeNull();
-    expect(screen.getByTestId("grouped-table-view")).toBeInTheDocument();
+    expect(screen.getByTestId("vendor-table")).toBeInTheDocument();
   });
 });

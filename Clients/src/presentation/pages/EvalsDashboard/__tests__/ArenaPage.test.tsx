@@ -390,19 +390,6 @@ describe("ArenaPage", () => {
       await waitFor(() => expect(screen.getByTestId("arena-row-battle-2")).toBeInTheDocument());
       expect(screen.getByTestId("arena-row-battle-1")).toBeInTheDocument();
     });
-
-    it("handles group selection without errors", async () => {
-      mockComparisons(mockArenaComparisons);
-      renderArena();
-      await screen.findByTestId("arena-row-battle-1");
-
-      fireEvent.click(screen.getByRole("button", { name: /Group/ }));
-      const popover = document.querySelector(".MuiPopover-paper") as HTMLElement;
-      fireEvent.mouseDown(within(popover).getByRole("combobox"));
-      fireEvent.click(screen.getByRole("option", { name: "Status" }));
-
-      expect(screen.getByTestId("arena-row-battle-1")).toBeInTheDocument();
-    });
   });
 
   describe("row actions", () => {

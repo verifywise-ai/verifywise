@@ -54,9 +54,9 @@ export const ENTITY_TIPS: EntityTips = {
         "Track use cases from planning through production to retirement. Status indicators help you see which AI systems are active, which are in development, and which need review. Regular status updates ensure governance stays current.",
     },
     {
-      header: "Grouping use cases reveals patterns and shared risks.",
+      header: "Filtering use cases reveals patterns and shared risks.",
       content:
-        "Use the group-by feature to organize use cases by risk level or status. This reveals patterns like common risk factors across systems or lifecycle stage distribution. These insights inform governance strategy.",
+        "Filter use cases by risk level or status to spot patterns like common risk factors across systems or how use cases spread across lifecycle stages. These insights inform governance strategy.",
     },
   ],
   "framework": [

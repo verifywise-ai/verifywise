@@ -37,15 +37,6 @@ vi.mock("../../../../application/hooks/useFilterBy", () => ({
   }),
 }));
 
-vi.mock("../../../../application/hooks/useTableGrouping", () => ({
-  useTableGrouping: () => [],
-  useGroupByState: () => ({
-    groupBy: null,
-    groupSortOrder: "asc",
-    handleGroupChange: vi.fn(),
-  }),
-}));
-
 vi.mock("../../../../application/hooks/useColumnVisibility", () => ({
   useColumnVisibility: () => ({
     visibleColumns: new Set(["title", "priority", "status", "due_date", "assignees", "actions"]),
@@ -88,16 +79,6 @@ vi.mock("../TaskSummaryCards", () => ({
 
 vi.mock("../../../components/Table/TasksTable", () => ({
   default: () => <div data-testid="tasks-table" />,
-}));
-
-vi.mock("../../../components/Table/GroupedTableView", () => ({
-  GroupedTableView: ({ ungroupedData, renderTable }: any) => (
-    <div data-testid="grouped-table-view">{renderTable(ungroupedData || [])}</div>
-  ),
-}));
-
-vi.mock("../../../components/Table/GroupBy", () => ({
-  GroupBy: () => <div data-testid="group-by" />,
 }));
 
 vi.mock("../../../components/Table/FilterBy", () => ({

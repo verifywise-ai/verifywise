@@ -76,7 +76,6 @@ export interface ModelInventoryTableProps {
   onViewDetails?: (id: string) => void;
   paginated?: boolean;
   deletingId?: string | null;
-  hidePagination?: boolean;
   modelRisks?: IModelRisk[];
   flashRowId?: number | string | null;
   visibleColumns?: Set<string>;
@@ -90,7 +89,6 @@ export interface ModelRisksTableProps {
   deletingId?: number | null;
   users?: User[];
   models?: IModelInventory[];
-  hidePagination?: boolean;
   visibleColumns?: Set<string>;
 }
 
@@ -105,7 +103,6 @@ export interface EvidenceHubTableProps {
   modelInventoryData: IModelInventory[];
   /** Optional training data so the table can render mapped_trainings names */
   trainingData?: { id?: number | string; training_name?: string | null }[];
-  hidePagination?: boolean;
   visibleColumns?: Set<string>;
 }
 

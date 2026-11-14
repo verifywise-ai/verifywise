@@ -176,7 +176,6 @@ export const policyManagementContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Filter', text: 'Filter by title, status, author, or next review date' },
-        { bold: 'Group by', text: 'Group policies by status or author for easier navigation' },
         { bold: 'Search', text: 'Search for policies by title' },
       ],
     },

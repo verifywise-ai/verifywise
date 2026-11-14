@@ -42,7 +42,6 @@ import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import SearchBox from "../../components/Search/SearchBox";
 import { type FilterColumn } from "../../components/Table/FilterBy";
 import { TableFilter } from "../../components/Table/TableFilter";
-import { GroupBy } from "../../components/Table/GroupBy";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import {
   getAllProjects,
@@ -416,7 +415,6 @@ export default function ProjectsList() {
             data={projects}
             getFieldValue={getFieldValue}
           />
-          <GroupBy options={[{ id: "useCase", label: "Use case" }]} onGroupChange={() => {}} />
           <SearchBox
             placeholder="Search projects..."
             value={searchTerm}

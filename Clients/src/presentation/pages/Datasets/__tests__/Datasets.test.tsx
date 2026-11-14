@@ -33,28 +33,8 @@ vi.mock("../../../../application/hooks/useFilterBy", () => ({
   }),
 }));
 
-vi.mock("../../../../application/hooks/useTableGrouping", () => ({
-  useTableGrouping: () => [],
-  useGroupByState: () => ({
-    groupBy: null,
-    groupSortOrder: "asc",
-    handleGroupChange: vi.fn(),
-  }),
-}));
-
 vi.mock("../../../../application/tools/log.engine", () => ({
   logEngine: vi.fn(),
-}));
-
-// Mock child components
-vi.mock("../../../components/Table/GroupedTableView", () => ({
-  GroupedTableView: ({ ungroupedData, renderTable }: any) => (
-    <div data-testid="grouped-table-view">{renderTable(ungroupedData || [])}</div>
-  ),
-}));
-
-vi.mock("../../../components/Table/GroupBy", () => ({
-  GroupBy: () => <div data-testid="group-by" />,
 }));
 
 vi.mock("../../../components/Table/FilterBy", () => ({

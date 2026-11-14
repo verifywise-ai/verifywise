@@ -1,10 +1,11 @@
 /* eslint-disable react-hooks/preserve-manual-memoization */
 import React, { useMemo, useState, useEffect } from "react";
-import { Box, Stack, Typography, Collapse, IconButton } from "@mui/material";
+import { Box, Typography, Collapse, IconButton } from "@mui/material";
 import {
   ChevronDown,
   ChevronRight,
   Calendar,
+  CalendarX,
   AlertTriangle,
   CalendarCheck,
   ListChecks,
@@ -16,12 +17,10 @@ import { TaskModel } from "../../../domain/models/Common/task/task.model";
 import { TaskStatus } from "../../../domain/enums/task.enum";
 import TasksTable from "../../components/Table/TasksTable";
 import { EmptyState } from "../../components/EmptyState";
-import Chip from "../../components/Chip";
-import { DASHBOARD_COLORS, DEADLINE_COLORS } from "../../styles/colors";
 import { DeadlineViewProps, DeadlineGroup } from "./types";
 import { getEndOfWeek, getEndOfMonth } from "./utils";
 import { storageService, dynamicKeys } from "../../../infrastructure/storage";
-import { radiusPx } from "../../themes/palette";
+import { background, border, icon, radiusPx, status, text } from "../../themes/palette";
 
 const DeadlineView: React.FC<DeadlineViewProps> = ({
   tasks,
@@ -136,61 +135,56 @@ const DeadlineView: React.FC<DeadlineViewProps> = ({
     thisMonth.sort(sortByDueDate);
     later.sort(sortByDueDate);
 
+    // Only the urgent groups carry colour; the rest stay neutral so urgency reads at a glance.
+    const neutral = (Icon: typeof Calendar) => <Icon size={16} color={icon.default} />;
     return [
       {
         key: "overdue",
         label: "Overdue",
-        color: DEADLINE_COLORS.overdue.color,
-        bgColor: DEADLINE_COLORS.overdue.bgColor,
-        icon: <AlertTriangle size={16} color={DEADLINE_COLORS.overdue.color} />,
+        color: status.error.text,
+        icon: <AlertTriangle size={16} color={status.error.text} />,
         tasks: overdue,
       },
       {
         key: "today",
         label: "Due today",
-        color: DEADLINE_COLORS.today.color,
-        bgColor: DEADLINE_COLORS.today.bgColor,
-        icon: <Calendar size={16} color={DEADLINE_COLORS.today.color} />,
+        color: status.warning.text,
+        icon: <Clock size={16} color={status.warning.text} />,
         tasks: dueToday,
       },
       {
         key: "this-week",
         label: "This week",
-        color: DEADLINE_COLORS.thisWeek.color,
-        bgColor: DEADLINE_COLORS.thisWeek.bgColor,
-        icon: <Calendar size={16} color={DEADLINE_COLORS.thisWeek.color} />,
+        color: text.primary,
+        icon: neutral(Calendar),
         tasks: thisWeek,
       },
       {
         key: "next-week",
         label: "Next week",
-        color: DEADLINE_COLORS.nextWeek.color,
-        bgColor: DEADLINE_COLORS.nextWeek.bgColor,
-        icon: <Calendar size={16} color={DEADLINE_COLORS.nextWeek.color} />,
+        color: text.primary,
+        icon: neutral(Calendar),
         tasks: nextWeek,
       },
       {
         key: "this-month",
         label: "This month",
-        color: DEADLINE_COLORS.thisMonth.color,
-        bgColor: DEADLINE_COLORS.thisMonth.bgColor,
-        icon: <Calendar size={16} color={DEADLINE_COLORS.thisMonth.color} />,
+        color: text.primary,
+        icon: neutral(Calendar),
         tasks: thisMonth,
       },
       {
         key: "later",
         label: "Later",
-        color: DEADLINE_COLORS.later.color,
-        bgColor: DEADLINE_COLORS.later.bgColor,
-        icon: <Calendar size={16} color={DEADLINE_COLORS.later.color} />,
+        color: text.primary,
+        icon: neutral(Calendar),
         tasks: later,
       },
       {
         key: "no-due-date",
         label: "No due date",
-        color: DEADLINE_COLORS.noDueDate.color,
-        bgColor: DEADLINE_COLORS.noDueDate.bgColor,
-        icon: <Calendar size={16} color={DEADLINE_COLORS.noDueDate.color} />,
+        color: text.primary,
+        icon: neutral(CalendarX),
         tasks: noDueDate,
       },
     ];
@@ -244,86 +238,108 @@ const DeadlineView: React.FC<DeadlineViewProps> = ({
   }
 
   return (
-    <Stack spacing="16px">
-      {deadlineGroups.map((group) => {
+    <Box
+      sx={{
+        border: `1px solid ${border.light}`,
+        borderRadius: radiusPx.sm,
+        backgroundColor: background.main,
+        overflow: "hidden",
+      }}
+    >
+      {deadlineGroups.map((group, index) => {
         const isCollapsed = collapsedSections.has(group.key);
+        const isEmpty = group.tasks.length === 0;
+        const isUrgent = !isEmpty && (group.key === "overdue" || group.key === "today");
+        const urgentTone = group.key === "overdue" ? status.error : status.warning;
 
         return (
           <Box
             key={group.key}
-            sx={{
-              overflow: "hidden",
-            }}
+            sx={{ borderTop: index === 0 ? "none" : `1px solid ${border.light}` }}
           >
-            {/* Section Header */}
+            {/* Section header */}
             <Box
               onClick={() => toggleSection(group.key)}
               sx={{
                 "display": "flex",
                 "alignItems": "center",
-                "justifyContent": "space-between",
-                "padding": "12px 16px",
-                "backgroundColor": group.bgColor,
-                "border": `1px solid ${DASHBOARD_COLORS.border}`,
-                "borderRadius": isCollapsed ? radiusPx.sm : `${radiusPx.sm} ${radiusPx.sm} 0 0`,
+                "gap": "8px",
+                "padding": "10px 14px",
                 "cursor": "pointer",
-                "&:hover": {
-                  opacity: 0.9,
-                },
+                "transition": "background-color 0.15s ease",
+                "&:hover": { backgroundColor: background.alt },
               }}
             >
-              <Stack direction="row" spacing={1.5} alignItems="center">
-                <IconButton
-                  size="small"
-                  sx={{ padding: 0 }}
-                  aria-label={isCollapsed ? `Expand ${group.label}` : `Collapse ${group.label}`}
-                  aria-expanded={!isCollapsed}
-                  onClick={(e) => {
-                    e.stopPropagation();
-                    toggleSection(group.key);
-                  }}
-                >
-                  {isCollapsed ? (
-                    <ChevronRight size={18} color={DASHBOARD_COLORS.dueLater} />
-                  ) : (
-                    <ChevronDown size={18} color={DASHBOARD_COLORS.dueLater} />
-                  )}
-                </IconButton>
-                {group.icon}
-                <Typography
-                  variant="subtitle2"
-                  sx={{
-                    fontWeight: 600,
-                    color: group.color,
-                    fontSize: "14px",
-                  }}
-                >
-                  {group.label}
-                </Typography>
-                <Chip
-                  label={group.tasks.length.toString()}
-                  backgroundColor={group.color}
-                  textColor={DASHBOARD_COLORS.white}
-                />
-              </Stack>
+              <IconButton
+                size="small"
+                sx={{ padding: 0 }}
+                aria-label={isCollapsed ? `Expand ${group.label}` : `Collapse ${group.label}`}
+                aria-expanded={!isCollapsed}
+                onClick={(e) => {
+                  e.stopPropagation();
+                  toggleSection(group.key);
+                }}
+              >
+                {isCollapsed ? (
+                  <ChevronRight size={16} color={icon.default} />
+                ) : (
+                  <ChevronDown size={16} color={icon.default} />
+                )}
+              </IconButton>
+              {group.icon}
+              <Typography
+                sx={{
+                  fontSize: "13px",
+                  fontWeight: 600,
+                  color: isEmpty ? text.tertiary : group.color,
+                }}
+              >
+                {group.label}
+              </Typography>
+              <Box
+                component="span"
+                sx={{
+                  display: "inline-flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  minWidth: "20px",
+                  height: "18px",
+                  padding: "0 6px",
+                  borderRadius: radiusPx.sm,
+                  fontSize: "11px",
+                  fontWeight: 500,
+                  fontVariantNumeric: "tabular-nums",
+                  backgroundColor: isUrgent ? urgentTone.bg : background.hover,
+                  color: isUrgent ? urgentTone.text : text.secondary,
+                }}
+              >
+                {group.tasks.length}
+              </Box>
             </Box>
 
-            {/* Section Content */}
+            {/* Section content */}
             <Collapse in={!isCollapsed}>
               <Box
                 sx={{
-                  "backgroundColor": DASHBOARD_COLORS.backgroundWhite,
-                  "border": `1px solid ${DASHBOARD_COLORS.border}`,
-                  "borderTop": "none",
-                  "borderRadius": `0 0 ${radiusPx.sm} ${radiusPx.sm}`,
-                  // Override TasksTable's frame border to prevent double borders
+                  "borderTop": `1px solid ${border.light}`,
+                  // The list frame already draws the outer border.
                   "& table": {
                     border: "none",
                     borderRadius: 0,
                   },
                 }}
               >
-                {group.tasks.length > 0 ? (
+                {isEmpty ? (
+                  <Typography
+                    sx={{
+                      padding: "12px 14px 12px 38px",
+                      color: text.tertiary,
+                      fontSize: "13px",
+                    }}
+                  >
+                    No tasks in this time period
+                  </Typography>
+                ) : (
                   <TasksTable
                     tasks={group.tasks}
                     users={users}
@@ -340,24 +356,13 @@ const DeadlineView: React.FC<DeadlineViewProps> = ({
                     onHardDelete={onHardDelete}
                     flashRowId={flashRowId}
                   />
-                ) : (
-                  <Typography
-                    sx={{
-                      padding: "16px",
-                      color: DASHBOARD_COLORS.textSecondary,
-                      fontSize: "13px",
-                      textAlign: "center",
-                    }}
-                  >
-                    No tasks in this time period
-                  </Typography>
                 )}
               </Box>
             </Collapse>
           </Box>
         );
       })}
-    </Stack>
+    </Box>
   );
 };
 

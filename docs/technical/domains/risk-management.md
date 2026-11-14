@@ -507,12 +507,11 @@ Ids fail closed: a value that is not a positive integer (for example `5.5`, whic
 
 ### Dashboard Features
 
-- Risk list with filtering and grouping
+- Risk list with filtering
 - Search functionality
 - Table view with sorting/pagination
 - Bulk actions (multi-select)
 - Export functionality
-- Group-by (Project, Framework)
 - Filter-by (name, severity, status)
 - Analytics drawer
 - History sidebar

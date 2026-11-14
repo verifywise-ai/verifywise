@@ -10,7 +10,7 @@ The Training Registry in VerifyWise provides a centralized system for tracking o
 - Status lifecycle (Planned → In Progress → Completed)
 - Participant count management
 - Department and provider categorization
-- Filtering, grouping, and search
+- Filtering and search
 - Report generation integration
 - Automation triggers for notifications
 
@@ -145,7 +145,6 @@ validateTrainingRegistrarUpdateBusinessRules(old, new) {
 **Features:**
 - CRUD operations with modal forms
 - Filtering by status, provider, department
-- GroupBy (status, provider, department)
 - Search functionality
 - Export to CSV/Excel
 - Pagination with configurable rows

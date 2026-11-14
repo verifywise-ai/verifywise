@@ -358,22 +358,6 @@ const filterColumns: FilterColumn[] = useMemo(
 
 ## Integration with Other Features
 
-### With GroupBy
-
-```typescript
-const filteredData = useMemo(() => {
-  return filterData(data);
-}, [filterData, data]);
-
-// GroupBy works on already filtered data
-const groupedData = useTableGrouping({
-  data: filteredData,
-  groupByField: groupBy,
-  sortOrder: groupSortOrder,
-  getGroupKey: getGroupKey,
-});
-```
-
 ### With Export
 
 ```typescript
@@ -424,14 +408,13 @@ const filteredData = useMemo(() => {
 **IMPORTANT**: The components in the filter row should follow this order:
 
 ```
-FilterBy → GroupBy → Search
+FilterBy → Search
 ```
 
 This provides a consistent user experience across all tables in the application:
 
 1. **FilterBy** - Primary filtering mechanism (leftmost)
-2. **GroupBy** - Group/organize the filtered results
-3. **Search** - Quick text search within filtered/grouped results (rightmost in left section)
+2. **Search** - Quick text search within filtered results (rightmost in left section)
 
 Example layout:
 
@@ -440,10 +423,6 @@ Example layout:
     <FilterBy
         columns={filterColumns}
         onFilterChange={handleFilterChange}
-    />
-    <GroupBy
-        options={groupByOptions}
-        onGroupChange={handleGroupChange}
     />
     <Box sx={{ width: 200 }}>
         <SearchBox
@@ -477,7 +456,7 @@ Replace with the unified FilterBy pattern shown above.
 - [ ] Add FilterBy component to UI
 - [ ] Remove old dropdown filters and their state
 - [ ] Test all filter combinations
-- [ ] Verify integration with search, groupBy, export
+- [ ] Verify integration with search and export
 
 ## Troubleshooting
 

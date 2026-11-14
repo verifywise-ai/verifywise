@@ -305,7 +305,6 @@ POST /policy-linked/:policyId/linked-objects
 
 - Search by title
 - Filter by status, tags, reviewers
-- Group by status, tags
 - Sort by date, title
 - Bulk export
 - Policy templates

@@ -44,8 +44,8 @@ export interface DeadlineViewProps {
 export interface DeadlineGroup {
   key: string;
   label: string;
+  /** Title colour: red for overdue, amber for due today, primary text otherwise. */
   color: string;
-  bgColor: string;
   icon: React.ReactNode;
   tasks: TaskModel[];
 }

@@ -586,7 +586,7 @@ describe("ProjectExperiments", () => {
     });
   });
 
-  describe("search, filter, group & chart", () => {
+  describe("search, filter & chart", () => {
     it("filters rows by the search term across name, model, judge and status", async () => {
       mockExperiments(
         makeExperiment({ id: "chat", name: "Chat bot eval" }),
@@ -667,29 +667,6 @@ describe("ProjectExperiments", () => {
 
       await waitFor(() => expect(screen.getByTestId("experiment-row-done")).toBeInTheDocument());
       expect(screen.queryByTestId("experiment-row-run")).not.toBeInTheDocument();
-    });
-
-    it("groups rows by status", async () => {
-      mockExperiments(
-        makeExperiment({ id: "done", name: "Done", status: "completed" }),
-        makeExperiment({ id: "run", name: "Run", status: "running", results: undefined }),
-      );
-      renderExperiments();
-
-      await screen.findByTestId("experiment-row-done");
-      fireEvent.click(screen.getByRole("button", { name: /Group/ }));
-
-      const popover = document.querySelector(".MuiPopover-paper") as HTMLElement;
-      const combobox = within(popover).getByRole("combobox");
-      fireEvent.mouseDown(combobox);
-      fireEvent.click(screen.getByRole("option", { name: "Status" }));
-
-      await waitFor(() => expect(screen.getAllByTestId("experiment-table")).toHaveLength(2));
-      const tables = screen.getAllByTestId("experiment-table");
-      expect(within(tables[0]).getByTestId("experiment-row-done")).toBeInTheDocument();
-      expect(within(tables[0]).queryByTestId("experiment-row-run")).not.toBeInTheDocument();
-      expect(within(tables[1]).getByTestId("experiment-row-run")).toBeInTheDocument();
-      expect(within(tables[1]).queryByTestId("experiment-row-done")).not.toBeInTheDocument();
     });
 
     it("passes the selected time range to the performance chart", async () => {
