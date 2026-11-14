@@ -136,8 +136,6 @@ export const de: Record<string, string> = {
     "Die beiden Risiken sind jetzt als verwandt verknüpft.",
   "Failed to link the risks.": "Die Risiken konnten nicht verknüpft werden.",
   "Failed to delete the risk.": "Das Risiko konnte nicht gelöscht werden.",
-  "Risk deleted but failed to remove it from some linked policies.":
-    "Risiko gelöscht, konnte aber nicht aus einigen verknüpften Richtlinien entfernt werden.",
   'Deleted "{name}".': "„{name}“ wurde gelöscht.",
   "Parent risk": "Übergeordnetes Risiko",
   "Child risks": "Untergeordnete Risiken",
@@ -348,8 +346,6 @@ export const fr: Record<string, string> = {
     "Les deux risques sont maintenant liés comme connexes.",
   "Failed to link the risks.": "Impossible de lier les risques.",
   "Failed to delete the risk.": "Impossible de supprimer le risque.",
-  "Risk deleted but failed to remove it from some linked policies.":
-    "Risque supprimé, mais impossible de le retirer de certaines politiques liées.",
   'Deleted "{name}".': "« {name} » a été supprimé.",
   "Parent risk": "Risque parent",
   "Child risks": "Risques enfants",
@@ -559,8 +555,6 @@ export const es: Record<string, string> = {
     "Los dos riesgos ahora están vinculados como relacionados.",
   "Failed to link the risks.": "No se pudieron vincular los riesgos.",
   "Failed to delete the risk.": "No se pudo eliminar el riesgo.",
-  "Risk deleted but failed to remove it from some linked policies.":
-    "Riesgo eliminado, pero no se pudo quitar de algunas políticas vinculadas.",
   'Deleted "{name}".': "«{name}» eliminado.",
   "Parent risk": "Riesgo principal",
   "Child risks": "Riesgos dependientes",
