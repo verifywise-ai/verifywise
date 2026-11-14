@@ -34,7 +34,7 @@ export const llmArenaContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Navigate to the **Arena** tab in your evals project. Select two models to compare by choosing a provider and model name for each side. You can compare models from different providers (e.g., GPT-4 vs Claude) or different versions of the same provider\'s models.',
+      text: 'In the sidebar, open **Enforce > LLM Evals** and click **Arena**. Select two models to compare by choosing a provider and model name for each side. You can compare models from different providers (e.g., GPT-4 vs Claude) or different versions of the same provider\'s models.',
     },
     {
       type: 'heading',

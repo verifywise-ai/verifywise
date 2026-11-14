@@ -264,8 +264,10 @@ describe("NAV_GROUPS: item map", () => {
     expect(findSub("workflows", "approval-workflows").gate).toEqual({
       permission: "approvalWorkflow.admin",
     });
-    expect(findItem("intake").gate).toEqual({ role: "Admin" });
-    expect(findSub("inventory", "ati-settings").gate).toEqual({ role: "Admin" });
+    expect(findItem("intake").gate).toEqual({ permission: "intakeForm.edit" });
+    expect(findSub("inventory", "ati-settings").gate).toEqual({
+      permission: "aiTrustIndex.admin",
+    });
     expect(findSub("llm-evals", "arena").gate).toEqual({ evalsArena: true });
     expect(findSub("ai-gateway", "prompts").gate).toEqual({ flag: "SHOW_AI_GATEWAY_PROMPTS" });
     expect(findSub("settings", "extensions").gate).toEqual({

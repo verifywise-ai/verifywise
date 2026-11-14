@@ -83,7 +83,7 @@ const UnifiedSidebar: FC<UnifiedSidebarProps> = ({
 
   // Gate sources: the same ones today's navigation reads.
   const can = useCanCheck();
-  const { userRoleName, isSuperAdmin } = useAuth();
+  const { isSuperAdmin } = useAuth();
 
   // Count sources: the main sidebar's open-task fetch and the module contexts.
   const openTasks = useOpenTasksCount();
@@ -121,7 +121,6 @@ const UnifiedSidebar: FC<UnifiedSidebarProps> = ({
         ? { visible: true, disabled: true, tooltip: gate.deniedTooltip }
         : HIDDEN;
     }
-    if ("role" in gate) return userRoleName === gate.role ? SHOWN : HIDDEN;
     if ("superAdmin" in gate) return isSuperAdmin ? SHOWN : HIDDEN;
     if ("evalsArena" in gate) return arenaOn ? SHOWN : HIDDEN;
     return featureFlags[gate.flag] ? SHOWN : HIDDEN;

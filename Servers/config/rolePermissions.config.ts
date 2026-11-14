@@ -66,6 +66,13 @@ export const ROLE_PERMISSIONS = {
     description: "Run and view AI audits",
     legacyRoles: ADMIN,
   },
+  "aiTrustIndex.admin": {
+    module: "AI Trust Index",
+    description: "View and choose who receives AI Trust Index alerts",
+    // Replaced an Admin/SuperAdmin role-name check; SuperAdmin is dropped on
+    // purpose (a pure super admin has no organization's settings to manage).
+    legacyRoles: ADMIN,
+  },
   "aiConfirmation.admin": {
     module: "AI confirmations",
     description: "Manage AI confirmation rules",

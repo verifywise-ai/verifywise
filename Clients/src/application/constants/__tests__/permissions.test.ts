@@ -117,6 +117,12 @@ const SCREEN_GATES: Array<{
     key: "extension.admin",
   },
   { gate: "dashboard approval workflows link", roles: ["Admin"], key: "approvalWorkflow.admin" },
+  // Was Admin by role name on screen and Admin/SuperAdmin in the controller.
+  {
+    gate: "AI Trust Index settings page and sidebar entry",
+    roles: ["Admin"],
+    key: "aiTrustIndex.admin",
+  },
   {
     gate: "Governance OS settings and enable prompts",
     roles: ["Admin"],

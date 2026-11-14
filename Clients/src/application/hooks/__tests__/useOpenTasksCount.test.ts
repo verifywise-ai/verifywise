@@ -28,6 +28,24 @@ describe("useOpenTasksCount", () => {
     });
   });
 
+  // The server returns every matching task (it ignores page_size), so the
+  // badge is the real count, past the default page of 25 and past 99.
+  it("counts past one page of 25", async () => {
+    mockedGetAllTasks.mockResolvedValue({
+      data: { tasks: Array.from({ length: 30 }, () => ({})) },
+    } as never);
+    const { result } = renderHook(() => useOpenTasksCount());
+    await waitFor(() => expect(result.current).toBe(30));
+  });
+
+  it("reaches more than 99, so the sidebar's 99+ can show", async () => {
+    mockedGetAllTasks.mockResolvedValue({
+      data: { tasks: Array.from({ length: 120 }, () => ({})) },
+    } as never);
+    const { result } = renderHook(() => useOpenTasksCount());
+    await waitFor(() => expect(result.current).toBe(120));
+  });
+
   it("asks without the global error toast on the five-minute refresh too", async () => {
     vi.useFakeTimers();
     mockedGetAllTasks.mockResolvedValue({ data: { tasks: [] } } as never);

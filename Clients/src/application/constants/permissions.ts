@@ -49,6 +49,7 @@ export const BUILTIN_UI_PERMISSIONS = {
   "policyTemplate.edit": EDITOR,
   "intakeForm.edit": EDITOR,
   "agentDiscovery.admin": ADMIN,
+  "aiTrustIndex.admin": ADMIN,
   "groups.manage": ADMIN,
   "roles.manage": ADMIN,
   "logs.admin": ADMIN,

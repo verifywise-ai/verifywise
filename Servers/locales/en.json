@@ -89,7 +89,6 @@
   "Active forms cannot be deleted. Archive the form first.": "Active forms cannot be deleted. Archive the form first.",
   "Active ingestion token not found": "Active ingestion token not found",
   "Add a mitigation plan before accepting this risk": "Add a mitigation plan before accepting this risk",
-  "Admin access required": "Admin access required",
   "Admin role required": "Admin role required",
   "Admin role required to clear agent memory": "Admin role required to clear agent memory",
   "Administrators cannot demote themselves from admin role": "Administrators cannot demote themselves from admin role",
