@@ -64,7 +64,8 @@ import { palette, radiusPx } from "../../themes/palette";
 
 // Constants
 const FILE_MANAGER_CONTEXT = "FileManager";
-const MANAGE_ROLES = ["Admin", "Editor"];
+// Metadata editing is checked against role names on the server.
+const METADATA_ROLES = ["Admin", "Editor"];
 
 /**
  * Main component for managing files with virtual folder support.
@@ -219,7 +220,9 @@ const FileManager: React.FC = (): JSX.Element => {
   // Permission checks
   // Uploads authorize on fileManager.contribute (Admin, Editor, Reviewer).
   const isUploadAllowed = useCan("fileManager.contribute");
-  const canManageFolders = Boolean(userRoleName) && MANAGE_ROLES.includes(userRoleName);
+  // Folders and bulk tagging authorize on file.edit (Admin and Editor by default).
+  const canManageFolders = useCan("file.edit");
+  const canEditMetadata = Boolean(userRoleName) && METADATA_ROLES.includes(userRoleName);
 
   // Fetch files with enhanced metadata
   const fetchFilesWithMetadata = useCallback(async () => {
@@ -992,7 +995,7 @@ const FileManager: React.FC = (): JSX.Element => {
                       hidePagination={options?.hidePagination}
                       onAssignToFolder={canManageFolders ? handleOpenAssignFolder : undefined}
                       onPreview={handleOpenPreview}
-                      onEditMetadata={canManageFolders ? handleOpenMetadataEditor : undefined}
+                      onEditMetadata={canEditMetadata ? handleOpenMetadataEditor : undefined}
                       onViewHistory={handleOpenVersionHistory}
                       visibleColumnKeys={visibleColumnKeys}
                       canRunBulkActions={canManageFolders}

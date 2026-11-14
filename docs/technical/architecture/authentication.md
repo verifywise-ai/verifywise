@@ -319,7 +319,7 @@ The client decides which controls to show from the same keys, through one hook: 
 
 **Screen only** (the key decides what the app offers; the server does not check it): `useCase.members` (members are also saved through the project form, which Editors use), `framework.edit` and `framework.audit` (Auditors save audit fields through the same framework endpoints; the framework picker in use case settings is not role-gated), `evals.edit` (EvalServer sits behind one catch-all proxy). Their catalog descriptions say so.
 
-**Still on the built-in role name**, because the server check is a role-name check too, or no key covers it: Settings > Team, Settings > Features, Settings > MCP, intake review lanes and routing, file downloads (Admin only on screen; the download route needs only a login), evidence folders, the demo data menu, and the "all tasks" Admin view. `Servers/routes/__tests__/roleNameRoutes.permissions.test.ts` lists every remaining server-side role-name check with its reason and fails if one is added.
+**Still on the built-in role name**, because the server check is a role-name check too, or no key covers it: Settings > Team, Settings > Features, Settings > MCP, intake review lanes and routing, file downloads (Admin only on screen; the download route needs only a login), the demo data menu, and the "all tasks" Admin view. Folders (`/api/virtual-folders`, shared by the File manager and the Policies page) are created, renamed and deleted with `file.edit` or `policy.edit`, and files are put into them with `file.edit`. `Servers/routes/__tests__/roleNameRoutes.permissions.test.ts` lists every remaining server-side role-name check with its reason and fails if one is added.
 
 ### Core governance writes
 
