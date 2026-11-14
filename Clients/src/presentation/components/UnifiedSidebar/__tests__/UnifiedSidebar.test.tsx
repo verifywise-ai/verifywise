@@ -429,6 +429,47 @@ describe("UnifiedSidebar: LLM Evals", () => {
     expect(location()).toBe("/evals/p2#models");
   });
 
+  it("leaves /evals/settings for the current project's tab", () => {
+    evalsCtx = { disabled: false, currentProject: project };
+    renderAt("/evals/settings");
+    fireEvent.click(sub("llm-evals", "experiments"));
+    expect(location()).toBe("/evals/p1#experiments");
+  });
+
+  it("leaves /evals/settings for /evals#<tab> without a current project", () => {
+    renderAt("/evals/settings");
+    fireEvent.click(sub("llm-evals", "datasets"));
+    expect(location()).toBe("/evals#datasets");
+  });
+
+  it("leaves the dataset editor for the current project's tab", () => {
+    evalsCtx = { disabled: false, currentProject: project };
+    renderAt("/evals/p1/datasets/editor");
+    fireEvent.click(sub("llm-evals", "scorers"));
+    expect(location()).toBe("/evals/p1#scorers");
+  });
+
+  it("selects no tab from the hash off the dashboard routes", () => {
+    evalsCtx = { disabled: false, currentProject: project };
+    renderAt("/evals/settings#experiments");
+    expect(isSelected(sub("llm-evals", "settings"))).toBe(true);
+    expect(isSelected(sub("llm-evals", "experiments"))).toBe(false);
+  });
+
+  it("shows no selector or recents on /evals pages outside the dashboard", () => {
+    evalsCtx = {
+      disabled: false,
+      currentProject: project,
+      allProjects: [project],
+      onProjectChange: vi.fn(),
+      recentProjects: [{ id: "p2", name: "Beta project" }],
+    };
+    renderAt("/evals/settings");
+    const section = screen.getByTestId("nav-section-llm-evals");
+    expect(within(section).queryByText("Alpha project")).not.toBeInTheDocument();
+    expect(within(section).queryByText("Recent projects")).not.toBeInTheDocument();
+  });
+
   it("applies the project rule when collapsed", () => {
     evalsCtx = { disabled: false, currentProject: project };
     renderAt("/tasks");
@@ -672,6 +713,61 @@ describe("UnifiedSidebar: keeping opened items in view", () => {
       });
     },
   );
+});
+
+describe("UnifiedSidebar: pinned items are not scrolled to", () => {
+  const scrollIntoView = vi.fn();
+  const original = Element.prototype.scrollIntoView;
+  beforeEach(() => {
+    scrollIntoView.mockClear();
+    Element.prototype.scrollIntoView = scrollIntoView;
+  });
+  afterAll(() => {
+    Element.prototype.scrollIntoView = original;
+  });
+
+  it("neither scrolls nor observes Workspace on a deep link or a click", () => {
+    const observe = vi.fn();
+    const originalObserver = window.ResizeObserver;
+    window.ResizeObserver = class {
+      observe = observe;
+      disconnect() {}
+    } as unknown as typeof ResizeObserver;
+    try {
+      renderAt("/event-tracker");
+      expect(item("settings")).toHaveAttribute("aria-expanded", "true");
+      fireEvent.click(item("settings"));
+      fireEvent.click(item("settings"));
+      expect(scrollIntoView).not.toHaveBeenCalled();
+      expect(observe).not.toHaveBeenCalled();
+    } finally {
+      window.ResizeObserver = originalObserver;
+    }
+  });
+});
+
+describe("UnifiedSidebar: routes hidden for this user", () => {
+  it("selects and opens nothing on the route of a hidden item", () => {
+    renderAt("/intake-forms");
+    expect(screen.queryByTestId("nav-item-intake")).not.toBeInTheDocument();
+    expect(document.querySelectorAll(".selected-path")).toHaveLength(0);
+    expect(document.querySelectorAll('[aria-expanded="true"]')).toHaveLength(0);
+  });
+
+  it("selects the parent item on the route of a hidden sub-item", () => {
+    renderAt("/ai-trust-index/settings");
+    expect(querySub("inventory", "ati-settings")).not.toBeInTheDocument();
+    expect(item("inventory")).toHaveAttribute("aria-expanded", "true");
+    expect(isSelected(item("inventory"))).toBe(true);
+    expect(document.querySelectorAll(".selected-path")).toHaveLength(1);
+  });
+
+  it("selects the sub-item, not the parent, when it is visible", () => {
+    authState.userRoleName = "Admin";
+    renderAt("/ai-trust-index/settings");
+    expect(isSelected(sub("inventory", "ati-settings"))).toBe(true);
+    expect(isSelected(item("inventory"))).toBe(false);
+  });
 });
 
 describe("UnifiedSidebar: pinned Workspace", () => {

@@ -324,8 +324,12 @@ export const SidebarItemRow: FC<SidebarItemRowProps> = ({
   );
 
   // A disabled button gets no pointer events; the span carries the tooltip.
+  // With a `tooltip` (unified sidebar) the span keeps the row full width;
+  // without one (classic sidebars) it stays inline-block as before.
   const menuItemContent = isDisabled ? (
-    <span style={{ display: "inline-block" }}>{button}</span>
+    <span style={tooltip ? { display: "block", width: "100%" } : { display: "inline-block" }}>
+      {button}
+    </span>
   ) : (
     button
   );

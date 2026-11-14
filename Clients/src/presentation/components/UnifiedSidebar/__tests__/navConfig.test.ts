@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { KEPT_ELSEWHERE, NAV_GROUPS, resolveActive } from "../navConfig";
+import { KEPT_ELSEWHERE, NAV_GROUPS, evalsDashboardRoute, resolveActive } from "../navConfig";
 import type { NavItem, NavSubItem } from "../types";
 import { navGroupColor } from "../../../themes/palette";
 
@@ -371,6 +371,9 @@ describe("resolveActive", () => {
     ["/evals/proj-1/experiment/9", "", "llm-evals", "experiments"],
     ["/evals/proj-1/datasets/editor", "", "llm-evals", "datasets"],
     ["/evals/settings", "", "llm-evals", "settings"],
+    // Off the dashboard routes the hash names no tab.
+    ["/evals/settings", "#experiments", "llm-evals", "settings"],
+    ["/evals/proj-1/datasets/editor", "#experiments", "llm-evals", "datasets"],
     // Enforce: AI Gateway
     ["/ai-gateway", "", "ai-gateway", "dashboard"],
     ["/ai-gateway/dashboard", "", "ai-gateway", "dashboard"],
@@ -426,5 +429,29 @@ describe("resolveActive", () => {
       itemId: "llm-evals",
       subId: "experiments",
     });
+  });
+});
+
+describe("evalsDashboardRoute", () => {
+  it.each([
+    ["/evals", {}],
+    ["/evals/", {}],
+    ["/evals/proj-1", { projectId: "proj-1" }],
+    ["/evals/proj-1/", { projectId: "proj-1" }],
+    ["/evals/settings", null],
+    ["/evals/proj-1/datasets/editor", null],
+    ["/evals/proj-1/experiment/9", null],
+    ["/tasks", null],
+  ])("%s → %j", (pathname, expected) => {
+    expect(evalsDashboardRoute(pathname)).toEqual(expected);
+  });
+});
+
+describe("NAV_GROUPS: gates", () => {
+  // UnifiedSidebar decides item visibility before it asks for the Arena setting.
+  it("puts the Arena gate on sub-items only", () => {
+    for (const item of NAV_GROUPS.flatMap((g) => g.items)) {
+      expect(item.gate && "evalsArena" in item.gate).toBeFalsy();
+    }
   });
 });

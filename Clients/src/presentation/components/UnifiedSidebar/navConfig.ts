@@ -7,6 +7,7 @@
  * navConfig.test.ts checks that every entry of today's navigation is here or
  * in KEPT_ELSEWHERE.
  */
+import { isPathUnder } from "../../../application/utils/appModule";
 import type { KeptElsewhere, NavActive, NavGroup, NavItem, NavSubItem } from "./types";
 
 /** The LLM Evals item: its sub-items follow the Evals project rule. */
@@ -348,13 +349,9 @@ export const KEPT_ELSEWHERE: readonly KeptElsewhere[] = [
 /** Path part of a nav path: `/evals#arena` → `/evals`. */
 const routeOf = (path: string): string => path.split("#")[0];
 
-/** True when `pathname` is `prefix` or below it. `/` matches only itself. */
-const isUnder = (pathname: string, prefix: string): boolean =>
-  prefix === "/" ? pathname === "/" : pathname === prefix || pathname.startsWith(`${prefix}/`);
-
 /** Length of the longest prefix that `pathname` is under, or -1. */
 const bestMatch = (pathname: string, prefixes: readonly string[]): number =>
-  prefixes.reduce((best, p) => (isUnder(pathname, p) ? Math.max(best, p.length) : best), -1);
+  prefixes.reduce((best, p) => (isPathUnder(pathname, p) ? Math.max(best, p.length) : best), -1);
 
 const subPrefixes = (sub: NavSubItem): string[] => [
   routeOf(sub.path),
@@ -368,13 +365,26 @@ const itemPrefixes = (item: NavItem): string[] => [
 ];
 
 /**
+ * The EvalsDashboard routes, whose tabs are the hash: `/evals` (no project in
+ * the URL) and `/evals/<projectId>`. Null on every other route, including the
+ * other /evals pages (`/evals/settings`, `/evals/<projectId>/datasets/editor`).
+ */
+export function evalsDashboardRoute(pathname: string): { projectId?: string } | null {
+  const path = pathname.length > 1 ? pathname.replace(/\/+$/, "") : pathname;
+  if (path === "/evals") return {};
+  const match = /^\/evals\/([^/]+)$/.exec(path);
+  if (!match || match[1] === "settings") return null;
+  return { projectId: match[1] };
+}
+
+/**
  * LLM Evals navigates by hash (`/evals#<tab>`, `/evals/<projectId>#<tab>`).
- * Without a known tab, routes under a project point at the tab they came from;
- * anything else is Overview, as today.
+ * The hash names the tab on the dashboard routes only. Elsewhere, routes under
+ * a project point at the tab they came from; anything else is Overview, as today.
  */
 const resolveEvalsTab = (item: NavItem, pathname: string, hash: string): string => {
   const tab = hash.replace(/^#/, "").split(/[?/&]/)[0];
-  if (item.children?.some((s) => s.id === tab)) return tab;
+  if (evalsDashboardRoute(pathname) && item.children?.some((s) => s.id === tab)) return tab;
   if (pathname === "/evals/settings") return "settings";
   if (/^\/evals\/[^/]+\/experiment(\/|$)/.test(pathname)) return "experiments";
   if (/^\/evals\/[^/]+\/datasets(\/|$)/.test(pathname)) return "datasets";

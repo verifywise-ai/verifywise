@@ -1,6 +1,6 @@
 import { screen, within } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
-import SidebarShell, { SidebarMenuItem } from "../SidebarShell";
+import SidebarShell, { SidebarItemRow, SidebarMenuItem } from "../SidebarShell";
 
 // The sidebar footer opens the right-hand helper panel; App.tsx provides it.
 vi.mock("../../UserGuide/UserGuideSidebarContext", () => ({
@@ -30,5 +30,40 @@ describe("SidebarShell: pinned footer navigation", () => {
     expect(
       pinned.compareDocumentPosition(footerButton) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+});
+
+describe("SidebarItemRow: disabled row wrapper", () => {
+  const disabled: SidebarMenuItem = { id: "ext", label: "Extensions", icon: null, disabled: true };
+
+  it("keeps a disabled row with a tooltip full width (unified sidebar)", () => {
+    renderWithProviders(
+      <SidebarItemRow
+        item={disabled}
+        isActive={false}
+        collapsed={false}
+        onClick={() => {}}
+        tooltip="Admin access required."
+        testId="row"
+      />,
+    );
+    const wrapper = screen.getByTestId("row").parentElement!;
+    expect(wrapper.tagName).toBe("SPAN");
+    expect(wrapper).toHaveStyle({ display: "block", width: "100%" });
+  });
+
+  it("keeps the inline-block wrapper without a tooltip (classic sidebars)", () => {
+    renderWithProviders(
+      <SidebarItemRow
+        item={disabled}
+        isActive={false}
+        collapsed={false}
+        onClick={() => {}}
+        testId="row"
+      />,
+    );
+    const wrapper = screen.getByTestId("row").parentElement!;
+    expect(wrapper.tagName).toBe("SPAN");
+    expect(wrapper.getAttribute("style")).toBe("display: inline-block;");
   });
 });
