@@ -56,4 +56,40 @@ describe("useProjectRisks", () => {
 
     await waitFor(() => expect(result.current.error).toBe("Timeout"));
   });
+
+  it("counts No risk, Very low risk and uses the effective level", async () => {
+    mockGetRisks.mockResolvedValue({
+      data: [
+        { id: 1, risk_level_autocalculated: "No risk", current_risk_level: null, project_id: 1 },
+        {
+          id: 2,
+          risk_level_autocalculated: "Very low risk",
+          current_risk_level: null,
+          project_id: 1,
+        },
+        // inherent Very high, current Low: counted as Low
+        {
+          id: 3,
+          risk_level_autocalculated: "Very high risk",
+          current_risk_level: "Low risk",
+          project_id: 1,
+        },
+        { id: 4, risk_level_autocalculated: "High risk", current_risk_level: null, project_id: 1 },
+      ],
+    });
+
+    const { result } = renderHook(() => useProjectRisks({ projectId: 1 }), {
+      wrapper: createWrapper(),
+    });
+
+    await waitFor(() => expect(result.current.loadingProjectRisks).toBe(false));
+    expect(result.current.projectRisksSummary).toEqual({
+      total: 4,
+      veryHighRisks: 0,
+      highRisks: 1,
+      mediumRisks: 0,
+      lowRisks: 1,
+      veryLowRisks: 2,
+    });
+  });
 });

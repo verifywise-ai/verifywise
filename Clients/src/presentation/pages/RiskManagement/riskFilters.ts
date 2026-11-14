@@ -10,14 +10,19 @@ import { Severity } from "../../../domain/enums/severity.enum";
 import { RiskLevelAutoCalculated } from "../../../domain/enums/riskLevelAutoCalculated.enum";
 import type { FilterCondition } from "../../components/Table/FilterBy";
 import { riskCalendarDay } from "../../tools/isoDateToString";
+import {
+  getEffectiveRiskLevel,
+  riskLevelBucket,
+  type RiskLevelBucket,
+} from "../../../application/utils/riskLevel";
 
 /** Severity values as stored on a risk. */
 export const SEVERITY_OPTIONS = Object.values(Severity).map((value) => ({ value, label: value }));
 
 /**
  * Risk levels as stored (`current_risk_level`, else `risk_level_autocalculated`),
- * highest first. Matching ignores case, so "Very low risk" also covers the
- * current-level spelling "Very Low risk".
+ * highest first. Matching ignores case, so "Very low risk" also covers any
+ * legacy "Very Low risk" spelling.
  */
 export const RISK_LEVEL_OPTIONS = [
   RiskLevelAutoCalculated.VeryHighRisk,
@@ -28,18 +33,21 @@ export const RISK_LEVEL_OPTIONS = [
   RiskLevelAutoCalculated.NoRisk,
 ].map((value) => ({ value, label: value }));
 
-const CARD_KEY_BY_LEVEL: Record<string, string> = {
-  "very high risk": "Very high",
-  "high risk": "High",
-  "medium risk": "Medium",
-  "low risk": "Low",
-  "very low risk": "Very low",
-  "no risk": "Very low",
+const CARD_KEY_BY_BUCKET: Record<RiskLevelBucket, string> = {
+  veryHigh: "Very high",
+  high: "High",
+  medium: "Medium",
+  low: "Low",
+  veryLow: "Very low",
 };
 
-/** The summary card that matches a filtered risk level, so the card shows as selected. */
+/**
+ * The summary card for a risk level ("No risk" counts in the very-low card),
+ * so the card shows as selected. Null when the level is unknown.
+ */
 export function riskLevelCardKey(level: string): string | null {
-  return CARD_KEY_BY_LEVEL[level.toLowerCase()] ?? null;
+  const bucket = riskLevelBucket(level);
+  return bucket ? CARD_KEY_BY_BUCKET[bucket] : null;
 }
 
 /** The risk-level condition's operator and value, or "" when there is none. */
@@ -79,7 +87,7 @@ export function getRiskFieldValue(
     case "severity":
       return risk.severity;
     case "risk_level":
-      return risk.current_risk_level || risk.risk_level_autocalculated;
+      return getEffectiveRiskLevel(risk) || undefined;
     case "mitigation_status":
       return risk.mitigation_status;
     case "risk_owner":

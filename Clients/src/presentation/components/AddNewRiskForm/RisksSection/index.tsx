@@ -619,8 +619,8 @@ const RiskSection: FC<RiskSectionProps> = ({
               lineHeight: 1.5,
             }}
           >
-            The Risk Level is calculated by multiplying the Likelihood and Severity scores. By
-            assigning these scores, the risk level will be determined based on your inputs.
+            The risk level is a weighted score: likelihood plus three times severity, so severity
+            counts more. Pick a likelihood and a severity and the level follows from the score.
           </Typography>
         </Stack>
         <Stack sx={{ mt: `${LAYOUT.VERTICAL_GAP}px`, width: "100%", maxWidth: contentWidth }}>

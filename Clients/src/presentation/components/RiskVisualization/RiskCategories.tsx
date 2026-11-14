@@ -9,6 +9,7 @@ import { ICategoryGroup } from "../../../domain/interfaces/i.categoryGroup";
 import { User } from "../../../domain/types/User";
 import { palette, radiusPx } from "../../themes/palette";
 import { chartTheme } from "../../themes/chartTheme";
+import { getEffectiveRiskLevel, riskLevelBucket } from "../../../application/utils/riskLevel";
 
 const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, onRiskSelect }) => {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
@@ -92,12 +93,9 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
         groups[category].risks.push(risk);
         groups[category].count++;
 
-        const riskLevel = getRiskLevelFromString(risk.current_risk_level);
-        if (riskLevel >= 16) groups[category].riskLevels.veryHigh++;
-        else if (riskLevel >= 12) groups[category].riskLevels.high++;
-        else if (riskLevel >= 8) groups[category].riskLevels.medium++;
-        else if (riskLevel >= 4) groups[category].riskLevels.low++;
-        else groups[category].riskLevels.veryLow++;
+        // Unknown levels count as very low, as before.
+        const bucket = riskLevelBucket(getEffectiveRiskLevel(risk)) ?? "veryLow";
+        groups[category].riskLevels[bucket]++;
       });
     });
 
@@ -330,10 +328,10 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
                           >
                             <Chip
                               size="small"
-                              label={risk.current_risk_level}
+                              label={getEffectiveRiskLevel(risk)}
                               sx={{
                                 backgroundColor: getRiskLevelColor(
-                                  getRiskLevelFromString(risk.current_risk_level),
+                                  getRiskLevelFromString(getEffectiveRiskLevel(risk)),
                                 ),
                                 color: "white",
                                 fontSize: 10,

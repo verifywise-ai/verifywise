@@ -103,10 +103,11 @@ function RiskHeatMap<T extends HeatMapRisk = RiskModel>({
       const row: HeatMapCell<T>[] = [];
       for (let likelihood = 1; likelihood <= 5; likelihood++) {
         const cellRisks = risks.filter((risk) => {
-          // Pair `likelihood` with `severity` — both describe the current risk.
+          // Pair `likelihood` with `severity`: both describe the inherent risk,
+          // so the map shows the inherent level (`risk_level_autocalculated`).
           // `risk_severity` is the post-mitigation severity and belongs to the
-          // residual risk, so mixing it in here contradicts the summary cards
-          // and the risks table, which read `risk_level_autocalculated`.
+          // residual risk. The summary cards and the table show the effective
+          // level (current level when set), which can differ from this map.
           const riskLikelihood = getLikelihoodNumeric(risk.likelihood);
           const riskSeverity = getSeverityNumeric(risk.severity);
           return riskLikelihood === likelihood && riskSeverity === severity;

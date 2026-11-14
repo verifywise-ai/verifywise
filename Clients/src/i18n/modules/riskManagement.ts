@@ -205,6 +205,15 @@ export const de: Record<string, string> = {
   "Search vendor risks": "Anbieterrisiken suchen",
   "Why are you dismissing {name}?": "Warum verwerfen Sie {name}?",
   "What happened?": "Was ist passiert?",
+  "The risk level is a weighted score: likelihood plus three times severity, so severity counts more. Pick a likelihood and a severity and the level follows from the score.":
+    "Die Risikostufe ist ein gewichteter Wert: Eintrittswahrscheinlichkeit plus das Dreifache der Schwere, die Schwere zählt also stärker. Wählen Sie Wahrscheinlichkeit und Schwere, und die Stufe ergibt sich aus dem Wert.",
+  "Heat map (inherent level)": "Heatmap (inhärente Stufe)",
+  "Inherent level: No risk": "Inhärente Stufe: Kein Risiko",
+  "Inherent level: Very low risk": "Inhärente Stufe: Sehr geringes Risiko",
+  "Inherent level: Low risk": "Inhärente Stufe: Geringes Risiko",
+  "Inherent level: Medium risk": "Inhärente Stufe: Mittleres Risiko",
+  "Inherent level: High risk": "Inhärente Stufe: Hohes Risiko",
+  "Inherent level: Very high risk": "Inhärente Stufe: Sehr hohes Risiko",
 };
 
 export const fr: Record<string, string> = {
@@ -407,6 +416,15 @@ export const fr: Record<string, string> = {
   "Search vendor risks": "Rechercher des risques fournisseurs",
   "Why are you dismissing {name}?": "Pourquoi rejetez-vous {name} ?",
   "What happened?": "Que s'est-il passé ?",
+  "The risk level is a weighted score: likelihood plus three times severity, so severity counts more. Pick a likelihood and a severity and the level follows from the score.":
+    "Le niveau de risque est un score pondéré : la probabilité plus trois fois la gravité, la gravité compte donc davantage. Choisissez une probabilité et une gravité, et le niveau découle du score.",
+  "Heat map (inherent level)": "Carte thermique (niveau inhérent)",
+  "Inherent level: No risk": "Niveau inhérent : aucun risque",
+  "Inherent level: Very low risk": "Niveau inhérent : risque très faible",
+  "Inherent level: Low risk": "Niveau inhérent : risque faible",
+  "Inherent level: Medium risk": "Niveau inhérent : risque moyen",
+  "Inherent level: High risk": "Niveau inhérent : risque élevé",
+  "Inherent level: Very high risk": "Niveau inhérent : risque très élevé",
 };
 
 export const es: Record<string, string> = {
@@ -609,4 +627,13 @@ export const es: Record<string, string> = {
   "Search vendor risks": "Buscar riesgos de proveedor",
   "Why are you dismissing {name}?": "¿Por qué descartas {name}?",
   "What happened?": "¿Qué ocurrió?",
+  "The risk level is a weighted score: likelihood plus three times severity, so severity counts more. Pick a likelihood and a severity and the level follows from the score.":
+    "El nivel de riesgo es una puntuación ponderada: la probabilidad más tres veces la gravedad, por lo que la gravedad pesa más. Elija una probabilidad y una gravedad, y el nivel se deduce de la puntuación.",
+  "Heat map (inherent level)": "Mapa de calor (nivel inherente)",
+  "Inherent level: No risk": "Nivel inherente: sin riesgo",
+  "Inherent level: Very low risk": "Nivel inherente: riesgo muy bajo",
+  "Inherent level: Low risk": "Nivel inherente: riesgo bajo",
+  "Inherent level: Medium risk": "Nivel inherente: riesgo medio",
+  "Inherent level: High risk": "Nivel inherente: riesgo alto",
+  "Inherent level: Very high risk": "Nivel inherente: riesgo muy alto",
 };

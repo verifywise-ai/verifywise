@@ -23,6 +23,8 @@ import { DEFAULT_VALUES } from "../RiskDatabaseModal/types";
 import { riskCategoryItems, aiLifecyclePhase } from "./projectRiskValue";
 import { riskInitialState } from "./hooks/useRiskForm";
 import { palette } from "../../themes/palette";
+import { RiskCalculator } from "../../tools/riskCalculator";
+import { RiskLikelihood, RiskSeverity } from "../RiskLevel/riskValues";
 
 export function mapCategoryNamesToIds(names: string[]): number[] {
   return names
@@ -34,16 +36,42 @@ export function mapPhaseNameToId(name: string): number {
   return aiLifecyclePhase.find((item) => item.name === name)?._id ?? 0;
 }
 
+const LIKELIHOOD_BY_VALUE = [
+  RiskLikelihood.Rare,
+  RiskLikelihood.Unlikely,
+  RiskLikelihood.Possible,
+  RiskLikelihood.Likely,
+  RiskLikelihood.AlmostCertain,
+];
+const SEVERITY_BY_VALUE = [
+  RiskSeverity.Negligible,
+  RiskSeverity.Minor,
+  RiskSeverity.Moderate,
+  RiskSeverity.Major,
+  RiskSeverity.Catastrophic,
+];
+
+const LEVEL_COLORS: Record<string, string> = {
+  "Very high risk": palette.risk.critical.text,
+  "High risk": palette.risk.high.text,
+  "Medium risk": palette.risk.medium.text,
+  "Low risk": palette.risk.low.text,
+  "No risk": palette.status.success.text,
+};
+
+/**
+ * The inherent level for a likelihood and severity (each 1-5), from the same
+ * weighted formula the risk form and the server use (RiskCalculator).
+ */
 export function getRiskLevelLabel(
   likelihood: number,
   severity: number,
 ): { text: string; color: string } {
-  const score = likelihood * severity;
-  if (score >= 20) return { text: "Very high risk", color: palette.risk.critical.text };
-  if (score >= 12) return { text: "High risk", color: palette.risk.high.text };
-  if (score >= 6) return { text: "Medium risk", color: palette.risk.medium.text };
-  if (score >= 3) return { text: "Low risk", color: palette.risk.low.text };
-  return { text: "Very low risk", color: palette.status.success.text };
+  const { level } = RiskCalculator.getRiskLevel(
+    LIKELIHOOD_BY_VALUE[likelihood - 1],
+    SEVERITY_BY_VALUE[severity - 1],
+  );
+  return { text: level, color: LEVEL_COLORS[level] };
 }
 
 export interface RiskSuggestionMappingOptions {

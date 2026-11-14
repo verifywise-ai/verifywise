@@ -6,6 +6,7 @@ import { IRiskFiltersProps } from "../../types/interfaces/i.risk";
 import { IFilterState } from "../../types/interfaces/i.filter";
 import { User } from "../../../domain/types/User";
 
+import { getEffectiveRiskLevel, riskLevelBucket } from "../../../application/utils/riskLevel";
 const initialFilterState: IFilterState = {
   riskLevel: "all",
   owner: "all",
@@ -45,26 +46,7 @@ const RiskFilters: React.FC<IRiskFiltersProps> = ({ risks, onFilterChange }) => 
     // Risk level filter
     if (newFilters.riskLevel !== "all") {
       filteredRisks = filteredRisks.filter((risk) => {
-        const currentRiskLevel = (
-          risk.current_risk_level ||
-          risk.risk_level_autocalculated ||
-          ""
-        ).toLowerCase();
-
-        switch (newFilters.riskLevel) {
-          case "veryHigh":
-            return currentRiskLevel.includes("very high");
-          case "high":
-            return currentRiskLevel.includes("high") && !currentRiskLevel.includes("very high");
-          case "medium":
-            return currentRiskLevel.includes("medium");
-          case "low":
-            return currentRiskLevel.includes("low") && !currentRiskLevel.includes("very low");
-          case "veryLow":
-            return currentRiskLevel.includes("very low") || currentRiskLevel.includes("no risk");
-          default:
-            return true;
-        }
+        return riskLevelBucket(getEffectiveRiskLevel(risk)) === newFilters.riskLevel;
       });
     }
 

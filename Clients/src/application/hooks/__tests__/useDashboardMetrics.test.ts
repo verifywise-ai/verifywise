@@ -530,4 +530,46 @@ describe("useDashboardMetrics", () => {
     // Network calls should have been made since cache is stale
     expect(mockGetAllEntities).toHaveBeenCalled();
   });
+
+  it("distributes project risks by the effective level", async () => {
+    mockGetAllEntities.mockImplementation(async ({ routeUrl }: any) => {
+      if (routeUrl === "/projectRisks") {
+        return {
+          data: [
+            // inherent Very high, current Low: counted as low
+            {
+              id: 1,
+              risk_name: "A",
+              risk_level_autocalculated: "Very high risk",
+              current_risk_level: "Low risk",
+            },
+            // no current level: inherent High
+            {
+              id: 2,
+              risk_name: "B",
+              risk_level_autocalculated: "High risk",
+              current_risk_level: null,
+            },
+            {
+              id: 3,
+              risk_name: "C",
+              risk_level_autocalculated: "No risk",
+              current_risk_level: null,
+            },
+          ],
+        };
+      }
+      return { data: [] };
+    });
+
+    const { result } = renderHook(() => useDashboardMetrics());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    expect(result.current.riskMetrics!.distribution).toMatchObject({ high: 1, low: 2, medium: 0 });
+    expect(result.current.riskMetrics!.recent.map((r: any) => r.severity)).toEqual([
+      "low",
+      "high",
+      "low",
+    ]);
+  });
 });

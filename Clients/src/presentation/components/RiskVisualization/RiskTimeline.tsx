@@ -7,6 +7,7 @@ import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { palette, radiusPx } from "../../themes/palette";
 import { chartTheme } from "../../themes/chartTheme";
 import { riskCalendarDay } from "../../tools/isoDateToString";
+import { getEffectiveRiskLevel } from "../../../application/utils/riskLevel";
 
 const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => {
   const formatDate = useFormattedDate();
@@ -49,9 +50,7 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
       const createdDate =
         riskCalendarDay(risk.date_of_assessment) ??
         (risk.created_at ? new Date(risk.created_at) : new Date());
-      const riskLevelValue = getRiskLevelFromString(
-        risk.current_risk_level || risk.risk_level_autocalculated,
-      );
+      const riskLevelValue = getRiskLevelFromString(getEffectiveRiskLevel(risk));
 
       events.push({
         id: `${risk.id}-created`,

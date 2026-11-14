@@ -77,4 +77,17 @@ describe("compareRisks", () => {
   it("keeps the original order for an unknown key saved in an older version", () => {
     expect(sortIds(withNulls, "likelihood", "asc")).toEqual([1, 2, 3]);
   });
+
+  it("sorts the level column by the effective level, current level first", () => {
+    const rows = [
+      // inherent Very high, current Low: effective Low
+      risk({ id: 1, risk_level_autocalculated: "Very high risk", current_risk_level: "Low risk" }),
+      // current null: effective is the inherent Medium
+      risk({ id: 2, risk_level_autocalculated: "Medium risk", current_risk_level: null }),
+      // inherent Low, current Very high: effective Very high
+      risk({ id: 3, risk_level_autocalculated: "Low risk", current_risk_level: "Very high risk" }),
+    ];
+    expect(sortIds(rows, "risk_level_autocalculated", "asc")).toEqual([1, 2, 3]);
+    expect(sortIds(rows, "risk_level_autocalculated", "desc")).toEqual([3, 2, 1]);
+  });
 });

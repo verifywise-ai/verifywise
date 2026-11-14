@@ -1,5 +1,5 @@
 export enum CurrentRiskLevel {
-  VeryLowRisk = "Very Low risk",
+  VeryLowRisk = "Very low risk",
   LowRisk = "Low risk",
   MediumRisk = "Medium risk",
   HighRisk = "High risk",

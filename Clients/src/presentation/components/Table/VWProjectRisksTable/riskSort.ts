@@ -1,5 +1,6 @@
 import { RiskModel } from "../../../../domain/models/Common/risks/risk.model";
 import { riskCalendarDay } from "../../../tools/isoDateToString";
+import { getEffectiveRiskLevel, riskLevelRank } from "../../../../application/utils/riskLevel";
 
 export type RiskSortDirection = "asc" | "desc";
 
@@ -18,18 +19,6 @@ const getSeverityValue = (severity: string | null | undefined): number => {
   return 0;
 };
 
-// Risk level values: No risk, Very low risk, Low risk, Medium risk, High risk, Very high risk
-const getRiskLevelValue = (riskLevel: string | null | undefined): number => {
-  const riskLower = lower(riskLevel);
-  if (riskLower.includes("very high")) return 6;
-  if (riskLower.includes("high")) return 5;
-  if (riskLower.includes("medium")) return 4;
-  if (riskLower.includes("low") && !riskLower.includes("very low")) return 3;
-  if (riskLower.includes("very low")) return 2;
-  if (riskLower.includes("no risk")) return 1;
-  return 0;
-};
-
 const sortValue = (risk: RiskModel, key: string): string | number | null => {
   switch (key) {
     case "risk_name":
@@ -41,7 +30,8 @@ const sortValue = (risk: RiskModel, key: string): string | number | null => {
     case "mitigation_status":
       return lower(risk.mitigation_status);
     case "risk_level_autocalculated":
-      return getRiskLevelValue(risk.risk_level_autocalculated);
+      // The column shows the effective level, so it sorts by it.
+      return riskLevelRank(getEffectiveRiskLevel(risk));
     case "deadline":
       return riskCalendarDay(risk.deadline)?.getTime() ?? 0;
     case "ale_estimate":

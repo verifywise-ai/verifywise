@@ -7,6 +7,7 @@ import {
   useTheme,
   Typography,
   Stack,
+  Tooltip,
 } from "@mui/material";
 import { VWLink } from "../../Link";
 import singleTheme from "../../../themes/v1SingleTheme";
@@ -29,6 +30,7 @@ import ProjectRiskLinkedPolicies from "../../../components/ProjectRiskMitigation
 import { text, palette as vwPalette } from "../../../themes/palette";
 import { formatCustomFieldValue } from "../../CustomFieldsSection/formatCustomFieldValue";
 import { riskCalendarDay } from "../../../tools/isoDateToString";
+import { getEffectiveRiskLevel } from "../../../../application/utils/riskLevel";
 
 function getDummyEvent() {
   const realEvent = new Event("click", { bubbles: true, cancelable: true });
@@ -303,8 +305,18 @@ const VWProjectRisksTableBody = ({
                             : "",
                     }}
                   >
-                    {row.risk_level_autocalculated ? (
-                      <Chip label={row.risk_level_autocalculated} />
+                    {getEffectiveRiskLevel(row) ? (
+                      <Tooltip
+                        title={
+                          row.risk_level_autocalculated
+                            ? `Inherent level: ${row.risk_level_autocalculated}`
+                            : ""
+                        }
+                      >
+                        <span>
+                          <Chip label={getEffectiveRiskLevel(row)} />
+                        </span>
+                      </Tooltip>
                     ) : (
                       "-"
                     )}

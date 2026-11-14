@@ -1,4 +1,5 @@
 import { apiServices } from "../../infrastructure/api/networkServices";
+import { getEffectiveRiskLevel } from "../utils/riskLevel";
 
 export interface EntityGraphData {
   useCases: Array<{
@@ -186,7 +187,8 @@ export async function fetchEntityGraphData(
   const projectRisks = extractData(projectRisksRes) as Array<{
     id: number;
     risk_name: string;
-    current_risk_level: string;
+    current_risk_level: string | null;
+    risk_level_autocalculated?: string | null;
     project_id: number;
     risk_owner?: string;
     ai_lifecycle_phase?: string;
@@ -225,7 +227,7 @@ export async function fetchEntityGraphData(
     ...projectRisks.map((r) => ({
       id: r.id + 100000, // Offset to avoid ID collision
       risk_name: r.risk_name,
-      risk_level: r.current_risk_level,
+      risk_level: getEffectiveRiskLevel(r),
       model_id: null,
       project_id: r.project_id,
       source: "project" as const,
