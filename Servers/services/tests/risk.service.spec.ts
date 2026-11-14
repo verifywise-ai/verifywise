@@ -322,7 +322,7 @@ describe("risk.service", () => {
         expect(writtenArg().risk_level_autocalculated).toBe("High risk");
       });
 
-      it("does not write the level when the merged inputs are not computable", async () => {
+      it("clears the level when a merged input is null", async () => {
         await updateRiskService(
           42,
           { severity: "Negligible", risk_level_autocalculated: "High risk" } as any,
@@ -330,7 +330,46 @@ describe("risk.service", () => {
           ctx,
           mockTransaction,
         );
+        expect(writtenArg().risk_level_autocalculated).toBeNull();
+      });
+
+      it("clears the level when likelihood is explicitly sent as null or empty", async () => {
+        await updateRiskService(42, { likelihood: null } as any, existing, ctx, mockTransaction);
+        expect(writtenArg().risk_level_autocalculated).toBeNull();
+        mockUpdateRiskByIdQuery.mockClear();
+        await updateRiskService(42, { severity: "" } as any, existing, ctx, mockTransaction);
+        expect(writtenArg().risk_level_autocalculated).toBeNull();
+      });
+
+      it("clears final_risk_level when a residual input is explicitly cleared", async () => {
+        await updateRiskService(
+          42,
+          { likelihood_mitigation: null } as any,
+          existing,
+          ctx,
+          mockTransaction,
+        );
+        expect(writtenArg().final_risk_level).toBeNull();
+      });
+
+      it("does not write a level for an unrecognised non-null label", async () => {
+        await updateRiskService(
+          42,
+          { likelihood: "Sometimes" } as any,
+          existing,
+          ctx,
+          mockTransaction,
+        );
         expect("risk_level_autocalculated" in writtenArg()).toBe(false);
+        mockUpdateRiskByIdQuery.mockClear();
+        await updateRiskService(
+          42,
+          { risk_severity: "Huge" } as any,
+          existing,
+          ctx,
+          mockTransaction,
+        );
+        expect("final_risk_level" in writtenArg()).toBe(false);
       });
 
       it("recomputes final_risk_level from sent residual severity and stored mitigation likelihood", async () => {

@@ -269,24 +269,36 @@ export async function updateRiskService(
   //     inputs was sent; a level the inputs cannot produce is not written.
   delete updateData.risk_level_autocalculated;
   delete updateData.final_risk_level;
+  // An explicit clear (a merged input that is null/empty) clears the level; an
+  // unrecognised non-null label leaves it as stored.
+  const isClear = (v: unknown) => v === null || v === undefined || v === "";
   if (updateData.likelihood !== undefined || updateData.severity !== undefined) {
-    const level = calculateRiskLevel(
-      updateData.likelihood !== undefined ? updateData.likelihood : existingRisk.likelihood,
-      updateData.severity !== undefined ? updateData.severity : existingRisk.severity,
-    );
-    if (level)
+    const likelihood =
+      updateData.likelihood !== undefined ? updateData.likelihood : existingRisk.likelihood;
+    const severity =
+      updateData.severity !== undefined ? updateData.severity : existingRisk.severity;
+    const level = calculateRiskLevel(likelihood, severity);
+    if (level) {
       updateData.risk_level_autocalculated = level as RiskModel["risk_level_autocalculated"];
+    } else if (isClear(likelihood) || isClear(severity)) {
+      (updateData as Record<string, unknown>).risk_level_autocalculated = null;
+    }
   }
   if (updateData.likelihood_mitigation !== undefined || updateData.risk_severity !== undefined) {
-    const level = calculateRiskLevel(
+    const likelihoodMitigation =
       updateData.likelihood_mitigation !== undefined
         ? updateData.likelihood_mitigation
-        : existingRisk.likelihood_mitigation,
+        : existingRisk.likelihood_mitigation;
+    const riskSeverity =
       updateData.risk_severity !== undefined
         ? updateData.risk_severity
-        : existingRisk.risk_severity,
-    );
-    if (level) updateData.final_risk_level = level;
+        : existingRisk.risk_severity;
+    const level = calculateRiskLevel(likelihoodMitigation, riskSeverity);
+    if (level) {
+      updateData.final_risk_level = level;
+    } else if (isClear(likelihoodMitigation) || isClear(riskSeverity)) {
+      (updateData as Record<string, unknown>).final_risk_level = null;
+    }
   }
 
   // 3. Write. An absent projects/frameworks list is sent as empty, as before.

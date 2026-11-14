@@ -745,7 +745,7 @@ export async function getRiskLinksForRiskQuery(
               END
             ) AS related_risk_name,
             COALESCE(
-              related.risk_level_autocalculated::text,
+              ${effectiveRiskLevelSql("related")},
               mr.risk_level::text,
               vr.risk_level
             ) AS related_risk_level,
@@ -803,7 +803,7 @@ export async function getRiskLinksForVendorRiskQuery(
             child.id AS related_id,
             'risk' AS related_entity_type,
             child.risk_name AS related_risk_name,
-            child.risk_level_autocalculated::text AS related_risk_level,
+            ${effectiveRiskLevelSql("child")} AS related_risk_level,
             child.risk_owner AS related_risk_owner,
             NULL::text AS related_vendor_name
        FROM risk_links l
@@ -963,7 +963,7 @@ export async function getRiskGraphQuery(
               NULLIF(LEFT(svr.risk_description, 80), ''),
               CASE WHEN l.source_vendor_risk_id IS NOT NULL THEN 'Untitled vendor risk' END
             ) AS source_name,
-            COALESCE(src.risk_level_autocalculated::text, svr.risk_level) AS source_level,
+            COALESCE(${effectiveRiskLevelSql("src")}, svr.risk_level) AS source_level,
             svr.vendor_id AS source_vendor_id,
             svendor.vendor_name AS source_vendor_name,
             COALESCE(
@@ -975,7 +975,7 @@ export async function getRiskGraphQuery(
                 WHEN l.target_vendor_risk_id IS NOT NULL THEN 'Untitled vendor risk'
               END
             ) AS target_name,
-            COALESCE(tgt.risk_level_autocalculated::text, mr.risk_level::text, vr.risk_level)
+            COALESCE(${effectiveRiskLevelSql("tgt")}, mr.risk_level::text, vr.risk_level)
               AS target_level,
             vr.vendor_id AS target_vendor_id,
             vendor.vendor_name AS target_vendor_name

@@ -129,11 +129,17 @@ describe("get_risk", () => {
 });
 
 describe("create_risk", () => {
-  /** The level is derived, never taken from the caller. */
-  it("calculates the risk level from severity and likelihood", async () => {
+  /** The level is derived by the service, never taken from the caller or the tool. */
+  it("leaves the risk level to the service and reports what it stored", async () => {
+    mockCreate.mockResolvedValue({
+      id: 21,
+      risk_owner: 4,
+      risk_level_autocalculated: "High risk",
+    } as never);
+
     const res = await tool("create_risk").handler(CREATE_ARGS, CALLER);
 
-    expect(mockCreate.mock.calls[0][0].risk_level_autocalculated).toBe("High risk");
+    expect(mockCreate.mock.calls[0][0]).not.toHaveProperty("risk_level_autocalculated");
     expect(payload(res).riskLevelCalculated).toBe("High risk");
   });
 
@@ -212,34 +218,31 @@ describe("update_risk", () => {
     expect(sent).toEqual({ risk_name: "Renamed" });
   });
 
-  /** Changing one input must not leave the stored level describing the other. */
-  it("recalculates against the stored likelihood when only severity changes", async () => {
-    await tool("update_risk").handler({ organizationId: 3, riskId: 21, severity: "Minor" }, CALLER);
+  /** The service recomputes against the stored row; the tool sends no level. */
+  it("sends no level and reports the stored one when an input changes", async () => {
+    mockUpdate.mockResolvedValue({
+      id: 21,
+      risk_owner: 4,
+      risk_level_autocalculated: "Medium risk",
+    } as never);
 
-    // (likelihood x 1) + (severity x 3): the stored "Possible" is 3, "Minor" is
-    // 2, so 3 + 6 = 9 -> Medium risk. Had the stored likelihood been dropped,
-    // "Rare" would give 1 + 6 = 7 -> Low risk.
-    expect(mockUpdate.mock.calls[0][1].risk_level_autocalculated).toBe("Medium risk");
-  });
-
-  it("recalculates against the stored severity when only likelihood changes", async () => {
-    await tool("update_risk").handler(
-      { organizationId: 3, riskId: 21, likelihood: "Rare" },
+    const res = await tool("update_risk").handler(
+      { organizationId: 3, riskId: 21, severity: "Minor" },
       CALLER,
     );
 
-    // The stored "Major" is 4, "Rare" is 1, so 1 + 12 = 13 -> High risk. Had
-    // the stored severity been dropped, 1 + 3 = 4 -> No risk.
-    expect(mockUpdate.mock.calls[0][1].risk_level_autocalculated).toBe("High risk");
+    expect(mockUpdate.mock.calls[0][1]).toEqual({ severity: "Minor" });
+    expect(payload(res).riskLevelCalculated).toBe("Medium risk");
   });
 
-  it("leaves the level alone when neither input is sent", async () => {
-    await tool("update_risk").handler(
+  it("does not report a level when neither input is sent", async () => {
+    const res = await tool("update_risk").handler(
       { organizationId: 3, riskId: 21, mitigationPlan: "Retrain" },
       CALLER,
     );
 
     expect(mockUpdate.mock.calls[0][1]).not.toHaveProperty("risk_level_autocalculated");
+    expect(payload(res)).not.toHaveProperty("riskLevelCalculated");
   });
 
   it("rewrites the links only when a list is sent", async () => {

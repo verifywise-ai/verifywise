@@ -24,7 +24,7 @@ import {
   PROJECT_RISK_CATEGORIES,
 } from "../../utils/risk.utils";
 import { createRiskService, updateRiskService } from "../../services/risk.service";
-import { calculateRiskLevel, normalizeCurrentRiskLevel } from "../../utils/riskLevel.utils";
+import { normalizeCurrentRiskLevel } from "../../utils/riskLevel.utils";
 import { enqueueRiskLinkRecompute } from "../../services/automations/automationProducer";
 import { notifyUserAssigned } from "../../services/inAppNotification.service";
 import { getUserByIdQuery } from "../../utils/user.utils";
@@ -205,11 +205,6 @@ const createRisk: ToolDef = {
 
     const frameworkIds = await resolveFrameworkIds(args.frameworks ?? []);
 
-    // Derived server-side from the same helper the AI action executor uses, so
-    // the stored level can never disagree with the likelihood and severity
-    // beside it.
-    const riskLevel = calculateRiskLevel(args.likelihood, args.severity);
-
     const transaction = await sequelize.transaction();
     let risk;
     try {
@@ -222,13 +217,6 @@ const createRisk: ToolDef = {
           impact: args.impact,
           likelihood: args.likelihood,
           severity: args.severity,
-          risk_level_autocalculated: riskLevel as
-            | "No risk"
-            | "Very low risk"
-            | "Low risk"
-            | "Medium risk"
-            | "High risk"
-            | "Very high risk",
           risk_owner: args.riskOwner,
           mitigation_status: args.mitigationStatus,
           mitigation_plan: args.mitigationPlan,
@@ -255,7 +243,8 @@ const createRisk: ToolDef = {
     );
     await notifyRiskOwnerAssigned(risk, caller.userId, args.organizationId);
 
-    return result({ risk, riskLevelCalculated: riskLevel });
+    // The service derives the level from likelihood and severity.
+    return result({ risk, riskLevelCalculated: risk.risk_level_autocalculated });
   },
 };
 
@@ -334,18 +323,6 @@ const updateRisk: ToolDef = {
       throw new Error("Provide at least one field to update.");
     }
 
-    // The stored level is derived, so a change to either input recalculates it
-    // against whichever value is not being changed.
-    let riskLevel: string | undefined;
-    if (args.likelihood !== undefined || args.severity !== undefined) {
-      riskLevel =
-        calculateRiskLevel(
-          args.likelihood ?? existing.likelihood,
-          args.severity ?? existing.severity,
-        ) ?? undefined;
-      input.risk_level_autocalculated = riskLevel;
-    }
-
     // Links are only rewritten when a list is sent. The update query leaves the
     // junctions alone for an empty list, which is what an omitted argument
     // becomes, so there is nothing to carry over here.
@@ -379,7 +356,12 @@ const updateRisk: ToolDef = {
       await notifyRiskOwnerAssigned(risk, caller.userId, args.organizationId);
     }
 
-    return result(riskLevel ? { risk, riskLevelCalculated: riskLevel } : { risk });
+    const levelInputChanged = args.likelihood !== undefined || args.severity !== undefined;
+    return result(
+      levelInputChanged && risk.risk_level_autocalculated
+        ? { risk, riskLevelCalculated: risk.risk_level_autocalculated }
+        : { risk },
+    );
   },
 };
 

@@ -1319,10 +1319,17 @@ export const updateRiskByIdQuery = async (
       { key: "severity", param: "severity" },
       { key: "likelihood", param: "likelihood" },
       { key: "mitigation_status", param: "mitigation_status" },
-      { key: "risk_level", param: "risk_level_autocalculated" },
     ];
 
     const snapshotPromises = [];
+    // Snapshots are keyed by the effective level, so a change to either the
+    // inherent or the current level can move the counts.
+    const effective = (r: any) => r?.current_risk_level ?? r?.risk_level_autocalculated ?? null;
+    if (existingRisk && effective(existingRisk) !== effective(updatedRisk.dataValues)) {
+      snapshotPromises.push(
+        recordSnapshotIfChanged("risk_level", organizationId, undefined, transaction),
+      );
+    }
     for (const { key, param } of parametersToCheck) {
       // Cast to any to avoid TypeScript complaining about indexing RiskModel with IRisk keys
       if (existingRisk && (existingRisk as any)[param] !== (updatedRisk.dataValues as any)[param]) {

@@ -337,7 +337,7 @@ function validateRow(row: RiskImportRow, rowIndex: number): RiskImportError[] {
   return errors;
 }
 
-function parseRow(row: RiskImportRow): Record<string, unknown> {
+export function parseRow(row: RiskImportRow): Record<string, unknown> {
   const riskCategory = row.risk_category
     ? row.risk_category
         .split(",")
@@ -363,7 +363,11 @@ function parseRow(row: RiskImportRow): Record<string, unknown> {
     implementation_strategy: row.implementation_strategy ?? null,
     likelihood_mitigation: row.likelihood_mitigation ?? "Rare",
     risk_severity: row.risk_severity ?? null,
-    final_risk_level: row.final_risk_level ?? null,
+    // Derived like the inherent level; the sheet value is ignored.
+    final_risk_level: calculateRiskLevel(
+      row.likelihood_mitigation ?? null,
+      row.risk_severity ?? null,
+    ),
     risk_approval: parseUserId(row.risk_approval),
     approval_status: row.approval_status ?? null,
     // An empty cell stays empty: the import time is not an assessment date.
