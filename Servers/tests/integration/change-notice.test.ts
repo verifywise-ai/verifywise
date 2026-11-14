@@ -133,6 +133,26 @@ describe("change notice state against a real database", () => {
     );
   };
 
+  it("does not show when the cap made the write a no-op after the rules said yes", async () => {
+    await seedKeys(199);
+    // 199 keys passes the rules (keyCount < 200); a second id sneaking in first fills the cap
+    // before this write runs, so the statement writes nothing.
+    const { recordViewQuery } = await import("../../utils/changeNotice.utils");
+    await view(userId, orgId, "filler");
+    expect(await recordViewQuery(userId, "late", new Date().toISOString(), 200)).toBe(false);
+    expect((await prefsOf(userId))!.change_notices.late).toBeUndefined();
+  });
+
+  it("reads the organization anchor only for a user with no state", async () => {
+    const { getNoticeContextQuery } = await import("../../utils/changeNotice.utils");
+    await view(userId, orgId);
+    const seen = await getNoticeContextQuery(userId, orgId, ID);
+    expect(seen!.state).toBeDefined();
+    expect(seen!.orgFirstSeenAt).toBeNull();
+    const unseen = await getNoticeContextQuery(userId, orgId, "other-notice");
+    expect(unseen!.state).toBeUndefined();
+  });
+
   it("concurrent first views of new ids at 199 keys cannot overshoot the key limit", async () => {
     await seedKeys(199);
     await Promise.all([view(userId, orgId, "race-a"), view(userId, orgId, "race-b")]);

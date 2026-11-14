@@ -18,8 +18,9 @@ export async function viewNotice(input: {
   const context = await getNoticeContextQuery(input.userId, input.organizationId, input.id);
   if (!context) return { show: false };
   if (!decideShow({ ...context, now: input.now })) return { show: false };
-  await recordViewQuery(input.userId, input.id, input.now.toISOString(), MAX_KEYS);
-  return { show: true };
+  // A refused write (the key cap, under the row lock) means the visit was not counted: do not show.
+  const recorded = await recordViewQuery(input.userId, input.id, input.now.toISOString(), MAX_KEYS);
+  return { show: recorded };
 }
 
 /** Dismisses a notice, or restores it (Undo) when `dismissed` is false. */

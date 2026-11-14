@@ -9,7 +9,8 @@ A change notice is a small "What's changed" card that tells a user about a resty
 - A notice stops after the user dismisses it, after 3 visits, or 90 days after the user's own first view, whichever comes first.
 - Accounts created after anyone in the organization first saw a notice are skipped for that notice, so most new users never see changes they never experienced. The first users of a new organization, and everyone invited before anyone's first view, can still see it.
 - "Show me" highlights the sidebar item named by `showMeTestId`. The button is hidden when that element is not in the DOM.
-- Dismissing a notice offers an Undo strip for 6 seconds. Undo restores the notice.
+- Dismissing a notice offers an Undo strip for 6 seconds. Undo restores the notice. The Undo request is sent after the dismiss request for the same id has settled, so the server applies them in order. A failed dismiss keeps the card hidden for the session.
+- One view request per notice per tab session: a `sessionStorage` marker (`vw-change-notice-requested:<id>`) records it. Every session start and end (`clearSession.ts`) clears the markers, and a failed view request frees its marker so a later page load asks again.
 - `localStorage["vw-change-notices"] = "off"` suppresses all notices. The E2E setup (`Clients/e2e/global.setup.ts`) sets it, and so should video recordings.
 
 ## Add a notice
@@ -73,7 +74,7 @@ Both require a valid token and are open to every role. A user only touches their
 
 | Endpoint | Behaviour |
 | --- | --- |
-| `POST /api/v1/change-notices/:id/view` | Returns `{ show }`. Records the visit (first view time and view count) only when the answer is `show: true`; a refusal writes nothing. A pure super admin has no organization and always gets `show: false`. |
+| `POST /api/v1/change-notices/:id/view` | Returns `{ show }`. Records the visit (first view time and view count) only when the answer is `show: true`; a refusal writes nothing. `show: true` also requires the write to have happened: when the 200 key cap makes the upsert a no-op, the answer is `show: false`. A pure super admin has no organization and always gets `show: false`. |
 | `PUT /api/v1/change-notices/:id/dismissed` | Body `{ dismissed: boolean }`. `true` dismisses; `false` restores (Undo). Dismissing an id the user never viewed stores `first_seen_at: null`, so the 90 day clock does not start. `dismissed: false` on an unseen id is a no-op. Dismissing respects the 200 key cap (only `dismissed: true` can create a key). |
 
 The client asks once per notice per session: `markViewRequested` (session storage) and the React Query cache (`staleTime: Infinity`, no refetch) keep re-renders, StrictMode double mounts and remounts from counting as extra visits.

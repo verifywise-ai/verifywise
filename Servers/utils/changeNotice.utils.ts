@@ -2,6 +2,11 @@ import { QueryTypes } from "sequelize";
 import { sequelize } from "../database/db";
 import type { NoticeState } from "../services/changeNotice/rules";
 
+/** SQL counting the notice keys a user holds, for the table or alias `table`. */
+function keyCountSql(table: string): string {
+  return `(SELECT COUNT(*) FROM jsonb_object_keys(COALESCE(${table}.preferences->'change_notices', '{}'::jsonb)))`;
+}
+
 export type NoticeContext = {
   state: NoticeState | undefined;
   accountCreatedAt: Date;
@@ -21,6 +26,12 @@ type ContextRow = {
  * notice, when their account was created, the earliest first view of the
  * notice across the organization's members, and how many notice keys they hold.
  * Null when the user does not exist.
+ *
+ * The organization anchor is read only for a user with no state for this notice,
+ * the one case decideShow uses it. It reads user_preferences of every member, and
+ * notice state is stored per user, not per organization (spec), so a member's first
+ * view in another organization they also belong to can move the anchor. Accepted:
+ * a user in several organizations has one notice history.
  */
 export const getNoticeContextQuery = async (
   userId: number,
@@ -32,11 +43,11 @@ export const getNoticeContextQuery = async (
        -- users.created_at is timestamp WITHOUT time zone: read it in the session zone it was written in.
        u.created_at::timestamptz AS account_created_at,
        up.preferences->'change_notices'->(:id) AS state,
-       (SELECT COUNT(*) FROM jsonb_object_keys(COALESCE(up.preferences->'change_notices', '{}'::jsonb))) AS key_count,
-       (SELECT MIN((mp.preferences->'change_notices'->(:id)->>'first_seen_at')::timestamptz)
+       ${keyCountSql("up")} AS key_count,
+       CASE WHEN up.preferences->'change_notices'->(:id) IS NULL THEN (SELECT MIN((mp.preferences->'change_notices'->(:id)->>'first_seen_at')::timestamptz)
           FROM organization_members om
           JOIN user_preferences mp ON mp.user_id = om.user_id
-         WHERE om.organization_id = :organizationId) AS org_first_seen_at
+         WHERE om.organization_id = :organizationId) END AS org_first_seen_at
      FROM users u
      LEFT JOIN user_preferences up ON up.user_id = u.id
      WHERE u.id = :userId`,
@@ -52,6 +63,7 @@ export const getNoticeContextQuery = async (
 };
 
 const OLD_STATE = `(user_preferences.preferences->'change_notices'->(:id))`;
+const KEY_COUNT = keyCountSql("user_preferences");
 
 /**
  * Counts one visit in ONE statement. The notice is merged from its own current
@@ -61,15 +73,16 @@ const OLD_STATE = `(user_preferences.preferences->'change_notices'->(:id))`;
  * here: COALESCE(old value, now), so a view after a dismiss-created null fills it.
  * An id with no state is only added while the user holds fewer than `maxKeys`
  * notice keys; the check is in the WHERE, so it runs under the row lock and
- * concurrent first views of new ids cannot overshoot the cap.
+ * concurrent first views of new ids cannot overshoot the cap. Returns whether a
+ * row was written: when the cap skips the update, RETURNING yields no row.
  */
 export const recordViewQuery = async (
   userId: number,
   id: string,
   nowIso: string,
   maxKeys: number,
-): Promise<void> => {
-  await sequelize.query(
+): Promise<boolean> => {
+  const written = await sequelize.query(
     `INSERT INTO user_preferences (user_id, preferences)
      VALUES (:userId, jsonb_build_object('change_notices', jsonb_build_object(:id::text,
        jsonb_build_object('first_seen_at', :nowIso::text, 'views', 1, 'dismissed_at', NULL::text))))
@@ -83,9 +96,11 @@ export const recordViewQuery = async (
                        'views', COALESCE((${OLD_STATE}->>'views')::int, 0) + 1))),
        updated_at = NOW()
      WHERE ${OLD_STATE} IS NOT NULL
-        OR (SELECT COUNT(*) FROM jsonb_object_keys(COALESCE(user_preferences.preferences->'change_notices', '{}'::jsonb))) < :maxKeys`,
-    { replacements: { userId, id, nowIso, maxKeys } },
+        OR ${KEY_COUNT} < :maxKeys
+     RETURNING user_id`,
+    { replacements: { userId, id, nowIso, maxKeys }, type: QueryTypes.SELECT },
   );
+  return written.length > 0;
 };
 
 /**
@@ -130,7 +145,7 @@ export const setDismissedQuery = async (
                        || jsonb_build_object('dismissed_at', :nowIso::text))),
        updated_at = NOW()
      WHERE ${OLD_STATE} IS NOT NULL
-        OR (SELECT COUNT(*) FROM jsonb_object_keys(COALESCE(user_preferences.preferences->'change_notices', '{}'::jsonb))) < :maxKeys`,
+        OR ${KEY_COUNT} < :maxKeys`,
     { replacements: { userId, id, nowIso, maxKeys } },
   );
 };
