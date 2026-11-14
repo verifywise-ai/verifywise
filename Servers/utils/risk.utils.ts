@@ -5,7 +5,7 @@ import { Transaction, QueryTypes } from "sequelize";
 import { IRisk } from "../domain.layer/interfaces/I.risk";
 import {
   enqueueAutomationActions,
-  getActiveAutomationActionsQuery,
+  getEventAutomationActionsQuery,
   IAutomationActionRow,
 } from "./automation/automationActions.utils";
 import {
@@ -31,14 +31,16 @@ type RiskAutomationTrigger = "risk_added" | "risk_updated" | "risk_deleted";
 
 /**
  * Every active action of the organization's automations for a risk trigger,
- * by automation, then action order (R-L6).
+ * by automation, then action order (R-L6). Automations from before that
+ * change run only the event's first action until saved again
+ * (keepLegacyFirstActionOnly).
  */
 const findRiskAutomationActions = (
   triggerKey: RiskAutomationTrigger,
   organizationId: number,
   transaction?: Transaction,
 ): Promise<IAutomationActionRow[]> =>
-  getActiveAutomationActionsQuery(organizationId, triggerKey, transaction);
+  getEventAutomationActionsQuery(organizationId, triggerKey, transaction);
 
 /**
  * Full names ("name surname") of the given users, keyed by id, in one query.

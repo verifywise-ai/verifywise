@@ -17,6 +17,8 @@ export interface IAutomationActionRow {
   action_key: string;
   params: Record<string, any> | null;
   order?: number | null;
+  /** The automation predates every-action dispatch for risk and policy events. */
+  legacy_first_action_only?: boolean;
 }
 
 /**
@@ -29,7 +31,8 @@ export async function getActiveAutomationActionsQuery(
   transaction?: Transaction,
 ): Promise<IAutomationActionRow[]> {
   return sequelize.query<IAutomationActionRow>(
-    `SELECT a.id AS automation_id, paa.key AS action_key, aa.params, aa."order"
+    `SELECT a.id AS automation_id, paa.key AS action_key, aa.params, aa."order",
+            a.legacy_first_action_only
        FROM automation_triggers pat
        JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId
        JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId
@@ -37,6 +40,44 @@ export async function getActiveAutomationActionsQuery(
       WHERE pat.key = :triggerKey AND a.is_active
       ORDER BY a.id ASC, aa."order" ASC`,
     { replacements: { organizationId, triggerKey }, type: QueryTypes.SELECT, transaction },
+  );
+}
+
+/**
+ * Risk and policy events used to run only one action: the first row of the
+ * old query, ordered by aa."order" alone. Automations that existed then are
+ * flagged legacy_first_action_only (migration
+ * 20261114200100-legacy-automation-first-action) so they keep that behaviour
+ * until someone saves them in the editor.
+ *
+ * Keeps every row of the other automations and, of the legacy rows of the
+ * event together, only the single first by aa."order", then a.id. That tie
+ * break approximates the old query, whose order among equal aa."order" values
+ * was unspecified. The result keeps the input order (a.id, aa."order").
+ */
+export function keepLegacyFirstActionOnly(actions: IAutomationActionRow[]): IAutomationActionRow[] {
+  const legacy = actions.filter((action) => action.legacy_first_action_only);
+  if (legacy.length === 0) return actions;
+  const first = legacy.reduce((best, action) => {
+    const order = (row: IAutomationActionRow) => Number(row.order ?? 0);
+    if (order(action) !== order(best)) return order(action) < order(best) ? action : best;
+    return action.automation_id < best.automation_id ? action : best;
+  });
+  return actions.filter((action) => !action.legacy_first_action_only || action === first);
+}
+
+/**
+ * The actions a risk or policy event runs: getActiveAutomationActionsQuery
+ * with the legacy first-action rule applied. Other events (AI Detection) call
+ * getActiveAutomationActionsQuery directly and run every action.
+ */
+export async function getEventAutomationActionsQuery(
+  organizationId: number,
+  triggerKey: string,
+  transaction?: Transaction,
+): Promise<IAutomationActionRow[]> {
+  return keepLegacyFirstActionOnly(
+    await getActiveAutomationActionsQuery(organizationId, triggerKey, transaction),
   );
 }
 

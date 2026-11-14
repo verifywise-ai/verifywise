@@ -441,6 +441,8 @@ Bulk archive, set owner and set category run the organization's automation once 
 
 A risk trigger (added, updated, deleted) runs every action of every active automation for it, ordered by automation id and then action order. The jobs are enqueued after the save commits; one failing action is logged and does not stop the others.
 
+Automations that existed before every-action dispatch keep their old behaviour until someone edits and saves them: only the event's first action runs (`automations.legacy_first_action_only`, set by migration `20261114200100-legacy-automation-first-action`; the dispatch keeps the single first legacy row by action order, then automation id). Saving the automation in the editor clears the flag; the active toggle does not. New automations run every action.
+
 A bulk set owner that gives the new owner two or more risks sends one in-app notification and one assignment email, "<n> risks were assigned to you", listing the risks (20, then "and <k> more") with a link to the risk list (`notifyUserAssignedMany`). With one changed risk the owner gets the usual single-risk notice.
 
 `PATCH /projectRisks/bulk` answers `{ updated, changed, action }`. `updated` keeps its original meaning, the number of ids sent; `changed` is the number of risks actually archived or edited. The risk table reports `changed`. The risk added, updated and deleted automations are enqueued after the transaction commits, so a bulk action that rolls back sends none, and the owner notice is sent after the commit too. A bulk action records the risk history snapshots once, after its loop.

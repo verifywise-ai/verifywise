@@ -3,7 +3,7 @@ import { sequelize } from "../database/db";
 import { IPolicy, PolicyTag, PolicyTagsSet } from "../domain.layer/interfaces/i.policy";
 import {
   enqueueAutomationActions,
-  getActiveAutomationActionsQuery,
+  getEventAutomationActionsQuery,
 } from "./automation/automationActions.utils";
 import {
   buildPolicyReplacements,
@@ -375,12 +375,8 @@ export const createPolicyQuery = async (
   // Add assigned_reviewer_ids to the returned object for consistency
   createdPolicy.assigned_reviewer_ids = reviewerIds;
 
-  // Every action of every active automation, enqueued after commit (P-L12).
-  const actions = await getActiveAutomationActionsQuery(
-    organizationId,
-    "policy_added",
-    transaction,
-  );
+  // Every action of every active automation (legacy ones: the first only), after commit (P-L12).
+  const actions = await getEventAutomationActionsQuery(organizationId, "policy_added", transaction);
   if (actions.length > 0) {
     const reviewerNames = await getReviewerNamesQuery(
       createdPolicy.assigned_reviewer_ids,
@@ -555,8 +551,8 @@ export const updatePolicyByIdQuery = async (
     throw new Error("Policy not found after update");
   }
   const updatedPolicy = updatedPolicyResult[0];
-  // Every action of every active automation, enqueued after commit (P-L12).
-  const actions = await getActiveAutomationActionsQuery(
+  // Every action of every active automation (legacy ones: the first only), after commit (P-L12).
+  const actions = await getEventAutomationActionsQuery(
     organizationId,
     "policy_updated",
     transaction,
@@ -601,8 +597,8 @@ export const deletePolicyByIdQuery = async (
     },
   );
 
-  // Every action of every active automation, enqueued after commit (P-L12).
-  const actions = await getActiveAutomationActionsQuery(
+  // Every action of every active automation (legacy ones: the first only), after commit (P-L12).
+  const actions = await getEventAutomationActionsQuery(
     organizationId,
     "policy_deleted",
     transaction,

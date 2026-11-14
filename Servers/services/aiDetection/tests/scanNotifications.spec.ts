@@ -478,6 +478,44 @@ describe("notifyAiDetectionScanFinished", () => {
     expect(highRiskJob.body).toMatch(/^1 new: eval http.*\/ai-detection\/scans\/42$/);
   });
 
+  it("runs every action even of automations flagged legacy_first_action_only", async () => {
+    mockAutomations.mockImplementation(async (_org: number, key: string) =>
+      key === "ai_detection_scan_completed"
+        ? [
+            {
+              automation_id: 1,
+              action_key: "send_email",
+              params: {},
+              order: 1,
+              legacy_first_action_only: true,
+            },
+            {
+              automation_id: 1,
+              action_key: "send_slack",
+              params: {},
+              order: 2,
+              legacy_first_action_only: true,
+            },
+            {
+              automation_id: 2,
+              action_key: "send_email",
+              params: {},
+              order: 1,
+              legacy_first_action_only: true,
+            },
+          ]
+        : [],
+    );
+
+    await notifyAiDetectionScanFinished(42, ORG);
+
+    expect(mockEnqueue.mock.calls.map(([key, data]) => `${key}:${data.automation_id}`)).toEqual([
+      "send_email:1",
+      "send_slack:1",
+      "send_email:2",
+    ]);
+  });
+
   it("logs a failed enqueue with the scan id and still enqueues the other actions", async () => {
     mockAutomations.mockImplementation(async (_org: number, key: string) =>
       key === "ai_detection_scan_completed"

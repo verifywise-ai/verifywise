@@ -445,6 +445,10 @@ CREATE INDEX idx_automation_execution_logs_triggered_at
   ON automation_execution_logs(triggered_at DESC);
 ```
 
+### Dispatch of risk and policy events
+
+Risk and policy triggers run every action of every active automation, ordered by automation id and then action order, enqueued one after another after the save commits (`getEventAutomationActionsQuery`, `enqueueAutomationActions` in `Servers/utils/automation/automationActions.utils.ts`). Automations that existed before every-action dispatch keep their old behaviour until someone edits and saves them: only the event's first action runs (`automations.legacy_first_action_only`, set by migration `20261114200100-legacy-automation-first-action`; the dispatch keeps the single first legacy row by action order, then automation id). Saving the automation in the editor clears the flag; the active toggle does not. New automations run every action. Other triggers (AI Detection) use `getActiveAutomationActionsQuery` and always run every action.
+
 ### Seeded Triggers
 
 26 triggers are seeded in `Servers/database/migrations/20260226234301-public-schema-tables.js`, and 3 AI Detection triggers in `20261112143741-ai-detection-notifications-and-triggers.js` (29 in all):

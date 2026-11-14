@@ -346,7 +346,9 @@ and compliance, People and organization, Industry packs.
 | `policy_updated` | Policy modified |
 | `policy_deleted` | Policy deleted |
 
-Each trigger runs every action of every active automation for it, ordered by automation id and then action order (`getActiveAutomationActionsQuery`, `enqueueAutomationActions`). The jobs are enqueued after the save commits, so a rolled-back save sends nothing. One failing action is logged and does not stop the others. Risk automations and AI Detection scan automations use the same dispatcher.
+Each trigger runs every action of every active automation for it, ordered by automation id and then action order (`getEventAutomationActionsQuery`, `enqueueAutomationActions`). The jobs are enqueued after the save commits, so a rolled-back save sends nothing. One failing action is logged and does not stop the others. Risk automations and AI Detection scan automations use the same dispatcher.
+
+Automations that existed before every-action dispatch keep their old behaviour until someone edits and saves them: only the event's first action runs (`automations.legacy_first_action_only`, set by migration `20261114200100-legacy-automation-first-action`; the dispatch keeps the single first legacy row by action order, then automation id). Saving the automation in the editor clears the flag; the active toggle does not. New automations run every action.
 
 ### Review Reminders
 
