@@ -73,6 +73,24 @@ describe("buildBulkRiskReplacements", () => {
     expect(r.date_and_time).not.toBe("");
   });
 
+  it("decides an owner change on ids, not names, and falls back to the id", () => {
+    const changes = [
+      // Two different users who share a full name.
+      {
+        before: risk(1, { risk_owner: 3, owner_name: "Sam Lee" }),
+        after: risk(1, { risk_owner: 9, owner_name: "Sam Lee" }),
+      },
+      // The new owner's name lookup missed.
+      { before: risk(2), after: risk(2, { risk_owner: 11, owner_name: "" }) },
+    ];
+
+    const r = buildBulkRiskReplacements("risk_updated", changes);
+
+    expect(r.changes_summary).toBe(
+      ["• Risk 1: Owner: Sam Lee → Sam Lee", "• Risk 2: Owner: Ann Old → 11"].join("\n"),
+    );
+  });
+
   it("writes a category line for a bulk category change", () => {
     const changes = [1, 2].map((id) => ({
       before: risk(id, { risk_category: id === 1 ? [] : ["Operational risk"] }),

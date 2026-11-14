@@ -225,10 +225,11 @@ const categoryText = (risk: any): string =>
 /** "• <name>: Owner: A → B; Category: x → y" for what a bulk edit changed. */
 function bulkChangeLine({ before, after }: BulkRiskChange): string {
   const parts: string[] = [];
-  const oldOwner = before.owner_name || before.risk_owner;
-  const newOwner = after.owner_name || after.risk_owner;
-  if (oldOwner !== newOwner) {
-    parts.push(`Owner: ${oldOwner || "(empty)"} → ${newOwner || "(empty)"}`);
+  // Decide on the ids (two users can share a name); names are for display.
+  const ownerId = (risk: any) => (risk.risk_owner ? Number(risk.risk_owner) : null);
+  const ownerLabel = (risk: any) => risk.owner_name || risk.risk_owner || "(empty)";
+  if (ownerId(before) !== ownerId(after)) {
+    parts.push(`Owner: ${ownerLabel(before)} → ${ownerLabel(after)}`);
   }
   const oldCategory = categoryText(before);
   const newCategory = categoryText(after);
