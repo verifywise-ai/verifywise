@@ -94,11 +94,11 @@ describe("loadHomeCounts", () => {
     expect(GATEWAY_COUNT_TIMEOUT_MS).toBeLessThanOrEqual(5000);
   });
 
-  it("reports null without calling or logging when the gateway key is not configured", async () => {
+  it("omits the count without calling or logging when the gateway key is not configured", async () => {
     keyConfigured.mockReturnValue(false);
     const counts = await loadHomeCounts(ctxWith([]));
 
-    expect(counts.promptsBlockedMasked24h).toBeNull();
+    expect(counts).not.toHaveProperty("promptsBlockedMasked24h");
     expect(gateway).not.toHaveBeenCalled();
     expect(logger.error).not.toHaveBeenCalled();
     expect(counts.untreatedRisks).toBe(4);

@@ -57,7 +57,10 @@ export interface HomeQueueResponse {
   items: HomeQueueItem[];
   /** A source the user may not see is absent, never zeroed. */
   sources: Partial<Record<HomeQueueSourceId, HomeQueueSourceResult>>;
-  /** null = the count failed to load; absent = the user may not see it. */
+  /**
+   * null = the count failed to load; absent = the user may not see it, or it
+   * does not apply on this deployment (prompts count without a gateway).
+   */
   counts: Partial<Record<HomeQueueCountId, number | null>>;
 }
 

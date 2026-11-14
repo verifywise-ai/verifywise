@@ -37,7 +37,6 @@ export const de: Record<string, string> = {
 
   // Item titles
   "Approval: {name}": "Freigabe: {name}",
-  "Task overdue: {name}": "Aufgabe überfällig: {name}",
   "Task: {name}": "Aufgabe: {name}",
   "Second review: {name}": "Zweitprüfung: {name}",
   "Intake review: {name}": "Intake-Prüfung: {name}",
@@ -107,7 +106,6 @@ export const fr: Record<string, string> = {
 
   // Item titles
   "Approval: {name}": "Approbation : {name}",
-  "Task overdue: {name}": "Tâche en retard : {name}",
   "Task: {name}": "Tâche : {name}",
   "Second review: {name}": "Deuxième revue : {name}",
   "Intake review: {name}": "Revue de demande : {name}",
@@ -175,7 +173,6 @@ export const es: Record<string, string> = {
 
   // Item titles
   "Approval: {name}": "Aprobación: {name}",
-  "Task overdue: {name}": "Tarea vencida: {name}",
   "Task: {name}": "Tarea: {name}",
   "Second review: {name}": "Segunda revisión: {name}",
   "Intake review: {name}": "Revisión de solicitud: {name}",

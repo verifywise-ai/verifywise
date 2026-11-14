@@ -31,7 +31,8 @@ export const GATEWAY_COUNT_TIMEOUT_MS = 2000;
 
 const GATEWAY_STATS_PATH = "/internal/guardrails/stats?period=24h";
 
-type CountLoader = (ctx: HomeQueueContext) => Promise<number | null>;
+/** A loader resolves to undefined when the count does not apply here: it is then left out. */
+type CountLoader = (ctx: HomeQueueContext) => Promise<number | null | undefined>;
 
 const sqlCount = async (sql: string, replacements: Record<string, unknown>): Promise<number> => {
   const rows = await sequelize.query<{ total: number | string }>(sql, {
@@ -90,9 +91,10 @@ const policyReviewsDue: CountLoader = (ctx) =>
 
 /** Prompts the guardrails blocked or masked in the last 24 hours. */
 const promptsBlockedMasked24h: CountLoader = async (ctx) => {
-  // No internal key means the gateway is not wired up here: skip the call (and
-  // its error log on every Home load) and show a dash.
-  if (!isGatewayInternalKeyConfigured()) return null;
+  // No internal key means there is no gateway on this deployment: omit the
+  // count (a dash would read as a failure). A configured gateway that errors
+  // or times out still reports null.
+  if (!isGatewayInternalKeyConfigured()) return undefined;
   const stats = await aiGatewayRequest("GET", GATEWAY_STATS_PATH, {
     organizationId: ctx.organizationId,
     timeoutMs: GATEWAY_COUNT_TIMEOUT_MS,
@@ -138,7 +140,7 @@ export async function loadHomeCounts(ctx: HomeQueueContext): Promise<HomeQueueRe
   settled.forEach((result, i) => {
     const { id } = visible[i];
     if (result.status === "fulfilled") {
-      counts[id] = result.value;
+      if (result.value !== undefined) counts[id] = result.value;
     } else {
       logger.error(`Home queue count ${id} failed:`, result.reason);
       counts[id] = null;

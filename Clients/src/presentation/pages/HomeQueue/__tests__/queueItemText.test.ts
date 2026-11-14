@@ -56,14 +56,14 @@ describe("queueItemText", () => {
     expect(text.context).toBe("Approval workflows · step 1 · waiting since today");
   });
 
-  it("tasks: overdue title and due date", () => {
+  it("tasks: overdue item keeps the plain title (the chip carries overdue)", () => {
     const text = queueItemText(
       item({ source: "tasks", name: "Update DPIA", dueDate: "2026-11-10", overdue: true }),
       t,
       opts,
     );
     expect(text).toEqual({
-      title: "Task overdue: Update DPIA",
+      title: "Task: Update DPIA",
       context: "Tasks · due Nov 10",
       action: "Open",
     });

@@ -1,5 +1,10 @@
 import { isValidElement, type ReactElement, type ReactNode } from "react";
+import { render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+
+vi.mock("../../../presentation/pages/StartHere", () => ({
+  default: () => <div data-testid="start-here-page" />,
+}));
 
 type RouteProps = { path?: string; element?: ReactNode; children?: unknown };
 
@@ -54,13 +59,11 @@ describe("Home routes", () => {
     const { routes, Navigate } = await loadRoutes("classic");
     expect(findRoute(routes, "/home")).not.toBeNull();
 
-    const element = findRoute(routes, "/start-here")?.props.element as ReactElement<{
-      children: ReactElement;
-    }>;
+    const element = findRoute(routes, "/start-here")?.props.element as ReactElement;
     expect(isValidElement(element)).toBe(true);
     expect(element.type).not.toBe(Navigate);
-    // <Suspense><StartHere /></Suspense>, as before the Home page existed.
-    expect(isValidElement(element.props.children)).toBe(true);
-    expect(element.props.children.type).not.toBe(Navigate);
+    // <Suspense><StartHere /></Suspense>: rendering it must land on Start here.
+    render(element);
+    expect(await screen.findByTestId("start-here-page")).toBeInTheDocument();
   }, 30_000);
 });

@@ -34,6 +34,7 @@ import { getAllProjectRisks } from "../../../application/repository/projectRisk.
 import { getUserById } from "../../../application/repository/user.repository";
 import { storageService, dynamicKeys } from "../../../infrastructure/storage";
 import { getTimeBasedGreeting } from "../../../application/utils/greetings";
+import { useTranslation } from "../../../application/hooks/useTranslation";
 import { WelcomeVideoPlayer } from "../../components/FeatureVideos/WelcomeVideo";
 import { VideoPlayerModal } from "../../components/FeatureVideos/player/VideoPlayerModal";
 import { buildExploreConfig } from "../../components/FeatureVideos/shared/buildExploreConfig";
@@ -343,6 +344,7 @@ interface StartHereContentProps {
  * Start here page and by Home's Get started tab.
  */
 const StartHereContent = ({ embedded = false }: StartHereContentProps) => {
+  const { t } = useTranslation();
   const theme = useTheme();
   const navigate = useNavigate();
   const exploreScrollRef = useRef<HTMLDivElement>(null);
@@ -509,7 +511,7 @@ const StartHereContent = ({ embedded = false }: StartHereContentProps) => {
         <Box sx={{ animation: `${fadeInUp} 0.5s ease-out` }}>
           <Typography variant="h5" sx={{ fontWeight: 400, fontSize: "20px" }}>
             <Box component="span" sx={{ color: brand.primary }}>
-              {greeting.greetingText}
+              {t(greeting.greetingText)}
             </Box>
             <Box component="span" sx={{ color: theme.palette.text.primary }}>
               , {greeting.text.split(", ")[1]}
@@ -524,7 +526,7 @@ const StartHereContent = ({ embedded = false }: StartHereContentProps) => {
               mt: 0.5,
             }}
           >
-            Here is an overview of your AI governance journey
+            {t("Here is an overview of your AI governance journey")}
           </Typography>
         </Box>
 

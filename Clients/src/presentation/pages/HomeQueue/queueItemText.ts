@@ -114,7 +114,7 @@ export function queueItemText(
       break;
     }
     case "tasks":
-      title = fill(t(item.overdue ? "Task overdue: {name}" : "Task: {name}"), { name: item.name });
+      title = fill(t("Task: {name}"), { name: item.name });
       details = [due ?? waiting];
       break;
     case "intake":
