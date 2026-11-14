@@ -55,7 +55,6 @@ export interface DatasetTableProps {
   onDelete?: (id: string) => void;
   paginated?: boolean;
   deletingId?: string | null;
-  hidePagination?: boolean;
   flashRowId?: number | string | null;
   visibleColumns?: Set<string>;
 }

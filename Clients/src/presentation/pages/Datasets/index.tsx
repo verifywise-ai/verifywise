@@ -21,14 +21,11 @@ import {
 } from "../../../domain/interfaces/i.dataset";
 import { DatasetStatus, DatasetType, DataClassification } from "../../../domain/enums/dataset.enum";
 import { IModelInventory } from "../../../domain/interfaces/i.modelInventory";
-import { GroupBy } from "../../components/Table/GroupBy";
 import { FilterColumn } from "../../components/Table/FilterBy";
 import { TableFilter } from "../../components/Table/TableFilter";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
-import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
-import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import DatasetSummary from "../ModelInventory/DatasetSummary";
 import DatasetTable from "../ModelInventory/DatasetTable";
@@ -36,13 +33,6 @@ import NewDataset from "../../components/Modals/NewDataset";
 
 import Alert from "../../components/Alert";
 import { useCan } from "../../../application/hooks/useCan";
-
-const DATASET_GROUP_BY_OPTIONS = [
-  { id: "status", label: "Status" },
-  { id: "type", label: "Type" },
-  { id: "classification", label: "Classification" },
-  { id: "owner", label: "Owner" },
-];
 
 type DatasetColumnKey =
   | "name"
@@ -141,9 +131,6 @@ const Datasets: React.FC = () => {
 
   const { isEnabled } = useExtensions();
 
-  // GroupBy state
-  const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
-
   // Column visibility
   const {
     visibleColumns: datasetVisibleColumns,
@@ -188,21 +175,6 @@ const Datasets: React.FC = () => {
     logic: datasetFilterLogic,
   } = useFilterBy<IDataset>(getDatasetFieldValue);
 
-  // GroupBy - Get group key for a dataset
-  const getDatasetGroupKey = useCallback((dataset: IDataset, field: string): string => {
-    switch (field) {
-      case "status":
-        return dataset.status || "Unknown";
-      case "type":
-        return dataset.type || "Unknown";
-      case "classification":
-        return dataset.classification || "Unknown";
-      case "owner":
-        return dataset.owner || "Unassigned";
-      default:
-        return "Other";
-    }
-  }, []);
   // Same gate as the dataset table (model.edit); the dataset routes need only a login.
   const isCreatingDisabled = !useCan("model.edit");
 
@@ -308,14 +280,6 @@ const Datasets: React.FC = () => {
 
     return data;
   }, [filterDatasetData, datasetData, selectedDatasetStatus, searchTerm]);
-
-  // Apply grouping to filtered datasets
-  const groupedDatasets = useTableGrouping({
-    data: filteredDatasets,
-    groupByField: groupBy,
-    sortOrder: groupSortOrder,
-    getGroupKey: getDatasetGroupKey,
-  });
 
   // Handlers
   const handleNewDatasetClick = () => {
@@ -478,7 +442,6 @@ const Datasets: React.FC = () => {
               data={datasetData}
               getFieldValue={getDatasetFieldValue}
             />
-            <GroupBy options={DATASET_GROUP_BY_OPTIONS} onGroupChange={handleGroupChange} />
             <ColumnSelector
               columns={allDatasetColumns}
               visibleColumns={datasetVisibleColumns}
@@ -513,21 +476,14 @@ const Datasets: React.FC = () => {
       </Stack>
 
       {/* Table */}
-      <GroupedTableView
-        groupedData={groupedDatasets}
-        ungroupedData={filteredDatasets}
-        renderTable={(data, options) => (
-          <DatasetTable
-            data={data}
-            isLoading={isLoading}
-            onEdit={handleEditDataset}
-            onDelete={handleDeleteDataset}
-            deletingId={deletingDatasetId}
-            flashRowId={flashDatasetRowId}
-            hidePagination={options?.hidePagination}
-            visibleColumns={datasetVisibleColumns}
-          />
-        )}
+      <DatasetTable
+        data={filteredDatasets}
+        isLoading={isLoading}
+        onEdit={handleEditDataset}
+        onDelete={handleDeleteDataset}
+        deletingId={deletingDatasetId}
+        flashRowId={flashDatasetRowId}
+        visibleColumns={datasetVisibleColumns}
       />
 
       {isEnabled("dataset-bulk-upload") && (

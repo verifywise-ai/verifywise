@@ -472,7 +472,6 @@ All vendor changes are tracked:
 | `VendorRiskInsights` | Heat map, blast radius, duplicate and coverage sections above the risks table |
 | `RiskTable` | Display vendor risks, including the Inherited by column |
 | `TableWithPlaceholder` | Main vendor list |
-| `GroupedTableView` | Grouped display |
 | `FilterBy` | Dynamic filtering |
 
 ### Hooks

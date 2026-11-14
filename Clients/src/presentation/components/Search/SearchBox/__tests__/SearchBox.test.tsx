@@ -9,10 +9,10 @@ describe("SearchBox", () => {
     expect(screen.getByPlaceholderText("Search this list")).toBeInTheDocument();
   });
 
-  it("uses the 8px search radius and keeps the 34px height", () => {
+  it("uses the 2px control radius and keeps the 34px height", () => {
     const { container } = renderWithProviders(<SearchBox value="" onChange={vi.fn()} />);
     const box = container.firstChild as HTMLElement;
-    expect(box).toHaveStyle("border-radius: 8px");
+    expect(box).toHaveStyle("border-radius: 2px");
     expect(box).toHaveStyle("min-height: 34px");
   });
 
@@ -24,7 +24,7 @@ describe("SearchBox", () => {
     const { container } = render(<ClassicSearchBox value="" onChange={vi.fn()} />);
     window.localStorage.removeItem("vw-ui-style");
     expect(screen.getByPlaceholderText("Search...")).toBeInTheDocument();
-    expect(container.firstChild).not.toHaveStyle("border-radius: 8px");
+    expect(container.firstChild).not.toHaveStyle("border-radius: 2px");
   });
 
   it("renders with custom placeholder", () => {

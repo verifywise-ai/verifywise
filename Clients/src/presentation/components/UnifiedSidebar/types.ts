@@ -38,11 +38,7 @@ export type NavCountKey =
 
 /** Extra blocks an item renders inside its open section, kept from today's module sidebars. */
 export type NavExtra =
-  | "evalsProjectSelector"
-  | "evalsRecentExperiments"
-  | "evalsRecentProjects"
-  | "recentScans"
-  | "recentTools";
+  "evalsProjectSelector" | "evalsRecentExperiments" | "evalsRecentProjects" | "recentScans";
 
 export interface NavSubItem {
   id: string;

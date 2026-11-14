@@ -125,7 +125,6 @@ const DatasetTable: React.FC<DatasetTableProps> = ({
   onDelete,
   paginated = true,
   deletingId,
-  hidePagination = false,
   flashRowId,
   visibleColumns,
 }) => {
@@ -431,7 +430,7 @@ const DatasetTable: React.FC<DatasetTableProps> = ({
             );
           })}
         </TableBody>
-        {paginated && !hidePagination && (
+        {paginated && (
           <TableFooter>
             <TableRow
               sx={{

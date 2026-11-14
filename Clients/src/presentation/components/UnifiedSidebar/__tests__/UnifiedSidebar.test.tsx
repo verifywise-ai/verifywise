@@ -591,17 +591,16 @@ describe("UnifiedSidebar: LLM Evals", () => {
 });
 
 describe("UnifiedSidebar: AI Detection recents", () => {
-  it("renders recent scans and recent tools inside AI Detection and opens them", () => {
+  it("renders recent scans inside AI Detection, opens them, and shows no recent tools", () => {
     detectionCtx = { recentScans: [{ id: 5, name: "acme/api" }] };
     shadowCtx = { recentTools: [{ id: 9, name: "ChatGPT" }] };
     renderAt("/shadow-ai/insights");
     const section = screen.getByTestId("nav-section-ai-detection");
     expect(within(section).getByText("Recent scans")).toBeInTheDocument();
-    expect(within(section).getByText("Recent tools")).toBeInTheDocument();
+    expect(within(section).queryByText("Recent tools")).not.toBeInTheDocument();
+    expect(within(section).queryByText("ChatGPT")).not.toBeInTheDocument();
     fireEvent.click(within(section).getByText("acme/api"));
     expect(location()).toBe("/ai-detection/scans/5");
-    fireEvent.click(within(section).getByText("ChatGPT"));
-    expect(location()).toBe("/shadow-ai/tools/9");
   });
 
   it("leaves out empty recents", () => {

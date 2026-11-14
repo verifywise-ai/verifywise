@@ -39,9 +39,6 @@ import PolicyStatusCard from "./PolicyStatusCard";
 import { ExportMenu } from "../../components/Table/ExportMenu";
 import useUsers from "../../../application/hooks/useUsers";
 import { useCanCheck, useCan } from "../../../application/hooks/useCan";
-import { GroupBy } from "../../components/Table/GroupBy";
-import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
-import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { FilterColumn } from "../../components/Table/FilterBy";
 import { TableFilter } from "../../components/Table/TableFilter";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
@@ -154,9 +151,6 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
   const [alert, setAlert] = useState<AlertProps | null>(null);
   const [showAlert, setShowAlert] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
-
-  // GroupBy state
-  const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
 
   // Navigate to editor page when coming from "Add new..." dropdown
   useEffect(() => {
@@ -491,33 +485,6 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
     return result;
   }, [filterPolicyData, policies, selectedStatus, searchTerm, folderPolicyIds]);
 
-  // Define how to get the group key for each policy
-  const getPolicyGroupKey = useCallback(
-    (policy: PolicyManagerModel, field: string): string => {
-      switch (field) {
-        case "status":
-          return policy.status || "Unknown";
-        case "author":
-          if (policy.author_id) {
-            const user = users.find((u) => u.id === policy.author_id);
-            return user ? `${user.name} ${user.surname}`.trim() : "Unknown";
-          }
-          return "Unknown";
-        default:
-          return "Other";
-      }
-    },
-    [users],
-  );
-
-  // Apply grouping to filtered policies
-  const groupedPolicies = useTableGrouping({
-    data: filteredPolicies,
-    groupByField: groupBy,
-    sortOrder: groupSortOrder,
-    getGroupKey: getPolicyGroupKey,
-  });
-
   const standardTableColumns = useMemo(
     (): StandardColumn[] =>
       POLICY_TABLE_COLUMNS.filter((col) => col.alwaysVisible || visibleColumns.has(col.key)).map(
@@ -634,7 +601,7 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
           spacing={4}
           sx={{ width: "100%" }}
         >
-          {/* Left side: Filter + Group + Search together */}
+          {/* Left side: Filter + Search together */}
           <Stack direction="row" spacing={2} alignItems="center">
             {/* FilterBy */}
             <div data-joyride-id="policy-status-filter">
@@ -647,15 +614,6 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
                 getFieldValue={getPolicyFieldValue}
               />
             </div>
-
-            {/* Group By */}
-            <GroupBy
-              options={[
-                { id: "status", label: "Status" },
-                { id: "author", label: "Author" },
-              ]}
-              onGroupChange={handleGroupChange}
-            />
 
             {/* Column Selector */}
             <ColumnSelector
@@ -815,36 +773,29 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
                 </TableEmptyStateLayout>
               }
             >
-              <GroupedTableView
-                groupedData={groupedPolicies}
-                ungroupedData={filteredPolicies}
-                renderTable={(data, options) => (
-                  <PolicyTable
-                    data={data}
-                    onOpen={handleOpen}
-                    onDelete={handleDelete}
-                    onLinkedObjects={handleLinkedObject}
-                    onAssignToFolder={canEditPolicies ? handleAssignToFolder : undefined}
-                    onSaveAsTemplate={canManageTemplates ? handleSaveAsTemplate : undefined}
-                    hidePagination={options?.hidePagination}
-                    flashRowId={flashRowId}
-                    visibleColumns={visibleColumns}
-                    canRunBulkActions={canEditPolicies}
-                    onBulkActionSuccess={(action, count) => {
-                      handleAlert({
-                        variant: "success",
-                        title:
-                          action === "archive"
-                            ? `${count} polic${count === 1 ? "y" : "ies"} archived`
-                            : action === "set_reviewer"
-                              ? `Reviewer assigned to ${count} polic${count === 1 ? "y" : "ies"}`
-                              : `Tags updated on ${count} polic${count === 1 ? "y" : "ies"}`,
-                        body: "",
-                        setAlert,
-                      });
-                    }}
-                  />
-                )}
+              <PolicyTable
+                data={filteredPolicies}
+                onOpen={handleOpen}
+                onDelete={handleDelete}
+                onLinkedObjects={handleLinkedObject}
+                onAssignToFolder={canEditPolicies ? handleAssignToFolder : undefined}
+                onSaveAsTemplate={canManageTemplates ? handleSaveAsTemplate : undefined}
+                flashRowId={flashRowId}
+                visibleColumns={visibleColumns}
+                canRunBulkActions={canEditPolicies}
+                onBulkActionSuccess={(action, count) => {
+                  handleAlert({
+                    variant: "success",
+                    title:
+                      action === "archive"
+                        ? `${count} polic${count === 1 ? "y" : "ies"} archived`
+                        : action === "set_reviewer"
+                          ? `Reviewer assigned to ${count} polic${count === 1 ? "y" : "ies"}`
+                          : `Tags updated on ${count} polic${count === 1 ? "y" : "ies"}`,
+                    body: "",
+                    setAlert,
+                  });
+                }}
               />
             </ListStateWrapper>
           </Box>

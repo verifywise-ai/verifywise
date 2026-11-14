@@ -68,7 +68,6 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
   onArchive,
   paginated = true,
   archivedId,
-  hidePagination = false,
   visibleColumns,
   jiraLinks,
 }) => {
@@ -165,12 +164,7 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
       <TableBody>
         {sortedRows?.length > 0
           ? sortedRows
-              .slice(
-                hidePagination ? 0 : validPage * rowsPerPage,
-                hidePagination
-                  ? Math.min(sortedRows.length, 100)
-                  : validPage * rowsPerPage + rowsPerPage,
-              )
+              .slice(validPage * rowsPerPage, validPage * rowsPerPage + rowsPerPage)
               .map((incident) => (
                 <TableRow
                   key={incident.id}
@@ -329,7 +323,6 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
       isVisible,
       sortConfig.key,
       visibleTableColumns.length,
-      hidePagination,
       formatDate,
     ],
   );
@@ -386,7 +379,7 @@ const IncidentTable: React.FC<IncidentTableProps> = ({
           onSort={handleSort}
         />
         {tableBody}
-        {paginated && !hidePagination && (
+        {paginated && (
           <StandardTablePagination
             totalCount={totalCount}
             page={validPage}

@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, Suspense, useCallback, useEffect, useRef, useMemo } from "react";
+import React, { useState, Suspense, useEffect, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router";
 import { Box, Typography, TableCell, Stack, Alert as MuiAlert } from "@mui/material";
 import Toggle from "../../../components/Inputs/Toggle";
@@ -27,9 +27,6 @@ import { handleAlert } from "../../../../application/tools/alertUtils";
 import { AITrustCentreOverviewData } from "../../../../application/hooks/useAITrustCentreOverviewQuery";
 import { Subprocessor } from "../../../../domain/interfaces/i.aiTrustCenter";
 import { TABLE_COLUMNS, WARNING_MESSAGES } from "./constants";
-import { GroupBy } from "../../../components/Table/GroupBy";
-import { useTableGrouping, useGroupByState } from "../../../../application/hooks/useTableGrouping";
-import { GroupedTableView } from "../../../components/Table/GroupedTableView";
 import { ColumnSelector } from "../../../components/Table/ColumnSelector";
 import {
   useColumnVisibility,
@@ -200,9 +197,6 @@ const AITrustCenterSubprocessors: React.FC = () => {
   const deleteSubprocessorMutation = useDeleteAITrustCentreSubprocessorMutation();
   const theme = useTheme();
   const styles = useStyles(theme);
-
-  // GroupBy state
-  const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
 
   // Column visibility
   const { visibleColumns, allColumns, toggleColumn, resetToDefaults } =
@@ -473,29 +467,6 @@ const AITrustCenterSubprocessors: React.FC = () => {
     }
   };
 
-  // Define how to get the group key for each subprocessor
-  const getSubprocessorGroupKey = useCallback(
-    (subprocessor: Subprocessor, field: string): string => {
-      switch (field) {
-        case "location":
-          return subprocessor.location || "Unknown";
-        case "purpose":
-          return subprocessor.purpose || "Unknown";
-        default:
-          return "Other";
-      }
-    },
-    [],
-  );
-
-  // Apply grouping to subprocessors
-  const groupedSubprocessors = useTableGrouping({
-    data: subprocessors || [],
-    groupByField: groupBy,
-    sortOrder: groupSortOrder,
-    getGroupKey: getSubprocessorGroupKey,
-  });
-
   const visibleTableColumns = useMemo(
     () => TABLE_COLUMNS.filter((col) => visibleColumns.has(col.id as SubprocessorColumn)),
     [visibleColumns],
@@ -516,13 +487,6 @@ const AITrustCenterSubprocessors: React.FC = () => {
         <Box sx={styles.subprocessorsHeader}>
           <Box sx={styles.headerControls}>
             <Box sx={{ display: "flex", gap: "8px", alignItems: "center" }}>
-              <GroupBy
-                options={[
-                  { id: "location", label: "Location" },
-                  { id: "purpose", label: "Purpose" },
-                ]}
-                onGroupChange={handleGroupChange}
-              />
               <ColumnSelector
                 columns={allColumns}
                 visibleColumns={visibleColumns}
@@ -581,32 +545,25 @@ const AITrustCenterSubprocessors: React.FC = () => {
               />
             </Stack>
           ) : (
-            <GroupedTableView
-              groupedData={groupedSubprocessors}
-              ungroupedData={subprocessors || []}
-              renderTable={(data, options) => (
-                <AITrustCenterTable
-                  data={data}
-                  columns={visibleTableColumns}
-                  isLoading={subprocessorsLoading}
-                  paginated={true}
-                  disabled={!formData?.info?.subprocessor_visible}
-                  emptyStateText="No subprocessors found. Add your first subprocessor to get started."
-                  emptyStateIcon={Users}
-                  renderRow={(subprocessor, sortConfig) => (
-                    <SubprocessorTableRow
-                      key={subprocessor.id}
-                      subprocessor={subprocessor}
-                      onDelete={handleDelete}
-                      onEdit={handleEdit}
-                      sortConfig={sortConfig}
-                      visibleColumnIds={visibleColumns}
-                    />
-                  )}
-                  tableId="subprocessors-table"
-                  hidePagination={options?.hidePagination}
+            <AITrustCenterTable
+              data={subprocessors || []}
+              columns={visibleTableColumns}
+              isLoading={subprocessorsLoading}
+              paginated={true}
+              disabled={!formData?.info?.subprocessor_visible}
+              emptyStateText="No subprocessors found. Add your first subprocessor to get started."
+              emptyStateIcon={Users}
+              renderRow={(subprocessor, sortConfig) => (
+                <SubprocessorTableRow
+                  key={subprocessor.id}
+                  subprocessor={subprocessor}
+                  onDelete={handleDelete}
+                  onEdit={handleEdit}
+                  sortConfig={sortConfig}
+                  visibleColumnIds={visibleColumns}
                 />
               )}
+              tableId="subprocessors-table"
             />
           )}
         </Box>

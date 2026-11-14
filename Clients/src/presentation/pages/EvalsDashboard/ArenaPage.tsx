@@ -25,7 +25,6 @@ import { DEFAULT_JUDGE } from "../../utils/providers";
 import ArenaResultsPage from "./ArenaResultsPage";
 import { FilterCondition, FilterColumn } from "../../components/Table/FilterBy";
 import { TableFilter } from "../../components/Table/TableFilter";
-import { GroupBy, GroupByOption } from "../../components/Table/GroupBy";
 import {
   createArenaComparison,
   listArenaComparisons,
@@ -156,15 +155,10 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
   // Configured providers (API keys)
   const [configuredProviders, setConfiguredProviders] = useState<LLMApiKey[]>([]);
 
-  // Filter, Search, Group state
+  // Filter and search state
   const [searchQuery, setSearchQuery] = useState("");
   const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
   const [filterLogic, setFilterLogic] = useState<"and" | "or">("and");
-  // Group state - values reserved for future grouping feature
-
-  const [_groupBy, setGroupBy] = useState<string | null>(null);
-
-  const [_groupSortOrder, setGroupSortOrder] = useState<"asc" | "desc">("asc");
 
   // Filter columns for arena battles
   const filterColumns: FilterColumn[] = [
@@ -181,9 +175,6 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
     },
     { id: "name", label: "Battle name", type: "text" },
   ];
-
-  // Group by options
-  const groupByOptions: GroupByOption[] = [{ id: "status", label: "Status" }];
 
   // Wizard step state
   const [activeStep, setActiveStep] = useState(0);
@@ -662,13 +653,6 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
                 }}
                 data={comparisons}
                 getFieldValue={getComparisonFieldValue}
-              />
-              <GroupBy
-                options={groupByOptions}
-                onGroupChange={(group, order) => {
-                  setGroupBy(group);
-                  setGroupSortOrder(order);
-                }}
               />
               <SearchBox
                 placeholder="Search battles..."

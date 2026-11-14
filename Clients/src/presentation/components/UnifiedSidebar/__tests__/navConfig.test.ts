@@ -135,7 +135,7 @@ describe("NAV_GROUPS: nothing lost", () => {
       "evalsRecentExperiments",
       "evalsRecentProjects",
     ]);
-    expect(findItem("ai-detection").extras).toEqual(["recentScans", "recentTools"]);
+    expect(findItem("ai-detection").extras).toEqual(["recentScans"]);
   });
 
   it("has a heading and icon colour for every group", () => {

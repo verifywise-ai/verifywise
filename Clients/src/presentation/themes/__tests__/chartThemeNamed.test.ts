@@ -275,11 +275,9 @@ const CLASSIC_ORIGINALS: [string, string][] = [
   ["riskHistory.noRisk", "#079455"],
   ["riskHistory.veryLow", "#84CC16"],
   ["riskHistory.low", "#FCD34D"],
-  // FilterBadge in Table/FilterBy.tsx and GroupBadge in Table/GroupBy.tsx at ba592b3ec
+  // FilterBadge in Table/FilterBy.tsx at ba592b3ec
   ["countBadge.filter.bg", "#dbeafe"],
   ["countBadge.filter.text", "#1e40af"],
-  ["countBadge.group.bg", "#dcfce7"],
-  ["countBadge.group.text", "#166534"],
   // connection footer in components/NotificationBell at ba592b3ec
   ["connectionNotice.bg", "#FEF3C7"],
   ["connectionNotice.text", "#92400E"],

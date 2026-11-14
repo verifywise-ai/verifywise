@@ -382,15 +382,11 @@ export const chartTheme = {
     veryLow: byLook("#84CC16", riskMark.veryLow),
     low: byLook("#FCD34D", riskMark.low),
   },
-  /** Count badges on the classic Filter and Group buttons. */
+  /** Count badge on the classic Filter button. */
   countBadge: {
     filter: {
       bg: byLook("#dbeafe", statusTokens.info.bg),
       text: byLook("#1e40af", statusTokens.info.text),
-    },
-    group: {
-      bg: byLook("#dcfce7", statusTokens.success.bg),
-      text: byLook("#166534", statusTokens.success.text),
     },
   },
   /** "Reconnecting" footer in the notification panel. */

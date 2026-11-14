@@ -128,17 +128,15 @@ describe("EvidenceHubTable", () => {
     expect(rows[0]).toHaveTextContent("Change log");
   });
 
-  it("hides pagination and honours visibleColumns", () => {
+  it("honours visibleColumns", () => {
     renderWithProviders(
       <EvidenceHubTable
         data={[evidence1]}
         isLoading={false}
         modelInventoryData={modelInventoryData}
-        hidePagination
         visibleColumns={new Set(["evidence_name", "evidence_type"])}
       />,
     );
-    expect(screen.queryByText("Rows per page")).not.toBeInTheDocument();
     expect(screen.queryByText("REVIEWER")).not.toBeInTheDocument();
   });
 });

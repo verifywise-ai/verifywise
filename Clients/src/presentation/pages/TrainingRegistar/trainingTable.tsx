@@ -117,7 +117,6 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
   onEdit,
   onDelete,
   paginated = true,
-  hidePagination = false,
   visibleColumns,
   assignmentSummaries,
   onOpenAssignments,
@@ -204,12 +203,7 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
       <TableBody>
         {sortedRows?.length > 0 ? (
           sortedRows
-            .slice(
-              hidePagination ? 0 : validPage * rowsPerPage,
-              hidePagination
-                ? Math.min(sortedRows.length, 100)
-                : validPage * rowsPerPage + rowsPerPage,
-            )
+            .slice(validPage * rowsPerPage, validPage * rowsPerPage + rowsPerPage)
             // Defensive: Filter out invalid records early (fail fast)
             .filter((training) => {
               const isValid = training.id !== undefined && training.id !== null;
@@ -383,7 +377,6 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
       isVisible,
       visibleTableColumns,
       sortConfig.key,
-      hidePagination,
       assignmentSummaries,
       onOpenAssignments,
       canEditAssignments,
@@ -442,7 +435,7 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
           onSort={handleSort}
         />
         {tableBody}
-        {paginated && !hidePagination && (
+        {paginated && (
           <StandardTablePagination
             totalCount={totalCount}
             page={validPage}

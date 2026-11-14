@@ -36,9 +36,6 @@ import { VendorModel } from "../../../domain/models/Common/vendor/vendor.model";
 import { ExistingRisk } from "../../../domain/interfaces/i.vendor";
 import TabBar from "../../components/TabBar";
 import { ReviewStatus } from "../../../domain/enums/status.enum";
-import { GroupBy } from "../../components/Table/GroupBy";
-import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
-import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { ExportMenu } from "../../components/Table/ExportMenu";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { FilterColumn, FilterCondition } from "../../components/Table/FilterBy";
@@ -109,16 +106,6 @@ const Vendors = () => {
   const [filterStatus, setFilterStatus] = useState<"active" | "deleted" | "all">("active");
   const [searchQuery, setSearchQuery] = useState<string>("");
   const [risksSearchTerm, setRisksSearchTerm] = useState<string>("");
-
-  // GroupBy state - vendors tab
-  const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
-
-  // GroupBy state - risks tab
-  const {
-    groupBy: groupByRisk,
-    groupSortOrder: groupSortOrderRisk,
-    handleGroupChange: handleGroupChangeRisk,
-  } = useGroupByState();
 
   const {
     visibleColumns: vendorVisibleColumns,
@@ -906,75 +893,6 @@ const Vendors = () => {
     return filtered;
   }, [filterVendorData, vendors, searchQuery]);
 
-  // Define how to get the group key for each vendor
-  const getVendorGroupKey = (vendor: VendorModel, field: string): string | string[] => {
-    const statusMap: Record<ReviewStatus, string> = {
-      [ReviewStatus.NotStarted]: "Not started",
-      [ReviewStatus.InReview]: "In review",
-      [ReviewStatus.Reviewed]: "Reviewed",
-      [ReviewStatus.RequiresFollowUp]: "Requires follow-up",
-    };
-
-    switch (field) {
-      case "review_status":
-        return statusMap[vendor.review_status as ReviewStatus] || "Unknown";
-      case "data_sensitivity":
-        return vendor.data_sensitivity || "Unknown";
-      case "business_criticality":
-        return vendor.business_criticality || "Unknown";
-      case "assignee":
-        if (vendor.assignee) {
-          const user = users.find((u) => u.id === Number(vendor.assignee));
-          return user ? `${user.name} ${user.surname}`.trim() : "Unknown";
-        }
-        return "Unassigned";
-      case "reviewer":
-        if (vendor.reviewer) {
-          const user = users.find((u) => u.id === Number(vendor.reviewer));
-          return user ? `${user.name} ${user.surname}`.trim() : "Unknown";
-        }
-        return "No Reviewer";
-      default:
-        return "Other";
-    }
-  };
-
-  // Apply grouping to filtered vendors
-  const groupedVendors = useTableGrouping({
-    data: filteredVendors,
-    groupByField: groupBy,
-    sortOrder: groupSortOrder,
-    getGroupKey: getVendorGroupKey,
-  });
-
-  // Define how to get the group key for each vendor risk
-  const getVendorRiskGroupKey = (risk: any, field: string): string | string[] => {
-    switch (field) {
-      case "risk_severity":
-        return risk.risk_severity || "Unknown";
-      case "risk_level":
-        return risk.risk_level || "Unknown";
-      case "vendor_name":
-        return risk.vendor_name || "Unknown Vendor";
-      case "action_owner":
-        if (risk.action_owner) {
-          const user = users.find((u) => u.id === Number(risk.action_owner));
-          return user ? `${user.name} ${user.surname}`.trim() : "Unknown";
-        }
-        return "Unassigned";
-      default:
-        return "Other";
-    }
-  };
-
-  // Apply grouping to vendor risks
-  const groupedVendorRisks = useTableGrouping({
-    data: filteredVendorRisks,
-    groupByField: groupByRisk,
-    sortOrder: groupSortOrderRisk,
-    getGroupKey: getVendorRiskGroupKey,
-  });
-
   // Define export columns for vendor table
   const exportColumns = useMemo(() => {
     return [
@@ -1043,24 +961,17 @@ const Vendors = () => {
     });
   }, [vendorRisks, vendors, users]);
 
-  // GroupedTableView renders the table's own placeholder for an empty list, so the
+  // The table renders its own placeholder for an empty list, so the
   // same element serves as the empty state and the table stays mounted (keeping
   // its page and sort) when a search briefly matches nothing.
   const vendorList = (
-    <GroupedTableView
-      groupedData={groupedVendors}
-      ungroupedData={filteredVendors}
-      renderTable={(data, options) => (
-        <TableWithPlaceholder
-          vendors={data}
-          users={users}
-          onDelete={handleDeleteVendor}
-          onEdit={handleEditVendor}
-          hidePagination={options?.hidePagination}
-          vendorRisks={vendorRisks}
-          visibleColumns={vendorVisibleColumns}
-        />
-      )}
+    <TableWithPlaceholder
+      vendors={filteredVendors}
+      users={users}
+      onDelete={handleDeleteVendor}
+      onEdit={handleEditVendor}
+      vendorRisks={vendorRisks}
+      visibleColumns={vendorVisibleColumns}
     />
   );
 
@@ -1189,19 +1100,6 @@ const Vendors = () => {
                   data={vendors}
                   getFieldValue={getVendorFieldValue}
                 />
-                <GroupBy
-                  options={[
-                    { id: "review_status", label: "Status" },
-                    { id: "assignee", label: "Assignee" },
-                    { id: "reviewer", label: "Reviewer" },
-                    { id: "data_sensitivity", label: "Data sensitivity" },
-                    {
-                      id: "business_criticality",
-                      label: "Business criticality",
-                    },
-                  ]}
-                  onGroupChange={handleGroupChange}
-                />
                 <ColumnSelector
                   columns={allVendorColumns}
                   visibleColumns={vendorVisibleColumns}
@@ -1270,15 +1168,6 @@ const Vendors = () => {
                   defaultLogic={vendorRiskFilterLogic}
                   data={vendorRisks}
                   getFieldValue={getVendorRiskFieldValue}
-                />
-                <GroupBy
-                  options={[
-                    { id: "risk_severity", label: "Risk severity" },
-                    { id: "risk_level", label: "Risk level" },
-                    { id: "vendor_name", label: "Vendor" },
-                    { id: "action_owner", label: "Action owner" },
-                  ]}
-                  onGroupChange={handleGroupChangeRisk}
                 />
                 <ColumnSelector
                   columns={allVendorRiskColumns}
@@ -1350,23 +1239,16 @@ const Vendors = () => {
                 onSelectCell={handleHeatCell}
                 onOpenRisk={(id) => handleEditRisk(id)}
               />
-              <GroupedTableView
-                groupedData={groupedVendorRisks}
-                ungroupedData={filteredVendorRisks}
-                renderTable={(data, options) => (
-                  <RiskTable
-                    users={users}
-                    vendors={vendors}
-                    vendorRisks={data}
-                    onDelete={handleDeleteRisk}
-                    onEdit={handleEditRisk}
-                    isDeletingAllowed={isDeletingAllowed}
-                    hidePagination={options?.hidePagination}
-                    visibleColumns={vendorRiskVisibleColumns}
-                    exposure={exposureById}
-                    onOpenLinks={(id) => handleEditRisk(id, "linked-risks")}
-                  />
-                )}
+              <RiskTable
+                users={users}
+                vendors={vendors}
+                vendorRisks={filteredVendorRisks}
+                onDelete={handleDeleteRisk}
+                onEdit={handleEditRisk}
+                isDeletingAllowed={isDeletingAllowed}
+                visibleColumns={vendorRiskVisibleColumns}
+                exposure={exposureById}
+                onOpenLinks={(id) => handleEditRisk(id, "linked-risks")}
               />
             </Stack>
           )}

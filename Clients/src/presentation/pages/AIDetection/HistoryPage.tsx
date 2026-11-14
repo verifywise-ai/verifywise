@@ -46,11 +46,8 @@ import singleTheme from "../../themes/v1SingleTheme";
 import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import { FilterColumn } from "../../components/Table/FilterBy";
 import { TableFilter } from "../../components/Table/TableFilter";
-import { GroupBy } from "../../components/Table/GroupBy";
 import SearchBox from "../../components/Search/SearchBox";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
-import { useGroupByState, useTableGrouping } from "../../../application/hooks/useTableGrouping";
-import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import {
   getScans,
   deleteScan,
@@ -213,12 +210,6 @@ const FILTER_COLUMNS: FilterColumn[] = [
   },
 ];
 
-// Group by options
-const GROUP_BY_OPTIONS = [
-  { id: "status", label: "Status" },
-  { id: "triggered_by", label: "Triggered by" },
-];
-
 export default function HistoryPage() {
   const theme = useTheme();
   const navigate = useNavigate();
@@ -252,9 +243,6 @@ export default function HistoryPage() {
     }
     return { key: "", direction: null };
   });
-
-  // GroupBy state
-  const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
 
   // FilterBy - Field value getter
   const getScanFieldValue = useCallback(
@@ -521,26 +509,6 @@ export default function HistoryPage() {
     });
   }, [filteredScans, sortConfig]);
 
-  // Define how to get the group key for each scan
-  const getScanGroupKey = (scan: Scan, field: string): string | string[] => {
-    switch (field) {
-      case "status":
-        return STATUS_CONFIG[scan.status] || "Unknown";
-      case "triggered_by":
-        return `${scan.triggered_by.name}${scan.triggered_by.surname ? ` ${scan.triggered_by.surname}` : ""}`;
-      default:
-        return "Other";
-    }
-  };
-
-  // Apply grouping to sorted scans
-  const groupedScans = useTableGrouping({
-    data: sortedScans,
-    groupByField: groupBy,
-    sortOrder: groupSortOrder,
-    getGroupKey: getScanGroupKey,
-  });
-
   const columns = [
     {
       id: "repository",
@@ -771,7 +739,7 @@ export default function HistoryPage() {
         ) : undefined
       }
     >
-      {/* Toolbar with Filter, Group, Search */}
+      {/* Toolbar with filter and search */}
       <Stack direction="row" gap={2} alignItems="center" sx={{ mb: 2 }}>
         <TableFilter
           columns={FILTER_COLUMNS}
@@ -781,7 +749,6 @@ export default function HistoryPage() {
           data={scans}
           getFieldValue={getScanFieldValue}
         />
-        <GroupBy options={GROUP_BY_OPTIONS} onGroupChange={handleGroupChange} />
         <SearchBox
           placeholder="Search scans..."
           value={searchQuery}
@@ -791,132 +758,120 @@ export default function HistoryPage() {
       </Stack>
 
       {/* Table */}
-      <GroupedTableView
-        groupedData={groupedScans}
-        ungroupedData={sortedScans}
-        renderTable={(data, options) => (
-          <TableContainer
-            sx={{
-              backgroundColor: palette.background.main,
-              borderRadius: radiusPx.sm,
-              overflow: "hidden",
-            }}
-          >
-            <Table sx={singleTheme.tableStyles.primary.frame}>
-              <SortableTableHead
-                columns={TABLE_COLUMNS}
-                sortConfig={sortConfig}
-                onSort={handleSort}
-              />
-              <TableBody sx={singleTheme.tableStyles.primary.body}>
-                {data.map((scan) => (
-                  <TableRow
-                    key={scan.id}
-                    onClick={() => {
-                      if (scan.status === "completed" || scan.status === "failed") {
-                        navigate(`/ai-detection/scans/${scan.id}`);
-                      }
-                    }}
-                    sx={{
-                      ...singleTheme.tableStyles.primary.body.row,
-                      cursor: ["completed", "failed"].includes(scan.status) ? "pointer" : "default",
-                    }}
-                  >
-                    {columns.map((col) => (
-                      <TableCell key={col.id} sx={singleTheme.tableStyles.primary.body.cell}>
-                        {col.render(scan)}
-                      </TableCell>
-                    ))}
-                  </TableRow>
+      <TableContainer
+        sx={{
+          backgroundColor: palette.background.main,
+          borderRadius: radiusPx.sm,
+          overflow: "hidden",
+        }}
+      >
+        <Table sx={singleTheme.tableStyles.primary.frame}>
+          <SortableTableHead columns={TABLE_COLUMNS} sortConfig={sortConfig} onSort={handleSort} />
+          <TableBody sx={singleTheme.tableStyles.primary.body}>
+            {sortedScans.map((scan) => (
+              <TableRow
+                key={scan.id}
+                onClick={() => {
+                  if (scan.status === "completed" || scan.status === "failed") {
+                    navigate(`/ai-detection/scans/${scan.id}`);
+                  }
+                }}
+                sx={{
+                  ...singleTheme.tableStyles.primary.body.row,
+                  cursor: ["completed", "failed"].includes(scan.status) ? "pointer" : "default",
+                }}
+              >
+                {columns.map((col) => (
+                  <TableCell key={col.id} sx={singleTheme.tableStyles.primary.body.cell}>
+                    {col.render(scan)}
+                  </TableCell>
                 ))}
-              </TableBody>
-              {!options?.hidePagination && (
-                <TableFooter>
-                  <TableRow
-                    sx={{
-                      "& .MuiTableCell-root.MuiTableCell-footer": {
-                        paddingX: theme.spacing(8),
-                        paddingY: theme.spacing(4),
+              </TableRow>
+            ))}
+          </TableBody>
+          <TableFooter>
+            <TableRow
+              sx={{
+                "& .MuiTableCell-root.MuiTableCell-footer": {
+                  paddingX: theme.spacing(8),
+                  paddingY: theme.spacing(4),
+                },
+              }}
+            >
+              <TableCell
+                sx={{
+                  paddingX: theme.spacing(2),
+                  fontSize: 12,
+                  opacity: 0.7,
+                }}
+              >
+                Showing {getRange()} of {total} scan(s)
+              </TableCell>
+              <TablePagination
+                count={total}
+                page={page}
+                onPageChange={handleChangePage}
+                rowsPerPage={rowsPerPage}
+                rowsPerPageOptions={[5, 10, 15, 25]}
+                onRowsPerPageChange={handleChangeRowsPerPage}
+                ActionsComponent={(props) => <TablePaginationActions {...props} />}
+                labelRowsPerPage="Rows per page"
+                labelDisplayedRows={({ page: currentPage, count }) =>
+                  pageOfLabel(currentPage + 1, Math.max(1, Math.ceil(count / rowsPerPage)))
+                }
+                slotProps={{
+                  select: {
+                    MenuProps: {
+                      keepMounted: true,
+                      PaperProps: {
+                        className: "pagination-dropdown",
+                        sx: {
+                          mt: 0,
+                          mb: theme.spacing(2),
+                        },
                       },
-                    }}
-                  >
-                    <TableCell
-                      sx={{
-                        paddingX: theme.spacing(2),
-                        fontSize: 12,
-                        opacity: 0.7,
-                      }}
-                    >
-                      Showing {getRange()} of {total} scan(s)
-                    </TableCell>
-                    <TablePagination
-                      count={total}
-                      page={page}
-                      onPageChange={handleChangePage}
-                      rowsPerPage={rowsPerPage}
-                      rowsPerPageOptions={[5, 10, 15, 25]}
-                      onRowsPerPageChange={handleChangeRowsPerPage}
-                      ActionsComponent={(props) => <TablePaginationActions {...props} />}
-                      labelRowsPerPage="Rows per page"
-                      labelDisplayedRows={({ page: currentPage, count }) =>
-                        pageOfLabel(currentPage + 1, Math.max(1, Math.ceil(count / rowsPerPage)))
-                      }
-                      slotProps={{
-                        select: {
-                          MenuProps: {
-                            keepMounted: true,
-                            PaperProps: {
-                              className: "pagination-dropdown",
-                              sx: {
-                                mt: 0,
-                                mb: theme.spacing(2),
-                              },
-                            },
-                            transformOrigin: {
-                              vertical: "bottom",
-                              horizontal: "left",
-                            },
-                            anchorOrigin: {
-                              vertical: "top",
-                              horizontal: "left",
-                            },
-                            sx: { mt: theme.spacing(-2) },
-                          },
-                          inputProps: { id: "pagination-dropdown" },
-                          IconComponent: SelectorVertical,
-                          sx: {
-                            "ml": theme.spacing(4),
-                            "mr": theme.spacing(12),
-                            "minWidth": theme.spacing(20),
-                            "textAlign": "left",
-                            "&.Mui-focused > div": {
-                              backgroundColor: theme.palette.background.main,
-                            },
-                          },
-                        },
-                      }}
-                      sx={{
-                        "mt": theme.spacing(6),
-                        "color": theme.palette.text.secondary,
-                        "& .MuiSelect-icon": {
-                          width: "24px",
-                          height: "fit-content",
-                        },
-                        "& .MuiSelect-select": {
-                          width: theme.spacing(10),
-                          borderRadius: theme.shape.borderRadius,
-                          border: `1px solid ${theme.palette.border.light}`,
-                          padding: theme.spacing(4),
-                        },
-                      }}
-                    />
-                  </TableRow>
-                </TableFooter>
-              )}
-            </Table>
-          </TableContainer>
-        )}
-      />
+                      transformOrigin: {
+                        vertical: "bottom",
+                        horizontal: "left",
+                      },
+                      anchorOrigin: {
+                        vertical: "top",
+                        horizontal: "left",
+                      },
+                      sx: { mt: theme.spacing(-2) },
+                    },
+                    inputProps: { id: "pagination-dropdown" },
+                    IconComponent: SelectorVertical,
+                    sx: {
+                      "ml": theme.spacing(4),
+                      "mr": theme.spacing(12),
+                      "minWidth": theme.spacing(20),
+                      "textAlign": "left",
+                      "&.Mui-focused > div": {
+                        backgroundColor: theme.palette.background.main,
+                      },
+                    },
+                  },
+                }}
+                sx={{
+                  "mt": theme.spacing(6),
+                  "color": theme.palette.text.secondary,
+                  "& .MuiSelect-icon": {
+                    width: "24px",
+                    height: "fit-content",
+                  },
+                  "& .MuiSelect-select": {
+                    width: theme.spacing(10),
+                    borderRadius: theme.shape.borderRadius,
+                    border: `1px solid ${theme.palette.border.light}`,
+                    padding: theme.spacing(4),
+                  },
+                }}
+              />
+            </TableRow>
+          </TableFooter>
+        </Table>
+      </TableContainer>
 
       {/* Delete Confirmation Modal */}
       {deleteModalOpen && scanToDelete && (

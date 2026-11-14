@@ -195,7 +195,6 @@ export const radius = {
   xl: 12,
   lgPlus: 10,
   xxl: 16,
-  search: 4,
   tab: 4,
   pill: 999,
 } as const;

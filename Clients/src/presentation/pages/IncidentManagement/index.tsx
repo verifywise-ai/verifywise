@@ -32,9 +32,6 @@ import { StatusTileCards } from "../../components/Cards/StatusTileCards";
 import PageTour from "../../components/PageTour";
 import IncidentManagementSteps from "./IncidentManagementSteps";
 import { AIIncidentManagementModel } from "../../../domain/models/Common/incidentManagement/incidentManagement.model";
-import { GroupBy } from "../../components/Table/GroupBy";
-import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
-import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { ExportMenu } from "../../components/Table/ExportMenu";
 import { FilterColumn } from "../../components/Table/FilterBy";
 import { TableFilter } from "../../components/Table/TableFilter";
@@ -174,9 +171,6 @@ const IncidentManagement: React.FC = () => {
   }, [alert]);
 
   const [mode, setModalMode] = useState("");
-
-  // GroupBy state
-  const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
 
   // Column visibility
   const {
@@ -391,33 +385,6 @@ const IncidentManagement: React.FC = () => {
 
     return result;
   }, [filterIncidentData, nonArchivedIncidents, searchTerm, selectedStatus]);
-
-  // Define how to get the group key for each incident
-  const getIncidentGroupKey = (
-    incident: AIIncidentManagementModel,
-    field: string,
-  ): string | string[] => {
-    switch (field) {
-      case "severity":
-        return incident.severity || "Unknown";
-      case "status":
-        return incident.status || "Unknown";
-      case "type":
-        return incident.type || "Unknown";
-      case "ai_project":
-        return incident.ai_project || "Unknown Project";
-      default:
-        return "Other";
-    }
-  };
-
-  // Apply grouping to filtered incidents
-  const groupedIncidents = useTableGrouping({
-    data: filteredData,
-    groupByField: groupBy,
-    sortOrder: groupSortOrder,
-    getGroupKey: getIncidentGroupKey,
-  });
 
   /** -------------------- FETCHING -------------------- */
   const fetchIncidentsData = async (showLoading = true) => {
@@ -854,16 +821,6 @@ const IncidentManagement: React.FC = () => {
               getFieldValue={getIncidentFieldValue}
             />
 
-            <GroupBy
-              options={[
-                { id: "severity", label: "Severity" },
-                { id: "status", label: "Status" },
-                { id: "type", label: "Type" },
-                { id: "ai_project", label: "AI Project" },
-              ]}
-              onGroupChange={handleGroupChange}
-            />
-
             <ColumnSelector
               columns={allIncidentColumns}
               visibleColumns={incidentVisibleColumns}
@@ -902,23 +859,16 @@ const IncidentManagement: React.FC = () => {
           </Stack>
         </Stack>
 
-        <GroupedTableView
-          groupedData={groupedIncidents}
-          ungroupedData={filteredData}
-          renderTable={(data, options) => (
-            <IncidentTable
-              key={tableKey}
-              data={data}
-              isLoading={isLoading}
-              onEdit={handleEditIncident}
-              onArchive={handleArchiveIncident}
-              onView={handleViewIncident}
-              archivedId={archiveId}
-              hidePagination={options?.hidePagination}
-              visibleColumns={incidentVisibleColumns}
-              jiraLinks={jiraLinks}
-            />
-          )}
+        <IncidentTable
+          key={tableKey}
+          data={filteredData}
+          isLoading={isLoading}
+          onEdit={handleEditIncident}
+          onArchive={handleArchiveIncident}
+          onView={handleViewIncident}
+          archivedId={archiveId}
+          visibleColumns={incidentVisibleColumns}
+          jiraLinks={jiraLinks}
         />
       </PageHeaderExtended>
 

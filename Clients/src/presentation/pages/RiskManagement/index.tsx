@@ -27,9 +27,7 @@ import { RiskFormValues } from "../../../domain/types/riskForm.types";
 import { onAiActionCompleted } from "../../../application/events/aiActionEvents";
 import AnalyticsDrawer from "../../components/AnalyticsDrawer";
 import { ExportMenu } from "../../components/Table/ExportMenu";
-import { GroupBy } from "../../components/Table/GroupBy";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
-import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
 import { FilterColumn, FilterCondition } from "../../components/Table/FilterBy";
 import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
@@ -40,7 +38,6 @@ import {
   SEVERITY_OPTIONS,
   riskLevelCardKey,
 } from "./riskFilters";
-import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import { useEntityChangeHistory } from "../../../application/hooks/useEntityChangeHistory";
 import { useExtensions } from "../../../application/contexts/Extensions.context";
@@ -121,9 +118,6 @@ const RiskManagement = () => {
   // Refs for form submission
   const onSubmitRef = useRef<(() => void) | null>(null);
   const onAiRiskSubmitRef = useRef<(() => void) | null>(null);
-
-  // GroupBy state
-  const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
 
   // Column visibility management
   type RiskColumn =
@@ -613,37 +607,6 @@ const RiskManagement = () => {
     setCurrentPage(page);
   };
 
-  // Define how to get the group key for each risk
-  const getRiskGroupKey = useCallback(
-    (risk: RiskModel, field: string): string => {
-      switch (field) {
-        case "risk_level":
-          return getEffectiveRiskLevel(risk) || "Unknown";
-        case "mitigation_status":
-          return risk.mitigation_status || "Unknown";
-        case "owner":
-          if (risk.risk_owner) {
-            const user = users.find((u) => u.id === risk.risk_owner);
-            return user ? `${user.name} ${user.surname}`.trim() : "Unknown";
-          }
-          return "Unassigned";
-        case "severity":
-          return risk.severity || "Unknown";
-        default:
-          return "Other";
-      }
-    },
-    [users],
-  );
-
-  // Apply grouping to filtered risks
-  const groupedRisks = useTableGrouping({
-    data: filteredRisks,
-    groupByField: groupBy,
-    sortOrder: groupSortOrder,
-    getGroupKey: getRiskGroupKey,
-  });
-
   return (
     <PageHeaderExtended
       title="Risk Management"
@@ -731,15 +694,6 @@ const RiskManagement = () => {
                 getFieldValue={getRiskFieldValue}
               />
             </div>
-            <GroupBy
-              options={[
-                { id: "risk_level", label: "Risk level" },
-                { id: "mitigation_status", label: "Mitigation status" },
-                { id: "owner", label: "Owner" },
-                { id: "severity", label: "Severity" },
-              ]}
-              onGroupChange={handleGroupChange}
-            />
             <ColumnSelector
               columns={allColumns}
               visibleColumns={visibleColumns}
@@ -922,24 +876,17 @@ const RiskManagement = () => {
             <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
           </Stack>
         ) : (
-          <GroupedTableView
-            groupedData={groupedRisks}
-            ungroupedData={filteredRisks}
-            renderTable={(data, options) => (
-              <VWProjectRisksTable
-                rows={data}
-                setPage={setCurrentPagingation}
-                page={currentPage}
-                setSelectedRow={(row: RiskModel) => setSelectedRow([row])}
-                setAnchor={() => setIsRiskModalOpen(true)}
-                onDeleteRisk={handleDelete}
-                flashRow={currentRow}
-                hidePagination={options?.hidePagination}
-                visibleColumns={visibleColumns}
-                canRunBulkActions={canEditRisks}
-                onBulkActionSuccess={() => setRefreshKey((k) => k + 1)}
-              />
-            )}
+          <VWProjectRisksTable
+            rows={filteredRisks}
+            setPage={setCurrentPagingation}
+            page={currentPage}
+            setSelectedRow={(row: RiskModel) => setSelectedRow([row])}
+            setAnchor={() => setIsRiskModalOpen(true)}
+            onDeleteRisk={handleDelete}
+            flashRow={currentRow}
+            visibleColumns={visibleColumns}
+            canRunBulkActions={canEditRisks}
+            onBulkActionSuccess={() => setRefreshKey((k) => k + 1)}
           />
         )}
 
