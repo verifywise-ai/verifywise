@@ -20,7 +20,7 @@ const availableTools = {
 const toProjection = (r: IRisk) => ({
   id: r.id,
   risk_name: r.risk_name,
-  risk_level: r.risk_level_autocalculated,
+  risk_level: r.current_risk_level || r.risk_level_autocalculated,
   severity: r.severity,
   likelihood: r.likelihood,
   risk_category: r.risk_category,
@@ -128,6 +128,35 @@ describe("Advisor Functions: fetchRisks", () => {
 
       expect(result.every((r: any) => r.risk_level === "High risk")).toBe(true);
       expect(result.length).toBeGreaterThan(0);
+    });
+
+    it("filters and projects by the effective level (current beats inherent, null falls back)", async () => {
+      const risks = [
+        {
+          ...mockRisks[0],
+          id: 901,
+          risk_level_autocalculated: "Low risk",
+          current_risk_level: "High risk",
+        },
+        {
+          ...mockRisks[0],
+          id: 902,
+          risk_level_autocalculated: "High risk",
+          current_risk_level: null,
+        },
+        {
+          ...mockRisks[0],
+          id: 903,
+          risk_level_autocalculated: "High risk",
+          current_risk_level: "Low risk",
+        },
+      ] as any[];
+      jest.spyOn(riskUtils, "getAllRisksQuery").mockResolvedValue(risks);
+
+      const result = await fetchRisks({ riskLevel: "High risk" }, mockTenant);
+
+      expect(result.map((r: any) => r.id)).toEqual([901, 902]);
+      expect(result.every((r: any) => r.risk_level === "High risk")).toBe(true);
     });
 
     it("should filter by AI lifecycle phase", async () => {

@@ -14,7 +14,7 @@ export interface CoverageGapRisk {
   id: number;
   risk_name: string;
   risk_owner: number | null;
-  risk_level: string | null; // risk_level_autocalculated::text
+  risk_level: string | null; // effective level: current, else inherent
   mitigation_status: string | null;
   projects: { id: number; name: string; has_framework: boolean }[];
   assessment_link_count: number; // §4 — context only, never affects state

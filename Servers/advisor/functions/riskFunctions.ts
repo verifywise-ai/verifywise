@@ -14,6 +14,10 @@ import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { sequelize } from "../../database/db";
 import logger from "../../utils/logger/fileLogger";
 
+/** Effective level of a risk: the current level when set, else the inherent one. */
+const effectiveLevel = (r: Pick<IRisk, "current_risk_level" | "risk_level_autocalculated">) =>
+  r.current_risk_level || r.risk_level_autocalculated;
+
 const VALID_RISK_CATEGORIES = [
   "Strategic risk",
   "Operational risk",
@@ -111,7 +115,7 @@ const fetchRisks = async (
       risks = risks.filter((r) => r.mitigation_status === params.mitigationStatus);
     }
     if (params.riskLevel) {
-      risks = risks.filter((r) => r.risk_level_autocalculated === params.riskLevel);
+      risks = risks.filter((r) => effectiveLevel(r) === params.riskLevel);
     }
     if (params.aiLifecyclePhase) {
       risks = risks.filter((r) => r.ai_lifecycle_phase === params.aiLifecyclePhase);
@@ -126,7 +130,7 @@ const fetchRisks = async (
     return risks.map((r) => ({
       id: r.id,
       risk_name: r.risk_name,
-      risk_level: r.risk_level_autocalculated,
+      risk_level: effectiveLevel(r),
       severity: r.severity,
       likelihood: r.likelihood,
       risk_category: r.risk_category,
@@ -234,9 +238,9 @@ const getRiskAnalytics = async (
     // 5. Risk Level Summary
     const riskLevelSummary: { [level: string]: number } = {};
     risks.forEach((risk) => {
-      if (risk.risk_level_autocalculated) {
-        riskLevelSummary[risk.risk_level_autocalculated] =
-          (riskLevelSummary[risk.risk_level_autocalculated] || 0) + 1;
+      const level = effectiveLevel(risk);
+      if (level) {
+        riskLevelSummary[level] = (riskLevelSummary[level] || 0) + 1;
       }
     });
 
@@ -291,11 +295,11 @@ const getExecutiveSummary = async (
 
     // Count critical and high risks
     const criticalRisks = risks.filter(
-      (r) => r.severity === "Catastrophic" || r.risk_level_autocalculated === "Very high risk",
+      (r) => r.severity === "Catastrophic" || effectiveLevel(r) === "Very high risk",
     ).length;
 
     const highRisks = risks.filter(
-      (r) => r.severity === "Major" || r.risk_level_autocalculated === "High risk",
+      (r) => r.severity === "Major" || effectiveLevel(r) === "High risk",
     ).length;
 
     // Top categories (top 3)

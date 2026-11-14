@@ -34,7 +34,9 @@ describe("Advisor Functions: getExecutiveSummary", () => {
 
       // Count risks with Catastrophic severity or Very high risk level
       const expectedCritical = mockRisks.filter(
-        (r) => r.severity === "Catastrophic" || r.risk_level_autocalculated === "Very high risk",
+        (r) =>
+          r.severity === "Catastrophic" ||
+          (r.current_risk_level || r.risk_level_autocalculated) === "Very high risk",
       ).length;
 
       expect(result.criticalRisks).toBe(expectedCritical);
@@ -43,14 +45,34 @@ describe("Advisor Functions: getExecutiveSummary", () => {
 
     it("should count critical risks by Very high risk level", async () => {
       const testRisks = [
-        createMockRisk({ risk_level_autocalculated: "Very high risk", severity: "Major" }),
-        createMockRisk({ risk_level_autocalculated: "High risk", severity: "Major" }),
+        createMockRisk({
+          risk_level_autocalculated: "Very high risk",
+          current_risk_level: null as any,
+          severity: "Major",
+        }),
+        createMockRisk({
+          risk_level_autocalculated: "High risk",
+          current_risk_level: null as any,
+          severity: "Major",
+        }),
+        // Current level overrides the inherent one: inherent Low, current Very high counts.
+        createMockRisk({
+          risk_level_autocalculated: "Low risk",
+          current_risk_level: "Very high risk",
+          severity: "Moderate",
+        }),
+        // ...and the other way round: inherent Very high, current Low does not.
+        createMockRisk({
+          risk_level_autocalculated: "Very high risk",
+          current_risk_level: "Low risk",
+          severity: "Moderate",
+        }),
       ];
       jest.spyOn(riskUtils, "getAllRisksQuery").mockResolvedValue(testRisks);
 
       const result = await getExecutiveSummary({}, mockTenant);
 
-      expect(result.criticalRisks).toBe(1);
+      expect(result.criticalRisks).toBe(2);
     });
 
     it("should count high risks by Major severity", async () => {
@@ -60,7 +82,9 @@ describe("Advisor Functions: getExecutiveSummary", () => {
 
       // Count risks with Major severity or High risk level
       const expectedHigh = mockRisks.filter(
-        (r) => r.severity === "Major" || r.risk_level_autocalculated === "High risk",
+        (r) =>
+          r.severity === "Major" ||
+          (r.current_risk_level || r.risk_level_autocalculated) === "High risk",
       ).length;
 
       expect(result.highRisks).toBe(expectedHigh);

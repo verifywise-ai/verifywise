@@ -1,6 +1,7 @@
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../../database/db";
 import { utcDateSql, toIso } from "./dateOnly";
+import { effectiveRiskLevelSql } from "../../../utils/riskLevel.utils";
 import type { HomeQueueItem, HomeQueueSource } from "../../../domain.layer/interfaces/i.homeQueue";
 
 /** `mitigation_status` has no default, so NULL is read as Not Started. */
@@ -31,7 +32,7 @@ export const RISK_NEEDS_ATTENTION_CONDITION = `
  * Exported so tests can pin the rule.
  */
 export const RISKS_SQL = `
-  SELECT r.id, r.risk_name, r.current_risk_level, ${STATUS} AS mitigation_status,
+  SELECT r.id, r.risk_name, ${effectiveRiskLevelSql("r")} AS risk_level, ${STATUS} AS mitigation_status,
          ${DEADLINE} AS deadline, r.created_at
   FROM risks r
   WHERE ${RISK_NEEDS_ATTENTION_CONDITION}
@@ -48,7 +49,8 @@ export const riskNeedsAttentionReplacements = (organizationId: number, today: st
 interface RiskRow {
   id: number;
   risk_name: string;
-  current_risk_level: string | null;
+  /** Effective level: current, else inherent. */
+  risk_level: string | null;
   mitigation_status: string;
   deadline: string | null;
   created_at: Date | string | null;
@@ -79,7 +81,7 @@ export const risksSource: HomeQueueSource = {
       dueDate: r.deadline,
       waitingSince: toIso(r.created_at),
       overdue: r.deadline !== null && r.deadline < ctx.today,
-      meta: { mitigationStatus: r.mitigation_status, riskLevel: r.current_risk_level },
+      meta: { mitigationStatus: r.mitigation_status, riskLevel: r.risk_level },
     }));
   },
 };

@@ -1,6 +1,7 @@
 import { RiskHistoryModel } from "../../domain.layer/models/riskHistory/riskHistory.model";
 import { sequelize } from "../../database/db";
 import { Transaction, QueryTypes } from "sequelize";
+import { effectiveRiskLevelSql } from "../riskLevel.utils";
 
 /**
  * Record a snapshot of parameter counts in history
@@ -143,18 +144,18 @@ export async function getCurrentParameterCounts(
         }
       });
     } else if (parameter === "risk_level") {
-      // Get counts for each risk level (using risk_level_autocalculated)
+      // Get counts for each risk level (effective level: current, else inherent)
       const riskLevelCounts = (await sequelize.query(
-        `SELECT risk_level_autocalculated, COUNT(*) as count
-         FROM risks
-         WHERE organization_id = :organizationId AND is_deleted = false
-         GROUP BY risk_level_autocalculated`,
+        `SELECT ${effectiveRiskLevelSql("r")} AS risk_level, COUNT(*) as count
+         FROM risks r
+         WHERE r.organization_id = :organizationId AND r.is_deleted = false
+         GROUP BY ${effectiveRiskLevelSql("r")}`,
         {
           replacements: { organizationId },
           type: QueryTypes.SELECT,
           transaction,
         },
-      )) as Array<{ risk_level_autocalculated: string; count: string }>;
+      )) as Array<{ risk_level: string; count: string }>;
 
       // Initialize all risk levels to 0
       const riskLevels = [
@@ -171,8 +172,8 @@ export async function getCurrentParameterCounts(
 
       // Update with actual counts
       riskLevelCounts.forEach((row) => {
-        if (row.risk_level_autocalculated) {
-          counts[row.risk_level_autocalculated] = parseInt(row.count, 10);
+        if (row.risk_level) {
+          counts[row.risk_level] = parseInt(row.count, 10);
         }
       });
     } else {

@@ -1,5 +1,6 @@
 import { sequelize } from "../database/db";
 import { TaskStatus } from "../domain.layer/enums/task-status.enum";
+import { effectiveRiskLevelSql } from "./riskLevel.utils";
 
 /**
  * Phase 4 / issue 3811 — in-house proactive detection logic.
@@ -9,8 +10,8 @@ import { TaskStatus } from "../domain.layer/enums/task-status.enum";
  * `sequelize.query` helper used across the other util files, so it is mockable
  * in unit tests.
  *
- * "High/critical" risks are identified by their auto-calculated risk level
- * ("High risk" / "Very high risk").
+ * "High/critical" risks are identified by their effective risk level (current,
+ * else inherent): "High risk" / "Very high risk".
  */
 
 const HIGH_CRITICAL_RISK_LEVELS = ["High risk", "Very high risk"];
@@ -30,22 +31,22 @@ export interface RiskAnomalyResult {
 export const detectRiskAnomaly = async (organizationId: number): Promise<RiskAnomalyResult> => {
   const last24hResult = (await sequelize.query(
     `SELECT COUNT(*) AS count
-       FROM risks
-      WHERE organization_id = :organizationId
-        AND is_deleted = false
-        AND current_risk_level IN (:levels)
-        AND created_at >= NOW() - INTERVAL '24 hours'`,
+       FROM risks r
+      WHERE r.organization_id = :organizationId
+        AND r.is_deleted = false
+        AND ${effectiveRiskLevelSql("r")} IN (:levels)
+        AND r.created_at >= NOW() - INTERVAL '24 hours'`,
     { replacements: { organizationId, levels: HIGH_CRITICAL_RISK_LEVELS } },
   )) as [{ count: string }[], number];
 
   const prior30dResult = (await sequelize.query(
     `SELECT COUNT(*) AS count
-       FROM risks
-      WHERE organization_id = :organizationId
-        AND is_deleted = false
-        AND current_risk_level IN (:levels)
-        AND created_at >= NOW() - INTERVAL '30 days'
-        AND created_at < NOW() - INTERVAL '24 hours'`,
+       FROM risks r
+      WHERE r.organization_id = :organizationId
+        AND r.is_deleted = false
+        AND ${effectiveRiskLevelSql("r")} IN (:levels)
+        AND r.created_at >= NOW() - INTERVAL '30 days'
+        AND r.created_at < NOW() - INTERVAL '24 hours'`,
     { replacements: { organizationId, levels: HIGH_CRITICAL_RISK_LEVELS } },
   )) as [{ count: string }[], number];
 

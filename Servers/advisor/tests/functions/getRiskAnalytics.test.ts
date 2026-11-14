@@ -220,14 +220,33 @@ describe("Advisor Functions: getRiskAnalytics", () => {
 
     it("should handle missing risk level data", async () => {
       const testRisks = [
-        createMockRisk({ risk_level_autocalculated: "High risk" }),
-        { ...createMockRisk({}), risk_level_autocalculated: undefined } as any,
+        createMockRisk({ risk_level_autocalculated: "High risk", current_risk_level: null as any }),
+        {
+          ...createMockRisk({}),
+          risk_level_autocalculated: undefined,
+          current_risk_level: undefined,
+        } as any,
       ];
       jest.spyOn(riskUtils, "getAllRisksQuery").mockResolvedValue(testRisks);
 
       const result = await getRiskAnalytics({}, mockTenant);
 
       expect(result.riskLevelSummary["High risk"]).toBe(1);
+    });
+
+    it("summarises by the effective level (current beats inherent, null falls back)", async () => {
+      const testRisks = [
+        createMockRisk({ risk_level_autocalculated: "Low risk", current_risk_level: "High risk" }),
+        createMockRisk({
+          risk_level_autocalculated: "Medium risk",
+          current_risk_level: null as any,
+        }),
+      ];
+      jest.spyOn(riskUtils, "getAllRisksQuery").mockResolvedValue(testRisks);
+
+      const result = await getRiskAnalytics({}, mockTenant);
+
+      expect(result.riskLevelSummary).toEqual({ "High risk": 1, "Medium risk": 1 });
     });
 
     it("should calculate total risks correctly", async () => {

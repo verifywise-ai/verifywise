@@ -41,6 +41,7 @@ import {
   normalizeHighRiskRoles,
   withLegacyHighRiskRole,
 } from "./highRiskRoles.utils";
+import { effectiveRiskLevelSql } from "./riskLevel.utils";
 
 /**
  * The owner's name as plain text (automation emails, reports): the user's full
@@ -1164,11 +1165,11 @@ export const calculateProjectRisks = async (
     risk_level_autocalculated: string;
     count: string;
   }>(
-    `SELECT risk_level_autocalculated, count(*) AS count
+    `SELECT ${effectiveRiskLevelSql("r")} AS risk_level_autocalculated, count(*) AS count
      FROM risks r
      JOIN projects_risks pr ON r.id = pr.risk_id AND pr.organization_id = :organizationId
      WHERE r.organization_id = :organizationId AND pr.project_id = :project_id
-     GROUP BY risk_level_autocalculated`,
+     GROUP BY ${effectiveRiskLevelSql("r")}`,
     {
       replacements: { organizationId, project_id },
       type: QueryTypes.SELECT,

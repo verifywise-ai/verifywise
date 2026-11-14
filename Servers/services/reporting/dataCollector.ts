@@ -57,6 +57,7 @@ import { getProjectByIdQuery } from "../../utils/project.utils";
 import { getAllFrameworkByIdQuery } from "../../utils/framework.utils";
 import { sequelize } from "../../database/db";
 import { QueryTypes } from "sequelize";
+import { effectiveRiskLevelSql } from "../../utils/riskLevel.utils";
 
 /**
  * Risk level colour mapping.
@@ -719,7 +720,7 @@ export class ReportDataCollector {
 
     const risksByLevel: Record<string, number> = {};
     risks.forEach((risk) => {
-      const level = risk.risk_level_autocalculated || "Unknown";
+      const level = risk.current_risk_level || risk.risk_level_autocalculated || "Unknown";
       risksByLevel[level] = (risksByLevel[level] || 0) + 1;
     });
 
@@ -734,7 +735,7 @@ export class ReportDataCollector {
         id: risk.id,
         name: risk.risk_name || "Unnamed Risk",
         description: risk.risk_description || "",
-        riskLevel: risk.risk_level_autocalculated || "Unknown",
+        riskLevel: risk.current_risk_level || risk.risk_level_autocalculated || "Unknown",
         impact: risk.risk_severity || "Unknown",
         likelihood: risk.likelihood || "Unknown",
         // `risks` carries both columns and they are orthogonal — a risk can be
@@ -1359,7 +1360,7 @@ export class ReportDataCollector {
           ns.status,
           r.id AS risk_id,
           r.risk_name,
-          r.risk_level_autocalculated AS risk_level
+          ${effectiveRiskLevelSql("r")} AS risk_level
         FROM nist_ai_rmf_subcategories ns
         JOIN nist_ai_rmf_subcategories_struct ss ON ns.subcategory_meta_id = ss.id
         JOIN nist_ai_rmf_categories_struct cs ON ss.category_struct_id = cs.id

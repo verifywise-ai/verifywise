@@ -36,6 +36,19 @@ describe("detectRiskAnomaly", () => {
     expect(result.isAnomaly).toBe(true);
   });
 
+  it("selects high/critical risks by the effective level (current, else inherent)", async () => {
+    mockQuery.mockResolvedValueOnce([[{ count: "0" }], {}] as any);
+    mockQuery.mockResolvedValueOnce([[{ count: "0" }], {}] as any);
+
+    await detectRiskAnomaly(7);
+
+    for (const [sql] of mockQuery.mock.calls as any[]) {
+      expect(sql).toContain(
+        "COALESCE(r.current_risk_level::text, r.risk_level_autocalculated::text) IN (:levels)",
+      );
+    }
+  });
+
   it("does not flag an anomaly when count24h is within twice the average", async () => {
     mockQuery.mockResolvedValueOnce([[{ count: "1" }], {}] as any);
     mockQuery.mockResolvedValueOnce([[{ count: "60" }], {}] as any);

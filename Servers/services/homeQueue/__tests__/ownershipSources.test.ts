@@ -40,7 +40,7 @@ describe("risksSource", () => {
   ) => ({
     id,
     risk_name: `Risk ${id}`,
-    current_risk_level: level,
+    risk_level: level,
     mitigation_status,
     deadline,
     created_at: created,
@@ -58,6 +58,9 @@ describe("risksSource", () => {
     const [sql, options] = query.mock.calls[0];
     expect(sql).toBe(RISKS_SQL);
     expect(sql).toContain("r.organization_id = :organizationId");
+    expect(sql).toContain(
+      "COALESCE(r.current_risk_level::text, r.risk_level_autocalculated::text) AS risk_level",
+    );
     expect(sql).toContain("r.risk_owner = :userId");
     expect(sql).toContain("r.is_deleted = false");
     // NULL mitigation_status reads as Not Started.

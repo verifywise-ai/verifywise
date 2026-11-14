@@ -13,6 +13,7 @@ import {
 import { HierarchyEdge, ParentEntityType } from "../services/riskLinks/hierarchy";
 import { DismissReason } from "../services/riskLinks/dismissReason";
 import { toJsonArray, toNumber } from "./pgRow.utils";
+import { effectiveRiskLevelSql, riskLevelRankSql } from "./riskLevel.utils";
 
 /**
  * pg hands NUMERIC back as a string and can hand JSONB / JSON_AGG output back
@@ -1682,9 +1683,9 @@ export async function getDuplicateScanRowsQuery(
  * `custom_framework_*` tables using `risk_id`) is copied from there, not
  * re-derived.
  *
- * ORDER BY uses the raw `risk_level_autocalculated` enum (declared in
- * severity order, so DESC is worst-first with no CASE); `::text` appears only
- * in the SELECT list, where an alphabetical sort would read
+ * The level is the effective one (current, else inherent). The two columns are
+ * different enum types, so the SELECT carries the text and ORDER BY ranks it
+ * with riskLevelRankSql (worst-first); sorting the text would read
  * High < Low < Medium < No < Very high.
  */
 export interface CoverageScanRow {
@@ -1767,8 +1768,8 @@ export async function getCoverageScanRowsQuery(
        SELECT r.id,
               r.risk_name,
               r.risk_owner,
-              r.risk_level_autocalculated,
-              r.risk_level_autocalculated::text AS risk_level,
+              ${effectiveRiskLevelSql("r")} AS risk_level,
+              ${riskLevelRankSql(effectiveRiskLevelSql("r"))} AS risk_rank,
               r.mitigation_status::text         AS mitigation_status,
               COALESCE(cc.n, 0) AS control_link_count,
               COALESCE(ac.n, 0) AS assessment_link_count,
@@ -1797,7 +1798,7 @@ export async function getCoverageScanRowsQuery(
        SELECT scored.*,
               ROW_NUMBER() OVER (
                 PARTITION BY state
-                ORDER BY risk_level_autocalculated DESC NULLS LAST, id ASC
+                ORDER BY risk_rank DESC NULLS LAST, id ASC
               ) AS rn,
               COUNT(*) OVER (PARTITION BY state) AS state_total
          FROM scored
