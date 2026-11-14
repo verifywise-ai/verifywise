@@ -350,7 +350,7 @@ Each trigger runs every action of every active automation for it, ordered by aut
 
 ### Review Reminders
 
-One daily sweep, `policy_review_reminder_sweep` at 08:00 (`services/automations/actions/policyReviewReminderSweep.ts`), reminds people of a policy's review twice: once when `next_review_date` comes within 7 days (`POLICY_DUE_SOON`) and once when it has passed (`POLICY_OVERDUE`). Days are compared by calendar day (`next_review_date::date` against `CURRENT_DATE`, UTC). Archived and Deprecated policies are skipped.
+One daily sweep, `policy_review_reminder_sweep` at 08:00 server time (`services/automations/actions/policyReviewReminderSweep.ts`), reminds people of a policy's review twice: once when `next_review_date` comes within 7 days (`POLICY_DUE_SOON`) and once when it has passed (`POLICY_OVERDUE`). Days are compared by calendar day (`next_review_date::date` against `CURRENT_DATE`, UTC). Archived and Deprecated policies are skipped.
 
 - **Recipients** (`findPolicyRemindersDueQuery`): the policy owner and the assigned reviewers, each once; when none of them is still a member of the organization, the author. Only current members are told, and a policy with nobody to tell is skipped.
 - **Channels** (`notifyPolicyReviewReminder`): the in-app notice, then the email (`policy-review-reminder.mjml`, best-effort); title, message and subject are i18n keys, the email body stays English. For a recipient with a Slack webhook on the "Policy reminders and status" route, also a Slack message; Slack is best-effort.
