@@ -8,6 +8,21 @@ import { TaskStatus } from "../../domain.layer/enums/task-status.enum";
 
 // --- Read Tools ---
 
+/**
+ * Refuses a project_id outside the organization, so a mistyped or invented
+ * id is reported as not found instead of as a use case with nothing in it.
+ */
+const assertProjectInOrganization = async (
+  projectId: number,
+  organizationId: number,
+): Promise<void> => {
+  const rows = await sequelize.query(
+    `SELECT id FROM projects WHERE id = :projectId AND organization_id = :organizationId`,
+    { replacements: { projectId, organizationId }, type: QueryTypes.SELECT },
+  );
+  if (rows.length === 0) throw new Error(`Use case ${projectId} not found`);
+};
+
 const getComplianceScore = async (
   _params: { project_id?: number },
   organizationId: number,
@@ -60,6 +75,7 @@ const getComplianceDetails = async (
   organizationId: number,
 ): Promise<any> => {
   try {
+    await assertProjectInOrganization(params.project_id, organizationId);
     const score = await calculateComplianceScore(organizationId);
 
     // Get project-specific framework data if framework_id is provided
@@ -256,6 +272,14 @@ const getProjectStats = async (
 ): Promise<any> => {
   try {
     const projectId = params.project_id;
+    await assertProjectInOrganization(projectId, organizationId);
+    // taskLinkReachesProjectSql binds :organizationId; the other queries use
+    // :organization_id. One object carries both names.
+    const replacements = {
+      organization_id: organizationId,
+      organizationId,
+      project_id: projectId,
+    };
 
     // Run all stat queries in parallel
     const [riskStats, vendorStats, modelStats, taskStats, projectInfo] = await Promise.all([
@@ -269,7 +293,7 @@ const getProjectStats = async (
          AND (is_deleted = false OR is_deleted IS NULL)
          AND id IN (SELECT risk_id FROM projects_risks WHERE project_id = :project_id AND organization_id = :organization_id)`,
         {
-          replacements: { organization_id: organizationId, project_id: projectId },
+          replacements,
           type: QueryTypes.SELECT,
         },
       ),
@@ -280,7 +304,7 @@ const getProjectStats = async (
          WHERE v.organization_id = :organization_id
          AND vp.project_id = :project_id`,
         {
-          replacements: { organization_id: organizationId, project_id: projectId },
+          replacements,
           type: QueryTypes.SELECT,
         },
       ),
@@ -290,7 +314,7 @@ const getProjectStats = async (
          WHERE organization_id = :organization_id
          AND id IN (SELECT model_inventory_id FROM model_inventories_projects_frameworks WHERE project_id = :project_id AND organization_id = :organization_id)`,
         {
-          replacements: { organization_id: organizationId, project_id: projectId },
+          replacements,
           type: QueryTypes.SELECT,
         },
       ),
@@ -311,8 +335,7 @@ const getProjectStats = async (
               AND (${taskLinkReachesProjectSql(":project_id")}))`,
         {
           replacements: {
-            organizationId,
-            project_id: projectId,
+            ...replacements,
             completed: TaskStatus.COMPLETED,
             deleted: TaskStatus.DELETED,
           },
@@ -323,7 +346,7 @@ const getProjectStats = async (
         `SELECT project_title, status, goal, created_at FROM projects
          WHERE id = :project_id AND organization_id = :organization_id`,
         {
-          replacements: { organization_id: organizationId, project_id: projectId },
+          replacements,
           type: QueryTypes.SELECT,
         },
       ),

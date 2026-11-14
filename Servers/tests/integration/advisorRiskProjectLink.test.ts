@@ -48,6 +48,20 @@ describe("advisor: link a risk to a project", () => {
     ]);
   });
 
+  it("refuses a deleted risk", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const projectId = await createTestProject(owner.orgId, owner.userId);
+    const riskId = await createTestRisk(owner.orgId);
+    await sequelize.query(`UPDATE risks SET is_deleted = true WHERE id = :riskId`, {
+      replacements: { riskId },
+    });
+
+    await expect(
+      linkRiskToProject({ risk_id: riskId, project_id: projectId }, owner.orgId),
+    ).rejects.toThrow("Risk not found");
+    expect(await projectRiskLinks(riskId)).toEqual([]);
+  });
+
   it("refuses a project from another organization", async () => {
     const { owner, attacker } = await seedTwoTenantContexts();
     const theirProject = await createTestProject(attacker.orgId, attacker.userId);
@@ -98,8 +112,8 @@ describe("advisor: project risk counts", () => {
       });
     const control = await controlIn(projectId);
     const otherControl = await controlIn(otherProject);
-    const linkedTask = async (controlId: number, status: string) => {
-      const taskId = await createTestTask(owner.orgId, { status });
+    const linkedTask = async (controlId: number, status: string, due_date?: string) => {
+      const taskId = await createTestTask(owner.orgId, { status, due_date });
       await sequelize.query(
         `INSERT INTO task_entity_links (organization_id, task_id, entity_id, entity_type)
          VALUES (:orgId, :taskId, :controlId, 'eu_control')`,
@@ -107,7 +121,8 @@ describe("advisor: project risk counts", () => {
       );
     };
     await linkedTask(control, "Open");
-    await linkedTask(control, "Completed");
+    await linkedTask(control, "In Progress", "2001-01-01");
+    await linkedTask(control, "Completed", "2001-01-01");
     await linkedTask(control, "Deleted");
     await linkedTask(otherControl, "Open");
     const vendorId = await createTestVendor(owner.orgId);
@@ -122,8 +137,24 @@ describe("advisor: project risk counts", () => {
       owner.orgId,
     );
 
-    expect(stats.tasks).toEqual({ total: 2, completed: 1, overdue: 0 });
+    expect(stats.tasks).toEqual({ total: 3, completed: 1, overdue: 1 });
     expect(stats.vendors.total).toBe(1);
     expect(stats.models.total).toBe(0);
+  });
+});
+
+describe("advisor: project tools with an unknown use case", () => {
+  it("report the use case as not found instead of returning zeros", async () => {
+    const { owner, attacker } = await seedTwoTenantContexts();
+    const theirProject = await createTestProject(attacker.orgId, attacker.userId);
+
+    for (const projectId of [2147483000, theirProject]) {
+      await expect(
+        availableComplianceTools.get_project_stats({ project_id: projectId }, owner.orgId),
+      ).rejects.toThrow(`Use case ${projectId} not found`);
+      await expect(
+        availableComplianceTools.get_compliance_details({ project_id: projectId }, owner.orgId),
+      ).rejects.toThrow(`Use case ${projectId} not found`);
+    }
   });
 });
