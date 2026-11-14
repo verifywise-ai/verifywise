@@ -29,10 +29,17 @@ jest.mock("../../../utils/aiDetectionDecisions.utils", () => ({
   writeGovernanceDecisionQuery: jest.fn(),
 }));
 
+jest.mock("../riskScoring", () => ({
+  ...jest.requireActual("../riskScoring"),
+  calculateAndStoreRiskScore: jest.fn(),
+}));
+
 import {
+  applyDecisionsThenScore,
   applyStoredGovernanceDecisions,
   updateFindingGovernanceStatus,
 } from "../../aiDetection.service";
+import { calculateAndStoreRiskScore } from "../riskScoring";
 import {
   getScanByIdQuery,
   updateFindingGovernanceStatusQuery,
@@ -117,5 +124,34 @@ describe("applyStoredGovernanceDecisions", () => {
     (applyGovernanceDecisionsToScanQuery as jest.Mock).mockRejectedValue(new Error("db down"));
     await expect(applyStoredGovernanceDecisions(10, 3)).resolves.toBeUndefined();
     expect(logger.error).toHaveBeenCalled();
+  });
+});
+
+describe("applyDecisionsThenScore", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (applyGovernanceDecisionsToScanQuery as jest.Mock).mockResolvedValue(2);
+    (calculateAndStoreRiskScore as jest.Mock).mockResolvedValue({ score: 80 });
+  });
+
+  // The score leaves out suppressed and accepted findings, so a rescan scored
+  // before its carried decisions would count findings a reviewer set aside.
+  it("applies stored decisions before scoring the scan", async () => {
+    await applyDecisionsThenScore(10, "acme/widgets", ctx);
+
+    expect(applyGovernanceDecisionsToScanQuery).toHaveBeenCalledWith(10, 3);
+    expect(calculateAndStoreRiskScore).toHaveBeenCalledWith(10, "acme/widgets", ctx);
+    const decisionsAt = (applyGovernanceDecisionsToScanQuery as jest.Mock).mock
+      .invocationCallOrder[0];
+    const scoreAt = (calculateAndStoreRiskScore as jest.Mock).mock.invocationCallOrder[0];
+    expect(decisionsAt).toBeLessThan(scoreAt);
+  });
+
+  it("still scores when applying decisions fails", async () => {
+    (applyGovernanceDecisionsToScanQuery as jest.Mock).mockRejectedValue(new Error("db down"));
+
+    await expect(applyDecisionsThenScore(10, "acme/widgets", ctx)).resolves.toBeUndefined();
+
+    expect(calculateAndStoreRiskScore).toHaveBeenCalledWith(10, "acme/widgets", ctx);
   });
 });
