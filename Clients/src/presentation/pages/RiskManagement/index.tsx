@@ -62,6 +62,7 @@ import {
 } from "./style";
 import { text } from "../../themes/palette";
 import { chartTheme } from "../../themes/chartTheme";
+import { riskCalendarDay, toLocalDateOnly } from "../../tools/isoDateToString";
 
 /**
  * Set initial loading status for all CRUD process
@@ -413,7 +414,7 @@ const RiskManagement = () => {
         likelihood: risk.likelihood || "-",
         mitigation_status: risk.mitigation_status || "-",
         risk_level: risk.current_risk_level || risk.risk_level_autocalculated || "-",
-        deadline: risk.deadline || "-",
+        deadline: toLocalDateOnly(riskCalendarDay(risk.deadline)) || "-",
         controls_mapping: risk.controls_mapping || "-",
       };
     });

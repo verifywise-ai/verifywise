@@ -11,15 +11,16 @@
  * New writes store calendar dates at 12:00 UTC and the client reads exactly
  * 12:00 UTC as that UTC date (utils/riskCalendarDate.utils.ts).
  *
- * This moves every stored value that looks like a local midnight (a whole
+ * This sets every stored value that looks like a local midnight (a whole
  * quarter hour, no seconds) to 12:00 UTC on the day it was picked. The local
  * midnight of day D sits at UTC D-1 10:00 (UTC+14) to D 12:00 (UTC-12), so the
  * picked day is the UTC date of the value plus 13 hours:
  * - 00:00 to 10:45 UTC: the same day (UTC and the Americas down to Hawaii);
- * - 11:00 to 23:45 UTC: the next day (UTC+13 New Zealand summer, UTC+12 New
- *   Zealand winter and Fiji, Asia, Europe).
+ * - 11:00 to 23:45 UTC: the next day (UTC+13 New Zealand summer, Asia, Europe).
+ * Values at exactly 12:00 UTC are left alone, so running this again changes
+ * nothing. That makes a UTC+12 pick (New Zealand winter, Fiji) a day early.
  * 10:00 and 11:00 UTC are each also a midnight in a sparsely populated zone on
- * the other side (UTC+14 Kiribati, UTC-11 Samoa); those picks land a day off.
+ * the other side (UTC+14 Kiribati, UTC-11 Samoa); those picks are a day off.
  * A whole-quarter-hour time sent on purpose through the API, such as 18:00
  * UTC, is treated as a local midnight too. Values with seconds ("now"
  * timestamps) are left alone.
@@ -37,7 +38,8 @@ module.exports = {
                          + INTERVAL '12 hours') AT TIME ZONE 'UTC'
        WHERE deadline IS NOT NULL
          AND date_part('second', deadline AT TIME ZONE 'UTC') = 0
-         AND date_part('minute', deadline AT TIME ZONE 'UTC')::int % 15 = 0;
+         AND date_part('minute', deadline AT TIME ZONE 'UTC')::int % 15 = 0
+         AND (deadline AT TIME ZONE 'UTC')::time <> TIME '12:00';
     `);
     await queryInterface.sequelize.query(`
       UPDATE verifywise.risks
@@ -46,7 +48,8 @@ module.exports = {
               + INTERVAL '12 hours') AT TIME ZONE 'UTC'
        WHERE date_of_assessment IS NOT NULL
          AND date_part('second', date_of_assessment AT TIME ZONE 'UTC') = 0
-         AND date_part('minute', date_of_assessment AT TIME ZONE 'UTC')::int % 15 = 0;
+         AND date_part('minute', date_of_assessment AT TIME ZONE 'UTC')::int % 15 = 0
+         AND (date_of_assessment AT TIME ZONE 'UTC')::time <> TIME '12:00';
     `);
   },
 

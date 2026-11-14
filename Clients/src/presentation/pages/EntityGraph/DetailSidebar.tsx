@@ -33,6 +33,7 @@ import {
   formatHighRiskRoles,
   projectHighRiskRoles,
 } from "../../../application/utils/highRiskRoles";
+import { riskCalendarDay } from "../../tools/isoDateToString";
 
 export interface EntityDetails {
   id: string;
@@ -533,7 +534,7 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({ entity, onClose, onNaviga
                 <DetailRow
                   icon={<Calendar size={14} />}
                   label="Deadline"
-                  value={formatDetailDate(rawData.deadline, formatDate)}
+                  value={formatDetailDate(riskCalendarDay(rawData.deadline), formatDate)}
                 />
               )}
               {Boolean(rawData.approval_status) && (

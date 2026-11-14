@@ -9,6 +9,7 @@
 
 import { Transaction } from "sequelize";
 import { createRiskQuery, updateRiskByIdQuery } from "../utils/risk.utils";
+import { writtenValues } from "../utils/changeHistory.base.utils";
 import { RiskModel } from "../domain.layer/models/risks/risk.model";
 import { IRisk } from "../domain.layer/interfaces/I.risk";
 import {
@@ -20,7 +21,6 @@ import { computeDerivedFields } from "../utils/quantitativeRisk.utils";
 import { validateQuantitativeRiskFields } from "../utils/validations/quantitativeRiskValidation.utils";
 import { ValidationError } from "../utils/validations/validation.utils";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
-import { toRiskCalendarDate } from "../utils/riskCalendarDate.utils";
 
 export type CreateRiskServiceInput = Partial<RiskModel> & {
   projects?: number[];
@@ -255,19 +255,7 @@ export async function updateRiskService(
     Object.assign(updateData, computeDerivedFields(mergedFairFields));
   }
 
-  // Diff the values that will be written, not the raw request: dates are
-  // stored at noon UTC and an empty risk_name is skipped.
-  for (const field of ["deadline", "date_of_assessment"] as const) {
-    if (field in updateData) {
-      (updateData as Record<string, unknown>)[field] = toRiskCalendarDate(updateData[field]);
-    }
-  }
-  if ("risk_name" in updateData && !updateData.risk_name) delete updateData.risk_name;
-
-  // 3. Diff before writing, while the stored row is still the old one.
-  const changes = await trackProjectRiskChanges(existingRisk as RiskModel, updateData);
-
-  // 4. Write. An absent projects/frameworks list is sent as empty, as before.
+  // 3. Write. An absent projects/frameworks list is sent as empty, as before.
   const updatedRisk = await updateRiskByIdQuery(
     riskId,
     {
@@ -279,7 +267,15 @@ export async function updateRiskService(
     transaction,
   );
 
-  // 5. Change history (in the same transaction)
+  // 4. Change history (in the same transaction). Diff the row as written:
+  //    the query stores dates at noon UTC, turns "" and user 0 into NULL and
+  //    skips an empty risk_name, so the request values can differ from it.
+  const changes = updatedRisk
+    ? await trackProjectRiskChanges(
+        existingRisk as RiskModel,
+        writtenValues(updatedRisk, updateData as Record<string, unknown>) as Partial<RiskModel>,
+      )
+    : [];
   if (updatedRisk && changes.length > 0) {
     await recordMultipleFieldChanges(riskId, ctx.userId, ctx.organizationId, changes, transaction);
   }

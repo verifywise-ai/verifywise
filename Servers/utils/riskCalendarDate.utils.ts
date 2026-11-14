@@ -50,3 +50,19 @@ export function toRiskCalendarDate<T>(value: T): T | Date {
     ? noonUtc(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
     : value;
 }
+
+/**
+ * A risk date from a spreadsheet cell. Date cells and ISO strings follow
+ * toRiskCalendarDate. Any other text without a time ("05/01/2026",
+ * "1 May 2026") is a calendar day: JavaScript parses it at the server's local
+ * midnight, so its local date is the day written in the cell.
+ */
+export function riskCalendarDateFromCell<T>(value: T): T | Date {
+  if (typeof value !== "string") return toRiskCalendarDate(value);
+  const trimmed = value.trim();
+  if (DATE_ONLY.test(trimmed) || /[T:]/.test(trimmed)) return toRiskCalendarDate(value);
+
+  const parsed = new Date(trimmed);
+  if (Number.isNaN(parsed.getTime())) return value;
+  return noonUtc(parsed.getFullYear(), parsed.getMonth(), parsed.getDate());
+}

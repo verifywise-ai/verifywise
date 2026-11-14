@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { riskCalendarDay } from "../riskCalendarDate";
+import { riskCalendarDay } from "../isoDateToString";
 
 const localDay = (date: Date | null) =>
   date
@@ -29,5 +29,9 @@ describe("riskCalendarDay", () => {
     expect(riskCalendarDay("")).toBeNull();
     expect(riskCalendarDay("not a date")).toBeNull();
     expect(riskCalendarDay(42)).toBeNull();
+  });
+
+  it("reads a bare YYYY-MM-DD as that day in any time zone", () => {
+    expect(localDay(riskCalendarDay("2026-05-01"))).toBe("2026-05-01");
   });
 });

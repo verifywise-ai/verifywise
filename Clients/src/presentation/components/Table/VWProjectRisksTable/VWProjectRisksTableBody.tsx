@@ -28,7 +28,7 @@ import Chip from "../../Chip";
 import ProjectRiskLinkedPolicies from "../../../components/ProjectRiskMitigation/ProjectRiskLinkedPolicies";
 import { text, palette as vwPalette } from "../../../themes/palette";
 import { formatCustomFieldValue } from "../../CustomFieldsSection/formatCustomFieldValue";
-import { riskCalendarDay } from "../../../tools/riskCalendarDate";
+import { riskCalendarDay } from "../../../tools/isoDateToString";
 
 function getDummyEvent() {
   const realEvent = new Event("click", { bubbles: true, cancelable: true });
@@ -73,6 +73,10 @@ const VWProjectRisksTableBody = ({
   selection,
 }: IVWProjectRisksTableRow) => {
   const formatDate = useFormattedDate();
+  const formatDeadline = (value: unknown) => {
+    const day = riskCalendarDay(value);
+    return day ? formatDate(day) : "NA";
+  };
   const isColVisible = (colId: string) => !visibleColumns || visibleColumns.has(colId);
   const theme = useTheme();
   const { setInputValues } = useContext(VerifyWiseContext);
@@ -318,9 +322,7 @@ const VWProjectRisksTableBody = ({
                             : "",
                     }}
                   >
-                    {riskCalendarDay(row.deadline)
-                      ? formatDate(riskCalendarDay(row.deadline))
-                      : "NA"}
+                    {formatDeadline(row.deadline)}
                   </TableCell>
                 )}
                 {isColVisible("controls_mapping") && (

@@ -1,5 +1,5 @@
 import { RiskModel } from "../../../../domain/models/Common/risks/risk.model";
-import { riskCalendarDay } from "../../../tools/riskCalendarDate";
+import { riskCalendarDay } from "../../../tools/isoDateToString";
 
 export type RiskSortDirection = "asc" | "desc";
 

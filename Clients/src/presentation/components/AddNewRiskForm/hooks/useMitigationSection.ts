@@ -9,7 +9,7 @@ import {
   riskSeverityItems,
 } from "../projectRiskValue";
 import { Likelihood, Severity } from "../../RiskLevel/constants";
-import { riskCalendarDay } from "../../../tools/riskCalendarDate";
+import { riskCalendarDay } from "../../../tools/isoDateToString";
 
 /** A stored risk date as the local midnight of its calendar day, or "" when unset. */
 const parseDateValue = (value: unknown): string => riskCalendarDay(value)?.toISOString() ?? "";

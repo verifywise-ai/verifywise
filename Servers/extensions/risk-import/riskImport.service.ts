@@ -12,7 +12,7 @@ import {
   RISK_SEVERITY_VALUES,
   SEVERITY_VALUES,
 } from "./risks.enums";
-import { toRiskCalendarDate } from "../../utils/riskCalendarDate.utils";
+import { riskCalendarDateFromCell } from "../../utils/riskCalendarDate.utils";
 
 /**
  * Server-side risk-import extension logic. Two entry points:
@@ -355,7 +355,7 @@ function parseRow(row: RiskImportRow): Record<string, unknown> {
     review_notes: row.review_notes ?? null,
     mitigation_status: row.mitigation_status ?? null,
     current_risk_level: row.current_risk_level ?? null,
-    deadline: row.deadline ? toRiskCalendarDate(new Date(row.deadline)) : null,
+    deadline: row.deadline ? riskCalendarDateFromCell(row.deadline) : null,
     mitigation_plan: row.mitigation_plan ?? null,
     implementation_strategy: row.implementation_strategy ?? null,
     likelihood_mitigation: row.likelihood_mitigation ?? "Rare",
@@ -365,7 +365,7 @@ function parseRow(row: RiskImportRow): Record<string, unknown> {
     approval_status: row.approval_status ?? null,
     // An empty cell stays empty: the import time is not an assessment date.
     date_of_assessment: row.date_of_assessment
-      ? toRiskCalendarDate(new Date(row.date_of_assessment))
+      ? riskCalendarDateFromCell(row.date_of_assessment)
       : null,
   };
 }

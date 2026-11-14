@@ -1,4 +1,4 @@
-import { toRiskCalendarDate } from "../riskCalendarDate.utils";
+import { riskCalendarDateFromCell, toRiskCalendarDate } from "../riskCalendarDate.utils";
 
 const iso = (value: unknown) => (value instanceof Date ? value.toISOString() : value);
 
@@ -34,5 +34,24 @@ describe("toRiskCalendarDate", () => {
     expect(toRiskCalendarDate("not a date")).toBe("not a date");
     expect(toRiskCalendarDate("2026-02-30")).toBe("2026-02-30");
     expect(toRiskCalendarDate(42)).toBe(42);
+  });
+});
+
+describe("riskCalendarDateFromCell", () => {
+  it("reads a cell without a time as that calendar day, whatever the server time zone", () => {
+    expect(iso(riskCalendarDateFromCell("05/01/2026"))).toBe("2026-05-01T12:00:00.000Z");
+    expect(iso(riskCalendarDateFromCell("1 May 2026"))).toBe("2026-05-01T12:00:00.000Z");
+  });
+
+  it("follows toRiskCalendarDate for ISO text and date cells", () => {
+    expect(iso(riskCalendarDateFromCell("2026-05-01"))).toBe("2026-05-01T12:00:00.000Z");
+    expect(iso(riskCalendarDateFromCell(new Date("2026-05-01T00:00:00.000Z")))).toBe(
+      "2026-05-01T12:00:00.000Z",
+    );
+    expect(riskCalendarDateFromCell("2026-05-01T18:00:00Z")).toBe("2026-05-01T18:00:00Z");
+  });
+
+  it("passes unparseable text through for validation", () => {
+    expect(riskCalendarDateFromCell("someday")).toBe("someday");
   });
 });

@@ -187,7 +187,7 @@ describe("Risk save correctness", () => {
       ["2000-12-31T21:00:00.000Z", "2001-01-01T12:00:00.000Z"], // Istanbul pick
       ["2000-12-31T18:30:00.000Z", "2001-01-01T12:00:00.000Z"], // India pick
       ["2000-12-31T11:00:00.000Z", "2001-01-01T12:00:00.000Z"], // New Zealand summer pick
-      ["2000-12-31T12:00:00.000Z", "2001-01-01T12:00:00.000Z"], // New Zealand winter pick
+      ["2001-01-01T12:00:00.000Z", "2001-01-01T12:00:00.000Z"], // already at noon: unchanged
       ["2001-01-01T10:00:00.000Z", "2001-01-01T12:00:00.000Z"], // Hawaii pick
       ["2001-01-01T14:23:41.512Z", "2001-01-01T14:23:41.512Z"], // a "now" timestamp
     ];
@@ -203,6 +203,8 @@ describe("Risk save correctness", () => {
 
     // eslint-disable-next-line @typescript-eslint/no-require-imports
     const migration = require("../../database/migrations/20261114120000-risk-dates-utc-noon.js");
+    await migration.up(sequelize.getQueryInterface());
+    // Running it again changes nothing.
     await migration.up(sequelize.getQueryInterface());
 
     for (const [index, [, expected]] of cases.entries()) {

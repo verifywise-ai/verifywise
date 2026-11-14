@@ -166,13 +166,14 @@ const MitigationSection: FC<MitigationSectionProps> = ({
   mitigationValuesRef.current = mitigationValues;
 
   // Approval fields become optional again once approval is un-started, so
-  // drop any "required" errors already shown on them.
+  // drop the "required" errors already shown on them. An error the server
+  // returned for one of them is kept until the next save.
   useEffect(() => {
     if (approvalStarted) return;
-    clearFieldError("approver");
-    clearFieldError("approvalStatus");
-    clearFieldError("dateOfAssessment");
-  }, [approvalStarted, clearFieldError]);
+    for (const field of ["approver", "approvalStatus", "dateOfAssessment"] as const) {
+      if (!serverErrors?.[field]) clearFieldError(field);
+    }
+  }, [approvalStarted, clearFieldError, serverErrors]);
 
   // Merge backend validation errors into the inline error state.
   useEffect(() => {
