@@ -162,12 +162,12 @@ export const mcpOverviewContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Runs', text: 'Follow what an agent did in one working session' },
-        { bold: 'Agent keys', text: 'Create and manage API keys for agents' },
-        { bold: 'MCP servers', text: 'Register backend MCP servers and see their discovery results' },
-        { bold: 'MCP tools', text: 'View all discovered tools, set risk levels' },
         { bold: 'Activity', text: 'Review tool invocation history and stats' },
         { bold: 'Approvals', text: 'Approve or deny pending tool calls' },
         { bold: 'Guardrails', text: 'Configure input scanning rules' },
+        { bold: 'Agent keys', text: 'Create and manage API keys for agents' },
+        { bold: 'MCP servers', text: 'Register backend MCP servers and see their discovery results' },
+        { bold: 'MCP tools', text: 'View all discovered tools, set risk levels' },
       ],
     },
     {

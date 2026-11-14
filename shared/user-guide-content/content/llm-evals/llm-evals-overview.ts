@@ -97,8 +97,12 @@ export const llmEvalsOverviewContent: ArticleContent = {
         { bold: 'Experiments', text: 'The full history of evaluation runs. Track performance over time with the built-in chart, dig into individual results or start new experiments.' },
         { bold: 'Datasets', text: 'Manage your test cases. Browse built-in datasets, upload your own or edit existing ones to better match your use cases.' },
         { bold: 'Scorers', text: 'Configure what you\'re measuring. Enable or disable metrics, adjust thresholds or create custom scorers.' },
-        { bold: 'Configuration', text: 'Project-level settings like default models and evaluation preferences.' },
-        { bold: 'Organizations', text: 'Manage API keys for different providers. These are stored securely and used when running evaluations.' },
+        { bold: 'Models', text: 'View and manage model configurations for your project.' },
+        { bold: 'Bias audits', text: 'Run and review bias audits.' },
+        { bold: 'Playground', text: 'Listed in the sidebar, not yet available.' },
+        { bold: 'Arena', text: 'Compare models side by side. Hidden until an Admin turns it on.' },
+        { bold: 'Reports', text: 'Reports for your project.' },
+        { bold: 'Settings', text: 'API keys for your providers, which are stored securely and used when running evaluations, and project settings such as the use case type.' },
       ],
     },
     {
@@ -115,7 +119,7 @@ export const llmEvalsOverviewContent: ArticleContent = {
       type: 'ordered-list',
       items: [
         { bold: 'Create a project', text: 'Click the project dropdown and select "Create new project." Give it a descriptive name like "Customer Support Bot" or "Document Q&A."' },
-        { bold: 'Add your API keys', text: 'Go to Organizations and add API keys for the model you\'re testing and the judge model. You\'ll need at least one of each.' },
+        { bold: 'Add your API keys', text: 'Go to **Settings** and add API keys for the model you\'re testing and the judge model. You\'ll need at least one of each.' },
         { bold: 'Start a new experiment', text: 'Click "New experiment" and follow the wizard. Select your model, pick a built-in dataset to start, choose your judge and select which metrics to evaluate.' },
         { bold: 'Review results', text: 'Once the experiment completes, click into it to see per-metric scores and drill down into individual test cases.' },
       ],
