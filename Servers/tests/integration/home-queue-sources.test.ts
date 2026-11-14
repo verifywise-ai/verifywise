@@ -155,6 +155,41 @@ describe("Home queue ownership sources against a real database", () => {
 
       expect((await run(policyReviewsSource, ctx)).names).toEqual([]);
     });
+
+    it("leaves out overdue Archived and Deprecated policies, keeps the rest", async () => {
+      const overdue = dayOffset(-30);
+      await seedPolicy(orgId, {
+        title: "archived",
+        ownerId: me,
+        nextReviewDate: overdue,
+        status: "Archived",
+      });
+      await seedPolicy(orgId, {
+        title: "deprecated",
+        ownerId: me,
+        nextReviewDate: overdue,
+        status: "Deprecated",
+      });
+      await seedPolicy(orgId, {
+        title: "draft",
+        ownerId: me,
+        nextReviewDate: overdue,
+        status: "Draft",
+      });
+      await seedPolicy(orgId, {
+        title: "published",
+        ownerId: me,
+        nextReviewDate: overdue,
+        status: "Published",
+      });
+      await seedPolicy(orgId, { title: "no status", ownerId: me, nextReviewDate: overdue });
+
+      expect((await run(policyReviewsSource, ctx)).names).toEqual([
+        "draft",
+        "no status",
+        "published",
+      ]);
+    });
   });
 
   describe("vendor reviews", () => {

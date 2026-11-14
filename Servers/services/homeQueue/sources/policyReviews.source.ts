@@ -8,11 +8,14 @@ const NEXT_REVIEW = dateSql("p.next_review_date");
 /**
  * Which policies are due for review, whoever the reviewer is (alias `p`). The
  * queue source adds the owner/reviewer filter; the Home counts strip counts it
- * org-wide. Keep the rule here so a change applies to both.
+ * org-wide. Keep the rule here so a change applies to both. Archived and
+ * Deprecated policies are retired, so they are never due (status may be NULL).
  */
 export const POLICY_REVIEW_DUE_CONDITION = `
     p.organization_id = :organizationId
     AND p.next_review_date IS NOT NULL
+    AND p.status IS DISTINCT FROM 'Archived'
+    AND p.status IS DISTINCT FROM 'Deprecated'
     AND ${NEXT_REVIEW} <= :windowEnd`;
 
 /** Binds the due condition's `:organizationId` and `:windowEnd`. */

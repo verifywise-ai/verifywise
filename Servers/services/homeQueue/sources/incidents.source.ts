@@ -14,8 +14,8 @@ export const INCIDENTS_SQL = `
   FROM ai_incident_managements i
   WHERE i.organization_id = :organizationId
     AND i.assignee_id = :userId
-    AND i.status <> :closed
-    AND i.archived = false`;
+    AND i.status IS DISTINCT FROM :closed
+    AND i.archived IS NOT TRUE`;
 
 interface IncidentRow {
   id: number;

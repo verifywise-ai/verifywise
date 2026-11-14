@@ -65,13 +65,14 @@ export interface SeedPolicyOptions {
   ownerId?: number | null;
   reviewerIds?: number[];
   nextReviewDate: string | null;
+  status?: string | null;
 }
 
 export async function seedPolicy(orgId: number, o: SeedPolicyOptions): Promise<number> {
   const id = firstId(
     await sequelize.query(
-      `INSERT INTO policy_manager (organization_id, title, policy_owner_id, next_review_date, created_at)
-       VALUES (:orgId, :title, :ownerId, :nextReview, NOW())
+      `INSERT INTO policy_manager (organization_id, title, policy_owner_id, next_review_date, status, created_at)
+       VALUES (:orgId, :title, :ownerId, :nextReview, :status, NOW())
        RETURNING id`,
       {
         replacements: {
@@ -79,6 +80,7 @@ export async function seedPolicy(orgId: number, o: SeedPolicyOptions): Promise<n
           title: o.title,
           ownerId: o.ownerId ?? null,
           nextReview: o.nextReviewDate ? `${o.nextReviewDate} 12:00:00` : null,
+          status: o.status ?? null,
         },
       },
     ),

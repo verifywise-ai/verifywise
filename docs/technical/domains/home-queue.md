@@ -30,7 +30,7 @@ Every query filters by `organization_id`. `today` is the UTC date computed in th
 | `tasks` | `tasks.source.ts` | You are in `task_assignees` and status is Open, In Progress or Overdue. Overdue is derived from `due_date < today`, because the stored status is not kept current. | everyone |
 | `intake` | `intake.source.ts` | Pending submission and you are a named reviewer of its lane, or routing is off or no lane is stored, or the lane has no named reviewers and `canDecideLane` accepts you. Or an approved submission with a second review open (or missed and unresolved) where you are a senior reviewer (an Admin when none are named) and not the first approver. | `intakeForm.edit` |
 | `risks` | `risks.source.ts` | `risk_owner` is you and the risk is not deleted. Its mitigation status is Not Started (NULL counts), Requires review, or `deadline < today` and status not Completed or Canceled. | everyone |
-| `policyReviews` | `policyReviews.source.ts` | You are `policy_owner_id` or an assigned reviewer and `next_review_date <= today + 14`. | everyone |
+| `policyReviews` | `policyReviews.source.ts` | You are `policy_owner_id` or an assigned reviewer, the policy is not Archived or Deprecated and `next_review_date <= today + 14`. | everyone |
 | `vendorReviews` | `vendorReviews.source.ts` | You are `reviewer` (or `assignee` when no reviewer) and `review_date <= today + 14`. A vendor with status Reviewed is excluded only when its review date is before today. | everyone |
 | `incidents` | `incidents.source.ts` | `assignee_id` is you, status is not Closed, not archived. | everyone |
 | `mrmFindings` | `mrmFindings.source.ts` | `owner_id` is you and stage is not Resolved or Closed. | everyone |
@@ -59,6 +59,10 @@ The prompts count calls the AI Gateway (`aiGatewayRequest`, `GET /internal/guard
 ## Tenant isolation
 
 Organization and user come from the token only; the endpoint takes no id parameters. Each source filters `organization_id` in SQL. Integration coverage is in `Servers/tests/integration/tenant-isolation/home-queue.isolation.test.ts` (another org's items and counts never appear) and `Servers/tests/integration/home-queue-sources.test.ts` (source rules against real tables).
+
+## Row level security
+
+With `RLS_ENFORCEMENT_ENABLED=true` all queries in a request share one transaction (see `Servers/middleware/rls.middleware.ts`). In Postgres a failed statement aborts that transaction, so one failing source or count query makes the rest fail too and they show as unavailable or null. Revisit this before enabling RLS for the Home queue.
 
 ## Adding a source
 

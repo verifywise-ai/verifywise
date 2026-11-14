@@ -128,6 +128,9 @@ describe("policyReviewsSource", () => {
     expect(sql).toContain("pmr.organization_id = :organizationId");
     expect(sql).toContain("pmr.user_id = :userId");
     expect(sql).toContain("<= :windowEnd");
+    // Retired policies are never due; NULL status stays in.
+    expect(sql).toContain("p.status IS DISTINCT FROM 'Archived'");
+    expect(sql).toContain("p.status IS DISTINCT FROM 'Deprecated'");
     // today 2026-11-14: +14 is in, +15 is out.
     expect(options.replacements).toEqual({
       organizationId: 7,
@@ -234,8 +237,8 @@ describe("incidentsSource", () => {
     expect(sql).toBe(INCIDENTS_SQL);
     expect(sql).toContain("i.organization_id = :organizationId");
     expect(sql).toContain("i.assignee_id = :userId");
-    expect(sql).toContain("i.status <> :closed");
-    expect(sql).toContain("i.archived = false");
+    expect(sql).toContain("i.status IS DISTINCT FROM :closed");
+    expect(sql).toContain("i.archived IS NOT TRUE");
     expect(options.replacements).toEqual({ organizationId: 7, userId: 5, closed: "Closed" });
     expect(items).toEqual([
       {
