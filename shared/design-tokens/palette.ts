@@ -229,7 +229,7 @@ export const riskMark = {
 /** Score spectrum 0 to 100: score[Math.round(value / 10)]. */
 export { score };
 
-/** ON HOLD until the new sidebar (phase 2). Do not use in phase 1. */
+/** Part colours: unified sidebar wayfinding only (phase 2). */
 export { part };
 
 /** Corner radius in px. */
