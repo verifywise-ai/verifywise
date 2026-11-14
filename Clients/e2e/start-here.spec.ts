@@ -6,7 +6,8 @@ test.describe("Start Here", () => {
 
   test("renders the start here page", async ({ authedPage: page }) => {
     await page.goto("/start-here");
-    await expect(page).toHaveURL(/\/start-here/);
+    // The new look moved Start here into Home's Get started tab.
+    await expect(page).toHaveURL(/\/home\?tab=get-started/);
 
     // Page should show onboarding or getting-started content
     await expect(

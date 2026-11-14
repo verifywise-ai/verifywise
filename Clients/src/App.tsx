@@ -36,6 +36,7 @@ import CommandPaletteErrorBoundary from "./presentation/components/CommandPalett
 import useCommandPalette from "./application/hooks/useCommandPalette";
 import useUserPreferences from "./application/hooks/useUserPreferences";
 import { SetupModal, useOnboarding } from "./presentation/components/Onboarding";
+import { isClassicUi } from "./presentation/themes/uiStyle";
 import { lazyRoute } from "./application/utils/lazyRoute";
 import {
   UserGuideSidebarProvider,
@@ -141,14 +142,14 @@ function App() {
   //   reconnectDelay: 3000,
   // });
 
-  // Onboarding should show on dashboard (/) or start-here page
-  const isOnboardingRoute = location.pathname === "/" || location.pathname === "/start-here";
+  // Onboarding should show on the dashboard (/), Home or the start-here page
+  const isOnboardingRoute = ["/", "/home", "/start-here"].includes(location.pathname);
 
   // Derive modal visibility from onboarding state and current route
   // Only show modal if:
   // 1. User is authenticated (has token and userId)
   // 2. Onboarding is not complete (first login)
-  // 3. Currently on dashboard or start-here route
+  // 3. Currently on the dashboard, Home or start-here route
   const showModal = useMemo(
     () => token && userId && !state.isComplete && isOnboardingRoute,
     [token, userId, state.isComplete, isOnboardingRoute],
@@ -156,7 +157,8 @@ function App() {
 
   const handleOnboardingDone = useCallback(() => {
     completeOnboarding();
-    navigate("/start-here");
+    // The new look keeps Start here as Home's Get started tab.
+    navigate(isClassicUi() ? "/start-here" : "/home?tab=get-started");
   }, [completeOnboarding, navigate]);
 
   useEffect(() => {
