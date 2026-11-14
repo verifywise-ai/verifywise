@@ -100,9 +100,28 @@ async function notifyNewRiskOwners(
         },
       );
     } catch (err) {
-      console.error("Failed to send risk owner notification:", err);
+      logger.error("Failed to send risk owner notification:", err);
     }
   }
+}
+
+/**
+ * A stored risk_category as a list. The column is an enum array, which the
+ * driver may hand back as a Postgres array literal ("{a,\"b c\"}").
+ */
+function storedCategories(value: unknown): string[] {
+  if (Array.isArray(value)) return value.map(String);
+  if (typeof value !== "string") return [];
+  const inner = value.replace(/^\{|\}$/g, "");
+  if (inner === "") return [];
+  return inner.split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
+}
+
+/** Same categories, ignoring order and duplicates. */
+function sameCategories(stored: unknown, next: string[]): boolean {
+  const a = new Set(storedCategories(stored));
+  const b = new Set(next);
+  return a.size === b.size && [...a].every((c) => b.has(c));
 }
 
 export async function getAllRisks(req: Request, res: Response): Promise<any> {
@@ -811,6 +830,14 @@ export async function bulkUpdateProjectRisks(req: Request, res: Response): Promi
         );
 
         for (const risk of activeRisks) {
+          // A risk that already has the value is not an edit: no write,
+          // automation, history or recompute, and it is not counted.
+          const unchanged =
+            action === "set_owner"
+              ? Number(risk.risk_owner) === ownerId
+              : sameCategories(risk.risk_category, categories!);
+          if (unchanged) continue;
+
           const input =
             action === "set_owner" ? { risk_owner: ownerId } : { risk_category: categories };
           const updated = await updateRiskService(
@@ -822,11 +849,7 @@ export async function bulkUpdateProjectRisks(req: Request, res: Response): Promi
           );
           if (!updated) continue;
           updatedIds.push(risk.id!);
-          if (
-            action === "set_owner" &&
-            updated.risk_owner &&
-            Number(updated.risk_owner) !== Number(risk.risk_owner)
-          ) {
+          if (action === "set_owner" && updated.risk_owner) {
             newOwnerRisks.push(updated);
           }
         }

@@ -5,7 +5,7 @@ import {
   getRisksByFrameworkQuery,
   createRiskQuery,
   updateRiskByIdQuery,
-  deleteRiskByIdQuery,
+  archiveRiskQuery,
   assertRiskReferencesInOrganization,
   linkRiskToProjectQuery,
 } from "../../utils/risk.utils";
@@ -493,7 +493,10 @@ const agentDeleteRisk = createWriteToolFn({
     const transaction = await sequelize.transaction();
     try {
       const riskId = params.risk_id as number;
-      await deleteRiskByIdQuery(riskId, organizationId, transaction);
+      // The approval gateway sets _userId to the user the action runs for.
+      const userId = (params._userId as number | undefined) || undefined;
+      // Same archive as the console: history entry and policy unlinks included.
+      await archiveRiskQuery(riskId, organizationId, userId, transaction);
       await transaction.commit();
       return { id: riskId, deleted: true, message: "Risk deleted successfully" };
     } catch (error) {

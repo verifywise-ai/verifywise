@@ -19,7 +19,7 @@ import {
 } from "../domain.layer/exceptions/custom.exception";
 import { toRiskCalendarDate } from "./riskCalendarDate.utils";
 import { recordProjectRiskDeletion } from "./projectRiskChangeHistory.utils";
-import { FRAMEWORK_STRUCTURES } from "../structures";
+import { getStructureById } from "../structures";
 
 type Mitigation = {
   id: number;
@@ -1507,7 +1507,7 @@ const BUILT_IN_RISK_MAPPING_TABLES: Record<number, RiskMappingTable[]> = {
 
 /** The bundled frameworks' l2 (and l3) junctions, from the structures registry. */
 const bundledRiskMappingTables = (frameworkId: number): RiskMappingTable[] => {
-  const structure = FRAMEWORK_STRUCTURES.find((fw) => fw.id === frameworkId);
+  const structure = getStructureById(frameworkId);
   if (!structure) return [];
   const { tables, cols } = structure;
   const families: RiskMappingTable[] = [

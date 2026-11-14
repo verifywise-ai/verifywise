@@ -150,7 +150,7 @@ describe("bulkUpdateProjectRisks", () => {
   });
 
   describe("set_owner", () => {
-    it("updates each active risk through updateRiskService and notifies only changed owners after commit", async () => {
+    it("updates only active risks whose owner changes, and notifies them after commit", async () => {
       arrangeRows([
         { id: 1, risk_owner: 3, risk_name: "R1", risk_description: "d1" },
         { id: 2, risk_owner: 7, risk_name: "R2", risk_description: "d2" },
@@ -180,7 +180,8 @@ describe("bulkUpdateProjectRisks", () => {
         }),
       );
 
-      expect(mockUpdateService).toHaveBeenCalledTimes(2);
+      // Risk 2 already belongs to user 7: no write, no automation, no recompute.
+      expect(mockUpdateService).toHaveBeenCalledTimes(1);
       expect(mockUpdateService).toHaveBeenCalledWith(
         1,
         { risk_owner: 7 },
@@ -188,15 +189,8 @@ describe("bulkUpdateProjectRisks", () => {
         { userId: 9, organizationId: 4 },
         TX,
       );
-      expect(mockUpdateService).toHaveBeenCalledWith(
-        2,
-        { risk_owner: 7 },
-        expect.objectContaining({ id: 2 }),
-        { userId: 9, organizationId: 4 },
-        TX,
-      );
 
-      // Risk 2 already belonged to user 7, so only risk 1 notifies, after commit.
+      // Only risk 1 notifies, after commit.
       expect(mockNotify).toHaveBeenCalledTimes(1);
       expect(committedAtNotify).toEqual([true]);
       expect(mockNotify).toHaveBeenCalledWith(
@@ -215,13 +209,13 @@ describe("bulkUpdateProjectRisks", () => {
       );
 
       // The single edit enqueues a link recompute on every update; so does bulk.
-      expect(mockEnqueue.mock.calls.map((c) => c[1])).toEqual([1, 2]);
+      expect(mockEnqueue.mock.calls.map((c) => c[1])).toEqual([1]);
       expect(mockArchive).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(200);
-      // Risk 5 is archived (not in the active rows), so it is not counted.
+      // Risk 2 was unchanged and risk 5 is archived, so neither is counted.
       expect(res.json).toHaveBeenCalledWith({
         message: "OK",
-        data: { updated: 2, action: "set_owner" },
+        data: { updated: 1, action: "set_owner" },
       });
     });
 
@@ -301,6 +295,47 @@ describe("bulkUpdateProjectRisks", () => {
       expect(res.json).toHaveBeenCalledWith({
         message: "OK",
         data: { updated: 1, action: "set_category" },
+      });
+    });
+
+    it("skips risks whose categories already match, in any order or stored as a literal", async () => {
+      arrangeRows([
+        { id: 1, risk_category: ["Operational risk", "Strategic risk"] },
+        { id: 2, risk_category: '{"Operational risk","Strategic risk"}' },
+        { id: 3, risk_category: "{}" },
+      ]);
+      const req = createReq({
+        ids: [1, 2, 3],
+        action: "set_category",
+        categories: ["Strategic risk", "Operational risk"],
+      });
+      const res = createRes();
+
+      await bulkUpdateProjectRisks(req as Request, res as Response);
+      await flush();
+
+      expect(mockUpdateService).toHaveBeenCalledTimes(1);
+      expect(mockUpdateService.mock.calls[0][0]).toBe(3);
+      expect(mockEnqueue.mock.calls.map((c) => c[1])).toEqual([3]);
+      expect(res.json).toHaveBeenCalledWith({
+        message: "OK",
+        data: { updated: 1, action: "set_category" },
+      });
+    });
+
+    it("updates nothing and counts nothing when every risk already matches", async () => {
+      arrangeRows([{ id: 1, risk_category: ["Strategic risk"] }]);
+      const req = createReq({ ids: [1], action: "set_category", categories: ["Strategic risk"] });
+      const res = createRes();
+
+      await bulkUpdateProjectRisks(req as Request, res as Response);
+      await flush();
+
+      expect(mockUpdateService).not.toHaveBeenCalled();
+      expect(mockEnqueue).not.toHaveBeenCalled();
+      expect(res.json).toHaveBeenCalledWith({
+        message: "OK",
+        data: { updated: 0, action: "set_category" },
       });
     });
 
