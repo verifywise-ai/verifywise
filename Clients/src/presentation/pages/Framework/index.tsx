@@ -60,10 +60,6 @@ import GovernanceIntelligenceContextBar from "../../components/GovernanceOS/Gove
 import { storageService } from "../../../infrastructure/storage";
 import { textStyles } from "../../themes/typography";
 import { useExtensions } from "../../../application/contexts/Extensions.context";
-import {
-  useDeleteImportedFramework,
-  useImportedFrameworks,
-} from "../../../application/hooks/useFrameworkImport";
 import FrameworkImportModal from "./Components/FrameworkImportModal";
 import { FileUp as FileUpIcon } from "lucide-react";
 
@@ -91,16 +87,6 @@ const tabListStyle = {
     columnGap: "34px",
   },
 };
-
-/**
- * Message for a failed imported-framework delete. On a 409 (still used by use
- * cases) the server's translated message already names those use cases.
- */
-function importedDeleteErrorMessage(error: unknown): string {
-  return error instanceof Error && error.message
-    ? error.message
-    : "Failed to delete the imported framework. Please try again.";
-}
 
 const Framework = () => {
   const [searchParams] = useSearchParams();
@@ -140,16 +126,6 @@ const Framework = () => {
   const { isEnabled } = useExtensions();
   const isFrameworkImportEnabled = isEnabled("framework-import");
   const [isImportModalOpen, setIsImportModalOpen] = useState(false);
-  const { data: importedFrameworks = [] } = useImportedFrameworks({
-    enabled: isFrameworkImportEnabled,
-  });
-  const deleteImportedMutation = useDeleteImportedFramework();
-  const [confirmDeleteImported, setConfirmDeleteImported] = useState<number | null>(null);
-  const [deleteImportedError, setDeleteImportedError] = useState<string | null>(null);
-  const closeDeleteImported = () => {
-    setConfirmDeleteImported(null);
-    setDeleteImportedError(null);
-  };
 
   // Check if there are any organizational projects
   const organizationalProject = useMemo(() => {
@@ -942,111 +918,11 @@ const Framework = () => {
         {/* Only show framework content if organizational project exists */}
         {organizationalProject && (
           <>
-            {/* Imported frameworks (#5254): self-service spreadsheet imports live here. */}
-            {isFrameworkImportEnabled && (
-              <Box sx={{ marginBottom: "32px" }}>
-                <Stack
-                  direction="row"
-                  justifyContent="space-between"
-                  alignItems="center"
-                  sx={{ marginBottom: "8px" }}
-                >
-                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
-                    Imported frameworks
-                  </Typography>
-                  <CustomizableButton
-                    variant="outlined"
-                    text="Import from Excel"
-                    startIcon={<FileUpIcon size={16} />}
-                    onClick={() => setIsImportModalOpen(true)}
-                    isDisabled={!canImportFrameworks}
-                  />
-                </Stack>
-                <Typography sx={{ fontSize: 13, color: "text.secondary", marginBottom: "8px" }}>
-                  Your own frameworks, imported from Excel. Add one to a use case from that use
-                  case's Frameworks tab to assess it.
-                </Typography>
-                {importedFrameworks.length === 0 ? (
-                  <Typography sx={{ fontSize: 13, color: "text.secondary" }}>
-                    No imported frameworks yet. Import one from a spreadsheet to keep its topics and
-                    subtopics here.
-                  </Typography>
-                ) : (
-                  <Stack sx={{ gap: "8px" }}>
-                    {importedFrameworks.map((fw) => (
-                      <Stack
-                        key={fw.id}
-                        direction="row"
-                        justifyContent="space-between"
-                        alignItems="center"
-                        sx={{
-                          border: `1px solid ${borderPalette.dark}`,
-                          borderRadius: radiusPx.sm,
-                          padding: "16px",
-                        }}
-                      >
-                        <Box>
-                          <Typography sx={{ fontSize: 13, fontWeight: 600 }}>{fw.name}</Typography>
-                          <Typography sx={{ fontSize: 12, color: "text.secondary" }}>
-                            {fw.topics.length} topic(s) ·{" "}
-                            {fw.topics.reduce((acc, t) => acc + t.subtopics.length, 0)} subtopic(s)
-                          </Typography>
-                        </Box>
-                        {canImportFrameworks && (
-                          <CustomizableButton
-                            variant="outlined"
-                            text="Delete"
-                            onClick={() => setConfirmDeleteImported(fw.id)}
-                            isDisabled={deleteImportedMutation.isPending}
-                          />
-                        )}
-                      </Stack>
-                    ))}
-                  </Stack>
-                )}
-              </Box>
-            )}
-
             {isImportModalOpen && (
               <FrameworkImportModal
                 open={isImportModalOpen}
                 onClose={() => setIsImportModalOpen(false)}
                 onImportComplete={() => setIsImportModalOpen(false)}
-              />
-            )}
-
-            {confirmDeleteImported !== null && (
-              <ConfirmationModal
-                isOpen
-                title="Delete this imported framework?"
-                body={
-                  <Stack sx={{ gap: "8px" }}>
-                    <Typography fontSize={13}>
-                      This removes the imported framework with all its topics and subtopics. You can
-                      import it again from your file later. A framework used by a use case cannot be
-                      deleted: remove it from those use cases first.
-                    </Typography>
-                    {deleteImportedError && (
-                      <Typography fontSize={13} color="error" role="alert">
-                        {deleteImportedError}
-                      </Typography>
-                    )}
-                  </Stack>
-                }
-                cancelText="Cancel"
-                proceedText="Delete"
-                proceedButtonColor="error"
-                proceedButtonVariant="contained"
-                onCancel={closeDeleteImported}
-                onProceed={async () => {
-                  try {
-                    await deleteImportedMutation.mutateAsync(confirmDeleteImported);
-                    closeDeleteImported();
-                  } catch (error) {
-                    setDeleteImportedError(importedDeleteErrorMessage(error));
-                  }
-                }}
-                isLoading={deleteImportedMutation.isPending}
               />
             )}
 

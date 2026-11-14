@@ -50,13 +50,6 @@ vi.mock("../../../../application/contexts/Extensions.context", () => ({
   ExtensionsProvider: ({ children }: any) => children,
 }));
 
-const mockImportedFrameworks = vi.fn(() => [] as unknown[]);
-const mockDeleteImported = vi.fn();
-vi.mock("../../../../application/hooks/useFrameworkImport", () => ({
-  useImportedFrameworks: () => ({ data: mockImportedFrameworks() }),
-  useDeleteImportedFramework: () => ({ mutateAsync: mockDeleteImported, isPending: false }),
-}));
-
 // Mock repositories
 const mockGetAllEntities = vi.fn();
 vi.mock("../../../../application/repository/entity.repository", () => ({
@@ -618,83 +611,20 @@ describe("Framework", () => {
   });
 
   describe("imported frameworks (#5254)", () => {
-    const withImported = () => {
+    afterEach(() => {
+      mockIsEnabled.mockImplementation(() => false);
+    });
+
+    it("does not show the imported frameworks list on the overview", () => {
       mockIsEnabled.mockImplementation((key: string) => key === "framework-import");
-      mockImportedFrameworks.mockReturnValue([
-        {
-          id: 9,
-          name: "Internal AI policy",
-          description: null,
-          is_active: true,
-          created_at: "",
-          updated_at: "",
-          topics: [],
-        },
-      ]);
       mockUseContext.mockReturnValue({
         changeComponentVisibility: vi.fn(),
         projects: [buildOrgProject([])],
         userRoleName: "Admin",
         setProjects: vi.fn(),
       });
-    };
-
-    afterEach(() => {
-      mockIsEnabled.mockImplementation(() => false);
-      mockImportedFrameworks.mockReturnValue([]);
-      mockHasPermission.mockImplementation(() => true);
-    });
-
-    it("gates import and delete on ext.frameworkImport.edit, not the role name", () => {
-      withImported();
-      // An Admin by role name, but without the import permission.
-      mockHasPermission.mockImplementation((key) => key !== "ext.frameworkImport.edit");
       renderWithProviders(<Framework />, { route: "/framework" });
-      expect(screen.getByRole("button", { name: "Import from Excel" })).toBeDisabled();
-      expect(screen.queryByRole("button", { name: "Delete" })).not.toBeInTheDocument();
-    });
-
-    it("lets a custom role holding ext.frameworkImport.edit import and delete", () => {
-      withImported();
-      mockUseContext.mockReturnValue({
-        changeComponentVisibility: vi.fn(),
-        projects: [buildOrgProject([])],
-        userRoleName: "Compliance lead",
-        setProjects: vi.fn(),
-      });
-      renderWithProviders(<Framework />, { route: "/framework" });
-      expect(mockHasPermission).toHaveBeenCalledWith("ext.frameworkImport.edit");
-      expect(screen.getByRole("button", { name: "Import from Excel" })).not.toBeDisabled();
-      expect(screen.getByRole("button", { name: "Delete" })).toBeInTheDocument();
-    });
-
-    it("says imported frameworks are added from the use case's Frameworks tab", () => {
-      withImported();
-      renderWithProviders(<Framework />, { route: "/framework" });
-      expect(screen.getByText(/Add one to a use case from that use case/)).toBeInTheDocument();
-      expect(screen.queryByText(/cannot be added to use cases/)).not.toBeInTheDocument();
-    });
-
-    it("keeps the delete dialog open with the server's reason when the framework is in use", async () => {
-      withImported();
-      mockDeleteImported.mockRejectedValue(
-        new Error("Used by these use cases: Credit scoring. Remove it from them first."),
-      );
-      renderWithProviders(<Framework />, { route: "/framework" });
-
-      fireEvent.click(screen.getByRole("button", { name: "Delete" }));
-      expect(
-        screen.getByText(/cannot be deleted: remove it from those use cases first/),
-      ).toBeVisible();
-      const deleteButtons = screen.getAllByRole("button", { name: "Delete" });
-      fireEvent.click(deleteButtons[deleteButtons.length - 1]);
-
-      expect(
-        await screen.findByText(
-          "Used by these use cases: Credit scoring. Remove it from them first.",
-        ),
-      ).toBeInTheDocument();
-      expect(mockDeleteImported).toHaveBeenCalledWith(9);
+      expect(screen.queryByText("Imported frameworks")).not.toBeInTheDocument();
     });
   });
 });

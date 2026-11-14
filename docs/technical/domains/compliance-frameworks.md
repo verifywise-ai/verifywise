@@ -571,6 +571,8 @@ Generated reports cover only the four core frameworks. `Servers/services/reporti
 
 An organization with the `framework-import` extension enabled imports its own framework from Excel (`POST /api/v1/framework-import/import`), then adds it to a use case and assesses it with the same page and drawer as the bundled frameworks (#5254).
 
+The imported frameworks list, with **Import from Excel** and **Delete**, is on the Frameworks page **Settings** tab (`pages/Framework/Settings/ImportedFrameworksSettings.tsx`), shown only while the extension is enabled. **Manage frameworks → Import framework from Excel** on the Frameworks page opens the same import dialog.
+
 ### Storage
 
 Imported frameworks never enter `frameworks` or `projects_frameworks`. Those tables hold the global bundled catalog, and ids 26+ are kept for future bundled frameworks. Every table below carries `organization_id` and the `tenant_isolation` RLS policy.

@@ -466,6 +466,9 @@ export const de: Record<string, string> = {
     "Speichern Sie Ihr eigenes Rahmenwerk, etwa eine interne Richtlinie, als Themen und Unterthemen. Fügen Sie es nach dem Import einem Anwendungsfall über dessen Tab „Rahmenwerke“ hinzu. Wenn Sie erneut eine Datei mit demselben Rahmenwerknamen hochladen, wird das vorhandene Rahmenwerk aktualisiert.",
   "All rows must describe the same framework. Re-uploading a framework name updates it and keeps the topics and subtopics that have assessment data. A file can have at most 5,000 rows.":
     "Alle Zeilen müssen dasselbe Rahmenwerk beschreiben. Wenn Sie einen Rahmenwerknamen erneut hochladen, wird das Rahmenwerk aktualisiert; Themen und Unterthemen mit Bewertungsdaten bleiben erhalten. Eine Datei darf höchstens 5.000 Zeilen enthalten.",
+  "Loading imported frameworks...": "Importierte Frameworks werden geladen...",
+  "Could not load imported frameworks. Refresh the page to try again.":
+    "Importierte Frameworks konnten nicht geladen werden. Laden Sie die Seite neu, um es erneut zu versuchen.",
 };
 
 export const fr: Record<string, string> = {
@@ -937,6 +940,9 @@ export const fr: Record<string, string> = {
     "Enregistrez votre propre référentiel, comme une politique interne, sous forme de thèmes et de sous-thèmes. Une fois importé, ajoutez-le à un cas d'usage depuis l'onglet Référentiels de ce cas d'usage. Importer à nouveau un fichier portant le même nom de référentiel met à jour le référentiel existant.",
   "All rows must describe the same framework. Re-uploading a framework name updates it and keeps the topics and subtopics that have assessment data. A file can have at most 5,000 rows.":
     "Toutes les lignes doivent décrire le même référentiel. Importer à nouveau un nom de référentiel le met à jour et conserve les thèmes et sous-thèmes qui ont des données d'évaluation. Un fichier peut contenir au plus 5 000 lignes.",
+  "Loading imported frameworks...": "Chargement des référentiels importés...",
+  "Could not load imported frameworks. Refresh the page to try again.":
+    "Impossible de charger les référentiels importés. Actualisez la page pour réessayer.",
 };
 
 export const es: Record<string, string> = {
@@ -1399,4 +1405,7 @@ export const es: Record<string, string> = {
     "Guarde su propio marco, como una política interna, en forma de temas y subtemas. Una vez importado, añádalo a un caso de uso desde la pestaña Marcos de ese caso de uso. Si vuelve a subir un archivo con el mismo nombre de marco, se actualiza el marco existente.",
   "All rows must describe the same framework. Re-uploading a framework name updates it and keeps the topics and subtopics that have assessment data. A file can have at most 5,000 rows.":
     "Todas las filas deben describir el mismo marco. Si vuelve a subir un nombre de marco, se actualiza y se conservan los temas y subtemas que tienen datos de evaluación. Un archivo puede tener como máximo 5.000 filas.",
+  "Loading imported frameworks...": "Cargando marcos importados...",
+  "Could not load imported frameworks. Refresh the page to try again.":
+    "No se pudieron cargar los marcos importados. Actualice la página para volver a intentarlo.",
 };

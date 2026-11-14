@@ -28,6 +28,8 @@ import {
   radiusPx,
 } from "../../../themes/palette";
 import { fontSize, fontWeight, textStyles } from "../../../themes/typography";
+import { useExtensions } from "../../../../application/contexts/Extensions.context";
+import ImportedFrameworksSettings from "./ImportedFrameworksSettings";
 
 interface FrameworkSettingsProps {
   organizationalProject: Project;
@@ -47,6 +49,9 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
   setProjects,
 }) => {
   const can = useCanCheck();
+  // Framework import extension (#5254): imported frameworks are managed here.
+  const { isEnabled } = useExtensions();
+  const isFrameworkImportEnabled = isEnabled("framework-import");
   const [isEditProjectModalOpen, setIsEditProjectModalOpen] = useState(false);
   const [isDeleteModalOpen, setIsDeleteModalOpen] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
@@ -235,60 +240,55 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
 
         <Box
           sx={{
-            display: "grid",
-            gridTemplateColumns: "1fr 1fr",
-            gap: 3,
-            alignItems: "stretch",
+            background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
+            border: `1px solid ${borderPalette.dark}`,
+            borderRadius: radiusPx.sm,
+            p: "24px",
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            flexWrap: "wrap",
+            gap: "16px",
           }}
         >
-          <Box
-            sx={{
-              background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
-              border: `1px solid ${borderPalette.dark}`,
-              borderRadius: radiusPx.sm,
-              p: "24px",
-              display: "flex",
-              justifyContent: "space-between",
-              alignItems: "center",
-            }}
-          >
-            <Box>
-              <Typography sx={{ ...textStyles.subsectionTitle, mb: 1, color: text.primary }}>
-                {organizationalProject.project_title}
-              </Typography>
-              <Typography sx={{ ...textStyles.body, color: text.tertiary }}>
-                Organizational framework
-              </Typography>
-            </Box>
-
-            <Stack direction="row" spacing={2}>
-              <CustomizableButton
-                variant="outlined"
-                icon={<EditIconGrey size={16} />}
-                text="Edit framework"
-                onClick={handleEditProjectClick}
-                isDisabled={!can("useCase.edit")}
-                sx={{
-                  "borderColor": borderPalette.dark,
-                  "width": "170px",
-                  "color": text.primary,
-                  "&:hover": {
-                    borderColor: borderPalette.dark,
-                    backgroundColor: background.hover,
-                  },
-                }}
-              />
-
-              <CustomizableButton
-                variant="outlined"
-                color="error"
-                icon={<DeleteIconRed size={16} />}
-                text="Delete framework"
-                onClick={handleDeleteProjectClick}
-                isDisabled={!can("useCase.edit")}
-              />
-            </Stack>
+          <Box>
+            <Typography sx={{ ...textStyles.subsectionTitle, mb: 1, color: text.primary }}>
+              {organizationalProject.project_title}
+            </Typography>
+            <Typography sx={{ ...textStyles.body, color: text.tertiary }}>
+              Organizational framework
+            </Typography>
           </Box>
+
+          <Stack direction="row" sx={{ gap: "8px", flexShrink: 0 }}>
+            <CustomizableButton
+              variant="outlined"
+              icon={<EditIconGrey size={16} />}
+              text="Edit framework"
+              onClick={handleEditProjectClick}
+              isDisabled={!can("useCase.edit")}
+              sx={{
+                "borderColor": borderPalette.dark,
+                "width": "170px",
+                "whiteSpace": "nowrap",
+                "color": text.primary,
+                "&:hover": {
+                  borderColor: borderPalette.dark,
+                  backgroundColor: background.hover,
+                },
+              }}
+            />
+
+            <CustomizableButton
+              variant="outlined"
+              color="error"
+              icon={<DeleteIconRed size={16} />}
+              text="Delete framework"
+              onClick={handleDeleteProjectClick}
+              isDisabled={!can("useCase.edit")}
+              sx={{ width: "170px", whiteSpace: "nowrap" }}
+            />
+          </Stack>
         </Box>
       </Box>
 
@@ -402,6 +402,8 @@ const FrameworkSettings: React.FC<FrameworkSettingsProps> = ({
           })}
         </Box>
       </Box>
+
+      {isFrameworkImportEnabled && <ImportedFrameworksSettings />}
 
       {/* Modals */}
       {isEditProjectModalOpen && (

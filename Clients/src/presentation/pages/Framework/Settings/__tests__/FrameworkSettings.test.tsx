@@ -48,6 +48,16 @@ vi.mock("../../../../components/Modals/StandardModal", () => ({
     ) : null,
 }));
 
+const mockIsEnabled = vi.fn((_key: string) => false);
+vi.mock("../../../../../application/contexts/Extensions.context", () => ({
+  useExtensions: () => ({ isEnabled: mockIsEnabled }),
+  ExtensionsProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
+
+vi.mock("../ImportedFrameworksSettings", () => ({
+  default: () => <div data-testid="imported-frameworks-settings" />,
+}));
+
 import FrameworkSettings from "../index";
 
 const organizationalProject: any = {
@@ -252,5 +262,17 @@ describe("FrameworkSettings", () => {
     );
     const removeButton = screen.getByText("Remove").closest("button");
     expect(removeButton).toBeDisabled();
+  });
+
+  it("shows the imported frameworks section only while framework-import is enabled", () => {
+    mockIsEnabled.mockImplementation(() => false);
+    const { unmount } = renderWithProviders(<FrameworkSettings {...defaultProps} />);
+    expect(screen.queryByTestId("imported-frameworks-settings")).not.toBeInTheDocument();
+    unmount();
+
+    mockIsEnabled.mockImplementation((key) => key === "framework-import");
+    renderWithProviders(<FrameworkSettings {...defaultProps} />);
+    expect(screen.getByTestId("imported-frameworks-settings")).toBeInTheDocument();
+    mockIsEnabled.mockImplementation(() => false);
   });
 });
