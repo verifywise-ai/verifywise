@@ -10,6 +10,9 @@ import { ReactComponent as AddCircleOutlineIcon } from "../../assets/icons/plus-
 import CreateNewApprovalWorkflow from "../../components/Modals/NewApprovalWorkflow";
 import RequestorApprovalModal from "../../components/Modals/RequestorApprovalModal";
 import { useSearchParams } from "react-router";
+import { useQueryClient } from "@tanstack/react-query";
+import { HOME_QUEUE_QUERY_KEY } from "../../../application/hooks/useHomeQueue";
+import { dispatchApprovalRequestsChanged } from "../../../application/events/approvalRequestEvents";
 import { ApprovalWorkflowStepModel } from "../../../domain/models/Common/approvalWorkflow/approvalWorkflowStepModel";
 import { ApprovalStatus } from "../../../domain/enums/aiApprovalWorkflow.enum";
 import { FilterColumn } from "../../components/Table/FilterBy";
@@ -61,6 +64,12 @@ const ApprovalWorkflows: React.FC = () => {
       { replace: true },
     );
   }, [setSearchParams]);
+  // A decision here removes the request from Home and changes the top-bar count.
+  const queryClient = useQueryClient();
+  const handleLinkedRequestDecided = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: HOME_QUEUE_QUERY_KEY });
+    dispatchApprovalRequestsChanged();
+  }, [queryClient]);
 
   // Column visibility
   const {
@@ -429,6 +438,7 @@ const ApprovalWorkflows: React.FC = () => {
       <RequestorApprovalModal
         isOpen={linkedRequestId !== null}
         onClose={handleCloseLinkedRequest}
+        onRefresh={handleLinkedRequestDecided}
         initialRequestId={linkedRequestId}
       />
     </PageHeaderExtended>

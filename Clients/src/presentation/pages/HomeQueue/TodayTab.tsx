@@ -37,6 +37,11 @@ const TodayTab = () => {
 
   const sources = data?.sources ?? {};
   const visibleSources = SOURCE_ORDER.filter((id) => sources[id]);
+  // A refetch can drop the selected source (e.g. it is no longer visible to
+  // the user): go back to All instead of filtering on a missing option.
+  if (filter !== ALL && data && !sources[filter as HomeQueueSourceId]) {
+    setFilter(ALL);
+  }
   const inScope = (id: HomeQueueSourceId) => filter === ALL || filter === id;
 
   const items = (data?.items ?? []).filter((item) => inScope(item.source));

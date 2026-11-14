@@ -13,6 +13,7 @@ import {
   getMyApprovalRequests,
 } from "../../../application/repository/approvalRequest.repository";
 import { getAppModuleFromPath, isGlobalPath } from "../../../application/utils/appModule";
+import { onApprovalRequestsChanged } from "../../../application/events/approvalRequestEvents";
 import type { RootState } from "../../../application/redux/store";
 import { actionButtonsStyles } from "./style";
 import "./icon-shake.css";
@@ -150,6 +151,13 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
   useEffect(() => {
     if (isSuperAdminRoute) return;
     fetchApprovalCounts();
+  }, [fetchApprovalCounts, isSuperAdminRoute]);
+
+  // A request decided outside this bar's own modal (Approval workflows page,
+  // opened from a Home link) changes the count too.
+  useEffect(() => {
+    if (isSuperAdminRoute) return undefined;
+    return onApprovalRequestsChanged(fetchApprovalCounts);
   }, [fetchApprovalCounts, isSuperAdminRoute]);
 
   return (

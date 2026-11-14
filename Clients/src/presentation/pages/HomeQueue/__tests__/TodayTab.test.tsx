@@ -1,7 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, screen, within } from "@testing-library/react";
 import type { HomeQueueResponse } from "../../../../domain/types/homeQueue.types";
-import { navGroupColor } from "../../../themes/palette";
+import { navGroupColor, text } from "../../../themes/palette";
 
 const hook = vi.hoisted(() => ({ useHomeQueue: vi.fn() }));
 vi.mock("../../../../application/hooks/useHomeQueue", () => hook);
@@ -150,6 +150,42 @@ describe("TodayTab", () => {
     expect(rows().map((row) => row.getAttribute("data-testid"))).toEqual([
       "home-queue-item-tasks:7",
     ]);
+  });
+
+  it("goes back to All when a refetch drops the selected source", () => {
+    const { rerender } = renderWithProviders(<TodayTab />);
+    fireEvent.mouseDown(screen.getByRole("combobox", { name: "Filter by source" }));
+    fireEvent.click(screen.getByRole("option", { name: "Tasks" }));
+    expect(rows()).toHaveLength(1);
+
+    const { tasks: _tasks, ...sourcesWithoutTasks } = RESPONSE.sources;
+    hook.useHomeQueue.mockReturnValue(
+      queryState({
+        data: {
+          ...RESPONSE,
+          items: RESPONSE.items.filter((item) => item.source !== "tasks"),
+          sources: sourcesWithoutTasks,
+        },
+        isSuccess: true,
+      }),
+    );
+    rerender(<TodayTab />);
+
+    expect(rows()).toHaveLength(3);
+    expect(screen.getByRole("combobox", { name: "Filter by source" })).toHaveTextContent("All");
+  });
+
+  it("keeps the counts strip headings neutral: part colours are for the dot only", () => {
+    renderWithProviders(<TodayTab />);
+    for (const [heading, part] of [
+      ["Record", "record"],
+      ["Track", "track"],
+      ["Enforce", "enforce"],
+    ] as const) {
+      const el = screen.getByText(heading);
+      expect(el).toHaveStyle({ color: text.secondary });
+      expect(el).not.toHaveStyle({ color: navGroupColor[part].heading });
+    }
   });
 
   it("says when a source couldn't be loaded", () => {

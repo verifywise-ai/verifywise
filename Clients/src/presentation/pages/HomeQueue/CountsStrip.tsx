@@ -2,7 +2,7 @@ import { Box, Stack, Typography } from "@mui/material";
 import { Link as RouterLink } from "react-router";
 import type { HomeQueueCountId, HomeQueueResponse } from "../../../domain/types/homeQueue.types";
 import { useTranslation } from "../../../application/hooks/useTranslation";
-import { background, border, navGroupColor, radiusPx, text } from "../../themes/palette";
+import { background, border, radiusPx, text } from "../../themes/palette";
 
 type CountPart = "record" | "track" | "enforce";
 
@@ -87,7 +87,7 @@ const CountsStrip = ({ counts }: CountsStripProps) => {
             sx={{
               fontSize: "13px",
               fontWeight: 600,
-              color: navGroupColor[group.part].heading,
+              color: text.secondary,
               marginBottom: "4px",
             }}
           >
