@@ -7937,6 +7937,8 @@ tags:
   -
     name: 'v1: V1/Ai Detection Repositories'
   -
+    name: 'v1: V1/Change Notices'
+  -
     name: 'v1: V1/Dashboard'
   -
     name: 'v1: V1/Groups'
@@ -28899,6 +28901,81 @@ paths:
       tags:
         - 'v1: V1/Home'
       operationId: getHomeQueueHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/change-notices/{id}/view':
+    post:
+      summary: 'View Change Notice Handler'
+      description: 'Counts a visit to a page''s change notice and says whether to show it. Stops after the user dismisses it, after 3 visits, or 90 days after the user first saw it; skipped for accounts created after the first time anyone in the organization saw it. A refusal writes nothing. A token with no organization always gets show false.'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-z0-9][a-z0-9-]{0,63}$'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string, example: OK}
+                  data: {type: object, required: [show], properties: {show: {type: boolean}}}
+        '400':
+          description: 'Invalid notice id'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Change Notices'
+      operationId: viewChangeNoticeHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/change-notices/{id}/dismissed':
+    put:
+      summary: 'Set Change Notice Dismissed Handler'
+      description: 'Dismisses the signed-in user''s change notice, or restores it when dismissed is false (Undo).'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-z0-9][a-z0-9-]{0,63}$'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - dismissed
+              properties:
+                dismissed:
+                  type: boolean
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string, example: OK}
+                  data: {type: object, required: [dismissed], properties: {dismissed: {type: boolean}}}
+        '400':
+          description: 'Invalid notice id or body'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Change Notices'
+      operationId: setChangeNoticeDismissedHandler
       security:
         -
           bearerAuth: []
