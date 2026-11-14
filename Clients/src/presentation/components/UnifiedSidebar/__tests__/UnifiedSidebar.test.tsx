@@ -143,8 +143,8 @@ describe("UnifiedSidebar: active item per route (Review focus 1)", () => {
     ["/", "dashboard", undefined],
     ["/tasks", "tasks", undefined],
     ["/project-view?projectId=3", "inventory", "use-cases"],
-    ["/ai-trust-index/tracked", "inventory", "ati-tracked"],
-    ["/ai-trust-index/gpt-4o", "inventory", "ati-browse"],
+    ["/ai-trust-index/tracked", "ai-trust-index", "ati-tracked"],
+    ["/ai-trust-index/gpt-4o", "ai-trust-index", "ati-browse"],
     ["/shadow-ai/tools", "ai-detection", "ai-tools"],
     ["/shadow-ai/user-activity/departments", "ai-detection", "user-activity"],
     ["/ai-detection/scans/12", "ai-detection", "scan-results"],
@@ -237,20 +237,20 @@ describe("UnifiedSidebar: gates", () => {
 
   it("hides Trust Index settings without aiTrustIndex.admin", () => {
     renderAt("/ai-trust-index/browse");
-    expect(querySub("inventory", "ati-settings")).not.toBeInTheDocument();
+    expect(querySub("ai-trust-index", "ati-settings")).not.toBeInTheDocument();
   });
 
   it("shows Trust Index settings with aiTrustIndex.admin, whatever the role name", () => {
     authState.userRoleName = "Compliance lead";
     permissions.add("aiTrustIndex.admin");
     renderAt("/ai-trust-index/browse");
-    expect(sub("inventory", "ati-settings")).toBeInTheDocument();
+    expect(sub("ai-trust-index", "ati-settings")).toBeInTheDocument();
   });
 
   it("hides Trust Index settings from an Admin-named role without the key", () => {
     authState.userRoleName = "Admin";
     renderAt("/ai-trust-index/browse");
-    expect(querySub("inventory", "ati-settings")).not.toBeInTheDocument();
+    expect(querySub("ai-trust-index", "ati-settings")).not.toBeInTheDocument();
   });
 
   it("hides Intake without intakeForm.edit", () => {
@@ -398,7 +398,7 @@ describe("UnifiedSidebar: counts", () => {
   it("shows the tracked count", () => {
     trustCtx = { trackedCount: 4 };
     renderAt("/ai-trust-index/browse");
-    expect(sub("inventory", "ati-tracked")).toHaveAccessibleName("Tracked 4");
+    expect(sub("ai-trust-index", "ati-tracked")).toHaveAccessibleName("Tracked 4");
   });
 });
 
@@ -780,17 +780,17 @@ describe("UnifiedSidebar: routes hidden for this user", () => {
 
   it("selects the parent item on the route of a hidden sub-item", () => {
     renderAt("/ai-trust-index/settings");
-    expect(querySub("inventory", "ati-settings")).not.toBeInTheDocument();
-    expect(item("inventory")).toHaveAttribute("aria-expanded", "true");
-    expect(isSelected(item("inventory"))).toBe(true);
+    expect(querySub("ai-trust-index", "ati-settings")).not.toBeInTheDocument();
+    expect(item("ai-trust-index")).toHaveAttribute("aria-expanded", "true");
+    expect(isSelected(item("ai-trust-index"))).toBe(true);
     expect(document.querySelectorAll(".selected-path")).toHaveLength(1);
   });
 
   it("selects the sub-item, not the parent, when it is visible", () => {
     permissions.add("aiTrustIndex.admin");
     renderAt("/ai-trust-index/settings");
-    expect(isSelected(sub("inventory", "ati-settings"))).toBe(true);
-    expect(isSelected(item("inventory"))).toBe(false);
+    expect(isSelected(sub("ai-trust-index", "ati-settings"))).toBe(true);
+    expect(isSelected(item("ai-trust-index"))).toBe(false);
   });
 });
 
