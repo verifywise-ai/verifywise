@@ -12998,6 +12998,22 @@ export const v1V1groupsEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Home endpoints
+export const v1V1homeEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/home/queue',
+    summary: "Get Home Queue Handler",
+    description: "Everything that needs the signed-in user's action in the token's organization, merged and sorted (overdue first, then due soonest, then oldest waiting). A source that failed is reported as `unavailable` with no items, never as an empty list; a source or count the user may not see is absent, as is the prompts count when no AI Gateway is configured. Titles are built on the client from these structured fields.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Home",
+  },
+];
+
 // v1: V1/Imported Framework Assessments endpoints
 export const v1V1importedFrameworkAssessmentsEndpoints: Endpoint[] = [
   {
@@ -13844,6 +13860,7 @@ export const allEndpoints = {
   v1V1aiDetectionRepositories: v1V1aiDetectionRepositoriesEndpoints,
   v1V1dashboard: v1V1dashboardEndpoints,
   v1V1groups: v1V1groupsEndpoints,
+  v1V1home: v1V1homeEndpoints,
   v1V1importedFrameworkAssessments: v1V1importedFrameworkAssessmentsEndpoints,
   v1V1intakeFormReviewTime: v1V1intakeFormReviewTimeEndpoints,
   v1V1lifecycleSettings: v1V1lifecycleSettingsEndpoints,

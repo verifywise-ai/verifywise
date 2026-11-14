@@ -10,7 +10,7 @@ import { navGroupColor } from "../../../themes/palette";
  */
 const TODAY_NAV_PATHS: ReadonlyArray<{ path: string; source: string }> = [
   // §1 Main sidebar (17)
-  { path: "/start-here", source: "Sidebar: Start here" },
+  { path: "/start-here", source: "Sidebar: Start here (Home claims it; it redirects to /home)" },
   { path: "/", source: "Sidebar: Dashboard" },
   { path: "/tasks", source: "Sidebar: Tasks" },
   { path: "/framework", source: "Sidebar: Frameworks" },
@@ -107,10 +107,13 @@ const navPaths = (): Set<string> =>
     ]),
   );
 
-/** Routes with no entry of their own that a sub-item explicitly claims (matchPrefixes). */
+/** Routes with no entry of their own that an item or sub-item explicitly claims (matchPrefixes). */
 const claimedPaths = (): Set<string> =>
   new Set(
-    allItems().flatMap((item) => (item.children ?? []).flatMap((s) => s.matchPrefixes ?? [])),
+    allItems().flatMap((item) => [
+      ...(item.matchPrefixes ?? []),
+      ...(item.children ?? []).flatMap((s) => s.matchPrefixes ?? []),
+    ]),
   );
 
 describe("NAV_GROUPS: nothing lost", () => {
@@ -182,7 +185,8 @@ describe("NAV_GROUPS: item map", () => {
       (findItem(id).children ?? []).map((s) =>
         s.section ? `${s.section}: ${s.label} ${s.path}` : `${s.label} ${s.path}`,
       );
-    expect(findItem("home").path).toBe("/start-here");
+    expect(findItem("home").path).toBe("/home");
+    expect(findItem("home").matchPrefixes).toContain("/start-here");
     expect(findItem("dashboard").path).toBe("/");
     expect(findItem("incidents").path).toBe("/ai-incident-managements");
     expect(findItem("tasks").path).toBe("/tasks");
@@ -315,6 +319,7 @@ describe("NAV_GROUPS: item map", () => {
 describe("resolveActive", () => {
   const cases: ReadonlyArray<[string, string, string | null, string | undefined]> = [
     // Top items
+    ["/home", "", "home", undefined],
     ["/start-here", "", "home", undefined],
     ["/", "", "dashboard", undefined],
     ["/tasks", "", "tasks", undefined],

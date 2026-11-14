@@ -48,7 +48,7 @@ test.describe("Onboarding SetupModal (org creator, pending onboarding)", () => {
   );
 
   setupTest(
-    "skipping SetupModal completes onboarding and navigates to start-here",
+    "skipping SetupModal completes onboarding and opens Home's Get started tab",
     async ({ setupModalPage: page }) => {
       await page.goto("/");
 
@@ -56,8 +56,8 @@ test.describe("Onboarding SetupModal (org creator, pending onboarding)", () => {
       await expect(skipButton).toBeVisible({ timeout: 15_000 });
       await skipButton.click();
 
-      // SetupModal.onSkip → handleOnboardingDone → navigate("/start-here").
-      await expect(page).toHaveURL(/\/start-here/, { timeout: 15_000 });
+      // SetupModal.onSkip → handleOnboardingDone → navigate("/home?tab=get-started").
+      await expect(page).toHaveURL(/\/home\?tab=get-started/, { timeout: 15_000 });
     },
   );
 

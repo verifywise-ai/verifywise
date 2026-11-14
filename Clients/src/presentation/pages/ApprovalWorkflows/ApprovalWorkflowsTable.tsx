@@ -77,9 +77,13 @@ const ApprovalWorkflowsTable: React.FC<ApprovalWorkflowTableProps> = ({
     [visibleColumns],
   );
 
+  // Without edit or archive handlers (no approvalWorkflow.admin) the table is
+  // read-only: no actions column and rows do not open the editor.
+  const hasActions = Boolean(onEdit || onArchive);
+
   const visibleTableColumns = useMemo(
-    () => TABLE_COLUMNS.filter((col) => isVisible(col.id)),
-    [isVisible],
+    () => TABLE_COLUMNS.filter((col) => isVisible(col.id) && (hasActions || col.id !== "actions")),
+    [isVisible, hasActions],
   );
 
   const {
@@ -153,12 +157,12 @@ const ApprovalWorkflowsTable: React.FC<ApprovalWorkflowTableProps> = ({
             .map((workflow) => (
               <TableRow
                 key={workflow.id}
-                onClick={() => onEdit?.(workflow.id.toString())}
+                onClick={onEdit ? () => onEdit(workflow.id.toString()) : undefined}
                 sx={{
                   ...singleTheme.tableStyles.primary.body.row,
                   ...workflowRowHover,
                   ...(archivedId === workflow.id?.toString() && workflowTableRowDeletingStyle),
-                  cursor: "pointer",
+                  cursor: onEdit ? "pointer" : "default",
                 }}
               >
                 {isVisible("workflow_title") && (
@@ -185,7 +189,7 @@ const ApprovalWorkflowsTable: React.FC<ApprovalWorkflowTableProps> = ({
                       : "-"}
                   </TableCell>
                 )}
-                {isVisible("actions") && (
+                {isVisible("actions") && hasActions && (
                   <TableCell
                     sx={bodyCellActionsStyle(cellStyle)}
                     onClick={(e) => e.stopPropagation()}

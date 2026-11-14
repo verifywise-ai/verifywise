@@ -187,6 +187,11 @@ const ROLE_NAME_ALLOWLIST: Record<string, { count: number; reason: string }> = {
     count: 2,
     reason: "Inner role list on delete/metadata; the routes also authorize fileManager.contribute.",
   },
+  "controllers/homeQueue.ctrl.ts": {
+    count: 1,
+    reason:
+      "Home queue mirrors intake's Admin lane override so an unnamed lane reaches who can decide it.",
+  },
   "controllers/intakeForm.ctrl.ts": {
     count: 1,
     reason: "An Admin may act in any intake review lane; no catalog key; the screen matches.",

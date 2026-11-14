@@ -17,7 +17,8 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     id: "automate",
     items: [
-      { id: "home", label: "Home", icon: "home", path: "/start-here" },
+      // /start-here redirects to /home?tab=get-started in this look.
+      { id: "home", label: "Home", icon: "home", path: "/home", matchPrefixes: ["/start-here"] },
       { id: "dashboard", label: "Dashboard", icon: "dashboard", path: "/" },
       {
         id: "workflows",

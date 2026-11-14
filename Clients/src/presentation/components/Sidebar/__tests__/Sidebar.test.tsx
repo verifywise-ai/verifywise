@@ -104,4 +104,21 @@ describe("Sidebar", () => {
 
     expect(mockNavigate).toHaveBeenCalledWith("/");
   });
+
+  // The new look's Home page took over Start here; the classic sidebar keeps it.
+  it("classic look: Start here still opens /start-here", async () => {
+    vi.resetModules();
+    window.localStorage.setItem("vw-ui-style", "classic");
+    try {
+      const { isClassicUi } = await import("../../../themes/uiStyle");
+      expect(isClassicUi()).toBe(true);
+      const { renderWithProviders: render } = await import("../../../../test/renderWithProviders");
+      const { default: ClassicSidebar } = await import("../index");
+      const { getByText } = render(<ClassicSidebar />);
+      fireEvent.click(getByText("Start here"));
+      expect(mockNavigate).toHaveBeenCalledWith("/start-here");
+    } finally {
+      window.localStorage.removeItem("vw-ui-style");
+    }
+  }, 30_000);
 });

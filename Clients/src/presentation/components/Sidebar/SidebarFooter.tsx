@@ -37,6 +37,7 @@ import {
 } from "lucide-react";
 import VWIcon from "../VWIcon";
 import { isClassicUi } from "../../themes/uiStyle";
+import { SIDEBAR_ROW_HEIGHT } from "./sidebarRowHeight";
 import { chartTheme } from "../../themes/chartTheme";
 import Avatar from "../Avatar/VWAvatar";
 import { brand, text, background, palette as vwPalette, radiusPx } from "../../themes/palette";
@@ -316,7 +317,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                   }
                 }}
                 sx={{
-                  height: "32px",
+                  height: SIDEBAR_ROW_HEIGHT,
                   gap: theme.spacing(4),
                   borderRadius: theme.shape.borderRadius,
                   px: theme.spacing(4),
@@ -406,7 +407,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                 }
               }}
               sx={{
-                height: "32px",
+                height: SIDEBAR_ROW_HEIGHT,
                 gap: theme.spacing(4),
                 borderRadius: theme.shape.borderRadius,
                 px: theme.spacing(4),
@@ -509,7 +510,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                 aria-label="Settings"
                 onClick={() => navigate("/super-admin/settings")}
                 sx={{
-                  "height": "32px",
+                  "height": SIDEBAR_ROW_HEIGHT,
                   "gap": theme.spacing(4),
                   "borderRadius": theme.shape.borderRadius,
                   "px": theme.spacing(4),
@@ -566,7 +567,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
               aria-label="Settings"
               onClick={() => navigate("/super-admin/settings")}
               sx={{
-                "height": "32px",
+                "height": SIDEBAR_ROW_HEIGHT,
                 "gap": theme.spacing(4),
                 "borderRadius": theme.shape.borderRadius,
                 "px": theme.spacing(4),
@@ -644,7 +645,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                 aria-label="Management"
                 onClick={(e) => setManagementAnchorEl(e.currentTarget)}
                 sx={{
-                  "height": "32px",
+                  "height": SIDEBAR_ROW_HEIGHT,
                   "gap": theme.spacing(4),
                   "borderRadius": theme.shape.borderRadius,
                   "px": theme.spacing(4),
@@ -726,7 +727,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
               aria-label="Management"
               onClick={(e) => setManagementAnchorEl(e.currentTarget)}
               sx={{
-                "height": "32px",
+                "height": SIDEBAR_ROW_HEIGHT,
                 "gap": theme.spacing(4),
                 "borderRadius": theme.shape.borderRadius,
                 "px": theme.spacing(4),

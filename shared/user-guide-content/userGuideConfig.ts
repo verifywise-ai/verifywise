@@ -45,7 +45,7 @@ export const collections: Collection[] = [
     title: 'Getting started',
     description: 'Learn the basics of VerifyWise and get up and running quickly with your AI governance journey.',
     icon: 'Rocket',
-    articleCount: 4,
+    articleCount: 5,
     articles: [
       {
         id: 'welcome',
@@ -64,6 +64,12 @@ export const collections: Collection[] = [
         title: 'Navigating the dashboard',
         description: 'Understand the main dashboard and how to find what you need.',
         keywords: ['dashboard', 'navigation', 'interface', 'home'],
+      },
+      {
+        id: 'home',
+        title: 'Home',
+        description: 'See what needs your attention today and where each item comes from.',
+        keywords: ['home', 'today', 'queue', 'needs attention', 'approvals', 'tasks', 'review', 'counts', 'get started', 'start here'],
       },
       {
         id: 'quick-start',

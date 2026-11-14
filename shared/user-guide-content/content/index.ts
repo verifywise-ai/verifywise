@@ -2,6 +2,7 @@ import type { ArticleContent } from '../contentTypes';
 import { welcomeContent } from './getting-started/welcome';
 import { installingContent } from './getting-started/installing';
 import { dashboardContent } from './getting-started/dashboard';
+import { homeContent } from './getting-started/home';
 import { quickStartContent } from './getting-started/quick-start';
 import { useCasesContent } from './ai-governance/use-cases';
 import { intakeFormsContent } from './ai-governance/intake-forms';
@@ -129,6 +130,7 @@ export const articleContentMap: Record<string, ArticleContent> = {
   'getting-started/welcome': welcomeContent,
   'getting-started/installing': installingContent,
   'getting-started/dashboard': dashboardContent,
+  'getting-started/home': homeContent,
   'getting-started/quick-start': quickStartContent,
   // AI Governance
   'ai-governance/use-cases': useCasesContent,
