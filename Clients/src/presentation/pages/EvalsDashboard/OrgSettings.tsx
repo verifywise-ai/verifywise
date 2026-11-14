@@ -488,16 +488,6 @@ export default function OrgSettings() {
                 onClick={handleAddKey}
                 isDisabled={!selectedProvider || !newApiKey.trim() || !!apiKeyError}
                 startIcon={<Plus size={16} />}
-                sx={{
-                  "backgroundColor": palette.brand.primary,
-                  "border": `1px solid ${palette.brand.primary}`,
-                  "&:hover": { backgroundColor: palette.brand.primaryHover },
-                  "&:disabled": {
-                    backgroundColor: theme.palette.action.disabledBackground,
-                    color: theme.palette.action.disabled,
-                  },
-                  "textTransform": "none",
-                }}
               />
             </Box>
           </Stack>

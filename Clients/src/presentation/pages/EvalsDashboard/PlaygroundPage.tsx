@@ -10,6 +10,7 @@ import {
   MenuItem,
   Divider,
   Tooltip,
+  alpha,
 } from "@mui/material";
 import { Send, Bot, ChevronDown, Trash2, Paperclip, X, FileText, Mic, Plus } from "lucide-react";
 import ReactMarkdown from "react-markdown";
@@ -18,6 +19,7 @@ import { evalModelsService, type SavedModel } from "../../../infrastructure/api/
 import * as ProviderIcons from "../../components/ProviderIcons";
 import palette from "../../themes/palette";
 import { palette as vwPalette, radiusPx } from "../../themes/palette";
+import { CustomizableButton } from "../../components/button/customizable-button";
 
 interface Message {
   role: "user" | "assistant";
@@ -776,10 +778,10 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                     "right": 2,
                     "width": 18,
                     "height": 18,
-                    "backgroundColor": "rgba(0,0,0,0.45)",
+                    "backgroundColor": alpha(vwPalette.text.black, 0.45),
                     "color": vwPalette.background.main,
                     "p": 0,
-                    "&:hover": { backgroundColor: "rgba(0,0,0,0.65)" },
+                    "&:hover": { backgroundColor: alpha(vwPalette.text.black, 0.65) },
                   }}
                 >
                   <X size={10} />
@@ -890,24 +892,20 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
           />
 
           {/* Send */}
-          <IconButton
+          <CustomizableButton
             onClick={sendMessage}
+            variant="contained"
+            color="primary"
+            iconOnly={true}
+            ariaLabel="Send message"
             disabled={!canSend}
             sx={{
-              "backgroundColor": canSend ? palette.brand.primary : palette.background.fill,
-              "color": canSend ? vwPalette.background.main : palette.text.disabled,
-              "width": 32,
-              "height": 32,
-              "borderRadius": radiusPx.lg,
-              "flexShrink": 0,
-              "transition": "background-color 0.15s",
-              "&:hover": {
-                backgroundColor: canSend ? palette.brand.primaryHover : palette.background.fill,
-              },
+              borderRadius: radiusPx.lg,
+              flexShrink: 0,
             }}
           >
             <Send size={14} strokeWidth={1.5} />
-          </IconButton>
+          </CustomizableButton>
         </Box>
 
         <Typography
