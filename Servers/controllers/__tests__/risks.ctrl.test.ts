@@ -7,10 +7,8 @@ jest.mock("../../utils/risk.utils", () => ({
   getRisksByFrameworkQuery: jest.fn(),
   getRisksByProjectQuery: jest.fn(),
   updateRiskByIdQuery: jest.fn(),
-  deleteRiskByIdQuery: jest.fn(),
-  bulkSetProjectRisksOwnerQuery: jest.fn(),
-  bulkSetProjectRisksCategoryQuery: jest.fn(),
-  bulkArchiveProjectRisksQuery: jest.fn(),
+  archiveRiskQuery: jest.fn(),
+  recordRiskDeletionSnapshots: jest.fn(),
   assertRiskReferencesInOrganization: jest.fn(),
   PROJECT_RISK_CATEGORIES_SET: new Set(["financial", "operational", "strategic", "compliance"]),
 }));
@@ -33,7 +31,7 @@ jest.mock("../../utils/bulkAction.utils", () => ({
   assertOrgOwnsIds: jest.fn().mockResolvedValue(undefined),
   withBulkTransaction: jest.fn().mockImplementation(async (_opts: any, fn: any) => {
     const transaction = { commit: jest.fn(), rollback: jest.fn() };
-    await fn(transaction);
+    return fn(transaction);
   }),
 }));
 jest.mock("../../utils/logger/logHelper", () => ({
@@ -101,10 +99,7 @@ import {
   getRisksByFrameworkQuery,
   getRisksByProjectQuery,
   updateRiskByIdQuery,
-  deleteRiskByIdQuery,
-  bulkSetProjectRisksOwnerQuery,
-  bulkSetProjectRisksCategoryQuery,
-  bulkArchiveProjectRisksQuery,
+  archiveRiskQuery,
 } from "../../utils/risk.utils";
 import { createRiskService } from "../../services/risk.service";
 import {
@@ -122,18 +117,8 @@ const mockGetByProject = getRisksByProjectQuery as jest.MockedFunction<
   typeof getRisksByProjectQuery
 >;
 const mockUpdate = updateRiskByIdQuery as jest.MockedFunction<typeof updateRiskByIdQuery>;
-const mockDelete = deleteRiskByIdQuery as jest.MockedFunction<typeof deleteRiskByIdQuery>;
+const mockDelete = archiveRiskQuery as jest.MockedFunction<typeof archiveRiskQuery>;
 const mockCreateService = createRiskService as jest.MockedFunction<typeof createRiskService>;
-const mockBulkOwner = bulkSetProjectRisksOwnerQuery as jest.MockedFunction<
-  typeof bulkSetProjectRisksOwnerQuery
->;
-const mockBulkCategory = bulkSetProjectRisksCategoryQuery as jest.MockedFunction<
-  typeof bulkSetProjectRisksCategoryQuery
->;
-const mockBulkArchive = bulkArchiveProjectRisksQuery as jest.MockedFunction<
-  typeof bulkArchiveProjectRisksQuery
->;
-
 function createReq(overrides?: Partial<Request>): any {
   return {
     userId: 1,
@@ -429,17 +414,18 @@ describe("risks.ctrl", () => {
   });
 
   describe("deleteRiskById", () => {
-    it("should return 200 when risk is deleted", async () => {
-      const risk = buildRisk();
-      mockDelete.mockResolvedValue(risk as any);
+    it("should archive through the shared path and return 200", async () => {
+      mockDelete.mockResolvedValue(true);
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
       await deleteRiskById(req, res);
+      // userId 1 from createReq, so the shared path records the deletion.
+      expect(mockDelete).toHaveBeenCalledWith(1, 1, 1, expect.anything());
       expect(res.status).toHaveBeenCalledWith(200);
-      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: risk }));
+      expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: true }));
     });
     it("should return 404 when risk is not found", async () => {
-      mockDelete.mockResolvedValue(null as any);
+      mockDelete.mockResolvedValue(false);
       const req = createReq({ params: { id: "99" } });
       const res = createRes();
       await deleteRiskById(req, res);
@@ -456,6 +442,11 @@ describe("risks.ctrl", () => {
 
   describe("bulkUpdateProjectRisks", () => {
     it("should return 200 for set_owner action", async () => {
+      const { sequelize } = require("../../database/db");
+      (sequelize.query as jest.Mock<any>).mockImplementation(async (sql: string) =>
+        sql.includes("FROM risks WHERE") ? [buildRisk({ id: 1 }), buildRisk({ id: 2 })] : [[]],
+      );
+      mockUpdate.mockImplementation(async (id: number) => buildRisk({ id }) as any);
       const req = createReq({ body: { ids: [1, 2], action: "set_owner", ownerId: 3 } });
       const res = createRes();
       await bulkUpdateProjectRisks(req, res);
@@ -465,6 +456,7 @@ describe("risks.ctrl", () => {
       );
     });
     it("should return 200 for archive action", async () => {
+      mockDelete.mockResolvedValue(true);
       const req = createReq({ body: { ids: [1], action: "archive" } });
       const res = createRes();
       await bulkUpdateProjectRisks(req, res);
