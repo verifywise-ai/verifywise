@@ -98,5 +98,7 @@ setup("authenticate as an admin of an organization that has risks", async ({ pag
 
   await loginAs(page, admin.email, admin.password, /\/(overview)?$/);
 
+  // Change notices would cover the UI under test; the off switch is saved with the storage state.
+  await page.evaluate(() => localStorage.setItem("vw-change-notices", "off"));
   await page.context().storageState({ path: REPORT_AUTH_STATE_PATH });
 });

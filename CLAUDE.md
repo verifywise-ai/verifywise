@@ -248,6 +248,7 @@ Read the relevant file BEFORE implementing changes in that area:
 | Database schema | `docs/technical/architecture/database-schema.md` |
 | Authentication architecture | `docs/technical/architecture/authentication.md` |
 | Multi-tenancy architecture | `docs/technical/architecture/multi-tenancy.md` |
+| Change notices (what's changed card for restyles and moves; add an entry in every PR that moves or renames a page) | `docs/technical/frontend/change-notice.md` |
 
 > Backend-specific refs (middleware, logging, BullMQ, email, PDF) are in `Servers/CLAUDE.md`.
 > Frontend-specific refs (styling, components, design tokens) are in `Clients/CLAUDE.md`.

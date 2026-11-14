@@ -12847,6 +12847,45 @@ export const v1V1aiDetectionRepositoriesEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Change Notices endpoints
+export const v1V1changeNoticesEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/v1/change-notices/{id}/view',
+    summary: "View Change Notice Handler",
+    description: "Counts a visit to a page's change notice and says whether to show it. Stops after the user dismisses it, after 3 visits, or 90 days after the user first saw it; skipped for accounts created after the first time anyone in the organization saw it. A refusal writes nothing. A token with no organization always gets show false.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'string', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 400, description: "Invalid notice id" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Change Notices",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/change-notices/{id}/dismissed',
+    summary: "Set Change Notice Dismissed Handler",
+    description: "Dismisses the signed-in user's change notice, or restores it when dismissed is false (Undo).",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'string', required: true, description: "The id" },
+    ],
+    requestBody: {
+      "dismissed": "boolean (required)",
+    },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 400, description: "Invalid notice id or body" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Change Notices",
+  },
+];
+
 // v1: V1/Dashboard endpoints
 export const v1V1dashboardEndpoints: Endpoint[] = [
   {
@@ -13858,6 +13897,7 @@ export const allEndpoints = {
   v1V1aiApps: v1V1aiAppsEndpoints,
   v1V1aiDetection: v1V1aiDetectionEndpoints,
   v1V1aiDetectionRepositories: v1V1aiDetectionRepositoriesEndpoints,
+  v1V1changeNotices: v1V1changeNoticesEndpoints,
   v1V1dashboard: v1V1dashboardEndpoints,
   v1V1groups: v1V1groupsEndpoints,
   v1V1home: v1V1homeEndpoints,

@@ -35,4 +35,9 @@ export const HEX_ALLOW_LIST: readonly HexAllowListEntry[] = [
     reason:
       "LLM provider brand colours shown beside each provider's logo. They identify a third-party brand, so they stay the same in both looks.",
   },
+  {
+    file: "components/ChangeNotice/inkPalette.ts",
+    reason:
+      "Ink change-notice card: a fixed dark surface the same in both looks (user-approved design); no theme token stands in for it.",
+  },
 ];

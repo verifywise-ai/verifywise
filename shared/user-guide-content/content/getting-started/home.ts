@@ -106,6 +106,28 @@ export const homeContent: ArticleContent = {
       text: 'Get started has the onboarding checklist with your progress, a notice if no LLM API key is set up yet, introductory videos, shortcuts to the main modules and links to the user guide. You can open it any time, including from the empty state of the Today tab.',
     },
     {
+      type: 'heading',
+      id: 'whats-changed-notices',
+      level: 2,
+      text: "What's changed notices",
+    },
+    {
+      type: 'paragraph',
+      text: 'In the new look, a "What\'s changed" card appears the first time you open a page that was moved or redesigned. It says what changed and, for a page that moved, where to find it in the sidebar. Only one card shows at a time, so the new look welcome card comes first. A page card is held back on the page where you closed the welcome card. It can appear when you open another page, or on a later visit.',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Show me', text: 'highlights the item in the sidebar. The button is not shown when that item is not in your sidebar.' },
+        { bold: 'Read the guide', text: 'opens the related article in the user guide, when there is one.' },
+        { bold: 'Dismiss (the X)', text: 'closes the card for good. Undo stays on screen for a few seconds in case you closed it by mistake.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'A card stops appearing once you dismiss it, after you have seen it three times, or 90 days after you first saw it. Cards are not shown in the classic look.',
+    },
+    {
       type: 'article-links',
       title: 'Continue reading',
       items: [
