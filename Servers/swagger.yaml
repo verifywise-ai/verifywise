@@ -7941,6 +7941,8 @@ tags:
   -
     name: 'v1: V1/Groups'
   -
+    name: 'v1: V1/Home'
+  -
     name: 'v1: V1/Imported Framework Assessments'
   -
     name: 'v1: V1/Intake Form Review Time'
@@ -28875,6 +28877,28 @@ paths:
       tags:
         - 'v1: V1/Ai Detection'
       operationId: addSuggestedRiskToRegisterController
+      security:
+        -
+          bearerAuth: []
+  /v1/home/queue:
+    get:
+      summary: 'Get Home Queue Handler'
+      description: "Everything that needs the signed-in user's action in the token's organization, merged and sorted (overdue first, then due soonest, then oldest waiting). A source that failed is reported as `unavailable` with no items, never as an empty list; a source or count the user may not see is absent. Titles are built on the client from these structured fields.\n"
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string, example: OK}
+                  data: {type: object, required: [items, sources, counts], properties: {items: {type: array, items: {type: object, required: [id, source, part, entityType, entityId, name, url, dueDate, waitingSince, overdue, meta], properties: {id: {type: string, description: '`<source>:<entityId>`, plus a suffix when one entity can appear twice', example: 'tasks:12'}, source: {type: string, enum: [approvals, tasks, intake, aiApprovals, risks, policyReviews, vendorReviews, incidents, mrmFindings]}, part: {type: string, enum: [automate, record, track, enforce]}, entityType: {type: string, example: task}, entityId: {type: integer, example: 12}, name: {type: string, example: 'Update DPIA for chatbot'}, url: {type: string, description: 'Client route that opens the record', example: '/tasks?taskId=12'}, dueDate: {type: string, nullable: true, description: YYYY-MM-DD, example: '2026-11-10'}, waitingSince: {type: string, format: date-time, nullable: true}, overdue: {type: boolean}, meta: {type: object, description: 'Source-specific fields (e.g. stepNumber/stepCount for approvals, status/priority for tasks)', additionalProperties: {nullable: true, oneOf: [{type: string}, {type: number}]}}}}}, sources: {type: object, description: 'Per visible source: ok with its item count, or unavailable (count 0) when it failed', additionalProperties: {type: object, properties: {status: {type: string, enum: [ok, unavailable]}, count: {type: integer}}}}, counts: {type: object, description: 'Org-wide counts the user may see; null when a count failed to load', additionalProperties: {type: integer, nullable: true}}}}
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Home'
+      operationId: getHomeQueueHandler
       security:
         -
           bearerAuth: []
