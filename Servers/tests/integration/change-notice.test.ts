@@ -122,4 +122,64 @@ describe("change notice state against a real database", () => {
     expect((await prefsOf(userId))!.change_notices["one-too-many"]).toBeUndefined();
     expect(await view(userId, orgId, "n-1")).toEqual({ show: true });
   });
+
+  const seedKeys = async (count: number) => {
+    const notices: Record<string, unknown> = {};
+    for (let i = 0; i < count; i++)
+      notices[`n-${i}`] = { first_seen_at: "2026-11-01T00:00:00Z", views: 1, dismissed_at: null };
+    await sequelize.query(
+      `INSERT INTO user_preferences (user_id, preferences) VALUES (:userId, :prefs::jsonb)`,
+      { replacements: { userId, prefs: JSON.stringify({ change_notices: notices }) } },
+    );
+  };
+
+  it("dismiss of an unseen id stores a null first_seen_at and zero views", async () => {
+    expect(await setDismissed({ userId, id: ID, dismissed: true, now: new Date() })).toEqual({
+      dismissed: true,
+    });
+    const state = (await prefsOf(userId))!.change_notices[ID];
+    expect(state.first_seen_at).toBeNull();
+    expect(state.views).toBe(0);
+    expect(state.dismissed_at).not.toBeNull();
+  });
+
+  it("dismiss refuses a new id at the key limit, writes nothing, and still answers dismissed", async () => {
+    await seedKeys(200);
+    expect(
+      await setDismissed({ userId, id: "one-too-many", dismissed: true, now: new Date() }),
+    ).toEqual({
+      dismissed: true,
+    });
+    const notices = (await prefsOf(userId))!.change_notices;
+    expect(notices["one-too-many"]).toBeUndefined();
+    expect(Object.keys(notices)).toHaveLength(200);
+    await setDismissed({ userId, id: "n-1", dismissed: true, now: new Date() });
+    expect((await prefsOf(userId))!.change_notices["n-1"].dismissed_at).not.toBeNull();
+  });
+
+  it("dismissed:false on an id with no state is a no-op", async () => {
+    expect(await setDismissed({ userId, id: ID, dismissed: false, now: new Date() })).toEqual({
+      dismissed: false,
+    });
+    expect(await prefsOf(userId)).toBeUndefined();
+    await seedKeys(1);
+    await setDismissed({ userId, id: ID, dismissed: false, now: new Date() });
+    expect(Object.keys((await prefsOf(userId))!.change_notices)).toEqual(["n-0"]);
+  });
+
+  it("a view after a dismiss-created state fills first_seen_at", async () => {
+    await setDismissed({ userId, id: ID, dismissed: true, now: new Date() });
+    await setDismissed({ userId, id: ID, dismissed: false, now: new Date() });
+    expect(await view(userId, orgId)).toEqual({ show: true });
+    const state = (await prefsOf(userId))!.change_notices[ID];
+    expect(state.first_seen_at).not.toBeNull();
+    expect(state.views).toBe(1);
+  });
+
+  it("a dismiss on an unseen id does not move the organization anchor", async () => {
+    const earlier = await createTestUser(orgId, 3, "cn-anchor-a@test.com", "ChangeNotice1!");
+    await setDismissed({ userId: earlier, id: ID, dismissed: true, now: new Date() });
+    const later = await createTestUser(orgId, 3, "cn-anchor-b@test.com", "ChangeNotice1!");
+    expect(await view(later, orgId)).toEqual({ show: true });
+  });
 });

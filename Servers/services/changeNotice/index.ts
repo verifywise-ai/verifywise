@@ -1,4 +1,4 @@
-import { decideShow } from "./rules";
+import { decideShow, MAX_KEYS } from "./rules";
 import {
   getNoticeContextQuery,
   recordViewQuery,
@@ -29,6 +29,12 @@ export async function setDismissed(input: {
   dismissed: boolean;
   now: Date;
 }): Promise<{ dismissed: boolean }> {
-  await setDismissedQuery(input.userId, input.id, input.dismissed, input.now.toISOString());
+  await setDismissedQuery(
+    input.userId,
+    input.id,
+    input.dismissed,
+    input.now.toISOString(),
+    MAX_KEYS,
+  );
   return { dismissed: input.dismissed };
 }

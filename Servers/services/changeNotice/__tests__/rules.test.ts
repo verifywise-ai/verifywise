@@ -24,6 +24,16 @@ describe("decideShow", () => {
     expect(decideShow(base)).toBe(true);
   });
 
+  it("treats a null first_seen_at as an unstarted clock, and still honours dismissal", () => {
+    expect(decideShow({ ...base, state: stateOf({ first_seen_at: null, views: 0 }) })).toBe(true);
+    expect(
+      decideShow({
+        ...base,
+        state: stateOf({ first_seen_at: null, views: 0, dismissed_at: NOW.toISOString() }),
+      }),
+    ).toBe(false);
+  });
+
   it("hides a dismissed notice", () => {
     expect(decideShow({ ...base, state: stateOf({ dismissed_at: NOW.toISOString() }) })).toBe(
       false,

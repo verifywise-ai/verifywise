@@ -51,58 +51,80 @@ export const getNoticeContextQuery = async (
   };
 };
 
+const OLD_STATE = `(user_preferences.preferences->'change_notices'->(:id))`;
+
 /**
- * Upserts this notice's state into user_preferences.preferences.change_notices
- * in ONE statement. The row is merged from its own current value inside the
- * conflict update, so concurrent calls serialize on the row lock and no count
- * is lost, and the user's other keys (date_format, parallel_agents, the other
- * notices) are kept. `extraPairs` are jsonb_build_object arguments applied on
- * top of the merged notice; the insert side starts from the same defaults.
+ * Counts one visit in ONE statement. The notice is merged from its own current
+ * value inside the conflict update, so concurrent calls serialize on the row
+ * lock and no count is lost, and the user's other keys (date_format,
+ * parallel_agents, the other notices) are kept. first_seen_at is only ever set
+ * here: COALESCE(old value, now), so a view after a dismiss-created null fills it.
  */
-const upsertNotice = async (
+export const recordViewQuery = async (
   userId: number,
   id: string,
   nowIso: string,
-  viewIncrement: 0 | 1,
-  extraPairs: string,
-  extraReplacements: Record<string, unknown>,
 ): Promise<void> => {
-  const old = `(user_preferences.preferences->'change_notices'->(:id))`;
-  const merged = `COALESCE(${old}, '{}'::jsonb) || jsonb_build_object(
-      'first_seen_at', COALESCE(${old}->>'first_seen_at', :nowIso::text),
-      'views', COALESCE((${old}->>'views')::int, 0) + ${viewIncrement}${extraPairs ? `, ${extraPairs}` : ""})`;
-  const fresh = `jsonb_build_object(
-      'first_seen_at', :nowIso::text,
-      'views', ${viewIncrement}${extraPairs ? `, ${extraPairs}` : ""})`;
-  // A fresh notice has no "dismissed_at" unless the caller sets it.
-  const freshWithDefault = extraPairs.includes("dismissed_at")
-    ? fresh
-    : `${fresh} || jsonb_build_object('dismissed_at', NULL::text)`;
-
   await sequelize.query(
     `INSERT INTO user_preferences (user_id, preferences)
-     VALUES (:userId, jsonb_build_object('change_notices', jsonb_build_object(:id::text, ${freshWithDefault})))
+     VALUES (:userId, jsonb_build_object('change_notices', jsonb_build_object(:id::text,
+       jsonb_build_object('first_seen_at', :nowIso::text, 'views', 1, 'dismissed_at', NULL::text))))
      ON CONFLICT (user_id) DO UPDATE SET
        preferences = COALESCE(user_preferences.preferences, '{}'::jsonb)
          || jsonb_build_object('change_notices',
               COALESCE(user_preferences.preferences->'change_notices', '{}'::jsonb)
-                || jsonb_build_object(:id::text, ${merged})),
+                || jsonb_build_object(:id::text,
+                     COALESCE(${OLD_STATE}, '{}'::jsonb) || jsonb_build_object(
+                       'first_seen_at', COALESCE(${OLD_STATE}->>'first_seen_at', :nowIso::text),
+                       'views', COALESCE((${OLD_STATE}->>'views')::int, 0) + 1))),
        updated_at = NOW()`,
-    { replacements: { userId, id, nowIso, ...extraReplacements } },
+    { replacements: { userId, id, nowIso } },
   );
 };
 
-/** Counts one visit; sets first_seen_at the first time. */
-export const recordViewQuery = (userId: number, id: string, nowIso: string): Promise<void> =>
-  upsertNotice(userId, id, nowIso, 1, "", {});
-
-/** Sets or clears dismissed_at, keeping the other fields. */
-export const setDismissedQuery = (
+/**
+ * Sets or clears dismissed_at, keeping the other fields, in ONE statement.
+ * - dismissed: existing state gets dismissed_at set. An id with no state gets
+ *   {first_seen_at: null, views: 0, dismissed_at} only while the user holds
+ *   fewer than `maxKeys` notice keys; at or over the cap nothing is written.
+ *   first_seen_at stays null (only a view sets it), so a dismiss never moves
+ *   the organization anchor.
+ * - not dismissed: only touches existing state; an id with no state is a no-op.
+ * The cap and existence checks live in the statement's WHERE so they are
+ * evaluated under the row lock.
+ */
+export const setDismissedQuery = async (
   userId: number,
   id: string,
   dismissed: boolean,
   nowIso: string,
-): Promise<void> =>
-  upsertNotice(userId, id, nowIso, 0, `'dismissed_at', :dismissedAt::text`, {
-    dismissedAt: dismissed ? nowIso : null,
-  });
+  maxKeys: number,
+): Promise<void> => {
+  if (!dismissed) {
+    await sequelize.query(
+      `UPDATE user_preferences
+          SET preferences = jsonb_set(preferences, ARRAY['change_notices', :id::text, 'dismissed_at'], 'null'::jsonb),
+              updated_at = NOW()
+        WHERE user_id = :userId
+          AND preferences->'change_notices'->(:id) IS NOT NULL`,
+      { replacements: { userId, id } },
+    );
+    return;
+  }
+  await sequelize.query(
+    `INSERT INTO user_preferences (user_id, preferences)
+     VALUES (:userId, jsonb_build_object('change_notices', jsonb_build_object(:id::text,
+       jsonb_build_object('first_seen_at', NULL::text, 'views', 0, 'dismissed_at', :nowIso::text))))
+     ON CONFLICT (user_id) DO UPDATE SET
+       preferences = COALESCE(user_preferences.preferences, '{}'::jsonb)
+         || jsonb_build_object('change_notices',
+              COALESCE(user_preferences.preferences->'change_notices', '{}'::jsonb)
+                || jsonb_build_object(:id::text,
+                     COALESCE(${OLD_STATE}, jsonb_build_object('first_seen_at', NULL::text, 'views', 0))
+                       || jsonb_build_object('dismissed_at', :nowIso::text))),
+       updated_at = NOW()
+     WHERE ${OLD_STATE} IS NOT NULL
+        OR (SELECT COUNT(*) FROM jsonb_object_keys(COALESCE(user_preferences.preferences->'change_notices', '{}'::jsonb))) < :maxKeys`,
+    { replacements: { userId, id, nowIso, maxKeys } },
+  );
+};
