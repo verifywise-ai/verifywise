@@ -106,6 +106,16 @@ describe("isIntakeReviewFor", () => {
     expect(isIntakeReviewFor(ME, sub, routingOff, false)).toBe("second-review");
   });
 
+  it("second review with no senior reviewer named goes to Admins, not to the first approver", () => {
+    const noSeniors: IFormRouting = { ...routingOn, seniorReviewerIds: [] };
+    const sub = approvedWithSecond({ status: "open", selectedAt: "2026-11-11T09:00:00.000Z" });
+    expect(isIntakeReviewFor(42, sub, noSeniors, true)).toBe("second-review");
+    expect(isIntakeReviewFor(42, sub, null, true)).toBe("second-review");
+    expect(isIntakeReviewFor(42, sub, noSeniors, false)).toBeNull();
+    const own = approvedWithSecond({ status: "open", selectedAt: "2026-11-11T09:00:00.000Z" }, 42);
+    expect(isIntakeReviewFor(42, own, noSeniors, true)).toBeNull();
+  });
+
   it("second review is never shown to the first approver", () => {
     const sub = approvedWithSecond({ status: "open", selectedAt: "2026-11-11T09:00:00.000Z" }, ME);
     expect(isIntakeReviewFor(ME, sub, routingOn, false)).toBeNull();

@@ -30,6 +30,20 @@ const secondReviewNeedsSomeone = (routing: ISubmissionRouting | null): boolean =
 };
 
 /**
+ * Senior reviewers do second reviews; with none named the review would reach
+ * nobody, though an Admin can decide it (loadSecondReview in
+ * intakeForm.ctrl.ts), so it falls to Admins.
+ */
+const isSecondReviewer = (
+  userId: number,
+  routing: IFormRouting | null,
+  isAdmin: boolean,
+): boolean => {
+  const seniors = routing?.seniorReviewerIds ?? [];
+  return seniors.length === 0 ? isAdmin : seniors.includes(userId);
+};
+
+/**
  * Whether a submission needs this user, who already holds intakeForm.edit.
  *
  * Pending: mine when routing is off, when no lane is stored yet, or when I am
@@ -41,9 +55,9 @@ const secondReviewNeedsSomeone = (routing: ISubmissionRouting | null): boolean =
  * it never waits unseen.
  *
  * Approved with a second review open, or missed and not yet resolved: mine
- * when I am a senior reviewer of the form and not the first approver. This is
- * getPendingSubmissions' secondReviewerIds rule; seniors keep it even after
- * routing is turned off.
+ * when I am a senior reviewer of the form (an Admin when it has none) and not
+ * the first approver. This is getPendingSubmissions' secondReviewerIds rule;
+ * seniors keep it even after routing is turned off.
  */
 export function isIntakeReviewFor(
   userId: number,
@@ -65,7 +79,7 @@ export function isIntakeReviewFor(
     submission.status === IntakeSubmissionStatus.APPROVED &&
     secondReviewNeedsSomeone(submission.routing) &&
     submission.reviewedBy !== userId &&
-    (routing?.seniorReviewerIds.includes(userId) ?? false)
+    isSecondReviewer(userId, routing, isAdmin)
   ) {
     return "second-review";
   }
