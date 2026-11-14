@@ -6,18 +6,17 @@ import type { ChangeNoticeEntry } from "../../../domain/types/changeNotice.types
 import { isClassicUi, setUiStyle } from "../../themes/uiStyle";
 import { useUserGuideSidebarContext } from "../UserGuide/UserGuideSidebarContext";
 import ChangeNoticeCard from "./ChangeNoticeCard";
-import ShowMeHighlight from "./ShowMeHighlight";
+import ShowMeHighlight, { findTarget } from "./ShowMeHighlight";
 import UndoStrip from "./UndoStrip";
 import { GLOBAL_NOTICE } from "./notices";
 import { noticesSuppressed } from "./noticeStorage";
 import { resolveNotice } from "./resolveNotice";
-import { mayRequestView } from "./viewDecision";
+import { failView, mayRequestView } from "./viewDecision";
 
 const UNDO_MS = 6000;
 const TARGET_RECHECK_MS = [400, 1200];
 
-const targetExists = (testId?: string) =>
-  !!testId && document.querySelector(`[data-testid="${testId}"]`) !== null;
+const targetExists = (testId?: string) => findTarget(testId) !== null;
 
 /**
  * Tells the user what changed on the current page. The global new look card
@@ -37,6 +36,8 @@ export default function ChangeNotice() {
   const [canShowMe, setCanShowMe] = useState(false);
   // Path where the global card was dismissed: its page entry waits for a later visit.
   const [pageDeferredAt, setPageDeferredAt] = useState<string | null>(null);
+  // Latest dismiss request per notice id, so an Undo is sent after it settles.
+  const pendingDismiss = useRef(new Map<string, Promise<unknown>>());
   const undoTimer = useRef<ReturnType<typeof setTimeout> | undefined>(undefined);
 
   const globalId = hidden ? null : (GLOBAL_NOTICE?.id ?? null);
@@ -58,6 +59,16 @@ export default function ChangeNotice() {
     pageId !== null &&
     (mayRequestView(pageId) || queryClient.getQueryData(["change-notice", pageId]) !== undefined);
   const pageView = useNoticeView(pageId, pageEnabled);
+
+  // A failed view must not burn its marker: free it so a later page load asks again.
+  const globalFailed = globalView.isError;
+  const pageFailed = pageView.isError;
+  useEffect(() => {
+    if (globalFailed && globalId) failView(globalId);
+  }, [globalFailed, globalId]);
+  useEffect(() => {
+    if (pageFailed && pageId) failView(pageId);
+  }, [pageFailed, pageId]);
 
   let active: ChangeNoticeEntry | null = null;
   if (globalShowing) {
@@ -104,7 +115,11 @@ export default function ChangeNotice() {
       queryClient.setQueryData(["change-notice", id], { show: false });
       if (id === GLOBAL_NOTICE?.id) setPageDeferredAt(pathname);
       setShowMeActive(false);
-      dismiss.mutate({ id, dismissed: true });
+      // A failed dismiss keeps the card hidden for this session: the user chose to close it.
+      pendingDismiss.current.set(
+        id,
+        dismiss.mutateAsync({ id, dismissed: true }).catch(() => undefined),
+      );
       clearTimeout(undoTimer.current);
       if (withUndo) {
         setUndoId(id);
@@ -119,7 +134,13 @@ export default function ChangeNotice() {
     clearTimeout(undoTimer.current);
     markDismissed(undoId, false);
     queryClient.setQueryData(["change-notice", undoId], { show: true });
-    dismiss.mutate({ id: undoId, dismissed: false });
+    const id = undoId;
+    // Chained after the dismiss for this id, so the server sees them in the order they were made.
+    const settled = pendingDismiss.current.get(id) ?? Promise.resolve();
+    pendingDismiss.current.set(
+      id,
+      settled.then(() => dismiss.mutateAsync({ id, dismissed: false })).catch(() => undefined),
+    );
     setUndoId(null);
   }, [undoId, dismiss, markDismissed, queryClient]);
 
@@ -135,14 +156,20 @@ export default function ChangeNotice() {
 
   const handleSwitchBack = useCallback(async () => {
     if (!active) return;
+    const id = active.id;
     setPageDeferredAt(pathname);
-    queryClient.setQueryData(["change-notice", active.id], { show: false });
+    queryClient.setQueryData(["change-notice", id], { show: false });
     try {
-      await dismiss.mutateAsync({ id: active.id, dismissed: true });
+      await dismiss.mutateAsync({ id, dismissed: true });
     } catch {
       // The choice to switch back still stands if recording the dismissal fails.
     }
-    setUiStyle("classic");
+    if (!setUiStyle("classic")) {
+      // Storage is blocked, so the look did not change: bring the card back.
+      setPageDeferredAt(null);
+      queryClient.setQueryData(["change-notice", id], { show: true });
+      void dismiss.mutateAsync({ id, dismissed: false }).catch(() => undefined);
+    }
   }, [active, dismiss, pathname, queryClient]);
 
   if (hidden) return null;

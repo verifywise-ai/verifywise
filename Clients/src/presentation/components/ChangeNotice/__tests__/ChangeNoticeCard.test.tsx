@@ -48,7 +48,7 @@ describe("ChangeNoticeCard", () => {
     expect(label).toContain("AI Gateway");
     expect(label).toContain("App switcher");
     expect(label).toContain("Enforce");
-    expect(screen.getByRole("status")).toHaveAccessibleName("AI Gateway is now in the sidebar");
+    expect(screen.getByRole("region")).toHaveAccessibleName("AI Gateway is now in the sidebar");
     expect(screen.getByRole("button", { name: "Dismiss" })).toBeInTheDocument();
   });
 

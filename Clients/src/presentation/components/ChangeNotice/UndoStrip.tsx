@@ -42,7 +42,7 @@ export default function UndoStrip({
         data-testid="change-notice-undo"
         onClick={onUndo}
         style={{
-          height: 30,
+          height: 34,
           padding: "0 12px",
           border: 0,
           borderRadius: 4,

@@ -360,7 +360,7 @@ export default function ChangeNoticeCard({
 
   return (
     <section
-      role="status"
+      role="region"
       aria-labelledby={titleId}
       data-testid="change-notice"
       className="cn-card"

@@ -9,7 +9,6 @@ const mocks = vi.hoisted(() => ({
   isClassicUi: vi.fn(() => false),
   setUiStyle: vi.fn(),
   view: vi.fn(),
-  mutate: vi.fn(),
   mutateAsync: vi.fn(),
   openGuide: vi.fn(),
 }));
@@ -20,7 +19,7 @@ vi.mock("../../../themes/uiStyle", () => ({
 }));
 vi.mock("../../../../application/hooks/useChangeNotice", () => ({
   useNoticeView: mocks.view,
-  useNoticeDismiss: () => ({ mutate: mocks.mutate, mutateAsync: mocks.mutateAsync }),
+  useNoticeDismiss: () => ({ mutateAsync: mocks.mutateAsync }),
 }));
 vi.mock("../../UserGuide/UserGuideSidebarContext", () => ({
   useUserGuideSidebarContext: () => ({ open: mocks.openGuide }),
@@ -92,15 +91,57 @@ describe("ChangeNotice", () => {
     expect(mocks.openGuide).toHaveBeenCalledWith("getting-started/home");
   });
 
-  it("dismisses with true, shows Undo, and Undo restores the card", () => {
+  it("dismisses with true, shows Undo, and Undo restores the card", async () => {
     renderWithProviders(<ChangeNotice />, { route: "/home" });
     fireEvent.click(screen.getByTestId("change-notice-dismiss"));
-    expect(mocks.mutate).toHaveBeenCalledWith({ id: "home-2026-11", dismissed: true });
+    expect(mocks.mutateAsync).toHaveBeenCalledWith({ id: "home-2026-11", dismissed: true });
     expect(screen.queryByTestId("change-notice")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByTestId("change-notice-undo"));
-    expect(mocks.mutate).toHaveBeenLastCalledWith({ id: "home-2026-11", dismissed: false });
+    await waitFor(() =>
+      expect(mocks.mutateAsync).toHaveBeenLastCalledWith({ id: "home-2026-11", dismissed: false }),
+    );
     expect(screen.getByTestId("change-notice")).toBeInTheDocument();
+  });
+
+  it("sends Undo only after the dismiss has settled", async () => {
+    let settleDismiss: (value: unknown) => void = () => {};
+    mocks.mutateAsync.mockImplementationOnce(
+      () => new Promise((resolve) => (settleDismiss = resolve)),
+    );
+    renderWithProviders(<ChangeNotice />, { route: "/home" });
+    fireEvent.click(screen.getByTestId("change-notice-dismiss"));
+    fireEvent.click(screen.getByTestId("change-notice-undo"));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(mocks.mutateAsync).toHaveBeenCalledTimes(1);
+
+    settleDismiss({ dismissed: true });
+    await waitFor(() => expect(mocks.mutateAsync).toHaveBeenCalledTimes(2));
+    expect(mocks.mutateAsync).toHaveBeenLastCalledWith({ id: "home-2026-11", dismissed: false });
+  });
+
+  it("keeps the card hidden when the dismiss request fails, and still sends Undo after it", async () => {
+    mocks.mutateAsync.mockRejectedValueOnce(new Error("network"));
+    renderWithProviders(<ChangeNotice />, { route: "/home" });
+    fireEvent.click(screen.getByTestId("change-notice-dismiss"));
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(screen.queryByTestId("change-notice")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByTestId("change-notice-undo"));
+    await waitFor(() => expect(mocks.mutateAsync).toHaveBeenCalledTimes(2));
+  });
+
+  it("frees the view marker when the view request fails", () => {
+    sessionStorage.clear();
+    mocks.view.mockImplementation((id: string | null, enabled: boolean) => ({
+      data: undefined,
+      isError: !!id && enabled,
+    }));
+    renderWithProviders(<ChangeNotice />, { route: "/home" });
+    expect(sessionStorage.getItem(`vw-change-notice-requested:${GLOBAL_ID}`)).toBeNull();
   });
 
   it("hides the Undo strip after six seconds", () => {
@@ -161,7 +202,7 @@ describe("ChangeNotice", () => {
       await waitFor(() =>
         expect(screen.queryByTestId("change-notice-ring")).not.toBeInTheDocument(),
       );
-      expect(mocks.mutate).toHaveBeenCalledWith({ id: "ai-gateway-2026-11", dismissed: true });
+      expect(mocks.mutateAsync).toHaveBeenCalledWith({ id: "ai-gateway-2026-11", dismissed: true });
       expect(screen.queryByTestId("change-notice")).not.toBeInTheDocument();
       expect(screen.getByTestId("change-notice-undo-strip")).toHaveTextContent("on this page");
     });
@@ -181,17 +222,19 @@ describe("ChangeNotice", () => {
       expect(mocks.view.mock.calls.some(([id]) => id === GLOBAL_ID)).toBe(true);
     });
 
-    it("the X shows the global Undo copy, and Undo restores the global card", () => {
+    it("the X shows the global Undo copy, and Undo restores the global card", async () => {
       renderWithProviders(<ChangeNotice />, { route: "/home" });
       fireEvent.click(screen.getByTestId("change-notice-dismiss"));
-      expect(mocks.mutate).toHaveBeenCalledWith({ id: GLOBAL_ID, dismissed: true });
+      expect(mocks.mutateAsync).toHaveBeenCalledWith({ id: GLOBAL_ID, dismissed: true });
       expect(screen.queryByTestId("change-notice")).not.toBeInTheDocument();
       const strip = screen.getByTestId("change-notice-undo-strip");
       expect(strip).toHaveTextContent("You won't see this again.");
       expect(strip).not.toHaveTextContent("on this page");
 
       fireEvent.click(screen.getByTestId("change-notice-undo"));
-      expect(mocks.mutate).toHaveBeenLastCalledWith({ id: GLOBAL_ID, dismissed: false });
+      await waitFor(() =>
+        expect(mocks.mutateAsync).toHaveBeenLastCalledWith({ id: GLOBAL_ID, dismissed: false }),
+      );
       expect(
         screen.getByRole("heading", { name: "Welcome to the new look of VerifyWise" }),
       ).toBeInTheDocument();
@@ -200,7 +243,7 @@ describe("ChangeNotice", () => {
     it("Keep the new look dismisses without an Undo strip", () => {
       renderWithProviders(<ChangeNotice />, { route: "/home" });
       fireEvent.click(screen.getByTestId("change-notice-keep"));
-      expect(mocks.mutate).toHaveBeenCalledWith({ id: GLOBAL_ID, dismissed: true });
+      expect(mocks.mutateAsync).toHaveBeenCalledWith({ id: GLOBAL_ID, dismissed: true });
       expect(screen.queryByTestId("change-notice-undo")).not.toBeInTheDocument();
     });
 
@@ -239,6 +282,16 @@ describe("ChangeNotice", () => {
       expect(mocks.mutateAsync.mock.invocationCallOrder[0]).toBeLessThan(
         mocks.setUiStyle.mock.invocationCallOrder[0],
       );
+    });
+
+    it("Switch back keeps the card and restores the notice when the look cannot change", async () => {
+      mocks.setUiStyle.mockReturnValue(false);
+      renderWithProviders(<ChangeNotice />, { route: "/home" });
+      fireEvent.click(screen.getByTestId("change-notice-switch-back"));
+      await waitFor(() =>
+        expect(mocks.mutateAsync).toHaveBeenLastCalledWith({ id: GLOBAL_ID, dismissed: false }),
+      );
+      expect(await screen.findByTestId("change-notice")).toBeInTheDocument();
     });
   });
 });

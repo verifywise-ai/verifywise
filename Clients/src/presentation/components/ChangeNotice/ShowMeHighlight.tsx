@@ -13,8 +13,9 @@ interface Rect {
   height: number;
 }
 
-const findTarget = (testId: string) =>
-  document.querySelector<HTMLElement>(`[data-testid="${testId}"]`);
+/** The element a notice points at, found by its data-testid. */
+export const findTarget = (testId?: string) =>
+  testId ? document.querySelector<HTMLElement>(`[data-testid="${testId}"]`) : null;
 
 /** Pulsing ring around the element a notice points at ("Show me"). Pointer events pass through. */
 export default function ShowMeHighlight({ testId }: ShowMeHighlightProps) {
