@@ -130,21 +130,19 @@ const BulkActionsToolbar: React.FC<BulkActionsToolbarProps> = ({
           ariaLabel="Clear selection"
         />
 
-        {actions.length > 0 && (
-          <Divider orientation="vertical" flexItem sx={{ mx: theme.spacing(1) }} />
-        )}
+        {actions.length > 0 && <Divider orientation="vertical" flexItem sx={{ mx: "2px" }} />}
 
         <Box
           component="ul"
           sx={{
             display: "flex",
             flexDirection: "row",
-            gap: theme.spacing(1),
+            gap: "2px",
             m: 0,
             p: 0,
             listStyle: "none",
             flexWrap: "wrap",
-            rowGap: theme.spacing(1),
+            rowGap: "2px",
           }}
         >
           {actions.map((action) => (

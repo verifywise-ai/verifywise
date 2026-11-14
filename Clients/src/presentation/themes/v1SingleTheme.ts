@@ -347,7 +347,9 @@ const buttons = {
     outlined: {
       ...buttonSizes.medium,
       "backgroundColor": "transparent",
-      "color": colors.error,
+      // Label in the darker red (errorHover) for WCAG AA at 13px: colors.error
+      // is 3.99:1 on white (classic) and 4.10:1 on the accent green bulk bar.
+      "color": colors.errorHover,
       "border": `1px solid ${colors.error}`,
       "boxShadow": "none",
       "textTransform": "inherit",
@@ -362,7 +364,9 @@ const buttons = {
     text: {
       ...buttonSizes.medium,
       "backgroundColor": "transparent",
-      "color": colors.error,
+      // Darker red for AA contrast, as for outlined: 6.47:1 on white and
+      // about 5.5:1 on the accent green bulk actions bar, in both looks.
+      "color": colors.errorHover,
       "border": "none",
       "boxShadow": "none",
       "textTransform": "inherit",
