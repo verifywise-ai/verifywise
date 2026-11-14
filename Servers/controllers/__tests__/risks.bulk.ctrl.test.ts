@@ -161,7 +161,7 @@ describe("bulkUpdateProjectRisks", () => {
       committed = true;
       return result;
     });
-    mockArchive.mockResolvedValue(true);
+    mockArchive.mockResolvedValue({ id: 1, risk_name: "R1" } as any);
     mockUpdateService.mockImplementation(async (id: number, input: any, existing: any) => {
       return { ...existing, ...input, id } as any;
     });
@@ -278,7 +278,6 @@ describe("bulkUpdateProjectRisks", () => {
         7,
         {
           entityType: "project_risk",
-          itemsLabel: "risks",
           items: [
             { id: 1, name: "R1" },
             { id: 4, name: "R4" },
@@ -286,6 +285,15 @@ describe("bulkUpdateProjectRisks", () => {
           ],
           roleType: "Risk Owner",
           entityUrl: "/risk-management",
+          texts: {
+            titleKey: "{count} risks were assigned to you",
+            messageKey: "{assigner} assigned you as Risk Owner for {count} risks: {names}",
+            messageMoreKey:
+              "{assigner} assigned you as Risk Owner for {count} risks: {names} and {more} more",
+            itemsLabel: "risks",
+            roleDescription:
+              "As the Risk Owner, you are responsible for managing and mitigating these risks.",
+          },
         },
         "Ada Admin",
         expect.any(String),
@@ -472,12 +480,10 @@ describe("bulkUpdateProjectRisks", () => {
 
   describe("archive", () => {
     it("archives each risk through the shared path and records the snapshots once", async () => {
-      // Risk 11 was already archived.
-      arrangeRows([
-        { id: 10, risk_name: "R10" },
-        { id: 12, risk_name: "R12" },
-      ]);
-      mockArchive.mockImplementation(async (id: number) => id !== 11);
+      // Risk 11 was already archived; the others come back as archived rows.
+      mockArchive.mockImplementation(
+        async (id: number) => (id === 11 ? null : { id, risk_name: `R${id}` }) as any,
+      );
       const req = createReq({ ids: [10, 11, 12], action: "archive" });
       const res = createRes();
 
@@ -494,7 +500,8 @@ describe("bulkUpdateProjectRisks", () => {
       expect(mockSnapshots).toHaveBeenCalledTimes(1);
       expect(mockSnapshots).toHaveBeenCalledWith(4, TX);
       // One risk_deleted automation for the batch, listing the archived risks.
-      expect(mockGetActive).toHaveBeenCalledWith([10, 11, 12], 4, TX);
+      // The archived rows feed the summary: no extra read of the risks.
+      expect(mockGetActive).not.toHaveBeenCalled();
       expect(mockBulkAutomation).toHaveBeenCalledTimes(1);
       expect(mockBulkAutomation).toHaveBeenCalledWith(
         "risk_deleted",
@@ -515,7 +522,7 @@ describe("bulkUpdateProjectRisks", () => {
     });
 
     it("records no snapshots when nothing was archived", async () => {
-      mockArchive.mockResolvedValue(false);
+      mockArchive.mockResolvedValue(null);
       const req = createReq({ ids: [10], action: "archive" });
       const res = createRes();
 

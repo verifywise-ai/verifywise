@@ -91,6 +91,35 @@ describe("buildBulkRiskReplacements", () => {
     );
   });
 
+  it("reads Postgres category literals like arrays", () => {
+    const changes = [
+      // Same categories, literal before and array after: no change.
+      {
+        before: risk(1, { risk_category: '{"Strategic risk","Operational risk"}' }),
+        after: risk(1, { risk_category: ["Strategic risk", "Operational risk"] }),
+      },
+      // "{}" reads as no categories.
+      {
+        before: risk(2, { risk_category: "{}" }),
+        after: risk(2, { risk_category: ["Strategic risk"] }),
+      },
+    ];
+
+    const r = buildBulkRiskReplacements("risk_updated", changes);
+
+    expect(r.changes_summary).toBe(
+      ["• Risk 1: updated", "• Risk 2: Category: (empty) → Strategic risk"].join("\n"),
+    );
+  });
+
+  it('gives a risk whose owner and category read the same an "updated" line', () => {
+    const changes = [1, 2].map((id) => ({ before: risk(id), after: risk(id) }));
+
+    const r = buildBulkRiskReplacements("risk_updated", changes);
+
+    expect(r.changes_summary).toBe(["• Risk 1: updated", "• Risk 2: updated"].join("\n"));
+  });
+
   it("writes a category line for a bulk category change", () => {
     const changes = [1, 2].map((id) => ({
       before: risk(id, { risk_category: id === 1 ? [] : ["Operational risk"] }),

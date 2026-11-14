@@ -17,8 +17,9 @@ jest.mock("../../utils/notification.utils", () => ({
   createNotificationQuery: (...args: unknown[]) => mockCreate(...args),
   createBulkNotificationsQuery: jest.fn(),
 }));
+const mockLanguage = jest.fn();
 jest.mock("../../utils/userPreference.utils", () => ({
-  getUserLanguage: jest.fn().mockResolvedValue(undefined),
+  getUserLanguage: (...args: unknown[]) => mockLanguage(...args),
 }));
 jest.mock("../notificationService", () => ({
   notificationService: {
@@ -28,23 +29,34 @@ jest.mock("../notificationService", () => ({
 
 import { notifyUserAssignedMany } from "../inAppNotification.service";
 import { EMAIL_TEMPLATES } from "../../constants/emailTemplates";
+import { getTranslator } from "../../utils/i18n.utils";
 import {
   NotificationEntityType,
   NotificationType,
 } from "../../domain.layer/interfaces/i.notification";
 
+const texts = {
+  titleKey: "{count} risks were assigned to you",
+  messageKey: "{assigner} assigned you as Risk Owner for {count} risks: {names}",
+  messageMoreKey:
+    "{assigner} assigned you as Risk Owner for {count} risks: {names} and {more} more",
+  itemsLabel: "risks",
+  roleDescription: "Manage these risks.",
+};
+
 const assignment = (names: string[]) => ({
   entityType: "project_risk",
-  itemsLabel: "risks",
   items: names.map((name, i) => ({ id: i + 1, name })),
   roleType: "Risk Owner" as const,
   entityUrl: "/risk-management",
+  texts,
 });
 
 beforeEach(() => {
   mockQuery.mockReset().mockResolvedValue([{ name: "Bo", surname: "New", email: "bo@x.io" }]);
   mockCreate.mockReset().mockImplementation(async (n: unknown) => ({ id: 1, ...(n as object) }));
   mockSendTemplate.mockReset().mockResolvedValue(undefined);
+  mockLanguage.mockReset().mockResolvedValue(undefined);
 });
 
 describe("notifyUserAssignedMany", () => {
@@ -85,7 +97,7 @@ describe("notifyUserAssignedMany", () => {
         entity_url: "https://app.test/risk-management",
       }),
     );
-    expect(vars.role_description).toContain("these risks");
+    expect(vars.role_description).toBe("Manage these risks.");
     expect((vars.entity_context_html.match(/<li /g) ?? []).length).toBe(3);
   });
 
@@ -104,6 +116,21 @@ describe("notifyUserAssignedMany", () => {
     expect(html).toContain("Risk 20<");
     expect(html).not.toContain("Risk 21<");
     expect(html).toContain("and 3 more</li>");
+  });
+
+  it("translates the title, message and subject into the recipient's language", async () => {
+    mockLanguage.mockResolvedValue("de");
+    const de = getTranslator("de");
+
+    await notifyUserAssignedMany(4, 7, assignment(["R1", "R2"]), "Ada Admin", "https://app.test");
+
+    const stored = mockCreate.mock.calls[0][0];
+    expect(stored.title).toBe(de(texts.titleKey, { count: 2 }));
+    expect(stored.title).not.toBe("2 risks were assigned to you");
+    expect(stored.message).toBe(
+      de(texts.messageKey, { assigner: "Ada Admin", count: 2, names: "R1, R2" }),
+    );
+    expect(mockSendTemplate.mock.calls[0][1]).toBe(de(texts.titleKey, { count: 2 }));
   });
 
   it("escapes risk names in the email list", async () => {

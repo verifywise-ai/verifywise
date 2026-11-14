@@ -95,10 +95,18 @@ async function notifyNewRiskOwners(
         ownerId,
         {
           entityType: "project_risk",
-          itemsLabel: "risks",
           items: owned.map((risk) => ({ id: risk.id!, name: risk.risk_name })),
           roleType: "Risk Owner",
           entityUrl: "/risk-management",
+          texts: {
+            titleKey: "{count} risks were assigned to you",
+            messageKey: "{assigner} assigned you as Risk Owner for {count} risks: {names}",
+            messageMoreKey:
+              "{assigner} assigned you as Risk Owner for {count} risks: {names} and {more} more",
+            itemsLabel: "risks",
+            roleDescription:
+              "As the Risk Owner, you are responsible for managing and mitigating these risks.",
+          },
         },
         assignerName,
         baseUrl,
@@ -818,23 +826,15 @@ export async function bulkUpdateProjectRisks(req: Request, res: Response): Promi
         const changes: BulkRiskChange[] = [];
 
         if (action === "archive") {
-          // The rows as they were, for the automation's summary.
-          const activeById = new Map(
-            (await getActiveRisksByIdsQuery(ids, organizationId, transaction)).map((risk) => [
-              Number(risk.id),
-              risk,
-            ]),
-          );
           for (const id of ids) {
-            if (
-              await archiveRiskQuery(id, organizationId, userId, transaction, {
-                recordSnapshots: false,
-                runAutomations: false,
-              })
-            ) {
+            // The archived row, for the automation's summary.
+            const archived = await archiveRiskQuery(id, organizationId, userId, transaction, {
+              recordSnapshots: false,
+              runAutomations: false,
+            });
+            if (archived) {
               updatedIds.push(id);
-              const risk = activeById.get(id);
-              if (risk) changes.push({ before: risk, after: risk });
+              changes.push({ before: archived, after: archived });
             }
           }
           if (updatedIds.length > 0) {

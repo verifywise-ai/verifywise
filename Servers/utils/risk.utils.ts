@@ -20,6 +20,7 @@ import {
   ValidationException,
 } from "../domain.layer/exceptions/custom.exception";
 import { toRiskCalendarDate } from "./riskCalendarDate.utils";
+import { storedRiskCategories } from "./riskCategory.utils";
 import { recordProjectRiskDeletion } from "./projectRiskChangeHistory.utils";
 import { getStructureById } from "../structures";
 import logger from "./logger/fileLogger";
@@ -72,6 +73,51 @@ const findRiskAutomation = async (
     { replacements: { organizationId, triggerKey }, transaction },
   )) as [RiskAutomation[], number];
   return automations[0][0];
+};
+
+/**
+ * Full names ("name surname") of the given users, keyed by id, in one query.
+ * Empty ids are skipped; a user not found is simply absent from the map.
+ */
+export const getUserFullNamesQuery = async (
+  ids: Array<number | null | undefined>,
+  transaction?: Transaction,
+): Promise<Map<number, string>> => {
+  const userIds = [...new Set(ids.filter((id) => Boolean(id)).map(Number))];
+  if (userIds.length === 0) return new Map();
+  const rows = await sequelize.query<{ id: number; full_name: string }>(
+    `SELECT id, name || ' ' || surname AS full_name FROM users WHERE id IN (:userIds);`,
+    { replacements: { userIds }, type: QueryTypes.SELECT, transaction },
+  );
+  return new Map(rows.map((row) => [Number(row.id), row.full_name]));
+};
+
+/** The risk with owner_name and approver_name for automations; "" when unknown. */
+const withUserNames = (risk: any, names: Map<number, string>) => ({
+  ...risk,
+  owner_name: (risk.risk_owner && names.get(Number(risk.risk_owner))) || "",
+  approver_name: (risk.risk_approval && names.get(Number(risk.risk_approval))) || "",
+});
+
+/** Fill the automation's subject and body, then enqueue it (after commit). */
+const enqueueRiskAutomationWithReplacements = async (
+  automation: RiskAutomation,
+  replacements: Record<string, any>,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<void> => {
+  const params = automation.params!;
+  await enqueueRiskAutomation(
+    automation.action_key,
+    {
+      ...params,
+      subject: replaceTemplateVariables(params.subject || "", replacements),
+      body: replaceTemplateVariables(params.body || "", replacements),
+      automation_id: automation.automation_id,
+      organizationId,
+    },
+    transaction,
+  );
 };
 
 type Mitigation = {
@@ -927,48 +973,14 @@ export const createRiskQuery = async (
 
   const automation = await findRiskAutomation("risk_added", organizationId, transaction);
   if (automation) {
-    if (automation["trigger_key"] === "risk_added") {
-      const owner_name = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :owner_id;`,
-        {
-          replacements: { owner_id: createdRisk.dataValues.risk_owner },
-          transaction,
-        },
-      )) as [{ full_name: string }[], number];
-      const approver_name = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :approver_id;`,
-        {
-          replacements: { approver_id: createdRisk.dataValues.risk_approval },
-          transaction,
-        },
-      )) as [{ full_name: string }[], number];
-
-      const params = automation.params!;
-
-      // Build replacements
-      const replacements = buildRiskReplacements({
-        ...createdRisk.dataValues,
-        owner_name: owner_name?.[0]?.[0]?.full_name ?? "",
-        approver_name: approver_name?.[0]?.[0]?.full_name ?? "",
-      });
-
-      // Replace variables in subject and body
-      const processedParams = {
-        ...params,
-        subject: replaceTemplateVariables(params.subject || "", replacements),
-        body: replaceTemplateVariables(params.body || "", replacements),
-        automation_id: automation.automation_id,
-      };
-
-      // Enqueue with processed params once the transaction commits
-      await enqueueRiskAutomation(
-        automation.action_key,
-        { ...processedParams, organizationId },
-        transaction,
-      );
-    } else {
-      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-    }
+    const risk = createdRisk.dataValues;
+    const names = await getUserFullNamesQuery([risk.risk_owner, risk.risk_approval], transaction);
+    await enqueueRiskAutomationWithReplacements(
+      automation,
+      buildRiskReplacements(withUserNames(risk, names)),
+      organizationId,
+      transaction,
+    );
   }
 
   // Record history snapshots for all tracked parameters
@@ -1238,61 +1250,14 @@ export const updateRiskByIdQuery = async (
     ? await findRiskAutomation("risk_updated", organizationId, transaction)
     : undefined;
   if (automation) {
-    if (automation["trigger_key"] === "risk_updated") {
-      let ownerFullName = "";
-
-      if (updatedRisk.dataValues.risk_owner) {
-        const ownerResult = (await sequelize.query(
-          `SELECT name || ' ' || surname AS full_name 
-            FROM users 
-            WHERE id = :owner_id;`,
-          {
-            replacements: { owner_id: updatedRisk.dataValues.risk_owner },
-            transaction,
-          },
-        )) as [{ full_name: string }[], any];
-
-        ownerFullName = ownerResult?.[0]?.[0]?.full_name ?? "";
-      }
-
-      let approverFullName = "";
-      if (updatedRisk.dataValues.risk_approval) {
-        const approver_name = (await sequelize.query(
-          `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :approver_id;`,
-          {
-            replacements: { approver_id: updatedRisk.dataValues.risk_approval },
-            transaction,
-          },
-        )) as [{ full_name: string }[], number];
-        approverFullName = approver_name?.[0]?.[0]?.full_name ?? "";
-      }
-
-      const params = automation.params!;
-
-      // Build replacements
-      const replacements = buildRiskUpdateReplacements(existingRisk, {
-        ...updatedRisk.dataValues,
-        owner_name: ownerFullName,
-        approver_name: approverFullName,
-      });
-
-      // Replace variables in subject and body
-      const processedParams = {
-        ...params,
-        subject: replaceTemplateVariables(params.subject || "", replacements),
-        body: replaceTemplateVariables(params.body || "", replacements),
-        automation_id: automation.automation_id,
-      };
-
-      // Enqueue with processed params once the transaction commits
-      await enqueueRiskAutomation(
-        automation.action_key,
-        { ...processedParams, organizationId },
-        transaction,
-      );
-    } else {
-      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-    }
+    const risk = updatedRisk.dataValues;
+    const names = await getUserFullNamesQuery([risk.risk_owner, risk.risk_approval], transaction);
+    await enqueueRiskAutomationWithReplacements(
+      automation,
+      buildRiskUpdateReplacements(existingRisk, withUserNames(risk, names)),
+      organizationId,
+      transaction,
+    );
   }
 
   // Record history snapshots if tracked parameters changed. A bulk edit
@@ -1332,6 +1297,10 @@ export const updateRiskByIdQuery = async (
   return updatedRisk;
 };
 
+/**
+ * Soft-delete one risk. Returns the archived row (as it was written), or null
+ * when no active risk matched.
+ */
 export const deleteRiskByIdQuery = async (
   id: number,
   organizationId: number,
@@ -1340,7 +1309,7 @@ export const deleteRiskByIdQuery = async (
     recordSnapshots = true,
     runAutomations = true,
   }: { recordSnapshots?: boolean; runAutomations?: boolean } = {},
-): Promise<boolean> => {
+): Promise<RiskModel | null> => {
   // Soft delete. Custom field values stay with the archived risk, and nothing
   // else runs when no active risk matched (R-M7).
   const result = (await sequelize.query(
@@ -1354,55 +1323,23 @@ export const deleteRiskByIdQuery = async (
     },
   )) as [RiskModel[], number];
   const deletedRisk = result[0][0];
-  if (!deletedRisk) return false;
+  if (!deletedRisk) return null;
   // A bulk action passes runAutomations: false and runs the automation once
   // for the whole batch (enqueueBulkRiskAutomation).
   const automation = runAutomations
     ? await findRiskAutomation("risk_deleted", organizationId, transaction)
     : undefined;
   if (automation) {
-    if (automation["trigger_key"] === "risk_deleted") {
-      const owner_name = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :owner_id;`,
-        {
-          replacements: { owner_id: deletedRisk.risk_owner },
-          transaction,
-        },
-      )) as [{ full_name: string }[], number];
-      const approver_name = (await sequelize.query(
-        `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :approver_id;`,
-        {
-          replacements: { approver_id: deletedRisk.risk_approval },
-          transaction,
-        },
-      )) as [{ full_name: string }[], number];
-
-      const params = automation.params!;
-
-      // Build replacements
-      const replacements = buildRiskReplacements({
-        ...deletedRisk,
-        owner_name: owner_name?.[0]?.[0]?.full_name ?? "",
-        approver_name: approver_name?.[0]?.[0]?.full_name ?? "",
-      });
-
-      // Replace variables in subject and body
-      const processedParams = {
-        ...params,
-        subject: replaceTemplateVariables(params.subject || "", replacements),
-        body: replaceTemplateVariables(params.body || "", replacements),
-        automation_id: automation.automation_id,
-      };
-
-      // Enqueue with processed params once the transaction commits
-      await enqueueRiskAutomation(
-        automation.action_key,
-        { ...processedParams, organizationId },
-        transaction,
-      );
-    } else {
-      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-    }
+    const names = await getUserFullNamesQuery(
+      [deletedRisk.risk_owner, deletedRisk.risk_approval],
+      transaction,
+    );
+    await enqueueRiskAutomationWithReplacements(
+      automation,
+      buildRiskReplacements(withUserNames(deletedRisk, names)),
+      organizationId,
+      transaction,
+    );
   }
 
   // Record history snapshots for all tracked parameters after deletion. A
@@ -1411,7 +1348,7 @@ export const deleteRiskByIdQuery = async (
     await recordRiskSnapshots(organizationId, transaction);
   }
 
-  return result[0].length > 0;
+  return deletedRisk;
 };
 
 /**
@@ -1428,18 +1365,6 @@ export const getActiveRisksByIdsQuery = async (
     `SELECT * FROM risks WHERE organization_id = :organizationId AND id IN (:ids) AND is_deleted = false`,
     { replacements: { organizationId, ids }, type: QueryTypes.SELECT, transaction },
   );
-};
-
-/**
- * A stored risk_category as a list. The column is an enum array, which the
- * driver may hand back as a Postgres array literal ("{a,\"b c\"}").
- */
-const storedRiskCategories = (value: unknown): string[] => {
-  if (Array.isArray(value)) return value.map(String);
-  if (typeof value !== "string") return [];
-  const inner = value.replace(/^\{|\}$/g, "");
-  if (inner === "") return [];
-  return inner.split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
 };
 
 /** Same risk categories, ignoring order and duplicates. */
@@ -1507,47 +1432,23 @@ export const enqueueBulkRiskAutomation = async (
   const automation = await findRiskAutomation(trigger, organizationId, transaction);
   if (!automation) return;
 
-  const userIds = [
-    ...new Set(
-      changes
-        .flatMap(({ before, after }) => [
-          before.risk_owner,
-          before.risk_approval,
-          after.risk_owner,
-          after.risk_approval,
-        ])
-        .filter((id): id is number => Boolean(id))
-        .map(Number),
-    ),
-  ];
-  const names = new Map<number, string>();
-  if (userIds.length > 0) {
-    const rows = await sequelize.query<{ id: number; full_name: string }>(
-      `SELECT id, name || ' ' || surname AS full_name FROM users WHERE id IN (:userIds);`,
-      { replacements: { userIds }, type: QueryTypes.SELECT, transaction },
-    );
-    for (const row of rows) names.set(Number(row.id), row.full_name);
-  }
-  const withNames = (risk: any) => ({
-    ...risk,
-    owner_name: (risk.risk_owner && names.get(Number(risk.risk_owner))) || "",
-    approver_name: (risk.risk_approval && names.get(Number(risk.risk_approval))) || "",
-  });
-
-  const replacements = buildBulkRiskReplacements(
-    trigger,
-    changes.map(({ before, after }) => ({ before: withNames(before), after: withNames(after) })),
+  const names = await getUserFullNamesQuery(
+    changes.flatMap(({ before, after }) => [
+      before.risk_owner,
+      before.risk_approval,
+      after.risk_owner,
+      after.risk_approval,
+    ]),
+    transaction,
   );
-  const params = automation.params!;
-  await enqueueRiskAutomation(
-    automation.action_key,
-    {
-      ...params,
-      subject: replaceTemplateVariables(params.subject || "", replacements),
-      body: replaceTemplateVariables(params.body || "", replacements),
-      automation_id: automation.automation_id,
-      organizationId,
-    },
+  const withNames = (risk: any) => withUserNames(risk, names);
+  await enqueueRiskAutomationWithReplacements(
+    automation,
+    buildBulkRiskReplacements(
+      trigger,
+      changes.map(({ before, after }) => ({ before: withNames(before), after: withNames(after) })),
+    ),
+    organizationId,
     transaction,
   );
 };
@@ -1559,7 +1460,8 @@ export const enqueueBulkRiskAutomation = async (
  * recordSnapshots: false and runAutomations: false and records the snapshots
  * and runs the automation once for the whole batch.
  *
- * Returns false, and does nothing else, when no active risk matched.
+ * Returns the archived row (the bulk archive uses it for its automation
+ * summary), or null, doing nothing else, when no active risk matched.
  */
 export const archiveRiskQuery = async (
   id: number,
@@ -1570,12 +1472,12 @@ export const archiveRiskQuery = async (
     recordSnapshots = true,
     runAutomations = true,
   }: { recordSnapshots?: boolean; runAutomations?: boolean } = {},
-): Promise<boolean> => {
+): Promise<RiskModel | null> => {
   const archived = await deleteRiskByIdQuery(id, organizationId, transaction, {
     recordSnapshots,
     runAutomations,
   });
-  if (!archived) return false;
+  if (!archived) return null;
 
   if (userId) {
     await recordProjectRiskDeletion(id, userId, organizationId, transaction);
@@ -1584,7 +1486,7 @@ export const archiveRiskQuery = async (
   // An archived risk is no longer linked to any policy (R-M8).
   await unlinkRiskFromAllPoliciesQuery(id, organizationId, transaction);
 
-  return true;
+  return archived;
 };
 
 /**

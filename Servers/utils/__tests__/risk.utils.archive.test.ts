@@ -64,7 +64,12 @@ describe("archiveRiskQuery", () => {
   it("soft-deletes, records the deletion, unlinks policies and records snapshots", async () => {
     arrange(true);
 
-    await expect(archiveRiskQuery(5, 4, 9, TX)).resolves.toBe(true);
+    // The archived row comes back for the caller (the bulk archive's summary).
+    await expect(archiveRiskQuery(5, 4, 9, TX)).resolves.toEqual({
+      id: 5,
+      risk_owner: 2,
+      risk_approval: 3,
+    });
 
     expect(mockRecordDeletion).toHaveBeenCalledWith(5, 9, 4, TX);
     const unlink = deletesFrom("policy_linked_objects");
@@ -96,7 +101,7 @@ describe("archiveRiskQuery", () => {
   it("does nothing else when no active risk matched", async () => {
     arrange(false);
 
-    await expect(archiveRiskQuery(5, 4, 9, TX)).resolves.toBe(false);
+    await expect(archiveRiskQuery(5, 4, 9, TX)).resolves.toBeNull();
 
     expect(mockRecordDeletion).not.toHaveBeenCalled();
     expect(deletesFrom("policy_linked_objects")).toHaveLength(0);

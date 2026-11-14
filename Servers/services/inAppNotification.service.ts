@@ -1923,6 +1923,44 @@ function buildEntityContextHtml(context?: AssignmentEntityContext): string {
   return `<table style="width: 100%; border-collapse: collapse; margin-bottom: 8px;">${rows.join("")}</table>`;
 }
 
+/** An assignment link: absolute URLs as they are, relative ones on `baseUrl`. */
+const buildAssignmentUrl = (entityUrl: string, baseUrl: string): string =>
+  entityUrl.startsWith("http")
+    ? entityUrl
+    : `${baseUrl}${entityUrl.startsWith("/") ? "" : "/"}${entityUrl}`;
+
+/**
+ * Shared scaffolding of the assignment notifications: look up the assignee
+ * (skip with a warning when missing), run `send`, log what it returns, and
+ * never throw, since notifications must not break the main flow.
+ */
+const sendAssignmentNotification = async (
+  assigneeId: number,
+  send: (assignee: { name: string; surname: string; email: string }) => Promise<string>,
+): Promise<void> => {
+  try {
+    const assignee = await getUserById(assigneeId);
+    if (!assignee) {
+      logger.warn(`Cannot send assignment notification: user ${assigneeId} not found`);
+      return;
+    }
+
+    const sent = await send(assignee);
+
+    // The values are interpolated into the message here rather than passed as
+    // printf arguments: winston is configured without format.splat(), so a
+    // stray %s or %d in caller-supplied data (assigneeId reaches here from a
+    // request body) is printed literally instead of being treated as a
+    // format specifier.
+    logger.info(`📧 Assignment notification sent to user ${assigneeId} ${sent}`);
+  } catch (error) {
+    logger.error(
+      `Failed to send assignment notification to user ${assigneeId}: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    // Don't rethrow - notifications should not break the main flow
+  }
+};
+
 /**
  * Notify a user when they are assigned to an entity
  *
@@ -1946,23 +1984,15 @@ export const notifyUserAssigned = async (
   assignerName: string,
   baseUrl: string,
   entityContext?: AssignmentEntityContext,
-): Promise<void> => {
-  try {
-    const assignee = await getUserById(assigneeId);
-    if (!assignee) {
-      logger.warn(`Cannot send assignment notification: user ${assigneeId} not found`);
-      return;
-    }
-
+): Promise<void> =>
+  sendAssignmentNotification(assigneeId, async (assignee) => {
     const displayEntityType =
       ENTITY_TYPE_DISPLAY_LABELS[assignment.entityType] || assignment.entityType;
     const notificationType = getNotificationTypeForRole(assignment.roleType);
     const notificationEntityType = getNotificationEntityType(assignment.entityType);
 
     // Build full URL
-    const fullUrl = assignment.entityUrl.startsWith("http")
-      ? assignment.entityUrl
-      : `${baseUrl}${assignment.entityUrl.startsWith("/") ? "" : "/"}${assignment.entityUrl}`;
+    const fullUrl = buildAssignmentUrl(assignment.entityUrl, baseUrl);
 
     // Build entity context HTML for email
     const entityContextHtml = buildEntityContextHtml(entityContext);
@@ -1997,24 +2027,28 @@ export const notifyUserAssigned = async (
       },
     );
 
-    // The values are interpolated into the message here rather than passed as
-    // printf arguments: winston is configured without format.splat(), so a
-    // stray %s or %d in caller-supplied data (assigneeId reaches here from a
-    // request body) is printed literally instead of being treated as a
-    // format specifier.
-    logger.info(
-      `📧 Assignment notification sent to user ${assigneeId} as ${assignment.roleType} for ${assignment.entityType} ${assignment.entityId}`,
-    );
-  } catch (error) {
-    logger.error(
-      `Failed to send assignment notification to user ${assigneeId}: ${error instanceof Error ? error.message : String(error)}`,
-    );
-    // Don't rethrow - notifications should not break the main flow
-  }
-};
+    return `as ${assignment.roleType} for ${assignment.entityType} ${assignment.entityId}`;
+  });
 
 /** Items listed in a multi-item assignment notice before "and <k> more". */
 export const ASSIGNED_MANY_LIST_LIMIT = 20;
+
+/**
+ * The words of a multi-item assignment notice, chosen by the caller. The keys
+ * are translated into the recipient's language; the email body stays English.
+ */
+export interface AssignedManyTexts {
+  /** Title and email subject. Vars: {count}. */
+  titleKey: string;
+  /** Message listing every item. Vars: {assigner}, {count}, {names}. */
+  messageKey: string;
+  /** Message when the list is cut. Vars: {assigner}, {count}, {names}, {more}. */
+  messageMoreKey: string;
+  /** Plural noun for the English email body, e.g. "risks". */
+  itemsLabel: string;
+  /** English email line on what the role means for these items. */
+  roleDescription: string;
+}
 
 /**
  * Notify a user once when a bulk action assigns them to several items of one
@@ -2022,7 +2056,6 @@ export const ASSIGNED_MANY_LIST_LIMIT = 20;
  * assignment email listing the items, instead of one per item. Same
  * notification type, entity type and email template as notifyUserAssigned.
  *
- * @param assignment.itemsLabel - Plural noun for the items, e.g. "risks"
  * @param assignment.entityUrl - Link to the list page, e.g. "/risk-management"
  */
 export const notifyUserAssignedMany = async (
@@ -2030,37 +2063,26 @@ export const notifyUserAssignedMany = async (
   assigneeId: number,
   assignment: {
     entityType: string;
-    itemsLabel: string;
     items: Array<{ id: number; name: string }>;
     roleType: AssignmentRoleType;
     entityUrl: string;
+    texts: AssignedManyTexts;
   },
   assignerName: string,
   baseUrl: string,
-): Promise<void> => {
-  try {
-    const assignee = await getUserById(assigneeId);
-    if (!assignee) {
-      logger.warn(`Cannot send assignment notification: user ${assigneeId} not found`);
-      return;
-    }
-
+): Promise<void> =>
+  sendAssignmentNotification(assigneeId, async (assignee) => {
+    const { texts } = assignment;
     const count = assignment.items.length;
-    const names = assignment.items.map((item) => item.name);
-    const shown = names.slice(0, ASSIGNED_MANY_LIST_LIMIT);
-    const hidden = count - shown.length;
-    const more = hidden > 0 ? ` and ${hidden} more` : "";
-    const title = `${count} ${assignment.itemsLabel} were assigned to you`;
-
-    const fullUrl = assignment.entityUrl.startsWith("http")
-      ? assignment.entityUrl
-      : `${baseUrl}${assignment.entityUrl.startsWith("/") ? "" : "/"}${assignment.entityUrl}`;
+    const shown = assignment.items.slice(0, ASSIGNED_MANY_LIST_LIMIT).map((item) => item.name);
+    const more = count - shown.length;
+    const names = shown.join(", ");
 
     // The item names are user text: escaped here, since *_html variables are
     // inserted into the email as is.
     const itemStyle = `color: ${emailColorTokens.colorTextSecondary}; font-size: 13px; margin-bottom: 4px;`;
     const listItems = shown.map((name) => `<li style="${itemStyle}">${escapeHtml(name)}</li>`);
-    if (hidden > 0) listItems.push(`<li style="${itemStyle}">and ${hidden} more</li>`);
+    if (more > 0) listItems.push(`<li style="${itemStyle}">and ${more} more</li>`);
     const listHtml = `<ul style="margin: 0 0 8px 0; padding-left: 20px;">${listItems.join("")}</ul>`;
 
     await sendInAppNotification(
@@ -2068,39 +2090,38 @@ export const notifyUserAssignedMany = async (
       {
         user_id: assigneeId,
         type: getNotificationTypeForRole(assignment.roleType),
-        title,
-        message: `${assignerName} assigned you as ${assignment.roleType} for ${count} ${assignment.itemsLabel}: ${shown.join(", ")}${more}`,
+        titleKey: texts.titleKey,
+        titleVars: { count },
+        ...(more > 0
+          ? {
+              messageKey: texts.messageMoreKey,
+              messageVars: { assigner: assignerName, count, names, more },
+            }
+          : {
+              messageKey: texts.messageKey,
+              messageVars: { assigner: assignerName, count, names },
+            }),
         entity_type: getNotificationEntityType(assignment.entityType),
         action_url: assignment.entityUrl,
       },
       true,
       {
         template: EMAIL_TEMPLATES.ASSIGNMENT_NOTIFICATION,
-        subject: title,
+        subjectKey: texts.titleKey,
+        subjectVars: { count },
         variables: {
           recipient_name: assignee.name || "User",
           assigner_name: assignerName,
           role_type: assignment.roleType,
-          entity_type: assignment.itemsLabel,
-          entity_name: `${count} ${assignment.itemsLabel}`,
-          entity_url: fullUrl,
+          entity_type: texts.itemsLabel,
+          entity_name: `${count} ${texts.itemsLabel}`,
+          entity_url: buildAssignmentUrl(assignment.entityUrl, baseUrl),
           assignment_date: formatAssignmentDate(),
-          role_description:
-            assignment.roleType === "Risk Owner"
-              ? "As the Risk Owner, you are responsible for managing and mitigating these risks."
-              : getRoleDescription(assignment.roleType),
+          role_description: texts.roleDescription,
           entity_context_html: listHtml,
         },
       },
     );
 
-    logger.info(
-      `📧 Assignment notification sent to user ${assigneeId} as ${assignment.roleType} for ${count} ${assignment.entityType} items`,
-    );
-  } catch (error) {
-    logger.error(
-      `Failed to send assignment notification to user ${assigneeId}: ${error instanceof Error ? error.message : String(error)}`,
-    );
-    // Don't rethrow - notifications should not break the main flow
-  }
-};
+    return `as ${assignment.roleType} for ${count} ${assignment.entityType} items`;
+  });

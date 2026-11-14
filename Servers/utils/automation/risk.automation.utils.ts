@@ -1,3 +1,5 @@
+import { storedRiskCategories } from "../riskCategory.utils";
+
 // Build replacement dict for risk
 export function buildRiskReplacements(risk: any): Record<string, any> {
   return {
@@ -219,10 +221,16 @@ export const BULK_RISK_NAME_LIMIT = 10;
 /** Lines listed in a bulk `changes_summary` before "• and <k> more". */
 export const BULK_RISK_CHANGE_LINE_LIMIT = 50;
 
-const categoryText = (risk: any): string =>
-  Array.isArray(risk?.risk_category) ? risk.risk_category.join(", ") : "";
+/** Categories as display text; a Postgres array literal reads like an array. */
+const categoryText = (risk: any): string => storedRiskCategories(risk?.risk_category).join(", ");
+const sortedCategories = (risk: any): string =>
+  [...new Set(storedRiskCategories(risk?.risk_category))].sort().join("\n");
 
-/** "• <name>: Owner: A → B; Category: x → y" for what a bulk edit changed. */
+/**
+ * "• <name>: Owner: A → B; Category: x → y" for what a bulk edit changed. A
+ * risk whose owner and category both read the same (the edit changed
+ * something else) gets "• <name>: updated", so every changed risk has a line.
+ */
 function bulkChangeLine({ before, after }: BulkRiskChange): string {
   const parts: string[] = [];
   // Decide on the ids (two users can share a name); names are for display.
@@ -231,12 +239,12 @@ function bulkChangeLine({ before, after }: BulkRiskChange): string {
   if (ownerId(before) !== ownerId(after)) {
     parts.push(`Owner: ${ownerLabel(before)} → ${ownerLabel(after)}`);
   }
-  const oldCategory = categoryText(before);
-  const newCategory = categoryText(after);
-  if (oldCategory !== newCategory) {
-    parts.push(`Category: ${oldCategory || "(empty)"} → ${newCategory || "(empty)"}`);
+  if (sortedCategories(before) !== sortedCategories(after)) {
+    parts.push(
+      `Category: ${categoryText(before) || "(empty)"} → ${categoryText(after) || "(empty)"}`,
+    );
   }
-  return `• ${after.risk_name}: ${parts.join("; ")}`;
+  return `• ${after.risk_name}: ${parts.length > 0 ? parts.join("; ") : "updated"}`;
 }
 
 /**
