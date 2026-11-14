@@ -5,6 +5,7 @@ import {
   isReviewDateString,
   toReviewDateValue,
 } from "../policyReviewDate.utils";
+import { ValidationException } from "../../domain.layer/exceptions/custom.exception";
 
 // Run under a TZ east and west of UTC: the results must not change.
 describe("policy review date helpers (P-M1)", () => {
@@ -46,9 +47,24 @@ describe("policy review date helpers (P-M1)", () => {
     expect(isReviewDateString(20300115)).toBe(false);
   });
 
-  it("passes a malformed value through so the database rejects it", () => {
-    expect(toReviewDateValue("2030-01-15garbage")).toBe("2030-01-15garbage");
-    expect(toReviewDateValue("2030-01-15T25:99:99")).toBe("2030-01-15T25:99:99");
+  it("refuses an out-of-range offset", () => {
+    expect(isReviewDateString("2030-01-15T10:00+14:00")).toBe(true);
+    expect(isReviewDateString("2030-01-15T10:00+99:99")).toBe(false);
+    expect(isReviewDateString("2030-01-15T10:00-7777")).toBe(false);
+  });
+
+  it("throws for anything it would not store as a calendar day", () => {
+    for (const value of [
+      "2030-01-15garbage",
+      "2030-01-15T25:99:99",
+      "2030-01-15 10:00",
+      "2030-1-5",
+      "next quarter",
+      new Date("invalid"),
+      20300115,
+    ]) {
+      expect(() => toReviewDateValue(value)).toThrow(ValidationException);
+    }
   });
 
   it("formats a UTC-midnight string as that day", () => {
