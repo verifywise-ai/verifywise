@@ -3,7 +3,7 @@
 > **Status:** Shipped to `develop` (PR included in 2026-06-19 release). Last updated 2026-06-21
 > (detail-parity refresh: card-grid UI, feed `indicators`, day-one seed, dropdown counts).
 
-The AI Trust Index is a sixth sidebar module that gives every organisation a read-only window
+The AI Trust Index is its own sidebar item in the Record group (below Inventory) and gives every organisation a read-only window
 into an independently-maintained, public feed of AI-app privacy and transparency scores. VerifyWise
 pulls the feed on a weekly schedule, detects changes, and emails configured recipients when an
 app they track materially changes. No scraping, no LLM, no new external service.

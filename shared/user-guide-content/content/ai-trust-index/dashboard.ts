@@ -95,7 +95,7 @@ export const aiTrustIndexDashboardContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Open **Record > AI Trust Index** in the sidebar, just below Inventory. You\'ll land on the Browse tab, which shows the full catalog of assessed apps. Use the Tracked tab to see only the apps your organisation is watching, and Settings to configure email notifications.',
+      text: 'Open **Record > AI Trust Index** in the sidebar, just below Inventory, and choose **Browse** to see the full catalog of assessed apps. Choose **Tracked** to see only the apps your organisation is watching. Admins also see **Trust Index settings**, where they configure email notifications.',
     },
     {
       type: 'callout',
