@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, Suspense, useCallback, useEffect, useRef, useMemo } from "react";
+import React, { useState, Suspense, useEffect, useRef, useMemo } from "react";
 import { useSearchParams } from "react-router";
 import { Box, Typography, TableCell, Stack, Tooltip, Alert as MuiAlert } from "@mui/material";
 import Alert from "../../../components/Alert";
@@ -40,9 +40,6 @@ import {
   Resource,
   FormData,
 } from "../../../../domain/interfaces/i.aiTrustCenter";
-import { GroupBy } from "../../../components/Table/GroupBy";
-import { useTableGrouping, useGroupByState } from "../../../../application/hooks/useTableGrouping";
-import { GroupedTableView } from "../../../components/Table/GroupedTableView";
 import { ColumnSelector } from "../../../components/Table/ColumnSelector";
 import {
   useColumnVisibility,
@@ -241,9 +238,6 @@ const TrustCenterResources: React.FC = () => {
     clearFieldError: clearEditFieldError,
     resetErrors: resetEditErrors,
   } = useFormValidation<EditResourceFormValues>(editResourceValidators);
-
-  // GroupBy state
-  const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
 
   // Column visibility
   const { visibleColumns, allColumns, toggleColumn, resetToDefaults } =
@@ -554,26 +548,6 @@ const TrustCenterResources: React.FC = () => {
     }
   };
 
-  // Define how to get the group key for each resource
-  const getResourceGroupKey = useCallback((resource: Resource, field: string): string => {
-    switch (field) {
-      case "description":
-        return resource.description || "Unknown";
-      case "visible":
-        return resource.visible ? "Visible" : "Hidden";
-      default:
-        return "Other";
-    }
-  }, []);
-
-  // Apply grouping to resources
-  const groupedResources = useTableGrouping({
-    data: resources || [],
-    groupByField: groupBy,
-    sortOrder: groupSortOrder,
-    getGroupKey: getResourceGroupKey,
-  });
-
   const visibleTableColumns = useMemo(
     () => TABLE_COLUMNS.filter((col) => visibleColumns.has(col.id as ResourceColumn)),
     [visibleColumns],
@@ -594,13 +568,6 @@ const TrustCenterResources: React.FC = () => {
       <Box sx={styles.container}>
         <Box sx={styles.resourcesHeader}>
           <Box sx={{ display: "flex", gap: "8px", alignItems: "center" }}>
-            <GroupBy
-              options={[
-                { id: "description", label: "Type" },
-                { id: "visible", label: "Visibility" },
-              ]}
-              onGroupChange={handleGroupChange}
-            />
             <ColumnSelector
               columns={allColumns}
               visibleColumns={visibleColumns}
@@ -653,35 +620,28 @@ const TrustCenterResources: React.FC = () => {
               />
             </Stack>
           ) : (
-            <GroupedTableView
-              groupedData={groupedResources}
-              ungroupedData={resources || []}
-              renderTable={(data, options) => (
-                <AITrustCenterTable
-                  data={data}
-                  columns={visibleTableColumns}
-                  isLoading={resourcesLoading}
-                  paginated={true}
-                  disabled={!formData?.info?.resources_visible}
-                  emptyStateText="No resources found. Add your first resource to get started."
-                  emptyStateIcon={FileText}
-                  renderRow={(resource, sortConfig) => (
-                    <ResourceTableRow
-                      key={resource.id}
-                      resource={resource}
-                      onDelete={handleDeleteResource}
-                      onEdit={handleEditResource}
-                      onMakeVisible={handleMakeVisible}
-                      onDownload={handleDownload}
-                      sortConfig={sortConfig}
-                      visibleColumnIds={visibleColumns}
-                    />
-                  )}
-                  tableId="resources-table"
-                  hidePagination={options?.hidePagination}
-                  flashRowId={flashRowId}
+            <AITrustCenterTable
+              data={resources || []}
+              columns={visibleTableColumns}
+              isLoading={resourcesLoading}
+              paginated={true}
+              disabled={!formData?.info?.resources_visible}
+              emptyStateText="No resources found. Add your first resource to get started."
+              emptyStateIcon={FileText}
+              renderRow={(resource, sortConfig) => (
+                <ResourceTableRow
+                  key={resource.id}
+                  resource={resource}
+                  onDelete={handleDeleteResource}
+                  onEdit={handleEditResource}
+                  onMakeVisible={handleMakeVisible}
+                  onDownload={handleDownload}
+                  sortConfig={sortConfig}
+                  visibleColumnIds={visibleColumns}
                 />
               )}
+              tableId="resources-table"
+              flashRowId={flashRowId}
             />
           )}
         </Box>

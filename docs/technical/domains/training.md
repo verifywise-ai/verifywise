@@ -145,7 +145,6 @@ validateTrainingRegistrarUpdateBusinessRules(old, new) {
 **Features:**
 - CRUD operations with modal forms
 - Filtering by status, provider, department
-- GroupBy (status, provider, department)
 - Search functionality
 - Export to CSV/Excel
 - Pagination with configurable rows

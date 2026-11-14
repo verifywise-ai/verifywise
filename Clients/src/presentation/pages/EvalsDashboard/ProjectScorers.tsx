@@ -5,7 +5,6 @@ import { Plus } from "lucide-react";
 import SearchBox from "../../components/Search/SearchBox";
 import { type FilterColumn } from "../../components/Table/FilterBy";
 import { TableFilter } from "../../components/Table/TableFilter";
-import { GroupBy } from "../../components/Table/GroupBy";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import {
   listScorers,
@@ -402,13 +401,6 @@ export default function ProjectScorers({ projectId, orgId }: ProjectScorersProps
             defaultLogic={filterLogic}
             data={scorers}
             getFieldValue={getFieldValue}
-          />
-          <GroupBy
-            options={[
-              { id: "type", label: "Type" },
-              { id: "metricKey", label: "Metric key" },
-            ]}
-            onGroupChange={() => {}}
           />
           <SearchBox
             placeholder="Search scorers..."

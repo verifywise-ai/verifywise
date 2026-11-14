@@ -122,7 +122,6 @@ export function ProjectDatasets({ projectId, orgId }: ProjectDatasetsProps) {
           onFilterChange={ds.handleFilterChange}
           filterConditions={ds.filterConditions}
           filterLogic={ds.filterLogic}
-          onGroupChange={ds.handleDatasetsGroupChange}
           searchTerm={ds.searchTerm}
           onSearchTermChange={ds.setSearchTerm}
           uploading={ds.uploading}
@@ -130,7 +129,6 @@ export function ProjectDatasets({ projectId, orgId }: ProjectDatasetsProps) {
           canDeleteDataset={ds.canDeleteDataset}
           onUploadClick={ds.handleUploadClick}
           onCreateClick={() => ds.setCreateDatasetModalOpen(true)}
-          groupedDatasets={ds.groupedDatasets}
           filteredDatasets={ds.filteredDatasets}
           loading={ds.loading}
           onRowClick={ds.handleRowClick}

@@ -150,7 +150,6 @@ export const policyTemplatesContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Filter', text: 'Filter by title (free text) or by category.' },
-        { bold: 'Group by', text: 'Group templates by category into collapsible sections.' },
         { bold: 'Column selector', text: 'Show or hide the ID, tags, description and actions columns. **Title** is always visible. Your choice is saved in your browser.' },
         { bold: 'Search', text: 'Filters templates by title as you type.' },
       ],

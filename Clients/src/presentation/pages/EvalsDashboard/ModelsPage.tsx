@@ -5,7 +5,6 @@ import { CustomizableButton } from "../../components/button/customizable-button"
 import SearchBox from "../../components/Search/SearchBox";
 import { type FilterColumn } from "../../components/Table/FilterBy";
 import { TableFilter } from "../../components/Table/TableFilter";
-import { GroupBy } from "../../components/Table/GroupBy";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { evalModelsService, type SavedModel } from "../../../infrastructure/api/evalModelsService";
 import {
@@ -351,10 +350,6 @@ export default function ModelsPage({ orgId, openAddModal, onAddModalConsumed }: 
             defaultLogic={filterLogic}
             data={models}
             getFieldValue={getFieldValue}
-          />
-          <GroupBy
-            options={[{ id: "modelProvider", label: "Provider" }]}
-            onGroupChange={() => {}}
           />
           <SearchBox
             placeholder="Search models..."

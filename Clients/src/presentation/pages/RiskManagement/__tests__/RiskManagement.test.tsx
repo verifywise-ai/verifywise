@@ -16,15 +16,6 @@ vi.mock("../../../../application/hooks/useUsers", () => ({
   }),
 }));
 
-vi.mock("../../../../application/hooks/useTableGrouping", () => ({
-  useTableGrouping: () => [],
-  useGroupByState: () => ({
-    groupBy: null,
-    groupSortOrder: "asc",
-    handleGroupChange: vi.fn(),
-  }),
-}));
-
 vi.mock("../../../../application/hooks/useFilterBy", () => ({
   useFilterBy: () => ({
     filterData: (data: unknown[]) => data,
@@ -141,10 +132,6 @@ vi.mock("../../../components/Cards/StatusTileCards", () => ({
   StatusTileCards: () => <div data-testid="status-tile-cards" />,
 }));
 
-vi.mock("../../../components/Table/GroupedTableView", () => ({
-  GroupedTableView: () => <div data-testid="grouped-table-view" />,
-}));
-
 vi.mock("../../../components/Table/ExportMenu", () => ({
   ExportMenu: () => <div data-testid="export-menu" />,
 }));
@@ -153,10 +140,6 @@ vi.mock("../../../components/Table/FilterBy", () => ({
   FilterBy: () => <div data-testid="filter-by" />,
   FilterColumn: {},
   FilterCondition: {},
-}));
-
-vi.mock("../../../components/Table/GroupBy", () => ({
-  GroupBy: () => <div data-testid="group-by" />,
 }));
 
 vi.mock("../../../components/Table/ColumnSelector", () => ({

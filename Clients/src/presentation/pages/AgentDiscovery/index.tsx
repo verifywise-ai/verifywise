@@ -15,14 +15,11 @@ import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import { FilterColumn, FilterCondition } from "../../components/Table/FilterBy";
 import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
-import { GroupBy } from "../../components/Table/GroupBy";
-import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
-import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { AgentPrimitiveRow } from "src/domain/interfaces/i.agentDiscovery";
 import AgentTable from "./AgentTable";
-import { getAgentSourceLabel, getReviewStatusDisplay, getSourceFilterOptions } from "./agentLabels";
+import { getReviewStatusDisplay, getSourceFilterOptions } from "./agentLabels";
 import { palette } from "../../themes/palette";
 
 import Alert from "../../components/Alert";
@@ -54,9 +51,6 @@ const AgentDiscovery: React.FC = () => {
 
   // Search
   const [searchTerm, setSearchTerm] = useState("");
-
-  // GroupBy state
-  const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
 
   // Column visibility
   type AgentColumn =
@@ -254,31 +248,6 @@ const AgentDiscovery: React.FC = () => {
     return filtered;
   }, [filterData, agents, searchTerm]);
 
-  // GroupBy - get group key
-  const getGroupKey = (agent: AgentPrimitiveRow, field: string): string | string[] => {
-    switch (field) {
-      case "review_status":
-        return getReviewStatusDisplay(agent.review_status).label;
-      case "source_system":
-        // The Source column's label, not the raw key.
-        return getAgentSourceLabel(agent);
-      case "primitive_type":
-        return agent.primitive_type || "Unknown";
-      case "is_stale":
-        return agent.is_stale ? "Stale" : "Active";
-      default:
-        return "Other";
-    }
-  };
-
-  // Apply grouping
-  const groupedAgents = useTableGrouping({
-    data: filteredAgents,
-    groupByField: groupBy,
-    sortOrder: groupSortOrder,
-    getGroupKey,
-  });
-
   const handleSync = async () => {
     setIsSyncing(true);
     try {
@@ -422,15 +391,6 @@ const AgentDiscovery: React.FC = () => {
                 data={agents}
                 getFieldValue={getFieldValue}
               />
-              <GroupBy
-                options={[
-                  { id: "review_status", label: "Status" },
-                  { id: "source_system", label: "Source" },
-                  { id: "primitive_type", label: "Type" },
-                  { id: "is_stale", label: "Stale" },
-                ]}
-                onGroupChange={handleGroupChange}
-              />
               <ColumnSelector
                 columns={allColumns}
                 visibleColumns={visibleColumns}
@@ -479,24 +439,18 @@ const AgentDiscovery: React.FC = () => {
       )}
 
       {/* Table */}
-      <GroupedTableView
-        groupedData={groupedAgents}
-        ungroupedData={filteredAgents}
-        renderTable={(data) => (
-          <AgentTable
-            agents={data}
-            isLoading={isLoading}
-            onRowClick={handleRowClick}
-            onReview={handleReviewAgent}
-            onEdit={handleEditAgent}
-            onDelete={handleDeleteAgent}
-            canManage={canManage}
-            onSync={handleSync}
-            onAddAgent={() => setIsManualModalOpen(true)}
-            isSyncing={isSyncing}
-            visibleColumns={visibleColumns}
-          />
-        )}
+      <AgentTable
+        agents={filteredAgents}
+        isLoading={isLoading}
+        onRowClick={handleRowClick}
+        onReview={handleReviewAgent}
+        onEdit={handleEditAgent}
+        onDelete={handleDeleteAgent}
+        canManage={canManage}
+        onSync={handleSync}
+        onAddAgent={() => setIsManualModalOpen(true)}
+        isSyncing={isSyncing}
+        visibleColumns={visibleColumns}
       />
 
       {/* Review modal */}

@@ -38,15 +38,6 @@ vi.mock("../../../../application/hooks/useFilterBy", () => ({
   }),
 }));
 
-vi.mock("../../../../application/hooks/useTableGrouping", () => ({
-  useTableGrouping: () => [],
-  useGroupByState: () => ({
-    groupBy: null,
-    groupSortOrder: "asc",
-    handleGroupChange: vi.fn(),
-  }),
-}));
-
 vi.mock("../../../../application/hooks/useColumnVisibility", () => ({
   useColumnVisibility: () => ({
     visibleColumns: new Set([
@@ -66,17 +57,6 @@ vi.mock("../../../../application/hooks/useColumnVisibility", () => ({
 
 vi.mock("../../../../application/tools/log.engine", () => ({
   logEngine: vi.fn(),
-}));
-
-// Mock child components
-vi.mock("../../../components/Table/GroupedTableView", () => ({
-  GroupedTableView: ({ ungroupedData, renderTable }: any) => (
-    <div data-testid="grouped-table-view">{renderTable(ungroupedData || [])}</div>
-  ),
-}));
-
-vi.mock("../../../components/Table/GroupBy", () => ({
-  GroupBy: () => <div data-testid="group-by" />,
 }));
 
 vi.mock("../../../components/Table/FilterBy", () => ({
@@ -131,7 +111,7 @@ describe("TrainingRegistar", () => {
     renderWithProviders(<Training />, { route: "/training/my-training" });
 
     expect(screen.getByTestId("my-training-table")).toBeInTheDocument();
-    expect(screen.queryByTestId("grouped-table-view")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("training-table")).not.toBeInTheDocument();
   });
 
   it("counts only open assignments on the my training tab", async () => {

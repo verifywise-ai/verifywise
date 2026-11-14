@@ -689,8 +689,8 @@ For each page/screen the following subsections describe: routes, user-facing fea
 | Routes | `/vendors`, `/vendors/risks` |
 | Component | `Clients/src/presentation/pages/Vendors/index.tsx` |
 | Tabs | Vendor list, Vendor risks. |
-| Features | Vendor table with status tile cards, search, filters (`FilterBy`), grouping, column visibility, export; create/edit vendor modal (`NewVendor`); vendor-risk table with create/edit modal (`NewRisk`); delete actions; project filter; scorecard column. |
-| Key components | `TableWithPlaceholder`, `RisksTable`, `NewVendor`, `NewRisk`, `StatusTileCards`, `FilterBy`, `GroupBy`, `ColumnSelector`, `ExportMenu`. |
+| Features | Vendor table with status tile cards, search, filters (`FilterBy`), column visibility, export; create/edit vendor modal (`NewVendor`); vendor-risk table with create/edit modal (`NewRisk`); delete actions; project filter; scorecard column. |
+| Key components | `TableWithPlaceholder`, `RisksTable`, `NewVendor`, `NewRisk`, `StatusTileCards`, `FilterBy`, `ColumnSelector`, `ExportMenu`. |
 | Access | Main sidebar → Vendors; dashboard stat cards. |
 | e2e tests | `Clients/e2e/vendors.spec.ts` |
 | Unit tests | `Clients/src/presentation/pages/Vendors/**/*.test.tsx`, `Clients/src/presentation/components/Modals/NewVendor/__tests__/*.test.tsx` |

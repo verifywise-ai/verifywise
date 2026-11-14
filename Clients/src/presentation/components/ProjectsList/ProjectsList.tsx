@@ -9,9 +9,6 @@ import { usePersistedViewMode } from "../../hooks/usePersistedViewMode";
 import { getAllUsers } from "../../../application/repository/user.repository";
 import { IProjectListProps } from "../../../domain/interfaces/i.project";
 import { SearchBox } from "../Search";
-import { GroupBy } from "../Table/GroupBy";
-import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
-import { GroupedTableView } from "../Table/GroupedTableView";
 import { Project } from "../../../domain/types/Project";
 import { User } from "../../../domain/types/User";
 import { ExportMenu } from "../Table/ExportMenu";
@@ -64,9 +61,6 @@ const ProjectList = ({
   const [viewMode, setViewMode] = usePersistedViewMode("projects-view-mode", "table");
 
   const [users, setUsers] = useState<User[]>([]);
-
-  // GroupBy state
-  const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
 
   // Column visibility management
   type ProjectColumn = "ucId" | "title" | "risk" | "role" | "startDate" | "lastUpdated" | "actions";
@@ -241,38 +235,6 @@ const ProjectList = ({
     return result;
   }, [filterProjectData, projects, searchTerm]);
 
-  // Define how to get the group key for each project/use case
-  const getProjectGroupKey = (project: Project, field: string): string | string[] => {
-    switch (field) {
-      case "risk_level":
-        return project.ai_risk_classification || "Unknown";
-      case "role": {
-        const roles = projectHighRiskRoles(project);
-        return roles.length > 0 ? roles : "Unknown";
-      }
-      case "owner":
-        if (project.owner) {
-          return getUserNameById(project.owner.toString());
-        }
-        if (project.external_owner_name) {
-          return externalOwnerLabel(project.external_owner_name);
-        }
-        return "Unassigned";
-      case "status":
-        return project.status || "Unknown";
-      default:
-        return "Other";
-    }
-  };
-
-  // Apply grouping to filtered projects (only for table view)
-  const groupedProjects = useTableGrouping({
-    data: filteredProjects,
-    groupByField: viewMode === "table" ? groupBy : null,
-    sortOrder: groupSortOrder,
-    getGroupKey: getProjectGroupKey,
-  });
-
   // Extracted render logic
   const renderProjects = () => {
     if (isLoading) {
@@ -313,18 +275,11 @@ const ProjectList = ({
 
     if (viewMode === "table") {
       return (
-        <GroupedTableView
-          groupedData={groupedProjects}
-          ungroupedData={filteredProjects}
-          renderTable={(data, options) => (
-            <ProjectTableView
-              projects={data}
-              hidePagination={options?.hidePagination}
-              onProjectDeleted={onProjectDeleted}
-              visibleColumns={visibleColumns}
-              staleIds={staleIds}
-            />
-          )}
+        <ProjectTableView
+          projects={filteredProjects}
+          onProjectDeleted={onProjectDeleted}
+          visibleColumns={visibleColumns}
+          staleIds={staleIds}
         />
       );
     }
@@ -408,15 +363,6 @@ const ProjectList = ({
 
           {viewMode === "table" && (
             <>
-              <GroupBy
-                options={[
-                  { id: "risk_level", label: "Risk level" },
-                  { id: "role", label: "Role" },
-                  { id: "owner", label: "Owner" },
-                  { id: "status", label: "Status" },
-                ]}
-                onGroupChange={handleGroupChange}
-              />
               <ColumnSelector
                 columns={allColumns}
                 visibleColumns={visibleColumns}

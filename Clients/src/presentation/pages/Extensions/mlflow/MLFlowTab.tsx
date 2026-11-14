@@ -1,5 +1,5 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
-import React, { useState, useEffect, useMemo, useCallback, useRef } from "react";
+import React, { useState, useEffect, useMemo, useCallback } from "react";
 import {
   Box,
   Typography,
@@ -20,16 +20,9 @@ import {
   TableFooter,
   TablePagination,
   Chip,
-  Popover,
-  Stack,
-  Select,
-  MenuItem,
-  ToggleButton,
-  ToggleButtonGroup,
-  FormControl,
 } from "@mui/material";
 import type { GridProps } from "@mui/material";
-import { RefreshCw, XCircle, Eye, ChevronsUpDown, X, Layers } from "lucide-react";
+import { RefreshCw, XCircle, Eye, ChevronsUpDown } from "lucide-react";
 import {
   colors,
   typography,
@@ -47,293 +40,6 @@ import { pageOfLabel } from "../../../components/Table/pageOfLabel";
 import { palette, radiusPx } from "../../../themes/palette";
 
 const SelectorVertical = (props: any) => <ChevronsUpDown size={16} {...props} />;
-
-interface GroupByOption {
-  id: string;
-  label: string;
-}
-
-interface GroupedData<T> {
-  group: string;
-  items: T[];
-}
-
-function useTableGrouping<T>({
-  data,
-  groupByField,
-  sortOrder,
-  getGroupKey,
-}: {
-  data: T[];
-  groupByField: string | null;
-  sortOrder: "asc" | "desc";
-  getGroupKey: (item: T, field: string) => string | string[];
-}): GroupedData<T>[] | null {
-  return useMemo(() => {
-    if (!groupByField) return null;
-
-    const groups: Record<string, T[]> = {};
-
-    data.forEach((item) => {
-      const keys = getGroupKey(item, groupByField);
-      const groupKeys = Array.isArray(keys) ? keys : [keys];
-
-      groupKeys.forEach((groupKey) => {
-        if (!groups[groupKey]) groups[groupKey] = [];
-        groups[groupKey].push(item);
-      });
-    });
-
-    const sortedGroupKeys = Object.keys(groups).sort((a, b) =>
-      sortOrder === "asc" ? a.localeCompare(b) : b.localeCompare(a),
-    );
-
-    return sortedGroupKeys.map((key) => ({ group: key, items: groups[key] }));
-  }, [data, groupByField, sortOrder, getGroupKey]);
-}
-
-function useGroupByState(defaultGroupBy?: string, defaultSortOrder: "asc" | "desc" = "asc") {
-  const [groupBy, setGroupBy] = useState<string | null>(defaultGroupBy || null);
-  const [groupSortOrder, setGroupSortOrder] = useState<"asc" | "desc">(defaultSortOrder);
-
-  const handleGroupChange = (field: string | null, sortOrder: "asc" | "desc") => {
-    setGroupBy(field);
-    setGroupSortOrder(sortOrder);
-  };
-
-  return { groupBy, groupSortOrder, handleGroupChange };
-}
-
-const GroupBadge: React.FC<{ count: number }> = ({ count }) => (
-  <Box
-    sx={{
-      display: "inline-flex",
-      alignItems: "center",
-      justifyContent: "center",
-      width: "18px",
-      height: "18px",
-      borderRadius: "50%",
-      backgroundColor: palette.status.success.bg,
-      color: palette.status.success.text,
-      fontSize: "11px",
-      fontWeight: 600,
-      marginLeft: "6px",
-    }}
-  >
-    {count}
-  </Box>
-);
-
-interface GroupByProps {
-  options: GroupByOption[];
-  onGroupChange: (groupBy: string | null, sortOrder: "asc" | "desc") => void;
-}
-
-const GroupBy: React.FC<GroupByProps> = ({ options, onGroupChange }) => {
-  const [selectedGroup, setSelectedGroup] = useState<string>("");
-  const [sortOrder, setSortOrder] = useState<"asc" | "desc">("asc");
-  const [anchorEl, setAnchorEl] = useState<HTMLButtonElement | null>(null);
-  const scrollParentRef = useRef<HTMLElement | null>(null);
-
-  const handleClick = (event: React.MouseEvent<HTMLButtonElement>) => {
-    setAnchorEl(event.currentTarget);
-    let parent = event.currentTarget.parentElement;
-    while (parent) {
-      const overflow = window.getComputedStyle(parent).overflow;
-      if (overflow === "auto" || overflow === "scroll" || parent === document.body) {
-        scrollParentRef.current = parent;
-        break;
-      }
-      parent = parent.parentElement;
-    }
-  };
-
-  const handleClose = () => setAnchorEl(null);
-
-  useEffect(() => {
-    const handleScroll = () => {
-      if (anchorEl) handleClose();
-    };
-    if (anchorEl && scrollParentRef.current) {
-      scrollParentRef.current.addEventListener("scroll", handleScroll);
-      window.addEventListener("scroll", handleScroll, true);
-    }
-    return () => {
-      if (scrollParentRef.current) {
-        scrollParentRef.current.removeEventListener("scroll", handleScroll);
-      }
-      window.removeEventListener("scroll", handleScroll, true);
-    };
-  }, [anchorEl]);
-
-  const handleGroupFieldChange = (event: any) => {
-    const value = event.target.value;
-    setSelectedGroup(value);
-    if (value === "") {
-      onGroupChange(null, "asc");
-      setSortOrder("asc");
-    } else {
-      onGroupChange(value, sortOrder);
-    }
-  };
-
-  const handleSortChange = (_: any, value: string | null) => {
-    if (value) {
-      const order = value as "asc" | "desc";
-      setSortOrder(order);
-      if (selectedGroup) onGroupChange(selectedGroup, order);
-    }
-  };
-
-  const handleClear = () => {
-    setSelectedGroup("");
-    setSortOrder("asc");
-    onGroupChange(null, "asc");
-    handleClose();
-  };
-
-  const open = Boolean(anchorEl);
-
-  return (
-    <>
-      <Button
-        onClick={handleClick}
-        variant="outlined"
-        sx={{
-          "fontSize": "13px",
-          "fontWeight": 500,
-          "padding": "6px 12px",
-          "textTransform": "none",
-          "color": palette.text.secondary,
-          "borderColor": palette.border.dark,
-          "height": "34px",
-          "minWidth": selectedGroup ? "110px" : "80px",
-          "backgroundColor": open ? palette.status.success.bg : "transparent",
-          "&:hover": {
-            borderColor: palette.text.disabled,
-            backgroundColor: palette.status.success.bg,
-          },
-        }}
-      >
-        <Layers size={16} color={palette.brand.primary} style={{ marginRight: "6px" }} />
-        Group
-        {selectedGroup && <GroupBadge count={1} />}
-      </Button>
-
-      <Popover
-        open={open}
-        anchorEl={anchorEl}
-        onClose={handleClose}
-        anchorOrigin={{ vertical: "bottom", horizontal: "left" }}
-        transformOrigin={{ vertical: "top", horizontal: "left" }}
-        slotProps={{
-          paper: {
-            sx: {
-              marginTop: "8px",
-              padding: "16px",
-              minWidth: "400px",
-              boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
-              borderRadius: radiusPx.lg,
-            },
-          },
-        }}
-      >
-        <Stack spacing={2}>
-          <Stack direction="row" justifyContent="space-between" alignItems="center">
-            <Typography
-              sx={{
-                fontSize: "12px",
-                fontWeight: 600,
-                color: palette.text.icon,
-              }}
-            >
-              Group by
-            </Typography>
-            <Box
-              onClick={selectedGroup ? handleClear : handleClose}
-              sx={{
-                "cursor": "pointer",
-                "display": "flex",
-                "alignItems": "center",
-                "&:hover": { opacity: 0.7 },
-              }}
-            >
-              <X size={16} color={palette.text.icon} />
-            </Box>
-          </Stack>
-
-          <Stack direction="row" spacing={2} alignItems="center">
-            <FormControl size="small" sx={{ minWidth: 150 }}>
-              <Select
-                value={selectedGroup}
-                onChange={handleGroupFieldChange}
-                displayEmpty
-                sx={{ fontSize: "13px" }}
-              >
-                <MenuItem value="">Select field</MenuItem>
-                {options.map((option) => (
-                  <MenuItem key={option.id} value={option.id}>
-                    {option.label}
-                  </MenuItem>
-                ))}
-              </Select>
-            </FormControl>
-
-            <ToggleButtonGroup value={sortOrder} exclusive onChange={handleSortChange} size="small">
-              <ToggleButton value="asc" sx={{ fontSize: "12px", textTransform: "none", px: 2 }}>
-                A → Z
-              </ToggleButton>
-              <ToggleButton value="desc" sx={{ fontSize: "12px", textTransform: "none", px: 2 }}>
-                Z → A
-              </ToggleButton>
-            </ToggleButtonGroup>
-          </Stack>
-        </Stack>
-      </Popover>
-    </>
-  );
-};
-
-interface GroupedTableViewProps<T> {
-  groupedData: GroupedData<T>[] | null;
-  ungroupedData: T[];
-  renderTable: (data: T[], options?: { hidePagination?: boolean }) => React.ReactNode;
-}
-
-function GroupedTableView<T>({
-  groupedData,
-  ungroupedData,
-  renderTable,
-}: GroupedTableViewProps<T>): React.ReactElement {
-  if (groupedData) {
-    if (groupedData.length === 0) return <>{renderTable([])}</>;
-    return (
-      <Stack spacing={0}>
-        {groupedData.map(({ group, items }, index) => (
-          <Box key={group} sx={{ marginTop: index === 0 ? 0 : "24px" }}>
-            <Typography
-              component="div"
-              sx={{
-                fontSize: "15px",
-                fontWeight: 600,
-                color: palette.text.secondary,
-                marginBottom: "4px",
-                paddingLeft: "4px",
-                display: "flex",
-                alignItems: "center",
-              }}
-            >
-              {group}
-              <GroupBadge count={items.length} />
-            </Typography>
-            {renderTable(items, { hidePagination: true })}
-          </Box>
-        ))}
-      </Stack>
-    );
-  }
-  return <>{renderTable(ungroupedData)}</>;
-}
 
 interface MLFlowModel {
   id: number;
@@ -361,8 +67,6 @@ export default function MLFlowTab() {
   const [mlflowData, setMlflowData] = useState<MLFlowModel[]>([]);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(10);
-
-  const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
 
   const summaryStats = useMemo(() => {
     const stageCounts = mlflowData.reduce(
@@ -454,25 +158,7 @@ export default function MLFlowTab() {
     return `${start} - ${end}`;
   }, [page, rowsPerPage, mlflowData.length]);
 
-  const getMLFlowGroupKey = useCallback((model: MLFlowModel, field: string): string | string[] => {
-    switch (field) {
-      case "lifecycle_stage":
-        return model.lifecycle_stage || "Unknown";
-      case "experiment":
-        return model.experiment_name || model.experiment_id || "Unknown Experiment";
-      case "model_name":
-        return model.model_name || "Unknown Model";
-      default:
-        return "Other";
-    }
-  }, []);
-
-  const groupedMLFlowData = useTableGrouping({
-    data: mlflowData,
-    groupByField: groupBy,
-    sortOrder: groupSortOrder,
-    getGroupKey: getMLFlowGroupKey,
-  });
+  const displayData = mlflowData.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
 
   if (loading && mlflowData.length === 0) {
     return (
@@ -505,14 +191,6 @@ export default function MLFlowTab() {
           width: "100%",
         }}
       >
-        <GroupBy
-          options={[
-            { id: "lifecycle_stage", label: "Lifecycle stage" },
-            { id: "experiment", label: "Experiment" },
-            { id: "model_name", label: "Model name" },
-          ]}
-          onGroupChange={handleGroupChange}
-        />
         <Button
           variant="outlined"
           startIcon={<RefreshCw size={16} />}
@@ -605,124 +283,111 @@ export default function MLFlowTab() {
             </Typography>
           </Box>
         ) : (
-          <GroupedTableView
-            groupedData={groupedMLFlowData}
-            ungroupedData={mlflowData}
-            renderTable={(data, options) => {
-              const hidePagination = options?.hidePagination || false;
-              const displayData = hidePagination
-                ? data
-                : data.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
-
-              return (
-                <TableContainer
-                  sx={{
-                    border: `1px solid ${colors.border}`,
-                    borderRadius: borderRadius.md,
-                  }}
-                >
-                  <Table sx={{ minWidth: 800 }}>
-                    <TableHead sx={{ backgroundColor: colors.backgroundSecondary }}>
-                      <TableRow>
-                        {[
-                          "Model Name",
-                          "Version",
-                          "Status",
-                          "Created",
-                          "Last Updated",
-                          "Description",
-                          "Actions",
-                        ].map((header) => (
-                          <TableCell key={header} sx={tableStyles.header}>
-                            {header}
-                          </TableCell>
-                        ))}
-                      </TableRow>
-                    </TableHead>
-                    <TableBody>
-                      {displayData.map((model) => (
-                        <TableRow
-                          key={model.id}
-                          sx={{ ...tableStyles.row, cursor: "pointer" }}
-                          onClick={() => handleModelClick(model)}
-                        >
-                          <TableCell sx={tableStyles.cell}>{model.model_name}</TableCell>
-                          <TableCell sx={tableStyles.cell}>{model.version}</TableCell>
-                          <TableCell sx={tableStyles.cell}>
-                            <Chip
-                              label={model.lifecycle_stage}
-                              size="small"
-                              sx={{
-                                ...chipStyles.base,
-                                ...(model.lifecycle_stage.toLowerCase() === "production"
-                                  ? chipStyles.success
-                                  : model.lifecycle_stage.toLowerCase() === "staging"
-                                    ? chipStyles.warning
-                                    : chipStyles.neutral),
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell sx={tableStyles.cell}>
-                            {formatDate(new Date(model.creation_timestamp))}
-                          </TableCell>
-                          <TableCell sx={tableStyles.cell}>
-                            {formatDate(new Date(model.last_updated_timestamp))}
-                          </TableCell>
-                          <TableCell
-                            sx={{
-                              ...tableStyles.cell,
-                              maxWidth: 200,
-                              overflow: "hidden",
-                              textOverflow: "ellipsis",
-                            }}
-                          >
-                            {model.description || "No description"}
-                          </TableCell>
-                          <TableCell>
-                            <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
-                              <Tooltip title="View details">
-                                <IconButton size="small" sx={{ mr: 1 }}>
-                                  <Eye size={16} />
-                                </IconButton>
-                              </Tooltip>
-                            </Box>
-                          </TableCell>
-                        </TableRow>
-                      ))}
-                    </TableBody>
-                    {data.length > 0 && !hidePagination && (
-                      <TableFooter>
-                        <TableRow>
-                          <TableCell
-                            sx={{
-                              fontSize: typography.sizes.md,
-                              color: colors.textTertiary,
-                            }}
-                          >
-                            Showing {getRange} of {data.length} model(s)
-                          </TableCell>
-                          <TablePagination
-                            count={data.length}
-                            page={page}
-                            onPageChange={handleChangePage}
-                            rowsPerPage={rowsPerPage}
-                            rowsPerPageOptions={[5, 10, 15, 25]}
-                            onRowsPerPageChange={handleRowsPerPageChange}
-                            labelRowsPerPage="Rows per page"
-                            labelDisplayedRows={({ page, count }) =>
-                              pageOfLabel(page + 1, Math.max(1, Math.ceil(count / rowsPerPage)))
-                            }
-                            slotProps={{ select: { IconComponent: SelectorVertical } }}
-                            sx={{ fontSize: typography.sizes.md }}
-                          />
-                        </TableRow>
-                      </TableFooter>
-                    )}
-                  </Table>
-                </TableContainer>
-              );
+          <TableContainer
+            sx={{
+              border: `1px solid ${colors.border}`,
+              borderRadius: borderRadius.md,
             }}
-          />
+          >
+            <Table sx={{ minWidth: 800 }}>
+              <TableHead sx={{ backgroundColor: colors.backgroundSecondary }}>
+                <TableRow>
+                  {[
+                    "Model Name",
+                    "Version",
+                    "Status",
+                    "Created",
+                    "Last Updated",
+                    "Description",
+                    "Actions",
+                  ].map((header) => (
+                    <TableCell key={header} sx={tableStyles.header}>
+                      {header}
+                    </TableCell>
+                  ))}
+                </TableRow>
+              </TableHead>
+              <TableBody>
+                {displayData.map((model) => (
+                  <TableRow
+                    key={model.id}
+                    sx={{ ...tableStyles.row, cursor: "pointer" }}
+                    onClick={() => handleModelClick(model)}
+                  >
+                    <TableCell sx={tableStyles.cell}>{model.model_name}</TableCell>
+                    <TableCell sx={tableStyles.cell}>{model.version}</TableCell>
+                    <TableCell sx={tableStyles.cell}>
+                      <Chip
+                        label={model.lifecycle_stage}
+                        size="small"
+                        sx={{
+                          ...chipStyles.base,
+                          ...(model.lifecycle_stage.toLowerCase() === "production"
+                            ? chipStyles.success
+                            : model.lifecycle_stage.toLowerCase() === "staging"
+                              ? chipStyles.warning
+                              : chipStyles.neutral),
+                        }}
+                      />
+                    </TableCell>
+                    <TableCell sx={tableStyles.cell}>
+                      {formatDate(new Date(model.creation_timestamp))}
+                    </TableCell>
+                    <TableCell sx={tableStyles.cell}>
+                      {formatDate(new Date(model.last_updated_timestamp))}
+                    </TableCell>
+                    <TableCell
+                      sx={{
+                        ...tableStyles.cell,
+                        maxWidth: 200,
+                        overflow: "hidden",
+                        textOverflow: "ellipsis",
+                      }}
+                    >
+                      {model.description || "No description"}
+                    </TableCell>
+                    <TableCell>
+                      <Box sx={{ display: "flex", alignItems: "center", gap: 1 }}>
+                        <Tooltip title="View details">
+                          <IconButton size="small" sx={{ mr: 1 }}>
+                            <Eye size={16} />
+                          </IconButton>
+                        </Tooltip>
+                      </Box>
+                    </TableCell>
+                  </TableRow>
+                ))}
+              </TableBody>
+              {mlflowData.length > 0 && (
+                <TableFooter>
+                  <TableRow>
+                    <TableCell
+                      sx={{
+                        fontSize: typography.sizes.md,
+                        color: colors.textTertiary,
+                      }}
+                    >
+                      Showing {getRange} of {mlflowData.length} model(s)
+                    </TableCell>
+                    <TablePagination
+                      count={mlflowData.length}
+                      page={page}
+                      onPageChange={handleChangePage}
+                      rowsPerPage={rowsPerPage}
+                      rowsPerPageOptions={[5, 10, 15, 25]}
+                      onRowsPerPageChange={handleRowsPerPageChange}
+                      labelRowsPerPage="Rows per page"
+                      labelDisplayedRows={({ page, count }) =>
+                        pageOfLabel(page + 1, Math.max(1, Math.ceil(count / rowsPerPage)))
+                      }
+                      slotProps={{ select: { IconComponent: SelectorVertical } }}
+                      sx={{ fontSize: typography.sizes.md }}
+                    />
+                  </TableRow>
+                </TableFooter>
+              )}
+            </Table>
+          </TableContainer>
         )}
       </Box>
 
