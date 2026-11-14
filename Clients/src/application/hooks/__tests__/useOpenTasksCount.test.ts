@@ -22,7 +22,21 @@ describe("useOpenTasksCount", () => {
     const { result } = renderHook(() => useOpenTasksCount());
     expect(result.current).toBe(0);
     await waitFor(() => expect(result.current).toBe(3));
-    expect(mockedGetAllTasks).toHaveBeenCalledWith({ status: [TaskStatus.OPEN] });
+    expect(mockedGetAllTasks).toHaveBeenCalledWith({
+      status: [TaskStatus.OPEN],
+      suppressGlobalErrorToast: true,
+    });
+  });
+
+  it("asks without the global error toast on the five-minute refresh too", async () => {
+    vi.useFakeTimers();
+    mockedGetAllTasks.mockResolvedValue({ data: { tasks: [] } } as never);
+    renderHook(() => useOpenTasksCount());
+    await vi.advanceTimersByTimeAsync(5 * 60 * 1000);
+    expect(mockedGetAllTasks).toHaveBeenCalledTimes(2);
+    for (const [params] of mockedGetAllTasks.mock.calls) {
+      expect(params).toMatchObject({ suppressGlobalErrorToast: true });
+    }
   });
 
   it("falls back to 0 when a refresh fails", async () => {
