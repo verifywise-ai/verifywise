@@ -1,7 +1,7 @@
 {
   "\"{title}\" has not been confirmed as live since {since}. Confirm it, or retire it if it is no longer in use.": "« {title} » n'a pas été confirmé comme en service depuis {since}. Confirmez-le ou retirez-le s'il n'est plus utilisé.",
-  "{assigner} assigned you as Risk Owner for {count} risks: {names}": "{assigner} vous a désigné responsable du risque pour {count} risques : {names}",
-  "{assigner} assigned you as Risk Owner for {count} risks: {names} and {more} more": "{assigner} vous a désigné responsable du risque pour {count} risques : {names} et {more} autres",
+  "{assigner} assigned you as Risk Owner for {count} risks: {names}": "{assigner} vous a désigné responsable de {count} risques : {names}",
+  "{assigner} assigned you as Risk Owner for {count} risks: {names} and {more} more": "{assigner} vous a désigné responsable de {count} risques : {names} et {more} autres",
   "{count} new exposed secrets": "{count} nouveaux secrets exposés",
   "{count} new high-risk findings": "{count} nouveaux résultats à risque élevé",
   "{count} risks were assigned to you": "{count} risques vous ont été attribués",

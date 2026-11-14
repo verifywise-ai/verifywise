@@ -419,8 +419,9 @@ describe("risks.ctrl", () => {
   });
 
   describe("deleteRiskById", () => {
-    it("should archive through the shared path and return 200", async () => {
-      mockDelete.mockResolvedValue(true);
+    it("should archive through the shared path and return 200 with data true", async () => {
+      // archiveRiskQuery returns the archived row; the legacy response stays `true`.
+      mockDelete.mockResolvedValue({ id: 1, risk_name: "Archived risk", is_deleted: true });
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
       await deleteRiskById(req, res);

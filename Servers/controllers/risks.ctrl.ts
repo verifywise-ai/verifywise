@@ -707,7 +707,8 @@ export async function deleteRiskById(req: Request, res: Response): Promise<any> 
         req.userId!,
         req.organizationId!,
       );
-      return res.status(200).json(STATUS_CODE[200](deletedProjectRisk));
+      // The response body stays `true`: the legacy contract never returned the row.
+      return res.status(200).json(STATUS_CODE[200](true));
     }
 
     logStructured(
