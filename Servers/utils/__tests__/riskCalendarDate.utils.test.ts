@@ -43,6 +43,18 @@ describe("riskCalendarDateFromCell", () => {
     expect(iso(riskCalendarDateFromCell("1 May 2026"))).toBe("2026-05-01T12:00:00.000Z");
   });
 
+  it("reads a weekday name as part of the date, not as a time", () => {
+    expect(iso(riskCalendarDateFromCell("Thu 1 Oct 2026"))).toBe("2026-10-01T12:00:00.000Z");
+    expect(iso(riskCalendarDateFromCell("Tue, 5 May 2026"))).toBe("2026-05-05T12:00:00.000Z");
+  });
+
+  it("turns a number cell into a date, as validation reads it", () => {
+    const midnight = Date.UTC(2026, 4, 1);
+    expect(iso(riskCalendarDateFromCell(midnight))).toBe("2026-05-01T12:00:00.000Z");
+    const later = Date.UTC(2026, 4, 1, 18);
+    expect(iso(riskCalendarDateFromCell(later))).toBe("2026-05-01T18:00:00.000Z");
+  });
+
   it("follows toRiskCalendarDate for ISO text and date cells", () => {
     expect(iso(riskCalendarDateFromCell("2026-05-01"))).toBe("2026-05-01T12:00:00.000Z");
     expect(iso(riskCalendarDateFromCell(new Date("2026-05-01T00:00:00.000Z")))).toBe(

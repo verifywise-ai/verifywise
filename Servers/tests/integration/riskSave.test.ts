@@ -188,6 +188,9 @@ describe("Risk save correctness", () => {
       ["2000-12-31T18:30:00.000Z", "2001-01-01T12:00:00.000Z"], // India pick
       ["2000-12-31T11:00:00.000Z", "2001-01-01T12:00:00.000Z"], // New Zealand summer pick
       ["2001-01-01T12:00:00.000Z", "2001-01-01T12:00:00.000Z"], // already at noon: unchanged
+      // New Zealand winter (UTC+12) pick of 2001-07-01 is already at noon, so it
+      // is left on 30 June: the documented day-early case.
+      ["2001-06-30T12:00:00.000Z", "2001-06-30T12:00:00.000Z"],
       ["2001-01-01T10:00:00.000Z", "2001-01-01T12:00:00.000Z"], // Hawaii pick
       ["2001-01-01T14:23:41.512Z", "2001-01-01T14:23:41.512Z"], // a "now" timestamp
     ];

@@ -184,8 +184,9 @@ export type UpdateRiskServiceInput = CreateRiskServiceInput;
  *  1. Normalize risk_owner (0 → null) — matches the existing controller behavior
  *  2. If FAIR fields are in play: merge them over the stored row, validate the
  *     merged set, then recompute the derived fields
- *  3. Diff the incoming values against the stored row
- *  4. UPDATE the risk (+ projects_risks and frameworks_risks junctions)
+ *  3. UPDATE the risk (+ projects_risks and frameworks_risks junctions)
+ *  4. Diff the stored row before and after the write, so history records the
+ *     values as stored ('' vs NULL and calendar dates normalised), not as sent
  *  5. Record the diff in change history
  *
  * `existingRisk` is the caller's — it already had to load the row to answer
