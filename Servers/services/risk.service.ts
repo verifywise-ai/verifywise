@@ -9,6 +9,7 @@
 
 import { Transaction } from "sequelize";
 import { createRiskQuery, updateRiskByIdQuery } from "../utils/risk.utils";
+import { writtenValues } from "../utils/changeHistory.base.utils";
 import { RiskModel } from "../domain.layer/models/risks/risk.model";
 import { IRisk } from "../domain.layer/interfaces/I.risk";
 import {
@@ -201,13 +202,17 @@ export async function updateRiskService(
   ctx: CreateRiskServiceContext,
   transaction: Transaction,
 ): Promise<RiskModel | null> {
-  // 1. Convert optional FK fields (0 => NULL), as the controller did.
-  const updateData = {
-    ...input,
-    risk_owner: (input.risk_owner && Number(input.risk_owner) !== 0
+  // 1. Convert optional FK fields (0 => NULL), as the controller did. Only
+  //    when the caller sent risk_owner: setting it on every partial edit
+  //    logged a false "Risk owner → -" change (R-H2).
+  const updateData = { ...input } as Partial<
+    RiskModel & { projects: number[]; frameworks: number[] }
+  >;
+  if ("risk_owner" in input) {
+    updateData.risk_owner = (input.risk_owner && Number(input.risk_owner) !== 0
       ? Number(input.risk_owner)
-      : null) as unknown as number | undefined,
-  } as Partial<RiskModel & { projects: number[]; frameworks: number[] }>;
+      : null) as unknown as number | undefined;
+  }
 
   // 2. Any one of these three arriving means the whole FAIR set is recomputed,
   //    so the stored values are merged in first — validating only the incoming
@@ -250,10 +255,7 @@ export async function updateRiskService(
     Object.assign(updateData, computeDerivedFields(mergedFairFields));
   }
 
-  // 3. Diff before writing, while the stored row is still the old one.
-  const changes = await trackProjectRiskChanges(existingRisk as RiskModel, updateData);
-
-  // 4. Write. An absent projects/frameworks list is sent as empty, as before.
+  // 3. Write. An absent projects/frameworks list is sent as empty, as before.
   const updatedRisk = await updateRiskByIdQuery(
     riskId,
     {
@@ -265,7 +267,15 @@ export async function updateRiskService(
     transaction,
   );
 
-  // 5. Change history (in the same transaction)
+  // 4. Change history (in the same transaction). Diff the row as written:
+  //    the query stores dates at noon UTC, turns "" and user 0 into NULL and
+  //    skips an empty risk_name, so the request values can differ from it.
+  const changes = updatedRisk
+    ? await trackProjectRiskChanges(
+        existingRisk as RiskModel,
+        writtenValues(updatedRisk, updateData as Record<string, unknown>) as Partial<RiskModel>,
+      )
+    : [];
   if (updatedRisk && changes.length > 0) {
     await recordMultipleFieldChanges(riskId, ctx.userId, ctx.organizationId, changes, transaction);
   }

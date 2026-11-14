@@ -1,6 +1,6 @@
 # Risk Management Domain
 
-**Last Updated:** 2026-10-06
+**Last Updated:** 2026-11-14
 
 ## Overview
 
@@ -134,9 +134,11 @@ enum Likelihood {
   UNLIKELY = "Unlikely"
   POSSIBLE = "Possible"
   LIKELY = "Likely"
-  ALMOST_CERTAIN = "Almost certain"
+  ALMOST_CERTAIN = "Almost Certain"
 }
 ```
+
+Project risks spell the top value "Almost Certain"; the vendor risk enum spells it "Almost certain". Vendor risk create and update accept either casing and store "Almost certain" (`normalizeVendorRiskLikelihood` in `utils/vendorRisk.utils.ts`).
 
 ### Severity
 
@@ -452,23 +454,41 @@ POST /projectRisks/
 
 ### Field Limits
 
-| Field | Max Length |
-|-------|------------|
-| risk_name | 255 chars |
-| risk_description | 1000 chars |
-| impact | 500 chars |
-| assessment_mapping | 500 chars |
-| controls_mapping | 500 chars |
-| review_notes | 1000 chars |
-| mitigation_plan | 1000 chars |
-| implementation_strategy | 1000 chars |
-| mitigation_evidence_document | 500 chars |
+The validator (`middleware/validators/risks.validator.ts`) enforces the column limits, so overlong text is a 400, not a 500. The other text columns are `TEXT` and have no limit.
+
+| Field | Max length | Column |
+|-------|------------|--------|
+| risk_name | 255 chars | VARCHAR(255) NOT NULL |
+| impact | 255 chars | VARCHAR(255) |
+| mitigation_evidence_document | 255 chars | VARCHAR(255) |
+| final_risk_level | 255 chars | VARCHAR(255) |
+| approval_status | 255 chars | VARCHAR(255) |
 
 ### Required Fields
 
-- `risk_name` - Non-empty string
-- `risk_owner` - Valid user ID
-- `risk_description` - Non-empty string
+- `risk_name` - non-empty string (create). An empty `risk_name` on update is ignored.
+- `risk_owner` - positive user id (create)
+
+The risk form requires approver, approval status and assessment date only once an approver or an approval status is set. A new risk starts without an assessment date, and import leaves an empty assessment date empty.
+
+### Saving and clearing fields
+
+`updateRiskByIdQuery` writes every key present in the request and leaves absent keys alone, so a partial edit does not touch the owner or log an owner change. A present key clears the field: `""` is stored on text columns, and `""`, `null` or user id `0` become `NULL` on enum, date and user columns. The form sends unset selects, dates and the approver as `null`. Change history diffs the row the update returned (`writtenValues`), so it records what was stored.
+
+Delete is a soft delete (`is_deleted = true`). It keeps the risk's custom field values and returns 404 when the risk does not exist or is already deleted, before any automation runs.
+
+### Calendar dates (deadline, date of assessment)
+
+`deadline` and `date_of_assessment` are `TIMESTAMP WITH TIME ZONE` but hold calendar dates. A calendar date is stored at 12:00 UTC on its day:
+
+- The form sends the picked day as `"YYYY-MM-DD"`. The server (`toRiskCalendarDate` in `utils/riskCalendarDate.utils.ts`) stores a date-only string, or a value at exactly 00:00 UTC (a date-only value something already parsed: import, the advisor, a JSON client), at noon UTC on that day.
+- Any other time, such as an explicit API or MCP timestamp, is stored as sent.
+- Risk import reads a cell without a time ("05/01/2026") as that calendar day (`riskCalendarDateFromCell`), whatever the server's time zone.
+- The client (`riskCalendarDay` in `Clients/src/presentation/tools/isoDateToString.ts`) reads `"YYYY-MM-DD"` as that day, exactly 12:00 UTC as that UTC date, and any other value as the local date of the instant. The risk form, table, sort, filters, export, timeline, entity graph sidebar and linked policies table use it, so every time zone sees the same day and saving the form never changes the date.
+
+Migration `20261114120000-risk-dates-utc-noon` rewrote existing rows on every deployment. A value that looks like a browser's local midnight (a whole quarter hour with no seconds) was set to 12:00 UTC on the UTC date of the value plus 13 hours: 00:00 to 10:45 UTC keep their day (UTC and the Americas), 11:00 to 23:45 UTC take the next day (New Zealand summer time, Asia, Europe). Values at exactly 12:00 UTC and values with seconds were left alone, so the migration can run twice safely. Picks from UTC+12 (New Zealand winter, Fiji), UTC+14 and UTC-11, and whole-quarter-hour times sent on purpose through the API, can be a day off.
+
+A deadline now passes at 12:00 UTC on its day, so overdue checks (`deadline < NOW()`) fire up to 12 hours later than they did with the picker's local midnight.
 
 ### Organization references
 

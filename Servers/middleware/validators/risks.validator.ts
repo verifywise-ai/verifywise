@@ -72,7 +72,9 @@ const optionalRiskBodyFields = [
     .isString()
     .trim()
     .notEmpty()
-    .withMessage("risk_name must be a non-empty string"),
+    .withMessage("risk_name must be a non-empty string")
+    .isLength({ max: 255 })
+    .withMessage("risk_name must be at most 255 characters"),
   body("risk_owner")
     .optional({ nullable: true })
     .isInt({ min: 0 })
@@ -93,7 +95,12 @@ const optionalRiskBodyFields = [
     .optional()
     .isString()
     .withMessage("each risk_category entry must be a string"),
-  body("impact").optional({ nullable: true }).isString().withMessage("impact must be a string"),
+  body("impact")
+    .optional({ nullable: true })
+    .isString()
+    .withMessage("impact must be a string")
+    .isLength({ max: 255 })
+    .withMessage("impact must be at most 255 characters"),
   body("assessment_mapping")
     .optional({ nullable: true })
     .isString()
@@ -141,7 +148,9 @@ const optionalRiskBodyFields = [
   body("mitigation_evidence_document")
     .optional({ nullable: true })
     .isString()
-    .withMessage("mitigation_evidence_document must be a string"),
+    .withMessage("mitigation_evidence_document must be a string")
+    .isLength({ max: 255 })
+    .withMessage("mitigation_evidence_document must be at most 255 characters"),
   body("likelihood_mitigation")
     .optional({ nullable: true })
     .isIn(LIKELIHOODS)
@@ -153,7 +162,9 @@ const optionalRiskBodyFields = [
   body("final_risk_level")
     .optional({ nullable: true })
     .isString()
-    .withMessage("final_risk_level must be a string"),
+    .withMessage("final_risk_level must be a string")
+    .isLength({ max: 255 })
+    .withMessage("final_risk_level must be at most 255 characters"),
   body("risk_approval")
     .optional({ nullable: true })
     .isInt({ min: 1 })
@@ -161,7 +172,9 @@ const optionalRiskBodyFields = [
   body("approval_status")
     .optional({ nullable: true })
     .isString()
-    .withMessage("approval_status must be a string"),
+    .withMessage("approval_status must be a string")
+    .isLength({ max: 255 })
+    .withMessage("approval_status must be at most 255 characters"),
   body("date_of_assessment")
     .optional({ nullable: true })
     .isISO8601()
@@ -207,7 +220,9 @@ export const validateCreateRisk = [
     .isString()
     .trim()
     .notEmpty()
-    .withMessage("risk_name is required and must be a non-empty string"),
+    .withMessage("risk_name is required and must be a non-empty string")
+    .isLength({ max: 255 })
+    .withMessage("risk_name must be at most 255 characters"),
   body("risk_owner")
     .isInt({ min: 1 })
     .withMessage("risk_owner is required and must be a positive integer"),

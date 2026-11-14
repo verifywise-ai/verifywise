@@ -6,6 +6,7 @@ import { ITimelineEvent } from "../../../domain/interfaces/i.widget";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { palette, radiusPx } from "../../themes/palette";
 import { chartTheme } from "../../themes/chartTheme";
+import { riskCalendarDay } from "../../tools/isoDateToString";
 
 const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => {
   const formatDate = useFormattedDate();
@@ -43,7 +44,11 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
 
     risks.forEach((risk) => {
       // Add creation event
-      const createdDate = risk.date_of_assessment ? new Date(risk.date_of_assessment) : new Date();
+      // Assessment date, else the creation date: a risk without either is
+      // placed at render time.
+      const createdDate =
+        riskCalendarDay(risk.date_of_assessment) ??
+        (risk.created_at ? new Date(risk.created_at) : new Date());
       const riskLevelValue = getRiskLevelFromString(
         risk.current_risk_level || risk.risk_level_autocalculated,
       );
@@ -59,8 +64,8 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
       });
 
       // Add mitigation events based on mitigation status
-      if (risk.mitigation_status === "Completed" && risk.deadline) {
-        const completedDate = new Date(risk.deadline);
+      const completedDate = riskCalendarDay(risk.deadline);
+      if (risk.mitigation_status === "Completed" && completedDate) {
         events.push({
           id: `${risk.id}-mitigated`,
           date: completedDate,

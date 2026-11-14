@@ -35,6 +35,7 @@ import { singleTheme } from "../../themes";
 import { useUserMap } from "../../../presentation/hooks/userMap";
 import { text } from "../../themes/palette";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
+import { riskCalendarDay } from "../../tools/isoDateToString";
 
 interface LinkedObjectsTableProps {
   items: any[];
@@ -219,7 +220,7 @@ const LinkedObjectsTable: React.FC<LinkedObjectsTableProps> = ({
               : "-",
 
         // ---- DUE DATE ----
-        due_date: type === "risk" ? source?.deadline || "-" : type === "evidence" ? "-" : "-",
+        due_date: type === "risk" ? (riskCalendarDay(source?.deadline)?.toISOString() ?? "-") : "-",
       };
     });
   }, [items, type, userMap, projectRisk, evidenceData]);

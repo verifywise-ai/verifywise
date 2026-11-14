@@ -103,6 +103,18 @@ export const getVendorRiskByIdQuery = async (
   return vendorRisk;
 };
 
+/**
+ * The vendor risk likelihood enum spells the top value "Almost certain", while
+ * project risks use "Almost Certain". Accept either casing so a caller using the
+ * project spelling saves instead of failing on the enum.
+ */
+export const normalizeVendorRiskLikelihood = <T>(likelihood: T): T => {
+  if (typeof likelihood === "string" && likelihood.trim().toLowerCase() === "almost certain") {
+    return "Almost certain" as T;
+  }
+  return likelihood;
+};
+
 export const createNewVendorRiskQuery = async (
   vendorRisk: IVendorRisk,
   organizationId: number,
@@ -123,7 +135,7 @@ export const createNewVendorRiskQuery = async (
         order_no: vendorRisk.order_no || null,
         risk_description: vendorRisk.risk_description,
         impact_description: vendorRisk.impact_description,
-        likelihood: vendorRisk.likelihood,
+        likelihood: normalizeVendorRiskLikelihood(vendorRisk.likelihood),
         risk_severity: vendorRisk.risk_severity,
         action_plan: vendorRisk.action_plan,
         action_owner: vendorRisk.action_owner,
@@ -163,7 +175,10 @@ export const updateVendorRiskByIdQuery = async (
         vendorRisk[f as keyof VendorRiskModel] !== undefined &&
         vendorRisk[f as keyof VendorRiskModel]
       ) {
-        updateVendorRisk[f as keyof VendorRiskModel] = vendorRisk[f as keyof VendorRiskModel];
+        updateVendorRisk[f as keyof VendorRiskModel] =
+          f === "likelihood"
+            ? normalizeVendorRiskLikelihood(vendorRisk.likelihood)
+            : vendorRisk[f as keyof VendorRiskModel];
         return true;
       }
       return false;

@@ -9,17 +9,19 @@ import {
   riskSeverityItems,
 } from "../projectRiskValue";
 import { Likelihood, Severity } from "../../RiskLevel/constants";
+import { riskCalendarDay } from "../../../tools/isoDateToString";
+
+/** A stored risk date as the local midnight of its calendar day, or "" when unset. */
+const parseDateValue = (value: unknown): string => riskCalendarDay(value)?.toISOString() ?? "";
 
 /**
- * Safely parses a date value to ISO string format.
- * Handles string, Date objects, and falsy values.
+ * The calendar day the user picked, as "YYYY-MM-DD" in their own time zone.
+ * The server stores it at noon UTC, so every viewer sees the same day.
  */
-const parseDateValue = (value: unknown): string => {
-  if (!value) return "";
-  if (typeof value === "string" || value instanceof Date) {
-    return dayjs(value).toISOString();
-  }
-  return "";
+const toCalendarDay = (value: string): string | null => {
+  if (!value) return null;
+  const date = dayjs(value);
+  return date.isValid() ? date.format("YYYY-MM-DD") : null;
 };
 
 export const mitigationInitialState: MitigationFormValues = {
@@ -33,7 +35,8 @@ export const mitigationInitialState: MitigationFormValues = {
   riskSeverity: 1 as Severity,
   approver: 0,
   approvalStatus: 0,
-  dateOfAssessment: new Date().toISOString(),
+  // Set only once approval is started, so a new risk does not look assessed.
+  dateOfAssessment: "",
 };
 
 export interface UseMitigationSectionReturn {
@@ -64,24 +67,28 @@ export function useMitigationSection(
    */
   const mapFromInputValues = useCallback(
     (inputValues: Record<string, unknown>): MitigationFormValues => {
+      // The server stores residual severity "Catastrophic" as "Critical" (R-H1).
+      const residualSeverity =
+        inputValues.risk_severity === "Critical" ? "Catastrophic" : inputValues.risk_severity;
+      // A value the risk never had stays empty (0), so the form does not show
+      // and save a made-up status, level or date (R-M12).
       return {
         ...mitigationInitialState,
         mitigationStatus:
           mitigationStatusItems.find((item) => item.name === inputValues.mitigation_status)?._id ??
-          1,
+          0,
         mitigationPlan: (inputValues.mitigation_plan as string) ?? "",
         currentRiskLevel:
-          riskLevelItems.find((item) => item.name === inputValues.current_risk_level)?._id ?? 1,
+          riskLevelItems.find((item) => item.name === inputValues.current_risk_level)?._id ?? 0,
         implementationStrategy: (inputValues.implementation_strategy as string) ?? "",
         deadline: parseDateValue(inputValues.deadline),
         doc: (inputValues.mitigation_evidence_document as string) ?? "",
         likelihood:
           likelihoodItems.find((item) => item.name === inputValues.likelihood_mitigation)?._id ?? 1,
-        riskSeverity:
-          riskSeverityItems.find((item) => item.name === inputValues.risk_severity)?._id ?? 1,
+        riskSeverity: riskSeverityItems.find((item) => item.name === residualSeverity)?._id ?? 1,
         approver: (inputValues.risk_approval as number) ?? 0,
         approvalStatus:
-          approvalStatusItems.find((item) => item.name === inputValues.approval_status)?._id ?? 1,
+          approvalStatusItems.find((item) => item.name === inputValues.approval_status)?._id ?? 0,
         dateOfAssessment: parseDateValue(inputValues.date_of_assessment),
       };
     },
@@ -93,11 +100,13 @@ export function useMitigationSection(
    */
   const buildBackendData = useCallback((values: MitigationFormValues): Record<string, unknown> => {
     return {
+      // Unset values go as null: the server rejects "" for enum and date
+      // fields and 0 for a user, and null clears the stored value.
       mitigation_status:
-        mitigationStatusItems.find((item) => item._id === values.mitigationStatus)?.name || "",
+        mitigationStatusItems.find((item) => item._id === values.mitigationStatus)?.name || null,
       current_risk_level:
-        riskLevelItems.find((item) => item._id === values.currentRiskLevel)?.name || "",
-      deadline: values.deadline,
+        riskLevelItems.find((item) => item._id === values.currentRiskLevel)?.name || null,
+      deadline: toCalendarDay(values.deadline),
       mitigation_plan: values.mitigationPlan,
       implementation_strategy: values.implementationStrategy,
       mitigation_evidence_document: values.doc,
@@ -107,10 +116,10 @@ export function useMitigationSection(
         riskSeverityItems.find((item) => item._id === values.riskSeverity)?.name === "Catastrophic"
           ? "Critical"
           : riskSeverityItems.find((item) => item._id === values.riskSeverity)?.name || "",
-      risk_approval: values.approver,
+      risk_approval: values.approver || null,
       approval_status:
-        approvalStatusItems.find((item) => item._id === values.approvalStatus)?.name || "",
-      date_of_assessment: values.dateOfAssessment,
+        approvalStatusItems.find((item) => item._id === values.approvalStatus)?.name || null,
+      date_of_assessment: toCalendarDay(values.dateOfAssessment),
     };
   }, []);
 
