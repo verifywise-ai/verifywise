@@ -133,6 +133,12 @@ describe("change notice state against a real database", () => {
     );
   };
 
+  it("concurrent first views of new ids at 199 keys cannot overshoot the key limit", async () => {
+    await seedKeys(199);
+    await Promise.all([view(userId, orgId, "race-a"), view(userId, orgId, "race-b")]);
+    expect(Object.keys((await prefsOf(userId))!.change_notices)).toHaveLength(200);
+  });
+
   it("dismiss of an unseen id stores a null first_seen_at and zero views", async () => {
     expect(await setDismissed({ userId, id: ID, dismissed: true, now: new Date() })).toEqual({
       dismissed: true,

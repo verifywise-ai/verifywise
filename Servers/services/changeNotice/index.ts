@@ -18,7 +18,7 @@ export async function viewNotice(input: {
   const context = await getNoticeContextQuery(input.userId, input.organizationId, input.id);
   if (!context) return { show: false };
   if (!decideShow({ ...context, now: input.now })) return { show: false };
-  await recordViewQuery(input.userId, input.id, input.now.toISOString());
+  await recordViewQuery(input.userId, input.id, input.now.toISOString(), MAX_KEYS);
   return { show: true };
 }
 

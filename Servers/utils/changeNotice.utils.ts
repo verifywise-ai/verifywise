@@ -59,11 +59,15 @@ const OLD_STATE = `(user_preferences.preferences->'change_notices'->(:id))`;
  * lock and no count is lost, and the user's other keys (date_format,
  * parallel_agents, the other notices) are kept. first_seen_at is only ever set
  * here: COALESCE(old value, now), so a view after a dismiss-created null fills it.
+ * An id with no state is only added while the user holds fewer than `maxKeys`
+ * notice keys; the check is in the WHERE, so it runs under the row lock and
+ * concurrent first views of new ids cannot overshoot the cap.
  */
 export const recordViewQuery = async (
   userId: number,
   id: string,
   nowIso: string,
+  maxKeys: number,
 ): Promise<void> => {
   await sequelize.query(
     `INSERT INTO user_preferences (user_id, preferences)
@@ -77,8 +81,10 @@ export const recordViewQuery = async (
                      COALESCE(${OLD_STATE}, '{}'::jsonb) || jsonb_build_object(
                        'first_seen_at', COALESCE(${OLD_STATE}->>'first_seen_at', :nowIso::text),
                        'views', COALESCE((${OLD_STATE}->>'views')::int, 0) + 1))),
-       updated_at = NOW()`,
-    { replacements: { userId, id, nowIso } },
+       updated_at = NOW()
+     WHERE ${OLD_STATE} IS NOT NULL
+        OR (SELECT COUNT(*) FROM jsonb_object_keys(COALESCE(user_preferences.preferences->'change_notices', '{}'::jsonb))) < :maxKeys`,
+    { replacements: { userId, id, nowIso, maxKeys } },
   );
 };
 

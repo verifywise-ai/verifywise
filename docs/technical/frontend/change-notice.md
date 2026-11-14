@@ -7,7 +7,7 @@ A change notice is a small "What's changed" card that tells a user about a resty
 - Shown in the new look only. It is hidden in the classic look (`isClassicUi()`).
 - One card at a time. The global new look card (the entry with `global: true`) goes first. A page notice is asked about only once the global card is not showing. When the welcome card is dismissed (or the user switches back to the classic look from it), the page notice is held back only on that path (`pageDeferredAt === pathname` in `index.tsx`); the hold is cleared on the next route change, so the notice can appear on another page or on a later visit.
 - A notice stops after the user dismisses it, after 3 visits, or 90 days after the user's own first view, whichever comes first.
-- Accounts created after anyone in the organization first saw a notice are skipped for that notice, so new users never see changes they never experienced.
+- Accounts created after anyone in the organization first saw a notice are skipped for that notice, so most new users never see changes they never experienced. The first users of a new organization, and everyone invited before anyone's first view, can still see it.
 - "Show me" highlights the sidebar item named by `showMeTestId`. The button is hidden when that element is not in the DOM.
 - Dismissing a notice offers an Undo strip for 6 seconds. Undo restores the notice.
 - `localStorage["vw-change-notices"] = "off"` suppresses all notices. The E2E setup (`Clients/e2e/global.setup.ts`) sets it, and so should video recordings.
