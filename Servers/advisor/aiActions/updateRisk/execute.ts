@@ -48,8 +48,15 @@ export async function executeUpdateRisk(
   // a re-derived one that matches.
   const recomputedLevel =
     severityChanged || likelihoodChanged
-      ? (calculateRiskLevel(effectiveLikelihood, effectiveSeverity) as
-          "No risk" | "Very low risk" | "Low risk" | "Medium risk" | "High risk" | "Very high risk")
+      ? // null when a stored label is unrecognised: leave the level alone then.
+        ((calculateRiskLevel(effectiveLikelihood, effectiveSeverity) ?? undefined) as
+          | "No risk"
+          | "Very low risk"
+          | "Low risk"
+          | "Medium risk"
+          | "High risk"
+          | "Very high risk"
+          | undefined)
       : undefined;
 
   // Build the partial payload for updateRiskByIdQuery. Only set fields

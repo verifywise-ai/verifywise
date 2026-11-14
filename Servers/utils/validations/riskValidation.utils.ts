@@ -476,7 +476,11 @@ export const validateRiskLevelConsistency = (
 ): ValidationResult => {
   const expectedRiskLevel = calculateRiskLevel(likelihood, severity);
 
-  if (riskLevel && expectedRiskLevel && riskLevel !== expectedRiskLevel) {
+  // "Very low risk" is a legacy stored value no formula produces any more
+  // (it is what Rare x Negligible used to give), so it still matches "No risk".
+  const matchesLegacy = riskLevel === "Very low risk" && expectedRiskLevel === "No risk";
+
+  if (riskLevel && expectedRiskLevel && riskLevel !== expectedRiskLevel && !matchesLegacy) {
     return {
       isValid: false,
       message: `Risk level "${riskLevel}" is not consistent with severity "${severity}" and likelihood "${likelihood}". Expected: "${expectedRiskLevel}"`,
