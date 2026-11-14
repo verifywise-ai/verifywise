@@ -15,7 +15,8 @@ jest.mock("../../services/automations/automationProducer", () => ({
 
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
-import { cleanupDatabase } from "./helpers";
+import { cleanupDatabase, createTestUser } from "./helpers";
+import { getAllPoliciesDueSoonQuery } from "../../utils/policyManager.utils";
 import { buildTenantContext, TenantContext } from "./tenant-isolation/tenantIsolation.harness";
 
 const policyPayload = (extra: Record<string, unknown> = {}) => ({
@@ -31,6 +32,10 @@ async function createPolicy(ctx: TenantContext, extra: Record<string, unknown> =
   const res = await ctx.request.post("/api/policies").send(policyPayload(extra));
   expect(res.status).toBe(201);
   return res.body.data.id as number;
+}
+
+async function createUserInOrg(orgId: number): Promise<number> {
+  return createTestUser(orgId, 3, `reviewer-${Date.now()}@test.com`, "Password123!");
 }
 
 async function activatePolicyUpdatedAutomation(orgId: number) {
@@ -175,6 +180,20 @@ describe("Policy save correctness", () => {
     const list = await ctx.request.get("/api/policies");
     const listed = list.body.data.find((p: { id: number }) => p.id === created.body.data.id);
     expect(listed.next_review_date).toBe("2030-01-15T00:00:00.000Z");
+  });
+
+  it("returns the same review date from the due-soon query used by reminders (P-M1)", async () => {
+    const ctx = await buildTenantContext();
+    const soon = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const reviewer = await createUserInOrg(ctx.orgId);
+    const policyId = await createPolicy(ctx, {
+      next_review_date: soon,
+      assigned_reviewer_ids: [reviewer],
+    });
+
+    const due = await getAllPoliciesDueSoonQuery(ctx.orgId);
+    const row = due.find((p: { id: number }) => p.id === policyId);
+    expect(row?.next_review_date).toBe(`${soon}T00:00:00.000Z`);
   });
 
   it("repairs review dates the old picker shifted (P-M1 migration)", async () => {

@@ -1,4 +1,5 @@
 import { PolicyManagerModel } from "../../domain.layer/models/policy/policy.model";
+import { formatReviewDate } from "../../utils/policyReviewDate.utils";
 import { getAllPoliciesDueSoonQuery } from "../../utils/policyManager.utils";
 import { getAllOrganizationsQuery } from "../../utils/organization.utils";
 import { sendSlackNotification } from "./slackNotificationService";
@@ -53,11 +54,7 @@ export const sendPolicyDueSoonNotification = async (): Promise<number> => {
 
               // Format the notification message
               const reviewDate = policy.next_review_date
-                ? new Date(policy.next_review_date).toLocaleDateString("en-US", {
-                    year: "numeric",
-                    month: "long",
-                    day: "numeric",
-                  })
+                ? formatReviewDate(policy.next_review_date)
                 : "Not set";
 
               const message = {

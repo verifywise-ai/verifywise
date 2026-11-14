@@ -191,10 +191,11 @@ export const GENERIC_FORMATTERS: { [key: string]: FieldFormatter } = {
   },
 
   // Calendar-date formatter for TIMESTAMP (no time zone) columns that hold a
-  // day, e.g. a policy's next review date. node-pg builds those as local
-  // midnight, so the local date parts are the stored day on any server time
-  // zone; toISOString() would give the previous day east of UTC and record a
-  // change on every save.
+  // day, e.g. a policy's next review date. Policy reads return it as a
+  // "YYYY-MM-DDT00:00:00.000Z" string (POLICY_REVIEW_DATE_SQL), which the date
+  // formatter slices. A raw node-pg read is a Date at local midnight; its local
+  // date parts are the stored day on any server time zone, where toISOString()
+  // would give the previous day east of UTC and record a change on every save.
   calendarDate: async (value: unknown): Promise<string> => {
     if (value instanceof Date && !Number.isNaN(value.getTime())) {
       const pad = (n: number) => String(n).padStart(2, "0");

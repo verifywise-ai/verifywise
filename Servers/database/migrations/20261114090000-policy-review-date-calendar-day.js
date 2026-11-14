@@ -10,6 +10,11 @@
  * to the nearest midnight restores the picked day for browsers from UTC-12 to
  * UTC+12 (21:00 becomes the next day, 05:00 from Toronto stays the same day).
  *
+ * The stored time alone cannot tell UTC+13/+14 (New Zealand summer, Tonga,
+ * Kiribati) from UTC-11/-10 (American Samoa, Hawaii): both give 10:00-11:00.
+ * Rounding keeps those on the stored day, which is right for the west side
+ * and a day early for the east side.
+ *
  * Values already at midnight are left alone. Down is a no-op: the original
  * times carried no information worth restoring.
  */

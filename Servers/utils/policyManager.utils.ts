@@ -14,6 +14,7 @@ import {
   fetchCustomFieldsForEntities,
 } from "./customField.utils";
 import { findUsersNotInOrganization, parseReferencedIds } from "./user.utils";
+import { POLICY_REVIEW_DATE_SQL, toReviewDateValue } from "./policyReviewDate.utils";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 
 /**
@@ -109,7 +110,7 @@ export const getAllPoliciesQuery = async (organizationId: number) => {
   const result = (await sequelize.query(
     `SELECT
       pm.*,
-      to_char(pm.next_review_date, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS next_review_date,
+      ${POLICY_REVIEW_DATE_SQL},
       COALESCE(
         ARRAY_AGG(DISTINCT pmr.user_id) FILTER (WHERE pmr.user_id IS NOT NULL),
         ARRAY[]::INTEGER[]
@@ -135,8 +136,9 @@ export const getAllPoliciesQuery = async (organizationId: number) => {
 
 export const getAllPoliciesDueSoonQuery = async (organizationId: number, daysAhead: number = 7) => {
   const result = (await sequelize.query(
-    `SELECT 
+    `SELECT
         pm.*,
+        ${POLICY_REVIEW_DATE_SQL},
         array_agg(pm_rev.user_id) AS reviewer_ids
       FROM verifywise.policy_manager AS pm
       INNER JOIN verifywise.policy_manager__assigned_reviewer_ids AS pm_rev
@@ -171,14 +173,6 @@ const getReviewerNamesQuery = async (
   )) as { full_name: string }[];
 };
 
-/*
- * next_review_date is TIMESTAMP (no time zone) holding a calendar day at
- * midnight. node-pg would read it as server-local midnight, so the JSON value
- * depended on the backend's time zone (a day early east of UTC). Policy reads
- * format it in SQL instead: always "YYYY-MM-DDT00:00:00.000Z", the value a
- * UTC backend has always returned, on any server time zone.
- */
-
 /**
  * A policy with its assigned reviewer ids. Pass the transaction when reading
  * inside a write, or the read misses the uncommitted change (P-H1).
@@ -191,7 +185,7 @@ export const getPolicyByIdQuery = async (
   const result = (await sequelize.query(
     `SELECT
       pm.*,
-      to_char(pm.next_review_date, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS next_review_date,
+      ${POLICY_REVIEW_DATE_SQL},
       COALESCE(
         ARRAY_AGG(DISTINCT pmr.user_id) FILTER (WHERE pmr.user_id IS NOT NULL),
         ARRAY[]::INTEGER[]
@@ -238,11 +232,11 @@ export const createPolicyQuery = async (
 
   // Insert policy without assigned_reviewer_ids
   const result = (await sequelize.query(
-    `INSERT INTO policy_manager (
+    `INSERT INTO policy_manager AS pm (
       organization_id, title, content_html, status, tags, next_review_date, author_id, policy_owner_id, last_updated_by, last_updated_at, is_demo
     ) VALUES (
       :organization_id, :title, :content_html, :status, ARRAY(SELECT jsonb_array_elements_text(CAST(:tags AS jsonb))), :next_review_date, :author_id, :policy_owner_id, :last_updated_by, :last_updated_at, :is_demo
-    ) RETURNING *, to_char(next_review_date, 'YYYY-MM-DD"T"HH24:MI:SS.MS"Z"') AS next_review_date`,
+    ) RETURNING *, ${POLICY_REVIEW_DATE_SQL}`,
     {
       replacements: {
         organization_id: organizationId,
@@ -252,7 +246,7 @@ export const createPolicyQuery = async (
         status: policy.status ?? "Draft",
         // JSON-bound so an empty list stores '{}' (ARRAY[] has no type, P-L6).
         tags: JSON.stringify(policy.tags ?? []),
-        next_review_date: policy.next_review_date || null,
+        next_review_date: toReviewDateValue(policy.next_review_date),
         author_id: userId,
         policy_owner_id: ownerId,
         last_updated_by: userId,
@@ -390,7 +384,7 @@ export const updatePolicyByIdQuery = async (
       // next_review_date is nullable: null or "" clears it.
       if (f === "next_review_date") {
         if (policy.next_review_date !== undefined) {
-          updatePolicy.next_review_date = policy.next_review_date || null;
+          updatePolicy.next_review_date = toReviewDateValue(policy.next_review_date);
           return true;
         }
         return false;

@@ -1,4 +1,5 @@
 import { getAllPoliciesQuery } from "../../utils/policyManager.utils";
+import { toReviewDateValue } from "../../utils/policyReviewDate.utils";
 import { getPolicyTemplatesQuery } from "../../utils/policyTemplate.utils";
 import { POLICY_TAGS } from "../../domain.layer/interfaces/i.policy";
 import { POLICY_STATUS_ENUM } from "../../utils/validations/policiesValidation.utils";
@@ -621,7 +622,8 @@ const agentCreatePolicy = createWriteToolFn({
           content_html: sanitizeUserHtml((params.description as string) || "") ?? "",
           status: (params.status as string) || "Draft",
           tags,
-          next_review_date: params.review_date ? new Date(params.review_date as string) : null,
+          // A calendar day, stored at midnight (P-M1).
+          next_review_date: toReviewDateValue(params.review_date),
           author_id: userId,
           last_updated_by: userId,
           last_updated_at: new Date(),
@@ -676,7 +678,7 @@ const agentUpdatePolicy = createWriteToolFn({
     }
     if (params.review_date !== undefined) {
       updateFields.push("next_review_date = :next_review_date");
-      replacements.next_review_date = new Date(params.review_date as string);
+      replacements.next_review_date = toReviewDateValue(params.review_date);
     }
 
     const [result] = await sequelize.query(
