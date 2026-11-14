@@ -17,6 +17,7 @@ import {
   recordProjectRiskCreation,
   trackProjectRiskChanges,
 } from "../utils/projectRiskChangeHistory.utils";
+import { calculateRiskLevel } from "../utils/riskLevel.utils";
 import { computeDerivedFields } from "../utils/quantitativeRisk.utils";
 import { validateQuantitativeRiskFields } from "../utils/validations/quantitativeRiskValidation.utils";
 import { ValidationError } from "../utils/validations/validation.utils";
@@ -92,7 +93,11 @@ export async function createRiskService(
     controls_mapping: projectRiskData.controls_mapping ?? null,
     likelihood: projectRiskData.likelihood ?? null,
     severity: projectRiskData.severity ?? null,
-    risk_level_autocalculated: projectRiskData.risk_level_autocalculated ?? null,
+    // Computed here, never taken from the client (R-M4).
+    risk_level_autocalculated: calculateRiskLevel(
+      projectRiskData.likelihood,
+      projectRiskData.severity,
+    ),
     review_notes: projectRiskData.review_notes ?? null,
     mitigation_status: projectRiskData.mitigation_status ?? null,
     current_risk_level: projectRiskData.current_risk_level ?? null,
@@ -102,7 +107,10 @@ export async function createRiskService(
     mitigation_evidence_document: projectRiskData.mitigation_evidence_document ?? null,
     likelihood_mitigation: projectRiskData.likelihood_mitigation ?? null,
     risk_severity: projectRiskData.risk_severity ?? null,
-    final_risk_level: projectRiskData.final_risk_level ?? null,
+    final_risk_level: calculateRiskLevel(
+      projectRiskData.likelihood_mitigation,
+      projectRiskData.risk_severity,
+    ),
     risk_approval: projectRiskData.risk_approval ?? null,
     approval_status: projectRiskData.approval_status ?? null,
     date_of_assessment: projectRiskData.date_of_assessment ?? null,
@@ -254,6 +262,31 @@ export async function updateRiskService(
       throw new QuantitativeRiskValidationError(fairErrors);
     }
     Object.assign(updateData, computeDerivedFields(mergedFairFields));
+  }
+
+  // 2b. The inherent and residual levels are computed here, never taken from
+  //     the client (R-M4). Recompute from the merged row only when one of the
+  //     inputs was sent; a level the inputs cannot produce is not written.
+  delete updateData.risk_level_autocalculated;
+  delete updateData.final_risk_level;
+  if (updateData.likelihood !== undefined || updateData.severity !== undefined) {
+    const level = calculateRiskLevel(
+      updateData.likelihood !== undefined ? updateData.likelihood : existingRisk.likelihood,
+      updateData.severity !== undefined ? updateData.severity : existingRisk.severity,
+    );
+    if (level)
+      updateData.risk_level_autocalculated = level as RiskModel["risk_level_autocalculated"];
+  }
+  if (updateData.likelihood_mitigation !== undefined || updateData.risk_severity !== undefined) {
+    const level = calculateRiskLevel(
+      updateData.likelihood_mitigation !== undefined
+        ? updateData.likelihood_mitigation
+        : existingRisk.likelihood_mitigation,
+      updateData.risk_severity !== undefined
+        ? updateData.risk_severity
+        : existingRisk.risk_severity,
+    );
+    if (level) updateData.final_risk_level = level;
   }
 
   // 3. Write. An absent projects/frameworks list is sent as empty, as before.
