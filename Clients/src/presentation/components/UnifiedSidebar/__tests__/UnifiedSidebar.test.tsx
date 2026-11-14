@@ -456,6 +456,50 @@ describe("UnifiedSidebar: LLM Evals", () => {
     expect(onProjectChange).toHaveBeenCalledWith("all_projects");
   });
 
+  it("shows no selector or Evals recents off /evals, only the sub-items", () => {
+    evalsCtx = {
+      disabled: false,
+      currentProject: project,
+      allProjects: [project],
+      onProjectChange: vi.fn(),
+      recentExperiments: [{ id: "e1", name: "Run one", projectId: "p1" }],
+      recentProjects: [{ id: "p2", name: "Beta project" }],
+      onExperimentClick: vi.fn(),
+      onProjectClick: vi.fn(),
+    };
+    renderAt("/tasks");
+    fireEvent.click(item("llm-evals"));
+    const section = screen.getByTestId("nav-section-llm-evals");
+    expect(within(section).queryByText("Alpha project")).not.toBeInTheDocument();
+    expect(within(section).queryByText("Recent experiments")).not.toBeInTheDocument();
+    expect(within(section).queryByText("Recent projects")).not.toBeInTheDocument();
+    expect(sub("llm-evals", "overview")).toBeInTheDocument();
+  });
+
+  it("off /evals, disables Experiments and Reports when no project is known", () => {
+    // A stale context from an earlier /evals visit says "enabled".
+    evalsCtx = { disabled: false };
+    renderAt("/tasks");
+    fireEvent.click(item("llm-evals"));
+    expect(sub("llm-evals", "experiments")).toHaveClass("Mui-disabled");
+    expect(sub("llm-evals", "reports")).toHaveClass("Mui-disabled");
+    expect(sub("llm-evals", "datasets")).not.toHaveClass("Mui-disabled");
+  });
+
+  it("off /evals, disables them before any /evals visit (no context)", () => {
+    renderAt("/tasks");
+    fireEvent.click(item("llm-evals"));
+    expect(sub("llm-evals", "experiments")).toHaveClass("Mui-disabled");
+  });
+
+  it("off /evals, enables them with a current project and opens its tab", () => {
+    evalsCtx = { disabled: true, currentProject: project };
+    renderAt("/tasks");
+    fireEvent.click(item("llm-evals"));
+    fireEvent.click(sub("llm-evals", "experiments"));
+    expect(location()).toBe("/evals/p1#experiments");
+  });
+
   it("renders no selector or recents while LLM Evals is closed", () => {
     evalsCtx = {
       disabled: false,
@@ -488,6 +532,133 @@ describe("UnifiedSidebar: AI Detection recents", () => {
     detectionCtx = { recentScans: [] };
     renderAt("/ai-detection/scan");
     expect(screen.queryByText("Recent scans")).not.toBeInTheDocument();
+  });
+});
+
+describe("UnifiedSidebar: keeping opened items in view", () => {
+  const scrollIntoView = vi.fn();
+  const original = Element.prototype.scrollIntoView;
+  beforeEach(() => {
+    scrollIntoView.mockClear();
+    Element.prototype.scrollIntoView = scrollIntoView;
+  });
+  afterAll(() => {
+    Element.prototype.scrollIntoView = original;
+  });
+  /** The element the latest scrollIntoView call was made on. */
+  const lastScrolled = () => {
+    const { contexts } = scrollIntoView.mock;
+    return contexts[contexts.length - 1] as HTMLElement;
+  };
+
+  it("scrolls the item into view when Agent controls opens", () => {
+    renderAt("/tasks");
+    expect(scrollIntoView).not.toHaveBeenCalled();
+    fireEvent.click(item("agent-controls"));
+    expect(scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ block: "nearest" }));
+    const target = lastScrolled();
+    expect(target).toContainElement(screen.getByTestId("nav-section-agent-controls"));
+  });
+
+  it("scrolls the deep-linked item into view on first render", () => {
+    renderAt("/ai-gateway/mcp/tools");
+    expect(scrollIntoView).toHaveBeenCalled();
+    const target = lastScrolled();
+    expect(target).toContainElement(sub("agent-controls", "mcp-tools"));
+  });
+
+  it("scrolls again when the active sub-item changes", () => {
+    renderAt("/ai-gateway/mcp/runs");
+    scrollIntoView.mockClear();
+    fireEvent.click(sub("agent-controls", "mcp-tools"));
+    expect(scrollIntoView).toHaveBeenCalled();
+  });
+
+  it("keeps the item's row at the top when the open item is taller than the nav", () => {
+    const height = vi
+      .spyOn(HTMLElement.prototype, "offsetHeight", "get")
+      .mockImplementation(function (this: HTMLElement) {
+        return this.dataset.testid === undefined &&
+          this.querySelector("[data-testid^='nav-section-']")
+          ? 900
+          : 0;
+      });
+    renderAt("/tasks");
+    fireEvent.click(item("ai-detection"));
+    height.mockRestore();
+    expect(scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ block: "start" }));
+    const target = lastScrolled();
+    expect(target).toContainElement(item("ai-detection"));
+    expect(target).not.toContainElement(screen.getByTestId("nav-section-ai-detection"));
+  });
+
+  it("scrolls again when the open item grows after loading (Evals selector, recents)", () => {
+    const observers: { callback: () => void; target?: Element }[] = [];
+    // setup.ts stubs ResizeObserver as a writable (not configurable) global.
+    const originalObserver = window.ResizeObserver;
+    window.ResizeObserver = class {
+      entry: { callback: () => void; target?: Element };
+      constructor(callback: () => void) {
+        this.entry = { callback };
+        observers.push(this.entry);
+      }
+      observe(target: Element) {
+        this.entry.target = target;
+      }
+      disconnect() {}
+    } as unknown as typeof ResizeObserver;
+    let wrapperHeight = 300;
+    const height = vi
+      .spyOn(HTMLElement.prototype, "offsetHeight", "get")
+      .mockImplementation(function (this: HTMLElement) {
+        return this.querySelector(":scope > [data-testid='nav-section-llm-evals']")
+          ? wrapperHeight
+          : 0;
+      });
+    const scroller = vi
+      .spyOn(HTMLElement.prototype, "clientHeight", "get")
+      .mockImplementation(() => 600);
+    try {
+      renderAt("/evals#settings");
+      scrollIntoView.mockClear();
+      const observer = observers[observers.length - 1];
+      expect(observer.target).toContainElement(screen.getByTestId("nav-section-llm-evals"));
+
+      // Same height: nothing to do.
+      observer.callback();
+      expect(scrollIntoView).not.toHaveBeenCalled();
+
+      wrapperHeight = 400;
+      observer.callback();
+      expect(scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ block: "nearest" }));
+    } finally {
+      height.mockRestore();
+      scroller.mockRestore();
+      window.ResizeObserver = originalObserver;
+    }
+  });
+});
+
+describe("UnifiedSidebar: pinned Workspace", () => {
+  it("renders Workspace outside the scrolling nav, above the footer", () => {
+    renderAt("/");
+    const pinned = screen.getByTestId("sidebar-footer-nav");
+    const menu = screen.getByRole("navigation");
+    expect(within(pinned).getByTestId("nav-group-heading-workspace")).toBeInTheDocument();
+    expect(within(pinned).getByTestId("nav-item-settings")).toBeInTheDocument();
+    expect(menu).not.toContainElement(item("settings"));
+    expect(menu).toContainElement(item("agent-controls"));
+    const footerButton = screen.getByRole("button", { name: "Open user options" });
+    expect(
+      pinned.compareDocumentPosition(footerButton) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
+  it("opens Workspace sub-items inside the pinned area", () => {
+    renderAt("/tasks");
+    fireEvent.click(item("settings"));
+    const pinned = screen.getByTestId("sidebar-footer-nav");
+    expect(within(pinned).getByTestId("nav-sub-settings-event-tracker")).toBeInTheDocument();
   });
 });
 

@@ -9,7 +9,8 @@
  */
 import type { KeptElsewhere, NavActive, NavGroup, NavItem, NavSubItem } from "./types";
 
-const EVALS_ITEM_ID = "llm-evals";
+/** The LLM Evals item: its sub-items follow the Evals project rule. */
+export const EVALS_ITEM_ID = "llm-evals";
 
 export const NAV_GROUPS: NavGroup[] = [
   {
@@ -294,6 +295,7 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     id: "workspace",
     heading: "Workspace",
+    pinned: true,
     items: [
       {
         id: "settings",

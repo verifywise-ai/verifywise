@@ -126,6 +126,13 @@ export interface SidebarShellProps {
 
   /** Custom navigation rendered in the menu after the built-in sections (unified sidebar). */
   navContent?: ReactNode;
+  /**
+   * Navigation pinned below the scrolling menu, just above the footer
+   * (unified sidebar: the Workspace group). Absent: nothing is rendered.
+   */
+  footerNav?: ReactNode;
+  /** Scrollbar thumb colour of the menu. Absent: today's border.light thumb. */
+  navScrollbarThumb?: string;
 }
 
 const COUNT_CHIP_SX = (isActive: boolean) => ({
@@ -625,6 +632,8 @@ const SidebarShell: FC<SidebarShellProps> = ({
   isAdmin = false,
   enableFlyingHearts = false,
   navContent,
+  footerNav,
+  navScrollbarThumb,
 }) => {
   const theme = useTheme();
   const dispatch = useDispatch();
@@ -916,7 +925,7 @@ const SidebarShell: FC<SidebarShellProps> = ({
           "&::-webkit-scrollbar": { width: "4px" },
           "&::-webkit-scrollbar-track": { background: "transparent" },
           "&::-webkit-scrollbar-thumb": {
-            background: theme.palette.border?.light || borderPalette.light,
+            background: navScrollbarThumb ?? (theme.palette.border?.light || borderPalette.light),
             borderRadius: "2px",
           },
           "&::-webkit-scrollbar-thumb:hover": {
@@ -1017,6 +1026,13 @@ const SidebarShell: FC<SidebarShellProps> = ({
         {/* Custom navigation (the unified sidebar renders its own groups here) */}
         {navContent}
       </List>
+
+      {/* Pinned navigation: stays above the footer; the menu scrolls instead */}
+      {footerNav && (
+        <Box data-testid="sidebar-footer-nav" sx={{ px: theme.spacing(8), flexShrink: 0 }}>
+          {footerNav}
+        </Box>
+      )}
 
       {/* Shared Footer */}
       <SidebarFooter

@@ -4,7 +4,7 @@
  * evaluates them with the sources today's navigation uses and renders them
  * with SidebarShell's rows, logo, collapse toggle and footer.
  */
-import { FC, ReactNode, useMemo, useState } from "react";
+import { FC, ReactNode, useEffect, useMemo, useRef, useState } from "react";
 import { Box, Typography } from "@mui/material";
 import { useSelector } from "react-redux";
 import { useLocation, useNavigate } from "react-router";
@@ -16,9 +16,9 @@ import SidebarShell, {
   type RecentSection,
 } from "../Sidebar/SidebarShell";
 import VWIcon from "../VWIcon";
-import { navGroupColor, text as textPalette } from "../../themes/palette";
-import { NAV_GROUPS, resolveActive } from "./navConfig";
-import type { NavCountKey, NavExtra, NavGate, NavItem, NavSubItem } from "./types";
+import { border as borderPalette, navGroupColor, text as textPalette } from "../../themes/palette";
+import { EVALS_ITEM_ID, NAV_GROUPS, resolveActive } from "./navConfig";
+import type { NavCountKey, NavExtra, NavGate, NavGroup, NavItem, NavSubItem } from "./types";
 import type { RootState } from "../../../application/redux/store";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { useCanCheck } from "../../../application/hooks/useCan";
@@ -31,9 +31,10 @@ import { useShadowAISidebarContextSafe } from "../../../application/contexts/Sha
 import { useAIGatewaySidebarContextSafe } from "../../../application/contexts/AIGatewaySidebar.context";
 import { useAITrustIndexSidebarContextSafe } from "../../../application/contexts/AITrustIndexSidebar.context";
 
-const EVALS_ITEM_ID = "llm-evals";
 /** Sub-items have no icon; this lines their labels up with the item label. */
 const SUB_ITEM_INDENT = "32px";
+/** Recent lists pad their rows by 8px; this lines their names up with the sub-items. */
+const RECENT_INDENT = `calc(${SUB_ITEM_INDENT} - 8px)`;
 
 export interface UnifiedSidebarProps {
   onOpenCreateDemoData?: () => void;
@@ -97,8 +98,66 @@ const UnifiedSidebar: FC<UnifiedSidebarProps> = ({
     aiGatewayEndpoints: gateway?.endpointsCount ?? 0,
     aiGatewayPrompts: gateway?.promptsCount ?? 0,
   };
-  // Today's Evals sidebar is disabled until the context says otherwise.
-  const evalsNeedsProject = evals?.disabled ?? true;
+  const active = useMemo(() => resolveActive(pathname, hash), [pathname, hash]);
+  const activeItemId = active?.itemId;
+
+  // One item open at a time; the current route's item opens on its own.
+  const [openItemId, setOpenItemId] = useState<string | null>(() =>
+    isExpandable(activeItemId) ? activeItemId : null,
+  );
+  // On a route change, open the new route's item (state adjusted during render).
+  const [openedForItemId, setOpenedForItemId] = useState(activeItemId);
+  if (openedForItemId !== activeItemId) {
+    setOpenedForItemId(activeItemId);
+    if (isExpandable(activeItemId)) setOpenItemId(activeItemId);
+  }
+
+  // The Arena setting lives on the EvalServer: ask only where Arena can show.
+  const onEvalsRoute = pathname === "/evals" || pathname.startsWith("/evals/");
+  const { data: arenaSetting } = useArenaSetting({
+    enabled: onEvalsRoute || openItemId === EVALS_ITEM_ID,
+  });
+  const arenaEnabled = arenaSetting?.enabled === true;
+
+  // On /evals the dashboard says whether a project is selected (disabled until
+  // it does, as today). Elsewhere its context may be stale, so only a known
+  // current project enables the project-scoped tabs.
+  const evalsNeedsProject = onEvalsRoute ? (evals?.disabled ?? true) : !evals?.currentProject;
+
+  // Bring the open item (and so the active sub-item) into view, on a click
+  // and on a route change, including a deep link on first render. The open
+  // item can grow after that (the Evals selector and recents arrive once the
+  // dashboard loads), so it is brought into view again when its height changes.
+  const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  const activeSubId = active?.subId;
+  useEffect(() => {
+    if (!openItemId || collapsed) return;
+    const wrapper = itemRefs.current[openItemId];
+    if (!wrapper) return;
+    const reducedMotion =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const behavior: ScrollBehavior = reducedMotion ? "auto" : "smooth";
+    const scroller = wrapper.closest("nav");
+    const bringIntoView = () => {
+      // Taller than the nav: keep the item's own row in view at the top.
+      if (scroller && wrapper.offsetHeight > scroller.clientHeight) {
+        wrapper.firstElementChild?.scrollIntoView?.({ block: "start", behavior });
+      } else {
+        wrapper.scrollIntoView?.({ block: "nearest", behavior });
+      }
+    };
+    bringIntoView();
+    if (typeof ResizeObserver === "undefined") return;
+    let lastHeight = wrapper.offsetHeight;
+    const observer = new ResizeObserver(() => {
+      if (wrapper.offsetHeight === lastHeight) return;
+      lastHeight = wrapper.offsetHeight;
+      bringIntoView();
+    });
+    observer.observe(wrapper);
+    return () => observer.disconnect();
+  }, [openItemId, activeSubId, collapsed]);
 
   const evaluateGate = (gate?: NavGate): GateResult => {
     if (!gate) return SHOWN;
@@ -120,27 +179,6 @@ const UnifiedSidebar: FC<UnifiedSidebarProps> = ({
     if (sub.requiresEvalsProject && evalsNeedsProject) return { ...gate, disabled: true };
     return gate;
   };
-
-  const active = useMemo(() => resolveActive(pathname, hash), [pathname, hash]);
-  const activeItemId = active?.itemId;
-
-  // One item open at a time; the current route's item opens on its own.
-  const [openItemId, setOpenItemId] = useState<string | null>(() =>
-    isExpandable(activeItemId) ? activeItemId : null,
-  );
-  // On a route change, open the new route's item (state adjusted during render).
-  const [openedForItemId, setOpenedForItemId] = useState(activeItemId);
-  if (openedForItemId !== activeItemId) {
-    setOpenedForItemId(activeItemId);
-    if (isExpandable(activeItemId)) setOpenItemId(activeItemId);
-  }
-
-  // The Arena setting lives on the EvalServer: ask only where Arena can show.
-  const onEvalsRoute = pathname === "/evals" || pathname.startsWith("/evals/");
-  const { data: arenaSetting } = useArenaSetting({
-    enabled: onEvalsRoute || openItemId === EVALS_ITEM_ID,
-  });
-  const arenaEnabled = arenaSetting?.enabled === true;
 
   /**
    * LLM Evals keeps ContextSidebar's rule: away from /evals, go to the current
@@ -176,7 +214,9 @@ const UnifiedSidebar: FC<UnifiedSidebarProps> = ({
 
   const recentSectionFor = (extra: NavExtra): RecentSection | null => {
     switch (extra) {
+      // The Evals recents act through the dashboard's handlers: /evals only.
       case "evalsRecentExperiments":
+        if (!onEvalsRoute) return null;
         return {
           title: "Recent experiments",
           items: (evals?.recentExperiments ?? []).map((exp) => ({
@@ -186,6 +226,7 @@ const UnifiedSidebar: FC<UnifiedSidebarProps> = ({
           })),
         };
       case "evalsRecentProjects":
+        if (!onEvalsRoute) return null;
         return {
           title: "Recent projects",
           items: (evals?.recentProjects ?? []).map((proj) => ({
@@ -264,7 +305,9 @@ const UnifiedSidebar: FC<UnifiedSidebarProps> = ({
 
   const renderOpenSection = (item: NavItem): ReactNode => {
     const extras = item.extras ?? [];
-    const showSelector = extras.includes("evalsProjectSelector") && evals?.onProjectChange;
+    // The selector changes the dashboard's project, so it shows on /evals only.
+    const showSelector =
+      onEvalsRoute && extras.includes("evalsProjectSelector") && evals?.onProjectChange;
     return (
       <Box
         id={`nav-section-${item.id}`}
@@ -286,7 +329,7 @@ const UnifiedSidebar: FC<UnifiedSidebarProps> = ({
         {extras.map((extra) => {
           const section = recentSectionFor(extra);
           return section ? (
-            <Box key={extra} sx={{ pl: "24px" }}>
+            <Box key={extra} sx={{ pl: RECENT_INDENT }}>
               <SidebarRecentSection section={section} />
             </Box>
           ) : null;
@@ -295,12 +338,12 @@ const UnifiedSidebar: FC<UnifiedSidebarProps> = ({
     );
   };
 
-  const navContent = NAV_GROUPS.map((group) => {
+  const renderGroup = (group: NavGroup) => {
     const colors = navGroupColor[group.id];
     const items = group.items.filter((item) => evaluateGate(item.gate).visible);
     if (items.length === 0) return null;
     return (
-      <Box key={group.id} sx={{ mt: group.heading ? "8px" : 0 }}>
+      <Box key={group.id} sx={{ mt: group.heading ? "4px" : 0 }}>
         {group.heading && !collapsed && (
           <Typography
             data-testid={`nav-group-heading-${group.id}`}
@@ -309,7 +352,7 @@ const UnifiedSidebar: FC<UnifiedSidebarProps> = ({
               fontWeight: 500,
               color: colors.heading,
               px: "8px",
-              pt: "8px",
+              pt: "4px",
               pb: "4px",
             }}
           >
@@ -322,7 +365,12 @@ const UnifiedSidebar: FC<UnifiedSidebarProps> = ({
           // A parent shows as selected only while its sub-items are out of view.
           const isActive = activeItemId === item.id && (!expandable || collapsed || !isOpen);
           return (
-            <Box key={item.id}>
+            <Box
+              key={item.id}
+              ref={(el: HTMLDivElement | null) => {
+                itemRefs.current[item.id] = el;
+              }}
+            >
               <SidebarItemRow
                 item={{
                   id: item.id,
@@ -340,12 +388,18 @@ const UnifiedSidebar: FC<UnifiedSidebarProps> = ({
                   expandable ? (
                     <Box
                       component="span"
-                      // The row shakes its icon on hover; the chevron stays still.
+                      // The row shakes and brands its icon on hover; the chevron
+                      // stays still and neutral (&&& outranks the row's rule).
                       sx={{
                         "ml": "auto",
                         "display": "flex",
                         "color": textPalette.tertiary,
-                        "& svg": { animation: "none !important" },
+                        "&&& svg": {
+                          animation: "none !important",
+                          color: `${textPalette.tertiary} !important`,
+                          stroke: `${textPalette.tertiary} !important`,
+                        },
+                        "&&& svg path": { stroke: `${textPalette.tertiary} !important` },
                       }}
                     >
                       {isOpen ? (
@@ -364,11 +418,17 @@ const UnifiedSidebar: FC<UnifiedSidebarProps> = ({
         })}
       </Box>
     );
-  });
+  };
+
+  // Workspace is pinned above the footer; the other groups scroll.
+  const navContent = NAV_GROUPS.filter((g) => !g.pinned).map(renderGroup);
+  const footerNav = NAV_GROUPS.filter((g) => g.pinned).map(renderGroup);
 
   return (
     <SidebarShell
       navContent={navContent}
+      footerNav={footerNav}
+      navScrollbarThumb={borderPalette.dark}
       hasDemoData={hasDemoData}
       onOpenCreateDemoData={onOpenCreateDemoData}
       onOpenDeleteDemoData={onOpenDeleteDemoData}

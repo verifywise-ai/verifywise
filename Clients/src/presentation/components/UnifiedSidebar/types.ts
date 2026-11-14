@@ -79,6 +79,8 @@ export interface NavGroup {
   id: NavGroupId;
   /** Shown above the group; the top group has none. */
   heading?: string;
+  /** Rendered below the scrolling nav, just above the footer (Workspace). */
+  pinned?: boolean;
   items: NavItem[];
 }
 
