@@ -478,7 +478,7 @@ Every risk write (REST, bulk `set_owner`, import, MCP, advisor, intake, AI Detec
 - a `projects` id is not a use case of the caller's organization.
 - a `frameworks` id does not exist (frameworks are a global catalog).
 
-Risk import reports a non-member owner or approver as a row error. REST create ignores a client-sent `is_demo`.
+Ids fail closed: a value that is not a positive integer (for example `5.5`, which PostgreSQL would round to another id) is rejected, never skipped. The advisor's `agent_assign_risk_owner` and `agent_link_risk_to_project` run the same guard. Risk import reports a non-member or malformed owner or approver as a row error. REST create ignores a client-sent `is_demo`.
 
 `POST /riskHistory/snapshot` requires `risks.edit`.
 

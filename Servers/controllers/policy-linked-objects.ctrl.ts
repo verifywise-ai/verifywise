@@ -2,26 +2,24 @@ import { Request, Response } from "express";
 import logger, { logStructured } from "../utils/logger/fileLogger";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import {
-  createPolicyLinkedObjectQuery,
   deletePolicyLinkedObjectQuery,
   getAllPolicyLinkedObjectsQuery,
   getPolicyLinkedObjectByIdQuery,
+  linkObjectsToPolicyQuery,
 } from "../utils/policyLinkedObject.utils";
-import { QueryTypes, Transaction } from "sequelize";
+import { Transaction } from "sequelize";
 import { sequelize } from "../database/db";
-import { assertOrgOwnsIds, parseBulkIds } from "../utils/bulkAction.utils";
+import { parseBulkIds } from "../utils/bulkAction.utils";
 import {
   ForbiddenException,
+  NotFoundException,
   ValidationException,
 } from "../domain.layer/exceptions/custom.exception";
 
 import { translateError } from "../utils/i18n.utils";
 
-/** The object types a policy can link to, and the table each id lives in. */
-const LINKABLE_OBJECT_TABLES = new Map<string, string>([
-  ["risk", "risks"],
-  ["evidence", "files"],
-]);
+/** Most ids one link request may carry (evidence lists can be long). */
+const MAX_LINK_IDS = 1000;
 /**
  * GET /policies/:policyId/linked-objects
  */
@@ -159,69 +157,44 @@ export async function createLinkedObject(req: Request, res: Response) {
 
   logger.debug(`🔗 Linking ${object_type} to policy ${policyId}`);
 
+  if (isNaN(policyId)) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid policy ID")));
+  }
+
   let transaction: Transaction | null = null;
 
   try {
-    const tenant = req.organizationId!;
-
-    const table = LINKABLE_OBJECT_TABLES.get(String(object_type));
-    if (!table) {
-      return res.status(400).json(STATUS_CODE[400](req.t!("object_type must be risk or evidence")));
-    }
     // Single id (old clients) and/or a list (new clients), de-duplicated.
-    const requestedIds = parseBulkIds(
-      [
-        ...(object_id !== undefined && object_id !== null ? [object_id] : []),
-        ...(Array.isArray(object_ids) ? object_ids : []),
-      ],
-      { field: "object_ids" },
-    );
+    // An empty request links nothing, as before.
+    const rawIds = [
+      ...(object_id !== undefined && object_id !== null ? [object_id] : []),
+      ...(Array.isArray(object_ids) ? object_ids : []),
+    ];
+    const ids =
+      rawIds.length > 0 ? parseBulkIds(rawIds, { field: "object_ids", max: MAX_LINK_IDS }) : [];
 
     transaction = await sequelize.transaction();
-
-    const policyRows = await sequelize.query(
-      `SELECT id FROM policy_manager WHERE id = :policyId AND organization_id = :organizationId`,
-      { replacements: { policyId, organizationId: tenant }, type: QueryTypes.SELECT, transaction },
+    const linked = await linkObjectsToPolicyQuery(
+      policyId,
+      object_type,
+      ids,
+      req.organizationId!,
+      transaction,
     );
-    if (policyRows.length === 0) {
-      await transaction.rollback();
-      return res.status(404).json(STATUS_CODE[404](null));
-    }
-
-    await assertOrgOwnsIds({ table, ids: requestedIds, organizationId: tenant, transaction });
-
-    const existingRows = (await sequelize.query(
-      `SELECT object_id FROM policy_linked_objects
-       WHERE organization_id = :organizationId AND policy_id = :policyId
-         AND object_type = :objectType AND object_id IN (:ids)`,
-      {
-        replacements: {
-          organizationId: tenant,
-          policyId,
-          objectType: object_type,
-          ids: requestedIds,
-        },
-        type: QueryTypes.SELECT,
-        transaction,
-      },
-    )) as { object_id: number }[];
-    const alreadyLinked = new Set(existingRows.map((r) => Number(r.object_id)));
-    const newIds = requestedIds.filter((id) => !alreadyLinked.has(id));
-
-    for (const id of newIds) {
-      await createPolicyLinkedObjectQuery(policyId, object_type, id, tenant, transaction);
-    }
-
     await transaction.commit();
 
-    return res.status(newIds.length > 0 ? 201 : 200).json({
+    // 201 even when every id was already linked: the legacy contract is frozen.
+    return res.status(201).json({
       message: req.t!("Linked successfully"),
-      linked: newIds.length,
+      linked,
     });
   } catch (error: any) {
     if (transaction) await transaction.rollback();
     if (error instanceof ValidationException) {
       return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+    }
+    if (error instanceof NotFoundException) {
+      return res.status(404).json(STATUS_CODE[404](translateError(req, error)));
     }
     if (error instanceof ForbiddenException) {
       return res.status(403).json(STATUS_CODE[403](translateError(req, error)));

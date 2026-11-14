@@ -167,6 +167,28 @@ export const getUserByIdQuery = async (
  * console.log(user.name);
  * ```
  */
+/**
+ * The distinct ids to check, or null when any value is set but is not a
+ * positive integer. Fails closed: a value such as 5.5 must never skip the
+ * check, because PostgreSQL would round it into a different user id.
+ * null, undefined and 0 mean "none".
+ */
+export const parseReferencedIds = (values: unknown[]): number[] | null => {
+  const ids = new Set<number>();
+  for (const value of values) {
+    if (value === null || value === undefined || value === 0) continue;
+    const id =
+      typeof value === "number"
+        ? value
+        : typeof value === "string" && /^\d+$/.test(value)
+          ? Number(value)
+          : NaN;
+    if (!Number.isInteger(id) || id <= 0) return null;
+    ids.add(id);
+  }
+  return Array.from(ids);
+};
+
 /** Returns the ids in `userIds` that are not users of `organizationId` (invalid ids are ignored). */
 export const findUsersNotInOrganization = async (
   userIds: number[],

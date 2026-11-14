@@ -13,7 +13,7 @@ import {
   deleteAllCustomFieldValuesForEntityQuery,
   fetchCustomFieldsForEntities,
 } from "./customField.utils";
-import { findUsersNotInOrganization } from "./user.utils";
+import { findUsersNotInOrganization, parseReferencedIds } from "./user.utils";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 
 /**
@@ -28,9 +28,13 @@ export const assertPolicyUsersInOrganization = async (
   organizationId: number,
   transaction?: Transaction,
 ): Promise<void> => {
-  const ids = userIds.map((id) => Number(id)).filter((id) => Number.isInteger(id) && id > 0);
-  if (ids.length === 0) return;
-  const outside = await findUsersNotInOrganization(ids, organizationId, transaction ?? null);
+  // Fails closed: a malformed id (5.5, "5x") is rejected, never skipped.
+  const ids = parseReferencedIds(userIds);
+  if (ids !== null && ids.length === 0) return;
+  const outside =
+    ids === null
+      ? userIds
+      : await findUsersNotInOrganization(ids, organizationId, transaction ?? null);
   if (outside.length === 0) return;
   if (field === "policy_owner_id") {
     throw new ValidationException(
@@ -40,6 +44,29 @@ export const assertPolicyUsersInOrganization = async (
     );
   }
   throw new ValidationException("Reviewers must be members of this organization", field, outside);
+};
+
+/**
+ * True when the policy exists in the organization. With `lock`, the row is
+ * locked FOR UPDATE until the transaction ends, so concurrent writes that
+ * depend on the policy (e.g. linking objects) run one after another.
+ */
+export const policyExistsInOrganizationQuery = async (
+  organizationId: number,
+  policyId: number,
+  transaction?: Transaction,
+  lock = false,
+): Promise<boolean> => {
+  if (!Number.isInteger(policyId) || policyId <= 0) return false;
+  const sql = lock
+    ? "SELECT id FROM policy_manager WHERE id = :policyId AND organization_id = :organizationId FOR UPDATE"
+    : "SELECT id FROM policy_manager WHERE id = :policyId AND organization_id = :organizationId";
+  const rows = await sequelize.query(sql, {
+    replacements: { policyId, organizationId },
+    type: QueryTypes.SELECT,
+    transaction,
+  });
+  return rows.length > 0;
 };
 
 export type PolicyReviewStatus = "pending_review" | "approved" | "changes_requested";

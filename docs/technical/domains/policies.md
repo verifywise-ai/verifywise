@@ -259,7 +259,7 @@ POST /policy-linked/:policyId/linked-objects
 }
 ```
 
-`object_type` must be `risk` (ids from `risks`) or `evidence` (ids from `files`), otherwise 400. The policy must belong to the caller's organization (404) and so must every object (403). Ids already linked are skipped. The response is 201 with `linked: <count>` when something was linked, 200 with `linked: 0` when everything was already linked.
+`object_type` must be `risk` (ids from `risks`) or `evidence` (ids from `files`), otherwise 400. The policy must belong to the caller's organization (404) and so must every object (403). Ids already linked are skipped, and the policy row is locked while linking so concurrent requests cannot create duplicates. The response stays 201 (legacy contract) and adds `linked: <count>`, the number of links actually created. REST and the advisor's `agent_link_object_to_policy` both go through `linkObjectsToPolicyQuery` (`utils/policyLinkedObject.utils.ts`).
 
 ## Change History
 

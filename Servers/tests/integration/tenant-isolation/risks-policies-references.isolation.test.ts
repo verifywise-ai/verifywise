@@ -271,13 +271,64 @@ describe("Policy references stay inside the organization", () => {
     const again = await owner.request
       .post(base)
       .send({ object_type: "risk", object_id: ownRisk, object_ids: [ownRisk] });
-    expect(again.status).toBe(200);
+    // Legacy contract: 201 even when nothing new was linked.
+    expect(again.status).toBe(201);
     expect(again.body.linked).toBe(0);
+
+    const empty = await owner.request.post(base).send({ object_type: "risk", object_ids: [] });
+    expect(empty.status).toBe(201);
+    expect(empty.body.linked).toBe(0);
+
+    expect(
+      (
+        await owner.request
+          .post("/api/policy-linked/abc/linked-objects")
+          .send({ object_type: "risk", object_ids: [ownRisk] })
+      ).status,
+    ).toBe(400);
 
     const rows = await sequelize.query(
       `SELECT 1 FROM policy_linked_objects WHERE policy_id = :policyId AND object_id = :ownRisk`,
       { replacements: { policyId, ownRisk }, type: QueryTypes.SELECT },
     );
     expect(rows).toHaveLength(1);
+  });
+
+  it("does not let concurrent link requests create duplicates", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const policyId = await createPolicy(owner);
+    const ownRisk = await createTestRisk(owner.orgId);
+    const base = `/api/policy-linked/${policyId}/linked-objects`;
+
+    const results = await Promise.all(
+      [1, 2, 3].map(() =>
+        owner.request.post(base).send({ object_type: "risk", object_ids: [ownRisk] }),
+      ),
+    );
+    expect(results.every((r) => r.status === 201)).toBe(true);
+
+    const rows = await sequelize.query(
+      `SELECT 1 FROM policy_linked_objects WHERE policy_id = :policyId AND object_id = :ownRisk`,
+      { replacements: { policyId, ownRisk }, type: QueryTypes.SELECT },
+    );
+    expect(rows).toHaveLength(1);
+  });
+
+  it("fails closed on malformed user ids instead of letting PostgreSQL round them", async () => {
+    const { owner } = await seedTwoTenantContexts();
+    const riskRes = await owner.request
+      .post("/api/projectRisks")
+      .send(riskPayload(owner.userId, { projects: [1.5] }));
+    expect(riskRes.status).toBe(400);
+
+    const policyRes = await owner.request
+      .post("/api/policies")
+      .send(policyPayload({ policy_owner_id: owner.userId + 0.4 }));
+    expect(policyRes.status).toBe(400);
+
+    const notArray = await owner.request
+      .post("/api/policies")
+      .send(policyPayload({ assigned_reviewer_ids: owner.userId }));
+    expect(notArray.status).toBe(400);
   });
 });

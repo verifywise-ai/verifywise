@@ -82,6 +82,13 @@ function pickEditablePolicyFields(body: unknown): Partial<IPolicy> {
   for (const field of EDITABLE_POLICY_FIELDS) {
     if (source[field] !== undefined) picked[field] = source[field];
   }
+  if (picked.assigned_reviewer_ids !== undefined && !Array.isArray(picked.assigned_reviewer_ids)) {
+    throw new ValidationException(
+      "assigned_reviewer_ids must be an array",
+      "assigned_reviewer_ids",
+      picked.assigned_reviewer_ids,
+    );
+  }
   if (picked.content_html !== undefined) {
     picked.content_html = sanitizeUserHtml(picked.content_html);
   }

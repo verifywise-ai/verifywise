@@ -15,7 +15,7 @@ import {
   deleteAllCustomFieldValuesForEntityQuery,
   fetchCustomFieldsForEntities,
 } from "./customField.utils";
-import { findUsersNotInOrganization } from "./user.utils";
+import { findUsersNotInOrganization, parseReferencedIds } from "./user.utils";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 
 type Mitigation = {
@@ -58,9 +58,6 @@ export const validateRiskProjectsQuery = async (
   return true;
 };
 
-const positiveIds = (values: Array<number | null | undefined>): number[] =>
-  Array.from(new Set(values.map((v) => Number(v)).filter((v) => Number.isInteger(v) && v > 0)));
-
 /**
  * Tenant guard for the ids a risk points at. Owner and approver must be
  * members of the organization, linked use cases must belong to it, and
@@ -82,7 +79,8 @@ export const assertRiskReferencesInOrganization = async (
   transaction?: Transaction,
 ): Promise<void> => {
   const isOutside = async (id: number | null | undefined): Promise<boolean> => {
-    const ids = positiveIds([id]);
+    const ids = parseReferencedIds([id]);
+    if (ids === null) return true;
     if (ids.length === 0) return false;
     const outside = await findUsersNotInOrganization(ids, organizationId, transaction ?? null);
     return outside.length > 0;
@@ -102,39 +100,41 @@ export const assertRiskReferencesInOrganization = async (
     );
   }
 
-  const projectIds = positiveIds(refs.projects ?? []);
-  if (projectIds.length > 0) {
-    const rows = (await sequelize.query(
-      `SELECT id FROM projects WHERE organization_id = :organizationId AND id IN (:ids)`,
-      {
-        replacements: { organizationId, ids: projectIds },
-        type: QueryTypes.SELECT,
-        transaction,
-      },
-    )) as { id: number }[];
-    if (rows.length !== projectIds.length) {
-      throw new ValidationException(
-        "Linked use cases must belong to this organization",
-        "projects",
-        refs.projects,
-      );
-    }
+  const projectIds = parseReferencedIds(refs.projects ?? []);
+  const projectRows =
+    projectIds && projectIds.length > 0
+      ? ((await sequelize.query(
+          `SELECT id FROM projects WHERE organization_id = :organizationId AND id IN (:ids)`,
+          {
+            replacements: { organizationId, ids: projectIds },
+            type: QueryTypes.SELECT,
+            transaction,
+          },
+        )) as { id: number }[])
+      : [];
+  if (projectIds === null || projectRows.length !== projectIds.length) {
+    throw new ValidationException(
+      "Linked use cases must belong to this organization",
+      "projects",
+      refs.projects,
+    );
   }
 
-  const frameworkIds = positiveIds(refs.frameworks ?? []);
-  if (frameworkIds.length > 0) {
-    const rows = (await sequelize.query(`SELECT id FROM frameworks WHERE id IN (:ids)`, {
-      replacements: { ids: frameworkIds },
-      type: QueryTypes.SELECT,
-      transaction,
-    })) as { id: number }[];
-    if (rows.length !== frameworkIds.length) {
-      throw new ValidationException(
-        "One or more linked frameworks do not exist",
-        "frameworks",
-        refs.frameworks,
-      );
-    }
+  const frameworkIds = parseReferencedIds(refs.frameworks ?? []);
+  const frameworkRows =
+    frameworkIds && frameworkIds.length > 0
+      ? ((await sequelize.query(`SELECT id FROM frameworks WHERE id IN (:ids)`, {
+          replacements: { ids: frameworkIds },
+          type: QueryTypes.SELECT,
+          transaction,
+        })) as { id: number }[])
+      : [];
+  if (frameworkIds === null || frameworkRows.length !== frameworkIds.length) {
+    throw new ValidationException(
+      "One or more linked frameworks do not exist",
+      "frameworks",
+      refs.frameworks,
+    );
   }
 };
 

@@ -19,7 +19,7 @@ import {
   bulkUpdatePolicyFoldersQuery,
 } from "../utils/policyFolder.utils";
 import { sequelize } from "../database/db";
-import { QueryTypes } from "sequelize";
+import { policyExistsInOrganizationQuery } from "../utils/policyManager.utils";
 import {
   ForbiddenException,
   ValidationException,
@@ -99,15 +99,7 @@ export const updatePolicyFolders = async (req: Request, res: Response): Promise<
       return res.status(400).json(STATUS_CODE[400](req.t!("Folder IDs array is required")));
     }
 
-    const policyRows = await sequelize.query(
-      `SELECT id FROM policy_manager WHERE id = :policyId AND organization_id = :organizationId`,
-      {
-        replacements: { policyId, organizationId: req.organizationId! },
-        type: QueryTypes.SELECT,
-        transaction,
-      },
-    );
-    if (policyRows.length === 0) {
+    if (!(await policyExistsInOrganizationQuery(req.organizationId!, policyId, transaction))) {
       await transaction.rollback();
       return res.status(404).json(STATUS_CODE[404](null));
     }
