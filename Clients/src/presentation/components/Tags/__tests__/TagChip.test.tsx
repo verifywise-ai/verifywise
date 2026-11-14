@@ -8,11 +8,11 @@ describe("TagChip", () => {
     expect(screen.getByText("AI Ethics")).toBeInTheDocument();
   });
 
-  it("renders tag text with uppercase text-transform", () => {
+  it("renders tag text in sentence case (phase 1 pill)", () => {
     renderWithProviders(<TagChip tag="privacy" />);
     const chip = screen.getByText("privacy");
     expect(chip).toBeInTheDocument();
-    expect(chip).toHaveStyle({ textTransform: "uppercase" });
+    expect(chip.parentElement).toHaveStyle({ textTransform: "none" });
   });
 
   it("renders a known tag with specific styling", () => {
@@ -29,7 +29,7 @@ describe("TagChip", () => {
 
   it("renders through StatusBadge", () => {
     renderWithProviders(<TagChip tag="fairness" />);
-    const chip = screen.getByText("fairness");
-    expect(chip).toHaveStyle({ display: "inline-flex", fontSize: "11px", fontWeight: 400 });
+    const chip = screen.getByText("fairness").parentElement;
+    expect(chip).toHaveStyle({ display: "inline-flex", fontSize: "11px", fontWeight: 500 });
   });
 });

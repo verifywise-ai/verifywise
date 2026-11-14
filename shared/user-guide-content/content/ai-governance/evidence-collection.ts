@@ -45,7 +45,7 @@ export const evidenceCollectionContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The evidence hub is your central place for all governance documentation. You can access it from Assurance > Evidence in the sidebar, or through linked records in your model inventory. It provides:',
+      text: 'The evidence hub is your central place for all governance documentation. You can access it from **Record > Evidence & reports > Evidence** in the sidebar, or through linked records in your model inventory. It provides:',
     },
     {
       type: 'checklist',

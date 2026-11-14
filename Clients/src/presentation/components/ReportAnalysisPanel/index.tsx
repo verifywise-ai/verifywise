@@ -17,6 +17,7 @@ import type {
   VendorRiskPayload,
 } from "../../../domain/interfaces/i.reporting";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
+import { radiusPx } from "../../themes/palette";
 
 interface ReportAnalysisPanelProps {
   /** Rows from GET /reporting/runs/:id/analyses. The caller owns the hook. */
@@ -61,7 +62,7 @@ function abstainReasonOf(payload: AnalysisPayload): string | null {
 const analysisCardSx = (theme: Theme) => ({
   backgroundColor: theme.palette.background.main,
   border: `1px solid ${theme.palette.border.light}`,
-  borderRadius: "4px",
+  borderRadius: radiusPx.sm,
   boxShadow: "none",
   p: "16px",
 });
@@ -84,7 +85,7 @@ function WarningNotice({ icon: Icon, text }: { icon: LucideIcon; text: string })
       sx={{
         backgroundColor: theme.palette.status.warning.bg,
         border: `1px solid ${theme.palette.status.warning.main}`,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         p: "12px 16px",
       }}
     >

@@ -4,7 +4,15 @@ import { Check as CheckGreenIcon, Shield as ShieldIcon } from "lucide-react";
 import { getFrameworkBadgePath } from "../../../tools/frameworkBadge";
 import StandardModal from "../../../components/Modals/StandardModal";
 import { CustomizableButton } from "../../../components/button/customizable-button";
-import { accent, background, brand, icon, text } from "../../../themes/palette";
+import {
+  accent,
+  background,
+  brand,
+  icon,
+  text,
+  palette as vwPalette,
+  radiusPx,
+} from "../../../themes/palette";
 import { Project } from "../../../../domain/types/Project";
 import { Framework } from "../../../../domain/types/Framework";
 import {
@@ -185,7 +193,7 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
                           alignItems: "center",
                           justifyContent: "center",
                           backgroundColor: background.surface,
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                           flexShrink: 0,
                         }}
                       >
@@ -214,12 +222,12 @@ const AddFrameworkModal: React.FC<AddFrameworkModalProps> = ({
                       }}
                       sx={{
                         "minWidth": "100px",
-                        "borderColor": "#F87171",
+                        "borderColor": vwPalette.status.error.border,
                         "color": accent.red.text,
                         "fontWeight": 600,
                         "textTransform": "none",
                         "&:hover": {
-                          borderColor: "#EF4444",
+                          borderColor: vwPalette.riskMark.critical,
                           backgroundColor: accent.red.bg,
                         },
                       }}

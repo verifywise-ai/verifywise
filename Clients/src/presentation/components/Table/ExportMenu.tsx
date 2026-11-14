@@ -11,7 +11,7 @@ import pdfIcon from "../../assets/icons/pdf_icon.svg";
 import csvIcon from "../../assets/icons/csv_icon.svg";
 import xlsIcon from "../../assets/icons/xls_icon.svg";
 import { singleTheme } from "../../themes";
-import { background, status } from "../../themes/palette";
+import { background, status, radiusPx } from "../../themes/palette";
 
 interface ExportColumn {
   id: string;
@@ -107,7 +107,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
             sx: {
               minWidth: "160px",
               boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
-              borderRadius: "8px",
+              borderRadius: radiusPx.lg,
               mt: 1,
             },
           },
@@ -165,7 +165,7 @@ export const ExportMenu: React.FC<ExportMenuProps> = ({
             sx: {
               minWidth: "180px",
               boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
-              borderRadius: "8px",
+              borderRadius: radiusPx.lg,
               ml: 0.5,
             },
           },

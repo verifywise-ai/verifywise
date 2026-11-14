@@ -14,6 +14,7 @@ import {
   ValidationException,
   NotFoundException,
   BusinessLogicException,
+  ConflictException,
   ExternalServiceException,
 } from "../domain.layer/exceptions/custom.exception";
 import {
@@ -35,12 +36,17 @@ import {
   getComplianceMapping,
 } from "../services/aiDetection.service";
 import {
+  IFindingGovernanceUpdate,
   IServiceContext,
+  IUpdateGovernanceStatusResponse,
   ScanStatus,
   FINDING_TYPES,
   VULNERABILITY_FINDING_TYPES,
 } from "../domain.layer/interfaces/i.aiDetection";
-import { calculateAndStoreRiskScore } from "../services/aiDetection/riskScoring";
+import {
+  calculateAndStoreRiskScore,
+  isLlmAnalysisPending,
+} from "../services/aiDetection/riskScoring";
 import {
   getRiskScoringConfigQuery,
   upsertRiskScoringConfigQuery,
@@ -57,7 +63,7 @@ const FILE_NAME = "aiDetection.ctrl.ts";
 /**
  * Build service context from request.
  */
-function buildServiceContext(req: Request): IServiceContext {
+export function buildServiceContext(req: Request): IServiceContext {
   return {
     userId: req.userId!,
     role: req.role!,
@@ -68,12 +74,15 @@ function buildServiceContext(req: Request): IServiceContext {
 /**
  * Handle service exceptions and send appropriate response
  */
-function handleException(req: Request, res: Response, error: unknown): Response {
+export function handleException(req: Request, res: Response, error: unknown): Response {
   if (error instanceof ValidationException) {
     return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
   }
   if (error instanceof NotFoundException) {
     return res.status(404).json(STATUS_CODE[404](translateError(req, error)));
+  }
+  if (error instanceof ConflictException) {
+    return res.status(409).json(STATUS_CODE[409](translateError(req, error)));
   }
   if (error instanceof BusinessLogicException) {
     return res.status(422).json(STATUS_CODE[422](translateError(req, error)));
@@ -242,6 +251,25 @@ export async function getScanController(req: Request, res: Response): Promise<Re
  * Query: page, limit, confidence, finding_type
  */
 export async function getScanFindingsController(req: Request, res: Response): Promise<Response> {
+  return respondWithScanFindings(req, res, false);
+}
+
+/**
+ * Get findings for a scan (API v1): adds who set each status and whether the
+ * scan is the repository's latest completed scan.
+ *
+ * GET /v1/ai-detection/scans/:scanId/findings
+ * Query: page, limit, confidence, finding_type
+ */
+export async function getScanFindingsV1Controller(req: Request, res: Response): Promise<Response> {
+  return respondWithScanFindings(req, res, true);
+}
+
+async function respondWithScanFindings(
+  req: Request,
+  res: Response,
+  includeDecisionDetails: boolean,
+): Promise<Response> {
   logProcessing({
     description: "Getting AI detection scan findings",
     functionName: "getScanFindingsController",
@@ -304,7 +332,9 @@ export async function getScanFindingsController(req: Request, res: Response): Pr
     }
 
     const ctx = buildServiceContext(req);
-    const findings = await getScanFindings(scanId, ctx, page, limit, confidence, findingType);
+    const findings = await getScanFindings(scanId, ctx, page, limit, confidence, findingType, {
+      includeDecisionDetails,
+    });
 
     return res.status(200).json(STATUS_CODE[200](findings));
   } catch (error) {
@@ -589,11 +619,34 @@ export async function getSecuritySummaryController(req: Request, res: Response):
  * Update governance status for a finding
  *
  * PATCH /ai-detection/scans/:scanId/findings/:findingId/governance
- * Body: { governance_status: "reviewed" | "approved" | "flagged" | null }
+ * Body: { governance_status: "reviewed" | "approved" | "flagged" | "suppressed" | "accepted_risk" | null }
  */
 export async function updateGovernanceStatusController(
   req: Request,
   res: Response,
+): Promise<Response> {
+  return respondToGovernanceStatusUpdate(req, res, false);
+}
+
+/**
+ * Update governance status for a finding (API v1). Also answers who set the
+ * status (null fields once cleared) and `decision_scope`: "repository" when
+ * the status is stored for later scans, "scan" when only this scan changed.
+ *
+ * PATCH /v1/ai-detection/scans/:scanId/findings/:findingId/governance
+ * Body: { governance_status: "reviewed" | "approved" | "flagged" | "suppressed" | "accepted_risk" | null }
+ */
+export async function updateGovernanceStatusV1Controller(
+  req: Request,
+  res: Response,
+): Promise<Response> {
+  return respondToGovernanceStatusUpdate(req, res, true);
+}
+
+async function respondToGovernanceStatusUpdate(
+  req: Request,
+  res: Response,
+  isV1: boolean,
 ): Promise<Response> {
   logProcessing({
     description: "Updating finding governance status",
@@ -657,7 +710,17 @@ export async function updateGovernanceStatusController(
       organizationId: req.organizationId!,
     });
 
-    return res.status(200).json(STATUS_CODE[200](result));
+    // The frozen legacy route keeps its response shape
+    const body: IFindingGovernanceUpdate | IUpdateGovernanceStatusResponse = isV1
+      ? result
+      : {
+          id: result.id,
+          governance_status: result.governance_status,
+          governance_updated_at: result.governance_updated_at ?? new Date().toISOString(),
+          governance_updated_by: result.governance_updated_by ?? ctx.userId,
+        };
+
+    return res.status(200).json(STATUS_CODE[200](body));
   } catch (error) {
     await logError({
       error: error as Error,
@@ -960,6 +1023,19 @@ export async function recalculateRiskScoreController(
         .json(STATUS_CODE[422](req.t!("Can only calculate risk score for completed scans")));
     }
 
+    // getScan reports a stale pending analysis as failed, so this never blocks for good.
+    // Returning early (instead of a rule-based recalculation) keeps the running
+    // analysis's run id valid, so its result still lands.
+    if (isLlmAnalysisPending(scan.scan.risk_score_details?.llm_status)) {
+      return res
+        .status(409)
+        .json(
+          STATUS_CODE[409](
+            req.t!("AI analysis is still running for this scan. Try again when it finishes."),
+          ),
+        );
+    }
+
     const repoName = `${scan.scan.repository_owner}/${scan.scan.repository_name}`;
     const result = await calculateAndStoreRiskScore(scanId, repoName, ctx);
 
@@ -1007,7 +1083,9 @@ export async function getRiskScoringConfigController(
       llm_enabled: false,
       llm_key_id: null,
       dimension_weights: DEFAULT_DIMENSION_WEIGHTS,
+      // No LLM key yet, so the default is off and nothing was chosen
       vulnerability_scan_enabled: false,
+      vulnerability_scan_explicit: false,
       vulnerability_types_enabled: {
         prompt_injection: true,
         pii_exposure: true,
@@ -1112,16 +1190,25 @@ export async function updateRiskScoringConfigController(
       }
     }
 
-    // Validate vulnerability_scan_enabled requires llm_enabled
-    // Check persisted config when llm_enabled is not in the request body
+    // vulnerability_scan_enabled is only a real choice while LLM analysis is on
+    // (the checks need its key). With LLM analysis off, the value is not stored,
+    // so an org that never chose stays "not chosen" (off) until an admin opts in.
+    // Check persisted config when llm_enabled is not in the request body.
     let effectiveVulnScan: boolean | undefined = undefined;
-    if (vulnerability_scan_enabled !== undefined) {
+    if (vulnerability_scan_enabled !== undefined && vulnerability_scan_enabled !== null) {
+      if (typeof vulnerability_scan_enabled !== "boolean") {
+        return res
+          .status(400)
+          .json(STATUS_CODE[400](req.t!("vulnerability_scan_enabled must be a boolean")));
+      }
       let effectiveLlmEnabled = llm_enabled;
       if (effectiveLlmEnabled === undefined) {
         const existingConfig = await getRiskScoringConfigQuery(req.organizationId!);
         effectiveLlmEnabled = existingConfig?.llm_enabled ?? false;
       }
-      effectiveVulnScan = vulnerability_scan_enabled && effectiveLlmEnabled;
+      if (effectiveLlmEnabled) {
+        effectiveVulnScan = vulnerability_scan_enabled;
+      }
     }
 
     // Validate vulnerability_types_enabled if provided

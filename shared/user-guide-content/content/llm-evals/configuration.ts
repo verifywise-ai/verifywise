@@ -52,7 +52,7 @@ export const configurationContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Open your project and click the **Configuration** tab in the sidebar.' },
+        { text: 'In the sidebar, open **Enforce > LLM Evals**, select your project and click **Settings**.' },
         { text: 'Select **RAG**, **Chatbot** or **Agent** from the radio buttons.' },
         { text: 'Click **Save changes**.' },
       ],

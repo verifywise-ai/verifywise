@@ -1,12 +1,12 @@
 import { Theme } from "@mui/material";
-import { text, background } from "../../themes/palette";
+import { text, background, radiusPx, palette as vwPalette } from "../../themes/palette";
 
 // Define styles as constants to improve readability and reusability
 const getStyles = (theme: Theme) => ({
   container: {
     width: "90%",
-    backgroundColor: "#28A745",
-    borderRadius: "4px",
+    backgroundColor: vwPalette.brand.primary,
+    borderRadius: radiusPx.sm,
   },
   stack: {
     padding: "15px",
@@ -26,11 +26,11 @@ const getStyles = (theme: Theme) => ({
     color: `${background.main}`,
   },
   button: {
-    border: "1px solid #A1A1A1",
+    border: `1px solid ${vwPalette.text.disabled}`,
     backgroundColor: theme.palette.background.main,
     color: `${text.secondary}`,
     padding: "4px",
-    borderRadius: "4px",
+    borderRadius: radiusPx.sm,
   },
 });
 

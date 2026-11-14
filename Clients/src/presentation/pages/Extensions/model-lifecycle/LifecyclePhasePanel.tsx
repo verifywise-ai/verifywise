@@ -12,6 +12,7 @@ import { LifecyclePhase } from "./useModelLifecycle";
 import LifecycleItemField from "./LifecycleItemField";
 import { background, status, text, border, accent } from "../../../themes/palette";
 import { textStyles } from "../../../themes/typography";
+import { radiusPx } from "../../../themes/palette";
 
 interface LifecyclePhasePanelProps {
   phase: LifecyclePhase;
@@ -53,7 +54,7 @@ export default function LifecyclePhasePanel({
       disableGutters
       sx={{
         "border": `1px solid ${border.light}`,
-        "borderRadius": "4px !important",
+        "borderRadius": `${radiusPx.sm} !important`,
         "&:before": { display: "none" },
         "boxShadow": "none",
         "mb": 6,

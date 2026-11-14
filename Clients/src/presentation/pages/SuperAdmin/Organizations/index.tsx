@@ -35,6 +35,7 @@ import { passwordValidation } from "../../../../application/validations/password
 import { EmailAvailabilityStatus } from "../../../../application/hooks/useEmailAvailability";
 import singleTheme from "../../../themes/v1SingleTheme";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import { palette, radiusPx } from "../../../themes/palette";
 
 const EMPTY_USER_FORM: UserFormValues = {
   email: "",
@@ -167,7 +168,9 @@ const CreateOrgModal = ({
             onEmailStatusChange={setEmailStatus}
           />
         )}
-        {error && <Typography sx={{ fontSize: 13, color: "#D32F2F" }}>{error}</Typography>}
+        {error && (
+          <Typography sx={{ fontSize: 13, color: palette.status.error.text }}>{error}</Typography>
+        )}
       </Stack>
     </StandardModal>
   );
@@ -294,7 +297,7 @@ const Organizations = () => {
             textTransform: "none",
             height: 34,
             fontSize: "13px",
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
           }}
         >
           Create Organization
@@ -350,7 +353,7 @@ const Organizations = () => {
                         ...tableStyles.header.cell,
                         "cursor": "pointer",
                         "userSelect": "none",
-                        "&:hover": { color: "#1d2939" },
+                        "&:hover": { color: palette.text.primary },
                       }}
                       onClick={() => handleSort(field)}
                     >
@@ -394,12 +397,12 @@ const Organizations = () => {
                         onClick={() => setDeleteTarget(org)}
                         sx={{
                           ...tableStyles.body.button,
-                          "color": "#dc2626",
-                          "borderColor": "#fecaca",
+                          "color": palette.riskMark.critical,
+                          "borderColor": palette.status.error.border,
                           "&:hover": {
-                            backgroundColor: "#dc2626",
-                            color: "#fff",
-                            border: "1px solid #dc2626",
+                            backgroundColor: palette.riskMark.critical,
+                            color: palette.background.main,
+                            border: `1px solid ${palette.riskMark.critical}`,
                           },
                         }}
                       >

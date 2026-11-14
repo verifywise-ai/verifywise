@@ -11,6 +11,8 @@ import {
 } from "../riskSuggestionMappers";
 import { Likelihood, Severity } from "../../RiskLevel/constants";
 import { palette } from "../../../themes/palette";
+import { RiskCalculator } from "../../../tools/riskCalculator";
+import { RiskLikelihood, RiskSeverity } from "../../RiskLevel/riskValues";
 import type { SuggestedRisk } from "../../../../domain/ai-detection/riskScoringTypes";
 import type {
   MatchedCatalogRisk,
@@ -45,37 +47,37 @@ describe("riskSuggestionMappers", () => {
   });
 
   describe("getRiskLevelLabel", () => {
-    it("returns 'Very high risk' for score >= 20", () => {
+    it("returns 'Very high risk' for a weighted score above 16", () => {
       expect(getRiskLevelLabel(5, 5)).toEqual({
         text: "Very high risk",
         color: palette.risk.critical.text,
       });
     });
 
-    it("returns 'High risk' for score >= 12 and < 20", () => {
+    it("returns 'High risk' for a weighted score of 13 to 16", () => {
       expect(getRiskLevelLabel(4, 3)).toEqual({
         text: "High risk",
         color: palette.risk.high.text,
       });
     });
 
-    it("returns 'Medium risk' for score >= 6 and < 12", () => {
+    it("returns 'Medium risk' for a weighted score of 9 to 12", () => {
       expect(getRiskLevelLabel(3, 2)).toEqual({
         text: "Medium risk",
         color: palette.risk.medium.text,
       });
     });
 
-    it("returns 'Low risk' for score >= 3 and < 6", () => {
-      expect(getRiskLevelLabel(1, 3)).toEqual({
+    it("returns 'Low risk' for a weighted score of 5 to 8", () => {
+      expect(getRiskLevelLabel(1, 2)).toEqual({
         text: "Low risk",
         color: palette.risk.low.text,
       });
     });
 
-    it("returns 'Very low risk' for score < 3", () => {
+    it("returns 'No risk' for a weighted score of 4 or less", () => {
       expect(getRiskLevelLabel(1, 1)).toEqual({
-        text: "Very low risk",
+        text: "No risk",
         color: palette.status.success.text,
       });
     });
@@ -262,6 +264,39 @@ describe("riskSuggestionMappers", () => {
         likelihood: 2,
         riskSeverity: 5,
       });
+    });
+  });
+
+  describe("getRiskLevelLabel matches RiskCalculator", () => {
+    const likelihoods = [
+      RiskLikelihood.Rare,
+      RiskLikelihood.Unlikely,
+      RiskLikelihood.Possible,
+      RiskLikelihood.Likely,
+      RiskLikelihood.AlmostCertain,
+    ];
+    const severities = [
+      RiskSeverity.Negligible,
+      RiskSeverity.Minor,
+      RiskSeverity.Moderate,
+      RiskSeverity.Major,
+      RiskSeverity.Catastrophic,
+    ];
+
+    it("gives the same level as the weighted calculator for every pair", () => {
+      for (let l = 1; l <= 5; l++) {
+        for (let s = 1; s <= 5; s++) {
+          expect(getRiskLevelLabel(l, s).text).toBe(
+            RiskCalculator.getRiskLevel(likelihoods[l - 1], severities[s - 1]).level,
+          );
+        }
+      }
+    });
+
+    it("uses the weighted sum, so Rare x Major is High risk", () => {
+      expect(getRiskLevelLabel(1, 4).text).toBe("High risk");
+      expect(getRiskLevelLabel(5, 1).text).toBe("Low risk");
+      expect(getRiskLevelLabel(1, 1).text).toBe("No risk");
     });
   });
 });

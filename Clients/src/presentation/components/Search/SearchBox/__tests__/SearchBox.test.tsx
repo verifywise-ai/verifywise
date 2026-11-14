@@ -4,9 +4,27 @@ import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import SearchBox from "../index";
 
 describe("SearchBox", () => {
-  it("renders with default placeholder", () => {
+  it("renders with the phase 1 default placeholder", () => {
     renderWithProviders(<SearchBox value="" onChange={vi.fn()} />);
+    expect(screen.getByPlaceholderText("Search this list")).toBeInTheDocument();
+  });
+
+  it("uses the 2px control radius and keeps the 34px height", () => {
+    const { container } = renderWithProviders(<SearchBox value="" onChange={vi.fn()} />);
+    const box = container.firstChild as HTMLElement;
+    expect(box).toHaveStyle("border-radius: 2px");
+    expect(box).toHaveStyle("min-height: 34px");
+  });
+
+  it("keeps the classic placeholder and radius in the classic look", async () => {
+    vi.resetModules();
+    window.localStorage.setItem("vw-ui-style", "classic");
+    const { default: ClassicSearchBox } = await import("../index");
+    const { renderWithProviders: render } = await import("../../../../../test/renderWithProviders");
+    const { container } = render(<ClassicSearchBox value="" onChange={vi.fn()} />);
+    window.localStorage.removeItem("vw-ui-style");
     expect(screen.getByPlaceholderText("Search...")).toBeInTheDocument();
+    expect(container.firstChild).not.toHaveStyle("border-radius: 2px");
   });
 
   it("renders with custom placeholder", () => {

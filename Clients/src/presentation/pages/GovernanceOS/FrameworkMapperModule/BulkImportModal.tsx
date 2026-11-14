@@ -17,7 +17,14 @@ import {
   IGovernanceControlMapping,
   MappingStrength,
 } from "../../../../domain/interfaces/i.governanceOs";
-import { border as borderPalette, background, text, accent, status } from "../../../themes/palette";
+import {
+  border as borderPalette,
+  background,
+  text,
+  accent,
+  status,
+  radiusPx,
+} from "../../../themes/palette";
 
 interface BulkImportModalProps {
   open: boolean;
@@ -166,7 +173,7 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
               "justifyContent": "center",
               "p": 4,
               "border": `2px dashed ${borderPalette.dark}`,
-              "borderRadius": "4px",
+              "borderRadius": radiusPx.sm,
               "backgroundColor": background.accent,
               "cursor": "pointer",
               "transition": "all 150ms ease",
@@ -222,7 +229,7 @@ const BulkImportModal: React.FC<BulkImportModalProps> = ({
                 maxHeight: 300,
                 overflow: "auto",
                 border: `1px solid ${borderPalette.light}`,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
               }}
             >
               <Table size="small">

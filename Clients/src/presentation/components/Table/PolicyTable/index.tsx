@@ -24,7 +24,7 @@ import {
   setPaginationRowCount,
 } from "../../../../application/utils/paginationStorage";
 import { ITableProps } from "../../../types/interfaces/i.table";
-import { text, border } from "../../../themes/palette";
+import { text, border, radiusPx } from "../../../themes/palette";
 
 const POLICY_TABLE_SORTING_KEY = "verifywise_policy_table_sorting";
 
@@ -318,7 +318,7 @@ const CustomizablePolicyTable = ({
           justifyContent="center"
           sx={{
             border: `1px solid ${border.light}`,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             padding: theme.spacing(15, 5),
             paddingBottom: theme.spacing(20),
             gap: theme.spacing(10),

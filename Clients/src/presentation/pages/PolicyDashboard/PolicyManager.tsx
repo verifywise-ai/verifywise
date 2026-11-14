@@ -39,10 +39,8 @@ import PolicyStatusCard from "./PolicyStatusCard";
 import { ExportMenu } from "../../components/Table/ExportMenu";
 import useUsers from "../../../application/hooks/useUsers";
 import { useCanCheck, useCan } from "../../../application/hooks/useCan";
-import { GroupBy } from "../../components/Table/GroupBy";
-import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
-import { GroupedTableView } from "../../components/Table/GroupedTableView";
-import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
+import { FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
@@ -63,6 +61,8 @@ import type {
   IVirtualFolder,
   IVirtualFolderInput,
 } from "../../../domain/interfaces/i.virtualFolder";
+import { palette, radiusPx } from "../../themes/palette";
+import { toDateOnlyString } from "../../tools/isoDateToString";
 
 type PolicyColumnKey =
   "title" | "status" | "next_review" | "author" | "last_updated" | "updated_by" | "actions";
@@ -91,7 +91,8 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
   const deletePolicyMutation = useDeletePolicy();
   const [flashRowId, setFlashRowId] = useState<number | null>(null);
   const can = useCanCheck();
-  const canRunBulkActions = can("policy.edit");
+  // policy.edit gates bulk actions and folder actions (create folder, assign to folder).
+  const canEditPolicies = can("policy.edit");
   // "Save as template" writes a template, so it follows the template routes' key.
   const canManageTemplates = useCan("policyTemplate.edit");
 
@@ -150,9 +151,6 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
   const [alert, setAlert] = useState<AlertProps | null>(null);
   const [showAlert, setShowAlert] = useState(false);
   const [selectedStatus, setSelectedStatus] = useState<string | null>(null);
-
-  // GroupBy state
-  const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
 
   // Navigate to editor page when coming from "Add new..." dropdown
   useEffect(() => {
@@ -456,8 +454,12 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
   );
 
   // FilterBy - Initialize hook
-  const { filterData: filterPolicyData, handleFilterChange: handlePolicyFilterChange } =
-    useFilterBy<PolicyManagerModel>(getPolicyFieldValue);
+  const {
+    filterData: filterPolicyData,
+    handleFilterChange: handlePolicyFilterChange,
+    conditions: policyFilterConditions,
+    logic: policyFilterLogic,
+  } = useFilterBy<PolicyManagerModel>(getPolicyFieldValue);
 
   // ✅ Filter + search using FilterBy
   const filteredPolicies = useMemo(() => {
@@ -482,33 +484,6 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
 
     return result;
   }, [filterPolicyData, policies, selectedStatus, searchTerm, folderPolicyIds]);
-
-  // Define how to get the group key for each policy
-  const getPolicyGroupKey = useCallback(
-    (policy: PolicyManagerModel, field: string): string => {
-      switch (field) {
-        case "status":
-          return policy.status || "Unknown";
-        case "author":
-          if (policy.author_id) {
-            const user = users.find((u) => u.id === policy.author_id);
-            return user ? `${user.name} ${user.surname}`.trim() : "Unknown";
-          }
-          return "Unknown";
-        default:
-          return "Other";
-      }
-    },
-    [users],
-  );
-
-  // Apply grouping to filtered policies
-  const groupedPolicies = useTableGrouping({
-    data: filteredPolicies,
-    groupByField: groupBy,
-    sortOrder: groupSortOrder,
-    getGroupKey: getPolicyGroupKey,
-  });
 
   const standardTableColumns = useMemo(
     (): StandardColumn[] =>
@@ -586,7 +561,9 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
       return {
         title: policy.title || "-",
         status: policy.status || "-",
-        next_review: policy.next_review_date ? formatDate(policy.next_review_date) : "-",
+        next_review: policy.next_review_date
+          ? formatDate(toDateOnlyString(policy.next_review_date))
+          : "-",
         author: authorName,
         last_updated: policy.last_updated_at ? formatDate(policy.last_updated_at) : "-",
         updated_by: updatedByName,
@@ -624,21 +601,19 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
           spacing={4}
           sx={{ width: "100%" }}
         >
-          {/* Left side: Filter + Group + Search together */}
+          {/* Left side: Filter + Search together */}
           <Stack direction="row" spacing={2} alignItems="center">
             {/* FilterBy */}
             <div data-joyride-id="policy-status-filter">
-              <FilterBy columns={policyFilterColumns} onFilterChange={handlePolicyFilterChange} />
+              <TableFilter
+                columns={policyFilterColumns}
+                onFilterChange={handlePolicyFilterChange}
+                defaultConditions={policyFilterConditions}
+                defaultLogic={policyFilterLogic}
+                data={policies}
+                getFieldValue={getPolicyFieldValue}
+              />
             </div>
-
-            {/* Group By */}
-            <GroupBy
-              options={[
-                { id: "status", label: "Status" },
-                { id: "author", label: "Author" },
-              ]}
-              onGroupChange={handleGroupChange}
-            />
 
             {/* Column Selector */}
             <ColumnSelector
@@ -669,10 +644,12 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
                 sx={{
                   "color": folderSidebarOpen ? "brand.primary" : "text.muted",
                   "padding": "4px",
-                  "borderRadius": "4px",
-                  "backgroundColor": folderSidebarOpen ? "#E6F4F1" : "transparent",
+                  "borderRadius": radiusPx.sm,
+                  "backgroundColor": folderSidebarOpen ? palette.accent.teal.bg : "transparent",
                   "&:hover": {
-                    backgroundColor: folderSidebarOpen ? "#D1EDE6" : "#F2F4F7",
+                    backgroundColor: folderSidebarOpen
+                      ? palette.brand.primaryLight
+                      : palette.background.hover,
                   },
                 }}
               >
@@ -685,7 +662,7 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
               filename="policy-manager"
               title="Policy Manager"
             />
-            {canRunBulkActions && (
+            {canEditPolicies && (
               <Box data-joyride-id="add-policy-button">
                 <CustomizableButton
                   variant="contained"
@@ -711,9 +688,9 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
               sx={{
                 "width": folderSidebarCollapsed ? 48 : 260,
                 "minWidth": folderSidebarCollapsed ? 48 : 260,
-                "backgroundColor": "#FAFBFC",
-                "border": "1px solid #d0d5dd",
-                "borderRadius": "4px",
+                "backgroundColor": palette.background.alt,
+                "border": `1px solid ${palette.border.dark}`,
+                "borderRadius": radiusPx.sm,
                 "overflow": "hidden",
                 "transition": "width 200ms ease, min-width 200ms ease",
                 // Override FolderTree's internal borderRight since this wrapper already has a full border
@@ -733,7 +710,7 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
                   setCreateFolderOpen(true);
                 }}
                 loading={foldersLoading}
-                canManage
+                canManage={canEditPolicies}
                 collapsed={folderSidebarCollapsed}
                 onToggleCollapse={() => setFolderSidebarCollapsed((p) => !p)}
                 allLabel="All policies"
@@ -796,36 +773,29 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
                 </TableEmptyStateLayout>
               }
             >
-              <GroupedTableView
-                groupedData={groupedPolicies}
-                ungroupedData={filteredPolicies}
-                renderTable={(data, options) => (
-                  <PolicyTable
-                    data={data}
-                    onOpen={handleOpen}
-                    onDelete={handleDelete}
-                    onLinkedObjects={handleLinkedObject}
-                    onAssignToFolder={handleAssignToFolder}
-                    onSaveAsTemplate={canManageTemplates ? handleSaveAsTemplate : undefined}
-                    hidePagination={options?.hidePagination}
-                    flashRowId={flashRowId}
-                    visibleColumns={visibleColumns}
-                    canRunBulkActions={canRunBulkActions}
-                    onBulkActionSuccess={(action, count) => {
-                      handleAlert({
-                        variant: "success",
-                        title:
-                          action === "archive"
-                            ? `${count} polic${count === 1 ? "y" : "ies"} archived`
-                            : action === "set_reviewer"
-                              ? `Reviewer assigned to ${count} polic${count === 1 ? "y" : "ies"}`
-                              : `Tags updated on ${count} polic${count === 1 ? "y" : "ies"}`,
-                        body: "",
-                        setAlert,
-                      });
-                    }}
-                  />
-                )}
+              <PolicyTable
+                data={filteredPolicies}
+                onOpen={handleOpen}
+                onDelete={handleDelete}
+                onLinkedObjects={handleLinkedObject}
+                onAssignToFolder={canEditPolicies ? handleAssignToFolder : undefined}
+                onSaveAsTemplate={canManageTemplates ? handleSaveAsTemplate : undefined}
+                flashRowId={flashRowId}
+                visibleColumns={visibleColumns}
+                canRunBulkActions={canEditPolicies}
+                onBulkActionSuccess={(action, count) => {
+                  handleAlert({
+                    variant: "success",
+                    title:
+                      action === "archive"
+                        ? `${count} polic${count === 1 ? "y" : "ies"} archived`
+                        : action === "set_reviewer"
+                          ? `Reviewer assigned to ${count} polic${count === 1 ? "y" : "ies"}`
+                          : `Tags updated on ${count} polic${count === 1 ? "y" : "ies"}`,
+                    body: "",
+                    setAlert,
+                  });
+                }}
               />
             </ListStateWrapper>
           </Box>

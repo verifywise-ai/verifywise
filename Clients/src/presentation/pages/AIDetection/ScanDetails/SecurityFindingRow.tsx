@@ -10,7 +10,7 @@ import { ChevronDown, ChevronRight, FileCode } from "lucide-react";
 import Chip from "../../../components/Chip";
 import { VWLink } from "../../../components/Link";
 import { SecurityFinding } from "../../../../domain/ai-detection/types";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import { FilePathItem } from "./FilePathItem";
 import {
   SEVERITY_BORDER_COLORS,
@@ -46,7 +46,7 @@ export function SecurityFindingRow({
     <Box
       sx={{
         border: `1px solid ${borderColor}`,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         mb: "8px",
         backgroundColor: palette.background.main,
       }}
@@ -179,7 +179,7 @@ export function SecurityFindingRow({
               maxHeight: 200,
               overflow: "auto",
               backgroundColor: palette.background.accent,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: 1,
             }}
           >

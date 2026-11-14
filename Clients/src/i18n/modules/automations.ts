@@ -98,6 +98,16 @@ export const de: Record<string, string> = {
   "When a vendor is changed": "Wenn ein Anbieter geändert wird",
   "When a vendor review date is approaching": "Wenn ein Anbieter-Überprüfungsdatum näher rückt",
   "When an incident is changed": "Wenn ein Vorfall geändert wird",
+  "When an AI Detection scan finishes": "Wenn ein AI Detection-Scan abgeschlossen ist",
+  "When an AI Detection scan finds new high-risk findings":
+    "Wenn ein AI Detection-Scan neue Befunde mit hohem Risiko findet",
+  "When an AI Detection scan fails": "Wenn ein AI Detection-Scan fehlschlägt",
+  "Triggered when an AI Detection scan of a repository finishes":
+    "Ausgelöst, wenn ein AI Detection-Scan eines Repositorys abgeschlossen ist",
+  "Triggered when a scan has high-risk findings, exposed secrets included, that the previous scan of the repository did not have":
+    "Ausgelöst, wenn ein Scan Befunde mit hohem Risiko, einschließlich offengelegter Geheimnisse, enthält, die der vorherige Scan des Repositorys nicht hatte",
+  "Triggered when an AI Detection scan of a repository fails":
+    "Ausgelöst, wenn ein AI Detection-Scan eines Repositorys fehlschlägt",
 };
 
 export const fr: Record<string, string> = {
@@ -198,6 +208,16 @@ export const fr: Record<string, string> = {
   "When a vendor is changed": "Lorsqu'un fournisseur est modifié",
   "When a vendor review date is approaching": "Lorsqu'une date d'examen de fournisseur approche",
   "When an incident is changed": "Lorsqu'un incident est modifié",
+  "When an AI Detection scan finishes": "Lorsqu'une analyse AI Detection se termine",
+  "When an AI Detection scan finds new high-risk findings":
+    "Lorsqu'une analyse AI Detection trouve de nouveaux résultats à risque élevé",
+  "When an AI Detection scan fails": "Lorsqu'une analyse AI Detection échoue",
+  "Triggered when an AI Detection scan of a repository finishes":
+    "Déclenché lorsqu'une analyse AI Detection d'un dépôt se termine",
+  "Triggered when a scan has high-risk findings, exposed secrets included, that the previous scan of the repository did not have":
+    "Déclenché lorsqu'une analyse contient des résultats à risque élevé, secrets exposés compris, absents de l'analyse précédente du dépôt",
+  "Triggered when an AI Detection scan of a repository fails":
+    "Déclenché lorsqu'une analyse AI Detection d'un dépôt échoue",
 };
 
 export const es: Record<string, string> = {
@@ -300,4 +320,14 @@ export const es: Record<string, string> = {
   "When a vendor review date is approaching":
     "Cuando se acerca la fecha de revisión de un proveedor",
   "When an incident is changed": "Cuando se modifica un incidente",
+  "When an AI Detection scan finishes": "Cuando termina un análisis de AI Detection",
+  "When an AI Detection scan finds new high-risk findings":
+    "Cuando un análisis de AI Detection encuentra nuevos hallazgos de alto riesgo",
+  "When an AI Detection scan fails": "Cuando falla un análisis de AI Detection",
+  "Triggered when an AI Detection scan of a repository finishes":
+    "Se activa cuando termina un análisis de AI Detection de un repositorio",
+  "Triggered when a scan has high-risk findings, exposed secrets included, that the previous scan of the repository did not have":
+    "Se activa cuando un análisis tiene hallazgos de alto riesgo, incluidos secretos expuestos, que el análisis anterior del repositorio no tenía",
+  "Triggered when an AI Detection scan of a repository fails":
+    "Se activa cuando falla un análisis de AI Detection de un repositorio",
 };

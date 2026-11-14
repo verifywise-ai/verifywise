@@ -2,6 +2,7 @@ import { FC, useEffect } from "react";
 import { Maximize2, Minimize2, X } from "lucide-react";
 import { colors, typography, spacing, border } from "./styles/theme";
 import { useLLMKeys } from "../../../application/hooks/useLLMKeys";
+import { palette } from "../../themes/palette";
 
 interface AdvisorHeaderProps {
   onClose: () => void;
@@ -99,7 +100,7 @@ const AdvisorHeader: FC<AdvisorHeaderProps> = ({
                 fontSize: typography.fontSize.xs,
                 padding: `4px 8px`,
                 borderRadius: border.radius,
-                border: `1px solid ${colors.border?.default || "#e5e7eb"}`,
+                border: `1px solid ${colors.border?.default || palette.border.light}`,
                 backgroundColor: colors.background.white,
                 color: colors.text.primary,
                 cursor: "pointer",

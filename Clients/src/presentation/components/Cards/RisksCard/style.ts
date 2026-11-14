@@ -1,4 +1,9 @@
-import { background, status, border as borderPalette } from "../../../themes/palette";
+import {
+  background,
+  status,
+  border as borderPalette,
+  palette as vwPalette,
+} from "../../../themes/palette";
 export const projectRisksCard = {
   width: "100%",
   height: "100%",
@@ -46,12 +51,12 @@ export const trendIndicator = {
 };
 
 export const trendIconUp = {
-  color: "#EF4444", // Red for increasing risks
+  color: vwPalette.riskMark.critical, // Red for increasing risks
   fontSize: 14,
 };
 
 export const trendIconDown = {
-  color: "#10B981", // Green for decreasing risks
+  color: vwPalette.status.success.strong, // Green for decreasing risks
   fontSize: 14,
 };
 
@@ -66,7 +71,7 @@ export const riskMetricsContainer = {
   gap: 2,
   padding: "16px 24px",
   backgroundColor: `${background.accent}`,
-  border: `1px solid #E5E7EB`,
+  border: `1px solid ${vwPalette.border.light}`,
   borderRadius: 2,
   minWidth: "200px",
 };
@@ -85,5 +90,5 @@ export const riskMetricLabel = {
 
 export const riskMetricValue = {
   fontWeight: 600,
-  color: "#111827",
+  color: vwPalette.text.primary,
 };

@@ -37,7 +37,16 @@ import {
 } from "lucide-react";
 import { LifecycleItem, useLifecycleConfig } from "./useModelLifecycle";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
-import { background, border, brand, editor, icon, status, text } from "../../../themes/palette";
+import {
+  background,
+  border,
+  brand,
+  editor,
+  icon,
+  status,
+  text,
+  radiusPx,
+} from "../../../themes/palette";
 import { textStyles } from "../../../../presentation/themes/typography";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 
@@ -72,7 +81,7 @@ const VW_TYPOGRAPHY = {
 const vwTextField = {
   "& .MuiOutlinedInput-root": {
     "backgroundColor": VW_COLORS.bgMain,
-    "borderRadius": "4px",
+    "borderRadius": radiusPx.sm,
     ...textStyles.body,
     "& .MuiOutlinedInput-notchedOutline": {
       borderColor: border.dark,
@@ -90,7 +99,7 @@ const vwTextField = {
 
 const vwSelect = {
   "backgroundColor": VW_COLORS.bgMain,
-  "borderRadius": "4px",
+  "borderRadius": radiusPx.sm,
   ...textStyles.body,
   "& .MuiOutlinedInput-notchedOutline": {
     borderColor: border.dark,
@@ -105,7 +114,7 @@ const vwSelect = {
 
 const vwAccordion = {
   "border": `1px solid ${border.light}`,
-  "borderRadius": "4px !important",
+  "borderRadius": `${radiusPx.sm} !important`,
   "&:before": { display: "none" },
   "boxShadow": "none",
   "overflow": "hidden",
@@ -130,7 +139,7 @@ const vwAccordionSummary = {
 
 const vwDialog = {
   "& .MuiDialog-paper": {
-    borderRadius: "8px",
+    borderRadius: radiusPx.lg,
   },
 };
 
@@ -406,7 +415,7 @@ export default function ModelLifecycleConfig() {
                   py: 4,
                   px: 6,
                   backgroundColor: phase.is_active ? VW_COLORS.bgAccent : background.main,
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   border: `1px solid ${border.light}`,
                   opacity: phase.is_active ? 1 : 0.6,
                 }}
@@ -441,7 +450,7 @@ export default function ModelLifecycleConfig() {
                     height: 10,
                     backgroundColor: background.main,
                     color: VW_COLORS.textTertiary,
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                   }}
                 />
                 {!phase.is_active && (
@@ -454,7 +463,7 @@ export default function ModelLifecycleConfig() {
                       height: 10,
                       backgroundColor: status.error.bg,
                       color: status.error.text,
-                      borderRadius: "4px",
+                      borderRadius: radiusPx.sm,
                     }}
                   />
                 )}
@@ -717,7 +726,7 @@ export default function ModelLifecycleConfig() {
                               fontFamily: VW_TYPOGRAPHY.fontFamily,
                               borderColor: border.dark,
                               color: VW_COLORS.textTertiary,
-                              borderRadius: "4px",
+                              borderRadius: radiusPx.sm,
                             }}
                           />
                           <FormControlLabel
@@ -895,7 +904,7 @@ export default function ModelLifecycleConfig() {
               <Box
                 sx={{
                   border: `1px dashed ${border.dark}`,
-                  borderRadius: 2,
+                  borderRadius: radiusPx.sm,
                   p: 8,
                   backgroundColor: VW_COLORS.bgMain,
                 }}

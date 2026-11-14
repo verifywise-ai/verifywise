@@ -30,8 +30,11 @@ describe("risk link enqueue matrix (amendment B)", () => {
     expect(enqueueRiskLinkRecompute).toBeDefined();
   });
 
+  // createRisk and the AI Detection "add suggested risk" route share the
+  // post-commit steps in runRiskCreatedSideEffects.
   it("enqueues after creating a risk", () => {
-    expect(bodyOf("createRisk")).toContain("enqueueRiskLinkRecompute(");
+    expect(bodyOf("createRisk")).toContain("runRiskCreatedSideEffects(");
+    expect(bodyOf("runRiskCreatedSideEffects")).toContain("enqueueRiskLinkRecompute(");
   });
 
   it("enqueues after updating a risk", () => {

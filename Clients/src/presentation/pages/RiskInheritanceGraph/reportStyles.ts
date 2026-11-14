@@ -14,6 +14,7 @@
 import { SxProps, Theme } from "@mui/material";
 import singleTheme from "../../themes/v1SingleTheme";
 import { textStyles } from "../../themes/typography";
+import { radiusPx } from "../../themes/palette";
 
 /**
  * The shared body.cell token is whiteSpace: nowrap, which is right for a name
@@ -59,7 +60,7 @@ const alertBaseSx = {
   gap: 6, // 12px
   py: 6, // 12px
   px: 8, // 16px
-  borderRadius: "4px",
+  borderRadius: radiusPx.sm,
   border: 1,
 } as const;
 
@@ -98,7 +99,7 @@ export const summaryGridSx: SxProps<Theme> = {
 export const summaryTileSx: SxProps<Theme> = {
   border: 1,
   borderColor: "border.light",
-  borderRadius: "4px",
+  borderRadius: radiusPx.sm,
   backgroundColor: "background.main",
   p: 8, // 16px
 };

@@ -62,6 +62,7 @@ import {
 export const routeMapping: Record<string, string> = {
   // Main pages
   "/": "Dashboard",
+  "/home": "Home",
   "/overview": "Use cases",
 
   // Project related

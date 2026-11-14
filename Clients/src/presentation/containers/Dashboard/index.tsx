@@ -22,10 +22,12 @@ import { AlertState } from "../../../application/interfaces/appStates";
 import { useDashboard } from "../../../application/hooks/useDashboard";
 import { useActiveModule } from "../../../application/hooks/useActiveModule";
 import AppSwitcher from "../../components/AppSwitcher";
+import ChangeNotice from "../../components/ChangeNotice";
 import { ContextSidebar } from "../../components/ContextSidebar";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { storageService } from "../../../infrastructure/storage";
-import { status } from "../../themes/palette";
+import { status, palette as vwPalette } from "../../themes/palette";
+import { isClassicUi } from "../../themes/uiStyle";
 
 interface DashboardProps {
   reloadTrigger: boolean;
@@ -278,14 +280,21 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
                 className="home-layout"
                 flexDirection="row"
                 gap={0}
-                sx={{ backgroundColor: "#FCFCFD", height: "100vh", overflow: "hidden" }}
+                sx={{
+                  backgroundColor: vwPalette.background.main,
+                  height: "100vh",
+                  overflow: "hidden",
+                }}
               >
-                <AppSwitcher
-                  activeModule={activeModule}
-                  onModuleChange={setActiveModule}
-                  isSuperAdmin={isSuperAdmin}
-                  hasOrg={!!organizationId}
-                />
+                {/* Phase 1: the unified sidebar (in ContextSidebar) replaces the switcher. */}
+                {isClassicUi() && (
+                  <AppSwitcher
+                    activeModule={activeModule}
+                    onModuleChange={setActiveModule}
+                    isSuperAdmin={isSuperAdmin}
+                    hasOrg={!!organizationId}
+                  />
+                )}
                 <ContextSidebar
                   activeModule={activeModule}
                   onOpenCreateDemoData={() => setOpenDemoDataModal(true)}
@@ -336,6 +345,8 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
                     </Box>
                   </>
                 </Stack>
+
+                <ChangeNotice />
 
                 {/* Demo Data Modals */}
                 <StandardModal

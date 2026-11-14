@@ -21,6 +21,7 @@ import ModelLifecycleConfig from "../model-lifecycle/ModelLifecycleConfig";
 import { JiraAssetsConfiguration } from "../jira-assets/JiraAssetsConfiguration";
 import { JiraIncidentsConfiguration } from "../jira-incidents/JiraIncidentsConfiguration";
 import { useCan, usePermissionsSettled } from "../../../../application/hooks/useCan";
+import { palette, radiusPx } from "../../../themes/palette";
 
 const CATEGORY_LABEL: Record<string, string> = {
   communication: "Communication",
@@ -210,13 +211,18 @@ export default function ExtensionSettingsPage() {
       ) : error ? (
         <Box
           sx={{
-            border: `1px solid ${theme.palette.status.error?.border ?? theme.palette.status.error?.main ?? "#F5B8B8"}`,
-            bgcolor: theme.palette.status.error?.bg ?? "#FFF1F1",
-            borderRadius: "4px",
+            border: `1px solid ${theme.palette.status.error?.border ?? theme.palette.status.error?.main ?? palette.status.error.border}`,
+            bgcolor: theme.palette.status.error?.bg ?? palette.accent.red.bg,
+            borderRadius: radiusPx.sm,
             p: "12px 16px",
           }}
         >
-          <Typography sx={{ fontSize: 13, color: theme.palette.status.error?.text ?? "#B42318" }}>
+          <Typography
+            sx={{
+              fontSize: 13,
+              color: theme.palette.status.error?.text ?? palette.status.error.text,
+            }}
+          >
             {error}
           </Typography>
         </Box>
@@ -229,7 +235,7 @@ export default function ExtensionSettingsPage() {
                 component="img"
                 src={extension.iconPath}
                 alt=""
-                sx={{ width: 28, height: 28, objectFit: "contain", borderRadius: "4px" }}
+                sx={{ width: 28, height: 28, objectFit: "contain", borderRadius: radiusPx.sm }}
               />
             )}
             {statusStyles && (
@@ -237,7 +243,7 @@ export default function ExtensionSettingsPage() {
                 sx={{
                   px: "8px",
                   py: "2px",
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   bgcolor: statusStyles.bg,
                   border: `1px solid ${statusStyles.border}`,
                 }}
@@ -268,9 +274,9 @@ export default function ExtensionSettingsPage() {
                   feedback.severity === "success"
                     ? theme.palette.status.success.bg
                     : feedback.severity === "error"
-                      ? (theme.palette.status.error?.bg ?? "#FFF1F1")
-                      : (theme.palette.status.info?.bg ?? "#EFF6FF"),
-                borderRadius: "4px",
+                      ? (theme.palette.status.error?.bg ?? palette.accent.red.bg)
+                      : (theme.palette.status.info?.bg ?? palette.status.info.bg),
+                borderRadius: radiusPx.sm,
                 p: "12px 16px",
               }}
             >
@@ -281,8 +287,8 @@ export default function ExtensionSettingsPage() {
                     feedback.severity === "success"
                       ? theme.palette.status.success.text
                       : feedback.severity === "error"
-                        ? (theme.palette.status.error?.text ?? "#B42318")
-                        : (theme.palette.status.info?.text ?? "#1D4ED8"),
+                        ? (theme.palette.status.error?.text ?? palette.status.error.text)
+                        : (theme.palette.status.info?.text ?? palette.status.info.text),
                 }}
               >
                 {feedback.message}
@@ -299,7 +305,7 @@ export default function ExtensionSettingsPage() {
               sx={{
                 backgroundColor: theme.palette.background.main,
                 border: `1px solid ${theme.palette.border.light}`,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 p: "16px",
               }}
             >
@@ -379,13 +385,18 @@ export default function ExtensionSettingsPage() {
       ) : (
         <Box
           sx={{
-            border: `1px solid ${theme.palette.status.warning?.border ?? "#F5E6B8"}`,
-            bgcolor: theme.palette.status.warning?.bg ?? "#FFF8E1",
-            borderRadius: "4px",
+            border: `1px solid ${theme.palette.status.warning?.border ?? palette.risk.medium.border}`,
+            bgcolor: theme.palette.status.warning?.bg ?? palette.risk.medium.bg,
+            borderRadius: radiusPx.sm,
             p: "12px 16px",
           }}
         >
-          <Typography sx={{ fontSize: 13, color: theme.palette.status.warning?.text ?? "#795548" }}>
+          <Typography
+            sx={{
+              fontSize: 13,
+              color: theme.palette.status.warning?.text ?? palette.risk.medium.text,
+            }}
+          >
             Extension not found.
           </Typography>
         </Box>

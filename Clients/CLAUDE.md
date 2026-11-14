@@ -1,6 +1,6 @@
 # Clients — Frontend Development Guide
 
-> **Last Updated:** 2026-11-11
+> **Last Updated:** 2026-11-14
 
 ---
 
@@ -36,7 +36,18 @@ infrastructure/   → API clients, external services
 
 **Extensions:** UI in `src/presentation/pages/Extensions/` (catalog, `Settings/`, one folder per extension key). Gate every entry point with `useExtensions().isEnabled("<key>")` (`src/application/contexts/Extensions.context.tsx`). Bundled frameworks (ids 5–25) render through `pages/Framework/Generic` + `components/Drawer/GenericFrameworkDrawer`. There is no per-framework UI. See `docs/technical/infrastructure/extensions.md` and `docs/technical/guides/adding-new-framework.md`.
 
+**Sidebar navigation:** the phase 1 (default) look has one sidebar, `src/presentation/components/UnifiedSidebar/`, driven by `navConfig.ts`. A new page needs an entry in `navConfig.ts` (group, item or sub-item, route, gate, count), or an entry in `KEPT_ELSEWHERE` with the reason it stays out; `navConfig.test.ts` enforces one or the other. While the classic look exists (until January 2027), also add the page to the classic module sidebar, since classic keeps the app switcher, per-module sidebars and the footer Management popup.
+
 **Permission gating:** decide what to show from permission keys, never from the role name (a custom role can never match one). Use `useCan("vendor.edit")` or `useCanCheck()` (`src/application/hooks/useCan.ts`) with the key the server route authorizes on; add a new UI key to `BUILTIN_UI_PERMISSIONS` (`src/application/constants/permissions.ts`) and to `Servers/config/rolePermissions.config.ts` together, since `permissions.test.ts` checks they match. See `docs/technical/architecture/authentication.md`.
+
+---
+
+## UI patterns
+
+- **Table filters:** `components/Table/TableFilter.tsx`, not `FilterBy`, for every new table. It shows `FilterBy` in the classic look and filter chips in phase 1 from one `FilterColumn[]`. Group and Columns stay as they are.
+- **Lifecycle stage:** `components/StageSteps`.
+- **No hex colours in screens:** `noHexInScreens.test.ts` fails on a hex literal under `presentation/pages` or `presentation/components`. Use a token or a named map in `themes/chartTheme.ts` (`entity`, `action`, `providers`, `tiles`, `avatars` and others); never index `chart[n]`. A genuine exception goes in `themes/hexAllowList.ts`.
+- Details: `docs/technical/guides/design-tokens.md`.
 
 ---
 
@@ -84,8 +95,15 @@ Read the relevant file BEFORE implementing changes in that area:
 | Frontend styling                      | `docs/technical/frontend/styling.md`               |
 | Frontend components                   | `docs/technical/frontend/components.md`            |
 | Redux, Axios, frontend architecture   | `docs/technical/frontend/overview.md`              |
+| Change notices (what's changed card)  | `docs/technical/frontend/change-notice.md`         |
 | TypeScript standards & naming         | `CodeRules/02-typescript/`                         |
 | React component & hook conventions    | `CodeRules/03-react/`                              |
 | Cross-org isolation tests (MSW guard) | `docs/technical/security/tenant-isolation.md` §6.4 |
 
 > All `docs/` paths are relative to the repository root.
+
+---
+
+## Home queue
+
+A new "needs action" item for the Home page (`/home`, Today tab) belongs in `Servers/services/homeQueue/sources/`, not in a client-side fetch. See `docs/technical/domains/home-queue.md`.

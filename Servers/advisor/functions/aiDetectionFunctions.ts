@@ -8,8 +8,8 @@ import {
   getAIDetectionStatsQuery,
   createScanQuery,
   updateScanProgressQuery,
-  updateFindingGovernanceStatusQuery,
 } from "../../utils/aiDetection.utils";
+import { updateFindingGovernanceStatus } from "../../services/aiDetection.service";
 import { getRepositoryByIdQuery } from "../../utils/aiDetectionRepository.utils";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { sequelize } from "../../database/db";
@@ -347,17 +347,12 @@ const agentUpdateFindingGovernanceStatus = createWriteToolFn({
       throw new Error(`Finding with ID ${findingId} not found`);
     }
 
-    const result = await updateFindingGovernanceStatusQuery(
-      findingId,
-      findingRow.scan_id,
-      governanceStatus,
+    // Through the service, so the status is also stored for later scans of the repository
+    await updateFindingGovernanceStatus(findingRow.scan_id, findingId, governanceStatus, {
       userId,
+      role: "",
       organizationId,
-    );
-
-    if (!result) {
-      throw new Error(`Failed to update governance status for finding #${findingId}`);
-    }
+    });
 
     return {
       id: findingId,

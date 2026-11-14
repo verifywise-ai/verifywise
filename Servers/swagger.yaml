@@ -3194,9 +3194,12 @@ components:
           type: integer
           minimum: 0
           maximum: 59
+        has_webhook_secret:
+          type: boolean
+          description: 'Whether a webhook secret is set. Read responses never include the secret.'
         webhook_secret:
           type: string
-          nullable: true
+          description: 'Returned only on the create or update response that generated the secret (CI/CD turned on for the first time), so it can be copied into GitHub once.'
         ci_enabled:
           type: boolean
         ci_min_score:
@@ -7930,9 +7933,17 @@ tags:
   -
     name: 'v1: V1/Ai Apps'
   -
+    name: 'v1: V1/Ai Detection'
+  -
+    name: 'v1: V1/Ai Detection Repositories'
+  -
+    name: 'v1: V1/Change Notices'
+  -
     name: 'v1: V1/Dashboard'
   -
     name: 'v1: V1/Groups'
+  -
+    name: 'v1: V1/Home'
   -
     name: 'v1: V1/Imported Framework Assessments'
   -
@@ -28776,6 +28787,195 @@ paths:
       tags:
         - 'v1: Intake submissions'
       operationId: approveSubmissionV1
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-detection/scans/{scanId}/suggested-risks/actions':
+    get:
+      summary: 'List Suggested Risk Actions Controller'
+      tags:
+        - 'v1: V1/Ai Detection'
+      operationId: listSuggestedRiskActionsController
+      security:
+        -
+          bearerAuth: []
+    put:
+      summary: 'Record Suggested Risk Action Controller'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Detection'
+      operationId: recordSuggestedRiskActionController
+      security:
+        -
+          bearerAuth: []
+  /v1/ai-detection-repositories/webhook-config:
+    get:
+      summary: 'Get Webhook Config Controller'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Detection Repositories'
+      operationId: getWebhookConfigController
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-detection/scans/{scanId}/suggested-risks/actions/{actionId}':
+    delete:
+      summary: 'Delete Suggested Risk Action Controller'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Detection'
+      operationId: deleteSuggestedRiskActionController
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-detection/scans/{scanId}/findings':
+    get:
+      summary: 'Get Scan Findings V1 Controller'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Detection'
+      operationId: getScanFindingsV1Controller
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-detection/scans/{scanId}/findings/{findingId}/governance':
+    patch:
+      summary: 'Update Governance Status V1 Controller'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Detection'
+      operationId: updateGovernanceStatusV1Controller
+      security:
+        -
+          bearerAuth: []
+  '/v1/ai-detection/scans/{scanId}/suggested-risks/risks':
+    post:
+      summary: 'Add Suggested Risk To Register Controller'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Ai Detection'
+      operationId: addSuggestedRiskToRegisterController
+      security:
+        -
+          bearerAuth: []
+  /v1/home/queue:
+    get:
+      summary: 'Get Home Queue Handler'
+      description: "Everything that needs the signed-in user's action in the token's organization, merged and sorted (overdue first, then due soonest, then oldest waiting). A source that failed is reported as `unavailable` with no items, never as an empty list; a source or count the user may not see is absent, as is the prompts count when no AI Gateway is configured. Titles are built on the client from these structured fields.\n"
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string, example: OK}
+                  data: {type: object, required: [items, sources, counts], properties: {items: {type: array, items: {type: object, required: [id, source, part, entityType, entityId, name, url, dueDate, waitingSince, overdue, meta], properties: {id: {type: string, description: '`<source>:<entityId>`, plus a suffix when one entity can appear twice', example: 'tasks:12'}, source: {type: string, enum: [approvals, tasks, intake, risks, policyReviews, vendorReviews, incidents, mrmFindings]}, part: {type: string, enum: [automate, record, track, enforce]}, entityType: {type: string, example: task}, entityId: {type: integer, example: 12}, name: {type: string, example: 'Update DPIA for chatbot'}, url: {type: string, description: 'Client route that opens the record', example: '/tasks?taskId=12'}, dueDate: {type: string, nullable: true, description: YYYY-MM-DD, example: '2026-11-10'}, waitingSince: {type: string, format: date-time, nullable: true}, overdue: {type: boolean}, meta: {type: object, description: 'Source-specific fields (e.g. stepNumber/stepCount for approvals, status/priority for tasks)', additionalProperties: {nullable: true, oneOf: [{type: string}, {type: number}]}}}}}, sources: {type: object, description: 'Per visible source: ok with its item count, or unavailable (count 0) when it failed', additionalProperties: {type: object, properties: {status: {type: string, enum: [ok, unavailable]}, count: {type: integer}}}}, counts: {type: object, description: 'Org-wide counts the user may see; null when a count failed to load; a count that does not apply (prompts blocked or masked without an AI Gateway) is absent', additionalProperties: {type: integer, nullable: true}}}}
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Home'
+      operationId: getHomeQueueHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/change-notices/{id}/view':
+    post:
+      summary: 'View Change Notice Handler'
+      description: 'Counts a visit to a page''s change notice and says whether to show it. Stops after the user dismisses it, after 3 visits, or 90 days after the user first saw it; skipped for accounts created after the first time anyone in the organization saw it. A refusal writes nothing. A token with no organization always gets show false.'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-z0-9][a-z0-9-]{0,63}$'
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string, example: OK}
+                  data: {type: object, required: [show], properties: {show: {type: boolean}}}
+        '400':
+          description: 'Invalid notice id'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Change Notices'
+      operationId: viewChangeNoticeHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/change-notices/{id}/dismissed':
+    put:
+      summary: 'Set Change Notice Dismissed Handler'
+      description: 'Dismisses the signed-in user''s change notice, or restores it when dismissed is false (Undo).'
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: string
+            pattern: '^[a-z0-9][a-z0-9-]{0,63}$'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required:
+                - dismissed
+              properties:
+                dismissed:
+                  type: boolean
+      responses:
+        '200':
+          description: Success
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  message: {type: string, example: OK}
+                  data: {type: object, required: [dismissed], properties: {dismissed: {type: boolean}}}
+        '400':
+          description: 'Invalid notice id or body'
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: V1/Change Notices'
+      operationId: setChangeNoticeDismissedHandler
       security:
         -
           bearerAuth: []

@@ -1,6 +1,6 @@
 import { Stack, Typography, Box, Tooltip } from "@mui/material";
 import { LifecycleProgress } from "./useModelLifecycle";
-import { accent, background, status, text } from "../../../themes/palette";
+import { accent, background, status, text, radiusPx } from "../../../themes/palette";
 import { textStyles } from "../../../themes";
 
 interface LifecycleProgressBarProps {
@@ -52,7 +52,7 @@ export default function LifecycleProgressBar({
                 sx={{
                   "flex": 1,
                   "height": 8,
-                  "borderRadius": 3,
+                  "borderRadius": radiusPx.md,
                   "overflow": "hidden",
                   "backgroundColor": background.main,
                   "cursor": onPhaseClick ? "pointer" : "default",
@@ -65,7 +65,7 @@ export default function LifecycleProgressBar({
                     width: `${pct}%`,
                     height: "100%",
                     backgroundColor: color,
-                    borderRadius: 3,
+                    borderRadius: radiusPx.md,
                     transition: "width 0.3s ease",
                   }}
                 />

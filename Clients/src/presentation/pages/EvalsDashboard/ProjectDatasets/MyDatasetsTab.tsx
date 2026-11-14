@@ -1,5 +1,5 @@
 /**
- * @fileoverview My datasets tab: toolbar (filter/group/search/actions) and grouped datasets table.
+ * @fileoverview My datasets tab: toolbar (filter/search/actions) and datasets table.
  *
  * @module pages/EvalsDashboard/ProjectDatasets/MyDatasetsTab
  */
@@ -8,22 +8,19 @@ import { Box, Stack } from "@mui/material";
 import { Plus, Upload } from "lucide-react";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import SearchBox from "../../../components/Search/SearchBox";
-import {
-  FilterBy,
-  type FilterColumn,
-  type FilterCondition,
-} from "../../../components/Table/FilterBy";
-import { GroupBy } from "../../../components/Table/GroupBy";
-import { GroupedTableView } from "../../../components/Table/GroupedTableView";
+import { type FilterColumn, type FilterCondition } from "../../../components/Table/FilterBy";
+import { TableFilter } from "../../../components/Table/TableFilter";
 import DatasetsTable, { type DatasetRow } from "../../../components/Table/DatasetsTable";
 import { palette } from "../../../themes/palette";
-import type { GroupedData } from "../../../../application/hooks/useTableGrouping";
 import type { BuiltInDataset } from "./types";
 
 export type MyDatasetsTabProps = {
   filterColumns: FilterColumn[];
   onFilterChange: (conditions: FilterCondition[], logic: "and" | "or") => void;
-  onGroupChange: (field: string | null, sortOrder: "asc" | "desc") => void;
+  /** The page's current conditions, so the filter shows them again after a tab switch. */
+  filterConditions: FilterCondition[];
+  /** The page's current and/or logic, so the classic filter restores it too. */
+  filterLogic: "and" | "or";
   searchTerm: string;
   onSearchTermChange: (value: string) => void;
   uploading: boolean;
@@ -31,7 +28,6 @@ export type MyDatasetsTabProps = {
   canDeleteDataset: boolean;
   onUploadClick: () => void;
   onCreateClick: () => void;
-  groupedDatasets: GroupedData<BuiltInDataset>[] | null;
   filteredDatasets: BuiltInDataset[];
   loading: boolean;
   onRowClick: (dataset: BuiltInDataset) => void;
@@ -44,7 +40,8 @@ export type MyDatasetsTabProps = {
 export default function MyDatasetsTab({
   filterColumns,
   onFilterChange,
-  onGroupChange,
+  filterConditions,
+  filterLogic,
   searchTerm,
   onSearchTermChange,
   uploading,
@@ -52,7 +49,6 @@ export default function MyDatasetsTab({
   canDeleteDataset,
   onUploadClick,
   onCreateClick,
-  groupedDatasets,
   filteredDatasets,
   loading,
   onRowClick,
@@ -72,14 +68,11 @@ export default function MyDatasetsTab({
         sx={{ marginBottom: "18px" }}
       >
         <Stack direction="row" alignItems="center" gap={2}>
-          <FilterBy columns={filterColumns} onFilterChange={onFilterChange} />
-          <GroupBy
-            options={[
-              { id: "name", label: "Name" },
-              { id: "prompts", label: "Prompts" },
-              { id: "createdAt", label: "Created" },
-            ]}
-            onGroupChange={onGroupChange}
+          <TableFilter
+            columns={filterColumns}
+            defaultConditions={filterConditions}
+            defaultLogic={filterLogic}
+            onFilterChange={onFilterChange}
           />
           <SearchBox
             placeholder="Search datasets..."
@@ -119,60 +112,53 @@ export default function MyDatasetsTab({
 
       {/* Table of user datasets */}
       <Box mb={4}>
-        <GroupedTableView
-          groupedData={groupedDatasets}
-          ungroupedData={filteredDatasets}
-          renderTable={(data, options) => (
-            <DatasetsTable
-              rows={data.map((dataset): DatasetRow => ({
-                key: dataset.path,
-                name: dataset.name,
-                path: dataset.path,
-                type: dataset.turnType,
-                useCase: dataset.use_case || dataset.datasetType,
-                createdAt: dataset.createdAt,
-                metadata: {
-                  promptCount: dataset.promptCount ?? 0,
-                  avgDifficulty: "Medium", // Default - only shown for user datasets
-                  loading: false,
-                },
-              }))}
-              onRowClick={
-                canUploadDataset
-                  ? (row) => {
-                      const dataset = data.find((d) => d.path === row.path);
-                      if (dataset) onRowClick(dataset);
-                    }
-                  : undefined
-              }
-              onView={(row) => {
-                const dataset = data.find((d) => d.path === row.path);
-                if (dataset) onView(dataset);
-              }}
-              onEdit={
-                canUploadDataset
-                  ? (row) => {
-                      const dataset = data.find((d) => d.path === row.path);
-                      if (dataset) onEdit(dataset);
-                    }
-                  : undefined
-              }
-              onDelete={
-                canDeleteDataset
-                  ? (row) => {
-                      const dataset = data.find((d) => d.path === row.path);
-                      if (dataset) onDelete(dataset);
-                    }
-                  : undefined
-              }
-              onDownload={(row: DatasetRow) => {
-                const dataset = data.find((d) => d.path === row.path);
-                if (dataset) onDownload(dataset);
-              }}
-              loading={loading}
-              hidePagination={options?.hidePagination}
-            />
-          )}
+        <DatasetsTable
+          rows={filteredDatasets.map((dataset): DatasetRow => ({
+            key: dataset.path,
+            name: dataset.name,
+            path: dataset.path,
+            type: dataset.turnType,
+            useCase: dataset.use_case || dataset.datasetType,
+            createdAt: dataset.createdAt,
+            metadata: {
+              promptCount: dataset.promptCount ?? 0,
+              avgDifficulty: "Medium", // Default - only shown for user datasets
+              loading: false,
+            },
+          }))}
+          onRowClick={
+            canUploadDataset
+              ? (row) => {
+                  const dataset = filteredDatasets.find((d) => d.path === row.path);
+                  if (dataset) onRowClick(dataset);
+                }
+              : undefined
+          }
+          onView={(row) => {
+            const dataset = filteredDatasets.find((d) => d.path === row.path);
+            if (dataset) onView(dataset);
+          }}
+          onEdit={
+            canUploadDataset
+              ? (row) => {
+                  const dataset = filteredDatasets.find((d) => d.path === row.path);
+                  if (dataset) onEdit(dataset);
+                }
+              : undefined
+          }
+          onDelete={
+            canDeleteDataset
+              ? (row) => {
+                  const dataset = filteredDatasets.find((d) => d.path === row.path);
+                  if (dataset) onDelete(dataset);
+                }
+              : undefined
+          }
+          onDownload={(row: DatasetRow) => {
+            const dataset = filteredDatasets.find((d) => d.path === row.path);
+            if (dataset) onDownload(dataset);
+          }}
+          loading={loading}
         />
       </Box>
     </>

@@ -12,7 +12,15 @@ import { Pencil, Trash2, MoreVertical } from "lucide-react";
 import singleTheme from "../../../themes/v1SingleTheme";
 import { ScorerRow } from "./index";
 import { CustomizableButton } from "../../button/customizable-button";
-import { brand, text, background, border as borderPalette, status } from "../../../themes/palette";
+import {
+  brand,
+  text,
+  background,
+  border as borderPalette,
+  status,
+  palette as vwPalette,
+  radiusPx,
+} from "../../../themes/palette";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 
 interface ScorersTableBodyProps {
@@ -194,7 +202,7 @@ const ScorersTableBody: React.FC<ScorersTableBodyProps> = ({
         sx={{
           "& .MuiPopover-paper": {
             minWidth: 120,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             border: `1px solid ${borderPalette.dark}`,
             boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
             overflow: "hidden",
@@ -213,12 +221,12 @@ const ScorersTableBody: React.FC<ScorersTableBodyProps> = ({
                 "height": "34px",
                 "fontSize": "13px",
                 "fontWeight": 500,
-                "color": "#374151",
+                "color": vwPalette.text.secondary,
                 "borderColor": `${borderPalette.dark}`,
                 "backgroundColor": "transparent",
                 "justifyContent": "flex-start",
                 "&:hover": {
-                  backgroundColor: "#F0FDF4",
+                  backgroundColor: vwPalette.status.success.bg,
                   borderColor: `${brand.primary}`,
                   color: `${brand.primary}`,
                 },
@@ -236,13 +244,13 @@ const ScorersTableBody: React.FC<ScorersTableBodyProps> = ({
                 "height": "34px",
                 "fontSize": "13px",
                 "fontWeight": 500,
-                "color": "#DC2626",
+                "color": vwPalette.riskMark.critical,
                 "borderColor": `${borderPalette.dark}`,
                 "backgroundColor": "transparent",
                 "justifyContent": "flex-start",
                 "&:hover": {
-                  backgroundColor: "#FEF2F2",
-                  borderColor: "#DC2626",
+                  backgroundColor: vwPalette.status.error.bg,
+                  borderColor: vwPalette.riskMark.critical,
                 },
               }}
             >

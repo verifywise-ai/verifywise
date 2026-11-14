@@ -39,7 +39,7 @@ import { ReviewStatus } from "../../../../domain/enums/status.enum";
 import { getRiskScoreColor } from "../../../../domain/utils/vendorScorecard.utils";
 import { VWLink } from "../../Link";
 import VendorLogo from "../../VendorLogo";
-import { text } from "../../../themes/palette";
+import { text, palette as vwPalette, radiusPx } from "../../../themes/palette";
 import { useCustomFieldDefinitions } from "../../../../application/hooks/useCustomFields";
 import { formatCustomFieldValue } from "../../CustomFieldsSection/formatCustomFieldValue";
 import { pageOfLabel } from "../pageOfLabel";
@@ -383,7 +383,10 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
                 <TableCell
                   sx={{
                     ...singleTheme.tableStyles.primary.body.cell,
-                    backgroundColor: sortConfig.key === "vendor_name" ? "#e8e8e8" : "#fafafa",
+                    backgroundColor:
+                      sortConfig.key === "vendor_name"
+                        ? vwPalette.border.light
+                        : vwPalette.background.alt,
                   }}
                 >
                   <VendorLogo
@@ -467,7 +470,7 @@ const TableWithPlaceholder: React.FC<ITableWithPlaceholderProps> = ({
                               alignItems: "center",
                               gap: 1,
                               padding: "4px 8px",
-                              borderRadius: "4px",
+                              borderRadius: radiusPx.sm,
                               backgroundColor: `${riskColor}20`,
                               border: `1px solid ${riskColor}`,
                               minWidth: "50px",

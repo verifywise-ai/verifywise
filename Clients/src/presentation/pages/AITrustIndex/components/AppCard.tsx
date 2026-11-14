@@ -22,7 +22,7 @@ import { Box, Stack, Typography } from "@mui/material";
 import { AlertTriangle } from "lucide-react";
 import Checkbox from "../../../components/Inputs/Checkbox";
 import Chip from "../../../components/Chip";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import { gradeVariant, categoryVariant, faviconUrl, TrustIndexRow } from "../shared";
 
 interface AppCardProps {
@@ -74,7 +74,7 @@ export default function AppCard({
         "display": "flex",
         "flexDirection": "column",
         "border": `1px solid ${palette.border.dark}`,
-        "borderRadius": "4px",
+        "borderRadius": radiusPx.sm,
         "backgroundColor": palette.background.main,
         "p": "16px",
         "cursor": "pointer",
@@ -110,7 +110,7 @@ export default function AppCard({
           sx={{
             width: 36,
             height: 36,
-            borderRadius: "8px",
+            borderRadius: radiusPx.lg,
             border: `1px solid ${palette.border.dark}`,
             display: "flex",
             alignItems: "center",
@@ -154,7 +154,7 @@ export default function AppCard({
               <AlertTriangle
                 size={14}
                 strokeWidth={1.5}
-                color="#B23B3B"
+                color={palette.status.error.text}
                 aria-label="Dealbreaker flag"
                 style={{ flexShrink: 0 }}
               />

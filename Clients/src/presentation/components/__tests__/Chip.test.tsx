@@ -17,11 +17,12 @@ describe("Chip", () => {
     expect(screen.getByText("High")).toBeInTheDocument();
   });
 
-  it("renders uppercase by default", () => {
+  it("renders sentence case by default (phase 1 pill)", () => {
     renderWithTheme(<Chip label="critical" variant="critical" />);
     const chip = screen.getByText("critical");
     expect(chip).toBeInTheDocument();
-    expect(chip).toHaveStyle("text-transform: uppercase");
+    // The label sits in an inner span; the pill is its parent.
+    expect(chip.parentElement).toHaveStyle("text-transform: none");
   });
 
   it("renders lowercase when uppercase=false", () => {

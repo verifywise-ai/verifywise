@@ -5,7 +5,8 @@ import React, { useState } from "react";
 import DropDowns from "../../Inputs/Dropdowns";
 import AuditorFeedback from "../ComplianceFeedback/ComplianceFeedback";
 import { ICustomModalProps } from "../../../../domain/interfaces/i.customs";
-import { border as borderPalette } from "../../../themes/palette";
+import { border as borderPalette, palette as vwPalette, radiusPx } from "../../../themes/palette";
+import { chartTheme } from "../../../themes/chartTheme";
 
 const CustomModal: React.FC<ICustomModalProps> = ({
   isOpen,
@@ -58,13 +59,13 @@ const CustomModal: React.FC<ICustomModalProps> = ({
   const buttonStyle = {
     "fontSize": 13,
     "textTransform": "capitalize",
-    "backgroundColor": "#4C7DE7",
+    "backgroundColor": chartTheme.action.fill,
     "boxShadow": "none",
-    "borderRadius": "4px",
-    "border": "1px solid #175CD3",
+    "borderRadius": radiusPx.sm,
+    "border": `1px solid ${chartTheme.action.border}`,
     "&:hover": {
       boxShadow: "none",
-      backgroundColor: "#175CD3 ",
+      backgroundColor: chartTheme.action.hover,
     },
   };
 
@@ -123,9 +124,9 @@ const CustomModal: React.FC<ICustomModalProps> = ({
             {responseMessage}
           </Typography>
         )}
-        <Divider sx={{ borderColor: "#C2C2C2", mt: theme.spacing(3) }} />
+        <Divider sx={{ borderColor: vwPalette.border.dark, mt: theme.spacing(3) }} />
 
-        <Box sx={{ width: "100%", bgcolor: "#FCFCFD" }}>
+        <Box sx={{ width: "100%", bgcolor: vwPalette.background.main }}>
           <Tabs
             value={selectedTab}
             onChange={handleSelectedTab}
@@ -151,8 +152,8 @@ const CustomModal: React.FC<ICustomModalProps> = ({
             display: "flex",
             flexDirection: "row",
             justifyContent: "flex-start",
-            borderRadius: "4px",
-            border: "1px solid #eaecf0",
+            borderRadius: radiusPx.sm,
+            border: `1px solid ${vwPalette.border.light}`,
             width: "fit-content",
           }}
         >
@@ -231,7 +232,7 @@ const CustomModal: React.FC<ICustomModalProps> = ({
               ...buttonStyle,
               "width": 68,
               "&:hover": {
-                backgroundColor: "#175CD3 ",
+                backgroundColor: chartTheme.action.hover,
               },
             }}
             disableRipple

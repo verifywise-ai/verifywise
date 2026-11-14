@@ -8,7 +8,7 @@ import GovernanceTooltip from "./GovernanceTooltip";
 import { IGovernanceScenario } from "../../../domain/interfaces/i.governanceOs";
 import { Project } from "../../../domain/types/Project";
 import { User } from "../../../domain/types/User";
-import { border as borderPalette, background, text } from "../../themes/palette";
+import { border as borderPalette, background, text, radiusPx } from "../../themes/palette";
 
 interface ActivationWizardProps {
   open: boolean;
@@ -130,7 +130,7 @@ const ActivationWizard: React.FC<ActivationWizardProps> = ({
             <Box
               sx={{
                 border: `1px solid ${borderPalette.light}`,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 maxHeight: 320,
                 overflow: "auto",
               }}
@@ -201,7 +201,7 @@ const ActivationWizard: React.FC<ActivationWizardProps> = ({
           <Box
             sx={{
               border: `1px solid ${borderPalette.light}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: "16px",
               background: background.main,
             }}
@@ -258,7 +258,7 @@ const ActivationWizard: React.FC<ActivationWizardProps> = ({
         <Box
           sx={{
             border: `1px solid ${borderPalette.light}`,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             p: "16px",
             background: background.main,
           }}

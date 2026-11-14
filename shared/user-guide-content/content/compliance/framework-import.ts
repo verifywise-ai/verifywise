@@ -40,7 +40,7 @@ export const frameworkImportContent: ArticleContent = {
       type: 'ordered-list',
       items: [
         { text: 'Click **Frameworks** in the sidebar.' },
-        { text: 'In the **Imported frameworks** section, click **Import from Excel**. You can also use **Manage frameworks** > **Import framework from Excel**.' },
+        { text: 'Click **Manage frameworks** > **Import framework from Excel**. You can also open the **Settings** tab and click **Import from Excel** in the **Imported frameworks** section.' },
         { text: 'In the **Import a framework from Excel** dialog, click **Download template** to get `framework_import_template.xlsx`.' },
         { text: 'Fill in the template (see the format below) and save it.' },
         { text: 'Click **Choose file** and pick your file. A preview shows how many rows were found, with the first 5 rows.' },
@@ -49,7 +49,7 @@ export const frameworkImportContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'When the import works, you see "Framework imported: N topic(s) and N subtopic(s)." The framework then appears under **Imported frameworks** with its topic and subtopic counts.',
+      text: 'When the import works, you see "Framework imported: N topic(s) and N subtopic(s)." The framework then appears under **Imported frameworks** on the **Settings** tab, with its topic and subtopic counts.',
     },
     {
       type: 'heading',
@@ -205,7 +205,7 @@ export const frameworkImportContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'On the Frameworks page, click **Delete** next to the framework under **Imported frameworks**.' },
+        { text: 'On the Frameworks page, open the **Settings** tab and click **Delete** next to the framework under **Imported frameworks**.' },
         { text: 'Click **Delete** in the "Delete this imported framework?" dialog.' },
       ],
     },

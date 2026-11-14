@@ -1,5 +1,6 @@
 import { Theme } from "@mui/material/styles";
-import { background } from "../../themes/palette";
+import { background, palette as vwPalette, radiusPx } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 
 export const createProjectFormStyles = {
   formContainer: {
@@ -41,12 +42,12 @@ export const createProjectFormStyles = {
         borderColor: "none",
       },
       "&.Mui-focused .MuiOutlinedInput-notchedOutline": {
-        borderColor: "#888",
+        borderColor: vwPalette.text.accent,
         borderWidth: "1px",
       },
     },
     "& .MuiChip-root": {
-      borderRadius: "4px",
+      borderRadius: radiusPx.sm,
     },
   }),
 
@@ -77,7 +78,7 @@ export const createProjectFormStyles = {
         "& .MuiAutocomplete-listbox": {
           "& .MuiAutocomplete-option": {
             fontSize: "13px",
-            color: "#1c2130",
+            color: vwPalette.text.primary,
             paddingLeft: "9px",
             paddingRight: "9px",
           },
@@ -96,7 +97,7 @@ export const createProjectFormStyles = {
 
   errorText: {
     mt: 4,
-    color: "#f04438",
+    color: vwPalette.status.error.text,
     fontWeight: 300,
   },
 
@@ -117,15 +118,15 @@ export const createProjectFormStyles = {
     "borderRadius": 2,
     "maxHeight": 34,
     "textTransform": "inherit",
-    "backgroundColor": "#4C7DE7",
+    "backgroundColor": chartTheme.action.fill,
     "boxShadow": "none",
-    "border": "1px solid #175CD3",
+    "border": `1px solid ${chartTheme.action.border}`,
     "ml": "auto",
     "mr": 0,
     "mt": "30px",
     "&:hover": {
       boxShadow: "none",
-      backgroundColor: "#175CD3",
+      backgroundColor: chartTheme.action.hover,
     },
   },
 } as const;

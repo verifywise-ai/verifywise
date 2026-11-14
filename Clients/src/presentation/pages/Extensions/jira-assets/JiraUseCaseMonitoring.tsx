@@ -6,6 +6,7 @@
 import React from "react";
 import { Box, Typography, Stack } from "@mui/material";
 import { ClipboardCheck, Info } from "lucide-react";
+import { palette, radiusPx } from "../../../themes/palette";
 
 interface JiraUseCaseMonitoringProps {
   project: {
@@ -23,20 +24,20 @@ export const JiraUseCaseMonitoring: React.FC<JiraUseCaseMonitoringProps> = () =>
             width: 80,
             height: 80,
             borderRadius: "50%",
-            backgroundColor: "#f3f4f6",
+            backgroundColor: palette.background.hover,
             display: "flex",
             alignItems: "center",
             justifyContent: "center",
           }}
         >
-          <ClipboardCheck size={40} color="#9ca3af" />
+          <ClipboardCheck size={40} color={palette.text.disabled} />
         </Box>
 
         <Box sx={{ textAlign: "center" }}>
-          <Typography sx={{ fontSize: 18, fontWeight: 600, color: "#374151", mb: 1 }}>
+          <Typography sx={{ fontSize: 18, fontWeight: 600, color: palette.text.secondary, mb: 1 }}>
             Post-Market Monitoring
           </Typography>
-          <Typography sx={{ fontSize: 14, color: "#6b7280", maxWidth: 450 }}>
+          <Typography sx={{ fontSize: 14, color: palette.text.icon, maxWidth: 450 }}>
             Post-market monitoring is managed through your JIRA workflow. This use case was imported
             from JIRA Assets and monitoring data should be tracked in your JIRA instance.
           </Typography>
@@ -47,15 +48,19 @@ export const JiraUseCaseMonitoring: React.FC<JiraUseCaseMonitoringProps> = () =>
             display: "flex",
             alignItems: "flex-start",
             gap: 1.5,
-            backgroundColor: "#EFF6FF",
-            border: "1px solid #BFDBFE",
-            borderRadius: 2,
+            backgroundColor: palette.status.info.bg,
+            border: `1px solid ${palette.status.info.border}`,
+            borderRadius: radiusPx.sm,
             p: 2,
             maxWidth: 450,
           }}
         >
-          <Info size={18} color="#3B82F6" style={{ flexShrink: 0, marginTop: 2 }} />
-          <Typography sx={{ fontSize: 13, color: "#1E40AF" }}>
+          <Info
+            size={18}
+            color={palette.status.info.text}
+            style={{ flexShrink: 0, marginTop: 2 }}
+          />
+          <Typography sx={{ fontSize: 13, color: palette.status.info.text }}>
             To configure post-market monitoring for this AI system, update the monitoring attributes
             in JIRA Assets. Changes will sync automatically.
           </Typography>

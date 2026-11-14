@@ -36,6 +36,7 @@ import Chip from "../../../components/Chip";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { getPaginationRowCount, setPaginationRowCount } from "../../../../application/utils/paginationStorage";
 import palette from "../../../themes/palette";
+import { radiusPx } from "../../../themes/palette";
 import { sectionTitleSx, useCardSx, formatEntityType } from "../shared";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import {
@@ -473,7 +474,7 @@ export default function LogsPage() {
                     }}
                     sx={{
                       p: "10px 14px",
-                      borderRadius: "4px",
+                      borderRadius: radiusPx.sm,
                       border: `1px solid ${palette.border.light}`,
                       cursor: "pointer",
                       "&:hover": { backgroundColor: palette.background.hover },
@@ -537,7 +538,7 @@ export default function LogsPage() {
                         ml: 3,
                         mt: 0.5,
                         border: `1px solid ${palette.border.light}`,
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                         backgroundColor: palette.background.alt,
                       }}
                     >
@@ -546,7 +547,7 @@ export default function LogsPage() {
                           sx={{
                             mb: 1.5,
                             p: "16px",
-                            borderRadius: "4px",
+                            borderRadius: radiusPx.sm,
                             backgroundColor: palette.background.main,
                             border: `1px solid ${palette.border.light}`,
                           }}
@@ -585,7 +586,7 @@ export default function LogsPage() {
                           sx={{
                             mb: 1.5,
                             p: "16px",
-                            borderRadius: "4px",
+                            borderRadius: radiusPx.sm,
                             backgroundColor: palette.background.main,
                             border: `1px solid ${palette.border.light}`,
                           }}
@@ -611,7 +612,7 @@ export default function LogsPage() {
                           sx={{
                             mb: 1.5,
                             p: "16px",
-                            borderRadius: "4px",
+                            borderRadius: radiusPx.sm,
                             backgroundColor: palette.background.main,
                             border: `1px solid ${palette.border.light}`,
                           }}
@@ -637,7 +638,7 @@ export default function LogsPage() {
                           sx={{
                             mb: 1,
                             p: "16px",
-                            borderRadius: "4px",
+                            borderRadius: radiusPx.sm,
                             backgroundColor: palette.background.main,
                             border: `1px solid ${palette.border.light}`,
                           }}

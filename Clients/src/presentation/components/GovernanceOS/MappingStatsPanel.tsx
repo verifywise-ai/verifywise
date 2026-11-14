@@ -3,7 +3,14 @@ import { Box, Typography, Stack, CircularProgress, alpha } from "@mui/material";
 import { Network } from "lucide-react";
 import { useUnifiedView } from "../../../application/hooks/useGovernanceOs";
 import GovernanceTooltip from "./GovernanceTooltip";
-import { border as borderPalette, background, text, brand, accent } from "../../themes/palette";
+import {
+  border as borderPalette,
+  background,
+  text,
+  brand,
+  accent,
+  radiusPx,
+} from "../../themes/palette";
 
 interface MappingStatsPanelProps {
   projectId: number;
@@ -47,7 +54,7 @@ const MappingStatsPanel: React.FC<MappingStatsPanelProps> = ({ projectId }) => {
       <Box
         sx={{
           border: `1px dashed ${borderPalette.light}`,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           p: "16px",
           background: background.main,
         }}
@@ -66,7 +73,7 @@ const MappingStatsPanel: React.FC<MappingStatsPanelProps> = ({ projectId }) => {
     <Box
       sx={{
         border: `1px solid ${borderPalette.dark}`,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         p: "16px",
         background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
       }}
@@ -98,7 +105,7 @@ const MappingStatsPanel: React.FC<MappingStatsPanelProps> = ({ projectId }) => {
               sx={{
                 p: "16px",
                 background: background.hover,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 textAlign: "center",
               }}
             >
@@ -131,7 +138,7 @@ const MappingStatsPanel: React.FC<MappingStatsPanelProps> = ({ projectId }) => {
                     alignItems: "center",
                     height: 24,
                     px: "8px",
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     fontSize: 12,
                     fontWeight: 400,
                     textTransform: "capitalize",
@@ -189,7 +196,7 @@ const MappingStatsPanel: React.FC<MappingStatsPanelProps> = ({ projectId }) => {
                         alignItems: "center",
                         height: 24,
                         px: "8px",
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                         fontSize: 12,
                         fontWeight: 500,
                         textTransform: "capitalize",

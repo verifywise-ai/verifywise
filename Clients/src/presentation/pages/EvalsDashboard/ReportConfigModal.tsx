@@ -5,7 +5,7 @@ import Field from "../../components/Inputs/Field";
 import Radio from "../../components/Inputs/Radio";
 import Checkbox from "../../components/Inputs/Checkbox";
 import Chip from "../../components/Chip";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 import type { ReportConfig, ReportSection, ReportFormat } from "./types";
 import { DEFAULT_REPORT_SECTIONS } from "./types";
 
@@ -165,7 +165,7 @@ export default function ReportConfigModal({
                 maxHeight: 180,
                 overflowY: "auto",
                 border: `1px solid ${palette.border.dark}`,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
               }}
             >
               {completedExperiments.map((exp) => (
@@ -232,7 +232,7 @@ export default function ReportConfigModal({
                 maxHeight: 220,
                 overflowY: "auto",
                 border: `1px solid ${palette.border.dark}`,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
               }}
             >
               {sections.map((section) => (

@@ -40,6 +40,7 @@ import StandardTablePagination from "../StandardTablePagination";
 import type { StandardColumn } from "../../../../domain/types/standardTable";
 import { useCustomFieldDefinitions } from "../../../../application/hooks/useCustomFields";
 import { formatCustomFieldValue } from "../../CustomFieldsSection/formatCustomFieldValue";
+import { palette } from "../../../themes/palette";
 
 // Status display mapping
 const STATUS_DISPLAY_MAP: Record<string, string> = {
@@ -481,7 +482,7 @@ const TasksTable: React.FC<ITasksTableProps> = ({
                               justifyContent: "center",
                               fontSize: 11,
                               fontWeight: 500,
-                              color: "#374151",
+                              color: palette.text.secondary,
                               border: "2px solid background.main",
                             }}
                           >

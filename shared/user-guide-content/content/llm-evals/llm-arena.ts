@@ -20,7 +20,7 @@ export const llmArenaContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Arena is off by default. An Admin can turn it on under **Arena** in **Settings**, at the bottom of the LLM Evals sidebar. While Arena is off, it is hidden from the sidebar and comparisons can\'t be created, opened or deleted. Turning Arena off keeps your comparisons, and they reappear when an Admin turns it back on.',
+      text: 'Arena is off by default. An Admin can turn it on under **Arena** in **Settings**, the last item under **Enforce > LLM Evals** in the sidebar. While Arena is off, it is hidden from the sidebar and comparisons can\'t be created, opened or deleted. Turning Arena off keeps your comparisons, and they reappear when an Admin turns it back on.',
     },
     {
       type: 'paragraph',
@@ -34,7 +34,7 @@ export const llmArenaContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Navigate to the **Arena** tab in your evals project. Select two models to compare by choosing a provider and model name for each side. You can compare models from different providers (e.g., GPT-4 vs Claude) or different versions of the same provider\'s models.',
+      text: 'In the sidebar, open **Enforce > LLM Evals** and click **Arena**. Select two models to compare by choosing a provider and model name for each side. You can compare models from different providers (e.g., GPT-4 vs Claude) or different versions of the same provider\'s models.',
     },
     {
       type: 'heading',

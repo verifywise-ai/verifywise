@@ -52,6 +52,7 @@ import ScoredOptionsEditor, {
 } from "./ScoredOptionsEditor";
 import MoveOptionAnswersModal, { OptionInUse } from "./MoveOptionAnswersModal";
 import { useCan, usePermissionsSettled } from "../../../../application/hooks/useCan";
+import { palette, radiusPx } from "../../../themes/palette";
 
 const TABLE_COLUMNS = [
   { id: "label", label: "LABEL" },
@@ -150,7 +151,7 @@ const CustomFieldsTab: React.FC = () => {
           <Typography sx={{ fontSize: 15, fontWeight: 600, color: "text.black" }}>
             Custom fields
           </Typography>
-          <Typography sx={{ fontSize: 13, color: "#666666", mt: 0.5 }}>
+          <Typography sx={{ fontSize: 13, color: palette.text.tertiary, mt: 0.5 }}>
             Define additional fields that appear on records across your organization. Choose an
             entity and add fields. Field keys are permanent once created.
           </Typography>
@@ -259,7 +260,7 @@ const CustomFieldsTab: React.FC = () => {
                         <Chip
                           key={chip.key}
                           label={chip.text}
-                          sx={{ fontSize: "11px", height: "20px", borderRadius: "4px" }}
+                          sx={{ fontSize: "11px", height: "20px", borderRadius: radiusPx.sm }}
                         />
                       ))}
                     </Stack>

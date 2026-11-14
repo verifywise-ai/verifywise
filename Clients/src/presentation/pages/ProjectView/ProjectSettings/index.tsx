@@ -48,7 +48,7 @@ import {
   useSetProjectGroups,
 } from "../../../../application/hooks/useGroups";
 import { CustomizableButton } from "../../../components/button/customizable-button";
-import { border, text } from "../../../themes/palette";
+import { border, text, radiusPx } from "../../../themes/palette";
 import { Save as SaveIcon, Trash2 as DeleteIcon } from "lucide-react";
 import CustomizableToast from "../../../components/Toast";
 import CustomizableSkeleton from "../../../components/Skeletons";
@@ -1354,10 +1354,10 @@ const ProjectSettings = React.memo(
                                   ...getAutocompleteStyles(theme, {
                                     hasError: !!errors.monitoredRegulationsAndStandards,
                                   })["& .MuiOutlinedInput-root"],
-                                  borderRadius: "4px",
+                                  borderRadius: radiusPx.sm,
                                 },
                                 "& .MuiChip-root": {
-                                  "borderRadius": "4px",
+                                  "borderRadius": radiusPx.sm,
                                   "& .MuiChip-deleteIcon": {
                                     display:
                                       values.monitoredRegulationsAndStandards.length === 1
@@ -1489,10 +1489,10 @@ const ProjectSettings = React.memo(
                         ...getAutocompleteStyles(theme, { hasError: !!errors.members })[
                           "& .MuiOutlinedInput-root"
                         ],
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                       },
                       "& .MuiChip-root": {
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                       },
                     }}
                     slotProps={{
@@ -1597,10 +1597,10 @@ const ProjectSettings = React.memo(
                         ...getAutocompleteStyles(theme, { hasError: false })[
                           "& .MuiOutlinedInput-root"
                         ],
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                       },
                       "& .MuiChip-root": {
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                       },
                     }}
                   />

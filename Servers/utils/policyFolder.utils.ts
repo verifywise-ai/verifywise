@@ -10,6 +10,7 @@
 import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../database/db";
 import { IVirtualFolder } from "../domain.layer/interfaces/i.virtualFolder";
+import { assertOrgOwnsIds, parseBulkIds } from "./bulkAction.utils";
 
 /**
  * Get all folders that a policy belongs to
@@ -17,16 +18,19 @@ import { IVirtualFolder } from "../domain.layer/interfaces/i.virtualFolder";
 export const getPolicyFoldersQuery = async (
   organizationId: number,
   policyId: number,
+  transaction?: Transaction,
 ): Promise<IVirtualFolder[]> => {
   const result = await sequelize.query(
     `SELECT vf.*
     FROM virtual_folders vf
-    INNER JOIN policy_folder_mappings pfm ON vf.id = pfm.folder_id
+    INNER JOIN policy_folder_mappings pfm
+      ON vf.id = pfm.folder_id AND vf.organization_id = pfm.organization_id
     WHERE pfm.policy_id = :policyId AND pfm.organization_id = :organizationId
     ORDER BY vf.name ASC`,
     {
       replacements: { policyId, organizationId },
       type: QueryTypes.SELECT,
+      transaction,
     },
   );
   return result as IVirtualFolder[];
@@ -51,15 +55,24 @@ export const getPolicyIdsInFolderQuery = async (
 };
 
 /**
- * Bulk update policy folder assignments (replace all folder assignments for a policy)
+ * Bulk update policy folder assignments (replace all folder assignments for a policy).
+ * The caller checks the policy belongs to the organization; every folder id is
+ * checked here.
+ *
+ * @throws ValidationException when a folder id is not a positive integer.
+ * @throws ForbiddenException when a folder belongs to another organization.
  */
 export const bulkUpdatePolicyFoldersQuery = async (
   organizationId: number,
   policyId: number,
-  folderIds: number[],
+  rawFolderIds: unknown[],
   userId: number,
   transaction?: Transaction,
 ): Promise<void> => {
+  const folderIds =
+    rawFolderIds.length > 0 ? parseBulkIds(rawFolderIds, { field: "folder_ids" }) : [];
+  await assertOrgOwnsIds({ table: "virtual_folders", ids: folderIds, organizationId, transaction });
+
   // Delete existing assignments
   await sequelize.query(
     `DELETE FROM policy_folder_mappings

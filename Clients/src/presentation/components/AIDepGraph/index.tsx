@@ -69,6 +69,7 @@ import {
   sidebarTableLabelSx,
   sidebarTableValueSx,
 } from "./styles";
+import { radiusPx } from "../../themes/palette";
 
 // Register custom node types
 const nodeTypes = { aiDep: AIDepNode };
@@ -442,7 +443,7 @@ const AIDepGraphInner: React.FC<AIDepGraphProps> = ({ scanId, repositoryUrl }) =
                 "alignItems": "flex-start",
                 "& .MuiToggleButton-root": {
                   "border": `1px solid ${theme.palette.divider}`,
-                  "borderRadius": "4px !important",
+                  "borderRadius": `${radiusPx.sm} !important`,
                   "textTransform": "none",
                   "fontSize": theme.typography.caption.fontSize,
                   "py": 0.25,

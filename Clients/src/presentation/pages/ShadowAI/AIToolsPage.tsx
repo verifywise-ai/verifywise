@@ -36,7 +36,7 @@ import {
 } from "../../../application/repository/shadowAi.repository";
 import { IShadowAiTool, ShadowAiToolStatus } from "../../../domain/interfaces/i.shadowAi";
 import singleTheme from "../../themes/v1SingleTheme";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 import { EmptyState } from "../../components/EmptyState";
 import EmptyStateTip from "../../components/EmptyState/EmptyStateTip";
 import { CustomizableButton } from "../../components/button/customizable-button";
@@ -515,7 +515,7 @@ export default function AIToolsPage() {
       </Stack>
 
       {loading ? (
-        <Skeleton variant="rectangular" height={300} sx={{ borderRadius: "4px" }} />
+        <Skeleton variant="rectangular" height={300} sx={{ borderRadius: radiusPx.sm }} />
       ) : tools.length === 0 ? (
         <EmptyState
           icon={Radar}

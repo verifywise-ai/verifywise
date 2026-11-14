@@ -5,7 +5,7 @@ import { useAuth } from "../../../application/hooks/useAuth";
 import useDeadlineWarnings from "../../../application/hooks/useDeadlineWarnings";
 import { SNOOZE_OPTIONS } from "../../../application/config/deadlineConfig";
 import { getSnoozeExpiry, setSnooze } from "../../../application/utils/deadlineSnooze";
-import { status, background, text } from "../../themes/palette";
+import { status, background, text, radiusPx } from "../../themes/palette";
 
 /**
  * Banner shown on the Tasks page when the organization has overdue or
@@ -72,23 +72,23 @@ const DeadlineWarningBox = () => {
       direction={{ xs: "column", sm: "row" }}
       alignItems={{ xs: "flex-start", sm: "center" }}
       justifyContent="space-between"
-      spacing={1.5}
+      gap="8px"
       role="alert"
       sx={{
-        py: "10px",
-        px: 2,
+        // Same frame as the InfoBox note: 10px 12px padding, 18px icon, 8px gap.
+        padding: "10px 12px",
         backgroundColor: palette.bg,
         border: `1px solid ${palette.border}`,
-        borderRadius: 2,
+        borderRadius: radiusPx.sm,
       }}
     >
-      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ minWidth: 0 }}>
+      <Stack direction="row" alignItems="center" gap="8px" sx={{ minWidth: 0 }}>
         {isCritical ? (
-          <AlertTriangle size={16} color={palette.text} style={{ flexShrink: 0 }} />
+          <AlertTriangle size={18} strokeWidth={2} color={palette.text} style={{ flexShrink: 0 }} />
         ) : (
-          <Clock size={16} color={palette.text} style={{ flexShrink: 0 }} />
+          <Clock size={18} strokeWidth={2} color={palette.text} style={{ flexShrink: 0 }} />
         )}
-        <Typography sx={{ fontSize: 13, fontWeight: 500, color: palette.text }}>
+        <Typography sx={{ fontSize: 13, fontWeight: 500, lineHeight: 1.5, color: palette.text }}>
           {message}
         </Typography>
       </Stack>
@@ -131,7 +131,7 @@ const DeadlineWarningBox = () => {
             sx: {
               minWidth: "160px",
               boxShadow: "0px 4px 12px rgba(0, 0, 0, 0.1)",
-              borderRadius: "8px",
+              borderRadius: radiusPx.lg,
               mt: 1,
             },
           },

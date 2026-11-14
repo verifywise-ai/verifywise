@@ -13,8 +13,6 @@ import {
 } from "../utils/aiTrustIndex.utils";
 import { isEmail } from "../utils/validations/email.utils";
 
-const isAdmin = (role?: string) => role === "Admin" || role === "SuperAdmin";
-
 export async function getApps(req: Request, res: Response): Promise<any> {
   const fn = "getApps",
     file = "aiTrustIndex.ctrl.ts";
@@ -212,8 +210,6 @@ export async function updateSettings(req: Request, res: Response): Promise<any> 
     organizationId: req.organizationId!,
   });
   try {
-    if (!isAdmin(req.role))
-      return res.status(403).json(STATUS_CODE[403](req.t!("Admin access required")));
     const recipientUserIds = req.body?.recipientUserIds ?? [];
     const recipientEmails = req.body?.recipientEmails ?? [];
     if (!Array.isArray(recipientUserIds) || !Array.isArray(recipientEmails))

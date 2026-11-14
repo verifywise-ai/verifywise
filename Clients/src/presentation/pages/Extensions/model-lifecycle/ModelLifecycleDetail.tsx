@@ -20,6 +20,7 @@ import { useNavigate } from "react-router";
 import ModelLifecycleTab from "./ModelLifecycleTab";
 import { HistorySidebar } from "../../../components/Common/HistorySidebar";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
+import { radiusPx } from "../../../themes/palette";
 
 interface ModelData {
   id: number;
@@ -82,7 +83,7 @@ export default function ModelLifecycleDetail({ modelId }: ModelLifecycleDetailPr
       <Box
         sx={{
           border: `1px solid ${theme.palette.divider}`,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           p: "20px",
           backgroundColor: theme.palette.background.paper,
         }}
@@ -159,7 +160,7 @@ export default function ModelLifecycleDetail({ modelId }: ModelLifecycleDetailPr
                     ? theme.palette.primary.main
                     : theme.palette.text.secondary,
                   "border": `1px solid ${theme.palette.divider}`,
-                  "borderRadius": "4px",
+                  "borderRadius": radiusPx.sm,
                   "&:hover": {
                     backgroundColor: theme.palette.background.fill,
                   },

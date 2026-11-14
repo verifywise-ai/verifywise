@@ -78,7 +78,14 @@ import React, { useId } from "react";
 import { Modal, Stack, Box, Typography, IconButton } from "@mui/material";
 import { X as CloseIcon } from "lucide-react";
 import { CustomizableButton } from "../../button/customizable-button";
-import { background, border, brand, text } from "../../../themes/palette";
+import {
+  background,
+  border,
+  brand,
+  text,
+  radiusPx,
+  palette as vwPalette,
+} from "../../../themes/palette";
 
 interface StandardModalProps {
   /** Controls whether the modal is visible */
@@ -196,7 +203,7 @@ const StandardModal: React.FC<StandardModalProps> = ({
           maxWidth: "calc(100vw - 48px)",
           maxHeight: "calc(100vh - 48px)",
           backgroundColor: "background.main",
-          borderRadius: "8px",
+          borderRadius: radiusPx.lg,
           overflow: "hidden",
           transition: "max-width 300ms cubic-bezier(0.4, 0, 0.2, 1)",
         }}
@@ -204,7 +211,7 @@ const StandardModal: React.FC<StandardModalProps> = ({
         {/* Header Section with Background */}
         <Stack
           sx={{
-            background: "linear-gradient(180deg, #F8FAFB 0%, #F3F5F8 100%)",
+            background: `linear-gradient(180deg, ${vwPalette.background.alt} 0%, ${vwPalette.background.hover} 100%)`,
             borderBottom: children ? `1px solid ${border.light}` : "none",
             padding: "16px 24px",
             paddingBottom: children ? "36px" : "16px",
@@ -257,7 +264,7 @@ const StandardModal: React.FC<StandardModalProps> = ({
                     "display": "flex",
                     "alignItems": "center",
                     "padding": "4px",
-                    "borderRadius": "4px",
+                    "borderRadius": radiusPx.sm,
                     "&:hover": {
                       backgroundColor: background.hover,
                     },
@@ -291,7 +298,7 @@ const StandardModal: React.FC<StandardModalProps> = ({
                   ? "min(740px, calc(90vh - 180px))"
                   : "calc(100vh - 240px)",
               border: `1px solid ${border.light}`,
-              borderRadius: "16px",
+              borderRadius: radiusPx.xxl,
               backgroundColor: "background.main",
               zIndex: 1,
               position: "relative",
@@ -323,7 +330,7 @@ const StandardModal: React.FC<StandardModalProps> = ({
             justifyContent={customFooter ? "space-between" : "flex-end"}
             spacing={6}
             sx={{
-              background: "linear-gradient(180deg, #F3F5F8 0%, #F8FAFB 100%)",
+              background: `linear-gradient(180deg, ${vwPalette.background.hover} 0%, ${vwPalette.background.alt} 100%)`,
               borderTop: children ? `1px solid ${border.light}` : "none",
               padding: "12px 24px",
               paddingTop: children ? "32px" : "12px",

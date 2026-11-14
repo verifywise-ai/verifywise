@@ -23,8 +23,8 @@ import GroupedSelect from "../../components/Inputs/Select/GroupedSelect";
 import ModelSelector from "../../components/Inputs/ModelSelector";
 import { DEFAULT_JUDGE } from "../../utils/providers";
 import ArenaResultsPage from "./ArenaResultsPage";
-import { FilterBy, FilterCondition, FilterColumn } from "../../components/Table/FilterBy";
-import { GroupBy, GroupByOption } from "../../components/Table/GroupBy";
+import { FilterCondition, FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import {
   createArenaComparison,
   listArenaComparisons,
@@ -38,7 +38,7 @@ import {
   type LLMApiKey,
 } from "../../../application/repository/deepEval.repository";
 import { useNavigate } from "react-router";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 
 // Timing constants (in milliseconds)
 const POLLING_INTERVAL_MS = 5000;
@@ -127,6 +127,13 @@ interface ArenaPageProps {
   orgId?: string | null;
 }
 
+/** The fields the battle filter reads; the filter chips count rows with it. */
+const getComparisonFieldValue = (comparison: ArenaComparisonSummary, columnId: string) => {
+  if (columnId === "status") return comparison.status;
+  if (columnId === "name") return comparison.name;
+  return null;
+};
+
 export default function ArenaPage({ orgId }: ArenaPageProps) {
   const navigate = useNavigate();
   const [comparisons, setComparisons] = useState<ArenaComparisonSummary[]>([]);
@@ -148,15 +155,10 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
   // Configured providers (API keys)
   const [configuredProviders, setConfiguredProviders] = useState<LLMApiKey[]>([]);
 
-  // Filter, Search, Group state
+  // Filter and search state
   const [searchQuery, setSearchQuery] = useState("");
   const [filterConditions, setFilterConditions] = useState<FilterCondition[]>([]);
   const [filterLogic, setFilterLogic] = useState<"and" | "or">("and");
-  // Group state - values reserved for future grouping feature
-
-  const [_groupBy, setGroupBy] = useState<string | null>(null);
-
-  const [_groupSortOrder, setGroupSortOrder] = useState<"asc" | "desc">("asc");
 
   // Filter columns for arena battles
   const filterColumns: FilterColumn[] = [
@@ -173,9 +175,6 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
     },
     { id: "name", label: "Battle name", type: "text" },
   ];
-
-  // Group by options
-  const groupByOptions: GroupByOption[] = [{ id: "status", label: "Status" }];
 
   // Wizard step state
   const [activeStep, setActiveStep] = useState(0);
@@ -567,7 +566,7 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
           <Box
             sx={{
               border: `2px dashed ${palette.accent.indigo.border}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: "16px",
               textAlign: "center",
               backgroundColor: palette.accent.purple.bg,
@@ -644,19 +643,16 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
             gap="4px"
           >
             <Stack direction="row" alignItems="center" gap="4px">
-              <FilterBy
+              <TableFilter
                 columns={filterColumns}
+                defaultConditions={filterConditions}
+                defaultLogic={filterLogic}
                 onFilterChange={(conditions, logic) => {
                   setFilterConditions(conditions);
                   setFilterLogic(logic);
                 }}
-              />
-              <GroupBy
-                options={groupByOptions}
-                onGroupChange={(group, order) => {
-                  setGroupBy(group);
-                  setGroupSortOrder(order);
-                }}
+                data={comparisons}
+                getFieldValue={getComparisonFieldValue}
               />
               <SearchBox
                 placeholder="Search battles..."
@@ -960,7 +956,7 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
                     key={index}
                     sx={{
                       p: "6px",
-                      borderRadius: "4px",
+                      borderRadius: radiusPx.sm,
                       border: "2px solid",
                       borderColor: colorScheme.border,
                       backgroundColor: colorScheme.bg,
@@ -978,7 +974,7 @@ export default function ArenaPage({ orgId }: ArenaPageProps) {
                         sx={{
                           px: "4px",
                           py: "1.5px",
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                           background: colorScheme.gradient,
                           color: palette.background.main,
                           fontSize: 12,

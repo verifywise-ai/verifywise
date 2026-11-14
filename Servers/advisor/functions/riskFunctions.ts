@@ -6,11 +6,16 @@ import {
   createRiskQuery,
   updateRiskByIdQuery,
   deleteRiskByIdQuery,
+  assertRiskReferencesInOrganization,
+  linkRiskToProjectQuery,
 } from "../../utils/risk.utils";
 import { getTimeseriesForTimeframe } from "../../utils/history/riskHistory.utils";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { sequelize } from "../../database/db";
 import logger from "../../utils/logger/fileLogger";
+import { getEffectiveRiskLevel } from "../../utils/riskLevel.utils";
+
+const effectiveLevel = getEffectiveRiskLevel;
 
 const VALID_RISK_CATEGORIES = [
   "Strategic risk",
@@ -109,7 +114,7 @@ const fetchRisks = async (
       risks = risks.filter((r) => r.mitigation_status === params.mitigationStatus);
     }
     if (params.riskLevel) {
-      risks = risks.filter((r) => r.risk_level_autocalculated === params.riskLevel);
+      risks = risks.filter((r) => effectiveLevel(r) === params.riskLevel);
     }
     if (params.aiLifecyclePhase) {
       risks = risks.filter((r) => r.ai_lifecycle_phase === params.aiLifecyclePhase);
@@ -124,7 +129,7 @@ const fetchRisks = async (
     return risks.map((r) => ({
       id: r.id,
       risk_name: r.risk_name,
-      risk_level: r.risk_level_autocalculated,
+      risk_level: effectiveLevel(r),
       severity: r.severity,
       likelihood: r.likelihood,
       risk_category: r.risk_category,
@@ -232,9 +237,9 @@ const getRiskAnalytics = async (
     // 5. Risk Level Summary
     const riskLevelSummary: { [level: string]: number } = {};
     risks.forEach((risk) => {
-      if (risk.risk_level_autocalculated) {
-        riskLevelSummary[risk.risk_level_autocalculated] =
-          (riskLevelSummary[risk.risk_level_autocalculated] || 0) + 1;
+      const level = effectiveLevel(risk);
+      if (level) {
+        riskLevelSummary[level] = (riskLevelSummary[level] || 0) + 1;
       }
     });
 
@@ -288,13 +293,9 @@ const getExecutiveSummary = async (
     const totalActiveRisks = risks.length;
 
     // Count critical and high risks
-    const criticalRisks = risks.filter(
-      (r) => r.severity === "Catastrophic" || r.risk_level_autocalculated === "Very high risk",
-    ).length;
+    const criticalRisks = risks.filter((r) => effectiveLevel(r) === "Very high risk").length;
 
-    const highRisks = risks.filter(
-      (r) => r.severity === "Major" || r.risk_level_autocalculated === "High risk",
-    ).length;
+    const highRisks = risks.filter((r) => effectiveLevel(r) === "High risk").length;
 
     // Top categories (top 3)
     const categoryMap = new Map<string, number>();
@@ -510,6 +511,7 @@ const agentAssignRiskOwner = createWriteToolFn({
   executeFn: async (params, organizationId) => {
     const riskId = params.risk_id as number;
     const ownerUserId = params.owner_user_id as number;
+    await assertRiskReferencesInOrganization({ risk_owner: ownerUserId }, organizationId);
     await sequelize.query(
       `UPDATE risks SET risk_owner = :owner_user_id, updated_at = NOW() WHERE id = :risk_id AND organization_id = :organization_id AND is_deleted = false`,
       {
@@ -572,14 +574,7 @@ const agentLinkRiskToProject = createWriteToolFn({
   executeFn: async (params, organizationId) => {
     const riskId = params.risk_id as number;
     const projectId = params.project_id as number;
-    await sequelize.query(
-      `INSERT INTO risks_projects_frameworks (organization_id, risk_id, project_id)
-       VALUES (:organization_id, :risk_id, :project_id)
-       ON CONFLICT DO NOTHING`,
-      {
-        replacements: { organization_id: organizationId, risk_id: riskId, project_id: projectId },
-      },
-    );
+    await linkRiskToProjectQuery(riskId, projectId, organizationId);
     return {
       risk_id: riskId,
       project_id: projectId,

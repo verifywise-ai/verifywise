@@ -321,7 +321,8 @@ export const getArenaComparisonResults = (comparisonId: string) =>
 export const deleteArenaComparison = (comparisonId: string) =>
   deepEvalArenaService.deleteComparison(comparisonId);
 
-export const getArenaSetting = () => deepEvalArenaService.getSetting();
+export const getArenaSetting = (options?: { silent?: boolean }) =>
+  deepEvalArenaService.getSetting(options);
 
 export const updateArenaSetting = (enabled: boolean) => deepEvalArenaService.updateSetting(enabled);
 

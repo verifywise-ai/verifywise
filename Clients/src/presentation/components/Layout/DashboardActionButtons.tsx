@@ -2,8 +2,8 @@ import { useState, useMemo, memo, useCallback, useEffect, type ReactNode } from 
 import { Stack, IconButton, Box } from "@mui/material";
 import { useNavigate, useLocation } from "react-router";
 import { useSelector } from "react-redux";
+import { useQueryClient } from "@tanstack/react-query";
 import { Search, Zap, WorkflowIcon, Package, ClipboardList } from "lucide-react";
-import { useAuth } from "../../../application/hooks/useAuth";
 import VWTooltip from "../VWTooltip";
 import RequestorApprovalModal from "../Modals/RequestorApprovalModal";
 import { ApprovalButton } from "./ApprovalButton";
@@ -13,10 +13,13 @@ import {
   getMyApprovalRequests,
 } from "../../../application/repository/approvalRequest.repository";
 import { getAppModuleFromPath, isGlobalPath } from "../../../application/utils/appModule";
+import { onApprovalRequestsChanged } from "../../../application/events/approvalRequestEvents";
 import type { RootState } from "../../../application/redux/store";
 import { actionButtonsStyles } from "./style";
 import "./icon-shake.css";
+import { HOME_QUEUE_QUERY_KEY } from "../../../application/hooks/useHomeQueue";
 import { useCan } from "../../../application/hooks/useCan";
+import { radiusPx } from "../../themes/palette";
 
 interface DashboardActionButtonsProps {
   hideOnMainDashboard?: boolean;
@@ -31,7 +34,7 @@ function KeyboardBadge({ children }: { children: ReactNode }) {
         alignItems: "center",
         justifyContent: "center",
         backgroundColor: "rgba(255, 255, 255, 0.15)",
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         padding: "2px 6px",
         fontSize: "12px",
         fontWeight: 500,
@@ -63,10 +66,8 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
 }: DashboardActionButtonsProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { userRoleName } = useAuth();
-  // The intake forms link stays on the role name: its routes allow Editors
-  // too (intakeForm.edit), and no Admin-only key covers it.
-  const isAdmin = userRoleName === "Admin";
+  // Intake forms: every write and review action on the page needs intakeForm.edit.
+  const canManageIntake = useCan("intakeForm.edit");
   const canManageWorkflows = useCan("approvalWorkflow.admin");
   const canManageExtensions = useCan("extension.admin");
 
@@ -118,7 +119,7 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
   const baseStyles = {
     "width": "32px",
     "height": "32px",
-    "borderRadius": "4px",
+    "borderRadius": radiusPx.sm,
     "transition": "all 0.2s ease",
     "&:hover svg": {
       animation: "icon-shake 400ms ease-in-out",
@@ -126,6 +127,9 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
   };
 
   const [totalApprovalCount, setTotalApprovalCount] = useState(0);
+
+  // A decision made in the modal also takes the request off Home.
+  const queryClient = useQueryClient();
 
   // Function to fetch approval counts
   const fetchApprovalCounts = useCallback(async () => {
@@ -145,10 +149,22 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
     }
   }, []);
 
+  const handleApprovalsRefresh = useCallback(() => {
+    queryClient.invalidateQueries({ queryKey: HOME_QUEUE_QUERY_KEY });
+    return fetchApprovalCounts();
+  }, [queryClient, fetchApprovalCounts]);
+
   // Initial fetch on mount (skip on super-admin routes — no org context)
   useEffect(() => {
     if (isSuperAdminRoute) return;
     fetchApprovalCounts();
+  }, [fetchApprovalCounts, isSuperAdminRoute]);
+
+  // A request decided outside this bar's own modal (Approval workflows page,
+  // opened from a Home link) changes the count too.
+  useEffect(() => {
+    if (isSuperAdminRoute) return undefined;
+    return onApprovalRequestsChanged(fetchApprovalCounts);
   }, [fetchApprovalCounts, isSuperAdminRoute]);
 
   return (
@@ -217,7 +233,7 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
       )}
 
       {/* Intake forms (Governance module only) */}
-      {isAdmin && isGovernanceModule && (
+      {canManageIntake && isGovernanceModule && (
         <VWTooltip
           header="Intake forms"
           content={"Create and manage intake forms for external submissions."}
@@ -281,7 +297,7 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
       <RequestorApprovalModal
         isOpen={isRequestModalOpen}
         onClose={() => setIsRequestModalOpen(false)}
-        onRefresh={fetchApprovalCounts}
+        onRefresh={handleApprovalsRefresh}
       />
     </Stack>
   );

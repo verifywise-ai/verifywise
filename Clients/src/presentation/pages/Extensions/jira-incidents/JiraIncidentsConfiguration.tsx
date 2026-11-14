@@ -35,6 +35,7 @@ import { MappingTable } from "./MappingTable";
 import { SyncActivity } from "./SyncActivity";
 import { describeJiraIncidentsRun } from "./runOutcome";
 import { useCan } from "../../../../application/hooks/useCan";
+import { radiusPx } from "../../../themes/palette";
 
 const CONTROL_HEIGHT_SX = { height: 30, minHeight: 30 };
 const LABEL_DEBOUNCE_MS = 300;
@@ -435,7 +436,7 @@ export function JiraIncidentsConfiguration() {
                     update({ label });
                     setLabelSuggestions([]);
                   }}
-                  sx={{ borderRadius: "4px" }}
+                  sx={{ borderRadius: radiusPx.sm }}
                 />
               ))}
             </Stack>

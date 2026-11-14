@@ -39,7 +39,7 @@ describe("RiskVisualizationTabs", () => {
   it("renders the tab bar with Heat map and Categories tabs", () => {
     renderWithProviders(<RiskVisualizationTabs risks={[]} />);
 
-    expect(screen.getByText("Heat map")).toBeInTheDocument();
+    expect(screen.getByText("Heat map (inherent level)")).toBeInTheDocument();
     expect(screen.getByText("Categories")).toBeInTheDocument();
   });
 

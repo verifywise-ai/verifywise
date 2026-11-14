@@ -3,7 +3,6 @@ import {
   Table,
   TableBody,
   TableCell,
-  TableContainer,
   TableHead,
   TableRow,
   Stack,
@@ -11,7 +10,9 @@ import {
   LinearProgress,
 } from "@mui/material";
 import Chip from "../../Chip";
+import ScrollableTableContainer from "../ScrollableTableContainer";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import { palette, radiusPx } from "../../../themes/palette";
 
 export interface UseCaseRow {
   id: number;
@@ -71,11 +72,9 @@ const UseCasesTable: React.FC<UseCasesTableProps> = ({
     formatDateOverride ?? ((date: string) => defaultFormatDate(date, formatUserDate));
 
   return (
-    // TableContainer scrolls once the table overflows its card, and a scrollable
-    // region that cannot be focused is unreachable by keyboard. tabIndex makes it
-    // focusable so the arrow keys can scroll it; the role and label say what it is
-    // once focused.
-    <TableContainer tabIndex={0} role="region" aria-label={ariaLabel}>
+    // Scrolls once the table overflows its card; it then takes keyboard focus so
+    // the arrow keys can scroll it.
+    <ScrollableTableContainer ariaLabel={ariaLabel}>
       <Table size="small">
         <TableHead>
           <TableRow>
@@ -98,7 +97,7 @@ const UseCasesTable: React.FC<UseCasesTableProps> = ({
                 onRowClick?.(useCase.id);
               }}
             >
-              <TableCell sx={{ fontSize: 13, color: "#1F2937", ...bodyCellStyle }}>
+              <TableCell sx={{ fontSize: 13, color: palette.text.primary, ...bodyCellStyle }}>
                 {useCase.name}
               </TableCell>
               <TableCell sx={bodyCellStyle}>
@@ -110,11 +109,11 @@ const UseCasesTable: React.FC<UseCasesTableProps> = ({
                     sx={{
                       "width": 60,
                       "height": 4,
-                      "borderRadius": 2,
+                      "borderRadius": radiusPx.sm,
                       "backgroundColor": "status.default.border",
                       "& .MuiLinearProgress-bar": {
                         backgroundColor: "brand.primary",
-                        borderRadius: 2,
+                        borderRadius: radiusPx.sm,
                       },
                     }}
                   />
@@ -133,7 +132,7 @@ const UseCasesTable: React.FC<UseCasesTableProps> = ({
           ))}
         </TableBody>
       </Table>
-    </TableContainer>
+    </ScrollableTableContainer>
   );
 };
 

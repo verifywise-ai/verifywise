@@ -25,9 +25,9 @@ import React, { useCallback, useEffect, useState } from "react";
 import { Box, Modal, Stack, Typography } from "@mui/material";
 import { LucideIcon, Shield, Check, X } from "lucide-react";
 import { CustomizableButton } from "../../button/customizable-button";
-import { border, icon, text } from "../../../themes/palette";
+import { border, icon, text, palette as vwPalette, radiusPx } from "../../../themes/palette";
 import { textStyles, fontSize } from "../../../themes/typography";
-import grey from "@design-tokens/primitives";
+import { grey } from "../../../themes";
 
 const useIsDarkMode = () => {
   const [isDark, setIsDark] = useState(() =>
@@ -166,7 +166,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         className="onboarding-wizard"
         sx={{
           width,
-          borderRadius: "12px",
+          borderRadius: radiusPx.xl,
           overflow: "hidden",
           outline: "none",
           boxShadow: "0 25px 50px -12px rgba(0,0,0,0.25)",
@@ -176,20 +176,24 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
         <Box
           sx={{
             background: isDark
-              ? "linear-gradient(135deg, #e0e0e0 0%, #d2d2d2 100%)"
-              : "linear-gradient(135deg, #1a1f2e 0%, #2d3548 100%)",
+              ? `linear-gradient(135deg, ${vwPalette.border.light} 0%, ${vwPalette.border.dark} 100%)`
+              : `linear-gradient(135deg, ${vwPalette.text.primary} 0%, ${vwPalette.text.secondary} 100%)`,
             padding: "32px 32px 28px",
           }}
         >
           <Stack direction="row" justifyContent="space-between" alignItems="flex-start">
             <Stack spacing={0}>
               <Stack direction="row" alignItems="center" spacing={1}>
-                <BadgeIcon size={18} color={isDark ? "#b52180" : "#4ADE80"} strokeWidth={2} />
+                <BadgeIcon
+                  size={18}
+                  color={isDark ? vwPalette.accent.pink.text : vwPalette.status.success.strong}
+                  strokeWidth={2}
+                />
                 <Typography
                   sx={{
                     fontSize: 13,
                     fontWeight: 600,
-                    color: isDark ? "#b52180" : "#4ADE80",
+                    color: isDark ? vwPalette.accent.pink.text : vwPalette.status.success.strong,
                     textTransform: "uppercase",
                     letterSpacing: 1.2,
                   }}
@@ -213,7 +217,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                 <Typography
                   sx={{
                     ...textStyles.body,
-                    color: isDark ? "#6b5c47" : text.accent,
+                    color: isDark ? vwPalette.text.tertiary : text.accent,
                     mt: 0.5,
                   }}
                 >
@@ -238,13 +242,13 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
               }}
               sx={{
                 "cursor": "pointer",
-                "color": isDark ? "#9b8b74" : icon.default,
+                "color": isDark ? vwPalette.text.accent : icon.default,
                 "display": "flex",
                 "alignItems": "center",
                 "padding": "4px",
-                "borderRadius": "4px",
+                "borderRadius": radiusPx.sm,
                 "&:hover": {
-                  color: isDark ? "#6b5c47" : grey[300],
+                  color: isDark ? vwPalette.text.tertiary : grey[300],
                   bgcolor: isDark ? "rgba(0,0,0,0.05)" : "rgba(255,255,255,0.05)",
                 },
               }}
@@ -259,7 +263,7 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           <Box
             sx={{
               display: "flex",
-              borderRadius: "10px",
+              borderRadius: radiusPx.lgPlus,
               overflow: "hidden",
               border: isDark ? "1px solid rgba(0,0,0,0.08)" : "1px solid rgba(255,255,255,0.08)",
             }}
@@ -312,14 +316,20 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                         width: 16,
                         height: 16,
                         borderRadius: "50%",
-                        bgcolor: isDark ? "#b52180" : "#4ADE80",
+                        bgcolor: isDark
+                          ? vwPalette.accent.pink.text
+                          : vwPalette.status.success.strong,
                         display: "flex",
                         alignItems: "center",
                         justifyContent: "center",
                         flexShrink: 0,
                       }}
                     >
-                      <Check size={10} color={isDark ? "#e0e0e0" : grey[900]} strokeWidth={3} />
+                      <Check
+                        size={10}
+                        color={isDark ? vwPalette.border.light : grey[900]}
+                        strokeWidth={3}
+                      />
                     </Box>
                   )}
                   <Typography
@@ -328,14 +338,14 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
                       fontWeight: isActive ? 600 : isDone ? 500 : 400,
                       color: isDone
                         ? isDark
-                          ? "#b52180"
-                          : "#4ADE80"
+                          ? vwPalette.accent.pink.text
+                          : vwPalette.status.success.strong
                         : isActive
                           ? isDark
                             ? "text.black"
                             : "background.main"
                           : isDark
-                            ? "#6b5c47"
+                            ? vwPalette.text.tertiary
                             : text.accent,
                     }}
                   >
@@ -355,8 +365,8 @@ const OnboardingWizard: React.FC<OnboardingWizardProps> = ({
           direction="row"
           justifyContent="space-between"
           sx={{
-            bgcolor: "#FAFBFC",
-            borderTop: "1px solid #E0E4E9",
+            bgcolor: vwPalette.background.alt,
+            borderTop: `1px solid ${vwPalette.border.light}`,
             padding: "14px 32px",
           }}
         >

@@ -7,7 +7,7 @@ import singleTheme from "../../../../themes/v1SingleTheme";
 import { styles } from "./styles";
 import { handleDownload } from "../../../../../application/tools/fileDownload";
 import { IReportTableProps } from "../../../../types/interfaces/i.table";
-import { brand, background } from "../../../../themes/palette";
+import { brand, background, palette as vwPalette } from "../../../../themes/palette";
 
 const ReportTableBody: React.FC<IReportTableProps> = ({
   rows,
@@ -56,7 +56,7 @@ const ReportTableBody: React.FC<IReportTableProps> = ({
               sx={{
                 ...singleTheme.tableStyles.primary.body.row,
                 "&:hover": {
-                  backgroundColor: "#fafafa",
+                  backgroundColor: vwPalette.background.alt,
                   cursor: "default",
                 },
               }}
@@ -69,8 +69,8 @@ const ReportTableBody: React.FC<IReportTableProps> = ({
                       sortConfig?.key &&
                       (sortConfig.key.toLowerCase().includes("file") ||
                         sortConfig.key.toLowerCase().includes("name"))
-                        ? "#e8e8e8"
-                        : "#fafafa",
+                        ? vwPalette.border.light
+                        : vwPalette.background.alt,
                   }}
                 >
                   {row.filename ? (

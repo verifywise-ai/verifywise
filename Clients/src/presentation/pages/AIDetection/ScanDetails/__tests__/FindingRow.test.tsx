@@ -4,6 +4,13 @@ import type { Finding } from "../../../../../domain/ai-detection/types";
 
 const mockUpdateFindingGovernanceStatus = vi.fn();
 
+// Permission keys the current user holds (all edit keys by default)
+const permissions = vi.hoisted(() => ({ denied: new Set<string>() }));
+vi.mock("../../../../../application/hooks/useCan", () => ({
+  useCan: (key: string) => !permissions.denied.has(key),
+  useCanCheck: () => (key: string) => !permissions.denied.has(key),
+}));
+
 vi.mock("../../../../../application/repository/aiDetection.repository", () => ({
   updateFindingGovernanceStatus: (...args: unknown[]) => mockUpdateFindingGovernanceStatus(...args),
   createSuppression: vi.fn(),
@@ -28,6 +35,7 @@ const baseFinding: Finding = {
 describe("FindingRow", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    permissions.denied.clear();
   });
 
   it("renders the finding name and description", () => {
@@ -217,13 +225,87 @@ describe("FindingRow", () => {
       />,
     );
 
-    const iconButtons = screen.getAllByRole("button");
-    fireEvent.click(iconButtons[iconButtons.length - 1]);
+    fireEvent.click(screen.getByRole("button", { name: "Change status" }));
 
-    const approvedOption = await screen.findByText("Approved");
-    fireEvent.click(approvedOption);
+    // The status chip on the row and the menu option both read "Approved"; the menu renders last
+    const approvedOptions = await screen.findAllByText("Approved");
+    fireEvent.click(approvedOptions[approvedOptions.length - 1]);
 
     expect(mockUpdateFindingGovernanceStatus).not.toHaveBeenCalled();
+  });
+
+  it("shows the status with who set it and when", () => {
+    render(
+      <FindingRow
+        finding={{
+          ...baseFinding,
+          governance_status: "accepted_risk",
+          governance_updated_by_name: "Ada Lovelace",
+          governance_updated_at: "2026-11-03T10:00:00.000Z",
+        }}
+        repositoryOwner="acme"
+        repositoryName="widgets"
+        scanId={7}
+      />,
+    );
+
+    const status = screen.getByTestId("finding-governance-status");
+    expect(status).toHaveTextContent("Accepted risk");
+    expect(status).toHaveTextContent(/by Ada Lovelace · \S+/);
+  });
+
+  it("shows no status chip for an unreviewed finding", () => {
+    render(
+      <FindingRow finding={baseFinding} repositoryOwner="acme" repositoryName="w" scanId={7} />,
+    );
+    expect(screen.queryByTestId("finding-governance-status")).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "Set status" })).toBeInTheDocument();
+  });
+
+  it("shows the saved status and its author after a change", async () => {
+    mockUpdateFindingGovernanceStatus.mockResolvedValue({
+      id: 1,
+      governance_status: "flagged",
+      governance_updated_at: "2026-11-12T09:00:00.000Z",
+      governance_updated_by: 3,
+      governance_updated_by_name: "Grace Hopper",
+    });
+    render(
+      <FindingRow finding={baseFinding} repositoryOwner="acme" repositoryName="w" scanId={7} />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Set status" }));
+    fireEvent.click(await screen.findByText("Flagged"));
+
+    const status = await screen.findByTestId("finding-governance-status");
+    expect(status).toHaveTextContent("Flagged");
+    expect(status).toHaveTextContent("by Grace Hopper");
+  });
+
+  it("removes the status chip when the status is cleared", async () => {
+    mockUpdateFindingGovernanceStatus.mockResolvedValue({
+      id: 1,
+      governance_status: null,
+      governance_updated_at: null,
+      governance_updated_by: null,
+      governance_updated_by_name: null,
+    });
+    render(
+      <FindingRow
+        finding={{ ...baseFinding, governance_status: "reviewed" }}
+        repositoryOwner="acme"
+        repositoryName="w"
+        scanId={7}
+      />,
+    );
+    expect(screen.getByTestId("finding-governance-status")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "Change status" }));
+    fireEvent.click(await screen.findByText("Clear status"));
+
+    await waitFor(() =>
+      expect(screen.queryByTestId("finding-governance-status")).not.toBeInTheDocument(),
+    );
   });
 
   it("does not link file paths when repositoryOwner/repositoryName are missing", () => {
@@ -231,5 +313,52 @@ describe("FindingRow", () => {
 
     fireEvent.click(screen.getByText("openai"));
     expect(screen.queryByRole("link")).not.toBeInTheDocument();
+  });
+
+  it("says when a change applies to this scan only", async () => {
+    mockUpdateFindingGovernanceStatus.mockResolvedValue({
+      id: 1,
+      governance_status: "approved",
+      governance_updated_at: "2026-11-03T10:00:00.000Z",
+      governance_updated_by: 7,
+      governance_updated_by_name: "Ada Lovelace",
+      decision_scope: "scan",
+    });
+    const onStatusMessage = vi.fn();
+    render(
+      <FindingRow
+        finding={baseFinding}
+        repositoryOwner="acme"
+        repositoryName="widgets"
+        scanId={7}
+        onStatusMessage={onStatusMessage}
+      />,
+    );
+
+    fireEvent.click(screen.getByRole("button", { name: "Set status" }));
+    fireEvent.click(await screen.findByText("Approved"));
+
+    await waitFor(() =>
+      expect(onStatusMessage).toHaveBeenCalledWith(
+        "success",
+        "Status updated on this scan only: Approved",
+      ),
+    );
+  });
+
+  it("hides the status control from a user who cannot edit AI Detection", () => {
+    permissions.denied.add("aiDetection.edit");
+    render(
+      <FindingRow
+        finding={{ ...baseFinding, governance_status: "approved" }}
+        repositoryOwner="acme"
+        repositoryName="widgets"
+        scanId={7}
+        onStatusMessage={vi.fn()}
+      />,
+    );
+    expect(screen.queryByRole("button", { name: "Change status" })).not.toBeInTheDocument();
+    // The status itself stays visible
+    expect(screen.getByTestId("finding-governance-status")).toBeInTheDocument();
   });
 });

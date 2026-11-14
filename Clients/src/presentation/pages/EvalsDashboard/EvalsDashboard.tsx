@@ -70,7 +70,7 @@ import { Collapse, IconButton, CircularProgress } from "@mui/material";
 import VWChip from "../../components/Chip";
 import ConfirmationModal from "../../components/Dialogs/ConfirmationModal";
 import SelectableCard from "../../components/SelectableCard";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 
 // Import provider logos
 import { ReactComponent as FolderFilledIcon } from "../../assets/icons/folder_filled.svg";
@@ -1199,7 +1199,7 @@ export default function EvalsDashboard() {
           sx={{
             p: 2,
             backgroundColor: palette.status.error.bg,
-            borderRadius: "8px",
+            borderRadius: radiusPx.lg,
             border: `1px solid ${palette.status.error.border}`,
             display: "flex",
             alignItems: "center",
@@ -1273,7 +1273,7 @@ export default function EvalsDashboard() {
               sx={{
                 background: palette.background.main,
                 border: `1px solid ${palette.border.dark}`,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 p: "20px 24px",
                 boxShadow: "none",
               }}
@@ -1321,7 +1321,7 @@ export default function EvalsDashboard() {
                 <Box
                   sx={{
                     border: `2px dashed ${palette.border.dark}`,
-                    borderRadius: "12px",
+                    borderRadius: radiusPx.xl,
                     p: 6,
                     textAlign: "center",
                     backgroundColor: palette.background.accent,
@@ -1382,7 +1382,7 @@ export default function EvalsDashboard() {
                         <Box
                           sx={{
                             border: `1.5px solid ${palette.border.light}`,
-                            borderRadius: "4px",
+                            borderRadius: radiusPx.sm,
                             p: 2,
                             pl: 2.5,
                             backgroundColor: palette.background.main,
@@ -1406,7 +1406,7 @@ export default function EvalsDashboard() {
                                 height: 56,
                                 minWidth: 56,
                                 minHeight: 56,
-                                borderRadius: "12px",
+                                borderRadius: radiusPx.xl,
                                 backgroundColor: palette.background.accent,
                                 border: `1px solid ${palette.border.dark}`,
                                 flexShrink: 0,
@@ -1561,7 +1561,7 @@ export default function EvalsDashboard() {
               sx={{
                 background: palette.background.main,
                 border: `1px solid ${palette.border.dark}`,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 p: "20px 24px",
                 boxShadow: "none",
                 mt: 3,
@@ -1608,7 +1608,7 @@ export default function EvalsDashboard() {
                 <Box
                   sx={{
                     border: `1px solid ${palette.accent.indigo.border}`,
-                    borderRadius: "8px",
+                    borderRadius: radiusPx.lg,
                     p: 3,
                     backgroundColor: palette.accent.indigo.bg,
                     display: "flex",
@@ -1654,7 +1654,7 @@ export default function EvalsDashboard() {
                 <Box
                   sx={{
                     border: `2px dashed ${palette.border.dark}`,
-                    borderRadius: "12px",
+                    borderRadius: radiusPx.xl,
                     p: 5,
                     textAlign: "center",
                     backgroundColor: palette.background.accent,
@@ -1678,7 +1678,7 @@ export default function EvalsDashboard() {
                       <Box
                         sx={{
                           border: `1.5px solid ${palette.border.light}`,
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                           p: 2,
                           pl: 2.5,
                           backgroundColor: palette.background.main,
@@ -1693,7 +1693,7 @@ export default function EvalsDashboard() {
                               width: 56,
                               height: 56,
                               minWidth: 56,
-                              borderRadius: "12px",
+                              borderRadius: radiusPx.xl,
                               backgroundColor: palette.background.accent,
                               border: `1px solid ${palette.border.dark}`,
                               display: "flex",
@@ -1784,7 +1784,7 @@ export default function EvalsDashboard() {
                   sx={{
                     background: palette.background.main,
                     border: `1px solid ${palette.border.dark}`,
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     boxShadow: "none",
                     overflow: "hidden",
                   }}
@@ -2275,7 +2275,7 @@ export default function EvalsDashboard() {
                                 top: 6,
                                 left: 6,
                                 backgroundColor: palette.status.success.bg,
-                                borderRadius: "4px",
+                                borderRadius: radiusPx.sm,
                                 px: 0.75,
                                 py: 0.25,
                               }}
@@ -2391,7 +2391,7 @@ export default function EvalsDashboard() {
                         p: 2,
                         backgroundColor: palette.background.accent,
                         border: `1px solid ${palette.border.light}`,
-                        borderRadius: "8px",
+                        borderRadius: radiusPx.lg,
                       }}
                     >
                       <Typography
@@ -2679,7 +2679,7 @@ export default function EvalsDashboard() {
                       p: 2,
                       backgroundColor: palette.background.accent,
                       border: `1px solid ${palette.border.light}`,
-                      borderRadius: "8px",
+                      borderRadius: radiusPx.lg,
                     }}
                   >
                     <Typography

@@ -22,7 +22,7 @@ import {
 } from "@mui/material";
 import { Download, Upload, CheckCircle, XCircle, X } from "lucide-react";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
-import { brand, icon } from "../../../themes/palette";
+import { brand, icon, radiusPx } from "../../../themes/palette";
 
 interface RiskImportModalProps {
   open: boolean;
@@ -196,7 +196,7 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
       fullWidth
       PaperProps={{
         sx: {
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           maxHeight: "90vh",
         },
       }}

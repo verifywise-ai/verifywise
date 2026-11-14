@@ -75,13 +75,18 @@ export function useUntrackApp() {
     },
   });
 }
-export function useSettings() {
+/**
+ * The organization's AI Trust Index alert recipients. The route needs
+ * aiTrustIndex.admin, so callers pass `enabled: false` for anyone without it.
+ */
+export function useSettings({ enabled = true }: { enabled?: boolean } = {}) {
   // Settings change rarely and the page auto-saves; a 60s staleTime avoids the
   // global 2s default refetching on every interaction (which made the page churn).
   return useQuery({
     queryKey: [KEY, "settings"],
     queryFn: () => getSettings(),
     staleTime: 60 * 1000,
+    enabled,
   });
 }
 export function useUpdateSettings() {

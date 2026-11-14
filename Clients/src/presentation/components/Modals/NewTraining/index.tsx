@@ -47,6 +47,7 @@ import { createEvidenceHub } from "../../../../application/repository/evidenceHu
 import { CustomizableButton } from "../../button/customizable-button";
 import { useCanCheck } from "../../../../application/hooks/useCan";
 import ReadOnlyFieldset from "../../ReadOnlyFieldset";
+import { radiusPx } from "../../../themes/palette";
 
 type TrainingFormState = Omit<Partial<TrainingRegistarDTO>, "status"> & {
   status: TrainingStatus;
@@ -465,7 +466,7 @@ const NewTraining: FC<NewTrainingProps> = ({
                 sx={{
                   border: "1px solid",
                   borderColor: "border.light",
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                 }}
               >
                 <Table size="small">

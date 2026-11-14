@@ -24,10 +24,8 @@ import FileManagerUploadModal from "../../components/Modals/FileManagerUpload";
 import { secureLogError } from "../../../application/utils/secureLogger.utils";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { SearchBox } from "../../components/Search";
-import { GroupBy } from "../../components/Table/GroupBy";
-import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
-import { GroupedTableView } from "../../components/Table/GroupedTableView";
-import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
+import { FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 
 // Virtual folder imports
@@ -59,10 +57,12 @@ import { FileVersionHistoryDrawer } from "./components/FileVersionHistoryDrawer"
 // Event subscription for cross-component communication
 import { onFileApprovalChanged } from "../../../application/events/fileEvents";
 import { useCan } from "../../../application/hooks/useCan";
+import { palette, radiusPx } from "../../themes/palette";
 
 // Constants
 const FILE_MANAGER_CONTEXT = "FileManager";
-const MANAGE_ROLES = ["Admin", "Editor"];
+// Metadata editing is checked against role names on the server.
+const METADATA_ROLES = ["Admin", "Editor"];
 
 /**
  * Main component for managing files with virtual folder support.
@@ -211,13 +211,16 @@ const FileManager: React.FC = (): JSX.Element => {
   // RBAC: Get user role for permission checks
   const { userRoleName } = useAuth();
 
-  // GroupBy state
-  const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
-
   // Permission checks
   // Uploads authorize on fileManager.contribute (Admin, Editor, Reviewer).
   const isUploadAllowed = useCan("fileManager.contribute");
-  const canManageFolders = Boolean(userRoleName) && MANAGE_ROLES.includes(userRoleName);
+  // Folders are shared with the Policies page, so either edit permission
+  // creates, renames and deletes them. Filing files and bulk tagging need
+  // file.edit. Both are Admin and Editor by default.
+  const canFileIntoFolders = useCan("file.edit");
+  const canEditPolicies = useCan("policy.edit");
+  const canManageFolders = canFileIntoFolders || canEditPolicies;
+  const canEditMetadata = Boolean(userRoleName) && METADATA_ROLES.includes(userRoleName);
 
   // Fetch files with enhanced metadata
   const fetchFilesWithMetadata = useCallback(async () => {
@@ -732,8 +735,12 @@ const FileManager: React.FC = (): JSX.Element => {
     [],
   );
 
-  const { filterData: filterFileData, handleFilterChange: handleFileFilterChange } =
-    useFilterBy<FileModel>(getFileFieldValue);
+  const {
+    filterData: filterFileData,
+    handleFilterChange: handleFileFilterChange,
+    conditions: fileFilterConditions,
+    logic: fileFilterLogic,
+  } = useFilterBy<FileModel>(getFileFieldValue);
 
   // Filter files
   const filteredFiles = useMemo(() => {
@@ -744,23 +751,6 @@ const FileManager: React.FC = (): JSX.Element => {
     }
     return result;
   }, [filterFileData, activeFilesData, searchTerm]);
-
-  // Grouping
-  const getFileGroupKey = useCallback((file: FileModel, field: string): string => {
-    switch (field) {
-      case "uploader":
-        return file.uploaderName || file.uploader || "Unknown";
-      default:
-        return "Other";
-    }
-  }, []);
-
-  const groupedFiles = useTableGrouping({
-    data: filteredFiles,
-    groupByField: groupBy,
-    sortOrder: groupSortOrder,
-    getGroupKey: getFileGroupKey,
-  });
 
   // Always show loading when folder files are loading (covers both folder and uncategorized views)
   const isLoading = loadingFiles || loadingFolderFiles;
@@ -803,8 +793,8 @@ const FileManager: React.FC = (): JSX.Element => {
         sx={{
           display: "flex",
           gap: 0,
-          border: "1px solid #E0E4E9",
-          borderRadius: "8px",
+          border: `1px solid ${palette.border.light}`,
+          borderRadius: radiusPx.lg,
           overflow: "hidden",
           minHeight: "600px",
         }}
@@ -837,7 +827,7 @@ const FileManager: React.FC = (): JSX.Element => {
           <Box
             sx={{
               padding: "12px 16px",
-              borderBottom: "1px solid #E0E4E9",
+              borderBottom: `1px solid ${palette.border.light}`,
               display: "flex",
               justifyContent: "space-between",
               alignItems: "center",
@@ -877,16 +867,19 @@ const FileManager: React.FC = (): JSX.Element => {
           <Box
             sx={{
               padding: "12px 16px",
-              borderBottom: "1px solid #E0E4E9",
+              borderBottom: `1px solid ${palette.border.light}`,
               display: "flex",
               alignItems: "center",
               gap: 2,
             }}
           >
-            <FilterBy columns={fileFilterColumns} onFilterChange={handleFileFilterChange} />
-            <GroupBy
-              options={[{ id: "uploader", label: "Uploader" }]}
-              onGroupChange={handleGroupChange}
+            <TableFilter
+              columns={fileFilterColumns}
+              onFilterChange={handleFileFilterChange}
+              defaultConditions={fileFilterConditions}
+              defaultLogic={fileFilterLogic}
+              data={activeFilesData}
+              getFieldValue={getFileFieldValue}
             />
             <ColumnSelector
               columns={availableColumns}
@@ -930,7 +923,7 @@ const FileManager: React.FC = (): JSX.Element => {
                     width: 48,
                     height: 48,
                     borderRadius: "50%",
-                    backgroundColor: "#FEE2E2",
+                    backgroundColor: palette.status.error.bg,
                     display: "flex",
                     alignItems: "center",
                     justifyContent: "center",
@@ -943,7 +936,7 @@ const FileManager: React.FC = (): JSX.Element => {
                   sx={{
                     fontSize: 14,
                     fontWeight: 500,
-                    color: "#DC2626",
+                    color: palette.riskMark.critical,
                     marginBottom: 1,
                   }}
                 >
@@ -968,31 +961,24 @@ const FileManager: React.FC = (): JSX.Element => {
               </Box>
             ) : (
               <Box sx={boxStyles}>
-                <GroupedTableView
-                  groupedData={groupedFiles}
-                  ungroupedData={filteredFiles}
-                  renderTable={(data, options) => (
-                    <FileTable
-                      cols={getTableColumns()}
-                      files={data}
-                      onFileDeleted={handleFileDeleted}
-                      hidePagination={options?.hidePagination}
-                      onAssignToFolder={canManageFolders ? handleOpenAssignFolder : undefined}
-                      onPreview={handleOpenPreview}
-                      onEditMetadata={canManageFolders ? handleOpenMetadataEditor : undefined}
-                      onViewHistory={handleOpenVersionHistory}
-                      visibleColumnKeys={visibleColumnKeys}
-                      canRunBulkActions={canManageFolders}
-                      onBulkActionSuccess={() => {
-                        refetch();
-                      }}
-                      emptyMessage={
-                        selectedFolder === "expired"
-                          ? "No expired files. Files past their expiry date will appear here."
-                          : undefined
-                      }
-                    />
-                  )}
+                <FileTable
+                  cols={getTableColumns()}
+                  files={filteredFiles}
+                  onFileDeleted={handleFileDeleted}
+                  onAssignToFolder={canFileIntoFolders ? handleOpenAssignFolder : undefined}
+                  onPreview={handleOpenPreview}
+                  onEditMetadata={canEditMetadata ? handleOpenMetadataEditor : undefined}
+                  onViewHistory={handleOpenVersionHistory}
+                  visibleColumnKeys={visibleColumnKeys}
+                  canRunBulkActions={canFileIntoFolders}
+                  onBulkActionSuccess={() => {
+                    refetch();
+                  }}
+                  emptyMessage={
+                    selectedFolder === "expired"
+                      ? "No expired files. Files past their expiry date will appear here."
+                      : undefined
+                  }
                 />
               </Box>
             )}

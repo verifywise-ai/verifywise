@@ -5,7 +5,7 @@ import { CustomizableButton } from "../../button/customizable-button";
 import { LinkedRisksPopup } from "../../LinkedRisks";
 import StandardModal from "../../Modals/StandardModal";
 import AddNewRiskForm from "../../AddNewRiskForm";
-import { text } from "../../../themes/palette";
+import { text, palette as vwPalette, radiusPx } from "../../../themes/palette";
 import { User } from "../../../../domain/types/User";
 import { OnAlert } from "./types";
 import { UseLinkedRisksReturn } from "./useLinkedRisks";
@@ -99,7 +99,7 @@ const CrossMappingsTab: React.FC<CrossMappingsTabProps> = ({
                     "justifyContent": "space-between",
                     "padding": "10px 12px",
                     "border": `1px solid ${theme.palette.border.light}`,
-                    "borderRadius": "4px",
+                    "borderRadius": radiusPx.sm,
                     "backgroundColor": "background.main",
                     "&:hover": {
                       backgroundColor: "background.accent",
@@ -111,7 +111,7 @@ const CrossMappingsTab: React.FC<CrossMappingsTabProps> = ({
                       sx={{
                         fontSize: 13,
                         fontWeight: 500,
-                        color: "#1F2937",
+                        color: vwPalette.text.primary,
                         overflow: "hidden",
                         textOverflow: "ellipsis",
                         whiteSpace: "nowrap",

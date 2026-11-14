@@ -32,11 +32,9 @@ import { StatusTileCards } from "../../components/Cards/StatusTileCards";
 import PageTour from "../../components/PageTour";
 import IncidentManagementSteps from "./IncidentManagementSteps";
 import { AIIncidentManagementModel } from "../../../domain/models/Common/incidentManagement/incidentManagement.model";
-import { GroupBy } from "../../components/Table/GroupBy";
-import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
-import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { ExportMenu } from "../../components/Table/ExportMenu";
-import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
+import { FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
@@ -48,6 +46,7 @@ import {
   UserFacingFieldErrors,
 } from "../../../application/utils/apiErrorReason";
 import { useCan } from "../../../application/hooks/useCan";
+import { chartTheme } from "../../themes/chartTheme";
 
 type IncidentColumnKey =
   | "incident_id"
@@ -172,9 +171,6 @@ const IncidentManagement: React.FC = () => {
   }, [alert]);
 
   const [mode, setModalMode] = useState("");
-
-  // GroupBy state
-  const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
 
   // Column visibility
   const {
@@ -353,18 +349,25 @@ const IncidentManagement: React.FC = () => {
   );
 
   // FilterBy - Initialize hook
-  const { filterData: filterIncidentData, handleFilterChange: handleIncidentFilterChange } =
-    useFilterBy<AIIncidentManagementModel>(getIncidentFieldValue);
+  const {
+    filterData: filterIncidentData,
+    handleFilterChange: handleIncidentFilterChange,
+    conditions: incidentFilterConditions,
+    logic: incidentFilterLogic,
+  } = useFilterBy<AIIncidentManagementModel>(getIncidentFieldValue);
 
   /** -------------------- FILTERING -------------------- */
-  const filteredData = useMemo(() => {
-    // Filter out archived items first
-    const nonArchivedData = incidentsData.filter((i) => !i.archived);
+  // Archived incidents never show, so the filter chips count only the rest
+  const nonArchivedIncidents = useMemo(
+    () => incidentsData.filter((i) => !i.archived),
+    [incidentsData],
+  );
 
+  const filteredData = useMemo(() => {
     // Apply card filter by status
     let result = selectedStatus
-      ? nonArchivedData.filter((i) => i.status === selectedStatus)
-      : nonArchivedData;
+      ? nonArchivedIncidents.filter((i) => i.status === selectedStatus)
+      : nonArchivedIncidents;
 
     // Apply FilterBy conditions
     result = filterIncidentData(result);
@@ -381,34 +384,7 @@ const IncidentManagement: React.FC = () => {
     }
 
     return result;
-  }, [filterIncidentData, incidentsData, searchTerm, selectedStatus]);
-
-  // Define how to get the group key for each incident
-  const getIncidentGroupKey = (
-    incident: AIIncidentManagementModel,
-    field: string,
-  ): string | string[] => {
-    switch (field) {
-      case "severity":
-        return incident.severity || "Unknown";
-      case "status":
-        return incident.status || "Unknown";
-      case "type":
-        return incident.type || "Unknown";
-      case "ai_project":
-        return incident.ai_project || "Unknown Project";
-      default:
-        return "Other";
-    }
-  };
-
-  // Apply grouping to filtered incidents
-  const groupedIncidents = useTableGrouping({
-    data: filteredData,
-    groupByField: groupBy,
-    sortOrder: groupSortOrder,
-    getGroupKey: getIncidentGroupKey,
-  });
+  }, [filterIncidentData, nonArchivedIncidents, searchTerm, selectedStatus]);
 
   /** -------------------- FETCHING -------------------- */
   const fetchIncidentsData = async (showLoading = true) => {
@@ -751,7 +727,7 @@ const IncidentManagement: React.FC = () => {
                 {
                   key: IncidentManagementStatus.OPEN,
                   label: "Open",
-                  color: "#F9A825",
+                  color: chartTheme.incidentStatus.open,
                   count: incidentsData.filter(
                     (i) => i.status === IncidentManagementStatus.OPEN && !i.archived,
                   ).length,
@@ -759,7 +735,7 @@ const IncidentManagement: React.FC = () => {
                 {
                   key: IncidentManagementStatus.INVESTIGATED,
                   label: "Investigating",
-                  color: "#FB8C00",
+                  color: chartTheme.incidentStatus.investigating,
                   count: incidentsData.filter(
                     (i) => i.status === IncidentManagementStatus.INVESTIGATED && !i.archived,
                   ).length,
@@ -767,7 +743,7 @@ const IncidentManagement: React.FC = () => {
                 {
                   key: IncidentManagementStatus.MITIGATED,
                   label: "Mitigated",
-                  color: "#2E7D32",
+                  color: chartTheme.incidentStatus.mitigated,
                   count: incidentsData.filter(
                     (i) => i.status === IncidentManagementStatus.MITIGATED && !i.archived,
                   ).length,
@@ -775,7 +751,7 @@ const IncidentManagement: React.FC = () => {
                 {
                   key: IncidentManagementStatus.CLOSED,
                   label: "Closed",
-                  color: "#455A64",
+                  color: chartTheme.incidentStatus.closed,
                   count: incidentsData.filter(
                     (i) => i.status === IncidentManagementStatus.CLOSED && !i.archived,
                   ).length,
@@ -783,7 +759,7 @@ const IncidentManagement: React.FC = () => {
                 {
                   key: IncidentManagementStatus.SUSPENDED,
                   label: "Suspended",
-                  color: "#7B1FA2",
+                  color: chartTheme.incidentStatus.suspended,
                   count: incidentsData.filter(
                     (i) => i.status === IncidentManagementStatus.SUSPENDED && !i.archived,
                   ).length,
@@ -791,7 +767,7 @@ const IncidentManagement: React.FC = () => {
                 {
                   key: IncidentManagementStatus.EMERGENCY_ACTION,
                   label: "Emergency action",
-                  color: "#C62828",
+                  color: chartTheme.incidentStatus.emergency,
                   count: incidentsData.filter(
                     (i) => i.status === IncidentManagementStatus.EMERGENCY_ACTION && !i.archived,
                   ).length,
@@ -836,16 +812,13 @@ const IncidentManagement: React.FC = () => {
           sx={incidentFilterRow}
         >
           <Stack direction="row" spacing={2} alignItems="center">
-            <FilterBy columns={incidentFilterColumns} onFilterChange={handleIncidentFilterChange} />
-
-            <GroupBy
-              options={[
-                { id: "severity", label: "Severity" },
-                { id: "status", label: "Status" },
-                { id: "type", label: "Type" },
-                { id: "ai_project", label: "AI Project" },
-              ]}
-              onGroupChange={handleGroupChange}
+            <TableFilter
+              columns={incidentFilterColumns}
+              onFilterChange={handleIncidentFilterChange}
+              defaultConditions={incidentFilterConditions}
+              defaultLogic={incidentFilterLogic}
+              data={nonArchivedIncidents}
+              getFieldValue={getIncidentFieldValue}
             />
 
             <ColumnSelector
@@ -886,23 +859,16 @@ const IncidentManagement: React.FC = () => {
           </Stack>
         </Stack>
 
-        <GroupedTableView
-          groupedData={groupedIncidents}
-          ungroupedData={filteredData}
-          renderTable={(data, options) => (
-            <IncidentTable
-              key={tableKey}
-              data={data}
-              isLoading={isLoading}
-              onEdit={handleEditIncident}
-              onArchive={handleArchiveIncident}
-              onView={handleViewIncident}
-              archivedId={archiveId}
-              hidePagination={options?.hidePagination}
-              visibleColumns={incidentVisibleColumns}
-              jiraLinks={jiraLinks}
-            />
-          )}
+        <IncidentTable
+          key={tableKey}
+          data={filteredData}
+          isLoading={isLoading}
+          onEdit={handleEditIncident}
+          onArchive={handleArchiveIncident}
+          onView={handleViewIncident}
+          archivedId={archiveId}
+          visibleColumns={incidentVisibleColumns}
+          jiraLinks={jiraLinks}
         />
       </PageHeaderExtended>
 

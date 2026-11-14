@@ -6,6 +6,7 @@ import { useAdvisorConversationSafe } from "../../../application/contexts/Adviso
 import { formatRelativeDate } from "../../../application/utils/dateFormatter";
 import VWTooltip from "../VWTooltip";
 import ConfirmationModal from "../Dialogs/ConfirmationModal";
+import { palette, radiusPx } from "../../themes/palette";
 
 interface AdvisorHeaderProps {
   pageContext?: AdvisorDomain;
@@ -169,7 +170,7 @@ const AdvisorHeaderComponent = ({ pageContext }: AdvisorHeaderProps) => {
             width: 320,
             maxHeight: 480,
             boxShadow: "0 4px 20px rgba(0, 0, 0, 0.12)",
-            borderRadius: "8px",
+            borderRadius: radiusPx.lg,
             border: "1px solid",
             borderColor: "background.hover",
             mt: 1,
@@ -184,7 +185,7 @@ const AdvisorHeaderComponent = ({ pageContext }: AdvisorHeaderProps) => {
             "&::-webkit-scrollbar": { width: "6px" },
             "&::-webkit-scrollbar-track": { background: "transparent" },
             "&::-webkit-scrollbar-thumb": {
-              background: "#e0e0e0",
+              background: palette.border.light,
               borderRadius: "3px",
             },
             "&::-webkit-scrollbar-thumb:hover": {
@@ -283,7 +284,7 @@ const AdvisorHeaderComponent = ({ pageContext }: AdvisorHeaderProps) => {
                           "opacity 120ms ease, color 120ms ease, background-color 120ms ease",
                         "color": "text.disabled",
                         "&:hover": {
-                          color: "#EF4444",
+                          color: palette.riskMark.critical,
                           backgroundColor: "rgba(239, 68, 68, 0.08)",
                         },
                         "&:focus-visible": {

@@ -2,6 +2,7 @@ import type { KeyboardEvent } from "react";
 import { Box, Popover, Typography, useTheme } from "@mui/material";
 import { CheckCircle2 } from "lucide-react";
 import { MenuOption } from "../IntakeFormBuilder/preview/PopoverMenu";
+import { radiusPx } from "../../themes/palette";
 
 export type PreviewSubmitMode = "test" | "real";
 
@@ -46,7 +47,7 @@ export const PreviewSubmitMenu = ({ anchor, onClose, onChoose }: PreviewSubmitMe
             mb: "4px",
             p: "4px",
             width: 340,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             border: `1px solid ${theme.palette.border.dark}`,
             boxShadow: theme.boxShadow,
           },
@@ -89,7 +90,7 @@ export const TestSubmitPassed = () => {
         mb: "16px",
         p: "12px 16px",
         border: `1px solid ${success.border}`,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         backgroundColor: success.bg,
       }}
     >

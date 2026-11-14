@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { getAppModuleFromPath, isGlobalPath } from "../appModule";
+import { getAppModuleFromPath, isGlobalPath, isPathUnder } from "../appModule";
 
 describe("getAppModuleFromPath", () => {
   it("maps root and governance routes to the main module", () => {
@@ -34,5 +34,21 @@ describe("isGlobalPath", () => {
     expect(isGlobalPath("/shadow-ai/settings")).toBe(false);
     expect(isGlobalPath("/settingsx")).toBe(false);
     expect(isGlobalPath("/super-admin/settings")).toBe(false);
+  });
+});
+
+describe("isPathUnder", () => {
+  it("matches the prefix itself and paths below it", () => {
+    expect(isPathUnder("/tasks", "/tasks")).toBe(true);
+    expect(isPathUnder("/tasks/3", "/tasks")).toBe(true);
+  });
+
+  it("does not match a sibling that shares the prefix text", () => {
+    expect(isPathUnder("/tasks-archive", "/tasks")).toBe(false);
+  });
+
+  it("matches / only by itself", () => {
+    expect(isPathUnder("/", "/")).toBe(true);
+    expect(isPathUnder("/tasks", "/")).toBe(false);
   });
 });

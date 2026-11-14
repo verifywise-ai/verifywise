@@ -57,7 +57,7 @@ import {
   statsContainerSx,
   statsTextSx,
 } from "./styles";
-import { text, status } from "../../themes/palette";
+import { text, status, palette as vwPalette } from "../../themes/palette";
 
 const nodeTypes = { entity: EntityNode };
 
@@ -261,7 +261,7 @@ const EntityGraphInner: React.FC = () => {
             />
             <Box sx={problemsToggleRowSx}>
               <Box sx={problemsToggleLabelContainerSx}>
-                <AlertTriangle size={14} color="#f59e0b" />
+                <AlertTriangle size={14} color={vwPalette.riskMark.medium} />
                 <Typography sx={problemsToggleLabelSx}>Show problems only</Typography>
               </Box>
               <Toggle size="small" checked={showProblemsOnly} onChange={handleProblemsToggle} />

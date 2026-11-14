@@ -52,6 +52,7 @@ import {
   calculateVendorRiskScore,
   getRiskScoreColor,
 } from "../../../../domain/utils/vendorScorecard.utils";
+import { radiusPx, palette as vwPalette } from "../../../themes/palette";
 
 const initialState = {
   vendorName: "",
@@ -660,7 +661,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
             "cursor": "pointer",
             "padding": theme.spacing(2),
             "border": `1px solid ${theme.palette.divider}`,
-            "borderRadius": "4px",
+            "borderRadius": radiusPx.sm,
             "backgroundColor": theme.palette.grey[50],
             "&:hover": {
               backgroundColor: theme.palette.grey[100],
@@ -690,7 +691,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
                   <Box
                     sx={{
                       backgroundColor: "rgba(255, 255, 255, 0.05)",
-                      borderRadius: "4px",
+                      borderRadius: radiusPx.sm,
                       padding: "12px",
                       mb: 2,
                       fontFamily: "monospace",
@@ -698,7 +699,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
                   >
                     <Typography
                       sx={{
-                        color: "#16C784",
+                        color: vwPalette.status.success.text,
                         fontSize: "12px",
                         lineHeight: 1.8,
                       }}
@@ -762,7 +763,7 @@ const AddNewVendor: React.FC<AddNewVendorProps> = ({
                       alignItems: "center",
                       gap: 1,
                       padding: "4px 8px",
-                      borderRadius: "4px",
+                      borderRadius: radiusPx.sm,
                       backgroundColor: `${riskColor}20`,
                       border: `1px solid ${riskColor}`,
                       minWidth: "50px",

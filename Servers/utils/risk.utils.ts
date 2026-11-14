@@ -1,4 +1,5 @@
 import { RiskModel } from "../domain.layer/models/risks/risk.model";
+import { getEffectiveRiskLevel } from "./riskLevel.utils";
 import { sequelize } from "../database/db";
 import { Transaction, QueryTypes } from "sequelize";
 import { IRisk } from "../domain.layer/interfaces/I.risk";
@@ -11,10 +12,13 @@ import {
   buildRiskUpdateReplacements,
 } from "./automation/risk.automation.utils";
 import { recordSnapshotIfChanged } from "./history/riskHistory.utils";
+import { fetchCustomFieldsForEntities } from "./customField.utils";
+import { findUsersNotInOrganization, parseReferencedIds } from "./user.utils";
 import {
-  deleteAllCustomFieldValuesForEntityQuery,
-  fetchCustomFieldsForEntities,
-} from "./customField.utils";
+  NotFoundException,
+  ValidationException,
+} from "../domain.layer/exceptions/custom.exception";
+import { toRiskCalendarDate } from "./riskCalendarDate.utils";
 
 type Mitigation = {
   id: number;
@@ -54,6 +58,86 @@ export const validateRiskProjectsQuery = async (
     }
   }
   return true;
+};
+
+/**
+ * Tenant guard for the ids a risk points at. Owner and approver must be
+ * members of the organization, linked use cases must belong to it, and
+ * framework ids must exist (frameworks are a global catalog).
+ *
+ * Every risk write path (REST, MCP, advisor, intake, AI detection, demo seed)
+ * goes through createRiskQuery / updateRiskByIdQuery, which call this.
+ *
+ * @throws ValidationException naming the first offending field.
+ */
+export const assertRiskReferencesInOrganization = async (
+  refs: {
+    risk_owner?: number | null;
+    risk_approval?: number | null;
+    projects?: number[];
+    frameworks?: number[];
+  },
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<void> => {
+  const isOutside = async (id: number | null | undefined): Promise<boolean> => {
+    const ids = parseReferencedIds([id]);
+    if (ids === null) return true;
+    if (ids.length === 0) return false;
+    const outside = await findUsersNotInOrganization(ids, organizationId, transaction ?? null);
+    return outside.length > 0;
+  };
+  if (await isOutside(refs.risk_owner)) {
+    throw new ValidationException(
+      "The risk owner must be a member of this organization",
+      "risk_owner",
+      refs.risk_owner,
+    );
+  }
+  if (await isOutside(refs.risk_approval)) {
+    throw new ValidationException(
+      "The risk approver must be a member of this organization",
+      "risk_approval",
+      refs.risk_approval,
+    );
+  }
+
+  const projectIds = parseReferencedIds(refs.projects ?? []);
+  const projectRows =
+    projectIds && projectIds.length > 0
+      ? ((await sequelize.query(
+          `SELECT id FROM projects WHERE organization_id = :organizationId AND id IN (:ids)`,
+          {
+            replacements: { organizationId, ids: projectIds },
+            type: QueryTypes.SELECT,
+            transaction,
+          },
+        )) as { id: number }[])
+      : [];
+  if (projectIds === null || projectRows.length !== projectIds.length) {
+    throw new ValidationException(
+      "Linked use cases must belong to this organization",
+      "projects",
+      refs.projects,
+    );
+  }
+
+  const frameworkIds = parseReferencedIds(refs.frameworks ?? []);
+  const frameworkRows =
+    frameworkIds && frameworkIds.length > 0
+      ? ((await sequelize.query(`SELECT id FROM frameworks WHERE id IN (:ids)`, {
+          replacements: { ids: frameworkIds },
+          type: QueryTypes.SELECT,
+          transaction,
+        })) as { id: number }[])
+      : [];
+  if (frameworkIds === null || frameworkRows.length !== frameworkIds.length) {
+    throw new ValidationException(
+      "One or more linked frameworks do not exist",
+      "frameworks",
+      refs.frameworks,
+    );
+  }
 };
 
 export const getAllRisksQuery = async (
@@ -599,7 +683,7 @@ const createProjectRiskLink = async (
   projects: number[],
   riskId: number,
   organizationId: number,
-  transaction: Transaction,
+  transaction?: Transaction,
 ): Promise<void> => {
   const projectReplacements: { [key: string]: number }[] = [];
   const placeholders = projects
@@ -614,12 +698,38 @@ const createProjectRiskLink = async (
     ...Object.assign({}, ...projectReplacements),
   };
   await sequelize.query(
-    `INSERT INTO projects_risks (project_id, risk_id, organization_id) VALUES ${placeholders}`,
+    `INSERT INTO projects_risks (project_id, risk_id, organization_id) VALUES ${placeholders}
+     ON CONFLICT (risk_id, project_id) DO NOTHING`,
     {
       replacements,
       transaction,
     },
   );
+};
+
+/**
+ * Links one live risk to one use case of the organization, through the same
+ * junction writer createRiskQuery and updateRiskByIdQuery use. A link that
+ * already exists is left as it is.
+ *
+ * @throws NotFoundException when the risk is missing, deleted or in another
+ *   organization; ValidationException when the use case is not in it.
+ */
+export const linkRiskToProjectQuery = async (
+  riskId: number,
+  projectId: number,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<void> => {
+  const risks = await sequelize.query(
+    `SELECT id FROM risks
+      WHERE id = :riskId AND organization_id = :organizationId
+        AND (is_deleted = false OR is_deleted IS NULL)`,
+    { replacements: { riskId, organizationId }, type: QueryTypes.SELECT, transaction },
+  );
+  if (risks.length === 0) throw new NotFoundException("Risk not found", "risk", riskId);
+  await assertRiskReferencesInOrganization({ projects: [projectId] }, organizationId, transaction);
+  await createProjectRiskLink([projectId], riskId, organizationId, transaction);
 };
 
 const createFrameworkRiskLink = async (
@@ -656,6 +766,8 @@ export const createRiskQuery = async (
   organizationId: number,
   transaction: Transaction,
 ): Promise<RiskModel> => {
+  await assertRiskReferencesInOrganization(projectRisk, organizationId, transaction);
+
   const result = await sequelize.query(
     `INSERT INTO risks (
       organization_id, risk_name, risk_owner, ai_lifecycle_phase, risk_description,
@@ -703,7 +815,7 @@ export const createRiskQuery = async (
         review_notes: projectRisk.review_notes,
         mitigation_status: projectRisk.mitigation_status,
         current_risk_level: projectRisk.current_risk_level,
-        deadline: projectRisk.deadline,
+        deadline: toRiskCalendarDate(projectRisk.deadline ?? null),
         mitigation_plan: projectRisk.mitigation_plan,
         implementation_strategy: projectRisk.implementation_strategy,
         mitigation_evidence_document: projectRisk.mitigation_evidence_document,
@@ -712,7 +824,7 @@ export const createRiskQuery = async (
         final_risk_level: projectRisk.final_risk_level,
         risk_approval: projectRisk.risk_approval,
         approval_status: projectRisk.approval_status,
-        date_of_assessment: projectRisk.date_of_assessment,
+        date_of_assessment: toRiskCalendarDate(projectRisk.date_of_assessment ?? null),
         is_demo: projectRisk.is_demo || false,
         event_frequency_min: projectRisk.event_frequency_min ?? null,
         event_frequency_likely: projectRisk.event_frequency_likely ?? null,
@@ -836,6 +948,22 @@ export const createRiskQuery = async (
   return createdRisk;
 };
 
+/** Text columns of risks: "" is stored as sent. */
+const RISK_TEXT_COLUMNS = new Set([
+  "risk_description",
+  "impact",
+  "assessment_mapping",
+  "controls_mapping",
+  "review_notes",
+  "mitigation_plan",
+  "implementation_strategy",
+  "mitigation_evidence_document",
+  "final_risk_level",
+  "approval_status",
+]);
+/** User columns of risks: 0 means no user. */
+const RISK_USER_COLUMNS = new Set(["risk_owner", "risk_approval"]);
+
 export const updateRiskByIdQuery = async (
   id: number,
   projectRisk: Partial<
@@ -850,6 +978,24 @@ export const updateRiskByIdQuery = async (
   transaction: Transaction,
 ): Promise<RiskModel | null> => {
   const existingRisk = await getRiskByIdQuery(id, organizationId, true);
+  // Unchanged owner/approver are not re-checked, so a risk whose owner has
+  // left the organization can still be edited.
+  await assertRiskReferencesInOrganization(
+    {
+      risk_owner:
+        Number(projectRisk.risk_owner) !== Number(existingRisk?.risk_owner)
+          ? projectRisk.risk_owner
+          : undefined,
+      risk_approval:
+        Number(projectRisk.risk_approval) !== Number(existingRisk?.risk_approval)
+          ? projectRisk.risk_approval
+          : undefined,
+      projects: projectRisk.projects,
+      frameworks: projectRisk.frameworks,
+    },
+    organizationId,
+    transaction,
+  );
   const updateProjectRisk: Partial<Record<keyof RiskModel, any>> & { organizationId?: number } = {};
   const setClause = [
     "risk_name",
@@ -903,38 +1049,22 @@ export const updateRiskByIdQuery = async (
   ]
     .filter((f) => {
       const value = projectRisk[f as keyof RiskModel];
-      // For quantitative FAIR fields, allow null and 0 as valid update values
-      const isQuantitativeField = [
-        "event_frequency_min",
-        "event_frequency_likely",
-        "event_frequency_max",
-        "loss_regulatory_min",
-        "loss_regulatory_likely",
-        "loss_regulatory_max",
-        "loss_operational_min",
-        "loss_operational_likely",
-        "loss_operational_max",
-        "loss_litigation_min",
-        "loss_litigation_likely",
-        "loss_litigation_max",
-        "loss_reputational_min",
-        "loss_reputational_likely",
-        "loss_reputational_max",
-        "total_loss_likely",
-        "ale_estimate",
-        "control_effectiveness",
-        "residual_ale",
-        "mitigation_cost_annual",
-        "roi_percentage",
-        "benchmark_id",
-        "currency",
-      ].includes(f);
-      const hasValue = isQuantitativeField ? value !== undefined : value !== undefined && value;
+      // A key that is present is written, so a field can be cleared (R-M1).
+      // risk_name is NOT NULL, so an empty name is skipped.
+      const hasValue = value !== undefined && (f !== "risk_name" || Boolean(value));
       if (hasValue) {
         if (f === "risk_category") {
           // Format array for PostgreSQL
           const arr = value as string[];
           updateProjectRisk[f as keyof RiskModel] = `{${(arr || []).join(",")}}` as any;
+        } else if (
+          !RISK_TEXT_COLUMNS.has(f) &&
+          (value === "" || (RISK_USER_COLUMNS.has(f) && Number(value) === 0))
+        ) {
+          // "" (and user id 0) on an enum, date or user column means none.
+          updateProjectRisk[f as keyof RiskModel] = null;
+        } else if (f === "deadline" || f === "date_of_assessment") {
+          updateProjectRisk[f as keyof RiskModel] = toRiskCalendarDate(value);
         } else {
           updateProjectRisk[f as keyof RiskModel] = value;
         }
@@ -1190,10 +1320,17 @@ export const updateRiskByIdQuery = async (
       { key: "severity", param: "severity" },
       { key: "likelihood", param: "likelihood" },
       { key: "mitigation_status", param: "mitigation_status" },
-      { key: "risk_level", param: "risk_level_autocalculated" },
     ];
 
     const snapshotPromises = [];
+    // Snapshots are keyed by the effective level, so a change to either the
+    // inherent or the current level can move the counts.
+    const effective = (r: any) => (r ? getEffectiveRiskLevel(r) : null);
+    if (existingRisk && effective(existingRisk) !== effective(updatedRisk.dataValues)) {
+      snapshotPromises.push(
+        recordSnapshotIfChanged("risk_level", organizationId, undefined, transaction),
+      );
+    }
     for (const { key, param } of parametersToCheck) {
       // Cast to any to avoid TypeScript complaining about indexing RiskModel with IRisk keys
       if (existingRisk && (existingRisk as any)[param] !== (updatedRisk.dataValues as any)[param]) {
@@ -1217,7 +1354,8 @@ export const deleteRiskByIdQuery = async (
   organizationId: number,
   transaction: Transaction,
 ): Promise<boolean> => {
-  await deleteAllCustomFieldValuesForEntityQuery("project_risk", id, organizationId, transaction);
+  // Soft delete. Custom field values stay with the archived risk, and nothing
+  // else runs when no active risk matched (R-M7).
   const result = (await sequelize.query(
     `UPDATE risks SET is_deleted = true, deleted_at = NOW(), updated_at = NOW() WHERE id = :id AND organization_id = :organizationId AND is_deleted = false RETURNING *`,
     {
@@ -1229,6 +1367,7 @@ export const deleteRiskByIdQuery = async (
     },
   )) as [RiskModel[], number];
   const deletedRisk = result[0][0];
+  if (!deletedRisk) return false;
   const automations = (await sequelize.query(
     `SELECT
       pat.key AS trigger_key,

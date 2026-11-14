@@ -1,6 +1,7 @@
 import { screen } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import { EmptyState } from "../index";
+import { radiusPx } from "../../../themes/palette";
 
 describe("EmptyState", () => {
   it("renders the default message", () => {
@@ -35,7 +36,7 @@ describe("EmptyState", () => {
 
   it("renders with border by default", () => {
     renderWithProviders(<EmptyState />);
-    expect(screen.getByRole("status")).toHaveStyle({ borderRadius: "4px" });
+    expect(screen.getByRole("status")).toHaveStyle({ borderRadius: radiusPx.sm });
   });
 
   it("omits border when showBorder is false", () => {

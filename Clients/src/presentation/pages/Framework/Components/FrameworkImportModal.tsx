@@ -14,7 +14,7 @@ import { Download, Upload } from "lucide-react";
 import StandardModal from "../../../components/Modals/StandardModal";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import Alert from "../../../components/Alert";
-import { border } from "../../../themes/palette";
+import { border, radiusPx } from "../../../themes/palette";
 import { downloadFrameworkImportTemplate } from "../../../../application/repository/frameworkImport.repository";
 import { useImportFramework } from "../../../../application/hooks/useFrameworkImport";
 import type {
@@ -30,7 +30,7 @@ interface FrameworkImportModalProps {
 
 const sectionSx = {
   border: `1px solid ${border.dark}`,
-  borderRadius: "4px",
+  borderRadius: radiusPx.sm,
   padding: "16px",
   display: "flex",
   flexDirection: "column",
@@ -39,7 +39,7 @@ const sectionSx = {
 
 const tableSx = {
   "border": `1px solid ${border.dark}`,
-  "borderRadius": "4px",
+  "borderRadius": radiusPx.sm,
   "& th, & td": { fontSize: 13, padding: "6px 12px" },
 } as const;
 

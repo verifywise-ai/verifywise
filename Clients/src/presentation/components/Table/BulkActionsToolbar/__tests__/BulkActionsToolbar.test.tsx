@@ -3,6 +3,7 @@ import { screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { renderWithProviders } from "../../../../../test/renderWithProviders";
 import BulkActionsToolbar, { type BulkAction } from "../index";
+import { accent } from "../../../../themes/palette";
 
 describe("BulkActionsToolbar", () => {
   beforeEach(() => {
@@ -124,5 +125,46 @@ describe("BulkActionsToolbar", () => {
     await userEvent.click(button);
 
     expect(onClick).not.toHaveBeenCalled();
+  });
+
+  // WCAG 2.x relative luminance contrast; 4.5:1 is AA for 13px text.
+  function contrast(a: [number, number, number], b: [number, number, number]): number {
+    const lum = ([r, g, b2]: [number, number, number]) => {
+      const c = [r, g, b2].map((v) => {
+        const x = v / 255;
+        return x <= 0.03928 ? x / 12.92 : ((x + 0.055) / 1.055) ** 2.4;
+      });
+      return 0.2126 * c[0] + 0.7152 * c[1] + 0.0722 * c[2];
+    };
+    const [hi, lo] = [lum(a), lum(b)].sort((x, y) => y - x);
+    return (hi + 0.05) / (lo + 0.05);
+  }
+  const parseRgb = (value: string): [number, number, number] => {
+    const [r, g, b] = (value.match(/\d+/g) ?? []).map(Number);
+    return [r, g, b];
+  };
+  const parseHex = (hex: string): [number, number, number] => [
+    parseInt(hex.slice(1, 3), 16),
+    parseInt(hex.slice(3, 5), 16),
+    parseInt(hex.slice(5, 7), 16),
+  ];
+
+  it("keeps danger actions readable on the bar (WCAG AA)", () => {
+    const actions: BulkAction[] = [
+      {
+        id: "delete",
+        label: "Delete",
+        onClick: vi.fn(),
+        confirm: { title: "Delete?", body: "Sure?", confirmLabel: "Delete", danger: true },
+      },
+    ];
+    renderWithProviders(<BulkActionsToolbar count={1} onClear={vi.fn()} actions={actions} />);
+
+    const toolbar = screen.getByRole("toolbar");
+    const deleteButton = screen.getByRole("button", { name: /delete/i });
+    const fill = getComputedStyle(toolbar).backgroundColor;
+    expect(parseRgb(fill)).toEqual(parseHex(accent.primary.bg));
+    const label = parseRgb(getComputedStyle(deleteButton).color);
+    expect(contrast(label, parseRgb(fill))).toBeGreaterThanOrEqual(4.5);
   });
 });

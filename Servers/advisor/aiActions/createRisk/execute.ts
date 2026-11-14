@@ -27,7 +27,7 @@ import { sequelize } from "../../../database/db";
 import { createRiskService } from "../../../services/risk.service";
 import { enqueueRiskLinkRecompute } from "../../../services/automations/automationProducer";
 import { createNewTaskQuery } from "../../../utils/task.utils";
-import { calculateRiskLevel } from "../../../utils/validations/riskValidation.utils";
+import { normalizeCurrentRiskLevel } from "../../../utils/riskLevel.utils";
 import { sendInAppNotification } from "../../../services/inAppNotification.service";
 import {
   NotificationType,
@@ -119,7 +119,6 @@ export async function executeCreateRisk(
 
   const severity = input.severity ?? DEFAULT_SEVERITY;
   const likelihood = input.likelihood ?? DEFAULT_LIKELIHOOD;
-  const riskLevelAutocalculated = calculateRiskLevel(severity, likelihood);
   const riskOwner = input.risk_owner ?? ctx.requesterId;
 
   // ═══════════════════════════════════════════════════════
@@ -135,15 +134,13 @@ export async function executeCreateRisk(
       impact: input.impact,
       severity,
       likelihood,
-      risk_level_autocalculated: riskLevelAutocalculated as
-        "No risk" | "Very low risk" | "Low risk" | "Medium risk" | "High risk" | "Very high risk",
       review_notes: input.review_notes,
       risk_owner: riskOwner,
       projects: input.project_ids ?? [],
       frameworks: input.framework_ids ?? [],
       mitigation_status: input.mitigation_status,
       mitigation_plan: input.mitigation_plan,
-      current_risk_level: input.current_risk_level,
+      current_risk_level: normalizeCurrentRiskLevel(input.current_risk_level),
       implementation_strategy: input.implementation_strategy,
       deadline: new Date(input.deadline),
       risk_approval: input.approver,

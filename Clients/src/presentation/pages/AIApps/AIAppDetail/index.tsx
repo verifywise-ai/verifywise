@@ -7,7 +7,7 @@ import { PageHeaderExtended } from "../../../components/Layout/PageHeaderExtende
 import { EmptyState } from "../../../components/EmptyState";
 import { useAiApp, useUpdateAiAppStatus } from "../../../../application/hooks/useAiApps";
 import { AiAppStatus } from "../../../../domain/enums/aiApp.enum";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import Alert from "../../../components/Alert";
 import AIAppApprovalCenter from "./AIAppApprovalCenter";
 import AIAppPolicyMapping from "./AIAppPolicyMapping";
@@ -18,7 +18,7 @@ import AIAppLifecyclePanel from "./AIAppLifecyclePanel";
 
 const sectionCardStyle = {
   border: `1px solid ${palette.border.dark}`,
-  borderRadius: "4px",
+  borderRadius: radiusPx.sm,
   padding: "24px",
   backgroundColor: palette.background.main,
 };
@@ -84,13 +84,10 @@ export default function AIAppDetail() {
           />
         </Box>
 
-        <Box sx={sectionCardStyle}>
-          <AIAppPolicyMapping appId={app.id!} appName={app.name} policies={app.policies || []} />
-        </Box>
+        {/* Table sections sit on the page: the table's own frame is the only box. */}
+        <AIAppPolicyMapping appId={app.id!} appName={app.name} policies={app.policies || []} />
 
-        <Box sx={sectionCardStyle}>
-          <AIAppModelDependencies appId={app.id!} models={app.models || []} />
-        </Box>
+        <AIAppModelDependencies appId={app.id!} models={app.models || []} />
 
         <Box sx={sectionCardStyle}>
           <AIAppLinkedUseCases appId={app.id!} />

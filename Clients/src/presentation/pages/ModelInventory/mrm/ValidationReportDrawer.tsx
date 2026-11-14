@@ -20,6 +20,7 @@ import {
   validationStageChipVariant,
 } from "./constants";
 import { mrmSubHeadingStyle, mrmTriggerBadgeStyle } from "./mrmStyles";
+import { radiusPx } from "../../../themes/palette";
 
 interface ValidationReportDrawerProps {
   validation: IMrmValidation | null;
@@ -194,7 +195,7 @@ const ValidationReportDrawer = ({
               sx={{
                 padding: "8px 12px",
                 marginBottom: "16px",
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 backgroundColor: "background.accent",
                 border: "1px solid",
                 borderColor: "border.light",
@@ -217,7 +218,7 @@ const ValidationReportDrawer = ({
                     justifyContent: "center",
                     width: "20px",
                     height: "20px",
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     backgroundColor: "background.accent",
                     color: "text.secondary",
                     fontSize: "11px",

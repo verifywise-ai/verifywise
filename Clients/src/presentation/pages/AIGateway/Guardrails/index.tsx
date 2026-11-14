@@ -35,6 +35,7 @@ import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { useTranslation } from "../../../../application/hooks/useTranslation";
 import { fill } from "../../../../i18n/fill";
 import palette from "../../../themes/palette";
+import { palette as vwPalette, radiusPx } from "../../../themes/palette";
 import { sectionTitleSx, useCardSx } from "../shared";
 import {
   getClientErrorReason,
@@ -873,7 +874,7 @@ export default function GuardrailsPage() {
       sx={{
         p: "12px 16px",
         border: `1px solid ${palette.border.dark}`,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         opacity: rule.is_active ? 1 : 0.6,
       }}
     >
@@ -1227,7 +1228,7 @@ export default function GuardrailsPage() {
               sx={{
                 p: "12px 16px",
                 border: `1px solid ${testResult.would_block ? palette.status.error.text : palette.border.light}`,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 backgroundColor: testResult.would_block
                   ? `${palette.status.error.text}08`
                   : palette.background.alt,
@@ -1347,7 +1348,7 @@ export default function GuardrailsPage() {
                                     justifyContent: "center",
                                     height: 24,
                                     px: "8px",
-                                    borderRadius: "4px",
+                                    borderRadius: radiusPx.sm,
                                     border: `1px solid ${palette.border.light}`,
                                     backgroundColor: palette.background.alt,
                                     fontSize: 11,
@@ -1382,7 +1383,7 @@ export default function GuardrailsPage() {
                                       color: palette.text.secondary,
                                       backgroundColor: palette.background.alt,
                                       border: `1px solid ${palette.border.light}`,
-                                      borderRadius: "4px",
+                                      borderRadius: radiusPx.sm,
                                       px: "6px",
                                       py: "2px",
                                       whiteSpace: "nowrap",
@@ -1448,7 +1449,7 @@ export default function GuardrailsPage() {
         description={`Are you sure you want to remove "${deleteTarget?.name}"?`}
         onSubmit={handleDeleteConfirm}
         submitButtonText="Remove rule"
-        submitButtonColor="#D32F2F"
+        submitButtonColor={vwPalette.status.error.text}
         isSubmitting={deleteSubmitting}
         maxWidth="480px"
       >

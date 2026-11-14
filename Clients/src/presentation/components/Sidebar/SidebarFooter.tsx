@@ -35,8 +35,12 @@ import {
   Moon,
   Sun,
 } from "lucide-react";
+import VWIcon from "../VWIcon";
+import { isClassicUi } from "../../themes/uiStyle";
+import { SIDEBAR_ROW_HEIGHT } from "./sidebarRowHeight";
+import { chartTheme } from "../../themes/chartTheme";
 import Avatar from "../Avatar/VWAvatar";
-import { brand, text, background } from "../../themes/palette";
+import { brand, text, background, palette as vwPalette, radiusPx } from "../../themes/palette";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import { storageService } from "../../../infrastructure/storage";
 import { ROLES } from "../../../application/constants/roles";
@@ -80,7 +84,11 @@ const MANAGEMENT_ITEMS: IManagementItem[] = [
   },
   {
     name: "Settings",
-    icon: <Settings size={16} strokeWidth={1.5} />,
+    icon: isClassicUi() ? (
+      <Settings size={16} strokeWidth={1.5} />
+    ) : (
+      <VWIcon name="settings" size={16} />
+    ),
     path: "/settings",
   },
 ];
@@ -88,7 +96,11 @@ const MANAGEMENT_ITEMS: IManagementItem[] = [
 const SUPER_ADMIN_MANAGEMENT_ITEMS: IManagementItem[] = [
   {
     name: "Settings",
-    icon: <Settings size={16} strokeWidth={1.5} />,
+    icon: isClassicUi() ? (
+      <Settings size={16} strokeWidth={1.5} />
+    ) : (
+      <VWIcon name="settings" size={16} />
+    ),
     path: "/super-admin/settings",
   },
 ];
@@ -106,6 +118,31 @@ const DEFAULT_USER: User = {
   surname: "",
   email: "",
   roleId: 1,
+};
+
+/**
+ * Colours of the demo data button (add or remove), shared by the collapsed
+ * and expanded sidebars. Classic keeps its gradients; phase 1 uses plain fills.
+ */
+const demoButtonColours = (hasDemoData: boolean | undefined) => {
+  const c = hasDemoData ? chartTheme.demoButton.remove : chartTheme.demoButton.add;
+  const fill = (from: string, to: string) =>
+    isClassicUi() ? `linear-gradient(135deg, ${from} 0%, ${to} 100%)` : from;
+  return {
+    "background": fill(c.fill, c.fillEnd),
+    "border": `1px solid ${c.border}`,
+    "&:hover": { background: fill(c.hoverFill, c.hoverFillEnd) },
+    "&:hover svg.demo-icon": {
+      color: `${c.hoverIcon} !important`,
+      stroke: `${c.hoverIcon} !important`,
+    },
+  };
+};
+
+/** The demo button icon: one colour for fill and stroke. */
+const demoIconColours = (hasDemoData: boolean | undefined) => {
+  const { icon } = hasDemoData ? chartTheme.demoButton.remove : chartTheme.demoButton.add;
+  return { color: icon, stroke: icon, transition: "color 0.2s ease, stroke 0.2s ease" };
 };
 
 const SidebarFooter: FC<SidebarFooterProps> = ({
@@ -280,23 +317,11 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                   }
                 }}
                 sx={{
-                  "height": "32px",
-                  "gap": theme.spacing(4),
-                  "borderRadius": theme.shape.borderRadius,
-                  "px": theme.spacing(4),
-                  "background": hasDemoData
-                    ? "linear-gradient(135deg, #FEF3F2 0%, #FEE4E2 100%)"
-                    : "linear-gradient(135deg, #ECFDF3 0%, #D1FADF 100%)",
-                  "border": hasDemoData ? "1px solid #FECDCA" : "1px solid #A6F4C5",
-                  "&:hover": {
-                    background: hasDemoData
-                      ? "linear-gradient(135deg, #FEE4E2 0%, #FECDCA 100%)"
-                      : "linear-gradient(135deg, #D1FADF 0%, #A6F4C5 100%)",
-                  },
-                  "&:hover svg.demo-icon": {
-                    color: hasDemoData ? "#B42318 !important" : "#027A48 !important",
-                    stroke: hasDemoData ? "#B42318 !important" : "#027A48 !important",
-                  },
+                  height: SIDEBAR_ROW_HEIGHT,
+                  gap: theme.spacing(4),
+                  borderRadius: theme.shape.borderRadius,
+                  px: theme.spacing(4),
+                  ...demoButtonColours(hasDemoData),
                 }}
               >
                 <ListItemIcon
@@ -307,11 +332,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                     "justifyContent": "center",
                     "width": "16px",
                     "mr": 0,
-                    "& svg": {
-                      color: hasDemoData ? "#D92D20" : "#039855",
-                      stroke: hasDemoData ? "#D92D20" : "#039855",
-                      transition: "color 0.2s ease, stroke 0.2s ease",
-                    },
+                    "& svg": demoIconColours(hasDemoData),
                   }}
                 >
                   {hasDemoData ? (
@@ -327,7 +348,9 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                         "& .MuiListItemText-primary": {
                           fontSize: "13px",
                           fontWeight: 500,
-                          color: hasDemoData ? "#B42318" : "#027A48",
+                          color: hasDemoData
+                            ? vwPalette.status.error.text
+                            : vwPalette.status.success.text,
                         },
                       }}
                     >
@@ -384,23 +407,11 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                 }
               }}
               sx={{
-                "height": "32px",
-                "gap": theme.spacing(4),
-                "borderRadius": theme.shape.borderRadius,
-                "px": theme.spacing(4),
-                "background": hasDemoData
-                  ? "linear-gradient(135deg, #FEF3F2 0%, #FEE4E2 100%)"
-                  : "linear-gradient(135deg, #ECFDF3 0%, #D1FADF 100%)",
-                "border": hasDemoData ? "1px solid #FECDCA" : "1px solid #A6F4C5",
-                "&:hover": {
-                  background: hasDemoData
-                    ? "linear-gradient(135deg, #FEE4E2 0%, #FECDCA 100%)"
-                    : "linear-gradient(135deg, #D1FADF 0%, #A6F4C5 100%)",
-                },
-                "&:hover svg.demo-icon": {
-                  color: hasDemoData ? "#B42318 !important" : "#027A48 !important",
-                  stroke: hasDemoData ? "#B42318 !important" : "#027A48 !important",
-                },
+                height: SIDEBAR_ROW_HEIGHT,
+                gap: theme.spacing(4),
+                borderRadius: theme.shape.borderRadius,
+                px: theme.spacing(4),
+                ...demoButtonColours(hasDemoData),
               }}
             >
               <ListItemIcon
@@ -411,11 +422,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                   "justifyContent": "center",
                   "width": "16px",
                   "mr": 0,
-                  "& svg": {
-                    color: hasDemoData ? "#D92D20" : "#039855",
-                    stroke: hasDemoData ? "#D92D20" : "#039855",
-                    transition: "color 0.2s ease, stroke 0.2s ease",
-                  },
+                  "& svg": demoIconColours(hasDemoData),
                 }}
               >
                 {hasDemoData ? (
@@ -430,7 +437,9 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                     "& .MuiListItemText-primary": {
                       fontSize: "13px",
                       fontWeight: 500,
-                      color: hasDemoData ? "#B42318" : "#027A48",
+                      color: hasDemoData
+                        ? vwPalette.status.error.text
+                        : vwPalette.status.success.text,
                     },
                   }}
                 >
@@ -501,18 +510,18 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                 aria-label="Settings"
                 onClick={() => navigate("/super-admin/settings")}
                 sx={{
-                  "height": "32px",
+                  "height": SIDEBAR_ROW_HEIGHT,
                   "gap": theme.spacing(4),
                   "borderRadius": theme.shape.borderRadius,
                   "px": theme.spacing(4),
                   "background": location.pathname.startsWith("/super-admin/settings")
-                    ? "linear-gradient(135deg, #ECECEC 0%, #E4E4E4 100%)"
+                    ? `linear-gradient(135deg, ${vwPalette.border.light} 0%, ${vwPalette.border.light} 100%)`
                     : "transparent",
                   "border": location.pathname.startsWith("/super-admin/settings")
-                    ? "1px solid #D8D8D8"
+                    ? `1px solid ${vwPalette.border.dark}`
                     : "1px solid transparent",
                   "&:hover": {
-                    background: "#F9F9F9",
+                    background: vwPalette.background.alt,
                     border: "1px solid transparent",
                   },
                   "&:hover svg": {
@@ -558,18 +567,18 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
               aria-label="Settings"
               onClick={() => navigate("/super-admin/settings")}
               sx={{
-                "height": "32px",
+                "height": SIDEBAR_ROW_HEIGHT,
                 "gap": theme.spacing(4),
                 "borderRadius": theme.shape.borderRadius,
                 "px": theme.spacing(4),
                 "background": location.pathname.startsWith("/super-admin/settings")
-                  ? "linear-gradient(135deg, #ECECEC 0%, #E4E4E4 100%)"
+                  ? `linear-gradient(135deg, ${vwPalette.border.light} 0%, ${vwPalette.border.light} 100%)`
                   : "transparent",
                 "border": location.pathname.startsWith("/super-admin/settings")
-                  ? "1px solid #D8D8D8"
+                  ? `1px solid ${vwPalette.border.dark}`
                   : "1px solid transparent",
                 "&:hover": {
-                  background: "#F9F9F9",
+                  background: vwPalette.background.alt,
                   border: "1px solid transparent",
                 },
                 "&:hover svg": {
@@ -608,7 +617,8 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
             </ListItemButton>
           )}
         </List>
-      ) : (
+      ) : isClassicUi() ? (
+        // Phase 1 lists Event tracker and Settings in the unified sidebar's Workspace group.
         <List
           component="nav"
           aria-labelledby="nested-management-subheader"
@@ -635,19 +645,23 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                 aria-label="Management"
                 onClick={(e) => setManagementAnchorEl(e.currentTarget)}
                 sx={{
-                  "height": "32px",
+                  "height": SIDEBAR_ROW_HEIGHT,
                   "gap": theme.spacing(4),
                   "borderRadius": theme.shape.borderRadius,
                   "px": theme.spacing(4),
                   "background": isManagementActive
-                    ? "linear-gradient(135deg, #ECECEC 0%, #E4E4E4 100%)"
+                    ? `linear-gradient(135deg, ${vwPalette.border.light} 0%, ${vwPalette.border.light} 100%)`
                     : "transparent",
-                  "border": isManagementActive ? "1px solid #D8D8D8" : "1px solid transparent",
+                  "border": isManagementActive
+                    ? `1px solid ${vwPalette.border.dark}`
+                    : "1px solid transparent",
                   "&:hover": {
                     background: isManagementActive
-                      ? "linear-gradient(135deg, #ECECEC 0%, #E4E4E4 100%)"
-                      : "#F9F9F9",
-                    border: isManagementActive ? "1px solid #D8D8D8" : "1px solid transparent",
+                      ? `linear-gradient(135deg, ${vwPalette.border.light} 0%, ${vwPalette.border.light} 100%)`
+                      : vwPalette.background.alt,
+                    border: isManagementActive
+                      ? `1px solid ${vwPalette.border.dark}`
+                      : "1px solid transparent",
                   },
                   "&:hover svg": {
                     color: `${brand.primary} !important`,
@@ -713,19 +727,23 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
               aria-label="Management"
               onClick={(e) => setManagementAnchorEl(e.currentTarget)}
               sx={{
-                "height": "32px",
+                "height": SIDEBAR_ROW_HEIGHT,
                 "gap": theme.spacing(4),
                 "borderRadius": theme.shape.borderRadius,
                 "px": theme.spacing(4),
                 "background": isManagementActive
-                  ? "linear-gradient(135deg, #ECECEC 0%, #E4E4E4 100%)"
+                  ? `linear-gradient(135deg, ${vwPalette.border.light} 0%, ${vwPalette.border.light} 100%)`
                   : "transparent",
-                "border": isManagementActive ? "1px solid #D8D8D8" : "1px solid transparent",
+                "border": isManagementActive
+                  ? `1px solid ${vwPalette.border.dark}`
+                  : "1px solid transparent",
                 "&:hover": {
                   background: isManagementActive
-                    ? "linear-gradient(135deg, #ECECEC 0%, #E4E4E4 100%)"
-                    : "#F9F9F9",
-                  border: isManagementActive ? "1px solid #D8D8D8" : "1px solid transparent",
+                    ? `linear-gradient(135deg, ${vwPalette.border.light} 0%, ${vwPalette.border.light} 100%)`
+                    : vwPalette.background.alt,
+                  border: isManagementActive
+                    ? `1px solid ${vwPalette.border.dark}`
+                    : "1px solid transparent",
                 },
                 "&:hover svg": {
                   color: `${brand.primary} !important`,
@@ -830,7 +848,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
                   "fontSize": "13px",
                   "borderRadius": theme.shape.borderRadius,
                   "&:hover": {
-                    backgroundColor: "#F9F9F9",
+                    backgroundColor: vwPalette.background.alt,
                   },
                   "&:hover svg": {
                     color: `${brand.primary} !important`,
@@ -891,7 +909,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
             ))}
           </Menu>
         </List>
-      )}
+      ) : null}
 
       {/* Ready To Subscribe Box - only shown when not collapsed and enabled */}
       {showReadyToSubscribe && !collapsed && (
@@ -991,7 +1009,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
               position: "absolute",
               bottom: "80px",
               left: collapsed ? "30px" : "30px",
-              borderRadius: "8px",
+              borderRadius: radiusPx.lg,
               boxShadow: "0 12px 24px rgba(0,0,0,0.15)",
               border: `1px solid ${theme.palette.divider}`,
               backgroundColor: "transparent",
@@ -1003,7 +1021,7 @@ const SidebarFooter: FC<SidebarFooterProps> = ({
             ref={drawerRef}
             sx={{
               "backgroundColor": theme.palette.background.main,
-              "borderRadius": "8px",
+              "borderRadius": radiusPx.lg,
               "border": `1px solid ${theme.palette.divider}`,
               "overflow": "hidden",
               "p": 1,

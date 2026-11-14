@@ -123,12 +123,14 @@ vi.mock("../../../components/Policies/PolicyTable", () => ({
       <button data-testid="linked-first" onClick={() => data[0] && onLinkedObjects(data[0].id)}>
         linked
       </button>
-      <button
-        data-testid="assign-folder-first"
-        onClick={() => data[0] && onAssignToFolder?.(data[0].id)}
-      >
-        assign folder
-      </button>
+      {onAssignToFolder && (
+        <button
+          data-testid="assign-folder-first"
+          onClick={() => data[0] && onAssignToFolder(data[0].id)}
+        >
+          assign folder
+        </button>
+      )}
       <button data-testid="bulk-archive" onClick={() => onBulkActionSuccess?.("archive", 2)}>
         bulk archive
       </button>
@@ -146,7 +148,9 @@ vi.mock("../../../components/Table/ExportMenu", () => ({
 }));
 
 vi.mock("../../FileManager/components/FolderTree", () => ({
-  FolderTree: () => <div data-testid="folder-tree" />,
+  FolderTree: ({ canManage }: any) => (
+    <div data-testid="folder-tree" data-can-manage={String(Boolean(canManage))} />
+  ),
 }));
 
 vi.mock("../../FileManager/components/CreateFolderModal", () => ({
@@ -386,5 +390,20 @@ describe("PolicyManager", () => {
     expect(screen.queryByTestId("folder-tree")).not.toBeInTheDocument();
     fireEvent.click(screen.getByLabelText("Documents"));
     expect(screen.getByTestId("folder-tree")).toBeInTheDocument();
+  });
+
+  it("offers folder actions to roles that can edit policies", () => {
+    renderWithProviders(<PolicyManager tags={[]} />, { route: "/policies" });
+    expect(screen.getByTestId("assign-folder-first")).toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("Documents"));
+    expect(screen.getByTestId("folder-tree")).toHaveAttribute("data-can-manage", "true");
+  });
+
+  it.each(["Auditor", "Reviewer"])("hides folder actions from the read-only %s role", (role) => {
+    mockUserRoleName = role;
+    renderWithProviders(<PolicyManager tags={[]} />, { route: "/policies" });
+    expect(screen.queryByTestId("assign-folder-first")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByLabelText("Documents"));
+    expect(screen.getByTestId("folder-tree")).toHaveAttribute("data-can-manage", "false");
   });
 });

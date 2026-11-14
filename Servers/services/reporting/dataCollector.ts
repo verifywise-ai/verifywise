@@ -4,7 +4,7 @@
  * Following VerifyWise clean architecture patterns
  */
 
-import { background, brand, risk, status, text } from "../../tools/design-tokens/palette";
+import { background, brand, riskMark, status, text } from "../../tools/design-tokens/palette";
 import {
   ReportData,
   ReportMetadata,
@@ -57,6 +57,7 @@ import { getProjectByIdQuery } from "../../utils/project.utils";
 import { getAllFrameworkByIdQuery } from "../../utils/framework.utils";
 import { sequelize } from "../../database/db";
 import { QueryTypes } from "sequelize";
+import { effectiveRiskLevelSql, getEffectiveRiskLevel } from "../../utils/riskLevel.utils";
 
 /**
  * Risk level colour mapping.
@@ -66,21 +67,24 @@ import { QueryTypes } from "sequelize";
  * 2026-07-29 only the unsuffixed forms were here, so every real level missed
  * and the report's donut, bar chart and legend rendered uniformly grey.
  *
+ * Bars and slices use the solid risk marks (phase 1 restyle), not the
+ * darker text colours meant for words on a tint.
+ *
  * The unsuffixed keys are kept: vendor and model risk levels are written
  * without the suffix, and they share this map.
  */
 const RISK_LEVEL_COLORS: Record<string, string> = {
-  Critical: risk.critical.text,
-  "Very high risk": risk.critical.text,
-  "Very High": risk.critical.text,
-  "High risk": risk.high.text,
-  High: risk.high.text,
-  "Medium risk": risk.medium.text,
-  Medium: risk.medium.text,
-  "Low risk": risk.low.text,
-  Low: risk.low.text,
-  "Very low risk": risk.veryLow.text,
-  "Very Low": risk.veryLow.text,
+  Critical: riskMark.critical,
+  "Very high risk": riskMark.critical,
+  "Very High": riskMark.critical,
+  "High risk": riskMark.high,
+  High: riskMark.high,
+  "Medium risk": riskMark.medium,
+  Medium: riskMark.medium,
+  "Low risk": riskMark.low,
+  Low: riskMark.low,
+  "Very low risk": riskMark.veryLow,
+  "Very Low": riskMark.veryLow,
   "No risk": text.icon,
 };
 
@@ -716,7 +720,7 @@ export class ReportDataCollector {
 
     const risksByLevel: Record<string, number> = {};
     risks.forEach((risk) => {
-      const level = risk.risk_level_autocalculated || "Unknown";
+      const level = getEffectiveRiskLevel(risk) || "Unknown";
       risksByLevel[level] = (risksByLevel[level] || 0) + 1;
     });
 
@@ -731,7 +735,7 @@ export class ReportDataCollector {
         id: risk.id,
         name: risk.risk_name || "Unnamed Risk",
         description: risk.risk_description || "",
-        riskLevel: risk.risk_level_autocalculated || "Unknown",
+        riskLevel: getEffectiveRiskLevel(risk) || "Unknown",
         impact: risk.risk_severity || "Unknown",
         likelihood: risk.likelihood || "Unknown",
         // `risks` carries both columns and they are orthogonal — a risk can be
@@ -1356,7 +1360,7 @@ export class ReportDataCollector {
           ns.status,
           r.id AS risk_id,
           r.risk_name,
-          r.risk_level_autocalculated AS risk_level
+          ${effectiveRiskLevelSql("r")} AS risk_level
         FROM nist_ai_rmf_subcategories ns
         JOIN nist_ai_rmf_subcategories_struct ss ON ns.subcategory_meta_id = ss.id
         JOIN nist_ai_rmf_categories_struct cs ON ss.category_struct_id = cs.id

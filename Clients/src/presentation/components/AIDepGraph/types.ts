@@ -12,6 +12,8 @@ import type {
   FilePath,
   GovernanceStatus,
 } from "../../../domain/ai-detection/types";
+import { palette } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 
 // Re-export for convenience
 export type DependencyNodeType = DomainDependencyNodeType;
@@ -43,13 +45,13 @@ export interface AIDepEdgeData {
 
 // Node type colors
 export const NODE_TYPE_COLORS: Record<DependencyNodeType, string> = {
-  library: "#3b82f6", // Blue
-  model: "#8b5cf6", // Purple
-  api: "#f59e0b", // Amber
-  secret: "#ef4444", // Red
-  rag: "#10b981", // Emerald
-  agent: "#6366f1", // Indigo
-  repository: "#64748b", // Slate
+  library: palette.status.info.text, // Blue
+  model: palette.accent.purple.text, // Purple
+  api: palette.riskMark.medium, // Amber
+  secret: palette.riskMark.critical, // Red
+  rag: palette.status.success.strong, // Emerald
+  agent: chartTheme.entity.indigo, // Indigo (phase 1: series 1)
+  repository: palette.text.icon, // Slate
 };
 
 // Node type labels
@@ -75,14 +77,14 @@ export const EDGE_RELATIONSHIP_LABELS: Record<EdgeRelationship, string> = {
 
 // Risk level colors
 export const RISK_LEVEL_COLORS: Record<RiskLevel, string> = {
-  high: "#ef4444",
-  medium: "#f59e0b",
-  low: "#10b981",
+  high: palette.riskMark.critical,
+  medium: palette.riskMark.medium,
+  low: palette.status.success.strong,
 };
 
 // Confidence level colors
 export const CONFIDENCE_COLORS: Record<ConfidenceLevel, string> = {
-  high: "#10b981",
-  medium: "#f59e0b",
-  low: "#94a3b8",
+  high: palette.status.success.strong,
+  medium: palette.riskMark.medium,
+  low: palette.text.disabled,
 };

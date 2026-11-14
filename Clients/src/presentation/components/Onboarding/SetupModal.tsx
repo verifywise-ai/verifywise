@@ -20,7 +20,7 @@ import { postAutoDrivers } from "../../../application/repository/entity.reposito
 import { updateOnboardingStatus } from "../../../application/repository/organization.repository";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { setOnboardingStatus } from "../../../application/redux/auth/authSlice";
-import { brand, text, background, border, accent } from "../../themes/palette";
+import { brand, text, background, border, accent, radiusPx } from "../../themes/palette";
 
 const SETUP_ERROR_MESSAGE =
   "Something went wrong while setting up your workspace. Try again, or skip for now.";
@@ -157,7 +157,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
         aria-modal="true"
         sx={{
           backgroundColor: background.main,
-          borderRadius: "12px",
+          borderRadius: radiusPx.xl,
           boxShadow: "0 20px 60px rgba(0, 0, 0, 0.2)",
           width: "100%",
           maxWidth: "520px",
@@ -208,7 +208,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
               "flex": 1,
               "padding": "24px 20px",
               "border": `1px solid ${border.light}`,
-              "borderRadius": "4px",
+              "borderRadius": radiusPx.sm,
               "cursor": isLoading ? "not-allowed" : "pointer",
               "opacity": isLoading && loadingOption !== "demo" ? 0.5 : 1,
               "transition": "all 0.2s ease",
@@ -223,7 +223,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
                 sx={{
                   width: 48,
                   height: 48,
-                  borderRadius: "8px",
+                  borderRadius: radiusPx.lg,
                   backgroundColor: background.fill,
                   display: "flex",
                   alignItems: "center",
@@ -267,7 +267,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
               "flex": 1,
               "padding": "24px 20px",
               "border": `1px solid ${border.light}`,
-              "borderRadius": "4px",
+              "borderRadius": radiusPx.sm,
               "cursor": isLoading ? "not-allowed" : "pointer",
               "opacity": isLoading && loadingOption !== "blank" ? 0.5 : 1,
               "transition": "all 0.2s ease",
@@ -282,7 +282,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
                 sx={{
                   width: 48,
                   height: 48,
-                  borderRadius: "8px",
+                  borderRadius: radiusPx.lg,
                   backgroundColor: background.surface,
                   display: "flex",
                   alignItems: "center",
@@ -326,7 +326,7 @@ const SetupModal: React.FC<SetupModalProps> = ({ onComplete, onSkip }) => {
             sx={{
               margin: "-16px 32px 24px",
               padding: "10px 12px",
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               border: `1px solid ${accent.red.border}`,
               backgroundColor: accent.red.bg,
             }}

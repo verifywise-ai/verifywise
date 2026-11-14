@@ -14,7 +14,7 @@ import useProjectData from "../../../../application/hooks/useProjectData";
 import useProjectStatus from "../../../../application/hooks/useProjectStatus";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import getProjectData from "../../../../application/tools/getProjectData";
-import { text } from "../../../themes/palette";
+import { text, palette as vwPalette } from "../../../themes/palette";
 
 export type RiskData = {
   veryHighRisks: number;
@@ -71,13 +71,13 @@ const Overview: FC<OverviewProps> = memo(({ projectRisksSummary }) => {
       },
       title: {
         fontSize: 12,
-        color: "#8594AC",
+        color: vwPalette.text.accent,
         pb: "2px",
       },
       value: {
         fontSize: 16,
         fontWeight: 600,
-        color: "#2D3748",
+        color: vwPalette.text.secondary,
       },
     }),
     [theme],
@@ -95,7 +95,7 @@ const Overview: FC<OverviewProps> = memo(({ projectRisksSummary }) => {
           {label} status
         </Typography>
         <ProgressBar progress={progress} />
-        <Typography sx={{ fontSize: 11, color: "#8594AC" }}>
+        <Typography sx={{ fontSize: 11, color: vwPalette.text.accent }}>
           {progress} {label}
           {completed > 1 && "s"} completed
         </Typography>

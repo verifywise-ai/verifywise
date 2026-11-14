@@ -1,6 +1,7 @@
 import React from "react";
 import { StatusTileCards, StatusTileItem } from "../../components/Cards/StatusTileCards";
 import { TaskSummary } from "../../../domain/interfaces/i.task";
+import { chartTheme } from "../../themes/chartTheme";
 
 interface TaskSummaryCardsProps {
   summary: TaskSummary;
@@ -14,11 +15,26 @@ const TaskSummaryCards: React.FC<TaskSummaryCardsProps> = ({
   selectedStatus,
 }) => {
   const items: StatusTileItem[] = [
-    { key: "total", label: "Total", count: summary.total, color: "#4B5563" },
-    { key: "open", label: "Open", count: summary.open, color: "#2196F3" },
-    { key: "overdue", label: "Overdue", count: summary.overdue, color: "#F44336" },
-    { key: "inProgress", label: "In progress", count: summary.inProgress, color: "#FF9800" },
-    { key: "completed", label: "Completed", count: summary.completed, color: "#4CAF50" },
+    { key: "total", label: "Total", count: summary.total, color: chartTheme.statusSummary.total },
+    { key: "open", label: "Open", count: summary.open, color: chartTheme.statusSummary.info },
+    {
+      key: "overdue",
+      label: "Overdue",
+      count: summary.overdue,
+      color: chartTheme.statusSummary.error,
+    },
+    {
+      key: "inProgress",
+      label: "In progress",
+      count: summary.inProgress,
+      color: chartTheme.statusSummary.warning,
+    },
+    {
+      key: "completed",
+      label: "Completed",
+      count: summary.completed,
+      color: chartTheme.statusSummary.success,
+    },
   ];
 
   return (

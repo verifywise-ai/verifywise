@@ -45,7 +45,7 @@ export const collections: Collection[] = [
     title: 'Getting started',
     description: 'Learn the basics of VerifyWise and get up and running quickly with your AI governance journey.',
     icon: 'Rocket',
-    articleCount: 4,
+    articleCount: 5,
     articles: [
       {
         id: 'welcome',
@@ -64,6 +64,12 @@ export const collections: Collection[] = [
         title: 'Navigating the dashboard',
         description: 'Understand the main dashboard and how to find what you need.',
         keywords: ['dashboard', 'navigation', 'interface', 'home'],
+      },
+      {
+        id: 'home',
+        title: 'Home',
+        description: 'See what needs your attention today and where each item comes from.',
+        keywords: ['home', 'today', 'queue', 'needs attention', 'approvals', 'tasks', 'review', 'counts', 'get started', 'start here'],
       },
       {
         id: 'quick-start',
@@ -323,8 +329,8 @@ export const collections: Collection[] = [
       {
         id: 'risk-scoring',
         title: 'Risk scoring',
-        description: 'Understand the AI Governance Risk Score, LLM-enhanced analysis, and suggested risks.',
-        keywords: ['risk', 'score', 'grade', 'agrs', 'dimension', 'llm', 'analysis', 'suggested', 'governance'],
+        description: 'Understand the governance score, partial scores, LLM-enhanced analysis, and suggested risks.',
+        keywords: ['risk', 'score', 'grade', 'agrs', 'dimension', 'llm', 'analysis', 'suggested', 'governance', 'governance score', 'partial', 'recalculate'],
       },
       {
         id: 'repositories',

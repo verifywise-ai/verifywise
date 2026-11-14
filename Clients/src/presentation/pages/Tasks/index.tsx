@@ -40,14 +40,13 @@ import PageTour from "../../components/PageTour";
 import TasksSteps from "./TasksSteps";
 import { TaskModel } from "../../../domain/models/Common/task/task.model";
 import { onAiActionCompleted } from "../../../application/events/aiActionEvents";
-import { GroupBy } from "../../components/Table/GroupBy";
-import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
-import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { ExportMenu } from "../../components/Table/ExportMenu";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 
-import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
+import { FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
+import type { FilterFieldValue } from "../../../application/utils/filterConditions";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import Alert from "../../components/Alert";
@@ -141,8 +140,6 @@ const Tasks: React.FC = () => {
   // Track if we've already processed the URL param to avoid duplicate fetches
   const hasProcessedUrlParam = useRef(false);
 
-  // Group by state management
-  const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
   const isCreatingDisabled = !useCan("task.edit");
 
   // Column visibility for the tasks table
@@ -281,30 +278,31 @@ const Tasks: React.FC = () => {
   );
 
   // FilterBy - Field value getter
-  const getTaskFieldValue = useCallback(
-    (item: TaskModel, fieldId: string): string | number | Date | null | undefined => {
-      switch (fieldId) {
-        case "title":
-          return item.title;
-        case "status":
-          return item.status;
-        case "priority":
-          return item.priority;
-        case "assignee":
-          // Return comma-separated assignee IDs for matching
-          return item.assignees?.map((id) => String(id)).join(",");
-        case "due_date":
-          return item.due_date;
-        default:
-          return null;
-      }
-    },
-    [],
-  );
+  const getTaskFieldValue = useCallback((item: TaskModel, fieldId: string): FilterFieldValue => {
+    switch (fieldId) {
+      case "title":
+        return item.title;
+      case "status":
+        return item.status;
+      case "priority":
+        return item.priority;
+      case "assignee":
+        // A task can have several assignees: "is" matches any of them.
+        return item.assignees?.map((id) => String(id)) ?? [];
+      case "due_date":
+        return item.due_date;
+      default:
+        return null;
+    }
+  }, []);
 
   // FilterBy - Initialize hook
-  const { filterData: filterTaskData, handleFilterChange: handleTaskFilterChange } =
-    useFilterBy<TaskModel>(getTaskFieldValue);
+  const {
+    filterData: filterTaskData,
+    handleFilterChange: handleTaskFilterChange,
+    conditions: taskFilterConditions,
+    logic: taskFilterLogic,
+  } = useFilterBy<TaskModel>(getTaskFieldValue);
 
   // Apply FilterBy and search filtering
   const filteredTasks = useMemo(() => {
@@ -632,37 +630,6 @@ const Tasks: React.FC = () => {
     return undefined;
   }, [alert]);
 
-  // Define how to get the group key for each task
-  const getTaskGroupKey = (task: TaskModel, field: string): string | string[] => {
-    switch (field) {
-      case "status":
-        return STATUS_DISPLAY_MAP[task.status as TaskStatus] || task.status || "Unknown";
-      case "priority":
-        return task.priority || "No Priority";
-      case "assignees":
-        if (task.assignees && task.assignees.length > 0) {
-          // Return array of assignee names - task will appear in multiple groups
-          return task.assignees.map((assigneeId) => {
-            const user = users.find((u) => u.id === Number(assigneeId));
-            return user ? `${user.name} ${user.surname}`.trim() : "Unknown";
-          });
-        }
-        return "Unassigned";
-      case "due_date":
-        return task.due_date ? formatDate(task.due_date) : "No Due Date";
-      default:
-        return "Other";
-    }
-  };
-
-  // Use the reusable grouping hook
-  const groupedTasks = useTableGrouping({
-    data: filteredTasks,
-    groupByField: groupBy,
-    sortOrder: groupSortOrder,
-    getGroupKey: getTaskGroupKey,
-  });
-
   // Export columns and data
   const exportColumns = useMemo(() => {
     return [
@@ -712,50 +679,43 @@ const Tasks: React.FC = () => {
   const taskListContent = (
     <>
       {activeTab === "list" && (
-        <GroupedTableView
-          groupedData={groupedTasks}
-          ungroupedData={filteredTasks}
-          renderTable={(data, options) => (
-            <TasksTable
-              tasks={data}
-              users={users}
-              onArchive={handleArchiveTask}
-              onEdit={handleEditTask}
-              onStatusChange={handleTaskStatusChange}
-              statusOptions={TASK_STATUS_OPTIONS.map((status) => {
-                const displayStatus = STATUS_DISPLAY_MAP[status as TaskStatus] || status;
-                return displayStatus;
-              })}
-              onPriorityChange={handleTaskPriorityChange}
-              priorityOptions={TASK_PRIORITY_OPTIONS.map((priority) => {
-                const displayPriority = PRIORITY_DISPLAY_MAP[priority as TaskPriority] || priority;
-                return {
-                  value: priority,
-                  label: displayPriority,
-                  icon: Flag,
-                  color: PRIORITY_COLOR_MAP[priority as TaskPriority],
-                };
-              })}
-              isUpdateDisabled={isCreatingDisabled}
-              onRowClick={handleEditTask}
-              hidePagination={options?.hidePagination}
-              onRestore={handleRestoreTask}
-              onHardDelete={handleHardDeleteTask}
-              flashRowId={flashRowId}
-              visibleColumns={visibleColumns}
-              canRunBulkActions={!isCreatingDisabled}
-              onBulkActionSuccess={(action, count) => {
-                setAlert({
-                  variant: "success",
-                  title:
-                    action === "mark_complete"
-                      ? `${count} task${count === 1 ? "" : "s"} marked complete`
-                      : `Categories updated on ${count} task${count === 1 ? "" : "s"}`,
-                });
-                setTimeout(() => setAlert(null), 4000);
-              }}
-            />
-          )}
+        <TasksTable
+          tasks={filteredTasks}
+          users={users}
+          onArchive={handleArchiveTask}
+          onEdit={handleEditTask}
+          onStatusChange={handleTaskStatusChange}
+          statusOptions={TASK_STATUS_OPTIONS.map((status) => {
+            const displayStatus = STATUS_DISPLAY_MAP[status as TaskStatus] || status;
+            return displayStatus;
+          })}
+          onPriorityChange={handleTaskPriorityChange}
+          priorityOptions={TASK_PRIORITY_OPTIONS.map((priority) => {
+            const displayPriority = PRIORITY_DISPLAY_MAP[priority as TaskPriority] || priority;
+            return {
+              value: priority,
+              label: displayPriority,
+              icon: Flag,
+              color: PRIORITY_COLOR_MAP[priority as TaskPriority],
+            };
+          })}
+          isUpdateDisabled={isCreatingDisabled}
+          onRowClick={handleEditTask}
+          onRestore={handleRestoreTask}
+          onHardDelete={handleHardDeleteTask}
+          flashRowId={flashRowId}
+          visibleColumns={visibleColumns}
+          canRunBulkActions={!isCreatingDisabled}
+          onBulkActionSuccess={(action, count) => {
+            setAlert({
+              variant: "success",
+              title:
+                action === "mark_complete"
+                  ? `${count} task${count === 1 ? "" : "s"} marked complete`
+                  : `Categories updated on ${count} task${count === 1 ? "" : "s"}`,
+            });
+            setTimeout(() => setAlert(null), 4000);
+          }}
         />
       )}
 
@@ -869,19 +829,15 @@ const Tasks: React.FC = () => {
           >
             {/* FilterBy */}
             <Box data-joyride-id="task-filters">
-              <FilterBy columns={taskFilterColumns} onFilterChange={handleTaskFilterChange} />
+              <TableFilter
+                columns={taskFilterColumns}
+                onFilterChange={handleTaskFilterChange}
+                defaultConditions={taskFilterConditions}
+                defaultLogic={taskFilterLogic}
+                data={tasks}
+                getFieldValue={getTaskFieldValue}
+              />
             </Box>
-
-            {/* GroupBy */}
-            <GroupBy
-              options={[
-                { id: "status", label: "Status" },
-                { id: "priority", label: "Priority" },
-                { id: "assignees", label: "Assignees" },
-                { id: "due_date", label: "Due date" },
-              ]}
-              onGroupChange={handleGroupChange}
-            />
 
             <ColumnSelector
               columns={allTaskColumns}

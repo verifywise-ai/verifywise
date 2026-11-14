@@ -10,6 +10,12 @@ vi.mock("../../../../application/repository/task.repository", () => ({
   getAllTasks: vi.fn().mockResolvedValue({ data: { tasks: [] } }),
 }));
 
+// The open-task count comes from the hook the unified sidebar shares.
+let openTasks = 0;
+vi.mock("../../../../application/hooks/useOpenTasksCount", () => ({
+  useOpenTasksCount: () => openTasks,
+}));
+
 vi.mock("../../UserGuide/UserGuideSidebarContext", () => ({
   useUserGuideSidebarContext: () => ({
     open: vi.fn(),
@@ -30,6 +36,13 @@ vi.mock("react-router", async () => {
 describe("Sidebar", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    openTasks = 0;
+  });
+
+  it("shows the open-task count from the shared hook", () => {
+    openTasks = 3;
+    renderWithProviders(<Sidebar />);
+    expect(screen.getByRole("button", { name: "Tasks 3" })).toBeInTheDocument();
   });
 
   it("should render the Dashboard nav link", () => {
@@ -91,4 +104,21 @@ describe("Sidebar", () => {
 
     expect(mockNavigate).toHaveBeenCalledWith("/");
   });
+
+  // The new look's Home page took over Start here; the classic sidebar keeps it.
+  it("classic look: Start here still opens /start-here", async () => {
+    vi.resetModules();
+    window.localStorage.setItem("vw-ui-style", "classic");
+    try {
+      const { isClassicUi } = await import("../../../themes/uiStyle");
+      expect(isClassicUi()).toBe(true);
+      const { renderWithProviders: render } = await import("../../../../test/renderWithProviders");
+      const { default: ClassicSidebar } = await import("../index");
+      const { getByText } = render(<ClassicSidebar />);
+      fireEvent.click(getByText("Start here"));
+      expect(mockNavigate).toHaveBeenCalledWith("/start-here");
+    } finally {
+      window.localStorage.removeItem("vw-ui-style");
+    }
+  }, 30_000);
 });

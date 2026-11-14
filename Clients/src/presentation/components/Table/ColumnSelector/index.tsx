@@ -24,7 +24,18 @@ import React, { useState } from "react";
 import { Box, Button, Checkbox, Popover, Typography, Stack, Divider } from "@mui/material";
 import { Columns } from "lucide-react";
 import { ColumnConfig } from "../../../../application/hooks/useColumnVisibility";
-import { brand, text, background, border as borderPalette } from "../../../themes/palette";
+import {
+  brand,
+  text,
+  background,
+  border as borderPalette,
+  palette as vwPalette,
+  radiusPx,
+} from "../../../themes/palette";
+import { isClassicUi } from "../../../themes/uiStyle";
+
+// Phase 1 draws the button with a hairline border; classic keeps the darker one.
+const buttonBorder = isClassicUi() ? borderPalette.dark : borderPalette.light;
 
 interface ColumnSelectorProps<TKey extends string = string> {
   /** All available column configurations */
@@ -77,8 +88,8 @@ export function ColumnSelector<TKey extends string = string>({
           "height": 34,
           "minWidth": 100,
           "padding": "6px 12px",
-          "borderRadius": "4px",
-          "border": variant === "outlined" ? `1px solid ${borderPalette.dark}` : undefined,
+          "borderRadius": radiusPx.sm,
+          "border": variant === "outlined" ? `1px solid ${buttonBorder}` : undefined,
           "backgroundColor": variant === "outlined" ? "white" : undefined,
           "color": `${text.secondary}`,
           "fontSize": 13,
@@ -112,8 +123,8 @@ export function ColumnSelector<TKey extends string = string>({
               minWidth: 220,
               maxWidth: 280,
               boxShadow: "0px 4px 16px rgba(0, 0, 0, 0.1)",
-              borderRadius: "4px",
-              border: "1px solid #E0E4E9",
+              borderRadius: radiusPx.sm,
+              border: `1px solid ${vwPalette.border.light}`,
             },
           },
         }}
@@ -123,7 +134,7 @@ export function ColumnSelector<TKey extends string = string>({
             sx={{
               fontSize: 13,
               fontWeight: 600,
-              color: "#101828",
+              color: vwPalette.text.primary,
               mb: 0.5,
             }}
           >
@@ -221,7 +232,7 @@ export function ColumnSelector<TKey extends string = string>({
               "color": `${text.icon}`,
               "textTransform": "none",
               "padding": "6px 12px",
-              "borderRadius": "4px",
+              "borderRadius": radiusPx.sm,
               "&:hover": {
                 backgroundColor: `${background.accent}`,
                 color: `${text.secondary}`,

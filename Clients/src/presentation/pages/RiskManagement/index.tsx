@@ -27,12 +27,17 @@ import { RiskFormValues } from "../../../domain/types/riskForm.types";
 import { onAiActionCompleted } from "../../../application/events/aiActionEvents";
 import AnalyticsDrawer from "../../components/AnalyticsDrawer";
 import { ExportMenu } from "../../components/Table/ExportMenu";
-import { GroupBy } from "../../components/Table/GroupBy";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
-import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
-import { FilterBy, FilterColumn, FilterCondition } from "../../components/Table/FilterBy";
+import { FilterColumn, FilterCondition } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
-import { GroupedTableView } from "../../components/Table/GroupedTableView";
+import {
+  getRiskFieldValue,
+  riskLevelCardAfterFilterChange,
+  RISK_LEVEL_OPTIONS,
+  SEVERITY_OPTIONS,
+  riskLevelCardKey,
+} from "./riskFilters";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
 import { useEntityChangeHistory } from "../../../application/hooks/useEntityChangeHistory";
 import { useExtensions } from "../../../application/contexts/Extensions.context";
@@ -53,7 +58,10 @@ import {
   riskMenuItemLogoStyle,
   riskMenuItemRecommendedBadgeStyle,
 } from "./style";
+import { getEffectiveRiskLevel } from "../../../application/utils/riskLevel";
 import { text } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
+import { riskCalendarDay, toLocalDateOnly } from "../../tools/isoDateToString";
 
 /**
  * Set initial loading status for all CRUD process
@@ -110,9 +118,6 @@ const RiskManagement = () => {
   // Refs for form submission
   const onSubmitRef = useRef<(() => void) | null>(null);
   const onAiRiskSubmitRef = useRef<(() => void) | null>(null);
-
-  // GroupBy state
-  const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
 
   // Column visibility management
   type RiskColumn =
@@ -188,25 +193,13 @@ const RiskManagement = () => {
         id: "severity",
         label: "Severity",
         type: "select" as const,
-        options: [
-          { value: "Very High", label: "Very High" },
-          { value: "High", label: "High" },
-          { value: "Medium", label: "Medium" },
-          { value: "Low", label: "Low" },
-          { value: "Very Low", label: "Very Low" },
-        ],
+        options: SEVERITY_OPTIONS,
       },
       {
         id: "risk_level",
         label: "Risk level",
         type: "select" as const,
-        options: [
-          { value: "Very High", label: "Very High" },
-          { value: "High", label: "High" },
-          { value: "Medium", label: "Medium" },
-          { value: "Low", label: "Low" },
-          { value: "Very Low", label: "Very Low" },
-        ],
+        options: RISK_LEVEL_OPTIONS,
       },
       {
         id: "mitigation_status",
@@ -243,53 +236,25 @@ const RiskManagement = () => {
     [getUniqueOwners],
   );
 
-  // Get field value for filtering
-  const getRiskFieldValue = useCallback(
-    (risk: RiskModel, fieldId: string): string | number | Date | null | undefined => {
-      switch (fieldId) {
-        case "risk_name":
-          return risk.risk_name;
-        case "risk_description":
-          return risk.risk_description;
-        case "severity":
-          return risk.severity;
-        case "risk_level":
-          return risk.current_risk_level || risk.risk_level_autocalculated;
-        case "mitigation_status":
-          return risk.mitigation_status;
-        case "risk_owner":
-          return risk.risk_owner?.toString();
-        case "impact":
-          return risk.impact;
-        case "deadline":
-          return risk.deadline;
-        case "date_of_assessment":
-          return risk.date_of_assessment;
-        default:
-          return null;
-      }
-    },
-    [],
-  );
-
-  const { filterData, handleFilterChange: handleFilterByChangeBase } =
-    useFilterBy<RiskModel>(getRiskFieldValue);
+  const {
+    filterData,
+    handleFilterChange: handleFilterByChangeBase,
+    conditions: filterConditions,
+    logic: filterLogic,
+  } = useFilterBy<RiskModel>(getRiskFieldValue);
 
   // Wrapper to sync selected risk level card with filter conditions
   const handleFilterByChange = useCallback(
     (conditions: FilterCondition[], logic: "and" | "or") => {
-      // Sync selected risk level card with filter conditions
-      const riskLevelCondition = conditions.find((c) => c.columnId === "risk_level");
-      if (riskLevelCondition && riskLevelCondition.operator === "is" && riskLevelCondition.value) {
-        setSelectedRiskLevel(riskLevelCondition.value);
-      } else {
-        setSelectedRiskLevel(null);
-      }
+      // Move the risk level card only when the risk level condition changes,
+      // so picking another filter keeps the card the user selected.
+      const card = riskLevelCardAfterFilterChange(filterConditions, conditions);
+      if (card !== undefined) setSelectedRiskLevel(card);
 
       // Pass to base handler for client-side filtering
       handleFilterByChangeBase(conditions, logic);
     },
-    [handleFilterByChangeBase],
+    [filterConditions, handleFilterByChangeBase],
   );
 
   // Handle risk card click to filter risks by risk level
@@ -326,29 +291,12 @@ const RiskManagement = () => {
     // First apply FilterBy conditions
     let filtered = filterData(projectRisks);
 
-    // Apply card filter for risk level (using same matching logic as summary at lines 298-318)
+    // Apply card filter for risk level (same bucketing as the summary cards)
     if (selectedRiskLevel) {
-      const levelLower = selectedRiskLevel.toLowerCase();
+      const card = selectedRiskLevel.toLowerCase();
       filtered = filtered.filter((risk) => {
-        const riskLevel = (
-          risk.current_risk_level ||
-          risk.risk_level_autocalculated ||
-          ""
-        ).toLowerCase();
-        switch (levelLower) {
-          case "very high":
-            return riskLevel.includes("very high");
-          case "high":
-            return riskLevel.includes("high") && !riskLevel.includes("very high");
-          case "medium":
-            return riskLevel.includes("medium");
-          case "low":
-            return riskLevel.includes("low") && !riskLevel.includes("very low");
-          case "very low":
-            return riskLevel.includes("very low") || riskLevel.includes("no risk");
-          default:
-            return true;
-        }
+        const cardKey = riskLevelCardKey(getEffectiveRiskLevel(risk));
+        return cardKey !== null && cardKey.toLowerCase() === card;
       });
     }
 
@@ -366,46 +314,13 @@ const RiskManagement = () => {
 
   // Compute risk summary from fetched data
   const risksSummary = useMemo(() => {
-    const veryHighRisks = projectRisks.filter((risk) => {
-      const riskLevel = (
-        risk.current_risk_level ||
-        risk.risk_level_autocalculated ||
-        ""
-      ).toLowerCase();
-      return riskLevel.includes("very high");
-    }).length;
-    const highRisks = projectRisks.filter((risk) => {
-      const riskLevel = (
-        risk.current_risk_level ||
-        risk.risk_level_autocalculated ||
-        ""
-      ).toLowerCase();
-      return riskLevel.includes("high") && !riskLevel.includes("very high");
-    }).length;
-    const mediumRisks = projectRisks.filter((risk) => {
-      const riskLevel = (
-        risk.current_risk_level ||
-        risk.risk_level_autocalculated ||
-        ""
-      ).toLowerCase();
-      return riskLevel.includes("medium");
-    }).length;
-    const lowRisks = projectRisks.filter((risk) => {
-      const riskLevel = (
-        risk.current_risk_level ||
-        risk.risk_level_autocalculated ||
-        ""
-      ).toLowerCase();
-      return riskLevel.includes("low") && !riskLevel.includes("very low");
-    }).length;
-    const veryLowRisks = projectRisks.filter((risk) => {
-      const riskLevel = (
-        risk.current_risk_level ||
-        risk.risk_level_autocalculated ||
-        ""
-      ).toLowerCase();
-      return riskLevel.includes("very low") || riskLevel.includes("no risk");
-    }).length;
+    const countCard = (card: string) =>
+      projectRisks.filter((risk) => riskLevelCardKey(getEffectiveRiskLevel(risk)) === card).length;
+    const veryHighRisks = countCard("Very high");
+    const highRisks = countCard("High");
+    const mediumRisks = countCard("Medium");
+    const lowRisks = countCard("Low");
+    const veryLowRisks = countCard("Very low");
 
     return {
       total: projectRisks.length,
@@ -444,8 +359,8 @@ const RiskManagement = () => {
         severity: risk.severity || "-",
         likelihood: risk.likelihood || "-",
         mitigation_status: risk.mitigation_status || "-",
-        risk_level: risk.current_risk_level || risk.risk_level_autocalculated || "-",
-        deadline: risk.deadline || "-",
+        risk_level: getEffectiveRiskLevel(risk) || "-",
+        deadline: toLocalDateOnly(riskCalendarDay(risk.deadline)) || "-",
         controls_mapping: risk.controls_mapping || "-",
       };
     });
@@ -692,37 +607,6 @@ const RiskManagement = () => {
     setCurrentPage(page);
   };
 
-  // Define how to get the group key for each risk
-  const getRiskGroupKey = useCallback(
-    (risk: RiskModel, field: string): string => {
-      switch (field) {
-        case "risk_level":
-          return risk.current_risk_level || risk.risk_level_autocalculated || "Unknown";
-        case "mitigation_status":
-          return risk.mitigation_status || "Unknown";
-        case "owner":
-          if (risk.risk_owner) {
-            const user = users.find((u) => u.id === risk.risk_owner);
-            return user ? `${user.name} ${user.surname}`.trim() : "Unknown";
-          }
-          return "Unassigned";
-        case "severity":
-          return risk.severity || "Unknown";
-        default:
-          return "Other";
-      }
-    },
-    [users],
-  );
-
-  // Apply grouping to filtered risks
-  const groupedRisks = useTableGrouping({
-    data: filteredRisks,
-    groupByField: groupBy,
-    sortOrder: groupSortOrder,
-    getGroupKey: getRiskGroupKey,
-  });
-
   return (
     <PageHeaderExtended
       title="Risk Management"
@@ -733,21 +617,41 @@ const RiskManagement = () => {
         <StatusTileCards
           items={
             [
-              { key: "Total", label: "Total", count: risksSummary.total, color: "#4B5563" },
+              {
+                key: "Total",
+                label: "Total",
+                count: risksSummary.total,
+                color: chartTheme.riskSummary.total,
+              },
               {
                 key: "Very high",
                 label: "Very high",
                 count: risksSummary.veryHighRisks,
-                color: "#C63622",
+                color: chartTheme.riskSummary.veryHigh,
               },
-              { key: "High", label: "High", count: risksSummary.highRisks, color: "#D68B61" },
-              { key: "Medium", label: "Medium", count: risksSummary.mediumRisks, color: "#D6B971" },
-              { key: "Low", label: "Low", count: risksSummary.lowRisks, color: "#52AB43" },
+              {
+                key: "High",
+                label: "High",
+                count: risksSummary.highRisks,
+                color: chartTheme.riskSummary.high,
+              },
+              {
+                key: "Medium",
+                label: "Medium",
+                count: risksSummary.mediumRisks,
+                color: chartTheme.riskSummary.medium,
+              },
+              {
+                key: "Low",
+                label: "Low",
+                count: risksSummary.lowRisks,
+                color: chartTheme.riskSummary.low,
+              },
               {
                 key: "Very low",
                 label: "Very low",
                 count: risksSummary.veryLowRisks,
-                color: "#B8D39C",
+                color: chartTheme.riskSummary.veryLow,
               },
             ] satisfies StatusTileItem[]
           }
@@ -781,17 +685,15 @@ const RiskManagement = () => {
         <Stack direction="row" justifyContent="space-between" alignItems="flex-end">
           <Box sx={riskFilterRowStyle}>
             <div data-joyride-id="risk-filters">
-              <FilterBy columns={filterColumns} onFilterChange={handleFilterByChange} />
+              <TableFilter
+                columns={filterColumns}
+                onFilterChange={handleFilterByChange}
+                defaultConditions={filterConditions}
+                defaultLogic={filterLogic}
+                data={projectRisks}
+                getFieldValue={getRiskFieldValue}
+              />
             </div>
-            <GroupBy
-              options={[
-                { id: "risk_level", label: "Risk level" },
-                { id: "mitigation_status", label: "Mitigation status" },
-                { id: "owner", label: "Owner" },
-                { id: "severity", label: "Severity" },
-              ]}
-              onGroupChange={handleGroupChange}
-            />
             <ColumnSelector
               columns={allColumns}
               visibleColumns={visibleColumns}
@@ -974,24 +876,17 @@ const RiskManagement = () => {
             <CustomizableSkeleton variant="rectangular" width="100%" height={400} />
           </Stack>
         ) : (
-          <GroupedTableView
-            groupedData={groupedRisks}
-            ungroupedData={filteredRisks}
-            renderTable={(data, options) => (
-              <VWProjectRisksTable
-                rows={data}
-                setPage={setCurrentPagingation}
-                page={currentPage}
-                setSelectedRow={(row: RiskModel) => setSelectedRow([row])}
-                setAnchor={() => setIsRiskModalOpen(true)}
-                onDeleteRisk={handleDelete}
-                flashRow={currentRow}
-                hidePagination={options?.hidePagination}
-                visibleColumns={visibleColumns}
-                canRunBulkActions={canEditRisks}
-                onBulkActionSuccess={() => setRefreshKey((k) => k + 1)}
-              />
-            )}
+          <VWProjectRisksTable
+            rows={filteredRisks}
+            setPage={setCurrentPagingation}
+            page={currentPage}
+            setSelectedRow={(row: RiskModel) => setSelectedRow([row])}
+            setAnchor={() => setIsRiskModalOpen(true)}
+            onDeleteRisk={handleDelete}
+            flashRow={currentRow}
+            visibleColumns={visibleColumns}
+            canRunBulkActions={canEditRisks}
+            onBulkActionSuccess={() => setRefreshKey((k) => k + 1)}
           />
         )}
 

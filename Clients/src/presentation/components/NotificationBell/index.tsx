@@ -15,7 +15,8 @@ import { useNotifications, Notification } from "../../../application/hooks/useNo
 import VWTooltip from "../VWTooltip";
 import "../Layout/icon-shake.css";
 
-import { text } from "../../themes/palette";
+import { text, palette as vwPalette, radiusPx } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 
 /**
@@ -72,28 +73,28 @@ const formatRelativeTime = (
  */
 const getNotificationColor = (type: string): string => {
   const colors: Record<string, string> = {
-    task_assigned: "#3B82F6", // Blue
-    task_completed: "#10B981", // Green
-    review_requested: "#8B5CF6", // Purple
-    review_approved: "#10B981", // Green
-    review_rejected: "#EF4444", // Red
-    approval_requested: "#F59E0B", // Amber
-    approval_approved: "#10B981", // Green
-    approval_rejected: "#EF4444", // Red
-    approval_complete: "#10B981", // Green
-    policy_due_soon: "#F59E0B", // Amber
-    policy_overdue: "#EF4444", // Red
-    training_assigned: "#3B82F6", // Blue
-    training_completed: "#10B981", // Green
-    training_due_soon: "#F59E0B", // Amber
-    training_overdue: "#EF4444", // Red
-    vendor_review_due: "#F59E0B", // Amber
-    file_uploaded: "#6366F1", // Indigo
-    comment_added: "#6366F1", // Indigo
-    mention: "#EC4899", // Pink
-    system: "#64748B", // Slate
+    task_assigned: vwPalette.status.info.text, // Blue
+    task_completed: vwPalette.status.success.strong, // Green
+    review_requested: vwPalette.accent.purple.text, // Purple
+    review_approved: vwPalette.status.success.strong, // Green
+    review_rejected: vwPalette.riskMark.critical, // Red
+    approval_requested: vwPalette.riskMark.medium, // Amber
+    approval_approved: vwPalette.status.success.strong, // Green
+    approval_rejected: vwPalette.riskMark.critical, // Red
+    approval_complete: vwPalette.status.success.strong, // Green
+    policy_due_soon: vwPalette.riskMark.medium, // Amber
+    policy_overdue: vwPalette.riskMark.critical, // Red
+    training_assigned: vwPalette.status.info.text, // Blue
+    training_completed: vwPalette.status.success.strong, // Green
+    training_due_soon: vwPalette.riskMark.medium, // Amber
+    training_overdue: vwPalette.riskMark.critical, // Red
+    vendor_review_due: vwPalette.riskMark.medium, // Amber
+    file_uploaded: chartTheme.entity.indigo, // Indigo (phase 1: series 1)
+    comment_added: chartTheme.entity.indigo, // Indigo (phase 1: series 1)
+    mention: chartTheme.entity.pink, // Rose in phase 1
+    system: vwPalette.text.icon, // Slate
   };
-  return colors[type] || "#64748B";
+  return colors[type] || vwPalette.text.icon;
 };
 
 interface NotificationItemProps {
@@ -211,7 +212,7 @@ const NotificationItem: React.FC<NotificationItemProps> = ({
             "color": text.disabled,
             "&:hover": {
               backgroundColor: "rgba(239, 68, 68, 0.08)",
-              color: "#EF4444",
+              color: vwPalette.riskMark.critical,
             },
           }}
         >
@@ -309,11 +310,11 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ sx }) => {
   const baseStyles = {
     "width": "32px",
     "height": "32px",
-    "borderRadius": "4px",
+    "borderRadius": radiusPx.sm,
     "transition": "all 0.2s ease",
     "backgroundColor": "transparent",
-    "color": "#666",
-    "border": "1px solid #e5e5e5",
+    "color": vwPalette.text.tertiary,
+    "border": `1px solid ${vwPalette.border.light}`,
     "&:hover": {
       backgroundColor: "rgba(0, 0, 0, 0.04)",
       borderColor: "border.dark",
@@ -344,7 +345,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ sx }) => {
             max={99}
             sx={{
               "& .MuiBadge-badge": {
-                backgroundColor: "#EF4444",
+                backgroundColor: vwPalette.riskMark.critical,
                 color: "white",
                 fontSize: "10px",
                 fontWeight: 600,
@@ -376,7 +377,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ sx }) => {
             width: 360,
             maxHeight: 480,
             boxShadow: "0 4px 20px rgba(0, 0, 0, 0.12)",
-            borderRadius: "8px",
+            borderRadius: radiusPx.lg,
             border: "1px solid status.default.border",
             mt: 1,
             overflow: "hidden",
@@ -391,7 +392,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ sx }) => {
             justifyContent: "space-between",
             px: 2,
             py: 1,
-            borderBottom: "1px solid #e5e7eb",
+            borderBottom: `1px solid ${vwPalette.border.light}`,
           }}
         >
           <Stack direction="row" alignItems="baseline" spacing={1}>
@@ -465,7 +466,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ sx }) => {
             "&::-webkit-scrollbar": { width: "6px" },
             "&::-webkit-scrollbar-track": { background: "transparent" },
             "&::-webkit-scrollbar-thumb": {
-              background: "#e0e0e0",
+              background: vwPalette.border.light,
               borderRadius: "3px",
             },
             "&::-webkit-scrollbar-thumb:hover": {
@@ -496,7 +497,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ sx }) => {
                 px: 2,
               }}
             >
-              <Bell size={24} strokeWidth={1.5} color="#D1D5DB" />
+              <Bell size={24} strokeWidth={1.5} color={vwPalette.border.dark} />
               <Typography
                 sx={{
                   fontSize: "14px",
@@ -557,8 +558,8 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ sx }) => {
                       "fontWeight": 500,
                       "color": "brand.primary",
                       "backgroundColor": "transparent",
-                      "border": "1px solid #d0d5dd",
-                      "borderRadius": "4px",
+                      "border": `1px solid ${vwPalette.border.dark}`,
+                      "borderRadius": radiusPx.sm,
                       "cursor": isLoadingMore ? "not-allowed" : "pointer",
                       "transition": "all 0.15s ease",
                       "opacity": isLoadingMore ? 0.6 : 1,
@@ -590,13 +591,13 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ sx }) => {
               px: 2,
               py: 1,
               borderTop: "1px solid status.default.border",
-              backgroundColor: "#FEF3C7",
+              backgroundColor: chartTheme.connectionNotice.bg,
             }}
           >
             <Typography
               sx={{
                 fontSize: "11px",
-                color: "#92400E",
+                color: chartTheme.connectionNotice.text,
                 display: "flex",
                 alignItems: "center",
                 gap: 0.5,
@@ -607,7 +608,7 @@ const NotificationBell: React.FC<NotificationBellProps> = ({ sx }) => {
                   width: 6,
                   height: 6,
                   borderRadius: "50%",
-                  backgroundColor: "#F59E0B",
+                  backgroundColor: vwPalette.riskMark.medium,
                 }}
               />
               Reconnecting to real-time updates...

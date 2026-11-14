@@ -3,7 +3,7 @@ import { Box, Stack, Typography, Paper, Tooltip } from "@mui/material";
 import { GitCompareArrows, Layers, Compass, BarChart3, Sparkles } from "lucide-react";
 import { useUpdatePreferences } from "../../../application/hooks/useGovernanceOs";
 import { CustomizableButton } from "../../components/button/customizable-button";
-import { text, brand, background, border as borderPalette } from "../../themes/palette";
+import { text, brand, background, border as borderPalette, radiusPx } from "../../themes/palette";
 import { useUserGuideSidebarContext } from "../../components/UserGuide/UserGuideSidebarContext";
 import { useCan } from "../../../application/hooks/useCan";
 
@@ -96,7 +96,7 @@ const GovernanceOSEnableCTA: React.FC<GovernanceOSEnableCTAProps> = ({ onEnabled
               elevation={0}
               sx={{
                 p: "16px",
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 border: `1px solid ${borderPalette.dark}`,
                 background: `linear-gradient(135deg, ${background.main} 0%, ${background.gradientStop} 100%)`,
               }}

@@ -22,6 +22,7 @@ import { usePolicyEditorContent } from "./PolicyEditor/usePolicyEditorContent";
 import { usePolicyFindReplace } from "./PolicyEditor/usePolicyFindReplace";
 import { PolicyContentEditor } from "./PolicyEditor/PolicyContentEditor";
 import { PolicyEditorTitleArea } from "./PolicyEditor/PolicyEditorTitleArea";
+import { radiusPx } from "../../themes/palette";
 
 const TEMPLATES_PATH = "/policies/templates";
 const noop = () => {};
@@ -111,7 +112,7 @@ export default function PolicyTemplateEditorPage() {
             textAlign: "center",
             border: "1px solid",
             borderColor: "border.dark",
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
           }}
         >
           <Typography sx={{ color: "text.secondary", mb: "16px" }}>

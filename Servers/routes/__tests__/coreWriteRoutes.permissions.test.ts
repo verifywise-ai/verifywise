@@ -27,6 +27,7 @@ import risksRouter from "../risks.route";
 import taskRouter from "../task.route";
 import trainingRouter from "../trainingRegistar.route";
 import quantitativeRiskRouter from "../quantitativeRisk.route";
+import virtualFolderRouter, { filesFolderRouter } from "../virtualFolder.route";
 
 const permissionFor = (router: any, method: string, path: string) => {
   const layer = router.stack.find((l: any) => l.route?.path === path && l.route.methods[method]);
@@ -54,6 +55,9 @@ describe("core write routes require a permission", () => {
     ["model risk", modelRiskRouter, "put", "/:id", "model.edit"],
     ["model risk", modelRiskRouter, "patch", "/:id", "model.edit"],
     ["model risk", modelRiskRouter, "delete", "/:id", "model.edit"],
+    ["folder files", virtualFolderRouter, "post", "/:id/files", "file.edit"],
+    ["folder files", virtualFolderRouter, "delete", "/:id/files/:fileId", "file.edit"],
+    ["folder files", filesFolderRouter, "patch", "/:id/folders", "file.edit"],
     ["policy", policyRouter, "post", "/import/docx", "policy.edit"],
     ["policy", policyRouter, "post", "/", "policy.edit"],
     ["policy", policyRouter, "put", "/:id", "policy.edit"],

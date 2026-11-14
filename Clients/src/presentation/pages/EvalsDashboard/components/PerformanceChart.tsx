@@ -20,6 +20,7 @@ import { displayFormattedTime } from "../../../tools/isoDateToString";
 import { lowerIsBetter } from "../metricScore";
 import { palette } from "../../../themes/palette";
 import { metricLabel as sharedMetricLabel } from "../metricLabels";
+import { chartTheme } from "../../../themes/chartTheme";
 
 export type TimeRange = "7d" | "30d" | "100d" | "all";
 
@@ -35,24 +36,8 @@ interface PerformanceChartProps {
   timeRange: TimeRange;
 }
 
-// 15 distinct colors for the chart - no repetition
-const CHART_COLORS = [
-  "#2563EB", // Blue
-  "#DC2626", // Red
-  "#16A34A", // Green
-  "#7C3AED", // Purple
-  "#EA580C", // Orange
-  "#0891B2", // Cyan
-  "#DB2777", // Pink
-  "#CA8A04", // Yellow
-  "#0D9488", // Teal
-  "#4F46E5", // Indigo
-  "#059669", // Emerald
-  "#9333EA", // Violet
-  "#C026D3", // Fuchsia
-  "#65A30D", // Lime
-  "#0284C7", // Sky
-];
+// Fixed series order; classic keeps 15 distinct colours, phase 1 folds past nine into Other.
+const CHART_COLORS = chartTheme.lines;
 
 // Legend and tooltip label. Lower is better metrics (bias, toxicity, hallucination) share
 // the 0-100% axis with the rest, so say which way is good: 0% is the best score for them.

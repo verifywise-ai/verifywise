@@ -10,7 +10,7 @@ export const connectPythonAgentsContent: ArticleContent = {
     { type: 'code', language: 'bash', code: 'pip install "verifywise-agent-control[langchain] @ git+https://github.com/verifywise-ai/verifywise.git@sdk-py-v0.1.0#subdirectory=sdks/python/verifywise-agent-control"' },
     { type: 'paragraph', text: 'The package is MIT licensed, so you can ship it inside your own agent.' },
     { type: 'heading', id: 'configure', level: 2, text: '2. Set the environment variables' },
-    { type: 'paragraph', text: 'Create an agent key in AI Gateway > Agent Control > Agent keys, then set:' },
+    { type: 'paragraph', text: 'Create an agent key in Enforce > Agent controls > Agent keys, then set:' },
     { type: 'code', language: 'bash', code: 'export VW_GATEWAY_URL=https://your-verifywise-host   # the URL you open VerifyWise at\nexport VW_AGENT_KEY=sk-mcp-...                       # your agent key\n# Local development: the dev server does not forward /v1, so use the backend, e.g. VW_GATEWAY_URL=http://localhost:3000' },
     { type: 'table', columns: [
       { key: 'name', label: 'Variable', width: '30%' },

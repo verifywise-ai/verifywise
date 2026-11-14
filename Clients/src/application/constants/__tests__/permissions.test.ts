@@ -92,6 +92,11 @@ const SCREEN_GATES: Array<{
 }> = [
   { gate: "RiskManagement bulk actions, RisksView", roles: ["Admin", "Editor"], key: "risks.edit" },
   {
+    gate: "AI Detection finding status and suggested risk actions",
+    roles: ["Admin", "Editor"],
+    key: "aiDetection.edit",
+  },
+  {
     gate: "risk graph link and page, link scans and suggestions, vendor blast radius map",
     roles: ["Admin"],
     key: "riskLinks.admin",
@@ -112,6 +117,12 @@ const SCREEN_GATES: Array<{
     key: "extension.admin",
   },
   { gate: "dashboard approval workflows link", roles: ["Admin"], key: "approvalWorkflow.admin" },
+  // Was Admin by role name on screen and Admin/SuperAdmin in the controller.
+  {
+    gate: "AI Trust Index settings page and sidebar entry",
+    roles: ["Admin"],
+    key: "aiTrustIndex.admin",
+  },
   {
     gate: "Governance OS settings and enable prompts",
     roles: ["Admin"],
@@ -124,6 +135,11 @@ const SCREEN_GATES: Array<{
     gate: "File manager upload (was: not Auditor)",
     roles: ["Admin", "Editor", "Reviewer"],
     key: "fileManager.contribute",
+  },
+  {
+    gate: "File manager folders and bulk tagging (was MANAGE_ROLES)",
+    roles: ["Admin", "Editor"],
+    key: "file.edit",
   },
 ];
 

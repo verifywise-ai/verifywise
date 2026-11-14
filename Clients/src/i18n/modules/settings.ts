@@ -236,6 +236,14 @@ export const de: Record<string, string> = {
   "Client secret": "Client-Geheimnis",
   "Enter your client secret": "Geben Sie Ihr Client-Geheimnis ein",
   "Parallel agents": "Parallele Agenten",
+  "Interface style": "Darstellung",
+  "Select a style": "Stil auswählen",
+  "New style": "Neuer Stil",
+  "Classic": "Klassisch",
+  "Your browser is blocking site storage, so the interface style can't be saved. Allow site data for VerifyWise and try again.":
+    "Ihr Browser blockiert den Websitespeicher, daher kann die Darstellung nicht gespeichert werden. Erlauben Sie Websitedaten für VerifyWise und versuchen Sie es erneut.",
+  "The classic look stays available until January 2027. Changing this reloads the page.":
+    "Die klassische Darstellung bleibt bis Januar 2027 verfügbar. Eine Änderung lädt die Seite neu.",
   "Accordion": "Akkordeon",
   "Accordion view": "Akkordeon-Ansicht",
   "Add Approver": "Genehmigenden hinzufügen",
@@ -741,6 +749,14 @@ export const fr: Record<string, string> = {
   "Client secret": "Secret client",
   "Enter your client secret": "Saisissez votre secret client",
   "Parallel agents": "Agents parallèles",
+  "Interface style": "Style de l'interface",
+  "Select a style": "Choisir un style",
+  "New style": "Nouveau style",
+  "Classic": "Classique",
+  "Your browser is blocking site storage, so the interface style can't be saved. Allow site data for VerifyWise and try again.":
+    "Votre navigateur bloque le stockage du site, le style de l'interface ne peut donc pas être enregistré. Autorisez les données de site pour VerifyWise et réessayez.",
+  "The classic look stays available until January 2027. Changing this reloads the page.":
+    "L'apparence classique reste disponible jusqu'en janvier 2027. Ce changement recharge la page.",
   "Accordion": "Accordéon",
   "Accordion view": "Vue accordéon",
   "Add Approver": "Ajouter un approbateur",
@@ -1243,6 +1259,14 @@ export const es: Record<string, string> = {
   "Client secret": "Secreto de cliente",
   "Enter your client secret": "Introduzca su secreto de cliente",
   "Parallel agents": "Agentes paralelos",
+  "Interface style": "Estilo de la interfaz",
+  "Select a style": "Selecciona un estilo",
+  "New style": "Estilo nuevo",
+  "Classic": "Clásico",
+  "Your browser is blocking site storage, so the interface style can't be saved. Allow site data for VerifyWise and try again.":
+    "Tu navegador está bloqueando el almacenamiento del sitio, así que no se puede guardar el estilo de la interfaz. Permite los datos del sitio para VerifyWise e inténtalo de nuevo.",
+  "The classic look stays available until January 2027. Changing this reloads the page.":
+    "El aspecto clásico seguirá disponible hasta enero de 2027. Al cambiarlo se recarga la página.",
   "Accordion": "Acordeón",
   "Accordion view": "Vista acordeón",
   "Add Approver": "Añadir aprobador",

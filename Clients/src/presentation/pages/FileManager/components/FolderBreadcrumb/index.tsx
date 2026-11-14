@@ -17,7 +17,13 @@ import {
   AlertCircle as ExpiredIcon,
 } from "lucide-react";
 import { IVirtualFolder, SelectedFolder } from "../../../../../domain/interfaces/i.virtualFolder";
-import { text, background, border as borderPalette, status } from "../../../../themes/palette";
+import {
+  text,
+  background,
+  border as borderPalette,
+  status,
+  radiusPx,
+} from "../../../../themes/palette";
 
 interface FolderBreadcrumbProps {
   selectedFolder: SelectedFolder;
@@ -69,7 +75,7 @@ export const FolderBreadcrumb: React.FC<FolderBreadcrumbProps> = ({
           "alignItems": "center",
           "cursor": "pointer",
           "padding": "4px 8px",
-          "borderRadius": "4px",
+          "borderRadius": radiusPx.sm,
           "&:hover": {
             backgroundColor: `${background.hover}`,
           },
@@ -88,7 +94,7 @@ export const FolderBreadcrumb: React.FC<FolderBreadcrumbProps> = ({
               alignItems: "center",
               gap: "6px",
               padding: "4px 8px",
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               backgroundColor: `${background.hover}`,
             }}
           >
@@ -116,7 +122,7 @@ export const FolderBreadcrumb: React.FC<FolderBreadcrumbProps> = ({
               <Box
                 sx={{
                   padding: "4px 8px",
-                  borderRadius: "4px",
+                  borderRadius: radiusPx.sm,
                   backgroundColor: `${background.hover}`,
                   minWidth: "80px",
                 }}
@@ -139,7 +145,7 @@ export const FolderBreadcrumb: React.FC<FolderBreadcrumbProps> = ({
                       "alignItems": "center",
                       "gap": "6px",
                       "padding": "4px 8px",
-                      "borderRadius": "4px",
+                      "borderRadius": radiusPx.sm,
                       "cursor": isLast ? "default" : "pointer",
                       "backgroundColor": isLast ? `${background.hover}` : "transparent",
                       "&:hover": {

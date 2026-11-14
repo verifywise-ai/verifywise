@@ -8,6 +8,7 @@ import { usePolicyFindReplace } from "./usePolicyFindReplace";
 import { FindReplacePopover } from "./FindReplacePopover";
 import { PolicyTableBubbleMenu } from "./PolicyTableBubbleMenu";
 import { PolicyToolbar } from "./PolicyToolbar";
+import { radiusPx } from "../../../themes/palette";
 
 export interface PolicyContentEditorProps {
   editor: Editor | null;
@@ -97,7 +98,7 @@ export function PolicyContentEditor({
             overflow: "auto",
             border: "1px solid",
             borderColor: "border.dark",
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
           }}
         >
           <EditorContent editor={editor} className="policy-tiptap-editor" />

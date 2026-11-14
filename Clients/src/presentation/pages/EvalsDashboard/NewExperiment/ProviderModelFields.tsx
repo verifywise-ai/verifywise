@@ -9,7 +9,7 @@ import { Check } from "lucide-react";
 import type { RefObject } from "react";
 import Field from "../../../components/Inputs/Field";
 import ModelPicker from "../../../components/Inputs/ModelPicker";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import { PROVIDERS, type ModelInfo } from "../../../utils/providers";
 import { apiKeyHelperText, type ProviderType } from "./newExperimentConfig";
 
@@ -135,7 +135,7 @@ export default function ProviderModelFields({
               sx={{
                 p: "8px 10px",
                 backgroundColor: palette.status.success.bg,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 border: `1px solid ${palette.status.success.border}`,
               }}
             >

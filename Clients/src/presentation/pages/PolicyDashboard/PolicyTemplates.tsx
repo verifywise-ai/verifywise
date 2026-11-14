@@ -19,13 +19,11 @@ import { PolicyTemplatesProps } from "../../types/interfaces/i.policy";
 import { SearchBox } from "../../components/Search";
 import { PolicyTemplateCategory } from "../../../domain/enums/policy.enum";
 import TagChip from "../../components/Tags/TagChip";
-import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
+import { FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
-import { GroupBy } from "../../components/Table/GroupBy";
-import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
-import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import CustomizableSkeleton from "../../components/Skeletons";
 import CustomizablePolicyTable from "../../components/Table/PolicyTable";
 import StandardModal from "../../components/Modals/StandardModal";
@@ -44,6 +42,7 @@ import type {
   PolicyTemplate,
   PolicyTemplateOrigin,
 } from "../../../domain/interfaces/i.policyTemplate";
+import { radiusPx } from "../../themes/palette";
 
 // Define table headers in the format expected by CustomizablePolicyTable
 const tableHeaders = [
@@ -114,9 +113,6 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
   const updateMutation = useUpdatePolicyTemplate();
   const deleteMutation = useDeletePolicyTemplate();
   const isLoading = isLoadingProp || isLoadingQuery;
-
-  // GroupBy state
-  const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
 
   // Handle templateId URL param to redirect to editor from Wise Search. Ids
   // are composite `${origin}-${id}` because system and org template ids can
@@ -227,12 +223,19 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
   const {
     filterData: filterPolicyTemplateData,
     handleFilterChange: handlePolicyTemplateFilterChange,
+    conditions: policyTemplateFilterConditions,
+    logic: policyTemplateFilterLogic,
   } = useFilterBy<TemplateRow>(getPolicyTemplateFieldValue);
+
+  // Templates in the current section, before filter + search
+  const sectionRows = useMemo(
+    () => templates.map(toRow).filter((row) => row.origin === section),
+    [templates, section],
+  );
 
   // Section + filter + search
   const filteredPolicyTemplates = useMemo(() => {
-    const rows = templates.map(toRow).filter((row) => row.origin === section);
-    let result = filterPolicyTemplateData(rows);
+    let result = filterPolicyTemplateData(sectionRows);
 
     if (searchTerm.trim()) {
       const query = searchTerm.toLowerCase();
@@ -240,25 +243,7 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
     }
 
     return result;
-  }, [filterPolicyTemplateData, templates, searchTerm, section]);
-
-  // Define how to get the group key for each policy template
-  const getTemplateGroupKey = useCallback((template: TemplateRow, field: string): string => {
-    switch (field) {
-      case "category":
-        return template.category || "Unknown";
-      default:
-        return "Other";
-    }
-  }, []);
-
-  // Apply grouping to filtered templates
-  const groupedTemplates = useTableGrouping({
-    data: filteredPolicyTemplates,
-    groupByField: groupBy,
-    sortOrder: groupSortOrder,
-    getGroupKey: getTemplateGroupKey,
-  });
+  }, [filterPolicyTemplateData, sectionRows, searchTerm]);
 
   const cellStyle = singleTheme.tableStyles.primary.body.cell;
 
@@ -299,17 +284,15 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
       <Stack direction="row" alignItems="center" flexWrap="wrap" sx={{ gap: "8px", mb: "16px" }}>
         {/* FilterBy */}
         <div data-joyride-id="policy-status-filter">
-          <FilterBy
+          <TableFilter
             columns={policyTemplateFilterColumns}
             onFilterChange={handlePolicyTemplateFilterChange}
+            defaultConditions={policyTemplateFilterConditions}
+            defaultLogic={policyTemplateFilterLogic}
+            data={sectionRows}
+            getFieldValue={getPolicyTemplateFieldValue}
           />
         </div>
-
-        {/* Group By */}
-        <GroupBy
-          options={[{ id: "category", label: "Category" }]}
-          onGroupChange={handleGroupChange}
-        />
 
         {/* Column Selector */}
         <ColumnSelector
@@ -361,153 +344,146 @@ const PolicyTemplates: React.FC<PolicyTemplatesProps> = ({
           />
         </EmptyState>
       ) : (
-        <GroupedTableView
-          groupedData={groupedTemplates}
-          ungroupedData={filteredPolicyTemplates}
-          renderTable={(data, options) => (
-            <CustomizablePolicyTable
-              data={{ rows: data, cols: visibleTableHeaders }}
-              paginated
-              setSelectedRow={() => {}}
-              setAnchorEl={() => {}}
-              onRowClick={(id: string) => {
-                const row = data.find((r) => String(r.id) === String(id));
-                if (row) handleSelectPolicyTemplate(row);
-              }}
-              hidePagination={options?.hidePagination}
-              renderRow={(policy: TemplateRow, sortConfig) => (
-                <TableRow
-                  key={`${policy.origin}-${policy.id}`}
-                  tabIndex={0}
-                  aria-label={`Policy template: ${policy.title}`}
-                  sx={{ ...singleTheme.tableStyles.primary.body.row }}
-                  onClick={() => handleSelectPolicyTemplate(policy)}
+        <CustomizablePolicyTable
+          data={{ rows: filteredPolicyTemplates, cols: visibleTableHeaders }}
+          paginated
+          setSelectedRow={() => {}}
+          setAnchorEl={() => {}}
+          onRowClick={(id: string) => {
+            const row = filteredPolicyTemplates.find((r) => String(r.id) === String(id));
+            if (row) handleSelectPolicyTemplate(row);
+          }}
+          renderRow={(policy: TemplateRow, sortConfig) => (
+            <TableRow
+              key={`${policy.origin}-${policy.id}`}
+              tabIndex={0}
+              aria-label={`Policy template: ${policy.title}`}
+              sx={{ ...singleTheme.tableStyles.primary.body.row }}
+              onClick={() => handleSelectPolicyTemplate(policy)}
+            >
+              {isVisible("id") && (
+                <TableCell
+                  sx={{
+                    ...cellStyle,
+                    fontWeight: 500,
+                    backgroundColor: sortConfig?.key?.toLowerCase().includes("id")
+                      ? "background.surface"
+                      : "inherit",
+                  }}
                 >
-                  {isVisible("id") && (
-                    <TableCell
-                      sx={{
-                        ...cellStyle,
-                        fontWeight: 500,
-                        backgroundColor: sortConfig?.key?.toLowerCase().includes("id")
-                          ? "background.surface"
-                          : "inherit",
-                      }}
-                    >
-                      {policy.origin === "system" ? (
-                        <Chip
-                          label="System"
-                          size="small"
-                          sx={{ fontSize: "11px", height: "20px", borderRadius: "4px" }}
-                        />
-                      ) : (
-                        policy.id
-                      )}
-                    </TableCell>
+                  {policy.origin === "system" ? (
+                    <Chip
+                      label="System"
+                      size="small"
+                      sx={{ fontSize: "11px", height: "20px", borderRadius: radiusPx.sm }}
+                    />
+                  ) : (
+                    policy.id
                   )}
-                  <TableCell
-                    sx={{
-                      ...cellStyle,
-                      maxWidth: 200,
-                      overflow: "hidden",
-                      textOverflow: "ellipsis",
-                      backgroundColor: sortConfig?.key?.toLowerCase().includes("title")
-                        ? "background.surface"
-                        : "inherit",
-                    }}
-                  >
-                    {policy.title}
-                  </TableCell>
-                  {isVisible("tags") && (
-                    <TableCell
-                      sx={{
-                        ...cellStyle,
-                        backgroundColor: sortConfig?.key?.toLowerCase().includes("tags")
-                          ? "background.surface"
-                          : "inherit",
-                      }}
-                    >
-                      <Stack direction="row" flexWrap="wrap" sx={{ gap: "2px" }}>
-                        {policy.tags.map((tag: string, index: number) => (
-                          <TagChip key={`${tag}-${index}`} tag={tag} />
-                        ))}
-                      </Stack>
-                    </TableCell>
-                  )}
-                  {isVisible("description") && (
-                    <TableCell
-                      sx={{
-                        ...cellStyle,
-                        maxWidth: 250,
-                        overflow: "hidden",
-                        textOverflow: "ellipsis",
-                        backgroundColor: sortConfig?.key?.toLowerCase().includes("description")
-                          ? "background.surface"
-                          : "inherit",
-                      }}
-                    >
-                      {policy.description}
-                    </TableCell>
-                  )}
-                  <TableCell sx={{ ...cellStyle }} align="right">
-                    <Stack
-                      direction="row"
-                      justifyContent="flex-end"
-                      sx={{ gap: "2px" }}
-                      onClick={(e) => e.stopPropagation()}
-                    >
-                      {policy.origin === "system"
-                        ? canManageTemplates && (
-                            <Tooltip title="Duplicate into our templates">
-                              <IconButton
-                                size="small"
-                                disableRipple
-                                aria-label={`Duplicate ${policy.title}`}
-                                onClick={() => handleDuplicate(policy)}
-                                disabled={createMutation.isPending}
-                              >
-                                <Copy size={16} />
-                              </IconButton>
-                            </Tooltip>
-                          )
-                        : canManageTemplates && (
-                            <>
-                              <Tooltip title="Edit content">
-                                <IconButton
-                                  size="small"
-                                  disableRipple
-                                  aria-label={`Edit content of ${policy.title}`}
-                                  onClick={() => navigate(`/policies/templates/${policy.id}/edit`)}
-                                >
-                                  <FilePen size={16} />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Edit details">
-                                <IconButton
-                                  size="small"
-                                  disableRipple
-                                  aria-label={`Edit ${policy.title}`}
-                                  onClick={() => openEdit(policy)}
-                                >
-                                  <Pencil size={16} />
-                                </IconButton>
-                              </Tooltip>
-                              <Tooltip title="Delete template">
-                                <IconButton
-                                  size="small"
-                                  disableRipple
-                                  aria-label={`Delete ${policy.title}`}
-                                  onClick={() => setConfirmDelete(policy)}
-                                >
-                                  <Trash2 size={16} />
-                                </IconButton>
-                              </Tooltip>
-                            </>
-                          )}
-                    </Stack>
-                  </TableCell>
-                </TableRow>
+                </TableCell>
               )}
-            />
+              <TableCell
+                sx={{
+                  ...cellStyle,
+                  maxWidth: 200,
+                  overflow: "hidden",
+                  textOverflow: "ellipsis",
+                  backgroundColor: sortConfig?.key?.toLowerCase().includes("title")
+                    ? "background.surface"
+                    : "inherit",
+                }}
+              >
+                {policy.title}
+              </TableCell>
+              {isVisible("tags") && (
+                <TableCell
+                  sx={{
+                    ...cellStyle,
+                    backgroundColor: sortConfig?.key?.toLowerCase().includes("tags")
+                      ? "background.surface"
+                      : "inherit",
+                  }}
+                >
+                  <Stack direction="row" flexWrap="wrap" sx={{ gap: "2px" }}>
+                    {policy.tags.map((tag: string, index: number) => (
+                      <TagChip key={`${tag}-${index}`} tag={tag} />
+                    ))}
+                  </Stack>
+                </TableCell>
+              )}
+              {isVisible("description") && (
+                <TableCell
+                  sx={{
+                    ...cellStyle,
+                    maxWidth: 250,
+                    overflow: "hidden",
+                    textOverflow: "ellipsis",
+                    backgroundColor: sortConfig?.key?.toLowerCase().includes("description")
+                      ? "background.surface"
+                      : "inherit",
+                  }}
+                >
+                  {policy.description}
+                </TableCell>
+              )}
+              <TableCell sx={{ ...cellStyle }} align="right">
+                <Stack
+                  direction="row"
+                  justifyContent="flex-end"
+                  sx={{ gap: "2px" }}
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  {policy.origin === "system"
+                    ? canManageTemplates && (
+                        <Tooltip title="Duplicate into our templates">
+                          <IconButton
+                            size="small"
+                            disableRipple
+                            aria-label={`Duplicate ${policy.title}`}
+                            onClick={() => handleDuplicate(policy)}
+                            disabled={createMutation.isPending}
+                          >
+                            <Copy size={16} />
+                          </IconButton>
+                        </Tooltip>
+                      )
+                    : canManageTemplates && (
+                        <>
+                          <Tooltip title="Edit content">
+                            <IconButton
+                              size="small"
+                              disableRipple
+                              aria-label={`Edit content of ${policy.title}`}
+                              onClick={() => navigate(`/policies/templates/${policy.id}/edit`)}
+                            >
+                              <FilePen size={16} />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Edit details">
+                            <IconButton
+                              size="small"
+                              disableRipple
+                              aria-label={`Edit ${policy.title}`}
+                              onClick={() => openEdit(policy)}
+                            >
+                              <Pencil size={16} />
+                            </IconButton>
+                          </Tooltip>
+                          <Tooltip title="Delete template">
+                            <IconButton
+                              size="small"
+                              disableRipple
+                              aria-label={`Delete ${policy.title}`}
+                              onClick={() => setConfirmDelete(policy)}
+                            >
+                              <Trash2 size={16} />
+                            </IconButton>
+                          </Tooltip>
+                        </>
+                      )}
+                </Stack>
+              </TableCell>
+            </TableRow>
           )}
         />
       )}

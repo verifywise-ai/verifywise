@@ -11,6 +11,7 @@ jest.mock("../../utils/risk.utils", () => ({
   bulkSetProjectRisksOwnerQuery: jest.fn(),
   bulkSetProjectRisksCategoryQuery: jest.fn(),
   bulkArchiveProjectRisksQuery: jest.fn(),
+  assertRiskReferencesInOrganization: jest.fn(),
   PROJECT_RISK_CATEGORIES_SET: new Set(["financial", "operational", "strategic", "compliance"]),
 }));
 jest.mock("../../domain.layer/models/risks/risk.model", () => ({
@@ -372,6 +373,51 @@ describe("risks.ctrl", () => {
           updated_at: "2026-08-14T00:00:00.000Z",
         }),
       });
+    });
+    it.each([
+      ["likelihood", { likelihood: null }],
+      ["severity", { severity: "" }],
+    ])("clears the inherent level when %s is explicitly cleared", async (_n, body) => {
+      const existing = { ...buildRisk(), risk_owner: null, event_frequency_min: null };
+      mockGetById.mockResolvedValue(existing as any);
+      mockUpdate.mockResolvedValue(existing as any);
+      const res = createRes();
+      await updateRiskById(createReq({ params: { id: "1" }, body }), res);
+      expect(mockUpdate.mock.calls[mockUpdate.mock.calls.length - 1][1]).toHaveProperty(
+        "risk_level_autocalculated",
+        null,
+      );
+    });
+    it("clears the residual level when a residual input is explicitly cleared", async () => {
+      const existing = { ...buildRisk(), risk_owner: null, event_frequency_min: null };
+      mockGetById.mockResolvedValue(existing as any);
+      mockUpdate.mockResolvedValue(existing as any);
+      const res = createRes();
+      await updateRiskById(
+        createReq({ params: { id: "1" }, body: { likelihood_mitigation: null } }),
+        res,
+      );
+      expect(mockUpdate.mock.calls[mockUpdate.mock.calls.length - 1][1]).toHaveProperty(
+        "final_risk_level",
+        null,
+      );
+    });
+    it("does not write a level for an unrecognised non-null label", async () => {
+      const existing = {
+        ...buildRisk(),
+        severity: "Major",
+        risk_owner: null,
+        event_frequency_min: null,
+      };
+      mockGetById.mockResolvedValue(existing as any);
+      mockUpdate.mockResolvedValue(existing as any);
+      const res = createRes();
+      await updateRiskById(
+        createReq({ params: { id: "1" }, body: { likelihood: "Sometimes" } }),
+        res,
+      );
+      const sent = mockUpdate.mock.calls[mockUpdate.mock.calls.length - 1][1];
+      expect(sent).not.toHaveProperty("risk_level_autocalculated");
     });
     it("should return 500 on error", async () => {
       mockGetById.mockRejectedValue(new Error("DB error"));

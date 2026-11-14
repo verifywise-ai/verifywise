@@ -1,4 +1,5 @@
 import { Worker, Job } from "bullmq";
+import { formatReviewDate } from "../../utils/policyReviewDate.utils";
 import { REDIS_URL } from "../../database/redis";
 import sendEmail from "./actions/sendEmail";
 import { resolveProjectOwnerName } from "../../utils/project.utils";
@@ -231,11 +232,7 @@ async function sendPolicyDueSoonEmailNotification() {
         if (!policy.author_id) continue;
 
         const reviewDate = policy.next_review_date
-          ? new Date(policy.next_review_date).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })
+          ? formatReviewDate(policy.next_review_date)
           : "Not set";
 
         try {

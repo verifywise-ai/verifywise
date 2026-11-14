@@ -35,6 +35,7 @@ import { passwordValidation } from "../../../../application/validations/password
 import { EmailAvailabilityStatus } from "../../../../application/hooks/useEmailAvailability";
 import singleTheme from "../../../themes/v1SingleTheme";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import { palette, radiusPx } from "../../../themes/palette";
 
 const EMPTY_USER_FORM: UserFormValues = {
   email: "",
@@ -178,7 +179,7 @@ const Users = () => {
             textTransform: "none",
             height: 34,
             fontSize: "13px",
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
           }}
         >
           Add user
@@ -231,8 +232,8 @@ const Users = () => {
             <TableBody>
               {filteredUsers.map((user) => {
                 const colors = ROLE_COLORS[user.role_name] || {
-                  bg: "#f3f4f6",
-                  text: "#6b7280",
+                  bg: palette.background.hover,
+                  text: palette.text.icon,
                 };
                 return (
                   <TableRow key={user.id} sx={tableStyles.body.row}>
@@ -243,14 +244,14 @@ const Users = () => {
                             width: 28,
                             height: 28,
                             borderRadius: "50%",
-                            backgroundColor: "#f3f4f6",
+                            backgroundColor: palette.background.hover,
                             display: "flex",
                             alignItems: "center",
                             justifyContent: "center",
                             flexShrink: 0,
                             fontSize: 12,
                             fontWeight: 600,
-                            color: "#6b7280",
+                            color: palette.text.icon,
                           }}
                         >
                           {user.name?.[0]?.toUpperCase() || "?"}
@@ -270,7 +271,7 @@ const Users = () => {
                           alignItems: "center",
                           px: 1,
                           py: 0.25,
-                          borderRadius: "4px",
+                          borderRadius: radiusPx.sm,
                           fontSize: 12,
                           fontWeight: 500,
                           backgroundColor: colors.bg,
@@ -294,12 +295,12 @@ const Users = () => {
                         }}
                         sx={{
                           ...tableStyles.body.button,
-                          "color": "#dc2626",
-                          "borderColor": "#fecaca",
+                          "color": palette.riskMark.critical,
+                          "borderColor": palette.status.error.border,
                           "&:hover": {
-                            backgroundColor: "#dc2626",
-                            color: "#fff",
-                            border: "1px solid #dc2626",
+                            backgroundColor: palette.riskMark.critical,
+                            color: palette.background.main,
+                            border: `1px solid ${palette.riskMark.critical}`,
                           },
                         }}
                       >
@@ -350,7 +351,10 @@ const Users = () => {
                 ) : (
                   invitations.map((inv) => {
                     const roleName = inv.role_name || "—";
-                    const colors = ROLE_COLORS[roleName] || { bg: "#f3f4f6", text: "#6b7280" };
+                    const colors = ROLE_COLORS[roleName] || {
+                      bg: palette.background.hover,
+                      text: palette.text.icon,
+                    };
                     return (
                       <TableRow key={inv.id} sx={tableStyles.body.row}>
                         <TableCell sx={tableStyles.body.cell}>
@@ -369,7 +373,7 @@ const Users = () => {
                               alignItems: "center",
                               px: 1,
                               py: 0.25,
-                              borderRadius: "4px",
+                              borderRadius: radiusPx.sm,
                               fontSize: 12,
                               fontWeight: 500,
                               backgroundColor: colors.bg,
@@ -424,7 +428,11 @@ const Users = () => {
             onChange={(patch) => setUserForm((prev) => ({ ...prev, ...patch }))}
             onEmailStatusChange={setEmailStatus}
           />
-          {addError && <Typography sx={{ fontSize: 13, color: "#D32F2F" }}>{addError}</Typography>}
+          {addError && (
+            <Typography sx={{ fontSize: 13, color: palette.status.error.text }}>
+              {addError}
+            </Typography>
+          )}
         </Stack>
       </StandardModal>
 

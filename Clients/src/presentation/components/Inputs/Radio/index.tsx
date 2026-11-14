@@ -20,6 +20,7 @@ import "./index.css";
 import { CircleDot } from "lucide-react";
 
 import { ChangeEvent } from "react";
+import { palette } from "../../../themes/palette";
 
 interface RadioProps {
   checked: boolean;
@@ -63,7 +64,7 @@ function Radio({ checked, value, id, size, onChange, title, desc, disabled, name
             color: "transparent",
             width: 16,
             height: 16,
-            boxShadow: "inset 0 0 0 1px #656a74",
+            boxShadow: `inset 0 0 0 1px ${palette.text.tertiary}`,
             mt: theme.spacing(0.5),
           }}
         />

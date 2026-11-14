@@ -12,7 +12,7 @@ import {
 } from "@mui/material";
 import { MoreVertical, RotateCcw, Download, Copy, Trash2, Loader2 } from "lucide-react";
 import singleTheme from "../../../themes/v1SingleTheme";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import ConfirmationModal from "../../Dialogs/ConfirmationModal";
 import { CustomizableButton } from "../../button/customizable-button";
 import VWTooltip from "../../VWTooltip";
@@ -284,7 +284,7 @@ const ExperimentTableBody: React.FC<IExperimentTableBodyProps> = ({
                       alignItems: "center",
                       px: "8px",
                       py: "2px",
-                      borderRadius: "4px",
+                      borderRadius: radiusPx.sm,
                       backgroundColor: palette.status.success.bg,
                       color: palette.status.success.text,
                       fontSize: "12px",
@@ -354,7 +354,7 @@ const ExperimentTableBody: React.FC<IExperimentTableBodyProps> = ({
         sx={{
           "& .MuiPopover-paper": {
             minWidth: 140,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             border: `1px solid ${palette.border.dark}`,
             boxShadow: "0 4px 12px rgba(0,0,0,0.1)",
             overflow: "hidden",

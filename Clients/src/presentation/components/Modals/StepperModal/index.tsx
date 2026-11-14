@@ -28,7 +28,7 @@
 
 import React, { useId } from "react";
 import { Modal, Stack, Box, Typography, Step, Stepper, StepLabel } from "@mui/material";
-import { background, border, text } from "../../../themes/palette";
+import { background, border, text, radiusPx, palette as vwPalette } from "../../../themes/palette";
 import { X as CloseIcon } from "lucide-react";
 import { CustomizableButton } from "../../button/customizable-button";
 
@@ -139,7 +139,7 @@ const StepperModal: React.FC<StepperModalProps> = ({
           "minWidth": "600px",
           "maxWidth": maxWidth,
           "backgroundColor": "background.main",
-          "borderRadius": "8px",
+          "borderRadius": radiusPx.lg,
           "overflow": "hidden",
           "&:focus": {
             outline: "none",
@@ -149,7 +149,7 @@ const StepperModal: React.FC<StepperModalProps> = ({
         {/* Header Section */}
         <Stack
           sx={{
-            background: "linear-gradient(180deg, #F8FAFB 0%, #F3F5F8 100%)",
+            background: `linear-gradient(180deg, ${vwPalette.background.alt} 0%, ${vwPalette.background.hover} 100%)`,
             borderBottom: `1px solid ${border.light}`,
             padding: "16px 24px",
             paddingBottom: "36px",
@@ -208,7 +208,7 @@ const StepperModal: React.FC<StepperModalProps> = ({
                   "display": "flex",
                   "alignItems": "center",
                   "padding": "4px",
-                  "borderRadius": "4px",
+                  "borderRadius": radiusPx.sm,
                   "&:hover": {
                     backgroundColor: background.surface,
                   },
@@ -231,7 +231,7 @@ const StepperModal: React.FC<StepperModalProps> = ({
               ? { flex: "none", height: "calc(90vh - 180px)", maxHeight: "calc(90vh - 180px)" }
               : { maxHeight: "calc(90vh - 180px)" }),
             border: `1px solid ${border.light}`,
-            borderRadius: "16px",
+            borderRadius: radiusPx.xxl,
             backgroundColor: "background.main",
             zIndex: 1,
             position: "relative",
@@ -273,7 +273,7 @@ const StepperModal: React.FC<StepperModalProps> = ({
           justifyContent="space-between"
           spacing={6}
           sx={{
-            background: "linear-gradient(180deg, #F3F5F8 0%, #F8FAFB 100%)",
+            background: `linear-gradient(180deg, ${vwPalette.background.hover} 0%, ${vwPalette.background.alt} 100%)`,
             borderTop: `1px solid ${border.light}`,
             padding: "12px 24px",
             paddingTop: "32px",

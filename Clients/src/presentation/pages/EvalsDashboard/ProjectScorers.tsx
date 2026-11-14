@@ -3,8 +3,8 @@ import { Box, Stack } from "@mui/material";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { Plus } from "lucide-react";
 import SearchBox from "../../components/Search/SearchBox";
-import { FilterBy, type FilterColumn } from "../../components/Table/FilterBy";
-import { GroupBy } from "../../components/Table/GroupBy";
+import { type FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import {
   listScorers,
@@ -113,7 +113,12 @@ export default function ProjectScorers({ projectId, orgId }: ProjectScorersProps
     [],
   );
 
-  const { filterData, handleFilterChange } = useFilterBy<DeepEvalScorer>(getFieldValue);
+  const {
+    filterData,
+    handleFilterChange,
+    conditions: filterConditions,
+    logic: filterLogic,
+  } = useFilterBy<DeepEvalScorer>(getFieldValue);
 
   const filteredScorers = useMemo(() => {
     const afterFilter = filterData(scorers);
@@ -389,13 +394,13 @@ export default function ProjectScorers({ projectId, orgId }: ProjectScorersProps
         gap={2}
       >
         <Stack direction="row" alignItems="center" gap={2}>
-          <FilterBy columns={filterColumns} onFilterChange={handleFilterChange} />
-          <GroupBy
-            options={[
-              { id: "type", label: "Type" },
-              { id: "metricKey", label: "Metric key" },
-            ]}
-            onGroupChange={() => {}}
+          <TableFilter
+            columns={filterColumns}
+            onFilterChange={handleFilterChange}
+            defaultConditions={filterConditions}
+            defaultLogic={filterLogic}
+            data={scorers}
+            getFieldValue={getFieldValue}
           />
           <SearchBox
             placeholder="Search scorers..."

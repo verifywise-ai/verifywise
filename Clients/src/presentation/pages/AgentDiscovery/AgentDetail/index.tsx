@@ -24,13 +24,13 @@ import { useUserNames } from "../useUserNames";
 import { useLinkedModelLabel } from "../useLinkedModelLabel";
 import ReviewAgentModal from "../../../components/Modals/AgentDiscovery/ReviewAgentModal";
 import ManualAgentModal from "../../../components/Modals/AgentDiscovery/ManualAgentModal";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import LifecycleStepper from "./LifecycleStepper";
 import ActivityTimeline from "./ActivityTimeline";
 
 const sectionCardStyle = {
   border: `1px solid ${palette.border.dark}`,
-  borderRadius: "4px",
+  borderRadius: radiusPx.sm,
   padding: "24px",
   backgroundColor: palette.background.main,
 };
@@ -319,7 +319,7 @@ export default function AgentDetail() {
             sx={{
               p: "16px",
               mb: "20px",
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               backgroundColor: palette.background.alt,
               border: `1px solid ${palette.border.light}`,
             }}

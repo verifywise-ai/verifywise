@@ -9,21 +9,22 @@ import {
   summarizeDomains,
   type IndicatorMap,
 } from "../rubric";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 
 function ratioColor(r: number): string {
-  if (r >= 0.75) return "#13715B";
-  if (r >= 0.5) return "#2E8B6F";
-  if (r >= 0.3) return "#C8941E";
-  if (r > 0) return "#C2683B";
-  return "#B23B3B";
+  if (r >= 0.75) return palette.brand.primary;
+  if (r >= 0.5) return palette.riskMark.low;
+  if (r >= 0.3) return palette.riskMark.medium;
+  if (r > 0) return palette.riskMark.high;
+  return palette.riskMark.critical;
 }
 
 function dot(award: string, subFlag?: string): { color: string; label: string } {
-  if (award === "full") return { color: "#13715B", label: AWARD_LABELS.full };
-  if (award === "half") return { color: "#C8941E", label: AWARD_LABELS.half };
-  if (subFlag === "ADVERSE") return { color: "#B23B3B", label: SUBFLAG_LABELS.ADVERSE };
-  if (subFlag === "NA") return { color: "#98A2B3", label: SUBFLAG_LABELS.NA };
+  if (award === "full") return { color: palette.brand.primary, label: AWARD_LABELS.full };
+  if (award === "half") return { color: palette.riskMark.medium, label: AWARD_LABELS.half };
+  if (subFlag === "ADVERSE")
+    return { color: palette.riskMark.critical, label: SUBFLAG_LABELS.ADVERSE };
+  if (subFlag === "NA") return { color: palette.text.disabled, label: SUBFLAG_LABELS.NA };
   return { color: palette.border.dark, label: SUBFLAG_LABELS.SILENT };
 }
 
@@ -43,7 +44,7 @@ export function ScoreBreakdown({
       <Box
         sx={{
           border: `1px solid ${palette.border.dark}`,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           overflow: "hidden",
         }}
       >
@@ -81,7 +82,7 @@ export function ScoreBreakdown({
                   sx={{
                     height: "8px",
                     borderRadius: "999px",
-                    backgroundColor: "#E5E7EB",
+                    backgroundColor: palette.border.light,
                     overflow: "hidden",
                   }}
                 >
@@ -144,11 +145,11 @@ export function ScoreBreakdown({
       <Stack direction="row" flexWrap="wrap" gap="16px" sx={{ mt: "12px" }}>
         {(
           [
-            ["#13715B", "Disclosed"],
-            ["#C8941E", "Partial"],
+            [palette.brand.primary, "Disclosed"],
+            [palette.riskMark.medium, "Partial"],
             [palette.border.dark, "Silent"],
-            ["#B23B3B", "Adverse"],
-            ["#98A2B3", "Not applicable"],
+            [palette.riskMark.critical, "Adverse"],
+            [palette.text.disabled, "Not applicable"],
           ] as [string, string][]
         ).map(([c, l]) => (
           <Stack key={l} direction="row" alignItems="center" gap="6px">

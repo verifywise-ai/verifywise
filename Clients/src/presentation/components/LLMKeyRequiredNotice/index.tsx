@@ -4,6 +4,7 @@ import { useNavigate } from "react-router";
 import { useCanCheck } from "../../../application/hooks/useCan";
 import { LLM_KEY_CREATE_PATH } from "../../../application/constants/llmKeyDeepLink";
 import { fontSize } from "../../themes/typography";
+import { radiusPx } from "../../themes/palette";
 
 interface LLMKeyRequiredNoticeProps {
   /** Shown to roles that can add a key, followed by a "Go to settings" link. */
@@ -45,7 +46,7 @@ const LLMKeyRequiredNotice = ({
         sx={{
           width: 32,
           height: 32,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           backgroundColor: iconBackground,
           display: "flex",
           alignItems: "center",

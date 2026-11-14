@@ -23,7 +23,7 @@ import { Project } from "../../../../../domain/types/Project";
 import { useSearchParams } from "react-router";
 import { TabFilterBar } from "../../../../components/FrameworkFilter/TabFilterBar";
 import { StatsCard } from "../../../../components/Cards/StatsCard";
-import { text } from "../../../../themes/palette";
+import { text, palette as vwPalette } from "../../../../themes/palette";
 import { textStyles } from "../../../../themes/typography";
 
 const ISO42001Annex = ({
@@ -377,8 +377,8 @@ const ISO42001Annex = ({
           const count = filteredControlsCountMemo[annex.id ?? 0];
           const chipColor =
             count !== undefined && count > 0
-              ? { bg: "#E6F4EA", color: "status.success.text" }
-              : { bg: "#FFF8E1", color: "#795548" };
+              ? { bg: vwPalette.status.success.bg, color: "status.success.text" }
+              : { bg: vwPalette.risk.medium.bg, color: vwPalette.risk.medium.text };
           return (
             <Stack key={annex.id} sx={styles.container}>
               <Accordion

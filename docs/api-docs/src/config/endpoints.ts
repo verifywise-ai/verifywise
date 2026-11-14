@@ -12763,6 +12763,129 @@ export const v1V1aiAppsEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: V1/Ai Detection endpoints
+export const v1V1aiDetectionEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/ai-detection/scans/{scanId}/suggested-risks/actions',
+    summary: "List Suggested Risk Actions Controller",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+    ],
+    tag: "v1: V1/Ai Detection",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/ai-detection/scans/{scanId}/suggested-risks/actions',
+    summary: "Record Suggested Risk Action Controller",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Detection",
+  },
+  {
+    method: 'DELETE',
+    path: '/v1/ai-detection/scans/{scanId}/suggested-risks/actions/{actionId}',
+    summary: "Delete Suggested Risk Action Controller",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Detection",
+  },
+  {
+    method: 'GET',
+    path: '/v1/ai-detection/scans/{scanId}/findings',
+    summary: "Get Scan Findings V1 Controller",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Detection",
+  },
+  {
+    method: 'PATCH',
+    path: '/v1/ai-detection/scans/{scanId}/findings/{findingId}/governance',
+    summary: "Update Governance Status V1 Controller",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Detection",
+  },
+  {
+    method: 'POST',
+    path: '/v1/ai-detection/scans/{scanId}/suggested-risks/risks',
+    summary: "Add Suggested Risk To Register Controller",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Detection",
+  },
+];
+
+// v1: V1/Ai Detection Repositories endpoints
+export const v1V1aiDetectionRepositoriesEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/ai-detection-repositories/webhook-config',
+    summary: "Get Webhook Config Controller",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Ai Detection Repositories",
+  },
+];
+
+// v1: V1/Change Notices endpoints
+export const v1V1changeNoticesEndpoints: Endpoint[] = [
+  {
+    method: 'POST',
+    path: '/v1/change-notices/{id}/view',
+    summary: "View Change Notice Handler",
+    description: "Counts a visit to a page's change notice and says whether to show it. Stops after the user dismisses it, after 3 visits, or 90 days after the user first saw it; skipped for accounts created after the first time anyone in the organization saw it. A refusal writes nothing. A token with no organization always gets show false.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'string', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 400, description: "Invalid notice id" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Change Notices",
+  },
+  {
+    method: 'PUT',
+    path: '/v1/change-notices/{id}/dismissed',
+    summary: "Set Change Notice Dismissed Handler",
+    description: "Dismisses the signed-in user's change notice, or restores it when dismissed is false (Undo).",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'string', required: true, description: "The id" },
+    ],
+    requestBody: {
+      "dismissed": "boolean (required)",
+    },
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 400, description: "Invalid notice id or body" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Change Notices",
+  },
+];
+
 // v1: V1/Dashboard endpoints
 export const v1V1dashboardEndpoints: Endpoint[] = [
   {
@@ -12911,6 +13034,22 @@ export const v1V1groupsEndpoints: Endpoint[] = [
       { status: 500, description: "Internal server error" },
     ],
     tag: "v1: V1/Groups",
+  },
+];
+
+// v1: V1/Home endpoints
+export const v1V1homeEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/home/queue',
+    summary: "Get Home Queue Handler",
+    description: "Everything that needs the signed-in user's action in the token's organization, merged and sorted (overdue first, then due soonest, then oldest waiting). A source that failed is reported as `unavailable` with no items, never as an empty list; a source or count the user may not see is absent, as is the prompts count when no AI Gateway is configured. Titles are built on the client from these structured fields.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: V1/Home",
   },
 ];
 
@@ -13756,8 +13895,12 @@ export const allEndpoints = {
   v1UseCaseSettings: v1UseCaseSettingsEndpoints,
   v1V1aiAppLifecycle: v1V1aiAppLifecycleEndpoints,
   v1V1aiApps: v1V1aiAppsEndpoints,
+  v1V1aiDetection: v1V1aiDetectionEndpoints,
+  v1V1aiDetectionRepositories: v1V1aiDetectionRepositoriesEndpoints,
+  v1V1changeNotices: v1V1changeNoticesEndpoints,
   v1V1dashboard: v1V1dashboardEndpoints,
   v1V1groups: v1V1groupsEndpoints,
+  v1V1home: v1V1homeEndpoints,
   v1V1importedFrameworkAssessments: v1V1importedFrameworkAssessmentsEndpoints,
   v1V1intakeFormReviewTime: v1V1intakeFormReviewTimeEndpoints,
   v1V1lifecycleSettings: v1V1lifecycleSettingsEndpoints,

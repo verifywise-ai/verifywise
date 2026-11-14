@@ -1,6 +1,12 @@
 import { useState, useEffect, useRef } from "react";
 import { Box, Typography, LinearProgress, Dialog } from "@mui/material";
-import { brand, text, border as borderPalette } from "../../themes/palette";
+import {
+  brand,
+  text,
+  border as borderPalette,
+  radiusPx,
+  palette as vwPalette,
+} from "../../themes/palette";
 
 export interface ProgressStep {
   label: string;
@@ -60,7 +66,7 @@ export function StepProgressDialog({
       slotProps={{
         paper: {
           sx: {
-            borderRadius: "8px",
+            borderRadius: radiusPx.lg,
             p: "24px 28px",
             minWidth: 400,
             maxWidth: 460,
@@ -93,11 +99,11 @@ export function StepProgressDialog({
         value={step.progress}
         sx={{
           "height": 6,
-          "borderRadius": 3,
+          "borderRadius": radiusPx.md,
           "backgroundColor": borderPalette.light,
           "& .MuiLinearProgress-bar": {
-            borderRadius: 3,
-            background: `linear-gradient(90deg, ${brand.primary} 0%, #1a9e7a 100%)`,
+            borderRadius: radiusPx.md,
+            background: `linear-gradient(90deg, ${brand.primary} 0%, ${vwPalette.status.success.strong} 100%)`,
             transition: "transform 0.8s ease",
           },
         }}

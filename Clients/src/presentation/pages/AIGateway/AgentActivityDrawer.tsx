@@ -15,6 +15,7 @@ import { StatCard } from "../../components/Cards/StatCard";
 import { EmptyState } from "../../components/EmptyState";
 import { apiServices } from "../../../infrastructure/api/networkServices";
 import palette from "../../themes/palette";
+import { radiusPx } from "../../themes/palette";
 import CustomizableSkeleton from "../../components/Skeletons";
 import {
   MCP_STATUS_COLORS,
@@ -198,7 +199,7 @@ export default function AgentActivityDrawer({
                     alignItems="center"
                     sx={{
                       p: "8px 12px",
-                      borderRadius: "4px",
+                      borderRadius: radiusPx.sm,
                       border: `1px solid ${palette.border.light}`,
                     }}
                   >
@@ -261,7 +262,7 @@ export default function AgentActivityDrawer({
                       key={r.id}
                       sx={{
                         p: "8px 12px",
-                        borderRadius: "4px",
+                        borderRadius: radiusPx.sm,
                         border: `1px solid ${palette.border.light}`,
                       }}
                     >

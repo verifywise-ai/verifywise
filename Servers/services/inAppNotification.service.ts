@@ -52,6 +52,8 @@ export const buildEntityUrl = (entityType: NotificationEntityType, entityId: num
       return `/shadow-ai/tools/${entityId}`;
     case NotificationEntityType.AI_GATEWAY:
       return `/ai-gateway/settings`;
+    case NotificationEntityType.AI_DETECTION_SCAN:
+      return `/ai-detection/scans/${entityId}`;
     case NotificationEntityType.COMMENT:
     case NotificationEntityType.USER:
     default:

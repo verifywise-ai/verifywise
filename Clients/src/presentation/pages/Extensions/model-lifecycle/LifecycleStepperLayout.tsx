@@ -3,7 +3,7 @@ import { Box, Stack, CircularProgress, Typography } from "@mui/material";
 import { LifecyclePhase, LifecycleProgress } from "./useModelLifecycle";
 import LifecycleSidebar from "./LifecycleSidebar";
 import LifecyclePhaseContent from "./LifecyclePhaseContent";
-import { background, border, text } from "../../../themes/palette";
+import { background, border, text, radiusPx } from "../../../themes/palette";
 
 interface LifecycleStepperLayoutProps {
   phases: LifecyclePhase[];
@@ -57,7 +57,7 @@ export default function LifecycleStepperLayout({
     <Box
       sx={{
         border: `1px solid ${border.light}`,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         backgroundColor: background.main,
         overflow: "hidden",
         display: "flex",

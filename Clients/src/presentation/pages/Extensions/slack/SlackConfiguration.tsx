@@ -23,26 +23,28 @@ import { SlidersHorizontal, Trash2, ToggleLeft, ToggleRight, MessageSquare, X } 
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { ENV_VARs } from "../../../../../env.vars";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import { palette } from "../../../themes/palette";
+import { radiusPx } from "../../../themes/palette";
 
 const colors = {
-  primary: "#13715B",
-  primaryHover: "#0F5A47",
+  primary: palette.brand.primary,
+  primaryHover: palette.brand.primaryHover,
   primaryLight: "rgba(19, 113, 91, 0.08)",
   successLight: "rgba(5, 150, 105, 0.1)",
-  error: "#DB504A",
+  error: palette.text.error,
   errorLight: "rgba(219, 80, 74, 0.1)",
-  textPrimary: "#1A1919",
-  textSecondary: "#344054",
-  textTertiary: "#667085",
-  background: "#ffffff",
-  backgroundSecondary: "#f9fafb",
-  backgroundHover: "#f5f5f5",
-  border: "#d0d5dd",
-  borderLight: "#e5e7eb",
-  disabled: "#E5E7EB",
+  textPrimary: palette.text.primary,
+  textSecondary: palette.text.secondary,
+  textTertiary: palette.text.icon,
+  background: palette.background.main,
+  backgroundSecondary: palette.background.alt,
+  backgroundHover: palette.background.hover,
+  border: palette.border.dark,
+  borderLight: palette.border.light,
+  disabled: palette.border.light,
 };
 const typography = { sizes: { sm: "12px", md: "13px" }, weights: { medium: 500, semibold: 600 } };
-const borderRadius = { sm: "4px", md: "8px", lg: "12px", full: "9999px" };
+const borderRadius = { sm: radiusPx.sm, md: radiusPx.lg, lg: radiusPx.xl, full: "9999px" };
 const shadows = {
   lg: "0px 4px 24px -4px rgba(16, 24, 40, 0.08), 0px 3px 3px -3px rgba(16, 24, 40, 0.03)",
 };
@@ -266,7 +268,9 @@ export default function SlackConfiguration() {
                             backgroundColor: workspace.is_active
                               ? colors.successLight
                               : "rgba(107, 114, 128, 0.1)",
-                            color: workspace.is_active ? "#13715B" : colors.textTertiary,
+                            color: workspace.is_active
+                              ? palette.brand.primary
+                              : colors.textTertiary,
                           }}
                         >
                           <Box
@@ -275,7 +279,7 @@ export default function SlackConfiguration() {
                               height: 6,
                               borderRadius: "50%",
                               backgroundColor: workspace.is_active
-                                ? "#13715B"
+                                ? palette.brand.primary
                                 : colors.textTertiary,
                             }}
                           />

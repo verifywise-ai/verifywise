@@ -36,6 +36,7 @@ import TablePaginationActions from "../TablePagination";
 import { paginationStyle } from "../Table/styles";
 import CustomizableToast from "../../components/Toast";
 import { text } from "../../themes/palette";
+import { getEffectiveRiskLevel, riskLevelRank } from "../../../application/utils/riskLevel";
 import { pageOfLabel } from "../Table/pageOfLabel";
 
 const SORT_KEY = "vw_link_risk_selector_sort";
@@ -223,6 +224,12 @@ const LinkRiskSelectorModal: React.FC<LinkRiskSelectorModalProps> = ({
     if (!sortConfig.key || !sortConfig.direction) return risks;
 
     return [...risks].sort((a, b) => {
+      if (sortConfig.key === "risk_level_autocalculated") {
+        // The column shows the effective level, so it sorts by risk rank, not alphabetically.
+        const diff =
+          riskLevelRank(getEffectiveRiskLevel(a)) - riskLevelRank(getEffectiveRiskLevel(b));
+        return sortConfig.direction === "asc" ? diff : -diff;
+      }
       const A = (a[sortConfig.key] || "").toString().toLowerCase();
       const B = (b[sortConfig.key] || "").toString().toLowerCase();
 
@@ -333,7 +340,7 @@ const LinkRiskSelectorModal: React.FC<LinkRiskSelectorModalProps> = ({
                   <TableCell>{risk.severity}</TableCell>
 
                   {/* LEVEL */}
-                  <TableCell>{risk.risk_level_autocalculated}</TableCell>
+                  <TableCell>{getEffectiveRiskLevel(risk)}</TableCell>
 
                   {/* RISK OWNER */}
                   <TableCell>{risk ? userMap.get(String(risk.risk_owner)) || "-" : "-"}</TableCell>

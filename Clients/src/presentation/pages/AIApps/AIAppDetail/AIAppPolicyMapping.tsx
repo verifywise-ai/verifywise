@@ -23,7 +23,7 @@ import { IAIAppPolicy } from "../../../../domain/interfaces/i.aiApp";
 import { AiAppPolicyStatus } from "../../../../domain/enums/aiApp.enum";
 import { PolicyManagerModel } from "../../../../domain/models/Common/policy/policyManager.model";
 import singleTheme from "../../../themes/v1SingleTheme";
-import { palette } from "../../../themes/palette";
+import { palette, radiusPx } from "../../../themes/palette";
 import Alert from "../../../components/Alert";
 import StandardTableHead from "../../../components/Table/StandardTableHead";
 import StandardTablePagination from "../../../components/Table/StandardTablePagination";
@@ -192,7 +192,7 @@ export default function AIAppPolicyMapping({ appId, appName, policies }: AIAppPo
           sx={{
             mb: "16px",
             p: "16px",
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             backgroundColor: palette.background.accent,
             border: `1px solid ${palette.border.light}`,
           }}

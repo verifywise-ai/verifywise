@@ -161,6 +161,16 @@ POST /policies/
 }
 ```
 
+`next_review_date` is a calendar day stored at midnight in a `TIMESTAMP` (no time zone) column. Clients send `"YYYY-MM-DD"`. Policy reads format it in SQL as `"YYYY-MM-DDT00:00:00.000Z"` (`to_char`), so the value does not depend on the backend's time zone; node-pg alone would read it as server-local midnight, a day early east of UTC. The client reads the first 10 characters (`toDateOnlyString`), and automation emails format it in UTC. Migration `20261114090000-policy-review-date-calendar-day` rounds dates the old picker stored with a time of day to the nearest midnight.
+
+The checks reject only input the database used to fail on with a 500, since the legacy endpoint is frozen. Create requires a non-empty `title` of at most 255 characters (untrimmed, it is `VARCHAR(255)`). `status` must be one of `POLICY_STATUS_ENUM` (the `policy_manager_status_check` constraint) and defaults to Draft. `tags` must be known tags; a missing or empty list stores `{}`. `next_review_date` must start with a valid `YYYY-MM-DD`; `null` or `""` stores or sets NULL. Update checks only the fields sent. Invalid input returns `400` with `STATUS_CODE[400]({ message, errors: [{ field, message }] })`, translated. The editor shows each message under its field, and a message with no field in a snackbar. History compares the review date by calendar day (`GENERIC_FORMATTERS.calendarDate`), so an unchanged date records no change on any server time zone.
+
+Create and update accept only `title`, `content_html`, `status`, `tags`, `next_review_date`, `policy_owner_id` and `assigned_reviewer_ids`; other body fields (`is_demo`, `review_status`, `author_id`, ...) are dropped.
+
+`policy_owner_id`, `assigned_reviewer_ids`, bulk `reviewerId` and `reviewer_ids` in a review request must be members of the caller's organization, or the request returns 400 (`assertPolicyUsersInOrganization` in `utils/policyManager.utils.ts`). On update only newly named users are checked.
+
+Folder assignment (`PATCH /policies/:id/folders`) returns 404 for another organization's policy and 403 for another organization's folder. Reading a policy's folders joins folders on the organization.
+
 ## Rich Text Editor
 
 ### TipTap Integration
@@ -253,6 +263,8 @@ POST /policy-linked/:policyId/linked-objects
 }
 ```
 
+`object_type` must be `risk` (ids from `risks`) or `evidence` (ids from `files`), otherwise 400. The policy must belong to the caller's organization (404) and so must every object (403). Ids already linked are skipped, and the policy row is locked while linking so concurrent requests cannot create duplicates. The response stays 201 (legacy contract) and adds `linked: <count>`, the number of links actually created. REST and the advisor's `agent_link_object_to_policy` both go through `linkObjectsToPolicyQuery` (`utils/policyLinkedObject.utils.ts`).
+
 ## Change History
 
 ### Tracked Events
@@ -297,7 +309,6 @@ POST /policy-linked/:policyId/linked-objects
 
 - Search by title
 - Filter by status, tags, reviewers
-- Group by status, tags
 - Sort by date, title
 - Bulk export
 - Policy templates

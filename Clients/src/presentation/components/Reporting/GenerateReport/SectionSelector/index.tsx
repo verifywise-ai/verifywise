@@ -7,7 +7,7 @@ import React, { useMemo, useCallback } from "react";
 import { Stack, Box, Typography, Checkbox, Collapse, useTheme } from "@mui/material";
 import { ChevronDown, ChevronRight, Sparkles } from "lucide-react";
 import { getAvailableSections, ReportSectionGroup } from "../constants";
-import { brand } from "../../../../themes/palette";
+import { brand, radiusPx } from "../../../../themes/palette";
 
 interface SectionSelectorProps {
   frameworkId: number;
@@ -145,7 +145,7 @@ const SectionSelector: React.FC<SectionSelectorProps> = ({
     "display": "flex",
     "alignItems": "center",
     "padding": "4px 8px",
-    "borderRadius": "4px",
+    "borderRadius": radiusPx.sm,
     "cursor": "pointer",
     "&:hover": {
       backgroundColor: theme.palette.background.alt,
@@ -158,7 +158,7 @@ const SectionSelector: React.FC<SectionSelectorProps> = ({
     "display": "flex",
     "alignItems": "center",
     "justifyContent": "center",
-    "borderRadius": "4px",
+    "borderRadius": radiusPx.sm,
     "flexShrink": 0,
     "&:hover": {
       backgroundColor: theme.palette.background.main,

@@ -20,6 +20,7 @@ import {
   GovernanceStatus,
 } from "../domain.layer/interfaces/i.aiDetection";
 import { ICreateModelSecurityFindingInput } from "../domain.layer/interfaces/i.modelSecurity";
+import { mergeDuplicateFindings } from "./aiDetectionFindingMerge.utils";
 
 // ============================================================================
 // Organization ID Validation
@@ -31,10 +32,23 @@ import { ICreateModelSecurityFindingInput } from "../domain.layer/interfaces/i.m
  * @param organizationId - The organization identifier
  * @throws Error if organization ID is invalid
  */
-function validateOrganizationId(organizationId: number): void {
+export function validateOrganizationId(organizationId: number): void {
   if (!organizationId || !Number.isInteger(organizationId) || organizationId <= 0) {
     throw new Error(`Invalid organization identifier: ${organizationId}`);
   }
+}
+
+/**
+ * SQL for a user's display name ("First Last", or NULL when empty), for a
+ * `users` table joined under the given alias.
+ */
+export function userDisplayNameSql(alias: string): string {
+  return `NULLIF(TRIM(CONCAT(${alias}.name, ' ', COALESCE(${alias}.surname, ''))), '')`;
+}
+
+/** Serialise a timestamp with an explicit UTC offset; null stays null. */
+function toUtcIsoString(value: Date | null): string | null {
+  return value === null ? null : new Date(value).toISOString();
 }
 
 // ============================================================================
@@ -222,13 +236,15 @@ export async function updateScanProgressQuery(
     setClauses.push("findings_count = :findings_count");
     replacements.findings_count = input.findings_count;
   }
+  // Timestamps are TIMESTAMPTZ. Pass an ISO string (explicit UTC offset) so the
+  // stored instant never depends on the Node process or session time zone.
   if (input.started_at !== undefined) {
     setClauses.push("started_at = :started_at");
-    replacements.started_at = input.started_at;
+    replacements.started_at = toUtcIsoString(input.started_at);
   }
   if (input.completed_at !== undefined) {
     setClauses.push("completed_at = :completed_at");
-    replacements.completed_at = input.completed_at;
+    replacements.completed_at = toUtcIsoString(input.completed_at);
   }
   if (input.duration_ms !== undefined) {
     setClauses.push("duration_ms = :duration_ms");
@@ -241,6 +257,10 @@ export async function updateScanProgressQuery(
   if (input.cache_path !== undefined) {
     setClauses.push("cache_path = :cache_path");
     replacements.cache_path = input.cache_path;
+  }
+  if (input.vulnerability_check_status !== undefined) {
+    setClauses.push("vulnerability_check_status = :vulnerability_check_status");
+    replacements.vulnerability_check_status = input.vulnerability_check_status;
   }
 
   const query = `
@@ -343,17 +363,28 @@ export async function deleteScanQuery(
   transaction: Transaction,
 ): Promise<boolean> {
   validateOrganizationId(organizationId);
-  // Findings are deleted via CASCADE
-  const query = `
-    DELETE FROM ai_detection_scans
-    WHERE id = :scanId AND organization_id = :organizationId;
-  `;
+  // Findings also cascade from the scan (fk_ai_detection_findings_scan) and
+  // vulnerability details cascade from findings. Deleting them explicitly keeps
+  // this correct on a database where that FK is not in place yet.
+  await sequelize.query(
+    `DELETE FROM ai_detection_findings
+     WHERE scan_id = :scanId AND organization_id = :organizationId;`,
+    {
+      replacements: { scanId, organizationId },
+      type: QueryTypes.DELETE,
+      transaction,
+    },
+  );
 
-  await sequelize.query(query, {
-    replacements: { scanId, organizationId },
-    type: QueryTypes.DELETE,
-    transaction,
-  });
+  await sequelize.query(
+    `DELETE FROM ai_detection_scans
+     WHERE id = :scanId AND organization_id = :organizationId;`,
+    {
+      replacements: { scanId, organizationId },
+      type: QueryTypes.DELETE,
+      transaction,
+    },
+  );
 
   return true;
 }
@@ -479,25 +510,10 @@ export async function createFindingsBatchQuery(
   validateOrganizationId(organizationId);
   if (inputs.length === 0) return 0;
 
-  // Final deduplication safety check - PostgreSQL ON CONFLICT fails if same row appears twice in batch
-  // Key is (scan_id, name, provider) - must match the unique constraint
-  // Normalize provider to handle undefined/null/"" consistently
-  const deduplicatedMap = new Map<string, ICreateFindingInput>();
-  for (const input of inputs) {
-    const normalizedProvider = input.provider || "NULL";
-    const key = `${input.scan_id}::${input.name}::${normalizedProvider}`;
-    const existing = deduplicatedMap.get(key);
-    if (existing) {
-      // Merge file paths
-      const existingPaths = existing.file_paths || [];
-      const newPaths = input.file_paths || [];
-      existing.file_paths = [...existingPaths, ...newPaths];
-      existing.file_count = existing.file_paths.length;
-    } else {
-      deduplicatedMap.set(key, { ...input });
-    }
-  }
-  const deduplicatedInputs = Array.from(deduplicatedMap.values());
+  // Final deduplication - PostgreSQL ON CONFLICT fails if the same row appears twice
+  // in one batch. The key is (scan_id, name, provider) compared case-insensitively,
+  // so "qdrant"/"Qdrant" from two catalogue entries become one finding.
+  const deduplicatedInputs = mergeDuplicateFindings(inputs);
 
   // Use single INSERT with multiple VALUES
   const values = deduplicatedInputs.map((_input, index) => {
@@ -510,6 +526,7 @@ export async function createFindingsBatchQuery(
       :provider_${index},
       :confidence_${index},
       :risk_level_${index},
+      :severity_${index},
       :description_${index},
       :documentation_url_${index},
       :file_count_${index},
@@ -534,6 +551,7 @@ export async function createFindingsBatchQuery(
     replacements[`provider_${index}`] = input.provider || null;
     replacements[`confidence_${index}`] = input.confidence;
     replacements[`risk_level_${index}`] = input.risk_level || "medium";
+    replacements[`severity_${index}`] = input.severity ?? null;
     replacements[`description_${index}`] = input.description || null;
     replacements[`documentation_url_${index}`] = input.documentation_url || null;
     replacements[`file_count_${index}`] = input.file_count || 1;
@@ -557,6 +575,7 @@ export async function createFindingsBatchQuery(
       provider,
       confidence,
       risk_level,
+      severity,
       description,
       documentation_url,
       file_count,
@@ -573,6 +592,7 @@ export async function createFindingsBatchQuery(
     ON CONFLICT (scan_id, name, provider) DO UPDATE SET
       file_count = ai_detection_findings.file_count + EXCLUDED.file_count,
       file_paths = ai_detection_findings.file_paths || EXCLUDED.file_paths,
+      severity = COALESCE(EXCLUDED.severity, ai_detection_findings.severity),
       license_id = COALESCE(EXCLUDED.license_id, ai_detection_findings.license_id),
       license_name = COALESCE(EXCLUDED.license_name, ai_detection_findings.license_name),
       license_risk = COALESCE(EXCLUDED.license_risk, ai_detection_findings.license_risk),
@@ -667,24 +687,10 @@ export async function createModelSecurityFindingsBatchQuery(
   validateOrganizationId(organizationId);
   if (inputs.length === 0) return 0;
 
-  // Deduplication safety check - PostgreSQL ON CONFLICT fails if same row appears twice in batch
-  // Key is (scan_id, name, provider) - must match the unique constraint
-  const deduplicatedMap = new Map<string, ICreateModelSecurityFindingInput>();
-  for (const input of inputs) {
-    const normalizedProvider = input.provider || "NULL";
-    const key = `${input.scan_id}::${input.name}::${normalizedProvider}`;
-    const existing = deduplicatedMap.get(key);
-    if (existing) {
-      // Merge file paths
-      const existingPaths = existing.file_paths || [];
-      const newPaths = input.file_paths || [];
-      existing.file_paths = [...existingPaths, ...newPaths];
-      existing.file_count = existing.file_paths.length;
-    } else {
-      deduplicatedMap.set(key, { ...input });
-    }
-  }
-  const deduplicatedInputs = Array.from(deduplicatedMap.values());
+  // PostgreSQL ON CONFLICT fails if the same row appears twice in one batch.
+  // Same case-insensitive (scan_id, name, provider) merge as library findings;
+  // the highest severity and the CWE/OWASP details that go with it are kept.
+  const deduplicatedInputs = mergeDuplicateFindings(inputs);
 
   // Use single INSERT with multiple VALUES
   const values = deduplicatedInputs.map((_input, index) => {
@@ -822,9 +828,11 @@ export async function getFindingsForScanQuery(
   `;
 
   const dataQuery = `
-    SELECT f.*, vd.mitigation, vd.data_flow_summary, vd.vulnerability_details
+    SELECT f.*, vd.mitigation, vd.data_flow_summary, vd.vulnerability_details,
+      ${userDisplayNameSql("gu")} AS governance_updated_by_name
     FROM ai_detection_findings f
     LEFT JOIN ai_detection_vulnerability_details vd ON vd.finding_id = f.id AND vd.organization_id = f.organization_id
+    LEFT JOIN users gu ON gu.id = f.governance_updated_by
     ${whereClause}
     ORDER BY
       CASE f.confidence
@@ -1045,6 +1053,51 @@ export async function getFindingsSummaryQuery(
 }
 
 /**
+ * Count critical findings for a scan (used by the CI status check).
+ *
+ * A finding is critical when its severity is "critical" or it is a hardcoded
+ * secret (finding_type "secret", which carries no severity but is always a
+ * release blocker). Severity is read from the finding row, which every write
+ * path fills: createFindingsBatchQuery for LLM vulnerability findings and for
+ * findings carried forward by incremental scans, and
+ * createModelSecurityFindingsBatchQuery for model security findings. Rows
+ * stored before severity was persisted were backfilled by migration
+ * 20261112143747.
+ *
+ * Suppressed and accepted-risk findings are not counted, as the governance
+ * score also leaves them out. Findings marked fixed by an incremental scan are
+ * not counted either (their code was deleted), although the score still
+ * includes them.
+ *
+ * @param scanId - Scan ID
+ * @param organizationId - Organization ID for multi-tenancy
+ * @returns Number of critical findings
+ */
+export async function countCriticalFindingsQuery(
+  scanId: number,
+  organizationId: number,
+): Promise<number> {
+  validateOrganizationId(organizationId);
+  const query = `
+    SELECT COUNT(*) AS count
+    FROM ai_detection_findings f
+    WHERE f.scan_id = :scanId
+      AND f.organization_id = :organizationId
+      AND (f.severity = 'critical' OR f.finding_type = 'secret')
+      AND COALESCE(f.suppressed, FALSE) = FALSE
+      AND COALESCE(f.governance_status, '') NOT IN ('suppressed', 'accepted_risk')
+      AND COALESCE(f.finding_status, '') <> 'fixed';
+  `;
+
+  const results = await sequelize.query(query, {
+    replacements: { scanId, organizationId },
+    type: QueryTypes.SELECT,
+  });
+
+  return parseInt((results[0] as { count: string }).count, 10);
+}
+
+/**
  * Delete all findings for a scan
  *
  * @param scanId - Scan ID
@@ -1150,7 +1203,8 @@ export async function clearScanCachePathQuery(
  * @param governanceStatus - New governance status (or null to clear)
  * @param userId - User making the update
  * @param organizationId - Organization ID for multi-tenancy
- * @returns Updated finding or null if not found
+ * @param transaction - Optional transaction
+ * @returns Updated finding (with `governance_updated_by_name`) or null if not found
  */
 export async function updateFindingGovernanceStatusQuery(
   findingId: number,
@@ -1158,19 +1212,25 @@ export async function updateFindingGovernanceStatusQuery(
   governanceStatus: GovernanceStatus | null,
   userId: number,
   organizationId: number,
+  transaction?: Transaction,
 ): Promise<IFinding | null> {
   validateOrganizationId(organizationId);
   const query = `
-    UPDATE ai_detection_findings
-    SET
-      governance_status = :governance_status,
-      governance_updated_at = NOW(),
-      governance_updated_by = :user_id
-    WHERE id = :finding_id AND scan_id = :scan_id AND organization_id = :organizationId
-    RETURNING *;
+    WITH updated AS (
+      UPDATE ai_detection_findings
+      SET
+        governance_status = :governance_status,
+        governance_updated_at = NOW(),
+        governance_updated_by = :user_id
+      WHERE id = :finding_id AND scan_id = :scan_id AND organization_id = :organizationId
+      RETURNING *
+    )
+    SELECT updated.*, ${userDisplayNameSql("u")} AS governance_updated_by_name
+    FROM updated
+    LEFT JOIN users u ON u.id = updated.governance_updated_by;
   `;
 
-  const results = await sequelize.query(query, {
+  const rows = await sequelize.query(query, {
     replacements: {
       finding_id: findingId,
       scan_id: scanId,
@@ -1178,10 +1238,11 @@ export async function updateFindingGovernanceStatusQuery(
       user_id: userId,
       organizationId,
     },
-    type: QueryTypes.UPDATE,
+    type: QueryTypes.SELECT,
+    transaction,
   });
 
-  return (results as unknown as IFinding[][])[0]?.[0] || null;
+  return (rows as IFinding[])[0] || null;
 }
 
 /**
@@ -1413,12 +1474,12 @@ export async function getAIDetectionStatsQuery(organizationId: number): Promise<
  *
  * @param organizationId - Organization ID for multi-tenancy
  * @param timeoutMinutes - Minutes after which an active scan is considered stale (default: 30)
- * @returns Number of scans marked as failed
+ * @returns Ids of the scans marked as failed (the caller announces each)
  */
 export async function markStaleScansFailed(
   organizationId: number,
   timeoutMinutes: number = 30,
-): Promise<number> {
+): Promise<number[]> {
   validateOrganizationId(organizationId);
 
   const results = await sequelize.query<{ id: number }>(
@@ -1436,7 +1497,7 @@ export async function markStaleScansFailed(
     },
   );
 
-  return results.length;
+  return results.map((row) => Number(row.id));
 }
 
 // ============================================================================
@@ -1478,7 +1539,8 @@ export async function getLatestCompletedFullScanQuery(
 }
 
 /**
- * Get all findings from a baseline scan for carry-forward logic.
+ * Get all findings from a baseline scan for carry-forward logic, with their
+ * vulnerability details, so carried findings keep severity and details.
  *
  * @param baselineScanId - The baseline scan ID
  * @param organizationId - Organization ID for multi-tenancy
@@ -1495,10 +1557,13 @@ export async function getBaselineFindingsQuery(
   // on pathological scans. Anything above the cap is treated as an error
   // (mirrors getAllFindingsForExportQuery).
   const results = await sequelize.query<IFinding>(
-    `SELECT * FROM ai_detection_findings
-     WHERE scan_id = :baselineScanId
-       AND organization_id = :organizationId
-     ORDER BY id ASC
+    `SELECT f.*, vd.mitigation, vd.data_flow_summary, vd.vulnerability_details
+     FROM ai_detection_findings f
+     LEFT JOIN ai_detection_vulnerability_details vd
+       ON vd.finding_id = f.id AND vd.organization_id = f.organization_id
+     WHERE f.scan_id = :baselineScanId
+       AND f.organization_id = :organizationId
+     ORDER BY f.id ASC
      LIMIT :maxFindings`,
     {
       replacements: {

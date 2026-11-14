@@ -21,14 +21,12 @@ import PerformanceChart, {
 } from "./components/PerformanceChart";
 import type { IExperimentRow } from "../../types/interfaces/i.table";
 import SearchBox from "../../components/Search/SearchBox";
-import { FilterBy, type FilterColumn } from "../../components/Table/FilterBy";
-import { GroupBy } from "../../components/Table/GroupBy";
-import { GroupedTableView } from "../../components/Table/GroupedTableView";
-import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
+import { type FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import HelperIcon from "../../components/HelperIcon";
 import Select from "../../components/Inputs/Select";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 import { countLabel } from "../../tools/countLabel";
 import TipBox from "../../components/TipBox";
 import { useCanCheck } from "../../../application/hooks/useCan";
@@ -104,9 +102,6 @@ export default function ProjectExperiments({
   const can = useCanCheck();
   const canCreateExperiment = can("evals.edit");
   const canDeleteExperiment = can("evals.edit");
-
-  // GroupBy state
-  const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
 
   // Helper function to estimate experiment duration based on prompt count
   // Each prompt takes ~20-30 seconds (model call + judge evaluations for each metric)
@@ -505,8 +500,12 @@ export default function ProjectExperiments({
     [],
   );
 
-  const { filterData, handleFilterChange } =
-    useFilterBy<ExperimentWithMetrics>(getExperimentFieldValue);
+  const {
+    filterData,
+    handleFilterChange,
+    conditions: filterConditions,
+    logic: filterLogic,
+  } = useFilterBy<ExperimentWithMetrics>(getExperimentFieldValue);
 
   const filteredExperiments = useMemo(() => {
     const afterFilter = filterData(experiments);
@@ -604,28 +603,6 @@ export default function ProjectExperiments({
     };
   });
 
-  // Define how to get the group key for each row
-  const getRowGroupKey = useCallback((row: IExperimentRow, field: string): string => {
-    switch (field) {
-      case "status":
-        return row.status || "Unknown";
-      case "model":
-        return row.model || "Unknown";
-      case "judge":
-        return row.judge || "Unknown";
-      default:
-        return "Other";
-    }
-  }, []);
-
-  // Apply grouping to table rows
-  const groupedRows = useTableGrouping({
-    data: tableRows,
-    groupByField: groupBy,
-    sortOrder: groupSortOrder,
-    getGroupKey: getRowGroupKey,
-  });
-
   return (
     <Box>
       {alert && <Alert variant={alert.variant} body={alert.body} />}
@@ -649,7 +626,7 @@ export default function ProjectExperiments({
                     alignItems: "center",
                     gap: "8px",
                     p: "8px 10px",
-                    borderRadius: "4px",
+                    borderRadius: radiusPx.sm,
                     backgroundColor: palette.status.success.bg,
                     border: `1px solid ${palette.status.success.border}`,
                   }}
@@ -731,7 +708,7 @@ export default function ProjectExperiments({
         sx={{
           marginBottom: "16px",
           border: `1px solid ${palette.border.dark}`,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           boxShadow: "none",
         }}
       >
@@ -807,7 +784,7 @@ export default function ProjectExperiments({
         </CardContent>
       </Card>
 
-      {/* Filters + Search + Group directly above the table */}
+      {/* Filters + Search directly above the table */}
       <Stack
         direction="row"
         justifyContent="space-between"
@@ -816,14 +793,13 @@ export default function ProjectExperiments({
         gap="4px"
       >
         <Stack direction="row" alignItems="center" gap="4px">
-          <FilterBy columns={experimentFilterColumns} onFilterChange={handleFilterChange} />
-          <GroupBy
-            options={[
-              { id: "status", label: "Status" },
-              { id: "model", label: "Model" },
-              { id: "judge", label: "Judge" },
-            ]}
-            onGroupChange={handleGroupChange}
+          <TableFilter
+            columns={experimentFilterColumns}
+            onFilterChange={handleFilterChange}
+            defaultConditions={filterConditions}
+            defaultLogic={filterLogic}
+            data={experiments}
+            getFieldValue={getExperimentFieldValue}
           />
           <SearchBox
             placeholder="Search experiments..."
@@ -845,20 +821,13 @@ export default function ProjectExperiments({
 
       {/* Experiments Table with Pagination */}
       <Box mb="8px">
-        <GroupedTableView
-          groupedData={groupedRows}
-          ungroupedData={tableRows}
-          renderTable={(data, options) => (
-            <ExperimentTable
-              rows={data}
-              onRowClick={handleViewExperiment}
-              onRerun={canCreateExperiment ? handleRerunExperiment : undefined}
-              onDownload={handleDownloadExperiment}
-              onCopy={handleCopyExperiment}
-              onDelete={canDeleteExperiment ? handleDeleteExperiment : undefined}
-              hidePagination={options?.hidePagination}
-            />
-          )}
+        <ExperimentTable
+          rows={tableRows}
+          onRowClick={handleViewExperiment}
+          onRerun={canCreateExperiment ? handleRerunExperiment : undefined}
+          onDownload={handleDownloadExperiment}
+          onCopy={handleCopyExperiment}
+          onDelete={canDeleteExperiment ? handleDeleteExperiment : undefined}
         />
       </Box>
 

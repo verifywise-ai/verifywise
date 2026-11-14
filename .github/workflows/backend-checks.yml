@@ -246,7 +246,7 @@ jobs:
       - name: Run database-backed regression suites
         if: matrix.suite == 'regression-suites'
         run: |
-          npm run test:integration -- --testPathPatterns='tests/integration/(login|projects|tasks|vendors|workflow-audit-log|user-deletion-fks|reporting-rls-policies|report-run-visibility|framework-gap-workflow|report-scope-membership|report-scope-authorization|workflow-approval-gate|audit-ledger-retention|file-manager|approval-workflows|rate-limiting/limiter-wiring|governance-os\.cross-tenant)\.test\.ts'
+          npm run test:integration -- --testPathPatterns='tests/integration/(login|projects|tasks|vendors|workflow-audit-log|user-deletion-fks|reporting-rls-policies|report-run-visibility|framework-gap-workflow|report-scope-membership|report-scope-authorization|workflow-approval-gate|audit-ledger-retention|file-manager|approval-workflows|rate-limiting/limiter-wiring|governance-os\.cross-tenant|home-queue-sources)\.test\.ts'
 
       - name: Run deadline-summary smoke test
         if: matrix.suite == 'smoke-and-audit'

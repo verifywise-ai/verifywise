@@ -6,6 +6,7 @@ import { getRouteMapping, getRouteIcon } from "./routeMapping";
 import { ChevronRight as ChevronRightGreyIcon } from "lucide-react";
 import { BreadcrumbItemPresentation } from "../../types/breadcrumbs.types";
 import { BreadcrumbsProps } from "../../types/breadcrumbs.types";
+import { radiusPx } from "../../themes/palette";
 
 /**
  * A customizable Breadcrumbs component that wraps Material-UI Breadcrumbs.
@@ -67,6 +68,7 @@ function Breadcrumbs({
 
     // Add home item (skip for module pages that have their own root breadcrumb)
     const skipHome =
+      location.pathname === "/home" ||
       location.pathname.startsWith("/ai-gateway") ||
       location.pathname.startsWith("/evals") ||
       location.pathname.startsWith("/ai-detection") ||
@@ -177,7 +179,7 @@ function Breadcrumbs({
             "backgroundColor":
               theme.palette.mode === "dark" ? "rgba(255, 255, 255, 0.06)" : "rgba(0, 0, 0, 0.04)",
             "padding": "3px 10px",
-            "borderRadius": "4px",
+            "borderRadius": radiusPx.sm,
             "gap": "6px",
           }}
         >

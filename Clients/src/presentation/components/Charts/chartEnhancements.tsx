@@ -18,6 +18,8 @@ import { Tooltip as MuiTooltip } from "@mui/material";
 import { Info } from "lucide-react";
 import { ResponsiveContainer, LineChart, Line } from "recharts";
 import palette from "../../themes/palette";
+import { palette as vwPalette, radiusPx } from "../../themes/palette";
+import { chartTheme } from "../../themes/chartTheme";
 
 // ─── 1. ChartCard ──────────────────────────────────────────────────────────
 
@@ -32,9 +34,9 @@ interface ChartCardProps {
 export const ChartCard: React.FC<ChartCardProps> = ({ title, tooltip, children, flex = 1, sx }) => (
   <Box
     sx={{
-      background: `linear-gradient(180deg, ${palette.background.main} 0%, #F8FAFB 100%)`,
+      background: `linear-gradient(180deg, ${palette.background.main} 0%, ${vwPalette.background.alt} 100%)`,
       border: `1.5px solid ${palette.border.light}`,
-      borderRadius: "4px",
+      borderRadius: radiusPx.sm,
       p: "16px",
       boxShadow: "none",
       flex,
@@ -244,38 +246,26 @@ export const chartTooltipStyle = {
 
 /** Consistent color mapping for LLM providers across all charts. */
 export const PROVIDER_COLORS: Record<string, string> = {
-  openai: "#10A37F",
-  anthropic: "#D4A574",
-  gemini: "#4285F4",
-  google: "#4285F4",
-  mistral: "#FF7000",
-  xai: "#1DA1F2",
-  bedrock: "#FF9900",
-  azure: "#0078D4",
-  together_ai: "#6366F1",
-  openrouter: "#8B5CF6",
-  fireworks_ai: "#EF4444",
-  deepinfra: "#06B6D4",
-  cohere: "#39B89D",
-  replicate: "#1A1A1A",
+  openai: chartTheme.providers.openai,
+  anthropic: chartTheme.providers.anthropic,
+  gemini: chartTheme.providers.gemini,
+  google: chartTheme.providers.google,
+  mistral: chartTheme.providers.mistral,
+  xai: chartTheme.providers.xai,
+  bedrock: chartTheme.providers.bedrock,
+  azure: chartTheme.providers.azure,
+  together_ai: chartTheme.providers.together_ai,
+  openrouter: vwPalette.accent.purple.text,
+  fireworks_ai: vwPalette.riskMark.critical,
+  deepinfra: chartTheme.providers.deepinfra,
+  cohere: chartTheme.providers.cohere,
+  replicate: vwPalette.text.primary,
 };
 
 /** Get provider color — falls back to chart palette by index. */
 export const getProviderColor = (provider: string, index: number = 0): string => {
   const p = provider.toLowerCase().replace(/[^a-z_]/g, "");
   return (
-    PROVIDER_COLORS[p] ||
-    [
-      "#13715B",
-      "#3B82F6",
-      "#F59E0B",
-      "#EF4444",
-      "#8B5CF6",
-      "#06B6D4",
-      "#EC4899",
-      "#14B8A6",
-      "#F97316",
-      "#6366F1",
-    ][index % 10]
+    PROVIDER_COLORS[p] || chartTheme.providerFallback[index % chartTheme.providerFallback.length]
   );
 };

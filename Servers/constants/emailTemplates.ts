@@ -60,6 +60,9 @@ export const EMAIL_TEMPLATES = {
   // Shadow AI templates
   SHADOW_AI_ALERT: "shadow-ai-alert.mjml",
 
+  // AI Detection templates
+  AI_DETECTION_SCAN_ALERT: "ai-detection-scan-alert.mjml",
+
   // MRM templates
   MRM_BREACH_ALERT: "mrm-breach-alert.mjml",
   MRM_REVALIDATION_DUE: "mrm-revalidation-due.mjml",

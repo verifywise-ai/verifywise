@@ -4,47 +4,25 @@ import { format } from "date-fns";
 import { IRiskTimelineProps } from "../../types/interfaces/i.risk";
 import { ITimelineEvent } from "../../../domain/interfaces/i.widget";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
+import { palette, radiusPx } from "../../themes/palette";
+import { riskCalendarDay } from "../../tools/isoDateToString";
+import { getEffectiveRiskLevel } from "../../../application/utils/riskLevel";
+import { riskLevelBucketLabel, riskLevelColor } from "./riskLevelColor";
 
 const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => {
   const formatDate = useFormattedDate();
-
-  const getRiskLevelFromString = (level: string | number): number => {
-    if (typeof level === "number") return level;
-    const levelStr = level.trim().toLowerCase();
-    if (levelStr.includes("very high") || levelStr === "5") return 5;
-    if (levelStr.includes("high") || levelStr === "4") return 4;
-    if (levelStr.includes("medium") || levelStr === "3") return 3;
-    if (levelStr.includes("very low") || levelStr === "1") return 1;
-    if (levelStr.includes("low") || levelStr === "2") return 2;
-    const n = parseInt(levelStr, 10);
-    return Number.isFinite(n) ? n : 0;
-  };
-
-  const getRiskLevelColor = (riskLevel: number): string => {
-    if (riskLevel >= 16) return "#C63622"; // Very High - Dark Red
-    if (riskLevel >= 12) return "#D68B61"; // High - Orange Red
-    if (riskLevel >= 8) return "#D6B971"; // Medium - Orange
-    if (riskLevel >= 4) return "#52AB43"; // Low - Light Green
-    return "#B8D39C"; // Very Low - Very Light Green
-  };
-
-  const getRiskLevelLabel = (riskLevel: number): string => {
-    if (riskLevel >= 16) return "Very High";
-    if (riskLevel >= 12) return "High";
-    if (riskLevel >= 8) return "Medium";
-    if (riskLevel >= 4) return "Low";
-    return "Very Low";
-  };
 
   const timelineEvents = useMemo(() => {
     const events: ITimelineEvent[] = [];
 
     risks.forEach((risk) => {
       // Add creation event
-      const createdDate = risk.date_of_assessment ? new Date(risk.date_of_assessment) : new Date();
-      const riskLevelValue = getRiskLevelFromString(
-        risk.current_risk_level || risk.risk_level_autocalculated,
-      );
+      // Assessment date, else the creation date: a risk without either is
+      // placed at render time.
+      const createdDate =
+        riskCalendarDay(risk.date_of_assessment) ??
+        (risk.created_at ? new Date(risk.created_at) : new Date());
+      const riskLevelValue = getEffectiveRiskLevel(risk);
 
       events.push({
         id: `${risk.id}-created`,
@@ -52,13 +30,13 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
         type: "created",
         risk,
         title: `Risk Identified: ${risk.risk_name}`,
-        description: `New ${getRiskLevelLabel(riskLevelValue).toLowerCase()} risk identified`,
+        description: `New ${riskLevelBucketLabel(riskLevelValue).toLowerCase()} risk identified`,
         riskLevel: riskLevelValue,
       });
 
       // Add mitigation events based on mitigation status
-      if (risk.mitigation_status === "Completed" && risk.deadline) {
-        const completedDate = new Date(risk.deadline);
+      const completedDate = riskCalendarDay(risk.deadline);
+      if (risk.mitigation_status === "Completed" && completedDate) {
         events.push({
           id: `${risk.id}-mitigated`,
           date: completedDate,
@@ -102,7 +80,7 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
           p: 4,
           textAlign: "center",
           backgroundColor: "background.accent",
-          borderRadius: 2,
+          borderRadius: radiusPx.sm,
           border: "1px solid status.default.border",
         }}
       >
@@ -118,7 +96,7 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
 
   return (
     <Box sx={{ p: 3 }}>
-      <Typography variant="h6" sx={{ fontWeight: 600, color: "#111827", mb: 3 }}>
+      <Typography variant="h6" sx={{ fontWeight: 600, color: palette.text.primary, mb: 3 }}>
         Risk Timeline Analysis
       </Typography>
 
@@ -144,7 +122,7 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
                   variant="subtitle2"
                   sx={{
                     fontWeight: 600,
-                    color: "#374151",
+                    color: palette.text.secondary,
                     backgroundColor: "background.hover",
                     px: 2,
                     py: 1,
@@ -183,7 +161,7 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
                       width: 16,
                       height: 16,
                       borderRadius: "50%",
-                      backgroundColor: getRiskLevelColor(event.riskLevel),
+                      backgroundColor: riskLevelColor(event.riskLevel),
                       border: "3px solid background.main",
                       boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
                       position: "relative",
@@ -198,10 +176,10 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
                       flex: 1,
                       backgroundColor: "background.main",
                       border: "1px solid status.default.border",
-                      borderRadius: 2,
+                      borderRadius: radiusPx.sm,
                       p: 3,
                       transition: "all 0.2s ease-in-out",
-                      borderLeft: `4px solid ${getRiskLevelColor(event.riskLevel)}`,
+                      borderLeft: `4px solid ${riskLevelColor(event.riskLevel)}`,
                     }}
                   >
                     <Box
@@ -219,26 +197,26 @@ const RiskTimeline: React.FC<IRiskTimelineProps> = ({ risks, onRiskSelect }) => 
 
                     <Typography
                       variant="subtitle2"
-                      sx={{ fontWeight: 600, color: "#111827", mb: 1 }}
+                      sx={{ fontWeight: 600, color: palette.text.primary, mb: 1 }}
                     >
                       {event.title}
                     </Typography>
 
-                    <Typography variant="body2" sx={{ color: "#4B5563", mb: 2 }}>
+                    <Typography variant="body2" sx={{ color: palette.text.tertiary, mb: 2 }}>
                       {event.description}
                     </Typography>
 
                     <Box sx={{ display: "flex", alignItems: "center", gap: 2 }}>
                       <Chip
-                        label={getRiskLevelLabel(event.riskLevel)}
+                        label={riskLevelBucketLabel(event.riskLevel)}
                         size="small"
                         sx={{
-                          backgroundColor: `${getRiskLevelColor(event.riskLevel)}20`,
-                          color: getRiskLevelColor(event.riskLevel),
+                          backgroundColor: `${riskLevelColor(event.riskLevel)}20`,
+                          color: riskLevelColor(event.riskLevel),
                           fontWeight: 500,
                           fontSize: 11,
-                          borderRadius: "4px",
-                          border: `1px solid ${getRiskLevelColor(event.riskLevel)}40`,
+                          borderRadius: radiusPx.sm,
+                          border: `1px solid ${riskLevelColor(event.riskLevel)}40`,
                         }}
                       />
                       {event.risk.risk_owner && (

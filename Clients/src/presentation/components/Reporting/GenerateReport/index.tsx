@@ -22,6 +22,7 @@ import {
   selectionToBackendFormat,
 } from "./constants";
 import { useCan, usePermissionsSettled } from "../../../../application/hooks/useCan";
+import { palette } from "../../../themes/palette";
 
 type ModalPage = "basic" | "sections" | "status";
 
@@ -321,11 +322,11 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
               sx={{
                 "minWidth": "80px",
                 "height": "34px",
-                "border": "1px solid #d0d5dd",
+                "border": `1px solid ${palette.border.dark}`,
                 "color": "text.secondary",
                 "&:hover": {
                   backgroundColor: "background.accent",
-                  border: "1px solid #d0d5dd",
+                  border: `1px solid ${palette.border.dark}`,
                 },
               }}
             />
@@ -357,11 +358,11 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
             sx={{
               "minWidth": "80px",
               "height": "34px",
-              "border": "1px solid #d0d5dd",
+              "border": `1px solid ${palette.border.dark}`,
               "color": "text.secondary",
               "&:hover": {
                 backgroundColor: "background.accent",
-                border: "1px solid #d0d5dd",
+                border: `1px solid ${palette.border.dark}`,
               },
             }}
           />
@@ -373,11 +374,11 @@ const GenerateReportPopup: React.FC<IGenerateReportProps> = ({
               sx={{
                 "minWidth": "80px",
                 "height": "34px",
-                "border": "1px solid #d0d5dd",
+                "border": `1px solid ${palette.border.dark}`,
                 "color": "text.secondary",
                 "&:hover": {
                   backgroundColor: "background.accent",
-                  border: "1px solid #d0d5dd",
+                  border: `1px solid ${palette.border.dark}`,
                 },
               }}
             />

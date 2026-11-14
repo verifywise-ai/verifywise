@@ -46,9 +46,11 @@ export const BUILTIN_UI_PERMISSIONS = {
   "ext.datasetBulkUpload.edit": EDITOR,
   "ext.frameworkImport.edit": EDITOR,
   "fileManager.contribute": CONTRIBUTOR,
+  "file.edit": EDITOR,
   "policyTemplate.edit": EDITOR,
   "intakeForm.edit": EDITOR,
   "agentDiscovery.admin": ADMIN,
+  "aiTrustIndex.admin": ADMIN,
   "groups.manage": ADMIN,
   "roles.manage": ADMIN,
   "logs.admin": ADMIN,
@@ -58,6 +60,7 @@ export const BUILTIN_UI_PERMISSIONS = {
   "governanceOs.admin": ADMIN,
   "approvalWorkflow.admin": ADMIN,
   "reporting.admin": ADMIN,
+  "aiDetection.edit": EDITOR,
 } as const satisfies Record<string, readonly BuiltinRoleName[]>;
 
 export type UiPermissionKey = keyof typeof BUILTIN_UI_PERMISSIONS;

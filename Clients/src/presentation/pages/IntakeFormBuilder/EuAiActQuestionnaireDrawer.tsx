@@ -4,6 +4,7 @@ import { X } from "lucide-react";
 import { CustomizableButton } from "../../components/button/customizable-button";
 import type { Question, Questionnaire } from "../../../domain/types/euAiActClassification";
 import { followUpTriggerLabels, groupEuAiActQuestions } from "./euAiActQuestionSections";
+import { radiusPx } from "../../themes/palette";
 
 const DRAWER_WIDTH = 560;
 
@@ -70,7 +71,7 @@ function QuestionCard({
         sx={{
           p: "12px",
           border: `1px solid ${theme.palette.border.light}`,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           backgroundColor: theme.palette.background.main,
         }}
       >
@@ -105,7 +106,7 @@ function QuestionCard({
                 py: "2px",
                 fontSize: "12px",
                 lineHeight: "18px",
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 color: theme.palette.text.secondary,
                 backgroundColor: option.exclusive
                   ? theme.palette.background.main
@@ -230,7 +231,12 @@ export function EuAiActQuestionnaireDrawer({
               Loading questions...
             </Typography>
             {[0, 1, 2].map((key) => (
-              <Skeleton key={key} variant="rounded" height={88} sx={{ borderRadius: "4px" }} />
+              <Skeleton
+                key={key}
+                variant="rounded"
+                height={88}
+                sx={{ borderRadius: radiusPx.sm }}
+              />
             ))}
           </Stack>
         )}

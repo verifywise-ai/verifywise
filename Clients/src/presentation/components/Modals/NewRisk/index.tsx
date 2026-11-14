@@ -52,6 +52,7 @@ import { VendorModel } from "../../../../domain/models/Common/vendor/vendor.mode
 import { ExistingRisk } from "../../../../domain/interfaces/i.vendor";
 import { Framework } from "../../../../domain/types/Framework";
 import RiskLevel from "../../RiskLevel";
+import { radiusPx } from "../../../themes/palette";
 
 interface AddNewRiskProps {
   isOpen: boolean;
@@ -73,6 +74,12 @@ const initialState: VendorRiskModalFormValues = {
   likelihood: "1",
   action_plan: "",
   vendor_id: "",
+};
+
+// The vendor risk enum spells the top likelihood "Almost certain"; the shared
+// RiskLikelihood value (used by RiskCalculator) is "Almost Certain".
+const VENDOR_LIKELIHOOD_VALUES: Record<string, string> = {
+  [RiskLikelihood.AlmostCertain]: "Almost certain",
 };
 
 const LIKELIHOOD_OPTIONS = [
@@ -220,7 +227,10 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
           RISK_SEVERITY_OPTIONS.find((r) => r.name === existingRisk.risk_severity)?._id ?? 1,
         ).toString(),
         likelihood: Number(
-          LIKELIHOOD_OPTIONS.find((r) => r.name === existingRisk.likelihood)?._id ?? 1,
+          LIKELIHOOD_OPTIONS.find(
+            (r) =>
+              String(r.name).toLowerCase() === String(existingRisk.likelihood ?? "").toLowerCase(),
+          )?._id ?? 1,
         ).toString(),
         action_plan: existingRisk.action_plan,
         vendor_id: existingRisk.vendor_id,
@@ -289,7 +299,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
       action_plan: values.action_plan,
       risk_severity: selectedSeverity.name,
       risk_level: risk_risklevel.level,
-      likelihood: selectedLikelihood.name,
+      likelihood: VENDOR_LIKELIHOOD_VALUES[selectedLikelihood.name] ?? selectedLikelihood.name,
       frameworks: selectedFrameworks,
     };
     if (existingRisk) {
@@ -584,7 +594,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
           sx={{
             "width": "100%",
             "& .MuiChip-root": {
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
             },
           }}
           disabled={frameworksLoading || isEditingDisabled}
@@ -598,8 +608,8 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
             Calculate risk level
           </Typography>
           <Typography fontSize={13} color="text.secondary" mb={4}>
-            The Risk Level is calculated by multiplying the Likelihood and Severity scores. By
-            assigning these scores, the risk level will be determined based on your inputs.
+            The risk level is a weighted score: likelihood plus three times severity, so severity
+            counts more. Pick a likelihood and a severity and the level follows from the score.
           </Typography>
           <Stack direction="row" spacing={6}>
             <RiskLevel

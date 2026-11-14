@@ -139,6 +139,7 @@ export function useRiskForm(props: AddNewRiskFormProps): UseRiskFormReturn {
     usersLoading: usersLoadingProp,
     onSubmitRef,
     entityId,
+    createRisk,
   } = props;
 
   const riskValidateRef = useRef<((values: RiskFormValues) => boolean) | null>(null);
@@ -600,7 +601,9 @@ export function useRiskForm(props: AddNewRiskFormProps): UseRiskFormReturn {
                 projectId: projectId ? Number(projectId) : undefined,
                 body: formData,
               })
-            : await createProjectRisk({ body: formData });
+            : createRisk
+              ? await createRisk(formData)
+              : await createProjectRisk({ body: formData });
 
         if (response && response.status === 201) {
           const newRiskId = response.data?.data?.id as number | undefined;
@@ -616,7 +619,7 @@ export function useRiskForm(props: AddNewRiskFormProps): UseRiskFormReturn {
               );
             }
           }
-          onSuccess();
+          onSuccess(newRiskId);
           if (cfFlushFailed) {
             return;
           }

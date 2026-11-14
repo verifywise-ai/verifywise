@@ -25,6 +25,7 @@ import evidenceHubRouter from "../evidenceHub.route";
 import useCaseOrgSettingsRouter from "../v1/useCaseOrgSettings.route";
 import postMarketMonitoringRouter from "../postMarketMonitoring.route";
 import incidentRouter from "../aiIncidentManagement.route";
+import aiTrustIndexRouter from "../aiTrustIndex.route";
 
 const permissionFor = (router: any, method: string, routePath: string) => {
   const layer = router.stack.find(
@@ -72,6 +73,21 @@ describe("routes that used role-name lists now authorize on a permission key", (
     // Same built-in roles as the role-name list it replaced: no change for them.
     expect(builtinRolesFor(key as string)).toEqual([...(legacyRoles as string[])].sort());
   });
+
+  // Not a like-for-like swap: the controller allowed Admin and SuperAdmin by
+  // name. SuperAdmin is deliberately dropped. legacyRoles builds the
+  // built-in matrix, so listing SuperAdmin would let a pure super admin (no
+  // organization) read and write an organization's alert recipients.
+  it.each([
+    ["get", "/settings"],
+    ["put", "/settings"],
+  ])(
+    "AI Trust Index %s %s requires aiTrustIndex.admin, Admin only (SuperAdmin dropped)",
+    (method, routePath) => {
+      expect(permissionFor(aiTrustIndexRouter, method, routePath)).toEqual(["aiTrustIndex.admin"]);
+      expect(builtinRolesFor("aiTrustIndex.admin")).toEqual(ADMIN);
+    },
+  );
 
   it("no route file authorizes by role name any more", () => {
     const roots = [path.join(__dirname, ".."), path.join(__dirname, "../../extensions")];
@@ -163,10 +179,6 @@ const ROLE_NAME_ALLOWLIST: Record<string, { count: number; reason: string }> = {
     count: 1,
     reason: "Forwards the role to the AI Gateway, whose routes check role names (require_admin).",
   },
-  "controllers/aiTrustIndex.ctrl.ts": {
-    count: 2,
-    reason: "AI Trust Index settings are Admin/SuperAdmin by name; no catalog key yet.",
-  },
   "controllers/featureSettings.ctrl.ts": {
     count: 2,
     reason: "Settings > Features stays on the role name (#5314); the screen matches.",
@@ -174,6 +186,11 @@ const ROLE_NAME_ALLOWLIST: Record<string, { count: number; reason: string }> = {
   "controllers/fileManager.ctrl.ts": {
     count: 2,
     reason: "Inner role list on delete/metadata; the routes also authorize fileManager.contribute.",
+  },
+  "controllers/homeQueue.ctrl.ts": {
+    count: 1,
+    reason:
+      "Home queue mirrors intake's Admin lane override so an unnamed lane reaches who can decide it.",
   },
   "controllers/intakeForm.ctrl.ts": {
     count: 1,
@@ -195,10 +212,6 @@ const ROLE_NAME_ALLOWLIST: Record<string, { count: number; reason: string }> = {
     count: 1,
     reason:
       "updateUserById: editing other users is Admin by name; Settings > Team matches (#5314).",
-  },
-  "controllers/virtualFolder.ctrl.ts": {
-    count: 1,
-    reason: "Evidence folder management is Admin/Editor by name; no folder key yet.",
   },
   "routes/mcp.route.ts": {
     count: 1,

@@ -31,6 +31,8 @@ import {
   icon,
   status,
   text,
+  palette as vwPalette,
+  radiusPx,
 } from "../../../themes/palette";
 import { textStyles } from "../../../themes/typography";
 
@@ -94,18 +96,18 @@ const VW_COLORS = {
   textAccent: text.accent,
   bgMain: background.main,
   bgAccent: background.alt,
-  borderLight: "#eaecf0",
+  borderLight: vwPalette.border.light,
   borderDark: borderPalette.dark,
-  error: "#f04438",
+  error: vwPalette.status.error.text,
   errorBg: editor.imageErrorBg,
   success: status.success.strong,
-  successBg: "#ecfdf3",
+  successBg: vwPalette.status.success.bg,
 };
 
 const vwChipSx = {
   ...textStyles.bodyLarge,
   color: text.secondary,
-  borderRadius: "4px",
+  borderRadius: radiusPx.sm,
 };
 
 interface LifecycleItemFieldProps {
@@ -352,7 +354,7 @@ function DocumentsFieldRenderer({
                 pb: 4,
                 pl: 6,
                 pr: 6,
-                borderRadius: "4px",
+                borderRadius: radiusPx.sm,
                 border: `1px solid ${border.light}`,
                 backgroundColor: background.alt,
               }}
@@ -397,7 +399,7 @@ function DocumentsFieldRenderer({
       <Box
         sx={{
           "border": `1px dashed ${VW_COLORS.borderDark}`,
-          "borderRadius": "4px",
+          "borderRadius": radiusPx.sm,
           "pt": 4,
           "pb": 4,
           "pl": 6,
@@ -904,7 +906,7 @@ function ApprovalFieldRenderer({
             pb: 6,
             pr: 8,
             pl: 8,
-            borderRadius: "4px",
+            borderRadius: radiusPx.sm,
             border: `1px solid ${border.light}`,
             background: background.main,
           }}

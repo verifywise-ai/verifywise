@@ -11,6 +11,7 @@ import {
 } from "../../../../application/repository/tokens.repository";
 import { useAuth } from "../../../../application/hooks/useAuth";
 import { useMcpTools } from "../../../../application/hooks/useMcpTools";
+import { radiusPx } from "../../../themes/palette";
 
 const SERVER_NAME = "verifywise";
 const TOKEN_PLACEHOLDER = "<your-api-token>";
@@ -60,7 +61,7 @@ const Snippet: React.FC<{ value: string; label: string; testId: string }> = ({
       sx={{
         backgroundColor: theme.palette.background.accent,
         border: `1px solid ${theme.palette.border.dark}`,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         p: 2.5,
         display: "flex",
         justifyContent: "space-between",
@@ -111,7 +112,7 @@ const Panel: React.FC<{ title: string; children: React.ReactNode }> = ({ title, 
         sx={{
           backgroundColor: theme.palette.background.accent,
           border: `1px solid ${theme.palette.border.dark}`,
-          borderRadius: "4px",
+          borderRadius: radiusPx.sm,
           p: 2.5,
         }}
       >

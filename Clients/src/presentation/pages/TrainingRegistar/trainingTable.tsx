@@ -28,6 +28,7 @@ import StandardTablePagination from "../../components/Table/StandardTablePaginat
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { useTranslation } from "../../../application/hooks/useTranslation";
 import type { TrainingAssignmentSummary } from "../../../application/repository/trainingAssignment.repository";
+import { palette } from "../../themes/palette";
 
 const TABLE_COLUMNS: StandardColumn[] = [
   { id: "training_name", label: "TRAINING NAME", sortable: true },
@@ -116,7 +117,6 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
   onEdit,
   onDelete,
   paginated = true,
-  hidePagination = false,
   visibleColumns,
   assignmentSummaries,
   onOpenAssignments,
@@ -203,12 +203,7 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
       <TableBody>
         {sortedRows?.length > 0 ? (
           sortedRows
-            .slice(
-              hidePagination ? 0 : validPage * rowsPerPage,
-              hidePagination
-                ? Math.min(sortedRows.length, 100)
-                : validPage * rowsPerPage + rowsPerPage,
-            )
+            .slice(validPage * rowsPerPage, validPage * rowsPerPage + rowsPerPage)
             // Defensive: Filter out invalid records early (fail fast)
             .filter((training) => {
               const isValid = training.id !== undefined && training.id !== null;
@@ -228,7 +223,7 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
                   sx={{
                     ...singleTheme.tableStyles.primary.body.row,
                     "&:hover": {
-                      backgroundColor: "#FBFBFB",
+                      backgroundColor: palette.background.alt,
                       cursor: "pointer",
                     },
                   }}
@@ -242,7 +237,10 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
                         ...singleTheme.tableStyles.primary.body.cell,
                         cursor: "pointer",
                         textTransform: "none !important",
-                        backgroundColor: sortConfig.key === "training_name" ? "#e8e8e8" : "#fafafa",
+                        backgroundColor:
+                          sortConfig.key === "training_name"
+                            ? palette.border.light
+                            : palette.background.alt,
                       }}
                     >
                       {training.training_name}
@@ -379,7 +377,6 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
       isVisible,
       visibleTableColumns,
       sortConfig.key,
-      hidePagination,
       assignmentSummaries,
       onOpenAssignments,
       canEditAssignments,
@@ -438,7 +435,7 @@ const TrainingTable: React.FC<TrainingTableProps> = ({
           onSort={handleSort}
         />
         {tableBody}
-        {paginated && !hidePagination && (
+        {paginated && (
           <StandardTablePagination
             totalCount={totalCount}
             page={validPage}

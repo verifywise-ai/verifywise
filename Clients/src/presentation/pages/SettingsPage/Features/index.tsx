@@ -3,7 +3,7 @@ import React, { useState } from "react";
 import Toggle from "../../../components/Inputs/Toggle";
 import { useRiskAssessmentMode } from "../../../../application/hooks/useRiskAssessmentMode";
 import { useAuth } from "../../../../application/hooks/useAuth";
-import { text } from "../../../themes/palette";
+import { text, palette as vwPalette, radiusPx } from "../../../themes/palette";
 
 const Features: React.FC = () => {
   const theme = useTheme();
@@ -31,7 +31,7 @@ const Features: React.FC = () => {
           <Typography sx={{ fontSize: 15, fontWeight: 600, color: `${text.black}` }}>
             Features
           </Typography>
-          <Typography sx={{ fontSize: 13, color: "#666666", mt: 0.5 }}>
+          <Typography sx={{ fontSize: 13, color: vwPalette.text.tertiary, mt: 0.5 }}>
             Configure which features are enabled for your organization
           </Typography>
         </Box>
@@ -41,7 +41,7 @@ const Features: React.FC = () => {
           <Box
             sx={{
               border: `1px solid ${theme.palette.border.light}`,
-              borderRadius: "4px",
+              borderRadius: radiusPx.sm,
               p: "16px",
               backgroundColor: theme.palette.background.main,
               display: "flex",

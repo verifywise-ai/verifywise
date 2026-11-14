@@ -69,15 +69,13 @@ import ModelRiskManagementTab from "./mrm";
 import ShareButton from "../../components/ShareViewDropdown/ShareButton";
 import ShareViewDropdown, { ShareViewSettings } from "../../components/ShareViewDropdown";
 import { useCreateShareLink, useUpdateShareLink } from "../../../application/hooks/useShare";
-import { GroupBy } from "../../components/Table/GroupBy";
-import { useTableGrouping, useGroupByState } from "../../../application/hooks/useTableGrouping";
-import { GroupedTableView } from "../../components/Table/GroupedTableView";
 import { ExportMenu } from "../../components/Table/ExportMenu";
-import { FilterBy, FilterColumn } from "../../components/Table/FilterBy";
+import { FilterColumn } from "../../components/Table/FilterBy";
+import { TableFilter } from "../../components/Table/TableFilter";
 import { useFilterBy } from "../../../application/hooks/useFilterBy";
 import { ColumnSelector } from "../../components/Table/ColumnSelector";
 import { useColumnVisibility, ColumnConfig } from "../../../application/hooks/useColumnVisibility";
-import { palette } from "../../themes/palette";
+import { palette, radiusPx } from "../../themes/palette";
 
 import Alert from "../../components/Alert";
 import ListStateWrapper from "../../components/ListStateWrapper";
@@ -248,23 +246,6 @@ const ModelInventory: React.FC = () => {
     columns: EVIDENCE_HUB_COLUMNS,
   });
 
-  // GroupBy state - models tab
-  const { groupBy, groupSortOrder, handleGroupChange } = useGroupByState();
-
-  // GroupBy state - model risks tab
-  const {
-    groupBy: groupByRisk,
-    groupSortOrder: groupSortOrderRisk,
-    handleGroupChange: handleGroupChangeRisk,
-  } = useGroupByState();
-
-  // GroupBy state - evidence hub tab
-  const {
-    groupBy: groupByEvidence,
-    groupSortOrder: groupSortOrderEvidence,
-    handleGroupChange: handleGroupChangeEvidence,
-  } = useGroupByState();
-
   // Preselected model ID for evidence creation (used by change history feature)
   const [preselectedModelId, setPreselectedModelId] = useState<number | undefined>(undefined);
 
@@ -377,8 +358,12 @@ const ModelInventory: React.FC = () => {
   );
 
   // FilterBy - Initialize hook for Models tab
-  const { filterData: filterModelData, handleFilterChange: handleModelFilterChange } =
-    useFilterBy<IModelInventory>(getModelFieldValue);
+  const {
+    filterData: filterModelData,
+    handleFilterChange: handleModelFilterChange,
+    conditions: modelFilterConditions,
+    logic: modelFilterLogic,
+  } = useFilterBy<IModelInventory>(getModelFieldValue);
 
   // FilterBy - Dynamic options generators for Model Risks tab
   const getUniqueRiskOwners = useCallback(() => {
@@ -488,8 +473,12 @@ const ModelInventory: React.FC = () => {
   );
 
   // FilterBy - Initialize hook for Model Risks tab
-  const { filterData: filterModelRiskData, handleFilterChange: handleModelRiskFilterChange } =
-    useFilterBy<IModelRisk>(getModelRiskFieldValue);
+  const {
+    filterData: filterModelRiskData,
+    handleFilterChange: handleModelRiskFilterChange,
+    conditions: modelRiskFilterConditions,
+    logic: modelRiskFilterLogic,
+  } = useFilterBy<IModelRisk>(getModelRiskFieldValue);
 
   const [evidenceHubData, setEvidenceHubData] = useState<EvidenceHubModel[]>([]);
 
@@ -651,8 +640,12 @@ const ModelInventory: React.FC = () => {
   );
 
   // FilterBy - Initialize hook for Evidence Hub tab
-  const { filterData: filterEvidenceData, handleFilterChange: handleEvidenceFilterChange } =
-    useFilterBy<EvidenceHubModel>(getEvidenceFieldValue);
+  const {
+    filterData: filterEvidenceData,
+    handleFilterChange: handleEvidenceFilterChange,
+    conditions: evidenceFilterConditions,
+    logic: evidenceFilterLogic,
+  } = useFilterBy<EvidenceHubModel>(getEvidenceFieldValue);
 
   const [isEvidenceLoading, setEvidenceLoading] = useState(false);
 
@@ -750,36 +743,6 @@ const ModelInventory: React.FC = () => {
 
     return data;
   }, [filterModelData, modelInventoryData, selectedStatus, searchTerm]);
-
-  // Define how to get the group key for each model
-  const getModelInventoryGroupKey = (model: IModelInventory, field: string): string | string[] => {
-    switch (field) {
-      case "provider":
-        return model.provider || "Unknown Provider";
-      case "status":
-        return model.status || "Unknown Status";
-      case "security_assessment":
-        return model.security_assessment ? "Assessed" : "Not Assessed";
-      case "hosting_provider":
-        return model.hosting_provider || "Unknown Hosting";
-      case "approver":
-        if (model.approver) {
-          const user = users.find((u: any) => u.id === Number(model.approver));
-          return user ? `${user.name} ${user.surname}`.trim() : "Unknown";
-        }
-        return "No Approver";
-      default:
-        return "Other";
-    }
-  };
-
-  // Apply grouping to filtered data
-  const groupedModelInventory = useTableGrouping({
-    data: filteredData,
-    groupByField: groupBy,
-    sortOrder: groupSortOrder,
-    getGroupKey: getModelInventoryGroupKey,
-  });
 
   // Define export columns for model inventory table
   const exportColumns = useMemo(() => {
@@ -1707,38 +1670,6 @@ const ModelInventory: React.FC = () => {
     return data;
   }, [filterModelRiskData, modelRisksData, selectedRiskLevel]);
 
-  // Define how to get the group key for each model risk
-  const getModelRiskGroupKey = (risk: any, field: string): string | string[] => {
-    switch (field) {
-      case "risk_level":
-        return risk.risk_level || "Unknown";
-      case "status":
-        return risk.status || "Unknown";
-      case "owner":
-        if (risk.owner) {
-          const user = users.find((u) => u.id == risk.owner);
-          return user ? `${user.name} ${user.surname}`.trim() : "Unknown";
-        }
-        return "Unassigned";
-      case "model_name":
-        if (risk.model_id) {
-          const model = modelInventoryData.find((m) => m.id == risk.model_id);
-          return model?.model || "Unknown Model";
-        }
-        return "No Model";
-      default:
-        return "Other";
-    }
-  };
-
-  // Apply grouping to filtered model risks
-  const groupedModelRisks = useTableGrouping({
-    data: filteredModelRisks,
-    groupByField: groupByRisk,
-    sortOrder: groupSortOrderRisk,
-    getGroupKey: getModelRiskGroupKey,
-  });
-
   // Filter evidence hub using FilterBy and search
   const filteredEvidenceHub = useMemo(() => {
     // First apply FilterBy conditions
@@ -1752,36 +1683,6 @@ const ModelInventory: React.FC = () => {
 
     return filtered;
   }, [filterEvidenceData, evidenceHubData, searchTypeTerm]);
-
-  // Define how to get the group key for each evidence
-  const getEvidenceGroupKey = (evidence: any, field: string): string | string[] => {
-    switch (field) {
-      case "evidence_type":
-        return evidence.evidence_type || "Unknown";
-      case "uploaded_by":
-        if (evidence.uploaded_by) {
-          const user = users.find((u) => u.id == evidence.uploaded_by);
-          return user ? `${user.name} ${user.surname}`.trim() : "Unknown";
-        }
-        return "Unknown";
-      case "model":
-        if (evidence.model_id) {
-          const model = modelInventoryData.find((m) => m.id == evidence.model_id);
-          return model?.model || "Unknown Model";
-        }
-        return "No Model";
-      default:
-        return "Other";
-    }
-  };
-
-  // Apply grouping to filtered evidence hub
-  const groupedEvidenceHub = useTableGrouping({
-    data: filteredEvidenceHub,
-    groupByField: groupByEvidence,
-    sortOrder: groupSortOrderEvidence,
-    getGroupKey: getEvidenceGroupKey,
-  });
 
   // Export columns and data for Model Risks
   const modelRisksExportColumns = useMemo(() => {
@@ -2084,29 +1985,22 @@ const ModelInventory: React.FC = () => {
     [selectedRiskLevel],
   );
 
-  // GroupedTableView renders the table's own placeholder for an empty list, so the
+  // The table renders its own placeholder for an empty list, so the
   // same element serves as the empty state and the table stays mounted (keeping
   // its page and sort) when a search briefly matches nothing.
   const modelInventoryList = (
-    <GroupedTableView
-      groupedData={groupedModelInventory}
-      ungroupedData={filteredData}
-      renderTable={(data, options) => (
-        <ModelInventoryTable
-          key={tableKey}
-          data={data}
-          isLoading={false}
-          onEdit={handleEditModelInventory}
-          onDelete={handleDeleteModelInventory}
-          onCheckModelHasRisks={handleCheckModelHasRisks}
-          onViewDetails={handleViewModelDetails}
-          deletingId={deletingId}
-          hidePagination={options?.hidePagination}
-          modelRisks={modelRisksData}
-          flashRowId={flashRowId}
-          visibleColumns={modelVisibleColumns}
-        />
-      )}
+    <ModelInventoryTable
+      key={tableKey}
+      data={filteredData}
+      isLoading={false}
+      onEdit={handleEditModelInventory}
+      onDelete={handleDeleteModelInventory}
+      onCheckModelHasRisks={handleCheckModelHasRisks}
+      onViewDetails={handleViewModelDetails}
+      deletingId={deletingId}
+      modelRisks={modelRisksData}
+      flashRowId={flashRowId}
+      visibleColumns={modelVisibleColumns}
     />
   );
 
@@ -2289,22 +2183,18 @@ const ModelInventory: React.FC = () => {
               alignItems="center"
               sx={filterButtonRowStyle}
             >
-              {/* Left side: FilterBy + Search + GroupBy */}
+              {/* Left side: FilterBy + Search */}
               <Stack direction="row" spacing={2} alignItems="center">
                 <div data-joyride-id="model-status-filter">
-                  <FilterBy columns={modelFilterColumns} onFilterChange={handleModelFilterChange} />
+                  <TableFilter
+                    columns={modelFilterColumns}
+                    onFilterChange={handleModelFilterChange}
+                    defaultConditions={modelFilterConditions}
+                    defaultLogic={modelFilterLogic}
+                    data={modelInventoryData}
+                    getFieldValue={getModelFieldValue}
+                  />
                 </div>
-
-                <GroupBy
-                  options={[
-                    { id: "provider", label: "Provider" },
-                    { id: "status", label: "Status" },
-                    { id: "security_assessment", label: "Assessment" },
-                    { id: "hosting_provider", label: "Hosting provider" },
-                    { id: "approver", label: "Approver" },
-                  ]}
-                  onGroupChange={handleGroupChange}
-                />
 
                 <ColumnSelector
                   columns={modelAllColumns}
@@ -2343,7 +2233,7 @@ const ModelInventory: React.FC = () => {
                     "height": "34px",
                     "width": "34px",
                     "padding": "8px",
-                    "borderRadius": "4px",
+                    "borderRadius": radiusPx.sm,
                     "border": `1px solid ${palette.border.light}`,
                     "backgroundColor": palette.background.main,
                     "&:hover": {
@@ -2391,20 +2281,15 @@ const ModelInventory: React.FC = () => {
             >
               <Stack direction="row" gap={2} alignItems="center">
                 <div data-joyride-id="risk-category-filter">
-                  <FilterBy
+                  <TableFilter
                     columns={modelRiskFilterColumns}
                     onFilterChange={handleModelRiskFilterChange}
+                    defaultConditions={modelRiskFilterConditions}
+                    defaultLogic={modelRiskFilterLogic}
+                    data={modelRisksData}
+                    getFieldValue={getModelRiskFieldValue}
                   />
                 </div>
-                <GroupBy
-                  options={[
-                    { id: "risk_level", label: "Risk level" },
-                    { id: "status", label: "Status" },
-                    { id: "model_name", label: "Model" },
-                    { id: "owner", label: "Owner" },
-                  ]}
-                  onGroupChange={handleGroupChangeRisk}
-                />
                 <ColumnSelector
                   columns={riskAllColumns}
                   visibleColumns={riskVisibleColumns}
@@ -2449,22 +2334,15 @@ const ModelInventory: React.FC = () => {
               </Stack>
             </Stack>
 
-            <GroupedTableView
-              groupedData={groupedModelRisks}
-              ungroupedData={filteredModelRisks}
-              renderTable={(data, options) => (
-                <ModelRisksTable
-                  data={data}
-                  isLoading={isModelRisksLoading}
-                  onEdit={handleEditModelRisk}
-                  onDelete={handleDeleteModelRisk}
-                  deletingId={deletingModelRiskId}
-                  users={users}
-                  models={modelInventoryData}
-                  hidePagination={options?.hidePagination}
-                  visibleColumns={riskVisibleColumns}
-                />
-              )}
+            <ModelRisksTable
+              data={filteredModelRisks}
+              isLoading={isModelRisksLoading}
+              onEdit={handleEditModelRisk}
+              onDelete={handleDeleteModelRisk}
+              deletingId={deletingModelRiskId}
+              users={users}
+              models={modelInventoryData}
+              visibleColumns={riskVisibleColumns}
             />
           </>
         )}
@@ -2485,22 +2363,18 @@ const ModelInventory: React.FC = () => {
               alignItems="center"
               sx={filterButtonRowStyle}
             >
-              {/* Left side: FilterBy + Search + GroupBy */}
+              {/* Left side: FilterBy + Search */}
               <Stack direction="row" spacing={2} alignItems="center">
                 <div data-joyride-id="evidence-type-filter">
-                  <FilterBy
+                  <TableFilter
                     columns={evidenceFilterColumns}
                     onFilterChange={handleEvidenceFilterChange}
+                    defaultConditions={evidenceFilterConditions}
+                    defaultLogic={evidenceFilterLogic}
+                    data={evidenceHubData}
+                    getFieldValue={getEvidenceFieldValue}
                   />
                 </div>
-                <GroupBy
-                  options={[
-                    { id: "evidence_type", label: "Evidence type" },
-                    { id: "uploaded_by", label: "Uploaded by" },
-                    { id: "model", label: "Model" },
-                  ]}
-                  onGroupChange={handleGroupChangeEvidence}
-                />
                 <ColumnSelector
                   columns={evidenceAllColumns}
                   visibleColumns={evidenceVisibleColumns}
@@ -2542,23 +2416,16 @@ const ModelInventory: React.FC = () => {
               </Stack>
             </Stack>
 
-            <GroupedTableView
-              groupedData={groupedEvidenceHub}
-              ungroupedData={filteredEvidenceHub}
-              renderTable={(data, options) => (
-                <EvidenceHubTable
-                  key={tableKey}
-                  isLoading={isEvidenceLoading}
-                  data={data}
-                  onEdit={handleEditEvidence}
-                  onDelete={handleDeleteEvidence}
-                  onPreview={handlePreviewEvidence}
-                  modelInventoryData={modelInventoryData}
-                  deletingId={deletingEvidenceId}
-                  hidePagination={options?.hidePagination}
-                  visibleColumns={evidenceVisibleColumns}
-                />
-              )}
+            <EvidenceHubTable
+              key={tableKey}
+              isLoading={isEvidenceLoading}
+              data={filteredEvidenceHub}
+              onEdit={handleEditEvidence}
+              onDelete={handleDeleteEvidence}
+              onPreview={handlePreviewEvidence}
+              modelInventoryData={modelInventoryData}
+              deletingId={deletingEvidenceId}
+              visibleColumns={evidenceVisibleColumns}
             />
           </>
         )}

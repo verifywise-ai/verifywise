@@ -1053,6 +1053,10 @@ export const de: Record<string, string> = {
   "AI-enhanced": "KI-gestützt",
   "Alert boxes": "Hinweisfelder",
   "All": "Alle",
+  "Clear filters": "Filter zurücksetzen",
+  "In 7 days": "In 7 Tagen",
+  "In 30 days": "In 30 Tagen",
+  "Past": "Vergangen",
   "All collections": "Alle Sammlungen",
   "Allow data to be exported": "Datenexport zulassen",
   "Allowed tools": "Zugelassene Tools",
@@ -1300,6 +1304,8 @@ export const de: Record<string, string> = {
     "Plugins nach Name, Beschreibung oder Tags suchen...",
   "Search use cases...": "Anwendungsfälle suchen...",
   "Search...": "Suchen...",
+  "Search this list": "Diese Liste durchsuchen",
+  "Step {current} of {total}": "Schritt {current} von {total}",
   "Searching...": "Suche läuft...",
   "Selected": "Ausgewählt",
   "Server name": "Servername",
@@ -1962,10 +1968,10 @@ export const de: Record<string, string> = {
     "Die Statusverfolgung von Anwendungsfällen zeigt die Phasen Ihres KI-Lebenszyklus.",
   "Track use cases from planning through production to retirement. Status indicators help you see which AI systems are active, which are in development, and which need review. Regular status updates ensure governance stays current.":
     "Verfolgen Sie Anwendungsfälle von der Planung über die Produktion bis zur Außerbetriebnahme. Statusanzeigen zeigen, welche KI-Systeme aktiv sind, welche in Entwicklung sind und welche geprüft werden müssen. Regelmäßige Status-Updates halten die Governance aktuell.",
-  "Grouping use cases reveals patterns and shared risks.":
-    "Das Gruppieren von Anwendungsfällen zeigt Muster und gemeinsame Risiken.",
-  "Use the group-by feature to organize use cases by risk level or status. This reveals patterns like common risk factors across systems or lifecycle stage distribution. These insights inform governance strategy.":
-    "Nutzen Sie die Gruppierung, um Anwendungsfälle nach Risikostufe oder Status zu organisieren. Das zeigt Muster wie systemübergreifende Risikofaktoren oder die Verteilung der Lebenszyklusphasen. Diese Erkenntnisse fließen in die Governance-Strategie ein.",
+  "Filtering use cases reveals patterns and shared risks.":
+    "Das Filtern von Anwendungsfällen zeigt Muster und gemeinsame Risiken.",
+  "Filter use cases by risk level or status to spot patterns like common risk factors across systems or how use cases spread across lifecycle stages. These insights inform governance strategy.":
+    "Filtern Sie Anwendungsfälle nach Risikostufe oder Status, um Muster wie systemübergreifende Risikofaktoren oder die Verteilung auf die Lebenszyklusphasen zu erkennen. Diese Erkenntnisse fließen in die Governance-Strategie ein.",
 
   "Frameworks map your compliance requirements to actions.":
     "Rahmenwerke bilden Ihre Compliance-Anforderungen auf Aktionen ab.",
@@ -5629,6 +5635,20 @@ export const de: Record<string, string> = {
   "AI app bulk import and bulk assessment": "Massenimport und Massenbewertung von KI-Apps",
   "Training assignments, groups and custom roles, and framework import":
     "Schulungszuweisungen, Gruppen und benutzerdefinierte Rollen sowie Framework-Import",
+  // Unified sidebar (phase 2)
+  "Record": "Erfassen",
+  "Workspace": "Arbeitsbereich",
+  "Inventory": "Inventar",
+  "Evidence & reports": "Nachweise & Berichte",
+  "Intake": "Eingang",
+  "AI risks": "KI-Risiken",
+  "Agent controls": "Agentensteuerung",
+  "Event tracker": "Ereignisverfolgung",
+  "Super admin": "Super-Administrator",
+  "Trust Index settings": "Einstellungen des Vertrauensindex",
+  "Shadow AI settings": "Schatten-KI-Einstellungen",
+  "Scan settings": "Scan-Einstellungen",
+  "Admin access required.": "Administratorzugriff erforderlich.",
 };
 
 export const fr: Record<string, string> = {
@@ -5985,6 +6005,8 @@ export const fr: Record<string, string> = {
   "Selected": "Sélectionné",
   "Search": "Rechercher",
   "Search...": "Rechercher...",
+  "Search this list": "Rechercher dans cette liste",
+  "Step {current} of {total}": "Étape {current} sur {total}",
   "Searching...": "Recherche...",
   "Filters": "Filtres",
   "Sort": "Trier",
@@ -6743,6 +6765,10 @@ export const fr: Record<string, string> = {
   "AI-enhanced": "Augmenté par l'IA",
   "Alert boxes": "Boîtes d'alerte",
   "All": "Tous",
+  "Clear filters": "Effacer les filtres",
+  "In 7 days": "Dans 7 jours",
+  "In 30 days": "Dans 30 jours",
+  "Past": "Passé",
   "All collections": "Toutes les collections",
   "Allow data to be exported": "Autoriser l'export des données",
   "Allowed tools": "Outils autorisés",
@@ -7612,10 +7638,10 @@ export const fr: Record<string, string> = {
     "Le suivi du statut des cas d'usage montre les étapes de votre cycle de vie IA.",
   "Track use cases from planning through production to retirement. Status indicators help you see which AI systems are active, which are in development, and which need review. Regular status updates ensure governance stays current.":
     "Suivez les cas d'usage de la planification à la production puis au retrait. Les indicateurs de statut vous aident à voir quels systèmes IA sont actifs, en développement ou à relire. Des mises à jour régulières gardent la gouvernance à jour.",
-  "Grouping use cases reveals patterns and shared risks.":
-    "Grouper les cas d'usage fait apparaître des motifs et des risques communs.",
-  "Use the group-by feature to organize use cases by risk level or status. This reveals patterns like common risk factors across systems or lifecycle stage distribution. These insights inform governance strategy.":
-    "Utilisez la fonction de groupement pour organiser les cas d'usage par niveau de risque ou statut. Cela révèle des motifs comme des facteurs de risque communs entre systèmes ou la répartition des étapes du cycle de vie. Ces informations orientent la stratégie de gouvernance.",
+  "Filtering use cases reveals patterns and shared risks.":
+    "Filtrer les cas d'usage fait apparaître des motifs et des risques communs.",
+  "Filter use cases by risk level or status to spot patterns like common risk factors across systems or how use cases spread across lifecycle stages. These insights inform governance strategy.":
+    "Filtrez les cas d'usage par niveau de risque ou statut pour repérer des motifs comme des facteurs de risque communs entre systèmes ou la répartition entre les étapes du cycle de vie. Ces informations orientent la stratégie de gouvernance.",
   "Frameworks map your compliance requirements to actions.":
     "Les référentiels traduisent vos exigences de conformité en actions.",
   "Each framework (like NIST AI RMF or EU AI Act) contains controls that translate regulatory requirements into specific tasks and policies. Select frameworks relevant to your industry to automatically generate compliance workstreams.":
@@ -11192,6 +11218,20 @@ export const fr: Record<string, string> = {
     "Affectation des formations, groupes et rôles personnalisés, et import de référentiels",
 
   "Request": "Requête",
+  // Unified sidebar (phase 2)
+  "Record": "Enregistrer",
+  "Workspace": "Espace de travail",
+  "Inventory": "Inventaire",
+  "Evidence & reports": "Preuves et rapports",
+  "Intake": "Entrée",
+  "AI risks": "Risques IA",
+  "Agent controls": "Contrôles des agents",
+  "Event tracker": "Suivi des événements",
+  "Super admin": "Super administrateur",
+  "Trust Index settings": "Paramètres de l'index de confiance",
+  "Shadow AI settings": "Paramètres de l'IA fantôme",
+  "Scan settings": "Paramètres d'analyse",
+  "Admin access required.": "Accès administrateur requis.",
 };
 
 export const es: Record<string, string> = {
@@ -12105,6 +12145,10 @@ export const es: Record<string, string> = {
   "AI-enhanced": "Mejorado con IA",
   "Alert boxes": "Cuadros de alerta",
   "All": "Todos",
+  "Clear filters": "Borrar filtros",
+  "In 7 days": "En 7 días",
+  "In 30 days": "En 30 días",
+  "Past": "Pasado",
   "All collections": "Todas las colecciones",
   "Allow data to be exported": "Permitir la exportación de datos",
   "Allowed tools": "Herramientas permitidas",
@@ -12343,6 +12387,8 @@ export const es: Record<string, string> = {
   "Search icons...": "Buscar iconos...",
   "Search use cases...": "Buscar casos de uso...",
   "Search...": "Buscar...",
+  "Search this list": "Buscar en esta lista",
+  "Step {current} of {total}": "Paso {current} de {total}",
   "Searching...": "Buscando...",
   "Selected": "Seleccionado",
   "Server name": "Nombre del servidor",
@@ -14402,10 +14448,10 @@ export const es: Record<string, string> = {
     "El seguimiento del estado de los casos de uso muestra las etapas del ciclo de vida de su IA.",
   "Track use cases from planning through production to retirement. Status indicators help you see which AI systems are active, which are in development, and which need review. Regular status updates ensure governance stays current.":
     "Haga un seguimiento de los casos de uso desde la planificación hasta la producción y la retirada. Los indicadores de estado le ayudan a ver qué sistemas de IA están activos, cuáles están en desarrollo y cuáles necesitan revisión. Las actualizaciones de estado periódicas garantizan que la gobernanza se mantenga al día.",
-  "Grouping use cases reveals patterns and shared risks.":
-    "Agrupar los casos de uso revela patrones y riesgos compartidos.",
-  "Use the group-by feature to organize use cases by risk level or status. This reveals patterns like common risk factors across systems or lifecycle stage distribution. These insights inform governance strategy.":
-    "Utilice la función de agrupación para organizar los casos de uso por nivel de riesgo o estado. Esto revela patrones como factores de riesgo comunes entre sistemas o la distribución de las etapas del ciclo de vida. Estos hallazgos sirven de base para la estrategia de gobernanza.",
+  "Filtering use cases reveals patterns and shared risks.":
+    "Filtrar los casos de uso revela patrones y riesgos compartidos.",
+  "Filter use cases by risk level or status to spot patterns like common risk factors across systems or how use cases spread across lifecycle stages. These insights inform governance strategy.":
+    "Filtre los casos de uso por nivel de riesgo o estado para detectar patrones como factores de riesgo comunes entre sistemas o la distribución entre las etapas del ciclo de vida. Estos hallazgos sirven de base para la estrategia de gobernanza.",
   "Frameworks map your compliance requirements to actions.":
     "Los marcos asignan sus requisitos de cumplimiento a acciones.",
   "Each framework (like NIST AI RMF or EU AI Act) contains controls that translate regulatory requirements into specific tasks and policies. Select frameworks relevant to your industry to automatically generate compliance workstreams.":
@@ -16647,4 +16693,18 @@ export const es: Record<string, string> = {
     "Introduzca una dirección web completa que empiece por http:// o https://",
   "Shown under the field on the public form":
     "Se muestra debajo del campo en el formulario público",
+  // Unified sidebar (phase 2)
+  "Record": "Registrar",
+  "Workspace": "Espacio de trabajo",
+  "Inventory": "Inventario",
+  "Evidence & reports": "Evidencia e informes",
+  "Intake": "Admisión",
+  "AI risks": "Riesgos de IA",
+  "Agent controls": "Controles de agentes",
+  "Event tracker": "Registro de eventos",
+  "Super admin": "Superadministrador",
+  "Trust Index settings": "Configuración del índice de confianza",
+  "Shadow AI settings": "Configuración de IA en la sombra",
+  "Scan settings": "Configuración de escaneo",
+  "Admin access required.": "Se requiere acceso de administrador.",
 };

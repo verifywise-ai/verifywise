@@ -2,13 +2,15 @@ import { ReactNode, useState } from "react";
 import { Box, Stack, Typography } from "@mui/material";
 import dayjs, { Dayjs } from "dayjs";
 import StatusBadge from "../StatusBadge";
+import StageSteps from "../StageSteps";
 import { CustomizableButton } from "../button/customizable-button";
 import StandardModal from "../Modals/StandardModal";
 import DatePicker from "../Inputs/Datepicker";
 import Alert from "../Alert";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { LIFECYCLE_STAGE_LABELS, LifecycleStage } from "../../../domain/enums/lifecycleStage.enum";
-import { border } from "../../themes/palette";
+import { border, radiusPx } from "../../themes/palette";
+import { isClassicUi } from "../../themes/uiStyle";
 import { lifecycleLabelSx, lifecycleValueSx } from "./lifecyclePanelStyles";
 
 const STAGE_VARIANT = {
@@ -103,7 +105,7 @@ const LifecyclePanel = ({
       data-testid={testId}
       sx={{
         border: `1px solid ${border.dark}`,
-        borderRadius: "4px",
+        borderRadius: radiusPx.sm,
         p: "16px",
         mb: "24px",
         backgroundColor: "background.main",
@@ -119,12 +121,16 @@ const LifecyclePanel = ({
         <Stack direction="row" alignItems="center" flexWrap="wrap" sx={{ gap: "24px" }}>
           <Stack sx={{ gap: "4px" }}>
             <Typography sx={lifecycleLabelSx}>Lifecycle</Typography>
-            <StatusBadge
-              label={LIFECYCLE_STAGE_LABELS[stage]}
-              variant={STAGE_VARIANT[stage]}
-              size="small"
-              uppercase={false}
-            />
+            {isClassicUi() ? (
+              <StatusBadge
+                label={LIFECYCLE_STAGE_LABELS[stage]}
+                variant={STAGE_VARIANT[stage]}
+                size="small"
+                uppercase={false}
+              />
+            ) : (
+              <StageSteps stage={stage} />
+            )}
           </Stack>
           {savedGoLiveDate && (
             <Stack sx={{ gap: "4px" }}>

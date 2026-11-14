@@ -7,6 +7,7 @@ import { RiskLikelihood, RiskSeverity } from "../RiskLevel/riskValues";
 import { RiskModel } from "../../../domain/models/Common/risks/risk.model";
 import { useTranslation } from "../../../application/hooks/useTranslation";
 import { fill } from "../../../i18n/fill";
+import { palette, radiusPx } from "../../themes/palette";
 
 /** IHeatMapCell, over whichever risk type is being plotted. */
 type HeatMapCell<T> = Omit<IHeatMapCell, "risks"> & { risks: T[] };
@@ -102,10 +103,11 @@ function RiskHeatMap<T extends HeatMapRisk = RiskModel>({
       const row: HeatMapCell<T>[] = [];
       for (let likelihood = 1; likelihood <= 5; likelihood++) {
         const cellRisks = risks.filter((risk) => {
-          // Pair `likelihood` with `severity` — both describe the current risk.
+          // Pair `likelihood` with `severity`: both describe the inherent risk,
+          // so the map shows the inherent level (`risk_level_autocalculated`).
           // `risk_severity` is the post-mitigation severity and belongs to the
-          // residual risk, so mixing it in here contradicts the summary cards
-          // and the risks table, which read `risk_level_autocalculated`.
+          // residual risk. The summary cards and the table show the effective
+          // level (current level when set), which can differ from this map.
           const riskLikelihood = getLikelihoodNumeric(risk.likelihood);
           const riskSeverity = getSeverityNumeric(risk.severity);
           return riskLikelihood === likelihood && riskSeverity === severity;
@@ -207,7 +209,7 @@ function RiskHeatMap<T extends HeatMapRisk = RiskModel>({
             "width": { xs: 60, sm: 80 },
             "height": { xs: 45, sm: 60 },
             "backgroundColor": cell.color,
-            "border": `2px solid ${isSelected ? "#13715B" : "transparent"}`,
+            "border": `2px solid ${isSelected ? palette.brand.primary : "transparent"}`,
             "borderRadius": 1,
             "display": "flex",
             "flexDirection": "column",
@@ -258,7 +260,7 @@ function RiskHeatMap<T extends HeatMapRisk = RiskModel>({
             <Typography
               variant="caption"
               sx={{
-                color: "#4B5563",
+                color: palette.text.tertiary,
                 fontSize: 10,
                 lineHeight: 1,
               }}
@@ -316,7 +318,7 @@ function RiskHeatMap<T extends HeatMapRisk = RiskModel>({
                   variant="subtitle2"
                   sx={{
                     fontWeight: 600,
-                    color: "#4B5563",
+                    color: palette.text.tertiary,
                     transform: "rotate(180deg)",
                   }}
                 >
@@ -374,7 +376,10 @@ function RiskHeatMap<T extends HeatMapRisk = RiskModel>({
                   pl: "130px", // Add 130px left padding to shift right
                 }}
               >
-                <Typography variant="subtitle2" sx={{ fontWeight: 600, color: "#4B5563" }}>
+                <Typography
+                  variant="subtitle2"
+                  sx={{ fontWeight: 600, color: palette.text.tertiary }}
+                >
                   LIKELIHOOD
                 </Typography>
               </Box>
@@ -389,11 +394,14 @@ function RiskHeatMap<T extends HeatMapRisk = RiskModel>({
             minWidth: 200,
             p: 3,
             backgroundColor: "background.accent",
-            borderRadius: 2,
+            borderRadius: radiusPx.sm,
             border: "1px solid status.default.border",
           }}
         >
-          <Typography variant="subtitle2" sx={{ color: "#374151", fontWeight: 600, mb: 2 }}>
+          <Typography
+            variant="subtitle2"
+            sx={{ color: palette.text.secondary, fontWeight: 600, mb: 2 }}
+          >
             Risk Levels
           </Typography>
           <Stack spacing={2}>
@@ -409,7 +417,10 @@ function RiskHeatMap<T extends HeatMapRisk = RiskModel>({
                   }}
                 />
                 <Stack>
-                  <Typography variant="caption" sx={{ color: "#374151", fontWeight: 500 }}>
+                  <Typography
+                    variant="caption"
+                    sx={{ color: palette.text.secondary, fontWeight: 500 }}
+                  >
                     {item.label}
                   </Typography>
                   <Typography
@@ -434,7 +445,7 @@ function RiskHeatMap<T extends HeatMapRisk = RiskModel>({
             transform: "translateX(-50%)",
             backgroundColor: "background.main",
             p: 2,
-            borderRadius: 2,
+            borderRadius: radiusPx.sm,
             border: "1px solid status.default.border",
             boxShadow: "0 2px 4px rgba(0,0,0,0.1)",
           }}
@@ -454,7 +465,10 @@ function RiskHeatMap<T extends HeatMapRisk = RiskModel>({
                     border: "1px solid status.default.border",
                   }}
                 />
-                <Typography variant="caption" sx={{ color: "#4B5563", fontSize: "0.7rem" }}>
+                <Typography
+                  variant="caption"
+                  sx={{ color: palette.text.tertiary, fontSize: "0.7rem" }}
+                >
                   {item.label}
                 </Typography>
               </Box>

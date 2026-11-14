@@ -36,6 +36,10 @@ import policyTemplatesRoutes from "./policyTemplates.route";
 import frameworkImportRoutes from "./frameworkImport.route";
 import importedFrameworkAssessmentRoutes from "./importedFrameworkAssessment.route";
 import intakeSubmissionsRoutes from "./intakeSubmissions.route";
+import aiDetectionRoutes from "./aiDetection.route";
+import aiDetectionRepositoriesRoutes from "./aiDetectionRepositories.route";
+import homeQueueRoutes from "./homeQueue.route";
+import changeNoticeRoutes from "./changeNotice.route";
 
 const router = express.Router();
 
@@ -93,5 +97,17 @@ router.use("/framework-import", frameworkImportRoutes);
 router.use("/imported-framework-assessments", importedFrameworkAssessmentRoutes);
 // Intake submission preview and approval with custom field values (#5262).
 router.use("/intake-submissions", intakeSubmissionsRoutes);
+// AI Detection CI/CD: the public webhook URL for repository setup.
+router.use("/ai-detection-repositories", aiDetectionRepositoriesRoutes);
+
+// AI Detection finding reviews and suggested risks; the legacy
+// /api/ai-detection router is frozen.
+router.use("/ai-detection", aiDetectionRoutes);
+
+// Home action queue: what needs the signed-in user, from every source.
+router.use("/home", homeQueueRoutes);
+
+// "What's changed" notices: per-user seen state and show rules.
+router.use("/change-notices", changeNoticeRoutes);
 
 export default router;
