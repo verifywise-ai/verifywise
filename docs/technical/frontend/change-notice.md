@@ -5,7 +5,7 @@ A change notice is a small "What's changed" card that tells a user about a resty
 ## How a notice behaves
 
 - Shown in the new look only. It is hidden in the classic look (`isClassicUi()`).
-- One card at a time. The global new look card (the entry with `global: true`) goes first. A page notice is asked about only once the global card is not showing, so the page notice appears on a later visit after the welcome card is dismissed. Switching back to the classic look from the welcome card also defers the page notice.
+- One card at a time. The global new look card (the entry with `global: true`) goes first. A page notice is asked about only once the global card is not showing. When the welcome card is dismissed (or the user switches back to the classic look from it), the page notice is held back only on that path (`pageDeferredAt === pathname` in `index.tsx`); the hold is cleared on the next route change, so the notice can appear on another page or on a later visit.
 - A notice stops after the user dismisses it, after 3 visits, or 90 days after the user's own first view, whichever comes first.
 - Accounts created after anyone in the organization first saw a notice are skipped for that notice, so new users never see changes they never experienced.
 - "Show me" highlights the sidebar item named by `showMeTestId`. The button is hidden when that element is not in the DOM.
@@ -74,7 +74,7 @@ Both require a valid token and are open to every role. A user only touches their
 | Endpoint | Behaviour |
 | --- | --- |
 | `POST /api/v1/change-notices/:id/view` | Returns `{ show }`. Records the visit (first view time and view count) only when the answer is `show: true`; a refusal writes nothing. A pure super admin has no organization and always gets `show: false`. |
-| `PUT /api/v1/change-notices/:id/dismissed` | Body `{ dismissed: boolean }`. `true` dismisses; `false` restores (Undo). Dismissing an id the user never viewed stores `first_seen_at: null`, so the 90 day clock does not start. `dismissed: false` on an unseen id is a no-op. Both paths respect the 200 key cap. |
+| `PUT /api/v1/change-notices/:id/dismissed` | Body `{ dismissed: boolean }`. `true` dismisses; `false` restores (Undo). Dismissing an id the user never viewed stores `first_seen_at: null`, so the 90 day clock does not start. `dismissed: false` on an unseen id is a no-op. Dismissing respects the 200 key cap (only `dismissed: true` can create a key). |
 
 The client asks once per notice per session: `markViewRequested` (session storage) and the React Query cache (`staleTime: Infinity`, no refetch) keep re-renders, StrictMode double mounts and remounts from counting as extra visits.
 

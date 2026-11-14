@@ -113,14 +113,14 @@ export const homeContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'In the new look, a "What\'s changed" card appears the first time you open a page that was moved or redesigned. It says what changed and, for a page that moved, where to find it in the sidebar. Only one card shows at a time, so the new look welcome card comes first and a page card appears on a later visit.',
+      text: 'In the new look, a "What\'s changed" card appears the first time you open a page that was moved or redesigned. It says what changed and, for a page that moved, where to find it in the sidebar. Only one card shows at a time, so the new look welcome card comes first. A page card is held back on the page where you closed the welcome card. It can appear when you open another page, or on a later visit.',
     },
     {
       type: 'bullet-list',
       items: [
         { bold: 'Show me', text: 'highlights the item in the sidebar. The button is not shown when that item is not in your sidebar.' },
-        { bold: 'Read the guide', text: 'opens the related article in the user guide.' },
-        { bold: 'The close button', text: 'dismisses the card. "Undo" stays on screen for a few seconds if you closed it by mistake.' },
+        { bold: 'Read the guide', text: 'opens the related article in the user guide, when there is one.' },
+        { bold: 'Dismiss (the X)', text: 'closes the card for good. Undo stays on screen for a few seconds in case you closed it by mistake.' },
       ],
     },
     {
