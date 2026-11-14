@@ -71,7 +71,7 @@ export const homeContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { bold: 'Record', text: 'Intake waiting (submissions pending a first decision, shown to people who can edit intake forms), agents to review and AI on the record (use cases, models, AI apps and agents together; rejected agents are not counted).' },
-        { bold: 'Track', text: 'Risks needing attention (not started, or past their deadline and still open) and vendor reviews due.' },
+        { bold: 'Track', text: 'Risks needing attention (not started, or past their deadline and not completed or canceled) and vendor reviews due.' },
         { bold: 'Enforce', text: 'Policy reviews due and prompts blocked or masked by AI Gateway guardrails in the last 24 hours. The prompts count is left out when AI Gateway is not set up for your deployment.' },
       ],
     },
