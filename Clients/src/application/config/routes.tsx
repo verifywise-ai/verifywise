@@ -2,6 +2,7 @@ import { Suspense } from "react";
 import { Route, Navigate } from "react-router";
 import { lazyRoute, LazyFallback } from "../utils/lazyRoute";
 import { SHOW_AI_GATEWAY_PROMPTS } from "./featureFlags";
+import { isClassicUi } from "../../presentation/themes/uiStyle";
 
 // Eager imports — app shell and route guard
 import Dashboard from "../../presentation/containers/Dashboard";
@@ -43,6 +44,7 @@ const IntegratedDashboard = lazyRoute(
   () => import("../../presentation/pages/DashboardOverview/IntegratedDashboard"),
 );
 const StartHere = lazyRoute(() => import("../../presentation/pages/StartHere"));
+const HomePage = lazyRoute(() => import("../../presentation/pages/HomeQueue"));
 const VWProjectView = lazyRoute(
   () => import("../../presentation/pages/ProjectView/V1.0ProjectView"),
 );
@@ -361,11 +363,24 @@ export const createRoutes = (
       }
     />
     <Route
-      path="/start-here"
+      path="/home"
       element={
         <Suspense fallback={<LazyFallback />}>
-          <StartHere />
+          <HomePage />
         </Suspense>
+      }
+    />
+    {/* The new look moved Start here into Home's Get started tab; classic keeps the page. */}
+    <Route
+      path="/start-here"
+      element={
+        isClassicUi() ? (
+          <Suspense fallback={<LazyFallback />}>
+            <StartHere />
+          </Suspense>
+        ) : (
+          <Navigate to="/home?tab=get-started" replace />
+        )
       }
     />
     <Route

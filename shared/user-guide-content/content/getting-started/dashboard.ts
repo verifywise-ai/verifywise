@@ -313,7 +313,7 @@ export const dashboardContent: ArticleContent = {
         {
           icon: 'FolderTree',
           title: 'Record',
-          description: 'Inventory (use cases, models, AI apps, agents, datasets, AI Trust Index), AI Detection, Evidence & reports, and Intake.',
+          description: 'Inventory (use cases, models, AI apps, agents, datasets), AI Trust Index, AI Detection, Evidence & reports, and Intake.',
         },
         {
           icon: 'Shield',

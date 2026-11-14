@@ -42,6 +42,7 @@ import "../Layout/icon-shake.css";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import VerifyWiseLogo from "../../assets/imgs/verifywise-logo.svg";
 import SidebarFooter from "./SidebarFooter";
+import { SIDEBAR_ROW_HEIGHT } from "./sidebarRowHeight";
 import { FlyingHearts } from "../FlyingHearts";
 
 declare const __APP_VERSION__: string;
@@ -227,7 +228,7 @@ export const SidebarItemRow: FC<SidebarItemRowProps> = ({
       aria-controls={ariaControls}
       data-testid={testId}
       sx={{
-        "height": "32px",
+        "height": SIDEBAR_ROW_HEIGHT,
         "gap": collapsed ? 0 : theme.spacing(4),
         "borderRadius": theme.shape.borderRadius,
         "px": theme.spacing(4),

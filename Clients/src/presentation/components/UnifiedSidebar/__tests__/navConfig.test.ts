@@ -10,7 +10,7 @@ import { navGroupColor } from "../../../themes/palette";
  */
 const TODAY_NAV_PATHS: ReadonlyArray<{ path: string; source: string }> = [
   // §1 Main sidebar (17)
-  { path: "/start-here", source: "Sidebar: Start here" },
+  { path: "/start-here", source: "Sidebar: Start here (Home claims it; it redirects to /home)" },
   { path: "/", source: "Sidebar: Dashboard" },
   { path: "/tasks", source: "Sidebar: Tasks" },
   { path: "/framework", source: "Sidebar: Frameworks" },
@@ -107,10 +107,13 @@ const navPaths = (): Set<string> =>
     ]),
   );
 
-/** Routes with no entry of their own that a sub-item explicitly claims (matchPrefixes). */
+/** Routes with no entry of their own that an item or sub-item explicitly claims (matchPrefixes). */
 const claimedPaths = (): Set<string> =>
   new Set(
-    allItems().flatMap((item) => (item.children ?? []).flatMap((s) => s.matchPrefixes ?? [])),
+    allItems().flatMap((item) => [
+      ...(item.matchPrefixes ?? []),
+      ...(item.children ?? []).flatMap((s) => s.matchPrefixes ?? []),
+    ]),
   );
 
 describe("NAV_GROUPS: nothing lost", () => {
@@ -165,7 +168,7 @@ describe("NAV_GROUPS: item map", () => {
       {
         id: "record",
         heading: "Record",
-        items: ["Inventory", "AI Detection", "Evidence & reports", "Intake"],
+        items: ["Inventory", "AI Trust Index", "AI Detection", "Evidence & reports", "Intake"],
       },
       { id: "track", heading: "Track", items: ["AI risks", "Vendors", "Frameworks"] },
       {
@@ -182,7 +185,8 @@ describe("NAV_GROUPS: item map", () => {
       (findItem(id).children ?? []).map((s) =>
         s.section ? `${s.section}: ${s.label} ${s.path}` : `${s.label} ${s.path}`,
       );
-    expect(findItem("home").path).toBe("/start-here");
+    expect(findItem("home").path).toBe("/home");
+    expect(findItem("home").matchPrefixes).toContain("/start-here");
     expect(findItem("dashboard").path).toBe("/");
     expect(findItem("incidents").path).toBe("/ai-incident-managements");
     expect(findItem("tasks").path).toBe("/tasks");
@@ -200,9 +204,11 @@ describe("NAV_GROUPS: item map", () => {
       "AI apps /ai-apps",
       "Agents /agent-discovery",
       "Datasets /datasets",
-      "AI Trust Index: Browse /ai-trust-index/browse",
-      "AI Trust Index: Tracked /ai-trust-index/tracked",
-      "AI Trust Index: Trust Index settings /ai-trust-index/settings",
+    ]);
+    expect(subs("ai-trust-index")).toEqual([
+      "Browse /ai-trust-index/browse",
+      "Tracked /ai-trust-index/tracked",
+      "Trust Index settings /ai-trust-index/settings",
     ]);
     expect(subs("ai-detection")).toEqual([
       "Shadow AI: Insights /shadow-ai/insights",
@@ -265,7 +271,7 @@ describe("NAV_GROUPS: item map", () => {
       permission: "approvalWorkflow.admin",
     });
     expect(findItem("intake").gate).toEqual({ permission: "intakeForm.edit" });
-    expect(findSub("inventory", "ati-settings").gate).toEqual({
+    expect(findSub("ai-trust-index", "ati-settings").gate).toEqual({
       permission: "aiTrustIndex.admin",
     });
     expect(findSub("llm-evals", "arena").gate).toEqual({ evalsArena: true });
@@ -295,7 +301,7 @@ describe("NAV_GROUPS: item map", () => {
     expect(counts.sort()).toEqual(
       [
         "tasks:openTasks",
-        "inventory/ati-tracked:aiTrustIndexTracked",
+        "ai-trust-index/ati-tracked:aiTrustIndexTracked",
         "ai-detection/ai-tools:shadowAiTools",
         "ai-detection/rules:shadowAiAlerts",
         "ai-detection/repositories:aiDetectionRepositories",
@@ -315,6 +321,7 @@ describe("NAV_GROUPS: item map", () => {
 describe("resolveActive", () => {
   const cases: ReadonlyArray<[string, string, string | null, string | undefined]> = [
     // Top items
+    ["/home", "", "home", undefined],
     ["/start-here", "", "home", undefined],
     ["/", "", "dashboard", undefined],
     ["/tasks", "", "tasks", undefined],
@@ -328,10 +335,10 @@ describe("resolveActive", () => {
     ["/ai-apps", "", "inventory", "ai-apps"],
     ["/agent-discovery", "", "inventory", "agents"],
     ["/datasets", "", "inventory", "datasets"],
-    ["/ai-trust-index/browse", "", "inventory", "ati-browse"],
-    ["/ai-trust-index/openai", "", "inventory", "ati-browse"],
-    ["/ai-trust-index/tracked", "", "inventory", "ati-tracked"],
-    ["/ai-trust-index/settings", "", "inventory", "ati-settings"],
+    ["/ai-trust-index/browse", "", "ai-trust-index", "ati-browse"],
+    ["/ai-trust-index/openai", "", "ai-trust-index", "ati-browse"],
+    ["/ai-trust-index/tracked", "", "ai-trust-index", "ati-tracked"],
+    ["/ai-trust-index/settings", "", "ai-trust-index", "ati-settings"],
     ["/shadow-ai/insights", "", "ai-detection", "insights"],
     ["/shadow-ai/user-activity/users", "", "ai-detection", "user-activity"],
     ["/shadow-ai/user-activity/departments", "", "ai-detection", "user-activity"],

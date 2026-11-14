@@ -8,6 +8,7 @@
 
 import { Router } from "express";
 import authenticateJWT from "../middleware/auth.middleware";
+import authorize from "../middleware/accessControl.middleware";
 import {
   getAllFolders,
   getFolderTree,
@@ -93,13 +94,13 @@ router.get("/:id/files", authenticateJWT, getFilesInFolder);
  * POST /virtual-folders/:id/files
  * Assign files to a folder
  */
-router.post("/:id/files", authenticateJWT, assignFilesToFolder);
+router.post("/:id/files", authenticateJWT, authorize("file.edit"), assignFilesToFolder);
 
 /**
  * DELETE /virtual-folders/:id/files/:fileId
  * Remove a file from a folder
  */
-router.delete("/:id/files/:fileId", authenticateJWT, removeFileFromFolder);
+router.delete("/:id/files/:fileId", authenticateJWT, authorize("file.edit"), removeFileFromFolder);
 
 // ============================================================================
 // FILE FOLDER ROUTES (Mounted at /files)
@@ -121,6 +122,6 @@ filesFolderRouter.get("/:id/folders", authenticateJWT, getFileFolders);
  * PATCH /files/:id/folders
  * Bulk update file folder assignments
  */
-filesFolderRouter.patch("/:id/folders", authenticateJWT, updateFileFolders);
+filesFolderRouter.patch("/:id/folders", authenticateJWT, authorize("file.edit"), updateFileFolders);
 
 export default router;

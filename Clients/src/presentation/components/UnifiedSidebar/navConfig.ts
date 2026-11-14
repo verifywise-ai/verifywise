@@ -17,7 +17,8 @@ export const NAV_GROUPS: NavGroup[] = [
   {
     id: "automate",
     items: [
-      { id: "home", label: "Home", icon: "home", path: "/start-here" },
+      // /start-here redirects to /home?tab=get-started in this look.
+      { id: "home", label: "Home", icon: "home", path: "/home", matchPrefixes: ["/start-here"] },
       { id: "dashboard", label: "Dashboard", icon: "dashboard", path: "/" },
       {
         id: "workflows",
@@ -61,11 +62,17 @@ export const NAV_GROUPS: NavGroup[] = [
           { id: "ai-apps", label: "AI apps", path: "/ai-apps" },
           { id: "agents", label: "Agents", path: "/agent-discovery" },
           { id: "datasets", label: "Datasets", path: "/datasets" },
+        ],
+      },
+      {
+        id: "ai-trust-index",
+        label: "AI Trust Index",
+        icon: "ai-trust-index",
+        children: [
           {
             id: "ati-browse",
             label: "Browse",
             path: "/ai-trust-index/browse",
-            section: "AI Trust Index",
             // Model detail pages (/ai-trust-index/:slug) belong to Browse, as today.
             matchPrefixes: ["/ai-trust-index"],
           },
@@ -73,14 +80,12 @@ export const NAV_GROUPS: NavGroup[] = [
             id: "ati-tracked",
             label: "Tracked",
             path: "/ai-trust-index/tracked",
-            section: "AI Trust Index",
             countKey: "aiTrustIndexTracked",
           },
           {
             id: "ati-settings",
             label: "Trust Index settings",
             path: "/ai-trust-index/settings",
-            section: "AI Trust Index",
             gate: { permission: "aiTrustIndex.admin" },
           },
         ],

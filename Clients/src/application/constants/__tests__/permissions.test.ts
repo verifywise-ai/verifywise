@@ -136,6 +136,11 @@ const SCREEN_GATES: Array<{
     roles: ["Admin", "Editor", "Reviewer"],
     key: "fileManager.contribute",
   },
+  {
+    gate: "File manager folders and bulk tagging (was MANAGE_ROLES)",
+    roles: ["Admin", "Editor"],
+    key: "file.edit",
+  },
 ];
 
 /** Keys that already gated through the old useHasPermission/useCanEditAiApps hooks. */

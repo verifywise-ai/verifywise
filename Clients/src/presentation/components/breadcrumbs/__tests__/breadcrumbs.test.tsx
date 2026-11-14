@@ -48,6 +48,15 @@ describe("Breadcrumbs", () => {
     expect(screen.getByText("Details")).toBeInTheDocument();
   });
 
+  it("shows only Home on /home, with no Dashboard root crumb", () => {
+    renderWithProviders(<Breadcrumbs autoGenerate homeLabel="Dashboard" />, {
+      route: "/home",
+    });
+
+    expect(screen.getByText("Home")).toBeInTheDocument();
+    expect(screen.queryByText("Dashboard")).not.toBeInTheDocument();
+  });
+
   it("renders the navigation aria label", () => {
     const items = [{ label: "Home", path: "/" }];
     renderWithProviders(<Breadcrumbs items={items} />);

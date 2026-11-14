@@ -38,6 +38,7 @@ import importedFrameworkAssessmentRoutes from "./importedFrameworkAssessment.rou
 import intakeSubmissionsRoutes from "./intakeSubmissions.route";
 import aiDetectionRoutes from "./aiDetection.route";
 import aiDetectionRepositoriesRoutes from "./aiDetectionRepositories.route";
+import homeQueueRoutes from "./homeQueue.route";
 
 const router = express.Router();
 
@@ -101,5 +102,8 @@ router.use("/ai-detection-repositories", aiDetectionRepositoriesRoutes);
 // AI Detection finding reviews and suggested risks; the legacy
 // /api/ai-detection router is frozen.
 router.use("/ai-detection", aiDetectionRoutes);
+
+// Home action queue: what needs the signed-in user, from every source.
+router.use("/home", homeQueueRoutes);
 
 export default router;

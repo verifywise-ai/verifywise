@@ -68,6 +68,7 @@ function Breadcrumbs({
 
     // Add home item (skip for module pages that have their own root breadcrumb)
     const skipHome =
+      location.pathname === "/home" ||
       location.pathname.startsWith("/ai-gateway") ||
       location.pathname.startsWith("/evals") ||
       location.pathname.startsWith("/ai-detection") ||

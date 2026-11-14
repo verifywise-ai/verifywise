@@ -7,8 +7,8 @@ import {
   updateRiskByIdQuery,
   deleteRiskByIdQuery,
   assertRiskReferencesInOrganization,
+  linkRiskToProjectQuery,
 } from "../../utils/risk.utils";
-import { assertOrgOwnsIds } from "../../utils/bulkAction.utils";
 import { getTimeseriesForTimeframe } from "../../utils/history/riskHistory.utils";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { sequelize } from "../../database/db";
@@ -575,16 +575,7 @@ const agentLinkRiskToProject = createWriteToolFn({
   executeFn: async (params, organizationId) => {
     const riskId = params.risk_id as number;
     const projectId = params.project_id as number;
-    await assertOrgOwnsIds({ table: "risks", ids: [riskId], organizationId });
-    await assertRiskReferencesInOrganization({ projects: [projectId] }, organizationId);
-    await sequelize.query(
-      `INSERT INTO risks_projects_frameworks (organization_id, risk_id, project_id)
-       VALUES (:organization_id, :risk_id, :project_id)
-       ON CONFLICT DO NOTHING`,
-      {
-        replacements: { organization_id: organizationId, risk_id: riskId, project_id: projectId },
-      },
-    );
+    await linkRiskToProjectQuery(riskId, projectId, organizationId);
     return {
       risk_id: riskId,
       project_id: projectId,
