@@ -210,3 +210,76 @@ export function buildRiskUpdateReplacements(oldRisk: any, newRisk: any): Record<
     }),
   };
 }
+
+/** One risk changed by a bulk action, with owner/approver names attached. */
+export type BulkRiskChange = { before: any; after: any };
+
+/** Names listed in a bulk `risk.name` before "and <k> more". */
+export const BULK_RISK_NAME_LIMIT = 10;
+/** Lines listed in a bulk `changes_summary` before "• and <k> more". */
+export const BULK_RISK_CHANGE_LINE_LIMIT = 50;
+
+const categoryText = (risk: any): string =>
+  Array.isArray(risk?.risk_category) ? risk.risk_category.join(", ") : "";
+
+/** "• <name>: Owner: A → B; Category: x → y" for what a bulk edit changed. */
+function bulkChangeLine({ before, after }: BulkRiskChange): string {
+  const parts: string[] = [];
+  const oldOwner = before.owner_name || before.risk_owner;
+  const newOwner = after.owner_name || after.risk_owner;
+  if (oldOwner !== newOwner) {
+    parts.push(`Owner: ${oldOwner || "(empty)"} → ${newOwner || "(empty)"}`);
+  }
+  const oldCategory = categoryText(before);
+  const newCategory = categoryText(after);
+  if (oldCategory !== newCategory) {
+    parts.push(`Category: ${oldCategory || "(empty)"} → ${newCategory || "(empty)"}`);
+  }
+  return `• ${after.risk_name}: ${parts.join("; ")}`;
+}
+
+/**
+ * Replacements for one automation run that covers a whole bulk action
+ * (`risk_deleted` for an archive, `risk_updated` for set owner/category).
+ *
+ * One risk: exactly the single-risk replacements. Several: `risk.name` (and
+ * `old_risk.name`) is "<n> risks: <names>", `risk.id` is empty, every other
+ * variable keeps a value only when all the risks share it, and
+ * `changes_summary` lists one line per risk.
+ */
+export function buildBulkRiskReplacements(
+  trigger: "risk_deleted" | "risk_updated",
+  changes: BulkRiskChange[],
+): Record<string, any> {
+  const single = ({ before, after }: BulkRiskChange) =>
+    trigger === "risk_updated"
+      ? buildRiskUpdateReplacements(before, after)
+      : buildRiskReplacements(after);
+
+  if (changes.length === 1) return single(changes[0]);
+
+  const perRisk = changes.map(single);
+  const merged: Record<string, any> = {};
+  for (const key of Object.keys(perRisk[0])) {
+    const first = String(perRisk[0][key] ?? "");
+    merged[key] = perRisk.every((r) => String(r[key] ?? "") === first) ? perRisk[0][key] : "";
+  }
+
+  const names = changes.map((c) => c.after.risk_name);
+  const shown = names.slice(0, BULK_RISK_NAME_LIMIT).join(", ");
+  const hidden = names.length - BULK_RISK_NAME_LIMIT;
+  const summaryName = `${names.length} risks: ${shown}${hidden > 0 ? ` and ${hidden} more` : ""}`;
+
+  merged["risk.id"] = "";
+  merged["risk.name"] = summaryName;
+  if (trigger === "risk_updated") {
+    merged["old_risk.id"] = "";
+    merged["old_risk.name"] = summaryName;
+    const lines = changes.slice(0, BULK_RISK_CHANGE_LINE_LIMIT).map(bulkChangeLine);
+    const more = changes.length - BULK_RISK_CHANGE_LINE_LIMIT;
+    if (more > 0) lines.push(`• and ${more} more`);
+    merged.changes_summary = lines.join("\n");
+  }
+  merged.date_and_time = perRisk[0].date_and_time;
+  return merged;
+}

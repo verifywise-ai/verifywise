@@ -22,6 +22,7 @@ import {
   archiveRiskQuery,
   createRiskQuery,
   deleteRiskByIdQuery,
+  enqueueBulkRiskAutomation,
   getActiveRisksByIdsQuery,
   getProjectTitlesByRiskIdsQuery,
   sameRiskCategories,
@@ -393,6 +394,178 @@ describe("risk automations wait for the commit", () => {
     await deleteRiskByIdQuery(5, 4, undefined as never);
 
     expect(mockEnqueue).toHaveBeenCalledTimes(1);
+  });
+
+  it("runs no per-risk automation when a bulk action asks it not to", async () => {
+    arrange("risk_updated");
+    const tx = makeTransaction();
+
+    await archiveRiskQuery(5, 4, 9, tx as never, { runAutomations: false });
+    await updateRiskByIdQuery(5, { risk_name: "Renamed" } as never, 4, tx as never, {
+      runAutomations: false,
+    });
+
+    expect(sqlCalls().some((sql) => sql.includes("FROM automation_triggers"))).toBe(false);
+    expect(tx.afterCommit).not.toHaveBeenCalled();
+  });
+});
+
+describe("enqueueBulkRiskAutomation", () => {
+  /** A transaction that keeps its afterCommit callbacks until commit() or rollback(). */
+  function makeTransaction() {
+    let callbacks: Array<() => unknown> = [];
+    return {
+      afterCommit: jest.fn((cb: () => unknown) => {
+        callbacks.push(cb);
+      }),
+      commit: () => {
+        callbacks.forEach((cb) => cb());
+        callbacks = [];
+      },
+      rollback: () => {
+        callbacks = [];
+      },
+    };
+  }
+
+  const USERS: Record<number, string> = { 3: "Ann Old", 4: "Cy Other", 7: "Bo New", 8: "Pat Lee" };
+
+  /** One active automation for `trigger` whose email names the risk, owner and changes. */
+  function arrange(trigger: string, automation = true) {
+    mockQuery.mockImplementation(async (sql: string, options: any) => {
+      if (sql.includes("FROM automation_triggers")) {
+        if (!automation) return [[], 0];
+        return [
+          [
+            {
+              trigger_key: trigger,
+              action_key: "send_email",
+              automation_id: 1,
+              params: {
+                to: ["a@example.com"],
+                subject: "{{risk.name}}",
+                body: "Owner: {{risk.owner}}\n{{changes_summary}}",
+              },
+            },
+          ],
+          1,
+        ];
+      }
+      if (sql.includes("FROM users")) {
+        return (options.replacements.userIds as number[])
+          .filter((id) => USERS[id])
+          .map((id) => ({ id, full_name: USERS[id] }));
+      }
+      return [[], 0];
+    });
+  }
+
+  const row = (id: number, owner: number) => ({
+    id,
+    risk_name: `Risk ${id}`,
+    risk_owner: owner,
+    risk_approval: 8,
+  });
+
+  it("enqueues one risk_deleted job for a bulk archive of 3, after commit", async () => {
+    arrange("risk_deleted");
+    const tx = makeTransaction();
+    const changes = [row(1, 3), row(2, 4), row(3, 3)].map((r) => ({ before: r, after: r }));
+
+    await enqueueBulkRiskAutomation("risk_deleted", changes, 4, tx as never);
+
+    expect(tx.afterCommit).toHaveBeenCalledTimes(1);
+    expect(mockEnqueue).not.toHaveBeenCalled();
+    // One name lookup for every owner and approver in the batch.
+    const userQueries = mockQuery.mock.calls.filter(([sql]) => String(sql).includes("FROM users"));
+    expect(userQueries).toHaveLength(1);
+    expect(userQueries[0][1].replacements.userIds.sort()).toEqual([3, 4, 8]);
+
+    tx.commit();
+    expect(mockEnqueue).toHaveBeenCalledTimes(1);
+    expect(mockEnqueue).toHaveBeenCalledWith(
+      "send_email",
+      expect.objectContaining({
+        to: ["a@example.com"],
+        subject: "3 risks: Risk 1, Risk 2, Risk 3",
+        // Owners differ, so risk.owner is empty; no change summary on delete.
+        body: "Owner: \n{{changes_summary}}",
+        automation_id: 1,
+        organizationId: 4,
+      }),
+    );
+  });
+
+  it("enqueues one risk_updated job for a bulk set owner of 3, with a line per risk", async () => {
+    arrange("risk_updated");
+    const tx = makeTransaction();
+    const changes = [row(1, 3), row(2, 4), row(3, 3)].map((r) => ({
+      before: r,
+      after: { ...r, risk_owner: 7 },
+    }));
+
+    await enqueueBulkRiskAutomation("risk_updated", changes, 4, tx as never);
+    tx.commit();
+
+    expect(mockEnqueue).toHaveBeenCalledTimes(1);
+    const [, payload] = mockEnqueue.mock.calls[0];
+    expect(payload.subject).toBe("3 risks: Risk 1, Risk 2, Risk 3");
+    expect(payload.body).toBe(
+      [
+        "Owner: Bo New",
+        "• Risk 1: Owner: Ann Old → Bo New",
+        "• Risk 2: Owner: Cy Other → Bo New",
+        "• Risk 3: Owner: Ann Old → Bo New",
+      ].join("\n"),
+    );
+  });
+
+  it("gives a one-risk batch the single edit's replacements", async () => {
+    arrange("risk_updated");
+    const tx = makeTransaction();
+
+    await enqueueBulkRiskAutomation(
+      "risk_updated",
+      [{ before: row(1, 3), after: { ...row(1, 3), risk_owner: 7 } }],
+      4,
+      tx as never,
+    );
+    tx.commit();
+
+    const [, payload] = mockEnqueue.mock.calls[0];
+    expect(payload.subject).toBe("Risk 1");
+    // The single edit's full summary, unchanged fields included.
+    expect(payload.body).toBe(
+      ["Owner: Bo New", "• Name: Risk 1", "• Owner: Ann Old → Bo New"].join("\n"),
+    );
+  });
+
+  it("enqueues nothing when the bulk action rolls back", async () => {
+    arrange("risk_deleted");
+    const tx = makeTransaction();
+    const changes = [row(1, 3), row(2, 3)].map((r) => ({ before: r, after: r }));
+
+    await enqueueBulkRiskAutomation("risk_deleted", changes, 4, tx as never);
+    tx.rollback();
+
+    expect(mockEnqueue).not.toHaveBeenCalled();
+  });
+
+  it("does nothing without an active automation or without changes", async () => {
+    arrange("risk_deleted", false);
+    const tx = makeTransaction();
+
+    await enqueueBulkRiskAutomation(
+      "risk_deleted",
+      [{ before: row(1, 3), after: row(1, 3) }],
+      4,
+      tx as never,
+    );
+    expect(tx.afterCommit).not.toHaveBeenCalled();
+
+    mockQuery.mockClear();
+    await enqueueBulkRiskAutomation("risk_deleted", [], 4, tx as never);
+    expect(mockQuery).not.toHaveBeenCalled();
   });
 });
 

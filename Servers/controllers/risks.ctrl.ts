@@ -13,6 +13,7 @@ import {
   getProjectTitlesByRiskIdsQuery,
   sameRiskCategories,
   PROJECT_RISK_CATEGORIES_SET,
+  enqueueBulkRiskAutomation,
 } from "../utils/risk.utils";
 import { sequelize } from "../database/db";
 import {
@@ -24,7 +25,7 @@ import { parseBulkIds, assertOrgOwnsIds, withBulkTransaction } from "../utils/bu
 import { logProcessing } from "../utils/logger/logHelper";
 import logger, { logStructured } from "../utils/logger/fileLogger";
 import { logEvent } from "../utils/logger/dbLogger";
-import { notifyUserAssigned } from "../services/inAppNotification.service";
+import { notifyUserAssigned, notifyUserAssignedMany } from "../services/inAppNotification.service";
 import { QueryTypes } from "sequelize";
 import { recordPortfolioSnapshot } from "../utils/quantitativeRisk.utils";
 import {
@@ -44,6 +45,7 @@ import {
 
 import { translateError } from "../utils/i18n.utils";
 import { IRisk } from "../domain.layer/interfaces/I.risk";
+import { BulkRiskChange } from "../utils/automation/risk.automation.utils";
 // Helper function to get user name
 async function getUserNameById(userId: number): Promise<string> {
   const result = await sequelize.query<{ name: string; surname: string }>(
@@ -60,8 +62,10 @@ type AssignedRisk = Pick<IRisk, "id" | "risk_owner" | "risk_name" | "risk_descri
 
 /**
  * Tell each risk's new owner they were assigned. Shared by the single edit and
- * the bulk set_owner, so both send the same notification. Run it after commit
- * and do not await it: a failed notification must not fail the edit.
+ * the bulk set_owner. An owner given one risk gets the single-risk notice; an
+ * owner given several in one bulk action gets one notice listing them all.
+ * Run it after commit and do not await it: a failed notification must not
+ * fail the edit.
  */
 async function notifyNewRiskOwners(
   organizationId: number,
@@ -71,13 +75,47 @@ async function notifyNewRiskOwners(
   if (risks.length === 0) return;
   const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
   const assignerName = await getUserNameById(assignerUserId);
-  // Project name for context, one query for every risk
+
+  const byOwner = new Map<number, AssignedRisk[]>();
+  for (const risk of risks) {
+    const owned = byOwner.get(risk.risk_owner) ?? [];
+    owned.push(risk);
+    byOwner.set(risk.risk_owner, owned);
+  }
+
+  const singles: AssignedRisk[] = [];
+  for (const [ownerId, owned] of byOwner) {
+    if (owned.length === 1) {
+      singles.push(owned[0]);
+      continue;
+    }
+    try {
+      await notifyUserAssignedMany(
+        organizationId,
+        ownerId,
+        {
+          entityType: "project_risk",
+          itemsLabel: "risks",
+          items: owned.map((risk) => ({ id: risk.id!, name: risk.risk_name })),
+          roleType: "Risk Owner",
+          entityUrl: "/risk-management",
+        },
+        assignerName,
+        baseUrl,
+      );
+    } catch (err) {
+      logger.error("Failed to send risk owner notification:", err);
+    }
+  }
+  if (singles.length === 0) return;
+
+  // Project name for context, one query for every single-risk notice
   const projectTitles = await getProjectTitlesByRiskIdsQuery(
-    risks.map((risk) => risk.id!),
+    singles.map((risk) => risk.id!),
     organizationId,
   );
 
-  for (const risk of risks) {
+  for (const risk of singles) {
     try {
       await notifyUserAssigned(
         organizationId,
@@ -758,7 +796,8 @@ export async function bulkUpdateProjectRisks(req: Request, res: Response): Promi
     const userId = req.userId!;
 
     // Each risk goes through the single-edit path, so it gets the same change
-    // history, automations and policy unlinks (R-M8).
+    // history and policy unlinks (R-M8). The org's automation runs once for
+    // the whole action, with a summary, not once per risk.
     const { updatedIds, newOwnerRisks } = await withBulkTransaction(
       {
         audit: {
@@ -776,19 +815,31 @@ export async function bulkUpdateProjectRisks(req: Request, res: Response): Promi
 
         const updatedIds: number[] = [];
         const newOwnerRisks: AssignedRisk[] = [];
+        const changes: BulkRiskChange[] = [];
 
         if (action === "archive") {
+          // The rows as they were, for the automation's summary.
+          const activeById = new Map(
+            (await getActiveRisksByIdsQuery(ids, organizationId, transaction)).map((risk) => [
+              Number(risk.id),
+              risk,
+            ]),
+          );
           for (const id of ids) {
             if (
               await archiveRiskQuery(id, organizationId, userId, transaction, {
                 recordSnapshots: false,
+                runAutomations: false,
               })
             ) {
               updatedIds.push(id);
+              const risk = activeById.get(id);
+              if (risk) changes.push({ before: risk, after: risk });
             }
           }
           if (updatedIds.length > 0) {
             await recordRiskSnapshots(organizationId, transaction);
+            await enqueueBulkRiskAutomation("risk_deleted", changes, organizationId, transaction);
           }
           return { updatedIds, newOwnerRisks };
         }
@@ -821,16 +872,18 @@ export async function bulkUpdateProjectRisks(req: Request, res: Response): Promi
             risk,
             { userId, organizationId },
             transaction,
-            { recordSnapshots: false },
+            { recordSnapshots: false, runAutomations: false },
           );
           if (!updated) continue;
           updatedIds.push(risk.id!);
+          changes.push({ before: risk, after: updated.dataValues ?? updated });
           if (action === "set_owner" && updated.risk_owner) {
             newOwnerRisks.push(updated);
           }
         }
         if (updatedIds.length > 0) {
           await recordRiskSnapshots(organizationId, transaction);
+          await enqueueBulkRiskAutomation("risk_updated", changes, organizationId, transaction);
         }
         return { updatedIds, newOwnerRisks };
       },
@@ -838,7 +891,8 @@ export async function bulkUpdateProjectRisks(req: Request, res: Response): Promi
 
     // After commit, as the single edit does: a link recompute for every
     // updated risk (an archive is a soft delete and recomputes nothing — R7)
-    // and a notification to each new owner.
+    // and one notification to the new owner (one notice listing the risks
+    // when there are several).
     if (action !== "archive") {
       for (const riskId of updatedIds) {
         enqueueRiskLinkRecompute(organizationId, riskId).catch((err) =>

@@ -2012,3 +2012,95 @@ export const notifyUserAssigned = async (
     // Don't rethrow - notifications should not break the main flow
   }
 };
+
+/** Items listed in a multi-item assignment notice before "and <k> more". */
+export const ASSIGNED_MANY_LIST_LIMIT = 20;
+
+/**
+ * Notify a user once when a bulk action assigns them to several items of one
+ * kind (e.g. a bulk set owner on risks): one in-app notification and one
+ * assignment email listing the items, instead of one per item. Same
+ * notification type, entity type and email template as notifyUserAssigned.
+ *
+ * @param assignment.itemsLabel - Plural noun for the items, e.g. "risks"
+ * @param assignment.entityUrl - Link to the list page, e.g. "/risk-management"
+ */
+export const notifyUserAssignedMany = async (
+  organizationId: number,
+  assigneeId: number,
+  assignment: {
+    entityType: string;
+    itemsLabel: string;
+    items: Array<{ id: number; name: string }>;
+    roleType: AssignmentRoleType;
+    entityUrl: string;
+  },
+  assignerName: string,
+  baseUrl: string,
+): Promise<void> => {
+  try {
+    const assignee = await getUserById(assigneeId);
+    if (!assignee) {
+      logger.warn(`Cannot send assignment notification: user ${assigneeId} not found`);
+      return;
+    }
+
+    const count = assignment.items.length;
+    const names = assignment.items.map((item) => item.name);
+    const shown = names.slice(0, ASSIGNED_MANY_LIST_LIMIT);
+    const hidden = count - shown.length;
+    const more = hidden > 0 ? ` and ${hidden} more` : "";
+    const title = `${count} ${assignment.itemsLabel} were assigned to you`;
+
+    const fullUrl = assignment.entityUrl.startsWith("http")
+      ? assignment.entityUrl
+      : `${baseUrl}${assignment.entityUrl.startsWith("/") ? "" : "/"}${assignment.entityUrl}`;
+
+    // The item names are user text: escaped here, since *_html variables are
+    // inserted into the email as is.
+    const itemStyle = `color: ${emailColorTokens.colorTextSecondary}; font-size: 13px; margin-bottom: 4px;`;
+    const listItems = shown.map((name) => `<li style="${itemStyle}">${escapeHtml(name)}</li>`);
+    if (hidden > 0) listItems.push(`<li style="${itemStyle}">and ${hidden} more</li>`);
+    const listHtml = `<ul style="margin: 0 0 8px 0; padding-left: 20px;">${listItems.join("")}</ul>`;
+
+    await sendInAppNotification(
+      organizationId,
+      {
+        user_id: assigneeId,
+        type: getNotificationTypeForRole(assignment.roleType),
+        title,
+        message: `${assignerName} assigned you as ${assignment.roleType} for ${count} ${assignment.itemsLabel}: ${shown.join(", ")}${more}`,
+        entity_type: getNotificationEntityType(assignment.entityType),
+        action_url: assignment.entityUrl,
+      },
+      true,
+      {
+        template: EMAIL_TEMPLATES.ASSIGNMENT_NOTIFICATION,
+        subject: title,
+        variables: {
+          recipient_name: assignee.name || "User",
+          assigner_name: assignerName,
+          role_type: assignment.roleType,
+          entity_type: assignment.itemsLabel,
+          entity_name: `${count} ${assignment.itemsLabel}`,
+          entity_url: fullUrl,
+          assignment_date: formatAssignmentDate(),
+          role_description:
+            assignment.roleType === "Risk Owner"
+              ? "As the Risk Owner, you are responsible for managing and mitigating these risks."
+              : getRoleDescription(assignment.roleType),
+          entity_context_html: listHtml,
+        },
+      },
+    );
+
+    logger.info(
+      `📧 Assignment notification sent to user ${assigneeId} as ${assignment.roleType} for ${count} ${assignment.entityType} items`,
+    );
+  } catch (error) {
+    logger.error(
+      `Failed to send assignment notification to user ${assigneeId}: ${error instanceof Error ? error.message : String(error)}`,
+    );
+    // Don't rethrow - notifications should not break the main flow
+  }
+};

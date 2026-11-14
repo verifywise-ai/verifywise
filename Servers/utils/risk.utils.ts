@@ -7,6 +7,8 @@ import { TenantAutomationActionModel } from "../domain.layer/models/tenantAutoma
 import { replaceTemplateVariables } from "./automation/automation.utils";
 import { enqueueAutomationAction } from "../services/automations/automationProducer";
 import {
+  BulkRiskChange,
+  buildBulkRiskReplacements,
   buildRiskReplacements,
   buildRiskUpdateReplacements,
 } from "./automation/risk.automation.utils";
@@ -42,6 +44,34 @@ const enqueueRiskAutomation = async (
       logger.error(`[risk] ${actionKey} automation enqueue after commit failed: ${error}`),
     );
   });
+};
+
+type RiskAutomationTrigger = "risk_added" | "risk_updated" | "risk_deleted";
+type RiskAutomation = TenantAutomationActionModel & {
+  trigger_key: string;
+  action_key: string;
+  automation_id: number;
+};
+
+/**
+ * The organization's active automation for a risk trigger: the first action
+ * in order, as every risk path has always used (R-L6 tracks running them all).
+ */
+const findRiskAutomation = async (
+  triggerKey: RiskAutomationTrigger,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<RiskAutomation | undefined> => {
+  const automations = (await sequelize.query(
+    `SELECT
+      pat.key AS trigger_key,
+      paa.key AS action_key,
+      a.id AS automation_id,
+      aa.*
+    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = :triggerKey AND a.is_active ORDER BY aa."order" ASC;`,
+    { replacements: { organizationId, triggerKey }, transaction },
+  )) as [RiskAutomation[], number];
+  return automations[0][0];
 };
 
 type Mitigation = {
@@ -895,24 +925,8 @@ export const createRiskQuery = async (
   }
   const createdRisk = result[0];
 
-  const automations = (await sequelize.query(
-    `SELECT
-      pat.key AS trigger_key,
-      paa.key AS action_key,
-      a.id AS automation_id,
-      aa.*
-    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'risk_added' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction },
-  )) as [
-    (TenantAutomationActionModel & {
-      trigger_key: string;
-      action_key: string;
-      automation_id: number;
-    })[],
-    number,
-  ];
-  if (automations[0].length > 0) {
-    const automation = automations[0][0];
+  const automation = await findRiskAutomation("risk_added", organizationId, transaction);
+  if (automation) {
     if (automation["trigger_key"] === "risk_added") {
       const owner_name = (await sequelize.query(
         `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :owner_id;`,
@@ -1001,7 +1015,10 @@ export const updateRiskByIdQuery = async (
   >,
   organizationId: number,
   transaction: Transaction,
-  { recordSnapshots = true }: { recordSnapshots?: boolean } = {},
+  {
+    recordSnapshots = true,
+    runAutomations = true,
+  }: { recordSnapshots?: boolean; runAutomations?: boolean } = {},
 ): Promise<RiskModel | null> => {
   const existingRisk = await getRiskByIdQuery(id, organizationId, true);
   // Unchanged owner/approver are not re-checked, so a risk whose owner has
@@ -1215,24 +1232,12 @@ export const updateRiskByIdQuery = async (
     }
   }
   const updatedRisk = result[0];
-  const automations = (await sequelize.query(
-    `SELECT
-      pat.key AS trigger_key,
-      paa.key AS action_key,
-      a.id AS automation_id,
-      aa.*
-    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'risk_updated' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction },
-  )) as [
-    (TenantAutomationActionModel & {
-      trigger_key: string;
-      action_key: string;
-      automation_id: number;
-    })[],
-    number,
-  ];
-  if (automations[0].length > 0) {
-    const automation = automations[0][0];
+  // A bulk action passes runAutomations: false and runs the automation once
+  // for the whole batch (enqueueBulkRiskAutomation).
+  const automation = runAutomations
+    ? await findRiskAutomation("risk_updated", organizationId, transaction)
+    : undefined;
+  if (automation) {
     if (automation["trigger_key"] === "risk_updated") {
       let ownerFullName = "";
 
@@ -1331,7 +1336,10 @@ export const deleteRiskByIdQuery = async (
   id: number,
   organizationId: number,
   transaction: Transaction,
-  { recordSnapshots = true }: { recordSnapshots?: boolean } = {},
+  {
+    recordSnapshots = true,
+    runAutomations = true,
+  }: { recordSnapshots?: boolean; runAutomations?: boolean } = {},
 ): Promise<boolean> => {
   // Soft delete. Custom field values stay with the archived risk, and nothing
   // else runs when no active risk matched (R-M7).
@@ -1347,24 +1355,12 @@ export const deleteRiskByIdQuery = async (
   )) as [RiskModel[], number];
   const deletedRisk = result[0][0];
   if (!deletedRisk) return false;
-  const automations = (await sequelize.query(
-    `SELECT
-      pat.key AS trigger_key,
-      paa.key AS action_key,
-      a.id AS automation_id,
-      aa.*
-    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'risk_deleted' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction },
-  )) as [
-    (TenantAutomationActionModel & {
-      trigger_key: string;
-      action_key: string;
-      automation_id: number;
-    })[],
-    number,
-  ];
-  if (automations[0].length > 0) {
-    const automation = automations[0][0];
+  // A bulk action passes runAutomations: false and runs the automation once
+  // for the whole batch (enqueueBulkRiskAutomation).
+  const automation = runAutomations
+    ? await findRiskAutomation("risk_deleted", organizationId, transaction)
+    : undefined;
+  if (automation) {
     if (automation["trigger_key"] === "risk_deleted") {
       const owner_name = (await sequelize.query(
         `SELECT name || ' ' || surname AS full_name FROM users WHERE id = :owner_id;`,
@@ -1495,10 +1491,73 @@ export const recordRiskSnapshots = async (
 };
 
 /**
+ * Run a risk automation once for a whole bulk action: `risk_deleted` for an
+ * archive, `risk_updated` for a set owner/category. The per-risk paths run
+ * with runAutomations: false, so the org gets one email per bulk action, not
+ * one per risk. Uses the same automation the single path would and enqueues
+ * after commit. Owner and approver names come from one query for the batch.
+ */
+export const enqueueBulkRiskAutomation = async (
+  trigger: "risk_deleted" | "risk_updated",
+  changes: BulkRiskChange[],
+  organizationId: number,
+  transaction: Transaction,
+): Promise<void> => {
+  if (changes.length === 0) return;
+  const automation = await findRiskAutomation(trigger, organizationId, transaction);
+  if (!automation) return;
+
+  const userIds = [
+    ...new Set(
+      changes
+        .flatMap(({ before, after }) => [
+          before.risk_owner,
+          before.risk_approval,
+          after.risk_owner,
+          after.risk_approval,
+        ])
+        .filter((id): id is number => Boolean(id))
+        .map(Number),
+    ),
+  ];
+  const names = new Map<number, string>();
+  if (userIds.length > 0) {
+    const rows = await sequelize.query<{ id: number; full_name: string }>(
+      `SELECT id, name || ' ' || surname AS full_name FROM users WHERE id IN (:userIds);`,
+      { replacements: { userIds }, type: QueryTypes.SELECT, transaction },
+    );
+    for (const row of rows) names.set(Number(row.id), row.full_name);
+  }
+  const withNames = (risk: any) => ({
+    ...risk,
+    owner_name: (risk.risk_owner && names.get(Number(risk.risk_owner))) || "",
+    approver_name: (risk.risk_approval && names.get(Number(risk.risk_approval))) || "",
+  });
+
+  const replacements = buildBulkRiskReplacements(
+    trigger,
+    changes.map(({ before, after }) => ({ before: withNames(before), after: withNames(after) })),
+  );
+  const params = automation.params!;
+  await enqueueRiskAutomation(
+    automation.action_key,
+    {
+      ...params,
+      subject: replaceTemplateVariables(params.subject || "", replacements),
+      body: replaceTemplateVariables(params.body || "", replacements),
+      automation_id: automation.automation_id,
+      organizationId,
+    },
+    transaction,
+  );
+};
+
+/**
  * Archive (soft-delete) one risk with every side effect of the single delete:
  * the risk_deleted automation, the change-history entry and the risk's policy
  * links. Shared by DELETE /projectRisks/:id and the bulk archive, which passes
- * recordSnapshots: false and records the snapshots once for the whole batch.
+ * recordSnapshots: false and runAutomations: false and records the snapshots
+ * and runs the automation once for the whole batch.
  *
  * Returns false, and does nothing else, when no active risk matched.
  */
@@ -1507,10 +1566,14 @@ export const archiveRiskQuery = async (
   organizationId: number,
   userId: number | undefined,
   transaction: Transaction,
-  { recordSnapshots = true }: { recordSnapshots?: boolean } = {},
+  {
+    recordSnapshots = true,
+    runAutomations = true,
+  }: { recordSnapshots?: boolean; runAutomations?: boolean } = {},
 ): Promise<boolean> => {
   const archived = await deleteRiskByIdQuery(id, organizationId, transaction, {
     recordSnapshots,
+    runAutomations,
   });
   if (!archived) return false;
 

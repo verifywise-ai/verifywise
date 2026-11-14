@@ -7,6 +7,7 @@ jest.mock("../../utils/risk.utils", () => ({
   assertRiskReferencesInOrganization: jest.fn<any>().mockResolvedValue(undefined),
   getActiveRisksByIdsQuery: jest.fn<any>().mockResolvedValue([]),
   getProjectTitlesByRiskIdsQuery: jest.fn<any>().mockResolvedValue(new Map()),
+  enqueueBulkRiskAutomation: jest.fn<any>().mockResolvedValue(undefined),
   // The real comparison, so the skip rules are exercised end to end.
   sameRiskCategories: (stored: unknown, next: string[]) =>
     jest
@@ -54,6 +55,7 @@ jest.mock("../../utils/logger/dbLogger", () => ({
 }));
 jest.mock("../../services/inAppNotification.service", () => ({
   notifyUserAssigned: jest.fn<any>().mockResolvedValue(undefined),
+  notifyUserAssignedMany: jest.fn<any>().mockResolvedValue(undefined),
 }));
 jest.mock("../../utils/quantitativeRisk.utils", () => ({
   computeDerivedFields: jest.fn(),
@@ -78,10 +80,14 @@ import {
   assertRiskReferencesInOrganization,
   getActiveRisksByIdsQuery,
   getProjectTitlesByRiskIdsQuery,
+  enqueueBulkRiskAutomation,
 } from "../../utils/risk.utils";
 import { parseBulkIds, assertOrgOwnsIds, withBulkTransaction } from "../../utils/bulkAction.utils";
 import { updateRiskService } from "../../services/risk.service";
-import { notifyUserAssigned } from "../../services/inAppNotification.service";
+import {
+  notifyUserAssigned,
+  notifyUserAssignedMany,
+} from "../../services/inAppNotification.service";
 import { enqueueRiskLinkRecompute } from "../../services/automations/automationProducer";
 import { sequelize } from "../../database/db";
 import {
@@ -104,6 +110,8 @@ const mockEnqueue = enqueueRiskLinkRecompute as jest.MockedFunction<
 const mockQuery = sequelize.query as unknown as jest.Mock<any>;
 const mockGetActive = getActiveRisksByIdsQuery as unknown as jest.Mock<any>;
 const mockTitles = getProjectTitlesByRiskIdsQuery as unknown as jest.Mock<any>;
+const mockBulkAutomation = enqueueBulkRiskAutomation as unknown as jest.Mock<any>;
+const mockNotifyMany = notifyUserAssignedMany as unknown as jest.Mock<any>;
 
 const TX = { id: "tx" };
 let committed = false;
@@ -191,11 +199,26 @@ describe("bulkUpdateProjectRisks", () => {
         expect.objectContaining({ id: 1, risk_owner: 3 }),
         { userId: 9, organizationId: 4 },
         TX,
-        { recordSnapshots: false },
+        { recordSnapshots: false, runAutomations: false },
       );
       // History snapshots are recorded once for the batch, in the transaction.
       expect(mockSnapshots).toHaveBeenCalledTimes(1);
       expect(mockSnapshots).toHaveBeenCalledWith(4, TX);
+      // The org automation runs once for the batch, with only the changed risk.
+      expect(mockBulkAutomation).toHaveBeenCalledTimes(1);
+      expect(mockBulkAutomation).toHaveBeenCalledWith(
+        "risk_updated",
+        [
+          {
+            before: expect.objectContaining({ id: 1, risk_owner: 3 }),
+            after: expect.objectContaining({ id: 1, risk_owner: 7 }),
+          },
+        ],
+        4,
+        TX,
+      );
+      // A single assigned risk keeps the single-risk notice.
+      expect(mockNotifyMany).not.toHaveBeenCalled();
       // One project-title lookup for every notified risk.
       expect(mockTitles).toHaveBeenCalledTimes(1);
       expect(mockTitles).toHaveBeenCalledWith([1], 4);
@@ -230,6 +253,55 @@ describe("bulkUpdateProjectRisks", () => {
       });
     });
 
+    it("sends the new owner one notice listing every changed risk, after commit", async () => {
+      arrangeRows([
+        { id: 1, risk_owner: 3, risk_name: "R1" },
+        { id: 2, risk_owner: 7, risk_name: "R2" },
+        { id: 4, risk_owner: null, risk_name: "R4" },
+        { id: 6, risk_owner: 5, risk_name: "R6" },
+      ]);
+      const committedAtNotify: boolean[] = [];
+      mockNotifyMany.mockImplementation(async () => {
+        committedAtNotify.push(committed);
+      });
+      const req = createReq({ ids: [1, 2, 4, 6], action: "set_owner", ownerId: 7 });
+      const res = createRes();
+
+      await bulkUpdateProjectRisks(req as Request, res as Response);
+      await flush();
+
+      expect(mockNotifyMany).toHaveBeenCalledTimes(1);
+      expect(committedAtNotify).toEqual([true]);
+      // Risk 2 already belonged to user 7, so it is not listed.
+      expect(mockNotifyMany).toHaveBeenCalledWith(
+        4,
+        7,
+        {
+          entityType: "project_risk",
+          itemsLabel: "risks",
+          items: [
+            { id: 1, name: "R1" },
+            { id: 4, name: "R4" },
+            { id: 6, name: "R6" },
+          ],
+          roleType: "Risk Owner",
+          entityUrl: "/risk-management",
+        },
+        "Ada Admin",
+        expect.any(String),
+      );
+      expect(mockNotify).not.toHaveBeenCalled();
+      // No per-risk project lookup for the combined notice.
+      expect(mockTitles).not.toHaveBeenCalled();
+      // One automation for the three changed risks.
+      expect(mockBulkAutomation).toHaveBeenCalledTimes(1);
+      expect(mockBulkAutomation.mock.calls[0][1].map((c: any) => c.after.id)).toEqual([1, 4, 6]);
+      expect(res.json).toHaveBeenCalledWith({
+        message: "OK",
+        data: { updated: 4, changed: 3, action: "set_owner" },
+      });
+    });
+
     it("returns 400 and writes nothing when the new owner is outside the organization", async () => {
       (assertRiskReferencesInOrganization as jest.Mock<any>).mockRejectedValueOnce(
         new ValidationException("The risk owner must be a member of this organization"),
@@ -256,7 +328,9 @@ describe("bulkUpdateProjectRisks", () => {
 
       expect(res.status).toHaveBeenCalledWith(500);
       expect(mockNotify).not.toHaveBeenCalled();
+      expect(mockNotifyMany).not.toHaveBeenCalled();
       expect(mockEnqueue).not.toHaveBeenCalled();
+      expect(mockBulkAutomation).not.toHaveBeenCalled();
     });
 
     it("returns 400 when set_owner is missing ownerId", async () => {
@@ -298,9 +372,23 @@ describe("bulkUpdateProjectRisks", () => {
         expect.objectContaining({ id: 1 }),
         { userId: 9, organizationId: 4 },
         TX,
-        { recordSnapshots: false },
+        { recordSnapshots: false, runAutomations: false },
       );
       expect(mockSnapshots).toHaveBeenCalledTimes(1);
+      expect(mockBulkAutomation).toHaveBeenCalledWith(
+        "risk_updated",
+        [
+          {
+            before: expect.objectContaining({ id: 1, risk_category: ["Strategic risk"] }),
+            after: expect.objectContaining({
+              id: 1,
+              risk_category: ["Strategic risk", "Operational risk"],
+            }),
+          },
+        ],
+        4,
+        TX,
+      );
       expect(assertRiskReferencesInOrganization).not.toHaveBeenCalled();
       expect(mockEnqueue).toHaveBeenCalledWith(4, 1);
       expect(mockNotify).not.toHaveBeenCalled();
@@ -347,6 +435,7 @@ describe("bulkUpdateProjectRisks", () => {
       expect(mockUpdateService).not.toHaveBeenCalled();
       expect(mockEnqueue).not.toHaveBeenCalled();
       expect(mockSnapshots).not.toHaveBeenCalled();
+      expect(mockBulkAutomation).not.toHaveBeenCalled();
       expect(res.json).toHaveBeenCalledWith({
         message: "OK",
         data: { updated: 1, changed: 0, action: "set_category" },
@@ -384,6 +473,10 @@ describe("bulkUpdateProjectRisks", () => {
   describe("archive", () => {
     it("archives each risk through the shared path and records the snapshots once", async () => {
       // Risk 11 was already archived.
+      arrangeRows([
+        { id: 10, risk_name: "R10" },
+        { id: 12, risk_name: "R12" },
+      ]);
       mockArchive.mockImplementation(async (id: number) => id !== 11);
       const req = createReq({ ids: [10, 11, 12], action: "archive" });
       const res = createRes();
@@ -393,10 +486,25 @@ describe("bulkUpdateProjectRisks", () => {
 
       expect(mockArchive).toHaveBeenCalledTimes(3);
       for (const id of [10, 11, 12]) {
-        expect(mockArchive).toHaveBeenCalledWith(id, 4, 9, TX, { recordSnapshots: false });
+        expect(mockArchive).toHaveBeenCalledWith(id, 4, 9, TX, {
+          recordSnapshots: false,
+          runAutomations: false,
+        });
       }
       expect(mockSnapshots).toHaveBeenCalledTimes(1);
       expect(mockSnapshots).toHaveBeenCalledWith(4, TX);
+      // One risk_deleted automation for the batch, listing the archived risks.
+      expect(mockGetActive).toHaveBeenCalledWith([10, 11, 12], 4, TX);
+      expect(mockBulkAutomation).toHaveBeenCalledTimes(1);
+      expect(mockBulkAutomation).toHaveBeenCalledWith(
+        "risk_deleted",
+        [
+          { before: { id: 10, risk_name: "R10" }, after: { id: 10, risk_name: "R10" } },
+          { before: { id: 12, risk_name: "R12" }, after: { id: 12, risk_name: "R12" } },
+        ],
+        4,
+        TX,
+      );
       expect(mockUpdateService).not.toHaveBeenCalled();
       expect(mockEnqueue).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(200);
@@ -414,6 +522,7 @@ describe("bulkUpdateProjectRisks", () => {
       await bulkUpdateProjectRisks(req as Request, res as Response);
 
       expect(mockSnapshots).not.toHaveBeenCalled();
+      expect(mockBulkAutomation).not.toHaveBeenCalled();
       expect(res.json).toHaveBeenCalledWith({
         message: "OK",
         data: { updated: 1, changed: 0, action: "archive" },

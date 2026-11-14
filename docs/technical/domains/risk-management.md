@@ -433,11 +433,15 @@ risk linked only via `answers_eu__risks` is still a `gap`.
 
 ### Archiving and bulk actions
 
-Archiving a risk (single, bulk or through the AI advisor) goes through one server path. In one transaction it soft-deletes the risk, records a deletion entry in its change history, runs the "risk deleted" automation and removes the risk from every policy it was linked to. The client no longer sends a separate unlink request. `DELETE /policy-linked/risk/:riskId/unlink-all` still exists for API callers.
+Archiving a risk (single, bulk or through the AI advisor) goes through one server path. In one transaction it soft-deletes the risk, records a deletion entry in its change history, runs the "risk deleted" automation (once per bulk action, see below) and removes the risk from every policy it was linked to. The client no longer sends a separate unlink request. `DELETE /policy-linked/risk/:riskId/unlink-all` still exists for API callers.
 
-Bulk "set owner" and "set category" go through the single-edit path. Each changed risk gets change-history entries and the "risk updated" automation, and each new owner gets the assignment notification. Risks that already hold the value are skipped and not counted.
+Bulk "set owner" and "set category" go through the single-edit path, so each changed risk still gets its change-history entries. Risks that already hold the value are skipped and not counted.
 
-`PATCH /projectRisks/bulk` answers `{ updated, changed, action }`. `updated` keeps its original meaning, the number of ids sent; `changed` is the number of risks actually archived or edited. The risk table reports `changed`. The risk added, updated and deleted automations are enqueued after the transaction commits, so a bulk action that rolls back sends none. A bulk action records the risk history snapshots once, after its loop.
+Bulk archive, set owner and set category run the organization's automation once per bulk action, not once per risk: the per-risk paths take `runAutomations: false` and the controller calls `enqueueBulkRiskAutomation` ("risk deleted" for archive, "risk updated" for the edits) with the changed risks. With one changed risk the variables are exactly those of a single edit or delete. With several, `{{risk.name}}` is "<n> risks: <names>" (10 names, then "and <k> more"), `{{risk.id}}` is empty, every other variable keeps its value only when all the changed risks share it (for example `{{risk.owner}}` after set owner) and is empty otherwise, and `{{changes_summary}}` has one line per risk such as "• Risk A: Owner: Ann → Bo" (50 lines, then "• and <k> more"). Owner and approver names come from one query for the batch.
+
+A bulk set owner that gives the new owner two or more risks sends one in-app notification and one assignment email, "<n> risks were assigned to you", listing the risks (20, then "and <k> more") with a link to the risk list (`notifyUserAssignedMany`). With one changed risk the owner gets the usual single-risk notice.
+
+`PATCH /projectRisks/bulk` answers `{ updated, changed, action }`. `updated` keeps its original meaning, the number of ids sent; `changed` is the number of risks actually archived or edited. The risk table reports `changed`. The risk added, updated and deleted automations are enqueued after the transaction commits, so a bulk action that rolls back sends none, and the owner notice is sent after the commit too. A bulk action records the risk history snapshots once, after its loop.
 
 Removing a use case or framework from a risk removes the risk's mappings in every framework of that use case: EU AI Act, ISO 42001, ISO 27001, NIST AI RMF, the 21 bundled frameworks, custom frameworks and imported frameworks.
 

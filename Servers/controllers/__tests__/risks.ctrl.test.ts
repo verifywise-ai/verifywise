@@ -14,6 +14,7 @@ jest.mock("../../utils/risk.utils", () => ({
   getProjectTitlesByRiskIdsQuery: jest.fn().mockResolvedValue(new Map()),
   sameRiskCategories: jest.fn().mockReturnValue(false),
   PROJECT_RISK_CATEGORIES_SET: new Set(["financial", "operational", "strategic", "compliance"]),
+  enqueueBulkRiskAutomation: jest.fn(),
 }));
 jest.mock("../../domain.layer/models/risks/risk.model", () => ({
   RiskModel: jest.fn(),
@@ -55,6 +56,7 @@ jest.mock("../../utils/projectRiskChangeHistory.utils", () => ({
 }));
 jest.mock("../../services/inAppNotification.service", () => ({
   notifyUserAssigned: jest.fn().mockResolvedValue(undefined),
+  notifyUserAssignedMany: jest.fn().mockResolvedValue(undefined),
 }));
 jest.mock("../../utils/quantitativeRisk.utils", () => ({
   computeDerivedFields: jest.fn().mockReturnValue({}),
@@ -460,6 +462,8 @@ describe("risks.ctrl", () => {
       );
     });
     it("should return 200 for archive action", async () => {
+      const { getActiveRisksByIdsQuery } = require("../../utils/risk.utils");
+      (getActiveRisksByIdsQuery as jest.Mock<any>).mockResolvedValue([buildRisk({ id: 1 })]);
       mockDelete.mockResolvedValue(true);
       const req = createReq({ body: { ids: [1], action: "archive" } });
       const res = createRes();
