@@ -84,13 +84,10 @@ export default function AIAppDetail() {
           />
         </Box>
 
-        <Box sx={sectionCardStyle}>
-          <AIAppPolicyMapping appId={app.id!} appName={app.name} policies={app.policies || []} />
-        </Box>
+        {/* Table sections sit on the page: the table's own frame is the only box. */}
+        <AIAppPolicyMapping appId={app.id!} appName={app.name} policies={app.policies || []} />
 
-        <Box sx={sectionCardStyle}>
-          <AIAppModelDependencies appId={app.id!} models={app.models || []} />
-        </Box>
+        <AIAppModelDependencies appId={app.id!} models={app.models || []} />
 
         <Box sx={sectionCardStyle}>
           <AIAppLinkedUseCases appId={app.id!} />

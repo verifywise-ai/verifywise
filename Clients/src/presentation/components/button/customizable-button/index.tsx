@@ -169,6 +169,9 @@ const CustomizableButton = memo(
           iconOnly ? ICON_ONLY_SIZE_STYLES[sizeKey] : BUTTON_SIZE_STYLES[sizeKey],
           {
             "position": "relative",
+            // Labels never wrap, and a flex toolbar may not squeeze the button below its label.
+            "whiteSpace": "nowrap",
+            "flexShrink": 0,
             ...(iconOnly && {
               display: "inline-flex",
               alignItems: "center",

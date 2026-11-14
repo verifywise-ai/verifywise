@@ -94,7 +94,7 @@ export const NAV_GROUPS: NavGroup[] = [
         id: "ai-detection",
         label: "AI Detection",
         icon: "ai-detection",
-        extras: ["recentScans", "recentTools"],
+        extras: ["recentScans"],
         children: [
           {
             id: "insights",
