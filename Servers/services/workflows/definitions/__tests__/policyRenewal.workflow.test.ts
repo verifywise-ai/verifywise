@@ -184,7 +184,7 @@ describe("workflows / definitions / policyRenewal", () => {
   });
 
   describe("notify_owner", () => {
-    it("sends a POLICY_DUE_SOON in-app notification to the policy author", async () => {
+    it("sends a POLICY_DUE_SOON in-app notification to the policy author when there is no owner", async () => {
       const policy = {
         id: 42,
         title: "Acceptable Use",
@@ -211,12 +211,28 @@ describe("workflows / definitions / policyRenewal", () => {
       });
     });
 
-    it("skips when the policy has no author_id", async () => {
+    it("notifies the policy owner instead of the author when there is an owner", async () => {
+      const policy = {
+        id: 42,
+        title: "Acceptable Use",
+        next_review_date: reviewDateIn(10),
+        author_id: 7,
+        policy_owner_id: 11,
+      };
+
+      const result = await handlerFor("notify_owner")(ctx({ results: { fetch_policy: policy } }));
+
+      expect((result as any).output).toEqual({ notified: 11 });
+      expect(mockNotify.mock.calls[0][1]).toMatchObject({ user_id: 11 });
+    });
+
+    it("skips when the policy has neither an owner nor an author", async () => {
       const policy = {
         id: 42,
         title: "Acceptable Use",
         next_review_date: reviewDateIn(10),
         author_id: null,
+        policy_owner_id: null,
       };
 
       const result = await handlerFor("notify_owner")(ctx({ results: { fetch_policy: policy } }));

@@ -346,6 +346,8 @@ and compliance, People and organization, Industry packs.
 | `policy_updated` | Policy modified |
 | `policy_deleted` | Policy deleted |
 
+Each trigger runs every action of every active automation for it, ordered by automation id and then action order (`getActiveAutomationActionsQuery`, `enqueueAutomationActions`). The jobs are enqueued after the save commits, so a rolled-back save sends nothing. One failing action is logged and does not stop the others. Risk automations and AI Detection scan automations use the same dispatcher.
+
 ### Review Reminders
 
 One daily sweep, `policy_review_reminder_sweep` at 08:00 (`services/automations/actions/policyReviewReminderSweep.ts`), reminds people of a policy's review twice: once when `next_review_date` comes within 7 days (`POLICY_DUE_SOON`) and once when it has passed (`POLICY_OVERDUE`). Days are compared by calendar day (`next_review_date::date` against `CURRENT_DATE`, UTC). Archived and Deprecated policies are skipped.
@@ -355,7 +357,9 @@ One daily sweep, `policy_review_reminder_sweep` at 08:00 (`services/automations/
 - **Once per kind**: `policy_manager.due_soon_reminded_at` / `overdue_reminded_at` (migration `20261114200000-policy-review-reminder-stamps`) are stamped once every recipient's in-app notice was stored; the in-app notice is the channel of record, and email and Slack failures are logged and never block the stamp. If an in-app notice fails, the policy is retried the next day, recipients already told included. The migration stamps policies already overdue or inside the 7-day window, so the first run after deploy sends nothing for them. Moving the review date to another day (policy update or advisor update) clears both stamps; saving the same day keeps them.
 - **Replaced jobs**: the 08:00 `send_policy_due_soon_notification` email job and the 09:00 `slack-notification-policy` Slack job. Startup removes their Redis schedulers (`removeRetiredPolicyDueSoonScheduler`, `removeRetiredSlackPolicyScheduler`); a job of either name still queued completes without sending.
 
-The policy renewal workflow (`services/workflows/definitions/policyRenewal.workflow.ts`, 30 days ahead, author only) is separate and unchanged.
+The policy renewal workflow (`services/workflows/definitions/policyRenewal.workflow.ts`) is an opt-in autopilot that sends an in-app "Policy renewal due" notice 30 days ahead. It notifies the policy owner, or the author when there is no owner. An organization with it enabled also gets that 30-day notice, separate from the 7-day reminder.
+
+The compliance score counts a policy as overdue when `next_review_date::date` is before `CURRENT_DATE` and its status is not Archived or Deprecated (`getPolicyDocumentationData` in `utils/compliance.utils.ts`). Published policies count when their review day has passed.
 
 ## Key Files
 
