@@ -10,12 +10,12 @@ export const aiTrustIndexSettingsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Settings tab lets you configure which people receive the weekly change digest when tracked apps have material updates. Only organisation Admins can view or edit these settings.',
+      text: 'The Settings tab lets you configure which people receive the weekly change digest when tracked apps have material updates. Only Admins, and custom roles allowed to choose who receives AI Trust Index alerts, can view or edit these settings.',
     },
     {
       type: 'callout',
       variant: 'warning',
-      text: 'If you do not have the Admin role, the Settings tab is hidden. Contact your organisation\'s Admin to update recipients.',
+      text: 'If your role does not have this permission, the Settings tab is hidden. Contact your organisation\'s Admin to update recipients.',
     },
     {
       type: 'heading',

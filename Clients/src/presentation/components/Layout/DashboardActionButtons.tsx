@@ -3,7 +3,6 @@ import { Stack, IconButton, Box } from "@mui/material";
 import { useNavigate, useLocation } from "react-router";
 import { useSelector } from "react-redux";
 import { Search, Zap, WorkflowIcon, Package, ClipboardList } from "lucide-react";
-import { useAuth } from "../../../application/hooks/useAuth";
 import VWTooltip from "../VWTooltip";
 import RequestorApprovalModal from "../Modals/RequestorApprovalModal";
 import { ApprovalButton } from "./ApprovalButton";
@@ -65,10 +64,8 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
 }: DashboardActionButtonsProps) {
   const navigate = useNavigate();
   const location = useLocation();
-  const { userRoleName } = useAuth();
-  // The intake forms link stays on the role name: its routes allow Editors
-  // too (intakeForm.edit), and no Admin-only key covers it.
-  const isAdmin = userRoleName === "Admin";
+  // Intake forms: every write and review action on the page needs intakeForm.edit.
+  const canManageIntake = useCan("intakeForm.edit");
   const canManageWorkflows = useCan("approvalWorkflow.admin");
   const canManageExtensions = useCan("extension.admin");
 
@@ -226,7 +223,7 @@ export const DashboardActionButtons = memo(function DashboardActionButtons({
       )}
 
       {/* Intake forms (Governance module only) */}
-      {isAdmin && isGovernanceModule && (
+      {canManageIntake && isGovernanceModule && (
         <VWTooltip
           header="Intake forms"
           content={"Create and manage intake forms for external submissions."}

@@ -10,14 +10,12 @@ export type NavGroupId = "automate" | "record" | "track" | "enforce" | "workspac
  * - permission: `useCan(key)`. `whenDenied: "disable"` keeps the entry visible
  *   but disabled with `deniedTooltip` (today's Extensions button); the default
  *   hides it.
- * - role: the user's role name in the current organization (`userRoleName`).
  * - superAdmin: `useAuth().isSuperAdmin`.
  * - evalsArena: the organization's Arena setting is on (`useArenaSetting`).
  * - flag: a constant in application/config/featureFlags.ts is true.
  */
 export type NavGate =
   | { permission: UiPermissionKey; whenDenied?: "hide" | "disable"; deniedTooltip?: string }
-  | { role: "Admin" }
   | { superAdmin: true }
   | { evalsArena: true }
   | { flag: "SHOW_AI_GATEWAY_PROMPTS" };

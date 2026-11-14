@@ -89,7 +89,6 @@
   "Active forms cannot be deleted. Archive the form first.": "Aktive Formulare können nicht gelöscht werden. Archivieren Sie das Formular zuerst.",
   "Active ingestion token not found": "Aktives Ingestion-Token nicht gefunden",
   "Add a mitigation plan before accepting this risk": "Fügen Sie einen Minderungsplan hinzu, bevor Sie dieses Risiko annehmen",
-  "Admin access required": "Administratorzugriff erforderlich",
   "Admin role required": "Administratorrolle erforderlich",
   "Admin role required to clear agent memory": "Zum Löschen des Agentenspeichers ist die Administratorrolle erforderlich",
   "Administrators cannot demote themselves from admin role": "Administratoren können sich nicht selbst aus der Administratorrolle entfernen",

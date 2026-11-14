@@ -206,18 +206,29 @@ test.describe("AI Gateway", () => {
   test("Guardrails: add and delete rule", async ({ authedPage: page }) => {
     await page.goto("/ai-gateway/guardrails");
 
+    // Only the page's own rule buttons ("Add PII rule", "Add filter rule"): a
+    // bare /new/i or /create/i also matches the sidebar's "Create demo data"
+    // button, which is always on screen.
     const addBtn = page
       .getByRole("button", { name: /add.*rule/i })
-      .or(page.getByRole("button", { name: /add.*guardrail/i }))
-      .or(page.getByRole("button", { name: /new/i }))
-      .or(page.getByRole("button", { name: /create/i }));
+      .or(page.getByRole("button", { name: /add.*guardrail/i }));
 
-    if (
-      !(await addBtn
+    // isVisible() does not wait, so wait for the page itself before deciding.
+    await expect(page.getByRole("heading", { name: /guardrails/i }).first()).toBeVisible({
+      timeout: 10_000,
+    });
+    // The rule buttons render once the rules have loaded.
+    const canAdd =
+      (await addBtn
         .first()
-        .isVisible({ timeout: 10_000 })
-        .catch(() => false))
-    ) {
+        .waitFor({ state: "visible", timeout: 10_000 })
+        .then(() => true)
+        .catch(() => false)) &&
+      (await addBtn
+        .first()
+        .isEnabled()
+        .catch(() => false));
+    if (!canAdd) {
       test.skip();
       return;
     }
@@ -311,20 +322,39 @@ test.describe("AI Gateway", () => {
   test("Prompts: create and delete prompt", async ({ authedPage: page }) => {
     await page.goto("/ai-gateway/prompts");
 
+    // Only the page's own button ("Create prompt"): a bare /create/i also
+    // matches the sidebar's "Create demo data" button, which is always on screen.
     const addBtn = page
-      .getByRole("button", { name: /add.*prompt/i })
-      .or(page.getByRole("button", { name: /new.*prompt/i }))
-      .or(page.getByRole("button", { name: /create/i }));
+      .getByRole("button", { name: /create.*prompt/i })
+      .or(page.getByRole("button", { name: /add.*prompt/i }))
+      .or(page.getByRole("button", { name: /new.*prompt/i }));
 
-    if (
-      !(await addBtn
+    // isVisible() does not wait, so wait for the button itself before deciding.
+    // The Prompts page only exists while SHOW_AI_GATEWAY_PROMPTS is on; without
+    // it there is no button and the test skips.
+    const canAdd =
+      (await addBtn
         .first()
-        .isVisible({ timeout: 10_000 })
-        .catch(() => false))
-    ) {
+        .waitFor({ state: "visible", timeout: 10_000 })
+        .then(() => true)
+        .catch(() => false)) &&
+      (await addBtn
+        .first()
+        .isEnabled()
+        .catch(() => false));
+    if (!canAdd) {
       test.skip();
       return;
     }
+    // The button shows while the list loads, but the create dialog only
+    // renders after it: wait for the list, its empty state or its error.
+    await expect(
+      page
+        .getByRole("table")
+        .or(page.getByText(/no prompts yet/i))
+        .or(page.getByRole("button", { name: /retry/i }))
+        .first(),
+    ).toBeVisible({ timeout: 10_000 });
     await addBtn.first().click();
 
     // Fill prompt name

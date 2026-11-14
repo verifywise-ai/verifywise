@@ -575,7 +575,11 @@ export default function ExperimentDetailContent({
               <Typography sx={{ fontSize: 18, fontWeight: 700, color: palette.text.primary }}>
                 {experiment.name || experiment.id}
               </Typography>
-              <IconButton
+              <CustomizableButton
+                variant="text"
+                color="primary"
+                iconOnly={true}
+                ariaLabel="Edit experiment name"
                 size="small"
                 onClick={handleStartEditName}
                 className="edit-icon"
@@ -583,14 +587,12 @@ export default function ExperimentDetailContent({
                   "opacity": 0,
                   "transition": "opacity 0.2s",
                   "color": palette.text.tertiary,
-                  "&:hover": {
-                    color: palette.brand.primary,
-                    backgroundColor: "rgba(19, 113, 91, 0.1)",
-                  },
+                  "&:hover": { color: palette.brand.primary },
+                  "&:focus-visible": { opacity: 1 },
                 }}
               >
                 <Pencil size={14} />
-              </IconButton>
+              </CustomizableButton>
             </>
           )}
         </Box>
