@@ -1,0 +1,249 @@
+@keyframes cnEnter {
+  from {
+    opacity: 0;
+    transform: translateY(14px);
+  }
+  to {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes cnSweep {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+@keyframes cnPing {
+  0% {
+    transform: scale(1);
+    opacity: 0.7;
+  }
+  100% {
+    transform: scale(2.6);
+    opacity: 0;
+  }
+}
+@keyframes cnCheck {
+  from {
+    stroke-dashoffset: 14;
+  }
+  to {
+    stroke-dashoffset: 0;
+  }
+}
+@keyframes cnOld {
+  0%,
+  25% {
+    opacity: 1;
+    transform: none;
+  }
+  60%,
+  100% {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+}
+@keyframes cnNew {
+  0%,
+  25% {
+    opacity: 0;
+    transform: translateY(10px);
+  }
+  60%,
+  100% {
+    opacity: 1;
+    transform: none;
+  }
+}
+@keyframes cnArrow {
+  0%,
+  8% {
+    stroke-dashoffset: 130;
+    opacity: 1;
+  }
+  32% {
+    stroke-dashoffset: 0;
+    opacity: 1;
+  }
+  62% {
+    opacity: 1;
+  }
+  85%,
+  100% {
+    stroke-dashoffset: 0;
+    opacity: 0.35;
+  }
+}
+@keyframes cnChip {
+  0%,
+  34% {
+    transform: translate(0, 0);
+  }
+  72%,
+  100% {
+    transform: translate(208px, -13px);
+  }
+}
+@keyframes cnSlot {
+  0%,
+  62% {
+    opacity: 0;
+  }
+  80%,
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes cnGhost {
+  0%,
+  34% {
+    opacity: 0;
+  }
+  55%,
+  100% {
+    opacity: 1;
+  }
+}
+@keyframes cnWipe {
+  0%,
+  15% {
+    clip-path: inset(0 100% 0 0);
+  }
+  75%,
+  100% {
+    clip-path: inset(0 0 0 0);
+  }
+}
+@keyframes cnHandle {
+  0%,
+  15% {
+    left: 0%;
+    opacity: 1;
+  }
+  75% {
+    left: 100%;
+    opacity: 1;
+  }
+  100% {
+    left: 100%;
+    opacity: 0;
+  }
+}
+@keyframes cnBefore {
+  0%,
+  60% {
+    opacity: 1;
+  }
+  75%,
+  100% {
+    opacity: 0;
+  }
+}
+@keyframes cnRing {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 rgba(19, 113, 91, 0.45);
+  }
+  50% {
+    box-shadow: 0 0 0 8px rgba(19, 113, 91, 0);
+  }
+}
+
+.cn-card {
+  animation: cnEnter 0.36s cubic-bezier(0.2, 0.8, 0.2, 1) both;
+}
+.cn-sweep {
+  transform-origin: 18px 18px;
+  animation: cnSweep 2.4s linear 2;
+}
+.cn-ping {
+  transform-origin: 24px 12px;
+  animation: cnPing 1.6s ease-out 3;
+}
+.cn-check {
+  stroke-dasharray: 14;
+  animation: cnCheck 0.5s ease-out both;
+}
+.cn-check-1 {
+  animation-delay: 0.45s;
+}
+.cn-check-2 {
+  animation-delay: 0.6s;
+}
+.cn-check-3 {
+  animation-delay: 0.75s;
+}
+.cn-old {
+  animation: cnOld 1.8s cubic-bezier(0.65, 0, 0.35, 1) 0.4s both;
+}
+.cn-new {
+  animation: cnNew 1.8s cubic-bezier(0.65, 0, 0.35, 1) 0.4s both;
+}
+.cn-arrow {
+  stroke-dasharray: 130;
+  animation: cnArrow 2.8s ease 0.3s 2 both;
+}
+.cn-chip {
+  animation: cnChip 2.8s cubic-bezier(0.65, 0, 0.35, 1) 0.3s 2 both;
+}
+.cn-slot {
+  animation: cnSlot 2.8s ease 0.3s 2 both;
+}
+.cn-ghost {
+  animation: cnGhost 2.8s ease 0.3s 2 both;
+}
+.cn-wipe {
+  animation: cnWipe 2.6s cubic-bezier(0.65, 0, 0.35, 1) 0.4s both;
+}
+.cn-handle {
+  animation: cnHandle 2.6s cubic-bezier(0.65, 0, 0.35, 1) 0.4s both;
+}
+.cn-before {
+  animation: cnBefore 2.6s ease 0.4s both;
+}
+.cn-ring {
+  animation: cnRing 1.2s ease-out 3;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cn-card,
+  .cn-sweep,
+  .cn-ping,
+  .cn-check,
+  .cn-arrow,
+  .cn-chip,
+  .cn-slot,
+  .cn-ghost,
+  .cn-handle,
+  .cn-before,
+  .cn-ring {
+    animation: none;
+  }
+  .cn-old {
+    animation: none;
+    opacity: 0;
+  }
+  .cn-new {
+    animation: none;
+  }
+  .cn-wipe {
+    animation: none;
+    clip-path: none;
+  }
+  .cn-handle {
+    opacity: 0;
+  }
+  .cn-before {
+    opacity: 0;
+  }
+  .cn-chip {
+    transform: translate(208px, -13px);
+  }
+  .cn-arrow {
+    stroke-dasharray: none;
+    opacity: 0.35;
+  }
+}

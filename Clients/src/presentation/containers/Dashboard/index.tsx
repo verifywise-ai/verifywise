@@ -22,6 +22,7 @@ import { AlertState } from "../../../application/interfaces/appStates";
 import { useDashboard } from "../../../application/hooks/useDashboard";
 import { useActiveModule } from "../../../application/hooks/useActiveModule";
 import AppSwitcher from "../../components/AppSwitcher";
+import ChangeNotice from "../../components/ChangeNotice";
 import { ContextSidebar } from "../../components/ContextSidebar";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { storageService } from "../../../infrastructure/storage";
@@ -344,6 +345,8 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
                     </Box>
                   </>
                 </Stack>
+
+                <ChangeNotice />
 
                 {/* Demo Data Modals */}
                 <StandardModal

@@ -60,6 +60,8 @@ export const de: Record<string, string> = {
   "App switcher": "App-Umschalter",
   "Record": "Erfassen",
   "Enforce": "Durchsetzen",
+  "The old look, with an app switcher and a flat menu, gives way to the new look with one grouped sidebar":
+    "Der alte Look mit App-Umschalter und flachem Menü weicht dem neuen Look mit einer gruppierten Seitenleiste",
 };
 
 export const fr: Record<string, string> = {
@@ -121,6 +123,8 @@ export const fr: Record<string, string> = {
   "App switcher": "Sélecteur d'applications",
   "Record": "Enregistrer",
   "Enforce": "Appliquer",
+  "The old look, with an app switcher and a flat menu, gives way to the new look with one grouped sidebar":
+    "L'ancien look, avec un sélecteur d'applications et un menu à plat, laisse place au nouveau look avec une seule barre latérale groupée",
 };
 
 export const es: Record<string, string> = {
@@ -182,4 +186,6 @@ export const es: Record<string, string> = {
   "App switcher": "Selector de aplicaciones",
   "Record": "Registrar",
   "Enforce": "Aplicar",
+  "The old look, with an app switcher and a flat menu, gives way to the new look with one grouped sidebar":
+    "El aspecto anterior, con un selector de aplicaciones y un menú plano, da paso al nuevo aspecto con una barra lateral agrupada",
 };

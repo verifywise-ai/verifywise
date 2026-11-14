@@ -82,6 +82,9 @@ vi.mock("../../../components/ContextSidebar", () => ({
     />
   ),
 }));
+vi.mock("../../../components/ChangeNotice", () => ({
+  default: () => <div data-testid="change-notice-mount" />,
+}));
 vi.mock("../../../components/DemoBanner/DemoAppBanner", () => ({
   default: () => <div data-testid="demo-app-banner" />,
 }));
@@ -117,6 +120,11 @@ describe("Dashboard container", () => {
 
   it("renders without crashing", () => {
     renderWithProviders(<Dashboard reloadTrigger={false} />);
+  });
+
+  it("mounts the change notice once", () => {
+    renderWithProviders(<Dashboard reloadTrigger={false} />);
+    expect(screen.getAllByTestId("change-notice-mount")).toHaveLength(1);
   });
 
   it("renders no AppSwitcher in the phase 1 look", () => {
