@@ -32,6 +32,7 @@ import { PolicyHeader } from "./PolicyEditor/PolicyHeader";
 import { PolicyMetadataSidebar } from "./PolicyEditor/PolicyMetadataSidebar";
 import { PolicyReviewPanel } from "./PolicyEditor/PolicyReviewPanel";
 import { radiusPx } from "../../themes/palette";
+import { toDateOnlyString } from "../../tools/isoDateToString";
 
 // ── Component ─────────────────────────────────────────────────────────
 export default function PolicyEditorPage() {
@@ -246,9 +247,7 @@ export default function PolicyEditorPage() {
         title: policy.title || "",
         status: policy.status || "Draft",
         tags: policy.tags || [],
-        nextReviewDate: policy.next_review_date
-          ? new Date(policy.next_review_date).toISOString().slice(0, 10)
-          : "",
+        nextReviewDate: toDateOnlyString(policy.next_review_date),
         policyOwner:
           policy.policy_owner_id != null
             ? (users.find((u) => u.id === policy.policy_owner_id) ?? null)

@@ -76,7 +76,8 @@ export function usePolicySave({
       status: formData.status,
       tags: formData.tags,
       content_html: html,
-      next_review_date: formData.nextReviewDate ? new Date(formData.nextReviewDate) : undefined,
+      // Sent as "YYYY-MM-DD" so the stored date is the one the user picked.
+      next_review_date: formData.nextReviewDate || undefined,
       policy_owner_id: formData.policyOwner?.id ?? null,
       assigned_reviewer_ids: formData.assignedReviewers
         .map((u) => u.id)
@@ -136,10 +137,13 @@ export function usePolicySave({
       setIsSaving(false);
 
       const errorData = err?.originalError?.response || err?.response?.data || err?.response;
+      // The server sends field errors as STATUS_CODE[400]({ message, errors }),
+      // i.e. under `data`; a bare top-level `errors` is accepted too.
+      const fieldErrors = errorData?.data?.errors ?? errorData?.errors;
 
-      if (errorData?.errors) {
+      if (Array.isArray(fieldErrors)) {
         const apiErrors: PolicyFormErrors = {};
-        errorData.errors.forEach((error: any) => {
+        fieldErrors.forEach((error: any) => {
           if (error.field === "title") apiErrors.title = error.message;
           else if (error.field === "status") apiErrors.status = error.message;
           else if (error.field === "tags") apiErrors.tags = error.message;

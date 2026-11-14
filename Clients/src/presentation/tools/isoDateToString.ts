@@ -39,6 +39,19 @@ const parseDateValue = (value: string | Date): Date | null => {
 };
 
 /**
+ * The calendar date ("YYYY-MM-DD") of a date-only value such as a policy's
+ * next review date. The server stores these at midnight and returns them as
+ * "YYYY-MM-DDT00:00:00.000Z"; formatting that full timestamp in a time zone
+ * west of UTC would show the previous day, so callers format this instead
+ * (parseISO reads a bare date as local midnight).
+ */
+export const toDateOnlyString = (value: string | Date | null | undefined): string => {
+  if (!value) return "";
+  if (value instanceof Date) return isValid(value) ? value.toISOString().slice(0, 10) : "";
+  return /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(0, 10) : "";
+};
+
+/**
  * Converts an ISO date string to a formatted date string based on the user preference.
  *
  * @param {string} isoDate - The ISO date string to be converted.

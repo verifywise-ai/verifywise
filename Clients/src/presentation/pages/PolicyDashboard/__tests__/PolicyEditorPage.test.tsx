@@ -212,6 +212,10 @@ describe("PolicyEditorPage", () => {
     await waitFor(() => {
       expect(mockCreatePolicy).toHaveBeenCalled();
     });
+    // The review date goes out as the picked calendar day, not a timestamp (P-M1).
+    expect(mockCreatePolicy.mock.calls[0][0]).toEqual(
+      expect.objectContaining({ next_review_date: "2026-01-01" }),
+    );
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith("/policies/42/edit", { replace: true });
     });

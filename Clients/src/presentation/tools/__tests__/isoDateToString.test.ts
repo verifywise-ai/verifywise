@@ -5,6 +5,7 @@ import {
   displayFormattedTime,
   formatDate,
   formatDateTime,
+  toDateOnlyString,
 } from "../isoDateToString";
 import { UserDateFormat } from "../../../domain/enums/userDateFormat.enum";
 
@@ -142,5 +143,29 @@ describe("formatDateTime", () => {
   it("includes hours, minutes, and seconds", () => {
     const result = formatDateTime("2024-06-15T00:00:00");
     expect(result).toMatch(/^\d{2}-\d{2}-\d{4}, \d{2}:\d{2}:\d{2}$/);
+  });
+});
+
+describe("toDateOnlyString (P-M1)", () => {
+  it("keeps the calendar day of a stored midnight timestamp", () => {
+    expect(toDateOnlyString("2030-01-15T00:00:00.000Z")).toBe("2030-01-15");
+  });
+  it("passes a date-only value through", () => {
+    expect(toDateOnlyString("2030-01-15")).toBe("2030-01-15");
+  });
+  it("returns an empty string for missing or invalid values", () => {
+    expect(toDateOnlyString(null)).toBe("");
+    expect(toDateOnlyString(undefined)).toBe("");
+    expect(toDateOnlyString("not a date")).toBe("");
+    expect(toDateOnlyString(new Date("invalid"))).toBe("");
+  });
+  it("formats the date-only value as that day in any time zone", () => {
+    // parseISO reads a bare date as local midnight, so the day never shifts.
+    expect(
+      displayFormattedDate(
+        toDateOnlyString("2030-01-15T00:00:00.000Z"),
+        UserDateFormat.DD_MM_YYYY_DASH,
+      ),
+    ).toBe("15-01-2030");
   });
 });

@@ -65,6 +65,7 @@ import type {
   IVirtualFolderInput,
 } from "../../../domain/interfaces/i.virtualFolder";
 import { palette, radiusPx } from "../../themes/palette";
+import { toDateOnlyString } from "../../tools/isoDateToString";
 
 type PolicyColumnKey =
   "title" | "status" | "next_review" | "author" | "last_updated" | "updated_by" | "actions";
@@ -593,7 +594,9 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
       return {
         title: policy.title || "-",
         status: policy.status || "-",
-        next_review: policy.next_review_date ? formatDate(policy.next_review_date) : "-",
+        next_review: policy.next_review_date
+          ? formatDate(toDateOnlyString(policy.next_review_date))
+          : "-",
         author: authorName,
         last_updated: policy.last_updated_at ? formatDate(policy.last_updated_at) : "-",
         updated_by: updatedByName,

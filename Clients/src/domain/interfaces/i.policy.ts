@@ -18,7 +18,8 @@ export interface PolicyInput {
   status: string;
   tags?: string[];
   content_html: string;
-  next_review_date?: Date | undefined;
+  /** Date-only, "YYYY-MM-DD". */
+  next_review_date?: string;
   policy_owner_id?: number | null;
   assigned_reviewer_ids?: number[];
 }
