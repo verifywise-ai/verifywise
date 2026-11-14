@@ -17,11 +17,13 @@ import logger from "../../../utils/logger/fileLogger";
  *
  * Tells a policy's owner and reviewers once when its review date comes within
  * seven days, and once when it passes (recipients are chosen by
- * findPolicyRemindersDueQuery). The policy's *_reminded_at column is stamped
- * only when every recipient's email and in-app notice went out. If any of
- * them failed, the policy stays unstamped and the whole policy is retried the
- * next day: the ones already told get it again, which is better than someone
- * never being told. Slack is a best-effort extra and never blocks the stamp.
+ * findPolicyRemindersDueQuery). The in-app notice is the channel of record:
+ * the policy's *_reminded_at column is stamped once every recipient's in-app
+ * notice was stored. If any of them failed, the policy stays unstamped and
+ * the whole policy is retried the next day: the ones already told get it
+ * again, which is better than someone never being told. Email and Slack are
+ * best-effort: their failures are logged and never block the stamp, so a
+ * deployment without email still gets its reminders, once.
  * One policy's failure does not stop the rest, and one organization's failure
  * does not stop the others.
  */

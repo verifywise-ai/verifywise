@@ -91,14 +91,14 @@ describe("runPolicyReviewReminderSweep", () => {
     expect(m(sendSlackNotification).mock.calls[1][0].userId).toBe(12);
   });
 
-  it("leaves a policy unstamped when one recipient fails, but still tells the rest", async () => {
+  it("leaves a policy unstamped when one in-app notice fails, but still tells the rest", async () => {
     m(findPolicyRemindersDueQuery).mockResolvedValue([
       reminder(1, "overdue", [11, 12, 13]),
       reminder(2, "due_soon", [14]),
     ]);
     m(notifyPolicyReviewReminder)
       .mockResolvedValueOnce(undefined)
-      .mockRejectedValueOnce(new Error("smtp down"))
+      .mockRejectedValueOnce(new Error("in-app store failed"))
       .mockResolvedValueOnce(undefined)
       .mockResolvedValueOnce(undefined);
 

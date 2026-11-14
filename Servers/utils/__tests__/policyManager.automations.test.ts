@@ -16,6 +16,7 @@ jest.mock("../logger/fileLogger", () => ({
 }));
 
 import { sequelize } from "../../database/db";
+import logger from "../logger/fileLogger";
 import { enqueueAutomationAction } from "../../services/automations/automationProducer";
 import {
   createPolicyQuery,
@@ -82,6 +83,7 @@ const userQueries = () =>
 
 beforeEach(() => {
   mockQuery.mockReset();
+  (logger.error as jest.Mock).mockClear();
   mockEnqueue.mockReset();
   mockEnqueue.mockResolvedValue(undefined);
 });
@@ -156,6 +158,8 @@ describe("policy automations", () => {
     await new Promise((resolve) => setImmediate(resolve));
 
     expect(enqueued()).toEqual(IN_ORDER);
+    expect(logger.error).toHaveBeenCalledTimes(1);
+    expect(logger.error).toHaveBeenCalledWith(expect.stringContaining("redis down"));
   });
 
   it("reads no reviewer names and enqueues nothing without an active automation", async () => {

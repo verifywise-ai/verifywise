@@ -16,7 +16,10 @@ jest.mock("../../services/automations/automationProducer", () => ({
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
 import { cleanupDatabase, createTestUser } from "./helpers";
-import { findPolicyRemindersDueQuery } from "../../utils/policyManager.utils";
+import {
+  findPolicyRemindersDueQuery,
+  markPolicyReminderSentQuery,
+} from "../../utils/policyManager.utils";
 import { buildTenantContext, TenantContext } from "./tenant-isolation/tenantIsolation.harness";
 
 const policyPayload = (extra: Record<string, unknown> = {}) => ({
@@ -196,6 +199,36 @@ describe("Policy save correctness", () => {
     expect(row?.review_date).toBe(soon);
     expect(row?.kind).toBe("due_soon");
     expect(row?.recipient_ids).toContain(reviewer);
+  });
+
+  it("picks each review day's reminder kind, and stamped kinds no more (P-H3)", async () => {
+    const ctx = await buildTenantContext();
+    // Days from the database's own CURRENT_DATE, which the query compares against.
+    const [days] = await sequelize.query<Record<string, string>>(
+      `SELECT to_char(CURRENT_DATE, 'YYYY-MM-DD') AS today,
+              to_char(CURRENT_DATE - 1, 'YYYY-MM-DD') AS yesterday,
+              to_char(CURRENT_DATE + 7, 'YYYY-MM-DD') AS in7,
+              to_char(CURRENT_DATE + 8, 'YYYY-MM-DD') AS in8`,
+      { type: QueryTypes.SELECT },
+    );
+    const today = await createPolicy(ctx, { next_review_date: days.today });
+    const yesterday = await createPolicy(ctx, { next_review_date: days.yesterday });
+    const in7 = await createPolicy(ctx, { next_review_date: days.in7 });
+    const in8 = await createPolicy(ctx, { next_review_date: days.in8 });
+
+    const kinds = async () =>
+      new Map((await findPolicyRemindersDueQuery(ctx.orgId)).map((r) => [r.id, r.kind]));
+    const before = await kinds();
+    expect(before.get(today)).toBe("due_soon");
+    expect(before.get(yesterday)).toBe("overdue");
+    expect(before.get(in7)).toBe("due_soon");
+    expect(before.has(in8)).toBe(false);
+
+    await markPolicyReminderSentQuery(today, "due_soon", ctx.orgId);
+    await markPolicyReminderSentQuery(yesterday, "overdue", ctx.orgId);
+    await markPolicyReminderSentQuery(in7, "due_soon", ctx.orgId);
+    const after = await kinds();
+    expect([today, yesterday, in7, in8].filter((id) => after.has(id))).toEqual([]);
   });
 
   it("restarts review reminders only when the review moves to another day (P-H3)", async () => {

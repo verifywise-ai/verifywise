@@ -1224,11 +1224,13 @@ export const notifyModelRiskDueSoon = async (
 
 /**
  * Remind a policy's owner or reviewer that its review is due soon or overdue
- * (P-H3, P-M2). Rejects when the email fails, so the sweep leaves the policy
- * unstamped and retries it the next day. sendInAppNotification swallows email
- * errors, so the email is sent here, and first: a retry after a failed email
- * then adds no second in-app notice. Title, message and subject are keyed and
- * reach the recipient in their language; the email body stays English.
+ * (P-H3, P-M2). The in-app notice is the channel of record: it is stored
+ * first, and a failure to store it rejects, so the sweep leaves the policy
+ * unstamped and retries it the next day. The email is best-effort:
+ * sendInAppNotification logs and swallows its failure (e.g. no email
+ * configured, or no address), so it never blocks the reminder. Title,
+ * message and subject are keyed and reach the recipient in their language;
+ * the email body stays English.
  *
  * @param policy.reviewDate - The review day, "YYYY-MM-DD".
  */
@@ -1240,8 +1242,6 @@ export const notifyPolicyReviewReminder = async (
   baseUrl: string,
 ): Promise<void> => {
   const user = await getUserById(userId);
-  if (!user?.email) throw new Error(`User ${userId} has no email address`);
-
   const overdue = kind === "overdue";
   const titleKey = overdue ? "Policy review overdue" : "Policy review due soon";
   const messageKey = overdue
@@ -1249,37 +1249,37 @@ export const notifyPolicyReviewReminder = async (
     : 'The review of policy "{title}" is due on {date}.';
   const subjectKey = overdue ? "Policy review overdue: {title}" : "Policy review due soon: {title}";
   const policyPath = buildEntityUrl(NotificationEntityType.POLICY, policy.id);
-  const lang = await getUserLanguage(userId);
+  const reviewDate = formatReviewDate(policy.reviewDate);
 
-  await notificationService.sendEmailWithTemplate(
-    user.email,
-    translate(lang, subjectKey, { title: policy.title }),
-    EMAIL_TEMPLATES.POLICY_REVIEW_REMINDER,
+  await sendInAppNotification(
+    organizationId,
     {
-      reminder_title: translate("en", titleKey),
-      reminder_message: translate("en", messageKey, {
-        title: policy.title,
-        date: formatReviewDate(policy.reviewDate),
-      }),
-      recipient_name: user.name || "there",
-      policy_name: policy.title,
-      review_date: formatReviewDate(policy.reviewDate),
-      policy_url: `${baseUrl}${policyPath}`,
+      user_id: userId,
+      lang: await getUserLanguage(userId),
+      type: overdue ? NotificationType.POLICY_OVERDUE : NotificationType.POLICY_DUE_SOON,
+      titleKey,
+      messageKey,
+      messageVars: { title: policy.title, date: policy.reviewDate },
+      entity_type: NotificationEntityType.POLICY,
+      entity_id: policy.id,
+      entity_name: policy.title,
+      action_url: policyPath,
+    },
+    true,
+    {
+      template: EMAIL_TEMPLATES.POLICY_REVIEW_REMINDER,
+      subjectKey,
+      subjectVars: { title: policy.title },
+      variables: {
+        reminder_title: translate("en", titleKey),
+        reminder_message: translate("en", messageKey, { title: policy.title, date: reviewDate }),
+        recipient_name: user?.name || "there",
+        policy_name: policy.title,
+        review_date: reviewDate,
+        policy_url: `${baseUrl}${policyPath}`,
+      },
     },
   );
-
-  await sendInAppNotification(organizationId, {
-    user_id: userId,
-    lang,
-    type: overdue ? NotificationType.POLICY_OVERDUE : NotificationType.POLICY_DUE_SOON,
-    titleKey,
-    messageKey,
-    messageVars: { title: policy.title, date: policy.reviewDate },
-    entity_type: NotificationEntityType.POLICY,
-    entity_id: policy.id,
-    entity_name: policy.title,
-    action_url: policyPath,
-  });
 };
 
 /**

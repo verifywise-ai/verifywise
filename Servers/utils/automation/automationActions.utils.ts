@@ -45,12 +45,14 @@ export async function getActiveAutomationActionsQuery(
  * replacements. Each action is enqueued on its own: a failed enqueue is
  * logged and never stops the others or throws. Inside a transaction the
  * enqueues wait for the commit, so a rolled-back write sends nothing.
+ * `logContext` (e.g. "scan 12") is added to the failure log.
  */
 export async function enqueueAutomationActions(
   actions: IAutomationActionRow[],
   replacements: Record<string, any>,
   organizationId: number,
   transaction?: Transaction,
+  logContext?: string,
 ): Promise<void> {
   if (actions.length === 0) return;
   const enqueueAll = () =>
@@ -67,7 +69,9 @@ export async function enqueueAutomationActions(
           });
         } catch (error) {
           logger.error(
-            `[automation] ${action.action_key} enqueue failed for automation ${action.automation_id}: ${String(error)}`,
+            `[automation] ${action.action_key} enqueue failed for automation ${action.automation_id}${
+              logContext ? ` (${logContext})` : ""
+            }: ${String(error)}`,
           );
         }
       }),

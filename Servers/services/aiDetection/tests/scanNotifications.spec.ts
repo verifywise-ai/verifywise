@@ -33,6 +33,7 @@ import {
 } from "../../../utils/automation/aiDetection.automation.utils";
 import { IScan, IRiskScoreDetails } from "../../../domain.layer/interfaces/i.aiDetection";
 import { getUserLanguage } from "../../../utils/userPreference.utils";
+import logger from "../../../utils/logger/fileLogger";
 import { translate } from "../../../utils/i18n.utils";
 
 jest.mock("../../../utils/aiDetection.utils", () => ({ getScanByIdQuery: jest.fn() }));
@@ -44,6 +45,7 @@ jest.mock("../../../utils/aiDetectionNotification.utils", () => ({
   getScanRecipientsQuery: jest.fn(),
 }));
 jest.mock("../../../utils/automation/automationActions.utils", () => ({
+  ...jest.requireActual("../../../utils/automation/automationActions.utils"),
   getActiveAutomationActionsQuery: jest.fn(),
 }));
 jest.mock("../../inAppNotification.service", () => ({
@@ -474,6 +476,26 @@ describe("notifyAiDetectionScanFinished", () => {
     ]);
     const highRiskJob = mockEnqueue.mock.calls.find(([, data]) => data.automation_id === 2)![1];
     expect(highRiskJob.body).toMatch(/^1 new: eval http.*\/ai-detection\/scans\/42$/);
+  });
+
+  it("logs a failed enqueue with the scan id and still enqueues the other actions", async () => {
+    mockAutomations.mockImplementation(async (_org: number, key: string) =>
+      key === "ai_detection_scan_completed"
+        ? [
+            { automation_id: 1, action_key: "send_email", params: { subject: "a" } },
+            { automation_id: 1, action_key: "send_slack", params: { subject: "b" } },
+          ]
+        : [],
+    );
+    mockEnqueue.mockRejectedValueOnce(new Error("redis down"));
+
+    await notifyAiDetectionScanFinished(42, ORG);
+
+    expect(mockEnqueue).toHaveBeenCalledTimes(2);
+    const errors = (logger.error as jest.Mock).mock.calls.map(([msg]) => String(msg));
+    expect(errors.filter((msg) => msg.includes("enqueue failed"))).toEqual([
+      expect.stringContaining("scan 42"),
+    ]);
   });
 });
 

@@ -1,7 +1,7 @@
 /**
- * notifyPolicyReviewReminder (P-H3, P-M2): email first, then the in-app
- * notice, both keyed into the recipient's language; rejects on a failed
- * email so the sweep leaves the policy unstamped.
+ * notifyPolicyReviewReminder (P-H3, P-M2): the in-app notice is the channel
+ * of record and is stored first; the email is best-effort. Both are keyed
+ * into the recipient's language. Rejects only when the in-app notice fails.
  */
 const mockQuery = jest.fn();
 const mockCreate = jest.fn();
@@ -33,6 +33,7 @@ jest.mock("../notificationService", () => ({
 }));
 
 import { notifyPolicyReviewReminder } from "../inAppNotification.service";
+import logger from "../../utils/logger/fileLogger";
 import { getTranslator } from "../../utils/i18n.utils";
 
 const de = getTranslator("de");
@@ -64,7 +65,7 @@ describe("notifyPolicyReviewReminder", () => {
       'The review of policy "AI use policy" was due on January 15, 2030. Please review it as soon as you can.',
     ],
   ] as const)(
-    "sends the %s reminder as %s, email then in-app",
+    "sends the %s reminder as %s, in-app then email",
     async (kind, type, title, inAppMessage, emailMessage) => {
       await notifyPolicyReviewReminder(3, 11, policy, kind, BASE_URL);
 
@@ -92,8 +93,8 @@ describe("notifyPolicyReviewReminder", () => {
         action_url: "/policies/9/edit",
       });
       expect(mockCreate.mock.calls[0][1]).toBe(3);
-      expect(mockSendTemplate.mock.invocationCallOrder[0]).toBeLessThan(
-        mockCreate.mock.invocationCallOrder[0],
+      expect(mockCreate.mock.invocationCallOrder[0]).toBeLessThan(
+        mockSendTemplate.mock.invocationCallOrder[0],
       );
     },
   );
@@ -112,20 +113,30 @@ describe("notifyPolicyReviewReminder", () => {
     expect(mockLanguage).toHaveBeenCalledTimes(1);
   });
 
-  it("rejects on a failed email and stores no in-app notice, so a retry is clean", async () => {
-    mockSendTemplate.mockRejectedValue(new Error("smtp down"));
+  it("stores the in-app notice and resolves when the email fails", async () => {
+    mockSendTemplate.mockRejectedValue(new Error("EMAIL_ID is not set"));
 
-    await expect(notifyPolicyReviewReminder(3, 11, policy, "due_soon", BASE_URL)).rejects.toThrow(
-      "smtp down",
-    );
-    expect(mockCreate).not.toHaveBeenCalled();
+    await expect(
+      notifyPolicyReviewReminder(3, 11, policy, "due_soon", BASE_URL),
+    ).resolves.toBeUndefined();
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(logger.error).toHaveBeenCalledWith(expect.stringContaining("EMAIL_ID is not set"));
   });
 
-  it("rejects when the person has no email address", async () => {
+  it("stores the in-app notice without an email address, and sends no email", async () => {
     mockQuery.mockResolvedValue([]);
 
+    await notifyPolicyReviewReminder(3, 11, policy, "overdue", BASE_URL);
+
+    expect(mockCreate).toHaveBeenCalledTimes(1);
+    expect(mockSendTemplate).not.toHaveBeenCalled();
+  });
+
+  it("rejects when the in-app notice cannot be stored", async () => {
+    mockCreate.mockRejectedValue(new Error("db down"));
+
     await expect(notifyPolicyReviewReminder(3, 11, policy, "overdue", BASE_URL)).rejects.toThrow(
-      "no email",
+      "db down",
     );
     expect(mockSendTemplate).not.toHaveBeenCalled();
   });

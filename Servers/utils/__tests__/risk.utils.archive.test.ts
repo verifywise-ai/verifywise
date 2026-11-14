@@ -13,8 +13,13 @@ jest.mock("../user.utils", () => ({
 jest.mock("../projectRiskChangeHistory.utils", () => ({
   recordProjectRiskDeletion: jest.fn().mockResolvedValue(undefined),
 }));
+jest.mock("../logger/fileLogger", () => ({
+  __esModule: true,
+  default: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() },
+}));
 
 import { sequelize } from "../../database/db";
+import logger from "../logger/fileLogger";
 import { recordSnapshotIfChanged } from "../history/riskHistory.utils";
 import { recordProjectRiskDeletion } from "../projectRiskChangeHistory.utils";
 import { enqueueAutomationAction } from "../../services/automations/automationProducer";
@@ -44,6 +49,7 @@ const deletesFrom = (table: string) =>
 
 beforeEach(() => {
   mockQuery.mockReset();
+  (logger.error as jest.Mock).mockClear();
   mockSnapshot.mockClear();
   mockRecordDeletion.mockClear();
   mockEnqueue.mockReset();
@@ -314,7 +320,7 @@ describe("risk automations wait for the commit", () => {
         ];
       }
       if (sql.startsWith("UPDATE risks SET is_deleted = true")) {
-        return [[{ id: 5, risk_owner: 2, risk_approval: 3 }], 1];
+        return [[{ id: 5, risk_name: "Archived", risk_owner: 2, risk_approval: 3 }], 1];
       }
       if (sql.startsWith("INSERT INTO risks")) {
         return [{ id: 5, dataValues: { id: 5, risk_owner: 2, risk_approval: 3 } }];
@@ -322,7 +328,9 @@ describe("risk automations wait for the commit", () => {
       // getRiskByIdQuery's read of the stored row, then the edit's UPDATE.
       if (sql.startsWith("SELECT * FROM risks")) return [[{ id: 5 }], 1];
       if (sql.startsWith("UPDATE risks SET")) {
-        return [{ id: 5, dataValues: { id: 5, risk_owner: 2, risk_approval: 3 } }];
+        return [
+          { id: 5, dataValues: { id: 5, risk_name: "Renamed", risk_owner: 2, risk_approval: 3 } },
+        ];
       }
       return [[], 0];
     });
@@ -452,7 +460,12 @@ describe("risk automations wait for the commit", () => {
       ["send_slack", 2],
     ]);
     expect(mockEnqueue.mock.calls[2][1]).toEqual(
-      expect.objectContaining({ subject: "2a ", body: "", automation_id: 2, organizationId: 4 }),
+      expect.objectContaining({
+        subject: "2a Renamed",
+        body: "",
+        automation_id: 2,
+        organizationId: 4,
+      }),
     );
   });
 
@@ -476,6 +489,8 @@ describe("risk automations wait for the commit", () => {
     await new Promise((resolve) => setImmediate(resolve));
 
     expect(mockEnqueue).toHaveBeenCalledTimes(4);
+    expect(logger.error).toHaveBeenCalledTimes(1);
+    expect(logger.error).toHaveBeenCalledWith(expect.stringContaining("redis down"));
   });
 
   it("runs every action for risk_added and, without a transaction, at once", async () => {
