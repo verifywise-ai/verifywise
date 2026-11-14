@@ -10,6 +10,7 @@ import { User } from "../../../domain/types/User";
 import { palette, radiusPx } from "../../themes/palette";
 import { chartTheme } from "../../themes/chartTheme";
 import { getEffectiveRiskLevel, riskLevelBucket } from "../../../application/utils/riskLevel";
+import { riskLevelColor } from "./riskLevelColor";
 
 const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, onRiskSelect }) => {
   const [expandedCategory, setExpandedCategory] = useState<string | null>(null);
@@ -36,18 +37,6 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
     if (riskLevel >= 8) return chartTheme.riskSummary.medium;
     if (riskLevel >= 4) return chartTheme.riskSummary.low;
     return chartTheme.riskSummary.veryLow;
-  };
-
-  const getRiskLevelFromString = (level: string | number): number => {
-    if (typeof level === "number") return level;
-    const levelStr = level.trim().toLowerCase();
-    if (levelStr.includes("very high") || levelStr === "5") return 5;
-    if (levelStr.includes("high") || levelStr === "4") return 4;
-    if (levelStr.includes("medium") || levelStr === "3") return 3;
-    if (levelStr.includes("very low") || levelStr === "1") return 1;
-    if (levelStr.includes("low") || levelStr === "2") return 2;
-    const n = parseInt(levelStr, 10);
-    return Number.isFinite(n) ? n : 0;
   };
 
   // Helper function to get user name by ID
@@ -330,9 +319,7 @@ const RiskCategories: React.FC<IRiskCategoriesProps> = ({ risks, selectedRisk, o
                               size="small"
                               label={getEffectiveRiskLevel(risk)}
                               sx={{
-                                backgroundColor: getRiskLevelColor(
-                                  getRiskLevelFromString(getEffectiveRiskLevel(risk)),
-                                ),
+                                backgroundColor: riskLevelColor(getEffectiveRiskLevel(risk)),
                                 color: "white",
                                 fontSize: 10,
                                 height: 18,
