@@ -22,8 +22,12 @@ jest.mock("../logger/fileLogger", () => ({
 }));
 
 import { sequelize } from "../../database/db";
+import { fetchCustomFieldsForEntities } from "../customField.utils";
 import {
+  createPolicyQuery,
   findPolicyRemindersDueQuery,
+  getAllPoliciesQuery,
+  getPolicyByIdQuery,
   markPolicyReminderSentQuery,
   updatePolicyByIdQuery,
 } from "../policyManager.utils";
@@ -104,16 +108,22 @@ describe("markPolicyReminderSentQuery", () => {
   it.each([
     ["due_soon", "due_soon_reminded_at"],
     ["overdue", "overdue_reminded_at"],
-  ] as const)("stamps %s in %s, scoped to the organization", async (kind, column) => {
-    mockQuery.mockResolvedValue([[], 1]);
+  ] as const)("stamps %s in %s only on the selected day, still unstamped", async (kind, column) => {
+    mockQuery.mockResolvedValue([undefined, 1]);
 
-    await markPolicyReminderSentQuery(9, kind, 4);
+    await expect(markPolicyReminderSentQuery(9, kind, "2030-01-15", 4)).resolves.toBe(true);
 
     const [sql, options] = mockQuery.mock.calls[0];
     expect(squash(sql)).toBe(
-      `UPDATE policy_manager SET ${column} = now() WHERE organization_id = :organizationId AND id = :id`,
+      `UPDATE policy_manager SET ${column} = now() WHERE organization_id = :organizationId AND id = :id AND next_review_date::date = CAST(:reviewDate AS date) AND ${column} IS NULL`,
     );
-    expect(options.replacements).toEqual({ organizationId: 4, id: 9 });
+    expect(options.replacements).toEqual({ organizationId: 4, id: 9, reviewDate: "2030-01-15" });
+  });
+
+  it("reports no stamp when the review date changed meanwhile", async () => {
+    mockQuery.mockResolvedValue([undefined, 0]);
+
+    await expect(markPolicyReminderSentQuery(9, "overdue", "2030-01-15", 4)).resolves.toBe(false);
   });
 });
 
@@ -157,5 +167,44 @@ describe("updatePolicyByIdQuery review reminder stamps", () => {
 
     expect(sql).not.toContain("next_review_date");
     expect(sql).not.toContain("reminded_at");
+  });
+});
+
+describe("policy rows leave the utils without the reminder stamps", () => {
+  const STAMPS = {
+    due_soon_reminded_at: "2030-01-10T08:00:00Z",
+    overdue_reminded_at: null,
+  };
+  const STORED = { id: 9, title: "Policy", assigned_reviewer_ids: [], ...STAMPS };
+  const tx = { afterCommit: jest.fn() };
+
+  beforeEach(() => {
+    mockQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes("FROM automation_triggers")) return [];
+      if (sql.includes("FROM policy_manager pm")) return [{ ...STORED }];
+      if (sql.includes("INSERT INTO policy_manager AS pm")) return [[{ ...STORED }], 1];
+      return [[], 0];
+    });
+  });
+
+  const expectNoStamps = (row: Record<string, unknown>) => {
+    expect(row).not.toHaveProperty("due_soon_reminded_at");
+    expect(row).not.toHaveProperty("overdue_reminded_at");
+    expect(row).toMatchObject({ id: 9, title: "Policy" });
+  };
+
+  it("on update", async () => {
+    const updated = await updatePolicyByIdQuery(9, { title: "Policy" } as never, 4, 1, tx as never);
+    expectNoStamps(updated as Record<string, unknown>);
+  });
+
+  it("on create, get by id and list", async () => {
+    (fetchCustomFieldsForEntities as jest.Mock).mockResolvedValue(new Map());
+
+    expectNoStamps(await createPolicyQuery({ title: "Policy" } as never, 4, 1, tx as never));
+    expectNoStamps((await getPolicyByIdQuery(4, 9))[0]);
+    const [listed] = await getAllPoliciesQuery(4);
+    expectNoStamps(listed);
+    expect(listed.custom_fields).toEqual([]);
   });
 });

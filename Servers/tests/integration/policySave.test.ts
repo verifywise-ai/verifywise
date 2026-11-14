@@ -224,9 +224,11 @@ describe("Policy save correctness", () => {
     expect(before.get(in7)).toBe("due_soon");
     expect(before.has(in8)).toBe(false);
 
-    await markPolicyReminderSentQuery(today, "due_soon", ctx.orgId);
-    await markPolicyReminderSentQuery(yesterday, "overdue", ctx.orgId);
-    await markPolicyReminderSentQuery(in7, "due_soon", ctx.orgId);
+    // A stale day stamps nothing (date changed mid-sweep).
+    expect(await markPolicyReminderSentQuery(today, "due_soon", days.in8, ctx.orgId)).toBe(false);
+    expect(await markPolicyReminderSentQuery(today, "due_soon", days.today, ctx.orgId)).toBe(true);
+    await markPolicyReminderSentQuery(yesterday, "overdue", days.yesterday, ctx.orgId);
+    await markPolicyReminderSentQuery(in7, "due_soon", days.in7, ctx.orgId);
     const after = await kinds();
     expect([today, yesterday, in7, in8].filter((id) => after.has(id))).toEqual([]);
   });

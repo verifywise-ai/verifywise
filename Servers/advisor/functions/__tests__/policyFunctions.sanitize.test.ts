@@ -1,5 +1,8 @@
 jest.mock("../../../database/db", () => ({ sequelize: { query: jest.fn() } }));
-jest.mock("../../../utils/policyManager.utils", () => ({ getAllPoliciesQuery: jest.fn() }));
+jest.mock("../../../utils/policyManager.utils", () => ({
+  getAllPoliciesQuery: jest.fn(),
+  omitReminderStamps: jest.requireActual("../../../utils/policyManager.utils").omitReminderStamps,
+}));
 jest.mock("../../../utils/policyTemplate.utils", () => ({ getPolicyTemplatesQuery: jest.fn() }));
 jest.mock("../../approval/approvalGateway", () => ({ submitForApproval: jest.fn() }));
 jest.mock("../../../utils/logger/fileLogger", () => ({
@@ -35,5 +38,17 @@ describe("advisor policy writes sanitize content_html", () => {
     expect(html).toContain("<p>keep</p>");
     expect(html).not.toContain("<script");
     expect(html).not.toContain("onerror");
+  });
+
+  it("agent_update_policy returns the policy without the review reminder stamps", async () => {
+    q.mockResolvedValueOnce([
+      { id: 1, title: "Policy", due_soon_reminded_at: "2030-01-10", overdue_reminded_at: null },
+    ]);
+    const exec = writeToolExecutors.get("agent_update_policy")!;
+    const result = (await exec({ policy_id: 1, policy_name: "Policy", _userId: 9 }, 42)) as any;
+    const policy = result?.data ?? result;
+    expect(policy).toMatchObject({ id: 1, title: "Policy" });
+    expect(policy).not.toHaveProperty("due_soon_reminded_at");
+    expect(policy).not.toHaveProperty("overdue_reminded_at");
   });
 });

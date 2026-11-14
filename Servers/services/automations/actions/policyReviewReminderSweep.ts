@@ -18,12 +18,15 @@ import logger from "../../../utils/logger/fileLogger";
  * Tells a policy's owner and reviewers once when its review date comes within
  * seven days, and once when it passes (recipients are chosen by
  * findPolicyRemindersDueQuery). The in-app notice is the channel of record:
- * the policy's *_reminded_at column is stamped once every recipient's in-app
- * notice was stored. If any of them failed, the policy stays unstamped and
- * the whole policy is retried the next day: the ones already told get it
- * again, which is better than someone never being told. Email and Slack are
- * best-effort: their failures are logged and never block the stamp, so a
- * deployment without email still gets its reminders, once.
+ * the policy's *_reminded_at column is stamped once at least one recipient's
+ * in-app notice was stored. Every per-recipient failure is logged; a
+ * recipient whose notice fails is not retried, so one broken recipient never
+ * makes everyone else hear the reminder again every day. Only a policy that
+ * reached nobody stays unstamped and is retried the next day. The stamp also
+ * requires the review day the sweep read, so a date changed mid-sweep is not
+ * marked reminded. Email and Slack are best-effort: their failures are logged
+ * and never block the stamp, so a deployment without email still gets its
+ * reminders, once.
  * One policy's failure does not stop the rest, and one organization's failure
  * does not stop the others.
  */
@@ -65,7 +68,7 @@ export async function runPolicyReviewReminderSweep(
 
   let notified = 0;
   for (const reminder of reminders) {
-    let allSent = true;
+    let reached = 0;
     for (const userId of reminder.recipient_ids) {
       try {
         await notifyPolicyReviewReminder(
@@ -75,8 +78,8 @@ export async function runPolicyReviewReminderSweep(
           reminder.kind,
           baseUrl,
         );
+        reached += 1;
       } catch (error) {
-        allSent = false;
         logger.error(
           `❌ Policy review reminder failed for policy ${reminder.id}, user ${userId} (org ${organizationId}):`,
           error,
@@ -85,10 +88,15 @@ export async function runPolicyReviewReminderSweep(
       await sendSlackReminder(Number(userId), reminder);
     }
 
-    if (!allSent) continue;
+    if (reached === 0) continue;
     try {
-      await markPolicyReminderSentQuery(reminder.id, reminder.kind, organizationId);
-      notified += 1;
+      const stamped = await markPolicyReminderSentQuery(
+        reminder.id,
+        reminder.kind,
+        reminder.review_date,
+        organizationId,
+      );
+      if (stamped) notified += 1;
     } catch (error) {
       logger.error(
         `❌ Could not stamp the ${reminder.kind} reminder of policy ${reminder.id} (org ${organizationId}):`,

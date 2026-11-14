@@ -613,6 +613,7 @@ export const createAutomationWorker = () => {
         } else if (name === "send_policy_due_soon_notification") {
           // Retired (P-H3): policy_review_reminder_sweep replaced it. Kept so a
           // job queued before the deploy completes without sending anything.
+          // Can be removed one release after the sweep ships.
           logger.info("Skipping retired job send_policy_due_soon_notification");
         } else if (name === "send_report_notification") {
           await sendReportNotification();

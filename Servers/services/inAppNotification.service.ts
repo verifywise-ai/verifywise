@@ -1259,7 +1259,7 @@ export const notifyPolicyReviewReminder = async (
       type: overdue ? NotificationType.POLICY_OVERDUE : NotificationType.POLICY_DUE_SOON,
       titleKey,
       messageKey,
-      messageVars: { title: policy.title, date: policy.reviewDate },
+      messageVars: { title: policy.title, date: reviewDate },
       entity_type: NotificationEntityType.POLICY,
       entity_id: policy.id,
       entity_name: policy.title,

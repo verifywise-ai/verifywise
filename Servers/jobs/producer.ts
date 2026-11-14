@@ -72,6 +72,7 @@ export async function addAllJobs(): Promise<void> {
   await safeSchedule("lifecycle-confirmation-sweep", scheduleLifecycleConfirmationSweep); // non-obliterating — safe to run after the obliterating schedulers
   await safeSchedule("policy-review-reminder-sweep", schedulePolicyReviewReminderSweep); // non-obliterating — safe to run after the obliterating schedulers
   // The two jobs the sweep replaced. Their schedulers persist in Redis.
+  // Can be removed one release after the policy review reminder sweep ships.
   await safeSchedule("retired-policy-due-soon-notification", removeRetiredPolicyDueSoonScheduler);
   await safeSchedule("retired-slack-policy-notification", removeRetiredSlackPolicyScheduler);
   await safeSchedule("training-assignment-reminder-sweep", scheduleTrainingAssignmentReminderSweep); // non-obliterating — safe to run after the obliterating schedulers

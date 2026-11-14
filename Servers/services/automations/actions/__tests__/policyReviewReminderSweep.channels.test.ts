@@ -57,7 +57,7 @@ const due = {
 beforeEach(() => {
   jest.clearAllMocks();
   mockFind.mockResolvedValue([due]);
-  mockMark.mockResolvedValue(undefined);
+  mockMark.mockResolvedValue(true);
   mockCreate.mockResolvedValue({ id: 1 });
   mockSendTemplate.mockResolvedValue(undefined);
 });
@@ -69,12 +69,22 @@ describe("policy review reminder sweep channels", () => {
     const summary = await runPolicyReviewReminderSweep(3);
 
     expect(mockCreate).toHaveBeenCalledTimes(2);
-    expect(mockMark).toHaveBeenCalledWith(9, "overdue", 3);
+    expect(mockMark).toHaveBeenCalledWith(9, "overdue", "2030-01-15", 3);
     expect(summary).toEqual({ organization_id: 3, candidates: 1, notified: 1 });
   });
 
-  it("leaves the policy unstamped when one in-app notice fails", async () => {
+  it("stamps the policy when one of the two in-app notices fails", async () => {
     mockCreate.mockResolvedValueOnce({ id: 1 }).mockRejectedValueOnce(new Error("db down"));
+
+    const summary = await runPolicyReviewReminderSweep(3);
+
+    expect(mockCreate).toHaveBeenCalledTimes(2);
+    expect(mockMark).toHaveBeenCalledWith(9, "overdue", "2030-01-15", 3);
+    expect(summary.notified).toBe(1);
+  });
+
+  it("leaves the policy unstamped when every in-app notice fails", async () => {
+    mockCreate.mockRejectedValue(new Error("db down"));
 
     const summary = await runPolicyReviewReminderSweep(3);
 

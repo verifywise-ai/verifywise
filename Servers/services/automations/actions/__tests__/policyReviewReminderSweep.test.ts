@@ -5,7 +5,7 @@ jest.mock("../../../../utils/organization.utils", () => ({
 }));
 jest.mock("../../../../utils/policyManager.utils", () => ({
   findPolicyRemindersDueQuery: jest.fn<any>(),
-  markPolicyReminderSentQuery: jest.fn<any>().mockResolvedValue(undefined),
+  markPolicyReminderSentQuery: jest.fn<any>().mockResolvedValue(true),
 }));
 jest.mock("../../../inAppNotification.service", () => ({
   notifyPolicyReviewReminder: jest.fn<any>(),
@@ -45,7 +45,7 @@ beforeEach(() => {
   jest.clearAllMocks();
   m(notifyPolicyReviewReminder).mockResolvedValue(undefined);
   m(sendSlackNotification).mockResolvedValue({ attempted: false, delivered: false });
-  m(markPolicyReminderSentQuery).mockResolvedValue(undefined);
+  m(markPolicyReminderSentQuery).mockResolvedValue(true);
 });
 
 describe("runPolicyReviewReminderSweep", () => {
@@ -70,8 +70,8 @@ describe("runPolicyReviewReminderSweep", () => {
       expect.any(String),
     ]);
     expect(markPolicyReminderSentQuery).toHaveBeenCalledTimes(2);
-    expect(markPolicyReminderSentQuery).toHaveBeenCalledWith(1, "due_soon", 3);
-    expect(markPolicyReminderSentQuery).toHaveBeenCalledWith(2, "overdue", 3);
+    expect(markPolicyReminderSentQuery).toHaveBeenCalledWith(1, "due_soon", "2030-01-15", 3);
+    expect(markPolicyReminderSentQuery).toHaveBeenCalledWith(2, "overdue", "2030-01-15", 3);
     expect(summary).toEqual({ organization_id: 3, candidates: 2, notified: 2 });
   });
 
@@ -91,27 +91,50 @@ describe("runPolicyReviewReminderSweep", () => {
     expect(m(sendSlackNotification).mock.calls[1][0].userId).toBe(12);
   });
 
-  it("leaves a policy unstamped when one in-app notice fails, but still tells the rest", async () => {
-    m(findPolicyRemindersDueQuery).mockResolvedValue([
-      reminder(1, "overdue", [11, 12, 13]),
-      reminder(2, "due_soon", [14]),
-    ]);
+  it("stamps a policy when one of three in-app notices fails, and logs that one", async () => {
+    m(findPolicyRemindersDueQuery).mockResolvedValue([reminder(1, "overdue", [11, 12, 13])]);
     m(notifyPolicyReviewReminder)
       .mockResolvedValueOnce(undefined)
       .mockRejectedValueOnce(new Error("in-app store failed"))
-      .mockResolvedValueOnce(undefined)
       .mockResolvedValueOnce(undefined);
 
     const summary = await runPolicyReviewReminderSweep(3);
 
-    expect(notifyPolicyReviewReminder).toHaveBeenCalledTimes(4);
-    expect(markPolicyReminderSentQuery).toHaveBeenCalledTimes(1);
-    expect(markPolicyReminderSentQuery).toHaveBeenCalledWith(2, "due_soon", 3);
-    expect(summary).toEqual({ organization_id: 3, candidates: 2, notified: 1 });
+    expect(notifyPolicyReviewReminder).toHaveBeenCalledTimes(3);
+    expect(markPolicyReminderSentQuery).toHaveBeenCalledWith(1, "overdue", "2030-01-15", 3);
+    expect(summary).toEqual({ organization_id: 3, candidates: 1, notified: 1 });
+    expect(logger.error).toHaveBeenCalledTimes(1);
     expect(logger.error).toHaveBeenCalledWith(
       expect.stringContaining("policy 1, user 12"),
       expect.any(Error),
     );
+  });
+
+  it("leaves a policy unstamped when no recipient was reached, and goes on", async () => {
+    m(findPolicyRemindersDueQuery).mockResolvedValue([
+      reminder(1, "overdue", [11, 12]),
+      reminder(2, "due_soon", [14]),
+    ]);
+    m(notifyPolicyReviewReminder)
+      .mockRejectedValueOnce(new Error("in-app store failed"))
+      .mockRejectedValueOnce(new Error("in-app store failed"))
+      .mockResolvedValueOnce(undefined);
+
+    const summary = await runPolicyReviewReminderSweep(3);
+
+    expect(markPolicyReminderSentQuery).toHaveBeenCalledTimes(1);
+    expect(markPolicyReminderSentQuery).toHaveBeenCalledWith(2, "due_soon", "2030-01-15", 3);
+    expect(summary).toEqual({ organization_id: 3, candidates: 2, notified: 1 });
+    expect(logger.error).toHaveBeenCalledTimes(2);
+  });
+
+  it("does not count a policy whose review date changed before the stamp", async () => {
+    m(findPolicyRemindersDueQuery).mockResolvedValue([reminder(1, "due_soon")]);
+    m(markPolicyReminderSentQuery).mockResolvedValue(false);
+
+    const summary = await runPolicyReviewReminderSweep(3);
+
+    expect(summary.notified).toBe(0);
   });
 
   it("still stamps when Slack fails", async () => {
@@ -120,7 +143,7 @@ describe("runPolicyReviewReminderSweep", () => {
 
     const summary = await runPolicyReviewReminderSweep(3);
 
-    expect(markPolicyReminderSentQuery).toHaveBeenCalledWith(1, "due_soon", 3);
+    expect(markPolicyReminderSentQuery).toHaveBeenCalledWith(1, "due_soon", "2030-01-15", 3);
     expect(summary.notified).toBe(1);
     expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining("slack down"));
   });
@@ -132,7 +155,7 @@ describe("runPolicyReviewReminderSweep", () => {
     ]);
     m(markPolicyReminderSentQuery)
       .mockRejectedValueOnce(new Error("db down"))
-      .mockResolvedValueOnce(undefined);
+      .mockResolvedValueOnce(true);
 
     const summary = await runPolicyReviewReminderSweep(3);
 
@@ -162,7 +185,7 @@ describe("runPolicyReviewReminderSweepAllOrgs", () => {
     expect(findPolicyRemindersDueQuery).toHaveBeenCalledTimes(2);
     expect(findPolicyRemindersDueQuery).toHaveBeenNthCalledWith(1, 1);
     expect(findPolicyRemindersDueQuery).toHaveBeenNthCalledWith(2, 2);
-    expect(markPolicyReminderSentQuery).toHaveBeenCalledWith(5, "overdue", 2);
+    expect(markPolicyReminderSentQuery).toHaveBeenCalledWith(5, "overdue", "2030-01-15", 2);
     expect(logger.error).toHaveBeenCalledWith(expect.stringContaining("org 1"), expect.any(Error));
     expect(logger.info).toHaveBeenCalledWith(expect.stringContaining("org 2: candidates=1"));
   });

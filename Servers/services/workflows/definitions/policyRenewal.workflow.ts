@@ -102,14 +102,38 @@ export const policyRenewalWorkflow: WorkflowDefinition = {
     {
       id: "notify_owner",
       description:
-        "Send a renewal reminder to the policy owner, or the author when there is no owner",
+        "Send a renewal reminder to the policy owner, or the author when the owner is not a member",
       agent: "policy",
       isWrite: false,
       handler: async (ctx) => {
         const policy = ctx.results.fetch_policy as PolicyRow | undefined;
-        const recipientId = policy?.policy_owner_id ?? policy?.author_id;
-        if (!policy || !recipientId) {
+        if (!policy) return { type: "skip", reason: "Policy has no owner or author" };
+        // Only current members of the organization are told, as in the daily
+        // review reminder sweep: the owner, else the author.
+        const candidates = [policy.policy_owner_id, policy.author_id].filter(
+          (id): id is number => id !== null && id !== undefined,
+        );
+        if (candidates.length === 0) {
           return { type: "skip", reason: "Policy has no owner or author" };
+        }
+        const members = new Set(
+          (
+            (await sequelize.query(
+              `SELECT user_id FROM organization_members
+                WHERE organization_id = :orgId AND user_id IN (:ids)`,
+              {
+                replacements: { orgId: ctx.organizationId, ids: candidates },
+                type: QueryTypes.SELECT,
+              },
+            )) as Array<{ user_id: number }>
+          ).map((row) => Number(row.user_id)),
+        );
+        const recipientId = candidates.find((id) => members.has(Number(id)));
+        if (recipientId === undefined) {
+          return {
+            type: "skip",
+            reason: "Neither the policy owner nor the author is a member of the organization",
+          };
         }
         await sendInAppNotification(ctx.organizationId, {
           user_id: recipientId,

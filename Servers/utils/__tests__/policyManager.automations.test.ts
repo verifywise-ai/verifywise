@@ -81,6 +81,9 @@ const IN_ORDER = [
 const userQueries = () =>
   mockQuery.mock.calls.filter(([sql]) => String(sql).includes("FROM users"));
 
+/** Let the after-commit enqueues, which run one after another, finish. */
+const settle = () => new Promise((resolve) => setImmediate(resolve));
+
 beforeEach(() => {
   mockQuery.mockReset();
   (logger.error as jest.Mock).mockClear();
@@ -104,6 +107,7 @@ describe("policy automations", () => {
     expect(userQueries()).toHaveLength(1);
 
     tx.commit();
+    await settle();
     expect(enqueued()).toEqual(IN_ORDER);
     expect(mockEnqueue.mock.calls[0][1]).toEqual({
       subject: "1a Acceptable use",
@@ -123,6 +127,7 @@ describe("policy automations", () => {
     expect(userQueries()).toHaveLength(1);
 
     tx.commit();
+    await settle();
     expect(enqueued()).toEqual(IN_ORDER);
   });
 
@@ -134,6 +139,7 @@ describe("policy automations", () => {
     expect(mockEnqueue).not.toHaveBeenCalled();
 
     tx.commit();
+    await settle();
     expect(enqueued()).toEqual(IN_ORDER);
     expect(mockEnqueue.mock.calls[2][1].subject).toBe("2a Acceptable use");
   });

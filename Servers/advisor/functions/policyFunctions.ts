@@ -1,4 +1,4 @@
-import { getAllPoliciesQuery } from "../../utils/policyManager.utils";
+import { getAllPoliciesQuery, omitReminderStamps } from "../../utils/policyManager.utils";
 import {
   CLEAR_REVIEW_REMINDERS_ON_DATE_CHANGE_SQL,
   POLICY_REVIEW_DATE_SQL,
@@ -636,7 +636,7 @@ const agentCreatePolicy = createWriteToolFn({
       },
     );
 
-    return result;
+    return omitReminderStamps(result as Record<string, any>);
   },
 });
 
@@ -699,7 +699,7 @@ const agentUpdatePolicy = createWriteToolFn({
       throw new Error(`Policy #${policyId} not found`);
     }
 
-    return result;
+    return omitReminderStamps(result as Record<string, any>);
   },
 });
 
@@ -729,7 +729,7 @@ const agentSubmitPolicyForReview = createWriteToolFn({
       throw new Error(`Policy #${policyId} not found`);
     }
 
-    return result;
+    return omitReminderStamps(result as Record<string, any>);
   },
 });
 
@@ -761,7 +761,7 @@ const agentApprovePolicyReview = createWriteToolFn({
       throw new Error(`Policy #${policyId} not found`);
     }
 
-    return result;
+    return omitReminderStamps(result as Record<string, any>);
   },
 });
 

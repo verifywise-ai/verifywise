@@ -47,6 +47,9 @@ const sqlCalls = () => mockQuery.mock.calls.map(([sql]) => String(sql));
 const deletesFrom = (table: string) =>
   mockQuery.mock.calls.filter(([sql]) => new RegExp(`DELETE FROM ${table}\\b`).test(String(sql)));
 
+/** Let the after-commit enqueues, which run one after another, finish. */
+const settle = () => new Promise((resolve) => setImmediate(resolve));
+
 beforeEach(() => {
   mockQuery.mockReset();
   (logger.error as jest.Mock).mockClear();
@@ -345,6 +348,7 @@ describe("risk automations wait for the commit", () => {
     expect(mockEnqueue).not.toHaveBeenCalled();
 
     tx.commit();
+    await settle();
     expect(mockEnqueue).toHaveBeenCalledWith(
       "send_email",
       expect.objectContaining({ organizationId: 4, automation_id: 1 }),
@@ -359,6 +363,7 @@ describe("risk automations wait for the commit", () => {
     expect(mockEnqueue).not.toHaveBeenCalled();
 
     tx.commit();
+    await settle();
     expect(mockEnqueue).toHaveBeenCalledTimes(1);
   });
 
@@ -370,6 +375,7 @@ describe("risk automations wait for the commit", () => {
     expect(mockEnqueue).not.toHaveBeenCalled();
 
     tx.commit();
+    await settle();
     expect(mockEnqueue).toHaveBeenCalledTimes(1);
   });
 
@@ -453,6 +459,7 @@ describe("risk automations wait for the commit", () => {
     expect(sqlCalls().filter((sql) => sql.includes("FROM users"))).toHaveLength(1);
 
     tx.commit();
+    await settle();
     expect(mockEnqueue.mock.calls.map(([key, data]) => [key, data.automation_id])).toEqual([
       ["send_email", 1],
       ["send_slack", 1],
@@ -498,6 +505,7 @@ describe("risk automations wait for the commit", () => {
     const tx = makeTransaction();
     await createRiskQuery({ risk_name: "New" } as never, 4, tx as never);
     tx.commit();
+    await settle();
     expect(mockEnqueue).toHaveBeenCalledTimes(4);
 
     mockEnqueue.mockClear();
@@ -576,6 +584,7 @@ describe("enqueueBulkRiskAutomation", () => {
     expect(userQueries[0][1].replacements.userIds.sort()).toEqual([3, 4, 8]);
 
     tx.commit();
+    await settle();
     expect(mockEnqueue).toHaveBeenCalledTimes(1);
     expect(mockEnqueue).toHaveBeenCalledWith(
       "send_email",
@@ -600,6 +609,7 @@ describe("enqueueBulkRiskAutomation", () => {
 
     await enqueueBulkRiskAutomation("risk_updated", changes, 4, tx as never);
     tx.commit();
+    await settle();
 
     expect(mockEnqueue).toHaveBeenCalledTimes(1);
     const [, payload] = mockEnqueue.mock.calls[0];
@@ -625,6 +635,7 @@ describe("enqueueBulkRiskAutomation", () => {
       tx as never,
     );
     tx.commit();
+    await settle();
 
     const [, payload] = mockEnqueue.mock.calls[0];
     expect(payload.subject).toBe("Risk 1");
@@ -655,6 +666,7 @@ describe("enqueueBulkRiskAutomation", () => {
 
     await enqueueBulkRiskAutomation("risk_updated", changes, 4, tx as never);
     tx.commit();
+    await settle();
 
     expect(mockEnqueue.mock.calls.map(([key, data]) => [key, data.automation_id])).toEqual([
       ["send_email", 1],

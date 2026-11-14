@@ -9,7 +9,8 @@ export const createNotificationWorker = () => {
       if (job.data.type === "policies") {
         // Retired (P-H3): the policy review reminder sweep sends these Slack
         // messages now. Kept so a job queued before the deploy completes
-        // without sending anything.
+        // without sending anything. Can be removed one release after the
+        // sweep ships.
         logger.info("Skipping retired Slack job slack-notification-policy");
         return { success: true, skipped: true };
       } else {

@@ -42,7 +42,8 @@ export async function getActiveAutomationActionsQuery(
 
 /**
  * Enqueue every action with its subject and body filled from the event's
- * replacements. Each action is enqueued on its own: a failed enqueue is
+ * replacements, one after another in the order given (the query's
+ * a.id, aa."order"). Each action is enqueued on its own: a failed enqueue is
  * logged and never stops the others or throws. Inside a transaction the
  * enqueues wait for the commit, so a rolled-back write sends nothing.
  * `logContext` (e.g. "scan 12") is added to the failure log.
@@ -55,27 +56,27 @@ export async function enqueueAutomationActions(
   logContext?: string,
 ): Promise<void> {
   if (actions.length === 0) return;
-  const enqueueAll = () =>
-    Promise.all(
-      actions.map(async (action) => {
-        try {
-          const params = action.params || {};
-          await enqueueAutomationAction(action.action_key, {
-            ...params,
-            subject: replaceTemplateVariables(params.subject || "", replacements),
-            body: replaceTemplateVariables(params.body || "", replacements),
-            automation_id: action.automation_id,
-            organizationId,
-          });
-        } catch (error) {
-          logger.error(
-            `[automation] ${action.action_key} enqueue failed for automation ${action.automation_id}${
-              logContext ? ` (${logContext})` : ""
-            }: ${String(error)}`,
-          );
-        }
-      }),
-    );
+  // One at a time, in query order, so actions keep their aa."order".
+  const enqueueAll = async () => {
+    for (const action of actions) {
+      try {
+        const params = action.params || {};
+        await enqueueAutomationAction(action.action_key, {
+          ...params,
+          subject: replaceTemplateVariables(params.subject || "", replacements),
+          body: replaceTemplateVariables(params.body || "", replacements),
+          automation_id: action.automation_id,
+          organizationId,
+        });
+      } catch (error) {
+        logger.error(
+          `[automation] ${action.action_key} enqueue failed for automation ${action.automation_id}${
+            logContext ? ` (${logContext})` : ""
+          }: ${String(error)}`,
+        );
+      }
+    }
+  };
   if (!transaction) {
     await enqueueAll();
     return;

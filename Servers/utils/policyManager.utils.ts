@@ -110,6 +110,20 @@ export const updatePolicyReviewStatusQuery = async (
   );
 };
 
+/**
+ * A policy row without the review reminder stamps (P-H3). They are the daily
+ * sweep's bookkeeping, not policy data: rows read with `pm.*` or
+ * `RETURNING *` pass through here before they leave for the API or the
+ * advisor, so responses keep their shape.
+ */
+export const omitReminderStamps = <T extends Record<string, any>>(
+  row: T,
+): Omit<T, "due_soon_reminded_at" | "overdue_reminded_at"> => {
+  if (!row || typeof row !== "object") return row;
+  const { due_soon_reminded_at: _dueSoon, overdue_reminded_at: _overdue, ...rest } = row;
+  return rest;
+};
+
 export const getAllPoliciesQuery = async (organizationId: number) => {
   const result = (await sequelize.query(
     `SELECT
@@ -132,10 +146,10 @@ export const getAllPoliciesQuery = async (organizationId: number) => {
 
   const ids = result.map((p) => p.id).filter((id): id is number => typeof id === "number");
   const customFieldsByPolicy = await fetchCustomFieldsForEntities("policy", ids, organizationId);
-  for (const p of result) {
-    p.custom_fields = customFieldsByPolicy.get(p.id) ?? [];
-  }
-  return result;
+  return result.map((p): any => ({
+    ...omitReminderStamps(p),
+    custom_fields: customFieldsByPolicy.get(p.id) ?? [],
+  }));
 };
 
 export type PolicyReminderKind = "due_soon" | "overdue";
@@ -215,18 +229,28 @@ export const findPolicyRemindersDueQuery = async (
   )) as PolicyReminderDue[];
 };
 
-/** Record that the reminder of this kind went out for the policy. */
+/**
+ * Record that the reminder of this kind went out for the policy. Stamps only
+ * while the row still has the review day the sweep selected (`reviewDate`,
+ * "YYYY-MM-DD") and the kind is unstamped, so a date changed mid-sweep is not
+ * marked reminded. Returns whether the policy was stamped.
+ */
 export const markPolicyReminderSentQuery = async (
   id: number,
   kind: PolicyReminderKind,
+  reviewDate: string,
   organizationId: number,
-): Promise<void> => {
-  await sequelize.query(
+): Promise<boolean> => {
+  const column = POLICY_REMINDER_COLUMNS[kind];
+  const [, affected] = (await sequelize.query(
     `UPDATE policy_manager
-        SET ${POLICY_REMINDER_COLUMNS[kind]} = now()
-      WHERE organization_id = :organizationId AND id = :id`,
-    { replacements: { organizationId, id } },
-  );
+        SET ${column} = now()
+      WHERE organization_id = :organizationId AND id = :id
+        AND next_review_date::date = CAST(:reviewDate AS date)
+        AND ${column} IS NULL`,
+    { replacements: { organizationId, id, reviewDate }, type: QueryTypes.UPDATE },
+  )) as unknown as [unknown, number];
+  return affected > 0;
 };
 
 /**
@@ -274,7 +298,7 @@ export const getPolicyByIdQuery = async (
     },
   )) as any[];
 
-  return result;
+  return result.map((row): any => omitReminderStamps(row));
 };
 
 /** @throws ValidationException (400) for a non-array or an unknown tag, instead of a 500 (P-L6). */
@@ -330,7 +354,7 @@ export const createPolicyQuery = async (
     },
   )) as any;
 
-  const createdPolicy = result[0][0] as any;
+  const createdPolicy = omitReminderStamps(result[0][0]) as any;
   const policyId = createdPolicy.id;
 
   // Insert assigned reviewers into mapping table

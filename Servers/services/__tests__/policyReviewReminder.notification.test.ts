@@ -54,14 +54,14 @@ describe("notifyPolicyReviewReminder", () => {
       "due_soon",
       "policy_due_soon",
       "Policy review due soon",
-      'The review of policy "AI use policy" is due on 2030-01-15.',
+      'The review of policy "AI use policy" is due on January 15, 2030.',
       'The review of policy "AI use policy" is due on January 15, 2030.',
     ],
     [
       "overdue",
       "policy_overdue",
       "Policy review overdue",
-      'The review of policy "AI use policy" was due on 2030-01-15. Please review it as soon as you can.',
+      'The review of policy "AI use policy" was due on January 15, 2030. Please review it as soon as you can.',
       'The review of policy "AI use policy" was due on January 15, 2030. Please review it as soon as you can.',
     ],
   ] as const)(
