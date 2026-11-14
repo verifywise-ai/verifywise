@@ -1,4 +1,8 @@
-import { riskCalendarDateFromCell, toRiskCalendarDate } from "../riskCalendarDate.utils";
+import {
+  isInvalidDateCell,
+  riskCalendarDateFromCell,
+  toRiskCalendarDate,
+} from "../riskCalendarDate.utils";
 
 const iso = (value: unknown) => (value instanceof Date ? value.toISOString() : value);
 
@@ -43,6 +47,16 @@ describe("riskCalendarDateFromCell", () => {
     expect(iso(riskCalendarDateFromCell("1 May 2026"))).toBe("2026-05-01T12:00:00.000Z");
   });
 
+  it("reads a weekday name as part of the date, not as a time", () => {
+    expect(iso(riskCalendarDateFromCell("Thu 1 Oct 2026"))).toBe("2026-10-01T12:00:00.000Z");
+    expect(iso(riskCalendarDateFromCell("Tue, 5 May 2026"))).toBe("2026-05-05T12:00:00.000Z");
+  });
+
+  it("reads a year or year-month as that day in UTC, whatever the server time zone", () => {
+    expect(iso(riskCalendarDateFromCell("2026"))).toBe("2026-01-01T12:00:00.000Z");
+    expect(iso(riskCalendarDateFromCell("2026-05"))).toBe("2026-05-01T12:00:00.000Z");
+  });
+
   it("follows toRiskCalendarDate for ISO text and date cells", () => {
     expect(iso(riskCalendarDateFromCell("2026-05-01"))).toBe("2026-05-01T12:00:00.000Z");
     expect(iso(riskCalendarDateFromCell(new Date("2026-05-01T00:00:00.000Z")))).toBe(
@@ -53,5 +67,19 @@ describe("riskCalendarDateFromCell", () => {
 
   it("passes unparseable text through for validation", () => {
     expect(riskCalendarDateFromCell("someday")).toBe("someday");
+  });
+});
+
+describe("isInvalidDateCell", () => {
+  it("refuses number cells, such as an Excel serial or a typed year", () => {
+    expect(isInvalidDateCell(46022)).toBe(true);
+    expect(isInvalidDateCell(2026)).toBe(true);
+  });
+
+  it("accepts parseable text and dates, and refuses text that does not parse", () => {
+    expect(isInvalidDateCell("2026-05-01")).toBe(false);
+    expect(isInvalidDateCell("Thu 1 Oct 2026")).toBe(false);
+    expect(isInvalidDateCell(new Date("2026-05-01"))).toBe(false);
+    expect(isInvalidDateCell("someday")).toBe(true);
   });
 });
