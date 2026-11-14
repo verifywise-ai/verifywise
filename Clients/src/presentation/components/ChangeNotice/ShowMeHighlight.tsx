@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useTheme } from "@mui/material/styles";
 import { inkPalette as ink } from "./inkPalette";
 
 interface ShowMeHighlightProps {
@@ -17,6 +18,7 @@ const findTarget = (testId: string) =>
 
 /** Pulsing ring around the element a notice points at ("Show me"). Pointer events pass through. */
 export default function ShowMeHighlight({ testId }: ShowMeHighlightProps) {
+  const theme = useTheme();
   const [rect, setRect] = useState<Rect | null>(null);
 
   useEffect(() => {
@@ -53,7 +55,7 @@ export default function ShowMeHighlight({ testId }: ShowMeHighlightProps) {
         outlineOffset: 2,
         borderRadius: 4,
         pointerEvents: "none",
-        zIndex: 1299,
+        zIndex: theme.zIndex.modal - 1,
       }}
     />
   );

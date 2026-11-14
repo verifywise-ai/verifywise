@@ -3,7 +3,13 @@ import useTranslation from "../../../application/hooks/useTranslation";
 import { inkPalette as ink } from "./inkPalette";
 
 /** Shown for a few seconds after a dismissal so it can be taken back. */
-export default function UndoStrip({ onUndo }: { onUndo: () => void }) {
+export default function UndoStrip({
+  onUndo,
+  global = false,
+}: {
+  onUndo: () => void;
+  global?: boolean;
+}) {
   const { t } = useTranslation();
   const theme = useTheme();
   return (
@@ -14,7 +20,7 @@ export default function UndoStrip({ onUndo }: { onUndo: () => void }) {
         position: "fixed",
         right: 40,
         bottom: 40,
-        maxWidth: "calc(100vw - 32px)",
+        maxWidth: "calc(100vw - 80px)",
         boxSizing: "border-box",
         zIndex: theme.zIndex.modal - 1,
         background: ink.card,
@@ -28,7 +34,9 @@ export default function UndoStrip({ onUndo }: { onUndo: () => void }) {
         gap: 12,
       }}
     >
-      <span>{t("You won't see this again on this page.")}</span>
+      <span>
+        {global ? t("You won't see this again.") : t("You won't see this again on this page.")}
+      </span>
       <button
         type="button"
         data-testid="change-notice-undo"

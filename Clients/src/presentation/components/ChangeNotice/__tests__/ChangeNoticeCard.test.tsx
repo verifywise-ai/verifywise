@@ -52,6 +52,24 @@ describe("ChangeNoticeCard", () => {
     expect(screen.getByRole("button", { name: "Dismiss" })).toBeInTheDocument();
   });
 
+  it("after Show me, the button reads Got it and dismisses the card", () => {
+    const entry: ChangeNoticeEntry = {
+      id: "moved-test",
+      routes: ["/x"],
+      variant: "moved",
+      title: "T",
+      moved: { item: "AI Gateway", before: "App switcher", now: "Enforce" },
+      showMeTestId: "nav-item-ai-gateway",
+    };
+    const props = { ...handlers(), showMeActive: true };
+    renderWithProviders(<ChangeNoticeCard entry={entry} {...props} />);
+    const button = screen.getByTestId("change-notice-show-me");
+    expect(button).toHaveTextContent("Got it");
+    fireEvent.click(button);
+    expect(props.onDismiss).toHaveBeenCalled();
+    expect(props.onShowMe).not.toHaveBeenCalled();
+  });
+
   it("hides Show me when the target is not available and the guide when there is no path", () => {
     const entry: ChangeNoticeEntry = {
       id: "moved-test",

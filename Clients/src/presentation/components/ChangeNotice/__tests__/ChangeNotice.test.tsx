@@ -161,6 +161,9 @@ describe("ChangeNotice", () => {
       await waitFor(() =>
         expect(screen.queryByTestId("change-notice-ring")).not.toBeInTheDocument(),
       );
+      expect(mocks.mutate).toHaveBeenCalledWith({ id: "ai-gateway-2026-11", dismissed: true });
+      expect(screen.queryByTestId("change-notice")).not.toBeInTheDocument();
+      expect(screen.getByTestId("change-notice-undo-strip")).toHaveTextContent("on this page");
     });
   });
 
@@ -174,8 +177,24 @@ describe("ChangeNotice", () => {
       expect(
         screen.getByRole("heading", { name: "Welcome to the new look of VerifyWise" }),
       ).toBeInTheDocument();
-      const pageCalls = mocks.view.mock.calls.filter(([id]) => id === "home-2026-11");
-      expect(pageCalls.every(([, enabled]) => enabled === false)).toBe(true);
+      expect(mocks.view.mock.calls.some(([id]) => id === "home-2026-11")).toBe(false);
+      expect(mocks.view.mock.calls.some(([id]) => id === GLOBAL_ID)).toBe(true);
+    });
+
+    it("the X shows the global Undo copy, and Undo restores the global card", () => {
+      renderWithProviders(<ChangeNotice />, { route: "/home" });
+      fireEvent.click(screen.getByTestId("change-notice-dismiss"));
+      expect(mocks.mutate).toHaveBeenCalledWith({ id: GLOBAL_ID, dismissed: true });
+      expect(screen.queryByTestId("change-notice")).not.toBeInTheDocument();
+      const strip = screen.getByTestId("change-notice-undo-strip");
+      expect(strip).toHaveTextContent("You won't see this again.");
+      expect(strip).not.toHaveTextContent("on this page");
+
+      fireEvent.click(screen.getByTestId("change-notice-undo"));
+      expect(mocks.mutate).toHaveBeenLastCalledWith({ id: GLOBAL_ID, dismissed: false });
+      expect(
+        screen.getByRole("heading", { name: "Welcome to the new look of VerifyWise" }),
+      ).toBeInTheDocument();
     });
 
     it("Keep the new look dismisses without an Undo strip", () => {
@@ -198,8 +217,9 @@ describe("ChangeNotice", () => {
       fireEvent.click(screen.getByTestId("change-notice-keep"));
 
       expect(screen.queryByTestId("change-notice")).not.toBeInTheDocument();
-      const homeCalls = mocks.view.mock.calls.filter(([id]) => id === "home-2026-11");
-      expect(homeCalls.every(([, enabled]) => enabled === false)).toBe(true);
+      expect(mocks.view.mock.calls.some(([id, enabled]) => id === "home-2026-11" && enabled)).toBe(
+        false,
+      );
       expect(sessionStorage.getItem("vw-change-notice-requested:home-2026-11")).toBeNull();
 
       fireEvent.click(screen.getByText("go /ai-gateway"));

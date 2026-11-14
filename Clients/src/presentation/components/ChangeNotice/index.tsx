@@ -101,6 +101,7 @@ export default function ChangeNotice() {
       if (!active) return;
       const id = active.id;
       markDismissed(id, true);
+      queryClient.setQueryData(["change-notice", id], { show: false });
       if (id === GLOBAL_NOTICE?.id) setPageDeferredAt(pathname);
       setShowMeActive(false);
       dismiss.mutate({ id, dismissed: true });
@@ -110,16 +111,17 @@ export default function ChangeNotice() {
         undoTimer.current = setTimeout(() => setUndoId(null), UNDO_MS);
       }
     },
-    [active, dismiss, markDismissed, pathname],
+    [active, dismiss, markDismissed, pathname, queryClient],
   );
 
   const handleUndo = useCallback(() => {
     if (!undoId) return;
     clearTimeout(undoTimer.current);
     markDismissed(undoId, false);
+    queryClient.setQueryData(["change-notice", undoId], { show: true });
     dismiss.mutate({ id: undoId, dismissed: false });
     setUndoId(null);
-  }, [undoId, dismiss, markDismissed]);
+  }, [undoId, dismiss, markDismissed, queryClient]);
 
   const handleShowMe = useCallback(() => {
     if (showMeActive) {
@@ -134,16 +136,18 @@ export default function ChangeNotice() {
   const handleSwitchBack = useCallback(async () => {
     if (!active) return;
     setPageDeferredAt(pathname);
+    queryClient.setQueryData(["change-notice", active.id], { show: false });
     try {
       await dismiss.mutateAsync({ id: active.id, dismissed: true });
     } catch {
       // The choice to switch back still stands if recording the dismissal fails.
     }
     setUiStyle("classic");
-  }, [active, dismiss, pathname]);
+  }, [active, dismiss, pathname, queryClient]);
 
   if (hidden) return null;
-  if (!active) return undoId ? <UndoStrip onUndo={handleUndo} /> : null;
+  if (!active)
+    return undoId ? <UndoStrip onUndo={handleUndo} global={undoId === GLOBAL_NOTICE?.id} /> : null;
 
   return (
     <>

@@ -179,7 +179,7 @@ export default function ChangeNoticeCard({
       <button
         type="button"
         data-testid="change-notice-show-me"
-        onClick={onShowMe}
+        onClick={showMeActive ? onDismiss : onShowMe}
         style={primaryButton(variant === "standard")}
       >
         {showMeActive ? t("Got it") : t("Show me")}
@@ -369,7 +369,9 @@ export default function ChangeNoticeCard({
         right: 40,
         bottom: 40,
         width: 432,
-        maxWidth: "calc(100vw - 32px)",
+        maxWidth: "calc(100vw - 80px)",
+        maxHeight: "calc(100vh - 80px)",
+        overflowY: "auto",
         boxSizing: "border-box",
         zIndex: theme.zIndex.modal - 1,
         background: ink.card,
@@ -377,7 +379,6 @@ export default function ChangeNoticeCard({
         borderRadius: 6,
         boxShadow: ink.cardShadow,
         fontSize: 14,
-        overflow: padding === 0 ? "hidden" : undefined,
         padding,
         display: "flex",
         flexDirection: "column",
