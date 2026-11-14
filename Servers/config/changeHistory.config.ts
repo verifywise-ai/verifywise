@@ -190,6 +190,19 @@ export const GENERIC_FORMATTERS: { [key: string]: FieldFormatter } = {
     return String(value);
   },
 
+  // Calendar-date formatter for TIMESTAMP (no time zone) columns that hold a
+  // day, e.g. a policy's next review date. node-pg builds those as local
+  // midnight, so the local date parts are the stored day on any server time
+  // zone; toISOString() would give the previous day east of UTC and record a
+  // change on every save.
+  calendarDate: async (value: unknown): Promise<string> => {
+    if (value instanceof Date && !Number.isNaN(value.getTime())) {
+      const pad = (n: number) => String(n).padStart(2, "0");
+      return `${value.getFullYear()}-${pad(value.getMonth() + 1)}-${pad(value.getDate())}`;
+    }
+    return GENERIC_FORMATTERS.date(value);
+  },
+
   // Array formatter (preserves order - IMPORTANT for tracking reordering)
   array: async (value: unknown): Promise<string> => {
     if (!value) return "-";
@@ -697,7 +710,7 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
     },
     fieldFormatters: {
       tags: GENERIC_FORMATTERS.array,
-      next_review_date: GENERIC_FORMATTERS.date,
+      next_review_date: GENERIC_FORMATTERS.calendarDate,
       policy_owner_id: GENERIC_FORMATTERS.user,
       assigned_reviewer_ids: GENERIC_FORMATTERS.userArray,
     },

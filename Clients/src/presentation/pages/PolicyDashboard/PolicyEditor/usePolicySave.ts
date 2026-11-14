@@ -54,10 +54,13 @@ export function usePolicySave({
   const [saveSuccess, setSaveSuccess] = useState(false);
   const [serverErrors, setServerErrors] = useState<PolicyFormErrors>({});
   const [validationSnackbar, setValidationSnackbar] = useState(false);
+  // Server message for a failed save that no form field can show.
+  const [saveError, setSaveError] = useState<string | null>(null);
 
   const save = async () => {
     if (customFieldsBlocked) return;
     setServerErrors({});
+    setSaveError(null);
     resetErrors();
     if (!validateAll(formData)) {
       formRef.current?.scrollIntoView({ behavior: "smooth", block: "start" });
@@ -154,7 +157,10 @@ export function usePolicySave({
           else if (error.field === "policy_owner_id") apiErrors.policyOwner = error.message;
         });
         setServerErrors(apiErrors);
+        if (Object.keys(apiErrors).length > 0) return;
       }
+      // Nothing to show under a field: surface the server's (translated) message.
+      setSaveError(err?.originalError?.message || err?.message || null);
     }
   };
 
@@ -167,5 +173,7 @@ export function usePolicySave({
     setServerErrors,
     validationSnackbar,
     setValidationSnackbar,
+    saveError,
+    setSaveError,
   };
 }

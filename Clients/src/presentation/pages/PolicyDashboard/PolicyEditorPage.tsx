@@ -302,6 +302,8 @@ export default function PolicyEditorPage() {
     setServerErrors,
     validationSnackbar,
     setValidationSnackbar,
+    saveError,
+    setSaveError,
   } = usePolicySave({
     isNew,
     policy,
@@ -568,6 +570,18 @@ export default function PolicyEditorPage() {
       >
         <Alert onClose={() => setValidationSnackbar(false)} severity="error" sx={{ width: "100%" }}>
           Please fill in all required fields before saving.
+        </Alert>
+      </Snackbar>
+
+      {/* Save error snackbar: a server error no form field can show */}
+      <Snackbar
+        open={Boolean(saveError)}
+        autoHideDuration={6000}
+        onClose={() => setSaveError(null)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert onClose={() => setSaveError(null)} severity="error" sx={{ width: "100%" }}>
+          {saveError}
         </Alert>
       </Snackbar>
 

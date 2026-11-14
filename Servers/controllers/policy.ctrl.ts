@@ -47,13 +47,7 @@ import { translateError } from "../utils/i18n.utils";
 import { roleHasPermission } from "../utils/rolePermissions.utils";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 import { sanitizeUserHtml } from "../utils/sanitization.utils";
-import {
-  validateAssignedReviewerIds,
-  validateNextReviewDate,
-  validatePolicyStatus,
-  validatePolicyTags,
-  validatePolicyTitle,
-} from "../utils/validations/policiesValidation.utils";
+import { POLICY_STATUS_ENUM } from "../utils/validations/policiesValidation.utils";
 
 /**
  * Only a reviewer assigned to the policy, or an Admin, may approve or reject
@@ -86,41 +80,52 @@ const EDITABLE_POLICY_FIELDS = [
 type PolicyFieldError = { field: string; message: string };
 
 /**
- * Field checks for create (`isCreate`: title and status required) and update
- * (only the fields sent). Returns translated, field-keyed errors the editor
- * shows under each input, instead of the 500s the database used to raise (P-L6).
+ * Field checks for create (`isCreate`: title required) and update (only the
+ * fields sent). They reject only input the database used to fail on with a
+ * 500 (P-L6): the legacy endpoint is frozen (Servers/CLAUDE.md), so a short
+ * title, duplicate tags or many reviewers are accepted as before. Returns translated, field-keyed errors the editor shows
+ * under each input.
  */
 function policyFieldErrors(req: Request, data: Partial<IPolicy>, isCreate: boolean) {
   const errors: PolicyFieldError[] = [];
   const t = req.t!;
-  if ((isCreate || data.title !== undefined) && !validatePolicyTitle(data.title).isValid) {
-    errors.push({ field: "title", message: t("Enter a title of 3 to 255 characters") });
+  const { title, status, tags, next_review_date: reviewDate } = data as Record<string, unknown>;
+  if (
+    (isCreate || title !== undefined) &&
+    // title is VARCHAR(255) NOT NULL; the stored value is untrimmed.
+    (typeof title !== "string" || title.trim() === "" || title.length > 255)
+  ) {
+    errors.push({ field: "title", message: t("Enter a title of up to 255 characters") });
   }
-  if ((isCreate || data.status !== undefined) && !validatePolicyStatus(data.status).isValid) {
+  // policy_manager_status_check limits status to POLICY_STATUS_ENUM.
+  if (
+    status !== undefined &&
+    !POLICY_STATUS_ENUM.includes(status as (typeof POLICY_STATUS_ENUM)[number])
+  ) {
     errors.push({ field: "status", message: t("Choose a valid status") });
   }
-  if (data.tags !== undefined && !validatePolicyTags(data.tags).isValid) {
-    errors.push({
-      field: "tags",
-      message: t("Choose up to 10 tags from the list, without duplicates"),
-    });
+
+  if (tags !== undefined && (!Array.isArray(tags) || tags.some((tag) => !PolicyTagsSet.has(tag)))) {
+    errors.push({ field: "tags", message: t("Choose tags from the list") });
   }
+  // null or "" clears the date; anything else must start with a real YYYY-MM-DD.
   if (
-    data.next_review_date !== undefined &&
-    !validateNextReviewDate(data.next_review_date).isValid
+    reviewDate !== undefined &&
+    reviewDate !== null &&
+    reviewDate !== "" &&
+    !isCalendarDate(reviewDate)
   ) {
     errors.push({ field: "next_review_date", message: t("Enter a valid next review date") });
   }
-  if (
-    data.assigned_reviewer_ids !== undefined &&
-    !validateAssignedReviewerIds(data.assigned_reviewer_ids).isValid
-  ) {
-    errors.push({
-      field: "assigned_reviewer_ids",
-      message: t("Choose up to 20 reviewers, without duplicates"),
-    });
-  }
   return errors;
+}
+
+/** True for a string that starts with a valid YYYY-MM-DD (a full ISO timestamp passes too). */
+function isCalendarDate(value: unknown): boolean {
+  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}/.test(value)) return false;
+  const [y, m, d] = value.slice(0, 10).split("-").map(Number);
+  const date = new Date(Date.UTC(y, m - 1, d));
+  return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
 }
 
 /** 400 body carrying field errors, in the shape other controllers use. */

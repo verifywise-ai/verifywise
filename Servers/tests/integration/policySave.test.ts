@@ -101,9 +101,29 @@ describe("Policy save correctness", () => {
     expect(unknownTag.status).toBe(400);
     expect(unknownTag.body.data.errors[0].field).toBe("tags");
 
-    const shortTitle = await ctx.request.post("/api/policies").send(policyPayload({ title: "P" }));
-    expect(shortTitle.status).toBe(400);
-    expect(shortTitle.body.data.errors[0].field).toBe("title");
+    // 250 characters plus padding: trimmed it fits, stored it would overflow VARCHAR(255).
+    const longTitle = await ctx.request
+      .post("/api/policies")
+      .send(policyPayload({ title: "A".repeat(250) + " ".repeat(10) }));
+    expect(longTitle.status).toBe(400);
+    expect(longTitle.body.data.errors[0].field).toBe("title");
+
+    const numericDate = await ctx.request
+      .post("/api/policies")
+      .send(policyPayload({ next_review_date: 1700000000000 }));
+    expect(numericDate.status).toBe(400);
+    expect(numericDate.body.data.errors[0].field).toBe("next_review_date");
+
+    // A status outside the CHECK constraint used to be a 500.
+    const badStatus = await ctx.request
+      .post("/api/policies")
+      .send(policyPayload({ status: "Custom" }));
+    expect(badStatus.status).toBe(400);
+    expect(badStatus.body.data.errors[0].field).toBe("status");
+
+    // The legacy endpoint keeps accepting a short title.
+    const legacy = await ctx.request.post("/api/policies").send(policyPayload({ title: "P" }));
+    expect(legacy.status).toBe(201);
   });
 
   it("accepts a policy without tags or review date, and clears tags on update (P-L6)", async () => {
@@ -115,10 +135,19 @@ describe("Policy save correctness", () => {
     expect(noTags.body.data.tags).toEqual([]);
     expect(noTags.body.data.next_review_date).toBeNull();
 
-    const emptyTags = await createPolicy(ctx, { tags: [] });
-    const cleared = await ctx.request.put(`/api/policies/${emptyTags}`).send({ tags: [] });
+    const emptyDate = await ctx.request
+      .post("/api/policies")
+      .send(policyPayload({ next_review_date: "" }));
+    expect(emptyDate.status).toBe(201);
+    expect(emptyDate.body.data.next_review_date).toBeNull();
+
+    const tagged = await createPolicy(ctx, { tags: ["Privacy", "Security"] });
+    const cleared = await ctx.request
+      .put(`/api/policies/${tagged}`)
+      .send({ tags: [], next_review_date: null });
     expect(cleared.status).toBe(202);
     expect(cleared.body.data.tags).toEqual([]);
+    expect(cleared.body.data.next_review_date).toBeNull();
   });
 
   it("keeps the picked calendar day of the review date (P-M1)", async () => {

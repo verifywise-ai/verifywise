@@ -238,10 +238,11 @@ export const createPolicyQuery = async (
         organization_id: organizationId,
         title: policy.title,
         content_html: policy.content_html,
-        status: policy.status,
+        // New policies start as Draft when no status is sent.
+        status: policy.status ?? "Draft",
         // JSON-bound so an empty list stores '{}' (ARRAY[] has no type, P-L6).
         tags: JSON.stringify(policy.tags ?? []),
-        next_review_date: policy.next_review_date ?? null,
+        next_review_date: policy.next_review_date || null,
         author_id: userId,
         policy_owner_id: ownerId,
         last_updated_by: userId,
@@ -374,6 +375,15 @@ export const updatePolicyByIdQuery = async (
     .filter((f) => {
       if (f === "last_updated_by" || f === "last_updated_at") {
         return true;
+      }
+
+      // next_review_date is nullable: null or "" clears it.
+      if (f === "next_review_date") {
+        if (policy.next_review_date !== undefined) {
+          updatePolicy.next_review_date = policy.next_review_date || null;
+          return true;
+        }
+        return false;
       }
 
       // policy_owner_id is nullable — accept null/undefined explicitly so the caller can clear it

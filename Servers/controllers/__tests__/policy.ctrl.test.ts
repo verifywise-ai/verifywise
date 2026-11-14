@@ -234,14 +234,22 @@ describe("policy.ctrl", () => {
   });
 
   describe("field validation (P-L6)", () => {
-    it("returns 400 with field errors for a short title and missing status on create", async () => {
-      const req = createReq({ body: { title: "P" } });
+    it("returns 400 with a field error for a missing or over-long title on create", async () => {
+      const req = createReq({ body: { title: "A".repeat(250) + " ".repeat(10) } });
       const res = createRes();
       await PolicyController.createPolicy(req, res);
       expect(res.status).toHaveBeenCalledWith(400);
       const body = res.json.mock.calls[0][0];
-      expect(body.data.errors.map((e: { field: string }) => e.field)).toEqual(["title", "status"]);
+      expect(body.data.errors.map((e: { field: string }) => e.field)).toEqual(["title"]);
       expect(mockCreate).not.toHaveBeenCalled();
+    });
+    it("keeps accepting what the legacy endpoint accepted: a short title, no status", async () => {
+      mockCreate.mockResolvedValue({ id: 1, title: "P" } as any);
+      for (const body of [{ title: "P" }, { title: "P", status: "Published" }]) {
+        const res = createRes();
+        await PolicyController.createPolicy(createReq({ body }), res);
+        expect(res.status).toHaveBeenCalledWith(201);
+      }
     });
     it("returns 400 for an unknown tag and an invalid date", async () => {
       const req = createReq({
@@ -267,7 +275,7 @@ describe("policy.ctrl", () => {
     });
     it("checks only the fields an update sends", async () => {
       mockGetById.mockResolvedValue([{ id: 1, title: "Policy one" }] as any);
-      const req = createReq({ params: { id: "1" }, body: { status: "Nope" } });
+      const req = createReq({ params: { id: "1" }, body: { status: "" } });
       const res = createRes();
       await PolicyController.updatePolicy(req, res);
       expect(res.status).toHaveBeenCalledWith(400);
