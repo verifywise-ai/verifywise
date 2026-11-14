@@ -11,6 +11,8 @@ export type NoticeContext = {
   state: NoticeState | undefined;
   accountCreatedAt: Date;
   orgFirstSeenAt: Date | null;
+  /** Whether the account predates this notice reaching the deployment; null when no release is recorded. */
+  createdBeforeRelease: boolean | null;
   keyCount: number;
 };
 
@@ -18,17 +20,20 @@ type ContextRow = {
   state: NoticeState | null;
   account_created_at: Date;
   org_first_seen_at: Date | null;
+  created_before_release: boolean | null;
   key_count: string | number;
 };
 
 /**
  * Everything the show rules need, in one read: this user's state for the
  * notice, when their account was created, the earliest first view of the
- * notice across the organization's members, and how many notice keys they hold.
+ * notice across the organization's members, whether the account predates the
+ * notice's release on this deployment (change_notice_releases; null when the
+ * notice has no release row), and how many notice keys they hold.
  * Null when the user does not exist.
  *
- * The organization anchor is read only for a user with no state for this notice,
- * the one case decideShow uses it. It reads user_preferences of every member, and
+ * The organization anchor is read only for a user with no state for this notice
+ * and only when the notice has no release row, the one case decideShow uses it. It reads user_preferences of every member, and
  * notice state is stored per user, not per organization (spec), so a member's first
  * view in another organization they also belong to can move the anchor. Accepted:
  * a user in several organizations has one notice history.
@@ -44,7 +49,12 @@ export const getNoticeContextQuery = async (
        u.created_at::timestamptz AS account_created_at,
        up.preferences->'change_notices'->(:id) AS state,
        ${keyCountSql("up")} AS key_count,
-       CASE WHEN up.preferences->'change_notices'->(:id) IS NULL THEN (SELECT MIN((mp.preferences->'change_notices'->(:id)->>'first_seen_at')::timestamptz)
+       (SELECT u.created_at::timestamptz < r.released_at
+          FROM change_notice_releases r
+         WHERE r.notice_id = :id) AS created_before_release,
+       CASE WHEN up.preferences->'change_notices'->(:id) IS NULL
+             AND NOT EXISTS (SELECT 1 FROM change_notice_releases r WHERE r.notice_id = :id)
+            THEN (SELECT MIN((mp.preferences->'change_notices'->(:id)->>'first_seen_at')::timestamptz)
           FROM organization_members om
           JOIN user_preferences mp ON mp.user_id = om.user_id
          WHERE om.organization_id = :organizationId) END AS org_first_seen_at
@@ -58,6 +68,7 @@ export const getNoticeContextQuery = async (
     state: row.state ?? undefined,
     accountCreatedAt: new Date(row.account_created_at),
     orgFirstSeenAt: row.org_first_seen_at ? new Date(row.org_first_seen_at) : null,
+    createdBeforeRelease: row.created_before_release,
     keyCount: Number(row.key_count),
   };
 };

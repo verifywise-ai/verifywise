@@ -61,6 +61,35 @@ describe("ChangeNotice", () => {
     expect(screen.queryByTestId("change-notice")).not.toBeInTheDocument();
   });
 
+  describe("while the first-login setup is pending", () => {
+    const pending = { onboardingStatus: "pending", isOrgCreator: true } as const;
+
+    beforeEach(() => {
+      answer({ [GLOBAL_ID]: true, "home-2026-11": true });
+    });
+
+    it("renders nothing and asks nothing where the setup modal opens", () => {
+      renderWithProviders(<ChangeNotice />, { route: "/home", preloadedAuth: pending });
+      expect(screen.queryByTestId("change-notice")).not.toBeInTheDocument();
+      expect(mocks.view).not.toHaveBeenCalledWith(expect.any(String), true);
+    });
+
+    it("still shows on a page where the setup modal cannot open", () => {
+      renderWithProviders(<ChangeNotice />, { route: "/vendors", preloadedAuth: pending });
+      expect(
+        screen.getByRole("heading", { name: "Welcome to the new look of VerifyWise" }),
+      ).toBeInTheDocument();
+    });
+
+    it("shows for a member who did not create the organization", () => {
+      renderWithProviders(<ChangeNotice />, {
+        route: "/home",
+        preloadedAuth: { onboardingStatus: "pending", isOrgCreator: false },
+      });
+      expect(screen.getByTestId("change-notice")).toBeInTheDocument();
+    });
+  });
+
   it("renders nothing when notices are switched off", () => {
     localStorage.setItem("vw-change-notices", "off");
     renderWithProviders(<ChangeNotice />, { route: "/home" });
