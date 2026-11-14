@@ -4,12 +4,12 @@
 // mapSeverityMIT/IBM exactly (pinned by catalogMapperParity.test.ts).
 import { ModelRiskCategory } from "../../domain.layer/enums/model-risk-category.enum";
 import { ModelRiskLevel } from "../../domain.layer/enums/model-risk-level.enum";
-import { calculateRiskLevel } from "../../utils/riskLevel.utils";
 import {
+  calculateRiskLevel,
   LIKELIHOOD_SCALE,
   SEVERITY_SCALE,
   RISK_CALCULATION_WEIGHTS,
-} from "../../utils/validations/riskValidation.utils";
+} from "../../utils/riskLevel.utils";
 
 export type Likelihood = "Rare" | "Unlikely" | "Possible" | "Likely" | "Almost Certain";
 export type Severity = "Negligible" | "Minor" | "Moderate" | "Major" | "Catastrophic";

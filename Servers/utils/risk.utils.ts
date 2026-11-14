@@ -1,4 +1,5 @@
 import { RiskModel } from "../domain.layer/models/risks/risk.model";
+import { getEffectiveRiskLevel } from "./riskLevel.utils";
 import { sequelize } from "../database/db";
 import { Transaction, QueryTypes } from "sequelize";
 import { IRisk } from "../domain.layer/interfaces/I.risk";
@@ -1324,7 +1325,7 @@ export const updateRiskByIdQuery = async (
     const snapshotPromises = [];
     // Snapshots are keyed by the effective level, so a change to either the
     // inherent or the current level can move the counts.
-    const effective = (r: any) => r?.current_risk_level ?? r?.risk_level_autocalculated ?? null;
+    const effective = (r: any) => (r ? getEffectiveRiskLevel(r) : null);
     if (existingRisk && effective(existingRisk) !== effective(updatedRisk.dataValues)) {
       snapshotPromises.push(
         recordSnapshotIfChanged("risk_level", organizationId, undefined, transaction),

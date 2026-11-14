@@ -17,7 +17,11 @@ import {
   recordProjectRiskCreation,
   trackProjectRiskChanges,
 } from "../utils/projectRiskChangeHistory.utils";
-import { calculateRiskLevel } from "../utils/riskLevel.utils";
+import {
+  calculateRiskLevel,
+  computeRiskLevelUpdates,
+  normalizeCurrentRiskLevel,
+} from "../utils/riskLevel.utils";
 import { computeDerivedFields } from "../utils/quantitativeRisk.utils";
 import { validateQuantitativeRiskFields } from "../utils/validations/quantitativeRiskValidation.utils";
 import { ValidationError } from "../utils/validations/validation.utils";
@@ -100,7 +104,7 @@ export async function createRiskService(
     ),
     review_notes: projectRiskData.review_notes ?? null,
     mitigation_status: projectRiskData.mitigation_status ?? null,
-    current_risk_level: projectRiskData.current_risk_level ?? null,
+    current_risk_level: normalizeCurrentRiskLevel(projectRiskData.current_risk_level ?? null),
     deadline: projectRiskData.deadline ?? null,
     mitigation_plan: projectRiskData.mitigation_plan ?? null,
     implementation_strategy: projectRiskData.implementation_strategy ?? null,
@@ -223,6 +227,10 @@ export async function updateRiskService(
       : null) as unknown as number | undefined;
   }
 
+  if (updateData.current_risk_level !== undefined) {
+    updateData.current_risk_level = normalizeCurrentRiskLevel(updateData.current_risk_level);
+  }
+
   // 2. Any one of these three arriving means the whole FAIR set is recomputed,
   //    so the stored values are merged in first — validating only the incoming
   //    subset would pass a set that is inconsistent once combined.
@@ -269,37 +277,7 @@ export async function updateRiskService(
   //     inputs was sent; a level the inputs cannot produce is not written.
   delete updateData.risk_level_autocalculated;
   delete updateData.final_risk_level;
-  // An explicit clear (a merged input that is null/empty) clears the level; an
-  // unrecognised non-null label leaves it as stored.
-  const isClear = (v: unknown) => v === null || v === undefined || v === "";
-  if (updateData.likelihood !== undefined || updateData.severity !== undefined) {
-    const likelihood =
-      updateData.likelihood !== undefined ? updateData.likelihood : existingRisk.likelihood;
-    const severity =
-      updateData.severity !== undefined ? updateData.severity : existingRisk.severity;
-    const level = calculateRiskLevel(likelihood, severity);
-    if (level) {
-      updateData.risk_level_autocalculated = level as RiskModel["risk_level_autocalculated"];
-    } else if (isClear(likelihood) || isClear(severity)) {
-      (updateData as Record<string, unknown>).risk_level_autocalculated = null;
-    }
-  }
-  if (updateData.likelihood_mitigation !== undefined || updateData.risk_severity !== undefined) {
-    const likelihoodMitigation =
-      updateData.likelihood_mitigation !== undefined
-        ? updateData.likelihood_mitigation
-        : existingRisk.likelihood_mitigation;
-    const riskSeverity =
-      updateData.risk_severity !== undefined
-        ? updateData.risk_severity
-        : existingRisk.risk_severity;
-    const level = calculateRiskLevel(likelihoodMitigation, riskSeverity);
-    if (level) {
-      updateData.final_risk_level = level;
-    } else if (isClear(likelihoodMitigation) || isClear(riskSeverity)) {
-      (updateData as Record<string, unknown>).final_risk_level = null;
-    }
-  }
+  Object.assign(updateData, computeRiskLevelUpdates(updateData, existingRisk));
 
   // 3. Write. An absent projects/frameworks list is sent as empty, as before.
   const updatedRisk = await updateRiskByIdQuery(

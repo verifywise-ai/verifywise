@@ -43,8 +43,6 @@ describe("buildUseCaseRiskFromSuggestion", () => {
       ai_lifecycle_phase: "Deployment & integration",
       likelihood: "Likely",
       severity: "Major",
-      // 4 (Likely) + 3 * 4 (Major) = 16
-      risk_level_autocalculated: "High risk",
       impact: "Qualified applicants are rejected.",
       mitigation_plan: "Audit rankings each quarter.",
       implementation_strategy: "HR analytics owns the audit.",
@@ -52,6 +50,8 @@ describe("buildUseCaseRiskFromSuggestion", () => {
       mitigation_status: "Not Started",
       projects: [42],
     });
+    // The service computes the level; the builder does not pass one.
+    expect("risk_level_autocalculated" in risk).toBe(false);
     expect(risk.review_notes).toBe("Accepted from intake submission #11 (MIT AI Risk Repository).");
   });
 

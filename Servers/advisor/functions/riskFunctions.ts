@@ -13,10 +13,9 @@ import { getTimeseriesForTimeframe } from "../../utils/history/riskHistory.utils
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { sequelize } from "../../database/db";
 import logger from "../../utils/logger/fileLogger";
+import { getEffectiveRiskLevel } from "../../utils/riskLevel.utils";
 
-/** Effective level of a risk: the current level when set, else the inherent one. */
-const effectiveLevel = (r: Pick<IRisk, "current_risk_level" | "risk_level_autocalculated">) =>
-  r.current_risk_level || r.risk_level_autocalculated;
+const effectiveLevel = getEffectiveRiskLevel;
 
 const VALID_RISK_CATEGORIES = [
   "Strategic risk",
@@ -294,13 +293,9 @@ const getExecutiveSummary = async (
     const totalActiveRisks = risks.length;
 
     // Count critical and high risks
-    const criticalRisks = risks.filter(
-      (r) => r.severity === "Catastrophic" || effectiveLevel(r) === "Very high risk",
-    ).length;
+    const criticalRisks = risks.filter((r) => effectiveLevel(r) === "Very high risk").length;
 
-    const highRisks = risks.filter(
-      (r) => r.severity === "Major" || effectiveLevel(r) === "High risk",
-    ).length;
+    const highRisks = risks.filter((r) => effectiveLevel(r) === "High risk").length;
 
     // Top categories (top 3)
     const categoryMap = new Map<string, number>();

@@ -18,4 +18,11 @@ describe("risk import parseRow residual level", () => {
     const data = parseRow({ final_risk_level: "High risk" } as never);
     expect(data.final_risk_level).toBeNull();
   });
+
+  it("derives the residual level from the stored default likelihood", () => {
+    const data = parseRow({ risk_severity: "Catastrophic" } as never);
+    // stored likelihood_mitigation defaults to Rare: 1 + 3 * 5 = 16
+    expect(data.likelihood_mitigation).toBe("Rare");
+    expect(data.final_risk_level).toBe("High risk");
+  });
 });

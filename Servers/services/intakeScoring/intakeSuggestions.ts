@@ -8,7 +8,7 @@ import type { createModelFromKey } from "../../advisor/llmModelFactory";
 import { IntakeEntityType } from "../../domain.layer/enums/intake-entity-type.enum";
 import type { ModelRiskCategory } from "../../domain.layer/enums/model-risk-category.enum";
 import type { ModelRiskLevel } from "../../domain.layer/enums/model-risk-level.enum";
-import { SEVERITY_SCALE } from "../../utils/validations/riskValidation.utils";
+import { SEVERITY_SCALE } from "../../utils/riskLevel.utils";
 import { suggestRisksForUseCase } from "../riskSuggestions/riskSuggestions.service";
 import type { UseCaseInput } from "../riskSuggestions/riskSuggestions.service";
 import type { ClassificationContext } from "./aiScoring";

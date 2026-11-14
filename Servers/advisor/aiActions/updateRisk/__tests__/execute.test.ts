@@ -31,4 +31,25 @@ describe("executeUpdateRisk risk level", () => {
     await run({ risk_id: 7, likelihood: "Likely" });
     expect(mockUpdate.mock.calls[0][1].risk_level_autocalculated).toBe("Low risk");
   });
+
+  it("does not default a missing stored severity to Negligible", async () => {
+    mockGet.mockResolvedValue({ id: 7, severity: null, likelihood: "Rare" });
+    await run({ risk_id: 7, likelihood: "Likely" });
+    expect(mockUpdate.mock.calls[0][1].risk_level_autocalculated).toBeNull();
+  });
+
+  it("does not touch the residual level when only inherent inputs change", async () => {
+    mockGet.mockResolvedValue({
+      id: 7,
+      severity: "Negligible",
+      likelihood: "Rare",
+      likelihood_mitigation: "Rare",
+      risk_severity: "Negligible",
+      final_risk_level: "No risk",
+    });
+    await run({ risk_id: 7, severity: "Catastrophic" });
+    const partial = mockUpdate.mock.calls[0][1];
+    expect(partial.risk_level_autocalculated).toBe("High risk");
+    expect("final_risk_level" in partial).toBe(false);
+  });
 });

@@ -345,6 +345,9 @@ export function parseRow(row: RiskImportRow): Record<string, unknown> {
         .filter((c) => c.length > 0 && inEnum(c, RISK_CATEGORY_VALUES))
     : null;
 
+  // The stored residual likelihood defaults to Rare; derive the level from it.
+  const likelihoodMitigation = row.likelihood_mitigation ?? "Rare";
+
   return {
     risk_name: row.risk_name?.trim() ?? null,
     risk_owner: parseUserId(row.risk_owner),
@@ -361,13 +364,10 @@ export function parseRow(row: RiskImportRow): Record<string, unknown> {
     deadline: row.deadline ? riskCalendarDateFromCell(row.deadline) : null,
     mitigation_plan: row.mitigation_plan ?? null,
     implementation_strategy: row.implementation_strategy ?? null,
-    likelihood_mitigation: row.likelihood_mitigation ?? "Rare",
+    likelihood_mitigation: likelihoodMitigation,
     risk_severity: row.risk_severity ?? null,
     // Derived like the inherent level; the sheet value is ignored.
-    final_risk_level: calculateRiskLevel(
-      row.likelihood_mitigation ?? null,
-      row.risk_severity ?? null,
-    ),
+    final_risk_level: calculateRiskLevel(likelihoodMitigation, row.risk_severity ?? null),
     risk_approval: parseUserId(row.risk_approval),
     approval_status: row.approval_status ?? null,
     // An empty cell stays empty: the import time is not an assessment date.

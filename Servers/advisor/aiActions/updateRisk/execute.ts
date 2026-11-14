@@ -7,16 +7,15 @@
  * only the fields they're changing.
  *
  * Two nuances over create:
- *   - `risk_level_autocalculated` must be RE-computed when severity or
- *     likelihood changes. We load the current row inside the approve
- *     transaction, merge the new values, and call `calculateRiskLevel`
- *     to produce the updated derived value.
+ *   - The derived levels must be RE-computed when their inputs change. We
+ *     load the current row inside the approve transaction and let
+ *     `computeRiskLevelUpdates` merge the new values with the stored ones.
  *   - ISO date strings need to be converted to `Date` objects before
  *     hitting Sequelize, same as in the create executor.
  */
 
 import { updateRiskByIdQuery, getRiskByIdQuery } from "../../../utils/risk.utils";
-import { calculateRiskLevel, normalizeCurrentRiskLevel } from "../../../utils/riskLevel.utils";
+import { computeRiskLevelUpdates, normalizeCurrentRiskLevel } from "../../../utils/riskLevel.utils";
 import type { AiActionExecuteContext, AiActionExecuteResult } from "../types";
 import type { AgentUpdateRiskInput } from "./schema";
 
@@ -25,7 +24,7 @@ export async function executeUpdateRisk(
 ): Promise<AiActionExecuteResult> {
   const input = ctx.inputParams;
 
-  // Load current row so we can merge severity/likelihood for the
+  // Load current row so we can merge the level inputs for the
   // risk-level recompute and so the mutation fails fast if the row
   // disappeared between file-time and approve-time.
   const current = await getRiskByIdQuery(input.risk_id, ctx.organizationId, false);
@@ -33,31 +32,6 @@ export async function executeUpdateRisk(
   if (!current) {
     throw new Error(`Risk #${input.risk_id} no longer exists — cannot apply update.`);
   }
-
-  // Merge severity + likelihood (input takes priority) so the recompute
-  // uses the final values, not just the changed one.
-  const effectiveSeverity = input.severity ?? current.severity ?? "Negligible";
-  const effectiveLikelihood = input.likelihood ?? current.likelihood ?? "Rare";
-
-  const severityChanged = input.severity !== undefined && input.severity !== current.severity;
-  const likelihoodChanged =
-    input.likelihood !== undefined && input.likelihood !== current.likelihood;
-
-  // Only recompute if at least one of the two actually changed —
-  // otherwise we'd overwrite a potentially human-curated value with
-  // a re-derived one that matches.
-  const recomputedLevel =
-    severityChanged || likelihoodChanged
-      ? // null when a stored label is unrecognised: leave the level alone then.
-        ((calculateRiskLevel(effectiveLikelihood, effectiveSeverity) ?? undefined) as
-          | "No risk"
-          | "Very low risk"
-          | "Low risk"
-          | "Medium risk"
-          | "High risk"
-          | "Very high risk"
-          | undefined)
-      : undefined;
 
   // Build the partial payload for updateRiskByIdQuery. Only set fields
   // the LLM asked to change, plus the recomputed risk_level if we
@@ -85,9 +59,9 @@ export async function executeUpdateRisk(
   if (input.date_of_assessment !== undefined)
     partial.date_of_assessment = new Date(input.date_of_assessment);
 
-  if (recomputedLevel !== undefined) {
-    partial.risk_level_autocalculated = recomputedLevel;
-  }
+  // Same rule as updateRiskService: recompute a level only when one of its
+  // inputs is sent, from sent-else-stored values; never default a missing one.
+  Object.assign(partial, computeRiskLevelUpdates(input, current));
 
   // Projects / frameworks go through the same partial as separate keys.
   // `updateRiskByIdQuery` handles them via its own junction-table logic.

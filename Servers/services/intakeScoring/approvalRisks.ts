@@ -6,7 +6,6 @@ import type { IModelRisk } from "../../domain.layer/interfaces/i.modelRisk";
 import { ModelRiskStatus } from "../../domain.layer/enums/model-risk-status.enum";
 import type { IRiskAssessmentV2 } from "../../domain.layer/interfaces/i.intakeSubmission";
 import type { CreateRiskServiceInput } from "../risk.service";
-import { calculateRiskLevel } from "../../utils/riskLevel.utils";
 import type { IntakeSuggestedRisk } from "./intakeSuggestions";
 import { modelRiskCategoryFor, modelRiskLevelFor } from "./riskMappers";
 import { bandFor, ClassificationLevel, combineScore, ruleMinimumFor } from "./scoreMath";
@@ -54,10 +53,6 @@ export function buildUseCaseRiskFromSuggestion(
     ai_lifecycle_phase: (s.lifecyclePhase ?? null) as CreateRiskServiceInput["ai_lifecycle_phase"],
     likelihood: s.likelihood as CreateRiskServiceInput["likelihood"],
     severity: s.severity as CreateRiskServiceInput["severity"],
-    risk_level_autocalculated: calculateRiskLevel(
-      s.likelihood,
-      s.severity,
-    ) as CreateRiskServiceInput["risk_level_autocalculated"],
     impact: s.impact,
     mitigation_plan: s.mitigationPlan,
     implementation_strategy: s.implementationStrategy,

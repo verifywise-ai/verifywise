@@ -27,7 +27,7 @@ import { sequelize } from "../../../database/db";
 import { createRiskService } from "../../../services/risk.service";
 import { enqueueRiskLinkRecompute } from "../../../services/automations/automationProducer";
 import { createNewTaskQuery } from "../../../utils/task.utils";
-import { calculateRiskLevel, normalizeCurrentRiskLevel } from "../../../utils/riskLevel.utils";
+import { normalizeCurrentRiskLevel } from "../../../utils/riskLevel.utils";
 import { sendInAppNotification } from "../../../services/inAppNotification.service";
 import {
   NotificationType,
@@ -119,7 +119,6 @@ export async function executeCreateRisk(
 
   const severity = input.severity ?? DEFAULT_SEVERITY;
   const likelihood = input.likelihood ?? DEFAULT_LIKELIHOOD;
-  const riskLevelAutocalculated = calculateRiskLevel(likelihood, severity);
   const riskOwner = input.risk_owner ?? ctx.requesterId;
 
   // ═══════════════════════════════════════════════════════
@@ -135,8 +134,6 @@ export async function executeCreateRisk(
       impact: input.impact,
       severity,
       likelihood,
-      risk_level_autocalculated: riskLevelAutocalculated as
-        "No risk" | "Very low risk" | "Low risk" | "Medium risk" | "High risk" | "Very high risk",
       review_notes: input.review_notes,
       risk_owner: riskOwner,
       projects: input.project_ids ?? [],

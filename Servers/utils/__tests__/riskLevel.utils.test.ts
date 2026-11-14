@@ -1,5 +1,7 @@
 import {
   calculateRiskLevel,
+  computeRiskLevelUpdates,
+  getEffectiveRiskLevel,
   normalizeCurrentRiskLevel,
   effectiveRiskLevelSql,
   riskLevelRankSql,
@@ -86,5 +88,58 @@ describe("SQL helpers", () => {
     expect(sql).toMatch(/'medium risk' THEN 3/);
     expect(sql).toMatch(/'high risk' THEN 4/);
     expect(sql).toMatch(/'very high risk' THEN 5/);
+  });
+});
+
+describe("getEffectiveRiskLevel", () => {
+  it("prefers the current level and treats an empty one as unset", () => {
+    expect(
+      getEffectiveRiskLevel({
+        current_risk_level: "Low risk",
+        risk_level_autocalculated: "High risk",
+      }),
+    ).toBe("Low risk");
+    expect(
+      getEffectiveRiskLevel({ current_risk_level: "", risk_level_autocalculated: "High risk" }),
+    ).toBe("High risk");
+    expect(
+      getEffectiveRiskLevel({ current_risk_level: null, risk_level_autocalculated: "High risk" }),
+    ).toBe("High risk");
+    expect(
+      getEffectiveRiskLevel({ current_risk_level: null, risk_level_autocalculated: null }),
+    ).toBeNull();
+    expect(getEffectiveRiskLevel({})).toBeNull();
+  });
+});
+
+describe("computeRiskLevelUpdates", () => {
+  const stored = {
+    likelihood: "Rare",
+    severity: "Negligible",
+    likelihood_mitigation: "Rare",
+    risk_severity: "Negligible",
+  };
+
+  it("writes nothing when no input of a pair is sent", () => {
+    expect(computeRiskLevelUpdates({}, stored)).toEqual({});
+  });
+
+  it("recomputes a pair from sent-else-stored values", () => {
+    expect(computeRiskLevelUpdates({ likelihood: "Likely" }, stored)).toEqual({
+      risk_level_autocalculated: "Low risk",
+    });
+    expect(computeRiskLevelUpdates({ risk_severity: "Catastrophic" }, stored)).toEqual({
+      final_risk_level: "High risk",
+    });
+  });
+
+  it("writes null when an input is cleared and nothing for an unrecognised label", () => {
+    expect(computeRiskLevelUpdates({ severity: null }, stored)).toEqual({
+      risk_level_autocalculated: null,
+    });
+    expect(computeRiskLevelUpdates({ severity: "" }, stored)).toEqual({
+      risk_level_autocalculated: null,
+    });
+    expect(computeRiskLevelUpdates({ severity: "Weird" }, stored)).toEqual({});
   });
 });

@@ -57,7 +57,7 @@ import { getProjectByIdQuery } from "../../utils/project.utils";
 import { getAllFrameworkByIdQuery } from "../../utils/framework.utils";
 import { sequelize } from "../../database/db";
 import { QueryTypes } from "sequelize";
-import { effectiveRiskLevelSql } from "../../utils/riskLevel.utils";
+import { effectiveRiskLevelSql, getEffectiveRiskLevel } from "../../utils/riskLevel.utils";
 
 /**
  * Risk level colour mapping.
@@ -720,7 +720,7 @@ export class ReportDataCollector {
 
     const risksByLevel: Record<string, number> = {};
     risks.forEach((risk) => {
-      const level = risk.current_risk_level || risk.risk_level_autocalculated || "Unknown";
+      const level = getEffectiveRiskLevel(risk) || "Unknown";
       risksByLevel[level] = (risksByLevel[level] || 0) + 1;
     });
 
@@ -735,7 +735,7 @@ export class ReportDataCollector {
         id: risk.id,
         name: risk.risk_name || "Unnamed Risk",
         description: risk.risk_description || "",
-        riskLevel: risk.current_risk_level || risk.risk_level_autocalculated || "Unknown",
+        riskLevel: getEffectiveRiskLevel(risk) || "Unknown",
         impact: risk.risk_severity || "Unknown",
         likelihood: risk.likelihood || "Unknown",
         // `risks` carries both columns and they are orthogonal — a risk can be
