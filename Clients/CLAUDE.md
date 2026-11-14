@@ -95,6 +95,7 @@ Read the relevant file BEFORE implementing changes in that area:
 | Frontend styling                      | `docs/technical/frontend/styling.md`               |
 | Frontend components                   | `docs/technical/frontend/components.md`            |
 | Redux, Axios, frontend architecture   | `docs/technical/frontend/overview.md`              |
+| Change notices (what's changed card)  | `docs/technical/frontend/change-notice.md`         |
 | TypeScript standards & naming         | `CodeRules/02-typescript/`                         |
 | React component & hook conventions    | `CodeRules/03-react/`                              |
 | Cross-org isolation tests (MSW guard) | `docs/technical/security/tenant-isolation.md` §6.4 |

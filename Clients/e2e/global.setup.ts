@@ -33,6 +33,8 @@ setup("authenticate", async ({ page }) => {
 
   // 1. Login as the default super-admin and save state.
   await loginAs(page, TEST_EMAIL, TEST_PASSWORD, /\/(super-admin)?$/);
+  // Change notices would cover the UI under test; the off switch is saved with the storage state.
+  await page.evaluate(() => localStorage.setItem("vw-change-notices", "off"));
   await page.context().storageState({ path: USER_AUTH_STATE_PATH });
 
   // 2. Use the super-admin API context to manage the setup organization.
@@ -100,5 +102,7 @@ setup("authenticate", async ({ page }) => {
     admin.password,
     /\/(overview|super-admin)?$/, // Admin is redirected to /overview
   );
+  // Change notices would cover the UI under test; the off switch is saved with the storage state.
+  await page.evaluate(() => localStorage.setItem("vw-change-notices", "off"));
   await page.context().storageState({ path: ADMIN_AUTH_STATE_PATH });
 });

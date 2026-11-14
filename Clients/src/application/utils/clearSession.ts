@@ -2,6 +2,7 @@ import type { Dispatch } from "@reduxjs/toolkit";
 import { clearAuthState, setAuthToken } from "../redux/auth/authSlice";
 import { resetQueryCache } from "../config/queryClient";
 import { persistor } from "../redux/store";
+import { clearNoticeSessionState } from "../../presentation/components/ChangeNotice/viewDecision";
 import { clearInflightGets } from "../../infrastructure/api/inflightGet";
 
 /**
@@ -19,6 +20,7 @@ export const clearSession = (dispatch: Dispatch) => {
   dispatch(clearAuthState());
   resetQueryCache();
   clearInflightGets();
+  clearNoticeSessionState();
 };
 
 /**
@@ -61,6 +63,7 @@ export const reloadSession = async () => {
 export const startSession = (dispatch: Dispatch, token: string) => {
   resetQueryCache();
   clearInflightGets();
+  clearNoticeSessionState();
   dispatch(setAuthToken(token));
 };
 
@@ -72,5 +75,6 @@ export const startSession = (dispatch: Dispatch, token: string) => {
 export const discardToken = (dispatch: Dispatch) => {
   resetQueryCache();
   clearInflightGets();
+  clearNoticeSessionState();
   dispatch(setAuthToken(""));
 };

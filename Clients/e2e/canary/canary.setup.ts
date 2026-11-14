@@ -21,5 +21,7 @@ setup("canary login", async ({ page }) => {
   }
 
   await loginAs(page, email, password, /\/(overview)?$/);
+  // Change notices would cover the UI under test; the off switch is saved with the storage state.
+  await page.evaluate(() => localStorage.setItem("vw-change-notices", "off"));
   await page.context().storageState({ path: CANARY_AUTH_STATE_PATH });
 });

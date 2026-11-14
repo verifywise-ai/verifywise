@@ -46,6 +46,16 @@ describe("clearSession", () => {
     expect(queryClient.getQueryCache().getAll()).toHaveLength(0);
   });
 
+  it("clears the change notice view markers so the next user is asked about notices", () => {
+    sessionStorage.setItem("vw-change-notice-requested:new-look-2026-11", "1");
+    sessionStorage.setItem("unrelated", "keep");
+
+    clearSession(createStore().dispatch);
+
+    expect(sessionStorage.getItem("vw-change-notice-requested:new-look-2026-11")).toBeNull();
+    expect(sessionStorage.getItem("unrelated")).toBe("keep");
+  });
+
   it("clears auth before the cache so a refetch has no token to send", () => {
     const store = createStore();
     let tokenWhenCleared: string | undefined;
