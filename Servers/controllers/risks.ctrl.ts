@@ -8,7 +8,10 @@ import {
   getRisksByFrameworkQuery,
   getRisksByProjectQuery,
   assertRiskReferencesInOrganization,
-  recordRiskDeletionSnapshots,
+  recordRiskSnapshots,
+  getActiveRisksByIdsQuery,
+  getProjectTitlesByRiskIdsQuery,
+  sameRiskCategories,
   PROJECT_RISK_CATEGORIES_SET,
 } from "../utils/risk.utils";
 import { sequelize } from "../database/db";
@@ -68,20 +71,14 @@ async function notifyNewRiskOwners(
   if (risks.length === 0) return;
   const baseUrl = process.env.FRONTEND_URL || "http://localhost:3000";
   const assignerName = await getUserNameById(assignerUserId);
+  // Project name for context, one query for every risk
+  const projectTitles = await getProjectTitlesByRiskIdsQuery(
+    risks.map((risk) => risk.id!),
+    organizationId,
+  );
 
   for (const risk of risks) {
     try {
-      // Project name for context
-      const projectsResult = await sequelize.query<{ project_title: string }>(
-        `SELECT p.project_title FROM projects p
-         JOIN projects_risks prl ON p.id = prl.project_id AND prl.organization_id = :organizationId
-         WHERE prl.risk_id = :riskId AND p.organization_id = :organizationId LIMIT 1`,
-        {
-          replacements: { riskId: risk.id, organizationId },
-          type: QueryTypes.SELECT,
-        },
-      );
-
       await notifyUserAssigned(
         organizationId,
         risk.risk_owner,
@@ -95,7 +92,7 @@ async function notifyNewRiskOwners(
         assignerName,
         baseUrl,
         {
-          projectName: projectsResult[0]?.project_title,
+          projectName: projectTitles.get(risk.id!),
           description: risk.risk_description,
         },
       );
@@ -103,25 +100,6 @@ async function notifyNewRiskOwners(
       logger.error("Failed to send risk owner notification:", err);
     }
   }
-}
-
-/**
- * A stored risk_category as a list. The column is an enum array, which the
- * driver may hand back as a Postgres array literal ("{a,\"b c\"}").
- */
-function storedCategories(value: unknown): string[] {
-  if (Array.isArray(value)) return value.map(String);
-  if (typeof value !== "string") return [];
-  const inner = value.replace(/^\{|\}$/g, "");
-  if (inner === "") return [];
-  return inner.split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
-}
-
-/** Same categories, ignoring order and duplicates. */
-function sameCategories(stored: unknown, next: string[]): boolean {
-  const a = new Set(storedCategories(stored));
-  const b = new Set(next);
-  return a.size === b.size && [...a].every((c) => b.has(c));
 }
 
 export async function getAllRisks(req: Request, res: Response): Promise<any> {
@@ -810,7 +788,7 @@ export async function bulkUpdateProjectRisks(req: Request, res: Response): Promi
             }
           }
           if (updatedIds.length > 0) {
-            await recordRiskDeletionSnapshots(organizationId, transaction);
+            await recordRiskSnapshots(organizationId, transaction);
           }
           return { updatedIds, newOwnerRisks };
         }
@@ -824,10 +802,7 @@ export async function bulkUpdateProjectRisks(req: Request, res: Response): Promi
         }
 
         // Archived risks are left alone, as before.
-        const activeRisks = await sequelize.query<IRisk>(
-          `SELECT * FROM risks WHERE organization_id = :organizationId AND id IN (:ids) AND is_deleted = false`,
-          { replacements: { organizationId, ids }, type: QueryTypes.SELECT, transaction },
-        );
+        const activeRisks = await getActiveRisksByIdsQuery(ids, organizationId, transaction);
 
         for (const risk of activeRisks) {
           // A risk that already has the value is not an edit: no write,
@@ -835,7 +810,7 @@ export async function bulkUpdateProjectRisks(req: Request, res: Response): Promi
           const unchanged =
             action === "set_owner"
               ? Number(risk.risk_owner) === ownerId
-              : sameCategories(risk.risk_category, categories!);
+              : sameRiskCategories(risk.risk_category, categories!);
           if (unchanged) continue;
 
           const input =
@@ -846,12 +821,16 @@ export async function bulkUpdateProjectRisks(req: Request, res: Response): Promi
             risk,
             { userId, organizationId },
             transaction,
+            { recordSnapshots: false },
           );
           if (!updated) continue;
           updatedIds.push(risk.id!);
           if (action === "set_owner" && updated.risk_owner) {
             newOwnerRisks.push(updated);
           }
+        }
+        if (updatedIds.length > 0) {
+          await recordRiskSnapshots(organizationId, transaction);
         }
         return { updatedIds, newOwnerRisks };
       },
@@ -871,7 +850,11 @@ export async function bulkUpdateProjectRisks(req: Request, res: Response): Promi
       console.error("Failed to send risk owner notification:", err),
     );
 
-    return res.status(200).json(STATUS_CODE[200]({ updated: updatedIds.length, action }));
+    // `updated` keeps its frozen meaning (the ids sent); `changed` is how many
+    // risks were actually archived or edited.
+    return res
+      .status(200)
+      .json(STATUS_CODE[200]({ updated: ids.length, changed: updatedIds.length, action }));
   } catch (error) {
     if (error instanceof ValidationException) {
       return res.status(400).json(STATUS_CODE[400](error.message));

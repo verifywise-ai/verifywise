@@ -437,6 +437,8 @@ Archiving a risk (single, bulk or through the AI advisor) goes through one serve
 
 Bulk "set owner" and "set category" go through the single-edit path. Each changed risk gets change-history entries and the "risk updated" automation, and each new owner gets the assignment notification. Risks that already hold the value are skipped and not counted.
 
+`PATCH /projectRisks/bulk` answers `{ updated, changed, action }`. `updated` keeps its original meaning, the number of ids sent; `changed` is the number of risks actually archived or edited. The risk table reports `changed`. The risk added, updated and deleted automations are enqueued after the transaction commits, so a bulk action that rolls back sends none. A bulk action records the risk history snapshots once, after its loop.
+
 Removing a use case or framework from a risk removes the risk's mappings in every framework of that use case: EU AI Act, ISO 42001, ISO 27001, NIST AI RMF, the 21 bundled frameworks, custom frameworks and imported frameworks.
 
 ### Archived risks are excluded from

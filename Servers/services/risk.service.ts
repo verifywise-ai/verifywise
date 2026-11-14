@@ -201,6 +201,9 @@ export type UpdateRiskServiceInput = CreateRiskServiceInput;
  *     values as stored ('' vs NULL and calendar dates normalised), not as sent
  *  5. Record the diff in change history
  *
+ * A bulk edit passes recordSnapshots: false and records the risk history
+ * snapshots once for the whole batch.
+ *
  * `existingRisk` is the caller's — it already had to load the row to answer
  * "no such risk", so it is passed in rather than read twice.
  *
@@ -214,6 +217,7 @@ export async function updateRiskService(
   existingRisk: IRisk,
   ctx: CreateRiskServiceContext,
   transaction: Transaction,
+  { recordSnapshots = true }: { recordSnapshots?: boolean } = {},
 ): Promise<RiskModel | null> {
   // 1. Convert optional FK fields (0 => NULL), as the controller did. Only
   //    when the caller sent risk_owner: setting it on every partial edit
@@ -289,6 +293,7 @@ export async function updateRiskService(
     },
     ctx.organizationId,
     transaction,
+    { recordSnapshots },
   );
 
   // 4. Change history (in the same transaction). Diff the row as written:

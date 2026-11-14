@@ -3,8 +3,15 @@ import { Request, Response } from "express";
 
 jest.mock("../../utils/risk.utils", () => ({
   archiveRiskQuery: jest.fn<any>().mockResolvedValue(true),
-  recordRiskDeletionSnapshots: jest.fn<any>().mockResolvedValue(undefined),
+  recordRiskSnapshots: jest.fn<any>().mockResolvedValue(undefined),
   assertRiskReferencesInOrganization: jest.fn<any>().mockResolvedValue(undefined),
+  getActiveRisksByIdsQuery: jest.fn<any>().mockResolvedValue([]),
+  getProjectTitlesByRiskIdsQuery: jest.fn<any>().mockResolvedValue(new Map()),
+  // The real comparison, so the skip rules are exercised end to end.
+  sameRiskCategories: (stored: unknown, next: string[]) =>
+    jest
+      .requireActual<typeof import("../../utils/risk.utils")>("../../utils/risk.utils")
+      .sameRiskCategories(stored, next),
   PROJECT_RISK_CATEGORIES: ["Strategic risk", "Operational risk"],
   PROJECT_RISK_CATEGORIES_SET: new Set(["Strategic risk", "Operational risk"]),
   // Other exports used by risks.ctrl — provide noop mocks.
@@ -67,8 +74,10 @@ jest.mock("../../database/db", () => ({
 import { bulkUpdateProjectRisks } from "../risks.ctrl";
 import {
   archiveRiskQuery,
-  recordRiskDeletionSnapshots,
+  recordRiskSnapshots,
   assertRiskReferencesInOrganization,
+  getActiveRisksByIdsQuery,
+  getProjectTitlesByRiskIdsQuery,
 } from "../../utils/risk.utils";
 import { parseBulkIds, assertOrgOwnsIds, withBulkTransaction } from "../../utils/bulkAction.utils";
 import { updateRiskService } from "../../services/risk.service";
@@ -86,25 +95,27 @@ const mockWithBulkTransaction = withBulkTransaction as jest.MockedFunction<
   typeof withBulkTransaction
 >;
 const mockArchive = archiveRiskQuery as jest.MockedFunction<typeof archiveRiskQuery>;
-const mockSnapshots = recordRiskDeletionSnapshots as jest.MockedFunction<
-  typeof recordRiskDeletionSnapshots
->;
+const mockSnapshots = recordRiskSnapshots as jest.MockedFunction<typeof recordRiskSnapshots>;
 const mockUpdateService = updateRiskService as jest.MockedFunction<typeof updateRiskService>;
 const mockNotify = notifyUserAssigned as jest.MockedFunction<typeof notifyUserAssigned>;
 const mockEnqueue = enqueueRiskLinkRecompute as jest.MockedFunction<
   typeof enqueueRiskLinkRecompute
 >;
 const mockQuery = sequelize.query as unknown as jest.Mock<any>;
+const mockGetActive = getActiveRisksByIdsQuery as unknown as jest.Mock<any>;
+const mockTitles = getProjectTitlesByRiskIdsQuery as unknown as jest.Mock<any>;
 
 const TX = { id: "tx" };
 let committed = false;
 
-/** Active rows the bulk SELECT returns; notification look-ups get a user and a project. */
+/** Active rows the bulk read returns; notification look-ups get a user and a project. */
 function arrangeRows(rows: Array<Record<string, unknown>>) {
+  mockGetActive.mockResolvedValue(rows);
+  mockTitles.mockImplementation(
+    async (riskIds: number[]) => new Map(riskIds.map((id) => [id, "Use case A"])),
+  );
   mockQuery.mockImplementation(async (sql: string) => {
-    if (sql.includes("FROM risks WHERE")) return rows;
     if (sql.includes("FROM users")) return [{ name: "Ada", surname: "Admin" }];
-    if (sql.includes("project_title")) return [{ project_title: "Use case A" }];
     return [];
   });
 }
@@ -169,16 +180,8 @@ describe("bulkUpdateProjectRisks", () => {
       expect(mockAssertOrgOwnsIds).toHaveBeenCalledWith(
         expect.objectContaining({ table: "risks", ids: [1, 2, 5], organizationId: 4 }),
       );
-      // The active-row read is org-scoped, skips archived risks and runs in the transaction.
-      const select = mockQuery.mock.calls.find(([sql]) => String(sql).includes("FROM risks WHERE"));
-      expect(select?.[0]).toContain("organization_id = :organizationId");
-      expect(select?.[0]).toContain("is_deleted = false");
-      expect(select?.[1]).toEqual(
-        expect.objectContaining({
-          replacements: { organizationId: 4, ids: [1, 2, 5] },
-          transaction: TX,
-        }),
-      );
+      // The active rows are read in the transaction (archived risks are left out there).
+      expect(mockGetActive).toHaveBeenCalledWith([1, 2, 5], 4, TX);
 
       // Risk 2 already belongs to user 7: no write, no automation, no recompute.
       expect(mockUpdateService).toHaveBeenCalledTimes(1);
@@ -188,7 +191,14 @@ describe("bulkUpdateProjectRisks", () => {
         expect.objectContaining({ id: 1, risk_owner: 3 }),
         { userId: 9, organizationId: 4 },
         TX,
+        { recordSnapshots: false },
       );
+      // History snapshots are recorded once for the batch, in the transaction.
+      expect(mockSnapshots).toHaveBeenCalledTimes(1);
+      expect(mockSnapshots).toHaveBeenCalledWith(4, TX);
+      // One project-title lookup for every notified risk.
+      expect(mockTitles).toHaveBeenCalledTimes(1);
+      expect(mockTitles).toHaveBeenCalledWith([1], 4);
 
       // Only risk 1 notifies, after commit.
       expect(mockNotify).toHaveBeenCalledTimes(1);
@@ -212,10 +222,11 @@ describe("bulkUpdateProjectRisks", () => {
       expect(mockEnqueue.mock.calls.map((c) => c[1])).toEqual([1]);
       expect(mockArchive).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(200);
-      // Risk 2 was unchanged and risk 5 is archived, so neither is counted.
+      // `updated` is the ids sent; risk 2 was unchanged and risk 5 is archived,
+      // so neither is in `changed`.
       expect(res.json).toHaveBeenCalledWith({
         message: "OK",
-        data: { updated: 1, action: "set_owner" },
+        data: { updated: 3, changed: 1, action: "set_owner" },
       });
     });
 
@@ -287,14 +298,16 @@ describe("bulkUpdateProjectRisks", () => {
         expect.objectContaining({ id: 1 }),
         { userId: 9, organizationId: 4 },
         TX,
+        { recordSnapshots: false },
       );
+      expect(mockSnapshots).toHaveBeenCalledTimes(1);
       expect(assertRiskReferencesInOrganization).not.toHaveBeenCalled();
       expect(mockEnqueue).toHaveBeenCalledWith(4, 1);
       expect(mockNotify).not.toHaveBeenCalled();
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({
         message: "OK",
-        data: { updated: 1, action: "set_category" },
+        data: { updated: 1, changed: 1, action: "set_category" },
       });
     });
 
@@ -319,7 +332,7 @@ describe("bulkUpdateProjectRisks", () => {
       expect(mockEnqueue.mock.calls.map((c) => c[1])).toEqual([3]);
       expect(res.json).toHaveBeenCalledWith({
         message: "OK",
-        data: { updated: 1, action: "set_category" },
+        data: { updated: 3, changed: 1, action: "set_category" },
       });
     });
 
@@ -333,9 +346,10 @@ describe("bulkUpdateProjectRisks", () => {
 
       expect(mockUpdateService).not.toHaveBeenCalled();
       expect(mockEnqueue).not.toHaveBeenCalled();
+      expect(mockSnapshots).not.toHaveBeenCalled();
       expect(res.json).toHaveBeenCalledWith({
         message: "OK",
-        data: { updated: 0, action: "set_category" },
+        data: { updated: 1, changed: 0, action: "set_category" },
       });
     });
 
@@ -388,7 +402,7 @@ describe("bulkUpdateProjectRisks", () => {
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith({
         message: "OK",
-        data: { updated: 2, action: "archive" },
+        data: { updated: 3, changed: 2, action: "archive" },
       });
     });
 
@@ -402,7 +416,7 @@ describe("bulkUpdateProjectRisks", () => {
       expect(mockSnapshots).not.toHaveBeenCalled();
       expect(res.json).toHaveBeenCalledWith({
         message: "OK",
-        data: { updated: 0, action: "archive" },
+        data: { updated: 1, changed: 0, action: "archive" },
       });
     });
   });

@@ -17,8 +17,14 @@ jest.mock("../projectRiskChangeHistory.utils", () => ({
 import { sequelize } from "../../database/db";
 import { recordSnapshotIfChanged } from "../history/riskHistory.utils";
 import { recordProjectRiskDeletion } from "../projectRiskChangeHistory.utils";
+import { enqueueAutomationAction } from "../../services/automations/automationProducer";
 import {
   archiveRiskQuery,
+  createRiskQuery,
+  deleteRiskByIdQuery,
+  getActiveRisksByIdsQuery,
+  getProjectTitlesByRiskIdsQuery,
+  sameRiskCategories,
   deleteRiskMappingsForProjectFrameworksQuery,
   deleteRiskMappingsForProjectsQuery,
   updateRiskByIdQuery,
@@ -28,6 +34,7 @@ import { FRAMEWORK_STRUCTURES } from "../../structures";
 const mockQuery = sequelize.query as jest.Mock;
 const mockSnapshot = recordSnapshotIfChanged as jest.Mock;
 const mockRecordDeletion = recordProjectRiskDeletion as jest.Mock;
+const mockEnqueue = enqueueAutomationAction as jest.Mock;
 const TX = { id: "tx" } as never;
 
 const sqlCalls = () => mockQuery.mock.calls.map(([sql]) => String(sql));
@@ -38,6 +45,8 @@ beforeEach(() => {
   mockQuery.mockReset();
   mockSnapshot.mockClear();
   mockRecordDeletion.mockClear();
+  mockEnqueue.mockReset();
+  mockEnqueue.mockResolvedValue(undefined);
 });
 
 describe("archiveRiskQuery", () => {
@@ -61,8 +70,11 @@ describe("archiveRiskQuery", () => {
     expect(unlink).toHaveLength(1);
     expect(unlink[0][0]).toContain("organization_id = :organizationId");
     expect(unlink[0][0]).toContain("object_type = 'risk'");
-    expect(unlink[0][0]).toContain("object_id = :id");
-    expect(unlink[0][1]).toEqual({ replacements: { organizationId: 4, id: 5 }, transaction: TX });
+    expect(unlink[0][0]).toContain("object_id = :riskId");
+    expect(unlink[0][1]).toEqual({
+      replacements: { organizationId: 4, riskId: 5 },
+      transaction: TX,
+    });
     expect(mockSnapshot.mock.calls.map((c) => c[0]).sort()).toEqual([
       "likelihood",
       "mitigation_status",
@@ -178,6 +190,18 @@ describe("deleteRiskMappingsForProjectFrameworksQuery", () => {
     // Only the frameworks the pfs belong to are touched.
     expect(deletesFrom("answers_eu__risks")).toHaveLength(0);
   });
+
+  it("matches EU control mappings on controls_eu ids, not subcontrol ids", async () => {
+    arrangeFrameworks([1]);
+
+    await deleteRiskMappingsForProjectFrameworksQuery(7, [11, 12], 4, TX);
+
+    const [sql] = deletesFrom("controls_eu__risks")[0] as [string];
+    expect(sql).toContain(
+      "control_id IN (SELECT c.id FROM controls_eu c WHERE c.projects_frameworks_id IN (:pfIds) AND c.organization_id = :organizationId)",
+    );
+    expect(sql).not.toContain("subcontrols_eu");
+  });
 });
 
 describe("deleteRiskMappingsForProjectsQuery", () => {
@@ -249,5 +273,219 @@ describe("updateRiskByIdQuery link removal", () => {
     expect(deletesFrom("custom_framework_level2_risks")).toHaveLength(1);
     expect(sqlCalls().some((s) => s.startsWith("DELETE FROM projects_risks"))).toBe(true);
     expect(sqlCalls().some((s) => s.startsWith("DELETE FROM frameworks_risks"))).toBe(true);
+  });
+});
+
+describe("risk automations wait for the commit", () => {
+  /** A transaction that keeps its afterCommit callbacks until commit() or rollback(). */
+  function makeTransaction() {
+    let callbacks: Array<() => unknown> = [];
+    return {
+      afterCommit: jest.fn((cb: () => unknown) => {
+        callbacks.push(cb);
+      }),
+      commit: () => {
+        callbacks.forEach((cb) => cb());
+        callbacks = [];
+      },
+      rollback: () => {
+        callbacks = [];
+      },
+    };
+  }
+
+  /** One active automation for `trigger`; the archive/update/insert returns risk 5. */
+  function arrange(trigger: string) {
+    mockQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes("FROM automation_triggers")) {
+        return [
+          [
+            {
+              trigger_key: trigger,
+              action_key: "send_email",
+              automation_id: 1,
+              params: { subject: "s", body: "b" },
+            },
+          ],
+          1,
+        ];
+      }
+      if (sql.startsWith("UPDATE risks SET is_deleted = true")) {
+        return [[{ id: 5, risk_owner: 2, risk_approval: 3 }], 1];
+      }
+      if (sql.startsWith("INSERT INTO risks")) {
+        return [{ id: 5, dataValues: { id: 5, risk_owner: 2, risk_approval: 3 } }];
+      }
+      // getRiskByIdQuery's read of the stored row, then the edit's UPDATE.
+      if (sql.startsWith("SELECT * FROM risks")) return [[{ id: 5 }], 1];
+      if (sql.startsWith("UPDATE risks SET")) {
+        return [{ id: 5, dataValues: { id: 5, risk_owner: 2, risk_approval: 3 } }];
+      }
+      return [[], 0];
+    });
+  }
+
+  it("enqueues risk_deleted only after the transaction commits", async () => {
+    arrange("risk_deleted");
+    const tx = makeTransaction();
+
+    await deleteRiskByIdQuery(5, 4, tx as never);
+    expect(tx.afterCommit).toHaveBeenCalledTimes(1);
+    expect(mockEnqueue).not.toHaveBeenCalled();
+
+    tx.commit();
+    expect(mockEnqueue).toHaveBeenCalledWith(
+      "send_email",
+      expect.objectContaining({ organizationId: 4, automation_id: 1 }),
+    );
+  });
+
+  it("enqueues risk_updated only after the transaction commits", async () => {
+    arrange("risk_updated");
+    const tx = makeTransaction();
+
+    await updateRiskByIdQuery(5, { risk_name: "Renamed" } as never, 4, tx as never);
+    expect(mockEnqueue).not.toHaveBeenCalled();
+
+    tx.commit();
+    expect(mockEnqueue).toHaveBeenCalledTimes(1);
+  });
+
+  it("enqueues risk_added only after the transaction commits", async () => {
+    arrange("risk_added");
+    const tx = makeTransaction();
+
+    await createRiskQuery({ risk_name: "New" } as never, 4, tx as never);
+    expect(mockEnqueue).not.toHaveBeenCalled();
+
+    tx.commit();
+    expect(mockEnqueue).toHaveBeenCalledTimes(1);
+  });
+
+  it("enqueues nothing when a bulk archive rolls back", async () => {
+    arrange("risk_deleted");
+    const tx = makeTransaction();
+
+    for (const id of [5, 6, 7]) {
+      await archiveRiskQuery(id, 4, 9, tx as never, { recordSnapshots: false });
+    }
+    expect(tx.afterCommit).toHaveBeenCalledTimes(3);
+
+    tx.rollback();
+    expect(mockEnqueue).not.toHaveBeenCalled();
+  });
+
+  it("logs, and does not throw, when the enqueue after commit fails", async () => {
+    arrange("risk_deleted");
+    mockEnqueue.mockRejectedValueOnce(new Error("redis down"));
+    const tx = makeTransaction();
+
+    await deleteRiskByIdQuery(5, 4, tx as never);
+
+    expect(() => tx.commit()).not.toThrow();
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(mockEnqueue).toHaveBeenCalledTimes(1);
+  });
+
+  it("enqueues at once without a transaction", async () => {
+    arrange("risk_deleted");
+
+    await deleteRiskByIdQuery(5, 4, undefined as never);
+
+    expect(mockEnqueue).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe("updateRiskByIdQuery snapshots", () => {
+  function arrange() {
+    mockQuery.mockImplementation(async (sql: string) => {
+      if (sql.startsWith("SELECT * FROM risks")) return [[{ id: 7, severity: "Minor" }], 1];
+      if (sql.startsWith("UPDATE risks SET")) {
+        return [{ id: 7, dataValues: { id: 7, severity: "Major" } }];
+      }
+      return [[], 0];
+    });
+  }
+
+  it("records the changed parameters' snapshots by default", async () => {
+    arrange();
+
+    await updateRiskByIdQuery(7, { severity: "Major" } as never, 4, TX);
+
+    expect(mockSnapshot.mock.calls.map((c) => c[0])).toContain("severity");
+  });
+
+  it("skips the snapshots when asked, for a bulk edit", async () => {
+    arrange();
+
+    await updateRiskByIdQuery(7, { severity: "Major" } as never, 4, TX, {
+      recordSnapshots: false,
+    });
+
+    expect(mockSnapshot).not.toHaveBeenCalled();
+  });
+});
+
+describe("getActiveRisksByIdsQuery", () => {
+  it("reads only the organization's active risks, in the transaction", async () => {
+    mockQuery.mockResolvedValue([{ id: 1 }]);
+
+    await expect(getActiveRisksByIdsQuery([1, 2], 4, TX)).resolves.toEqual([{ id: 1 }]);
+
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).toContain("organization_id = :organizationId");
+    expect(sql).toContain("id IN (:ids)");
+    expect(sql).toContain("is_deleted = false");
+    expect(options).toEqual(
+      expect.objectContaining({
+        replacements: { organizationId: 4, ids: [1, 2] },
+        transaction: TX,
+      }),
+    );
+  });
+
+  it("does not query for no ids", async () => {
+    await expect(getActiveRisksByIdsQuery([], 4, TX)).resolves.toEqual([]);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+});
+
+describe("sameRiskCategories", () => {
+  it("ignores order and duplicates, and reads a Postgres array literal", () => {
+    expect(sameRiskCategories(["B", "A"], ["A", "B"])).toBe(true);
+    expect(sameRiskCategories('{"A","B c"}', ["B c", "A", "A"])).toBe(true);
+    expect(sameRiskCategories("{}", [])).toBe(true);
+    expect(sameRiskCategories(["A"], ["A", "B"])).toBe(false);
+    expect(sameRiskCategories(null, ["A"])).toBe(false);
+  });
+});
+
+describe("getProjectTitlesByRiskIdsQuery", () => {
+  it("reads every risk's first project title in one org-scoped query", async () => {
+    mockQuery.mockResolvedValue([
+      { risk_id: 1, project_title: "Use case A" },
+      { risk_id: 2, project_title: "Use case B" },
+    ]);
+
+    const titles = await getProjectTitlesByRiskIdsQuery([1, 2, 3], 4);
+
+    expect(mockQuery).toHaveBeenCalledTimes(1);
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).toContain("DISTINCT ON (prl.risk_id)");
+    expect(sql).toContain("prl.risk_id IN (:riskIds)");
+    expect(sql).toContain("prl.organization_id = :organizationId");
+    expect(sql).toContain("p.organization_id = :organizationId");
+    expect(sql).toContain("ORDER BY prl.risk_id, p.id ASC");
+    expect(options).toEqual(
+      expect.objectContaining({ replacements: { riskIds: [1, 2, 3], organizationId: 4 } }),
+    );
+    expect(titles.get(1)).toBe("Use case A");
+    expect(titles.get(2)).toBe("Use case B");
+    expect(titles.has(3)).toBe(false);
+  });
+
+  it("does not query for no risks", async () => {
+    await expect(getProjectTitlesByRiskIdsQuery([], 4)).resolves.toEqual(new Map());
+    expect(mockQuery).not.toHaveBeenCalled();
   });
 });

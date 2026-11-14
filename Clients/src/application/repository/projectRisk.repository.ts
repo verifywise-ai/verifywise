@@ -116,7 +116,19 @@ export interface BulkUpdateProjectRisksPayload {
   categories?: string[];
 }
 
-export async function bulkUpdateProjectRisks(payload: BulkUpdateProjectRisksPayload): Promise<any> {
-  const response = await apiServices.patch("/projectRisks/bulk", payload);
+/** `updated` is the number of ids sent; `changed` the risks actually archived or edited. */
+export interface BulkUpdateProjectRisksResult {
+  updated: number;
+  changed?: number;
+  action: BulkProjectRiskAction;
+}
+
+export async function bulkUpdateProjectRisks(
+  payload: BulkUpdateProjectRisksPayload,
+): Promise<{ message?: string; data?: BulkUpdateProjectRisksResult }> {
+  const response = await apiServices.patch<{
+    message?: string;
+    data?: BulkUpdateProjectRisksResult;
+  }>("/projectRisks/bulk", payload);
   return response.data;
 }

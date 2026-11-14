@@ -349,13 +349,17 @@ const VWProjectRisksTable = ({
   const [pendingCategories, setPendingCategories] = useState<string[]>([]);
 
   const bulkMutation = useBulkUpdateProjectRisks({
-    onSuccess: (payload) => {
+    onSuccess: (payload, result) => {
       clearSelection();
       setOwnerDialogOpen(false);
       setCategoryDialogOpen(false);
       setPendingOwnerId("");
       setPendingCategories([]);
-      onBulkActionSuccess?.(payload.action, payload.ids.length);
+      // Risks that already had the value, or were archived, are not counted.
+      onBulkActionSuccess?.(
+        payload.action,
+        result?.changed ?? result?.updated ?? payload.ids.length,
+      );
     },
   });
 

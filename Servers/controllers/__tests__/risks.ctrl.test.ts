@@ -8,8 +8,11 @@ jest.mock("../../utils/risk.utils", () => ({
   getRisksByProjectQuery: jest.fn(),
   updateRiskByIdQuery: jest.fn(),
   archiveRiskQuery: jest.fn(),
-  recordRiskDeletionSnapshots: jest.fn(),
+  recordRiskSnapshots: jest.fn(),
   assertRiskReferencesInOrganization: jest.fn(),
+  getActiveRisksByIdsQuery: jest.fn(),
+  getProjectTitlesByRiskIdsQuery: jest.fn().mockResolvedValue(new Map()),
+  sameRiskCategories: jest.fn().mockReturnValue(false),
   PROJECT_RISK_CATEGORIES_SET: new Set(["financial", "operational", "strategic", "compliance"]),
 }));
 jest.mock("../../domain.layer/models/risks/risk.model", () => ({
@@ -442,17 +445,18 @@ describe("risks.ctrl", () => {
 
   describe("bulkUpdateProjectRisks", () => {
     it("should return 200 for set_owner action", async () => {
-      const { sequelize } = require("../../database/db");
-      (sequelize.query as jest.Mock<any>).mockImplementation(async (sql: string) =>
-        sql.includes("FROM risks WHERE") ? [buildRisk({ id: 1 }), buildRisk({ id: 2 })] : [[]],
-      );
+      const { getActiveRisksByIdsQuery } = require("../../utils/risk.utils");
+      (getActiveRisksByIdsQuery as jest.Mock<any>).mockResolvedValue([
+        buildRisk({ id: 1 }),
+        buildRisk({ id: 2 }),
+      ]);
       mockUpdate.mockImplementation(async (id: number) => buildRisk({ id }) as any);
       const req = createReq({ body: { ids: [1, 2], action: "set_owner", ownerId: 3 } });
       const res = createRes();
       await bulkUpdateProjectRisks(req, res);
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { updated: 2, action: "set_owner" } }),
+        expect.objectContaining({ data: { updated: 2, changed: 2, action: "set_owner" } }),
       );
     });
     it("should return 200 for archive action", async () => {
@@ -462,7 +466,7 @@ describe("risks.ctrl", () => {
       await bulkUpdateProjectRisks(req, res);
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(
-        expect.objectContaining({ data: { updated: 1, action: "archive" } }),
+        expect.objectContaining({ data: { updated: 1, changed: 1, action: "archive" } }),
       );
     });
     it("should return 400 for invalid action", async () => {

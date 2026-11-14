@@ -20,6 +20,29 @@ import {
 import { toRiskCalendarDate } from "./riskCalendarDate.utils";
 import { recordProjectRiskDeletion } from "./projectRiskChangeHistory.utils";
 import { getStructureById } from "../structures";
+import logger from "./logger/fileLogger";
+import { unlinkRiskFromAllPoliciesQuery } from "./policyLinkedObject.utils";
+
+/**
+ * Enqueue a risk automation. Inside a transaction the enqueue waits for the
+ * commit, so a rolled-back create, edit or archive (one risk of a failed bulk
+ * action) sends nothing. Without one it is enqueued at once.
+ */
+const enqueueRiskAutomation = async (
+  actionKey: string,
+  data: object,
+  transaction?: Transaction,
+): Promise<void> => {
+  if (!transaction) {
+    await enqueueAutomationAction(actionKey, data);
+    return;
+  }
+  transaction.afterCommit(() => {
+    enqueueAutomationAction(actionKey, data).catch((error) =>
+      logger.error(`[risk] ${actionKey} automation enqueue after commit failed: ${error}`),
+    );
+  });
+};
 
 type Mitigation = {
   id: number;
@@ -923,11 +946,12 @@ export const createRiskQuery = async (
         automation_id: automation.automation_id,
       };
 
-      // Enqueue with processed params
-      await enqueueAutomationAction(automation.action_key, {
-        ...processedParams,
-        organizationId,
-      });
+      // Enqueue with processed params once the transaction commits
+      await enqueueRiskAutomation(
+        automation.action_key,
+        { ...processedParams, organizationId },
+        transaction,
+      );
     } else {
       console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
     }
@@ -977,6 +1001,7 @@ export const updateRiskByIdQuery = async (
   >,
   organizationId: number,
   transaction: Transaction,
+  { recordSnapshots = true }: { recordSnapshots?: boolean } = {},
 ): Promise<RiskModel | null> => {
   const existingRisk = await getRiskByIdQuery(id, organizationId, true);
   // Unchanged owner/approver are not re-checked, so a risk whose owner has
@@ -1254,17 +1279,20 @@ export const updateRiskByIdQuery = async (
         automation_id: automation.automation_id,
       };
 
-      // Enqueue with processed params
-      await enqueueAutomationAction(automation.action_key, {
-        ...processedParams,
-        organizationId,
-      });
+      // Enqueue with processed params once the transaction commits
+      await enqueueRiskAutomation(
+        automation.action_key,
+        { ...processedParams, organizationId },
+        transaction,
+      );
     } else {
       console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
     }
   }
 
-  // Record history snapshots if tracked parameters changed
+  // Record history snapshots if tracked parameters changed. A bulk edit
+  // skips this and records them once after its loop.
+  if (!recordSnapshots) return updatedRisk;
   try {
     const parametersToCheck = [
       { key: "severity", param: "severity" },
@@ -1370,11 +1398,12 @@ export const deleteRiskByIdQuery = async (
         automation_id: automation.automation_id,
       };
 
-      // Enqueue with processed params
-      await enqueueAutomationAction(automation.action_key, {
-        ...processedParams,
-        organizationId,
-      });
+      // Enqueue with processed params once the transaction commits
+      await enqueueRiskAutomation(
+        automation.action_key,
+        { ...processedParams, organizationId },
+        transaction,
+      );
     } else {
       console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
     }
@@ -1383,17 +1412,73 @@ export const deleteRiskByIdQuery = async (
   // Record history snapshots for all tracked parameters after deletion. A
   // bulk archive skips this and records them once after its loop.
   if (recordSnapshots) {
-    await recordRiskDeletionSnapshots(organizationId, transaction);
+    await recordRiskSnapshots(organizationId, transaction);
   }
 
   return result[0].length > 0;
 };
 
 /**
- * Record the four risk history snapshots an archive moves. Failures are
- * logged, never thrown: history must not block the archive.
+ * The active (not archived) risks of the organization among `ids`. Archived
+ * ids are left out, so a bulk edit leaves them alone.
  */
-export const recordRiskDeletionSnapshots = async (
+export const getActiveRisksByIdsQuery = async (
+  ids: number[],
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<IRisk[]> => {
+  if (ids.length === 0) return [];
+  return sequelize.query<IRisk>(
+    `SELECT * FROM risks WHERE organization_id = :organizationId AND id IN (:ids) AND is_deleted = false`,
+    { replacements: { organizationId, ids }, type: QueryTypes.SELECT, transaction },
+  );
+};
+
+/**
+ * A stored risk_category as a list. The column is an enum array, which the
+ * driver may hand back as a Postgres array literal ("{a,\"b c\"}").
+ */
+const storedRiskCategories = (value: unknown): string[] => {
+  if (Array.isArray(value)) return value.map(String);
+  if (typeof value !== "string") return [];
+  const inner = value.replace(/^\{|\}$/g, "");
+  if (inner === "") return [];
+  return inner.split(",").map((c) => c.trim().replace(/^"|"$/g, ""));
+};
+
+/** Same risk categories, ignoring order and duplicates. */
+export const sameRiskCategories = (stored: unknown, next: string[]): boolean => {
+  const a = new Set(storedRiskCategories(stored));
+  const b = new Set(next);
+  return a.size === b.size && [...a].every((c) => b.has(c));
+};
+
+/**
+ * One project (use case) title per risk, for notifications: the title of the
+ * lowest-id project each risk is linked to. Risks with no project are absent.
+ */
+export const getProjectTitlesByRiskIdsQuery = async (
+  riskIds: number[],
+  organizationId: number,
+): Promise<Map<number, string>> => {
+  if (riskIds.length === 0) return new Map();
+  const rows = await sequelize.query<{ risk_id: number; project_title: string }>(
+    `SELECT DISTINCT ON (prl.risk_id) prl.risk_id, p.project_title
+       FROM projects_risks prl
+       JOIN projects p ON p.id = prl.project_id AND p.organization_id = :organizationId
+      WHERE prl.risk_id IN (:riskIds) AND prl.organization_id = :organizationId
+      ORDER BY prl.risk_id, p.id ASC`,
+    { replacements: { riskIds, organizationId }, type: QueryTypes.SELECT },
+  );
+  return new Map(rows.map((r) => [Number(r.risk_id), r.project_title]));
+};
+
+/**
+ * Record the four risk history snapshots. A bulk archive or edit records them
+ * once after its loop. Failures are logged, never thrown: history must not
+ * block the change.
+ */
+export const recordRiskSnapshots = async (
   organizationId: number,
   transaction: Transaction,
 ): Promise<void> => {
@@ -1434,11 +1519,7 @@ export const archiveRiskQuery = async (
   }
 
   // An archived risk is no longer linked to any policy (R-M8).
-  await sequelize.query(
-    `DELETE FROM policy_linked_objects
-      WHERE organization_id = :organizationId AND object_type = 'risk' AND object_id = :id`,
-    { replacements: { organizationId, id }, transaction },
-  );
+  await unlinkRiskFromAllPoliciesQuery(id, organizationId, transaction);
 
   return true;
 };
@@ -1461,7 +1542,7 @@ const BUILT_IN_RISK_MAPPING_TABLES: Record<number, RiskMappingTable[]> = {
     {
       risksTable: "controls_eu__risks",
       implCol: "control_id",
-      implIdsSql: `SELECT sc.id FROM controls_eu c JOIN subcontrols_eu sc ON c.id = sc.control_id AND c.organization_id = :organizationId AND sc.organization_id = :organizationId WHERE c.projects_frameworks_id IN (:pfIds)`,
+      implIdsSql: `SELECT c.id FROM controls_eu c WHERE c.projects_frameworks_id IN (:pfIds) AND c.organization_id = :organizationId`,
     },
     {
       risksTable: "subcontrols_eu__risks",

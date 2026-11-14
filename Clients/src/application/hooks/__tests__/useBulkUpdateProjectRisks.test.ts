@@ -38,17 +38,23 @@ describe("useBulkUpdateProjectRisks", () => {
 
   it("should call onSuccess callback when mutation succeeds", async () => {
     const onSuccess = vi.fn();
-    mockBulkUpdateProjectRisks.mockResolvedValue({ success: true });
+    mockBulkUpdateProjectRisks.mockResolvedValue({
+      message: "OK",
+      data: { updated: 2, changed: 1, action: "archive" },
+    });
 
     const { result } = renderHook(() => useBulkUpdateProjectRisks({ onSuccess }), {
       wrapper: createWrapper(),
     });
 
     await act(async () => {
-      await result.current.mutateAsync({ ids: [1], action: "archive" });
+      await result.current.mutateAsync({ ids: [1, 2], action: "archive" });
     });
 
-    expect(onSuccess).toHaveBeenCalledWith({ ids: [1], action: "archive" });
+    expect(onSuccess).toHaveBeenCalledWith(
+      { ids: [1, 2], action: "archive" },
+      { updated: 2, changed: 1, action: "archive" },
+    );
   });
 
   it("should call onError callback when mutation fails", async () => {
