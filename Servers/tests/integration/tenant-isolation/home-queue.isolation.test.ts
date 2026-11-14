@@ -4,6 +4,12 @@ jest.mock("../../../utils/aiGatewayInternal.utils", () => ({
   aiGatewayRequest: jest.fn().mockResolvedValue({ summary: { blocked: 0, masked: 0 } }),
 }));
 
+// The gateway count is skipped without an internal key; pretend one is set.
+jest.mock("../../../utils/aiGatewayConfig", () => ({
+  ...jest.requireActual("../../../utils/aiGatewayConfig"),
+  isGatewayInternalKeyConfigured: () => true,
+}));
+
 import { sequelize } from "../../../database/db";
 import { cleanupDatabase, createTestOrganization, createTestUser } from "../helpers";
 import {

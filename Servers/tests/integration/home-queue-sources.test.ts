@@ -178,7 +178,7 @@ describe("Home queue ownership sources against a real database", () => {
       expect(byName.get("I review")?.overdue).toBe(false);
     });
 
-    it("leaves Reviewed vendors out and keeps a NULL or other review status in", async () => {
+    it("leaves an overdue Reviewed vendor out, keeps NULL and other statuses in", async () => {
       await seedVendor(orgId, {
         name: "reviewed overdue",
         reviewerId: me,
@@ -186,21 +186,41 @@ describe("Home queue ownership sources against a real database", () => {
         reviewStatus: "Reviewed",
       });
       await seedVendor(orgId, {
-        name: "null status",
+        name: "null status overdue",
         reviewerId: me,
         reviewDate: dayOffset(-3),
         reviewStatus: null,
       });
       await seedVendor(orgId, {
-        name: "follow-up status",
+        name: "follow-up overdue",
         reviewerId: me,
-        reviewDate: dayOffset(2),
+        reviewDate: dayOffset(-3),
         reviewStatus: "Requires follow-up",
       });
 
       expect((await run(vendorReviewsSource, ctx)).names).toEqual([
-        "follow-up status",
-        "null status",
+        "follow-up overdue",
+        "null status overdue",
+      ]);
+    });
+
+    it("keeps a Reviewed vendor whose next review is today or later in the window", async () => {
+      await seedVendor(orgId, {
+        name: "reviewed, next in 5",
+        reviewerId: me,
+        reviewDate: dayOffset(5),
+        reviewStatus: "Reviewed",
+      });
+      await seedVendor(orgId, {
+        name: "reviewed, next today",
+        reviewerId: me,
+        reviewDate: dayOffset(0),
+        reviewStatus: "Reviewed",
+      });
+
+      expect((await run(vendorReviewsSource, ctx)).names).toEqual([
+        "reviewed, next in 5",
+        "reviewed, next today",
       ]);
     });
 

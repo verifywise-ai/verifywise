@@ -3,6 +3,7 @@ import { sequelize } from "../../database/db";
 import { IntakeSubmissionStatus } from "../../domain.layer/enums/intake-submission-status.enum";
 import logger from "../../utils/logger/fileLogger";
 import { aiGatewayRequest } from "../../utils/aiGatewayInternal.utils";
+import { isGatewayInternalKeyConfigured } from "../../utils/aiGatewayConfig";
 import { getAgentStatsQuery } from "../../utils/agentDiscovery.utils";
 import {
   POLICY_REVIEW_DUE_CONDITION,
@@ -30,7 +31,7 @@ export const GATEWAY_COUNT_TIMEOUT_MS = 2000;
 
 const GATEWAY_STATS_PATH = "/internal/guardrails/stats?period=24h";
 
-type CountLoader = (ctx: HomeQueueContext) => Promise<number>;
+type CountLoader = (ctx: HomeQueueContext) => Promise<number | null>;
 
 const sqlCount = async (sql: string, replacements: Record<string, unknown>): Promise<number> => {
   const rows = await sequelize.query<{ total: number | string }>(sql, {
@@ -89,9 +90,11 @@ const policyReviewsDue: CountLoader = (ctx) =>
 
 /** Prompts the guardrails blocked or masked in the last 24 hours. */
 const promptsBlockedMasked24h: CountLoader = async (ctx) => {
+  // No internal key means the gateway is not wired up here: skip the call (and
+  // its error log on every Home load) and show a dash.
+  if (!isGatewayInternalKeyConfigured()) return null;
   const stats = await aiGatewayRequest("GET", GATEWAY_STATS_PATH, {
     organizationId: ctx.organizationId,
-    userId: ctx.userId,
     timeoutMs: GATEWAY_COUNT_TIMEOUT_MS,
   });
   const blocked = stats?.summary?.blocked;

@@ -172,7 +172,7 @@ describe("vendorReviewsSource", () => {
     expect(vendorReviewsSource.isVisible(ctx)).toBe(true);
   });
 
-  it("recipient is reviewer, else assignee; no status filter, as the sweep has none", async () => {
+  it("recipient is reviewer, else assignee; a Reviewed vendor drops out only once its date has passed", async () => {
     query.mockResolvedValueOnce([]);
     await vendorReviewsSource.load(ctx);
     const [sql, options] = query.mock.calls[0];
@@ -180,10 +180,12 @@ describe("vendorReviewsSource", () => {
     expect(sql).toContain("v.organization_id = :organizationId");
     // reviewer || assignee: a reviewer, when set, is the only recipient.
     expect(sql).toContain("COALESCE(NULLIF(v.reviewer, 0), v.assignee) = :userId");
-    expect(sql).not.toMatch(/review_status\s*(=|<>|IN|NOT)/i);
+    expect(sql).toContain("v.review_status IS DISTINCT FROM 'Reviewed' OR");
+    expect(sql).toContain(">= :today");
     expect(sql).toContain("<= :windowEnd");
     expect(options.replacements).toEqual({
       organizationId: 7,
+      today: "2026-11-14",
       userId: 5,
       windowEnd: "2026-11-28",
     });

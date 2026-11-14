@@ -8,12 +8,15 @@ const REVIEW_DATE = utcDateSql("v.review_date");
 /**
  * Which vendors are due for review, whoever the recipient is (alias `v`). The
  * queue source adds the recipient; the Home counts strip counts it org-wide.
- * Keep the rule here so a change applies to both.
+ * Keep the rule here so a change applies to both. A 'Reviewed' vendor drops
+ * out only once its review_date is before today; the usual workflow marks it
+ * Reviewed and sets the next cycle's date in the same save, and that upcoming
+ * review must still show. (IS DISTINCT FROM keeps a NULL status in.)
  */
 export const VENDOR_REVIEW_DUE_CONDITION = `
     v.organization_id = :organizationId
     AND v.review_date IS NOT NULL
-    AND v.review_status IS DISTINCT FROM 'Reviewed'
+    AND (v.review_status IS DISTINCT FROM 'Reviewed' OR ${REVIEW_DATE} >= :today)
     AND ${REVIEW_DATE} <= :windowEnd`;
 
 /**
@@ -21,8 +24,10 @@ export const VENDOR_REVIEW_DUE_CONDITION = `
  * The sweep (automationWorker.ts, the vendor_review_date_approaching loop)
  * notifies `vendor.reviewer || vendor.assignee`; so the recipient here is the
  * reviewer, or the assignee when there is no reviewer (NULL or 0, as `||`
- * reads it). Unlike the sweep, vendors whose review_status is 'Reviewed' are
- * excluded, by product decision (2026-11-13); a NULL status stays in. Window:
+ * reads it). Unlike the sweep, a vendor whose review_status is 'Reviewed' is
+ * excluded only when its review_date is before today, by product decision
+ * (2026-11-13); a Reviewed vendor due today or later stays in, as do NULL and
+ * other statuses. Window:
  * review_date <= today + 14 days, overdue included. Vendors have no
  * soft-delete flag. Exported so tests can pin the rule.
  */
@@ -32,9 +37,10 @@ export const VENDOR_REVIEWS_SQL = `
   WHERE ${VENDOR_REVIEW_DUE_CONDITION}
     AND COALESCE(NULLIF(v.reviewer, 0), v.assignee) = :userId`;
 
-/** Binds the due condition's `:organizationId` and `:windowEnd`. */
+/** Binds the due condition's `:organizationId`, `:today` and `:windowEnd`. */
 export const vendorReviewDueReplacements = (organizationId: number, today: string) => ({
   organizationId,
+  today,
   windowEnd: addDays(today, DUE_SOON_DAYS),
 });
 

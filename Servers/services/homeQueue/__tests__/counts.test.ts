@@ -5,16 +5,20 @@ jest.mock("../../../utils/logger/fileLogger", () => ({
 }));
 jest.mock("../../../database/db", () => ({ sequelize: { query: jest.fn() } }));
 jest.mock("../../../utils/aiGatewayInternal.utils", () => ({ aiGatewayRequest: jest.fn() }));
+jest.mock("../../../utils/aiGatewayConfig", () => ({ isGatewayInternalKeyConfigured: jest.fn() }));
 jest.mock("../../../utils/agentDiscovery.utils", () => ({ getAgentStatsQuery: jest.fn() }));
 
+import logger from "../../../utils/logger/fileLogger";
 import { sequelize } from "../../../database/db";
 import { aiGatewayRequest } from "../../../utils/aiGatewayInternal.utils";
+import { isGatewayInternalKeyConfigured } from "../../../utils/aiGatewayConfig";
 import { getAgentStatsQuery } from "../../../utils/agentDiscovery.utils";
 import { loadHomeCounts, GATEWAY_COUNT_TIMEOUT_MS } from "../counts";
 import type { HomeQueueContext } from "../../../domain.layer/interfaces/i.homeQueue";
 
 const query = sequelize.query as jest.Mock;
 const gateway = aiGatewayRequest as jest.Mock;
+const keyConfigured = isGatewayInternalKeyConfigured as jest.Mock;
 const agentStats = getAgentStatsQuery as jest.Mock;
 
 const ctxWith = (allowed: string[]): HomeQueueContext => ({
@@ -50,6 +54,7 @@ beforeEach(() => {
   answerSql();
   agentStats.mockResolvedValue({ total: 9, unreviewed: 2, confirmed: 0, rejected: 0, stale: 0 });
   gateway.mockResolvedValue({ summary: { blocked: 7, masked: 11 } });
+  keyConfigured.mockReturnValue(true);
 });
 
 describe("loadHomeCounts", () => {
@@ -83,10 +88,20 @@ describe("loadHomeCounts", () => {
     expect(path).toBe("/internal/guardrails/stats?period=24h");
     expect(options).toMatchObject({
       organizationId: 7,
-      userId: 5,
       timeoutMs: GATEWAY_COUNT_TIMEOUT_MS,
     });
+    expect(options).not.toHaveProperty("userId");
     expect(GATEWAY_COUNT_TIMEOUT_MS).toBeLessThanOrEqual(5000);
+  });
+
+  it("reports null without calling or logging when the gateway key is not configured", async () => {
+    keyConfigured.mockReturnValue(false);
+    const counts = await loadHomeCounts(ctxWith([]));
+
+    expect(counts.promptsBlockedMasked24h).toBeNull();
+    expect(gateway).not.toHaveBeenCalled();
+    expect(logger.error).not.toHaveBeenCalled();
+    expect(counts.untreatedRisks).toBe(4);
   });
 
   it("reports null for a count whose gateway call rejects, leaving the others intact", async () => {
