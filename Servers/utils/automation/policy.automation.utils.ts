@@ -1,3 +1,5 @@
+import { formatReviewDate } from "../policyReviewDate.utils";
+
 // Build replacement dict for policy
 export function buildPolicyReplacements(policy: any): Record<string, any> {
   return {
@@ -5,9 +7,7 @@ export function buildPolicyReplacements(policy: any): Record<string, any> {
     "policy.content": policy.content_html || "",
     "policy.status": policy.status || "",
     "policy.tags": Array.isArray(policy.tags) ? policy.tags.join(", ") : "",
-    "policy.next_review_date": policy.next_review_date
-      ? new Date(policy.next_review_date).toLocaleDateString("en-US", { dateStyle: "long" })
-      : "",
+    "policy.next_review_date": formatReviewDate(policy.next_review_date),
     "policy.author": policy.author_name || policy.author_id,
     "policy.reviewers": policy.reviewer_names || "",
     date_and_time: new Date().toLocaleString("en-US", {
@@ -18,12 +18,8 @@ export function buildPolicyReplacements(policy: any): Record<string, any> {
 }
 
 export function buildPolicyUpdateReplacements(oldPolicy: any, newPolicy: any): Record<string, any> {
-  const nextReviewDate = newPolicy.next_review_date
-    ? new Date(newPolicy.next_review_date).toLocaleDateString("en-US", { dateStyle: "long" })
-    : "";
-  const oldNextReviewDate = oldPolicy.next_review_date
-    ? new Date(oldPolicy.next_review_date).toLocaleDateString("en-US", { dateStyle: "long" })
-    : "";
+  const nextReviewDate = formatReviewDate(newPolicy.next_review_date);
+  const oldNextReviewDate = formatReviewDate(oldPolicy.next_review_date);
   const tags = Array.isArray(newPolicy.tags) ? newPolicy.tags.join(", ") : "";
   const oldTags = Array.isArray(oldPolicy.tags) ? oldPolicy.tags.join(", ") : "";
 

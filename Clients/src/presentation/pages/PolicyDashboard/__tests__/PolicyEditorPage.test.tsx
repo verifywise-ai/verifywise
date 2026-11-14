@@ -212,9 +212,36 @@ describe("PolicyEditorPage", () => {
     await waitFor(() => {
       expect(mockCreatePolicy).toHaveBeenCalled();
     });
+    // The review date goes out as the picked calendar day, not a timestamp (P-M1).
+    expect(mockCreatePolicy.mock.calls[0][0]).toEqual(
+      expect.objectContaining({ next_review_date: "2026-01-01" }),
+    );
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith("/policies/42/edit", { replace: true });
     });
+  });
+
+  it("shows the server's message when a failed save has no field to show it under", async () => {
+    mockCreatePolicy.mockRejectedValueOnce({
+      message: "Failed to create policy",
+      originalError: {
+        message: "The policy owner must be a member of this organization",
+        response: { data: { errors: [{ field: "body", message: "x" }] } },
+      },
+    });
+    renderWithProviders(<PolicyEditorPage />, { route: "/policies/new" });
+    await waitFor(() => expect(screen.getByTestId("policy-form")).toBeInTheDocument());
+
+    fireEvent.click(screen.getByTestId("fill-valid-form"));
+    await waitFor(() =>
+      expect(screen.getByTestId("form-title").textContent).toBe("AI Ethics Policy"),
+    );
+    fireEvent.click(screen.getByText("Save"));
+
+    expect(
+      await screen.findByText("The policy owner must be a member of this organization"),
+    ).toBeInTheDocument();
+    expect(mockNavigate).not.toHaveBeenCalledWith("/policies/42/edit", { replace: true });
   });
 
   it("navigates back to policies when the back button is clicked", async () => {

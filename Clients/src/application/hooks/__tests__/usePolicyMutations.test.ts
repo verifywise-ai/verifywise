@@ -171,6 +171,22 @@ describe("useUpdatePolicy", () => {
     expect(mockUpdatePolicy).toHaveBeenCalledWith(1, input);
     expect(returned).toEqual(updated);
   });
+
+  it("refreshes the policy's change history after a save (P-L7)", async () => {
+    mockUpdatePolicy.mockResolvedValue(createPolicy(1, { title: "New Title" }));
+    const { queryClient, wrapper } = createWrapper();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    const { result } = renderHook(() => useUpdatePolicy(), { wrapper });
+
+    await act(async () => {
+      await result.current.mutateAsync({
+        id: 1,
+        input: { title: "New Title", status: "Draft", content_html: "" },
+      });
+    });
+
+    expect(invalidateSpy).toHaveBeenCalledWith({ queryKey: ["changeHistory", "policy", 1] });
+  });
 });
 
 describe("useDeletePolicy", () => {

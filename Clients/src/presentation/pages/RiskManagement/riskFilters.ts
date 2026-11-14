@@ -9,6 +9,7 @@ import type { RiskModel } from "../../../domain/models/Common/risks/risk.model";
 import { Severity } from "../../../domain/enums/severity.enum";
 import { RiskLevelAutoCalculated } from "../../../domain/enums/riskLevelAutoCalculated.enum";
 import type { FilterCondition } from "../../components/Table/FilterBy";
+import { riskCalendarDay } from "../../tools/isoDateToString";
 
 /** Severity values as stored on a risk. */
 export const SEVERITY_OPTIONS = Object.values(Severity).map((value) => ({ value, label: value }));
@@ -86,9 +87,9 @@ export function getRiskFieldValue(
     case "impact":
       return risk.impact;
     case "deadline":
-      return risk.deadline;
+      return riskCalendarDay(risk.deadline);
     case "date_of_assessment":
-      return risk.date_of_assessment;
+      return riskCalendarDay(risk.date_of_assessment);
     default:
       return null;
   }

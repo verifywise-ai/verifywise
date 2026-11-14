@@ -12,6 +12,7 @@ import {
   RISK_SEVERITY_VALUES,
   SEVERITY_VALUES,
 } from "./risks.enums";
+import { isInvalidDateCell, riskCalendarDateFromCell } from "../../utils/riskCalendarDate.utils";
 
 /**
  * Server-side risk-import extension logic. Two entry points:
@@ -316,14 +317,14 @@ function validateRow(row: RiskImportRow, rowIndex: number): RiskImportError[] {
       message: `Invalid risk severity. Must be one of: ${RISK_SEVERITY_VALUES.join(", ")}`,
     });
   }
-  if (row.deadline && Number.isNaN(new Date(row.deadline).getTime())) {
+  if (row.deadline && isInvalidDateCell(row.deadline)) {
     errors.push({
       row: rowIndex,
       field: "deadline",
       message: "Invalid deadline date format. Use YYYY-MM-DD",
     });
   }
-  if (row.date_of_assessment && Number.isNaN(new Date(row.date_of_assessment).getTime())) {
+  if (row.date_of_assessment && isInvalidDateCell(row.date_of_assessment)) {
     errors.push({
       row: rowIndex,
       field: "date_of_assessment",
@@ -354,7 +355,7 @@ function parseRow(row: RiskImportRow): Record<string, unknown> {
     review_notes: row.review_notes ?? null,
     mitigation_status: row.mitigation_status ?? null,
     current_risk_level: row.current_risk_level ?? null,
-    deadline: row.deadline ? new Date(row.deadline) : null,
+    deadline: row.deadline ? riskCalendarDateFromCell(row.deadline) : null,
     mitigation_plan: row.mitigation_plan ?? null,
     implementation_strategy: row.implementation_strategy ?? null,
     likelihood_mitigation: row.likelihood_mitigation ?? "Rare",
@@ -362,7 +363,10 @@ function parseRow(row: RiskImportRow): Record<string, unknown> {
     final_risk_level: row.final_risk_level ?? null,
     risk_approval: parseUserId(row.risk_approval),
     approval_status: row.approval_status ?? null,
-    date_of_assessment: row.date_of_assessment ? new Date(row.date_of_assessment) : new Date(),
+    // An empty cell stays empty: the import time is not an assessment date.
+    date_of_assessment: row.date_of_assessment
+      ? riskCalendarDateFromCell(row.date_of_assessment)
+      : null,
   };
 }
 

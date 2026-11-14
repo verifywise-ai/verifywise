@@ -33,6 +33,7 @@ import {
   formatHighRiskRoles,
   projectHighRiskRoles,
 } from "../../../application/utils/highRiskRoles";
+import { riskCalendarDay } from "../../tools/isoDateToString";
 
 export interface EntityDetails {
   id: string;
@@ -84,7 +85,7 @@ const formatDetailDate = (
 ): string => {
   if (!dateValue) return "";
   try {
-    const date = new Date(String(dateValue));
+    const date = dateValue instanceof Date ? dateValue : new Date(String(dateValue));
     if (isNaN(date.getTime())) return String(dateValue);
     return formatDate(date);
   } catch {
@@ -533,7 +534,10 @@ const DetailSidebar: React.FC<DetailSidebarProps> = ({ entity, onClose, onNaviga
                 <DetailRow
                   icon={<Calendar size={14} />}
                   label="Deadline"
-                  value={formatDetailDate(rawData.deadline, formatDate)}
+                  value={formatDetailDate(
+                    riskCalendarDay(rawData.deadline) ?? rawData.deadline,
+                    formatDate,
+                  )}
                 />
               )}
               {Boolean(rawData.approval_status) && (

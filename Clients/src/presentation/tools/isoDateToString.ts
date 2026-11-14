@@ -39,6 +39,54 @@ const parseDateValue = (value: string | Date): Date | null => {
 };
 
 /**
+ * The calendar date ("YYYY-MM-DD") of a date-only value such as a policy's
+ * next review date. The server stores these at midnight and returns them as
+ * "YYYY-MM-DDT00:00:00.000Z"; formatting that full timestamp in a time zone
+ * west of UTC would show the previous day, so callers format this instead
+ * (parseISO reads a bare date as local midnight).
+ */
+export const toDateOnlyString = (value: string | Date | null | undefined): string => {
+  if (!value) return "";
+  if (value instanceof Date) return isValid(value) ? value.toISOString().slice(0, 10) : "";
+  return /^\d{4}-\d{2}-\d{2}/.test(value) ? value.slice(0, 10) : "";
+};
+
+/**
+ * The calendar day of a risk deadline or assessment date, as local midnight of
+ * that day. Use it wherever these risk dates are shown, compared or edited.
+ *
+ * Policies store calendar dates at UTC midnight (see toDateOnlyString); risks
+ * store them at exactly 12:00 UTC, and older risk rows may hold a browser's
+ * local midnight or another time. So:
+ * - "YYYY-MM-DD": that day;
+ * - exactly 12:00 UTC: the UTC date (reading the instant locally would show
+ *   the next day from UTC+12 and move the date forward on every save);
+ * - anything else: the local date of the instant, as before.
+ */
+export const riskCalendarDay = (value: unknown): Date | null => {
+  if (!value || (typeof value !== "string" && !(value instanceof Date))) return null;
+  if (typeof value === "string" && /^\d{4}-\d{2}-\d{2}$/.test(value.trim())) {
+    const parsed = parseISO(value.trim()); // a bare date parses as local midnight
+    return isValid(parsed) ? parsed : null;
+  }
+  const date = value instanceof Date ? value : new Date(value);
+  if (!isValid(date)) return null;
+
+  const isStoredNoon =
+    date.getUTCHours() === 12 &&
+    date.getUTCMinutes() === 0 &&
+    date.getUTCSeconds() === 0 &&
+    date.getUTCMilliseconds() === 0;
+  return isStoredNoon
+    ? new Date(date.getUTCFullYear(), date.getUTCMonth(), date.getUTCDate())
+    : new Date(date.getFullYear(), date.getMonth(), date.getDate());
+};
+
+/** A local date as "YYYY-MM-DD", or "" when there is none. */
+export const toLocalDateOnly = (date: Date | null | undefined): string =>
+  date && isValid(date) ? format(date, "yyyy-MM-dd") : "";
+
+/**
  * Converts an ISO date string to a formatted date string based on the user preference.
  *
  * @param {string} isoDate - The ISO date string to be converted.

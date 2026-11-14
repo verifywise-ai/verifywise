@@ -84,9 +84,10 @@ export const USER_HTML_ALLOWED_ATTRIBUTES: sanitizeHtml.IOptions["allowedAttribu
   img: ["src", "alt", "width", "height", "title"],
   th: ["colspan", "rowspan"],
   td: ["colspan", "rowspan"],
-  // TipTap task-list specific attributes
+  // TipTap task-list specific attributes. TaskItem only parses
+  // li[data-type="taskItem"], so without it checklists load back as bullets (P-M7).
   ul: ["data-type"],
-  li: ["data-checked"],
+  li: ["data-checked", { name: "data-type", multiple: false, values: ["taskItem"] }],
 };
 
 /**

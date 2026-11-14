@@ -32,6 +32,7 @@ import { PolicyHeader } from "./PolicyEditor/PolicyHeader";
 import { PolicyMetadataSidebar } from "./PolicyEditor/PolicyMetadataSidebar";
 import { PolicyReviewPanel } from "./PolicyEditor/PolicyReviewPanel";
 import { radiusPx } from "../../themes/palette";
+import { toDateOnlyString } from "../../tools/isoDateToString";
 
 // ── Component ─────────────────────────────────────────────────────────
 export default function PolicyEditorPage() {
@@ -246,9 +247,7 @@ export default function PolicyEditorPage() {
         title: policy.title || "",
         status: policy.status || "Draft",
         tags: policy.tags || [],
-        nextReviewDate: policy.next_review_date
-          ? new Date(policy.next_review_date).toISOString().slice(0, 10)
-          : "",
+        nextReviewDate: toDateOnlyString(policy.next_review_date),
         policyOwner:
           policy.policy_owner_id != null
             ? (users.find((u) => u.id === policy.policy_owner_id) ?? null)
@@ -303,6 +302,8 @@ export default function PolicyEditorPage() {
     setServerErrors,
     validationSnackbar,
     setValidationSnackbar,
+    saveError,
+    setSaveError,
   } = usePolicySave({
     isNew,
     policy,
@@ -569,6 +570,18 @@ export default function PolicyEditorPage() {
       >
         <Alert onClose={() => setValidationSnackbar(false)} severity="error" sx={{ width: "100%" }}>
           Please fill in all required fields before saving.
+        </Alert>
+      </Snackbar>
+
+      {/* Save error snackbar: a server error no form field can show */}
+      <Snackbar
+        open={Boolean(saveError)}
+        autoHideDuration={6000}
+        onClose={() => setSaveError(null)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert onClose={() => setSaveError(null)} severity="error" sx={{ width: "100%" }}>
+          {saveError}
         </Alert>
       </Snackbar>
 

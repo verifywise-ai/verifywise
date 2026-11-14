@@ -31,7 +31,12 @@ export function useUpdatePolicy() {
       ({ input }) =>
       (policy) =>
         ({ ...policy, ...input }) as PolicyManagerModel,
-    invalidateKeys: ({ id }) => [[...policyQueryKeys.list()], [...policyQueryKeys.detail(id)]],
+    // The history sidebar reads ["changeHistory", "policy", id]; a save adds entries to it.
+    invalidateKeys: ({ id }) => [
+      [...policyQueryKeys.list()],
+      [...policyQueryKeys.detail(id)],
+      ["changeHistory", "policy", id],
+    ],
   });
 }
 

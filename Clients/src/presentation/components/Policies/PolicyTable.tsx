@@ -20,6 +20,7 @@ import { useCustomFieldDefinitions } from "../../../application/hooks/useCustomF
 import { formatCustomFieldValue } from "../CustomFieldsSection/formatCustomFieldValue";
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { useCanCheck } from "../../../application/hooks/useCan";
+import { toDateOnlyString } from "../../tools/isoDateToString";
 
 const tableHeaders = [
   { id: "title", name: "Title" },
@@ -397,7 +398,9 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
                       : undefined,
                 }}
               >
-                {policy.next_review_date ? formatDate(policy.next_review_date) : "-"}
+                {policy.next_review_date
+                  ? formatDate(toDateOnlyString(policy.next_review_date))
+                  : "-"}
               </TableCell>
             )}
             {isVisible("author") && (

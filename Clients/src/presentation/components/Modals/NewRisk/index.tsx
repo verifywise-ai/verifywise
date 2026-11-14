@@ -76,6 +76,12 @@ const initialState: VendorRiskModalFormValues = {
   vendor_id: "",
 };
 
+// The vendor risk enum spells the top likelihood "Almost certain"; the shared
+// RiskLikelihood value (used by RiskCalculator) is "Almost Certain".
+const VENDOR_LIKELIHOOD_VALUES: Record<string, string> = {
+  [RiskLikelihood.AlmostCertain]: "Almost certain",
+};
+
 const LIKELIHOOD_OPTIONS = [
   { _id: "", name: "Select likelihood" },
   { _id: 1, name: RiskLikelihood.Rare },
@@ -221,7 +227,10 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
           RISK_SEVERITY_OPTIONS.find((r) => r.name === existingRisk.risk_severity)?._id ?? 1,
         ).toString(),
         likelihood: Number(
-          LIKELIHOOD_OPTIONS.find((r) => r.name === existingRisk.likelihood)?._id ?? 1,
+          LIKELIHOOD_OPTIONS.find(
+            (r) =>
+              String(r.name).toLowerCase() === String(existingRisk.likelihood ?? "").toLowerCase(),
+          )?._id ?? 1,
         ).toString(),
         action_plan: existingRisk.action_plan,
         vendor_id: existingRisk.vendor_id,
@@ -290,7 +299,7 @@ const AddNewRisk: React.FC<AddNewRiskProps> = ({
       action_plan: values.action_plan,
       risk_severity: selectedSeverity.name,
       risk_level: risk_risklevel.level,
-      likelihood: selectedLikelihood.name,
+      likelihood: VENDOR_LIKELIHOOD_VALUES[selectedLikelihood.name] ?? selectedLikelihood.name,
       frameworks: selectedFrameworks,
     };
     if (existingRisk) {
