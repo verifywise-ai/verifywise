@@ -3,39 +3,35 @@ import type { ArticleContent } from '../../contentTypes';
 export const playgroundContent: ArticleContent = {
   blocks: [
     {
-      type: 'callout',
-      variant: 'warning',
-      text: 'The playground is listed in the sidebar but not yet available. This page will be enabled in a future release.',
-    },
-    {
       type: 'heading',
       id: 'overview',
       level: 2,
-      text: 'What the playground will do',
+      text: 'What the playground does',
     },
     {
       type: 'paragraph',
-      text: 'The playground will be a chat interface for talking to any model your organization has configured. You\'ll be able to test prompts, compare model responses and verify API key connectivity without setting up a formal experiment.',
+      text: 'The playground is a chat window for the models you saved under **Models**. Use it to try a prompt, or to check that a model and its API key work, before you set up an experiment. Open it from **Enforce > LLM Evals > Playground** in the sidebar.',
     },
     {
       type: 'heading',
-      id: 'planned-features',
+      id: 'using-the-playground',
       level: 2,
-      text: 'Planned features',
+      text: 'Using the playground',
     },
     {
       type: 'bullet-list',
       items: [
-        { text: 'Pick a provider and model from a dropdown, then chat in real time' },
-        { text: 'Multi-turn conversations with full history sent on each request' },
-        { text: 'Switch models mid-session (clears conversation)' },
-        { text: 'No project selection required, available from the sidebar at any time' },
+        { text: 'Pick a saved model from the dropdown at the top, type a message and press Enter. Shift+Enter adds a new line' },
+        { text: 'The conversation keeps its history: each message goes to the model with the turns before it' },
+        { text: 'Attach a text file (TXT, Markdown, CSV or JSON) to add its text to your message. Images can be attached when the selected model accepts them' },
+        { text: 'Dictate a message with the microphone button, where your browser supports speech input' },
+        { text: 'Switching to another model, or clicking **Clear conversation**, starts a new conversation' },
       ],
     },
     {
       type: 'callout',
       variant: 'info',
-      text: 'You\'ll need at least one API key configured in **Settings** before the playground can connect to a model.',
+      text: 'The playground needs at least one saved model. With none saved, choose **Add model** in the model dropdown. It opens **Models**, where you pick a provider and model and enter the provider\'s API key if one isn\'t stored yet.',
     },
   ],
 };

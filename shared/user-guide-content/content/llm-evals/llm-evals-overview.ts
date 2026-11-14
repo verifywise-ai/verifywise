@@ -88,7 +88,7 @@ export const llmEvalsOverviewContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Access LLM Evals from **Enforce > LLM Evals** in the sidebar. Click it to open its pages in place. You\'ll see a project dropdown at the top of the list and these pages below it:',
+      text: 'Access LLM Evals from **Enforce > LLM Evals** in the sidebar. Click it to open its pages in place. On LLM Evals pages, a project dropdown sits at the top of the list, with your recent experiments and projects below the pages:',
     },
     {
       type: 'bullet-list',
@@ -97,9 +97,9 @@ export const llmEvalsOverviewContent: ArticleContent = {
         { bold: 'Experiments', text: 'The full history of evaluation runs. Track performance over time with the built-in chart, dig into individual results or start new experiments.' },
         { bold: 'Datasets', text: 'Manage your test cases. Browse built-in datasets, upload your own or edit existing ones to better match your use cases.' },
         { bold: 'Scorers', text: 'Configure what you\'re measuring. Enable or disable metrics, adjust thresholds or create custom scorers.' },
-        { bold: 'Models', text: 'View and manage model configurations for your project.' },
+        { bold: 'Models', text: 'The models your experiments use. A model is saved when you run an experiment with it, and you can add one here for later experiments and the playground.' },
         { bold: 'Bias audits', text: 'Run and review bias audits.' },
-        { bold: 'Playground', text: 'Listed in the sidebar, not yet available.' },
+        { bold: 'Playground', text: 'Chat with a saved model to try a prompt or check its API key before you run an experiment.' },
         { bold: 'Arena', text: 'Compare models side by side. Hidden until an Admin turns it on.' },
         { bold: 'Reports', text: 'Reports for your project.' },
         { bold: 'Settings', text: 'API keys for your providers, which are stored securely and used when running evaluations, and project settings such as the use case type.' },
