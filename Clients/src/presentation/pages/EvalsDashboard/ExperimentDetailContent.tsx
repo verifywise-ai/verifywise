@@ -586,6 +586,8 @@ export default function ExperimentDetailContent({
                 sx={{
                   "opacity": 0,
                   "transition": "opacity 0.2s",
+                  "color": palette.text.tertiary,
+                  "&:hover": { color: palette.brand.primary },
                   "&:focus-visible": { opacity: 1 },
                 }}
               >

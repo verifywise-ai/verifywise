@@ -19,7 +19,6 @@ import { evalModelsService, type SavedModel } from "../../../infrastructure/api/
 import * as ProviderIcons from "../../components/ProviderIcons";
 import palette from "../../themes/palette";
 import { palette as vwPalette, radiusPx } from "../../themes/palette";
-import grey from "@design-tokens/primitives";
 import { CustomizableButton } from "../../components/button/customizable-button";
 
 interface Message {
@@ -779,10 +778,10 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
                     "right": 2,
                     "width": 18,
                     "height": 18,
-                    "backgroundColor": alpha(grey[950], 0.45),
+                    "backgroundColor": alpha(vwPalette.text.black, 0.45),
                     "color": vwPalette.background.main,
                     "p": 0,
-                    "&:hover": { backgroundColor: alpha(grey[950], 0.65) },
+                    "&:hover": { backgroundColor: alpha(vwPalette.text.black, 0.65) },
                   }}
                 >
                   <X size={10} />
@@ -902,6 +901,7 @@ export default function PlaygroundPage({ orgId, onNavigateToModels }: Playground
             disabled={!canSend}
             sx={{
               borderRadius: radiusPx.lg,
+              flexShrink: 0,
             }}
           >
             <Send size={14} strokeWidth={1.5} />
