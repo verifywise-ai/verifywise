@@ -266,6 +266,17 @@ describe("policy.ctrl", () => {
       const fields = res.json.mock.calls[0][0].data.errors.map((e: { field: string }) => e.field);
       expect(fields).toEqual(["tags", "next_review_date"]);
     });
+    it("returns 400 for a valid date prefix followed by a malformed suffix", async () => {
+      for (const next_review_date of ["2030-01-15garbage", "2030-01-15T25:99:99"]) {
+        const req = createReq({ body: { title: "Policy one", status: "Draft", next_review_date } });
+        const res = createRes();
+        await PolicyController.createPolicy(req, res);
+        expect(res.status).toHaveBeenCalledWith(400);
+        const fields = res.json.mock.calls[0][0].data.errors.map((e: { field: string }) => e.field);
+        expect(fields).toEqual(["next_review_date"]);
+      }
+      expect(mockCreate).not.toHaveBeenCalled();
+    });
     it("accepts a create without tags or review date", async () => {
       mockCreate.mockResolvedValue({ id: 1, title: "Policy one" } as any);
       const req = createReq({ body: { title: "Policy one", status: "Draft" } });

@@ -1,5 +1,5 @@
 import { getAllPoliciesQuery } from "../../utils/policyManager.utils";
-import { toReviewDateValue } from "../../utils/policyReviewDate.utils";
+import { POLICY_REVIEW_DATE_SQL, toReviewDateValue } from "../../utils/policyReviewDate.utils";
 import { getPolicyTemplatesQuery } from "../../utils/policyTemplate.utils";
 import { POLICY_TAGS } from "../../domain.layer/interfaces/i.policy";
 import { POLICY_STATUS_ENUM } from "../../utils/validations/policiesValidation.utils";
@@ -609,11 +609,11 @@ const agentCreatePolicy = createWriteToolFn({
     const tags = (params.tags as string[]) || [];
 
     const [result] = await sequelize.query(
-      `INSERT INTO policy_manager (
+      `INSERT INTO policy_manager AS pm (
         organization_id, title, content_html, status, tags, next_review_date, author_id, last_updated_by, last_updated_at, is_demo
       ) VALUES (
         :organization_id, :title, :content_html, :status, ARRAY[:tags], :next_review_date, :author_id, :last_updated_by, :last_updated_at, false
-      ) RETURNING *`,
+      ) RETURNING *, ${POLICY_REVIEW_DATE_SQL}`,
       {
         replacements: {
           organization_id: organizationId,
@@ -682,7 +682,7 @@ const agentUpdatePolicy = createWriteToolFn({
     }
 
     const [result] = await sequelize.query(
-      `UPDATE policy_manager SET ${updateFields.join(", ")} WHERE organization_id = :organizationId AND id = :id RETURNING *`,
+      `UPDATE policy_manager AS pm SET ${updateFields.join(", ")} WHERE organization_id = :organizationId AND id = :id RETURNING *, ${POLICY_REVIEW_DATE_SQL}`,
       {
         replacements,
         type: QueryTypes.SELECT,
@@ -706,8 +706,8 @@ const agentSubmitPolicyForReview = createWriteToolFn({
     const userId = (params._userId as number) || 0;
 
     const [result] = await sequelize.query(
-      `UPDATE policy_manager SET status = 'Under Review', last_updated_by = :userId, last_updated_at = :now
-       WHERE organization_id = :organizationId AND id = :id RETURNING *`,
+      `UPDATE policy_manager AS pm SET status = 'Under Review', last_updated_by = :userId, last_updated_at = :now
+       WHERE organization_id = :organizationId AND id = :id RETURNING *, ${POLICY_REVIEW_DATE_SQL}`,
       {
         replacements: {
           organizationId,
@@ -737,8 +737,8 @@ const agentApprovePolicyReview = createWriteToolFn({
     const userId = (params._userId as number) || 0;
 
     const [result] = await sequelize.query(
-      `UPDATE policy_manager SET status = 'Approved', review_status = 'approved', reviewed_by = :userId, reviewed_at = :now, review_comment = :comment, last_updated_by = :userId, last_updated_at = :now
-       WHERE organization_id = :organizationId AND id = :id RETURNING *`,
+      `UPDATE policy_manager AS pm SET status = 'Approved', review_status = 'approved', reviewed_by = :userId, reviewed_at = :now, review_comment = :comment, last_updated_by = :userId, last_updated_at = :now
+       WHERE organization_id = :organizationId AND id = :id RETURNING *, ${POLICY_REVIEW_DATE_SQL}`,
       {
         replacements: {
           organizationId,

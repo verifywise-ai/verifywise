@@ -48,6 +48,7 @@ import { roleHasPermission } from "../utils/rolePermissions.utils";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 import { sanitizeUserHtml } from "../utils/sanitization.utils";
 import { POLICY_STATUS_ENUM } from "../utils/validations/policiesValidation.utils";
+import { isReviewDateString } from "../utils/policyReviewDate.utils";
 
 /**
  * Only a reviewer assigned to the policy, or an Admin, may approve or reject
@@ -108,24 +109,16 @@ function policyFieldErrors(req: Request, data: Partial<IPolicy>, isCreate: boole
   if (tags !== undefined && (!Array.isArray(tags) || tags.some((tag) => !PolicyTagsSet.has(tag)))) {
     errors.push({ field: "tags", message: t("Choose tags from the list") });
   }
-  // null or "" clears the date; anything else must start with a real YYYY-MM-DD.
+  // null or "" clears the date; anything else must be YYYY-MM-DD or a full ISO timestamp.
   if (
     reviewDate !== undefined &&
     reviewDate !== null &&
     reviewDate !== "" &&
-    !isCalendarDate(reviewDate)
+    !isReviewDateString(reviewDate)
   ) {
     errors.push({ field: "next_review_date", message: t("Enter a valid next review date") });
   }
   return errors;
-}
-
-/** True for a string that starts with a valid YYYY-MM-DD (a full ISO timestamp passes too). */
-function isCalendarDate(value: unknown): boolean {
-  if (typeof value !== "string" || !/^\d{4}-\d{2}-\d{2}/.test(value)) return false;
-  const [y, m, d] = value.slice(0, 10).split("-").map(Number);
-  const date = new Date(Date.UTC(y, m - 1, d));
-  return date.getUTCFullYear() === y && date.getUTCMonth() === m - 1 && date.getUTCDate() === d;
 }
 
 /** 400 body carrying field errors, in the shape other controllers use. */
