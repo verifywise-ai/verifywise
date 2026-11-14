@@ -52,7 +52,7 @@ export const policyTemplatesContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Go to **Policy manager** from the sidebar.' },
+        { text: 'In the sidebar, open **Enforce > Policy > Policy manager**.' },
         { text: 'Click the **Policy templates** tab at the top of the page.' },
         { text: 'Choose **System templates** or **Our templates**.' },
       ],

@@ -1,0 +1,492 @@
+/**
+ * Unified sidebar (phase 2): one sidebar for every module, built from
+ * NAV_GROUPS. Items, gates and counts are data in navConfig.ts; this file
+ * evaluates them with the sources today's navigation uses and renders them
+ * with SidebarShell's rows, logo, collapse toggle and footer.
+ */
+import { FC, ReactNode, useEffect, useMemo, useRef, useState } from "react";
+import { Box, Typography } from "@mui/material";
+import { useSelector } from "react-redux";
+import { useLocation, useNavigate } from "react-router";
+import { ChevronDown, ChevronRight } from "lucide-react";
+import SidebarShell, {
+  SidebarItemRow,
+  SidebarProjectSelector,
+  SidebarRecentSection,
+  type RecentSection,
+} from "../Sidebar/SidebarShell";
+import VWIcon from "../VWIcon";
+import { border as borderPalette, navGroupColor, text as textPalette } from "../../themes/palette";
+import { EVALS_ITEM_ID, NAV_GROUPS, evalsDashboardRoute, resolveActive } from "./navConfig";
+import type { NavCountKey, NavExtra, NavGate, NavGroup, NavItem, NavSubItem } from "./types";
+import type { RootState } from "../../../application/redux/store";
+import { useAuth } from "../../../application/hooks/useAuth";
+import { useCanCheck } from "../../../application/hooks/useCan";
+import { useArenaSetting } from "../../../application/hooks/useArenaSetting";
+import { useOpenTasksCount } from "../../../application/hooks/useOpenTasksCount";
+import * as featureFlags from "../../../application/config/featureFlags";
+import { getAppModuleFromPath } from "../../../application/utils/appModule";
+import { useEvalsSidebarContextSafe } from "../../../application/contexts/EvalsSidebar.context";
+import { useAIDetectionSidebarContextSafe } from "../../../application/contexts/AIDetectionSidebar.context";
+import { useShadowAISidebarContextSafe } from "../../../application/contexts/ShadowAISidebar.context";
+import { useAIGatewaySidebarContextSafe } from "../../../application/contexts/AIGatewaySidebar.context";
+import { useAITrustIndexSidebarContextSafe } from "../../../application/contexts/AITrustIndexSidebar.context";
+
+/** Sub-items have no icon; this lines their labels up with the item label. */
+const SUB_ITEM_INDENT = "32px";
+/** Recent lists pad their rows by 8px; this lines their names up with the sub-items. */
+const RECENT_INDENT = `calc(${SUB_ITEM_INDENT} - 8px)`;
+
+export interface UnifiedSidebarProps {
+  onOpenCreateDemoData?: () => void;
+  onOpenDeleteDemoData?: () => void;
+  onDismissDemoDataButton?: () => void;
+  showDemoDataButton?: boolean;
+  hasDemoData?: boolean;
+  /** Only show demo data options to admins */
+  isAdmin?: boolean;
+}
+
+interface GateResult {
+  visible: boolean;
+  disabled: boolean;
+  tooltip?: string;
+}
+
+/** True when `id` names an item with sub-items. */
+const isExpandable = (id: string | undefined): id is string =>
+  NAV_GROUPS.some((g) => g.items.some((i) => i.id === id && i.children));
+
+/** Items of the pinned group (Workspace): always in view, never scrolled to. */
+const PINNED_ITEM_IDS = new Set(
+  NAV_GROUPS.filter((g) => g.pinned).flatMap((g) => g.items.map((i) => i.id)),
+);
+
+/** The item with this id, if any. */
+const findItem = (id: string): NavItem | undefined =>
+  NAV_GROUPS.flatMap((g) => g.items).find((i) => i.id === id);
+
+const SHOWN: GateResult = { visible: true, disabled: false };
+const HIDDEN: GateResult = { visible: false, disabled: false };
+
+const UnifiedSidebar: FC<UnifiedSidebarProps> = ({
+  onOpenCreateDemoData,
+  onOpenDeleteDemoData,
+  onDismissDemoDataButton,
+  showDemoDataButton = true,
+  hasDemoData = false,
+  isAdmin = false,
+}) => {
+  const navigate = useNavigate();
+  const { pathname, hash } = useLocation();
+  const collapsed = useSelector((state: RootState) => state.ui?.sidebar?.collapsed) ?? false;
+
+  // Gate sources: the same ones today's navigation reads.
+  const can = useCanCheck();
+  const { userRoleName, isSuperAdmin } = useAuth();
+
+  // Count sources: the main sidebar's open-task fetch and the module contexts.
+  const openTasks = useOpenTasksCount();
+  const evals = useEvalsSidebarContextSafe();
+  const detection = useAIDetectionSidebarContextSafe();
+  const shadowAi = useShadowAISidebarContextSafe();
+  const gateway = useAIGatewaySidebarContextSafe();
+  const trustIndex = useAITrustIndexSidebarContextSafe();
+
+  const counts: Record<NavCountKey, number> = {
+    openTasks,
+    aiTrustIndexTracked: trustIndex?.trackedCount ?? 0,
+    shadowAiTools: shadowAi?.toolsCount ?? 0,
+    shadowAiAlerts: shadowAi?.alertsCount ?? 0,
+    aiDetectionRepositories: detection?.repositoryCount ?? 0,
+    aiDetectionHistory: detection?.historyCount ?? 0,
+    evalsExperiments: evals?.experimentsCount ?? 0,
+    evalsDatasets: evals?.datasetsCount ?? 0,
+    evalsScorers: evals?.scorersCount ?? 0,
+    evalsModels: evals?.modelsCount ?? 0,
+    evalsArena: evals?.arenaCount ?? 0,
+    aiGatewayEndpoints: gateway?.endpointsCount ?? 0,
+    aiGatewayPrompts: gateway?.promptsCount ?? 0,
+  };
+  /**
+   * Gate result for this user. `arenaOn` is the organization's Arena setting;
+   * only sub-items carry the Arena gate (navConfig.test checks), so item
+   * visibility can be decided before that setting is asked for.
+   */
+  const gateFor = (gate: NavGate | undefined, arenaOn: boolean): GateResult => {
+    if (!gate) return SHOWN;
+    if ("permission" in gate) {
+      if (can(gate.permission)) return SHOWN;
+      return gate.whenDenied === "disable"
+        ? { visible: true, disabled: true, tooltip: gate.deniedTooltip }
+        : HIDDEN;
+    }
+    if ("role" in gate) return userRoleName === gate.role ? SHOWN : HIDDEN;
+    if ("superAdmin" in gate) return isSuperAdmin ? SHOWN : HIDDEN;
+    if ("evalsArena" in gate) return arenaOn ? SHOWN : HIDDEN;
+    return featureFlags[gate.flag] ? SHOWN : HIDDEN;
+  };
+
+  const active = useMemo(() => resolveActive(pathname, hash), [pathname, hash]);
+  // A route whose item is hidden for this user selects and opens nothing.
+  const activeItem = active ? findItem(active.itemId) : undefined;
+  const activeItemId =
+    activeItem && gateFor(activeItem.gate, false).visible ? activeItem.id : undefined;
+
+  // One item open at a time; the current route's item opens on its own.
+  const [openItemId, setOpenItemId] = useState<string | null>(() =>
+    isExpandable(activeItemId) ? activeItemId : null,
+  );
+  // On a route change, open the new route's item (state adjusted during render).
+  const [openedForItemId, setOpenedForItemId] = useState(activeItemId);
+  if (openedForItemId !== activeItemId) {
+    setOpenedForItemId(activeItemId);
+    if (isExpandable(activeItemId)) setOpenItemId(activeItemId);
+  }
+
+  // The Arena setting lives on the EvalServer: ask only where Arena can show.
+  // Away from /evals a failure only hides Arena, so it shows no error toast.
+  const onEvalsRoute = getAppModuleFromPath(pathname) === "evals";
+  const { data: arenaSetting } = useArenaSetting({
+    enabled: onEvalsRoute || openItemId === EVALS_ITEM_ID,
+    silent: !onEvalsRoute,
+  });
+  const arenaEnabled = arenaSetting?.enabled === true;
+  const evaluateGate = (gate?: NavGate): GateResult => gateFor(gate, arenaEnabled);
+
+  // The EvalsDashboard (/evals, /evals/<projectId>) is what fills the Evals
+  // context. On its routes it says whether a project is selected (disabled
+  // until it does, as today). Elsewhere, other /evals pages included, the
+  // context may be stale, so only a known current project enables the
+  // project-scoped tabs.
+  const evalsDashboard = evalsDashboardRoute(pathname);
+  const onEvalsDashboard = evalsDashboard !== null;
+  const evalsNeedsProject = onEvalsDashboard ? (evals?.disabled ?? true) : !evals?.currentProject;
+
+  // A route whose sub-item is hidden for this user selects its parent item.
+  const activeSub = activeItem?.children?.find((s) => s.id === active?.subId);
+  const activeSubId =
+    activeItemId && activeSub && evaluateGate(activeSub.gate).visible ? activeSub.id : undefined;
+
+  // Bring the open item (and so the active sub-item) into view, on a click
+  // and on a route change, including a deep link on first render. The open
+  // item can grow after that (the Evals selector and recents arrive once the
+  // dashboard loads), so it is brought into view again when its height
+  // changes, until the user scrolls or touches the nav themselves.
+  const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
+  useEffect(() => {
+    // Pinned items sit outside the scrolling nav and are always in view.
+    if (!openItemId || collapsed || PINNED_ITEM_IDS.has(openItemId)) return;
+    const wrapper = itemRefs.current[openItemId];
+    if (!wrapper) return;
+    const reducedMotion =
+      typeof window.matchMedia === "function" &&
+      window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+    const behavior: ScrollBehavior = reducedMotion ? "auto" : "smooth";
+    const scroller = wrapper.closest("nav");
+    const bringIntoView = () => {
+      // Taller than the nav: keep the item's own row in view at the top.
+      if (scroller && wrapper.offsetHeight > scroller.clientHeight) {
+        wrapper.firstElementChild?.scrollIntoView?.({ block: "start", behavior });
+      } else {
+        wrapper.scrollIntoView?.({ block: "nearest", behavior });
+      }
+    };
+    bringIntoView();
+    if (typeof ResizeObserver === "undefined") return;
+    let lastHeight = wrapper.offsetHeight;
+    const observer = new ResizeObserver(() => {
+      if (wrapper.offsetHeight === lastHeight) return;
+      lastHeight = wrapper.offsetHeight;
+      bringIntoView();
+    });
+    observer.observe(wrapper);
+    // Once the user takes over (wheel, touch, keys, scrollbar drag), stop.
+    const userEvents = ["wheel", "touchmove", "keydown", "pointerdown"] as const;
+    const stop = () => {
+      observer.disconnect();
+      userEvents.forEach((type) => scroller?.removeEventListener(type, stop));
+    };
+    userEvents.forEach((type) => scroller?.addEventListener(type, stop, { passive: true }));
+    return stop;
+  }, [openItemId, activeSubId, collapsed]);
+
+  const subState = (sub: NavSubItem): GateResult => {
+    const gate = evaluateGate(sub.gate);
+    if (!gate.visible) return gate;
+    if (sub.requiresEvalsProject && evalsNeedsProject) return { ...gate, disabled: true };
+    return gate;
+  };
+
+  /**
+   * LLM Evals keeps ContextSidebar's rule: on a dashboard route with a project
+   * in the URL, keep the path and change the tab; anywhere else (other /evals
+   * pages such as /evals/settings included) go to the current project's tab,
+   * or /evals#<tab> without one.
+   */
+  const evalsPath = (tab: string): string => {
+    if (evalsDashboard?.projectId) return `${pathname}#${tab}`;
+    const projectId = evals?.currentProject?.id;
+    return projectId ? `/evals/${projectId}#${tab}` : `/evals#${tab}`;
+  };
+
+  const goToSub = (item: NavItem, sub: NavSubItem) =>
+    navigate(item.id === EVALS_ITEM_ID ? evalsPath(sub.id) : sub.path);
+
+  const handleItemClick = (item: NavItem) => {
+    if (!item.children) {
+      if (item.path) navigate(item.path);
+      return;
+    }
+    if (collapsed) {
+      const first = item.children.find((s) => {
+        const state = subState(s);
+        return state.visible && !state.disabled;
+      });
+      if (first) goToSub(item, first);
+      return;
+    }
+    setOpenItemId((current) => (current === item.id ? null : item.id));
+  };
+
+  const recentSectionFor = (extra: NavExtra): RecentSection | null => {
+    switch (extra) {
+      // The Evals recents act through the dashboard's handlers: its routes only.
+      case "evalsRecentExperiments":
+        if (!onEvalsDashboard) return null;
+        return {
+          title: "Recent experiments",
+          items: (evals?.recentExperiments ?? []).map((exp) => ({
+            id: exp.id,
+            name: exp.name,
+            onClick: () => evals?.onExperimentClick?.(exp.id, exp.projectId),
+          })),
+        };
+      case "evalsRecentProjects":
+        if (!onEvalsDashboard) return null;
+        return {
+          title: "Recent projects",
+          items: (evals?.recentProjects ?? []).map((proj) => ({
+            id: proj.id,
+            name: proj.name,
+            onClick: () => evals?.onProjectClick?.(proj.id),
+          })),
+        };
+      case "recentScans":
+        return {
+          title: "Recent scans",
+          items: (detection?.recentScans ?? []).map((scan) => ({
+            id: String(scan.id),
+            name: scan.name,
+            onClick: () => navigate(`/ai-detection/scans/${scan.id}`),
+          })),
+        };
+      case "recentTools":
+        return {
+          title: "Recent tools",
+          items: (shadowAi?.recentTools ?? []).map((tool) => ({
+            id: String(tool.id),
+            name: tool.name,
+            onClick: () => navigate(`/shadow-ai/tools/${tool.id}`),
+          })),
+        };
+      default:
+        return null;
+    }
+  };
+
+  const renderSubItems = (item: NavItem): ReactNode => {
+    let lastSection: string | undefined;
+    return (item.children ?? []).map((sub) => {
+      const state = subState(sub);
+      if (!state.visible) return null;
+      const heading =
+        sub.section && sub.section !== lastSection ? (
+          <Typography
+            key={`section-${sub.section}`}
+            sx={{
+              fontSize: "11px",
+              fontWeight: 500,
+              color: textPalette.tertiary,
+              pl: SUB_ITEM_INDENT,
+              pt: "8px",
+              pb: "2px",
+            }}
+          >
+            {sub.section}
+          </Typography>
+        ) : null;
+      lastSection = sub.section;
+      return (
+        <Box key={sub.id}>
+          {heading}
+          <SidebarItemRow
+            item={{
+              id: sub.id,
+              label: sub.label,
+              icon: null,
+              count: sub.countKey ? counts[sub.countKey] : undefined,
+              disabled: state.disabled,
+            }}
+            isActive={activeItemId === item.id && activeSubId === sub.id}
+            collapsed={false}
+            onClick={() => goToSub(item, sub)}
+            paddingLeft={SUB_ITEM_INDENT}
+            tooltip={state.disabled ? state.tooltip : undefined}
+            testId={`nav-sub-${item.id}-${sub.id}`}
+          />
+        </Box>
+      );
+    });
+  };
+
+  const renderOpenSection = (item: NavItem): ReactNode => {
+    const extras = item.extras ?? [];
+    // The selector changes the dashboard's project: its routes only.
+    const showSelector =
+      onEvalsDashboard && extras.includes("evalsProjectSelector") && evals?.onProjectChange;
+    return (
+      <Box
+        id={`nav-section-${item.id}`}
+        data-testid={`nav-section-${item.id}`}
+        role="group"
+        aria-label={item.label}
+        sx={{ pb: "4px" }}
+      >
+        {showSelector && (
+          <Box sx={{ pl: SUB_ITEM_INDENT, pt: "4px" }}>
+            <SidebarProjectSelector
+              currentProject={evals.currentProject ?? null}
+              allProjects={evals.allProjects ?? []}
+              onProjectChange={evals.onProjectChange!}
+            />
+          </Box>
+        )}
+        {renderSubItems(item)}
+        {extras.map((extra) => {
+          const section = recentSectionFor(extra);
+          return section ? (
+            <Box key={extra} sx={{ pl: RECENT_INDENT }}>
+              <SidebarRecentSection section={section} />
+            </Box>
+          ) : null;
+        })}
+      </Box>
+    );
+  };
+
+  const renderGroup = (group: NavGroup) => {
+    const colors = navGroupColor[group.id];
+    const items = group.items.filter((item) => evaluateGate(item.gate).visible);
+    if (items.length === 0) return null;
+    const headingId = `nav-group-heading-${group.id}`;
+    const showHeading = Boolean(group.heading) && !collapsed;
+    // The pinned group sits outside the nav landmark: name it by its heading.
+    const pinnedGroupProps =
+      group.pinned && showHeading ? { "role": "group", "aria-labelledby": headingId } : {};
+    return (
+      <Box key={group.id} sx={{ mt: group.heading ? "4px" : 0 }} {...pinnedGroupProps}>
+        {showHeading && (
+          <Typography
+            id={headingId}
+            data-testid={headingId}
+            sx={{
+              fontSize: "11px",
+              fontWeight: 500,
+              color: colors.heading,
+              px: "8px",
+              pt: "4px",
+              pb: "4px",
+            }}
+          >
+            {group.heading}
+          </Typography>
+        )}
+        {items.map((item) => {
+          const expandable = Boolean(item.children);
+          const isOpen = expandable && !collapsed && openItemId === item.id;
+          // A parent shows as selected while its sub-items are out of view, or
+          // when the route's sub-item is hidden for this user.
+          const isActive =
+            activeItemId === item.id &&
+            (!expandable || collapsed || !isOpen || activeSubId === undefined);
+          return (
+            <Box
+              key={item.id}
+              ref={(el: HTMLDivElement | null) => {
+                itemRefs.current[item.id] = el;
+              }}
+            >
+              <SidebarItemRow
+                item={{
+                  id: item.id,
+                  label: item.label,
+                  icon: <VWIcon name={item.icon} size={16} />,
+                  count: item.countKey ? counts[item.countKey] : undefined,
+                }}
+                isActive={isActive}
+                collapsed={collapsed}
+                onClick={() => handleItemClick(item)}
+                iconColor={colors.icon}
+                ariaExpanded={expandable && !collapsed ? isOpen : undefined}
+                ariaControls={isOpen ? `nav-section-${item.id}` : undefined}
+                endAdornment={
+                  expandable ? (
+                    <Box
+                      component="span"
+                      // The row shakes and brands its icon on hover; the chevron
+                      // stays still and neutral (&&& outranks the row's rule).
+                      sx={{
+                        "ml": "auto",
+                        "display": "flex",
+                        "color": textPalette.tertiary,
+                        "&&& svg": {
+                          animation: "none !important",
+                          color: `${textPalette.tertiary} !important`,
+                          stroke: `${textPalette.tertiary} !important`,
+                        },
+                        "&&& svg path": { stroke: `${textPalette.tertiary} !important` },
+                      }}
+                    >
+                      {isOpen ? (
+                        <ChevronDown size={14} strokeWidth={1.5} />
+                      ) : (
+                        <ChevronRight size={14} strokeWidth={1.5} />
+                      )}
+                    </Box>
+                  ) : undefined
+                }
+                testId={`nav-item-${item.id}`}
+              />
+              {isOpen && renderOpenSection(item)}
+            </Box>
+          );
+        })}
+      </Box>
+    );
+  };
+
+  // Workspace is pinned above the footer; the other groups scroll.
+  const navContent = NAV_GROUPS.filter((g) => !g.pinned).map(renderGroup);
+  const footerGroups = NAV_GROUPS.filter((g) => g.pinned)
+    .map(renderGroup)
+    .filter((group) => group !== null);
+
+  return (
+    <SidebarShell
+      navContent={navContent}
+      footerNav={footerGroups.length > 0 ? footerGroups : undefined}
+      navScrollbarThumb={borderPalette.dark}
+      hasDemoData={hasDemoData}
+      onOpenCreateDemoData={onOpenCreateDemoData}
+      onOpenDeleteDemoData={onOpenDeleteDemoData}
+      onDismissDemoDataButton={onDismissDemoDataButton}
+      showDemoDataButton={showDemoDataButton}
+      showReadyToSubscribe={true}
+      isAdmin={isAdmin}
+      enableFlyingHearts={true}
+    />
+  );
+};
+
+export default UnifiedSidebar;

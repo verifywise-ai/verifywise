@@ -106,17 +106,27 @@ test.describe("AI Gateway", () => {
     await page.goto("/ai-gateway/endpoints");
     const endpointName = `E2E Endpoint ${Date.now()}`;
 
+    // Only the page's own endpoint button: a bare /create/i also matches the
+    // sidebar's "Create demo data" button, which is always on screen.
     const addBtn = page
       .getByRole("button", { name: /add.*endpoint/i })
-      .or(page.getByRole("button", { name: /new.*endpoint/i }))
-      .or(page.getByRole("button", { name: /create/i }));
+      .or(page.getByRole("button", { name: /new.*endpoint/i }));
 
-    if (
-      !(await addBtn
+    // isVisible() does not wait, so wait for the page itself before deciding.
+    await expect(page.getByRole("heading", { name: /endpoints/i }).first()).toBeVisible({
+      timeout: 10_000,
+    });
+    const canAdd =
+      (await addBtn
         .first()
-        .isVisible({ timeout: 10_000 })
-        .catch(() => false))
-    ) {
+        .isVisible()
+        .catch(() => false)) &&
+      (await addBtn
+        .first()
+        .isEnabled()
+        .catch(() => false));
+    // Adding needs a provider API key; without one the button is disabled.
+    if (!canAdd) {
       test.skip();
       return;
     }

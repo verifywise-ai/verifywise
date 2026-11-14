@@ -29,7 +29,7 @@ export const mrmContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Open Model inventory from the left sidebar, then select the Model risk management tab. Six sub-tabs run across the top:',
+      text: 'In the sidebar, open **Record > Inventory > Models**, then select the Model risk management tab. Six sub-tabs run across the top:',
     },
     {
       type: 'icon-cards',

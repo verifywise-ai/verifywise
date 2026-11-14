@@ -44,7 +44,7 @@ export const modelInventoryContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Open **Model inventory** from the sidebar (under Inventory). You get a table of all registered models with search, filters for status and provider, and summary cards showing counts by approval status at the top.',
+      text: 'In the sidebar, open **Record > Inventory > Models**. You get a table of all registered models with search, filters for status and provider, and summary cards showing counts by approval status at the top.',
     },
     {
       type: 'image',
@@ -207,7 +207,7 @@ export const modelInventoryContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Navigate to **Datasets** from the main sidebar under Inventory. The page shows all registered datasets in a searchable table with status summary cards at the top.',
+      text: 'In the sidebar, open **Record > Inventory > Datasets**. The page shows all registered datasets in a searchable table with status summary cards at the top.',
     },
     {
       type: 'heading',

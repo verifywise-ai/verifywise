@@ -10,7 +10,7 @@
  *   1. Brand green (green.*)                    brand, primary buttons, selected states
  *   2. Signal (red, orange, amber, signalGreen) risk tiers and status only, always with a label
  *   3. Chart (series.*)                        chart series; tints in indigo, pink, teal, cocoa, blue, purple for badges
- *   4. Part (part.*)                            ON HOLD until the new sidebar (phase 2)
+ *   4. Part (part.*)                            sidebar wayfinding only (phase 2)
  */
 
 /** Neutral greys, slightly green-tinted to sit with the brand. 50 = white, 900 = ink. */
@@ -205,9 +205,9 @@ export const score = [
 ] as const;
 
 /**
- * PART COLOURS: ON HOLD. Do not use in phase 1.
- * Record, Track and Enforce wayfinding for the new sidebar (phase 2):
- * section headings, hover / selected / pressed states and module icons.
+ * PART COLOURS: sidebar wayfinding only.
+ * Record, Track and Enforce wayfinding for the unified sidebar (phase 2):
+ * group heading text and item icons.
  * Never a chart mark, pill or risk tier.
  */
 export const part = {

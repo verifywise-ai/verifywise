@@ -54,6 +54,20 @@ export const {
 } = tokens;
 
 /**
+ * Unified sidebar wayfinding colour per nav group (phase 2): `heading` for the
+ * group heading text, `icon` for its item icons. Record, Track and Enforce use
+ * the part colours; the top group and Workspace stay grey (Workspace heading
+ * is text.muted, grey 600). Never a status, bar or severity colour.
+ */
+export const navGroupColor = {
+  automate: { heading: text.muted, icon: icon.default },
+  record: { heading: part.record.text, icon: part.record.solid },
+  track: { heading: part.track.text, icon: part.track.solid },
+  enforce: { heading: part.enforce.text, icon: part.enforce.solid },
+  workspace: { heading: text.muted, icon: icon.default },
+} as const;
+
+/**
  * Corner radius as CSS strings for the active look. Phase 1: 2px on buttons,
  * cards, inputs, menus and modals; 8px on the table search field; 9px on the
  * top corners of tabs; fully round pills. Classic: 4px, with 6px (md) and 8px (lg) for inner and large panels, 10px (lgPlus) for icon tiles,

@@ -76,14 +76,16 @@ test.describe("AI Trust Center", () => {
     authedPage: page,
   }) => {
     await page.goto("/ai-trust-center");
-    const settingsTab = page
-      .getByRole("tab", { name: /settings/i })
-      .or(page.getByText(/settings/i));
+    // The page's own tab only: a bare /settings/i text match also hits the
+    // sidebar's Workspace > Settings, which expands in place and doesn't
+    // navigate. waitFor (unlike isVisible) waits for the tabs to render.
+    const settingsTab = page.getByRole("tab", { name: /settings/i });
 
     if (
       await settingsTab
         .first()
-        .isVisible()
+        .waitFor({ state: "visible", timeout: 10_000 })
+        .then(() => true)
         .catch(() => false)
     ) {
       await settingsTab.first().click();

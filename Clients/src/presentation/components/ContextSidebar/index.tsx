@@ -14,6 +14,8 @@ import AIDetectionSidebar from "../../pages/AIDetection/AIDetectionSidebar";
 import ShadowAISidebar from "../../pages/ShadowAI/ShadowAISidebar";
 import AIGatewaySidebar from "../../pages/AIGateway/AIGatewaySidebar";
 import AITrustIndexSidebar from "../../pages/AITrustIndex/AITrustIndexSidebar";
+import UnifiedSidebar from "../UnifiedSidebar";
+import { isClassicUi } from "../../themes/uiStyle";
 
 interface ContextSidebarProps {
   activeModule: AppModule;
@@ -28,10 +30,13 @@ interface ContextSidebarProps {
 }
 
 /**
- * ContextSidebar renders the appropriate sidebar based on the active module.
- * - 'main': Renders the main VerifyWise sidebar
- * - 'evals': Renders EvalsSidebar (state provided via EvalsSidebarContext)
- * - 'ai-detection': Renders AIDetectionSidebar
+ * ContextSidebar renders the sidebar of the tenant layout.
+ * - Phase 1 look: one UnifiedSidebar for every module (super admins in the
+ *   'super-admin' module keep SuperAdminSidebar).
+ * - Classic look: the sidebar of the active module:
+ *   - 'main': the main VerifyWise sidebar
+ *   - 'evals': EvalsSidebar (state provided via EvalsSidebarContext)
+ *   - 'ai-detection', 'shadow-ai', 'ai-gateway', 'ai-trust-index': their module sidebars
  */
 export function ContextSidebar({
   activeModule,
@@ -77,6 +82,19 @@ export function ContextSidebar({
       navigate(`${location.pathname}#${newTab}`);
     }
   };
+
+  if (!isClassicUi() && !(activeModule === "super-admin" && isSuperAdmin)) {
+    return (
+      <UnifiedSidebar
+        onOpenCreateDemoData={onOpenCreateDemoData}
+        onOpenDeleteDemoData={onOpenDeleteDemoData}
+        onDismissDemoDataButton={onDismissDemoDataButton}
+        showDemoDataButton={showDemoDataButton}
+        hasDemoData={hasDemoData}
+        isAdmin={isAdmin}
+      />
+    );
+  }
 
   switch (activeModule) {
     case "main":

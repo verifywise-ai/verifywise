@@ -5635,6 +5635,20 @@ export const de: Record<string, string> = {
   "AI app bulk import and bulk assessment": "Massenimport und Massenbewertung von KI-Apps",
   "Training assignments, groups and custom roles, and framework import":
     "Schulungszuweisungen, Gruppen und benutzerdefinierte Rollen sowie Framework-Import",
+  // Unified sidebar (phase 2)
+  "Record": "Erfassen",
+  "Workspace": "Arbeitsbereich",
+  "Inventory": "Inventar",
+  "Evidence & reports": "Nachweise & Berichte",
+  "Intake": "Eingang",
+  "AI risks": "KI-Risiken",
+  "Agent controls": "Agentensteuerung",
+  "Event tracker": "Ereignisverfolgung",
+  "Super admin": "Super-Administrator",
+  "Trust Index settings": "Einstellungen des Vertrauensindex",
+  "Shadow AI settings": "Schatten-KI-Einstellungen",
+  "Scan settings": "Scan-Einstellungen",
+  "Admin access required.": "Administratorzugriff erforderlich.",
 };
 
 export const fr: Record<string, string> = {
@@ -11204,6 +11218,20 @@ export const fr: Record<string, string> = {
     "Affectation des formations, groupes et rôles personnalisés, et import de référentiels",
 
   "Request": "Requête",
+  // Unified sidebar (phase 2)
+  "Record": "Enregistrer",
+  "Workspace": "Espace de travail",
+  "Inventory": "Inventaire",
+  "Evidence & reports": "Preuves et rapports",
+  "Intake": "Entrée",
+  "AI risks": "Risques IA",
+  "Agent controls": "Contrôles des agents",
+  "Event tracker": "Suivi des événements",
+  "Super admin": "Super administrateur",
+  "Trust Index settings": "Paramètres de l'index de confiance",
+  "Shadow AI settings": "Paramètres de l'IA fantôme",
+  "Scan settings": "Paramètres d'analyse",
+  "Admin access required.": "Accès administrateur requis.",
 };
 
 export const es: Record<string, string> = {
@@ -16665,4 +16693,18 @@ export const es: Record<string, string> = {
     "Introduzca una dirección web completa que empiece por http:// o https://",
   "Shown under the field on the public form":
     "Se muestra debajo del campo en el formulario público",
+  // Unified sidebar (phase 2)
+  "Record": "Registrar",
+  "Workspace": "Espacio de trabajo",
+  "Inventory": "Inventario",
+  "Evidence & reports": "Evidencia e informes",
+  "Intake": "Admisión",
+  "AI risks": "Riesgos de IA",
+  "Agent controls": "Controles de agentes",
+  "Event tracker": "Registro de eventos",
+  "Super admin": "Superadministrador",
+  "Trust Index settings": "Configuración del índice de confianza",
+  "Shadow AI settings": "Configuración de IA en la sombra",
+  "Scan settings": "Configuración de escaneo",
+  "Admin access required.": "Se requiere acceso de administrador.",
 };

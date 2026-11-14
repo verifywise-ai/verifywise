@@ -1,4 +1,4 @@
-import React, { useEffect, useState, useContext } from "react";
+import React, { useEffect, useContext } from "react";
 import { useLocation, useNavigate } from "react-router";
 import {
   Home,
@@ -21,8 +21,7 @@ import {
 } from "lucide-react";
 import { VerifyWiseContext } from "../../../application/contexts/VerifyWise.context";
 import useMultipleOnScreen from "../../../application/hooks/useMultipleOnScreen";
-import { getAllTasks } from "../../../application/repository/task.repository";
-import { TaskStatus } from "../../../domain/enums/task.enum";
+import { useOpenTasksCount } from "../../../application/hooks/useOpenTasksCount";
 import SidebarShell, { SidebarMenuItem, SidebarMenuGroup } from "./SidebarShell";
 
 import VWIcon, { type VWIconName } from "../VWIcon";
@@ -61,32 +60,13 @@ const Sidebar: React.FC<SidebarProps> = ({
     countToTrigger: 1,
   });
 
-  const [openTasksCount, setOpenTasksCount] = useState(0);
+  const openTasksCount = useOpenTasksCount();
 
   useEffect(() => {
     if (allVisible) {
       changeComponentVisibility("sidebar", true);
     }
   }, [allVisible]);
-
-  // Fetch open tasks count
-  useEffect(() => {
-    const fetchOpenTasksCount = async () => {
-      try {
-        const response = await getAllTasks({
-          status: [TaskStatus.OPEN],
-        });
-        setOpenTasksCount(response?.data?.tasks?.length || 0);
-      } catch (error) {
-        console.error("Error fetching open tasks count:", error);
-        setOpenTasksCount(0);
-      }
-    };
-
-    fetchOpenTasksCount();
-    const interval = setInterval(fetchOpenTasksCount, 5 * 60 * 1000);
-    return () => clearInterval(interval);
-  }, []);
 
   // Top level items
   const topItems: SidebarMenuItem[] = [

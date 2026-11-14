@@ -65,6 +65,9 @@ vi.mock("../../../../application/contexts/ShadowAISidebar.context", () => ({
 vi.mock("../../../../application/contexts/AIGatewaySidebar.context", () => ({
   AIGatewaySidebarProvider: ({ children }: { children: React.ReactNode }) => children,
 }));
+vi.mock("../../../../application/contexts/AITrustIndexSidebar.context", () => ({
+  AITrustIndexSidebarProvider: ({ children }: { children: React.ReactNode }) => children,
+}));
 
 // Mock child components as stub divs
 vi.mock("../../../components/AppSwitcher", () => ({
@@ -116,12 +119,23 @@ describe("Dashboard container", () => {
     renderWithProviders(<Dashboard reloadTrigger={false} />);
   });
 
-  it("renders AppSwitcher", () => {
+  it("renders no AppSwitcher in the phase 1 look", () => {
     renderWithProviders(<Dashboard reloadTrigger={false} />);
-    expect(screen.getByTestId("app-switcher")).toBeInTheDocument();
+    expect(screen.queryByTestId("app-switcher")).not.toBeInTheDocument();
   });
 
-  it("renders ContextSidebar", () => {
+  it("renders AppSwitcher and ContextSidebar in the classic look", async () => {
+    // The look is read once when uiStyle loads: load the layout afresh.
+    vi.resetModules();
+    localStorage.setItem("vw-ui-style", "classic");
+    const fresh = await import("../../../../test/renderWithProviders");
+    const { default: ClassicDashboard } = await import("../index");
+    fresh.renderWithProviders(<ClassicDashboard reloadTrigger={false} />);
+    expect(screen.getByTestId("app-switcher")).toBeInTheDocument();
+    expect(screen.getByTestId("context-sidebar")).toBeInTheDocument();
+  });
+
+  it("renders ContextSidebar (which holds the unified sidebar in phase 1)", () => {
     renderWithProviders(<Dashboard reloadTrigger={false} />);
     expect(screen.getByTestId("context-sidebar")).toBeInTheDocument();
   });

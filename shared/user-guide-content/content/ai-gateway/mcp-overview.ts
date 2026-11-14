@@ -117,7 +117,7 @@ export const mcpOverviewContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Register an MCP server in **AI Gateway > Agent Control > MCP Servers**.' },
+        { text: 'Register an MCP server in **Enforce > Agent controls > MCP servers**.' },
         { text: 'Check the result of tool discovery, which runs when you save the server. Use **Discover tools** to run it again.' },
         { text: 'Review discovered tools in the **MCP Tools** page. Set risk levels and approval requirements.' },
         { text: 'Create an agent key in **Agent keys**. Scope it to the tools the agent needs.' },
@@ -156,17 +156,18 @@ export const mcpOverviewContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Agent Control section appears as a collapsible group in the AI Gateway sidebar. Click "Agent Control" to expand it. You\'ll see 6 sub-pages:',
+      text: 'Agent controls is its own item under **Enforce** in the sidebar. Click it to expand its pages in place. You\'ll see 7 pages:',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Agent keys', text: 'Create and manage API keys for agents' },
-        { bold: 'Servers', text: 'Register backend MCP servers and see their discovery results' },
-        { bold: 'MCP Tools', text: 'View all discovered tools, set risk levels' },
+        { bold: 'Runs', text: 'Follow what an agent did in one working session' },
         { bold: 'Activity', text: 'Review tool invocation history and stats' },
         { bold: 'Approvals', text: 'Approve or deny pending tool calls' },
         { bold: 'Guardrails', text: 'Configure input scanning rules' },
+        { bold: 'Agent keys', text: 'Create and manage API keys for agents' },
+        { bold: 'MCP servers', text: 'Register backend MCP servers and see their discovery results' },
+        { bold: 'MCP tools', text: 'View all discovered tools, set risk levels' },
       ],
     },
     {

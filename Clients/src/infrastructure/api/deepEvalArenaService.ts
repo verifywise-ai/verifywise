@@ -5,6 +5,7 @@
  * Based on DeepEval's LLM Arena: https://deepeval.com/docs/getting-started-llm-arena
  */
 
+import type { AxiosRequestConfig } from "axios";
 import CustomAxios from "./customAxios";
 
 // Types for Arena functionality
@@ -186,10 +187,15 @@ class DeepEvalArenaService {
   }
 
   /**
-   * Whether Arena is on for the current organization
+   * Whether Arena is on for the current organization. `silent` skips the
+   * global error toast, for callers that just hide Arena when it fails.
    */
-  async getSetting(): Promise<ArenaSetting> {
-    const response = await CustomAxios.get(`${BASE_URL}/settings/arena`);
+  async getSetting({ silent = false }: { silent?: boolean } = {}): Promise<ArenaSetting> {
+    const response = await CustomAxios.get(
+      `${BASE_URL}/settings/arena`,
+      // Read by customAxios's error interceptor (RequestParams option).
+      silent ? ({ suppressGlobalErrorToast: true } as AxiosRequestConfig) : undefined,
+    );
     return response.data;
   }
 

@@ -5,7 +5,7 @@ export const connectYourAgentContent: ArticleContent = {
     { type: 'heading', id: 'overview', level: 2, text: 'Connect your agent' },
     { type: 'paragraph', text: 'This gets one tool call governed in about 5 minutes using the bundled hook script. Steps 1, 2, 4 and 5 are the same for every agent. Step 3 shows the wiring for Claude Code and for Cursor, which share the same script. For any other terminal agent, see Connect any agent.' },
     { type: 'heading', id: 'step-1', level: 2, text: '1. Create an agent key' },
-    { type: 'paragraph', text: 'In the UI, go to AI Gateway > Agent Control > Agent keys and create a key. Copy the value (it starts with sk-mcp-). You only see it once.' },
+    { type: 'paragraph', text: 'In the UI, go to Enforce > Agent controls > Agent keys and create a key. Copy the value (it starts with sk-mcp-). You only see it once.' },
     { type: 'heading', id: 'step-2', level: 2, text: '2. Set the environment variables' },
     { type: 'code', language: 'bash', code: 'export VW_GATEWAY_URL=https://your-verifywise-host   # the URL you open VerifyWise at\nexport VW_AGENT_KEY=sk-mcp-...                       # the key you just copied\n# Local development: the dev server does not forward /v1, so use the backend, e.g. VW_GATEWAY_URL=http://localhost:3000' },
     { type: 'heading', id: 'step-3', level: 2, text: '3. Wire the hook' },
@@ -20,7 +20,7 @@ export const connectYourAgentContent: ArticleContent = {
     { type: 'heading', id: 'step-4', level: 2, text: '4. Make a tool call' },
     { type: 'paragraph', text: 'Run any Bash command in your agent. The hook calls the gateway, the gateway returns a decision, and the call runs only if it is allowed.' },
     { type: 'heading', id: 'step-5', level: 2, text: '5. See it in Activity' },
-    { type: 'paragraph', text: 'Open AI Gateway > Agent Control > Activity. The call appears with its decision, latency and the agent key that made it.' },
+    { type: 'paragraph', text: 'Open Enforce > Agent controls > Activity. The call appears with its decision, latency and the agent key that made it.' },
     { type: 'callout', variant: 'tip', title: 'Fail-open by default', text: 'If the gateway is unreachable, the hook lets the call run so your workflow is never blocked by an outage. Set VW_FAIL_MODE=closed to block instead.' },
     { type: 'article-links', title: 'Next steps', items: [
       { collectionId: 'developers', articleId: 'connect-any-agent', title: 'Connect any agent', description: 'The generic contract for agents other than Claude Code and Cursor.' },

@@ -6,10 +6,17 @@ import type { AppModule } from "../redux/ui/uiSlice";
  */
 const GLOBAL_PATH_PREFIXES = ["/settings", "/event-tracker"];
 
+/**
+ * True when `pathname` is `prefix` or a path below it (`/tasks` and
+ * `/tasks/3`, not `/tasks-archive`). `/` matches only itself.
+ */
+export function isPathUnder(pathname: string, prefix: string): boolean {
+  if (prefix === "/") return pathname === "/";
+  return pathname === prefix || pathname.startsWith(`${prefix}/`);
+}
+
 export function isGlobalPath(pathname: string): boolean {
-  return GLOBAL_PATH_PREFIXES.some(
-    (prefix) => pathname === prefix || pathname.startsWith(`${prefix}/`),
-  );
+  return GLOBAL_PATH_PREFIXES.some((prefix) => isPathUnder(pathname, prefix));
 }
 
 /**

@@ -26,6 +26,7 @@ import { ContextSidebar } from "../../components/ContextSidebar";
 import { useAuth } from "../../../application/hooks/useAuth";
 import { storageService } from "../../../infrastructure/storage";
 import { status, palette as vwPalette } from "../../themes/palette";
+import { isClassicUi } from "../../themes/uiStyle";
 
 interface DashboardProps {
   reloadTrigger: boolean;
@@ -284,12 +285,15 @@ const Dashboard: FC<DashboardProps> = ({ reloadTrigger }) => {
                   overflow: "hidden",
                 }}
               >
-                <AppSwitcher
-                  activeModule={activeModule}
-                  onModuleChange={setActiveModule}
-                  isSuperAdmin={isSuperAdmin}
-                  hasOrg={!!organizationId}
-                />
+                {/* Phase 1: the unified sidebar (in ContextSidebar) replaces the switcher. */}
+                {isClassicUi() && (
+                  <AppSwitcher
+                    activeModule={activeModule}
+                    onModuleChange={setActiveModule}
+                    isSuperAdmin={isSuperAdmin}
+                    hasOrg={!!organizationId}
+                  />
+                )}
                 <ContextSidebar
                   activeModule={activeModule}
                   onOpenCreateDemoData={() => setOpenDemoDataModal(true)}
