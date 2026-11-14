@@ -1,6 +1,7 @@
 import ExcelJS from "exceljs";
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
+import { findUsersNotInOrganization } from "../../utils/user.utils";
 import {
   AI_LIFECYCLE_PHASES,
   calculateRiskLevel,
@@ -374,6 +375,31 @@ export async function importRisks(
   rows.forEach((row, i) => {
     // +2 accounts for the header row (row 1) plus 1-based indexing.
     errors.push(...validateRow(row, i + 2));
+  });
+
+  // Owner and approver must be members of the importing organization. A value
+  // that is not a positive integer (e.g. 5.5, which PostgreSQL would round to
+  // another user id) fails closed instead of skipping the check.
+  const userFields = ["risk_owner", "risk_approval"] as const;
+  const isValidUserId = (id: number | null): id is number =>
+    id !== null && Number.isInteger(id) && id > 0;
+  const referencedUserIds = rows.flatMap((row) =>
+    userFields.map((field) => parseUserId(row[field])).filter(isValidUserId),
+  );
+  const outsideUserIds = new Set(
+    await findUsersNotInOrganization(referencedUserIds, organizationId),
+  );
+  rows.forEach((row, i) => {
+    for (const field of userFields) {
+      const id = parseUserId(row[field]);
+      if (id !== null && (!isValidUserId(id) || outsideUserIds.has(id))) {
+        errors.push({
+          row: i + 2,
+          field,
+          message: "User must be a member of this organization",
+        });
+      }
+    }
   });
 
   if (errors.length > 0) {

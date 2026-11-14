@@ -2,6 +2,8 @@ import { sequelize } from "../../database/db";
 import { QueryTypes } from "sequelize";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import logger from "../../utils/logger/fileLogger";
+import { linkObjectsToPolicyQuery } from "../../utils/policyLinkedObject.utils";
+import { parseBulkIds } from "../../utils/bulkAction.utils";
 
 // --- Read Tools ---
 
@@ -56,19 +58,22 @@ const agentLinkObjectToPolicy = createWriteToolFn({
   descriptionFn: (params) =>
     `Link ${params.object_type} #${params.object_id} to policy #${params.policy_id}`,
   executeFn: async (params, organizationId) => {
-    await sequelize.query(
-      `INSERT INTO policy_linked_objects (organization_id, policy_id, object_type, object_id, created_at)
-       VALUES (:organization_id, :policy_id, :object_type, :object_id, NOW())
-       ON CONFLICT DO NOTHING`,
-      {
-        replacements: {
-          organization_id: organizationId,
-          policy_id: params.policy_id,
-          object_type: params.object_type,
-          object_id: params.object_id,
-        },
-      },
-    );
+    // Same checks as the REST endpoint: type, policy and object in the org, no duplicates.
+    const objectIds = parseBulkIds([params.object_id], { field: "object_id" });
+    const transaction = await sequelize.transaction();
+    try {
+      await linkObjectsToPolicyQuery(
+        Number(params.policy_id),
+        params.object_type,
+        objectIds,
+        organizationId,
+        transaction,
+      );
+      await transaction.commit();
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
     return {
       policy_id: params.policy_id,
       object_type: params.object_type,

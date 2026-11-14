@@ -22,7 +22,7 @@ export const toolsDefinition: any[] = [
     function: {
       name: "agent_link_object_to_policy",
       description:
-        "Link an object (risk, evidence, etc.) to a policy. This creates an association between the object and the policy for compliance tracking. Requires user confirmation before executing.",
+        "Link a risk or an evidence file to a policy. This creates an association between the object and the policy for compliance tracking. Requires user confirmation before executing.",
       parameters: {
         type: "object",
         properties: {
@@ -32,7 +32,7 @@ export const toolsDefinition: any[] = [
           },
           object_type: {
             type: "string",
-            enum: ["risk", "evidence", "control", "model", "vendor"],
+            enum: ["risk", "evidence"],
             description: "The type of object to link to the policy.",
           },
           object_id: {

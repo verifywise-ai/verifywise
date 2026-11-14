@@ -6,7 +6,9 @@ import {
   createRiskQuery,
   updateRiskByIdQuery,
   deleteRiskByIdQuery,
+  assertRiskReferencesInOrganization,
 } from "../../utils/risk.utils";
+import { assertOrgOwnsIds } from "../../utils/bulkAction.utils";
 import { getTimeseriesForTimeframe } from "../../utils/history/riskHistory.utils";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { sequelize } from "../../database/db";
@@ -510,6 +512,7 @@ const agentAssignRiskOwner = createWriteToolFn({
   executeFn: async (params, organizationId) => {
     const riskId = params.risk_id as number;
     const ownerUserId = params.owner_user_id as number;
+    await assertRiskReferencesInOrganization({ risk_owner: ownerUserId }, organizationId);
     await sequelize.query(
       `UPDATE risks SET risk_owner = :owner_user_id, updated_at = NOW() WHERE id = :risk_id AND organization_id = :organization_id AND is_deleted = false`,
       {
@@ -572,6 +575,8 @@ const agentLinkRiskToProject = createWriteToolFn({
   executeFn: async (params, organizationId) => {
     const riskId = params.risk_id as number;
     const projectId = params.project_id as number;
+    await assertOrgOwnsIds({ table: "risks", ids: [riskId], organizationId });
+    await assertRiskReferencesInOrganization({ projects: [projectId] }, organizationId);
     await sequelize.query(
       `INSERT INTO risks_projects_frameworks (organization_id, risk_id, project_id)
        VALUES (:organization_id, :risk_id, :project_id)

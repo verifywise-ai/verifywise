@@ -11,6 +11,7 @@ jest.mock("../../utils/risk.utils", () => ({
   bulkSetProjectRisksOwnerQuery: jest.fn(),
   bulkSetProjectRisksCategoryQuery: jest.fn(),
   bulkArchiveProjectRisksQuery: jest.fn(),
+  assertRiskReferencesInOrganization: jest.fn(),
   PROJECT_RISK_CATEGORIES_SET: new Set(["financial", "operational", "strategic", "compliance"]),
 }));
 jest.mock("../../domain.layer/models/risks/risk.model", () => ({

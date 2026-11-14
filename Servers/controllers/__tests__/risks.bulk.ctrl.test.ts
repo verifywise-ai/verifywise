@@ -5,6 +5,7 @@ jest.mock("../../utils/risk.utils", () => ({
   bulkSetProjectRisksOwnerQuery: jest.fn<any>().mockResolvedValue(undefined),
   bulkSetProjectRisksCategoryQuery: jest.fn<any>().mockResolvedValue(undefined),
   bulkArchiveProjectRisksQuery: jest.fn<any>().mockResolvedValue(undefined),
+  assertRiskReferencesInOrganization: jest.fn<any>().mockResolvedValue(undefined),
   PROJECT_RISK_CATEGORIES: ["Strategic risk", "Operational risk"],
   PROJECT_RISK_CATEGORIES_SET: new Set(["Strategic risk", "Operational risk"]),
   // Other exports used by risks.ctrl — provide noop mocks.
@@ -73,6 +74,7 @@ import {
   bulkSetProjectRisksOwnerQuery,
   bulkSetProjectRisksCategoryQuery,
   bulkArchiveProjectRisksQuery,
+  assertRiskReferencesInOrganization,
 } from "../../utils/risk.utils";
 import { parseBulkIds, assertOrgOwnsIds, withBulkTransaction } from "../../utils/bulkAction.utils";
 import {
@@ -142,6 +144,24 @@ describe("bulkUpdateProjectRisks", () => {
       message: "OK",
       data: { updated: 2, action: "set_owner" },
     });
+  });
+
+  it("returns 400 and writes nothing when the new owner is outside the organization", async () => {
+    (assertRiskReferencesInOrganization as jest.Mock<any>).mockRejectedValueOnce(
+      new ValidationException("The risk owner must be a member of this organization"),
+    );
+    const req = createReq({ ids: [1], action: "set_owner", ownerId: 99 });
+    const res = createRes();
+
+    await bulkUpdateProjectRisks(req as Request, res as Response);
+
+    expect(assertRiskReferencesInOrganization).toHaveBeenCalledWith(
+      { risk_owner: 99 },
+      4,
+      expect.anything(),
+    );
+    expect(mockSetOwner).not.toHaveBeenCalled();
+    expect(res.status).toHaveBeenCalledWith(400);
   });
 
   it("returns 400 when set_owner is missing ownerId", async () => {

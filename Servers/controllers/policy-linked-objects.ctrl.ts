@@ -2,15 +2,24 @@ import { Request, Response } from "express";
 import logger, { logStructured } from "../utils/logger/fileLogger";
 import { STATUS_CODE } from "../utils/statusCode.utils";
 import {
-  createPolicyLinkedObjectQuery,
   deletePolicyLinkedObjectQuery,
   getAllPolicyLinkedObjectsQuery,
   getPolicyLinkedObjectByIdQuery,
+  linkObjectsToPolicyQuery,
 } from "../utils/policyLinkedObject.utils";
 import { Transaction } from "sequelize";
 import { sequelize } from "../database/db";
+import { parseBulkIds } from "../utils/bulkAction.utils";
+import {
+  ForbiddenException,
+  NotFoundException,
+  ValidationException,
+} from "../domain.layer/exceptions/custom.exception";
 
 import { translateError } from "../utils/i18n.utils";
+
+/** Most ids one link request may carry (evidence lists can be long). */
+const MAX_LINK_IDS = 1000;
 /**
  * GET /policies/:policyId/linked-objects
  */
@@ -144,35 +153,52 @@ export async function createLinkedObject(req: Request, res: Response) {
   const policyId = parseInt(
     Array.isArray(req.params.policyId) ? req.params.policyId[0] : req.params.policyId,
   );
-  const { object_type, object_id, object_ids } = req.body;
+  const { object_type, object_id, object_ids } = req.body ?? {};
 
   logger.debug(`🔗 Linking ${object_type} to policy ${policyId}`);
+
+  if (isNaN(policyId)) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid policy ID")));
+  }
 
   let transaction: Transaction | null = null;
 
   try {
-    const tenant = req.organizationId!;
+    // Single id (old clients) and/or a list (new clients), de-duplicated.
+    // An empty request links nothing, as before.
+    const rawIds = [
+      ...(object_id !== undefined && object_id !== null ? [object_id] : []),
+      ...(Array.isArray(object_ids) ? object_ids : []),
+    ];
+    const ids =
+      rawIds.length > 0 ? parseBulkIds(rawIds, { field: "object_ids", max: MAX_LINK_IDS }) : [];
+
     transaction = await sequelize.transaction();
-
-    // Handle single insert (old)
-    if (object_id) {
-      await createPolicyLinkedObjectQuery(policyId, object_type, object_id, tenant, transaction);
-    }
-
-    // Handle bulk insert (new)
-    if (Array.isArray(object_ids)) {
-      for (const id of object_ids) {
-        await createPolicyLinkedObjectQuery(policyId, object_type, id, tenant, transaction);
-      }
-    }
-
+    const linked = await linkObjectsToPolicyQuery(
+      policyId,
+      object_type,
+      ids,
+      req.organizationId!,
+      transaction,
+    );
     await transaction.commit();
 
+    // 201 even when every id was already linked: the legacy contract is frozen.
     return res.status(201).json({
       message: req.t!("Linked successfully"),
+      linked,
     });
   } catch (error: any) {
     if (transaction) await transaction.rollback();
+    if (error instanceof ValidationException) {
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+    }
+    if (error instanceof NotFoundException) {
+      return res.status(404).json(STATUS_CODE[404](translateError(req, error)));
+    }
+    if (error instanceof ForbiddenException) {
+      return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
+    }
     logger.error("❌ Error in createLinkedObject:", error);
     return res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }

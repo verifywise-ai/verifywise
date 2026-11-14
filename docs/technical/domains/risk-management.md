@@ -470,6 +470,18 @@ POST /projectRisks/
 - `risk_owner` - Valid user ID
 - `risk_description` - Non-empty string
 
+### Organization references
+
+Every risk write (REST, bulk `set_owner`, import, MCP, advisor, intake, AI Detection, demo seed) goes through `assertRiskReferencesInOrganization` in `utils/risk.utils.ts`, called by `createRiskQuery` and `updateRiskByIdQuery`. A request returns 400 when:
+
+- `risk_owner` or `risk_approval` is not a member of the caller's organization (`organization_members`). On update, an unchanged owner or approver is not re-checked, so a risk whose owner left the organization can still be edited.
+- a `projects` id is not a use case of the caller's organization.
+- a `frameworks` id does not exist (frameworks are a global catalog).
+
+Ids fail closed: a value that is not a positive integer (for example `5.5`, which PostgreSQL would round to another id) is rejected, never skipped. The advisor's `agent_assign_risk_owner` and `agent_link_risk_to_project` run the same guard. Risk import reports a non-member or malformed owner or approver as a row error. REST create ignores a client-sent `is_demo`.
+
+`POST /riskHistory/snapshot` requires `risks.edit`.
+
 ## Frontend Structure
 
 ### Main Pages
