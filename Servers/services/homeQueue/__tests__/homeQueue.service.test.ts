@@ -137,8 +137,8 @@ describe("getHomeQueue", () => {
     expect(logger.error).toHaveBeenCalled();
   });
 
-  it("registers the approvals and tasks sources by default", async () => {
+  it("registers the approvals, tasks and intake sources by default", async () => {
     const { HOME_QUEUE_SOURCES } = await import("../index");
-    expect(HOME_QUEUE_SOURCES.map((s) => s.id)).toEqual(["approvals", "tasks"]);
+    expect(HOME_QUEUE_SOURCES.map((s) => s.id)).toEqual(["approvals", "tasks", "intake"]);
   });
 });

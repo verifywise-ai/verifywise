@@ -1,6 +1,7 @@
 import logger, { logStructured } from "../../utils/logger/fileLogger";
 import { sortQueueItems } from "./sort";
 import { approvalsSource } from "./sources/approvals.source";
+import { intakeSource } from "./sources/intake.source";
 import { tasksSource } from "./sources/tasks.source";
 import type {
   HomeQueueContext,
@@ -14,7 +15,7 @@ const FILE = "services/homeQueue/index.ts";
 export type CountsLoader = (ctx: HomeQueueContext) => Promise<HomeQueueResponse["counts"]>;
 
 /** Every queue source, in registration order. */
-export const HOME_QUEUE_SOURCES: HomeQueueSource[] = [approvalsSource, tasksSource];
+export const HOME_QUEUE_SOURCES: HomeQueueSource[] = [approvalsSource, tasksSource, intakeSource];
 
 /** Placeholder until the counts strip has its loader: no counts are reported. */
 const noCounts: CountsLoader = async () => ({});
