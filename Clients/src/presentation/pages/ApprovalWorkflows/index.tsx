@@ -8,6 +8,8 @@ import { addNewWorkflowButton, workflowMainStack, filterSearchContainer } from "
 import { CustomizableButton } from "../../components/button/customizable-button";
 import { ReactComponent as AddCircleOutlineIcon } from "../../assets/icons/plus-circle-white.svg";
 import CreateNewApprovalWorkflow from "../../components/Modals/NewApprovalWorkflow";
+import RequestorApprovalModal from "../../components/Modals/RequestorApprovalModal";
+import { useSearchParams } from "react-router";
 import { ApprovalWorkflowStepModel } from "../../../domain/models/Common/approvalWorkflow/approvalWorkflowStepModel";
 import { ApprovalStatus } from "../../../domain/enums/aiApprovalWorkflow.enum";
 import { FilterColumn } from "../../components/Table/FilterBy";
@@ -42,6 +44,23 @@ const ApprovalWorkflows: React.FC = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [isNewWorkflowModalOpen, setIsNewWorkflowModalOpen] = useState(false);
   const [archivedId, setArchivedId] = useState<string | null>(null);
+
+  // `?request=<id>` (Home queue links) opens the approval requests modal on
+  // that request; closing it drops the parameter.
+  const [searchParams, setSearchParams] = useSearchParams();
+  const requestParam = searchParams.get("request");
+  const linkedRequestId =
+    requestParam && /^[1-9]\d*$/.test(requestParam) ? Number(requestParam) : null;
+  const handleCloseLinkedRequest = useCallback(() => {
+    setSearchParams(
+      (params) => {
+        const next = new URLSearchParams(params);
+        next.delete("request");
+        return next;
+      },
+      { replace: true },
+    );
+  }, [setSearchParams]);
 
   // Column visibility
   const {
@@ -406,6 +425,11 @@ const ApprovalWorkflows: React.FC = () => {
         }
         isEdit={!!selectWorkflow}
         onSuccess={handleWorkflowSuccess}
+      />
+      <RequestorApprovalModal
+        isOpen={linkedRequestId !== null}
+        onClose={handleCloseLinkedRequest}
+        initialRequestId={linkedRequestId}
       />
     </PageHeaderExtended>
   );

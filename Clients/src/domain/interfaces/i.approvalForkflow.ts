@@ -48,6 +48,8 @@ export interface IRequestorApprovalProps {
   isOpen: boolean;
   onClose: () => void;
   onRefresh?: () => void;
+  /** Request to show first, e.g. from a Home queue link (`?request=<id>`). */
+  initialRequestId?: number | null;
 }
 
 export interface ITimelineStep {

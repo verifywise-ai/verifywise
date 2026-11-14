@@ -1,3 +1,5 @@
+import { fireEvent, screen } from "@testing-library/react";
+import { useLocation } from "react-router";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
 // Mock repositories
@@ -90,7 +92,19 @@ vi.mock("../../../../domain/models/Common/approvalWorkflow/approvalWorkflow.mode
   },
 }));
 
+// The approval requests modal, reduced to the props the page passes it.
+vi.mock("../../../components/Modals/RequestorApprovalModal", () => ({
+  default: ({ isOpen, onClose, initialRequestId }: any) =>
+    isOpen ? (
+      <div data-testid="requests-modal" data-request-id={String(initialRequestId)}>
+        <button onClick={onClose}>Close requests</button>
+      </div>
+    ) : null,
+}));
+
 import ApprovalWorkflows from "../index";
+
+const LocationProbe = () => <div data-testid="location-search">{useLocation().search}</div>;
 
 describe("ApprovalWorkflows", () => {
   beforeEach(() => {
@@ -100,5 +114,35 @@ describe("ApprovalWorkflows", () => {
   it("renders without crashing", () => {
     const { container } = renderWithProviders(<ApprovalWorkflows />);
     expect(container).toBeTruthy();
+  });
+
+  describe("?request= deep link (Home queue)", () => {
+    it("opens the approval requests modal on the linked request", () => {
+      renderWithProviders(<ApprovalWorkflows />, { route: "/approval-workflows?request=42" });
+      expect(screen.getByTestId("requests-modal")).toHaveAttribute("data-request-id", "42");
+    });
+
+    it("drops the parameter when the modal closes", () => {
+      renderWithProviders(
+        <>
+          <ApprovalWorkflows />
+          <LocationProbe />
+        </>,
+        { route: "/approval-workflows?request=42&tab=x" },
+      );
+      fireEvent.click(screen.getByRole("button", { name: "Close requests" }));
+      expect(screen.queryByTestId("requests-modal")).not.toBeInTheDocument();
+      expect(screen.getByTestId("location-search")).toHaveTextContent("?tab=x");
+    });
+
+    it("leaves the modal closed without the parameter", () => {
+      renderWithProviders(<ApprovalWorkflows />, { route: "/approval-workflows" });
+      expect(screen.queryByTestId("requests-modal")).not.toBeInTheDocument();
+    });
+
+    it("ignores an id that is not a positive whole number", () => {
+      renderWithProviders(<ApprovalWorkflows />, { route: "/approval-workflows?request=abc" });
+      expect(screen.queryByTestId("requests-modal")).not.toBeInTheDocument();
+    });
   });
 });
