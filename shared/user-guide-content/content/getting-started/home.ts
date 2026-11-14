@@ -24,7 +24,7 @@ export const homeContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The list on the Today tab only contains items that are yours. Nobody else\'s work appears in it. Each row shows a title, one line of context (the module, the reason and a due date or how long it has been waiting) and a link that opens the record where you act. Home does not approve or change anything itself.',
+      text: 'The list on the Today tab only contains items that are yours. Each row shows a title, one line of context (the module, the reason and a due date or how long it has been waiting) and a link that opens the record where you act. Home does not approve or change anything itself.',
     },
     {
       type: 'paragraph',
@@ -43,7 +43,7 @@ export const homeContent: ArticleContent = {
         { key: 'rule', label: 'What puts an item on your list' },
       ],
       rows: [
-        { source: 'Approvals', rule: 'An approval request is waiting on your decision at its current step, and you have not answered yet. Requests you raised yourself are not listed.' },
+        { source: 'Approvals', rule: 'An approval request is waiting on your decision at its current step and you have not answered yet. Requests you raised are not listed.' },
         { source: 'Tasks', rule: 'A task assigned to you that is Open, In progress or Overdue. It shows as overdue when its due date has passed.' },
         { source: 'Intake', rule: 'A submission waiting for your first review, or an approved submission with a second review open that you are asked to do. Only people who can edit intake forms see this source. When review routing is on, a submission appears for the reviewers named on its lane.' },
         { source: 'AI risks', rule: 'A risk you own that is Not started or Requires review, or whose deadline has passed and is not Completed or Canceled.' },
@@ -70,20 +70,20 @@ export const homeContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Record', text: 'Intake waiting (submissions pending a first decision, shown to people who can edit intake forms), agents to review, and AI on the record (use cases, models, AI apps and agents together).' },
+        { bold: 'Record', text: 'Intake waiting (submissions pending a first decision, shown to people who can edit intake forms), agents to review and AI on the record (use cases, models, AI apps and agents together).' },
         { bold: 'Track', text: 'Untreated risks and vendor reviews due.' },
-        { bold: 'Enforce', text: 'Policy reviews due, and prompts blocked or masked by AI Gateway guardrails in the last 24 hours. The prompts count is left out when AI Gateway is not set up for your deployment.' },
+        { bold: 'Enforce', text: 'Policy reviews due and prompts blocked or masked by AI Gateway guardrails in the last 24 hours. The prompts count is left out when AI Gateway is not set up for your deployment.' },
       ],
     },
     {
       type: 'paragraph',
-      text: 'A dash in place of a number means that count could not be loaded just now. It is never a zero.',
+      text: 'A dash in place of a number means that count could not be loaded when the page opened. It is never a zero.',
     },
     {
       type: 'callout',
       variant: 'info',
       title: 'Not shown on Home yet',
-      text: 'Agent approvals, Advisor AI approvals, evidence that is about to expire, training, AI Detection and Shadow AI decisions, post-market monitoring and FRIA are not part of the list yet. Open those modules directly. Agent approvals are still decided in AI Gateway.',
+      text: 'Agent approvals, Advisor AI approvals, evidence that is about to expire, training, AI Detection and Shadow AI decisions, post-market monitoring and FRIA are not part of the list yet. Open those modules directly. Agent approvals are decided in AI Gateway.',
     },
     {
       type: 'heading',
@@ -103,7 +103,7 @@ export const homeContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Get started has the onboarding checklist with your progress, a notice if an LLM API key is still missing, introductory videos, shortcuts to the main modules and links to the user guide. You can open it any time, including from the empty state of the Today tab.',
+      text: 'Get started has the onboarding checklist with your progress, a notice if no LLM API key is set up yet, introductory videos, shortcuts to the main modules and links to the user guide. You can open it any time, including from the empty state of the Today tab.',
     },
     {
       type: 'article-links',

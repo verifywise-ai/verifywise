@@ -28,8 +28,8 @@ Every query filters by `organization_id`. `today` is the UTC date computed in th
 |--------|------|------------------------------|------------|
 | `approvals` | `approvals.source.ts` | `getPendingApprovalsQuery` returns it: you approve the request's current step, have not answered, request is pending. Requests you raised are not included. | everyone |
 | `tasks` | `tasks.source.ts` | You are in `task_assignees` and status is Open, In Progress or Overdue. Overdue is derived from `due_date < today`, because the stored status is not kept current. | everyone |
-| `intake` | `intake.source.ts` | Pending submission and you are a named reviewer of its lane, or routing is off or no lane is stored, or the lane has nobody named and `canDecideLane` accepts you. Or an approved submission with a second review open (or missed and unresolved) where you are a senior reviewer (an Admin when none are named) and not the first approver. | `intakeForm.edit` |
-| `risks` | `risks.source.ts` | `risk_owner` is you, not deleted, and mitigation status is Not Started (NULL counts), Requires review, or `deadline < today` and status not Completed or Canceled. | everyone |
+| `intake` | `intake.source.ts` | Pending submission and you are a named reviewer of its lane, or routing is off or no lane is stored, or the lane has no named reviewers and `canDecideLane` accepts you. Or an approved submission with a second review open (or missed and unresolved) where you are a senior reviewer (an Admin when none are named) and not the first approver. | `intakeForm.edit` |
+| `risks` | `risks.source.ts` | `risk_owner` is you and the risk is not deleted. Its mitigation status is Not Started (NULL counts), Requires review, or `deadline < today` and status not Completed or Canceled. | everyone |
 | `policyReviews` | `policyReviews.source.ts` | You are `policy_owner_id` or an assigned reviewer and `next_review_date <= today + 14`. | everyone |
 | `vendorReviews` | `vendorReviews.source.ts` | You are `reviewer` (or `assignee` when no reviewer) and `review_date <= today + 14`. A vendor with status Reviewed is excluded only when its review date is before today. | everyone |
 | `incidents` | `incidents.source.ts` | `assignee_id` is you, status is not Closed, not archived. | everyone |
@@ -37,11 +37,11 @@ Every query filters by `organization_id`. `today` is the UTC date computed in th
 
 Order (`sort.ts`): overdue first, then `dueDate` ascending, then `waitingSince` ascending, nulls last, item id as the tie break.
 
-Not in the queue yet, and why: agent (MCP) approvals (no permission key means "may decide an agent approval"), Advisor AI approvals (no page lists or decides them), evidence expiry, training, AI Detection and Shadow AI decisions, post-market monitoring cycles, FRIA, and framework control assignments (no truthful per-user owner today).
+Not in the queue yet, with the reason: agent (MCP) approvals (no permission key means "may decide an agent approval"), Advisor AI approvals (no page lists or decides them), evidence expiry, training, AI Detection and Shadow AI decisions, post-market monitoring cycles, FRIA and framework control assignments (no truthful per-user owner today).
 
 ## Counts
 
-`counts.ts` returns org-wide counts the user may see: intake waiting (`intakeForm.edit` only), agents to review, AI on the record, untreated risks, vendor reviews due, policy reviews due, and prompts blocked or masked in the last 24 hours. The risk, vendor and policy counts reuse the condition constants exported by their source files, so the list and the count cannot drift apart.
+`counts.ts` returns org-wide counts the user may see: intake waiting (`intakeForm.edit` only), agents to review, AI on the record, untreated risks, vendor reviews due, policy reviews due and prompts blocked or masked in the last 24 hours. The risk, vendor and policy counts reuse the condition constants exported by their source files, so the list and the count cannot drift apart.
 
 The prompts count calls the AI Gateway (`aiGatewayRequest`, `GET /internal/guardrails/stats?period=24h`, `summary.blocked + summary.masked`) with a 2 s timeout (`GATEWAY_COUNT_TIMEOUT_MS`).
 
@@ -64,9 +64,9 @@ Organization and user come from the token only; the endpoint takes no id paramet
 
 1. Check there is a truthful per-user owner or assignee. If the only rule is "anyone with the role", do not add it.
 2. Add the id to `HomeQueueSourceId` in `i.homeQueue.ts` and to `Clients/src/domain/types/homeQueue.types.ts`.
-3. Create `Servers/services/homeQueue/sources/<name>.source.ts` exporting a `HomeQueueSource` (`id`, `part`, `isVisible`, `load`). Filter by `ctx.organizationId` and `ctx.userId`, format dates in SQL (see `dateOnly.ts`), and return `url` of the record or the page where it is decided. Export the SQL so a test can pin it.
+3. Create `Servers/services/homeQueue/sources/<name>.source.ts` exporting a `HomeQueueSource` (`id`, `part`, `isVisible`, `load`). Filter by `ctx.organizationId` and `ctx.userId`, format dates in SQL (see `dateOnly.ts`). Return `url` of the record or the page where it is decided. Export the SQL so a test can pin it.
 4. Register it in `HOME_QUEUE_SOURCES` in `services/homeQueue/index.ts`.
-5. On the client add its label to `HOME_QUEUE_SOURCE_LABELS` (its key order is the filter order), its module name in `MODULE` and a `case` in `queueItemText.ts`, and de, fr and es strings in `Clients/src/i18n/modules/homeQueue.ts`.
+5. On the client add its label to `HOME_QUEUE_SOURCE_LABELS` (its key order is the filter order), its module name in `MODULE` and a `case` in `queueItemText.ts`. Add de, fr and es strings in `Clients/src/i18n/modules/homeQueue.ts`.
 6. If the item has a matching org-wide count, share the condition constant between the source and `counts.ts`.
-7. Add unit tests for the rule, a row in the tenant isolation test, and update the Home user guide article (`shared/user-guide-content/content/getting-started/home.ts`, mirrored to the website guide).
+7. Add unit tests for the rule, a row in the tenant isolation test. Update the Home user guide article (`shared/user-guide-content/content/getting-started/home.ts`, mirrored to the website guide).
 8. Run `npm run generate:swagger` and `npm run generate:endpoints` if the response shape changed.
