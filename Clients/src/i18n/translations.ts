@@ -77,6 +77,7 @@ import {
 import { de as evidenceDe, fr as evidenceFr, es as evidenceEs } from "./modules/evidence";
 import { de as frameworksDe, fr as frameworksFr, es as frameworksEs } from "./modules/frameworks";
 import { de as governanceDe, fr as governanceFr, es as governanceEs } from "./modules/governance";
+import { de as homeQueueDe, fr as homeQueueFr, es as homeQueueEs } from "./modules/homeQueue";
 import { de as incidentsDe, fr as incidentsFr, es as incidentsEs } from "./modules/incidents";
 import {
   de as intakeLiveChecksDe,
@@ -145,6 +146,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...evidenceDe,
     ...frameworksDe,
     ...governanceDe,
+    ...homeQueueDe,
     ...incidentsDe,
     ...intakeLiveChecksDe,
     ...intakeLogicDe,
@@ -187,6 +189,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...evidenceFr,
     ...frameworksFr,
     ...governanceFr,
+    ...homeQueueFr,
     ...incidentsFr,
     ...intakeLiveChecksFr,
     ...intakeLogicFr,
@@ -229,6 +232,7 @@ export const translations: Record<string, Record<string, string>> = {
     ...evidenceEs,
     ...frameworksEs,
     ...governanceEs,
+    ...homeQueueEs,
     ...incidentsEs,
     ...intakeLiveChecksEs,
     ...intakeLogicEs,
