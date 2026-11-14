@@ -1,6 +1,6 @@
 # Clients — Frontend Development Guide
 
-> **Last Updated:** 2026-11-13
+> **Last Updated:** 2026-11-14
 
 ---
 
@@ -100,3 +100,9 @@ Read the relevant file BEFORE implementing changes in that area:
 | Cross-org isolation tests (MSW guard) | `docs/technical/security/tenant-isolation.md` §6.4 |
 
 > All `docs/` paths are relative to the repository root.
+
+---
+
+## Home queue
+
+A new "needs action" item for the Home page (`/home`, Today tab) belongs in `Servers/services/homeQueue/sources/`, not in a client-side fetch. See `docs/technical/domains/home-queue.md`.

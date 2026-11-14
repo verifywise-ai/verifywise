@@ -13004,7 +13004,7 @@ export const v1V1homeEndpoints: Endpoint[] = [
     method: 'GET',
     path: '/v1/home/queue',
     summary: "Get Home Queue Handler",
-    description: "Everything that needs the signed-in user's action in the token's organization, merged and sorted (overdue first, then due soonest, then oldest waiting). A source that failed is reported as `unavailable` with no items, never as an empty list; a source or count the user may not see is absent. Titles are built on the client from these structured fields.",
+    description: "Everything that needs the signed-in user's action in the token's organization, merged and sorted (overdue first, then due soonest, then oldest waiting). A source that failed is reported as `unavailable` with no items, never as an empty list; a source or count the user may not see is absent, as is the prompts count when no AI Gateway is configured. Titles are built on the client from these structured fields.",
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },

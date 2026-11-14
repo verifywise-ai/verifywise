@@ -87,8 +87,7 @@ export const GUIDE_ROUTE_RULES: GuideRouteRule[] = [
   { prefix: "/ai-trust-index", target: "ai-trust-index" },
 
   // Governance
-  // Home's article is still to be written; until then Home opens Start here's.
-  { prefix: "/home", target: "getting-started/quick-start" },
+  { prefix: "/home", target: "getting-started/home" },
   { prefix: "/start-here", target: "getting-started/quick-start" },
   { prefix: "/overview", target: "ai-governance/use-cases" },
   { prefix: "/project-view", target: "ai-governance/use-cases" },
