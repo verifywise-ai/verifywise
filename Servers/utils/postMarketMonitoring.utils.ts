@@ -1,5 +1,6 @@
 import { Transaction } from "sequelize";
 import { sequelize } from "../database/db";
+import { effectiveRiskLevelSql, riskLevelRankSql } from "./riskLevel.utils";
 import {
   IPMMConfig,
   IPMMConfigCreateRequest,
@@ -807,12 +808,15 @@ export const getContextSnapshotQuery = async (
   // Get risk counts
   const riskResult = (await sequelize.query(
     `SELECT
-      COUNT(*) as total,
-      SUM(CASE WHEN risk_severity = 'High' OR risk_severity = 'high' THEN 1 ELSE 0 END) as high_count,
-      SUM(CASE WHEN risk_severity = 'Medium' OR risk_severity = 'medium' THEN 1 ELSE 0 END) as medium_count,
-      SUM(CASE WHEN risk_severity = 'Low' OR risk_severity = 'low' THEN 1 ELSE 0 END) as low_count
-     FROM risks
-     WHERE organization_id = :organizationId AND project_id = :projectId;`,
+      COUNT(DISTINCT r.id) AS total,
+      COUNT(DISTINCT r.id) FILTER (WHERE ${riskLevelRankSql(effectiveRiskLevelSql("r"))} >= 4) AS high_count,
+      COUNT(DISTINCT r.id) FILTER (WHERE ${riskLevelRankSql(effectiveRiskLevelSql("r"))} = 3) AS medium_count,
+      COUNT(DISTINCT r.id) FILTER (WHERE ${riskLevelRankSql(effectiveRiskLevelSql("r"))} <= 2) AS low_count
+     FROM risks r
+     JOIN projects_risks pr ON pr.risk_id = r.id AND pr.organization_id = :organizationId
+     WHERE r.organization_id = :organizationId
+       AND r.is_deleted = false
+       AND pr.project_id = :projectId;`,
     { replacements: { projectId, organizationId } },
   )) as [{ total: string; high_count: string; medium_count: string; low_count: string }[], number];
 
