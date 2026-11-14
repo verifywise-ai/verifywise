@@ -27,12 +27,18 @@ interface UserOption {
   label: string;
 }
 
+const serializeRecipients = (userIds: number[], emails: string[]) =>
+  JSON.stringify([userIds, emails]);
+
 export default function Settings() {
-  const isAdmin = useCan("aiTrustIndex.admin");
+  const canManageSettings = useCan("aiTrustIndex.admin");
   // A custom role's permissions may still be loading: don't refuse it yet.
   const permissionsSettled = usePermissionsSettled();
 
-  const { data: settingsData, isLoading: settingsLoading } = useSettings();
+  // Reading the recipients needs the key too: don't ask without it.
+  const { data: settingsData, isLoading: settingsLoading } = useSettings({
+    enabled: canManageSettings,
+  });
   const { users, loading: usersLoading } = useUsers();
   const updateSettings = useUpdateSettings();
   const { showError, AlertSlot } = useTrustIndexAlert();
@@ -47,8 +53,10 @@ export default function Settings() {
     const t = setTimeout(() => setJustSaved(false), 2000);
     return () => clearTimeout(t);
   }, [justSaved]);
-  // Skip the very first auto-save so loading the saved value doesn't trigger a write.
-  const hydratedRef = useRef(false);
+  // The recipients as last loaded from or saved to the server, serialized;
+  // null until they load. Auto-save runs only when the lists differ from it,
+  // so loading (or refetching) the saved settings never sends a write.
+  const savedRef = useRef<string | null>(null);
   const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   // Hydrate local state from the saved settings once they arrive.
@@ -59,6 +67,7 @@ export default function Settings() {
     if (settingsData?.data) {
       const nextUserIds = settingsData.data.recipientUserIds ?? [];
       const nextEmails = settingsData.data.recipientEmails ?? [];
+      savedRef.current = serializeRecipients(nextUserIds, nextEmails);
       setRecipientUserIds((prev) =>
         prev.length === nextUserIds.length && prev.every((v, i) => v === nextUserIds[i])
           ? prev
@@ -72,19 +81,21 @@ export default function Settings() {
     }
   }, [settingsData]);
 
-  // Debounced auto-save on any change (after initial hydration).
+  // Debounced auto-save, only for a change the user made: not before the
+  // saved settings load, and not when the lists still match them.
   useEffect(() => {
-    if (!isAdmin) return;
-    if (!hydratedRef.current) {
-      hydratedRef.current = true;
-      return;
-    }
+    if (!canManageSettings || savedRef.current === null) return;
+    const current = serializeRecipients(recipientUserIds, recipientEmails);
+    if (current === savedRef.current) return;
     if (debounceRef.current) clearTimeout(debounceRef.current);
     debounceRef.current = setTimeout(() => {
       updateSettings.mutate(
         { recipientUserIds, recipientEmails },
         {
-          onSuccess: () => setJustSaved(true),
+          onSuccess: () => {
+            savedRef.current = current;
+            setJustSaved(true);
+          },
           onError: () => showError("We couldn't save your recipient changes. Please try again."),
         },
       );
@@ -94,7 +105,7 @@ export default function Settings() {
     };
     // updateSettings is stable from React Query; intentionally excluded.
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [recipientUserIds, recipientEmails, isAdmin]);
+  }, [recipientUserIds, recipientEmails, canManageSettings]);
 
   const userOptions: UserOption[] = useMemo(
     () =>
@@ -110,7 +121,7 @@ export default function Settings() {
     [userOptions, recipientUserIds],
   );
 
-  if (!isAdmin && permissionsSettled) {
+  if (!canManageSettings && permissionsSettled) {
     return (
       <PageHeaderExtended
         title="Settings"
@@ -120,7 +131,7 @@ export default function Settings() {
       >
         <EmptyState
           icon={Lock}
-          message="Only administrators can change AI Trust Index notification settings."
+          message="You do not have permission to view or change AI Trust Index notification settings."
           showBorder
         />
       </PageHeaderExtended>

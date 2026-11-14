@@ -20,7 +20,7 @@ router.get("/tracked", authenticateJWT, getTracked);
 router.post("/tracked/bulk", authenticateJWT, trackAppsBulk);
 router.post("/tracked", authenticateJWT, trackApp);
 router.delete("/tracked/:slug", authenticateJWT, untrackApp);
-router.get("/settings", authenticateJWT, getSettings);
+router.get("/settings", authenticateJWT, authorize("aiTrustIndex.admin"), getSettings);
 router.put("/settings", authenticateJWT, authorize("aiTrustIndex.admin"), updateSettings);
 
 export default router;

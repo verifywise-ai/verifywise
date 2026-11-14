@@ -68,14 +68,26 @@ describe("routes that used role-name lists now authorize on a permission key", (
     [riskLinksRouter, "post", "/:id/acknowledge-parent-change", "riskLinks.edit", EDITOR],
     [evidenceHubRouter, "post", "/freshness-sweep", "evidence.admin", ADMIN],
     [useCaseOrgSettingsRouter, "put", "/", "organization.admin", ADMIN],
-    // Was Admin/SuperAdmin by name in the controller. A pure super admin has
-    // no organization, so the settings were never theirs to change.
-    [aiTrustIndexRouter, "put", "/settings", "aiTrustIndex.admin", ADMIN],
   ])("%#: %s %s requires %s", (router, method, routePath, key, legacyRoles) => {
     expect(permissionFor(router, method as string, routePath as string)).toEqual([key]);
     // Same built-in roles as the role-name list it replaced: no change for them.
     expect(builtinRolesFor(key as string)).toEqual([...(legacyRoles as string[])].sort());
   });
+
+  // Not a like-for-like swap: the controller allowed Admin and SuperAdmin by
+  // name. SuperAdmin is deliberately dropped. legacyRoles builds the
+  // built-in matrix, so listing SuperAdmin would let a pure super admin (no
+  // organization) read and write an organization's alert recipients.
+  it.each([
+    ["get", "/settings"],
+    ["put", "/settings"],
+  ])(
+    "AI Trust Index %s %s requires aiTrustIndex.admin, Admin only (SuperAdmin dropped)",
+    (method, routePath) => {
+      expect(permissionFor(aiTrustIndexRouter, method, routePath)).toEqual(["aiTrustIndex.admin"]);
+      expect(builtinRolesFor("aiTrustIndex.admin")).toEqual(ADMIN);
+    },
+  );
 
   it("no route file authorizes by role name any more", () => {
     const roots = [path.join(__dirname, ".."), path.join(__dirname, "../../extensions")];
