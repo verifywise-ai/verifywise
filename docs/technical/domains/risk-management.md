@@ -460,7 +460,7 @@ Track how risk distribution changes over time across severity, likelihood, and m
 - `severity` - Distribution of severity levels
 - `likelihood` - Distribution of likelihood levels
 - `mitigation_status` - Distribution of mitigation statuses
-- `risk_level` - Distribution of calculated risk levels
+- `risk_level` - Distribution of risk levels. From this release snapshots are keyed by the effective level (the current level when set, otherwise the inherent level). Older snapshots are keyed by the inherent level, so the trend chart can step once after deploy for organizations that set current levels. The compliance score's high and very high counts use the same effective level, so they now include risks with no current level but a high inherent level.
 
 ### Timeseries Query Parameters
 

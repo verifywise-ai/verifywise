@@ -293,7 +293,7 @@ The table below scores tools across dimensions that matter for VerifyWise: cost,
    - Added `Servers/scripts/generateEnumManifest.ts` which exports the backend enums/const arrays to `Servers/enum-manifest.json`.
    - Added `Servers/scripts/checkEnumLabelDrift.ts` which compares the manifest to frontend domain enums in `Clients/src/domain/enums` and to swagger enum schemas.
    - Fixed two small frontend drifts: added `Rejected` to `ModelInventoryStatus` and aligned `MitigationStatus` casing with the backend.
-   - One known drift remains: `CurrentRiskLevel` uses title-case `"Very Low risk"` in the frontend while the backend risk calculator uses `"Very low risk"`. The sentinel reports this but exits 0 by default; set `ENUM_DRIFT_STRICT=1` to fail on drift.
+   - The former `"Very Low risk"` vs `"Very low risk"` drift is resolved by the spelling migration. The sentinel exits 0 by default on any drift; set `ENUM_DRIFT_STRICT=1` to fail on drift.
    - Run it locally with `cd Servers && npm run check:enum-drift`.
 
 4. **Enable session replay on staging.**
