@@ -305,11 +305,12 @@ handler in `Servers/advisor/aiActions/registry.ts`.
 2. Default severity to 'Negligible' and likelihood to 'Rare' if not
    provided (mirrors the UI form's silent defaults).
 3. Compute risk_level_autocalculated via the shared server util
-   calculateRiskLevel(severity, likelihood). Without this, the "Risk
+   calculateRiskLevel(likelihood, severity) from
+   Servers/utils/riskLevel.utils.ts. Without this, the "Risk
    Level" column on the risks table is always blank for AI-created
    risks. Formula:
      score = likelihood_value * 1 + severity_value * 3
-     ≤4 → Very low risk, ≤8 → Low risk, ≤12 → Medium risk,
+     ≤4 → No risk, ≤8 → Low risk, ≤12 → Medium risk,
      ≤16 → High risk, else Very high risk
 4. Call createRiskService(payload, { userId, organizationId }, tx)
    with all Tab 1 + Tab 2 fields. Field remappings:
@@ -455,14 +456,13 @@ the window-event listener picks up the refresh signal.
   Medium risk/Low risk/Very low risk". The Zod schema and tool
   definition use the DB-form values — the frontend's display layer
   maps them to the label form.
-- **Risk level is server-computed.** The UI form computes
-  `risk_level_autocalculated` client-side via `RiskCalculator` and
-  ships the value. The AI executor uses the equivalent server-side
-  helper `calculateRiskLevel` in
-  `Servers/utils/validations/riskValidation.utils.ts`. Both
-  implementations must produce the same output for the same
-  severity/likelihood pair or the "Risk Level" column will
-  mysteriously differ between UI-created and AI-created risks.
+- **Risk level is server-computed.** The server calculates the inherent
+  and residual levels on every create and update and ignores a level sent
+  by a client. The AI executors and the UI form use the same formula:
+  `calculateRiskLevel(likelihood, severity)` in
+  `Servers/utils/riskLevel.utils.ts` (client mirror:
+  `Clients/src/presentation/tools/riskCalculator.ts`). See the risk levels
+  section of `risk-management.md`.
 - **Post-commit side effects aren't wired for AI path yet.** The HTTP
   controller path runs `logEvent`, portfolio snapshot, and risk-owner
   notification after creating a risk. The AI path runs only the

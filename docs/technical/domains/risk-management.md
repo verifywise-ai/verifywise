@@ -55,16 +55,16 @@ project_risks
 │
 ├── likelihood (ENUM)                 # current risk
 ├── severity (ENUM)                   # current risk
-├── risk_level_autocalculated (ENUM)  # derived from likelihood + severity
+├── risk_level_autocalculated (ENUM)  # inherent level, calculated by the server from likelihood + severity
 ├── risk_severity (ENUM)              # RESIDUAL severity (mitigation)
-├── current_risk_level (ENUM)
+├── current_risk_level (ENUM)         # picked by hand in the Mitigation tab; optional
 │
 ├── mitigation_status (ENUM)
 ├── mitigation_plan
 ├── implementation_strategy
 ├── mitigation_evidence_document
 ├── likelihood_mitigation (ENUM)      # residual likelihood (mitigation)
-├── final_risk_level                  # derived from the two residual fields
+├── final_risk_level                  # residual level, calculated by the server from the two residual fields
 │
 ├── risk_approval (FK → users)
 ├── approval_status
@@ -152,7 +152,7 @@ enum Severity {
 }
 ```
 
-### Risk Level (Auto-calculated)
+### Risk Level
 
 ```typescript
 enum RiskLevel {
@@ -246,11 +246,59 @@ Severity is weighted 3x heavier than likelihood.
 | 13-16 | High risk |
 | ≥17 | Very high risk |
 
-`RiskCalculator` (`Clients/src/presentation/tools/riskCalculator.ts`) is the only
-implementation of this formula. Views that show a score — including the risk heat
-map on the use case's **Use case risks** tab — must call `getRiskLevel` /
-`getRiskScore` rather than re-deriving it, or they will report a different level
-than the summary cards and the risks table for the same risk.
+The same formula runs in the form, the server, the risk import, the AI advisor,
+the MCP tools, intake and AI suggestions. Client:
+`Clients/src/presentation/tools/riskCalculator.ts` (`getRiskLevel` /
+`getRiskScore`). Server: `calculateRiskLevel(likelihood, severity)` in
+`Servers/utils/riskLevel.utils.ts` (argument order is likelihood, then severity;
+labels are matched case-insensitively, and "Critical" scores like "Catastrophic"
+because residual severity is stored under that label). It returns null when
+either input is missing or unknown. Views that show a score, including the risk
+heat map on the use case's **Use case risks** tab, must call these helpers
+rather than re-deriving the score.
+
+### Risk levels: inherent, current, residual, effective
+
+| Level | Column | How it is set |
+|-------|--------|---------------|
+| Inherent | `risk_level_autocalculated` | Server, from `likelihood` and `severity`, on every create and update |
+| Residual | `final_risk_level` | Server, from `likelihood_mitigation` and `risk_severity`, with the same formula |
+| Current | `current_risk_level` | Picked by hand in the Mitigation tab; may be empty |
+| Effective | none (derived) | `current_risk_level` when set, otherwise `risk_level_autocalculated` |
+
+A level sent by a client for the inherent or residual column is ignored: the
+server drops it and recomputes it (`createRiskService` and `updateRiskService` in
+`Servers/services/risk.service.ts`). On update the level is recomputed only when
+one of its two inputs is in the payload.
+
+The effective level is what the risk table chip and sort, summary cards, filters,
+grouping, export, the use case risks view, the dashboard, the timeline, risk
+categories, DOCX and PDF reports, risk trend snapshots, the compliance score's
+high and very high counts, proactive detection, link coverage, the home queue and
+the AI advisor read. Do not read `risk_level_autocalculated` directly for those;
+use:
+
+- Server: `effectiveRiskLevelSql(alias)` (`COALESCE(current, inherent)`) and
+  `riskLevelRankSql(expr)` (No risk 0 to Very high risk 5) in
+  `Servers/utils/riskLevel.utils.ts`.
+- Client: `getEffectiveRiskLevel`, `riskLevelBucket` and `riskLevelRank` in
+  `Clients/src/application/utils/riskLevel.ts`. "No risk" and "Very low risk" share
+  the very-low summary card.
+
+The heat map is the exception: it plots likelihood and severity, so it shows the
+inherent level, and its tab reads "Heat map (inherent level)". The table chip has
+a tooltip with the inherent level (`VWProjectRisksTableBody.tsx`).
+
+"Very low risk" is still a valid stored value for the current level, but the
+formula never produces it, and the current level has no "No risk" value.
+
+### Spelling of the current level
+
+The current level used to be stored as "Very Low risk". Migration
+`20261114090307-current-risk-level-spelling.js` renames the enum value to
+"Very low risk" so it matches the inherent level. The API now returns "Very low
+risk". Every input that accepts a current level accepts both spellings and stores
+"Very low risk" (`normalizeCurrentRiskLevel` in `Servers/utils/riskLevel.utils.ts`).
 
 ### Example Calculation
 

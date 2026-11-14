@@ -126,7 +126,7 @@ export const riskAssessmentContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Each risk gets analyzed using likelihood and severity. VerifyWise calculates the overall risk level automatically from these inputs.',
+      text: 'Each risk gets analyzed using likelihood and severity. VerifyWise calculates the inherent risk level automatically from these inputs, on the server, every time you save a risk.',
     },
     {
       type: 'heading',
@@ -184,21 +184,42 @@ export const riskAssessmentContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise calculates the risk level from your likelihood and severity ratings:',
+      text: 'Each rating counts from 1 to 5 (Rare to Almost certain, Negligible to Catastrophic). VerifyWise adds the likelihood once and the severity three times: score = likelihood + 3 × severity. The score decides the level:',
     },
     {
       type: 'table',
       columns: [
+        { key: 'score', label: 'Score', width: '1fr' },
         { key: 'level', label: 'Risk level', width: '1fr' },
         { key: 'action', label: 'Recommended action', width: '2fr' },
       ],
       rows: [
-        { level: 'No risk', action: 'No action required' },
-        { level: 'Very low', action: 'Monitor periodically' },
-        { level: 'Low', action: 'Standard monitoring and review' },
-        { level: 'Medium', action: 'Active management required' },
-        { level: 'High', action: 'Priority attention needed' },
-        { level: 'Very high', action: 'Immediate action required' },
+        { score: '4', level: 'No risk', action: 'No action required' },
+        { score: '5 to 8', level: 'Low risk', action: 'Standard monitoring and review' },
+        { score: '9 to 12', level: 'Medium risk', action: 'Active management required' },
+        { score: '13 to 16', level: 'High risk', action: 'Priority attention needed' },
+        { score: '17 to 20', level: 'Very high risk', action: 'Immediate action required' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'The same formula applies everywhere a level is calculated: the risk form, imports, the AI advisor, intake forms and AI suggestions. After mitigation, the residual level uses the same formula on the mitigated likelihood and severity.',
+    },
+    {
+      type: 'heading',
+      id: 'which-level-is-shown',
+      level: 3,
+      text: 'Which level a risk shows',
+    },
+    {
+      type: 'paragraph',
+      text: 'A risk can have two levels. The inherent level is calculated from likelihood and severity. The current level is one you pick by hand in the Mitigation tab. VerifyWise shows the current level when you have set one and the inherent level otherwise. This level drives the chip in the risks table, sorting, the summary cards, filters, exports, reports, the dashboard and the compliance score.',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Table chip', text: 'Hover over the chip to see the inherent level' },
+        { bold: 'Heat map', text: 'The heat map plots likelihood against severity, so it always shows the inherent level. Its tab reads "Heat map (inherent level)"' },
       ],
     },
     {

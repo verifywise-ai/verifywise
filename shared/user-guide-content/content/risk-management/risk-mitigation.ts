@@ -126,8 +126,8 @@ export const riskMitigationContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Current risk level', text: 'The present risk level captured on the mitigation form (manually selected from Low / Medium / High / Critical)' },
-        { bold: 'Residual risk', text: 'Calculated automatically from residual likelihood × residual severity once mitigations are in place' },
+        { bold: 'Current risk level', text: 'The level you pick by hand on the mitigation form. When it is set, VerifyWise shows it for the risk in tables, cards, filters and reports. When it is empty, the inherent level is shown' },
+        { bold: 'Residual risk', text: 'Calculated automatically from the residual likelihood and residual severity with the same formula as the inherent level (likelihood + 3 × severity) once mitigations are in place' },
       ],
     },
     {
