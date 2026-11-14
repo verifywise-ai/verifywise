@@ -10,6 +10,7 @@ const freshContext = {
   state: undefined,
   accountCreatedAt: new Date("2026-01-01"),
   orgFirstSeenAt: null,
+  createdBeforeRelease: null,
   keyCount: 0,
 };
 

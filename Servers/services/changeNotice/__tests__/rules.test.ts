@@ -8,6 +8,7 @@ const base = {
   state: undefined as NoticeState | undefined,
   accountCreatedAt: daysAgo(200),
   orgFirstSeenAt: daysAgo(10) as Date | null,
+  createdBeforeRelease: null as boolean | null,
   keyCount: 0,
   now: NOW,
 };
@@ -67,6 +68,33 @@ describe("decideShow", () => {
   it("refuses a new notice id once the user holds the maximum number of keys", () => {
     expect(decideShow({ ...base, keyCount: MAX_KEYS })).toBe(false);
     expect(decideShow({ ...base, keyCount: MAX_KEYS - 1 })).toBe(true);
+  });
+
+  it("hides from an account created after the notice reached the deployment", () => {
+    expect(decideShow({ ...base, createdBeforeRelease: false })).toBe(false);
+  });
+
+  it("hides from the first viewer of a new organization created after the release", () => {
+    expect(
+      decideShow({
+        ...base,
+        accountCreatedAt: daysAgo(1),
+        orgFirstSeenAt: null,
+        createdBeforeRelease: false,
+      }),
+    ).toBe(false);
+  });
+
+  it("shows to an account that predates the release, without the organization anchor", () => {
+    expect(decideShow({ ...base, createdBeforeRelease: true, orgFirstSeenAt: null })).toBe(true);
+  });
+
+  it("still refuses a new id at the key limit when the account predates the release", () => {
+    expect(decideShow({ ...base, createdBeforeRelease: true, keyCount: MAX_KEYS })).toBe(false);
+  });
+
+  it("keeps showing a notice the user already has state for, whatever the release says", () => {
+    expect(decideShow({ ...base, state: stateOf(), createdBeforeRelease: false })).toBe(true);
   });
 
   it("still shows an existing notice when the user is at the key limit", () => {

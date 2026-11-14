@@ -113,7 +113,7 @@ export const homeContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'In the new look, a "What\'s changed" card appears the first time you open a page that was moved or redesigned. It says what changed and, for a page that moved, where to find it in the sidebar. Only one card shows at a time, so the new look welcome card comes first. A page card is held back on the page where you closed the welcome card. It can appear when you open another page, or on a later visit.',
+      text: 'In the new look, a "What\'s changed" card appears the first time you open a page that was moved or redesigned. It says what changed and, for a page that moved, where to find it in the sidebar. Only one card shows at a time, so the new look welcome card comes first. A page card is held back on the page where you closed the welcome card. It can appear when you open another page, or on a later visit. If your account was created after the change reached your VerifyWise, you never see its card, because there is nothing to compare with.',
     },
     {
       type: 'bullet-list',

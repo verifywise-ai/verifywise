@@ -3,7 +3,8 @@ import type { ChangeNoticeEntry } from "../../../domain/types/changeNotice.types
 /**
  * Change notice registry. Every restyle or restructure PR adds an entry here.
  * Strings are English source text and are rendered through t(); each needs a
- * de, fr and es entry in i18n/modules/changeNotice.ts.
+ * de, fr and es entry in i18n/modules/changeNotice.ts, and the id needs a row in
+ * change_notice_releases (a migration), so accounts created later never see it.
  */
 export const CHANGE_NOTICES: readonly ChangeNoticeEntry[] = [
   {
