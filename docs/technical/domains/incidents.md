@@ -379,7 +379,6 @@ All incident modifications are tracked:
 **Features:**
 - Incident list with filtering
 - Filter by: incident_id, ai_project, type, severity, status, approval_status
-- Group by support
 - Search functionality
 - Role-based create (Admin/Editor only)
 - Export functionality

@@ -1,5 +1,5 @@
 // Shared color palette for dashboard components
-import { brand, text, background, border, status, risk, accent } from "../themes/palette";
+import { brand, text, background, border, status, risk } from "../themes/palette";
 import { chartTheme } from "../themes/chartTheme";
 
 export const DASHBOARD_COLORS = {
@@ -43,17 +43,7 @@ export const DASHBOARD_COLORS = {
   overdue: status.error.text,
   overdueBackground: status.error.bg,
   dueToday: risk.high.text,
-  dueTodayBackground: risk.high.bg,
-  dueThisWeek: risk.medium.text,
-  dueThisWeekBackground: risk.medium.bg,
-  dueNextWeek: status.info.text,
-  dueNextWeekBackground: status.info.bg,
-  dueThisMonth: accent.purple.text,
-  dueThisMonthBackground: accent.purple.bg,
   dueLater: status.default.text,
-  dueLaterBackground: background.accent,
-  noDueDate: text.disabled,
-  noDueDateBackground: background.hover,
 
   // UI colors
   primary: brand.primary,
@@ -68,26 +58,6 @@ export const DASHBOARD_COLORS = {
   backgroundLight: background.hover,
   backgroundSubtle: background.accent,
   progressBackground: status.default.border,
-} as const;
-
-// Deadline group color configurations for DeadlineView component
-export const DEADLINE_COLORS = {
-  overdue: { color: DASHBOARD_COLORS.overdue, bgColor: DASHBOARD_COLORS.overdueBackground },
-  today: { color: DASHBOARD_COLORS.dueToday, bgColor: DASHBOARD_COLORS.dueTodayBackground },
-  thisWeek: {
-    color: DASHBOARD_COLORS.dueThisWeek,
-    bgColor: DASHBOARD_COLORS.dueThisWeekBackground,
-  },
-  nextWeek: {
-    color: DASHBOARD_COLORS.dueNextWeek,
-    bgColor: DASHBOARD_COLORS.dueNextWeekBackground,
-  },
-  thisMonth: {
-    color: DASHBOARD_COLORS.dueThisMonth,
-    bgColor: DASHBOARD_COLORS.dueThisMonthBackground,
-  },
-  later: { color: DASHBOARD_COLORS.dueLater, bgColor: DASHBOARD_COLORS.dueLaterBackground },
-  noDueDate: { color: DASHBOARD_COLORS.noDueDate, bgColor: DASHBOARD_COLORS.noDueDateBackground },
 } as const;
 
 // Common text styles

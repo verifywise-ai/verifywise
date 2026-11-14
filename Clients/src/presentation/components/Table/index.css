@@ -40,13 +40,15 @@
 /* Header values come from themes/cssVars.ts so they follow the interface style. */
 .MuiTable-root .MuiTableHead-root .MuiTableCell-root {
   font-size: var(--vw-table-head-size, 13px);
+  padding: var(--vw-table-head-padding, 12px 10px);
   font-weight: var(--vw-table-head-weight, 400);
   letter-spacing: var(--vw-table-head-tracking, normal);
 }
-/* Select-all cells are 40px wide and set their own padding; the header padding
-   would squeeze the checkbox to half its width. */
-.MuiTable-root .MuiTableHead-root .MuiTableCell-root:not(:has(.MuiCheckbox-root)) {
-  padding: var(--vw-table-head-padding, 12px 10px);
+/* Select-all cells are 40px wide: the header padding above would squeeze the
+   checkbox to half its width. Kept separate so a browser without :has() only
+   loses this override, not the header padding. */
+.MuiTable-root .MuiTableHead-root .MuiTableCell-root:has(.MuiCheckbox-root) {
+  padding: 0;
 }
 /* Phase 1: many tables wrap header labels in a Typography with its own size;
    let the label take the 11px header size and tracking from the cell. */

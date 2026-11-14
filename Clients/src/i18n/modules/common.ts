@@ -1968,10 +1968,10 @@ export const de: Record<string, string> = {
     "Die Statusverfolgung von Anwendungsfällen zeigt die Phasen Ihres KI-Lebenszyklus.",
   "Track use cases from planning through production to retirement. Status indicators help you see which AI systems are active, which are in development, and which need review. Regular status updates ensure governance stays current.":
     "Verfolgen Sie Anwendungsfälle von der Planung über die Produktion bis zur Außerbetriebnahme. Statusanzeigen zeigen, welche KI-Systeme aktiv sind, welche in Entwicklung sind und welche geprüft werden müssen. Regelmäßige Status-Updates halten die Governance aktuell.",
-  "Grouping use cases reveals patterns and shared risks.":
-    "Das Gruppieren von Anwendungsfällen zeigt Muster und gemeinsame Risiken.",
-  "Use the group-by feature to organize use cases by risk level or status. This reveals patterns like common risk factors across systems or lifecycle stage distribution. These insights inform governance strategy.":
-    "Nutzen Sie die Gruppierung, um Anwendungsfälle nach Risikostufe oder Status zu organisieren. Das zeigt Muster wie systemübergreifende Risikofaktoren oder die Verteilung der Lebenszyklusphasen. Diese Erkenntnisse fließen in die Governance-Strategie ein.",
+  "Filtering use cases reveals patterns and shared risks.":
+    "Das Filtern von Anwendungsfällen zeigt Muster und gemeinsame Risiken.",
+  "Filter use cases by risk level or status to spot patterns like common risk factors across systems or how use cases spread across lifecycle stages. These insights inform governance strategy.":
+    "Filtern Sie Anwendungsfälle nach Risikostufe oder Status, um Muster wie systemübergreifende Risikofaktoren oder die Verteilung auf die Lebenszyklusphasen zu erkennen. Diese Erkenntnisse fließen in die Governance-Strategie ein.",
 
   "Frameworks map your compliance requirements to actions.":
     "Rahmenwerke bilden Ihre Compliance-Anforderungen auf Aktionen ab.",
@@ -7638,10 +7638,10 @@ export const fr: Record<string, string> = {
     "Le suivi du statut des cas d'usage montre les étapes de votre cycle de vie IA.",
   "Track use cases from planning through production to retirement. Status indicators help you see which AI systems are active, which are in development, and which need review. Regular status updates ensure governance stays current.":
     "Suivez les cas d'usage de la planification à la production puis au retrait. Les indicateurs de statut vous aident à voir quels systèmes IA sont actifs, en développement ou à relire. Des mises à jour régulières gardent la gouvernance à jour.",
-  "Grouping use cases reveals patterns and shared risks.":
-    "Grouper les cas d'usage fait apparaître des motifs et des risques communs.",
-  "Use the group-by feature to organize use cases by risk level or status. This reveals patterns like common risk factors across systems or lifecycle stage distribution. These insights inform governance strategy.":
-    "Utilisez la fonction de groupement pour organiser les cas d'usage par niveau de risque ou statut. Cela révèle des motifs comme des facteurs de risque communs entre systèmes ou la répartition des étapes du cycle de vie. Ces informations orientent la stratégie de gouvernance.",
+  "Filtering use cases reveals patterns and shared risks.":
+    "Filtrer les cas d'usage fait apparaître des motifs et des risques communs.",
+  "Filter use cases by risk level or status to spot patterns like common risk factors across systems or how use cases spread across lifecycle stages. These insights inform governance strategy.":
+    "Filtrez les cas d'usage par niveau de risque ou statut pour repérer des motifs comme des facteurs de risque communs entre systèmes ou la répartition entre les étapes du cycle de vie. Ces informations orientent la stratégie de gouvernance.",
   "Frameworks map your compliance requirements to actions.":
     "Les référentiels traduisent vos exigences de conformité en actions.",
   "Each framework (like NIST AI RMF or EU AI Act) contains controls that translate regulatory requirements into specific tasks and policies. Select frameworks relevant to your industry to automatically generate compliance workstreams.":
@@ -14448,10 +14448,10 @@ export const es: Record<string, string> = {
     "El seguimiento del estado de los casos de uso muestra las etapas del ciclo de vida de su IA.",
   "Track use cases from planning through production to retirement. Status indicators help you see which AI systems are active, which are in development, and which need review. Regular status updates ensure governance stays current.":
     "Haga un seguimiento de los casos de uso desde la planificación hasta la producción y la retirada. Los indicadores de estado le ayudan a ver qué sistemas de IA están activos, cuáles están en desarrollo y cuáles necesitan revisión. Las actualizaciones de estado periódicas garantizan que la gobernanza se mantenga al día.",
-  "Grouping use cases reveals patterns and shared risks.":
-    "Agrupar los casos de uso revela patrones y riesgos compartidos.",
-  "Use the group-by feature to organize use cases by risk level or status. This reveals patterns like common risk factors across systems or lifecycle stage distribution. These insights inform governance strategy.":
-    "Utilice la función de agrupación para organizar los casos de uso por nivel de riesgo o estado. Esto revela patrones como factores de riesgo comunes entre sistemas o la distribución de las etapas del ciclo de vida. Estos hallazgos sirven de base para la estrategia de gobernanza.",
+  "Filtering use cases reveals patterns and shared risks.":
+    "Filtrar los casos de uso revela patrones y riesgos compartidos.",
+  "Filter use cases by risk level or status to spot patterns like common risk factors across systems or how use cases spread across lifecycle stages. These insights inform governance strategy.":
+    "Filtre los casos de uso por nivel de riesgo o estado para detectar patrones como factores de riesgo comunes entre sistemas o la distribución entre las etapas del ciclo de vida. Estos hallazgos sirven de base para la estrategia de gobernanza.",
   "Frameworks map your compliance requirements to actions.":
     "Los marcos asignan sus requisitos de cumplimiento a acciones.",
   "Each framework (like NIST AI RMF or EU AI Act) contains controls that translate regulatory requirements into specific tasks and policies. Select frameworks relevant to your industry to automatically generate compliance workstreams.":

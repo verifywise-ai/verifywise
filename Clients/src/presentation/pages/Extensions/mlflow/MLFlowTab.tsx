@@ -293,11 +293,11 @@ export default function MLFlowTab() {
               <TableHead sx={{ backgroundColor: colors.backgroundSecondary }}>
                 <TableRow>
                   {[
-                    "Model Name",
+                    "Model name",
                     "Version",
                     "Status",
                     "Created",
-                    "Last Updated",
+                    "Last updated",
                     "Description",
                     "Actions",
                   ].map((header) => (

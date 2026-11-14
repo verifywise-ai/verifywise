@@ -167,16 +167,14 @@ describe("ModelInventoryTable", () => {
     expect(screen.getByText("OpenAI")).toBeInTheDocument();
   });
 
-  it("hides pagination and custom columns when configured", () => {
+  it("shows only the configured columns", () => {
     renderWithProviders(
       <ModelInventoryTable
         data={models}
         isLoading={false}
-        hidePagination
         visibleColumns={new Set(["provider", "model"])}
       />,
     );
-    expect(screen.queryByText("Rows per page")).not.toBeInTheDocument();
     expect(screen.queryByText("VERSION")).not.toBeInTheDocument();
   });
 });

@@ -295,7 +295,6 @@ export interface TrainingTableProps {
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
   paginated?: boolean;
-  hidePagination?: boolean;
   visibleColumns?: Set<string>;
 }
 
@@ -305,7 +304,6 @@ export interface TrainingTableProps {
   onEdit?: (id: string) => void;
   onDelete?: (id: string) => void;
   paginated?: boolean;
-  hidePagination?: boolean;
   visibleColumns?: Set<string>;
   /** Assignment counts keyed by training id. */
   assignmentSummaries?: Map<number, TrainingAssignmentSummary>;
@@ -320,7 +318,6 @@ export interface IncidentTableProps {
   onArchive?: (id: string, mode: string) => void;
   paginated?: boolean;
   archivedId?: string | null;
-  hidePagination?: boolean;
   visibleColumns?: Set<string>;
   /** Jira issue links by incident id (Jira incidents extension); a chip shows next to the incident ID. */
   jiraLinks?: Map<number, JiraIncidentLink>;

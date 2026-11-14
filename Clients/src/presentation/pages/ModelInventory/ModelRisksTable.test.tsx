@@ -145,7 +145,7 @@ describe("ModelRisksTable", () => {
     expect(rows[0]).toHaveTextContent("Bias in scoring");
   });
 
-  it("hides pagination and the actions column when configured", () => {
+  it("shows only the configured columns", () => {
     renderWithProviders(
       <ModelRisksTable
         data={risks}
@@ -154,11 +154,9 @@ describe("ModelRisksTable", () => {
         onDelete={vi.fn()}
         users={users}
         models={models}
-        hidePagination
         visibleColumns={new Set(["risk_name", "status"])}
       />,
     );
-    expect(screen.queryByText("Rows per page")).not.toBeInTheDocument();
     expect(screen.queryByText("owner")).not.toBeInTheDocument();
   });
 });

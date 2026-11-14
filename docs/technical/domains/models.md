@@ -337,7 +337,6 @@ Tracked parameters:
 
 - Status-based summary cards
 - Advanced filtering and search
-- Group by project/framework/status
 - Export functionality
 - Share links
 - Analytics drawer
