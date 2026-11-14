@@ -3,6 +3,8 @@ import { getDashboardDataQuery } from "../../utils/dashboard.utils";
 import { sequelize } from "../../database/db";
 import { QueryTypes } from "sequelize";
 import logger from "../../utils/logger/fileLogger";
+import { taskLinkReachesProjectSql } from "../../utils/taskEntityLink.utils";
+import { TaskStatus } from "../../domain.layer/enums/task-status.enum";
 
 // --- Read Tools ---
 
@@ -87,7 +89,7 @@ const getComplianceDetails = async (
       `SELECT COUNT(*) as count FROM risks
        WHERE organization_id = :organization_id
        AND (is_deleted = false OR is_deleted IS NULL)
-       AND id IN (SELECT risk_id FROM risks_projects_frameworks WHERE project_id = :project_id AND organization_id = :organization_id)`,
+       AND id IN (SELECT risk_id FROM projects_risks WHERE project_id = :project_id AND organization_id = :organization_id)`,
       {
         replacements: { organization_id: organizationId, project_id: params.project_id },
         type: QueryTypes.SELECT,
@@ -265,7 +267,7 @@ const getProjectStats = async (
          FROM risks
          WHERE organization_id = :organization_id
          AND (is_deleted = false OR is_deleted IS NULL)
-         AND id IN (SELECT risk_id FROM risks_projects_frameworks WHERE project_id = :project_id AND organization_id = :organization_id)`,
+         AND id IN (SELECT risk_id FROM projects_risks WHERE project_id = :project_id AND organization_id = :organization_id)`,
         {
           replacements: { organization_id: organizationId, project_id: projectId },
           type: QueryTypes.SELECT,
@@ -276,8 +278,7 @@ const getProjectStats = async (
          FROM vendors v
          INNER JOIN vendors_projects vp ON v.id = vp.vendor_id AND vp.organization_id = :organization_id
          WHERE v.organization_id = :organization_id
-         AND vp.project_id = :project_id
-         AND (v.is_deleted = false OR v.is_deleted IS NULL)`,
+         AND vp.project_id = :project_id`,
         {
           replacements: { organization_id: organizationId, project_id: projectId },
           type: QueryTypes.SELECT,
@@ -287,7 +288,6 @@ const getProjectStats = async (
         `SELECT COUNT(*) as total
          FROM model_inventories
          WHERE organization_id = :organization_id
-         AND (is_deleted = false OR is_deleted IS NULL)
          AND id IN (SELECT model_inventory_id FROM model_inventories_projects_frameworks WHERE project_id = :project_id AND organization_id = :organization_id)`,
         {
           replacements: { organization_id: organizationId, project_id: projectId },
@@ -295,16 +295,27 @@ const getProjectStats = async (
         },
       ),
       sequelize.query(
+        // Tasks carry no project id: a task belongs to a use case through a
+        // task_entity_links row on one of its framework requirements.
         `SELECT
            COUNT(*) as total,
-           COUNT(CASE WHEN status = 'Completed' THEN 1 END) as completed,
-           COUNT(CASE WHEN due_date < CURRENT_DATE AND status NOT IN ('Completed', 'Deleted') THEN 1 END) as overdue
-         FROM tasks
-         WHERE organization_id = :organization_id
-         AND project_id = :project_id
-         AND status != 'Deleted'`,
+           COUNT(CASE WHEN t.status = :completed THEN 1 END) as completed,
+           COUNT(CASE WHEN t.due_date < CURRENT_DATE AND t.status <> :completed THEN 1 END) as overdue
+         FROM tasks t
+         WHERE t.organization_id = :organizationId
+         AND t.status <> :deleted
+         AND EXISTS (
+           SELECT 1 FROM task_entity_links tel
+            WHERE tel.task_id = t.id
+              AND tel.organization_id = :organizationId
+              AND (${taskLinkReachesProjectSql(":project_id")}))`,
         {
-          replacements: { organization_id: organizationId, project_id: projectId },
+          replacements: {
+            organizationId,
+            project_id: projectId,
+            completed: TaskStatus.COMPLETED,
+            deleted: TaskStatus.DELETED,
+          },
           type: QueryTypes.SELECT,
         },
       ),

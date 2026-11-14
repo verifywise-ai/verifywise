@@ -578,7 +578,7 @@ const agentLinkRiskToProject = createWriteToolFn({
     await assertOrgOwnsIds({ table: "risks", ids: [riskId], organizationId });
     await assertRiskReferencesInOrganization({ projects: [projectId] }, organizationId);
     await sequelize.query(
-      `INSERT INTO risks_projects_frameworks (organization_id, risk_id, project_id)
+      `INSERT INTO projects_risks (organization_id, risk_id, project_id)
        VALUES (:organization_id, :risk_id, :project_id)
        ON CONFLICT DO NOTHING`,
       {
