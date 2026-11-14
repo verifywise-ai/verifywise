@@ -6,6 +6,8 @@
  * structured fields, so the server sends no English sentences.
  */
 
+import type { PermissionKey } from "../../config/rolePermissions.config";
+
 export type HomeQueueSourceId =
   | "approvals"
   | "tasks"
@@ -64,8 +66,12 @@ export interface HomeQueueResponse {
 export interface HomeQueueContext {
   organizationId: number;
   userId: number;
-  /** Same permission resolution as the authorize() middleware. */
-  can: (permissionKey: string) => boolean;
+  /**
+   * Same permission resolution as the authorize() middleware. Typed to the
+   * permission catalog so a misspelled key is a compile error, not a source
+   * silently hidden from everyone who could act on it.
+   */
+  can: (permissionKey: PermissionKey) => boolean;
   /** Server's UTC date, `YYYY-MM-DD`. */
   today: string;
 }
