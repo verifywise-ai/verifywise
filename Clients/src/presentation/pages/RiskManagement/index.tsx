@@ -348,8 +348,7 @@ const RiskManagement = () => {
 
   // Prepare export data - format the data for export
   const exportData = useMemo(() => {
-    const dataToExport = filteredRisks.length > 0 ? filteredRisks : projectRisks;
-    return dataToExport.map((risk: RiskModel) => {
+    return filteredRisks.map((risk: RiskModel) => {
       const ownerUser = users.find((user) => user.id === risk.risk_owner);
       const ownerName = ownerUser ? `${ownerUser.name} ${ownerUser.surname}` : "-";
 
@@ -364,7 +363,7 @@ const RiskManagement = () => {
         controls_mapping: risk.controls_mapping || "-",
       };
     });
-  }, [filteredRisks, projectRisks, users]);
+  }, [filteredRisks, users]);
 
   const fetchProjectRisks = useCallback(async (filter: "active" | "deleted" | "all" = "active") => {
     try {

@@ -412,7 +412,7 @@ const VWProjectRisksTable = ({
         disabled: bulkMutation.isPending,
         confirm: {
           title: `Archive ${selectionCount} project risk${selectionCount === 1 ? "" : "s"}?`,
-          body: "Archived risks are soft-deleted: they are hidden from the active risk register but remain available for audit history.",
+          body: "Archived risks are removed from the risk register, reports and linked policies. Their change history is kept.",
           confirmLabel: "Archive",
           danger: true,
         },

@@ -398,7 +398,7 @@ risk linked only via `answers_eu__risks` is still a `gap`.
 | GET | `/projectRisks/by-frameworkid/:id` | Get by framework |
 | POST | `/projectRisks/` | Create risk |
 | PUT | `/projectRisks/:id` | Update risk |
-| DELETE | `/projectRisks/:id` | Delete risk (soft) |
+| DELETE | `/projectRisks/:id` | Archive risk (soft delete) |
 
 ### Vendor Risks
 
@@ -430,6 +430,26 @@ risk linked only via `answers_eu__risks` is still a `gap`.
 | GET | `/riskHistory/timeseries` | Get trend data |
 | GET | `/riskHistory/current-counts` | Get distribution |
 | POST | `/riskHistory/snapshot` | Create snapshot |
+
+### Archiving and bulk actions
+
+Archiving a risk (single, bulk or through the AI advisor) goes through one server path. In one transaction it soft-deletes the risk, records a deletion entry in its change history, runs the "risk deleted" automation and removes the risk from every policy it was linked to. The client no longer sends a separate unlink request. `DELETE /policy-linked/risk/:riskId/unlink-all` still exists for API callers.
+
+Bulk "set owner" and "set category" go through the single-edit path. Each changed risk gets change-history entries and the "risk updated" automation, and each new owner gets the assignment notification. Risks that already hold the value are skipped and not counted.
+
+Removing a use case or framework from a risk removes the risk's mappings in every framework of that use case: EU AI Act, ISO 42001, ISO 27001, NIST AI RMF, the 21 bundled frameworks, custom frameworks and imported frameworks.
+
+### Archived risks are excluded from
+
+- use-case and organization reports (DOCX and PDF), including the NIST section
+- use-case risk totals, which the advisor and the MCP use-case tool also use
+- ISO 42001 subclause and annex risk panels, generic framework control panels and imported-framework control panels
+- the advisor's readiness risk count
+- the post-market monitoring cycle snapshot, which counts the use case's active risks by risk level (high = High or Very high, medium = Medium, low = Low, Very low or No risk)
+
+The report's Severity column shows the inherent severity, not the post-mitigation severity.
+
+The risk register export uses the filtered list. With a filter or search that matches nothing, the export is empty and the export button is disabled.
 
 ## Risk History Tracking
 
