@@ -2,6 +2,7 @@ import { QueryTypes } from "sequelize";
 import { sequelize } from "../../../database/db";
 import { IntakeSubmissionStatus } from "../../../domain.layer/enums/intake-submission-status.enum";
 import { canDecideLane, laneReviewerIdsFor } from "../../intakeRouting/routingRules";
+import { toIso } from "./dateOnly";
 import type { HomeQueueItem, HomeQueueSource } from "../../../domain.layer/interfaces/i.homeQueue";
 import type { IFormRouting } from "../../../domain.layer/interfaces/i.intakeForm";
 import type { ISubmissionRouting } from "../../../domain.layer/interfaces/i.intakeSubmission";
@@ -122,9 +123,6 @@ const CANDIDATES_SQL = `
         )
       )
     )`;
-
-const toIso = (value: Date | string | null | undefined): string | null =>
-  value ? new Date(value).toISOString() : null;
 
 /**
  * Intake submissions waiting on my review or second review. Opens the
