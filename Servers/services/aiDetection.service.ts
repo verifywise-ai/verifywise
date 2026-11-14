@@ -1397,6 +1397,21 @@ async function scoreCompletedScan(
 }
 
 /**
+ * Carry stored review decisions onto a completed scan, then score it. The
+ * order matters: the score leaves out findings a reviewer suppressed or
+ * accepted, so decisions must be on the new scan's findings first. Both steps
+ * log their own failures and never throw.
+ */
+export async function applyDecisionsThenScore(
+  scanId: number,
+  repositoryName: string,
+  ctx: IServiceContext,
+): Promise<void> {
+  await applyStoredGovernanceDecisions(scanId, ctx.organizationId);
+  await scoreCompletedScan(scanId, repositoryName, ctx);
+}
+
+/**
  * Build the input that carries a baseline finding into an incremental scan.
  * Severity and vulnerability details are kept so the CI critical-findings gate
  * still sees a carried critical finding, and the baseline suppression is kept
@@ -1440,6 +1455,7 @@ function baselineFindingInput(
  */
 async function executeIncrementalScan(
   scanId: number,
+  repositoryName: string,
   repoPath: string,
   changedFiles: ChangedFile[],
   baselineScanId: number,
@@ -1655,12 +1671,7 @@ async function executeIncrementalScan(
     await transaction.commit();
     committed = true;
 
-    const scan = await getScanByIdQuery(scanId, ctx.organizationId);
-    if (scan) {
-      await scoreCompletedScan(scanId, `${scan.repository_owner}/${scan.repository_name}`, ctx);
-    }
-
-    await applyStoredGovernanceDecisions(scanId, ctx.organizationId);
+    await applyDecisionsThenScore(scanId, repositoryName, ctx);
 
     progressState.status = "completed";
     progressState.progress = 100;
@@ -1672,10 +1683,9 @@ async function executeIncrementalScan(
 
     invalidateAIDetectionStatsCache(ctx.organizationId).catch(() => {});
 
-    if (scan) {
-      // Report to GitHub from the stored row, which now has the score
-      void reportStoredScanToGitHub(scanId, ctx.organizationId);
-    }
+    // Report to GitHub from the stored row, which now has the score
+    // (fire-and-forget, never throws)
+    void reportStoredScanToGitHub(scanId, ctx.organizationId);
 
     // Last step: once announced (notified_at claimed), a later failure here
     // would mark the scan failed but could no longer announce it.
@@ -1748,6 +1758,7 @@ async function executeScan(
           // Run incremental scan and return early
           await executeIncrementalScan(
             scanId,
+            `${owner}/${repo}`,
             clonedRepoPath,
             changedFiles,
             scanRecord.baseline_scan_id,
@@ -2171,9 +2182,7 @@ async function executeScan(
       await transaction.commit();
       committed = true;
 
-      await scoreCompletedScan(scanId, `${owner}/${repo}`, ctx);
-
-      await applyStoredGovernanceDecisions(scanId, ctx.organizationId);
+      await applyDecisionsThenScore(scanId, `${owner}/${repo}`, ctx);
 
       progressState.status = "completed";
       progressState.progress = 100;
