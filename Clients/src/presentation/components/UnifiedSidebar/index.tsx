@@ -113,9 +113,11 @@ const UnifiedSidebar: FC<UnifiedSidebarProps> = ({
   }
 
   // The Arena setting lives on the EvalServer: ask only where Arena can show.
+  // Away from /evals a failure only hides Arena, so it shows no error toast.
   const onEvalsRoute = pathname === "/evals" || pathname.startsWith("/evals/");
   const { data: arenaSetting } = useArenaSetting({
     enabled: onEvalsRoute || openItemId === EVALS_ITEM_ID,
+    silent: !onEvalsRoute,
   });
   const arenaEnabled = arenaSetting?.enabled === true;
 
@@ -127,7 +129,8 @@ const UnifiedSidebar: FC<UnifiedSidebarProps> = ({
   // Bring the open item (and so the active sub-item) into view, on a click
   // and on a route change, including a deep link on first render. The open
   // item can grow after that (the Evals selector and recents arrive once the
-  // dashboard loads), so it is brought into view again when its height changes.
+  // dashboard loads), so it is brought into view again when its height
+  // changes, until the user scrolls or touches the nav themselves.
   const itemRefs = useRef<Record<string, HTMLDivElement | null>>({});
   const activeSubId = active?.subId;
   useEffect(() => {
@@ -156,7 +159,14 @@ const UnifiedSidebar: FC<UnifiedSidebarProps> = ({
       bringIntoView();
     });
     observer.observe(wrapper);
-    return () => observer.disconnect();
+    // Once the user takes over (wheel, touch, keys, scrollbar drag), stop.
+    const userEvents = ["wheel", "touchmove", "keydown", "pointerdown"] as const;
+    const stop = () => {
+      observer.disconnect();
+      userEvents.forEach((type) => scroller?.removeEventListener(type, stop));
+    };
+    userEvents.forEach((type) => scroller?.addEventListener(type, stop, { passive: true }));
+    return stop;
   }, [openItemId, activeSubId, collapsed]);
 
   const evaluateGate = (gate?: NavGate): GateResult => {
@@ -342,11 +352,17 @@ const UnifiedSidebar: FC<UnifiedSidebarProps> = ({
     const colors = navGroupColor[group.id];
     const items = group.items.filter((item) => evaluateGate(item.gate).visible);
     if (items.length === 0) return null;
+    const headingId = `nav-group-heading-${group.id}`;
+    const showHeading = Boolean(group.heading) && !collapsed;
+    // The pinned group sits outside the nav landmark: name it by its heading.
+    const pinnedGroupProps =
+      group.pinned && showHeading ? { "role": "group", "aria-labelledby": headingId } : {};
     return (
-      <Box key={group.id} sx={{ mt: group.heading ? "4px" : 0 }}>
-        {group.heading && !collapsed && (
+      <Box key={group.id} sx={{ mt: group.heading ? "4px" : 0 }} {...pinnedGroupProps}>
+        {showHeading && (
           <Typography
-            data-testid={`nav-group-heading-${group.id}`}
+            id={headingId}
+            data-testid={headingId}
             sx={{
               fontSize: "11px",
               fontWeight: 500,
@@ -422,12 +438,14 @@ const UnifiedSidebar: FC<UnifiedSidebarProps> = ({
 
   // Workspace is pinned above the footer; the other groups scroll.
   const navContent = NAV_GROUPS.filter((g) => !g.pinned).map(renderGroup);
-  const footerNav = NAV_GROUPS.filter((g) => g.pinned).map(renderGroup);
+  const footerGroups = NAV_GROUPS.filter((g) => g.pinned)
+    .map(renderGroup)
+    .filter((group) => group !== null);
 
   return (
     <SidebarShell
       navContent={navContent}
-      footerNav={footerNav}
+      footerNav={footerGroups.length > 0 ? footerGroups : undefined}
       navScrollbarThumb={borderPalette.dark}
       hasDemoData={hasDemoData}
       onOpenCreateDemoData={onOpenCreateDemoData}

@@ -23,11 +23,13 @@ vi.mock("../../../../application/hooks/useCan", () => ({
 }));
 
 const arena: { data?: { enabled: boolean } } = {};
-/** The `enabled` option of the latest useArenaSetting call. */
+/** The `enabled` and `silent` options of the latest useArenaSetting call. */
 let arenaQueryEnabled: boolean | undefined;
+let arenaQuerySilent: boolean | undefined;
 vi.mock("../../../../application/hooks/useArenaSetting", () => ({
-  useArenaSetting: (options?: { enabled?: boolean }) => {
+  useArenaSetting: (options?: { enabled?: boolean; silent?: boolean }) => {
     arenaQueryEnabled = options?.enabled;
+    arenaQuerySilent = options?.silent;
     return arena;
   },
 }));
@@ -97,6 +99,7 @@ beforeEach(() => {
   permissions.clear();
   delete arena.data;
   arenaQueryEnabled = undefined;
+  arenaQuerySilent = undefined;
   openTasks = 0;
   evalsCtx = null;
   detectionCtx = null;
@@ -272,6 +275,14 @@ describe("UnifiedSidebar: gates", () => {
   it("asks for the Arena setting on an /evals route", () => {
     renderAt("/evals/p1#overview");
     expect(arenaQueryEnabled).toBe(true);
+    expect(arenaQuerySilent).toBe(false);
+  });
+
+  it("asks silently away from /evals, where a failure only hides Arena", () => {
+    renderAt("/");
+    fireEvent.click(item("llm-evals"));
+    expect(arenaQueryEnabled).toBe(true);
+    expect(arenaQuerySilent).toBe(true);
   });
 
   it("shows Super admin to super admins only", () => {
@@ -592,20 +603,26 @@ describe("UnifiedSidebar: keeping opened items in view", () => {
     expect(target).not.toContainElement(screen.getByTestId("nav-section-ai-detection"));
   });
 
-  it("scrolls again when the open item grows after loading (Evals selector, recents)", () => {
-    const observers: { callback: () => void; target?: Element }[] = [];
-    // setup.ts stubs ResizeObserver as a writable (not configurable) global.
+  /**
+   * Renders `route` with a controllable ResizeObserver (setup.ts stubs it as
+   * a writable, not configurable, global) and an LLM Evals item whose height
+   * the test sets. Returns a function that reports a resize.
+   */
+  const withObservedEvals = (run: (resize: (height: number) => void) => void) => {
+    const observers: { callback: () => void; target?: Element; connected: boolean }[] = [];
     const originalObserver = window.ResizeObserver;
     window.ResizeObserver = class {
-      entry: { callback: () => void; target?: Element };
+      entry: { callback: () => void; target?: Element; connected: boolean };
       constructor(callback: () => void) {
-        this.entry = { callback };
+        this.entry = { callback, connected: true };
         observers.push(this.entry);
       }
       observe(target: Element) {
         this.entry.target = target;
       }
-      disconnect() {}
+      disconnect() {
+        this.entry.connected = false;
+      }
     } as unknown as typeof ResizeObserver;
     let wrapperHeight = 300;
     const height = vi
@@ -623,20 +640,38 @@ describe("UnifiedSidebar: keeping opened items in view", () => {
       scrollIntoView.mockClear();
       const observer = observers[observers.length - 1];
       expect(observer.target).toContainElement(screen.getByTestId("nav-section-llm-evals"));
-
-      // Same height: nothing to do.
-      observer.callback();
-      expect(scrollIntoView).not.toHaveBeenCalled();
-
-      wrapperHeight = 400;
-      observer.callback();
-      expect(scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ block: "nearest" }));
+      run((next) => {
+        wrapperHeight = next;
+        if (observer.connected) observer.callback();
+      });
     } finally {
       height.mockRestore();
       scroller.mockRestore();
       window.ResizeObserver = originalObserver;
     }
+  };
+
+  it("scrolls again when the open item grows after loading (Evals selector, recents)", () => {
+    withObservedEvals((resize) => {
+      // Same height: nothing to do.
+      resize(300);
+      expect(scrollIntoView).not.toHaveBeenCalled();
+
+      resize(400);
+      expect(scrollIntoView).toHaveBeenCalledWith(expect.objectContaining({ block: "nearest" }));
+    });
   });
+
+  it.each(["wheel", "touchMove", "keyDown", "pointerDown"] as const)(
+    "stops following the open item once the user scrolls the nav (%s)",
+    (event) => {
+      withObservedEvals((resize) => {
+        fireEvent[event](screen.getByRole("navigation"));
+        resize(400);
+        expect(scrollIntoView).not.toHaveBeenCalled();
+      });
+    },
+  );
 });
 
 describe("UnifiedSidebar: pinned Workspace", () => {
@@ -652,6 +687,14 @@ describe("UnifiedSidebar: pinned Workspace", () => {
     expect(
       pinned.compareDocumentPosition(footerButton) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
+  });
+
+  it("names the pinned Workspace group by its heading", () => {
+    renderAt("/");
+    const pinned = screen.getByTestId("sidebar-footer-nav");
+    const group = within(pinned).getByRole("group", { name: "Workspace" });
+    expect(group).toHaveAttribute("aria-labelledby", "nav-group-heading-workspace");
+    expect(group).toContainElement(item("settings"));
   });
 
   it("opens Workspace sub-items inside the pinned area", () => {

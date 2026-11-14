@@ -23,7 +23,7 @@ export const playgroundContent: ArticleContent = {
       items: [
         { text: 'Pick a saved model from the dropdown at the top, type a message and press Enter. Shift+Enter adds a new line' },
         { text: 'The conversation keeps its history: each message goes to the model with the turns before it' },
-        { text: 'Attach a text file (TXT, Markdown, CSV or JSON) to add its text to your message. Images can be attached when the selected model accepts them' },
+        { text: 'When the selected model accepts images, you can attach an image or a text file (TXT, Markdown, CSV or JSON). For other models, attachments are off' },
         { text: 'Dictate a message with the microphone button, where your browser supports speech input' },
         { text: 'Switching to another model, or clicking **Clear conversation**, starts a new conversation' },
       ],

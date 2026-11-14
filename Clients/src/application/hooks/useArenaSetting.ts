@@ -14,11 +14,16 @@ export const ARENA_SETTING_KEY = ["llmEvals", "arenaSetting"] as const;
  * hide Arena, and show a load error (not "turned off") when `isError`.
  * Pass `enabled: false` to skip the request (it needs the EvalServer) until
  * the caller is about to show Arena; `data` stays undefined meanwhile.
+ * Pass `silent: true` where a failure only hides Arena (the unified sidebar
+ * away from /evals), so an EvalServer outage shows no error toast there.
  */
-export function useArenaSetting({ enabled = true }: { enabled?: boolean } = {}) {
+export function useArenaSetting({
+  enabled = true,
+  silent = false,
+}: { enabled?: boolean; silent?: boolean } = {}) {
   return useQuery<ArenaSetting>({
     queryKey: ARENA_SETTING_KEY,
-    queryFn: getArenaSetting,
+    queryFn: () => getArenaSetting({ silent }),
     enabled,
     // Short, so another Admin's change reaches open tabs quickly.
     staleTime: 30 * 1000,
