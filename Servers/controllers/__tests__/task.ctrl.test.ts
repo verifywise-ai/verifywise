@@ -251,6 +251,33 @@ describe("task.ctrl", () => {
       await getAllTasks(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
     });
+    // The sidebar's open-task count and the /tasks page send the default
+    // page_size (25) and rely on getting every matching task back.
+    it("returns every matching task, and their full count as total, past page_size", async () => {
+      const tasks = Array.from({ length: 30 }, (_, i) => mockTask(buildTask({ id: i + 1 })));
+      mockGetAll.mockResolvedValue(tasks as any);
+      const req = createReq({
+        organizationId: 7,
+        role: "Editor",
+        userId: 3,
+        query: { status: "Open", page: "1", page_size: "25" },
+      } as any);
+      const res = createRes();
+      await getAllTasks(req, res);
+      expect(res.status).toHaveBeenCalledWith(200);
+      // Same organization and visibility as the list; no limit/offset.
+      expect(mockGetAll).toHaveBeenCalledWith(
+        { userId: 3, role: "Editor" },
+        7,
+        expect.objectContaining({ status: ["Open"], organization_id: 7 }),
+        expect.anything(),
+      );
+      expect(mockGetAll.mock.calls[0]).toHaveLength(4);
+      const body = res.json.mock.calls[0][0];
+      const payload = body.data ?? body;
+      expect(payload.tasks).toHaveLength(30);
+      expect(payload.pagination.total).toBe(30);
+    });
   });
 
   describe("getTaskById", () => {

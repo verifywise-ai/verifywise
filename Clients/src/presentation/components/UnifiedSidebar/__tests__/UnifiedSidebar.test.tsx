@@ -357,6 +357,12 @@ describe("UnifiedSidebar: counts", () => {
     expect(item("tasks")).toHaveAccessibleName("Tasks 7");
   });
 
+  it("caps a large open-task count at 99+", () => {
+    openTasks = 120;
+    renderAt("/");
+    expect(item("tasks")).toHaveAccessibleName("Tasks 99+");
+  });
+
   it("shows the module counts from today's sidebar contexts", () => {
     evalsCtx = { disabled: false, experimentsCount: 3, datasetsCount: 4, scorersCount: 5 };
     renderAt("/evals#overview");

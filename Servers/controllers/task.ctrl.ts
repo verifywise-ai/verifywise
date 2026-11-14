@@ -277,14 +277,18 @@ export async function getAllTasks(req: Request, res: Response): Promise<any> {
     const pageSize = parseInt(page_size as string, 10);
     const limit = Math.min(pageSize, 100); // Cap at 100 items per page
 
+    // No limit/offset is passed: the query returns every task matching the
+    // filters that this user may see in this organization. The /tasks page
+    // and the sidebar's open-task count rely on that (they send the default
+    // page_size but filter and paginate client-side), so `total` is the full
+    // filtered count, not the length of one page.
     const tasks = await getTasksQuery({ userId, role }, req.organizationId!, filters, sort);
 
-    // Calculate pagination metadata
-    const totalTasks = tasks.length; // This is just the current page, we'd need a count query for real total
+    const totalTasks = tasks.length;
     const pagination = {
       page: pageNum,
       pageSize: limit,
-      total: totalTasks, // This would need to be calculated properly
+      total: totalTasks,
       totalPages: Math.ceil(totalTasks / limit),
       hasNext: tasks.length === limit,
       hasPrev: pageNum > 1,
