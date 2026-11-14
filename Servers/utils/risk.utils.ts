@@ -11,12 +11,10 @@ import {
   buildRiskUpdateReplacements,
 } from "./automation/risk.automation.utils";
 import { recordSnapshotIfChanged } from "./history/riskHistory.utils";
-import {
-  deleteAllCustomFieldValuesForEntityQuery,
-  fetchCustomFieldsForEntities,
-} from "./customField.utils";
+import { fetchCustomFieldsForEntities } from "./customField.utils";
 import { findUsersNotInOrganization, parseReferencedIds } from "./user.utils";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
+import { toRiskCalendarDate } from "./riskCalendarDate.utils";
 
 type Mitigation = {
   id: number;
@@ -787,7 +785,7 @@ export const createRiskQuery = async (
         review_notes: projectRisk.review_notes,
         mitigation_status: projectRisk.mitigation_status,
         current_risk_level: projectRisk.current_risk_level,
-        deadline: projectRisk.deadline,
+        deadline: toRiskCalendarDate(projectRisk.deadline ?? null),
         mitigation_plan: projectRisk.mitigation_plan,
         implementation_strategy: projectRisk.implementation_strategy,
         mitigation_evidence_document: projectRisk.mitigation_evidence_document,
@@ -796,7 +794,7 @@ export const createRiskQuery = async (
         final_risk_level: projectRisk.final_risk_level,
         risk_approval: projectRisk.risk_approval,
         approval_status: projectRisk.approval_status,
-        date_of_assessment: projectRisk.date_of_assessment,
+        date_of_assessment: toRiskCalendarDate(projectRisk.date_of_assessment ?? null),
         is_demo: projectRisk.is_demo || false,
         event_frequency_min: projectRisk.event_frequency_min ?? null,
         event_frequency_likely: projectRisk.event_frequency_likely ?? null,
@@ -920,6 +918,22 @@ export const createRiskQuery = async (
   return createdRisk;
 };
 
+/** Text columns of risks: "" is stored as sent. */
+const RISK_TEXT_COLUMNS = new Set([
+  "risk_description",
+  "impact",
+  "assessment_mapping",
+  "controls_mapping",
+  "review_notes",
+  "mitigation_plan",
+  "implementation_strategy",
+  "mitigation_evidence_document",
+  "final_risk_level",
+  "approval_status",
+]);
+/** User columns of risks: 0 means no user. */
+const RISK_USER_COLUMNS = new Set(["risk_owner", "risk_approval"]);
+
 export const updateRiskByIdQuery = async (
   id: number,
   projectRisk: Partial<
@@ -1031,12 +1045,26 @@ export const updateRiskByIdQuery = async (
         "benchmark_id",
         "currency",
       ].includes(f);
-      const hasValue = isQuantitativeField ? value !== undefined : value !== undefined && value;
+      // A key that is present is written, so a field can be cleared (R-M1).
+      // risk_name is NOT NULL, so an empty name is skipped.
+      const hasValue = isQuantitativeField
+        ? value !== undefined
+        : f === "risk_name"
+          ? Boolean(value)
+          : value !== undefined;
       if (hasValue) {
         if (f === "risk_category") {
           // Format array for PostgreSQL
           const arr = value as string[];
           updateProjectRisk[f as keyof RiskModel] = `{${(arr || []).join(",")}}` as any;
+        } else if (
+          !RISK_TEXT_COLUMNS.has(f) &&
+          (value === "" || (RISK_USER_COLUMNS.has(f) && Number(value) === 0))
+        ) {
+          // "" (and user id 0) on an enum, date or user column means none.
+          updateProjectRisk[f as keyof RiskModel] = null;
+        } else if (f === "deadline" || f === "date_of_assessment") {
+          updateProjectRisk[f as keyof RiskModel] = toRiskCalendarDate(value);
         } else {
           updateProjectRisk[f as keyof RiskModel] = value;
         }
@@ -1319,7 +1347,8 @@ export const deleteRiskByIdQuery = async (
   organizationId: number,
   transaction: Transaction,
 ): Promise<boolean> => {
-  await deleteAllCustomFieldValuesForEntityQuery("project_risk", id, organizationId, transaction);
+  // Soft delete. Custom field values stay with the archived risk, and nothing
+  // else runs when no active risk matched (R-M7).
   const result = (await sequelize.query(
     `UPDATE risks SET is_deleted = true, deleted_at = NOW(), updated_at = NOW() WHERE id = :id AND organization_id = :organizationId AND is_deleted = false RETURNING *`,
     {
@@ -1331,6 +1360,7 @@ export const deleteRiskByIdQuery = async (
     },
   )) as [RiskModel[], number];
   const deletedRisk = result[0][0];
+  if (!deletedRisk) return false;
   const automations = (await sequelize.query(
     `SELECT
       pat.key AS trigger_key,

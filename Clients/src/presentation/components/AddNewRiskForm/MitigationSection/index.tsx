@@ -73,6 +73,10 @@ interface MitigationSectionProps {
  * @param {MitigationFormErrors} [props.mitigationErrors] - Form validation errors (optional)
  * @returns {JSX.Element} Rendered mitigation form section
  */
+/** Approval is started once an approver or an approval status is picked. */
+const isApprovalStarted = (values: MitigationFormValues): boolean =>
+  Boolean(values.approver) || Boolean(values.approvalStatus);
+
 const MitigationSection: FC<MitigationSectionProps> = ({
   mitigationValues,
   setMitigationValues,
@@ -106,6 +110,8 @@ const MitigationSection: FC<MitigationSectionProps> = ({
     maxWidth: contentWidth,
   };
 
+  const approvalStarted = isApprovalStarted(mitigationValues);
+
   const validators = useMemo<FieldValidators<MitigationFormValues>>(
     () => ({
       mitigationStatus: (v: unknown) => {
@@ -128,15 +134,19 @@ const MitigationSection: FC<MitigationSectionProps> = ({
         const r = checkStringValidation("Implementation strategy", v as string, 1, 1024);
         return r.accepted ? "" : r.message;
       },
-      approver: (v: unknown) => {
+      // Approval data is required only once approval is started (R-M12).
+      approver: (v: unknown, all: MitigationFormValues) => {
+        if (!isApprovalStarted(all)) return "";
         const r = selectValidation("Approver", v as number);
         return r.accepted ? "" : r.message;
       },
-      approvalStatus: (v: unknown) => {
+      approvalStatus: (v: unknown, all: MitigationFormValues) => {
+        if (!isApprovalStarted(all)) return "";
         const r = selectValidation("Approval status", v as number);
         return r.accepted ? "" : r.message;
       },
-      dateOfAssessment: (v: unknown) => {
+      dateOfAssessment: (v: unknown, all: MitigationFormValues) => {
+        if (!isApprovalStarted(all)) return "";
         const r = checkStringValidation("Date of assessment", v as string, 1);
         return r.accepted ? "" : r.message;
       },
@@ -224,7 +234,10 @@ const MitigationSection: FC<MitigationSectionProps> = ({
       field: keyof Pick<MitigationFormValues, "deadline" | "dateOfAssessment">,
       newDate: Dayjs | null,
     ) => {
-      if (newDate?.isValid()) {
+      if (newDate === null) {
+        // Cleared by the user: keep it empty.
+        setMitigationValues((prevValues) => ({ ...prevValues, [field]: "" }));
+      } else if (newDate.isValid()) {
         setMitigationValues((prevValues) => ({
           ...prevValues,
           [field]: newDate.toISOString(),
@@ -300,9 +313,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
               <DatePicker
                 id="mitigation-deadline-input"
                 label="Deadline"
-                date={
-                  mitigationValues.deadline ? dayjs(mitigationValues.deadline) : dayjs(new Date())
-                }
+                date={mitigationValues.deadline ? dayjs(mitigationValues.deadline) : null}
                 handleDateChange={(e) => handleDateChange("deadline", e)}
                 onBlur={handleFieldBlur("deadline")}
                 sx={{ flex: 1 }}
@@ -391,7 +402,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
             onBlur={handleFieldBlur("approver")}
             items={userOptions}
             sx={formFieldStyles}
-            isRequired
+            isRequired={approvalStarted}
             error={errors.approver}
             disabled={isEditingDisabled || usersLoading}
           />
@@ -404,7 +415,7 @@ const MitigationSection: FC<MitigationSectionProps> = ({
             onBlur={handleFieldBlur("approvalStatus")}
             items={approvalStatusItems}
             sx={formFieldStyles}
-            isRequired
+            isRequired={approvalStarted}
             error={errors.approvalStatus}
             disabled={isEditingDisabled}
           />
@@ -412,14 +423,12 @@ const MitigationSection: FC<MitigationSectionProps> = ({
             id="mitigation-assessment-date-input"
             label="Assessment date"
             date={
-              mitigationValues.dateOfAssessment
-                ? dayjs(mitigationValues.dateOfAssessment)
-                : dayjs(new Date())
+              mitigationValues.dateOfAssessment ? dayjs(mitigationValues.dateOfAssessment) : null
             }
             handleDateChange={(e) => handleDateChange("dateOfAssessment", e)}
             onBlur={handleFieldBlur("dateOfAssessment")}
             sx={{ flex: 1 }}
-            isRequired
+            isRequired={approvalStarted}
             error={errors.dateOfAssessment}
             disabled={isEditingDisabled}
           />

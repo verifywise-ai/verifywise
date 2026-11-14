@@ -134,7 +134,8 @@ const RiskSection: FC<RiskSectionProps> = ({
         return r.accepted ? "" : r.message;
       },
       potentialImpact: (v: unknown) => {
-        const r = checkStringValidation("Potential impact", v as string, 1, 256);
+        // impact is VARCHAR(255) (R-M6).
+        const r = checkStringValidation("Potential impact", v as string, 1, 255);
         return r.accepted ? "" : r.message;
       },
       reviewNotes: (v: unknown) => {

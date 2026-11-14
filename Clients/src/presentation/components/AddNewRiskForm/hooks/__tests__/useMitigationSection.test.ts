@@ -1,5 +1,6 @@
 import { describe, it, expect, vi } from "vitest";
 import { renderHook, act } from "@testing-library/react";
+import dayjs from "dayjs";
 import { useMitigationSection, mitigationInitialState } from "../useMitigationSection";
 import { MitigationFormValues } from "../../interface";
 
@@ -115,13 +116,14 @@ describe("useMitigationSection", () => {
       mitigationPlan: "Plan",
       currentRiskLevel: 2,
       implementationStrategy: "Strategy",
-      deadline: "2024-01-01T00:00:00.000Z",
+      // Local midnight on the picked day, as the date picker sends it.
+      deadline: dayjs("2024-01-01").toISOString(),
       doc: "doc.pdf",
       likelihood: 2,
       riskSeverity: 1,
       approver: 10,
       approvalStatus: 3,
-      dateOfAssessment: "2024-06-01T00:00:00.000Z",
+      dateOfAssessment: dayjs("2024-06-01").toISOString(),
     };
 
     const backendData = result.current.buildBackendData(values);
@@ -131,12 +133,64 @@ describe("useMitigationSection", () => {
       mitigation_plan: "Plan",
       current_risk_level: "High",
       implementation_strategy: "Strategy",
-      deadline: "2024-01-01T00:00:00.000Z",
+      deadline: "2024-01-01",
       mitigation_evidence_document: "doc.pdf",
       likelihood_mitigation: "Unlikely",
       risk_approval: 10,
       approval_status: "Completed",
-      date_of_assessment: "2024-06-01T00:00:00.000Z",
+      date_of_assessment: "2024-06-01",
+    });
+  });
+
+  it("maps a stored residual severity of Critical back to Catastrophic (R-H1)", () => {
+    const { result } = renderHook(() => useMitigationSection());
+
+    const mapped = result.current.mapFromInputValues({ risk_severity: "Critical" });
+    expect(mapped.riskSeverity).toBe(5);
+    // A save without changes sends the same stored value back.
+    expect(result.current.buildBackendData(mapped).risk_severity).toBe("Critical");
+  });
+
+  it("leaves values the risk never had empty instead of prefilling them (R-M12)", () => {
+    const { result } = renderHook(() => useMitigationSection());
+
+    const mapped = result.current.mapFromInputValues({
+      mitigation_status: null,
+      current_risk_level: null,
+      deadline: null,
+      risk_approval: null,
+      approval_status: null,
+      date_of_assessment: null,
+    });
+
+    expect(mapped.mitigationStatus).toBe(0);
+    expect(mapped.currentRiskLevel).toBe(0);
+    expect(mapped.deadline).toBe("");
+    expect(mapped.approver).toBe(0);
+    expect(mapped.approvalStatus).toBe(0);
+    expect(mapped.dateOfAssessment).toBe("");
+  });
+
+  it("sends unset selects, dates and approver as null so the server clears them (R-M12)", () => {
+    const { result } = renderHook(() => useMitigationSection());
+
+    const backendData = result.current.buildBackendData({
+      ...mitigationInitialState,
+      mitigationStatus: 0,
+      currentRiskLevel: 0,
+      deadline: "",
+      approver: 0,
+      approvalStatus: 0,
+      dateOfAssessment: "",
+    });
+
+    expect(backendData).toMatchObject({
+      mitigation_status: null,
+      current_risk_level: null,
+      deadline: null,
+      risk_approval: null,
+      approval_status: null,
+      date_of_assessment: null,
     });
   });
 });

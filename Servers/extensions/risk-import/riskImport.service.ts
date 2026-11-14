@@ -12,6 +12,7 @@ import {
   RISK_SEVERITY_VALUES,
   SEVERITY_VALUES,
 } from "./risks.enums";
+import { toRiskCalendarDate } from "../../utils/riskCalendarDate.utils";
 
 /**
  * Server-side risk-import extension logic. Two entry points:
@@ -354,7 +355,7 @@ function parseRow(row: RiskImportRow): Record<string, unknown> {
     review_notes: row.review_notes ?? null,
     mitigation_status: row.mitigation_status ?? null,
     current_risk_level: row.current_risk_level ?? null,
-    deadline: row.deadline ? new Date(row.deadline) : null,
+    deadline: row.deadline ? toRiskCalendarDate(new Date(row.deadline)) : null,
     mitigation_plan: row.mitigation_plan ?? null,
     implementation_strategy: row.implementation_strategy ?? null,
     likelihood_mitigation: row.likelihood_mitigation ?? "Rare",
@@ -362,7 +363,9 @@ function parseRow(row: RiskImportRow): Record<string, unknown> {
     final_risk_level: row.final_risk_level ?? null,
     risk_approval: parseUserId(row.risk_approval),
     approval_status: row.approval_status ?? null,
-    date_of_assessment: row.date_of_assessment ? new Date(row.date_of_assessment) : new Date(),
+    date_of_assessment: row.date_of_assessment
+      ? toRiskCalendarDate(new Date(row.date_of_assessment))
+      : new Date(),
   };
 }
 

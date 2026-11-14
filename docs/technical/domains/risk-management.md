@@ -1,6 +1,6 @@
 # Risk Management Domain
 
-**Last Updated:** 2026-10-06
+**Last Updated:** 2026-11-14
 
 ## Overview
 
@@ -134,9 +134,11 @@ enum Likelihood {
   UNLIKELY = "Unlikely"
   POSSIBLE = "Possible"
   LIKELY = "Likely"
-  ALMOST_CERTAIN = "Almost certain"
+  ALMOST_CERTAIN = "Almost Certain"
 }
 ```
+
+Project risks spell the top value "Almost Certain"; the vendor risk enum spells it "Almost certain". Vendor risk create and update accept either casing and store "Almost certain" (`normalizeVendorRiskLikelihood` in `utils/vendorRisk.utils.ts`).
 
 ### Severity
 
@@ -437,29 +439,41 @@ POST /projectRisks/
   risk_category: ["Data Quality", "Security"],
   impact: "Model accuracy degradation",
   likelihood: "Likely",
-  severity: "Major",
-  assessment_mapping: "Q1.2",
-  controls_mapping: "AC-1",
-  mitigation_plan: "Implement validation pipeline",
-  mitigation_status: "Not Started",
-  deadline: "2026-02-28",
-  projects: [1, 2],
-  frameworks: [5]
-}
-```
+  severity: "### Field Limits
 
-## Validation Rules
+The validator (`middleware/validators/risks.validator.ts`) enforces the column limits, so overlong text is a 400, not a 500. The other text columns are `TEXT` and have no limit.
 
-### Field Limits
+| Field | Max length | Column |
+|-------|------------|--------|
+| risk_name | 255 chars | VARCHAR(255) NOT NULL |
+| impact | 255 chars | VARCHAR(255) |
+| mitigation_evidence_document | 255 chars | VARCHAR(255) |
+| final_risk_level | 255 chars | VARCHAR(255) |
+| approval_status | 255 chars | VARCHAR(255) |
 
-| Field | Max Length |
-|-------|------------|
-| risk_name | 255 chars |
-| risk_description | 1000 chars |
-| impact | 500 chars |
-| assessment_mapping | 500 chars |
-| controls_mapping | 500 chars |
-| review_notes | 1000 chars |
+### Required Fields
+
+- `risk_name` - non-empty string (create). An empty `risk_name` on update is ignored.
+- `risk_owner` - positive user id (create)
+
+The risk form requires approver, approval status and assessment date only once one of approver or approval status is set.
+
+### Saving and clearing fields
+
+`updateRiskByIdQuery` writes every key present in the request and leaves absent keys alone, so a partial edit does not touch the owner or log an owner change. A present key clears the field: `""` is stored on text columns, and `""`, `null` or user id `0` become `NULL` on enum, date and user columns. The form sends unset selects, dates and the approver as `null`.
+
+Delete is a soft delete (`is_deleted = true`). It keeps the risk's custom field values and returns 404 when the risk does not exist or is already deleted, before any automation runs.
+
+### Calendar dates (deadline, date of assessment)
+
+`deadline` and `date_of_assessment` are `TIMESTAMP WITH TIME ZONE` but hold calendar dates. Every write stores them at 12:00 UTC on their day (`toRiskCalendarDate` in `utils/riskCalendarDate.utils.ts`), which reads as the same day from UTC-11 to UTC+11:
+
+- The form sends the picked day as `"YYYY-MM-DD"`.
+- A value that looks like a browser's local midnight (a whole quarter hour, no seconds), including 00:00 UTC from import, the advisor or an API client, moves to noon UTC on the nearest day.
+- Other timestamps (a "now" value with seconds) are stored as sent.
+
+Migration `20261114120000-risk-dates-utc-noon` applied the same rule to existing rows on every deployment. A deadline therefore passes at 12:00 UTC on its day, so overdue checks (`deadline < NOW()`) fire up to 12 hours later than they did with the picker's local midnight. A local midnight from UTC+12..+14 cannot be told from UTC-12..-10 and may land a day off.
+
 | mitigation_plan | 1000 chars |
 | implementation_strategy | 1000 chars |
 | mitigation_evidence_document | 500 chars |

@@ -201,13 +201,17 @@ export async function updateRiskService(
   ctx: CreateRiskServiceContext,
   transaction: Transaction,
 ): Promise<RiskModel | null> {
-  // 1. Convert optional FK fields (0 => NULL), as the controller did.
-  const updateData = {
-    ...input,
-    risk_owner: (input.risk_owner && Number(input.risk_owner) !== 0
+  // 1. Convert optional FK fields (0 => NULL), as the controller did. Only
+  //    when the caller sent risk_owner: setting it on every partial edit
+  //    logged a false "Risk owner → -" change (R-H2).
+  const updateData = { ...input } as Partial<
+    RiskModel & { projects: number[]; frameworks: number[] }
+  >;
+  if ("risk_owner" in input) {
+    updateData.risk_owner = (input.risk_owner && Number(input.risk_owner) !== 0
       ? Number(input.risk_owner)
-      : null) as unknown as number | undefined,
-  } as Partial<RiskModel & { projects: number[]; frameworks: number[] }>;
+      : null) as unknown as number | undefined;
+  }
 
   // 2. Any one of these three arriving means the whole FAIR set is recomputed,
   //    so the stored values are merged in first — validating only the incoming
