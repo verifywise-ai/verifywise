@@ -1,4 +1,5 @@
 import React, { useEffect, useState, useMemo, useCallback } from "react";
+import { useQueryClient } from "@tanstack/react-query";
 import { useLocation, useNavigate, useSearchParams } from "react-router";
 import { Box, Stack, Fade, Tooltip, IconButton } from "@mui/material";
 import {
@@ -34,7 +35,11 @@ import {
 import { AlertProps } from "../../types/alert.types";
 import { PolicyManagerModel } from "../../../domain/models/Common/policy/policyManager.model";
 import { PolicyManagerProps } from "../../types/interfaces/i.policy";
-import { usePolicies } from "../../../application/hooks/usePolicies";
+import {
+  usePolicies,
+  usePolicyFolderCounts,
+  policyQueryKeys,
+} from "../../../application/hooks/usePolicies";
 import { usePolicyApprovalChangedListener } from "../../../application/hooks/usePolicyApproval";
 import PolicyStatusCard from "./PolicyStatusCard";
 import { ExportMenu } from "../../components/Table/ExportMenu";
@@ -91,6 +96,8 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
   } = usePolicies({ suppressGlobalErrorToast: true });
   // Refetch when a policy request is decided from the approval requests modal.
   usePolicyApprovalChangedListener();
+  const queryClient = useQueryClient();
+  const { data: folderCounts } = usePolicyFolderCounts();
   const deletePolicyMutation = useDeletePolicy();
   const [flashRowId, setFlashRowId] = useState<number | null>(null);
   const can = useCanCheck();
@@ -322,6 +329,7 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
         setAssignFolderPolicyId(null);
         setAssignFolderCurrentFolders([]);
         await refreshFolders();
+        queryClient.invalidateQueries({ queryKey: policyQueryKeys.folderCounts() });
         // Refresh folder filter if a folder is currently selected
         if (typeof selectedFolder === "number") {
           const updatedIds = await getPolicyIdsInFolder(selectedFolder);
@@ -345,7 +353,7 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
         setAssignFolderSubmitting(false);
       }
     },
-    [assignFolderPolicyId, refreshFolders],
+    [assignFolderPolicyId, refreshFolders, queryClient],
   );
 
   // Handle policy card click to filter by status
@@ -716,6 +724,7 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
                 canManage={canEditPolicies}
                 collapsed={folderSidebarCollapsed}
                 onToggleCollapse={() => setFolderSidebarCollapsed((p) => !p)}
+                countByFolderId={folderCounts ?? {}}
                 allLabel="All policies"
                 showUncategorized={false}
               />

@@ -14,6 +14,7 @@ export function useCreatePolicy() {
     mutationFn: (input: PolicyInput) => createPolicy(input),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: policyQueryKeys.lists() });
+      queryClient.invalidateQueries({ queryKey: policyQueryKeys.folderCounts() });
     },
   });
 }
@@ -69,6 +70,8 @@ export function useDeletePolicy() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: tagQueryKeys.all });
+      // The deleted policy's folder mappings are gone; refresh the sidebar counts.
+      queryClient.invalidateQueries({ queryKey: policyQueryKeys.folderCounts() });
     },
     onError: (error, _id, context) => {
       if (context?.snapshots) {

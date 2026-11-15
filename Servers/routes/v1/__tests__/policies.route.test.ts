@@ -47,6 +47,7 @@ jest.mock("../../../utils/logger/fileLogger", () => ({
   logStructured: jest.fn(),
 }));
 
+import { sequelize } from "../../../database/db";
 import routes from "../policies.route";
 import * as service from "../../../services/policies/policyApproval.service";
 import { logFailure } from "../../../utils/logger/logHelper";
@@ -316,5 +317,41 @@ describe("/api/v1/policies approval endpoints", () => {
       expect(res.status).toBe(409);
       expect(res.body.data).toBe("t:Use the approval workflow");
     });
+  });
+});
+
+describe("GET /api/v1/policies/folder-counts", () => {
+  const query = sequelize.query as jest.Mock;
+  beforeEach(() => jest.clearAllMocks());
+
+  it("answers 401 without a token", async () => {
+    expect((await request(app).get(`${BASE}/folder-counts`)).status).toBe(401);
+    expect(query).not.toHaveBeenCalled();
+  });
+
+  it("returns the counts keyed by folder id, scoped to the caller's organization", async () => {
+    query.mockResolvedValueOnce([
+      { folder_id: 3, policy_count: 2 },
+      { folder_id: 7, policy_count: 1 },
+    ]);
+    const res = await request(app).get(`${BASE}/folder-counts`).set(auth).set("x-org", "42");
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({ "3": 2, "7": 1 });
+    expect(query.mock.calls[0][1].replacements).toEqual({ organizationId: 42 });
+    // Not read as a policy id by the /:id/approval route
+    expect(getState).not.toHaveBeenCalled();
+  });
+
+  it("returns an empty object when no folder holds a policy", async () => {
+    query.mockResolvedValueOnce([]);
+    const res = await request(app).get(`${BASE}/folder-counts`).set(auth);
+    expect(res.status).toBe(200);
+    expect(res.body.data).toEqual({});
+  });
+
+  it("answers 500 when the query fails", async () => {
+    query.mockRejectedValueOnce(new Error("db down"));
+    const res = await request(app).get(`${BASE}/folder-counts`).set(auth);
+    expect(res.status).toBe(500);
   });
 });

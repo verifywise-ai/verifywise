@@ -29026,3 +29026,17 @@ paths:
       security:
         -
           bearerAuth: []
+  /v1/policies/folder-counts:
+    get:
+      summary: 'Get Policy Folder Counts'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Policies'
+      operationId: getPolicyFolderCounts
+      security:
+        -
+          bearerAuth: []

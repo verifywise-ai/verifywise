@@ -159,3 +159,11 @@ export async function approvePolicyDirectly(
   );
   return extractData<PolicyManagerModel>(response);
 }
+
+/** Policies assigned directly to each folder: { [folderId]: count }. */
+export async function getPolicyFolderCounts(): Promise<Record<number, number>> {
+  const response = await apiServices.get<{ message: string; data: Record<number, number> }>(
+    "/v1/policies/folder-counts",
+  );
+  return extractData<Record<number, number>>(response);
+}

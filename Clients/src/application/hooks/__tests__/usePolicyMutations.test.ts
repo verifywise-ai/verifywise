@@ -194,7 +194,7 @@ describe("useDeletePolicy", () => {
     vi.clearAllMocks();
   });
 
-  it("removes the policy optimistically and invalidates only policy-tags on success", async () => {
+  it("removes the policy optimistically and invalidates policy-tags and folder counts on success", async () => {
     let resolveMutation: () => void = () => {};
     mockDeletePolicy.mockImplementation(
       () =>
@@ -229,12 +229,16 @@ describe("useDeletePolicy", () => {
 
     await waitFor(() => expect(result.current.isSuccess).toBe(true));
 
-    // Deleting a policy can orphan a tag, so only the tags query refreshes.
+    // Deleting a policy can orphan a tag and drops its folder mappings, so the
+    // tags query and the folder counts refresh; the list itself does not.
     const keys = invalidateSpy.mock.calls.map(
       (call) => (call[0] as { queryKey: unknown[] }).queryKey,
     );
     expect(keys).toContainEqual([...tagQueryKeys.all]);
-    expect(keys.every((key) => key[0] !== "policies")).toBe(true);
+    expect(keys).toContainEqual([...policyQueryKeys.folderCounts()]);
+    expect(keys.filter((key) => key[0] === "policies")).toEqual([
+      [...policyQueryKeys.folderCounts()],
+    ]);
 
     // The exact removal stands — no list refetch needed.
     expect(queryClient.getQueryData<PolicyManagerModel[]>(queryKey)?.map((p) => p.id)).toEqual([2]);

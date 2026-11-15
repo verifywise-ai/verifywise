@@ -55,6 +55,35 @@ export const getPolicyIdsInFolderQuery = async (
 };
 
 /**
+ * Number of policies assigned directly to each folder (no roll-up into
+ * parents, same as the evidence file_count). The join to policy_manager keeps
+ * a mapping whose policy is gone out of the count.
+ *
+ * @returns Map of folder id to count; a folder with no policies is absent.
+ */
+export const getPolicyFolderCountsQuery = async (
+  organizationId: number,
+): Promise<Record<number, number>> => {
+  const rows = await sequelize.query<{ folder_id: number; policy_count: number }>(
+    `SELECT pfm.folder_id, COUNT(DISTINCT pfm.policy_id)::int AS policy_count
+     FROM policy_folder_mappings pfm
+     INNER JOIN policy_manager pm
+       ON pm.id = pfm.policy_id AND pm.organization_id = pfm.organization_id
+     WHERE pfm.organization_id = :organizationId
+     GROUP BY pfm.folder_id`,
+    {
+      replacements: { organizationId },
+      type: QueryTypes.SELECT,
+    },
+  );
+  const counts: Record<number, number> = {};
+  for (const row of rows) {
+    counts[Number(row.folder_id)] = Number(row.policy_count);
+  }
+  return counts;
+};
+
+/**
  * Bulk update policy folder assignments (replace all folder assignments for a policy).
  * The caller checks the policy belongs to the organization; every folder id is
  * checked here.

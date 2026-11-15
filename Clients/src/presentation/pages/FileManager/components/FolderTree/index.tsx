@@ -43,6 +43,11 @@ interface FolderTreeProps {
   showUncategorized?: boolean;
   /** Whether to show the "Expired files" item. Defaults to true. */
   showExpired?: boolean;
+  /**
+   * Count to show per folder id, in place of the folder's own file_count.
+   * A folder missing from the map shows 0. Absent: file_count is shown.
+   */
+  countByFolderId?: Record<number, number>;
 }
 
 interface FolderItemProps {
@@ -56,6 +61,7 @@ interface FolderItemProps {
   onEditFolder?: (folder: IFolderTreeNode) => void;
   onDeleteFolder?: (folder: IFolderTreeNode) => void;
   canManage?: boolean;
+  countByFolderId?: Record<number, number>;
 }
 
 /**
@@ -72,6 +78,7 @@ const FolderItem: React.FC<FolderItemProps> = ({
   onEditFolder,
   onDeleteFolder,
   canManage,
+  countByFolderId,
 }) => {
   const [showActions, setShowActions] = useState(false);
   const isSelected = selectedFolder === folder.id;
@@ -183,7 +190,7 @@ const FolderItem: React.FC<FolderItemProps> = ({
             flexShrink: 0,
           }}
         >
-          ({folder.file_count})
+          ({countByFolderId ? (countByFolderId[folder.id] ?? 0) : folder.file_count})
         </Typography>
 
         {/* Action buttons (shown on hover) */}
@@ -245,6 +252,7 @@ const FolderItem: React.FC<FolderItemProps> = ({
               onEditFolder={onEditFolder}
               onDeleteFolder={onDeleteFolder}
               canManage={canManage}
+              countByFolderId={countByFolderId}
             />
           ))}
         </Box>
@@ -270,6 +278,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
   allLabel = "All files",
   showUncategorized = true,
   showExpired = true,
+  countByFolderId,
 }) => {
   const [expandedFolders, setExpandedFolders] = useState<Set<number>>(new Set());
 
@@ -529,6 +538,7 @@ export const FolderTree: React.FC<FolderTreeProps> = ({
                   onEditFolder={onEditFolder}
                   onDeleteFolder={onDeleteFolder}
                   canManage={canManage}
+                  countByFolderId={countByFolderId}
                 />
               ))}
 

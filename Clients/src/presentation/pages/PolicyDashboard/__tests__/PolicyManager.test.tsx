@@ -62,8 +62,10 @@ vi.mock("../../../../application/hooks/usePolicies", () => ({
       error: mockPoliciesError,
     };
   },
+  usePolicyFolderCounts: () => ({ data: {} }),
   policyQueryKeys: {
     all: ["policies"],
+    folderCounts: () => ["policies", "folder-counts"],
     lists: () => ["policies", "list"],
     list: (filters: Record<string, unknown> = {}) => ["policies", "list", filters],
   },
