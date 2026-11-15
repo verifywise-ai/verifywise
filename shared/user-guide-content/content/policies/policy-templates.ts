@@ -356,7 +356,7 @@ export const policyTemplatesContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Import DOCX', text: 'Upload an existing Word document to import its content into the editor' },
+        { bold: 'Import DOCX', text: 'Upload an existing Word document to import its content into the editor. Images in the document are not imported: a message tells you how many were skipped, and you can add them with the image button in the toolbar' },
         { bold: 'Export', text: 'Download the policy as PDF or DOCX for sharing outside VerifyWise. PDFs include images you uploaded, but not images loaded from an external web address' },
         { bold: 'Character count', text: 'Shown at the bottom of the editor' },
         { bold: 'Change history', text: 'Click the history icon to view all changes made to the policy over time' },
