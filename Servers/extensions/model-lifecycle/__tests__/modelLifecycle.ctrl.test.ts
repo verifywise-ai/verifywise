@@ -5,6 +5,8 @@ jest.mock("../modelLifecycle.service", () => ({
   reorderItems: jest.fn(async () => undefined),
   detachFile: jest.fn(),
   updateApprovalStatus: jest.fn(),
+  modelInOrganization: jest.fn(),
+  itemInOrganization: jest.fn(),
 }));
 
 import * as svc from "../modelLifecycle.service";
@@ -13,6 +15,8 @@ import {
   orderedIdsFrom,
   reorderItemsCtrl,
   reorderPhasesCtrl,
+  requireItemInOrganization,
+  requireModelInOrganization,
   updateApprovalStatusCtrl,
 } from "../modelLifecycle.ctrl";
 
@@ -149,5 +153,77 @@ describe("model lifecycle approval decision", () => {
     await updateApprovalStatusCtrl(decisionRequest("7"), res);
 
     expect(res.status).toHaveBeenCalledWith(404);
+  });
+});
+
+describe("model lifecycle organization scope", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  const scopedRequest = () =>
+    ({
+      params: { id: "10", itemId: "20" },
+      organizationId: 1,
+      userId: 7,
+      t: (key: string) => key,
+    }) as unknown as Request;
+
+  it("answers 404 for a model outside the organization and stops there", async () => {
+    (svc.modelInOrganization as jest.Mock).mockResolvedValueOnce(false);
+    const res = response();
+    const next = jest.fn();
+
+    await requireModelInOrganization(scopedRequest(), res, next);
+
+    expect(svc.modelInOrganization).toHaveBeenCalledWith(1, 10);
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: "Model not found" }));
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("passes a model of the organization on", async () => {
+    (svc.modelInOrganization as jest.Mock).mockResolvedValueOnce(true);
+    const res = response();
+    const next = jest.fn();
+
+    await requireModelInOrganization(scopedRequest(), res, next);
+
+    expect(next).toHaveBeenCalledWith();
+    expect(res.status).not.toHaveBeenCalled();
+  });
+
+  it("answers 404 for an item outside the organization and stops there", async () => {
+    (svc.itemInOrganization as jest.Mock).mockResolvedValueOnce(false);
+    const res = response();
+    const next = jest.fn();
+
+    await requireItemInOrganization(scopedRequest(), res, next);
+
+    expect(svc.itemInOrganization).toHaveBeenCalledWith(1, 20);
+    expect(res.status).toHaveBeenCalledWith(404);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({ data: "Lifecycle item not found" }),
+    );
+    expect(next).not.toHaveBeenCalled();
+  });
+
+  it("passes an item of the organization on", async () => {
+    (svc.itemInOrganization as jest.Mock).mockResolvedValueOnce(true);
+    const res = response();
+    const next = jest.fn();
+
+    await requireItemInOrganization(scopedRequest(), res, next);
+
+    expect(next).toHaveBeenCalledWith();
+  });
+
+  it("answers 500 when the lookup fails, without calling next", async () => {
+    (svc.modelInOrganization as jest.Mock).mockRejectedValueOnce(new Error("db down"));
+    const res = response();
+    const next = jest.fn();
+
+    await requireModelInOrganization(scopedRequest(), res, next);
+
+    expect(res.status).toHaveBeenCalledWith(500);
+    expect(next).not.toHaveBeenCalled();
   });
 });

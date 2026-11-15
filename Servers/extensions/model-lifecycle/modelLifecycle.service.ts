@@ -2,6 +2,8 @@ import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
 import { appendToAuditLedger } from "../../utils/auditLedger.utils";
 import { GENERIC_FORMATTERS } from "../../config/changeHistory.config";
+import { findUsersNotInOrganization, parseReferencedIds } from "../../utils/user.utils";
+import { ValidationException } from "../../domain.layer/exceptions/custom.exception";
 
 /**
  * DB helpers for the model-lifecycle extension.
@@ -391,6 +393,60 @@ export async function reorderItems(
       { replacements: { organizationId, order: i + 1, id: orderedIds[i], phaseId } },
     );
   }
+}
+
+// ---------------------------------------------------------------------------
+// Organization scope
+// ---------------------------------------------------------------------------
+
+/**
+ * True when the model is in the organization. The per-model routes answer 404
+ * otherwise, before any read or write, so another organization's model id
+ * never reaches the lifecycle tables (whose foreign key alone accepts it).
+ */
+export async function modelInOrganization(
+  organizationId: number,
+  modelId: number,
+): Promise<boolean> {
+  const rows = (await sequelize.query(
+    `SELECT 1 FROM model_inventories WHERE id = :modelId AND organization_id = :organizationId;`,
+    { replacements: { organizationId, modelId }, type: QueryTypes.SELECT },
+  )) as unknown[];
+  return rows.length > 0;
+}
+
+/**
+ * True when the lifecycle item is in the organization, active or not: an
+ * inactive item keeps its answers, files, people and approvers.
+ */
+export async function itemInOrganization(organizationId: number, itemId: number): Promise<boolean> {
+  const rows = (await sequelize.query(
+    `SELECT 1 FROM model_lifecycle_items WHERE id = :itemId AND organization_id = :organizationId;`,
+    { replacements: { organizationId, itemId }, type: QueryTypes.SELECT },
+  )) as unknown[];
+  return rows.length > 0;
+}
+
+/**
+ * Tenant guard for people and approvers: the user must be a member of the
+ * organization, so names and approvals never cross tenants. Fails closed on a
+ * malformed id (NaN, 5.5), which is rejected rather than skipped.
+ *
+ * @throws ValidationException when the id is malformed or not a member.
+ */
+async function assertMemberOfOrganization(
+  organizationId: number,
+  userId: number,
+  message:
+    | "Every person must be a member of this organization"
+    | "Every approver must be a member of this organization",
+): Promise<void> {
+  const ids = parseReferencedIds([userId]);
+  const outside =
+    ids === null || ids.length === 0
+      ? [userId]
+      : await findUsersNotInOrganization(ids, organizationId);
+  if (outside.length > 0) throw new ValidationException(message, "userId", userId);
 }
 
 // ---------------------------------------------------------------------------
@@ -839,6 +895,11 @@ export async function addPerson(
   userId: number,
   personUserId: number,
 ): Promise<any> {
+  await assertMemberOfOrganization(
+    organizationId,
+    personUserId,
+    "Every person must be a member of this organization",
+  );
   const valueId = await ensureValueRow(organizationId, modelId, itemId, userId);
   const rows = (await sequelize.query(
     `INSERT INTO model_lifecycle_item_people (organization_id, value_id, user_id)
@@ -916,6 +977,11 @@ export async function addApprover(
   userId: number,
   approverUserId: number,
 ): Promise<any> {
+  await assertMemberOfOrganization(
+    organizationId,
+    approverUserId,
+    "Every approver must be a member of this organization",
+  );
   const valueId = await ensureValueRow(organizationId, modelId, itemId, userId);
   const rows = (await sequelize.query(
     `INSERT INTO model_lifecycle_item_approvals (organization_id, value_id, user_id, status)

@@ -20,6 +20,8 @@ import {
   removePersonCtrl,
   reorderItemsCtrl,
   reorderPhasesCtrl,
+  requireItemInOrganization,
+  requireModelInOrganization,
   updateApprovalStatusCtrl,
   updateItemCtrl,
   updatePhaseCtrl,
@@ -62,6 +64,13 @@ router.post("/phases/:phaseId/items", configAdmin, createItemCtrl);
 router.put("/phases/:phaseId/items/reorder", configAdmin, reorderItemsCtrl);
 router.put("/items/:id", configAdmin, updateItemCtrl);
 router.delete("/items/:id", configAdmin, deleteItemCtrl);
+
+// ---- Organization scope -----------------------------------------------
+// Every per-model route, read or write, answers 404 for a model or item id
+// outside the caller's organization before anything else runs. The id
+// bounds above run first, as router.param applies to these paths too.
+router.use("/models/:id/lifecycle", requireModelInOrganization);
+router.use("/models/:id/lifecycle/items/:itemId", requireItemInOrganization);
 
 // ---- Per-model reads + value upsert -----------------------------------
 router.get("/models/:id/lifecycle", getLifecycleCtrl);

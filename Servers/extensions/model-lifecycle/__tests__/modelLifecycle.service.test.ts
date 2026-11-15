@@ -20,12 +20,17 @@ jest.mock("../../../utils/auditLedger.utils", () => ({
 
 import { sequelize } from "../../../database/db";
 import { appendToAuditLedger } from "../../../utils/auditLedger.utils";
+import { ValidationException } from "../../../domain.layer/exceptions/custom.exception";
 import {
+  addApprover,
+  addPerson,
   attachFile,
   deleteItem,
   deletePhase,
   detachFile,
   formatLifecycleSnapshot,
+  itemInOrganization,
+  modelInOrganization,
   updateApprovalStatus,
   updateItem,
   upsertValue,
@@ -240,7 +245,9 @@ describe("deletePhase / deleteItem", () => {
 // The foreign key accepts any tenant's file, so attach must check ownership
 // itself or one org could link (and then read the name of) another's file.
 describe("attachFile", () => {
-  beforeEach(() => mockQuery.mockReset());
+  beforeEach(() => {
+    mockQuery.mockReset();
+  });
 
   it("refuses a file outside the organization and writes nothing", async () => {
     mockQuery.mockResolvedValueOnce([]); // ownership SELECT: no row
@@ -488,5 +495,94 @@ describe("formatLifecycleSnapshot", () => {
     expect(formatLifecycleSnapshot({ approver: "Ada Lovelace", status: "approved" })).toBe(
       "Ada Lovelace (approved)",
     );
+  });
+});
+
+describe("organization scope lookups", () => {
+  beforeEach(() => {
+    mockQuery.mockReset();
+  });
+
+  it("finds a model only in the caller's organization", async () => {
+    mockQuery.mockResolvedValueOnce([{ "?column?": 1 }]);
+
+    await expect(modelInOrganization(1, 10)).resolves.toBe(true);
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(String(sql)).toMatch(/FROM model_inventories/);
+    expect(String(sql)).toMatch(/organization_id = :organizationId/);
+    expect(options.replacements).toEqual({ organizationId: 1, modelId: 10 });
+  });
+
+  it("answers false for a model of another organization or none", async () => {
+    mockQuery.mockResolvedValueOnce([]);
+
+    await expect(modelInOrganization(1, 99)).resolves.toBe(false);
+  });
+
+  it("finds an item, active or not, only in the caller's organization", async () => {
+    mockQuery.mockResolvedValueOnce([{ "?column?": 1 }]);
+
+    await expect(itemInOrganization(1, 20)).resolves.toBe(true);
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(String(sql)).toMatch(/FROM model_lifecycle_items/);
+    expect(String(sql)).toMatch(/organization_id = :organizationId/);
+    expect(String(sql)).not.toMatch(/is_active/);
+    expect(options.replacements).toEqual({ organizationId: 1, itemId: 20 });
+  });
+
+  it("answers false for an item of another organization", async () => {
+    mockQuery.mockResolvedValueOnce([]);
+
+    await expect(itemInOrganization(1, 99)).resolves.toBe(false);
+  });
+});
+
+describe("people and approvers must be organization members", () => {
+  beforeEach(() => {
+    mockQuery.mockReset();
+  });
+
+  const inserts = () =>
+    mockQuery.mock.calls.filter((call) => /INSERT INTO model_lifecycle/.test(String(call[0])));
+
+  it.each([
+    ["a person", addPerson, "Every person must be a member of this organization"],
+    ["an approver", addApprover, "Every approver must be a member of this organization"],
+  ] as const)("rejects %s outside the organization and writes nothing", async (_l, add, msg) => {
+    mockQuery.mockResolvedValueOnce([]); // organization_members lookup: no row
+
+    const attempt = add(1, 10, 20, 7, 55);
+
+    await expect(attempt).rejects.toBeInstanceOf(ValidationException);
+    await expect(attempt).rejects.toThrow(msg);
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(String(sql)).toMatch(/FROM organization_members/);
+    expect(options.replacements).toEqual({ organizationId: 1, userIds: [55] });
+    expect(inserts()).toHaveLength(0);
+  });
+
+  it.each([
+    ["person", addPerson],
+    ["approver", addApprover],
+  ] as const)("rejects a malformed %s id without querying", async (_l, add) => {
+    await expect(add(1, 10, 20, 7, NaN)).rejects.toBeInstanceOf(ValidationException);
+    await expect(add(1, 10, 20, 7, 5.5)).rejects.toBeInstanceOf(ValidationException);
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    ["a person", addPerson, "model_lifecycle_item_people"],
+    ["an approver", addApprover, "model_lifecycle_item_approvals"],
+  ] as const)("adds %s who is a member", async (_l, add, table) => {
+    mockQuery
+      .mockResolvedValueOnce([{ id: 55 }]) // membership
+      .mockResolvedValueOnce(undefined) // ensureValueRow INSERT
+      .mockResolvedValueOnce([{ id: 3 }]) // ensureValueRow SELECT
+      .mockResolvedValueOnce([[], 0]); // link INSERT ... ON CONFLICT DO NOTHING
+
+    await expect(add(1, 10, 20, 7, 55)).resolves.toEqual(
+      expect.objectContaining({ value_id: 3, user_id: 55 }),
+    );
+    expect(inserts().some((call) => String(call[0]).includes(table))).toBe(true);
   });
 });

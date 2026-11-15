@@ -1,7 +1,69 @@
 import { DatasetModel } from "../domain.layer/models/dataset/dataset.model";
 import { sequelize } from "../database/db";
-import { Transaction } from "sequelize";
+import { QueryTypes, Transaction } from "sequelize";
 import { IDatasetModelInventory, IDatasetProject } from "../domain.layer/interfaces/i.dataset";
+import { ValidationException } from "../domain.layer/exceptions/custom.exception";
+import { parseReferencedIds } from "./user.utils";
+
+/**
+ * Rejects `value` unless it is an array of ids that `sql` finds in the
+ * organization. Fails closed on a malformed id (5.5, "7x") or a value that is
+ * not an array.
+ */
+const assertIdsInOrganization = async (
+  organizationId: number,
+  value: unknown,
+  sql: string,
+  field: "models" | "projects",
+  message: string,
+  transaction?: Transaction,
+): Promise<void> => {
+  const ids = Array.isArray(value) ? parseReferencedIds(value) : null;
+  if (ids !== null && ids.length === 0) return;
+  const found =
+    ids === null
+      ? []
+      : ((await sequelize.query(sql, {
+          replacements: { organizationId, ids },
+          type: QueryTypes.SELECT,
+          ...(transaction ? { transaction } : {}),
+        })) as { id: number }[]);
+  if (ids === null || found.length !== ids.length) {
+    throw new ValidationException(message, field, value);
+  }
+};
+
+/**
+ * Tenant guard for a dataset's linked models and use cases: every id must
+ * belong to the organization, since the link tables' foreign keys alone
+ * accept any tenant's row. Shared by the dataset routes and the dataset bulk
+ * upload extension.
+ *
+ * @throws ValidationException naming the field ("models" or "projects").
+ */
+export const assertDatasetReferencesInOrganization = async (
+  organizationId: number,
+  models: unknown,
+  projects: unknown,
+  transaction?: Transaction,
+): Promise<void> => {
+  await assertIdsInOrganization(
+    organizationId,
+    models,
+    "SELECT id FROM model_inventories WHERE organization_id = :organizationId AND id IN (:ids)",
+    "models",
+    "Linked models must belong to this organization",
+    transaction,
+  );
+  await assertIdsInOrganization(
+    organizationId,
+    projects,
+    "SELECT id FROM projects WHERE organization_id = :organizationId AND id IN (:ids)",
+    "projects",
+    "Linked use cases must belong to this organization",
+    transaction,
+  );
+};
 
 export const getAllDatasetsQuery = async (organizationId: number) => {
   const datasets = await sequelize.query(
@@ -127,6 +189,8 @@ export const createNewDatasetQuery = async (
   const created_at = new Date();
 
   try {
+    await assertDatasetReferencesInOrganization(organizationId, models, projects, transaction);
+
     const result = await sequelize.query(
       `INSERT INTO datasets (
         organization_id, name, description, version, owner, type, function, source, license, format,
@@ -229,6 +293,8 @@ export const updateDatasetByIdQuery = async (
   const updated_at = new Date();
 
   try {
+    await assertDatasetReferencesInOrganization(organizationId, models, projects, transaction);
+
     // Update the dataset record
     await sequelize.query(
       `UPDATE datasets SET

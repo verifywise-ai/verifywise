@@ -48,9 +48,12 @@ jest.mock("../modelLifecycle.service", () => ({
   addApprover: jest.fn(async () => ({})),
   removeApprover: jest.fn(),
   updateApprovalStatus: jest.fn(),
+  modelInOrganization: jest.fn(async () => true),
+  itemInOrganization: jest.fn(async () => true),
 }));
 
 import * as svc from "../modelLifecycle.service";
+import { ValidationException } from "../../../domain.layer/exceptions/custom.exception";
 import lifecycleRoutes from "../modelLifecycle.route";
 
 const app = express();
@@ -285,5 +288,112 @@ describe("role checks on lifecycle routes", () => {
         expect(svc.updateApprovalStatus).not.toHaveBeenCalled();
       },
     );
+  });
+});
+
+// A model or item id from another organization (or no organization) must
+// answer 404 before any read or write, never reach the service, and never
+// surface the foreign-key error as a 500.
+describe("same-organization model and item ids", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  const base = "/api/extensions/model-lifecycle";
+  const item = `${base}/models/1/lifecycle/items/2`;
+
+  type Method = "get" | "post" | "put" | "delete";
+  type Route = readonly [label: string, method: Method, path: string, fn: string, body?: object];
+
+  const itemRoutes: Route[] = [
+    ["value upsert", "put", item, "upsertValue", { value_text: "x" }],
+    ["file attach", "post", `${item}/files`, "attachFile", { fileId: 5 }],
+    ["file detach", "delete", `${item}/files/5`, "detachFile"],
+    ["person add", "post", `${item}/people`, "addPerson", { userId: 3 }],
+    ["person remove", "delete", `${item}/people/3`, "removePerson"],
+    ["approver add", "post", `${item}/approvals`, "addApprover", { userId: 3 }],
+    ["approver remove", "delete", `${item}/approvals/3`, "removeApprover"],
+    // The caller is user 9, so this reaches the service when ids are in scope.
+    [
+      "approval decision",
+      "put",
+      `${item}/approvals/9`,
+      "updateApprovalStatus",
+      { status: "approved" },
+    ],
+  ];
+  const modelRoutes: Route[] = [
+    ["lifecycle read", "get", `${base}/models/1/lifecycle`, "getLifecycleForModel"],
+    ["progress read", "get", `${base}/models/1/lifecycle/progress`, "getProgressForModel"],
+    ...itemRoutes,
+  ];
+
+  const send = ([, method, path, , body]: Route) => {
+    const req = request(app)[method](path).set("x-role", "Admin");
+    return body ? req.send(body) : req;
+  };
+
+  it.each(modelRoutes.map((route) => [route[0], route] as const))(
+    "answers 404 on %s when the model is not in the organization",
+    async (_label, route) => {
+      (svc.modelInOrganization as jest.Mock).mockResolvedValueOnce(false);
+
+      const res = await send(route);
+
+      expect(res.status).toBe(404);
+      expect(res.body.data).toBe("Model not found");
+      expect(svc.modelInOrganization).toHaveBeenCalledWith(42, 1);
+      expect((svc as any)[route[3]]).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(itemRoutes.map((route) => [route[0], route] as const))(
+    "answers 404 on %s when the item is not in the organization",
+    async (_label, route) => {
+      (svc.itemInOrganization as jest.Mock).mockResolvedValueOnce(false);
+
+      const res = await send(route);
+
+      expect(res.status).toBe(404);
+      expect(res.body.data).toBe("Lifecycle item not found");
+      expect(svc.itemInOrganization).toHaveBeenCalledWith(42, 2);
+      expect((svc as any)[route[3]]).not.toHaveBeenCalled();
+    },
+  );
+
+  it("checks the model once per request on an item route", async () => {
+    await send(itemRoutes[0]);
+
+    expect(svc.modelInOrganization).toHaveBeenCalledTimes(1);
+    expect(svc.itemInOrganization).toHaveBeenCalledTimes(1);
+    expect(svc.upsertValue).toHaveBeenCalled();
+  });
+
+  it("leaves the setup routes alone", async () => {
+    await request(app).get(`${base}/config`).set("x-role", "Admin");
+    await request(app).put(`${base}/items/4`).set("x-role", "Admin").send({ name: "Owner" });
+
+    expect(svc.modelInOrganization).not.toHaveBeenCalled();
+    expect(svc.itemInOrganization).not.toHaveBeenCalled();
+  });
+
+  it("answers 400 when a person is not a member of the organization", async () => {
+    (svc.addPerson as jest.Mock).mockRejectedValueOnce(
+      new ValidationException("Every person must be a member of this organization", "userId", 3),
+    );
+
+    const res = await send(itemRoutes[3]);
+
+    expect(res.status).toBe(400);
+    expect(res.body.data).toBe("Every person must be a member of this organization");
+  });
+
+  it("answers 400 when an approver is not a member of the organization", async () => {
+    (svc.addApprover as jest.Mock).mockRejectedValueOnce(
+      new ValidationException("Every approver must be a member of this organization", "userId", 3),
+    );
+
+    const res = await send(itemRoutes[5]);
+
+    expect(res.status).toBe(400);
+    expect(res.body.data).toBe("Every approver must be a member of this organization");
   });
 });
