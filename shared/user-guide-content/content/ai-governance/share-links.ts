@@ -21,7 +21,7 @@ export const shareLinksContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Open the **Model inventory**. The app offers share links from there.' },
+        { text: 'Open **Model inventory**, where the app offers share links.' },
         { text: 'Click the **Share** button.' },
         { text: 'Choose what fields to include in the shared view.' },
         { text: 'Set an expiration date (how long the link stays active).' },

@@ -381,7 +381,7 @@ Client dirs are relative to `Clients/src/presentation/pages/`.
 - A category that is not in the allowed list is a row error. It is no longer dropped silently.
 - A risk name is a row error when it already exists in the organization (not deleted, compared case-insensitively after trimming) or when it repeats an earlier row of the same file.
 - Any validation error imports nothing.
-- When validation passes, the rows are inserted in one transaction, each inside its own savepoint. A failed insert rolls back only that row, so every row reports its own error. Any error still means nothing is imported.
+- When validation passes, the rows are inserted in one transaction, each inside its own savepoint. A failed insert rolls back only that row, so every row reports its own error. Any error means nothing is imported.
 - Each imported risk gets a creation entry in the change history, attributed to the importing user (`recordEntityCreation` with `req.userId`).
 
 ### Per-extension routes
