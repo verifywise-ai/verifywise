@@ -750,8 +750,6 @@ async function parseImage(imgEl: Element, organizationId: number): Promise<Parag
     return null;
   }
 
-  console.log("Processing image with src:", src.substring(0, 100) + "...");
-
   let imageBuffer: Buffer | null = null;
 
   // Check if it's a file-manager URL (various patterns)
@@ -852,13 +850,8 @@ export async function generatePolicyDOCX(
   contentHtml: string,
   organizationId: number,
 ): Promise<Buffer> {
-  console.log("Generating DOCX for policy:", title);
-  console.log("Content HTML length:", contentHtml.length);
-  console.log("Content HTML preview:", contentHtml.substring(0, 500));
-
   // Parse HTML content to DOCX elements
   const contentElements = await parseHtmlToDocxElements(contentHtml, organizationId);
-  console.log("Generated", contentElements.length, "DOCX elements");
 
   // Build document
   const doc = new Document({
@@ -957,7 +950,7 @@ export async function generatePolicyDOCX(
  */
 export function generateFilename(title: string, extension: "pdf" | "docx"): string {
   const sanitized = title
-    .replace(/[^a-zA-Z0-9\s-]/g, "")
+    .replace(/[^\p{L}\p{N}\s-]/gu, "")
     .replace(/\s+/g, "_")
     .substring(0, 50);
 

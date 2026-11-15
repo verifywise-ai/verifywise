@@ -176,6 +176,13 @@ describe("policy.ctrl", () => {
       await PolicyController.getPolicyById(req, res);
       expect(res.status).toHaveBeenCalledWith(200);
     });
+    it("should return 404 when the query returns an empty array", async () => {
+      mockGetById.mockResolvedValue([] as any);
+      const req = createReq({ params: { id: "99" } });
+      const res = createRes();
+      await PolicyController.getPolicyById(req, res);
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
     it("should return 404 when policy is not found", async () => {
       mockGetById.mockResolvedValue(null as any);
       const req = createReq({ params: { id: "99" } });

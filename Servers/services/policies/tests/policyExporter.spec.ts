@@ -154,6 +154,11 @@ describe("policyExporter", () => {
       );
     });
 
+    it("keeps non-Latin letters and digits", () => {
+      expect(generateFilename("Richtlinie für KI", "pdf")).toBe("Richtlinie_für_KI_2026-03-15.pdf");
+      expect(generateFilename("政策 2026", "pdf")).toBe("政策_2026_2026-03-15.pdf");
+    });
+
     it("collapses runs of whitespace into a single underscore", () => {
       expect(generateFilename("Multi   Word    Title", "pdf")).toBe(
         "Multi_Word_Title_2026-03-15.pdf",

@@ -40,6 +40,7 @@ import { isPolicyFormDirty } from "./PolicyEditor/policyFormDirty";
 import { radiusPx } from "../../themes/palette";
 import { fill, pluralKey } from "../../../i18n/fill";
 import { toDateOnlyString } from "../../tools/isoDateToString";
+import { filenameFromContentDisposition } from "../../utils/browserDownload.utils";
 
 // ── Component ─────────────────────────────────────────────────────────
 export default function PolicyEditorPage() {
@@ -432,12 +433,9 @@ export default function PolicyEditorPage() {
 
       const blob = await response.blob();
       const contentDisposition = response.headers.get("Content-Disposition");
-      let filename = `${formData.title.replace(/[^a-zA-Z0-9\s-]/g, "").replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.${format}`;
+      let filename = `${formData.title.replace(/[^\p{L}\p{N}\s-]/gu, "").replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.${format}`;
 
-      if (contentDisposition) {
-        const match = contentDisposition.match(/filename="?([^"]+)"?/);
-        if (match) filename = match[1];
-      }
+      filename = filenameFromContentDisposition(contentDisposition, filename);
 
       const finalBlob =
         format === "docx"

@@ -35,6 +35,7 @@ import {
   generatePolicyDOCX,
   generateFilename,
 } from "../services/policies/policyExporter";
+import { contentDispositionAttachment } from "../utils/contentDisposition.utils";
 import { convertDocxToHtml, DOCX_ALLOWED_MIMES } from "../services/policies/policyImporter";
 import {
   notifyReviewRequested,
@@ -145,7 +146,7 @@ export class PolicyController {
       const policyId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
       const policy = await getPolicyByIdQuery(req.organizationId!, policyId);
 
-      if (policy) {
+      if (policy && policy.length > 0) {
         return res.status(200).json(STATUS_CODE[200](policy));
       }
 
@@ -338,7 +339,7 @@ export class PolicyController {
       const filename = generateFilename(policy.title, "pdf");
 
       res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.setHeader("Content-Disposition", contentDispositionAttachment(filename));
       res.setHeader("Content-Length", pdfBuffer.length);
 
       return res.send(pdfBuffer);
@@ -378,7 +379,7 @@ export class PolicyController {
         "Content-Type",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       );
-      res.setHeader("Content-Disposition", `attachment; filename="${filename}"`);
+      res.setHeader("Content-Disposition", contentDispositionAttachment(filename));
       res.setHeader("Content-Length", docxBuffer.length);
 
       return res.send(docxBuffer);
