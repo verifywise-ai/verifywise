@@ -13,6 +13,7 @@ import {
 } from "./risks.enums";
 import { calculateRiskLevel, normalizeCurrentRiskLevel } from "../../utils/riskLevel.utils";
 import { isInvalidDateCell, riskCalendarDateFromCell } from "../../utils/riskCalendarDate.utils";
+import logger from "../../utils/logger/fileLogger";
 
 /**
  * Server-side risk-import extension logic. Two entry points:
@@ -21,8 +22,33 @@ import { isInvalidDateCell, riskCalendarDateFromCell } from "../../utils/riskCal
  *   - importRisks() → validates every row against the same enums and
  *     bulk-inserts into verifywise.risks. Errors are collected and
  *     returned as an atomic batch — the migration file's contract is
- *     that a batch with any validation error inserts nothing.
+ *     that a batch with any validation error inserts nothing. Each insert
+ *     runs inside its own savepoint, so a row the database refuses does not
+ *     abort the rows after it: every row's error is reported, then the whole
+ *     import is rolled back.
  */
+
+/** Most rows one import may hold (the same cap as the framework import). */
+export const MAX_IMPORT_ROWS = 5000;
+
+/** Hidden sheet in the template that holds the user list for the owner and approver dropdowns. */
+export const LISTS_SHEET_NAME = "Lists";
+
+/**
+ * Messages the import adds to its result. The controller translates these
+ * (and only these) through this map, so the i18n scanner sees each one.
+ */
+export const RISK_IMPORT_MESSAGES = {
+  tooManyRows:
+    "This file has more than 5000 rows. Split it into smaller files and import each one.",
+  enumValue: "A value in this row is not one of the allowed options.",
+  requiredValue: "A required value in this row is empty.",
+  valueTooLong: "A value in this row is too long.",
+  invalidDate: "A date in this row is not valid. Use YYYY-MM-DD.",
+  rowNotSaved: "This row could not be saved.",
+} as const;
+
+export type RiskImportMessage = keyof typeof RISK_IMPORT_MESSAGES;
 
 // ---------------------------------------------------------------------------
 // EXCEL TEMPLATE
@@ -58,6 +84,15 @@ export async function buildExcelTemplate(
 
   const users = await fetchOrgUsers(organizationId);
   const userOptions = users.map((u) => `${u.name} ${u.surname} - ${u.email} (ID: ${u.id})`);
+
+  // An inline list validation holds at most 255 characters, which a handful
+  // of users already exceeds. The user names go on a hidden sheet and the
+  // owner and approver dropdowns point at that range instead.
+  const listsSheet = workbook.addWorksheet(LISTS_SHEET_NAME, { state: "veryHidden" });
+  userOptions.forEach((option, i) => {
+    listsSheet.getCell(i + 1, 1).value = option;
+  });
+  const userListRange = `${LISTS_SHEET_NAME}!$A$1:$A$${userOptions.length}`;
 
   const headers = [
     { key: "risk_name", header: "Risk Name *", width: 30 },
@@ -119,12 +154,13 @@ export async function buildExcelTemplate(
 
   const DATA_ROWS_END = 1000;
 
-  const addDropdown = (colIndex: number, values: readonly string[]) => {
+  const addDropdown = (colIndex: number, values: readonly string[] | { range: string }) => {
+    const formula = "range" in values ? values.range : `"${values.join(",")}"`;
     for (let rowNum = 2; rowNum <= DATA_ROWS_END; rowNum++) {
       worksheet.getCell(rowNum, colIndex).dataValidation = {
         type: "list",
         allowBlank: true,
-        formulae: [`"${values.join(",")}"`],
+        formulae: [formula],
         showErrorMessage: true,
         errorStyle: "error",
         errorTitle: "Invalid Value",
@@ -167,8 +203,8 @@ export async function buildExcelTemplate(
   };
 
   if (userOptions.length > 0) {
-    addDropdown(2, userOptions); // risk_owner
-    addDropdown(18, userOptions); // risk_approval
+    addDropdown(2, { range: userListRange }); // risk_owner
+    addDropdown(18, { range: userListRange }); // risk_approval
   }
   addDropdown(3, AI_LIFECYCLE_PHASES);
   addMultiSelectDropdown(5, RISK_CATEGORY_VALUES);
@@ -377,10 +413,48 @@ export function parseRow(row: RiskImportRow): Record<string, unknown> {
   };
 }
 
+const ROW_SAVEPOINT = "risk_import_row";
+
+/** PostgreSQL error codes a row insert can hit, mapped to the message the user sees. */
+const DB_ERROR_MESSAGES: Record<string, RiskImportMessage> = {
+  "22P02": "enumValue", // invalid_text_representation (bad enum label)
+  "23502": "requiredValue", // not_null_violation
+  "22001": "valueTooLong", // string_data_right_truncation
+  "22007": "invalidDate", // invalid_datetime_format
+  "22008": "invalidDate", // datetime_field_overflow
+};
+
+/**
+ * The row error for a refused insert. Never carries the database's own text
+ * (it can name tables, constraints and values); the caller logs that.
+ */
+export function rowInsertError(row: number, err: unknown): RiskImportError {
+  const original = (err as { original?: { code?: unknown; column?: unknown } } | null)?.original;
+  const code = typeof original?.code === "string" ? original.code : undefined;
+  const key = code ? DB_ERROR_MESSAGES[code] : undefined;
+  const column =
+    key === "requiredValue" && typeof original?.column === "string" ? original.column : undefined;
+  return {
+    row,
+    field: column ?? "general",
+    message: RISK_IMPORT_MESSAGES[key ?? "rowNotSaved"],
+  };
+}
+
 export async function importRisks(
   rows: RiskImportRow[],
   organizationId: number,
 ): Promise<RiskImportResult> {
+  if (rows.length > MAX_IMPORT_ROWS) {
+    return {
+      success: false,
+      imported: 0,
+      failed: rows.length,
+      errors: [{ row: 0, field: "file", message: RISK_IMPORT_MESSAGES.tooManyRows }],
+      importedAt: new Date().toISOString(),
+    };
+  }
+
   const errors: RiskImportError[] = [];
 
   rows.forEach((row, i) => {
@@ -431,6 +505,10 @@ export async function importRisks(
     for (let i = 0; i < rows.length; i++) {
       const data = parseRow(rows[i]);
       const rowIndex = i + 2;
+      // A failed statement aborts the whole transaction; rolling back to the
+      // row's savepoint keeps it usable, so the later rows still report
+      // their own result instead of "current transaction is aborted".
+      await sequelize.query(`SAVEPOINT ${ROW_SAVEPOINT};`, { transaction });
       try {
         await sequelize.query(
           `INSERT INTO risks (
@@ -464,13 +542,12 @@ export async function importRisks(
             transaction,
           },
         );
+        await sequelize.query(`RELEASE SAVEPOINT ${ROW_SAVEPOINT};`, { transaction });
         imported++;
-      } catch (err: any) {
-        insertErrors.push({
-          row: rowIndex,
-          field: "general",
-          message: `Failed to import: ${err.message}`,
-        });
+      } catch (err) {
+        await sequelize.query(`ROLLBACK TO SAVEPOINT ${ROW_SAVEPOINT};`, { transaction });
+        logger.warn(`[risk-import] Row ${rowIndex} could not be saved`, err);
+        insertErrors.push(rowInsertError(rowIndex, err));
       }
     }
 

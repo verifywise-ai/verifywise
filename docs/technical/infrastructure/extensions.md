@@ -129,8 +129,9 @@ enabled the extension. All are tenant-scoped by `organization_id`.
 | `getRuntimeConfiguration(key, orgId)` | Full config with secrets **decrypted**, for server-side use only. Returns `{}` if there is no enablement row. |
 
 Every response body (`assemble`: list, get, enable, disable and update) contains
-the catalog fields, `configFields`, `enabled`, the redacted `configuration` and
-the `enablement` row. The `enablement` row is sent without its `configuration`
+the catalog fields, `configFields`, `enabled`, the redacted `configuration`,
+`secretsSet` (the keys of the secret fields that hold a stored value, never the
+value; `[]` when nothing is stored) and the `enablement` row. The `enablement` row is sent without its `configuration`
 (`publicEnablement`; `ExtensionEnablementModel.toJSON` leaves it out too),
 because that column holds the ciphertext of every secret field. The redacted
 top-level `configuration` is the only copy a client gets.
@@ -143,13 +144,21 @@ top-level `configuration` is the only copy a client gets.
   decrypt). With `NODE_ENV=production` the backend and the worker refuse to
   start when `ENCRYPTION_KEY` is unset or blank (`resolveEncryptionKey`; see
   [Configuration reference](../../deployment/CONFIGURATION_REFERENCE.md#data-encryption)).
-- If a secret field is missing or blank in the payload, the stored ciphertext
-  carries over. This is how the UI's "Leave blank to keep the existing value"
-  works. Non-secret fields that are missing from the payload are dropped,
-  because the caller sends the full non-secret shape each time.
-- `validate` enforces `is_required` (a required secret passes if a previous
-  value exists), type checks per `field_type`, `options` membership and the
-  `validation` rules. It rejects unknown keys.
+- A save (enable or update) is merged onto the stored configuration, so the
+  caller sends only the fields it changed:
+
+  | Value in the payload | Non-secret field | Secret field |
+  |----------------------|------------------|--------------|
+  | absent | stored value kept | stored ciphertext kept |
+  | `""` | cleared | stored ciphertext kept ("Leave blank to keep the existing value") |
+  | `null` | cleared | cleared |
+  | anything else | replaced | replaced, encrypted |
+
+  Re-enabling with `{}` therefore keeps the whole stored configuration.
+- `validate` runs on the merged result: `is_required` (so clearing a required
+  field, secret or not, is a 400 "Field '<key>' is required"), type checks per
+  `field_type`, `options` membership and the `validation` rules. It rejects
+  unknown keys.
 - On read, `redactSecrets` removes secret keys entirely. Masked values are not
   returned either.
 - Per-extension code must read config through `getRuntimeConfiguration`. Never
@@ -186,6 +195,9 @@ submitted:
   switching to token auth, or an `api_token` after switching to none or basic),
   the stale secret is dropped from the saved configuration instead.
 
+On a save the compared values are the ones the save would store, so a field
+left out of a partial payload keeps its stored value and is no change. A secret
+cleared with `null` in the same save is not carried over and does not block it.
 URLs are compared after `assertSafeOutboundUrl` normalization and other values
 are trimmed, so a trailing slash or whitespace is not a change. When none of
 the fields changed, the stored secret carries over as before.
@@ -306,7 +318,7 @@ to a runner that returns `{ success, message, testedAt }`:
 |-----|--------|
 | `mlflow` | Stored runtime config overlaid with the submitted config (`overlayOnStored`, which applies the [stored-secret rule](#stored-secrets-and-changed-addresses)) → `testConnection` in `extensions/mlflow/mlflow.service.ts`. Reports "The server answered HTTP <status>" or "Could not reach the server". |
 | `azure-ai-foundry` | Same pattern → `testConnection` in `extensions/azure-ai-foundry/azureAiFoundry.service.ts` |
-| `jira-assets` | Submitted config. If no `api_token` is submitted, the stored token comes from `jira_assets_config`, unless the base URL, workspace, email or deployment type changed (then a failed result asks for the token again). Then `clientFromConfig(...).testConnection()`. A refused base URL is a failed result, not a 500, and an error answer reads "Jira returned HTTP <status>" without Jira's reply (its start goes to the server log). |
+| `jira-assets` | Submitted config. If no `api_token` is submitted, the stored token comes from `jira_assets_config`, unless the base URL, workspace, email or deployment type changed (then a failed result asks for the token again). Then `clientFromConfig(...).testConnection()`. A refused base URL is a failed result, not a 500, and so is a missing field with nothing stored to fill it ("Save the Jira Assets connection first.", no field names or raw error). A database or decryption fault is still a 500. An error answer reads "Jira returned HTTP <status>" without Jira's reply (its start goes to the server log). |
 | `jira-incidents` | `testConnection(orgId, submitted)` in `extensions/jira-incidents/jiraIncidents.config.ts`: submitted fields overlaid on `jira_incidents_config`; a changed site URL or email needs a submitted token; checks `/myself`, then the three project permissions when a project is known. Never throws. |
 
 Any other key returns **200** with `success: false` and "Test connection is not
@@ -386,7 +398,7 @@ enabled can call the route.
 | `/api/extensions/mlflow` | `GET /models`, `GET /models/:modelId`, `POST /sync` | `model.edit` (Admin, Editor) on `POST /sync`: it writes model records and calls the server with the stored secret. The model reads are open. |
 | `/api/extensions/azure-ai-foundry` | `GET /models`, `GET /models/:deploymentId`, `POST /sync`, `GET /discover` | `model.edit` (Admin, Editor) on `POST /sync` and `GET /discover`. The model reads are open. `GET /discover` (agent discovery) has the same limits as sync and test connection: 30 seconds per request, 110 seconds overall. On failure it returns no agents and logs the reason. |
 | `/api/extensions/model-lifecycle` | `GET /config`; phases CRUD and reorder; items CRUD and reorder; `GET /models/:id/lifecycle`, `/progress`; item values, files, people and approvals under `/models/:id/lifecycle/items/:itemId/...` `POST .../items/:itemId/files` links only a file of the caller's organization (404 otherwise). | `extension.admin` (Admin) on phase and item create, update, delete and reorder. `model.edit` (Admin, Editor) on value, file, people and approver writes. `PUT .../approvals/:userId` is open to any role but only for the caller's own row (403 otherwise, Admins included; no override). Every `/models/:id/lifecycle...` route answers 404 for a model outside the caller's organization, and item routes 404 for an item outside it; people and approvers must be members of the organization (400). `DELETE .../items/:itemId/files/:fileId` only unlinks: the `files` row stays in the File Manager. Deleting a phase or item also keeps its files. 404 when the item has no link to the file, 400 when an id is not a positive integer up to 2147483647. |
-| `/api/extensions/risk-import` | `GET /template`, `POST /import` | Admin, Editor |
+| `/api/extensions/risk-import` | `GET /template`, `POST /import` | Admin, Editor. `POST /import` takes at most 5000 rows (`MAX_IMPORT_ROWS`; more answers 400 with one row-0 error before anything is checked or written) and is all-or-nothing: any validation or insert error answers 400 with every row's error under `data.errors` and nothing is saved. Each insert runs in its own savepoint, so a row the database refuses does not abort the rows after it. A refused insert reads a short sentence (`RISK_IMPORT_MESSAGES`: not an allowed option, required value empty, value too long, date not valid, or "This row could not be saved."), translated by the controller; the database's own text goes to the server log only. The template lists the organization's users on a very hidden `Lists` sheet and the Risk Owner and Risk Approval dropdowns point at that range, so the 255-character limit of an inline list never applies. |
 | `/api/extensions/jira-assets` | `GET/POST /config`, `PATCH /config/sync`, `PATCH /config/selection`, `GET /vw-attributes`, schema and object-type discovery (`GET /object-types/:id/objects?startAt=` is one page of up to 1000 for the import picker), `POST /import`, `POST /sync` (202, queued for the worker), `GET /sync/status`, `GET /sync/history`, `GET /use-cases`, `POST /use-cases/remove-missing`, `GET/DELETE /use-cases/:id`, `GET /projects/:projectId/custom-frameworks-progress` | `extension.admin` (Admin) on `POST /config`, `PATCH /config/sync`, `PATCH /config/selection`, `GET /schemas`, `GET /schemas/:schemaId/object-types`, `GET /object-types/:objectTypeId/objects`, `POST /import`, `POST /sync`, `POST /use-cases/remove-missing`, `DELETE /use-cases/:id`. `GET /object-types/:objectTypeId/attributes` stays open to members (the use case Jira settings tab reads it), but only for the organization's configured object type or the object type of one of its imported use cases; any other id is 403 "Access denied" (Admins read any). Schema, object type and object ids must be numeric (`/^\d{1,18}$/`) in paths and in the `selected_schema_id` / `selected_object_type_id` that `POST /config` and `PATCH /config/selection` save (empty clears); anything else is 400 "{field} must be a numeric Jira id" before Jira is called or anything is saved. `GET /use-cases` lists only the use cases in the caller's use case list (`projectVisibilitySql`; Admins see all). `GET /use-cases/:id` and `GET /projects/:projectId/custom-frameworks-progress` go through `requireProjectAccess` (read rule, the same as the use case's own page, so a task assignee or workflow approver can open one they do not see in the list): 403 "Access denied" without access, 404 when missing or in another organization. Errors: 400 bad input, 404 not configured, 409 a run is live or a sync job is waiting, 502 Jira or network failure (reason in `error`), 503 the job queue did not answer. |
 | `/api/extensions/jira-incidents` | `GET/PUT /config`, `GET /jira/projects`, `GET /jira/issue-types?project=`, `GET /jira/statuses?project=&issue_type=` (with `default_map_in` / `default_map_out`), `GET /jira/priorities` (with `default_severity_map`), `GET /jira/labels?query=`, `GET /events?limit=` (1–200, default 50), `GET /links?incident_ids=` (at most 500) | `extension.admin` (Admin) on every route, reads included, **except `GET /links`**: it is registered before the extension gate, open to any member, and returns `[]` when the extension is disabled. Errors: 400 bad input or "Connect to Jira first" on the pickers, 502 Jira's answer (401 from Jira included) or a network failure. |
 | `/api/extensions/dataset-bulk-upload` | `POST /upload` (multipart, one file per request, 30 MB, CSV/XLS/XLSX; 413/415 on error; 400 when the metadata links a model or use case outside the organization, checked in `dataset.utils.ts` for the core dataset routes too) | Admin, Editor |
