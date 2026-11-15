@@ -58,7 +58,6 @@ export function useBulkUpdatePolicies(options: UseBulkUpdatePoliciesOptions = {}
       if (context?.queryKey) {
         queryClient.invalidateQueries({ queryKey: context.queryKey });
       }
-      queryClient.invalidateQueries({ queryKey: policyQueryKeys.folderCounts() });
     },
     onSuccess: (_data, payload) => options.onSuccess?.(payload),
   });

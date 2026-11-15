@@ -75,6 +75,24 @@ describe("useCreatePolicy", () => {
     expect(mockCreatePolicy).toHaveBeenCalledWith(input);
     expect(returned).toEqual(created);
   });
+
+  it("refreshes the policy lists but not the folder counts", async () => {
+    mockCreatePolicy.mockResolvedValue(createPolicy(11));
+    const { queryClient, wrapper } = createWrapper();
+    const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+    const { result } = renderHook(() => useCreatePolicy(), { wrapper });
+
+    await act(async () => {
+      await result.current.mutateAsync({ title: "P", status: "Draft", content_html: "" });
+    });
+
+    // A new policy is in no folder, so the folder counts can't change.
+    const keys = invalidateSpy.mock.calls.map(
+      (call) => (call[0] as { queryKey: unknown[] }).queryKey,
+    );
+    expect(keys).toContainEqual([...policyQueryKeys.lists()]);
+    expect(keys).not.toContainEqual([...policyQueryKeys.folderCounts()]);
+  });
 });
 
 describe("useUpdatePolicy", () => {

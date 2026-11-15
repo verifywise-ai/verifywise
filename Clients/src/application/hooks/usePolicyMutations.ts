@@ -14,7 +14,6 @@ export function useCreatePolicy() {
     mutationFn: (input: PolicyInput) => createPolicy(input),
     onSettled: () => {
       queryClient.invalidateQueries({ queryKey: policyQueryKeys.lists() });
-      queryClient.invalidateQueries({ queryKey: policyQueryKeys.folderCounts() });
     },
   });
 }

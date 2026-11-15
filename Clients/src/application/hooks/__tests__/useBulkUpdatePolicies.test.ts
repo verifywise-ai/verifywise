@@ -57,6 +57,26 @@ describe("useBulkUpdatePolicies", () => {
     expect(mockBulkUpdatePolicies).toHaveBeenCalledWith({ ids: [1, 2], action: "archive" });
   });
 
+  it.each(["archive", "set_reviewer", "set_tags"] as const)(
+    "does not refresh the folder counts after %s",
+    async (action) => {
+      mockBulkUpdatePolicies.mockResolvedValue({ updated: 1, action });
+      const { queryClient, wrapper } = createWrapper();
+      const invalidateSpy = vi.spyOn(queryClient, "invalidateQueries");
+      const { result } = renderHook(() => useBulkUpdatePolicies(), { wrapper });
+
+      await act(async () => {
+        await result.current.mutateAsync({ ids: [1], action });
+      });
+
+      // Bulk actions never change folder mappings.
+      const keys = invalidateSpy.mock.calls.map(
+        (call) => (call[0] as { queryKey: unknown[] }).queryKey,
+      );
+      expect(keys).not.toContainEqual([...policyQueryKeys.folderCounts()]);
+    },
+  );
+
   it("should call onSuccess callback when mutation succeeds", async () => {
     const onSuccess = vi.fn();
     mockBulkUpdatePolicies.mockResolvedValue({ updated: 1, action: "archive" });
