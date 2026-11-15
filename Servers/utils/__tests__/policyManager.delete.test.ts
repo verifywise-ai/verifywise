@@ -17,12 +17,17 @@ jest.mock("../customField.utils", () => ({
   deleteAllCustomFieldValuesForEntityQuery: jest.fn(),
   fetchCustomFieldsForEntities: jest.fn(),
 }));
+jest.mock("../notification.utils", () => ({
+  deleteNotificationsByEntityQuery: jest.fn(),
+}));
 
 import { sequelize } from "../../database/db";
-import { deletePolicyByIdQuery } from "../policyManager.utils";
+import { deletePolicyByIdQuery, deletePolicyLeftoversQuery } from "../policyManager.utils";
 import { runInSavepoint } from "../../config/changeHistory.config";
 import { recordEntityDeletion } from "../changeHistory.base.utils";
 import { deleteAllCustomFieldValuesForEntityQuery } from "../customField.utils";
+import { deleteNotificationsByEntityQuery } from "../notification.utils";
+import { NotificationEntityType } from "../../domain.layer/interfaces/i.notification";
 
 const mockQuery = sequelize.query as jest.MockedFunction<typeof sequelize.query>;
 const tx = { id: "tx" } as any;
@@ -40,6 +45,7 @@ describe("deletePolicyByIdQuery", () => {
     expect(issued.some((sql) => sql.trim().startsWith("DELETE"))).toBe(false);
     expect(recordEntityDeletion).not.toHaveBeenCalled();
     expect(deleteAllCustomFieldValuesForEntityQuery).not.toHaveBeenCalled();
+    expect(deleteNotificationsByEntityQuery).not.toHaveBeenCalled();
   });
 
   it("removes the leftovers org-scoped on the transaction, then records the deletion", async () => {
@@ -62,13 +68,23 @@ describe("deletePolicyByIdQuery", () => {
     for (const call of deletes) {
       expect(String(call[0])).toContain("organization_id = :organizationId");
       expect((call[1] as any).transaction).toBe(tx);
-      expect((call[1] as any).replacements).toEqual({ organizationId: 4, id: 10 });
     }
+    for (const call of deletes.slice(0, 4)) {
+      expect((call[1] as any).replacements).toEqual({ organizationId: 4, ids: [10] });
+    }
+    expect((deletes[4][1] as any).replacements).toEqual({ organizationId: 4, id: 10 });
     expect(String(deletes[2][0])).toContain("entity_type = 'policy'");
     expect(String(deletes[3][0])).toContain("resource_type = 'policy'");
     expect(tables).not.toContain("policy_change_history");
 
     expect(deleteAllCustomFieldValuesForEntityQuery).toHaveBeenCalledWith("policy", 10, 4, tx);
+    // The policy's in-app notifications go too, org-scoped, in the same transaction.
+    expect(deleteNotificationsByEntityQuery).toHaveBeenCalledWith(
+      NotificationEntityType.POLICY,
+      10,
+      4,
+      tx,
+    );
     expect(recordEntityDeletion).toHaveBeenCalledWith("policy", 10, 7, 4, tx);
   });
 
@@ -89,5 +105,47 @@ describe("deletePolicyByIdQuery", () => {
     policyRowOnly();
     expect(await deletePolicyByIdQuery(4, 10, null, tx)).toBe(true);
     expect(recordEntityDeletion).not.toHaveBeenCalled();
+  });
+});
+
+describe("deletePolicyLeftoversQuery", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockQuery.mockReset();
+    mockQuery.mockResolvedValue([[], 0] as any);
+  });
+
+  it("does nothing for an empty list", async () => {
+    await deletePolicyLeftoversQuery(4, [], tx);
+    expect(mockQuery).not.toHaveBeenCalled();
+    expect(deleteNotificationsByEntityQuery).not.toHaveBeenCalled();
+    expect(deleteAllCustomFieldValuesForEntityQuery).not.toHaveBeenCalled();
+  });
+
+  it("removes every listed policy's leftovers, org-scoped, on the transaction", async () => {
+    await deletePolicyLeftoversQuery(4, [10, 11], tx);
+
+    const tables = mockQuery.mock.calls.map((c) => /DELETE FROM (\w+)/.exec(String(c[0]))![1]);
+    expect(tables).toEqual([
+      "policy_folder_mappings",
+      "ce_marking_policies",
+      "task_entity_links",
+      "share_links",
+    ]);
+    for (const call of mockQuery.mock.calls) {
+      expect(String(call[0])).toContain("organization_id = :organizationId");
+      expect(String(call[0])).toContain("IN (:ids)");
+      expect((call[1] as any).replacements).toEqual({ organizationId: 4, ids: [10, 11] });
+      expect((call[1] as any).transaction).toBe(tx);
+    }
+    for (const id of [10, 11]) {
+      expect(deleteNotificationsByEntityQuery).toHaveBeenCalledWith(
+        NotificationEntityType.POLICY,
+        id,
+        4,
+        tx,
+      );
+      expect(deleteAllCustomFieldValuesForEntityQuery).toHaveBeenCalledWith("policy", id, 4, tx);
+    }
   });
 });

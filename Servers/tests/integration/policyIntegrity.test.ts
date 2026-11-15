@@ -5,9 +5,10 @@ jest.setTimeout(60000);
  * and the real middleware chain.
  *
  * Covers: deleting a policy removes the rows that point at it without a
- * foreign key (folder mapping, CE marking link, task link, share link) and
- * writes a deletion history row as the acting user, leaving another
- * organization's rows alone; bulk archive and bulk set tags write one history
+ * foreign key (folder mapping, CE marking link, task link, share link, in-app
+ * notification) and writes a deletion history row as the acting user, leaving
+ * another organization's rows alone; "Delete demo data" removes the same rows
+ * for every demo policy; bulk archive and bulk set tags write one history
  * row per changed policy as the acting user; the folder counts endpoint
  * returns only the caller's organization.
  */
@@ -17,6 +18,7 @@ import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
 import { createTestApp, testRequest } from "./setup";
 import { cleanupDatabase, createTestOrganization, createTestUser } from "./helpers";
+import { deleteMockData } from "../../infrastructure.layer/driver/autoDriver.driver";
 
 const ADMIN = 1;
 
@@ -97,8 +99,27 @@ async function leftovers(orgId: number, policyId: number): Promise<Record<string
       `SELECT COUNT(*)::int AS count FROM share_links
        WHERE organization_id = :orgId AND resource_type = 'policy' AND resource_id = :policyId`,
     ),
+    notifications: await count(
+      `SELECT COUNT(*)::int AS count FROM notifications
+       WHERE organization_id = :orgId AND entity_type = 'policy' AND entity_id = :policyId`,
+    ),
   };
 }
+
+const ONE_OF_EACH = {
+  folderMappings: 1,
+  ceMarkingLinks: 1,
+  taskLinks: 1,
+  shareLinks: 1,
+  notifications: 1,
+};
+const NONE = {
+  folderMappings: 0,
+  ceMarkingLinks: 0,
+  taskLinks: 0,
+  shareLinks: 0,
+  notifications: 0,
+};
 
 /** One of each leftover row for the policy, in the organization. */
 async function seedLeftovers(org: OrgSeed, policyId: number): Promise<void> {
@@ -146,6 +167,14 @@ async function seedLeftovers(org: OrgSeed, policyId: number): Promise<void> {
       },
     },
   );
+
+  await sequelize.query(
+    `INSERT INTO notifications
+       (organization_id, user_id, type, title, message, entity_type, entity_id, entity_name)
+     VALUES (:orgId, :userId, 'review_requested', 'Review requested', 'Review the policy',
+             'policy', :policyId, 'Policy')`,
+    { replacements: { orgId: org.orgId, userId: org.adminId, policyId } },
+  );
 }
 
 interface HistoryRow {
@@ -181,33 +210,49 @@ describe("Policy integrity", () => {
       // Another organization's rows that happen to use the same policy id.
       await seedLeftovers(other, policyId);
 
-      expect(await leftovers(org.orgId, policyId)).toEqual({
-        folderMappings: 1,
-        ceMarkingLinks: 1,
-        taskLinks: 1,
-        shareLinks: 1,
-      });
+      expect(await leftovers(org.orgId, policyId)).toEqual(ONE_OF_EACH);
 
       const deleted = await org.admin.delete(`/api/policies/${policyId}`);
       expect(deleted.status).toBe(202);
 
-      expect(await leftovers(org.orgId, policyId)).toEqual({
-        folderMappings: 0,
-        ceMarkingLinks: 0,
-        taskLinks: 0,
-        shareLinks: 0,
-      });
-      expect(await leftovers(other.orgId, policyId)).toEqual({
-        folderMappings: 1,
-        ceMarkingLinks: 1,
-        taskLinks: 1,
-        shareLinks: 1,
-      });
+      expect(await leftovers(org.orgId, policyId)).toEqual(NONE);
+      expect(await leftovers(other.orgId, policyId)).toEqual(ONE_OF_EACH);
 
       const rows = await history(policyId, "action = 'deleted'");
       expect(rows).toHaveLength(1);
       expect(rows[0].changed_by_user_id).toBe(org.adminId);
       expect(rows[0].changed_by_system).toBe(false);
+    });
+  });
+
+  describe("deleting demo data", () => {
+    it("removes every demo policy's leftover rows with the policies", async () => {
+      const org = await seedOrg();
+      const other = await seedOrg();
+      const demoA = await createPolicy(org.admin);
+      const demoB = await createPolicy(org.admin);
+      const kept = await createPolicy(org.admin);
+      await sequelize.query(
+        `UPDATE policy_manager SET is_demo = true
+         WHERE organization_id = :orgId AND id IN (:ids)`,
+        { replacements: { orgId: org.orgId, ids: [demoA, demoB] } },
+      );
+      for (const id of [demoA, demoB, kept]) await seedLeftovers(org, id);
+      // Another organization's rows that happen to use a demo policy's id.
+      await seedLeftovers(other, demoA);
+
+      await deleteMockData(org.orgId);
+
+      const [remaining] = await sequelize.query<{ ids: number[] }>(
+        `SELECT COALESCE(ARRAY_AGG(id ORDER BY id), ARRAY[]::int[]) AS ids
+         FROM policy_manager WHERE organization_id = :orgId`,
+        { replacements: { orgId: org.orgId }, type: QueryTypes.SELECT },
+      );
+      expect(remaining.ids).toEqual([kept]);
+      expect(await leftovers(org.orgId, demoA)).toEqual(NONE);
+      expect(await leftovers(org.orgId, demoB)).toEqual(NONE);
+      expect(await leftovers(org.orgId, kept)).toEqual(ONE_OF_EACH);
+      expect(await leftovers(other.orgId, demoA)).toEqual(ONE_OF_EACH);
     });
   });
 

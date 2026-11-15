@@ -20,6 +20,8 @@ import logger from "./logger/fileLogger";
 import { recordEntityDeletion, recordUpdateChanges } from "./changeHistory.base.utils";
 import { recordPolicyStatusChange } from "./policyApprovalDecision.utils";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
+import { deleteNotificationsByEntityQuery } from "./notification.utils";
+import { NotificationEntityType } from "../domain.layer/interfaces/i.notification";
 
 /**
  * Tenant guard for policy owners and reviewers: every id must be a member of
@@ -544,6 +546,40 @@ export const updatePolicyByIdQuery = async (
   return updatedPolicy;
 };
 
+/**
+ * Removes the rows that point at policies without a foreign key, which would
+ * otherwise survive the policies' delete: custom field values, folder
+ * mappings, CE marking links, task links, share links and in-app
+ * notifications. Run it in the delete's transaction, before the policies go.
+ * policy_change_history is kept on purpose. Shared by the single policy delete
+ * and the demo data delete.
+ */
+export const deletePolicyLeftoversQuery = async (
+  organizationId: number,
+  policyIds: number[],
+  transaction: Transaction,
+): Promise<void> => {
+  if (policyIds.length === 0) return;
+  for (const id of policyIds) {
+    await deleteAllCustomFieldValuesForEntityQuery("policy", id, organizationId, transaction);
+    await deleteNotificationsByEntityQuery(
+      NotificationEntityType.POLICY,
+      id,
+      organizationId,
+      transaction,
+    );
+  }
+  const leftovers = [
+    `DELETE FROM policy_folder_mappings WHERE organization_id = :organizationId AND policy_id IN (:ids)`,
+    `DELETE FROM ce_marking_policies WHERE organization_id = :organizationId AND policy_id IN (:ids)`,
+    `DELETE FROM task_entity_links WHERE organization_id = :organizationId AND entity_type = 'policy' AND entity_id IN (:ids)`,
+    `DELETE FROM share_links WHERE organization_id = :organizationId AND resource_type = 'policy' AND resource_id IN (:ids)`,
+  ];
+  for (const sql of leftovers) {
+    await sequelize.query(sql, { replacements: { organizationId, ids: policyIds }, transaction });
+  }
+};
+
 export const deletePolicyByIdQuery = async (
   organizationId: number,
   id: number,
@@ -559,19 +595,7 @@ export const deletePolicyByIdQuery = async (
 
   const deletedPolicyData = policyToDelete[0] as any;
 
-  await deleteAllCustomFieldValuesForEntityQuery("policy", id, organizationId, transaction);
-
-  // Rows that point at the policy without a foreign key survive the delete, so
-  // they go in the same transaction. policy_change_history is kept on purpose.
-  const leftovers = [
-    `DELETE FROM policy_folder_mappings WHERE organization_id = :organizationId AND policy_id = :id`,
-    `DELETE FROM ce_marking_policies WHERE organization_id = :organizationId AND policy_id = :id`,
-    `DELETE FROM task_entity_links WHERE organization_id = :organizationId AND entity_type = 'policy' AND entity_id = :id`,
-    `DELETE FROM share_links WHERE organization_id = :organizationId AND resource_type = 'policy' AND resource_id = :id`,
-  ];
-  for (const sql of leftovers) {
-    await sequelize.query(sql, { replacements: { organizationId, id }, transaction });
-  }
+  await deletePolicyLeftoversQuery(organizationId, [id], transaction);
 
   // Delete the policy (CASCADE will handle mapping table deletion)
   await sequelize.query(
