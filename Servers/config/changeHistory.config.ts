@@ -200,7 +200,7 @@ const stripTags = (html: string): string => {
 
 /**
  * A readable one-line plain-text excerpt of an HTML value: tags stripped,
- * then basic entities decoded (&amp; last, so nothing is decoded twice),
+ * then basic entities decoded in one pass (so nothing is decoded twice),
  * whitespace collapsed, cut to HISTORY_EXCERPT_LENGTH characters with a
  * trailing ellipsis when cut. The excerpt is text, not HTML: an encoded
  * "&lt;" in the policy becomes "<" and must be shown as text. An empty
@@ -208,8 +208,7 @@ const stripTags = (html: string): string => {
  */
 export const htmlExcerpt = (value: unknown): string => {
   const text = stripTags(String(value ?? ""))
-    .replace(/&(?:nbsp|lt|gt|quot|apos|#39);/g, (m) => BASIC_ENTITIES[m])
-    .replace(/&amp;/g, "&")
+    .replace(/&(?:nbsp|amp|lt|gt|quot|apos|#39);/g, (m) => BASIC_ENTITIES[m])
     .replace(/\s+/g, " ")
     .trim();
   if (!text) return "-";
