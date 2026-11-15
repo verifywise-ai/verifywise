@@ -34,9 +34,9 @@ import {
 import { SlackNotificationRoutingType } from "../domain.layer/enums/slack.enum";
 
 import { translateError } from "../utils/i18n.utils";
+import { MAX_POSTGRES_ID } from "../utils/validations/aiAppBulkValidation.utils";
 const fileName = "slackWebhook.ctrl.ts";
 
-const MAX_INTEGER = 2147483647;
 const ROUTING_TYPES: readonly string[] = Object.values(SlackNotificationRoutingType);
 const UPDATABLE_FIELDS = new Set(["routing_type", "is_active"]);
 
@@ -45,7 +45,7 @@ function parseConnectionId(req: Request): number | null {
   const raw = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   if (typeof raw !== "string" || !/^\d+$/.test(raw)) return null;
   const id = Number(raw);
-  return id >= 1 && id <= MAX_INTEGER ? id : null;
+  return id >= 1 && id <= MAX_POSTGRES_ID ? id : null;
 }
 
 type SlackWebhookUpdate = { routing_type?: SlackNotificationRoutingType[]; is_active?: boolean };

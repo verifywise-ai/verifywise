@@ -62,11 +62,8 @@ async function checkEnabled(
       return;
     }
 
-    const enablement = await ExtensionEnablementModel.findByExtensionId(
-      extensionId,
-      organizationId,
-    );
-    if (!enablement || !enablement.enabled) {
+    // Same lookup the background senders use, so the gate and they agree.
+    if (!(await isExtensionEnabledForOrganization(extensionKey, organizationId))) {
       res.status(403).json(
         STATUS_CODE[403](
           req.t!("Extension '{key}' is not enabled for this organization", {
