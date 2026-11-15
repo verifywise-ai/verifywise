@@ -182,15 +182,20 @@ const lockPolicyStatusRows = async (
   return rows.map((r) => ({ ...r, id: Number(r.id), has_pending: pending.has(Number(r.id)) }));
 };
 
+type PolicyTextFields = { title?: unknown; content_html?: unknown };
+/** The update with title and content possibly removed (empty ones are not written). */
+type PolicyFieldsWritten<T extends PolicyTextFields> = Omit<T, keyof PolicyTextFields> &
+  Partial<Pick<T, keyof PolicyTextFields>>;
+
 /**
  * The fields of a policy update that are actually written: updatePolicyByIdQuery
  * skips an empty title or content, so neither is a change, for the pending
  * text lock or for the history. Shared by the REST editor and the advisor.
  */
-export const policyFieldsWritten = <T extends { title?: unknown; content_html?: unknown }>(
+export const policyFieldsWritten = <T extends PolicyTextFields>(
   data: T,
-): T => {
-  const written = { ...data };
+): PolicyFieldsWritten<T> => {
+  const written: PolicyFieldsWritten<T> = { ...data };
   if (!written.title) delete written.title;
   if (!written.content_html) delete written.content_html;
   return written;
