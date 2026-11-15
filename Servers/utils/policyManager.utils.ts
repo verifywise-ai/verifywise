@@ -1,10 +1,10 @@
 import { Transaction, QueryTypes } from "sequelize";
 import { sequelize } from "../database/db";
 import { IPolicy, PolicyTag, PolicyTagsSet } from "../domain.layer/interfaces/i.policy";
-import { PolicyManagerModel } from "../domain.layer/models/policy/policy.model";
-import { TenantAutomationActionModel } from "../domain.layer/models/tenantAutomationAction/tenantAutomationAction.model";
-import { replaceTemplateVariables } from "./automation/automation.utils";
-import { enqueueAutomationAction } from "../services/automations/automationProducer";
+import {
+  enqueueAutomationActions,
+  getEventAutomationActionsQuery,
+} from "./automation/automationActions.utils";
 import {
   buildPolicyReplacements,
   buildPolicyUpdateReplacements,
@@ -14,7 +14,11 @@ import {
   fetchCustomFieldsForEntities,
 } from "./customField.utils";
 import { findUsersNotInOrganization, parseReferencedIds } from "./user.utils";
-import { POLICY_REVIEW_DATE_SQL, toReviewDateValue } from "./policyReviewDate.utils";
+import {
+  CLEAR_REVIEW_REMINDERS_ON_DATE_CHANGE_SQL,
+  POLICY_REVIEW_DATE_SQL,
+  toReviewDateValue,
+} from "./policyReviewDate.utils";
 import { runInSavepoint } from "../config/changeHistory.config";
 import logger from "./logger/fileLogger";
 import { recordEntityDeletion, recordUpdateChanges } from "./changeHistory.base.utils";
@@ -112,6 +116,20 @@ export const updatePolicyReviewStatusQuery = async (
   );
 };
 
+/**
+ * A policy row without the review reminder stamps (P-H3). They are the daily
+ * sweep's bookkeeping, not policy data: rows read with `pm.*` or
+ * `RETURNING *` pass through here before they leave for the API or the
+ * advisor, so responses keep their shape.
+ */
+export const omitReminderStamps = <T extends Record<string, any>>(
+  row: T,
+): Omit<T, "due_soon_reminded_at" | "overdue_reminded_at"> => {
+  if (!row || typeof row !== "object") return row;
+  const { due_soon_reminded_at: _dueSoon, overdue_reminded_at: _overdue, ...rest } = row;
+  return rest;
+};
+
 export const getAllPoliciesQuery = async (organizationId: number) => {
   const result = (await sequelize.query(
     `SELECT
@@ -134,33 +152,111 @@ export const getAllPoliciesQuery = async (organizationId: number) => {
 
   const ids = result.map((p) => p.id).filter((id): id is number => typeof id === "number");
   const customFieldsByPolicy = await fetchCustomFieldsForEntities("policy", ids, organizationId);
-  for (const p of result) {
-    p.custom_fields = customFieldsByPolicy.get(p.id) ?? [];
-  }
-  return result;
+  return result.map((p): any => ({
+    ...omitReminderStamps(p),
+    custom_fields: customFieldsByPolicy.get(p.id) ?? [],
+  }));
 };
 
-export const getAllPoliciesDueSoonQuery = async (organizationId: number, daysAhead: number = 7) => {
-  const result = (await sequelize.query(
-    `SELECT
-        pm.*,
-        ${POLICY_REVIEW_DATE_SQL},
-        array_agg(pm_rev.user_id) AS reviewer_ids
-      FROM verifywise.policy_manager AS pm
-      INNER JOIN verifywise.policy_manager__assigned_reviewer_ids AS pm_rev
-        ON pm.id = pm_rev.policy_manager_id
-      WHERE pm.organization_id = :organizationId
-        AND pm.next_review_date IS NOT NULL
-        AND pm.next_review_date <= NOW() + INTERVAL '${daysAhead} days'
-        AND pm.next_review_date >= NOW()
-      GROUP BY pm.id
-      ORDER BY pm.next_review_date ASC;`,
-    {
-      replacements: { organizationId },
-    },
-  )) as [(PolicyManagerModel & { reviewer_ids: number[] })[], number];
+export type PolicyReminderKind = "due_soon" | "overdue";
 
-  return result[0];
+export interface PolicyReminderDue {
+  id: number;
+  title: string;
+  /** The review day, "YYYY-MM-DD". */
+  review_date: string;
+  kind: PolicyReminderKind;
+  recipient_ids: number[];
+}
+
+/** Days before the review date in which a policy counts as due soon. */
+export const POLICY_REVIEW_DUE_SOON_DAYS = 7;
+
+const POLICY_REMINDER_COLUMNS: Record<PolicyReminderKind, string> = {
+  due_soon: "due_soon_reminded_at",
+  overdue: "overdue_reminded_at",
+};
+
+const isOrgMember = (userIdSql: string) => `EXISTS (
+  SELECT 1 FROM organization_members om
+   WHERE om.organization_id = pm.organization_id AND om.user_id = ${userIdSql}
+)`;
+
+/**
+ * Policies of the organization with a review reminder waiting (P-H3, P-M2):
+ * not retired, review day within the next seven days or passed, and that
+ * kind not sent yet. The review date is a calendar day stored at midnight, so
+ * it is compared by day against CURRENT_DATE, as the training sweep does.
+ *
+ * Recipients are the owner and the assigned reviewers who are still members
+ * of the organization; when there is none, the author, if still a member. A
+ * policy nobody can be told about is not returned.
+ */
+export const findPolicyRemindersDueQuery = async (
+  organizationId: number,
+): Promise<PolicyReminderDue[]> => {
+  return (await sequelize.query(
+    `SELECT due.id, due.title, due.review_date, due.kind, due.recipient_ids
+       FROM (
+         SELECT pm.id, pm.title,
+                to_char(pm.next_review_date, 'YYYY-MM-DD') AS review_date,
+                CASE WHEN pm.next_review_date::date < CURRENT_DATE
+                     THEN 'overdue' ELSE 'due_soon' END AS kind,
+                COALESCE(
+                  (SELECT array_agg(assigned.user_id ORDER BY assigned.user_id)
+                     FROM (
+                       SELECT pm.policy_owner_id AS user_id
+                       UNION
+                       SELECT r.user_id
+                         FROM policy_manager__assigned_reviewer_ids r
+                        WHERE r.organization_id = pm.organization_id
+                          AND r.policy_manager_id = pm.id
+                     ) assigned
+                    WHERE ${isOrgMember("assigned.user_id")}),
+                  (SELECT ARRAY[pm.author_id] WHERE ${isOrgMember("pm.author_id")})
+                ) AS recipient_ids
+           FROM policy_manager pm
+          WHERE pm.organization_id = :organizationId
+            AND pm.status IS DISTINCT FROM 'Archived'
+            AND pm.status IS DISTINCT FROM 'Deprecated'
+            AND pm.next_review_date IS NOT NULL
+            AND (
+              (pm.next_review_date::date < CURRENT_DATE AND pm.overdue_reminded_at IS NULL)
+              OR (
+                pm.next_review_date::date BETWEEN CURRENT_DATE
+                  AND CURRENT_DATE + ${POLICY_REVIEW_DUE_SOON_DAYS}
+                AND pm.due_soon_reminded_at IS NULL
+              )
+            )
+       ) due
+      WHERE due.recipient_ids IS NOT NULL
+      ORDER BY due.id`,
+    { replacements: { organizationId }, type: QueryTypes.SELECT },
+  )) as PolicyReminderDue[];
+};
+
+/**
+ * Record that the reminder of this kind went out for the policy. Stamps only
+ * while the row still has the review day the sweep selected (`reviewDate`,
+ * "YYYY-MM-DD") and the kind is unstamped, so a date changed mid-sweep is not
+ * marked reminded. Returns whether the policy was stamped.
+ */
+export const markPolicyReminderSentQuery = async (
+  id: number,
+  kind: PolicyReminderKind,
+  reviewDate: string,
+  organizationId: number,
+): Promise<boolean> => {
+  const column = POLICY_REMINDER_COLUMNS[kind];
+  const [, affected] = (await sequelize.query(
+    `UPDATE policy_manager
+        SET ${column} = now()
+      WHERE organization_id = :organizationId AND id = :id
+        AND next_review_date::date = CAST(:reviewDate AS date)
+        AND ${column} IS NULL`,
+    { replacements: { organizationId, id, reviewDate }, type: QueryTypes.UPDATE },
+  )) as unknown as [unknown, number];
+  return affected > 0;
 };
 
 /**
@@ -208,7 +304,7 @@ export const getPolicyByIdQuery = async (
     },
   )) as any[];
 
-  return result;
+  return result.map((row): any => omitReminderStamps(row));
 };
 
 /** @throws ValidationException (400) for a non-array or an unknown tag, instead of a 500 (P-L6). */
@@ -264,7 +360,7 @@ export const createPolicyQuery = async (
     },
   )) as any;
 
-  const createdPolicy = result[0][0] as any;
+  const createdPolicy = omitReminderStamps(result[0][0]) as any;
   const policyId = createdPolicy.id;
 
   // Insert assigned reviewers into mapping table
@@ -285,54 +381,18 @@ export const createPolicyQuery = async (
   // Add assigned_reviewer_ids to the returned object for consistency
   createdPolicy.assigned_reviewer_ids = reviewerIds;
 
-  const automations = (await sequelize.query(
-    `SELECT
-      pat.key AS trigger_key,
-      paa.key AS action_key,
-      a.id AS automation_id,
-      aa.*
-    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'policy_added' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction },
-  )) as [
-    (TenantAutomationActionModel & {
-      trigger_key: string;
-      action_key: string;
-      automation_id: number;
-    })[],
-    number,
-  ];
-  if (automations[0].length > 0) {
-    const automation = automations[0][0];
-    if (automation["trigger_key"] === "policy_added") {
-      const reviewer_names = await getReviewerNamesQuery(
-        createdPolicy.assigned_reviewer_ids,
-        transaction,
-      );
-
-      const params = automation.params!;
-
-      // Build replacements
-      const replacements = buildPolicyReplacements({
-        ...createdPolicy,
-        reviewer_names: reviewer_names.map((r) => r.full_name).join(", "),
-      });
-
-      // Replace variables in subject and body
-      const processedParams = {
-        ...params,
-        subject: replaceTemplateVariables(params.subject || "", replacements),
-        body: replaceTemplateVariables(params.body || "", replacements),
-        automation_id: automation.automation_id,
-      };
-
-      // Enqueue with processed params
-      await enqueueAutomationAction(automation.action_key, {
-        ...processedParams,
-        organizationId,
-      });
-    } else {
-      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-    }
+  // Every action of every active automation (legacy ones: the first only), after commit (P-L12).
+  const actions = await getEventAutomationActionsQuery(organizationId, "policy_added", transaction);
+  if (actions.length > 0) {
+    const reviewerNames = await getReviewerNamesQuery(
+      createdPolicy.assigned_reviewer_ids,
+      transaction,
+    );
+    const replacements = buildPolicyReplacements({
+      ...createdPolicy,
+      reviewer_names: reviewerNames.map((r) => r.full_name).join(", "),
+    });
+    await enqueueAutomationActions(actions, replacements, organizationId, transaction);
   }
 
   return createdPolicy;
@@ -420,6 +480,9 @@ export const updatePolicyByIdQuery = async (
       if (f === "tags") {
         return "tags = ARRAY(SELECT jsonb_array_elements_text(CAST(:tags AS jsonb)))";
       }
+      if (f === "next_review_date") {
+        return `next_review_date = :next_review_date, ${CLEAR_REVIEW_REMINDERS_ON_DATE_CHANGE_SQL}`;
+      }
       return `${f} = :${f}`;
     })
     .join(", ");
@@ -494,54 +557,22 @@ export const updatePolicyByIdQuery = async (
     throw new Error("Policy not found after update");
   }
   const updatedPolicy = updatedPolicyResult[0];
-  const automations = (await sequelize.query(
-    `SELECT
-      pat.key AS trigger_key,
-      paa.key AS action_key,
-      a.id AS automation_id,
-      aa.*
-    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'policy_updated' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction },
-  )) as [
-    (TenantAutomationActionModel & {
-      trigger_key: string;
-      action_key: string;
-      automation_id: number;
-    })[],
-    number,
-  ];
-  if (automations[0].length > 0) {
-    const automation = automations[0][0];
-    if (automation["trigger_key"] === "policy_updated") {
-      const reviewer_names = await getReviewerNamesQuery(
-        (updatedPolicy as any).assigned_reviewer_ids,
-        transaction,
-      );
-
-      const params = automation.params!;
-
-      // Build replacements
-      const replacements = buildPolicyUpdateReplacements(existingPolicy[0], {
-        ...updatedPolicy,
-        reviewer_names: reviewer_names.map((r) => r.full_name).join(", "),
-      });
-
-      // Replace variables in subject and body
-      const processedParams = {
-        ...params,
-        subject: replaceTemplateVariables(params.subject || "", replacements),
-        body: replaceTemplateVariables(params.body || "", replacements),
-        automation_id: automation.automation_id,
-      };
-
-      // Enqueue with processed params
-      await enqueueAutomationAction(automation.action_key, {
-        ...processedParams,
-        organizationId,
-      });
-    } else {
-      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-    }
+  // Every action of every active automation (legacy ones: the first only), after commit (P-L12).
+  const actions = await getEventAutomationActionsQuery(
+    organizationId,
+    "policy_updated",
+    transaction,
+  );
+  if (actions.length > 0) {
+    const reviewerNames = await getReviewerNamesQuery(
+      (updatedPolicy as any).assigned_reviewer_ids,
+      transaction,
+    );
+    const replacements = buildPolicyUpdateReplacements(existingPolicy[0], {
+      ...updatedPolicy,
+      reviewer_names: reviewerNames.map((r) => r.full_name).join(", "),
+    });
+    await enqueueAutomationActions(actions, replacements, organizationId, transaction);
   }
   return updatedPolicy;
 };
@@ -622,54 +653,22 @@ export const deletePolicyByIdQuery = async (
     }
   }
 
-  const automations = (await sequelize.query(
-    `SELECT
-      pat.key AS trigger_key,
-      paa.key AS action_key,
-      a.id AS automation_id,
-      aa.*
-    FROM automation_triggers pat JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId JOIN automation_actions paa ON aa.action_type_id = paa.id WHERE pat.key = 'policy_deleted' AND a.is_active ORDER BY aa."order" ASC;`,
-    { replacements: { organizationId }, transaction },
-  )) as [
-    (TenantAutomationActionModel & {
-      trigger_key: string;
-      action_key: string;
-      automation_id: number;
-    })[],
-    number,
-  ];
-  if (automations[0].length > 0) {
-    const automation = automations[0][0];
-    if (automation["trigger_key"] === "policy_deleted") {
-      const reviewer_names = await getReviewerNamesQuery(
-        deletedPolicyData.assigned_reviewer_ids,
-        transaction,
-      );
-
-      const params = automation.params!;
-
-      // Build replacements
-      const replacements = buildPolicyReplacements({
-        ...deletedPolicyData,
-        reviewer_names: reviewer_names.map((r) => r.full_name).join(", "),
-      });
-
-      // Replace variables in subject and body
-      const processedParams = {
-        ...params,
-        subject: replaceTemplateVariables(params.subject || "", replacements),
-        body: replaceTemplateVariables(params.body || "", replacements),
-        automation_id: automation.automation_id,
-      };
-
-      // Enqueue with processed params
-      await enqueueAutomationAction(automation.action_key, {
-        ...processedParams,
-        organizationId,
-      });
-    } else {
-      console.warn(`No matching trigger found for key: ${automation["trigger_key"]}`);
-    }
+  // Every action of every active automation (legacy ones: the first only), after commit (P-L12).
+  const actions = await getEventAutomationActionsQuery(
+    organizationId,
+    "policy_deleted",
+    transaction,
+  );
+  if (actions.length > 0) {
+    const reviewerNames = await getReviewerNamesQuery(
+      deletedPolicyData.assigned_reviewer_ids,
+      transaction,
+    );
+    const replacements = buildPolicyReplacements({
+      ...deletedPolicyData,
+      reviewer_names: reviewerNames.map((r) => r.full_name).join(", "),
+    });
+    await enqueueAutomationActions(actions, replacements, organizationId, transaction);
   }
 
   return true;

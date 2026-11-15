@@ -132,6 +132,19 @@ export const policyVersioningContent: ArticleContent = {
       ],
     },
     {
+      type: 'paragraph',
+      text: 'VerifyWise reminds people about upcoming and overdue reviews. A reminder goes to the policy owner and the assigned reviewers, or to the author when the policy has neither. It arrives as a notification and an email, and in Slack if your organization sends policy reminders there.',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'Due soon', text: 'Sent once, when the review date is within the next 7 days' },
+        { bold: 'Overdue', text: 'Sent once, after the review date has passed' },
+        { bold: 'Changing the date', text: 'Moving the review date to another day sends the reminders again for the new date' },
+        { bold: 'Archived and deprecated', text: 'Policies with these statuses are not reminded' },
+      ],
+    },
+    {
       type: 'callout',
       variant: 'tip',
       title: 'Best practice',

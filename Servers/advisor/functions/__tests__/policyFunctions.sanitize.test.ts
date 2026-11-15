@@ -58,4 +58,20 @@ describe("advisor policy writes sanitize content_html", () => {
     expect(html).not.toContain("<script");
     expect(html).not.toContain("onerror");
   });
+
+  it("agent_update_policy returns the shared update query's row, which has no reminder stamps", async () => {
+    // updatePolicyByIdQuery re-reads through getPolicyByIdQuery, which drops the
+    // stamps (covered in policyReviewReminders.utils.test.ts); the advisor adds none.
+    const row = { id: 1, title: "Policy" };
+    // The update gate locks the row and reads pending requests first.
+    q.mockResolvedValueOnce([{ id: 1, title: "P", status: "Draft", content_html: "" }]);
+    q.mockResolvedValueOnce([]);
+    (updatePolicyByIdQuery as jest.Mock).mockResolvedValueOnce(row);
+    const exec = writeToolExecutors.get("agent_update_policy")!;
+    const result = (await exec({ policy_id: 1, policy_name: "Policy", _userId: 9 }, 42)) as any;
+    const policy = result?.data ?? result;
+    expect(policy).toEqual(row);
+    expect(policy).not.toHaveProperty("due_soon_reminded_at");
+    expect(policy).not.toHaveProperty("overdue_reminded_at");
+  });
 });

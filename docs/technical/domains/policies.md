@@ -511,11 +511,22 @@ and compliance, People and organization, Industry packs.
 | `policy_updated` | Policy modified |
 | `policy_deleted` | Policy deleted |
 
+Each trigger runs every action of every active automation for it, ordered by automation id and then action order (`getEventAutomationActionsQuery`, `enqueueAutomationActions`). The jobs are enqueued after the save commits, so a rolled-back save sends nothing. One failing action is logged and does not stop the others. Risk automations and AI Detection scan automations use the same dispatcher.
+
+Automations that existed before every-action dispatch keep their old behaviour until someone edits and saves them: only the event's first action runs (`automations.legacy_first_action_only`, set by migration `20261114200100-legacy-automation-first-action`; the dispatch keeps the single first legacy row by action order, then automation id). Saving the automation in the editor clears the flag; the active toggle does not. New automations run every action.
+
 ### Review Reminders
 
-Slack notifications sent 7 days before `next_review_date` to:
-- Policy author
-- Organization admins
+One daily sweep, `policy_review_reminder_sweep` at 08:00 server time (`services/automations/actions/policyReviewReminderSweep.ts`), reminds people of a policy's review twice: once when `next_review_date` comes within 7 days (`POLICY_DUE_SOON`) and once when it has passed (`POLICY_OVERDUE`). Days are compared by calendar day (`next_review_date::date` against `CURRENT_DATE`, UTC). Archived and Deprecated policies are skipped.
+
+- **Recipients** (`findPolicyRemindersDueQuery`): the policy owner and the assigned reviewers, each once; when none of them is still a member of the organization, the author. Only current members are told, and a policy with nobody to tell is skipped.
+- **Channels** (`notifyPolicyReviewReminder`): the in-app notice, then the email (`policy-review-reminder.mjml`, best-effort); title, message and subject are i18n keys, the email body stays English. For a recipient with a Slack webhook on the "Policy reminders and status" route, also a Slack message; Slack is best-effort.
+- **Once per kind**: `policy_manager.due_soon_reminded_at` / `overdue_reminded_at` (migration `20261114200000-policy-review-reminder-stamps`) are stamped once at least one recipient's in-app notice was stored; the in-app notice is the channel of record. Every per-recipient failure is logged, and a recipient whose notice failed is not retried; only a policy that reached nobody is retried the next day. Email and Slack failures are logged and never block the stamp. The stamp applies only while the row still has the review day the sweep read, so a date changed mid-sweep is not marked reminded. The stamps are bookkeeping and are stripped from policy API and advisor responses (`omitReminderStamps`). The migration stamps policies already overdue or inside the 7-day window, so the first run after deploy sends nothing for them. Moving the review date to another day (policy update or advisor update) clears both stamps; saving the same day keeps them.
+- **Replaced jobs**: the 08:00 `send_policy_due_soon_notification` email job and the 09:00 `slack-notification-policy` Slack job. Startup removes their Redis schedulers (`removeRetiredPolicyDueSoonScheduler`, `removeRetiredSlackPolicyScheduler`); a job of either name still queued completes without sending.
+
+The policy renewal workflow (`services/workflows/definitions/policyRenewal.workflow.ts`) is an opt-in autopilot that sends an in-app "Policy renewal due" notice 30 days ahead. It notifies the policy owner if they are still a member of the organization, otherwise the author if they are; with neither, it skips. An organization with it enabled also gets that 30-day notice, separate from the 7-day reminder.
+
+The compliance score counts a policy as overdue when `next_review_date::date` is before `CURRENT_DATE` and its status is not Archived or Deprecated (`getPolicyDocumentationData` in `utils/compliance.utils.ts`). Published policies count when their review day has passed.
 
 ## Key Files
 

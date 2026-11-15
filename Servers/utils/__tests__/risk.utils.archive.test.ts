@@ -13,8 +13,13 @@ jest.mock("../user.utils", () => ({
 jest.mock("../projectRiskChangeHistory.utils", () => ({
   recordProjectRiskDeletion: jest.fn().mockResolvedValue(undefined),
 }));
+jest.mock("../logger/fileLogger", () => ({
+  __esModule: true,
+  default: { info: jest.fn(), error: jest.fn(), warn: jest.fn(), debug: jest.fn() },
+}));
 
 import { sequelize } from "../../database/db";
+import logger from "../logger/fileLogger";
 import { recordSnapshotIfChanged } from "../history/riskHistory.utils";
 import { recordProjectRiskDeletion } from "../projectRiskChangeHistory.utils";
 import { enqueueAutomationAction } from "../../services/automations/automationProducer";
@@ -42,8 +47,12 @@ const sqlCalls = () => mockQuery.mock.calls.map(([sql]) => String(sql));
 const deletesFrom = (table: string) =>
   mockQuery.mock.calls.filter(([sql]) => new RegExp(`DELETE FROM ${table}\\b`).test(String(sql)));
 
+/** Let the after-commit enqueues, which run one after another, finish. */
+const settle = () => new Promise((resolve) => setImmediate(resolve));
+
 beforeEach(() => {
   mockQuery.mockReset();
+  (logger.error as jest.Mock).mockClear();
   mockSnapshot.mockClear();
   mockRecordDeletion.mockClear();
   mockEnqueue.mockReset();
@@ -54,6 +63,7 @@ describe("archiveRiskQuery", () => {
   /** The soft-delete UPDATE matches `archived`; everything else returns nothing. */
   function arrange(archived: boolean) {
     mockQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes("FROM automation_triggers")) return [];
       if (sql.startsWith("UPDATE risks SET is_deleted = true")) {
         return [archived ? [{ id: 5, risk_owner: 2, risk_approval: 3 }] : [], 0];
       }
@@ -124,6 +134,7 @@ describe("deleteRiskMappingsForProjectFrameworksQuery", () => {
 
   function arrangeFrameworks(frameworkIds: number[]) {
     mockQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes("FROM automation_triggers")) return [];
       if (sql.includes("SELECT DISTINCT framework_id FROM projects_frameworks")) {
         return frameworkIds.map((framework_id) => ({ framework_id }));
       }
@@ -213,6 +224,7 @@ describe("deleteRiskMappingsForProjectFrameworksQuery", () => {
 describe("deleteRiskMappingsForProjectsQuery", () => {
   it("clears framework, custom framework and imported framework mappings for the projects", async () => {
     mockQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes("FROM automation_triggers")) return [];
       if (sql.startsWith("SELECT id FROM projects_frameworks")) return [{ id: 11 }];
       if (sql.includes("SELECT DISTINCT framework_id")) return [{ framework_id: 2 }];
       return [[], 0];
@@ -250,6 +262,7 @@ describe("updateRiskByIdQuery link removal", () => {
   /** The risk is linked to project 30 and framework 2; the edit removes both. */
   function arrange() {
     mockQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes("FROM automation_triggers")) return [];
       if (sql.startsWith("SELECT * FROM risks")) return [[{ id: 7 }], 1];
       if (sql.startsWith("SELECT project_id FROM projects_risks")) return [[{ project_id: 30 }], 1];
       if (sql.startsWith("SELECT framework_id FROM frameworks_risks"))
@@ -302,22 +315,15 @@ describe("risk automations wait for the commit", () => {
 
   /** One active automation for `trigger`; the archive/update/insert returns risk 5. */
   function arrange(trigger: string) {
-    mockQuery.mockImplementation(async (sql: string) => {
+    mockQuery.mockImplementation(async (sql: string, options: any) => {
       if (sql.includes("FROM automation_triggers")) {
+        if (options.replacements.triggerKey !== trigger) return [];
         return [
-          [
-            {
-              trigger_key: trigger,
-              action_key: "send_email",
-              automation_id: 1,
-              params: { subject: "s", body: "b" },
-            },
-          ],
-          1,
+          { action_key: "send_email", automation_id: 1, params: { subject: "s", body: "b" } },
         ];
       }
       if (sql.startsWith("UPDATE risks SET is_deleted = true")) {
-        return [[{ id: 5, risk_owner: 2, risk_approval: 3 }], 1];
+        return [[{ id: 5, risk_name: "Archived", risk_owner: 2, risk_approval: 3 }], 1];
       }
       if (sql.startsWith("INSERT INTO risks")) {
         return [{ id: 5, dataValues: { id: 5, risk_owner: 2, risk_approval: 3 } }];
@@ -325,7 +331,9 @@ describe("risk automations wait for the commit", () => {
       // getRiskByIdQuery's read of the stored row, then the edit's UPDATE.
       if (sql.startsWith("SELECT * FROM risks")) return [[{ id: 5 }], 1];
       if (sql.startsWith("UPDATE risks SET")) {
-        return [{ id: 5, dataValues: { id: 5, risk_owner: 2, risk_approval: 3 } }];
+        return [
+          { id: 5, dataValues: { id: 5, risk_name: "Renamed", risk_owner: 2, risk_approval: 3 } },
+        ];
       }
       return [[], 0];
     });
@@ -340,6 +348,7 @@ describe("risk automations wait for the commit", () => {
     expect(mockEnqueue).not.toHaveBeenCalled();
 
     tx.commit();
+    await settle();
     expect(mockEnqueue).toHaveBeenCalledWith(
       "send_email",
       expect.objectContaining({ organizationId: 4, automation_id: 1 }),
@@ -354,6 +363,7 @@ describe("risk automations wait for the commit", () => {
     expect(mockEnqueue).not.toHaveBeenCalled();
 
     tx.commit();
+    await settle();
     expect(mockEnqueue).toHaveBeenCalledTimes(1);
   });
 
@@ -365,6 +375,7 @@ describe("risk automations wait for the commit", () => {
     expect(mockEnqueue).not.toHaveBeenCalled();
 
     tx.commit();
+    await settle();
     expect(mockEnqueue).toHaveBeenCalledTimes(1);
   });
 
@@ -413,6 +424,96 @@ describe("risk automations wait for the commit", () => {
     expect(sqlCalls().some((sql) => sql.includes("FROM automation_triggers"))).toBe(false);
     expect(tx.afterCommit).not.toHaveBeenCalled();
   });
+
+  /** Two active automations with two actions each, in a.id, order order (R-L6). */
+  const FOUR_ACTIONS = [
+    { automation_id: 1, action_key: "send_email", params: { subject: "1a {{risk.name}}" } },
+    { automation_id: 1, action_key: "send_slack", params: { subject: "1b {{risk.name}}" } },
+    { automation_id: 2, action_key: "send_email", params: { subject: "2a {{risk.name}}" } },
+    { automation_id: 2, action_key: "send_slack", params: { subject: "2b {{risk.name}}" } },
+  ];
+
+  function arrangeFourActions(trigger: string) {
+    arrange(trigger);
+    const base = mockQuery.getMockImplementation()!;
+    mockQuery.mockImplementation(async (sql: string, options: any) => {
+      if (sql.includes("FROM automation_triggers")) {
+        return options.replacements.triggerKey === trigger ? FOUR_ACTIONS : [];
+      }
+      return base(sql, options);
+    });
+  }
+
+  it("runs every action of every automation for risk_updated, in order, after commit", async () => {
+    arrangeFourActions("risk_updated");
+    const tx = makeTransaction();
+
+    await updateRiskByIdQuery(5, { risk_name: "Renamed" } as never, 4, tx as never);
+    expect(mockEnqueue).not.toHaveBeenCalled();
+
+    const automationSql = sqlCalls().find((sql) => sql.includes("FROM automation_triggers"))!;
+    expect(automationSql).toContain('ORDER BY a.id ASC, aa."order" ASC');
+    expect(automationSql).toContain("a.organization_id = :organizationId");
+    expect(automationSql).toContain("aa.organization_id = :organizationId");
+    // Owner and approver names are read once for the event, not per action.
+    expect(sqlCalls().filter((sql) => sql.includes("FROM users"))).toHaveLength(1);
+
+    tx.commit();
+    await settle();
+    expect(mockEnqueue.mock.calls.map(([key, data]) => [key, data.automation_id])).toEqual([
+      ["send_email", 1],
+      ["send_slack", 1],
+      ["send_email", 2],
+      ["send_slack", 2],
+    ]);
+    expect(mockEnqueue.mock.calls[2][1]).toEqual(
+      expect.objectContaining({
+        subject: "2a Renamed",
+        body: "",
+        automation_id: 2,
+        organizationId: 4,
+      }),
+    );
+  });
+
+  it("enqueues none of the actions when the edit rolls back", async () => {
+    arrangeFourActions("risk_updated");
+    const tx = makeTransaction();
+
+    await updateRiskByIdQuery(5, { risk_name: "Renamed" } as never, 4, tx as never);
+    tx.rollback();
+
+    expect(mockEnqueue).not.toHaveBeenCalled();
+  });
+
+  it("still enqueues the other actions when one enqueue fails", async () => {
+    arrangeFourActions("risk_deleted");
+    mockEnqueue.mockResolvedValueOnce(undefined).mockRejectedValueOnce(new Error("redis down"));
+    const tx = makeTransaction();
+
+    await deleteRiskByIdQuery(5, 4, tx as never);
+    expect(() => tx.commit()).not.toThrow();
+    await new Promise((resolve) => setImmediate(resolve));
+
+    expect(mockEnqueue).toHaveBeenCalledTimes(4);
+    expect(logger.error).toHaveBeenCalledTimes(1);
+    expect(logger.error).toHaveBeenCalledWith(expect.stringContaining("redis down"));
+  });
+
+  it("runs every action for risk_added and, without a transaction, at once", async () => {
+    arrangeFourActions("risk_added");
+    const tx = makeTransaction();
+    await createRiskQuery({ risk_name: "New" } as never, 4, tx as never);
+    tx.commit();
+    await settle();
+    expect(mockEnqueue).toHaveBeenCalledTimes(4);
+
+    mockEnqueue.mockClear();
+    arrangeFourActions("risk_deleted");
+    mockEnqueue.mockRejectedValueOnce(new Error("redis down"));
+    await expect(deleteRiskByIdQuery(5, 4, undefined as never)).resolves.toBeTruthy();
+    expect(mockEnqueue).toHaveBeenCalledTimes(4);
+  });
 });
 
 describe("enqueueBulkRiskAutomation", () => {
@@ -439,21 +540,17 @@ describe("enqueueBulkRiskAutomation", () => {
   function arrange(trigger: string, automation = true) {
     mockQuery.mockImplementation(async (sql: string, options: any) => {
       if (sql.includes("FROM automation_triggers")) {
-        if (!automation) return [[], 0];
+        if (!automation || options.replacements.triggerKey !== trigger) return [];
         return [
-          [
-            {
-              trigger_key: trigger,
-              action_key: "send_email",
-              automation_id: 1,
-              params: {
-                to: ["a@example.com"],
-                subject: "{{risk.name}}",
-                body: "Owner: {{risk.owner}}\n{{changes_summary}}",
-              },
+          {
+            action_key: "send_email",
+            automation_id: 1,
+            params: {
+              to: ["a@example.com"],
+              subject: "{{risk.name}}",
+              body: "Owner: {{risk.owner}}\n{{changes_summary}}",
             },
-          ],
-          1,
+          },
         ];
       }
       if (sql.includes("FROM users")) {
@@ -487,6 +584,7 @@ describe("enqueueBulkRiskAutomation", () => {
     expect(userQueries[0][1].replacements.userIds.sort()).toEqual([3, 4, 8]);
 
     tx.commit();
+    await settle();
     expect(mockEnqueue).toHaveBeenCalledTimes(1);
     expect(mockEnqueue).toHaveBeenCalledWith(
       "send_email",
@@ -511,6 +609,7 @@ describe("enqueueBulkRiskAutomation", () => {
 
     await enqueueBulkRiskAutomation("risk_updated", changes, 4, tx as never);
     tx.commit();
+    await settle();
 
     expect(mockEnqueue).toHaveBeenCalledTimes(1);
     const [, payload] = mockEnqueue.mock.calls[0];
@@ -536,6 +635,7 @@ describe("enqueueBulkRiskAutomation", () => {
       tx as never,
     );
     tx.commit();
+    await settle();
 
     const [, payload] = mockEnqueue.mock.calls[0];
     expect(payload.subject).toBe("Risk 1");
@@ -543,6 +643,39 @@ describe("enqueueBulkRiskAutomation", () => {
     expect(payload.body).toBe(
       ["Owner: Bo New", "• Name: Risk 1", "• Owner: Ann Old → Bo New"].join("\n"),
     );
+  });
+
+  it("runs each action of every automation once for the whole bulk action", async () => {
+    arrange("risk_updated");
+    const base = mockQuery.getMockImplementation()!;
+    mockQuery.mockImplementation(async (sql: string, options: any) => {
+      if (sql.includes("FROM automation_triggers")) {
+        return [
+          { automation_id: 1, action_key: "send_email", params: { subject: "{{risk.name}}" } },
+          { automation_id: 1, action_key: "send_slack", params: { subject: "{{risk.name}}" } },
+          { automation_id: 2, action_key: "send_email", params: { subject: "{{risk.name}}" } },
+        ];
+      }
+      return base(sql, options);
+    });
+    const tx = makeTransaction();
+    const changes = [row(1, 3), row(2, 4), row(3, 3)].map((r) => ({
+      before: r,
+      after: { ...r, risk_owner: 7 },
+    }));
+
+    await enqueueBulkRiskAutomation("risk_updated", changes, 4, tx as never);
+    tx.commit();
+    await settle();
+
+    expect(mockEnqueue.mock.calls.map(([key, data]) => [key, data.automation_id])).toEqual([
+      ["send_email", 1],
+      ["send_slack", 1],
+      ["send_email", 2],
+    ]);
+    for (const [, payload] of mockEnqueue.mock.calls) {
+      expect(payload.subject).toBe("3 risks: Risk 1, Risk 2, Risk 3");
+    }
   });
 
   it("enqueues nothing when the bulk action rolls back", async () => {
@@ -577,6 +710,7 @@ describe("enqueueBulkRiskAutomation", () => {
 describe("updateRiskByIdQuery snapshots", () => {
   function arrange() {
     mockQuery.mockImplementation(async (sql: string) => {
+      if (sql.includes("FROM automation_triggers")) return [];
       if (sql.startsWith("SELECT * FROM risks")) return [[{ id: 7, severity: "Minor" }], 1];
       if (sql.startsWith("UPDATE risks SET")) {
         return [{ id: 7, dataValues: { id: 7, severity: "Major" } }];

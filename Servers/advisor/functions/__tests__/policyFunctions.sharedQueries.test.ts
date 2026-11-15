@@ -5,7 +5,7 @@
  * empty tag list binds as JSON (ARRAY[] has no type and failed, P-M8) and the
  * policy_added / policy_updated automations are looked up.
  */
-const mockTx = { commit: jest.fn(), rollback: jest.fn() };
+const mockTx = { commit: jest.fn(), rollback: jest.fn(), afterCommit: jest.fn() };
 jest.mock("../../../database/db", () => ({
   sequelize: { query: jest.fn(), transaction: jest.fn(async () => mockTx) },
 }));
@@ -62,7 +62,7 @@ const STORED = {
 const answerBySql = () =>
   q.mockImplementation(async (sql: string) => {
     if (sql.includes("INSERT INTO policy_manager AS pm")) return [[{ id: 5, title: "P" }], 1];
-    if (sql.includes("FROM automation_triggers")) return [[], 0];
+    if (sql.includes("FROM automation_triggers")) return [];
     if (sql.includes("FROM policy_manager pm") && sql.includes("ARRAY_AGG")) return [STORED];
     return [[], 0];
   });
@@ -91,8 +91,8 @@ describe("agent_create_policy through createPolicyQuery", () => {
     );
     expect(insert[1].transaction).toBe(mockTx);
     // The policy_added automation is looked up, org-scoped, as for the REST create.
-    const automation = q.mock.calls.find((c) => sqlOf(c).includes("pat.key = 'policy_added'"))!;
-    expect(automation[1].replacements).toEqual({ organizationId: 42 });
+    const automation = q.mock.calls.find((c) => c[1]?.replacements?.triggerKey === "policy_added")!;
+    expect(automation[1].replacements).toEqual({ organizationId: 42, triggerKey: "policy_added" });
     expect(recordPolicyCreation).toHaveBeenCalledWith(
       5,
       9,
@@ -128,7 +128,13 @@ describe("agent_update_policy through updatePolicyByIdQuery", () => {
       expect.objectContaining({ organizationId: 42, id: 1, tags: '["Audit"]', last_updated_by: 9 }),
     );
     expect(update[1].transaction).toBe(mockTx);
-    expect(q.mock.calls.some((c) => sqlOf(c).includes("pat.key = 'policy_updated'"))).toBe(true);
+    expect(
+      q.mock.calls.some(
+        (c) =>
+          c[1]?.replacements?.triggerKey === "policy_updated" &&
+          c[1]?.replacements?.organizationId === 42,
+      ),
+    ).toBe(true);
     expect(recordUpdateChanges).toHaveBeenCalledWith(
       "policy",
       1,

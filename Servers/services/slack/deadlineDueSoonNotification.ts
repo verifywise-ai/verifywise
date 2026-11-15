@@ -11,8 +11,8 @@ export interface DeadlineSlackNotice {
 /**
  * One-recipient Slack send for the deadline sweep's 1-day leg. The per-row
  * and per-recipient loops (with their try/catch) live in the sweep — this
- * helper sends exactly one message, unlike policyDueSoonNotification, whose
- * `return` inside the per-policy loop exits after the first policy.
+ * helper sends exactly one message, unlike the retired policy Slack job,
+ * whose `return` inside the per-policy loop exited after the first policy.
  *
  * Deliberate reuse of EVIDENCE_AND_TASK_ALERTS: routing_type is a Postgres
  * ARRAY(ENUM) column and a dedicated risk value would cost a second migration

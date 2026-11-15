@@ -30,7 +30,7 @@ import { deleteNotificationsByEntityQuery } from "../notification.utils";
 import { NotificationEntityType } from "../../domain.layer/interfaces/i.notification";
 
 const mockQuery = sequelize.query as jest.MockedFunction<typeof sequelize.query>;
-const tx = { id: "tx" } as any;
+const tx = { id: "tx", afterCommit: jest.fn() } as any;
 
 describe("deletePolicyByIdQuery", () => {
   beforeEach(() => {
