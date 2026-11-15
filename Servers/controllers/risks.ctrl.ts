@@ -43,6 +43,7 @@ import {
   suggestRisksForUseCase,
 } from "../services/riskSuggestions/riskSuggestions.service";
 
+import { isRiskVisibleQuery, riskViewer } from "../utils/riskVisibility.utils";
 import { translateError } from "../utils/i18n.utils";
 import { IRisk } from "../domain.layer/interfaces/I.risk";
 import { BulkRiskChange } from "../utils/automation/risk.automation.utils";
@@ -159,7 +160,7 @@ export async function getAllRisks(req: Request, res: Response): Promise<any> {
   );
   logger.debug(`🔍 Fetching all project risks with filter: ${filter}`);
   try {
-    const projectRisks = await getAllRisksQuery(req.organizationId!, filter);
+    const projectRisks = await getAllRisksQuery(req.organizationId!, filter, riskViewer(req));
 
     if (projectRisks) {
       logStructured(
@@ -208,7 +209,12 @@ export async function getRisksByProject(req: Request, res: Response): Promise<an
   );
   logger.debug(`🔍 Fetching risks for project ID: ${projectId} with filter: ${filter}`);
   try {
-    const risks = await getRisksByProjectQuery(projectId, req.organizationId!, filter);
+    const risks = await getRisksByProjectQuery(
+      projectId,
+      req.organizationId!,
+      filter,
+      riskViewer(req),
+    );
 
     if (risks) {
       logStructured(
@@ -257,7 +263,12 @@ export async function getRisksByFramework(req: Request, res: Response): Promise<
   );
   logger.debug(`🔍 Fetching risks for framework ID: ${frameworkId} with filter: ${filter}`);
   try {
-    const risks = await getRisksByFrameworkQuery(frameworkId, req.organizationId!, filter);
+    const risks = await getRisksByFrameworkQuery(
+      frameworkId,
+      req.organizationId!,
+      filter,
+      riskViewer(req),
+    );
 
     if (risks) {
       logStructured(
@@ -308,7 +319,9 @@ export async function getRiskById(req: Request, res: Response): Promise<any> {
   );
   logger.debug(`🔍 Looking up project risk with ID: ${projectRiskId}`);
   try {
-    const projectRisk = await getRiskByIdQuery(projectRiskId, req.organizationId!);
+    // A risk the viewer cannot see answers like a missing one.
+    const visible = await isRiskVisibleQuery(projectRiskId, req.organizationId!, riskViewer(req));
+    const projectRisk = visible ? await getRiskByIdQuery(projectRiskId, req.organizationId!) : null;
 
     if (projectRisk) {
       logStructured(

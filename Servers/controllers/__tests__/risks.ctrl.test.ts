@@ -16,6 +16,10 @@ jest.mock("../../utils/risk.utils", () => ({
   PROJECT_RISK_CATEGORIES_SET: new Set(["financial", "operational", "strategic", "compliance"]),
   enqueueBulkRiskAutomation: jest.fn(),
 }));
+jest.mock("../../utils/riskVisibility.utils", () => ({
+  ...jest.requireActual<any>("../../utils/riskVisibility.utils"),
+  isRiskVisibleQuery: jest.fn(),
+}));
 jest.mock("../../domain.layer/models/risks/risk.model", () => ({
   RiskModel: jest.fn(),
 }));
@@ -106,6 +110,7 @@ import {
   updateRiskByIdQuery,
   archiveRiskQuery,
 } from "../../utils/risk.utils";
+import { isRiskVisibleQuery } from "../../utils/riskVisibility.utils";
 import { createRiskService } from "../../services/risk.service";
 import {
   ValidationException,
@@ -123,6 +128,7 @@ const mockGetByProject = getRisksByProjectQuery as jest.MockedFunction<
 >;
 const mockUpdate = updateRiskByIdQuery as jest.MockedFunction<typeof updateRiskByIdQuery>;
 const mockDelete = archiveRiskQuery as jest.MockedFunction<typeof archiveRiskQuery>;
+const mockVisible = isRiskVisibleQuery as jest.MockedFunction<typeof isRiskVisibleQuery>;
 const mockCreateService = createRiskService as jest.MockedFunction<typeof createRiskService>;
 function createReq(overrides?: Partial<Request>): any {
   return {
@@ -144,7 +150,10 @@ function createRes(): any {
 }
 
 describe("risks.ctrl", () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockVisible.mockResolvedValue(true);
+  });
   afterEach(() => jest.restoreAllMocks());
 
   describe("getAllRisks", () => {
@@ -156,6 +165,17 @@ describe("risks.ctrl", () => {
       await getAllRisks(req, res);
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data }));
+    });
+    it("passes the viewer so the query can scope a non-Admin", async () => {
+      mockGetAll.mockResolvedValue([] as any);
+      const req = createReq({ role: "Editor", userId: 7 });
+      await getAllRisks(req, createRes());
+      expect(mockGetAll).toHaveBeenCalledWith(1, "active", { userId: 7, role: "Editor" });
+    });
+    it("passes the Admin viewer unchanged", async () => {
+      mockGetAll.mockResolvedValue([] as any);
+      await getAllRisks(createReq(), createRes());
+      expect(mockGetAll).toHaveBeenCalledWith(1, "active", { userId: 1, role: "Admin" });
     });
     it("should return 204 when no risks exist", async () => {
       mockGetAll.mockResolvedValue(null as any);
@@ -206,6 +226,21 @@ describe("risks.ctrl", () => {
   });
 
   describe("getRisksByFramework", () => {
+    it("passes the viewer to the framework and project queries", async () => {
+      mockGetByFramework.mockResolvedValue([] as any);
+      mockGetByProject.mockResolvedValue([] as any);
+      const req = createReq({ params: { id: "3" }, role: "Reviewer", userId: 9 });
+      await getRisksByFramework(req, createRes());
+      await getRisksByProject(req, createRes());
+      expect(mockGetByFramework).toHaveBeenCalledWith(3, 1, "active", {
+        userId: 9,
+        role: "Reviewer",
+      });
+      expect(mockGetByProject).toHaveBeenCalledWith(3, 1, "active", {
+        userId: 9,
+        role: "Reviewer",
+      });
+    });
     it("should return 200 with risks when data exists", async () => {
       const data = buildManyRisk(1);
       mockGetByFramework.mockResolvedValue(data as any);
@@ -239,6 +274,23 @@ describe("risks.ctrl", () => {
       await getRiskById(req, res);
       expect(res.status).toHaveBeenCalledWith(200);
       expect(res.json).toHaveBeenCalledWith(expect.objectContaining({ data: risk }));
+    });
+    it("answers a risk the viewer cannot see like a missing one", async () => {
+      mockVisible.mockResolvedValue(false);
+      mockGetById.mockResolvedValue(buildRisk() as any);
+      const req = createReq({ params: { id: "1" }, role: "Auditor", userId: 7 });
+      const res = createRes();
+      await getRiskById(req, res);
+      expect(mockVisible).toHaveBeenCalledWith(1, 1, { userId: 7, role: "Auditor" });
+      expect(mockGetById).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(204);
+    });
+    it("returns a visible risk to a non-Admin", async () => {
+      const risk = buildRisk();
+      mockGetById.mockResolvedValue(risk as any);
+      const res = createRes();
+      await getRiskById(createReq({ params: { id: "1" }, role: "Editor" }), res);
+      expect(res.status).toHaveBeenCalledWith(200);
     });
     it("should return 204 when risk is not found", async () => {
       mockGetById.mockResolvedValue(null as any);

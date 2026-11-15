@@ -26,6 +26,8 @@ import { storedRiskCategories } from "./riskCategory.utils";
 import { recordProjectRiskDeletion } from "./projectRiskChangeHistory.utils";
 import { getStructureById } from "../structures";
 import { unlinkRiskFromAllPoliciesQuery } from "./policyLinkedObject.utils";
+import { riskVisibilitySql, RiskViewer } from "./riskVisibility.utils";
+import { projectAccessSql, seesAllProjects } from "./projectVisibility.utils";
 
 type RiskAutomationTrigger = "risk_added" | "risk_updated" | "risk_deleted";
 
@@ -189,6 +191,7 @@ export const assertRiskReferencesInOrganization = async (
 export const getAllRisksQuery = async (
   organizationId: number,
   filter: "active" | "deleted" | "all" = "active",
+  viewer?: RiskViewer,
 ): Promise<IRisk[]> => {
   let whereClause = "WHERE r.organization_id = :organizationId";
   switch (filter) {
@@ -202,6 +205,11 @@ export const getAllRisksQuery = async (
       // No additional filter
       break;
   }
+
+  // Without a viewer the list is org-wide; a non-Admin viewer sees only the
+  // risks riskVisibilitySql lets through.
+  const visibility = viewer ? riskVisibilitySql("r", viewer) : { sql: "", replacements: {} };
+  whereClause += visibility.sql;
 
   // OPTIMIZED: Fast query for list view - only fetches basic risk data with projects/frameworks
   // The full relationships (subClauses, annexCategories, controls, assessments, etc.)
@@ -226,7 +234,7 @@ export const getAllRisksQuery = async (
   `;
 
   const risks = (await sequelize.query(query, {
-    replacements: { organizationId },
+    replacements: { organizationId, ...visibility.replacements },
     type: QueryTypes.SELECT,
   })) as any[];
 
@@ -487,6 +495,7 @@ export const getRisksByProjectQuery = async (
   projectId: number,
   organizationId: number,
   filter: "active" | "deleted" | "all" = "active",
+  viewer?: RiskViewer,
 ): Promise<IRisk[] | null> => {
   let whereClause = "WHERE r.organization_id = :organizationId";
   switch (filter) {
@@ -499,6 +508,19 @@ export const getRisksByProjectQuery = async (
     case "all":
       // No additional filter
       break;
+  }
+
+  // A viewer who cannot see the use case gets only the risks they own or
+  // approve there, so a risk shared with another use case they can see does
+  // not expose the hidden use case's list.
+  const visibility = viewer ? riskVisibilitySql("r", viewer) : { sql: "", replacements: {} };
+  whereClause += visibility.sql;
+  if (viewer && !seesAllProjects(viewer.role)) {
+    const access = projectAccessSql("pvs", viewer.userId);
+    whereClause += ` AND (EXISTS (
+        SELECT 1 FROM projects pvs
+         WHERE pvs.id = :projectId AND pvs.organization_id = :organizationId${access.sql})
+      OR r.risk_owner = :visibilityUserId OR r.risk_approval = :visibilityUserId)`;
   }
 
   const result = (await sequelize.query(
@@ -521,7 +543,10 @@ export const getRisksByProjectQuery = async (
       ${whereClause}
       GROUP BY r.id
       ORDER BY r.created_at DESC, r.id ASC`,
-    { replacements: { projectId, organizationId }, type: QueryTypes.SELECT },
+    {
+      replacements: { projectId, organizationId, ...visibility.replacements },
+      type: QueryTypes.SELECT,
+    },
   )) as IRisk[];
   return result;
 };
@@ -530,6 +555,7 @@ export const getRisksByFrameworkQuery = async (
   frameworkId: number,
   organizationId: number,
   filter: "active" | "deleted" | "all" = "active",
+  viewer?: RiskViewer,
 ): Promise<IRisk[] | null> => {
   let whereClause = "WHERE r.organization_id = :organizationId";
   switch (filter) {
@@ -543,6 +569,9 @@ export const getRisksByFrameworkQuery = async (
       // No additional filter
       break;
   }
+
+  const visibility = viewer ? riskVisibilitySql("r", viewer) : { sql: "", replacements: {} };
+  whereClause += visibility.sql;
 
   const result = (await sequelize.query(
     `SELECT
@@ -565,7 +594,10 @@ export const getRisksByFrameworkQuery = async (
     GROUP BY r.id
     ORDER BY r.created_at DESC, r.id ASC;
     `,
-    { replacements: { frameworkId, organizationId }, type: QueryTypes.SELECT },
+    {
+      replacements: { frameworkId, organizationId, ...visibility.replacements },
+      type: QueryTypes.SELECT,
+    },
   )) as IRisk[];
   return result;
 };
