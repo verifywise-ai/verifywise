@@ -724,7 +724,8 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
                 canManage={canEditPolicies}
                 collapsed={folderSidebarCollapsed}
                 onToggleCollapse={() => setFolderSidebarCollapsed((p) => !p)}
-                countByFolderId={folderCounts ?? {}}
+                // No counts while they load or after they fail, rather than a 0 everywhere.
+                countByFolderId={folderCounts ?? null}
                 allLabel="All policies"
                 showUncategorized={false}
               />

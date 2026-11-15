@@ -23,6 +23,8 @@ let mockPolicies: PolicyManagerModel[] = [];
 let mockPoliciesLoading = false;
 let mockPoliciesError: Error | null = null;
 const mockUsePolicies = vi.fn();
+// undefined = the counts are loading or failed to load.
+let mockFolderCounts: Record<number, number> | undefined = {};
 const mockCreateFromPolicy = vi.fn();
 vi.mock("../../../../application/hooks/usePolicyTemplates", () => ({
   useCreatePolicyTemplateFromPolicy: () => ({
@@ -62,7 +64,7 @@ vi.mock("../../../../application/hooks/usePolicies", () => ({
       error: mockPoliciesError,
     };
   },
-  usePolicyFolderCounts: () => ({ data: {} }),
+  usePolicyFolderCounts: () => ({ data: mockFolderCounts }),
   policyQueryKeys: {
     all: ["policies"],
     folderCounts: () => ["policies", "folder-counts"],
@@ -150,8 +152,12 @@ vi.mock("../../../components/Table/ExportMenu", () => ({
 }));
 
 vi.mock("../../FileManager/components/FolderTree", () => ({
-  FolderTree: ({ canManage }: any) => (
-    <div data-testid="folder-tree" data-can-manage={String(Boolean(canManage))} />
+  FolderTree: ({ canManage, countByFolderId }: any) => (
+    <div
+      data-testid="folder-tree"
+      data-can-manage={String(Boolean(canManage))}
+      data-counts={JSON.stringify(countByFolderId)}
+    />
   ),
 }));
 
@@ -199,6 +205,7 @@ describe("PolicyManager", () => {
     ];
     mockPoliciesLoading = false;
     mockPoliciesError = null;
+    mockFolderCounts = {};
     mockGetPolicyFolders.mockResolvedValue([]);
     mockGetPolicyIdsInFolder.mockResolvedValue([]);
     mockUpdatePolicyFolders.mockResolvedValue(undefined);
@@ -407,5 +414,20 @@ describe("PolicyManager", () => {
     expect(screen.queryByTestId("assign-folder-first")).not.toBeInTheDocument();
     fireEvent.click(screen.getByLabelText("Documents"));
     expect(screen.getByTestId("folder-tree")).toHaveAttribute("data-can-manage", "false");
+  });
+
+  it("passes the policy counts to the folder sidebar once they load", () => {
+    mockFolderCounts = { 4: 2 };
+    renderWithProviders(<PolicyManager tags={[]} />, { route: "/policies" });
+    fireEvent.click(screen.getByLabelText("Documents"));
+    expect(screen.getByTestId("folder-tree")).toHaveAttribute("data-counts", '{"4":2}');
+  });
+
+  it("hides the folder counts while they load or after they fail", () => {
+    // usePolicyFolderCounts has no data in both states.
+    mockFolderCounts = undefined;
+    renderWithProviders(<PolicyManager tags={[]} />, { route: "/policies" });
+    fireEvent.click(screen.getByLabelText("Documents"));
+    expect(screen.getByTestId("folder-tree")).toHaveAttribute("data-counts", "null");
   });
 });

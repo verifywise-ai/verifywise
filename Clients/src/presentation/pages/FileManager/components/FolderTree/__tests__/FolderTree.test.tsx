@@ -9,7 +9,7 @@ const node = (id: number, name: string, fileCount: number, children: IFolderTree
 
 const folders = [node(1, "Security", 7, [node(2, "Access", 3)]), node(3, "HR", 5)];
 
-const renderTree = (countByFolderId?: Record<number, number>) =>
+const renderTree = (countByFolderId?: Record<number, number> | null) =>
   renderWithProviders(
     <FolderTree
       folders={folders}
@@ -41,5 +41,11 @@ describe("FolderTree counts", () => {
     renderTree({ 1: 1, 2: 4, 3: 0 });
     expect(screen.getByText("(4)")).toBeInTheDocument();
     expect(screen.queryByText("(3)")).not.toBeInTheDocument();
+  });
+
+  it("shows no counts at all when countByFolderId is null", () => {
+    renderTree(null);
+    expect(screen.getByText("Security")).toBeInTheDocument();
+    expect(screen.queryByText(/^\(\d+\)$/)).not.toBeInTheDocument();
   });
 });
