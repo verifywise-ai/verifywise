@@ -144,9 +144,9 @@ export const extensionsContent: ArticleContent = {
       type: 'ordered-list',
       items: [
         { text: 'Click **Enable** on the Slack card, then **Configure**.' },
-        { text: 'Click **Add to Slack**. Slack asks you to pick a workspace and the channel to post to, and to approve the connection.' },
-        { text: 'Back in VerifyWise, the connection appears in the table (Team Name, Channel, Creation Date, Active, Action). You can add more connections the same way.' },
-        { text: 'Click **Configure** to open **Notification Routing**, choose the notification types under "Apply to all workspaces", and click **Save Changes**.' },
+        { text: 'Click **Add to Slack**. The same tab opens Slack. Pick a workspace and the channel to post to, then approve the connection.' },
+        { text: 'Back in VerifyWise, the connection appears in the table. You can add more connections the same way.' },
+        { text: 'Click **Edit routing** on the connection\'s row, choose the notification types that channel should receive, then click **Save**. A new connection receives nothing until you do.' },
       ],
     },
     {

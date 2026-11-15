@@ -10,6 +10,8 @@ import { SlackDeliveryScope, SlackNotificationRoutingType } from "../domain.laye
  * single organization when organizations were backfilled) never equals an
  * organization id, so it is invisible to every management route: list, get,
  * update, delete and send treat it as missing (404). It also never sends.
+ * Only its owner can see and remove it, through the unlinked-connection
+ * queries at the end of this file.
  */
 
 /** The organization's connections, newest first, optionally one channel only. */
@@ -225,4 +227,44 @@ export const deleteSlackWebhookByIdQuery = async (
     },
   );
   return result.length > 0;
+};
+
+/**
+ * A connection with no organization, as its owner sees it: no token, no URL.
+ * See database/migrations/20261115100000-slack-webhooks-unlinked-cleanup.js.
+ */
+export interface UnlinkedSlackConnection {
+  id: number;
+  team_name: string;
+  channel: string;
+  created_at: Date;
+}
+
+/**
+ * The user's own connections with no organization, newest first. Read through
+ * a SECURITY DEFINER function: the tenant_isolation policy hides
+ * organization_id NULL rows from a request running under RLS.
+ */
+export const getUnlinkedSlackConnectionsQuery = async (
+  userId: number,
+): Promise<UnlinkedSlackConnection[]> =>
+  sequelize.query<UnlinkedSlackConnection>(
+    `SELECT id, team_name, channel, created_at
+       FROM verifywise.slack_unlinked_connections(:userId)`,
+    { replacements: { userId }, type: QueryTypes.SELECT },
+  );
+
+/**
+ * Delete one of the user's own connections with no organization. False when
+ * no such row exists: missing, another user's, or linked to an organization.
+ */
+export const deleteUnlinkedSlackConnectionQuery = async (
+  id: number,
+  userId: number,
+): Promise<boolean> => {
+  const rows = await sequelize.query<{ deleted: boolean }>(
+    `SELECT verifywise.delete_unlinked_slack_connection(:id, :userId) AS deleted`,
+    { replacements: { id, userId }, type: QueryTypes.SELECT },
+  );
+  return rows[0]?.deleted === true;
 };

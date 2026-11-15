@@ -10,7 +10,7 @@ export const slackIntegrationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Slack integration lets VerifyWise send real-time notifications about AI governance activities to your Slack workspace. Your team can stay on top of model updates, risk assessments, compliance changes and more without leaving Slack.',
+      text: 'The Slack integration posts VerifyWise notifications to channels in your Slack workspace, such as membership changes, new use cases, deadline reminders and policy review reminders. Your team sees them without opening VerifyWise.',
     },
     {
       type: 'heading',
@@ -21,9 +21,9 @@ export const slackIntegrationContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Receive notifications', text: 'Get real-time alerts about governance events in Slack channels' },
-        { bold: 'Choose what to send', text: 'Pick which notification types go to Slack' },
-        { bold: 'Multiple workspaces', text: 'Connect more than one Slack workspace if needed' },
+        { bold: 'Receive notifications', text: 'Get VerifyWise notifications in the Slack channels you pick' },
+        { bold: 'Choose what to send', text: 'Pick which notification types each channel receives' },
+        { bold: 'Multiple channels', text: 'Connect more than one channel or workspace' },
         { bold: 'Stay informed', text: 'Keep your team updated without requiring them to log into VerifyWise' },
       ],
     },
@@ -42,11 +42,19 @@ export const slackIntegrationContent: ArticleContent = {
       items: [
         { text: 'Click the **Extensions** button in the top header' },
         { text: 'On the Slack card, click **Enable**, then **Configure**' },
-        { text: 'Click **Add to Slack**. You\'ll be redirected to Slack to authorize the connection' },
+        { text: 'Click **Add to Slack**. The same browser tab opens Slack' },
         { text: 'Select the Slack workspace and the channel VerifyWise should post to' },
-        { text: 'Review the permissions and click Allow' },
-        { text: 'You\'ll be sent back to VerifyWise with the connection active' },
+        { text: 'Review the permissions and click **Allow**' },
+        { text: 'Slack sends you back to the Slack settings page, which shows "Slack connected." and the new connection in the table' },
       ],
+    },
+    {
+      type: 'paragraph',
+      text: 'If you cancel in Slack, VerifyWise shows a message and saves nothing. Finish the sign-in in the tab where you clicked **Add to Slack**: VerifyWise checks that the reply from Slack belongs to that tab and refuses it otherwise.',
+    },
+    {
+      type: 'paragraph',
+      text: 'A new connection receives no notifications until you choose its routing, as described under **Notification routing** below.',
     },
     {
       type: 'callout',
@@ -67,18 +75,31 @@ export const slackIntegrationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise requests the following Slack permissions:',
+      text: 'VerifyWise requests these permissions for its Slack app:',
     },
     {
       type: 'bullet-list',
       items: [
         { bold: 'incoming-webhook', text: 'Post messages to the channel you pick during authorization' },
-        { bold: 'chat:write', text: 'Send messages to channels' },
+        { bold: 'chat:write', text: 'Send messages as the VerifyWise app' },
+        { bold: 'chat:write.public', text: 'Send messages to public channels the app has not joined' },
+        { bold: 'channels:read, groups:read', text: 'See basic details of public and private channels, such as their names' },
       ],
     },
     {
       type: 'paragraph',
-      text: 'These permissions let VerifyWise send notifications but don\'t give it access to read your messages or user data.',
+      text: 'It also asks for these permissions on behalf of the person who adds Slack:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'channels:read, groups:read', text: 'Look up the channel you pick' },
+        { bold: 'groups:write.invites', text: 'Add the VerifyWise app to that channel when it is private' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'These permissions let VerifyWise post notifications to the channel you pick. They don\'t let it read your messages.',
     },
     {
       type: 'heading',
@@ -111,11 +132,12 @@ export const slackIntegrationContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Team Name', text: 'The name of the connected Slack workspace' },
+        { bold: 'Team name', text: 'The Slack workspace' },
         { bold: 'Channel', text: 'The channel VerifyWise posts to' },
-        { bold: 'Creation Date', text: 'When the connection was added' },
-        { bold: 'Active', text: 'Whether the connection is active or inactive' },
-        { bold: 'Action', text: 'Turn the connection on or off, or delete it' },
+        { bold: 'Notification routing', text: 'The notification types the channel receives, or "None"' },
+        { bold: 'Created', text: 'When the connection was added' },
+        { bold: 'Status', text: 'Active or Inactive' },
+        { bold: 'Actions', text: 'Edit routing, turn the connection off or on, or remove it' },
       ],
     },
     {
@@ -126,24 +148,22 @@ export const slackIntegrationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Routing decides which notification types VerifyWise sends to Slack. Each connection posts to the channel you chose when you added it. A connection added before connections belonged to the organization only posts events of the person who added it, until you save routing.',
-    },
-    {
-      type: 'paragraph',
-      text: 'To configure notification routing:',
+      text: 'Routing decides which notification types a connection receives. Each connection has its own routing, so different channels can get different notifications. To set it:',
     },
     {
       type: 'ordered-list',
       items: [
-        { text: 'On the Slack settings page, click **Configure** (available once at least one workspace is connected)' },
-        { text: 'In the **Notification Routing** dialog, open "Apply to all workspaces" and select the notification types to send' },
-        { text: 'Click **Save Changes**' },
+        { text: 'On the Slack settings page, find the connection in the table' },
+        { text: 'Click the **Edit routing** button in the Actions column. The dialog opens with the types the connection receives now' },
+        { text: 'Select the notification types this channel should receive' },
+        { text: 'Click **Save**. The dialog closes once the routing is saved. If saving fails, the error shows in the dialog and nothing changes' },
       ],
     },
     {
       type: 'callout',
       variant: 'info',
-      text: 'The notification types you select apply to every connected workspace.',
+      title: 'Connections added before organization ownership',
+      text: 'A connection added before Slack connections belonged to the organization shows "Posts only its owner\'s events until you save its routing." under its team name. It posts only events of the person who added it. Once you save its routing, it posts events for the whole organization.',
     },
     {
       type: 'image',
@@ -159,36 +179,46 @@ export const slackIntegrationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'You can choose from these notification types:',
+      text: 'VerifyWise sends these messages for each type today:',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Membership and roles', text: 'User invites, role changes and removals' },
-        { bold: 'Projects and organizations', text: 'Project creation, updates and organization changes' },
-        { bold: 'Policy reminders and status', text: 'Policy approaching review dates or status updates' },
-        { bold: 'Evidence and task alerts', text: 'New evidence uploads, task assignments and completions' },
-        { bold: 'Control or policy changes', text: 'Control status changes and policy updates' },
+        { bold: 'Membership and roles', text: 'A message when a user\'s details or role are updated, naming their role' },
+        { bold: 'Projects and organizations', text: 'A message when someone creates a use case' },
+        { bold: 'Policy reminders and status', text: 'Policy review reminders for the policy\'s owner and reviewers' },
+        { bold: 'Evidence and task alerts', text: 'A reminder one day before a risk or model risk deadline' },
+        { bold: 'Control or policy changes', text: 'Listed in the dialog, but VerifyWise does not send any messages of this type yet' },
       ],
     },
     {
       type: 'heading',
       id: 'adding-workspace',
       level: 2,
-      text: 'Adding another workspace',
+      text: 'Adding another channel or workspace',
     },
     {
       type: 'paragraph',
-      text: 'To connect an additional Slack workspace:',
+      text: 'Each time you go through **Add to Slack**, you add one connection for the channel you pick. To add another:',
     },
     {
       type: 'ordered-list',
       items: [
         { text: 'Go to the Slack settings page' },
         { text: 'Click **Add to Slack**' },
-        { text: 'Follow the authorization flow for the new workspace' },
-        { text: 'Update notification routing if needed' },
+        { text: 'Pick the workspace and channel in Slack, then click **Allow**' },
+        { text: 'Set the new connection\'s routing' },
       ],
+    },
+    {
+      type: 'heading',
+      id: 'turning-off-connection',
+      level: 2,
+      text: 'Turning a connection off',
+    },
+    {
+      type: 'paragraph',
+      text: 'To pause a connection without removing it, click the **Turn off** button in its Actions column. Its status changes to Inactive and it receives nothing until you click **Turn on**. Its routing is kept.',
     },
     {
       type: 'heading',
@@ -198,25 +228,43 @@ export const slackIntegrationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'To disconnect a Slack workspace:',
+      text: 'To remove a connection:',
     },
     {
       type: 'ordered-list',
       items: [
         { text: 'Go to the Slack settings page' },
-        { text: 'Find the workspace connection in the table' },
-        { text: 'Click the delete icon in the Action column' },
+        { text: 'Find the connection in the table' },
+        { text: 'Click the **Remove** button in the Actions column' },
+        { text: 'Confirm with **Remove**. The dialog names the channel and workspace that will stop receiving notifications' },
       ],
     },
     {
-      type: 'callout',
-      variant: 'warning',
-      text: 'The connection is removed as soon as you click delete, without a confirmation step, and notifications to it stop right away. To pause a connection instead, turn it off in the Action column. You can reconnect at any time by going through the authorization flow again.',
+      type: 'paragraph',
+      text: 'Notifications to that channel stop as soon as the connection is removed. To use the channel again, add it with **Add to Slack**.',
     },
     {
       type: 'callout',
       variant: 'tip',
-      text: 'To stop notifications, turn off or delete the connections in the table before you disable the Slack extension. Disabling the extension hides the Slack settings page but keeps your connections.',
+      text: 'To stop notifications, turn off or remove the connections in the table before you disable the Slack extension. Disabling the extension hides the Slack settings page but keeps your connections.',
+    },
+    {
+      type: 'heading',
+      id: 'unlinked-connections',
+      level: 2,
+      text: 'Unlinked connections',
+    },
+    {
+      type: 'paragraph',
+      text: 'Some connections were created before Slack connections belonged to an organization. VerifyWise could not tell which organization they belong to. This happens when the person who added them was a member of several organizations, or of none. These connections send nothing.',
+    },
+    {
+      type: 'paragraph',
+      text: 'If you added any of them, the Slack settings page lists them under **Unlinked connections**, below the main table. Only you see your own. You can\'t link one to an organization: click **Remove**, confirm, and then add the channel again with **Add to Slack** if you need it again.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Unlinked connections whose owner no longer has an account were deleted automatically during an update, since no one could see or remove them.',
     },
     {
       type: 'heading',
@@ -233,8 +281,9 @@ export const slackIntegrationContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { text: 'Check that the Slack extension is enabled and the connection is active in the connections table' },
-        { text: 'Verify notification routing is set up for the right channel' },
+        { text: 'Check that the Slack extension is enabled and the connection\'s status is Active' },
+        { text: 'Check that the connection\'s routing includes the notification type. A new connection receives nothing until you set its routing' },
+        { text: 'If the connection says it posts only its owner\'s events, save its routing' },
         { text: 'Make sure the VerifyWise app hasn\'t been removed from your Slack workspace' },
         { text: 'Confirm the target channel still exists' },
       ],
@@ -249,7 +298,10 @@ export const slackIntegrationContent: ArticleContent = {
       type: 'bullet-list',
       items: [
         { text: 'Make sure you have permission to install apps in your Slack workspace' },
-        { text: 'Try again after clearing your browser cache' },
+        { text: '"This Slack sign-in could not be verified" means the reply from Slack did not match the tab you started in. Click **Add to Slack** again and finish in the same tab' },
+        { text: '"Slack did not accept the authorization code" means the sign-in expired or was already used. Click **Add to Slack** again' },
+        { text: '"Slack did not grant the permissions VerifyWise needs" means Slack returned without the permissions listed above. Click **Add to Slack** again and allow every permission' },
+        { text: '"Slack rejected the return address" means the server setting `FRONTEND_URL` differs from the address you open VerifyWise at. Ask the person who runs your VerifyWise server to correct it' },
         { text: 'Contact your Slack workspace administrator if restrictions are in place' },
       ],
     },
@@ -297,7 +349,7 @@ export const slackIntegrationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Notifications go out in real-time as events happen in VerifyWise. There\'s no batching or delay.',
+      text: 'Membership and use case messages go out when the change happens. Deadline and policy review reminders come from scheduled checks, so they arrive when the check runs.',
     },
     {
       type: 'article-links',

@@ -15,7 +15,7 @@ export type PublicBaseUrlSource = "API_PUBLIC_URL" | "client" | "FRONTEND_URL";
 const MAX_URL_LENGTH = 500;
 
 /** A trimmed http(s) URL without trailing slashes, or null when not usable. */
-function normaliseHttpUrl(value: string | undefined | null): string | null {
+export function normaliseHttpUrl(value: string | undefined | null): string | null {
   const trimmed = typeof value === "string" ? value.trim() : "";
   if (!trimmed || trimmed.length > MAX_URL_LENGTH) return null;
   try {

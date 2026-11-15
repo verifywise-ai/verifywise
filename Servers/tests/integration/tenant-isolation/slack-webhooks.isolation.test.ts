@@ -12,7 +12,11 @@ import { seedTwoTenantContexts } from "./tenantIsolation.harness";
 import { getDeliverableSlackWebhooksQuery } from "../../../utils/slackWebhook.utils";
 import { SlackNotificationRoutingType } from "../../../domain.layer/enums/slack.enum";
 
+// eslint-disable-next-line @typescript-eslint/no-require-imports
+const unlinkedCleanup = require("../../../database/migrations/20261115100000-slack-webhooks-unlinked-cleanup.js");
+
 const BASE = "/api/extensions/slack/oauth/workspaces";
+const UNLINKED = "/api/extensions/slack/oauth/unlinked";
 const ROUTING = SlackNotificationRoutingType.MEMBERSHIP_AND_ROLES;
 
 /**
@@ -92,6 +96,21 @@ async function editorOf(orgId: number) {
     mockUser: { userId, organizationId: orgId, role: "Editor" },
   });
   return testRequest(app);
+}
+
+/** Another Admin of `orgId`, as a request agent, with their user id. */
+async function adminOf(orgId: number) {
+  const userId = await createTestUser(
+    orgId,
+    1,
+    `slack-admin-${Date.now()}@test.com`,
+    "Password123!",
+  );
+  const app = await createTestApp({
+    bypassAuth: true,
+    mockUser: { userId, organizationId: orgId, role: "Admin" },
+  });
+  return { userId, request: testRequest(app) };
 }
 
 const deliverableIds = async (params: Parameters<typeof getDeliverableSlackWebhooksQuery>[0]) =>
@@ -282,5 +301,99 @@ describe("slack webhooks tenant isolation", () => {
     expect(await deliverableIds({ organizationId: attacker.orgId, routingType: ROUTING })).toEqual([
       otherOrg,
     ]);
+  });
+
+  describe("connections with no organization", () => {
+    it("their owner lists and removes them; nobody else can", async () => {
+      const { owner, attacker } = await seedTwoTenantContexts();
+      await enableSlack(owner.orgId, owner.userId);
+      await enableSlack(attacker.orgId, attacker.userId);
+      const colleague = await adminOf(owner.orgId);
+      const unlinked = await insertConnection({
+        orgId: null,
+        userId: owner.userId,
+        scope: "user",
+        channel: "#old",
+      });
+      const linked = await insertConnection({
+        orgId: owner.orgId,
+        userId: owner.userId,
+        scope: "organization",
+      });
+
+      const list = await owner.request.get(UNLINKED);
+      expect(list.status).toBe(200);
+      expect(list.body.data).toEqual([
+        expect.objectContaining({ id: unlinked, team_name: "Acme", channel: "#old" }),
+      ]);
+      // No token, no webhook URL.
+      expect(Object.keys(list.body.data[0]).sort()).toEqual([
+        "channel",
+        "created_at",
+        "id",
+        "team_name",
+      ]);
+
+      // Another Admin of the same organization and another organization's Admin
+      // see nothing and cannot remove it.
+      for (const other of [colleague.request, attacker.request]) {
+        const otherList = await other.get(UNLINKED);
+        expect(otherList.status).toBe(200);
+        expect(otherList.body.data).toEqual([]);
+        expect((await other.delete(`${UNLINKED}/${unlinked}`)).status).toBe(404);
+      }
+      expect(await connectionRow(unlinked)).toBeDefined();
+
+      // An organization's connection is not reachable through this route.
+      expect((await owner.request.delete(`${UNLINKED}/${linked}`)).status).toBe(404);
+      expect(await connectionRow(linked)).toBeDefined();
+
+      expect((await owner.request.delete(`${UNLINKED}/${unlinked}`)).status).toBe(204);
+      expect(await connectionRow(unlinked)).toBeUndefined();
+      expect((await owner.request.delete(`${UNLINKED}/${unlinked}`)).status).toBe(404);
+      expect((await owner.request.get(UNLINKED)).body.data).toEqual([]);
+    });
+
+    it("refuses an Editor both routes", async () => {
+      const { owner } = await seedTwoTenantContexts();
+      await enableSlack(owner.orgId, owner.userId);
+      const unlinked = await insertConnection({ orgId: null, userId: owner.userId, scope: "user" });
+      const editor = await editorOf(owner.orgId);
+
+      expect((await editor.get(UNLINKED)).status).toBe(403);
+      expect((await editor.delete(`${UNLINKED}/${unlinked}`)).status).toBe(403);
+      expect(await connectionRow(unlinked)).toBeDefined();
+    });
+
+    it("the cleanup migration deletes only rows with neither organization nor owner", async () => {
+      const { owner } = await seedTwoTenantContexts();
+      const ownerless = await insertConnection({ orgId: null, userId: null, scope: "user" });
+      const unlinked = await insertConnection({ orgId: null, userId: owner.userId, scope: "user" });
+      const orgWide = await insertConnection({
+        orgId: owner.orgId,
+        userId: null,
+        scope: "organization",
+      });
+
+      await unlinkedCleanup.up({ sequelize });
+
+      expect(await connectionRow(ownerless)).toBeUndefined();
+      expect(await connectionRow(unlinked)).toBeDefined();
+      expect(await connectionRow(orgWide)).toBeDefined();
+    });
+
+    it("does not let PUBLIC execute the cross-tenant helpers", async () => {
+      for (const fn of [
+        "verifywise.slack_unlinked_connections(integer)",
+        "verifywise.delete_unlinked_slack_connection(integer, integer)",
+      ]) {
+        const [row] = await sequelize.query<{ public_can: boolean; app_can: boolean }>(
+          `SELECT has_function_privilege('public', :fn, 'EXECUTE') AS public_can,
+                  has_function_privilege('verifywise_app', :fn, 'EXECUTE') AS app_can`,
+          { replacements: { fn }, type: QueryTypes.SELECT },
+        );
+        expect(row).toEqual({ public_can: false, app_can: true });
+      }
+    });
   });
 });

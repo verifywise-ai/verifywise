@@ -14,7 +14,7 @@ The SlackWebhook controller manages all HTTP request handling for Slack webhook 
 
 **Location:** `Servers/controllers/slackWebhook.ctrl.ts`
 
-**Mounted at:** `/api/extensions/slack/oauth/workspaces` (`Servers/extensions/slack/slack.route.ts`), the only mount. Every route needs JWT, the Slack extension enabled for the caller's organization, and `extension.admin` (Admin).
+**Mounted at:** `/api/extensions/slack/oauth/workspaces` and `/api/extensions/slack/oauth/unlinked` (`Servers/extensions/slack/slack.route.ts`), plus the deprecated `/api/slackWebhooks` alias for the workspace handlers. Every route needs JWT, the Slack extension enabled for the caller's organization, and `extension.admin` (Admin).
 
 **Organization scope:** Slack connections belong to the organization. Every handler takes the user and organization from the token (`req.userId`, `req.organizationId`) and ignores any `userId` in the body or query. Reads, updates, deletes and sends filter by `organization_id`, so another organization's id answers 404.
 
@@ -61,13 +61,14 @@ Success (200):
       "channel_id": "C1234567890",
       "created_at": "2025-09-16T10:30:00Z",
       "is_active": true,
-      "routing_type": ["Membership and roles"]
+      "routing_type": ["Membership and roles"],
+      "delivery_scope": "organization"
     }
   ]
 }
 ```
 
-`user_id` is the Admin who connected the workspace. The response does not include `organization_id` or `delivery_scope`.
+`user_id` is the Admin who connected the workspace. `delivery_scope` is `organization` or `user` (a connection from before organization ownership that posts only its owner's events until its routing is saved). The response does not include `organization_id`.
 
 ---
 
@@ -114,11 +115,11 @@ Creates a new Slack webhook after validating OAuth code with Slack API.
 
 **OAuth Flow:**
 
-1. Client redirects to Slack OAuth URL
-2. User authorizes app and selects channel
-3. Slack redirects back with authorization code
-4. Client sends code to this endpoint
-5. Server exchanges code for access token
+1. Client stores a random `state` in `sessionStorage` and redirects the same tab to Slack's authorize URL with that `state`, the bot scopes `incoming-webhook,chat:write,chat:write.public,channels:read,groups:read` and the user scopes `channels:read,groups:read,groups:write.invites`
+2. User authorizes the app and selects a channel
+3. Slack redirects back to `/extensions/slack/settings` with `code` and `state` (or `error` when the user cancels)
+4. Client clears the query string, checks `state` against the stored value and, only on a match, sends the code to this endpoint
+5. Server checks `code` (a non-empty string of at most 512 characters, else 400 before Slack is called) and exchanges it for an access token
 6. Server creates the connection for the caller's organization (owner and organization from the token, `delivery_scope` defaults to `organization`) and invites the bot to the channel
 
 Rate-limited by `slackWorkspaceCreateLimiter` (10 per hour).
@@ -126,9 +127,12 @@ Rate-limited by `slackWorkspaceCreateLimiter` (10 per hour).
 **Response:**
 
 - 201: Created
-- 400: Bad request (missing required fields)
-- 503: Service unavailable
-- 500: Server error
+- 400: `code` missing, blank or over 512 characters ("A Slack authorization code is required")
+- 400: Slack answered `bad_redirect_uri` or `redirect_uri_mismatch` ("Slack rejected the return address. FRONTEND_URL must match the address you open VerifyWise at.")
+- 400: Slack returned no user token, because the user scopes were not granted ("Slack did not grant the permissions VerifyWise needs. Add Slack again and allow every permission."); nothing is saved and the bot invite is not attempted
+- 400: Slack refused the code for any other reason ("Slack did not accept the authorization code. Add Slack again.")
+- Slack's own error is logged, never returned
+- 500: Server error (including `SLACK_API_URL` not set or Slack unreachable)
 
 **Slack API Call:**
 
@@ -143,7 +147,7 @@ With parameters:
 - `client_id`: Slack app client ID
 - `client_secret`: Slack app client secret
 - `code`: Authorization code from client
-- `redirect_uri`: OAuth redirect URI
+- `redirect_uri`: `${FRONTEND_URL}/extensions/slack/settings`, with trailing slashes dropped from `FRONTEND_URL` (`slackRedirectUri`)
 
 **Transaction Handling:**
 
@@ -187,13 +191,14 @@ async function validateSlackOAuth(code: string): Promise<any>;
 - `scope`: Granted scopes
 - `team`: Workspace information
 - `incoming_webhook`: Webhook details
-- `authed_user`: User who authorized
+- `authed_user`: User who authorized; its `access_token` (the user token) invites the bot into the channel
 - `bot_user_id`: Bot user ID
 
 **Throws:**
 
-- Error if OAuth validation fails
-- Error if Slack API returns `ok: false`
+- `ValidationException` with a fixed message when Slack answers with anything but `ok: true`: a redirect URI message for `bad_redirect_uri` or `redirect_uri_mismatch`, the "did not accept the authorization code" message otherwise. Slack's error code is logged (filtered to letters, digits and underscores, at most 64 characters) and never sent to the client.
+- `ValidationException` with the "did not grant the permissions" message when the answer has no `authed_user.access_token`
+- A generic `Error` when `SLACK_API_URL` is not set, the request fails or the body is not JSON
 
 **Environment Variables Required:**
 
@@ -340,6 +345,36 @@ Deletes a connection of the caller's organization.
 - 204: Deleted
 - 400: Invalid ID
 - 404: Connection not found in the caller's organization
+- 500: Server error
+
+### getUnlinkedSlackConnections
+
+Lists the caller's own connections with no organization (legacy rows the organization backfill could not assign). They send nothing. Filtered by `req.userId`, not the organization, through `getUnlinkedSlackConnectionsQuery`, which reads the `SECURITY DEFINER` function `verifywise.slack_unlinked_connections` because the RLS policy hides rows with no organization.
+
+**HTTP Method:** GET
+**Endpoint:** `/api/extensions/slack/oauth/unlinked`
+**Authentication:** JWT, extension enabled, Admin
+
+**Response:**
+
+- 200: Array of `{ id, team_name, channel, created_at }` (no token or URL)
+- 500: Server error
+
+---
+
+### deleteUnlinkedSlackConnection
+
+Removes one of the caller's own connections with no organization, through `deleteUnlinkedSlackConnectionQuery` (`verifywise.delete_unlinked_slack_connection`). Logs a `Delete` event; that audit write is best effort, so a failing write is logged and the answer stays 204.
+
+**HTTP Method:** DELETE
+**Endpoint:** `/api/extensions/slack/oauth/unlinked/:id`
+**Authentication:** JWT, extension enabled, Admin
+
+**Response:**
+
+- 204: Deleted
+- 400: Invalid ID
+- 404: No such unlinked connection of the caller (missing, another user's, or linked to an organization)
 - 500: Server error
 
 ## Error Handling

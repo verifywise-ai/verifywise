@@ -23,6 +23,8 @@ import {
   getSlackWebhookByIdAndOrganizationQuery,
   getSlackWebhooksByOrganizationQuery,
   updateSlackWebhookByIdQuery,
+  getUnlinkedSlackConnectionsQuery,
+  deleteUnlinkedSlackConnectionQuery,
 } from "../slackWebhook.utils";
 import { SlackNotificationRoutingType } from "../../domain.layer/enums/slack.enum";
 
@@ -216,5 +218,36 @@ describe("management queries filter by organization", () => {
       "DELETE FROM slack_webhooks WHERE id = :id AND organization_id = :organizationId RETURNING *",
     );
     expect(options.replacements).toEqual({ id: 4, organizationId: 8 });
+  });
+});
+
+describe("unlinked connections (no organization)", () => {
+  it("lists through the SECURITY DEFINER function, by user id, without tokens or URLs", async () => {
+    const rows = [{ id: 1, team_name: "Acme", channel: "#old", created_at: new Date() }];
+    mockQuery.mockResolvedValue(rows);
+
+    expect(await getUnlinkedSlackConnectionsQuery(3)).toBe(rows);
+
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(squash(sql)).toBe(
+      "SELECT id, team_name, channel, created_at FROM verifywise.slack_unlinked_connections(:userId)",
+    );
+    expect(options).toMatchObject({ replacements: { userId: 3 } });
+  });
+
+  it("deletes through the SECURITY DEFINER function and reports whether a row went", async () => {
+    mockQuery.mockResolvedValue([{ deleted: true }]);
+    expect(await deleteUnlinkedSlackConnectionQuery(5, 3)).toBe(true);
+
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(squash(sql)).toBe(
+      "SELECT verifywise.delete_unlinked_slack_connection(:id, :userId) AS deleted",
+    );
+    expect(options).toMatchObject({ replacements: { id: 5, userId: 3 } });
+
+    mockQuery.mockResolvedValue([{ deleted: false }]);
+    expect(await deleteUnlinkedSlackConnectionQuery(5, 3)).toBe(false);
+    mockQuery.mockResolvedValue([]);
+    expect(await deleteUnlinkedSlackConnectionQuery(5, 3)).toBe(false);
   });
 });
