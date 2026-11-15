@@ -8,8 +8,9 @@ jest.setTimeout(60000);
  * usable, so an Admin approves directly; an organization with a usable
  * workflow submits, and the approver's approve or reject moves the policy;
  * withdraw, and withdraw after a decision; the hand-set status gate on the
- * legacy PUT; the v1 routes deny another organization; deleting a policy or a
- * file rejects its pending request.
+ * legacy PUT; the title and content lock while a request is pending and the
+ * submitted text in the request snapshot; the v1 routes deny another
+ * organization; deleting a policy or a file rejects its pending request.
  */
 
 import { Agent } from "supertest";
@@ -474,6 +475,90 @@ describe("Policy approval through approval workflows", () => {
 
       expect((await readPolicy(policyId)).status).toBe("Under Review");
       expect(await pendingRequests("policy", policyId)).toBe(1);
+    });
+  });
+
+  describe("title and content lock while a request is pending", () => {
+    const lockedMessage =
+      "This policy is waiting for approval. Withdraw the request to change its title or content.";
+
+    async function readText(policyId: number): Promise<{ title: string; content_html: string }> {
+      const [row] = await sequelize.query<{ title: string; content_html: string }>(
+        "SELECT title, content_html FROM policy_manager WHERE id = :policyId",
+        { replacements: { policyId }, type: QueryTypes.SELECT },
+      );
+      return row;
+    }
+
+    it("stores the submitted title and content in the request snapshot", async () => {
+      const org = await seedOrg();
+      await createWorkflow(org.admin, org.adminId);
+      const policyId = await createPolicy(org.editor, {
+        title: "Snapshot policy",
+        content_html: "<p>Submitted text</p>",
+      });
+      const requestId = await submit(org.editor, policyId);
+
+      const [row] = await sequelize.query<{ entity_data: any }>(
+        "SELECT entity_data FROM approval_requests WHERE id = :requestId",
+        { replacements: { requestId }, type: QueryTypes.SELECT },
+      );
+      const data =
+        typeof row.entity_data === "string" ? JSON.parse(row.entity_data) : row.entity_data;
+      expect(data).toMatchObject({
+        title: "Snapshot policy",
+        content_html: "<p>Submitted text</p>",
+        status: "Draft",
+      });
+    });
+
+    it("refuses title and content changes until the request is withdrawn", async () => {
+      const org = await seedOrg();
+      await createWorkflow(org.admin, org.adminId);
+      const policyId = await createPolicy(org.editor);
+      const before = await readText(policyId);
+      const requestId = await submit(org.editor, policyId);
+
+      const content = await org.editor
+        .put(`/api/policies/${policyId}`)
+        .send({ title: before.title, content_html: "<p>Changed</p>", status: "Under Review" });
+      expect(content.status).toBe(400);
+      expect(content.body.data.errors[0]).toMatchObject({
+        field: "content_html",
+        message: lockedMessage,
+      });
+
+      const title = await org.editor
+        .put(`/api/policies/${policyId}`)
+        .send({ title: "Renamed while pending", status: "Under Review" });
+      expect(title.status).toBe(400);
+      expect(title.body.data.errors[0]).toMatchObject({ field: "title", message: lockedMessage });
+      expect(await readText(policyId)).toEqual(before);
+
+      // Other fields stay editable; sending the stored text is not a change.
+      const tagsOnly = await org.editor
+        .put(`/api/policies/${policyId}`)
+        .send({ tags: ["Security"], status: "Under Review" });
+      expect(tagsOnly.status).toBe(202);
+      const sameText = await org.editor.put(`/api/policies/${policyId}`).send({
+        title: before.title,
+        content_html: before.content_html,
+        status: "Under Review",
+        next_review_date: "2031-02-01",
+      });
+      expect(sameText.status).toBe(202);
+
+      const withdrawn = await org.editor.post(`/api/approval-requests/${requestId}/withdraw`);
+      expect(withdrawn.status).toBe(200);
+
+      const afterWithdraw = await org.editor
+        .put(`/api/policies/${policyId}`)
+        .send({ title: "Renamed after withdraw", content_html: "<p>Changed</p>" });
+      expect(afterWithdraw.status).toBe(202);
+      expect(await readText(policyId)).toEqual({
+        title: "Renamed after withdraw",
+        content_html: "<p>Changed</p>",
+      });
     });
   });
 

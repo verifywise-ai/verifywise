@@ -38,10 +38,13 @@ describe("advisor policy writes sanitize content_html", () => {
   });
 
   it("agent_update_policy sanitizes the description before it becomes content_html", async () => {
+    // The update gate locks the row and reads pending requests first.
+    q.mockResolvedValueOnce([{ id: 1, title: "P", status: "Draft", content_html: "" }]);
+    q.mockResolvedValueOnce([]);
     q.mockResolvedValueOnce([{ id: 1 }]);
     const exec = writeToolExecutors.get("agent_update_policy")!;
     await exec({ policy_id: 1, description: DIRTY, _userId: 9 }, 42);
-    const html = q.mock.calls[0][1].replacements.content_html as string;
+    const html = q.mock.calls[2][1].replacements.content_html as string;
     expect(html).toContain("<p>keep</p>");
     expect(html).not.toContain("<script");
     expect(html).not.toContain("onerror");

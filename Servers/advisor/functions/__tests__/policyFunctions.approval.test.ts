@@ -112,7 +112,7 @@ describe("agent_update_policy status", () => {
   it("treats a null status as not sent: not written, not checked, no history", async () => {
     q.mockResolvedValueOnce([{ id: 1 }]);
     await exec("agent_update_policy")(
-      { policy_id: 1, policy_name: "New", status: null, _userId: 9 },
+      { policy_id: 1, review_date: "2027-01-01", status: null, _userId: 9 },
       42,
     );
     expect(q).toHaveBeenCalledTimes(1);
@@ -137,9 +137,65 @@ describe("agent_update_policy status", () => {
 
   it("does not check or record status when none is sent", async () => {
     q.mockResolvedValueOnce([{ id: 1 }]);
-    await exec("agent_update_policy")({ policy_id: 1, policy_name: "New", _userId: 9 }, 42);
+    await exec("agent_update_policy")({ policy_id: 1, review_date: "2027-01-01", _userId: 9 }, 42);
     expect(q).toHaveBeenCalledTimes(1);
     expect(recordPolicyStatusChange).not.toHaveBeenCalled();
+  });
+});
+
+describe("agent_update_policy title and content while a request is pending", () => {
+  const lockRow = (hasPending: boolean) => {
+    q.mockResolvedValueOnce([
+      { id: 1, title: "Acceptable use", status: "Under Review", content_html: "<p>v1</p>" },
+    ]);
+    q.mockResolvedValueOnce(hasPending ? [{ entity_id: 1 }] : []);
+  };
+
+  it("refuses a new title with field title, writes nothing and rolls back", async () => {
+    lockRow(true);
+    const error = (await exec("agent_update_policy")(
+      { policy_id: 1, policy_name: "Renamed", _userId: 9 },
+      42,
+    ).catch((e: unknown) => e)) as ValidationException;
+    expect(error).toBeInstanceOf(ValidationException);
+    expect(error.message).toBe(POLICY_STATUS_MESSAGES.textPendingRequest);
+    expect(error.metadata.field).toBe("title");
+    expect(q).toHaveBeenCalledTimes(2);
+    expect(String(q.mock.calls[0][0])).toContain("FOR UPDATE");
+    expect(q.mock.calls[0][1].replacements).toEqual({ organizationId: 42, policyIds: [1] });
+    expect(mockTx.rollback).toHaveBeenCalled();
+    expect(mockTx.commit).not.toHaveBeenCalled();
+  });
+
+  it("refuses new content with field content_html", async () => {
+    lockRow(true);
+    const error = (await exec("agent_update_policy")(
+      { policy_id: 1, description: "<p>v2</p>", _userId: 9 },
+      42,
+    ).catch((e: unknown) => e)) as ValidationException;
+    expect(error).toBeInstanceOf(ValidationException);
+    expect(error.metadata.field).toBe("content_html");
+    expect(mockTx.rollback).toHaveBeenCalled();
+  });
+
+  it("updates other fields with the stored title", async () => {
+    lockRow(true);
+    q.mockResolvedValueOnce([{ id: 1 }]);
+    await exec("agent_update_policy")(
+      { policy_id: 1, policy_name: "Acceptable use", tags: ["AI ethics"], _userId: 9 },
+      42,
+    );
+    expect(q).toHaveBeenCalledTimes(3);
+    expect(String(q.mock.calls[2][0])).toContain("UPDATE policy_manager");
+    expect(mockTx.commit).toHaveBeenCalled();
+  });
+
+  it("changes the title when no request is pending", async () => {
+    lockRow(false);
+    q.mockResolvedValueOnce([{ id: 1, title: "Renamed" }]);
+    await exec("agent_update_policy")({ policy_id: 1, policy_name: "Renamed", _userId: 9 }, 42);
+    expect(q.mock.calls[2][1].replacements.title).toBe("Renamed");
+    expect(mockTx.commit).toHaveBeenCalled();
   });
 });
 

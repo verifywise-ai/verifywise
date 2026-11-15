@@ -230,7 +230,7 @@ export const toolsDefinition: any[] = [
     function: {
       name: "agent_update_policy",
       description:
-        "Update an existing policy's fields. Requires human confirmation before execution.",
+        "Update an existing policy's fields. Requires human confirmation before execution. While the policy has a pending approval request its title and content cannot change (the request must be withdrawn first); other fields can.",
       parameters: {
         type: "object",
         properties: {

@@ -1253,6 +1253,7 @@
   "This organization has no policy approval workflow. An Admin can approve the policy directly.": "This organization has no policy approval workflow. An Admin can approve the policy directly.",
   "This password reset link has already been used or is invalid": "This password reset link has already been used or is invalid",
   "This policy already has a pending approval request": "This policy already has a pending approval request",
+  "This policy is waiting for approval. Withdraw the request to change its title or content.": "This policy is waiting for approval. Withdraw the request to change its title or content.",
   "This questionnaire has pending assessments": "This questionnaire has pending assessments",
   "This resource is not visible to the public.": "This resource is not visible to the public.",
   "This risk already has a parent. Remove it first.": "This risk already has a parent. Remove it first.",

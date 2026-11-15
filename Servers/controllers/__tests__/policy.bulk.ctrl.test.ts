@@ -51,7 +51,7 @@ jest.mock("../../services/policies/policyExporter", () => ({
 jest.mock("../../utils/policyStatus.utils", () => ({
   assertPoliciesCanBeArchived: jest.fn<any>().mockResolvedValue(undefined),
   assertPolicyStatusChange: jest.fn(),
-  assertPolicyStatusUpdateAllowed: jest.fn<any>().mockResolvedValue(null),
+  assertPolicyUpdateAllowed: jest.fn<any>().mockResolvedValue(null),
 }));
 
 jest.mock("../../services/policies/policyApproval.service", () => ({

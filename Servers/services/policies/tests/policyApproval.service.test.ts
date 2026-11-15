@@ -104,6 +104,7 @@ const routeDb = (db: Db) => {
 const draftPolicy = {
   id: 55,
   title: "Acceptable use",
+  content_html: "<p>Use AI responsibly.</p>",
   status: "Draft",
   tags: ["AI ethics"],
   next_review_date: "2027-01-01",
@@ -188,6 +189,7 @@ describe("submitPolicyForApproval", () => {
         entity_type: "policy",
         entity_data: {
           title: "Acceptable use",
+          content_html: "<p>Use AI responsibly.</p>",
           status: "Draft",
           tags: ["AI ethics"],
           next_review_date: "2027-01-01",

@@ -600,7 +600,7 @@ import { QueryTypes } from "sequelize";
 import { sanitizeUserHtml } from "../../utils/sanitization.utils";
 import {
   assertPolicyStatusChange,
-  assertPolicyStatusUpdateAllowed,
+  assertPolicyUpdateAllowed,
 } from "../../utils/policyStatus.utils";
 import { recordPolicyStatusChange } from "../../utils/policyApprovalDecision.utils";
 import { ValidationException } from "../../domain.layer/exceptions/custom.exception";
@@ -711,11 +711,14 @@ const agentUpdatePolicy = createWriteToolFn({
 
     const transaction = await sequelize.transaction();
     try {
-      // Same status rules as the policy editor (utils/policyStatus.utils.ts).
-      const previousStatus = await assertPolicyStatusUpdateAllowed({
+      // Same status rules and pending-approval text lock as the policy editor
+      // (utils/policyStatus.utils.ts).
+      const previousStatus = await assertPolicyUpdateAllowed({
         organizationId,
         policyId,
         nextStatus: status as string | undefined,
+        nextTitle: replacements.title as string | null | undefined,
+        nextContentHtml: replacements.content_html as string | undefined,
         transaction,
       });
 

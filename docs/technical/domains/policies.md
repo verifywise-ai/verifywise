@@ -100,13 +100,31 @@ This gate applies to the legacy `POST /policies` and `PUT /policies/:id` as an a
 
 The client mirrors the rules in `Clients/src/application/utils/policyStatusOptions.ts`, so the status dropdown offers only statuses the server accepts. It is disabled while a request is pending.
 
+### Title and content while a request is pending
+
+While a policy has a Pending approval request, its `title` and `content_html` cannot change, so the approvers decide on the text that was submitted. The other fields (tags, owner, team members, next review date, custom fields) stay editable. A value equal to the stored one is not a change, so a save that sends the stored title and content with other changes passes. An empty title or content is not written by `PUT /policies/:id`, so it is not a change either.
+
+The same gate does this (`assertPolicyUpdateAllowed` in `utils/policyStatus.utils.ts`): in the save transaction it locks the policy row (`FOR UPDATE`, filtered by `organization_id`), then reads the pending request, then checks the status and then the text. It runs on every write path that can change an existing policy's title or content: the legacy `PUT /policies/:id` and the advisor's `agent_update_policy`. There is no v1 policy update route, bulk actions do not touch title or content, and DOCX import (`POST /policies/import/docx`) only converts a file to HTML for the editor and writes nothing.
+
+`PUT /policies/:id` refusals from the gate:
+
+| Status | Field | When | Message |
+|--------|-------|------|---------|
+| 400 | `status` | A status rule above refuses the change (a pending request, a workflow-only status, the transition table) | The rule's message |
+| 400 | `title` | A pending request and a title different from the stored one | "This policy is waiting for approval. Withdraw the request to change its title or content." |
+| 400 | `content_html` | A pending request and content different from the stored one (compared after sanitizing) | Same message |
+
+The status is checked first, then the title, then the content; the first refusal is returned, in the usual `{ message, errors: [{ field, message }] }` body, translated (en/de/fr). The advisor tool throws the same `ValidationException`. Withdrawing the request (or a decision) lifts the lock.
+
+The editor follows the approval state: while a request is pending the title and content are read-only (TipTap `setEditable(false)`, toolbar and title pencil hidden, DOCX import disabled), with the note "Waiting for approval. Withdraw the request to edit the title or content." A save leaves `title` and `content_html` out of the payload and saves the rest. The lock lifts as soon as the approval query refreshes after a withdrawal or decision, without a reload and without losing unsaved edits.
+
 ### Usable policy workflow
 
 A workflow is usable for an organization when it belongs to the organization, has `entity_type = 'policy'`, is active, has at least one step, and every step has at least one approver (`getUsablePolicyWorkflows` in `services/policies/policyApproval.service.ts`). The "Policy Approval" workflow that migration `20260413175412` seeded for every organization has one step and no approvers, so it is not usable and is ignored. An Admin makes it usable by adding approvers to its step.
 
 ### Approval paths
 
-- **The organization has a usable workflow.** A user with `policy.edit` submits the policy. In one transaction this opens an approval request (`entity_type 'policy'`, `request_name` = policy title, `entity_data` = snapshot of title, status, tags, next review date and owner), sets the policy to Under Review with `review_status = 'pending_review'`, clears the previous review fields and records the status change in history. Step 1 approvers, except the requester, are notified after the commit. The workflow's approvers then decide through `/approval-requests` (see [Approvals](./approvals.md#policy-requests)).
+- **The organization has a usable workflow.** A user with `policy.edit` submits the policy. In one transaction this opens an approval request (`entity_type 'policy'`, `request_name` = policy title, `entity_data` = snapshot of title, content (`content_html`), status, tags, next review date and owner, so the request records which text was submitted; the lock above keeps the live text equal to it while the request is pending), sets the policy to Under Review with `review_status = 'pending_review'`, clears the previous review fields and records the status change in history. Step 1 approvers, except the requester, are notified after the commit. The workflow's approvers then decide through `/approval-requests` (see [Approvals](./approvals.md#policy-requests)).
 - **The organization has no usable workflow.** An Admin (a role with `organization.admin`) approves the policy directly, with an optional comment. Submitting returns 409.
 
 A policy can be submitted or approved directly only from Draft or Under Review, and only with no pending request. An Under Review policy without a pending request is legacy data and may be submitted.

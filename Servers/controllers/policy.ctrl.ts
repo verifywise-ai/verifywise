@@ -53,7 +53,7 @@ import { rejectPendingPolicyRequestOnDelete } from "../services/policies/policyA
 import {
   assertPoliciesCanBeArchived,
   assertPolicyStatusChange,
-  assertPolicyStatusUpdateAllowed,
+  assertPolicyUpdateAllowed,
 } from "../utils/policyStatus.utils";
 
 /**
@@ -260,11 +260,16 @@ export class PolicyController {
         await transaction.rollback();
         return res.status(400).json(policyValidationResponse(fieldErrors));
       }
-      // Status moves by hand only within the rules (pending request, workflow-only statuses).
-      await assertPolicyStatusUpdateAllowed({
+      // Status moves by hand only within the rules (pending request, workflow-only
+      // statuses); title and content are locked while a request is pending.
+      // updatePolicyByIdQuery writes title and content only when non-empty, so
+      // an empty value is not a change.
+      await assertPolicyUpdateAllowed({
         organizationId: req.organizationId!,
         policyId,
         nextStatus: policyData.status,
+        nextTitle: policyData.title || undefined,
+        nextContentHtml: policyData.content_html || undefined,
         transaction,
       });
 

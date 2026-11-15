@@ -8,8 +8,9 @@ import { sequelize } from "../../database/db";
 import {
   assertPoliciesCanBeArchived,
   assertPolicyStatusChange,
-  assertPolicyStatusUpdateAllowed,
+  assertPolicyUpdateAllowed,
   getPolicyStatusChangeError,
+  getPolicyTextChangeError,
   POLICY_CREATE_STATUSES,
   POLICY_STATUS_MESSAGES,
 } from "../policyStatus.utils";
@@ -148,14 +149,14 @@ describe("transition table", () => {
   });
 });
 
-describe("assertPolicyStatusUpdateAllowed", () => {
+describe("assertPolicyUpdateAllowed", () => {
   beforeEach(() => {
     mockQuery.mockReset();
   });
 
   it("does not query when no status is sent", async () => {
     await expect(
-      assertPolicyStatusUpdateAllowed({
+      assertPolicyUpdateAllowed({
         organizationId: 1,
         policyId: 5,
         nextStatus: undefined,
@@ -170,7 +171,7 @@ describe("assertPolicyStatusUpdateAllowed", () => {
       .mockResolvedValueOnce([{ id: "5", title: "P", status: "Approved" }] as any)
       .mockResolvedValueOnce([] as any);
     await expect(
-      assertPolicyStatusUpdateAllowed({
+      assertPolicyUpdateAllowed({
         organizationId: 1,
         policyId: 5,
         nextStatus: "Published",
@@ -192,7 +193,7 @@ describe("assertPolicyStatusUpdateAllowed", () => {
       .mockResolvedValueOnce([{ id: 5, title: "P", status: "Under Review" }] as any)
       .mockResolvedValueOnce([{ entity_id: "5" }] as any);
     await expect(
-      assertPolicyStatusUpdateAllowed({
+      assertPolicyUpdateAllowed({
         organizationId: 1,
         policyId: 5,
         nextStatus: "Draft",
@@ -217,7 +218,7 @@ describe("assertPolicyStatusUpdateAllowed", () => {
 
   it("treats a null status as not sent", async () => {
     await expect(
-      assertPolicyStatusUpdateAllowed({
+      assertPolicyUpdateAllowed({
         organizationId: 1,
         policyId: 5,
         nextStatus: null,
@@ -232,7 +233,7 @@ describe("assertPolicyStatusUpdateAllowed", () => {
       .mockResolvedValueOnce([{ id: 5, title: "P", status: "Under Review" }] as any)
       .mockResolvedValueOnce([{ entity_id: 5 }] as any);
     await expect(
-      assertPolicyStatusUpdateAllowed({
+      assertPolicyUpdateAllowed({
         organizationId: 1,
         policyId: 5,
         nextStatus: "Draft",
@@ -244,13 +245,171 @@ describe("assertPolicyStatusUpdateAllowed", () => {
   it("returns null when the policy is not in the organization", async () => {
     mockQuery.mockResolvedValueOnce([] as any);
     await expect(
-      assertPolicyStatusUpdateAllowed({
+      assertPolicyUpdateAllowed({
         organizationId: 1,
         policyId: 5,
         nextStatus: "Draft",
         transaction: tx,
       }),
     ).resolves.toBeNull();
+  });
+});
+
+describe("getPolicyTextChangeError", () => {
+  const current = { title: "Acceptable use", content_html: "<p>v1</p>" };
+
+  it("allows anything when no request is pending", () => {
+    expect(
+      getPolicyTextChangeError({
+        current,
+        next: { title: "New", content_html: "<p>v2</p>" },
+        hasPendingRequest: false,
+      }),
+    ).toBeNull();
+  });
+
+  it("refuses a changed title while pending", () => {
+    expect(
+      getPolicyTextChangeError({ current, next: { title: "New" }, hasPendingRequest: true }),
+    ).toBe("title");
+  });
+
+  it("refuses changed content while pending", () => {
+    expect(
+      getPolicyTextChangeError({
+        current,
+        next: { content_html: "<p>v2</p>" },
+        hasPendingRequest: true,
+      }),
+    ).toBe("content_html");
+  });
+
+  it("reports the title first when both change", () => {
+    expect(
+      getPolicyTextChangeError({
+        current,
+        next: { title: "New", content_html: "<p>v2</p>" },
+        hasPendingRequest: true,
+      }),
+    ).toBe("title");
+  });
+
+  it("accepts values equal to the stored ones while pending", () => {
+    expect(
+      getPolicyTextChangeError({
+        current,
+        next: { title: "Acceptable use", content_html: "<p>v1</p>" },
+        hasPendingRequest: true,
+      }),
+    ).toBeNull();
+  });
+
+  it("accepts values that were not sent while pending", () => {
+    expect(getPolicyTextChangeError({ current, next: {}, hasPendingRequest: true })).toBeNull();
+  });
+
+  it("treats empty and missing stored content as the same text", () => {
+    expect(
+      getPolicyTextChangeError({
+        current: { title: "T", content_html: null },
+        next: { content_html: "" },
+        hasPendingRequest: true,
+      }),
+    ).toBeNull();
+  });
+
+  it("refuses clearing the title (null) while pending", () => {
+    expect(
+      getPolicyTextChangeError({ current, next: { title: null }, hasPendingRequest: true }),
+    ).toBe("title");
+  });
+});
+
+describe("assertPolicyUpdateAllowed: title and content", () => {
+  beforeEach(() => {
+    mockQuery.mockReset();
+  });
+
+  const lockRow = (pending: boolean) =>
+    mockQuery
+      .mockResolvedValueOnce([
+        { id: 5, title: "Acceptable use", status: "Under Review", content_html: "<p>v1</p>" },
+      ] as any)
+      .mockResolvedValueOnce((pending ? [{ entity_id: 5 }] : []) as any);
+
+  const call = (next: { nextTitle?: string; nextContentHtml?: string; nextStatus?: string }) =>
+    assertPolicyUpdateAllowed({
+      organizationId: 1,
+      policyId: 5,
+      nextStatus: next.nextStatus,
+      nextTitle: next.nextTitle,
+      nextContentHtml: next.nextContentHtml,
+      transaction: tx,
+    });
+
+  it("refuses a changed title while pending with field title", async () => {
+    lockRow(true);
+    const error = (await call({ nextTitle: "Renamed" }).catch((e) => e)) as ValidationException;
+    expect(error).toBeInstanceOf(ValidationException);
+    expect(error.message).toBe(POLICY_STATUS_MESSAGES.textPendingRequest);
+    expect(error.metadata?.field).toBe("title");
+  });
+
+  it("refuses changed content while pending with field content_html", async () => {
+    lockRow(true);
+    const error = (await call({ nextContentHtml: "<p>v2</p>" }).catch(
+      (e) => e,
+    )) as ValidationException;
+    expect(error).toBeInstanceOf(ValidationException);
+    expect(error.metadata?.field).toBe("content_html");
+  });
+
+  it("accepts the stored title and content with an unchanged status while pending", async () => {
+    lockRow(true);
+    await expect(
+      call({
+        nextTitle: "Acceptable use",
+        nextContentHtml: "<p>v1</p>",
+        nextStatus: "Under Review",
+      }),
+    ).resolves.toBe("Under Review");
+  });
+
+  it("accepts changed text when no request is pending", async () => {
+    lockRow(false);
+    await expect(call({ nextTitle: "Renamed", nextContentHtml: "<p>v2</p>" })).resolves.toBe(
+      "Under Review",
+    );
+  });
+
+  it("locks the row in the organization, reading content, before the pending read", async () => {
+    lockRow(true);
+    await call({ nextContentHtml: "<p>v1</p>" });
+    expect(mockQuery).toHaveBeenCalledTimes(2);
+    const [lockSql, lockOptions] = mockQuery.mock.calls[0] as [string, any];
+    const [pendingSql, pendingOptions] = mockQuery.mock.calls[1] as [string, any];
+    expect(lockSql).toContain("pm.content_html");
+    expect(lockSql).toContain("pm.organization_id = :organizationId");
+    expect(lockSql).toContain("FOR UPDATE");
+    expect(lockOptions.replacements).toEqual({ organizationId: 1, policyIds: [5] });
+    expect(lockOptions.transaction).toBe(tx);
+    expect(pendingSql).toContain("FROM approval_requests");
+    expect(pendingOptions.replacements.organizationId).toBe(1);
+    expect(pendingOptions.transaction).toBe(tx);
+  });
+
+  it("does not read content when only the status is sent", async () => {
+    mockQuery
+      .mockResolvedValueOnce([{ id: 5, title: "P", status: "Draft" }] as any)
+      .mockResolvedValueOnce([] as any);
+    await call({ nextStatus: "Archived" });
+    expect(String(mockQuery.mock.calls[0][0])).not.toContain("content_html");
+  });
+
+  it("returns null when the policy is not in the organization", async () => {
+    mockQuery.mockResolvedValueOnce([] as any);
+    await expect(call({ nextTitle: "Renamed" })).resolves.toBeNull();
+    expect(mockQuery).toHaveBeenCalledTimes(1);
   });
 });
 

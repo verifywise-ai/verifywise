@@ -136,6 +136,16 @@ function createRes(): any {
   return res;
 }
 
+// The update gate locks the row, then reads pending requests. The module-wide
+// query mock returns id-less rows, which would match as pending, so tests that
+// change the title or content state the lock result.
+const lockUnlockedRow = () => {
+  const { sequelize } = require("../../database/db");
+  (sequelize.query as jest.Mock<any>)
+    .mockResolvedValueOnce([{ id: 1, title: "P1", status: "Draft" }])
+    .mockResolvedValueOnce([]);
+};
+
 describe("policy.ctrl", () => {
   beforeEach(() => jest.clearAllMocks());
   afterEach(() => jest.restoreAllMocks());
@@ -380,13 +390,13 @@ describe("policy.ctrl", () => {
       expect(mockUpdate).not.toHaveBeenCalled();
     });
 
-    it("accepts the unchanged status on save while a request is pending", async () => {
+    it("accepts the unchanged status and title on save while a request is pending", async () => {
       mockGetById.mockResolvedValue([{ id: 1, title: "P1", status: "Under Review" }] as any);
       lockRow("Under Review", true);
-      mockUpdate.mockResolvedValue({ id: 1, title: "P2" } as any);
+      mockUpdate.mockResolvedValue({ id: 1, title: "P1" } as any);
       const res = createRes();
       await PolicyController.updatePolicy(
-        createReq({ params: { id: "1" }, body: { title: "P2", status: "Under Review" } }),
+        createReq({ params: { id: "1" }, body: { title: "P1", status: "Under Review" } }),
         res,
       );
       expect(res.status).toHaveBeenCalledWith(202);
@@ -410,16 +420,104 @@ describe("policy.ctrl", () => {
       expect(options.transaction).toBeDefined();
     });
 
-    it("does not look up the status when the update sends none", async () => {
+    it("does not lock the row when the update sends no status, title or content", async () => {
       mockGetById.mockResolvedValue([{ id: 1, title: "P1", status: "Draft" }] as any);
-      mockUpdate.mockResolvedValue({ id: 1, title: "P2" } as any);
+      mockUpdate.mockResolvedValue({ id: 1, title: "P1" } as any);
       const res = createRes();
       await PolicyController.updatePolicy(
-        createReq({ params: { id: "1" }, body: { title: "P2" } }),
+        createReq({ params: { id: "1" }, body: { next_review_date: "2027-01-01" } }),
         res,
       );
       expect(res.status).toHaveBeenCalledWith(202);
       expect(sequelize.query).not.toHaveBeenCalled();
+    });
+
+    describe("title and content while a request is pending", () => {
+      const lockTextRow = (hasPending: boolean) =>
+        (sequelize.query as jest.Mock<any>)
+          .mockResolvedValueOnce([
+            { id: 1, title: "P1", status: "Under Review", content_html: "<p>v1</p>" },
+          ])
+          .mockResolvedValueOnce(hasPending ? [{ entity_id: 1 }] : []);
+      const lockedMessage =
+        "This policy is waiting for approval. Withdraw the request to change its title or content.";
+
+      beforeEach(() => {
+        mockGetById.mockResolvedValue([
+          { id: 1, title: "P1", status: "Under Review", content_html: "<p>v1</p>" },
+        ] as any);
+        mockUpdate.mockResolvedValue({ id: 1, title: "P1" } as any);
+      });
+
+      it("rejects a changed title with a title field error", async () => {
+        lockTextRow(true);
+        const res = createRes();
+        await PolicyController.updatePolicy(
+          createReq({ params: { id: "1" }, body: { title: "Renamed", status: "Under Review" } }),
+          res,
+        );
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(res.json.mock.calls[0][0].data.errors).toEqual([
+          { field: "title", message: lockedMessage },
+        ]);
+        expect(mockUpdate).not.toHaveBeenCalled();
+      });
+
+      it("rejects changed content with a content_html field error", async () => {
+        lockTextRow(true);
+        const res = createRes();
+        await PolicyController.updatePolicy(
+          createReq({ params: { id: "1" }, body: { title: "P1", content_html: "<p>v2</p>" } }),
+          res,
+        );
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(res.json.mock.calls[0][0].data.errors).toEqual([
+          { field: "content_html", message: lockedMessage },
+        ]);
+        expect(mockUpdate).not.toHaveBeenCalled();
+      });
+
+      it("saves other fields with the stored title and content", async () => {
+        lockTextRow(true);
+        const res = createRes();
+        await PolicyController.updatePolicy(
+          createReq({
+            params: { id: "1" },
+            body: {
+              title: "P1",
+              content_html: "<p>v1</p>",
+              status: "Under Review",
+              next_review_date: "2027-01-01",
+            },
+          }),
+          res,
+        );
+        expect(res.status).toHaveBeenCalledWith(202);
+        expect(mockUpdate).toHaveBeenCalled();
+      });
+
+      it("ignores empty content, which the update does not write", async () => {
+        lockTextRow(true);
+        const res = createRes();
+        await PolicyController.updatePolicy(
+          createReq({ params: { id: "1" }, body: { content_html: "", status: "Under Review" } }),
+          res,
+        );
+        expect(res.status).toHaveBeenCalledWith(202);
+      });
+
+      it("saves changed text when no request is pending", async () => {
+        lockTextRow(false);
+        const res = createRes();
+        await PolicyController.updatePolicy(
+          createReq({ params: { id: "1" }, body: { title: "Renamed", content_html: "<p>v2</p>" } }),
+          res,
+        );
+        expect(res.status).toHaveBeenCalledWith(202);
+        const [sql, options] = (sequelize.query as jest.Mock<any>).mock.calls[0];
+        expect(sql).toContain("FOR UPDATE");
+        expect(options.replacements).toEqual({ organizationId: 1, policyIds: [1] });
+      });
     });
 
     it("bulk archive returns 400 naming the policies with a pending request and archives none", async () => {
@@ -453,6 +551,7 @@ describe("policy.ctrl", () => {
     });
     it("should return 202 when policy is updated", async () => {
       mockGetById.mockResolvedValue([{ id: 1, title: "P1" }] as any);
+      lockUnlockedRow();
       mockUpdate.mockResolvedValue({ id: 1, title: "P2" } as any);
       const req = createReq({ params: { id: "1" }, body: { title: "Policy two" } });
       const res = createRes();
@@ -461,6 +560,7 @@ describe("policy.ctrl", () => {
     });
     it("should return 404 when update returns null", async () => {
       mockGetById.mockResolvedValue([{ id: 1, title: "P1" }] as any);
+      lockUnlockedRow();
       mockUpdate.mockResolvedValue(null as any);
       const req = createReq({ params: { id: "1" }, body: { title: "Policy two" } });
       const res = createRes();
@@ -506,6 +606,7 @@ describe("policy.ctrl", () => {
 
       // PUT /policies/:id — 202 body carries the full persisted row
       mockGetById.mockResolvedValue([{ id: 1, title: "P1" }] as any);
+      lockUnlockedRow();
       mockUpdate.mockResolvedValue({ ...persisted, title: "P2" } as any);
       const updateReqObj = createReq({ params: { id: "1" }, body: { title: "Policy two" } });
       const updateResObj = createRes();

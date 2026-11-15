@@ -102,6 +102,7 @@ export interface PolicyApprovalState {
 interface LockedPolicy {
   id: number;
   title: string;
+  content_html: string | null;
   status: string;
   tags: string[] | null;
   next_review_date: Date | string | null;
@@ -204,7 +205,7 @@ const lockPolicyRow = async (
   transaction: Transaction,
 ): Promise<LockedPolicy | undefined> => {
   const rows = (await sequelize.query(
-    `SELECT id, title, status, tags, next_review_date, policy_owner_id
+    `SELECT id, title, content_html, status, tags, next_review_date, policy_owner_id
      FROM policy_manager
      WHERE organization_id = :organizationId AND id = :policyId
      FOR UPDATE`,
@@ -310,8 +311,12 @@ export const submitPolicyForApproval = async (params: {
         workflow_id: workflow.id,
         entity_id: policy.id,
         entity_type: "policy",
+        // The submitted text: the title and content are locked while the
+        // request is pending (utils/policyStatus.utils.ts), so this is what
+        // the approvers decide on.
         entity_data: {
           title: policy.title,
+          content_html: policy.content_html,
           status: policy.status,
           tags: policy.tags,
           next_review_date: policy.next_review_date,

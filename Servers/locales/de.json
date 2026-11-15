@@ -1253,6 +1253,7 @@
   "This organization has no policy approval workflow. An Admin can approve the policy directly.": "Diese Organisation hat keinen Genehmigungsworkflow für Richtlinien. Ein Admin kann die Richtlinie direkt genehmigen.",
   "This password reset link has already been used or is invalid": "Dieser Link zum Zurücksetzen des Passworts wurde bereits verwendet oder ist ungültig",
   "This policy already has a pending approval request": "Für diese Richtlinie gibt es bereits eine ausstehende Genehmigungsanfrage",
+  "This policy is waiting for approval. Withdraw the request to change its title or content.": "Diese Richtlinie wartet auf Genehmigung. Ziehen Sie die Anfrage zurück, um Titel oder Inhalt zu ändern.",
   "This questionnaire has pending assessments": "Für diesen Fragebogen gibt es ausstehende Bewertungen",
   "This resource is not visible to the public.": "Diese Ressource ist nicht öffentlich sichtbar.",
   "This risk already has a parent. Remove it first.": "Dieses Risiko hat bereits ein übergeordnetes Risiko. Entfernen Sie es zuerst.",
