@@ -361,7 +361,7 @@ connection** for unsaved values).
 
 | Key | Category | Config fields | Server dir | Client dir | Where it surfaces |
 |-----|----------|---------------|------------|------------|-------------------|
-| `slack` | communication | none (post-enable panel) | `Servers/extensions/slack/` (reuses `controllers/slackWebhook.ctrl.ts`) | `Extensions/slack/` | Settings page panel: **Add to Slack** OAuth, workspace table, notification routing |
+| `slack` | communication | none (post-enable panel) | `Servers/extensions/slack/` (reuses `controllers/slackWebhook.ctrl.ts`) | `Extensions/slack/` | Settings page panel: **Add to Slack** OAuth, the organization's connection table, notification routing |
 | `mlflow` | ml_ops | `tracking_server_url` (url, required), `auth_method` (select none/basic/token, default none), `username`, `password` (secret), `api_token` (secret), `timeout` (number 1–600, default 30; per-request) | `Servers/extensions/mlflow/` | `Extensions/mlflow/` (`MLFlowTab`) | Model inventory **MLFlow** tab with manual **Sync** (shown with `model.edit`) |
 | `azure-ai-foundry` | ml_ops | `project_endpoint` (url, required), `api_key` (secret, required), `subscription_id`, `resource_group`, `resource_name` (optional) | `Servers/extensions/azure-ai-foundry/` | `Extensions/azure-ai-foundry/` (`AzureAIFoundryTab`) | Model inventory **Azure AI Foundry** tab with **Sync** (shown with `model.edit`); Agent discovery (`AgentTable`) |
 | `model-lifecycle` | ml_ops | none (post-enable panel) | `Servers/extensions/model-lifecycle/` | `Extensions/model-lifecycle/` | **View lifecycle** in Model inventory rows; model lifecycle detail page |
@@ -382,7 +382,7 @@ enabled can call the route.
 
 | Base path | Routes | Extra roles |
 |-----------|--------|-------------|
-| `/api/extensions/slack` | `GET/POST /oauth/workspaces`, `GET/PATCH/DELETE /oauth/workspaces/:id`, `POST /oauth/workspaces/:id/send` | `POST /oauth/workspaces` rate-limited (`slackWorkspaceCreateLimiter`, 10/hour) |
+| `/api/extensions/slack` | `GET/POST /oauth/workspaces`, `GET/PATCH/DELETE /oauth/workspaces/:id`, `POST /oauth/workspaces/:id/send` | `extension.admin` (Admin) on every route, reads included. `POST /oauth/workspaces` rate-limited (`slackWorkspaceCreateLimiter`, 10/hour). Rows are filtered by the caller's organization (another organization's id answers 404). PATCH takes only `routing_type` (array of known types) and/or `is_active` (boolean), else 400; `POST /:id/send` answers 400 for an inactive connection. See [Slack connections and delivery](#slack-connections-and-delivery). |
 | `/api/extensions/mlflow` | `GET /models`, `GET /models/:modelId`, `POST /sync` | `model.edit` (Admin, Editor) on `POST /sync`: it writes model records and calls the server with the stored secret. The model reads are open. |
 | `/api/extensions/azure-ai-foundry` | `GET /models`, `GET /models/:deploymentId`, `POST /sync`, `GET /discover` | `model.edit` (Admin, Editor) on `POST /sync` and `GET /discover`. The model reads are open. `GET /discover` (agent discovery) has the same limits as sync and test connection: 30 seconds per request, 110 seconds overall. On failure it returns no agents and logs the reason. |
 | `/api/extensions/model-lifecycle` | `GET /config`; phases CRUD and reorder; items CRUD and reorder; `GET /models/:id/lifecycle`, `/progress`; item values, files, people and approvals under `/models/:id/lifecycle/items/:itemId/...` `POST .../items/:itemId/files` links only a file of the caller's organization (404 otherwise). | `extension.admin` (Admin) on phase and item create, update, delete and reorder. `model.edit` (Admin, Editor) on value, file, people and approver writes. `PUT .../approvals/:userId` is open to any role but only for the caller's own row (403 otherwise, Admins included; no override). Every `/models/:id/lifecycle...` route answers 404 for a model outside the caller's organization, and item routes 404 for an item outside it; people and approvers must be members of the organization (400). `DELETE .../items/:itemId/files/:fileId` only unlinks: the `files` row stays in the File Manager. Deleting a phase or item also keeps its files. 404 when the item has no link to the file, 400 when an id is not a positive integer up to 2147483647. |
@@ -425,7 +425,8 @@ and ignores it.
 - **Disable** sets `enabled = false`. Configuration, secrets and all
   extension-owned data (synced models, lifecycle phases, Jira use cases, Slack
   webhooks) are **kept**. Re-enabling restores access to them. The UI shows no
-  confirmation dialog.
+  confirmation dialog. While Slack is disabled, no Slack notification is sent
+  for that organization.
 - **There is no uninstall** and no way to purge an extension's data from the
   UI or API.
 - While disabled, the gate returns 403 on every `/api/extensions/<key>/...`
@@ -1003,6 +1004,102 @@ tests/mocks/jiraCloud/start.ts --port 4010`). Point the site URL at it with
 `JIRA_INCIDENTS_ALLOW_LOCAL_SITE_URL=true` and `OUTBOUND_ALLOW_LOOPBACK=true` in
 development or test.
 
+## Slack connections and delivery
+
+### Ownership
+
+A Slack connection (`slack_webhooks` row) belongs to an organization
+(`organization_id`). `user_id` records the Admin who connected it. Every Admin
+of the organization sees and manages the same list through
+`/api/extensions/slack/oauth/workspaces`. The handlers take the owner and the
+organization from the token and ignore any `userId` in the body or query.
+Responses include `delivery_scope` (see below) but not `organization_id`.
+
+The table has the `tenant_isolation` RLS policy and a tenant-isolation registry
+entry (`slack-webhooks`). The delivery read and the deactivation write run in
+`withOrganizationScope` (`utils/slackWebhook.utils.ts`), which sets
+`app.current_org` in a transaction, so background senders work with RLS on.
+
+### Delivery scope and the quiet start
+
+`delivery_scope` is `'organization'` or `'user'`:
+
+- `'organization'` (the default for new connections): the connection posts
+  every routed event of its organization.
+- `'user'`: the connection posts only events whose user is its owner. Every
+  connection that existed before migration
+  `20261114232015-slack-webhooks-organization-scope.js` starts as `'user'`, so
+  it keeps sending what it sent before.
+
+A `PATCH` that contains `routing_type` also sets `delivery_scope =
+'organization'`. A `PATCH` with only `is_active` leaves the scope as it is.
+
+### Delivery filters
+
+`sendSlackNotification({ organizationId, userId?, routingType }, message)`
+(`services/slack/slackNotificationService.ts`) posts to a connection only when
+all of these hold:
+
+1. The event has an organization. Without a valid `organizationId` it is
+   dropped with a warning.
+2. The routing type is one of the five in `SlackNotificationRoutingType` (the
+   types the UI offers). The automations' `compliance`, `escalation` and
+   `digest` sends are skipped, as before.
+3. Slack is enabled for the event's organization
+   (`isExtensionEnabledForOrganization`, the gate's own lookup).
+4. `getDeliverableSlackWebhooksQuery` matches the connection: same
+   organization, `is_active`, routed for the type, and either
+   `delivery_scope = 'organization'` or the event's user is the owner. An
+   event without a user matches organization-wide connections only.
+
+A `channel_not_found` or `is_archived` reply from Slack deactivates the
+connection (by id and organization).
+
+### Deadline reminders
+
+The deadline sweep's 1-day Slack leg sends one post per risk or model risk to
+the organization-wide connections, on the first run that notifies anyone about
+that row and deadline: at least one recipient is newly notified and none was
+notified before. A later run that only reaches a new recipient (a new Admin,
+an owner change, a retry after a failed write) does not post to the shared
+channel again. A recipient whose send failed counts as neither. Each
+recipient's own user-scope connections still get a post for that recipient.
+An organization-wide channel therefore gets one post per row and deadline,
+not one per recipient. A rescheduled deadline re-arms it.
+
+### Policy review reminders
+
+The policy review reminder sweep (`policyReviewReminderSweep.ts`) sends each
+owner and reviewer a post on their own user-scope connections, then one post
+per reminder to the organization-wide connections, only when at least one
+recipient's in-app notice was stored. That is the same condition as the
+reminder's stamp, so a reminder that reached nobody, and is retried the next
+day, posts nothing to the shared channel.
+
+### Connections without an organization
+
+The migration filled `organization_id` from the owner's membership only when
+the owner belonged to exactly one organization. Connections whose owner
+belonged to several organizations, or whose owner is gone or had no
+membership, keep `organization_id = NULL`. Delivery always filters by
+organization, so they stop sending. The API filters by organization too, so
+they stay invisible to every organization: no Admin can list, change or
+delete them. Removing them needs a separate cleanup step, planned with the
+Slack setup work; there is no cleanup path in the app today.
+
+### Legacy alias
+
+`/api/slackWebhooks` (`routes/slackWebhook.route.ts`) is a deprecated alias of
+`/api/extensions/slack/oauth/workspaces`. It used to be JWT only, with no
+extension gate and no role check. It now mounts the same handlers behind the
+same gates (JWT, Slack enabled, `extension.admin`,
+`slackWorkspaceCreateLimiter` on create), so it has the same Admin-only,
+organization-scoped behaviour. It is kept per ADR 0001 and slated for removal
+in a dedicated PR after a release cycle. The client uses the extension path.
+The old `slackWebhookCreateLimiter` was removed.
+
+---
+
 ## Adding a new extension
 
 Base it on `mlflow` if the extension has config fields and a connection test,
@@ -1092,12 +1189,9 @@ for live features.
 - `Clients/e2e/plugins.spec.ts` is skipped (`test.describe.skip`).
 - `Servers/docs/api/files-plugins-shadow-pmm-openapi.yaml` keeps its old file
   name but now documents the `/extensions` catalog paths.
-- The legacy `/api/slackWebhooks` router is still mounted in `Servers/app.ts`
-  and is **not** behind the extension gate. It shares handlers with
-  `/api/extensions/slack/oauth/workspaces`.
-- Slack notification delivery (`Servers/services/slack/`) reads
-  `slack_webhooks` directly and does not check whether the extension is
-  enabled.
+- Slack connections with `organization_id = NULL` (see
+  [Connections without an organization](#connections-without-an-organization))
+  stay in `slack_webhooks`, never send, and cannot be removed through the API.
 - The legacy `custom_framework_*` tables remain.
   `GET /api/extensions/jira-assets/projects/:projectId/custom-frameworks-progress`
   (`jiraAssets.service.ts`) still reads them.

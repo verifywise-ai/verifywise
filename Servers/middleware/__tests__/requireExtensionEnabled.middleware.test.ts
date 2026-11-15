@@ -29,7 +29,10 @@ jest.mock("../../domain.layer/models/extension/extensionEnablement.model", () =>
 
 // Import the middleware AFTER mocks are wired.
 // eslint-disable-next-line @typescript-eslint/no-require-imports
-const { requireExtensionEnabled } = require("../requireExtensionEnabled.middleware");
+const {
+  requireExtensionEnabled,
+  isExtensionEnabledForOrganization,
+} = require("../requireExtensionEnabled.middleware");
 
 function makeReq(organizationId?: number): Partial<Request> {
   return {
@@ -163,5 +166,38 @@ describe("requireExtensionEnabled middleware", () => {
     expect(mockFindByKey).toHaveBeenCalledWith("param-ext");
     expect(mockFindByExtensionId).toHaveBeenCalledWith(31, 7);
     expect(next).toHaveBeenCalled();
+  });
+});
+
+describe("isExtensionEnabledForOrganization", () => {
+  beforeEach(() => {
+    mockFindByKey.mockReset();
+    mockFindByExtensionId.mockReset();
+  });
+
+  it("is true when the organization enabled the extension", async () => {
+    mockFindByKey.mockResolvedValue({ id: 41 } as never);
+    mockFindByExtensionId.mockResolvedValue({ enabled: true } as never);
+
+    await expect(isExtensionEnabledForOrganization("lookup-on", 7)).resolves.toBe(true);
+    expect(mockFindByExtensionId).toHaveBeenCalledWith(41, 7);
+  });
+
+  it("is false when the organization disabled the extension", async () => {
+    mockFindByKey.mockResolvedValue({ id: 42 } as never);
+    mockFindByExtensionId.mockResolvedValue({ enabled: false } as never);
+    await expect(isExtensionEnabledForOrganization("lookup-off", 7)).resolves.toBe(false);
+  });
+
+  it("is false when the organization never enabled the extension", async () => {
+    mockFindByKey.mockResolvedValue({ id: 43 } as never);
+    mockFindByExtensionId.mockResolvedValue(null as never);
+    await expect(isExtensionEnabledForOrganization("lookup-never", 7)).resolves.toBe(false);
+  });
+
+  it("is false for an extension missing from the catalog", async () => {
+    mockFindByKey.mockResolvedValue(null as never);
+    await expect(isExtensionEnabledForOrganization("lookup-missing", 7)).resolves.toBe(false);
+    expect(mockFindByExtensionId).not.toHaveBeenCalled();
   });
 });

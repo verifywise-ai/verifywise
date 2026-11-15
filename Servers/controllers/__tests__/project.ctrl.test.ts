@@ -144,6 +144,7 @@ import { createUseCaseApprovalRequest } from "../../services/projects/approvalRe
 import { notifyUseCaseApprovalRequested } from "../../services/projects/approvalRequest.service";
 import { notifyApprovalAutoApproved } from "../../services/inAppNotification.service";
 import { ValidationException } from "../../domain.layer/exceptions/custom.exception";
+import { sendSlackNotification } from "../../services/slack/slackNotificationService";
 import {
   createPendingFrameworksForApprovedUseCase,
   getPendingApprovalRequestIdQuery,
@@ -285,6 +286,19 @@ describe("project.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(201);
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({ data: expect.objectContaining({ project }) }),
+      );
+    });
+    it("sends the Slack notice for the request's organization and actor", async () => {
+      const project = { ...buildProject(), owner: 1, approval_workflow_id: null, members: [] };
+      mockCreate.mockResolvedValue(project as any);
+      const req = createReq({
+        organizationId: 7,
+        body: { project_title: "P1", owner: 1, framework: [], members: [] },
+      } as any);
+      await createProject(req, createRes());
+      expect(sendSlackNotification).toHaveBeenCalledWith(
+        { organizationId: 7, userId: 1, routingType: "Projects and organizations" },
+        expect.objectContaining({ title: "Project created" }),
       );
     });
     it("should return 500 when creation returns null due to premature access on null", async () => {

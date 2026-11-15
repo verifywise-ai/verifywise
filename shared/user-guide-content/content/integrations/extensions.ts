@@ -138,7 +138,7 @@ export const extensionsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Sends VerifyWise notifications to channels in your Slack workspace.',
+      text: 'Sends VerifyWise notifications to channels in your Slack workspace. Slack connections belong to the organization. Admins add, route and remove them, and every Admin sees the same list.',
     },
     {
       type: 'ordered-list',
@@ -152,6 +152,10 @@ export const extensionsContent: ArticleContent = {
     {
       type: 'paragraph',
       text: '**Where it shows up:** notifications arrive in the Slack channels you connected. See **Slack integration** for routing, troubleshooting and removing connections.',
+    },
+    {
+      type: 'paragraph',
+      text: '**Older connections:** a connection added before this change only posts events of the person who added it. Once an Admin saves **Notification Routing**, every connection posts the organization\'s events.',
     },
     {
       type: 'callout',
@@ -430,6 +434,7 @@ export const extensionsContent: ArticleContent = {
       rows: [
         { action: 'Open the Extensions page', roles: 'Admin' },
         { action: 'Enable, configure or disable an extension', roles: 'Admin' },
+        { action: 'See, add, route, turn off or remove Slack connections (Slack)', roles: 'Admin' },
         { action: 'Import risks from Excel (Risk Import)', roles: 'Admin, Editor' },
         { action: 'Bulk upload datasets (Dataset Bulk Upload)', roles: 'Admin, Editor' },
         { action: 'Sync models from MLflow or Azure AI Foundry', roles: 'Admin, Editor' },

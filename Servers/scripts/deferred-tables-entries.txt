@@ -131,7 +131,6 @@
   { name: "shadow_ai_syslog_config", justification: "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4." },
   { name: "shadow_ai_tools", justification: "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4." },
   { name: "share_links", justification: "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4." },
-  { name: "slack_webhooks", justification: "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4." },
   { name: "sso_configurations", justification: "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4." },
   { name: "subclauses_iso", justification: "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4." },
   { name: "subclauses_iso27001", justification: "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4." },

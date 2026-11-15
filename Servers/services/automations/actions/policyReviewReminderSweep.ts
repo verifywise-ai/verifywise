@@ -37,12 +37,26 @@ export interface PolicyReviewReminderSweepSummary {
   notified: number;
 }
 
-/** Same routing and wording as the retired Slack job, for both kinds. */
-const sendSlackReminder = async (userId: number, reminder: PolicyReminderDue): Promise<void> => {
+/**
+ * Same routing and wording as the retired Slack job, for both kinds. With a
+ * user: only that user's own Slack connections, once per recipient. With
+ * `null`: the organization-wide connections, once per reminder — so a shared
+ * channel hears about a policy once, not once per owner and reviewer.
+ */
+const sendSlackReminder = async (
+  organizationId: number,
+  userId: number | null,
+  reminder: PolicyReminderDue,
+): Promise<void> => {
   const date = formatReviewDate(reminder.review_date);
   try {
     await sendSlackNotification(
-      { userId, routingType: SlackNotificationRoutingType.POLICY_REMINDERS_AND_STATUS },
+      {
+        organizationId,
+        userId,
+        ownConnectionsOnly: userId !== null,
+        routingType: SlackNotificationRoutingType.POLICY_REMINDERS_AND_STATUS,
+      },
       {
         title: "Policy review reminder",
         message:
@@ -53,9 +67,9 @@ const sendSlackReminder = async (userId: number, reminder: PolicyReminderDue): P
     );
   } catch (error) {
     logger.warn(
-      `Policy review Slack reminder failed for policy ${reminder.id}, user ${userId}: ${
-        error instanceof Error ? error.message : String(error)
-      }`,
+      `Policy review Slack reminder failed for policy ${reminder.id}, ${
+        userId === null ? "organization channels" : `user ${userId}`
+      }: ${error instanceof Error ? error.message : String(error)}`,
     );
   }
 };
@@ -85,10 +99,14 @@ export async function runPolicyReviewReminderSweep(
           error,
         );
       }
-      await sendSlackReminder(Number(userId), reminder);
+      await sendSlackReminder(organizationId, Number(userId), reminder);
     }
 
     if (reached === 0) continue;
+    // Organization-wide Slack connections: one post per reminder, only when
+    // someone was reached — the same condition as the stamp below, so a
+    // reminder that reached nobody (and is retried tomorrow) posts nothing.
+    await sendSlackReminder(organizationId, null, reminder);
     try {
       const stamped = await markPolicyReminderSentQuery(
         reminder.id,

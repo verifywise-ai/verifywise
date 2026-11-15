@@ -75,20 +75,48 @@ describe("runPolicyReviewReminderSweep", () => {
     expect(summary).toEqual({ organization_id: 3, candidates: 2, notified: 2 });
   });
 
-  it("sends each recipient the Slack message on the policy reminders route", async () => {
+  it("sends each recipient their own Slack message and the organization one post", async () => {
     m(findPolicyRemindersDueQuery).mockResolvedValue([reminder(1, "overdue", [11, 12])]);
 
     await runPolicyReviewReminderSweep(3);
 
-    expect(sendSlackNotification).toHaveBeenCalledTimes(2);
+    const message = {
+      title: "Policy review reminder",
+      message: 'The review of policy "Policy 1" was due on January 15, 2030.',
+    };
+    expect(sendSlackNotification).toHaveBeenCalledTimes(3);
     expect(sendSlackNotification).toHaveBeenCalledWith(
-      { userId: 11, routingType: "Policy reminders and status" },
       {
-        title: "Policy review reminder",
-        message: 'The review of policy "Policy 1" was due on January 15, 2030.',
+        organizationId: 3,
+        userId: 11,
+        ownConnectionsOnly: true,
+        routingType: "Policy reminders and status",
       },
+      message,
     );
-    expect(m(sendSlackNotification).mock.calls[1][0].userId).toBe(12);
+    expect(m(sendSlackNotification).mock.calls[1][0]).toMatchObject({
+      userId: 12,
+      ownConnectionsOnly: true,
+    });
+    // Organization-wide connections: once per reminder, not once per recipient.
+    expect(sendSlackNotification).toHaveBeenLastCalledWith(
+      {
+        organizationId: 3,
+        userId: null,
+        ownConnectionsOnly: false,
+        routingType: "Policy reminders and status",
+      },
+      message,
+    );
+  });
+
+  it("posts nothing to organization channels when no recipient was reached", async () => {
+    m(findPolicyRemindersDueQuery).mockResolvedValue([reminder(1, "overdue", [11])]);
+    m(notifyPolicyReviewReminder).mockRejectedValue(new Error("in-app store failed"));
+
+    await runPolicyReviewReminderSweep(3);
+
+    expect(m(sendSlackNotification).mock.calls.map((call) => call[0].userId)).toEqual([11]);
   });
 
   it("stamps a policy when one of three in-app notices fails, and logs that one", async () => {

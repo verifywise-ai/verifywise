@@ -14,6 +14,10 @@ The SlackWebhook controller manages all HTTP request handling for Slack webhook 
 
 **Location:** `Servers/controllers/slackWebhook.ctrl.ts`
 
+**Mounted at:** `/api/extensions/slack/oauth/workspaces` (`Servers/extensions/slack/slack.route.ts`), the only mount. Every route needs JWT, the Slack extension enabled for the caller's organization, and `extension.admin` (Admin).
+
+**Organization scope:** Slack connections belong to the organization. Every handler takes the user and organization from the token (`req.userId`, `req.organizationId`) and ignores any `userId` in the body or query. Reads, updates, deletes and sends filter by `organization_id`, so another organization's id answers 404.
+
 **Responsibilities:**
 
 - Handle Slack OAuth 2.0 authorization flow
@@ -27,17 +31,16 @@ The SlackWebhook controller manages all HTTP request handling for Slack webhook 
 
 ### getAllSlackWebhooks
 
-Retrieves all Slack webhooks for a specific user, optionally filtered by channel.
+Retrieves the Slack connections of the caller's organization, optionally filtered by channel.
 
 **HTTP Method:** GET
-**Endpoint:** `/slackWebhooks`
-**Authentication:** Required (JWT)
+**Endpoint:** `/api/extensions/slack/oauth/workspaces`
+**Authentication:** JWT, extension enabled, Admin
 
 **Query Parameters:**
 
 | Parameter | Type     | Required | Description                  |
 | --------- | -------- | -------- | ---------------------------- |
-| `userId`  | `string` | Yes      | User ID to filter webhooks   |
 | `channel` | `string` | No       | Optional channel name filter |
 
 **Response:**
@@ -64,24 +67,17 @@ Success (200):
 }
 ```
 
-Error (400):
-
-```json
-{
-  "status": "error",
-  "message": "userId query parameter is required"
-}
-```
+`user_id` is the Admin who connected the workspace. The response does not include `organization_id` or `delivery_scope`.
 
 ---
 
 ### getSlackWebhookById
 
-Retrieves a single Slack webhook by its ID.
+Retrieves one connection of the caller's organization by its ID.
 
 **HTTP Method:** GET
-**Endpoint:** `/slackWebhooks/:id`
-**Authentication:** Required (JWT)
+**Endpoint:** `/api/extensions/slack/oauth/workspaces/:id`
+**Authentication:** JWT, extension enabled, Admin
 
 **Path Parameters:**
 
@@ -107,15 +103,14 @@ Retrieves a single Slack webhook by its ID.
 Creates a new Slack webhook after validating OAuth code with Slack API.
 
 **HTTP Method:** POST
-**Endpoint:** `/slackWebhooks`
-**Authentication:** Required (JWT)
+**Endpoint:** `/api/extensions/slack/oauth/workspaces`
+**Authentication:** JWT, extension enabled, Admin
 
 **Request Body:**
 
-| Field    | Type     | Required | Description                         |
-| -------- | -------- | -------- | ----------------------------------- |
-| `code`   | `string` | Yes      | OAuth authorization code from Slack |
-| `userId` | `number` | Yes      | User creating the integration       |
+| Field  | Type     | Required | Description                         |
+| ------ | -------- | -------- | ----------------------------------- |
+| `code` | `string` | Yes      | OAuth authorization code from Slack |
 
 **OAuth Flow:**
 
@@ -124,7 +119,9 @@ Creates a new Slack webhook after validating OAuth code with Slack API.
 3. Slack redirects back with authorization code
 4. Client sends code to this endpoint
 5. Server exchanges code for access token
-6. Server creates webhook and invites bot to channel
+6. Server creates the connection for the caller's organization (owner and organization from the token, `delivery_scope` defaults to `organization`) and invites the bot to the channel
+
+Rate-limited by `slackWorkspaceCreateLimiter` (10 per hour).
 
 **Response:**
 
@@ -209,11 +206,11 @@ async function validateSlackOAuth(code: string): Promise<any>;
 
 ### updateSlackWebhookById
 
-Updates an existing Slack webhook's routing configuration or active status.
+Updates a connection's routing or active status. Saving `routing_type` also sets `delivery_scope = 'organization'`, so a connection that predates organization ownership starts posting the organization's events. Changing only `is_active` leaves the scope as it is.
 
 **HTTP Method:** PATCH
-**Endpoint:** `/slackWebhooks/:id`
-**Authentication:** Required (JWT)
+**Endpoint:** `/api/extensions/slack/oauth/workspaces/:id`
+**Authentication:** JWT, extension enabled, Admin
 
 **Path Parameters:**
 
@@ -223,10 +220,12 @@ Updates an existing Slack webhook's routing configuration or active status.
 
 **Request Body:**
 
-| Field          | Type       | Required | Description                         |
-| -------------- | ---------- | -------- | ----------------------------------- |
-| `is_active`    | `boolean`  | No       | Active status                       |
-| `routing_type` | `string[]` | No       | Array of notification routing types |
+| Field          | Type       | Required | Description                                                                |
+| -------------- | ---------- | -------- | -------------------------------------------------------------------------- |
+| `is_active`    | `boolean`  | No       | Active status                                                              |
+| `routing_type` | `string[]` | No       | Array of known notification routing types (`SlackNotificationRoutingType`) |
+
+Any other field, a non-boolean `is_active` or an unknown routing type answers 400.
 
 **Example Request:**
 
@@ -240,8 +239,8 @@ Updates an existing Slack webhook's routing configuration or active status.
 **Response:**
 
 - 202: Accepted
-- 400: Bad request (missing required fields)
-- 404: Vendor risk not found
+- 400: Invalid ID or body
+- 404: Connection not found in the caller's organization
 - 500: Server error
 
 **Transaction Handling:**
@@ -264,8 +263,8 @@ Updates an existing Slack webhook's routing configuration or active status.
 Sends a test message to a Slack channel via webhook.
 
 **HTTP Method:** POST
-**Endpoint:** `/slackWebhooks/:id/send`
-**Authentication:** Required (JWT)
+**Endpoint:** `/api/extensions/slack/oauth/workspaces/:id/send`
+**Authentication:** JWT, extension enabled, Admin
 
 **Path Parameters:**
 
@@ -311,14 +310,14 @@ The message is sent using Slack's Block Kit format:
 
 **Validation:**
 
-- Webhook must exist
-- Webhook must be active (`is_active: true`)
+- Connection must exist in the caller's organization (404 otherwise)
+- Connection must be active (`is_active: true`); an inactive one answers 400
 
 **Error Handling:**
 
 - `is_archived`: Channel has been archived
 - `channel_not_found`: Channel deleted or inaccessible
-- Both errors trigger automatic webhook deactivation
+- Both errors deactivate the connection (`deactivateSlackWebhookQuery` in `sendImmediateMessage`, by id and organization)
 
 **Exceptions:**
 
@@ -328,32 +327,20 @@ The message is sent using Slack's Block Kit format:
 
 ---
 
-### disableSlackActivity
+### deleteSlackWebhookById
 
-Internal function to deactivate a webhook when channel errors occur.
+Deletes a connection of the caller's organization.
 
-**Signature:**
+**HTTP Method:** DELETE
+**Endpoint:** `/api/extensions/slack/oauth/workspaces/:id`
+**Authentication:** JWT, extension enabled, Admin
 
-```typescript
-async function disableSlackActivity(id: number): Promise<any>;
-```
+**Response:**
 
-**Parameters:**
-
-- `id`: Webhook ID to deactivate
-
-**Behavior:**
-
-- Finds webhook by ID
-- Sets `is_active` to false
-- Updates database within transaction
-- Commits or rolls back based on success
-
-**Usage:**
-Called automatically when Slack API returns:
-
-- `channel_not_found`
-- `is_archived`
+- 204: Deleted
+- 400: Invalid ID
+- 404: Connection not found in the caller's organization
+- 500: Server error
 
 ## Error Handling
 
@@ -401,7 +388,7 @@ Required configuration:
 
 ## Related Files
 
-- **Routes:** `Servers/routes/slackWebhook.route.ts`
+- **Routes:** `Servers/extensions/slack/slack.route.ts`
 - **Model:** `Servers/domain.layer/models/slackNotification/slackWebhook.model.ts`
 - **Service:** `Servers/services/slack/slackNotificationService.ts`
 - **Utils:** `Servers/utils/slackWebhook.utils.ts`

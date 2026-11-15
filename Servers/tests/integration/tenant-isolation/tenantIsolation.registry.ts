@@ -369,6 +369,15 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     testFile: "imported-framework-assessment.isolation.test.ts",
   },
   {
+    // Slack extension connections. Every connection belongs to an
+    // organization; management routes and delivery filter by it, so a
+    // hand-written file covers the routes and the delivery query.
+    name: "slack-webhooks",
+    tables: ["slack_webhooks"],
+    baseRoute: "/api/extensions/slack",
+    testFile: "slack-webhooks.isolation.test.ts",
+  },
+  {
     // Model Lifecycle extension. Setup rows are keyed by the caller's
     // organization; every per-model row is reached through a model and an
     // item that must both be in the organization, so a hand-written file

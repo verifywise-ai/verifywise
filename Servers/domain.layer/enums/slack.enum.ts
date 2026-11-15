@@ -5,3 +5,14 @@ export enum SlackNotificationRoutingType {
   EVIDENCE_AND_TASK_ALERTS = "Evidence and task alerts",
   CONTROL_OR_POLICY_CHANGES = "Control or policy changes",
 }
+
+/**
+ * Who a Slack connection delivers for. "organization": every routed event in
+ * the connection's organization. "user": only events its owner triggered —
+ * connections that existed before organization ownership keep this until an
+ * Admin saves their routing again.
+ */
+export enum SlackDeliveryScope {
+  USER = "user",
+  ORGANIZATION = "organization",
+}
