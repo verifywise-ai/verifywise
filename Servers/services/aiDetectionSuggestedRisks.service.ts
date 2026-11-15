@@ -118,7 +118,11 @@ export async function addSuggestedRiskToRegister(
 
     const risk = await createRiskService(
       { ...riskInput, projects: riskInput.projects || [], frameworks: riskInput.frameworks || [] },
-      { userId: ctx.userId, organizationId: ctx.organizationId },
+      {
+        userId: ctx.userId,
+        organizationId: ctx.organizationId,
+        viewer: { userId: ctx.userId, role: ctx.role },
+      },
       transaction,
     );
     if (!risk?.id) {

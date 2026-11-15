@@ -3,18 +3,56 @@ jest.mock("../../../../utils/risk.utils", () => ({
   updateRiskByIdQuery: jest.fn(),
 }));
 
+jest.mock("../../../../utils/riskVisibility.utils", () => ({
+  isRiskVisibleQuery: jest.fn(),
+  riskViewerForUserQuery: jest.fn(),
+}));
+
+import { isRiskVisibleQuery, riskViewerForUserQuery } from "../../../../utils/riskVisibility.utils";
 import { getRiskByIdQuery, updateRiskByIdQuery } from "../../../../utils/risk.utils";
 import { executeUpdateRisk } from "../execute";
 
 const mockGet = getRiskByIdQuery as jest.Mock;
 const mockUpdate = updateRiskByIdQuery as jest.Mock;
 
+const mockVisible = isRiskVisibleQuery as jest.Mock;
+const mockViewer = riskViewerForUserQuery as jest.Mock;
+const viewer = { userId: 2, role: "Editor" };
+
 const run = (inputParams: Record<string, unknown>) =>
-  executeUpdateRisk({ inputParams, organizationId: 1, transaction: undefined } as never);
+  executeUpdateRisk({
+    inputParams,
+    organizationId: 1,
+    requesterId: 2,
+    transaction: undefined,
+  } as never);
+
+describe("executeUpdateRisk visibility", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    mockViewer.mockResolvedValue(viewer);
+    mockVisible.mockResolvedValue(true);
+    mockGet.mockResolvedValue({ id: 7, severity: "Major", likelihood: "Rare" });
+    mockUpdate.mockResolvedValue({ id: 7 });
+  });
+
+  it("treats a risk the requester cannot see as missing", async () => {
+    mockVisible.mockResolvedValue(false);
+    await expect(run({ risk_id: 7, project_ids: [3] })).rejects.toThrow("no longer exists");
+    expect(mockUpdate).not.toHaveBeenCalled();
+  });
+
+  it("passes the requester as the viewer, so linking is checked", async () => {
+    await run({ risk_id: 7, project_ids: [3] });
+    expect(mockUpdate.mock.calls[0][4]).toEqual({ viewer });
+  });
+});
 
 describe("executeUpdateRisk risk level", () => {
   beforeEach(() => {
     jest.clearAllMocks();
+    mockViewer.mockResolvedValue(viewer);
+    mockVisible.mockResolvedValue(true);
     mockUpdate.mockResolvedValue({ id: 7 });
   });
 

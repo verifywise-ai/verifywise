@@ -1,11 +1,16 @@
 import { beforeEach, describe, expect, it, jest } from "@jest/globals";
 
 jest.mock("../../../utils/risk.utils");
+jest.mock("../../../utils/riskVisibility.utils", () => ({
+  isRiskVisibleQuery: jest.fn(),
+  riskViewerForUserQuery: jest.fn(),
+}));
 jest.mock("../../../database/db", () => ({
   sequelize: { transaction: jest.fn(), query: jest.fn() },
 }));
 
 import * as riskUtils from "../../../utils/risk.utils";
+import * as visibility from "../../../utils/riskVisibility.utils";
 import { sequelize } from "../../../database/db";
 import "../../functions/riskFunctions";
 import { writeToolExecutors } from "../../confirmation/createWriteTool";
@@ -23,6 +28,17 @@ describe("agent_delete_risk executor", () => {
     jest.clearAllMocks();
     mockTransaction.mockResolvedValue(tx);
     mockArchive.mockResolvedValue(true);
+    (visibility.riskViewerForUserQuery as jest.Mock<any>).mockResolvedValue({
+      userId: 9,
+      role: "Editor",
+    });
+    (visibility.isRiskVisibleQuery as jest.Mock<any>).mockResolvedValue(true);
+  });
+
+  it("leaves a risk the acting user cannot see alone, as a missing one", async () => {
+    (visibility.isRiskVisibleQuery as jest.Mock<any>).mockResolvedValue(false);
+    await execute({ risk_id: 7, _userId: 9 }, 4);
+    expect(mockArchive).not.toHaveBeenCalled();
   });
 
   it("archives through the shared path with the acting user and commits", async () => {

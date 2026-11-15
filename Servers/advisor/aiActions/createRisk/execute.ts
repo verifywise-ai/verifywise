@@ -25,6 +25,7 @@
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../../database/db";
 import { createRiskService } from "../../../services/risk.service";
+import { riskViewerForUserQuery } from "../../../utils/riskVisibility.utils";
 import { enqueueRiskLinkRecompute } from "../../../services/automations/automationProducer";
 import { createNewTaskQuery } from "../../../utils/task.utils";
 import { normalizeCurrentRiskLevel } from "../../../utils/riskLevel.utils";
@@ -150,6 +151,7 @@ export async function executeCreateRisk(
     {
       userId: ctx.requesterId,
       organizationId: ctx.organizationId,
+      viewer: await riskViewerForUserQuery(ctx.requesterId, ctx.organizationId, ctx.transaction),
     },
     ctx.transaction,
   );

@@ -26,7 +26,12 @@ import { storedRiskCategories } from "./riskCategory.utils";
 import { recordProjectRiskDeletion } from "./projectRiskChangeHistory.utils";
 import { getStructureById } from "../structures";
 import { unlinkRiskFromAllPoliciesQuery } from "./policyLinkedObject.utils";
-import { riskVisibilitySql, RiskViewer } from "./riskVisibility.utils";
+import {
+  getAccessibleProjectIdsQuery,
+  isRiskVisibleQuery,
+  riskVisibilitySql,
+  RiskViewer,
+} from "./riskVisibility.utils";
 import { projectAccessSql, seesAllProjects } from "./projectVisibility.utils";
 
 type RiskAutomationTrigger = "risk_added" | "risk_updated" | "risk_deleted";
@@ -127,6 +132,12 @@ export const assertRiskReferencesInOrganization = async (
   },
   organizationId: number,
   transaction?: Transaction,
+  options: {
+    /** The acting user. A non-Admin may only link use cases they can write to. */
+    viewer?: RiskViewer;
+    /** Use cases already linked: not re-checked against the viewer. */
+    alreadyLinked?: number[];
+  } = {},
 ): Promise<void> => {
   const isOutside = async (id: number | null | undefined): Promise<boolean> => {
     const ids = parseReferencedIds([id]);
@@ -168,6 +179,26 @@ export const assertRiskReferencesInOrganization = async (
       "projects",
       refs.projects,
     );
+  }
+
+  // A use case the viewer cannot see is answered like one outside the
+  // organization: no new status or message. Only newly linked ones count.
+  if (options.viewer && !seesAllProjects(options.viewer.role) && projectIds) {
+    const already = new Set((options.alreadyLinked ?? []).map(Number));
+    const toCheck = [...new Set(projectIds)].filter((id) => !already.has(id));
+    const accessible = await getAccessibleProjectIdsQuery(
+      toCheck,
+      organizationId,
+      options.viewer,
+      transaction,
+    );
+    if (accessible.length !== toCheck.length) {
+      throw new ValidationException(
+        "Linked use cases must belong to this organization",
+        "projects",
+        refs.projects,
+      );
+    }
   }
 
   const frameworkIds = parseReferencedIds(refs.frameworks ?? []);
@@ -798,6 +829,7 @@ export const linkRiskToProjectQuery = async (
   projectId: number,
   organizationId: number,
   transaction?: Transaction,
+  viewer?: RiskViewer,
 ): Promise<void> => {
   const risks = await sequelize.query(
     `SELECT id FROM risks
@@ -805,9 +837,29 @@ export const linkRiskToProjectQuery = async (
         AND (is_deleted = false OR is_deleted IS NULL)`,
     { replacements: { riskId, organizationId }, type: QueryTypes.SELECT, transaction },
   );
-  if (risks.length === 0) throw new NotFoundException("Risk not found", "risk", riskId);
-  await assertRiskReferencesInOrganization({ projects: [projectId] }, organizationId, transaction);
+  // A risk the viewer cannot see is a missing one.
+  if (
+    risks.length === 0 ||
+    (viewer && !(await isRiskVisibleQuery(riskId, organizationId, viewer, transaction)))
+  ) {
+    throw new NotFoundException("Risk not found", "risk", riskId);
+  }
+  await assertRiskReferencesInOrganization({ projects: [projectId] }, organizationId, transaction, {
+    viewer,
+  });
   await createProjectRiskLink([projectId], riskId, organizationId, transaction);
+};
+
+const getLinkedProjectIdsQuery = async (
+  riskId: number,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<number[]> => {
+  const rows = await sequelize.query<{ project_id: number }>(
+    `SELECT project_id FROM projects_risks WHERE risk_id = :riskId AND organization_id = :organizationId`,
+    { replacements: { riskId, organizationId }, type: QueryTypes.SELECT, transaction },
+  );
+  return rows.map((r) => Number(r.project_id));
 };
 
 const createFrameworkRiskLink = async (
@@ -843,8 +895,9 @@ export const createRiskQuery = async (
   projectRisk: Partial<RiskModel & { projects: number[]; frameworks: number[] }>,
   organizationId: number,
   transaction: Transaction,
+  { viewer }: { viewer?: RiskViewer } = {},
 ): Promise<RiskModel> => {
-  await assertRiskReferencesInOrganization(projectRisk, organizationId, transaction);
+  await assertRiskReferencesInOrganization(projectRisk, organizationId, transaction, { viewer });
 
   const result = await sequelize.query(
     `INSERT INTO risks (
@@ -1008,9 +1061,14 @@ export const updateRiskByIdQuery = async (
   {
     recordSnapshots = true,
     runAutomations = true,
-  }: { recordSnapshots?: boolean; runAutomations?: boolean } = {},
+    viewer,
+  }: { recordSnapshots?: boolean; runAutomations?: boolean; viewer?: RiskViewer } = {},
 ): Promise<RiskModel | null> => {
   const existingRisk = await getRiskByIdQuery(id, organizationId, true);
+  const scopedViewer = viewer && !seesAllProjects(viewer.role) ? viewer : undefined;
+  const linkedBefore = scopedViewer
+    ? await getLinkedProjectIdsQuery(id, organizationId, transaction)
+    : [];
   // Unchanged owner/approver are not re-checked, so a risk whose owner has
   // left the organization can still be edited.
   await assertRiskReferencesInOrganization(
@@ -1028,6 +1086,7 @@ export const updateRiskByIdQuery = async (
     },
     organizationId,
     transaction,
+    { viewer: scopedViewer, alreadyLinked: linkedBefore },
   );
   const updateProjectRisk: Partial<Record<keyof RiskModel, any>> & { organizationId?: number } = {};
   const setClause = [
@@ -1145,9 +1204,26 @@ export const updateRiskByIdQuery = async (
     const currentProjectIds = currentProjectsResult[0].map((row) => row.project_id);
     const newProjectIds = projectRisk.projects || [];
 
+    // A non-Admin only replaces links among the use cases they can see. Links
+    // to the others stay, so editing a risk cannot unlink a use case that is
+    // hidden from the editor (ruling J3).
+    const keptHiddenIds = scopedViewer
+      ? await (async () => {
+          const visible = new Set(
+            await getAccessibleProjectIdsQuery(
+              currentProjectIds,
+              organizationId,
+              scopedViewer,
+              transaction,
+            ),
+          );
+          return currentProjectIds.filter((pid) => !visible.has(Number(pid)));
+        })()
+      : [];
+
     // Find projects that are being removed
     const deletedProjectIds = currentProjectIds.filter(
-      (projectId) => !newProjectIds.includes(projectId),
+      (projectId) => !newProjectIds.includes(projectId) && !keptHiddenIds.includes(projectId),
     );
 
     // Clean up every framework's mappings for the removed projects (R-L7)
@@ -1155,11 +1231,14 @@ export const updateRiskByIdQuery = async (
       await deleteRiskMappingsForProjectsQuery(id, deletedProjectIds, organizationId, transaction);
     }
 
-    // Delete all project-risk links
+    // Delete the project-risk links (all of them, except the hidden ones a
+    // non-Admin keeps)
     await sequelize.query(
-      `DELETE FROM projects_risks WHERE risk_id = :riskId AND organization_id = :organizationId`,
+      `DELETE FROM projects_risks WHERE risk_id = :riskId AND organization_id = :organizationId${
+        keptHiddenIds.length > 0 ? " AND project_id NOT IN (:keptHiddenIds)" : ""
+      }`,
       {
-        replacements: { riskId: id, organizationId },
+        replacements: { riskId: id, organizationId, keptHiddenIds },
         transaction,
       },
     );

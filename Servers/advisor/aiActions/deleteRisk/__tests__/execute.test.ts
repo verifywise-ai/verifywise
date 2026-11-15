@@ -2,6 +2,12 @@ jest.mock("../../../../utils/risk.utils", () => ({
   archiveRiskQuery: jest.fn(),
 }));
 
+jest.mock("../../../../utils/riskVisibility.utils", () => ({
+  isRiskVisibleQuery: jest.fn(),
+  riskViewerForUserQuery: jest.fn().mockResolvedValue({ userId: 9, role: "Editor" }),
+}));
+
+import { isRiskVisibleQuery } from "../../../../utils/riskVisibility.utils";
 import { archiveRiskQuery } from "../../../../utils/risk.utils";
 import { executeDeleteRisk } from "../execute";
 
@@ -18,7 +24,16 @@ const run = () =>
   } as never);
 
 describe("executeDeleteRisk", () => {
-  beforeEach(() => jest.clearAllMocks());
+  beforeEach(() => {
+    jest.clearAllMocks();
+    (isRiskVisibleQuery as jest.Mock).mockResolvedValue(true);
+  });
+
+  it("answers a risk the requester cannot see like a missing one", async () => {
+    (isRiskVisibleQuery as jest.Mock).mockResolvedValue(false);
+    await expect(run()).rejects.toThrow("could not be deleted");
+    expect(mockArchive).not.toHaveBeenCalled();
+  });
 
   it("archives through the shared path with the requester as the actor", async () => {
     mockArchive.mockResolvedValue(true);

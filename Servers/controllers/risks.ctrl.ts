@@ -43,7 +43,7 @@ import {
   suggestRisksForUseCase,
 } from "../services/riskSuggestions/riskSuggestions.service";
 
-import { isRiskVisibleQuery, riskViewer } from "../utils/riskVisibility.utils";
+import { isRiskVisibleQuery, riskViewer, riskVisibilitySql } from "../utils/riskVisibility.utils";
 import { translateError } from "../utils/i18n.utils";
 import { IRisk } from "../domain.layer/interfaces/I.risk";
 import { BulkRiskChange } from "../utils/automation/risk.automation.utils";
@@ -447,7 +447,7 @@ export async function createRisk(req: Request, res: Response): Promise<any> {
         // Only the demo seed creates demo risks; "Delete demo data" removes them.
         is_demo: false,
       },
-      { userId: req.userId!, organizationId: req.organizationId! },
+      { userId: req.userId!, organizationId: req.organizationId!, viewer: riskViewer(req) },
       transaction,
     );
 
@@ -536,8 +536,12 @@ export async function updateRiskById(req: Request, res: Response): Promise<any> 
   );
   logger.debug(`✏️ Update requested for project risk ID: ${projectRiskId}`);
   try {
-    // Find existing risk to track changes
-    const existingProjectRisk = await getRiskByIdQuery(projectRiskId, req.organizationId!);
+    // Find existing risk to track changes. A risk the viewer cannot see
+    // answers like a missing one.
+    const visible = await isRiskVisibleQuery(projectRiskId, req.organizationId!, riskViewer(req));
+    const existingProjectRisk = visible
+      ? await getRiskByIdQuery(projectRiskId, req.organizationId!)
+      : null;
 
     if (!existingProjectRisk) {
       logStructured(
@@ -560,7 +564,7 @@ export async function updateRiskById(req: Request, res: Response): Promise<any> 
       projectRiskId,
       updateData,
       existingProjectRisk,
-      { userId: req.userId!, organizationId: req.organizationId! },
+      { userId: req.userId!, organizationId: req.organizationId!, viewer: riskViewer(req) },
       transaction,
     );
 
@@ -698,13 +702,17 @@ export async function deleteRiskById(req: Request, res: Response): Promise<any> 
   );
   logger.debug(`🗑️ Delete request for project risk ID ${projectRiskId}`);
   try {
-    // Soft delete + automation + change history + policy unlinks (R-M8)
-    const deletedProjectRisk = await archiveRiskQuery(
+    // Soft delete + automation + change history + policy unlinks (R-M8). A
+    // risk the viewer cannot see answers like a missing one.
+    const visible = await isRiskVisibleQuery(
       projectRiskId,
       req.organizationId!,
-      req.userId,
+      riskViewer(req),
       transaction,
     );
+    const deletedProjectRisk = visible
+      ? await archiveRiskQuery(projectRiskId, req.organizationId!, req.userId, transaction)
+      : null;
 
     if (deletedProjectRisk) {
       await transaction.commit();
@@ -833,7 +841,14 @@ export async function bulkUpdateProjectRisks(req: Request, res: Response): Promi
         },
       },
       async (transaction) => {
-        await assertOrgOwnsIds({ table: "risks", ids, organizationId, transaction });
+        // A risk the user cannot see counts as an id that is not theirs.
+        await assertOrgOwnsIds({
+          table: "risks",
+          ids,
+          organizationId,
+          transaction,
+          extra: riskVisibilitySql("risks", riskViewer(req)),
+        });
 
         const updatedIds: number[] = [];
         const newOwnerRisks: AssignedRisk[] = [];

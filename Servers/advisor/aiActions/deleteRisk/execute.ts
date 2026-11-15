@@ -9,6 +9,7 @@
  */
 
 import { archiveRiskQuery } from "../../../utils/risk.utils";
+import { isRiskVisibleQuery, riskViewerForUserQuery } from "../../../utils/riskVisibility.utils";
 import type { AiActionExecuteContext, AiActionExecuteResult } from "../types";
 import type { AgentDeleteRiskInput } from "./schema";
 
@@ -17,12 +18,17 @@ export async function executeDeleteRisk(
 ): Promise<AiActionExecuteResult> {
   const input = ctx.inputParams;
 
-  const success = await archiveRiskQuery(
+  // A risk the requester cannot see is a missing one to them.
+  const viewer = await riskViewerForUserQuery(ctx.requesterId, ctx.organizationId, ctx.transaction);
+  const visible = await isRiskVisibleQuery(
     input.risk_id,
     ctx.organizationId,
-    ctx.requesterId,
+    viewer,
     ctx.transaction,
   );
+  const success = visible
+    ? await archiveRiskQuery(input.risk_id, ctx.organizationId, ctx.requesterId, ctx.transaction)
+    : false;
 
   if (!success) {
     throw new Error(

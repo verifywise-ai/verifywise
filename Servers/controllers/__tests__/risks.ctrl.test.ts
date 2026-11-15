@@ -371,6 +371,50 @@ describe("risks.ctrl", () => {
       await updateRiskById(req, res);
       expect(res.status).toHaveBeenCalledWith(404);
     });
+    it("answers a risk the viewer cannot see like a missing one (404, nothing written)", async () => {
+      mockVisible.mockResolvedValue(false);
+      mockGetById.mockResolvedValue(buildRisk() as any);
+      const req = createReq({
+        params: { id: "1" },
+        body: { risk_name: "R2" },
+        role: "Editor",
+        userId: 7,
+      });
+      const res = createRes();
+      await updateRiskById(req, res);
+      expect(mockVisible).toHaveBeenCalledWith(1, 1, { userId: 7, role: "Editor" });
+      expect(mockUpdate).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(404);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({ data: "Project risk not found" }),
+      );
+    });
+    it("passes the viewer to the service, so linking is checked", async () => {
+      mockGetById.mockResolvedValue({ ...buildRisk(), risk_owner: null } as any);
+      mockUpdate.mockResolvedValue({ ...buildRisk(), risk_owner: null } as any);
+      const req = createReq({
+        params: { id: "1" },
+        body: { projects: [3] },
+        role: "Editor",
+        userId: 7,
+      });
+      await updateRiskById(req, createRes());
+      expect(mockUpdate.mock.calls[0][4]).toEqual(
+        expect.objectContaining({ viewer: { userId: 7, role: "Editor" } }),
+      );
+    });
+    it("answers a link to an inaccessible use case with the 400 a foreign one gets", async () => {
+      mockGetById.mockResolvedValue({ ...buildRisk(), risk_owner: null } as any);
+      mockUpdate.mockRejectedValue(
+        new ValidationException("Linked use cases must belong to this organization"),
+      );
+      const res = createRes();
+      await updateRiskById(
+        createReq({ params: { id: "1" }, body: { projects: [9] }, role: "Editor" }),
+        res,
+      );
+      expect(res.status).toHaveBeenCalledWith(400);
+    });
     it("should return 200 when risk is updated", async () => {
       const existing = { ...buildRisk(), risk_owner: null, event_frequency_min: null };
       const updated = { ...buildRisk({ risk_name: "R2" }), risk_owner: null };
@@ -489,6 +533,14 @@ describe("risks.ctrl", () => {
       await deleteRiskById(req, res);
       expect(res.status).toHaveBeenCalledWith(404);
     });
+    it("answers a risk the viewer cannot see like a missing one (404, not archived)", async () => {
+      mockVisible.mockResolvedValue(false);
+      mockDelete.mockResolvedValue({ id: 1 } as any);
+      const res = createRes();
+      await deleteRiskById(createReq({ params: { id: "1" }, role: "Editor", userId: 7 }), res);
+      expect(mockDelete).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(404);
+    });
     it("should return 500 on error", async () => {
       mockDelete.mockRejectedValue(new Error("DB error"));
       const req = createReq({ params: { id: "1" } });
@@ -525,6 +577,24 @@ describe("risks.ctrl", () => {
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({ data: { updated: 1, changed: 1, action: "archive" } }),
       );
+    });
+    it("counts risks the user cannot see as ids that are not theirs (same 403 as unknown ids)", async () => {
+      const { assertOrgOwnsIds } = require("../../utils/bulkAction.utils");
+      await bulkUpdateProjectRisks(
+        createReq({ body: { ids: [1], action: "archive" }, role: "Editor", userId: 7 }),
+        createRes(),
+      );
+      const arg = (assertOrgOwnsIds as jest.Mock<any>).mock.calls.at(-1)[0];
+      expect(arg.extra.sql).toContain("risks.risk_owner = :visibilityUserId");
+      expect(arg.extra.replacements).toEqual({ visibilityUserId: 7 });
+    });
+    it("adds no visibility filter for an Admin", async () => {
+      const { assertOrgOwnsIds } = require("../../utils/bulkAction.utils");
+      await bulkUpdateProjectRisks(
+        createReq({ body: { ids: [1], action: "archive" } }),
+        createRes(),
+      );
+      expect((assertOrgOwnsIds as jest.Mock<any>).mock.calls.at(-1)[0].extra.sql).toBe("");
     });
     it("should return 400 for invalid action", async () => {
       const req = createReq({ body: { ids: [1], action: "invalid" } });

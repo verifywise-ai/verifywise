@@ -10,6 +10,10 @@ jest.mock("../../../../services/inAppNotification.service", () => ({
   sendInAppNotification: jest.fn(),
 }));
 
+jest.mock("../../../../utils/riskVisibility.utils", () => ({
+  riskViewerForUserQuery: jest.fn().mockResolvedValue({ userId: 2, role: "Editor" }),
+}));
+
 import { createRiskService } from "../../../../services/risk.service";
 import { executeCreateRisk } from "../execute";
 
@@ -37,5 +41,27 @@ describe("executeCreateRisk", () => {
     const payload = mockCreate.mock.calls[0][0];
     expect("risk_level_autocalculated" in payload).toBe(false);
     expect(payload.severity).toBe("Major");
+  });
+
+  it("passes the requester as the viewer, so linking is checked", async () => {
+    mockCreate.mockResolvedValue({ id: 3 });
+    await executeCreateRisk({
+      inputParams: {
+        risk_name: "R",
+        risk_description: "d",
+        ai_lifecycle_phase: "Deployment & integration",
+        risk_category: ["Data privacy risk"],
+        impact: "i",
+        deadline: "2027-01-01",
+        date_of_assessment: "2026-11-01",
+        project_ids: [5],
+      },
+      organizationId: 1,
+      requesterId: 2,
+      transaction: { afterCommit: jest.fn() },
+    } as never);
+    expect(mockCreate.mock.calls.at(-1)[1]).toEqual(
+      expect.objectContaining({ viewer: { userId: 2, role: "Editor" } }),
+    );
   });
 });

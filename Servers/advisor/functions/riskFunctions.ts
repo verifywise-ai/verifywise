@@ -14,6 +14,13 @@ import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { sequelize } from "../../database/db";
 import logger from "../../utils/logger/fileLogger";
 import { getEffectiveRiskLevel } from "../../utils/riskLevel.utils";
+import {
+  isRiskVisibleQuery,
+  riskViewerForUserQuery,
+  RiskViewer,
+} from "../../utils/riskVisibility.utils";
+import { NotFoundException } from "../../domain.layer/exceptions/custom.exception";
+import { Transaction } from "sequelize";
 
 const effectiveLevel = getEffectiveRiskLevel;
 
@@ -401,6 +408,20 @@ const getRiskHistoryTimeseries = async (
   }
 };
 
+/**
+ * The user a write tool runs for, as the risk visibility rule sees them.
+ * Undefined when the gateway sent no user (no check, as before).
+ */
+const actingRiskViewer = async (
+  params: Record<string, unknown>,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<RiskViewer | undefined> => {
+  const userId = Number(params._userId);
+  if (!userId) return undefined;
+  return riskViewerForUserQuery(userId, organizationId, transaction);
+};
+
 // --- Write Tools (Human Confirmation Flow) ---
 
 const agentCreateRisk = createWriteToolFn({
@@ -411,6 +432,7 @@ const agentCreateRisk = createWriteToolFn({
   executeFn: async (params, organizationId) => {
     const transaction = await sequelize.transaction();
     try {
+      const viewer = await actingRiskViewer(params, organizationId, transaction);
       const riskData: any = {
         risk_name: params.risk_name,
         risk_description: params.risk_description || "",
@@ -441,7 +463,7 @@ const agentCreateRisk = createWriteToolFn({
         projects: [params.project_id],
         frameworks: [],
       };
-      const result = await createRiskQuery(riskData, organizationId, transaction);
+      const result = await createRiskQuery(riskData, organizationId, transaction, { viewer });
       await transaction.commit();
       return { id: result.id, risk_name: result.risk_name, message: "Risk created successfully" };
     } catch (error) {
@@ -462,6 +484,10 @@ const agentUpdateRisk = createWriteToolFn({
     const transaction = await sequelize.transaction();
     try {
       const riskId = params.risk_id as number;
+      const viewer = await actingRiskViewer(params, organizationId, transaction);
+      if (viewer && !(await isRiskVisibleQuery(riskId, organizationId, viewer, transaction))) {
+        throw new NotFoundException("Risk not found", "risk", riskId);
+      }
       const updateData: any = {};
       if (params.risk_name !== undefined) updateData.risk_name = params.risk_name;
       if (params.risk_description !== undefined)
@@ -475,7 +501,7 @@ const agentUpdateRisk = createWriteToolFn({
         updateData.mitigation_status = params.mitigation_status;
       if (params.mitigation_plan !== undefined) updateData.mitigation_plan = params.mitigation_plan;
 
-      await updateRiskByIdQuery(riskId, updateData, organizationId, transaction);
+      await updateRiskByIdQuery(riskId, updateData, organizationId, transaction, { viewer });
       await transaction.commit();
       return { id: riskId, updated: true, message: "Risk updated successfully" };
     } catch (error) {
@@ -496,7 +522,11 @@ const agentDeleteRisk = createWriteToolFn({
       // The approval gateway sets _userId to the user the action runs for.
       const userId = (params._userId as number | undefined) || undefined;
       // Same archive as the console: history entry and policy unlinks included.
-      await archiveRiskQuery(riskId, organizationId, userId, transaction);
+      // A risk the user cannot see is left alone, as a missing one is.
+      const viewer = await actingRiskViewer(params, organizationId, transaction);
+      if (!viewer || (await isRiskVisibleQuery(riskId, organizationId, viewer, transaction))) {
+        await archiveRiskQuery(riskId, organizationId, userId, transaction);
+      }
       await transaction.commit();
       return { id: riskId, deleted: true, message: "Risk deleted successfully" };
     } catch (error) {
@@ -577,7 +607,8 @@ const agentLinkRiskToProject = createWriteToolFn({
   executeFn: async (params, organizationId) => {
     const riskId = params.risk_id as number;
     const projectId = params.project_id as number;
-    await linkRiskToProjectQuery(riskId, projectId, organizationId);
+    const viewer = await actingRiskViewer(params, organizationId);
+    await linkRiskToProjectQuery(riskId, projectId, organizationId, undefined, viewer);
     return {
       risk_id: riskId,
       project_id: projectId,

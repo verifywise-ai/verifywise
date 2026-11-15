@@ -1,6 +1,6 @@
 import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../database/db";
-import { projectAccessSql, seesAllProjects } from "./projectVisibility.utils";
+import { projectAccessSql, projectVisibilitySql, seesAllProjects } from "./projectVisibility.utils";
 
 export type RiskViewer = { userId: number; role: string };
 
@@ -73,4 +73,47 @@ export async function isRiskVisibleQuery(
     },
   );
   return rows.length > 0;
+}
+
+/**
+ * The viewer for a user known only by id (advisor tools, which carry no
+ * request): their role in the organization. A user with no role in it is
+ * a plain non-Admin, so the visibility rule applies to them.
+ */
+export async function riskViewerForUserQuery(
+  userId: number,
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<RiskViewer> {
+  const rows = await sequelize.query<{ name: string }>(
+    `SELECT r.name FROM organization_members om
+       JOIN roles r ON r.id = om.role_id
+      WHERE om.user_id = :userId AND om.organization_id = :organizationId`,
+    { replacements: { userId, organizationId }, type: QueryTypes.SELECT, transaction },
+  );
+  return { userId, role: rows[0]?.name ?? "" };
+}
+
+/**
+ * Which of these use cases of the organization the viewer can see and write
+ * to (projectVisibilitySql: owner, member or group member; Admins all).
+ */
+export async function getAccessibleProjectIdsQuery(
+  projectIds: number[],
+  organizationId: number,
+  viewer: RiskViewer,
+  transaction?: Transaction,
+): Promise<number[]> {
+  if (projectIds.length === 0) return [];
+  const access = projectVisibilitySql("p", viewer);
+  const rows = await sequelize.query<{ id: number }>(
+    `SELECT p.id FROM projects p
+      WHERE p.organization_id = :organizationId AND p.id IN (:projectIds)${access.sql}`,
+    {
+      replacements: { organizationId, projectIds, ...access.replacements },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
+  );
+  return rows.map((r) => Number(r.id));
 }
