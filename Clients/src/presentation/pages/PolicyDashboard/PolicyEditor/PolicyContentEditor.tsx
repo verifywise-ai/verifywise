@@ -2,6 +2,7 @@ import { ChangeEvent, ReactNode, RefObject } from "react";
 import type { Editor } from "@tiptap/react";
 import { EditorContent } from "@tiptap/react";
 import { Box, GlobalStyles, Stack, Typography, useTheme } from "@mui/material";
+import { Lock } from "lucide-react";
 import InsertLinkModal from "../../../components/Modals/InsertLinkModal/InsertLinkModal";
 import { policyEditorStyles } from "./editorStyles";
 import { usePolicyFindReplace } from "./usePolicyFindReplace";
@@ -26,6 +27,8 @@ export interface PolicyContentEditorProps {
   children?: ReactNode;
   /** Hides the formatting toolbar for roles that cannot edit policies. */
   readOnly?: boolean;
+  /** Shown above the editor when the content is locked (a pending approval request). */
+  lockedNote?: string;
 }
 
 /** TipTap editor region: toolbar, find/replace, link modal, editor surface. */
@@ -43,6 +46,7 @@ export function PolicyContentEditor({
   findReplace,
   children,
   readOnly = false,
+  lockedNote,
 }: PolicyContentEditorProps) {
   const theme = useTheme();
 
@@ -71,6 +75,19 @@ export function PolicyContentEditor({
           onOpenLink={onOpenLink}
           onOpenFindReplace={findReplace.openFindReplace}
         />
+      )}
+
+      {lockedNote && (
+        <Stack
+          direction="row"
+          alignItems="center"
+          gap="8px"
+          data-testid="policy-content-locked-note"
+          sx={{ mb: "8px", color: "text.secondary", flexShrink: 0 }}
+        >
+          <Lock size={14} strokeWidth={1.5} />
+          <Typography sx={{ fontSize: "13px", color: "text.secondary" }}>{lockedNote}</Typography>
+        </Stack>
       )}
 
       <FindReplacePopover

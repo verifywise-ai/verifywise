@@ -1,7 +1,24 @@
-jest.mock("../../../database/db", () => ({ sequelize: { query: jest.fn() } }));
+jest.mock("../../../database/db", () => ({
+  sequelize: {
+    query: jest.fn(),
+    transaction: jest.fn(async () => ({ commit: jest.fn(), rollback: jest.fn() })),
+  },
+}));
+jest.mock("../../../services/policies/policyApproval.service", () => ({
+  approvePolicyDirectly: jest.fn(),
+  rejectPendingPolicyRequestOnDelete: jest.fn(),
+  submitPolicyForApproval: jest.fn(),
+}));
 jest.mock("../../../utils/policyManager.utils", () => ({
   getAllPoliciesQuery: jest.fn(),
-  omitReminderStamps: jest.requireActual("../../../utils/policyManager.utils").omitReminderStamps,
+  createPolicyQuery: jest.fn(async () => ({ id: 1 })),
+  getPolicyByIdQuery: jest.fn(async () => [{ id: 1, title: "P", content_html: "" }]),
+  updatePolicyByIdQuery: jest.fn(async () => ({ id: 1 })),
+}));
+jest.mock("../../../utils/policyChangeHistory.utils", () => ({ recordPolicyCreation: jest.fn() }));
+jest.mock("../../../utils/changeHistory.base.utils", () => ({ recordUpdateChanges: jest.fn() }));
+jest.mock("../../../config/changeHistory.config", () => ({
+  runInSavepoint: jest.fn(async (work: () => Promise<unknown>) => work()),
 }));
 jest.mock("../../../utils/policyTemplate.utils", () => ({ getPolicyTemplatesQuery: jest.fn() }));
 jest.mock("../../approval/approvalGateway", () => ({ submitForApproval: jest.fn() }));
@@ -12,6 +29,7 @@ jest.mock("../../../utils/logger/fileLogger", () => ({
 
 import { sequelize } from "../../../database/db";
 import { writeToolExecutors } from "../../confirmation/createWriteTool";
+import { createPolicyQuery, updatePolicyByIdQuery } from "../../../utils/policyManager.utils";
 import "../policyFunctions";
 
 const q = sequelize.query as jest.Mock;
@@ -21,33 +39,38 @@ describe("advisor policy writes sanitize content_html", () => {
   beforeEach(() => q.mockReset());
 
   it("agent_create_policy sanitizes the description before it becomes content_html", async () => {
-    q.mockResolvedValueOnce([{ id: 1 }]);
     const exec = writeToolExecutors.get("agent_create_policy")!;
     await exec({ policy_name: "Policy", description: DIRTY, _userId: 9 }, 42);
-    const html = q.mock.calls[0][1].replacements.content_html as string;
+    const html = (createPolicyQuery as jest.Mock).mock.calls.at(-1)![0].content_html as string;
     expect(html).toContain("<p>keep</p>");
     expect(html).not.toContain("<script");
     expect(html).not.toContain("onerror");
   });
 
   it("agent_update_policy sanitizes the description before it becomes content_html", async () => {
-    q.mockResolvedValueOnce([{ id: 1 }]);
+    // The update gate locks the row and reads pending requests first.
+    q.mockResolvedValueOnce([{ id: 1, title: "P", status: "Draft", content_html: "" }]);
+    q.mockResolvedValueOnce([]);
     const exec = writeToolExecutors.get("agent_update_policy")!;
     await exec({ policy_id: 1, description: DIRTY, _userId: 9 }, 42);
-    const html = q.mock.calls[0][1].replacements.content_html as string;
+    const html = (updatePolicyByIdQuery as jest.Mock).mock.calls.at(-1)![1].content_html as string;
     expect(html).toContain("<p>keep</p>");
     expect(html).not.toContain("<script");
     expect(html).not.toContain("onerror");
   });
 
-  it("agent_update_policy returns the policy without the review reminder stamps", async () => {
-    q.mockResolvedValueOnce([
-      { id: 1, title: "Policy", due_soon_reminded_at: "2030-01-10", overdue_reminded_at: null },
-    ]);
+  it("agent_update_policy returns the shared update query's row, which has no reminder stamps", async () => {
+    // updatePolicyByIdQuery re-reads through getPolicyByIdQuery, which drops the
+    // stamps (covered in policyReviewReminders.utils.test.ts); the advisor adds none.
+    const row = { id: 1, title: "Policy" };
+    // The update gate locks the row and reads pending requests first.
+    q.mockResolvedValueOnce([{ id: 1, title: "P", status: "Draft", content_html: "" }]);
+    q.mockResolvedValueOnce([]);
+    (updatePolicyByIdQuery as jest.Mock).mockResolvedValueOnce(row);
     const exec = writeToolExecutors.get("agent_update_policy")!;
     const result = (await exec({ policy_id: 1, policy_name: "Policy", _userId: 9 }, 42)) as any;
     const policy = result?.data ?? result;
-    expect(policy).toMatchObject({ id: 1, title: "Policy" });
+    expect(policy).toEqual(row);
     expect(policy).not.toHaveProperty("due_soon_reminded_at");
     expect(policy).not.toHaveProperty("overdue_reminded_at");
   });

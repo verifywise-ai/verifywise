@@ -135,7 +135,7 @@ describe("policy automations", () => {
     arrange("policy_deleted");
     const tx = makeTransaction();
 
-    await expect(deletePolicyByIdQuery(4, 9, tx as never)).resolves.toBe(true);
+    await expect(deletePolicyByIdQuery(4, 9, null, tx as never)).resolves.toBe(true);
     expect(mockEnqueue).not.toHaveBeenCalled();
 
     tx.commit();
@@ -159,7 +159,7 @@ describe("policy automations", () => {
     mockEnqueue.mockRejectedValueOnce(new Error("redis down"));
     const tx = makeTransaction();
 
-    await deletePolicyByIdQuery(4, 9, tx as never);
+    await deletePolicyByIdQuery(4, 9, null, tx as never);
     expect(() => tx.commit()).not.toThrow();
     await new Promise((resolve) => setImmediate(resolve));
 

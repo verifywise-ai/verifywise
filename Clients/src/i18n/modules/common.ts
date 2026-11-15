@@ -4803,7 +4803,6 @@ export const de: Record<string, string> = {
   "Replace tags": "Tags ersetzen",
   "Replaces existing categories. Leave empty to clear.":
     "Ersetzt vorhandene Kategorien. Leer lassen, um sie zu entfernen.",
-  "Replaces existing reviewer assignments.": "Ersetzt bestehende Prüferzuweisungen.",
   "Replaces existing tags. Leave empty to clear.":
     "Ersetzt vorhandene Tags. Leer lassen, um sie zu entfernen.",
   "Set categories": "Kategorien festlegen",
@@ -10394,7 +10393,6 @@ export const fr: Record<string, string> = {
   "Replace tags": "Remplacer les balises",
   "Replaces existing categories. Leave empty to clear.":
     "Remplace les catégories existantes. Laisser vide pour effacer.",
-  "Replaces existing reviewer assignments.": "Remplace les affectations de relecteurs existantes.",
   "Replaces existing tags. Leave empty to clear.":
     "Remplace les balises existantes. Laisser vide pour effacer.",
   "Set categories": "Définir les catégories",
@@ -14009,7 +14007,6 @@ export const es: Record<string, string> = {
   "Mark complete": "Marcar como completado",
   "Remove tags": "Eliminar etiquetas",
   "Replace tags": "Reemplazar etiquetas",
-  "Replaces existing reviewer assignments.": "Reemplaza las asignaciones de revisor existentes.",
   "Set categories": "Establecer categorías",
   "Set category": "Establecer categoría",
   "Set owner": "Establecer responsable",

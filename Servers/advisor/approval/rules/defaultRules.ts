@@ -61,17 +61,21 @@ export const defaultRules: RuleDefinition[] = [
     eventParams: { approver_role: "Admin" },
   },
   {
+    // The name is kept so a tenant rule that overrides it still matches.
+    // Submitting a policy needs no special approver: the approval workflow's
+    // approvers decide it. Only an Admin's direct approval is left here.
     name: "policy-review-requires-reviewer",
-    description: "Policy approval/review actions require a reviewer",
+    description:
+      "Approving a policy directly requires Admin approval; submitted policies are decided by their approval workflow",
     priority: 600,
     conditions: {
       all: [
         { fact: "tool_category", operator: "equal", value: "policy" },
-        { fact: "operation_type", operator: "in", value: ["approve", "review", "submit"] },
+        { fact: "operation_type", operator: "equal", value: "approve" },
       ],
     },
     eventType: "require-approval",
-    eventParams: { approver_role: "Reviewer" },
+    eventParams: { approver_role: "Admin" },
   },
   {
     name: "danger-level-requires-approval",

@@ -331,6 +331,8 @@ export function extractEntityDetails(requestData: any): Record<string, any> {
         ...baseDetails,
         entityName: requestData.request_name,
         policyContent: requestData.policy_content,
+        // Not displayed: lets the modal tell the policy pages which policy changed.
+        policyId: requestData.entity_id,
       };
 
     case "incident":

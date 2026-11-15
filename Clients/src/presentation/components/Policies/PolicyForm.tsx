@@ -4,9 +4,11 @@ import DatePicker from "../Inputs/Datepicker";
 import dayjs, { Dayjs } from "dayjs";
 import useUsers from "../../../application/hooks/useUsers";
 import { ChevronDown as GreyDownArrowIcon } from "lucide-react";
-import { useCallback, useEffect } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import { PolicyFormData, PolicyFormProps } from "../../types/interfaces/i.policy";
 import AutoCompleteField from "../Inputs/Autocomplete";
+import { getSelectablePolicyStatuses } from "../../../application/utils/policyStatusOptions";
+import { useTranslation } from "../../../application/hooks/useTranslation";
 
 const DEBUG = import.meta.env?.DEV;
 const debugLog = (...args: unknown[]) => {
@@ -16,24 +18,25 @@ const debugLog = (...args: unknown[]) => {
   }
 };
 
-const statuses: PolicyFormData["status"][] = [
-  "Draft",
-  "Under Review",
-  "Approved",
-  "Published",
-  "Archived",
-  "Deprecated",
-];
-
 const PolicyForm: React.FC<PolicyFormProps> = ({
   formData,
   setFormData,
   tags,
   errors,
   clearFieldError,
+  currentStatus = null,
+  statusLocked = false,
 }) => {
   const theme = useTheme();
   const { users } = useUsers();
+  const { t } = useTranslation();
+
+  // Only the statuses the server accepts from the saved one (see policyStatusOptions).
+  const statusItems = useMemo(
+    () =>
+      getSelectablePolicyStatuses(currentStatus, statusLocked).map((s) => ({ _id: s, name: s })),
+    [currentStatus, statusLocked],
+  );
 
   useEffect(() => {
     debugLog("mount", {
@@ -174,14 +177,24 @@ const PolicyForm: React.FC<PolicyFormProps> = ({
                 clearFieldError("status");
               }
             }}
-            items={statuses.map((s) => ({ _id: s, name: s }))}
+            items={statusItems}
             sx={{
               width: "100%",
               backgroundColor: theme.palette.background.main,
             }}
             error={errors.status}
             isRequired
+            disabled={statusLocked}
+            dataTestId="policy-status-select"
           />
+          {statusLocked && (
+            <Typography
+              data-testid="policy-status-locked-hint"
+              sx={{ fontSize: "13px", color: "text.secondary", mt: "4px" }}
+            >
+              {t("Withdraw the approval request to change the status.")}
+            </Typography>
+          )}
         </Stack>
       </Stack>
 

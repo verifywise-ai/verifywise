@@ -3,7 +3,7 @@
 import { apiServices } from "../../infrastructure/api/networkServices";
 import { APIError } from "../tools/error";
 import { PolicyManagerModel } from "../../domain/models/Common/policy/policyManager.model";
-import { PolicyInput } from "../../domain/interfaces/i.policy";
+import { PolicyApprovalState, PolicyInput } from "../../domain/interfaces/i.policy";
 
 function extractData<T>(response: { data: { data: T } }): T {
   return response.data.data;
@@ -60,7 +60,11 @@ export async function createPolicy(input: PolicyInput): Promise<PolicyManagerMod
   }
 }
 
-export async function updatePolicy(id: number, input: PolicyInput): Promise<PolicyManagerModel> {
+/** A field left out of `input` is left unchanged on the server. */
+export async function updatePolicy(
+  id: number,
+  input: Partial<PolicyInput>,
+): Promise<PolicyManagerModel> {
   try {
     const response = await apiServices.put<{ message: string; data: PolicyManagerModel }>(
       `/policies/${id}`,
@@ -80,15 +84,22 @@ export async function deletePolicy(id: number): Promise<void> {
   }
 }
 
-export async function importDocxToHtml(file: File): Promise<{ html: string; warnings: string[] }> {
+export interface DocxImportResponse {
+  html: string;
+  warnings: string[];
+  /** Images in the document that were not imported. Absent on older servers. */
+  skippedImages?: number;
+}
+
+export async function importDocxToHtml(file: File): Promise<DocxImportResponse> {
   try {
     const formData = new FormData();
     formData.append("file", file);
     const response = await apiServices.post<{
       message: string;
-      data: { html: string; warnings: string[] };
+      data: DocxImportResponse;
     }>("/policies/import/docx", formData, { headers: { "Content-Type": "multipart/form-data" } });
-    return extractData<{ html: string; warnings: string[] }>(response);
+    return extractData<DocxImportResponse>(response);
   } catch (error: any) {
     throw new APIError("Failed to import DOCX file", error?.response?.status, error);
   }
@@ -115,4 +126,51 @@ export async function bulkUpdatePolicies(
   } catch (error: any) {
     throw new APIError("Failed to perform bulk policy update", error?.response?.status, error);
   }
+}
+
+// ── Approval (api/v1/policies) ──────────────────────────────────────
+// These rethrow the request error untouched: its message is the server's
+// translated reason (for example "This policy already has a pending approval
+// request"), which the approval section shows in place of a global toast.
+
+export async function getPolicyApproval(id: number): Promise<PolicyApprovalState> {
+  const response = await apiServices.get<{ message: string; data: PolicyApprovalState }>(
+    `/v1/policies/${id}/approval`,
+    { suppressGlobalErrorToast: true },
+  );
+  return extractData<PolicyApprovalState>(response);
+}
+
+export async function submitPolicyForApproval(
+  id: number,
+  workflowId?: number,
+): Promise<{ request_id: number; policy: PolicyManagerModel }> {
+  // workflow_id must be a JSON number; the server rejects a string.
+  const body = workflowId === undefined ? {} : { workflow_id: Number(workflowId) };
+  const response = await apiServices.post<{
+    message: string;
+    data: { request_id: number; policy: PolicyManagerModel };
+  }>(`/v1/policies/${id}/submit-for-approval`, body, { suppressGlobalErrorToast: true });
+  return extractData<{ request_id: number; policy: PolicyManagerModel }>(response);
+}
+
+export async function approvePolicyDirectly(
+  id: number,
+  comment?: string,
+): Promise<PolicyManagerModel> {
+  const body = comment ? { comment } : {};
+  const response = await apiServices.post<{ message: string; data: PolicyManagerModel }>(
+    `/v1/policies/${id}/approve`,
+    body,
+    { suppressGlobalErrorToast: true },
+  );
+  return extractData<PolicyManagerModel>(response);
+}
+
+/** Policies assigned directly to each folder: { [folderId]: count }. */
+export async function getPolicyFolderCounts(): Promise<Record<number, number>> {
+  const response = await apiServices.get<{ message: string; data: Record<number, number> }>(
+    "/v1/policies/folder-counts",
+  );
+  return extractData<Record<number, number>>(response);
 }

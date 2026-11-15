@@ -59,6 +59,10 @@ export interface PolicyFormProps {
   clearFieldError: (
     field: keyof import("../../../domain/interfaces/i.policy").PolicyFormData,
   ) => void;
+  /** The saved status the options are worked out from; null for a new policy. */
+  currentStatus?: string | null;
+  /** Locks the status while the policy has a pending approval request. */
+  statusLocked?: boolean;
 }
 
 /**

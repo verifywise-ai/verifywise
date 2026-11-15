@@ -129,9 +129,15 @@ const LinkedPolicyModal: React.FC<LinkedPolicyModalProps> = ({ onClose, policyId
   // REMOVE LINK
   // ------------------------------------
   const handleRemove = async (type: string, id: number) => {
-    await deleteEntityById({
-      routeUrl: `/policy-linked/${id}/linked-objects`,
-    });
+    try {
+      await deleteEntityById({
+        routeUrl: `/policy-linked/${id}/linked-objects`,
+      });
+    } catch {
+      // The link is still there, so leave the list as it is.
+      handleToast("error", "Couldn't unlink this item. Try again.");
+      return;
+    }
 
     if (type === "risk") setRisks((prev) => prev.filter((i) => i.id !== id));
     if (type === "evidence") setEvidence((prev) => prev.filter((i) => i.id !== id));
@@ -151,26 +157,42 @@ const LinkedPolicyModal: React.FC<LinkedPolicyModalProps> = ({ onClose, policyId
         object_type: objectType,
         object_ids: objectIds,
       });
+    } catch (error) {
+      // Report once here, then rethrow so the selector modal stays open and
+      // does not run its own success path.
+      handleToast(
+        "error",
+        objectType === "evidence"
+          ? "Couldn't link the selected evidence. Try again."
+          : "Couldn't link the selected risks. Try again.",
+      );
+      throw error;
+    }
 
-      // Fetch updated linked objects
+    // The link is saved from here on. A failed refresh must not reject, or the
+    // selector stays open and invites a second, duplicate link.
+    try {
       const updated = await getAllEntities({
         routeUrl: `/policy-linked/${policyId}/linked-objects`,
       });
 
-      // Set state based on type
       if (objectType === "risk") {
         setRisks(updated.data.risks || []);
       } else if (objectType === "evidence") {
         setEvidence(updated.data.evidence || []);
       }
-
-      setAlert({
-        variant: "success",
-        body: `${objectType} linked successfully!`,
-      });
-    } catch (error) {
-      handleToast("error", `Failed to link ${objectType} with error ${error}.`);
+    } catch {
+      handleToast(
+        "error",
+        "Linked, but the list couldn't be refreshed. Reopen this window to see it.",
+      );
+      return;
     }
+
+    setAlert({
+      variant: "success",
+      body: `${objectType} linked successfully!`,
+    });
   };
 
   // ------------------------------------
