@@ -90,6 +90,14 @@ vi.mock("../../../components/Policies/PolicyForm", () => ({
   ),
 }));
 
+// The toolbar and table menu need a real ProseMirror view; the lock tests use a fake editor.
+vi.mock("../PolicyEditor/PolicyToolbar", () => ({
+  PolicyToolbar: () => <div data-testid="policy-toolbar" />,
+}));
+vi.mock("../PolicyEditor/PolicyTableBubbleMenu", () => ({
+  PolicyTableBubbleMenu: () => null,
+}));
+
 vi.mock("../../../components/Modals/InsertLinkModal/InsertLinkModal", () => ({
   default: ({ open }: any) => (open ? <div data-testid="insert-link-modal" /> : null),
 }));
@@ -111,24 +119,41 @@ const mockGetAllTags = vi.fn();
 const mockImportDocxToHtml = vi.fn();
 const mockCreatePolicy = vi.fn();
 const mockUpdatePolicy = vi.fn();
+const noApproval = {
+  usable_workflows: [],
+  pending_request: null,
+  review_status: null,
+  review_comment: null,
+  reviewed_by: null,
+  reviewed_by_name: null,
+  reviewed_at: null,
+  can_submit: false,
+  can_approve_directly: false,
+  can_withdraw: false,
+};
+const pendingApproval = {
+  ...noApproval,
+  usable_workflows: [{ id: 3, workflow_title: "Legal review", step_count: 1 }],
+  pending_request: {
+    id: 11,
+    workflow_id: 3,
+    workflow_title: "Legal review",
+    current_step: 1,
+    total_steps: 1,
+    requested_by: 1,
+    requested_by_name: "Ada Admin",
+    created_at: "2026-11-14T10:00:00.000Z",
+  },
+  can_withdraw: true,
+};
+const mockGetPolicyApproval = vi.fn();
 vi.mock("../../../../application/repository/policy.repository", () => ({
   getPolicyById: (...args: any[]) => mockGetPolicyById(...args),
   getAllTags: (...args: any[]) => mockGetAllTags(...args),
   importDocxToHtml: (...args: any[]) => mockImportDocxToHtml(...args),
   createPolicy: (...args: any[]) => mockCreatePolicy(...args),
   updatePolicy: (...args: any[]) => mockUpdatePolicy(...args),
-  getPolicyApproval: vi.fn().mockResolvedValue({
-    usable_workflows: [],
-    pending_request: null,
-    review_status: null,
-    review_comment: null,
-    reviewed_by: null,
-    reviewed_by_name: null,
-    reviewed_at: null,
-    can_submit: false,
-    can_approve_directly: false,
-    can_withdraw: false,
-  }),
+  getPolicyApproval: (...args: any[]) => mockGetPolicyApproval(...args),
 }));
 
 const mockUploadFileToManager = vi.fn();
@@ -136,6 +161,7 @@ vi.mock("../../../../application/repository/file.repository", () => ({
   uploadFileToManager: (...args: any[]) => mockUploadFileToManager(...args),
 }));
 
+import { useEditor } from "@tiptap/react";
 import PolicyEditorPage from "../PolicyEditorPage";
 import { dispatchPolicyApprovalChanged } from "../../../../application/events/policyEvents";
 
@@ -151,6 +177,8 @@ describe("PolicyEditorPage", () => {
     mockUsers = [];
     mockGetAllTags.mockResolvedValue(["AI ethics", "Privacy"]);
     mockCreatePolicy.mockResolvedValue({ id: 42, title: "AI Ethics Policy" });
+    mockGetPolicyApproval.mockResolvedValue(noApproval);
+    vi.mocked(useEditor).mockReturnValue(null as any);
   });
 
   it("shows a loading skeleton while tags are being fetched", () => {
@@ -322,5 +350,100 @@ describe("PolicyEditorPage", () => {
     await waitFor(() => expect(screen.getByTestId("form-status")).toHaveTextContent("Approved"));
     expect(mockGetPolicyById).toHaveBeenLastCalledWith("7");
     expect(screen.getByTestId("form-title")).toHaveTextContent("AI Ethics Policy");
+  });
+  describe("title and content while an approval request is pending", () => {
+    const saved = {
+      id: 7,
+      title: "Saved title",
+      status: "Under Review",
+      tags: ["Privacy"],
+      content_html: "<p>c</p>",
+      next_review_date: "2027-01-01",
+      policy_owner_id: null,
+      assigned_reviewer_ids: [],
+    };
+    const lockedNote = "Waiting for approval. Withdraw the request to edit the title or content.";
+
+    // Enough of a TipTap editor for the page, its hooks and the save.
+    const fakeEditor = () => ({
+      setEditable: vi.fn(),
+      isEditable: true,
+      isEmpty: false,
+      getHTML: () => "<p>c</p>",
+      state: { tr: { setMeta: () => ({}) }, doc: { descendants: () => {} } },
+      view: { dispatch: vi.fn() },
+    });
+
+    const renderSaved = async () => {
+      mockParams = { id: "7" };
+      mockGetPolicyById.mockResolvedValue(saved);
+      const editor = fakeEditor();
+      vi.mocked(useEditor).mockReturnValue(editor as any);
+      renderWithProviders(<PolicyEditorPage />, { route: "/policies/7/edit" });
+      await waitFor(() =>
+        expect(screen.getByTestId("form-title")).toHaveTextContent("Saved title"),
+      );
+      return editor;
+    };
+
+    it("makes the title and content read-only with a note, and disables import", async () => {
+      mockGetPolicyApproval.mockResolvedValue(pendingApproval);
+      const editor = await renderSaved();
+
+      expect(await screen.findByText(lockedNote)).toBeInTheDocument();
+      expect(editor.setEditable).toHaveBeenLastCalledWith(false);
+      expect(screen.queryByTestId("policy-toolbar")).not.toBeInTheDocument();
+      expect(screen.getByTestId("policy-import-docx")).toBeDisabled();
+      expect(document.querySelector(".edit-title-icon")).toBeNull();
+      // Other fields stay editable, and Save still saves them.
+      expect(screen.getByTestId("fill-valid-form")).toBeEnabled();
+      expect(screen.getByText("Save").closest("button")).toBeEnabled();
+    });
+
+    it("leaves the title and content out of a save while locked", async () => {
+      mockGetPolicyApproval.mockResolvedValue(pendingApproval);
+      mockUpdatePolicy.mockResolvedValue({ ...saved, tags: ["Privacy"] });
+      await renderSaved();
+      await screen.findByText(lockedNote);
+
+      fireEvent.click(screen.getByText("Save"));
+
+      await waitFor(() => expect(mockUpdatePolicy).toHaveBeenCalled());
+      const [id, input] = mockUpdatePolicy.mock.calls[0];
+      expect(id).toBe(7);
+      expect(input).not.toHaveProperty("title");
+      expect(input).not.toHaveProperty("content_html");
+      expect(input).toEqual(expect.objectContaining({ status: "Under Review", tags: ["Privacy"] }));
+    });
+
+    it("unlocks after a withdrawal without a reload and keeps unsaved edits", async () => {
+      mockGetPolicyApproval.mockResolvedValue(pendingApproval);
+      const editor = await renderSaved();
+      await screen.findByText(lockedNote);
+
+      // An unsaved sidebar edit, then the request is withdrawn elsewhere.
+      fireEvent.click(screen.getByTestId("fill-valid-form"));
+      await waitFor(() =>
+        expect(screen.getByTestId("form-title")).toHaveTextContent("AI Ethics Policy"),
+      );
+      mockGetPolicyApproval.mockResolvedValue(noApproval);
+      mockGetPolicyById.mockResolvedValue({ ...saved, status: "Draft" });
+      act(() => dispatchPolicyApprovalChanged({ policyId: 7, status: "withdrawn" }));
+
+      await waitFor(() => expect(screen.queryByText(lockedNote)).not.toBeInTheDocument());
+      await waitFor(() => expect(screen.getByTestId("form-status")).toHaveTextContent("Draft"));
+      expect(editor.setEditable).toHaveBeenLastCalledWith(true);
+      expect(screen.getByTestId("policy-toolbar")).toBeInTheDocument();
+      expect(screen.getByTestId("policy-import-docx")).toBeEnabled();
+      expect(screen.getByTestId("form-title")).toHaveTextContent("AI Ethics Policy");
+    });
+
+    it("keeps the title and content editable with no pending request", async () => {
+      const editor = await renderSaved();
+      await waitFor(() => expect(mockGetPolicyApproval).toHaveBeenCalled());
+      expect(screen.queryByText(lockedNote)).not.toBeInTheDocument();
+      expect(editor.setEditable).toHaveBeenLastCalledWith(true);
+      expect(document.querySelector(".edit-title-icon")).not.toBeNull();
+    });
   });
 });

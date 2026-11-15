@@ -81,6 +81,8 @@ export const de: Record<string, string> = {
     "Aktualisieren Sie Name, Beschreibung und Kategorie dieser Organisationsvorlage. Um den Inhalt zu ändern, verwenden Sie „Inhalt bearbeiten“.",
   "Withdraw the approval request to change the status.":
     "Ziehen Sie die Genehmigungsanfrage zurück, um den Status zu ändern.",
+  "Waiting for approval. Withdraw the request to edit the title or content.":
+    "Wartet auf Genehmigung. Ziehen Sie die Anfrage zurück, um Titel oder Inhalt zu bearbeiten.",
   "Submit for approval": "Zur Genehmigung einreichen",
   "Save the policy before submitting it for approval.":
     "Speichern Sie die Richtlinie, bevor Sie sie zur Genehmigung einreichen.",
@@ -193,6 +195,8 @@ export const fr: Record<string, string> = {
     "Modifiez le nom, la description et la catégorie de ce modèle de l'organisation. Pour modifier son contenu, utilisez « Modifier le contenu ».",
   "Withdraw the approval request to change the status.":
     "Retirez la demande d'approbation pour modifier le statut.",
+  "Waiting for approval. Withdraw the request to edit the title or content.":
+    "En attente d'approbation. Retirez la demande pour modifier le titre ou le contenu.",
   "Submit for approval": "Soumettre pour approbation",
   "Save the policy before submitting it for approval.":
     "Enregistrez la politique avant de la soumettre pour approbation.",
@@ -306,6 +310,8 @@ export const es: Record<string, string> = {
     "Actualice el nombre, la descripción y la categoría de esta plantilla de la organización. Para cambiar su contenido, use Editar contenido.",
   "Withdraw the approval request to change the status.":
     "Retire la solicitud de aprobación para cambiar el estado.",
+  "Waiting for approval. Withdraw the request to edit the title or content.":
+    "En espera de aprobación. Retire la solicitud para editar el título o el contenido.",
   "Submit for approval": "Enviar para aprobación",
   "Save the policy before submitting it for approval.":
     "Guarde la política antes de enviarla para aprobación.",

@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import type { Editor } from "@tiptap/react";
 import { useCreatePolicy, useUpdatePolicy } from "../../../../application/hooks/usePolicyMutations";
 import { PolicyManagerModel } from "../../../../domain/models/Common/policy/policyManager.model";
-import { PolicyFormData, PolicyFormErrors } from "../../../types/interfaces/i.policy";
+import { PolicyFormData, PolicyFormErrors, PolicyInput } from "../../../types/interfaces/i.policy";
 import { type CustomFieldsSectionHandle } from "../../../components/CustomFieldsSection";
 import { policyOwnerIdToSave } from "./policyFormDirty";
 
@@ -24,6 +24,11 @@ export interface UsePolicySaveParams {
   setIsEditingTitle: Dispatch<SetStateAction<boolean>>;
   /** Called after a successful save with the form content that was saved. */
   onSaved?: (savedFormContent: string) => void;
+  /**
+   * The title and content are locked (a pending approval request): the save
+   * leaves them out, since the server refuses a change, and saves the rest.
+   */
+  textLocked?: boolean;
 }
 
 /**
@@ -52,6 +57,7 @@ export function usePolicySave({
   setEditedTitle,
   setIsEditingTitle,
   onSaved,
+  textLocked = false,
 }: UsePolicySaveParams) {
   const navigate = useNavigate();
   const createPolicyMutation = useCreatePolicy();
@@ -81,7 +87,8 @@ export function usePolicySave({
     setIsSaving(true);
 
     const html = editor?.getHTML() || "";
-    const payload = {
+    const sendText = isNew || !textLocked;
+    const payload: PolicyInput = {
       title: formData.title,
       status: formData.status,
       tags: formData.tags,
@@ -97,6 +104,12 @@ export function usePolicySave({
         .map((u) => u.id)
         .filter((id) => id !== formData.policyOwner?.id),
     };
+    // Locked: leave the keys out rather than sending undefined, which the
+    // list cache update would spread over the stored title and content.
+    if (!sendText) {
+      delete (payload as Partial<PolicyInput>).title;
+      delete (payload as Partial<PolicyInput>).content_html;
+    }
 
     try {
       let savedPolicy: PolicyManagerModel;
@@ -124,7 +137,8 @@ export function usePolicySave({
           ? ({ ...savedPolicy, content_html: prev.content_html } as PolicyManagerModel)
           : savedPolicy,
       );
-      onSaved?.(formData.content);
+      // Content left out of a locked save was not saved.
+      if (sendText) onSaved?.(formData.content);
 
       // Flush any locally-staged custom field changes (create OR update).
       let cfFlushFailed = false;

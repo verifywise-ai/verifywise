@@ -113,7 +113,8 @@ export function PolicyTableBubbleMenu({ editor }: PolicyTableBubbleMenuProps) {
     <BubbleMenu
       editor={editor}
       pluginKey="tableMenu"
-      shouldShow={({ editor: e }) => e.isActive("table")}
+      // Table actions change the content, so only while the editor is editable.
+      shouldShow={({ editor: e }) => e.isEditable && e.isActive("table")}
       updateDelay={100}
     >
       <Box

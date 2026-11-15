@@ -65,6 +65,10 @@ export const policyApprovalContent: ArticleContent = {
       text: 'While the request is pending, the Approval section shows the workflow, the current step (for example "Step 1 of 2") and who submitted it. The status dropdown is locked until the request is decided or withdrawn.',
     },
     {
+      type: 'paragraph',
+      text: 'The title and content are locked too, so approvers review exactly the text you submitted. You can still change the tags, owner, team members, review date and custom fields. To edit the text, withdraw the request, make your changes and submit again.',
+    },
+    {
       type: 'heading',
       id: 'deciding',
       level: 2,

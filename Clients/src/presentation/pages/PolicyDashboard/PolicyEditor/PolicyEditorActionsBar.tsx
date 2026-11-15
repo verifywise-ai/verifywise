@@ -29,6 +29,8 @@ export interface PolicyEditorActionsBarProps {
   onDownloadExport: (format: "pdf" | "docx") => void;
   isImporting: boolean;
   onDocxFileSelect: (event: React.ChangeEvent<HTMLInputElement>) => void;
+  /** Import replaces the content, so it is off while the content is locked. */
+  isImportDisabled?: boolean;
   isSaving: boolean;
   saveSuccess: boolean;
   isSaveDisabled: boolean;
@@ -50,6 +52,7 @@ export function PolicyEditorActionsBar({
   onDownloadExport,
   isImporting,
   onDocxFileSelect,
+  isImportDisabled = false,
   isSaving,
   saveSuccess,
   isSaveDisabled,
@@ -201,7 +204,8 @@ export function PolicyEditorActionsBar({
         <CustomizableButton
           variant="outlined"
           text={isImporting ? "Importing..." : "Import"}
-          isDisabled={isImporting}
+          isDisabled={isImporting || isImportDisabled}
+          testId="policy-import-docx"
           sx={{
             "backgroundColor": palette.background.main,
             "border": `1px solid ${palette.border.dark}`,

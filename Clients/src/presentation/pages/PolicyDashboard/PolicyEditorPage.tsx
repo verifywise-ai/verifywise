@@ -21,6 +21,7 @@ import {
 import { usePolicyTemplate } from "../../../application/hooks/usePolicyTemplates";
 import useUsers from "../../../application/hooks/useUsers";
 import { useCanCheck } from "../../../application/hooks/useCan";
+import { useTranslation } from "../../../application/hooks/useTranslation";
 import { User } from "../../../domain/types/User";
 import { PolicyFormData, PolicyInput } from "../../types/interfaces/i.policy";
 import { PolicyManagerModel } from "../../../domain/models/Common/policy/policyManager.model";
@@ -48,6 +49,7 @@ export default function PolicyEditorPage() {
   const updatePolicyMutation = useUpdatePolicy();
   const can = useCanCheck();
   const readOnly = !can("policy.edit");
+  const { t } = useTranslation();
 
   const isNew = !id;
   const templateId = searchParams.get("templateId");
@@ -305,10 +307,28 @@ export default function PolicyEditorPage() {
 
   const findReplace = usePolicyFindReplace(editor);
 
+  // ── Approval ──────────────────────────────────────────────────────
+  const { data: approvalState } = usePolicyApproval(policy?.id);
+  const hasPendingApproval = Boolean(approvalState?.pending_request);
+  // While a request is pending the approvers decide on the submitted text:
+  // the title and content are locked (the server refuses a change), the other
+  // fields stay editable. Follows the approval query, so a withdrawal or a
+  // decision unlocks them without a reload.
+  const textLocked = !isNew && !readOnly && hasPendingApproval;
+
   // Reviewer and Auditor can read policies but not change them.
   useEffect(() => {
-    editor?.setEditable(!readOnly);
-  }, [editor, readOnly]);
+    editor?.setEditable(!readOnly && !textLocked);
+  }, [editor, readOnly, textLocked]);
+
+  // Close anything that would change the title or content once they lock.
+  const { closeFindReplace } = findReplace;
+  useEffect(() => {
+    if (!textLocked) return;
+    setIsEditingTitle(false);
+    setPendingImportFile(null);
+    closeFindReplace();
+  }, [textLocked, closeFindReplace]);
 
   const knownUserIds = useMemo(() => new Set(users.map((u) => u.id)), [users]);
 
@@ -339,11 +359,8 @@ export default function PolicyEditorPage() {
     setEditedTitle,
     setIsEditingTitle,
     onSaved: setSavedContent,
+    textLocked,
   });
-
-  // ── Approval ──────────────────────────────────────────────────────
-  const { data: approvalState } = usePolicyApproval(policy?.id);
-  const hasPendingApproval = Boolean(approvalState?.pending_request);
 
   const hasUnsavedChanges = useMemo(
     () => (policy ? isPolicyFormDirty({ policy, formData, knownUserIds, savedContent }) : true),
@@ -453,6 +470,7 @@ export default function PolicyEditorPage() {
     const file = e.target.files?.[0];
     if (!file) return;
     e.target.value = ""; // reset so same file can be re-selected
+    if (textLocked) return;
 
     if (file.size > MAX_DOCX_SIZE) {
       setImportError("File is too large. Maximum size is 10 MB.");
@@ -468,6 +486,7 @@ export default function PolicyEditorPage() {
   };
 
   const processDocxImport = async (file: File) => {
+    if (textLocked) return;
     setIsImporting(true);
     setImportError(null);
     try {
@@ -576,6 +595,8 @@ export default function PolicyEditorPage() {
             onDownloadExport={downloadExport}
             isImporting={isImporting}
             onDocxFileSelect={handleDocxFileSelect}
+            isImportDisabled={textLocked}
+            titleLocked={textLocked}
             isSaving={isSaving}
             saveSuccess={saveSuccess}
             isSaveDisabled={isSaving || customFieldsGate.blocked}
@@ -622,7 +643,12 @@ export default function PolicyEditorPage() {
             onCloseLink={handleCloseLink}
             onInsertLink={handleInsertLink}
             findReplace={findReplace}
-            readOnly={readOnly}
+            readOnly={readOnly || textLocked}
+            lockedNote={
+              textLocked
+                ? t("Waiting for approval. Withdraw the request to edit the title or content.")
+                : undefined
+            }
           >
             <PolicyReviewPanel isOpen={isHistorySidebarOpen} isNew={isNew} policyId={policy?.id} />
           </PolicyContentEditor>
