@@ -20,10 +20,12 @@ jest.mock("../../utils/i18n.utils", () => ({ translateError: jest.fn() }));
 
 import { createShareLink, getShareLinksForResource, updateShareLink } from "../shareLink.ctrl";
 import { sequelize } from "../../database/db";
-import {
-  POLICY_ALL_FIELDS_SHARE_WARNING,
-  POLICY_LIST_SHARE_WARNING,
-} from "../../utils/shareLinkWarnings.utils";
+
+const LIST =
+  "This link lists your organization's 100 most recently created policies, whatever their status: drafts, policies under review, deprecated and archived policies included.";
+const ALL_FIELDS =
+  "Share all fields is on: anyone with this link can read every column of the policies it shows, the full policy text included.";
+const EXPORT = "Data export is on: anyone with this link can download what it shows.";
 
 const queryMock = sequelize.query as unknown as jest.Mock;
 const transactionMock = sequelize.transaction as unknown as jest.Mock;
@@ -44,7 +46,7 @@ const link = (resourceId: number, shareAllFields: boolean) => ({
   resource_type: "policy",
   resource_id: resourceId,
   created_by: 1,
-  settings: { shareAllFields },
+  settings: { shareAllFields, allowDataExport: false },
   is_enabled: true,
   expires_at: null,
 });
@@ -68,10 +70,7 @@ describe("share link responses carry translated policy exposure warnings", () =>
       res,
     );
     expect(res.status).toHaveBeenCalledWith(201);
-    expect((res.json.mock.calls[0][0] as any).warnings).toEqual([
-      t(POLICY_LIST_SHARE_WARNING),
-      t(POLICY_ALL_FIELDS_SHARE_WARNING),
-    ]);
+    expect((res.json.mock.calls[0][0] as any).warnings).toEqual([t(LIST), t(ALL_FIELDS)]);
   });
 
   it("on update", async () => {
@@ -90,9 +89,7 @@ describe("share link responses carry translated policy exposure warnings", () =>
       res,
     );
     expect(res.status).toHaveBeenCalledWith(200);
-    expect((res.json.mock.calls[0][0] as any).warnings).toEqual([
-      t(POLICY_ALL_FIELDS_SHARE_WARNING),
-    ]);
+    expect((res.json.mock.calls[0][0] as any).warnings).toEqual([t(ALL_FIELDS)]);
   });
 
   it("on the list of a resource's links, and none for a model", async () => {
@@ -102,7 +99,20 @@ describe("share link responses carry translated policy exposure warnings", () =>
       { params: { resourceType: "policy", resourceId: "0" }, organizationId: 9, t } as any,
       res,
     );
-    expect((res.json.mock.calls[0][0] as any)[0].warnings).toEqual([t(POLICY_LIST_SHARE_WARNING)]);
+    expect((res.json.mock.calls[0][0] as any)[0].warnings).toEqual([t(LIST)]);
+
+    queryMock.mockResolvedValueOnce([
+      { ...link(0, false), settings: { shareAllFields: false } },
+      { ...link(0, true), is_enabled: false },
+    ] as never);
+    const res3 = createRes();
+    await getShareLinksForResource(
+      { params: { resourceType: "policy", resourceId: "0" }, organizationId: 9, t } as any,
+      res3,
+    );
+    const listed = res3.json.mock.calls[0][0] as any[];
+    expect(listed[0].warnings).toEqual([t(LIST), t(EXPORT)]);
+    expect(listed[1].warnings).toEqual([]);
 
     queryMock.mockResolvedValueOnce([{ ...link(0, true), resource_type: "model" }] as never);
     const res2 = createRes();

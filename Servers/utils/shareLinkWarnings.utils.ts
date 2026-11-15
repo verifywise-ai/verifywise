@@ -1,28 +1,33 @@
 /**
- * Warnings returned when a share link is created or updated, so whoever makes
- * the link through the API knows what its holder will see. Policy links can
- * only be made through the API (the app offers share links for models only),
- * so the response is the one place to say it.
+ * What a share link exposes, reported when it is created, updated or listed so
+ * whoever makes it through the API knows what its holder will see. Policy
+ * links can only be made through the API (the app offers share links for
+ * models only), so the response is the one place to say it.
  *
- * Each warning is an English message key, translated by the caller with req.t.
+ * The controller turns each code into a translated message.
  */
 
-/** A policy list link (resource_id 0) shows policies of every status. */
-export const POLICY_LIST_SHARE_WARNING =
-  "This link lists up to 100 of your organization's most recent policies, drafts and archived policies included.";
+export type ShareLinkWarning = "policyList" | "policyAllFields" | "policyExport";
 
-/** With share all fields on, a policy link shows full policy text and every stored field. */
-export const POLICY_ALL_FIELDS_SHARE_WARNING =
-  "Share all fields is on: anyone with this link can read the full text and every stored field of the policies it shows.";
+/** A link with resource_id 0 shows the resource's list (table view); any other id one record. */
+export const isTableViewLink = (resourceId: number): boolean => resourceId === 0;
 
-export const shareLinkWarnings = (
-  resourceType: string,
-  resourceId: number,
-  settings: { shareAllFields?: unknown } | null | undefined,
-): string[] => {
-  if (resourceType !== "policy") return [];
-  const warnings: string[] = [];
-  if (Number(resourceId) === 0) warnings.push(POLICY_LIST_SHARE_WARNING);
-  if (settings?.shareAllFields === true) warnings.push(POLICY_ALL_FIELDS_SHARE_WARNING);
+export const shareLinkWarnings = (link: {
+  resource_type: string;
+  resource_id: number;
+  settings?: { shareAllFields?: unknown; allowDataExport?: unknown } | null;
+  is_enabled?: boolean;
+  expires_at?: Date | string | null;
+}): ShareLinkWarning[] => {
+  if (link.resource_type !== "policy") return [];
+  // A disabled or expired link shows nothing.
+  if (link.is_enabled === false) return [];
+  if (link.expires_at && new Date() > new Date(link.expires_at)) return [];
+  const warnings: ShareLinkWarning[] = [];
+  if (isTableViewLink(link.resource_id)) warnings.push("policyList");
+  // Same strict check as the shared view.
+  if (link.settings?.shareAllFields === true) warnings.push("policyAllFields");
+  // The shared view offers export unless it is turned off.
+  if (link.settings?.allowDataExport !== false) warnings.push("policyExport");
   return warnings;
 };

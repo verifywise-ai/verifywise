@@ -118,16 +118,22 @@ CREATE INDEX share_links_created_by_idx ON share_links(created_by);
 
 The create (`POST /shares`), update (`PATCH /shares/:id`) and list
 (`GET /shares/:resourceType/:resourceId`) responses carry a `warnings` array of
-translated messages (`utils/shareLinkWarnings.utils.ts`). Policy links can only
-be created through the API, so the response is where the caller learns what a
-link exposes:
+translated messages (`shareLinkWarnings` in `utils/shareLinkWarnings.utils.ts`,
+translated in `shareLink.ctrl.ts`). Policy links can only be created through
+the API, so the response is where the caller learns what a link exposes. For an
+enabled, unexpired policy link:
 
-- A policy list link (`resource_id` 0) lists up to 100 of the organization's
-  most recent policies of every status, drafts and archived included.
-- `shareAllFields: true` on a policy link shows every stored field, the full
-  policy text included, of each policy it shows.
+- A list link (`resource_id` 0, `isTableViewLink`, the same rule the shared view
+  uses) lists the organization's 100 most recently created policies (`id DESC`),
+  whatever their status.
+- `shareAllFields: true` shows every `policy_manager` column of each policy it
+  shows, the full policy text included (not joined data such as assigned
+  reviewers or tags).
+- Data export is on unless `allowDataExport` is `false`, and it is on by default.
 
-Other resource types return an empty array.
+A disabled or expired link, and every other resource type, returns an empty
+array. Model, vendor, project and risk list links expose their records the same
+way but carry no warnings yet.
 
 ### Shared Data Response
 
