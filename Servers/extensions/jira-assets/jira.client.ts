@@ -233,7 +233,7 @@ export class JiraAssetsClient {
     if (!response.ok) {
       // Status only: the base URL is admin-supplied, so its body is not
       // shown back. The start of it goes to the server log.
-      await logErrorReply("Jira", new URL(rawUrl).pathname, response);
+      await logErrorReply("Jira", endpoint, response, [this.authHeader.slice("Basic ".length)]);
       throw new JiraUpstreamError(`Jira returned HTTP ${response.status}`);
     }
     try {

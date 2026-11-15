@@ -8,6 +8,7 @@ import {
   RemoteStatusError,
   describeConnectionTestError,
   describeFetchError,
+  errorReplyForLog,
   logErrorReply,
 } from "../outboundFetch.utils";
 import { UnsafeOutboundUrlError } from "../safeOutboundUrl";
@@ -149,6 +150,46 @@ describe("logErrorReply", () => {
   it("says no details for an empty reply, and cancels a body it cannot read", async () => {
     const cancel = jest.fn().mockResolvedValue(undefined);
     await logErrorReply("Jira", "/p", { status: 502, body: { cancel } } as unknown as Response);
+    expect(cancel).toHaveBeenCalled();
+    expect(logger.warn).toHaveBeenCalledWith("Jira returned HTTP 502 for /p: no details");
+  });
+});
+
+describe("errorReplyForLog", () => {
+  it("turns newlines and control characters into spaces, so no line can be forged", () => {
+    expect(errorReplyForLog("x\n2026-11-15 INFO admin logged in\r\n\u001b[2J")).toBe(
+      "x 2026-11-15 INFO admin logged in [2J",
+    );
+  });
+
+  it("hides Authorization values and the given secrets", () => {
+    expect(
+      errorReplyForLog("echo Authorization: Basic YTpi== and Bearer abc.def", ["s3cr3t"]),
+    ).toBe("echo Authorization: Basic [redacted] and Bearer [redacted]");
+    expect(errorReplyForLog("token s3cr3t here", ["s3cr3t"])).toBe("token [redacted] here");
+  });
+
+  it("keeps the text of an HTML error page, not its head", () => {
+    expect(
+      errorReplyForLog(
+        "<!DOCTYPE html><html><head><title>t</title><style>p{}</style></head><body><h1>502 Bad Gateway</h1><script>x()</script></body></html>",
+      ),
+    ).toBe("502 Bad Gateway");
+  });
+});
+
+describe("logErrorReply with a stalled body", () => {
+  beforeEach(() => (logger.warn as jest.Mock).mockClear());
+
+  it("stops waiting after the read limit and still logs the status", async () => {
+    jest.useFakeTimers();
+    const cancel = jest.fn().mockResolvedValue(undefined);
+    const reader = { read: () => new Promise(() => undefined), cancel };
+    const response = { status: 502, body: { getReader: () => reader } } as unknown as Response;
+    const done = logErrorReply("Jira", "/p", response);
+    await jest.advanceTimersByTimeAsync(2_000);
+    await done;
+    jest.useRealTimers();
     expect(cancel).toHaveBeenCalled();
     expect(logger.warn).toHaveBeenCalledWith("Jira returned HTTP 502 for /p: no details");
   });

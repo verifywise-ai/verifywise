@@ -152,17 +152,48 @@ export function describeConnectionTestError(err: unknown, timeoutSeconds: number
 /** Most characters of an error reply written to the server log. */
 export const ERROR_REPLY_LOG_MAX_CHARS = 500;
 
+/** Most bytes read from an error reply: enough to get past an HTML page's head. */
+const ERROR_REPLY_READ_MAX_BYTES = 16_384;
+
+/** How long reading an error reply may take before the error is thrown anyway. */
+export const ERROR_REPLY_READ_MAX_MS = 2_000;
+
+/**
+ * An error reply as one safe log line: HTML head, script and style dropped,
+ * tags removed, credentials that look like an Authorization value and the given
+ * secrets replaced, control characters (newlines included) turned into spaces
+ * so the remote server cannot write lines of its own, cut to
+ * ERROR_REPLY_LOG_MAX_CHARS.
+ */
+export function errorReplyForLog(reply: string, secrets: string[] = []): string {
+  let text = reply
+    .replace(/<(head|script|style)\b[^>]*>[\s\S]*?<\/\1\s*>/gi, " ")
+    .replace(/<[^>]{0,2000}>/g, " ");
+  for (const secret of secrets) {
+    if (secret) text = text.split(secret).join("[redacted]");
+  }
+  text = text
+    .replace(/\b(Basic|Bearer)\s+[A-Za-z0-9+/=._~-]+/gi, "$1 [redacted]")
+    .replace(/[\u0000-\u001f\u007f-\u009f\u2028\u2029]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return text.slice(0, ERROR_REPLY_LOG_MAX_CHARS) || "no details";
+}
+
 /**
  * Write the start of a failed answer's body to the server log, then release
  * the rest. The base URL is admin-supplied, so the body is never put in an
  * error the user sees; the log keeps the reason for whoever fixes the
- * connection. Reads at most ERROR_REPLY_LOG_MAX_CHARS characters' worth of
- * bytes and never throws.
+ * connection. Reads at most ERROR_REPLY_READ_MAX_BYTES for at most
+ * ERROR_REPLY_READ_MAX_MS, so a stalled body never holds up the error, and
+ * never throws. `path` is logged without its query; `secrets` (e.g. the
+ * encoded credentials) are replaced if the reply echoes them.
  */
 export async function logErrorReply(
   service: string,
   path: string,
   response: Response,
+  secrets: string[] = [],
 ): Promise<void> {
   let reply = "";
   try {
@@ -172,20 +203,27 @@ export async function logErrorReply(
       await response.body?.cancel().catch(() => undefined);
     } else {
       const decoder = new TextDecoder();
-      // A UTF-8 character is at most 4 bytes.
-      const maxBytes = ERROR_REPLY_LOG_MAX_CHARS * 4;
-      let read = 0;
-      while (read < maxBytes) {
-        const { done, value } = await reader.read();
-        if (done || !value) break;
-        read += value.byteLength;
-        reply += decoder.decode(value, { stream: true });
+      let timer: NodeJS.Timeout | undefined;
+      const stop = new Promise<"timeout">((resolve) => {
+        timer = setTimeout(() => resolve("timeout"), ERROR_REPLY_READ_MAX_MS);
+      });
+      try {
+        let read = 0;
+        while (read < ERROR_REPLY_READ_MAX_BYTES) {
+          const chunk = await Promise.race([reader.read(), stop]);
+          if (chunk === "timeout" || chunk.done || !chunk.value) break;
+          read += chunk.value.byteLength;
+          reply += decoder.decode(chunk.value, { stream: true });
+        }
+      } finally {
+        clearTimeout(timer);
+        void reader.cancel().catch(() => undefined);
       }
-      await reader.cancel().catch(() => undefined);
     }
   } catch {
     // The status alone is still logged.
   }
-  const shown = reply.slice(0, ERROR_REPLY_LOG_MAX_CHARS).trim() || "no details";
-  logger.warn(`${service} returned HTTP ${response.status} for ${path.split("?")[0]}: ${shown}`);
+  logger.warn(
+    `${service} returned HTTP ${response.status} for ${path.split("?")[0]}: ${errorReplyForLog(reply, secrets)}`,
+  );
 }

@@ -1,5 +1,6 @@
 import { startJiraCloudMock, JiraCloudMock } from "../../../tests/mocks/jiraCloud/server";
 import { JiraIncidentsClient } from "../jiraIncidents.client";
+import logger from "../../../utils/logger/fileLogger";
 import {
   JiraAuthError,
   JiraHttpError,
@@ -42,6 +43,18 @@ describe("JiraIncidentsClient", () => {
     await expect(client("wrong").myself()).rejects.toThrow(
       new JiraAuthError(401, "Jira rejected the API token. It may have expired or been revoked."),
     );
+  });
+
+  it("logs Jira's answer to a rejected token on the server, never in the error", async () => {
+    const warn = jest.spyOn(logger, "warn").mockImplementation(() => logger);
+    const err = await client("wrong")
+      .myself()
+      .catch((e: Error) => e);
+    expect((err as Error).message).not.toContain("Jira returned HTTP");
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringMatching(/^Jira returned HTTP 401 for \/rest\/api\/3\/myself: /),
+    );
+    warn.mockRestore();
   });
 
   it("names missing permissions", async () => {
