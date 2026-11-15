@@ -83,6 +83,7 @@ jest.mock("../../utils/logger/fileLogger", () => ({
   default: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
 }));
 jest.mock("../../extensions/model-lifecycle/modelLifecycle.service", () => ({
+  canStartLifecycle: jest.fn<any>().mockResolvedValue(true),
   startLifecycleForModel: jest.fn<any>().mockResolvedValue(true),
 }));
 jest.mock("../../database/db", () => ({
@@ -93,7 +94,10 @@ jest.mock("../../database/db", () => ({
 }));
 
 import { sequelize } from "../../database/db";
-import { startLifecycleForModel } from "../../extensions/model-lifecycle/modelLifecycle.service";
+import {
+  canStartLifecycle,
+  startLifecycleForModel,
+} from "../../extensions/model-lifecycle/modelLifecycle.service";
 import { createNewModelRiskQuery } from "../../utils/modelRisk.utils";
 import { getUserByIdQuery } from "../../utils/user.utils";
 import { recordEntityCreation } from "../../utils/changeHistory.base.utils";
@@ -786,6 +790,13 @@ describe("shadowAi.ctrl", () => {
         const res = createRes();
         await startGovernance(req, res);
         expect(mockStart).toHaveBeenCalledWith(1, 10, expect.any(Number), expect.anything());
+        // The enablement lookup runs before the transaction opens.
+        const mockCanStart = canStartLifecycle as jest.MockedFunction<any>;
+        const mockTransaction = sequelize.transaction as jest.MockedFunction<any>;
+        expect(mockCanStart).toHaveBeenCalledWith(1);
+        expect(mockCanStart.mock.invocationCallOrder[0]).toBeLessThan(
+          mockTransaction.mock.invocationCallOrder[0],
+        );
         expect(res.status).toHaveBeenCalledWith(201);
         expect(res.json).toHaveBeenCalledWith(
           expect.objectContaining({
@@ -794,6 +805,31 @@ describe("shadowAi.ctrl", () => {
         );
       },
     );
+
+    it("does not start the lifecycle when model-lifecycle is not enabled", async () => {
+      const mockStart = startLifecycleForModel as jest.MockedFunction<any>;
+      (canStartLifecycle as jest.MockedFunction<any>).mockResolvedValueOnce(false);
+      mockGetToolById.mockResolvedValue({ id: 1, name: "ChatGPT" });
+      mockLinkTool.mockResolvedValue(undefined);
+      mockSequelizeQuery.mockResolvedValueOnce([[{ id: 10 }]]).mockResolvedValueOnce(undefined);
+      const req = createReq({
+        params: { id: "1" },
+        body: {
+          model_inventory: { provider: "OpenAI", model: "GPT-4" },
+          governance_owner_id: "2",
+          start_lifecycle: true,
+        },
+      });
+      const res = createRes();
+      await startGovernance(req, res);
+      expect(mockStart).not.toHaveBeenCalled();
+      expect(res.status).toHaveBeenCalledWith(201);
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ lifecycle_initialized: false }),
+        }),
+      );
+    });
 
     it("does not touch the lifecycle when it was not asked for", async () => {
       const mockStart = startLifecycleForModel as jest.MockedFunction<any>;
@@ -809,6 +845,7 @@ describe("shadowAi.ctrl", () => {
       });
       const res = createRes();
       await startGovernance(req, res);
+      expect(canStartLifecycle).not.toHaveBeenCalled();
       expect(mockStart).not.toHaveBeenCalled();
       expect(res.json).toHaveBeenCalledWith(
         expect.objectContaining({

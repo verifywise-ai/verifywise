@@ -67,7 +67,10 @@ import {
   appendRetentionChangeToLedger,
   canChangeRetentionPeriods,
 } from "../utils/retentionAudit.utils";
-import { startLifecycleForModel } from "../extensions/model-lifecycle/modelLifecycle.service";
+import {
+  canStartLifecycle,
+  startLifecycleForModel,
+} from "../extensions/model-lifecycle/modelLifecycle.service";
 const FILE_NAME = "shadowAi.ctrl.ts";
 
 // ─── Helpers ────────────────────────────────────────────────────────────
@@ -674,6 +677,12 @@ export async function startGovernance(req: Request, res: Response) {
         .json(STATUS_CODE[400](req.t!("The governance owner must be a user in your organization")));
     }
 
+    // Checked before the transaction opens, so the lookup never waits on a
+    // second pooled connection while the transaction holds one.
+    const startLifecycle = req.body.start_lifecycle
+      ? await canStartLifecycle(organizationId)
+      : false;
+
     let transaction: Transaction | null = null;
 
     try {
@@ -756,8 +765,8 @@ export async function startGovernance(req: Request, res: Response) {
         },
       );
 
-      // Start the lifecycle review if requested (and model-lifecycle is enabled)
-      const lifecycleInitialized = req.body.start_lifecycle
+      // Start the lifecycle review if requested and model-lifecycle is enabled
+      const lifecycleInitialized = startLifecycle
         ? await startLifecycleForModel(organizationId, modelInventoryId, userId, transaction)
         : false;
 
