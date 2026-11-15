@@ -396,7 +396,9 @@ export default function ModelLifecycleConfig() {
               color: VW_COLORS.textTertiary,
             }}
           >
-            No lifecycle phases configured yet. Click the button below to add phases.
+            {canConfigure
+              ? "No lifecycle phases configured yet. Click the button below to add phases."
+              : "No lifecycle phases yet. An Admin can add them."}
           </Typography>
         ) : (
           <Stack sx={{ gap: 4 }}>

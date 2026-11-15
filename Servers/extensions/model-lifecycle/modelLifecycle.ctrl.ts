@@ -2,7 +2,10 @@ import { NextFunction, Request, Response } from "express";
 import { STATUS_CODE } from "../../utils/statusCode.utils";
 import logger, { logStructured } from "../../utils/logger/fileLogger";
 import { translateError } from "../../utils/i18n.utils";
-import { ValidationException } from "../../domain.layer/exceptions/custom.exception";
+import {
+  ForbiddenException,
+  ValidationException,
+} from "../../domain.layer/exceptions/custom.exception";
 import * as svc from "./modelLifecycle.service";
 
 const fileName = "modelLifecycle.ctrl.ts";
@@ -46,6 +49,10 @@ function fail(res: Response, error: unknown, req: Request, where: string) {
   // Rejected input, such as a person or approver outside the organization.
   if (error instanceof ValidationException) {
     return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+  }
+  // A decision on another approver's row.
+  if (error instanceof ForbiddenException) {
+    return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
   }
   logStructured("error", `model-lifecycle ${where} failed`, where, fileName);
   logger.error(`❌ Error in ${where}:`, error);

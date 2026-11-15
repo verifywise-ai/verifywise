@@ -10,6 +10,7 @@ jest.mock("../modelLifecycle.service", () => ({
 }));
 
 import * as svc from "../modelLifecycle.service";
+import { ForbiddenException } from "../../../domain.layer/exceptions/custom.exception";
 import {
   detachFileCtrl,
   orderedIdsFrom,
@@ -153,6 +154,22 @@ describe("model lifecycle approval decision", () => {
     await updateApprovalStatusCtrl(decisionRequest("7"), res);
 
     expect(res.status).toHaveBeenCalledWith(404);
+  });
+
+  it("answers 403 when the service refuses the decision", async () => {
+    (svc.updateApprovalStatus as jest.Mock).mockRejectedValueOnce(
+      new ForbiddenException("Only the assigned approver can record this decision"),
+    );
+    const res = response();
+
+    await updateApprovalStatusCtrl(decisionRequest("7"), res);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: "Only the assigned approver can record this decision",
+      }),
+    );
   });
 });
 

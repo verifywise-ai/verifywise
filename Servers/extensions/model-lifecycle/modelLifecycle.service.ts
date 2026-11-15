@@ -3,7 +3,10 @@ import { sequelize } from "../../database/db";
 import { appendToAuditLedger } from "../../utils/auditLedger.utils";
 import { GENERIC_FORMATTERS } from "../../config/changeHistory.config";
 import { findUsersNotInOrganization, parseReferencedIds } from "../../utils/user.utils";
-import { ValidationException } from "../../domain.layer/exceptions/custom.exception";
+import {
+  ForbiddenException,
+  ValidationException,
+} from "../../domain.layer/exceptions/custom.exception";
 
 /**
  * DB helpers for the model-lifecycle extension.
@@ -1050,14 +1053,27 @@ export async function removeApprover(
 
 export type ApprovalStatus = "pending" | "approved" | "rejected";
 
+/**
+ * Records the named approver's own decision. Only that approver may decide
+ * their row (no Admin override); the controller checks the same rule first.
+ *
+ * @throws ForbiddenException when `actorId` is not `approverUserId`.
+ */
 export async function updateApprovalStatus(
   organizationId: number,
   modelId: number,
   itemId: number,
   approverUserId: number,
   status: ApprovalStatus,
-  actorId: number | null = null,
+  actorId: number,
 ): Promise<any | null> {
+  if (actorId !== approverUserId) {
+    throw new ForbiddenException(
+      "Only the assigned approver can record this decision",
+      "model_lifecycle_item_approvals",
+      "decide",
+    );
+  }
   // decided_at is NULL only when the reviewer walks the decision back to
   // "pending"; otherwise we stamp NOW(). The CTE locks the row and reads the
   // previous status in the same statement, for the change history.

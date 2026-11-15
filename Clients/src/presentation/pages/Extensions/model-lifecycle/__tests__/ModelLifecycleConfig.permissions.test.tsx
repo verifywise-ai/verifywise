@@ -35,4 +35,25 @@ describe("ModelLifecycleConfig setup entry", () => {
     expect(await screen.findByText("Design")).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Configure Phases" })).not.toBeInTheDocument();
   });
+
+  it("tells an Admin to add phases with the button when there are none", async () => {
+    api.get.mockResolvedValue({ data: { data: [] } });
+    auth.keys = new Set(["extension.admin"]);
+    render(<ModelLifecycleConfig />);
+    expect(
+      await screen.findByText(
+        "No lifecycle phases configured yet. Click the button below to add phases.",
+      ),
+    ).toBeInTheDocument();
+  });
+
+  it("tells a non-admin that an Admin adds phases when there are none", async () => {
+    api.get.mockResolvedValue({ data: { data: [] } });
+    auth.keys = new Set(["model.edit"]);
+    render(<ModelLifecycleConfig />);
+    expect(
+      await screen.findByText("No lifecycle phases yet. An Admin can add them."),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Click the button below/)).not.toBeInTheDocument();
+  });
 });

@@ -20,7 +20,10 @@ jest.mock("../../../utils/auditLedger.utils", () => ({
 
 import { sequelize } from "../../../database/db";
 import { appendToAuditLedger } from "../../../utils/auditLedger.utils";
-import { ValidationException } from "../../../domain.layer/exceptions/custom.exception";
+import {
+  ForbiddenException,
+  ValidationException,
+} from "../../../domain.layer/exceptions/custom.exception";
 import {
   addApprover,
   addPerson,
@@ -455,14 +458,14 @@ describe("updateApprovalStatus history", () => {
       .mockResolvedValueOnce([{ name: "Ada", surname: "Lovelace" }])
       .mockResolvedValue(undefined);
 
-    const row = await updateApprovalStatus(1, 10, 5, 8, "approved", 7);
+    const row = await updateApprovalStatus(1, 10, 5, 8, "approved", 8);
 
     expect(row).toEqual({ id: 4, status: "approved" });
     const insert = historyInsert();
     expect(insert[1].replacements).toEqual(
       expect.objectContaining({
         changeType: "approved",
-        changedBy: 7,
+        changedBy: 8,
         oldValue: JSON.stringify({ approver: "Ada Lovelace", status: "pending" }),
         newValue: JSON.stringify({ approver: "Ada Lovelace", status: "approved" }),
         modelInventoryId: 10,
@@ -476,9 +479,17 @@ describe("updateApprovalStatus history", () => {
       1,
     ]);
 
-    await updateApprovalStatus(1, 10, 5, 8, "approved", 7);
+    await updateApprovalStatus(1, 10, 5, 8, "approved", 8);
 
     expect(historyInsert()).toBeUndefined();
+  });
+
+  it("refuses a decision on another user's row without touching the database", async () => {
+    const attempt = updateApprovalStatus(1, 10, 5, 8, "approved", 7);
+
+    await expect(attempt).rejects.toBeInstanceOf(ForbiddenException);
+    await expect(attempt).rejects.toThrow("Only the assigned approver can record this decision");
+    expect(mockQuery).not.toHaveBeenCalled();
   });
 });
 

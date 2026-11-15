@@ -61,29 +61,35 @@ function toUserOption(user: User) {
 }
 
 // Custom hook for fetching users. Read-only viewers never pick a user, so
-// they skip the request.
+// they skip the request. `loading` is true while a fetch is in flight,
+// including one that starts when edit access arrives after the first render.
 function useUsers(enabled = true) {
   const [users, setUsers] = useState<User[]>([]);
   const [loading, setLoading] = useState(enabled);
 
   useEffect(() => {
     if (!enabled) return;
+    let cancelled = false;
+    setLoading(true);
     const fetchUsers = async () => {
       try {
         const response = await apiServices.get<any>("/users");
         // Handle nested data structure: { message: "OK", data: [...] }
         const data = response?.data;
         const usersArray = data?.data || data || [];
-        setUsers(Array.isArray(usersArray) ? usersArray : []);
+        if (!cancelled) setUsers(Array.isArray(usersArray) ? usersArray : []);
       } catch (err) {
         console.error("Failed to fetch users:", err);
-        setUsers([]);
+        if (!cancelled) setUsers([]);
       } finally {
-        setLoading(false);
+        if (!cancelled) setLoading(false);
       }
     };
 
     fetchUsers();
+    return () => {
+      cancelled = true;
+    };
   }, [enabled]);
 
   return { users, loading };
@@ -315,6 +321,10 @@ function DocumentsFieldRenderer({
   readOnly: boolean;
 }) {
   const files = Array.isArray(value?.files) ? value.files : [];
+  // Uploading also creates a file manager entry, which POST /file-manager
+  // authorizes on fileManager.contribute. Without it the list stays visible.
+  const canContributeFiles = useCan("fileManager.contribute");
+  const canUpload = !readOnly && canContributeFiles;
   const [uploading, setUploading] = useState(false);
   // Which action last failed; cleared when any action starts or succeeds so
   // a stale message never outlives the thing it was about.
@@ -381,7 +391,7 @@ function DocumentsFieldRenderer({
     [modelId, item.id, onValueChanged],
   );
 
-  if (readOnly && files.length === 0) {
+  if (!canUpload && files.length === 0) {
     return (
       <Typography sx={{ ...textStyles.body, color: text.subdued }}>
         No files uploaded yet.
@@ -448,7 +458,7 @@ function DocumentsFieldRenderer({
             : "Could not remove the file. Try again."}
         </Typography>
       )}
-      {!readOnly && (
+      {canUpload && (
         <Box
           sx={{
             "border": `1px dashed ${VW_COLORS.borderDark}`,
@@ -667,6 +677,8 @@ function ClassificationFieldRenderer({
     [modelId, item.id, onValueChanged],
   );
 
+  if (readOnly) return <ReadOnlyValue>{currentValue}</ReadOnlyValue>;
+
   return (
     <Stack sx={{ gap: 4 }}>
       <RadioGroup value={selected} onChange={(e) => handleChange(e.target.value)}>
@@ -674,7 +686,6 @@ function ClassificationFieldRenderer({
           <FormControlLabel
             key={level}
             value={level}
-            disabled={readOnly}
             control={
               <Radio
                 size="small"

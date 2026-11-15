@@ -112,14 +112,19 @@ describe("LifecycleItemField without model.edit (Auditor)", () => {
     expect(document.querySelector(".MuiChip-deleteIcon")).toBeNull();
   });
 
-  it("disables the classification choices", () => {
+  it("shows the chosen classification as plain text, not radios", () => {
     renderField(
       makeItem("classification", { value_json: { level: "High" } }, { levels: ["Low", "High"] }),
     );
-    const radios = screen.getAllByRole("radio");
-    expect(radios).toHaveLength(2);
-    radios.forEach((r) => expect(r).toBeDisabled());
-    expect(screen.getByRole("radio", { name: "High" })).toBeChecked();
+    expect(screen.getByText("High")).toBeInTheDocument();
+    expect(screen.queryByText("Low")).not.toBeInTheDocument();
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
+  });
+
+  it("shows 'Not set' for a classification with no level", () => {
+    renderField(makeItem("classification", null, { levels: ["Low", "High"] }));
+    expect(screen.getByText("Not set")).toBeInTheDocument();
+    expect(screen.queryByRole("radio")).not.toBeInTheDocument();
   });
 
   it("disables the checklist and hides add and remove", () => {
@@ -183,5 +188,79 @@ describe("LifecycleItemField approvals with model.edit (Editor)", () => {
   it("keeps text fields editable", () => {
     renderField(makeItem("text", { value_text: "Fraud scoring" }));
     expect(screen.getByRole("textbox")).toHaveValue("Fraud scoring");
+  });
+});
+
+describe("LifecycleItemField documents upload permission", () => {
+  const documents = makeItem("documents", {
+    files: [{ id: 1, value_id: 5, file_id: 99, filename: "card.pdf" }],
+  });
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    api.get.mockResolvedValue({ data: { data: [] } });
+    auth.userId = 7;
+  });
+
+  it("offers upload with model.edit and fileManager.contribute", () => {
+    auth.keys = new Set(["model.edit", "fileManager.contribute"]);
+    const { container } = renderField(documents);
+    expect(screen.getByText("Click to upload documents")).toBeInTheDocument();
+    expect(container.querySelector('input[type="file"]')).not.toBeNull();
+  });
+
+  it("lists files without upload when the user cannot add to the file manager", () => {
+    auth.keys = new Set(["model.edit"]);
+    const { container } = renderField(documents);
+    expect(screen.getByText("card.pdf")).toBeInTheDocument();
+    expect(screen.queryByText("Click to upload documents")).not.toBeInTheDocument();
+    expect(container.querySelector('input[type="file"]')).toBeNull();
+    // Detaching needs only model.edit, so the remove control stays.
+    expect(screen.getByRole("button", { name: "Remove file" })).toBeInTheDocument();
+  });
+
+  it("says no files are uploaded when the user cannot upload and there are none", () => {
+    auth.keys = new Set(["model.edit"]);
+    renderField(makeItem("documents", { files: [] }));
+    expect(screen.getByText("No files uploaded yet.")).toBeInTheDocument();
+  });
+
+  it("offers no upload with fileManager.contribute alone", () => {
+    auth.keys = new Set(["fileManager.contribute"]);
+    const { container } = renderField(documents);
+    expect(screen.getByText("card.pdf")).toBeInTheDocument();
+    expect(container.querySelector('input[type="file"]')).toBeNull();
+  });
+});
+
+describe("LifecycleItemField people user list loading", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    auth.userId = 7;
+  });
+
+  it("shows loading while the user list loads after edit access arrives", async () => {
+    const people = makeItem("people", {
+      people: [{ id: 1, user_id: 8, name: "Ada", surname: "Lovelace", email: "" }],
+    } as any);
+    let resolveUsers: (value: unknown) => void = () => {};
+    api.get.mockReturnValue(new Promise((resolve) => (resolveUsers = resolve)));
+
+    auth.keys = new Set();
+    const { rerender } = renderField(people);
+    expect(api.get).not.toHaveBeenCalled();
+
+    auth.keys = new Set(["model.edit"]);
+    rerender(
+      <ThemeProvider theme={light}>
+        <LifecycleItemField modelId={10} item={people} onValueChanged={vi.fn()} />
+      </ThemeProvider>,
+    );
+
+    expect(await screen.findByText("Loading users...")).toBeInTheDocument();
+    expect(api.get).toHaveBeenCalledWith("/users");
+
+    resolveUsers({ data: { data: [] } });
+    expect(await screen.findByText("Select a user...")).toBeInTheDocument();
   });
 });
