@@ -75,7 +75,7 @@ describe("readSlackOAuthReturn", () => {
 });
 
 describe("buildSlackAuthorizeUrl", () => {
-  it("sends the client id, scope, redirect URI and state", () => {
+  it("sends the client id, bot and user scopes, redirect URI and state", () => {
     const url = new URL(
       buildSlackAuthorizeUrl({
         baseUrl: "https://slack.com/oauth/v2/authorize",
@@ -86,7 +86,13 @@ describe("buildSlackAuthorizeUrl", () => {
     );
     expect(url.origin + url.pathname).toBe("https://slack.com/oauth/v2/authorize");
     expect(url.searchParams.get("client_id")).toBe("client-1");
-    expect(url.searchParams.get("scope")).toBe("incoming-webhook,chat:write");
+    expect(url.searchParams.get("scope")).toBe(
+      "incoming-webhook,chat:write,chat:write.public,channels:read,groups:read",
+    );
+    // Without user scopes Slack returns no user token, and the server cannot invite the bot.
+    expect(url.searchParams.get("user_scope")).toBe(
+      "channels:read,groups:read,groups:write.invites",
+    );
     expect(url.searchParams.get("redirect_uri")).toBe(
       "https://app.example.com/extensions/slack/settings",
     );

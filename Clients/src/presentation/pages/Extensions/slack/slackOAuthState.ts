@@ -13,7 +13,24 @@ export const SLACK_OAUTH_STATE_KEY = "vw.slack.oauthState";
 /** Path Slack returns to. The server builds the same redirect URI from FRONTEND_URL. */
 export const SLACK_REDIRECT_PATH = "/extensions/slack/settings";
 
-const SLACK_SCOPE = "incoming-webhook,chat:write";
+/**
+ * Bot scopes: post through the incoming webhook and as the bot, and read the
+ * channel being connected.
+ */
+export const SLACK_BOT_SCOPES = [
+  "incoming-webhook",
+  "chat:write",
+  "chat:write.public",
+  "channels:read",
+  "groups:read",
+] as const;
+
+/**
+ * User scopes: Slack only returns the installer's user token (authed_user)
+ * when some are requested. The server uses it once, to look up the channel
+ * and invite the bot into a private one.
+ */
+export const SLACK_USER_SCOPES = ["channels:read", "groups:read", "groups:write.invites"] as const;
 
 function safeStorage(): Storage | null {
   try {
@@ -90,7 +107,8 @@ export function buildSlackAuthorizeUrl({
 }): string {
   const params = new URLSearchParams({
     client_id: clientId,
-    scope: SLACK_SCOPE,
+    scope: SLACK_BOT_SCOPES.join(","),
+    user_scope: SLACK_USER_SCOPES.join(","),
     redirect_uri: `${origin}${SLACK_REDIRECT_PATH}`,
     state,
   });
