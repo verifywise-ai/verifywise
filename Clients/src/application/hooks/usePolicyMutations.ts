@@ -23,7 +23,8 @@ export function useUpdatePolicy() {
     PolicyManagerModel,
     PolicyManagerModel,
     Error,
-    { id: number; input: PolicyInput }
+    // A field left out is unchanged, on the server and in the cached list.
+    { id: number; input: Partial<PolicyInput> }
   >({
     mutationFn: ({ id, input }) => updatePolicy(id, input),
     queryKey: () => policyQueryKeys.list(),
@@ -68,6 +69,8 @@ export function useDeletePolicy() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: tagQueryKeys.all });
+      // The deleted policy's folder mappings are gone; refresh the sidebar counts.
+      queryClient.invalidateQueries({ queryKey: policyQueryKeys.folderCounts() });
     },
     onError: (error, _id, context) => {
       if (context?.snapshots) {

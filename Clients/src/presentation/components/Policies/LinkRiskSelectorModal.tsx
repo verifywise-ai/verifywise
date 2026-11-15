@@ -293,10 +293,9 @@ const LinkRiskSelectorModal: React.FC<LinkRiskSelectorModalProps> = ({
     try {
       setIsLoading(true);
       await onSubmit(selected);
-      toast("success", "Risks linked successfully!");
       onClose();
     } catch {
-      toast("error", "Failed to link selected risks.");
+      // The caller already reported the failure; stay open so the selection is kept.
     } finally {
       setIsLoading(false);
     }

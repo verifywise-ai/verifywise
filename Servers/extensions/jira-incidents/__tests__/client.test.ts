@@ -1,13 +1,23 @@
 import { startJiraCloudMock, JiraCloudMock } from "../../../tests/mocks/jiraCloud/server";
 import { JiraIncidentsClient } from "../jiraIncidents.client";
+import logger from "../../../utils/logger/fileLogger";
 import {
   JiraAuthError,
+  JiraHttpError,
   JiraNotFoundError,
   JiraRateLimitError,
   JiraUnreachableError,
 } from "../jiraIncidents.errors";
 
 describe("JiraIncidentsClient", () => {
+  // The mock listens on 127.0.0.1, which the outbound policy refuses unless
+  // loopback is allowed.
+  beforeAll(() => {
+    process.env.OUTBOUND_ALLOW_LOOPBACK = "true";
+  });
+  afterAll(() => {
+    delete process.env.OUTBOUND_ALLOW_LOOPBACK;
+  });
   let mock: JiraCloudMock;
   let sleeps: number[];
   const client = (token = "token-1") =>
@@ -35,6 +45,18 @@ describe("JiraIncidentsClient", () => {
     );
   });
 
+  it("logs Jira's answer to a rejected token on the server, never in the error", async () => {
+    const warn = jest.spyOn(logger, "warn").mockImplementation(() => logger);
+    const err = await client("wrong")
+      .myself()
+      .catch((e: Error) => e);
+    expect((err as Error).message).not.toContain("Jira returned HTTP");
+    expect(warn).toHaveBeenCalledWith(
+      expect.stringMatching(/^Jira returned HTTP 401 for \/rest\/api\/3\/myself: /),
+    );
+    warn.mockRestore();
+  });
+
   it("names missing permissions", async () => {
     mock.state.permissions.TRANSITION_ISSUES = false;
     expect(await client().missingPermissions("10000")).toEqual(["TRANSITION_ISSUES"]);
@@ -48,6 +70,15 @@ describe("JiraIncidentsClient", () => {
     await expect(client().myself()).rejects.toBeInstanceOf(JiraRateLimitError);
     mock.state.failNext.push({ status: 503, retryAfter: 1 }, { status: 503, retryAfter: 1 });
     await expect(client().myself()).rejects.toBeInstanceOf(JiraRateLimitError);
+  });
+
+  it("reports an error status without Jira's answer", async () => {
+    mock.state.failNext.push({ status: 500 });
+    const err = await client()
+      .myself()
+      .catch((e: Error) => e);
+    expect(err).toBeInstanceOf(JiraHttpError);
+    expect((err as Error).message).toBe("Jira returned HTTP 500");
   });
 
   it("pages a search and parses issues", async () => {

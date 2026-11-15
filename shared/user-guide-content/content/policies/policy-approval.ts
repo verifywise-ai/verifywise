@@ -10,199 +10,147 @@ export const policyApprovalContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise comes with a library of pre-built policy templates covering common AI governance topics. They give you a starting point for creating your own organizational policies, saving time and helping you cover the governance areas that matter.',
-    },
-    {
-      type: 'paragraph',
-      text: 'Templates are organized by category, covering everything from AI ethics and fairness to regulatory compliance and vendor management. You can use them as-is or customize them to fit your needs.',
-    },
-    {
-      type: 'heading',
-      id: 'why-templates',
-      level: 2,
-      text: 'Why use policy templates?',
-    },
-    {
-      type: 'paragraph',
-      text: 'Writing AI governance policies from scratch takes real expertise in both AI technology and regulatory requirements. Templates give you a foundation built on industry best practices and governance standards. They help you cover topics you might otherwise miss and provide language that\'s been refined through real-world use.',
+      text: 'A policy becomes **Approved** in one of two ways, depending on whether your organization has a policy approval workflow:',
     },
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Save time', text: 'Start with professionally written content rather than a blank page' },
-        { bold: 'Cover key topics', text: 'Templates cover governance areas you might otherwise miss' },
-        { bold: 'Industry alignment', text: 'Templates reflect best practices from AI governance frameworks and regulations' },
-        { bold: 'Consistency', text: 'Multiple policies built from templates share a consistent structure and tone' },
-        { bold: 'Customizable', text: 'Adapt template content to your organization\'s specific context and requirements' },
+        { bold: 'With a workflow', text: 'You submit the policy for approval and the workflow\'s approvers decide.' },
+        { bold: 'Without a workflow', text: 'An Admin approves the policy directly from the policy editor.' },
       ],
-    },
-    {
-      type: 'heading',
-      id: 'template-categories',
-      level: 2,
-      text: 'Template categories',
     },
     {
       type: 'paragraph',
-      text: 'Policy templates are organized into the following categories:',
-    },
-    {
-      type: 'icon-cards',
-      items: [
-        {
-          icon: 'Shield',
-          title: 'Core AI governance policies',
-          description: 'Foundational policies covering AI principles, ethics, accountability and organizational governance structures.',
-        },
-        {
-          icon: 'Repeat',
-          title: 'Model lifecycle policies',
-          description: 'Policies for model development, testing, deployment, monitoring and retirement.',
-        },
-        {
-          icon: 'Lock',
-          title: 'Data and security AI policies',
-          description: 'Data governance, privacy, security controls and access management for AI systems.',
-        },
-        {
-          icon: 'Scale',
-          title: 'Legal and compliance',
-          description: 'Regulatory compliance, contractual requirements and legal considerations for AI.',
-        },
-        {
-          icon: 'Users',
-          title: 'People and organization',
-          description: 'Roles, responsibilities, training requirements and organizational structures for AI governance.',
-        },
-        {
-          icon: 'Building',
-          title: 'Industry packs',
-          description: 'Sector-specific policies for healthcare, finance and other regulated industries.',
-        },
-      ],
+      text: 'Nobody can set **Under Review** or **Approved** from the status dropdown. Once a policy is Approved, you publish it by setting its status to **Published**.',
     },
     {
       type: 'heading',
-      id: 'browsing-templates',
+      id: 'setting-up',
       level: 2,
-      text: 'Browsing templates',
+      text: 'Setting up a policy approval workflow',
     },
     {
       type: 'paragraph',
-      text: 'To browse available templates:',
-    },
-    {
-      type: 'ordered-list',
-      items: [
-        { text: 'Navigate to the Policy Manager' },
-        { text: 'Click the "Policy templates" tab' },
-        { text: 'Use the filter to narrow by category' },
-        { text: 'Use search to find templates by title' },
-        { text: 'Click on a template to view its full content' },
-      ],
-    },
-    {
-      type: 'image',
-      src: '/images/user-guide/policy-templates.png',
-      alt: 'Policy Templates tab showing a list of pre-built templates with columns for ID, Title, Tags, and Description covering topics like AI safety, governance, transparency, and security',
-      caption: 'The policy templates library has ready-to-use policies covering common AI governance topics.',
-    },
-    {
-      type: 'heading',
-      id: 'template-details',
-      level: 2,
-      text: 'Template information',
-    },
-    {
-      type: 'paragraph',
-      text: 'Each template in the list displays:',
-    },
-    {
-      type: 'bullet-list',
-      items: [
-        { bold: 'ID', text: 'A unique identifier for the template' },
-        { bold: 'Title', text: 'The policy name describing its purpose' },
-        { bold: 'Tags', text: 'Categories and topics the template covers' },
-        { bold: 'Description', text: 'A summary of what the policy addresses' },
-      ],
-    },
-    {
-      type: 'heading',
-      id: 'creating-from-template',
-      level: 2,
-      text: 'Creating a policy from a template',
-    },
-    {
-      type: 'paragraph',
-      text: 'To create a new organizational policy from a template:',
-    },
-    {
-      type: 'ordered-list',
-      items: [
-        { text: 'Click on a template in the templates list to open it' },
-        { text: 'Review the template content in the preview' },
-        { text: 'The title and content will be pre-filled from the template' },
-        { text: 'Customize the title if needed for your organization' },
-        { text: 'Edit the content to match your specific requirements' },
-        { text: 'Select appropriate tags (some may be pre-selected based on the template)' },
-        { text: 'Set the status (typically Draft for new policies)' },
-        { text: 'Save to create your new policy' },
-      ],
-    },
-    {
-      type: 'callout',
-      variant: 'tip',
-      title: 'Customization tip',
-      text: 'Templates include placeholder text and guidance that you should replace with your organization\'s specific details. Look for bracketed text like [Organization Name] or [Specific Requirement] and replace with your actual information.',
-    },
-    {
-      type: 'heading',
-      id: 'common-templates',
-      level: 2,
-      text: 'Commonly used templates',
-    },
-    {
-      type: 'paragraph',
-      text: 'Some frequently used policy templates include:',
-    },
-    {
-      type: 'checklist',
-      items: [
-        'AI ethics policy, principles for responsible AI development and use',
-        'AI risk management policy, framework for identifying and managing AI risks',
-        'Model development policy, standards for building and testing AI models',
-        'Data governance policy, rules for data collection, storage and use in AI',
-        'AI security policy, security controls specific to AI systems',
-        'Vendor AI assessment policy, requirements for evaluating third-party AI',
-        'Human oversight policy, when and how humans review AI decisions',
-        'AI incident response policy, procedures for handling AI-related incidents',
-      ],
-    },
-    {
-      type: 'heading',
-      id: 'template-tags',
-      level: 2,
-      text: 'Template tags',
-    },
-    {
-      type: 'paragraph',
-      text: 'Templates are tagged with relevant topics so you can find policies for specific governance areas. Common tags include:',
-    },
-    {
-      type: 'bullet-list',
-      items: [
-        { text: 'AI ethics, Fairness, Transparency, Explainability' },
-        { text: 'Bias mitigation, Privacy, Data governance' },
-        { text: 'Model risk, Accountability, Security' },
-        { text: 'LLM, Human oversight, Red teaming' },
-        { text: 'EU AI Act, ISO 42001, NIST RMF' },
-        { text: 'Audit, Monitoring, Vendor management' },
-      ],
+      text: 'An Admin creates the workflow on the **Approval workflows** page, with **Policy** as the entity type. Only an active workflow with at least one approver on every step can approve policies.',
     },
     {
       type: 'callout',
       variant: 'info',
-      text: 'Templates are read-only. When you create a policy from a template, a copy is made that you can edit. The original template remains unchanged for future use.',
+      text: 'Every organization starts with a workflow called "Policy Approval" that has a step but no approvers. Until an Admin adds an approver to it, it is ignored and Admins approve policies directly.',
+    },
+    {
+      type: 'paragraph',
+      text: 'If your organization has more than one policy workflow, the person who submits a policy chooses which one approves it.',
+    },
+    {
+      type: 'heading',
+      id: 'submitting',
+      level: 2,
+      text: 'Submitting a policy for approval',
+    },
+    {
+      type: 'ordered-list',
+      items: [
+        { text: 'Open the policy and save any changes. You can\'t submit while the policy has unsaved changes, or before a new policy is saved.' },
+        { text: 'In the **Approval** section of the sidebar, click **Submit for approval**.' },
+        { text: 'If asked, choose the approval workflow, then click **Submit**.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'The policy moves to **Under Review** and the approvers on the workflow\'s first step get a notification. You can submit a policy that is Draft or Under Review, as long as it has no pending request.',
+    },
+    {
+      type: 'paragraph',
+      text: 'While the request is pending, the Approval section shows the workflow, the current step (for example "Step 1 of 2") and who submitted it. The status dropdown is locked until the request is decided or withdrawn.',
+    },
+    {
+      type: 'paragraph',
+      text: 'The title and content are locked too, so approvers review exactly the text you submitted. You can still change the tags, owner, team members, review date and custom fields. To edit the text, withdraw the request, make your changes and submit again.',
+    },
+    {
+      type: 'heading',
+      id: 'deciding',
+      level: 2,
+      text: 'Approving or rejecting',
+    },
+    {
+      type: 'paragraph',
+      text: 'Approvers open the request from their notification or from **Approval requests**, then click **Approve** or **Reject** and can add a comment. Each step works as the workflow sets it: one approver is enough, or all of them must approve.',
+    },
+    {
+      type: 'table',
+      columns: [
+        { key: 'decision', label: 'Decision', width: '35%' },
+        { key: 'result', label: 'What happens to the policy', width: '65%' },
+      ],
+      rows: [
+        { decision: 'Last step approved', result: 'The policy becomes Approved. The Approval section shows who approved it and when.' },
+        { decision: 'Rejected at any step', result: 'The policy goes back to Draft. The Approval section shows "Changes requested by" the approver, with their comment.' },
+        { decision: 'Withdrawn by the submitter', result: 'The policy goes back to Draft.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'The person who submitted the policy is notified when it is approved or rejected, with a link back to the policy. After a rejection, edit the policy and submit it again.',
+    },
+    {
+      type: 'callout',
+      variant: 'warning',
+      text: 'A decided request can\'t be withdrawn. To change an Approved policy, set it back to Draft, edit it and submit it again.',
+    },
+    {
+      type: 'heading',
+      id: 'withdrawing',
+      level: 2,
+      text: 'Withdrawing a request',
+    },
+    {
+      type: 'paragraph',
+      text: 'Only the person who submitted the policy can withdraw the request. Click **Withdraw request** in the Approval section and confirm. The policy goes back to Draft and you can submit it again later.',
+    },
+    {
+      type: 'heading',
+      id: 'direct-approval',
+      level: 2,
+      text: 'Approving without a workflow',
+    },
+    {
+      type: 'paragraph',
+      text: 'When your organization has no policy approval workflow, an Admin sees an **Approve** button in the Approval section of a Draft or Under Review policy, and can add an optional comment of up to 2,000 characters. On a Draft or Under Review policy with no pending request, other users see "An Admin approves this policy. Your organization has no policy approval workflow."',
+    },
+    {
+      type: 'paragraph',
+      text: 'Once a policy workflow is set up, direct approval is no longer available and every policy goes through the workflow.',
+    },
+    {
+      type: 'heading',
+      id: 'status-rules',
+      level: 2,
+      text: 'Which statuses you can set by hand',
+    },
+    {
+      type: 'table',
+      columns: [
+        { key: 'status', label: 'Status', width: '25%' },
+        { key: 'rule', label: 'How it is set', width: '75%' },
+      ],
+      rows: [
+        { status: 'Draft', rule: 'By hand, except from Published or Archived. New policies start as Draft.' },
+        { status: 'Under Review', rule: 'Only by submitting for approval.' },
+        { status: 'Approved', rule: 'Only by the approval workflow, or by an Admin when there is no workflow.' },
+        { status: 'Published', rule: 'By hand, only from Approved.' },
+        { status: 'Archived', rule: 'By hand.' },
+        { status: 'Deprecated', rule: 'By hand.' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'The status dropdown only lists the statuses you can choose. While a request is pending, no status change is allowed, including bulk archive from the policy list. Withdraw the request first.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Deleting a policy rejects its pending request, and the submitter is notified.',
     },
     {
       type: 'article-links',
@@ -210,15 +158,15 @@ export const policyApprovalContent: ArticleContent = {
       items: [
         {
           collectionId: 'policies',
-          articleId: 'policy-management',
-          title: 'Policy management basics',
-          description: 'Create and organize policies',
-        },
-        {
-          collectionId: 'policies',
           articleId: 'policy-versioning',
           title: 'Policy lifecycle',
           description: 'Understand the policy status workflow',
+        },
+        {
+          collectionId: 'ai-governance',
+          articleId: 'approval-workflows',
+          title: 'Approval workflows',
+          description: 'Create workflows and decide approval requests',
         },
       ],
     },

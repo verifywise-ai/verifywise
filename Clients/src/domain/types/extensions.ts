@@ -56,7 +56,8 @@ export interface ExtensionEnablementRow {
   organizationId: number;
   extensionId: number;
   enabled: boolean;
-  configuration: Record<string, unknown>;
+  // No `configuration` here: the server leaves it out because it holds
+  // secret values. Read the redacted `Extension.configuration` instead.
   enabledAt: string | null;
   enabledBy: number | null;
   createdAt: string;

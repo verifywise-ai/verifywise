@@ -13,7 +13,7 @@ import { deleteDemoUsersQuery } from "../../utils/user.utils";
 import { createNewModelRiskQuery } from "../../utils/modelRisk.utils";
 import { createNewTaskQuery } from "../../utils/task.utils";
 import { createNewTrainingRegistarQuery } from "../../utils/trainingRegistar.utils";
-import { createPolicyQuery } from "../../utils/policyManager.utils";
+import { createPolicyQuery, deletePolicyLeftoversQuery } from "../../utils/policyManager.utils";
 import { createNewModelInventoryQuery } from "../../utils/modelInventory.utils";
 import { createNewDatasetQuery } from "../../utils/dataset.utils";
 
@@ -1102,6 +1102,13 @@ export async function deleteMockData(organizationId: number) {
         { replacements: { organizationId, id: policy.id }, transaction },
       );
     }
+    // The rows a single policy delete also removes (folder mappings, CE marking,
+    // task and share links, notifications, custom field values).
+    await deletePolicyLeftoversQuery(
+      organizationId,
+      demoPolicies[0].map((policy) => policy.id),
+      transaction,
+    );
     await sequelize.query(
       `DELETE FROM policy_manager WHERE organization_id = :organizationId AND is_demo = true`,
       { replacements: { organizationId }, transaction },

@@ -8771,7 +8771,7 @@ export const policyEndpoints: Endpoint[] = [
     method: 'POST',
     path: '/policies/{id}/review/request',
     summary: "Request review for a policy",
-    description: "Sets the policy review status to pending_review and sends in-app notifications to each specified reviewer.",
+    description: "**Deprecated.** Sunset: not before v2.7.0. Submit with POST /v1/policies/{id}/submit-for-approval and decide through the approval requests endpoints (/approval-requests), or, when the organization has no policy approval workflow, an Admin approves with POST /v1/policies/{id}/approve.  Sets the policy review status to pending_review and sends in-app notifications to each specified reviewer.",
     requiresAuth: true,
     requestBody: {
       "reviewer_ids": "array (required)",
@@ -8789,7 +8789,7 @@ export const policyEndpoints: Endpoint[] = [
     method: 'PUT',
     path: '/policies/{id}/review/approve',
     summary: "Approve a policy review",
-    description: "Sets the policy review status to approved and sends an in-app notification to the policy author.",
+    description: "**Deprecated.** Sunset: not before v2.7.0. Submit with POST /v1/policies/{id}/submit-for-approval and decide through the approval requests endpoints (/approval-requests), or, when the organization has no policy approval workflow, an Admin approves with POST /v1/policies/{id}/approve.  Sets the policy review status to approved and sends an in-app notification to the policy author.",
     requiresAuth: true,
     requestBody: {
       "comment": "string (optional)",
@@ -8806,7 +8806,7 @@ export const policyEndpoints: Endpoint[] = [
     method: 'PUT',
     path: '/policies/{id}/review/reject',
     summary: "Reject a policy review (request changes)",
-    description: "Sets the policy review status to changes_requested and sends an in-app notification to the policy author. A comment is required.",
+    description: "**Deprecated.** Sunset: not before v2.7.0. Submit with POST /v1/policies/{id}/submit-for-approval and decide through the approval requests endpoints (/approval-requests), or, when the organization has no policy approval workflow, an Admin approves with POST /v1/policies/{id}/approve.  Sets the policy review status to changes_requested and sends an in-app notification to the policy author. A comment is required.",
     requiresAuth: true,
     requestBody: {
       "comment": "string (required)",
@@ -12452,6 +12452,54 @@ export const v1IntakeSubmissionsEndpoints: Endpoint[] = [
   },
 ];
 
+// v1: Policies endpoints
+export const v1PoliciesEndpoints: Endpoint[] = [
+  {
+    method: 'GET',
+    path: '/v1/policies/{id}/approval',
+    summary: "Get Policy Approval State",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Policies",
+  },
+  {
+    method: 'POST',
+    path: '/v1/policies/{id}/submit-for-approval',
+    summary: "Submit Policy For Approval",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Policies",
+  },
+  {
+    method: 'POST',
+    path: '/v1/policies/{id}/approve',
+    summary: "Approve Policy Directly",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Policies",
+  },
+  {
+    method: 'GET',
+    path: '/v1/policies/folder-counts',
+    summary: "Get Policy Folder Counts",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Policies",
+  },
+];
+
 // v1: Use Case Settings endpoints
 export const v1UseCaseSettingsEndpoints: Endpoint[] = [
   {
@@ -13892,6 +13940,7 @@ export const allEndpoints = {
   v1Extensions: v1ExtensionsEndpoints,
   v1IntakeForms: v1IntakeFormsEndpoints,
   v1IntakeSubmissions: v1IntakeSubmissionsEndpoints,
+  v1Policies: v1PoliciesEndpoints,
   v1UseCaseSettings: v1UseCaseSettingsEndpoints,
   v1V1aiAppLifecycle: v1V1aiAppLifecycleEndpoints,
   v1V1aiApps: v1V1aiAppsEndpoints,

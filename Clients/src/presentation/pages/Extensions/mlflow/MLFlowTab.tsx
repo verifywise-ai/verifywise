@@ -5,7 +5,6 @@ import {
   Typography,
   IconButton,
   Tooltip,
-  Alert,
   CircularProgress,
   Button,
   Grid,
@@ -38,6 +37,9 @@ import { getApiErrorReason } from "../../../../application/utils/apiErrorReason"
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { pageOfLabel } from "../../../components/Table/pageOfLabel";
 import { palette, radiusPx } from "../../../themes/palette";
+import { useCan } from "../../../../application/hooks/useCan";
+import ExtensionSetupNotice from "../ExtensionSetupNotice";
+import Alert from "../../../components/Alert";
 
 const SelectorVertical = (props: any) => <ChevronsUpDown size={16} {...props} />;
 
@@ -61,8 +63,11 @@ interface MLFlowModel {
 
 export default function MLFlowTab() {
   const formatDate = useFormattedDate();
+  // Sync writes model records, so the server requires model.edit for it.
+  const canSync = useCan("model.edit");
   const [loading, setLoading] = useState(false);
   const [warning, setWarning] = useState<string | null>(null);
+  const [notConfigured, setNotConfigured] = useState(false);
   const [selectedModel, setSelectedModel] = useState<MLFlowModel | null>(null);
   const [mlflowData, setMlflowData] = useState<MLFlowModel[]>([]);
   const [page, setPage] = useState(0);
@@ -95,12 +100,13 @@ export default function MLFlowTab() {
   const fetchMLFlowData = async () => {
     setLoading(true);
     setWarning(null);
+    setNotConfigured(false);
     try {
       const response = await apiServices.get("/extensions/mlflow/models");
       const payload = (response.data as any)?.data;
       if (payload && "models" in payload && Array.isArray(payload.models)) {
         if (!payload.configured) {
-          setWarning("Configure the MLFlow extension to start syncing live data.");
+          setNotConfigured(true);
         } else if (payload.connected === false) {
           setWarning(payload.message || "MLFlow server is not reachable.");
         } else if (payload.error) {
@@ -175,37 +181,42 @@ export default function MLFlowTab() {
 
   return (
     <Box sx={{ p: 3, maxWidth: "100%", overflowX: "hidden" }}>
-      {warning && (
-        <Alert severity="warning" sx={{ mb: 8 }}>
-          {warning}
-        </Alert>
+      {notConfigured && (
+        <ExtensionSetupNotice
+          extensionKey="mlflow"
+          name="MLflow"
+          adminText="Configure the MLflow extension to start syncing live data."
+        />
       )}
+      {warning && <Alert variant="warning" inline body={warning} sx={{ mb: "16px" }} />}
 
-      <Box
-        sx={{
-          mb: 2,
-          display: "flex",
-          justifyContent: "flex-end",
-          alignItems: "center",
-          gap: 2,
-          width: "100%",
-        }}
-      >
-        <Button
-          variant="outlined"
-          startIcon={<RefreshCw size={16} />}
-          onClick={handleRefresh}
-          disabled={loading}
+      {canSync && (
+        <Box
           sx={{
-            ...buttonStyles.base,
-            ...buttonStyles.sizes.medium,
-            ...buttonStyles.primary.outlined,
-            textTransform: "none",
+            mb: 2,
+            display: "flex",
+            justifyContent: "flex-end",
+            alignItems: "center",
+            gap: 2,
+            width: "100%",
           }}
         >
-          Sync
-        </Button>
-      </Box>
+          <Button
+            variant="outlined"
+            startIcon={<RefreshCw size={16} />}
+            onClick={handleRefresh}
+            disabled={loading}
+            sx={{
+              ...buttonStyles.base,
+              ...buttonStyles.sizes.medium,
+              ...buttonStyles.primary.outlined,
+              textTransform: "none",
+            }}
+          >
+            Sync
+          </Button>
+        </Box>
+      )}
 
       <Box sx={{ display: "flex", gap: 2, mb: 4, flexWrap: "wrap" }}>
         <Card sx={{ flex: "1 1 200px", minWidth: 150, ...cardStyles.base }}>
@@ -278,8 +289,9 @@ export default function MLFlowTab() {
         {mlflowData.length === 0 && !loading ? (
           <Box sx={{ textAlign: "center", py: 4, color: colors.textTertiary }}>
             <Typography sx={{ fontSize: typography.sizes.md }}>
-              No MLFlow runs have been synced yet. Configure the integration and click Sync to pull
-              the latest models.
+              {canSync
+                ? "No MLFlow runs have been synced yet. Configure the integration and click Sync to pull the latest models."
+                : "No MLflow models have been synced yet."}
             </Typography>
           </Box>
         ) : (

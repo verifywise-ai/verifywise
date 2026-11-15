@@ -12,7 +12,8 @@ import {
   ValidationResult,
   ValidationError,
 } from "./validation.utils";
-import { POLICY_TAGS, PolicyTag } from "../../domain.layer/interfaces/i.policy";
+import { POLICY_TAGS, PolicyTag, PolicyTagsSet } from "../../domain.layer/interfaces/i.policy";
+import { isReviewDateString } from "../policyReviewDate.utils";
 import striptags from "striptags";
 /**
  * Validation constants for policies
@@ -36,6 +37,88 @@ export const POLICY_STATUS_ENUM = [
   "Archived",
   "Deprecated",
 ] as const;
+
+/**
+ * Status changes a policy may never make, whoever makes them. Shared by the
+ * status gate (utils/policyStatus.utils.ts) and validatePolicyUpdateBusinessRules.
+ */
+export const POLICY_INVALID_STATUS_TRANSITIONS: ReadonlyArray<{
+  from: (typeof POLICY_STATUS_ENUM)[number];
+  to: (typeof POLICY_STATUS_ENUM)[number];
+  message: string;
+}> = [
+  { from: "Published", to: "Draft", message: "Cannot move published policy back to draft" },
+  {
+    from: "Published",
+    to: "Under Review",
+    message: "Published policies require formal revision process",
+  },
+  { from: "Archived", to: "Draft", message: "Cannot restore archived policy to draft" },
+  {
+    from: "Archived",
+    to: "Under Review",
+    message: "Cannot restore archived policy to under review",
+  },
+  { from: "Archived", to: "Approved", message: "Cannot restore archived policy to approved" },
+  { from: "Deprecated", to: "Published", message: "Cannot republish deprecated policy" },
+];
+
+/** The forbidden transition from `from` to `to`, or undefined when it is allowed. */
+export const findInvalidPolicyStatusTransition = (from: unknown, to: unknown) =>
+  POLICY_INVALID_STATUS_TRANSITIONS.find((t) => t.from === from && t.to === to);
+
+export type PolicyFieldError = { field: string; message: string };
+
+/**
+ * Field checks for a policy write, shared by the REST editor (policy.ctrl.ts)
+ * and the advisor's policy tools: create (`isCreate`: title required) and
+ * update (only the fields sent). They reject only input the database used to
+ * fail on with a 500 (P-L6): the legacy endpoint is frozen (Servers/CLAUDE.md),
+ * so a short title, duplicate tags or many reviewers are accepted as before.
+ * `t` translates each message; the REST editor passes req.t and shows the
+ * field-keyed errors under each input.
+ */
+export function getPolicyFieldErrors(
+  data: {
+    title?: unknown;
+    status?: unknown;
+    tags?: unknown;
+    next_review_date?: unknown;
+  },
+  isCreate: boolean,
+  t: (message: string) => string,
+): PolicyFieldError[] {
+  const errors: PolicyFieldError[] = [];
+  const { title, status, tags, next_review_date: reviewDate } = data;
+  if (
+    (isCreate || title !== undefined) &&
+    // title is VARCHAR(255) NOT NULL; the stored value is untrimmed.
+    (typeof title !== "string" || title.trim() === "" || title.length > 255)
+  ) {
+    errors.push({ field: "title", message: t("Enter a title of up to 255 characters") });
+  }
+  // policy_manager_status_check limits status to POLICY_STATUS_ENUM.
+  if (
+    status !== undefined &&
+    !POLICY_STATUS_ENUM.includes(status as (typeof POLICY_STATUS_ENUM)[number])
+  ) {
+    errors.push({ field: "status", message: t("Choose a valid status") });
+  }
+
+  if (tags !== undefined && (!Array.isArray(tags) || tags.some((tag) => !PolicyTagsSet.has(tag)))) {
+    errors.push({ field: "tags", message: t("Choose tags from the list") });
+  }
+  // null or "" clears the date; anything else must be YYYY-MM-DD or a full ISO timestamp.
+  if (
+    reviewDate !== undefined &&
+    reviewDate !== null &&
+    reviewDate !== "" &&
+    !isReviewDateString(reviewDate)
+  ) {
+    errors.push({ field: "next_review_date", message: t("Enter a valid next review date") });
+  }
+  return errors;
+}
 
 /**
  * review_status values written by updatePolicyReviewStatusQuery.
@@ -441,26 +524,7 @@ export const validatePolicyUpdateBusinessRules = (
 
   // Validate status transitions
   if (data.status && existingData?.status) {
-    const invalidTransitions = [
-      { from: "Published", to: "Draft", message: "Cannot move published policy back to draft" },
-      {
-        from: "Published",
-        to: "Under Review",
-        message: "Published policies require formal revision process",
-      },
-      { from: "Archived", to: "Draft", message: "Cannot restore archived policy to draft" },
-      {
-        from: "Archived",
-        to: "Under Review",
-        message: "Cannot restore archived policy to under review",
-      },
-      { from: "Archived", to: "Approved", message: "Cannot restore archived policy to approved" },
-      { from: "Deprecated", to: "Published", message: "Cannot republish deprecated policy" },
-    ];
-
-    const invalidTransition = invalidTransitions.find(
-      (t) => t.from === existingData.status && t.to === data.status,
-    );
+    const invalidTransition = findInvalidPolicyStatusTransition(existingData.status, data.status);
 
     if (invalidTransition) {
       errors.push({

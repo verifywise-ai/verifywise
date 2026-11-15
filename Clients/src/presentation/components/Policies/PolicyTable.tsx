@@ -522,8 +522,8 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
           title={`Assign reviewer to ${selectionCount} polic${selectionCount === 1 ? "y" : "ies"}`}
           body={
             <Stack gap={2}>
-              <Typography variant="body2" sx={{ color: "text.secondary", fontSize: 12 }}>
-                Replaces existing reviewer assignments.
+              <Typography variant="body2" sx={{ color: "text.secondary", fontSize: "13px" }}>
+                Replaces the team members of each selected policy with this user.
               </Typography>
               <VWSelect
                 id="bulk-policy-reviewer"

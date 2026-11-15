@@ -15,6 +15,7 @@ import { assertSafeOutboundUrl, safeFetch } from "../../utils/safeOutboundUrl";
 import {
   EXTERNAL_SYNC_DEADLINE_MS,
   describeFetchError,
+  logErrorReply,
   requestSignal,
 } from "../../utils/outboundFetch.utils";
 
@@ -58,9 +59,6 @@ export class JiraUpstreamError extends Error {
  * API, or change an AQL/IQL query.
  */
 export const JIRA_NUMERIC_ID_PATTERN = /^\d{1,18}$/;
-
-/** Most characters of Jira's error body echoed in a JiraUpstreamError. */
-const ERROR_BODY_MAX_CHARS = 500;
 
 /**
  * Message key for an id that is not a numeric Jira id, shared by the route
@@ -233,10 +231,10 @@ export class JiraAssetsClient {
       );
     }
     if (!response.ok) {
-      const errorText = await response.text().catch(() => "");
-      throw new JiraUpstreamError(
-        `Jira returned ${response.status}: ${errorText.slice(0, ERROR_BODY_MAX_CHARS) || "no details"}`,
-      );
+      // Status only: the base URL is admin-supplied, so its body is not
+      // shown back. The start of it goes to the server log.
+      await logErrorReply("Jira", endpoint, response, [this.authHeader.slice("Basic ".length)]);
+      throw new JiraUpstreamError(`Jira returned HTTP ${response.status}`);
     }
     try {
       return (await response.json()) as T;

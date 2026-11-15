@@ -108,13 +108,13 @@ export const toolsDefinition: any[] = [
     function: {
       name: "get_approval_status_for_entity",
       description:
-        "Check whether a specific entity (use case, file, etc.) has a pending or rejected approval request. Use this to determine if an entity is blocked by an approval workflow before taking action on it.",
+        "Check whether a specific entity (use case, file, policy) has a pending or rejected approval request. Use this to determine if an entity is blocked by an approval workflow before taking action on it.",
       parameters: {
         type: "object",
         properties: {
           entity_type: {
             type: "string",
-            enum: ["use_case", "file"],
+            enum: ["use_case", "file", "policy"],
             description: "The type of entity to check approval status for.",
           },
           entity_id: {
@@ -240,7 +240,7 @@ export const toolsDefinition: any[] = [
     function: {
       name: "agent_withdraw_approval_request",
       description:
-        "Withdraw a pending approval request. This cancels the request so it no longer requires approval. Only the original requester should withdraw their own requests. Requires user confirmation before executing.",
+        "Withdraw a pending approval request. This cancels the request so it no longer requires approval. Only the user who made the request can withdraw it, and only while it is pending. Requires user confirmation before executing.",
       parameters: {
         type: "object",
         properties: {

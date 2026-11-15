@@ -108,6 +108,29 @@ describe("policyImporter", () => {
       expect(mockSanitizeUserHtml).toHaveBeenCalledWith(expect.stringContaining("<p>safe</p>"));
     });
 
+    it("counts images the sanitizer drops (data: sources) before sanitizing", async () => {
+      mockConvertToHtml.mockResolvedValue({
+        value:
+          '<p>a</p><img src="data:image/png;base64,AAA" /><p>b</p><IMG alt="x" src=\'data:image/jpeg;base64,BBB\'>',
+        messages: [],
+      });
+
+      const result = await convertDocxToHtml(Buffer.from("fake"));
+
+      expect(result.skippedImages).toBe(2);
+    });
+
+    it("reports zero skipped images when the document has none or only linked images", async () => {
+      mockConvertToHtml.mockResolvedValue({
+        value: '<p>text</p><img src="https://example.com/a.png" />',
+        messages: [],
+      });
+
+      const result = await convertDocxToHtml(Buffer.from("fake"));
+
+      expect(result.skippedImages).toBe(0);
+    });
+
     it("should pass the buffer to mammoth correctly", async () => {
       mockConvertToHtml.mockResolvedValue({ value: "", messages: [] });
       const buffer = Buffer.from("docx-data");

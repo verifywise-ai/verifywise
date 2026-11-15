@@ -386,8 +386,10 @@ export const trackEntityChanges = async (
     const oldValueStr = await formatFieldValue(entityType, field, oldValue, context);
     const newValueStr = await formatFieldValue(entityType, field, newValue, context);
 
-    // Record change if values differ
-    if (oldValueStr !== newValueStr) {
+    // Record change if values differ (by the field's comparison key when it has one)
+    const compare = config.fieldComparators?.[field];
+    const differs = compare ? compare(oldValue) !== compare(newValue) : oldValueStr !== newValueStr;
+    if (differs) {
       changes.push({
         fieldName: getFieldLabel(entityType, field),
         oldValue: oldValueStr,

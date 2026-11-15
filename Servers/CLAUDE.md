@@ -1,6 +1,6 @@
 # Servers — Backend Development Guide
 
-> **Last Updated:** 2026-11-11
+> **Last Updated:** 2026-11-14
 
 ---
 
@@ -187,7 +187,10 @@ every contributor must follow:
   operations keep their existing tags. Regenerate (`generate:swagger`,
   `generate:endpoints`, `check:api-drift`) — never hand-edit `swagger.yaml`. Deprecation
   markings go through the generator's deprecation list (`scripts/apiDeprecations.ts`),
-  not manual edits.
+  not manual edits. Add an entry there (method, OpenAPI path, sunset, replacement): the
+  generator sets `deprecated: true` and prepends the Sunset notice ahead of the
+  `Requires role: ...` note, and fails if an entry matches no route. First entries: the
+  legacy `/policies/{id}/review/*` endpoints, replaced by `/v1/policies` approval.
 - **Raw-body trap:** the `express.json` exclusions in `app.ts` match legacy URL substrings
   (`/api/deepeval/`, `/api/bias_and_fairness/`, `/api/webhooks/`). If such a router is ever
   migrated to `/api/v1`, update the exclusions in the same PR.

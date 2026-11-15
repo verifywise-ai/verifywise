@@ -481,9 +481,9 @@ export const collections: Collection[] = [
       },
       {
         id: 'policy-approval',
-        title: 'Policy templates',
-        description: 'Use pre-built templates to create common governance policies.',
-        keywords: ['template', 'pre-built', 'ethics', 'compliance', 'starter'],
+        title: 'Policy approval',
+        description: 'Submit policies for approval through an approval workflow, or approve them as an Admin when there is none.',
+        keywords: ['approval', 'approve', 'submit', 'workflow', 'reject', 'withdraw', 'under review', 'approved', 'publish', 'status'],
       },
       {
         id: 'policy-templates',

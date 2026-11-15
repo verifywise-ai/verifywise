@@ -129,7 +129,7 @@ REFRESH_TOKEN_SECRET=f6e5d4c3b2a1...64_hex_characters
 
 | Variable | Description | Default | Required |
 |----------|-------------|---------|----------|
-| `ENCRYPTION_KEY` | Key for encrypting sensitive data | - | Recommended |
+| `ENCRYPTION_KEY` | Key for encrypting sensitive data | - | Yes, in production |
 | `ENCRYPTION_ALGORITHM` | Encryption algorithm | `aes-256-cbc` | No |
 | `ENCRYPTION_PASSWORD` | Legacy encryption password | - | No |
 
@@ -143,6 +143,16 @@ ENCRYPTION_KEY=your-32-character-encryption-key
 ```
 
 **Warning:** Changing `ENCRYPTION_KEY` after data is encrypted will make that data unreadable. You must re-save any encrypted credentials after changing this value.
+
+**Required in production.** With `NODE_ENV=production` (the backend Docker image sets it) the backend and the worker refuse to start when `ENCRYPTION_KEY` is unset or blank. Outside production a built-in development key is used when it is empty.
+
+**Upgrading an install that ran without a key.** Its stored credentials (extension settings, LLM API keys, GitHub tokens) were encrypted with the old built-in default. To keep them readable, set exactly that value first:
+
+```bash
+ENCRYPTION_KEY="default-key-change-this-in-production-32chars!!"
+```
+
+Then rotate to a new random key and re-save each credential. This affects Docker Compose installs whose `.env` has `ENCRYPTION_KEY=` with no value. Helm and Ansible already generate a key: the chart uses `secrets.encryptionKey`, else the value in its existing Secret, else a random 32-character key, and Ansible's `install.yml` generates one. The Helm chart and the raw Kubernetes manifests now also pass `ENCRYPTION_KEY` to the worker, from the same Secret as the backend; before, the worker used the built-in default.
 
 ---
 
@@ -278,6 +288,15 @@ SLACK_USER_OAUTH_TOKEN=xoxp-...
 SLACK_BOT_TOKEN=xoxb-...
 ```
 
+### Extension outbound requests
+
+MLflow, Azure AI Foundry, Jira Assets and Jira incidents call the address an Admin configures. Loopback, link-local (including the cloud metadata service at 169.254.169.254), unspecified and cloud metadata addresses are always refused, checked against the addresses a host name resolves to, and redirects are not followed. Private networks are allowed by default, because on-prem MLflow and Jira servers usually live on them. Details: [Extensions, outbound requests](../technical/infrastructure/extensions.md#outbound-requests).
+
+| Variable | Description | Default | Required |
+|----------|-------------|---------|----------|
+| `OUTBOUND_BLOCK_PRIVATE_NETWORKS` | `true` also refuses 10.0.0.0/8, 172.16.0.0/12, 192.168.0.0/16, 100.64.0.0/10 and `fc00::/7`. Use it on hosted deployments where extensions should only reach the internet | off | No |
+| `OUTBOUND_ALLOW_LOOPBACK` | `true` allows loopback addresses (only loopback, never link-local or metadata) for local development and tests. Never set it on a shared deployment | off | No |
+
 ### AI Gateway
 
 The backend and the EvalServer call the AI Gateway's internal API with a shared key. Set the same value on the backend, the AI Gateway and the EvalServer, including any separate worker process or container (it runs the daily retention job). Both sides trim surrounding whitespace, and a whitespace-only value counts as not set.
@@ -395,6 +414,7 @@ These variables are used by Docker Compose for service configuration.
 | `NODE_ENV` | development | production |
 | `JWT_SECRET` | Any value | 64+ hex characters |
 | `REFRESH_TOKEN_SECRET` | Any value | 64+ hex characters |
+| `ENCRYPTION_KEY` | Optional | Required (the server does not start without it) |
 | `DB_PASSWORD` | Simple | Strong (16+ chars) |
 | `DB_SSL` | false | true |
 | URLs | localhost | HTTPS domains |
@@ -440,6 +460,9 @@ REFRESH_TOKEN_SECRET=dev_refresh_secret_not_for_production
 
 EMAIL_PROVIDER=resend
 EMAIL_ID=dev@example.com
+
+# Local development only: lets extensions reach MLflow or Jira on localhost
+OUTBOUND_ALLOW_LOOPBACK=true
 ```
 
 ### Production
@@ -485,6 +508,12 @@ MULTI_TENANCY_ENABLED=true
 Error: secretOrPrivateKey must have a value
 ```
 Solution: Ensure `JWT_SECRET` is set and not empty.
+
+**Missing ENCRYPTION_KEY:**
+```
+Error: ENCRYPTION_KEY must be set in production.
+```
+Solution: Set `ENCRYPTION_KEY` for the backend and the worker. If the install ran without one before, use the old default first. See [Data encryption](#data-encryption).
 
 **Database connection failed:**
 ```
