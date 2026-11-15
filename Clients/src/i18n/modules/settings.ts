@@ -453,6 +453,8 @@ export const de: Record<string, string> = {
     "Leer lassen oder 0 eingeben, um unbegrenzt aufzubewahren. Maximum {max}.",
   "Retention settings could not be loaded.":
     "Die Aufbewahrungseinstellungen konnten nicht geladen werden.",
+  "Extension": "Erweiterung",
+  "Configure and enable this extension.": "Konfigurieren und aktivieren Sie diese Erweiterung.",
 };
 
 export const fr: Record<string, string> = {
@@ -908,6 +910,8 @@ export const fr: Record<string, string> = {
     "Laissez vide ou saisissez 0 pour conserver indéfiniment. Maximum {max}.",
   "Retention settings could not be loaded.":
     "Les paramètres de conservation n'ont pas pu être chargés.",
+  "Extension": "Extension",
+  "Configure and enable this extension.": "Configurez et activez cette extension.",
 };
 
 export const es: Record<string, string> = {
@@ -1360,4 +1364,6 @@ export const es: Record<string, string> = {
   "Leave empty or enter 0 to keep indefinitely. Maximum {max}.":
     "Déjalo vacío o escribe 0 para conservar indefinidamente. Máximo {max}.",
   "Retention settings could not be loaded.": "No se pudo cargar la configuración de retención.",
+  "Extension": "Extensión",
+  "Configure and enable this extension.": "Configure y active esta extensión.",
 };

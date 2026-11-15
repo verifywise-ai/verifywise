@@ -9,6 +9,7 @@ const STRINGS = [
   "e.g. Facebook, Instagram",
   "Other names this vendor is known by, separated by commas. The research looks for them too.",
   "Other names must be at most 500 characters",
+  "Other names must be at most 500 characters with a comma and a space between names",
   "Other names can list at most 8 names",
   "Each of the other names must be between 2 and 80 characters",
   "Each of the other names must contain a letter or a digit",
@@ -22,6 +23,11 @@ describe("the text of the other names of a vendor", () => {
 
   it.each(["de", "fr", "es"] as const)("keeps the numbers of the limits in %s", (lang) => {
     expect(translations[lang]["Other names must be at most 500 characters"]).toContain("500");
+    expect(
+      translations[lang][
+        "Other names must be at most 500 characters with a comma and a space between names"
+      ],
+    ).toContain("500");
     expect(translations[lang]["Other names can list at most 8 names"]).toContain("8");
     expect(
       translations[lang]["Each of the other names must be between 2 and 80 characters"],

@@ -30,7 +30,8 @@ interface HeatMapSectionProps {
 
 /**
  * Vendor risks on the same likelihood × severity grid the project risks view
- * uses. Selecting a cell filters the table below; selecting it again clears.
+ * uses. Selecting a cell filters the register on the Risks tab (the page takes
+ * the reader there); selecting it again clears the filter.
  */
 export default function HeatMapSection({ risks, selectedCell, onSelectCell }: HeatMapSectionProps) {
   const plotted = useMemo<HeatMapRisk[]>(() => {

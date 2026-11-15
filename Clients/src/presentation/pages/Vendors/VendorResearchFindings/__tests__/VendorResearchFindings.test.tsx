@@ -73,7 +73,9 @@ vi.mock("../../../../components/Modals/NewRisk", async () => ({
 
 import * as repository from "../../../../../application/repository/vendorResearch.repository";
 import {
+  TURN_QUIET_MS,
   VENDOR_RESEARCH_FOLLOW_KEY,
+  VENDOR_RESEARCH_KEY,
   followResearch,
 } from "../../../../../application/hooks/useVendorResearch";
 import { joinAttributions } from "../../../../../application/utils/vendorResearchText";
@@ -99,7 +101,7 @@ const VENDORS: TestVendor[] = [
   { id: 8, vendor_name: "Zeta Labs" },
   { id: 7, vendor_name: "Acme Cloud" },
 ];
-const WITH_VENDOR_7 = "/vendors/risks?findingsVendorId=7";
+const WITH_VENDOR_7 = "/vendors/research-findings?findingsVendorId=7";
 
 const renderSection = (
   options: { route?: string; vendors?: TestVendor[]; queryClient?: QueryClient } = {},
@@ -107,7 +109,7 @@ const renderSection = (
   const handlers = { onOpenRisk: vi.fn(), onNotify: vi.fn() };
   const view = renderWithProviders(
     <VendorResearchFindings vendors={options.vendors ?? VENDORS} {...handlers} />,
-    { route: options.route ?? "/vendors/risks", queryClient: options.queryClient },
+    { route: options.route ?? "/vendors/research-findings", queryClient: options.queryClient },
   );
   return { ...view, ...handlers };
 };
@@ -116,7 +118,6 @@ const renderSection = (
 const newQueryClient = () =>
   new QueryClient({ defaultOptions: { queries: { retry: false }, mutations: { retry: false } } });
 
-const header = () => screen.getByRole("button", { name: /^Research findings/ });
 /**
  * The row of the finding with this text, with its details open. A row shows its details on a click
  * of the risk, and most cases here are about what the details hold; what a row shows before the
@@ -167,7 +168,9 @@ const firstButtonOf = (text: string) => within(rowOf(text)).getAllByRole("button
 
 /** Opens the vendor risk form on the finding of the row with this text. */
 const openPreview = async (text = FIRST) => {
-  await userEvent.click(within(rowOf(text)).getByRole("button", { name: "Preview" }));
+  await userEvent.click(
+    within(rowOf(text)).getByRole("button", { name: "Preview suggested risk" }),
+  );
   return screen.findByRole("dialog", { name: "Review suggested risk" });
 };
 const clickSave = (dialog: HTMLElement) =>
@@ -316,52 +319,36 @@ describe("the states of the section", () => {
     await userEvent.hover(againButton().parentElement as HTMLElement);
     expect(await screen.findByRole("tooltip")).toHaveTextContent("Vendor research is not set up.");
     // Adding what was found does not depend on the setup.
-    expect(within(rowOf(FIRST)).getByRole("button", { name: "Preview" })).toBeEnabled();
+    expect(
+      within(rowOf(FIRST)).getByRole("button", { name: "Preview suggested risk" }),
+    ).toBeEnabled();
   });
 });
 
-describe("opening and closing the section", () => {
-  it("starts closed to its header when nothing is pending", async () => {
-    mocks.list.mockResolvedValue({ rows: [], total: 0 });
-    renderSection();
-
-    await waitFor(() => expect(mocks.list).toHaveBeenCalled());
-    expect(header()).toHaveAttribute("aria-expanded", "false");
-    expect(await screen.findByText("Pending: 0")).toBeInTheDocument();
-    expect(screen.queryByText("No pending research findings.")).not.toBeInTheDocument();
-  });
-
-  it("opens by itself when findings are pending, and shows how many", async () => {
+describe("the section on its tab", () => {
+  // The section is the content of the Research findings tab: it is not a panel that folds, so
+  // nothing is behind a click and nothing of it can be closed.
+  it("shows the findings, and how many are pending, without a click", async () => {
     renderSection();
 
     expect(await screen.findByText(FIRST)).toBeInTheDocument();
-    expect(header()).toHaveAttribute("aria-expanded", "true");
-    expect(screen.getByText("Pending: 2")).toBeInTheDocument();
+    expect(screen.getByText(SECOND)).toBeInTheDocument();
+    expect(screen.getByText("2 possible risks to review. 1 is high risk.")).toBeInTheDocument();
+    // The title and the count are the tab's; the section has no header of its own to open.
+    expect(screen.queryByRole("button", { name: /^Research findings/ })).not.toBeInTheDocument();
+    expect(screen.queryByText(/^Pending: /)).not.toBeInTheDocument();
   });
 
-  it("opens when the vendor comes from the URL, even with nothing pending", async () => {
+  it("shows that nothing is pending without a click when there is nothing", async () => {
     mocks.list.mockResolvedValue({ rows: [], total: 0 });
-    renderSection({ route: WITH_VENDOR_7 });
+    renderSection();
 
     expect(await screen.findByText("No pending research findings.")).toBeInTheDocument();
-    expect(header()).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("combobox")).toBeInTheDocument();
+    expect(screen.queryByText(/possible risks? to review/)).not.toBeInTheDocument();
   });
 
-  it("lets the user's choice win over the default, both ways", async () => {
-    renderSection();
-    await screen.findByText(FIRST);
-
-    await userEvent.click(header());
-    expect(header()).toHaveAttribute("aria-expanded", "false");
-    expect(screen.queryByText(FIRST)).not.toBeInTheDocument();
-    // The count is still in the header of a closed section.
-    expect(screen.getByText("Pending: 2")).toBeInTheDocument();
-
-    await userEvent.click(header());
-    expect(await screen.findByText(FIRST)).toBeInTheDocument();
-  });
-
-  it("stays open when the user picks a vendor that has nothing pending", async () => {
+  it("stays as it is when the user picks a vendor that has nothing pending", async () => {
     mocks.list.mockImplementation(async (filter) =>
       filter.vendorId === 8 ? { rows: [], total: 0 } : { rows: [finding()], total: 1 },
     );
@@ -372,17 +359,16 @@ describe("opening and closing the section", () => {
     await userEvent.click(await screen.findByRole("option", { name: "Zeta Labs" }));
 
     expect(await screen.findByText("No pending research findings.")).toBeInTheDocument();
-    expect(header()).toHaveAttribute("aria-expanded", "true");
+    // The vendor filter is still there to pick another vendor from.
+    expect(screen.getByRole("combobox")).toBeInTheDocument();
   });
 
-  it("always says the findings are suggestions to verify, open or closed", async () => {
+  it("always says the findings are suggestions to verify, before the list has loaded and after", async () => {
     mocks.list.mockResolvedValue({ rows: [], total: 0 });
     renderSection();
 
     const sentence = "AI-suggested from web sources. Verify before accepting.";
     expect(screen.getByText(sentence)).toBeInTheDocument();
-    await waitFor(() => expect(mocks.list).toHaveBeenCalled());
-    await userEvent.click(header());
     expect(await screen.findByText("No pending research findings.")).toBeInTheDocument();
     expect(screen.getByText(sentence)).toBeInTheDocument();
   });
@@ -654,6 +640,91 @@ describe("a finding", () => {
         "Showing 2 of 250 pending findings. Choose a vendor to see the rest.",
       ),
     ).toBeInTheDocument();
+  });
+
+  describe("for one vendor with more pending findings than one answer holds", () => {
+    // 250 pending for vendor 7: the server sends 200 at once.
+    const page = (first: number, count: number) =>
+      Array.from({ length: count }, (_, index) =>
+        finding({ id: first + index, risk_description: `Finding ${first + index}` }),
+      );
+
+    it("does not tell the user to choose the vendor that is chosen", async () => {
+      mocks.list.mockResolvedValue({ rows: page(1, 200), total: 250 });
+      renderSection({ route: WITH_VENDOR_7 });
+      await screen.findByText("Finding 1");
+
+      expect(screen.queryByText(/Choose a vendor to see the rest/)).not.toBeInTheDocument();
+      expect(screen.getByText("250 possible risks to review.")).toBeInTheDocument();
+    });
+
+    it("reads the rest with Load more, from where the list ended, then offers no more", async () => {
+      // By the offset asked for, so that nothing is left queued for the next test.
+      mocks.list.mockImplementation(async ({ offset }) =>
+        offset === 200 ? { rows: page(201, 50), total: 250 } : { rows: page(1, 200), total: 250 },
+      );
+      renderSection({ route: WITH_VENDOR_7 });
+      await screen.findByText("Finding 1");
+      expect(screen.queryByText("Finding 201")).not.toBeInTheDocument();
+
+      await userEvent.click(screen.getByRole("button", { name: "Load more" }));
+
+      expect(await screen.findByText("Finding 250")).toBeInTheDocument();
+      expect(screen.getByText("Finding 1")).toBeInTheDocument();
+      expect(mocks.list).toHaveBeenLastCalledWith({
+        status: "pending",
+        vendorId: 7,
+        limit: 200,
+        offset: 200,
+      });
+      expect(screen.queryByRole("button", { name: "Load more" })).not.toBeInTheDocument();
+    });
+
+    it("keeps Load more busy while the list is read again, so a click cannot cut that read short", async () => {
+      const queryClient = newQueryClient();
+      mocks.list.mockImplementation(async ({ offset }) =>
+        offset === 200 ? { rows: page(201, 50), total: 250 } : { rows: page(1, 200), total: 250 },
+      );
+      renderSection({ route: WITH_VENDOR_7, queryClient });
+      await screen.findByText("Finding 1");
+      expect(screen.getByRole("button", { name: "Load more" })).toBeEnabled();
+
+      // A decision refreshes the list; its answer is held back for a moment.
+      let release: () => void = () => undefined;
+      const held = new Promise<void>((resolve) => {
+        release = resolve;
+      });
+      mocks.list.mockImplementationOnce(async () => {
+        await held;
+        return { rows: page(1, 200), total: 250 };
+      });
+      act(() => {
+        void queryClient.invalidateQueries({ queryKey: VENDOR_RESEARCH_KEY });
+      });
+
+      await waitFor(() => expect(screen.getByRole("button", { name: "Load more" })).toBeDisabled());
+      const reads = mocks.list.mock.calls.length;
+      fireEvent.click(screen.getByRole("button", { name: "Load more" }));
+      expect(mocks.list).toHaveBeenCalledTimes(reads);
+
+      release();
+      await waitFor(() => expect(screen.getByRole("button", { name: "Load more" })).toBeEnabled());
+    });
+
+    it("offers no Load more when everything pending is on screen", async () => {
+      renderSection({ route: WITH_VENDOR_7 });
+      await screen.findByText(FIRST);
+
+      expect(screen.queryByRole("button", { name: "Load more" })).not.toBeInTheDocument();
+    });
+  });
+
+  it("offers no Load more with every vendor listed, where choosing a vendor narrows the list", async () => {
+    mocks.list.mockResolvedValue({ rows: [finding(), secondFinding()], total: 250 });
+    renderSection();
+    await screen.findByText(FIRST);
+
+    expect(screen.queryByRole("button", { name: "Load more" })).not.toBeInTheDocument();
   });
 
   it("shows no such notice when everything pending is on screen", async () => {
@@ -1367,6 +1438,8 @@ describe("a label the backfill wrote (M3)", () => {
   /** What the server says of a label that is the earlier confidence of a finding. */
   const EARLIER_LINE =
     "Rated before the source rules; this is the earlier confidence level until the label is recomputed.";
+  /** What the server says of it once the finding was accepted or dismissed. */
+  const DECIDED_EARLIER_LINE = "Rated with the earlier confidence rule.";
   /** What the screen says of it: once, above the list, for every row that carries the asterisk. */
   const LEGEND =
     "* Earlier estimate: 1 of these findings was rated before the current rules for rating sources.";
@@ -1400,6 +1473,7 @@ describe("a label the backfill wrote (M3)", () => {
     expect(rowOf(FIRST)).not.toContainElement(legend);
     // The screen words the line itself: the server's line is not shown.
     expect(screen.queryByText(EARLIER_LINE)).not.toBeInTheDocument();
+    expect(screen.queryByText(DECIDED_EARLIER_LINE)).not.toBeInTheDocument();
     // It is the label that was shown, and no confidence.
     expect(row.queryByText("Confidence")).not.toBeInTheDocument();
     // Its sources are those of a run before the rule: none has a category, so none has a tag.
@@ -1440,6 +1514,29 @@ describe("a label the backfill wrote (M3)", () => {
       expect(within(rowOf(text)).queryByText(/\*/)).not.toBeInTheDocument();
     }
     expect(screen.queryByText(/^\* Earlier estimate/)).not.toBeInTheDocument();
+    expect(screen.queryByText(EARLIER_LINE)).not.toBeInTheDocument();
+    expect(screen.queryByText(DECIDED_EARLIER_LINE)).not.toBeInTheDocument();
+  });
+
+  it("a finding whose server line says it keeps the earlier rating is worded by the screen too", async () => {
+    mocks.list.mockResolvedValue({
+      rows: [
+        finding({
+          credibility: "high",
+          credibility_basis: { rule: "legacy_confidence" },
+          credibility_rationale: DECIDED_EARLIER_LINE,
+        }),
+      ],
+      total: 1,
+    });
+    renderSection();
+    await screen.findByText(FIRST);
+
+    expect(
+      within(rowOf(FIRST)).getByText("High*: one source reports it (news.example.com)."),
+    ).toBeInTheDocument();
+    expect(screen.getByText(LEGEND)).toBeInTheDocument();
+    expect(screen.queryByText(DECIDED_EARLIER_LINE)).not.toBeInTheDocument();
     expect(screen.queryByText(EARLIER_LINE)).not.toBeInTheDocument();
   });
 
@@ -1542,7 +1639,9 @@ describe("a role that cannot edit vendors", () => {
     expect(await screen.findByText(FIRST)).toBeInTheDocument();
     await openRunDetails();
     expect(screen.getByText("Security incidents: risks found")).toBeInTheDocument();
-    expect(screen.queryByRole("button", { name: "Preview" })).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "Preview suggested risk" }),
+    ).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Dismiss" })).not.toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Research again" })).not.toBeInTheDocument();
   });
@@ -1609,7 +1708,7 @@ describe("accepting a finding", () => {
     });
   });
 
-  it("keeps the section and the notice open after the last pending finding is accepted", async () => {
+  it("keeps the notice on screen, above the empty list, after the last pending finding is accepted", async () => {
     mocks.list.mockResolvedValue({ rows: [finding()], total: 1 });
     mocks.accept.mockImplementation(async () => {
       mocks.list.mockResolvedValue({ rows: [], total: 0 });
@@ -1621,7 +1720,7 @@ describe("accepting a finding", () => {
     await accept(FIRST);
 
     expect(await screen.findByText("Risk added to the register.")).toBeInTheDocument();
-    expect(header()).toHaveAttribute("aria-expanded", "true");
+    expect(await screen.findByText("No pending research findings.")).toBeInTheDocument();
   });
 
   it("points the notice at the newest accepted risk", async () => {
@@ -1707,7 +1806,9 @@ describe("accepting a finding", () => {
       second.reject(refusal(409, "Finding already accepted"));
     });
     await waitFor(() =>
-      expect(within(rowOf(SECOND)).getByRole("button", { name: "Preview" })).toBeEnabled(),
+      expect(
+        within(rowOf(SECOND)).getByRole("button", { name: "Preview suggested risk" }),
+      ).toBeEnabled(),
     );
     expect(screen.queryByText("Risk added to the register.")).not.toBeInTheDocument();
   });
@@ -1750,7 +1851,9 @@ describe("accepting a finding", () => {
     await waitFor(() => expect(mocks.accept).toHaveBeenCalled());
     // The row is usable again, and no notice or alert was made up.
     await waitFor(() =>
-      expect(within(rowOf(FIRST)).getByRole("button", { name: "Preview" })).toBeEnabled(),
+      expect(
+        within(rowOf(FIRST)).getByRole("button", { name: "Preview suggested risk" }),
+      ).toBeEnabled(),
     );
     expect(onNotify).not.toHaveBeenCalled();
     expect(screen.queryByText("Risk added to the register.")).not.toBeInTheDocument();
@@ -1770,8 +1873,12 @@ describe("accepting a finding", () => {
     await waitFor(() =>
       expect(within(rowOf(FIRST)).getByRole("button", { name: "Dismiss" })).toBeDisabled(),
     );
-    expect(within(rowOf(FIRST)).getByRole("button", { name: "Preview" })).toBeDisabled();
-    expect(within(rowOf(SECOND)).getByRole("button", { name: "Preview" })).toBeEnabled();
+    expect(
+      within(rowOf(FIRST)).getByRole("button", { name: "Preview suggested risk" }),
+    ).toBeDisabled();
+    expect(
+      within(rowOf(SECOND)).getByRole("button", { name: "Preview suggested risk" }),
+    ).toBeEnabled();
     expect(within(rowOf(SECOND)).getByRole("button", { name: "Dismiss" })).toBeEnabled();
   });
 
@@ -1803,7 +1910,9 @@ describe("accepting a finding", () => {
 
     await waitFor(() => expect(screen.queryByText(FIRST)).not.toBeInTheDocument());
     // The second accept is still in flight, so its row is still busy.
-    expect(within(rowOf(SECOND)).getByRole("button", { name: "Preview" })).toBeDisabled();
+    expect(
+      within(rowOf(SECOND)).getByRole("button", { name: "Preview suggested risk" }),
+    ).toBeDisabled();
     expect(within(rowOf(SECOND)).getByRole("button", { name: "Dismiss" })).toBeDisabled();
   });
 });
@@ -1865,7 +1974,9 @@ describe("previewing a finding", () => {
     expect(onNotify).not.toHaveBeenCalled();
     expect(screen.getByText(FIRST)).toBeInTheDocument();
     expect(screen.queryByText("Risk added to the register.")).not.toBeInTheDocument();
-    expect(within(rowOf(FIRST)).getByRole("button", { name: "Preview" })).toBeEnabled();
+    expect(
+      within(rowOf(FIRST)).getByRole("button", { name: "Preview suggested risk" }),
+    ).toBeEnabled();
   });
 
   it("keeps the notice of an earlier risk when a preview is closed without saving", async () => {
@@ -1968,7 +2079,10 @@ describe("previewing a finding", () => {
       await waitFor(() => expect(mocks.accept).toHaveBeenCalledTimes(1));
       await waitFor(() =>
         expect(
-          within(rowOf(FIRST)).getByRole("button", { name: "Preview", hidden: true }),
+          within(rowOf(FIRST)).getByRole("button", {
+            name: "Preview suggested risk",
+            hidden: true,
+          }),
         ).toBeEnabled(),
       );
       // The global toast reports a 500; the section adds nothing, and the form is still there.
@@ -2049,7 +2163,9 @@ describe("previewing a finding", () => {
       await waitFor(() => expect(mocks.accept).toHaveBeenCalledTimes(1));
       // The form hides the rows from the accessibility tree while it is open.
       const row = within(rowOf(FIRST));
-      expect(row.getByRole("button", { name: "Preview", hidden: true })).toBeDisabled();
+      expect(
+        row.getByRole("button", { name: "Preview suggested risk", hidden: true }),
+      ).toBeDisabled();
       expect(row.getByRole("button", { name: "Dismiss", hidden: true })).toBeDisabled();
     });
   });
@@ -2074,7 +2190,17 @@ describe("keyboard and screen reader use of the rows", () => {
     await choose(dialog, "Other");
     await userEvent.click(within(dialog).getByRole("button", { name: "Dismiss" }));
   };
-  const heading = () => screen.getByText("Research findings");
+  // Once nothing is left to decide, focus goes to the line that says so. The note at the top of the
+  // section is the last resort, for a decision that leaves neither a row beside it nor that line:
+  // the list read again after it holds only findings that were not on screen before (a run added
+  // them meanwhile and every row that was beside the decided one is gone too), so there is no
+  // neighbour to take the focus and the list is not empty. See "falls back to the note".
+  const topNote = () => screen.getByText("AI-suggested from web sources. Verify before accepting.");
+  const NEWCOMER = "The vendor does not publish a list of its sub-processors";
+  const newcomer = () =>
+    finding({ id: 3, category: "legal_regulatory", risk_description: NEWCOMER });
+  const emptyLine = () => screen.getByText("No pending research findings.");
+  const notSetUpLine = () => screen.getByText("Vendor research is not set up.");
 
   it("describes the Preview and Dismiss buttons of a row by the risk they decide on", async () => {
     renderSection();
@@ -2082,7 +2208,7 @@ describe("keyboard and screen reader use of the rows", () => {
 
     const ids: string[] = [];
     for (const text of [FIRST, SECOND]) {
-      for (const name of ["Dismiss", "Preview"]) {
+      for (const name of ["Dismiss", "Preview suggested risk"]) {
         const button = within(rowOf(text)).getByRole("button", { name });
         // A screen reader reads the risk after the name of the button.
         expect(button).toHaveAccessibleDescription(text);
@@ -2119,7 +2245,7 @@ describe("keyboard and screen reader use of the rows", () => {
     await waitFor(() => expect(document.activeElement).toBe(firstButtonOf(FIRST)));
   });
 
-  it("moves focus to the heading of the section when the last pending finding is accepted", async () => {
+  it("moves focus to the line that says nothing is pending when the last pending finding is accepted", async () => {
     mocks.list.mockResolvedValue({ rows: [finding()], total: 1 });
     accepts([]);
     renderSection();
@@ -2128,9 +2254,79 @@ describe("keyboard and screen reader use of the rows", () => {
     await accept(FIRST);
 
     await waitFor(() => expect(screen.queryByText(FIRST)).not.toBeInTheDocument());
-    await waitFor(() => expect(document.activeElement).toBe(heading()));
+    await waitFor(() => expect(document.activeElement).toBe(emptyLine()));
     // Not a stop of the tab order, only a place focus can be sent to.
-    expect(heading()).toHaveAttribute("tabindex", "-1");
+    expect(emptyLine()).toHaveAttribute("tabindex", "-1");
+    expect(document.activeElement).not.toBe(topNote());
+  });
+
+  it("moves focus to the line that says research is not set up when that is what the empty list says", async () => {
+    mocks.config.mockResolvedValue({ hasLlmKey: false, autoRunEnabled: true });
+    mocks.list.mockResolvedValue({ rows: [finding()], total: 1 });
+    accepts([]);
+    renderSection();
+    await screen.findByText(FIRST);
+
+    await accept(FIRST);
+
+    await waitFor(() => expect(screen.queryByText(FIRST)).not.toBeInTheDocument());
+    await waitFor(() => expect(document.activeElement).toBe(notSetUpLine()));
+    expect(notSetUpLine()).toHaveAttribute("tabindex", "-1");
+    expect(screen.queryByText("No pending research findings.")).not.toBeInTheDocument();
+  });
+
+  // The list read again after the decision holds a finding that was not on screen before and none
+  // of the rows beside the decided one: there is no neighbour to take the focus, and the empty
+  // line is not shown because the list is not empty. The focus must still land somewhere on the
+  // section, not stay on the page body, so it goes to the note at the top.
+  it("falls back to the note at the top when the decided row leaves no neighbour and the list is not empty", async () => {
+    mocks.list.mockResolvedValue({ rows: [finding()], total: 1 });
+    accepts([newcomer()]);
+    renderSection();
+    await screen.findByText(FIRST);
+
+    await accept(FIRST);
+
+    await waitFor(() => expect(screen.queryByText(FIRST)).not.toBeInTheDocument());
+    expect(screen.getByText(NEWCOMER)).toBeInTheDocument();
+    expect(screen.queryByText("No pending research findings.")).not.toBeInTheDocument();
+    await waitFor(() => expect(document.activeElement).toBe(topNote()));
+    // Like the empty line, a place focus can be sent to and not a stop of the tab order, and not
+    // the newcomer's button either: that row was not beside the decision.
+    expect(topNote()).toHaveAttribute("tabindex", "-1");
+    expect(document.activeElement).not.toBe(firstButtonOf(NEWCOMER));
+  });
+
+  it("falls back to the note at the top after a dismissal in the same case", async () => {
+    mocks.list.mockResolvedValue({ rows: [finding()], total: 1 });
+    dismisses([newcomer()]);
+    renderSection();
+    await screen.findByText(FIRST);
+
+    await dismissWithReason(FIRST);
+
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
+    await waitFor(() => expect(screen.queryByText(FIRST)).not.toBeInTheDocument());
+    expect(screen.getByText(NEWCOMER)).toBeInTheDocument();
+    await waitFor(() => expect(document.activeElement).toBe(topNote()));
+  });
+
+  // A focus ring is the only thing that tells a keyboard user where the focus went. These two
+  // elements take the focus from a script and are not stops of the tab order, so the browser shows
+  // the ring for them only if nothing hides it: neither may carry an outline of "none".
+  it("does not hide the focus ring of the two places the focus is sent to", async () => {
+    mocks.list.mockResolvedValue({ rows: [], total: 0 });
+    const { unmount } = renderSection();
+    await screen.findByText("No pending research findings.");
+    // jsdom reports `outline-style: none` for an element nothing styles (it has no user-agent
+    // sheet), so the declared shorthand is what tells: "" when nobody wrote one, "none" when a
+    // style rule did.
+    const hidesRing = (element: HTMLElement) =>
+      window.getComputedStyle(element).outline.trim() === "none";
+
+    expect(hidesRing(emptyLine())).toBe(false);
+    expect(hidesRing(topNote())).toBe(false);
+    unmount();
   });
 
   it("moves focus to the next row after a dismissal, once the modal has given focus back", async () => {
@@ -2156,7 +2352,7 @@ describe("keyboard and screen reader use of the rows", () => {
     await waitFor(() => expect(document.activeElement).toBe(firstButtonOf(FIRST)));
   });
 
-  it("moves focus to the heading when the last pending finding is dismissed", async () => {
+  it("moves focus to the line that says nothing is pending when the last pending finding is dismissed", async () => {
     mocks.list.mockResolvedValue({ rows: [finding()], total: 1 });
     dismisses([]);
     renderSection();
@@ -2165,7 +2361,8 @@ describe("keyboard and screen reader use of the rows", () => {
     await dismissWithReason(FIRST);
 
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
-    await waitFor(() => expect(document.activeElement).toBe(heading()));
+    await waitFor(() => expect(document.activeElement).toBe(emptyLine()));
+    expect(document.activeElement).not.toBe(topNote());
   });
 
   it("leaves focus where the user has put it meanwhile", async () => {
@@ -2197,7 +2394,9 @@ describe("keyboard and screen reader use of the rows", () => {
     await accept(FIRST);
 
     await waitFor(() =>
-      expect(within(rowOf(FIRST)).getByRole("button", { name: "Preview" })).toBeEnabled(),
+      expect(
+        within(rowOf(FIRST)).getByRole("button", { name: "Preview suggested risk" }),
+      ).toBeEnabled(),
     );
 
     expect(screen.getByText(FIRST)).toBeInTheDocument();
@@ -2334,8 +2533,12 @@ describe("dismissing a finding", () => {
     );
     // The modal hides the rows from the accessibility tree.
     expect(first.getByRole("button", { name: "Dismiss", hidden: true })).toBeDisabled();
-    expect(first.getByRole("button", { name: "Preview", hidden: true })).toBeDisabled();
-    expect(second.getByRole("button", { name: "Preview", hidden: true })).toBeEnabled();
+    expect(
+      first.getByRole("button", { name: "Preview suggested risk", hidden: true }),
+    ).toBeDisabled();
+    expect(
+      second.getByRole("button", { name: "Preview suggested risk", hidden: true }),
+    ).toBeEnabled();
   });
 
   it("leaves the modal of another finding open when an earlier dismissal finishes", async () => {
@@ -2731,7 +2934,7 @@ describe("the vendor filter", () => {
   });
 
   it("treats a URL value that is not a vendor id as all vendors", async () => {
-    renderSection({ route: "/vendors/risks?findingsVendorId=abc" });
+    renderSection({ route: "/vendors/research-findings?findingsVendorId=abc" });
     await screen.findByText(FIRST);
 
     expect(screen.getByRole("combobox")).toHaveTextContent("All vendors");
@@ -2740,7 +2943,7 @@ describe("the vendor filter", () => {
   });
 
   it("still offers a vendor from the URL that the page's own list does not have", async () => {
-    renderSection({ route: "/vendors/risks?findingsVendorId=99" });
+    renderSection({ route: "/vendors/research-findings?findingsVendorId=99" });
     await screen.findByText(FIRST);
 
     expect(screen.getByRole("combobox")).toHaveTextContent("Vendor 99");
@@ -2787,51 +2990,48 @@ describe("a link that arrives while the section is on screen", () => {
     );
   const follow = () => userEvent.click(screen.getByRole("button", { name: "Follow link" }));
 
-  it("opens on the vendor the new URL names, from a closed section", async () => {
+  it("moves to the vendor the new URL names, from a list with nothing pending", async () => {
     mocks.list.mockResolvedValue({ rows: [], total: 0 });
-    renderWithLink("/vendors/risks", "/vendors/risks?findingsVendorId=8");
-    await waitFor(() => expect(mocks.list).toHaveBeenCalled());
-    expect(header()).toHaveAttribute("aria-expanded", "false");
+    renderWithLink("/vendors/research-findings", "/vendors/research-findings?findingsVendorId=8");
+    expect(await screen.findByText("No pending research findings.")).toBeInTheDocument();
+    expect(screen.getByRole("combobox")).toHaveTextContent("All vendors");
 
     await follow();
 
-    await waitFor(() => expect(header()).toHaveAttribute("aria-expanded", "true"));
-    expect(screen.getByRole("combobox")).toHaveTextContent("Zeta Labs");
+    await waitFor(() => expect(screen.getByRole("combobox")).toHaveTextContent("Zeta Labs"));
     expect(mocks.list).toHaveBeenLastCalledWith({ status: "pending", vendorId: 8, limit: 200 });
   });
 
-  it("opens again if the user had closed it, and drops the notice of an earlier accept", async () => {
+  it("drops the notice of an earlier accept when it moves to the vendor of the new URL", async () => {
     mocks.accept.mockImplementation(async () => {
       mocks.list.mockResolvedValue({ rows: [secondFinding()], total: 1 });
       return { finding: finding({ status: "accepted" }), vendorRisk: acceptedRisk() };
     });
-    renderWithLink("/vendors/risks", "/vendors/risks?findingsVendorId=8");
+    renderWithLink("/vendors/research-findings", "/vendors/research-findings?findingsVendorId=8");
     await screen.findByText(FIRST);
     await accept(FIRST);
     await screen.findByText("Risk added to the register.");
-    await userEvent.click(header());
-    expect(header()).toHaveAttribute("aria-expanded", "false");
 
     await follow();
 
-    await waitFor(() => expect(header()).toHaveAttribute("aria-expanded", "true"));
-    expect(screen.getByRole("combobox")).toHaveTextContent("Zeta Labs");
+    await waitFor(() => expect(screen.getByRole("combobox")).toHaveTextContent("Zeta Labs"));
     expect(screen.queryByText("Risk added to the register.")).not.toBeInTheDocument();
   });
 
   it("keeps the vendor the user is looking at when the URL loses its parameter", async () => {
-    renderWithLink(WITH_VENDOR_7, "/vendors/risks");
+    renderWithLink(WITH_VENDOR_7, "/vendors/research-findings");
     await screen.findByText(FIRST);
 
     await follow();
 
     expect(screen.getByRole("combobox")).toHaveTextContent("Acme Cloud");
-    expect(header()).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText(FIRST)).toBeInTheDocument();
   });
 });
 
 // A run started with "Research risks" on the vendors table cannot be followed there. The button
-// leaves the vendor for the Risks tab, whose section opens on it the next time it is mounted.
+// leaves the vendor for the Research findings tab, whose section starts on it the next time it is
+// mounted.
 describe("a run started on the vendors table", () => {
   const advance = (ms: number) =>
     act(async () => {
@@ -2845,14 +3045,13 @@ describe("a run started on the vendors table", () => {
     return queryClient;
   };
 
-  it("opens the section on that vendor, even with nothing pending, and reads its run", async () => {
+  it("starts on that vendor, even with nothing pending, and reads its run", async () => {
     mocks.list.mockResolvedValue({ rows: [], total: 0 });
     mocks.latest.mockResolvedValue(run({ status: "queued" }));
     renderSection({ queryClient: afterStartFor(7) });
 
     expect(await screen.findByText("Researching…")).toBeInTheDocument();
     expect(screen.getByRole("combobox")).toHaveTextContent("Acme Cloud");
-    expect(header()).toHaveAttribute("aria-expanded", "true");
     expect(mocks.list).toHaveBeenCalledWith({ status: "pending", vendorId: 7, limit: 200 });
     expect(mocks.latest).toHaveBeenCalledWith(7);
   });
@@ -2864,7 +3063,7 @@ describe("a run started on the vendors table", () => {
     renderSection({ queryClient: afterStartFor(7) });
     await advance(10);
     expect(screen.getByText("Researching…")).toBeInTheDocument();
-    expect(screen.getByText("Pending: 0")).toBeInTheDocument();
+    expect(screen.getByText("No pending research findings.")).toBeInTheDocument();
 
     // The run finishes with a finding; the next read of the run sees it.
     mocks.latest.mockResolvedValue(run({ status: "completed", category_summary: FOUR_OUTCOMES }));
@@ -2874,7 +3073,8 @@ describe("a run started on the vendors table", () => {
 
     expect(screen.getByText("Last researched: 10 Oct 2026")).toBeInTheDocument();
     expect(screen.getByText(FIRST)).toBeInTheDocument();
-    expect(screen.getByText("Pending: 1")).toBeInTheDocument();
+    expect(screen.getByText("1 possible risk to review. It is high risk.")).toBeInTheDocument();
+    expect(screen.queryByText("No pending research findings.")).not.toBeInTheDocument();
   });
 
   it("clears the hint once the section has read it", async () => {
@@ -2929,6 +3129,76 @@ describe("a run started on the vendors table", () => {
 
     expect(screen.getByRole("combobox")).toHaveTextContent("All vendors");
     expect(mocks.latest).not.toHaveBeenCalled();
+  });
+
+  // The button on the vendors table is answered when the server has queued the run, which can be
+  // after the person has opened this tab: the section is mounted, and read its hint (none) then.
+  describe("a start that is answered after the section was opened", () => {
+    it("moves to the vendor and reads its run", async () => {
+      const queryClient = newQueryClient();
+      renderSection({ queryClient });
+      await screen.findByText(FIRST);
+      expect(screen.getByRole("combobox")).toHaveTextContent("All vendors");
+      expect(mocks.latest).not.toHaveBeenCalled();
+
+      mocks.list.mockResolvedValue({ rows: [], total: 0 });
+      mocks.latest.mockResolvedValue(run({ status: "queued" }));
+      act(() => followResearch(queryClient, 7));
+
+      expect(await screen.findByText("Researching…")).toBeInTheDocument();
+      expect(screen.getByRole("combobox")).toHaveTextContent("Acme Cloud");
+      expect(mocks.list).toHaveBeenCalledWith({ status: "pending", vendorId: 7, limit: 200 });
+      expect(mocks.latest).toHaveBeenCalledWith(7);
+    });
+
+    it("uses the hint up, so that the next visit opens on all vendors", async () => {
+      const queryClient = newQueryClient();
+      const first = renderSection({ queryClient });
+      await screen.findByText(FIRST);
+      mocks.latest.mockResolvedValue(run({ status: "queued" }));
+      act(() => followResearch(queryClient, 7));
+      await screen.findByText("Researching…");
+      expect(queryClient.getQueryData(VENDOR_RESEARCH_FOLLOW_KEY)).toBeUndefined();
+      first.unmount();
+      vi.clearAllMocks();
+      mocks.list.mockResolvedValue({ rows: [finding(), secondFinding()], total: 2 });
+      mocks.latest.mockResolvedValue(run());
+
+      renderSection({ queryClient });
+
+      expect(await screen.findByText(FIRST)).toBeInTheDocument();
+      expect(screen.getByRole("combobox")).toHaveTextContent("All vendors");
+      expect(mocks.latest).not.toHaveBeenCalled();
+    });
+
+    // A start is something the person has just done, and a vendor picked by hand is older.
+    it("takes the place of a vendor that was picked by hand", async () => {
+      const queryClient = newQueryClient();
+      renderSection({ queryClient, route: WITH_VENDOR_7 });
+      await screen.findByText(FIRST);
+      expect(screen.getByRole("combobox")).toHaveTextContent("Acme Cloud");
+
+      act(() => followResearch(queryClient, 8));
+
+      await waitFor(() => expect(screen.getByRole("combobox")).toHaveTextContent("Zeta Labs"));
+      expect(mocks.list).toHaveBeenCalledWith({ status: "pending", vendorId: 8, limit: 200 });
+      expect(mocks.latest).toHaveBeenCalledWith(8);
+    });
+
+    it("forgets the finding that was just accepted, as choosing another vendor does", async () => {
+      acceptsAndLeavesOnlyTheSecond();
+      const queryClient = newQueryClient();
+      renderSection({ queryClient });
+      await screen.findByText(FIRST);
+      await accept(FIRST);
+      await screen.findByText("Risk added to the register.");
+
+      act(() => followResearch(queryClient, 8));
+
+      await waitFor(() =>
+        expect(screen.queryByText("Risk added to the register.")).not.toBeInTheDocument(),
+      );
+    });
   });
 });
 
@@ -3266,6 +3536,65 @@ describe("the coverage of the latest run", () => {
     expect(line.closest("[data-vw-no-translate]")).not.toBeNull();
   });
 
+  // A finding on screen can come from an earlier run than the latest: its list is credited from
+  // the finding, whatever the latest run did.
+  describe("of the lists the findings on screen cite", () => {
+    const KEV_LINE = `Data sources: ${ATTRIBUTIONS[0]}`;
+
+    it.each([
+      ["failed with no coverage", run({ status: "failed", coverage: null, error: "x" })],
+      ["still going", run({ status: "running", coverage: null, progress: progress() })],
+      [
+        "did not ask the list",
+        run({
+          coverage: coverage({
+            sources: [listCopy("ofac")],
+            lookups: [],
+          }),
+        }),
+      ],
+    ])("credits the list of a finding when the latest run %s", async (_name, latest) => {
+      mocks.list.mockResolvedValue({ rows: [credibleFinding()], total: 1 });
+      mocks.latest.mockResolvedValue(latest);
+      renderSection({ route: WITH_VENDOR_7 });
+      await screen.findByText(FIRST);
+
+      const expected =
+        latest.status === "completed"
+          ? `Data sources: ${joinAttributions([ATTRIBUTIONS[1], ATTRIBUTIONS[0]])}`
+          : KEV_LINE;
+      const line = await screen.findByText(expected);
+      expect(line.closest("[data-vw-no-translate]")).not.toBeNull();
+      expect(screen.getAllByText(/^Data sources:/)).toHaveLength(1);
+    });
+
+    it("credits a list once when both the run and a finding name it", async () => {
+      mocks.list.mockResolvedValue({ rows: [credibleFinding()], total: 1 });
+      mocks.latest.mockResolvedValue(run({ coverage: coverage() }));
+      renderSection({ route: WITH_VENDOR_7 });
+
+      expect(
+        await screen.findByText(`Data sources: ${joinAttributions(ATTRIBUTIONS)}`),
+      ).toBeInTheDocument();
+    });
+
+    it("credits the lists the findings cite with every vendor listed", async () => {
+      mocks.list.mockResolvedValue({ rows: [credibleFinding(), secondFinding()], total: 2 });
+      renderSection();
+
+      expect(await screen.findByText(KEV_LINE)).toBeInTheDocument();
+      expect(screen.queryByRole("link", { name: "GDELT Project" })).not.toBeInTheDocument();
+    });
+
+    it("credits nothing for findings that cite no list", async () => {
+      mocks.latest.mockResolvedValue(run({ status: "failed", coverage: null, error: "x" }));
+      renderSection({ route: WITH_VENDOR_7 });
+      await screen.findByText(FIRST);
+
+      expect(screen.queryByText(/^Data sources:/)).not.toBeInTheDocument();
+    });
+  });
+
   it("the NVD is checked as a database, with its notice in the data sources", async () => {
     mocks.latest.mockResolvedValue(
       run({
@@ -3588,28 +3917,32 @@ describe("a run that is still active after the polling window", () => {
     });
   const checkAgainButton = () => screen.getByRole("button", { name: "Check again" });
   const queryCheckAgain = () => screen.queryByRole("button", { name: "Check again" });
-  /** The section on a vendor whose run is still going when the polling window ends. */
+  /**
+   * The section on a vendor whose run is still going when the polling window ends: a run in its
+   * research loop, which writes its progress after every search or read, so a turn of the model
+   * and the action after it without a move is long (TURN_QUIET_MS).
+   */
   const renderUntilWindowEnds = async () => {
     vi.useFakeTimers();
-    mocks.latest.mockResolvedValue(run({ status: "running" }));
+    mocks.latest.mockResolvedValue(run({ status: "running", progress: progress() }));
     const view = renderSection({ route: WITH_VENDOR_7 });
     await advance(10);
     expect(screen.getByText("Researching…")).toBeInTheDocument();
-    await advance(120_000);
+    await advance(TURN_QUIET_MS);
     expect(screen.getByText("Still running. Check back later.")).toBeInTheDocument();
     return view;
   };
 
   it("says it is still running and allows another start, once polling has stopped", async () => {
     vi.useFakeTimers();
-    mocks.latest.mockResolvedValue(run({ status: "running" }));
+    mocks.latest.mockResolvedValue(run({ status: "running", progress: progress() }));
     renderSection({ route: WITH_VENDOR_7 });
 
     await advance(10);
     expect(screen.getByText("Researching…")).toBeInTheDocument();
     expect(screen.getByRole("button", { name: "Research again" })).toBeDisabled();
 
-    await advance(120_000);
+    await advance(TURN_QUIET_MS);
 
     expect(screen.getByText("Still running. Check back later.")).toBeInTheDocument();
     expect(screen.queryByText("Researching…")).not.toBeInTheDocument();
@@ -3638,6 +3971,28 @@ describe("a run that is still active after the polling window", () => {
     expect(screen.getByText("Researching…")).toBeInTheDocument();
     expect(queryCheckAgain()).not.toBeInTheDocument();
   });
+
+  // The analysis writes no progress for minutes (its model call, then the checks of the quotes and
+  // the SEC filers), and neither do the website check and the gathering before the first turn.
+  it.each([
+    ["analysing what was found", progress({ phase: "analysing" }), "Analysing what was found"],
+    ["starting the research", progress({ steps: 0, action: null, category: null }), null],
+  ] as const)(
+    "keeps following a run that is %s past 2 minutes without a move",
+    async (_name, silent, line) => {
+      vi.useFakeTimers();
+      mocks.latest.mockResolvedValue(run({ status: "running", progress: silent }));
+      renderSection({ route: WITH_VENDOR_7 });
+      await advance(10);
+      if (line !== null) expect(screen.getByText(line)).toBeInTheDocument();
+
+      await advance(240_000);
+
+      expect(screen.getByText("Researching…")).toBeInTheDocument();
+      expect(screen.queryByText("Still running. Check back later.")).not.toBeInTheDocument();
+      expect(screen.getByRole("button", { name: "Research again" })).toBeDisabled();
+    },
+  );
 
   it.each(["completed", "failed"] as const)(
     "does not offer it for a run that is %s",
@@ -3677,7 +4032,7 @@ describe("a run that is still active after the polling window", () => {
 
     expect(screen.getByText("Last researched: 10 Oct 2026")).toBeInTheDocument();
     expect(screen.getByText(FIRST)).toBeInTheDocument();
-    expect(screen.getByText("Pending: 1")).toBeInTheDocument();
+    expect(screen.getByText("1 possible risk to review. It is high risk.")).toBeInTheDocument();
     expect(screen.queryByText("Still running. Check back later.")).not.toBeInTheDocument();
     expect(queryCheckAgain()).not.toBeInTheDocument();
   });
@@ -3696,7 +4051,7 @@ describe("a run that is still active after the polling window", () => {
     await advance(3_000);
     expect(mocks.latest.mock.calls.length).toBeGreaterThan(readsWhenStopped + 1);
 
-    await advance(120_000);
+    await advance(TURN_QUIET_MS);
 
     expect(screen.getByText("Still running. Check back later.")).toBeInTheDocument();
     expect(checkAgainButton()).toBeInTheDocument();
@@ -3793,7 +4148,7 @@ describe("a run that is going", () => {
     expect(screen.getByText("Last researched: 10 Oct 2026")).toBeInTheDocument();
   });
 
-  it("is followed to its end for as long as it moves, beyond the two minutes of a quiet run", async () => {
+  it("is followed to its end for as long as it moves, beyond the window of a quiet run", async () => {
     vi.useFakeTimers();
     let moved = 0;
     mocks.latest.mockImplementation(async () =>
@@ -3807,16 +4162,16 @@ describe("a run that is going", () => {
     renderSection({ route: WITH_VENDOR_7 });
     await advance(10);
 
-    // Five minutes, with a move every minute.
-    for (let minute = 0; minute < 5; minute += 1) {
+    // Eight minutes, longer than the window, with a move every minute.
+    for (let minute = 0; minute < 8; minute += 1) {
       moved += 60;
       await advance(60_000);
     }
     expect(screen.getByText("Researching…")).toBeInTheDocument();
     expect(screen.queryByText("Still running. Check back later.")).not.toBeInTheDocument();
 
-    // Then nothing moves any more: after the two minutes the screen says it is still running.
-    await advance(125_000);
+    // Then nothing moves any more: after the window the screen says it is still running.
+    await advance(TURN_QUIET_MS + 5_000);
     expect(screen.getByText("Still running. Check back later.")).toBeInTheDocument();
   });
 });
@@ -3835,7 +4190,7 @@ describe("Research again", () => {
     await waitFor(() =>
       expect(onNotify).toHaveBeenCalledWith({
         variant: "success",
-        body: "Research started for Acme Cloud. Findings appear on the Risks tab.",
+        body: "Research started for Acme Cloud. Findings appear on the Research findings tab.",
       }),
     );
   });

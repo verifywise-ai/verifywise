@@ -8,6 +8,7 @@ import {
   deleteVendor,
 } from "../repository/vendor.repository";
 import { VendorModel } from "../../domain/models/Common/vendor/vendor.model";
+import { VENDOR_RESEARCH_KEY } from "./useVendorResearch";
 
 // Query keys for vendors
 export const vendorQueryKeys = {
@@ -106,6 +107,8 @@ export const useDeleteVendor = () => {
     onSuccess: () => {
       // Invalidate and refetch vendor lists
       queryClient.invalidateQueries({ queryKey: vendorQueryKeys.lists() });
+      // The findings and the runs of the vendor go with it, and the Research findings tab counts them.
+      queryClient.invalidateQueries({ queryKey: VENDOR_RESEARCH_KEY });
     },
   });
 };

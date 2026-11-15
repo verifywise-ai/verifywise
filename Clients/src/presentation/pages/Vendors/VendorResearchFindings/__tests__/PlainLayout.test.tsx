@@ -81,8 +81,8 @@ const VENDORS = [
   { id: 8, vendor_name: "Zeta Labs" },
   { id: 7, vendor_name: "Acme Cloud" },
 ];
-const ALL_VENDORS = "/vendors/risks";
-const WITH_VENDOR_7 = "/vendors/risks?findingsVendorId=7";
+const ALL_VENDORS = "/vendors/research-findings";
+const WITH_VENDOR_7 = "/vendors/research-findings?findingsVendorId=7";
 
 const renderSection = (route = WITH_VENDOR_7) => {
   const handlers = { onOpenRisk: vi.fn(), onNotify: vi.fn() };
@@ -174,7 +174,6 @@ describe("the summary of what is pending", () => {
   it("is not there when nothing is pending", async () => {
     listOf([]);
     renderSection(ALL_VENDORS);
-    await userEvent.click(await screen.findByRole("button", { name: /^Research findings/ }));
 
     expect(await screen.findByText("No pending research findings.")).toBeInTheDocument();
     expect(screen.queryByText(/possible risks? to review/)).not.toBeInTheDocument();
@@ -596,7 +595,9 @@ describe("the findings in groups, the most severe first", () => {
     renderSection();
     await screen.findByText("New breach");
 
-    await userEvent.click(within(rowOf("New breach")).getByRole("button", { name: "Preview" }));
+    await userEvent.click(
+      within(rowOf("New breach")).getByRole("button", { name: "Preview suggested risk" }),
+    );
     const form = await screen.findByRole("dialog", { name: "Review suggested risk" });
     await userEvent.click(within(form).getByRole("button", { name: "Save" }));
 
@@ -614,7 +615,7 @@ describe("a finding on one line, with the rest behind a click", () => {
     expect(row.getByText("High Risk")).toBeInTheDocument();
     expect(row.getByText("Credibility")).toBeInTheDocument();
     expect(row.getByText("Medium")).toBeInTheDocument();
-    expect(row.getByRole("button", { name: "Preview" })).toBeInTheDocument();
+    expect(row.getByRole("button", { name: "Preview suggested risk" })).toBeInTheDocument();
     expect(row.getByRole("button", { name: "Dismiss" })).toBeInTheDocument();
     for (const hidden of [IMPACT, PLAN, WHY, QUOTE]) {
       expect(row.queryByText(hidden)).not.toBeInTheDocument();
@@ -700,7 +701,9 @@ describe("a finding on one line, with the rest behind a click", () => {
     renderSection();
     await screen.findByText(FIRST);
 
-    await userEvent.click(within(rowOf(FIRST)).getByRole("button", { name: "Preview" }));
+    await userEvent.click(
+      within(rowOf(FIRST)).getByRole("button", { name: "Preview suggested risk" }),
+    );
 
     expect(
       await screen.findByRole("dialog", { name: "Review suggested risk" }),
@@ -728,7 +731,9 @@ describe("a finding on one line, with the rest behind a click", () => {
     await screen.findByText(FIRST);
     await userEvent.click(toggleOf(FIRST));
 
-    await userEvent.click(within(rowOf(SECOND)).getByRole("button", { name: "Preview" }));
+    await userEvent.click(
+      within(rowOf(SECOND)).getByRole("button", { name: "Preview suggested risk" }),
+    );
     const form = await screen.findByRole("dialog", { name: "Review suggested risk" });
     await userEvent.click(within(form).getByRole("button", { name: "Save" }));
 
@@ -743,6 +748,7 @@ describe("how well a finding is established, in one line", () => {
     "High: CISA Known Exploited Vulnerabilities lists it (CVE-2026-28001), as of 7 Oct 2026.";
   const EARLIER_NOTE =
     "Rated before the source rules; this is the earlier confidence level until the label is recomputed.";
+  const DECIDED_EARLIER_NOTE = "Rated with the earlier confidence rule.";
 
   it("reads the sentence of the rule that decided the label, with no chip beside it", async () => {
     listOf([credibleFinding()]);
@@ -756,9 +762,15 @@ describe("how well a finding is established, in one line", () => {
   });
 
   it("counts the sources of an earlier estimate, under an asterisk that is explained once", async () => {
+    // Each row carries a line the server writes for such a label (pending, and decided), so that
+    // the screen could show it: it must word the row itself instead.
     listOf([
-      finding({ id: 1, credibility_basis: legacy }),
-      secondFinding({ id: 2, credibility_basis: legacy }),
+      finding({ id: 1, credibility_basis: legacy, credibility_rationale: EARLIER_NOTE }),
+      secondFinding({
+        id: 2,
+        credibility_basis: legacy,
+        credibility_rationale: DECIDED_EARLIER_NOTE,
+      }),
       credibleFinding({ id: 3, risk_description: "Third" }),
     ]);
     renderSection();
@@ -777,6 +789,7 @@ describe("how well a finding is established, in one line", () => {
     expect(follows(legend[0], screen.getByText("Third"))).toBe(true);
     // What every such row used to say, and the note beside its chip.
     expect(screen.queryByText(EARLIER_NOTE)).not.toBeInTheDocument();
+    expect(screen.queryByText(DECIDED_EARLIER_NOTE)).not.toBeInTheDocument();
     expect(screen.queryByText("Earlier rating")).not.toBeInTheDocument();
   });
 

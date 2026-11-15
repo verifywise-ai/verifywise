@@ -195,6 +195,88 @@ describe("the lines that say which search a run used", () => {
   });
 });
 
+// A category whose verified risks the cap of the run cut is stored with the outcome over_cap and
+// the server's note NOTES.overCap. Its line must not say that nothing was found above the note that
+// says more was found than a run keeps; and the line is read from the outcome, never the note.
+describe("a category whose risks the cap of the run cut", () => {
+  const CAPPED_LINE = "AI-specific risks: risks found, left for the next run";
+  const CAPPED_NOTE = "More risks were found than one run keeps.";
+  const capped = () =>
+    searched({
+      category_summary: [
+        {
+          category: "ai_specific",
+          outcome: "over_cap",
+          note: "More risks were found than one run keeps",
+        },
+        {
+          category: "certifications",
+          outcome: "nothing_found",
+          note: "No risks found in the sources reviewed",
+        },
+      ],
+    });
+
+  afterAll(async () => {
+    await setLanguage("en");
+  });
+
+  it("says the risks were found and left for the next run, with the note under it", async () => {
+    mocks.latest.mockResolvedValue(capped());
+    renderSummary();
+
+    await openDetails();
+
+    const line = await screen.findByText(CAPPED_LINE);
+    expect(screen.queryByText("AI-specific risks: nothing found")).not.toBeInTheDocument();
+    expect(follows(line, screen.getByText(CAPPED_NOTE))).toBe(true);
+    // The neighbour, where nothing was found, still says so.
+    expect(screen.getByText("Certifications: nothing found")).toBeInTheDocument();
+  });
+
+  // RV6C-1: the same words on a category in which nothing was found, as the model may write them
+  // (or as a run stored before the cap had its own outcome kept them), do not change its line.
+  it("says nothing was found when only the note has the cap's words", async () => {
+    mocks.latest.mockResolvedValue(
+      searched({
+        category_summary: [
+          {
+            category: "ai_specific",
+            outcome: "nothing_found",
+            note: "More risks were found than one run keeps",
+          },
+        ],
+      }),
+    );
+    renderSummary();
+
+    await openDetails();
+
+    const line = await screen.findByText("AI-specific risks: nothing found");
+    expect(screen.queryByText(CAPPED_LINE)).not.toBeInTheDocument();
+    expect(follows(line, screen.getByText(CAPPED_NOTE))).toBe(true);
+  });
+
+  it.each(LANGS)("says it in %s", async (lang) => {
+    resetAudit();
+    await setLanguage(lang);
+    mocks.latest.mockResolvedValue(capped());
+    renderSummary();
+
+    await openDetails(tr(lang, DETAILS));
+
+    const outcome = translations[lang]["risks found, left for the next run"];
+    expect(outcome, `${lang}: the words of the outcome`).toEqual(expect.any(String));
+    expect(outcome).not.toBe("risks found, left for the next run");
+    const line = tr(lang, "{category}: {outcome}")
+      .replace("{category}", tr(lang, "AI-specific risks"))
+      .replace("{outcome}", outcome);
+    expect(await screen.findByText(line)).toBeInTheDocument();
+    expect(screen.getByText(tr(lang, CAPPED_NOTE))).toBeInTheDocument();
+    expect(screen.queryByText(CAPPED_LINE)).not.toBeInTheDocument();
+  });
+});
+
 describe("the lines of the engine in German, French and Spanish", () => {
   afterAll(async () => {
     await setLanguage("en");

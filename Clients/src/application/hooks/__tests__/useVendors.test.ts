@@ -1,4 +1,4 @@
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import React from "react";
 import {
@@ -8,6 +8,7 @@ import {
   useUpdateVendor,
   useDeleteVendor,
 } from "../useVendors";
+import { VENDOR_RESEARCH_FOLLOW_KEY, VENDOR_RESEARCH_KEY } from "../useVendorResearch";
 
 vi.mock("../../repository/vendor.repository", () => ({
   getAllVendors: vi.fn(),
@@ -117,5 +118,70 @@ describe("useDeleteVendor", () => {
     const { result } = renderHook(() => useDeleteVendor(), { wrapper: createWrapper() });
     await result.current.mutateAsync(5);
     expect(mockDeleteVendor).toHaveBeenCalledWith({ id: 5 });
+  });
+
+  // The findings and the runs of a vendor go with it (the server cascades them), and the Research
+  // findings tab counts the pending findings, so what the page has read of them is stale.
+  describe("what the page has read of the research", () => {
+    const COUNT_KEY = [...VENDOR_RESEARCH_KEY, "findings", "pendingCount"];
+    const LATEST_KEY = [...VENDOR_RESEARCH_KEY, "latest", 5];
+    const LISTS_KEY = ["vendors", "list", {}];
+
+    /** A client that holds what the page holds: a vendor list, the count of findings, a run. */
+    const setup = () => {
+      const queryClient = new QueryClient({
+        defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+      });
+      queryClient.setQueryData(LISTS_KEY, []);
+      queryClient.setQueryData(COUNT_KEY, { rows: [], total: 4 });
+      queryClient.setQueryData(LATEST_KEY, null);
+      queryClient.setQueryData(VENDOR_RESEARCH_FOLLOW_KEY, 5);
+      const wrapper = ({ children }: { children: React.ReactNode }) =>
+        React.createElement(QueryClientProvider, { client: queryClient }, children);
+      const { result } = renderHook(() => useDeleteVendor(), { wrapper });
+      return { queryClient, result };
+    };
+    const stale = (queryClient: QueryClient, key: readonly unknown[]) =>
+      queryClient.getQueryState(key)?.isInvalidated;
+
+    beforeEach(() => vi.clearAllMocks());
+
+    it("is read again after a vendor is deleted: the count of findings and the runs", async () => {
+      mockDeleteVendor.mockResolvedValue({});
+      const { queryClient, result } = setup();
+
+      await act(async () => {
+        await result.current.mutateAsync(5);
+      });
+
+      expect(stale(queryClient, COUNT_KEY)).toBe(true);
+      expect(stale(queryClient, LATEST_KEY)).toBe(true);
+      // The lists of vendors were always read again.
+      expect(stale(queryClient, LISTS_KEY)).toBe(true);
+    });
+
+    it("leaves the hint of a run that is being followed alone: it is not research data to read again", async () => {
+      mockDeleteVendor.mockResolvedValue({});
+      const { queryClient, result } = setup();
+
+      await act(async () => {
+        await result.current.mutateAsync(5);
+      });
+
+      expect(stale(queryClient, VENDOR_RESEARCH_FOLLOW_KEY)).toBe(false);
+    });
+
+    it("is left as it is when the vendor could not be deleted", async () => {
+      mockDeleteVendor.mockRejectedValue(new Error("refused"));
+      const { queryClient, result } = setup();
+
+      await act(async () => {
+        await result.current.mutateAsync(5).catch(() => undefined);
+      });
+
+      expect(stale(queryClient, COUNT_KEY)).toBe(false);
+      expect(stale(queryClient, LATEST_KEY)).toBe(false);
+      expect(stale(queryClient, LISTS_KEY)).toBe(false);
+    });
   });
 });

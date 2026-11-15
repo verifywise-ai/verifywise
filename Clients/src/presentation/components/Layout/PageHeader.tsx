@@ -2,7 +2,7 @@ import { Stack, Typography } from "@mui/material";
 
 interface PageHeaderProps {
   title: string;
-  description?: string;
+  description?: React.ReactNode;
   rightContent?: React.ReactNode;
   titleFontFamily?: string;
 }

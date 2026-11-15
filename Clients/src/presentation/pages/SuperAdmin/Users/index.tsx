@@ -35,6 +35,8 @@ import { passwordValidation } from "../../../../application/validations/password
 import { EmailAvailabilityStatus } from "../../../../application/hooks/useEmailAvailability";
 import singleTheme from "../../../themes/v1SingleTheme";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
+import useTranslation from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
 
 const EMPTY_USER_FORM: UserFormValues = {
   email: "",
@@ -47,6 +49,7 @@ const EMPTY_USER_FORM: UserFormValues = {
 const Users = () => {
   const formatDate = useFormattedDate();
   const { id: orgId } = useParams<{ id: string }>();
+  const { t } = useTranslation();
   const [users, setUsers] = useState<OrgUser[]>([]);
   const [invitations, setInvitations] = useState<OrgInvitation[]>([]);
   const [loading, setLoading] = useState(true);
@@ -166,7 +169,7 @@ const Users = () => {
   return (
     <PageHeaderExtended
       title="Users"
-      description={`Manage users for organization #${orgId}`}
+      description={fill(t("Manage users for organization #{orgId}"), { orgId: orgId ?? "" })}
       breadcrumbItems={[{ label: "Organizations", path: "/super-admin" }, { label: "Users" }]}
       actionButton={
         <Button

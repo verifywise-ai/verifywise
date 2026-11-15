@@ -7,8 +7,8 @@
  * the button is enabled and the server decides: a start without them is refused with a 409.
  * Every click is answered with a message handed to `onNotify`, whatever the outcome: the global
  * error toast is off for this call, so nothing else tells the user. The run itself is followed on
- * the Risks tab, not here: a run that was started, or that the vendor already had, leaves its
- * vendor for the findings section there, which opens on it and reads the run to its end. A
+ * the Research findings tab, not here: a run that was started, or that the vendor already had,
+ * leaves its vendor for the findings there, which open on it and read the run to its end. A
  * refused start leaves nothing.
  *
  * Mount it with `key={vendorId}` where rows can change order, so that a start still in flight

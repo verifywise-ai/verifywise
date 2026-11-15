@@ -76,6 +76,16 @@ describe("checkRegistrationNumber", () => {
   it("takes an empty field as no number", () => {
     expect(checkRegistrationNumber("  ")).toEqual(NONE);
   });
+
+  it("leaves out the control characters the server leaves out, and keeps tabs as white space", () => {
+    expect(checkRegistrationNumber("\u0000HRB\t86891\u007f")).toEqual({
+      accepted: true,
+      message: "",
+      value: "HRB 86891",
+    });
+    expect(checkRegistrationNumber("\u0001\u0002")).toEqual(NONE);
+    expect(checkRegistrationNumber(`${"x".repeat(64)}\u0000`).accepted).toBe(true);
+  });
 });
 
 describe("checkLei", () => {

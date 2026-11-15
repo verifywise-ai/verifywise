@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { dirname, resolve } from "node:path";
 import { fileURLToPath } from "node:url";
-import { checkOtherNames, otherNamesIn } from "../otherNamesValidation";
+import { checkOtherNames, otherNamesIn, storedOtherNames } from "../otherNamesValidation";
 
 // The cases live with the server's validation; both suites run the same file. Resolved with
 // node:path, as the intake form logic cases test does: Vite refuses `new URL(..., import.meta.url)`
@@ -10,9 +10,21 @@ const CASES_FILE = resolve(
   dirname(fileURLToPath(import.meta.url)),
   "../../../../../Servers/utils/validations/__fixtures__/otherNames.cases.json",
 );
-const cases: { names: Array<{ name: string; text: string; names: string[] }> } = JSON.parse(
-  readFileSync(CASES_FILE, "utf8"),
-);
+const cases: {
+  names: Array<{ name: string; text: string; names: string[] }>;
+  storedLength: Array<{ name: string; lengths: number[]; separator: string; accepted: boolean }>;
+  controlCharacters: Array<{
+    name: string;
+    text: string;
+    accepted: boolean;
+    message: string;
+    stored: string;
+  }>;
+} = JSON.parse(readFileSync(CASES_FILE, "utf8"));
+
+/** A text of distinct names of the given lengths ("AAA…", "BBB…"), joined by `separator`, as on the server. */
+const namesOfLengths = (lengths: number[], separator: string): string =>
+  lengths.map((length, n) => String.fromCharCode(65 + n).repeat(length)).join(separator);
 
 const FIVE = "Alpha, Inc., Beta, LLC, Gamma, Ltd., Delta, GmbH, Epsilon, plc";
 
@@ -98,4 +110,45 @@ describe("a legal form after a comma", () => {
     });
     expect(checkOtherNames(`${"x".repeat(74)}, Inc.`)).toEqual(ACCEPTED);
   });
+});
+
+describe("the length of the other names as the server stores them", () => {
+  it.each(cases.storedLength)(
+    "is held to 500 characters, as the server holds it: $name",
+    ({ lengths, separator, accepted }) => {
+      expect(checkOtherNames(namesOfLengths(lengths, separator)).accepted).toBe(accepted);
+    },
+  );
+
+  it("refuses names that would be stored longer than 500 characters, in plain words", () => {
+    const typed = namesOfLengths(Array(8).fill(61), "\n");
+
+    expect(typed).toHaveLength(495);
+    expect(storedOtherNames(typed)).toHaveLength(502);
+    expect(checkOtherNames(typed)).toEqual({
+      accepted: false,
+      message: "Other names must be at most 500 characters with a comma and a space between names",
+    });
+  });
+
+  it.each(cases.storedLength.filter(({ accepted }) => accepted))(
+    "accepts the stored text of names it accepted, as the edit form loads it: $name",
+    ({ lengths, separator }) => {
+      expect(checkOtherNames(storedOtherNames(namesOfLengths(lengths, separator)))).toEqual(
+        ACCEPTED,
+      );
+    },
+  );
+});
+
+// The server drops the C0 control characters that are not white space, and DEL, before it splits
+// and measures the names, so the form does too: what it accepts the server accepts.
+describe("the control characters in other names", () => {
+  it.each(cases.controlCharacters)(
+    "are left out as the server leaves them out: $name",
+    ({ text, accepted, message, stored }) => {
+      expect(checkOtherNames(text)).toEqual({ accepted, message });
+      expect(storedOtherNames(text)).toBe(stored);
+    },
+  );
 });

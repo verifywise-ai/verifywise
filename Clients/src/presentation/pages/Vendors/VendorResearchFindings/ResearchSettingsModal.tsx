@@ -55,14 +55,22 @@ interface ResearchSettingsModalProps {
  * is offered before the saved choice and the keys are there, and what the person changes is kept
  * apart from what is saved, so that a choice that arrives late never overwrites a change. A
  * choice that names a key which is not in the list (deleted since) shows as the default, and is
- * saved as the default; an interval that is not one of the choices shows as off, and is saved as
+ * saved as the default; a list of keys that could not be read offers nothing and saves nothing,
+ * so that it never resets the saved keys; an interval that is not one of the choices shows as off, and is saved as
  * off. Closing is the parent's call, so that a failed save leaves the window open with what was
  * chosen.
  */
 export default function ResearchSettingsModal({ onClose, onNotify }: ResearchSettingsModalProps) {
   const { t } = useTranslation();
   const settings = useVendorResearchSettings();
-  const { keys, loading: keysLoading } = useLLMKeys();
+  const {
+    keys,
+    loading: keysLoading,
+    isError: keysFailed,
+    isFetching: keysFetching,
+    unread: keysUnread,
+    refetch: refetchKeys,
+  } = useLLMKeys();
   const save = useSaveVendorResearchSettings();
   // What the person changed on screen. A select they did not touch shows what is saved.
   const [changes, setChanges] = useState<{
@@ -92,7 +100,10 @@ export default function ResearchSettingsModal({ onClose, onNotify }: ResearchSet
     noTranslate: true,
   }));
 
-  const ready = saved !== undefined && !keysLoading;
+  // A list of keys that could not be read is not a list without the saved keys: it would show
+  // them as the default, and saving would write the default over them. Nothing is offered until
+  // a list has been read, also while one that failed is asked for again.
+  const ready = saved !== undefined && !keysLoading && !keysFailed && !keysUnread;
 
   const handleSubmit = async () => {
     if (!ready) return;
@@ -118,11 +129,17 @@ export default function ResearchSettingsModal({ onClose, onNotify }: ResearchSet
   };
 
   const renderBody = () => {
-    if (saved === undefined && settings.isError) {
+    // The keys are part of the settings: without them the window says it could not load them,
+    // and Retry reads again whichever of the two failed.
+    const settingsFailed = saved === undefined && settings.isError;
+    if (settingsFailed || (keysFailed && !keysFetching)) {
       return (
         <InlineError
           message="Could not load the research settings."
-          onRetry={() => void settings.refetch()}
+          onRetry={() => {
+            if (settingsFailed) void settings.refetch();
+            if (keysFailed) void refetchKeys();
+          }}
         />
       );
     }

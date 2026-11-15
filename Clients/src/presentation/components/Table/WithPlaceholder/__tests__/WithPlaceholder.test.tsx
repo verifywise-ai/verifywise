@@ -137,7 +137,7 @@ describe("the research action of a vendor row", () => {
     expect(mocks.start).toHaveBeenCalledWith(2);
     expect(onNotify).toHaveBeenCalledWith({
       variant: "success",
-      body: "Research started for Beta Labs. Findings appear on the Risks tab.",
+      body: "Research started for Beta Labs. Findings appear on the Research findings tab.",
     });
     await waitFor(() => expect(researchButtonOf("Beta Labs")).toBeEnabled());
   });
@@ -166,7 +166,7 @@ describe("the research action of a vendor row", () => {
     await waitFor(() => expect(onNotify).toHaveBeenCalledTimes(1));
     expect(onNotify).toHaveBeenCalledWith({
       variant: "success",
-      body: "Research started for Alpha Systems. Findings appear on the Risks tab.",
+      body: "Research started for Alpha Systems. Findings appear on the Research findings tab.",
     });
     await waitFor(() => expect(researchButtonOf("Alpha Systems")).toBeEnabled());
   });

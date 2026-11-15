@@ -2,8 +2,20 @@
 // Spread into ../translations.ts. Other areas stay in that file for now.
 
 export const de: Record<string, string> = {
+  "Preview suggested risk": "Vorschau des vorgeschlagenen Risikos",
   "Add vendor risk": "Anbieterrisiko hinzufügen",
   "Vendor List": "Anbieterliste",
+  "Vendor list": "Anbieterliste",
+  "Vendor risks list": "Liste der Anbieterrisiken",
+  "Vendor risk insights": "Erkenntnisse zu Anbieterrisiken",
+  "This table includes a list of external entities that provide AI-related products, services, or components. You can create and manage all vendors here.":
+    "Diese Tabelle enthält eine Liste externer Stellen, die KI-bezogene Produkte, Dienstleistungen oder Komponenten bereitstellen. Hier können Sie alle Anbieter erstellen und verwalten.",
+  "This table includes a list of risks related to a vendor. You can create and manage all vendor risks here.":
+    "Diese Tabelle enthält eine Liste von Risiken im Zusammenhang mit einem Anbieter. Hier können Sie alle Anbieterrisiken erstellen und verwalten.",
+  "Risks that the research agent suggested for your vendors. Review each finding, then add it to the vendor risk register or dismiss it.":
+    "Risiken, die der Recherche-Agent für Ihre Anbieter vorgeschlagen hat. Prüfen Sie jeden Befund und nehmen Sie ihn dann in das Anbieterrisikoregister auf oder verwerfen Sie ihn.",
+  "Heat map, blast radius, duplicates and framework coverage of vendor risks.":
+    "Heatmap, Wirkungsradius, Duplikate und Rahmenwerksabdeckung der Anbieterrisiken.",
   "Search vendors...": "Anbieter suchen...",
   "Scorecard": "Bewertungskarte",
   "Security and compliance risks from vendor relationships":
@@ -15,8 +27,12 @@ export const de: Record<string, string> = {
     "Registrieren Sie externe KI-Anbieter und Drittanbieterdienste. Dokumentieren Sie Anbieterinformationen, Verträge und Compliance-Anforderungen an einem zentralen Ort.",
   "The table now shows only vendor risks with this risk level. Click the card again to see all risks.":
     "Die Tabelle zeigt jetzt nur Anbieterrisiken mit diesem Risikoniveau an. Klicken Sie erneut auf die Karte, um alle Risiken zu sehen.",
-  "Vendor risks by likelihood and severity. Select a cell to filter the table.":
-    "Anbieterrisiken nach Wahrscheinlichkeit und Schweregrad. Wählen Sie eine Zelle, um die Tabelle zu filtern.",
+  "Vendor risks by likelihood and severity. Select a cell to see its risks in the Risks tab.":
+    "Anbieterrisiken nach Wahrscheinlichkeit und Schweregrad. Wählen Sie eine Zelle, um ihre Risiken im Tab Risiken zu sehen.",
+  "Risks the research agent suggested, waiting for your decision":
+    "Von der Recherche vorgeschlagene Risiken, die auf Ihre Entscheidung warten",
+  "Heat map, blast radius, duplicates and framework coverage of vendor risks":
+    "Heatmap, Wirkungsradius, Duplikate und Rahmenwerksabdeckung der Anbieterrisiken",
   "Blast radius": "Wirkungsradius",
   "How many project risks and use cases inherit from the risks of each vendor.":
     "Wie viele Projektrisiken und Anwendungsfälle von den Risiken jedes Anbieters erben.",
@@ -52,6 +68,8 @@ export const de: Record<string, string> = {
     "Andere Namen, unter denen dieser Anbieter bekannt ist, durch Kommas getrennt. Die Recherche sucht auch nach ihnen.",
   "Other names must be at most 500 characters":
     "Andere Namen dürfen höchstens 500 Zeichen lang sein",
+  "Other names must be at most 500 characters with a comma and a space between names":
+    "Andere Namen dürfen höchstens 500 Zeichen lang sein, mit einem Komma und einem Leerzeichen zwischen den Namen",
   "Other names can list at most 8 names": "Es können höchstens 8 andere Namen angegeben werden",
   "Each of the other names must be between 2 and 80 characters":
     "Jeder der anderen Namen muss zwischen 2 und 80 Zeichen lang sein",
@@ -76,8 +94,6 @@ export const de: Record<string, string> = {
   "LEI check digits do not match": "Die Prüfziffern der LEI stimmen nicht",
   "SEC CIK must be one to ten digits": "Die SEC-CIK muss aus einer bis zehn Ziffern bestehen",
   // Vendor risks page layout
-  "Heat map, blast radius, duplicates and framework coverage of vendor risks.":
-    "Heatmap, Wirkungsradius, Duplikate und Rahmenwerksabdeckung der Anbieterrisiken.",
   "The table shows only the risks in the selected heat map cell.":
     "Die Tabelle zeigt nur die Risiken in der ausgewählten Heatmap-Zelle.",
   "Show all risks": "Alle Risiken anzeigen",
@@ -88,7 +104,6 @@ export const de: Record<string, string> = {
   "Research findings": "Recherchebefunde",
   "AI-suggested from web sources. Verify before accepting.":
     "KI-Vorschläge aus Webquellen. Vor dem Annehmen prüfen.",
-  "Pending: {count}": "Ausstehend: {count}",
   "Loading research findings": "Recherchebefunde werden geladen",
   "Pending research findings": "Ausstehende Recherchebefunde",
   "Could not load research findings.": "Die Recherchebefunde konnten nicht geladen werden.",
@@ -163,6 +178,7 @@ export const de: Record<string, string> = {
   "Rated before the source rules; this is the earlier confidence level until the label is recomputed.":
     "Vor den Quellenregeln bewertet; dies ist die frühere Konfidenzstufe, bis die Bewertung neu berechnet wird.",
   "Earlier rating": "Frühere Bewertung",
+  "Rated with the earlier confidence rule.": "Mit der früheren Konfidenzregel bewertet.",
   "High: {operator} lists it ({record}), as of {date}.":
     "Hoch: Verzeichnet ({operator}, {record}), Stand: {date}.",
   "High: {operator} lists it ({record}).": "Hoch: Verzeichnet ({operator}, {record}).",
@@ -298,6 +314,8 @@ export const de: Record<string, string> = {
   "Financial health": "Finanzielle Stabilität",
   "risks found": "Risiken gefunden",
   "nothing found": "nichts gefunden",
+  "risks found, left for the next run":
+    "Risiken gefunden, für den nächsten Durchlauf zurückgestellt",
   "could not be researched": "Recherche nicht möglich",
   "skipped": "übersprungen",
   "unknown": "unbekannt",
@@ -337,6 +355,8 @@ export const de: Record<string, string> = {
     "Es wurden keine Risiken gefunden. {searchesFailed} von {searches} Suchen waren nicht verfügbar, und {pagesFailed} von {pages} Seiten konnten nicht gelesen werden.",
   "Possible risks were found but could not be verified, or are already recorded.":
     "Es wurden mögliche Risiken gefunden, die sich aber nicht bestätigen ließen oder bereits erfasst sind.",
+  "More risks were found than one run keeps.":
+    "Es wurden mehr Risiken gefunden, als ein Durchlauf behält.",
   "The search was not available.": "Die Suche war nicht verfügbar.",
   "The pages could not be read.": "Die Seiten konnten nicht gelesen werden.",
   "1 potential risk found": "1 mögliches Risiko gefunden",
@@ -351,8 +371,8 @@ export const de: Record<string, string> = {
   "The sources are about another company": "Die Quellen betreffen ein anderes Unternehmen",
   "The sources are out of date": "Die Quellen sind veraltet",
   "Up to 500 characters.": "Bis zu 500 Zeichen.",
-  "Research started for {vendorName}. Findings appear on the Risks tab.":
-    "Recherche für {vendorName} gestartet. Die Befunde erscheinen im Tab Risiken.",
+  "Research started for {vendorName}. Findings appear on the Research findings tab.":
+    "Recherche für {vendorName} gestartet. Die Befunde erscheinen im Tab Recherchebefunde.",
   "Research is already running for {vendorName}.": "Für {vendorName} läuft bereits eine Recherche.",
   "Research ran recently. Try again in {minutes} min.":
     "Die Recherche lief erst kürzlich. Versuchen Sie es in {minutes} Min. erneut.",
@@ -415,8 +435,20 @@ export const de: Record<string, string> = {
 };
 
 export const fr: Record<string, string> = {
+  "Preview suggested risk": "Aperçu du risque suggéré",
   "Add vendor risk": "Ajouter un risque fournisseur",
   "Vendor List": "Liste des fournisseurs",
+  "Vendor list": "Liste des fournisseurs",
+  "Vendor risks list": "Liste des risques fournisseurs",
+  "Vendor risk insights": "Analyses des risques fournisseurs",
+  "This table includes a list of external entities that provide AI-related products, services, or components. You can create and manage all vendors here.":
+    "Ce tableau contient la liste des entités externes qui fournissent des produits, des services ou des composants liés à l'IA. Vous pouvez y créer et gérer tous les fournisseurs.",
+  "This table includes a list of risks related to a vendor. You can create and manage all vendor risks here.":
+    "Ce tableau contient la liste des risques liés à un fournisseur. Vous pouvez y créer et gérer tous les risques fournisseurs.",
+  "Risks that the research agent suggested for your vendors. Review each finding, then add it to the vendor risk register or dismiss it.":
+    "Risques que l'agent de recherche a suggérés pour vos fournisseurs. Examinez chaque résultat, puis ajoutez-le au registre des risques fournisseurs ou rejetez-le.",
+  "Heat map, blast radius, duplicates and framework coverage of vendor risks.":
+    "Carte thermique, rayon d'impact, doublons et couverture des référentiels des risques fournisseurs.",
   "Search vendors...": "Rechercher des fournisseurs...",
   "Scorecard": "Tableau de bord",
   "Security and compliance risks from vendor relationships":
@@ -429,8 +461,12 @@ export const fr: Record<string, string> = {
     "Enregistrez les fournisseurs IA externes et les services tiers. Documentez les informations sur les fournisseurs, contrats et exigences de conformité dans un emplacement centralisé.",
   "The table now shows only vendor risks with this risk level. Click the card again to see all risks.":
     "Le tableau affiche maintenant uniquement les risques fournisseur avec ce niveau de risque. Cliquez à nouveau sur la carte pour voir tous les risques.",
-  "Vendor risks by likelihood and severity. Select a cell to filter the table.":
-    "Risques fournisseurs par probabilité et gravité. Sélectionnez une cellule pour filtrer le tableau.",
+  "Vendor risks by likelihood and severity. Select a cell to see its risks in the Risks tab.":
+    "Risques fournisseurs par probabilité et gravité. Sélectionnez une cellule pour voir ses risques dans l'onglet Risques.",
+  "Risks the research agent suggested, waiting for your decision":
+    "Risques suggérés par la recherche, en attente de votre décision",
+  "Heat map, blast radius, duplicates and framework coverage of vendor risks":
+    "Carte thermique, rayon d'impact, doublons et couverture des référentiels des risques fournisseurs",
   "Blast radius": "Rayon d'impact",
   "How many project risks and use cases inherit from the risks of each vendor.":
     "Combien de risques de projet et de cas d'usage héritent des risques de chaque fournisseur.",
@@ -466,6 +502,8 @@ export const fr: Record<string, string> = {
     "Autres noms sous lesquels ce fournisseur est connu, séparés par des virgules. La recherche les prend aussi en compte.",
   "Other names must be at most 500 characters":
     "Les autres noms doivent contenir au plus 500 caractères",
+  "Other names must be at most 500 characters with a comma and a space between names":
+    "Les autres noms doivent contenir au plus 500 caractères, avec une virgule et une espace entre les noms",
   "Other names can list at most 8 names": "Vous pouvez indiquer au plus 8 autres noms",
   "Each of the other names must be between 2 and 80 characters":
     "Chacun des autres noms doit comporter entre 2 et 80 caractères",
@@ -490,8 +528,6 @@ export const fr: Record<string, string> = {
   "LEI check digits do not match": "Les chiffres de contrôle du LEI ne correspondent pas",
   "SEC CIK must be one to ten digits": "Le CIK de la SEC doit comporter de un à dix chiffres",
   // Vendor risks page layout
-  "Heat map, blast radius, duplicates and framework coverage of vendor risks.":
-    "Carte thermique, rayon d'impact, doublons et couverture des référentiels des risques fournisseurs.",
   "The table shows only the risks in the selected heat map cell.":
     "Le tableau n'affiche que les risques de la cellule sélectionnée de la carte thermique.",
   "Show all risks": "Afficher tous les risques",
@@ -502,7 +538,6 @@ export const fr: Record<string, string> = {
   "Research findings": "Résultats de recherche",
   "AI-suggested from web sources. Verify before accepting.":
     "Suggestions de l'IA issues de sources web. À vérifier avant d'accepter.",
-  "Pending: {count}": "En attente : {count}",
   "Loading research findings": "Chargement des résultats de recherche",
   "Pending research findings": "Résultats de recherche en attente",
   "Could not load research findings.": "Impossible de charger les résultats de recherche.",
@@ -576,6 +611,7 @@ export const fr: Record<string, string> = {
   "Rated before the source rules; this is the earlier confidence level until the label is recomputed.":
     "Évalué avant les règles relatives aux sources ; il s'agit du niveau de confiance antérieur, en attendant que l'évaluation soit recalculée.",
   "Earlier rating": "Évaluation antérieure",
+  "Rated with the earlier confidence rule.": "Évalué avec l'ancienne règle de confiance.",
   "High: {operator} lists it ({record}), as of {date}.":
     "Élevé : répertorié ({operator}, {record}), à la date du {date}.",
   "High: {operator} lists it ({record}).": "Élevé : répertorié ({operator}, {record}).",
@@ -715,6 +751,7 @@ export const fr: Record<string, string> = {
   "Financial health": "Santé financière",
   "risks found": "risques trouvés",
   "nothing found": "rien trouvé",
+  "risks found, left for the next run": "risques trouvés, reportés à la prochaine exécution",
   "could not be researched": "recherche impossible",
   "skipped": "ignoré",
   "unknown": "inconnu",
@@ -753,6 +790,8 @@ export const fr: Record<string, string> = {
     "Aucun risque n'a été trouvé. {searchesFailed} recherches sur {searches} n'étaient pas disponibles, et {pagesFailed} pages sur {pages} n'ont pas pu être lues.",
   "Possible risks were found but could not be verified, or are already recorded.":
     "Des risques possibles ont été trouvés, mais ils n'ont pas pu être vérifiés ou sont déjà enregistrés.",
+  "More risks were found than one run keeps.":
+    "Plus de risques ont été trouvés qu'une exécution n'en conserve.",
   "The search was not available.": "La recherche n'était pas disponible.",
   "The pages could not be read.": "Les pages n'ont pas pu être lues.",
   "1 potential risk found": "1 risque potentiel trouvé",
@@ -767,8 +806,8 @@ export const fr: Record<string, string> = {
   "The sources are about another company": "Les sources concernent une autre entreprise",
   "The sources are out of date": "Les sources sont obsolètes",
   "Up to 500 characters.": "500 caractères maximum.",
-  "Research started for {vendorName}. Findings appear on the Risks tab.":
-    "Recherche lancée pour {vendorName}. Les résultats apparaissent dans l'onglet Risques.",
+  "Research started for {vendorName}. Findings appear on the Research findings tab.":
+    "Recherche lancée pour {vendorName}. Les résultats apparaissent dans l'onglet Résultats de recherche.",
   "Research is already running for {vendorName}.":
     "Une recherche est déjà en cours pour {vendorName}.",
   "Research ran recently. Try again in {minutes} min.":
@@ -831,8 +870,20 @@ export const fr: Record<string, string> = {
 };
 
 export const es: Record<string, string> = {
+  "Preview suggested risk": "Vista previa del riesgo sugerido",
   "Add vendor risk": "Añadir riesgo de proveedor",
   "Vendor List": "Lista de proveedores",
+  "Vendor list": "Lista de proveedores",
+  "Vendor risks list": "Lista de riesgos del proveedor",
+  "Vendor risk insights": "Información sobre los riesgos del proveedor",
+  "This table includes a list of external entities that provide AI-related products, services, or components. You can create and manage all vendors here.":
+    "Esta tabla incluye una lista de entidades externas que proporcionan productos, servicios o componentes relacionados con la IA. Aquí puede crear y gestionar todos los proveedores.",
+  "This table includes a list of risks related to a vendor. You can create and manage all vendor risks here.":
+    "Esta tabla incluye una lista de riesgos relacionados con un proveedor. Aquí puede crear y gestionar todos los riesgos de proveedor.",
+  "Risks that the research agent suggested for your vendors. Review each finding, then add it to the vendor risk register or dismiss it.":
+    "Riesgos que el agente de investigación sugirió para sus proveedores. Revise cada hallazgo y luego añádalo al registro de riesgos de proveedores o descártelo.",
+  "Heat map, blast radius, duplicates and framework coverage of vendor risks.":
+    "Mapa de calor, radio de impacto, duplicados y cobertura del marco de los riesgos de proveedor.",
   "Search vendors...": "Buscar proveedores...",
   "Scorecard": "Cuadro de mando",
   "Security and compliance risks from vendor relationships":
@@ -845,8 +896,12 @@ export const es: Record<string, string> = {
     "Registre proveedores de IA externos y servicios de terceros. Documente la información de los proveedores, los contratos y los requisitos de cumplimiento en una ubicación centralizada.",
   "The table now shows only vendor risks with this risk level. Click the card again to see all risks.":
     "La tabla ahora muestra solo los riesgos de proveedor con este nivel de riesgo. Haz clic de nuevo en la tarjeta para ver todos los riesgos.",
-  "Vendor risks by likelihood and severity. Select a cell to filter the table.":
-    "Riesgos del proveedor por probabilidad y gravedad. Seleccione una celda para filtrar la tabla.",
+  "Vendor risks by likelihood and severity. Select a cell to see its risks in the Risks tab.":
+    "Riesgos del proveedor por probabilidad y gravedad. Seleccione una celda para ver sus riesgos en la pestaña Riesgos.",
+  "Risks the research agent suggested, waiting for your decision":
+    "Riesgos que sugirió la investigación, a la espera de su decisión",
+  "Heat map, blast radius, duplicates and framework coverage of vendor risks":
+    "Mapa de calor, radio de impacto, duplicados y cobertura del marco de los riesgos de proveedor",
   "Blast radius": "Radio de impacto",
   "How many project risks and use cases inherit from the risks of each vendor.":
     "Cuántos riesgos de proyecto y casos de uso heredan de los riesgos de cada proveedor.",
@@ -882,6 +937,8 @@ export const es: Record<string, string> = {
     "Otros nombres con los que se conoce a este proveedor, separados por comas. La investigación también los busca.",
   "Other names must be at most 500 characters":
     "Los otros nombres deben tener como máximo 500 caracteres",
+  "Other names must be at most 500 characters with a comma and a space between names":
+    "Los otros nombres deben tener como máximo 500 caracteres, con una coma y un espacio entre los nombres",
   "Other names can list at most 8 names": "Se pueden indicar como máximo 8 otros nombres",
   "Each of the other names must be between 2 and 80 characters":
     "Cada uno de los otros nombres debe tener entre 2 y 80 caracteres",
@@ -906,8 +963,6 @@ export const es: Record<string, string> = {
   "LEI check digits do not match": "Los dígitos de control del LEI no coinciden",
   "SEC CIK must be one to ten digits": "El CIK de la SEC debe tener entre uno y diez dígitos",
   // Vendor risks page layout
-  "Heat map, blast radius, duplicates and framework coverage of vendor risks.":
-    "Mapa de calor, radio de impacto, duplicados y cobertura del marco de los riesgos de proveedor.",
   "The table shows only the risks in the selected heat map cell.":
     "La tabla muestra solo los riesgos de la celda seleccionada del mapa de calor.",
   "Show all risks": "Mostrar todos los riesgos",
@@ -918,7 +973,6 @@ export const es: Record<string, string> = {
   "Research findings": "Hallazgos de la investigación",
   "AI-suggested from web sources. Verify before accepting.":
     "Sugerencias de la IA a partir de fuentes web. Verifique antes de aceptar.",
-  "Pending: {count}": "Pendientes: {count}",
   "Loading research findings": "Cargando los hallazgos de la investigación",
   "Pending research findings": "Hallazgos de investigación pendientes",
   "Could not load research findings.": "No se pudieron cargar los hallazgos de la investigación.",
@@ -992,6 +1046,7 @@ export const es: Record<string, string> = {
   "Rated before the source rules; this is the earlier confidence level until the label is recomputed.":
     "Evaluado antes de las reglas sobre las fuentes; es el nivel de confianza anterior hasta que se recalcule la evaluación.",
   "Earlier rating": "Evaluación anterior",
+  "Rated with the earlier confidence rule.": "Evaluado con la regla de confianza anterior.",
   "High: {operator} lists it ({record}), as of {date}.":
     "Alto: registrado ({operator}, {record}), a fecha de {date}.",
   "High: {operator} lists it ({record}).": "Alto: registrado ({operator}, {record}).",
@@ -1129,6 +1184,7 @@ export const es: Record<string, string> = {
   "Financial health": "Salud financiera",
   "risks found": "riesgos encontrados",
   "nothing found": "no se encontró nada",
+  "risks found, left for the next run": "riesgos encontrados, aplazados para la próxima ejecución",
   "could not be researched": "no se pudo investigar",
   "skipped": "omitido",
   "unknown": "desconocido",
@@ -1166,6 +1222,8 @@ export const es: Record<string, string> = {
     "No se encontraron riesgos. {searchesFailed} de {searches} búsquedas no estaban disponibles y no se pudieron leer {pagesFailed} de {pages} páginas.",
   "Possible risks were found but could not be verified, or are already recorded.":
     "Se encontraron posibles riesgos, pero no se pudieron verificar o ya están registrados.",
+  "More risks were found than one run keeps.":
+    "Se encontraron más riesgos de los que conserva una ejecución.",
   "The search was not available.": "La búsqueda no estaba disponible.",
   "The pages could not be read.": "No se pudieron leer las páginas.",
   "1 potential risk found": "1 posible riesgo encontrado",
@@ -1180,8 +1238,8 @@ export const es: Record<string, string> = {
   "The sources are about another company": "Las fuentes tratan de otra empresa",
   "The sources are out of date": "Las fuentes están desactualizadas",
   "Up to 500 characters.": "Hasta 500 caracteres.",
-  "Research started for {vendorName}. Findings appear on the Risks tab.":
-    "Investigación iniciada para {vendorName}. Los hallazgos aparecen en la pestaña Riesgos.",
+  "Research started for {vendorName}. Findings appear on the Research findings tab.":
+    "Investigación iniciada para {vendorName}. Los hallazgos aparecen en la pestaña Hallazgos de la investigación.",
   "Research is already running for {vendorName}.":
     "Ya hay una investigación en curso para {vendorName}.",
   "Research ran recently. Try again in {minutes} min.":

@@ -90,7 +90,7 @@ export default function LinkChildRiskForm({
   return (
     <InlineFormCard
       title="Link a project risk"
-      description="The project risk becomes a child of this vendor risk and is flagged for review when its level changes."
+      description="The project risk becomes a child of this vendor risk and is flagged for review when the level of this vendor risk changes."
     >
       <AutoCompleteField<Candidate>
         label="Project risk"

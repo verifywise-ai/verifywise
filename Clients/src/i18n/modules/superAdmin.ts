@@ -87,6 +87,7 @@ export const de: Record<string, string> = {
     "Einem bestehenden Benutzer organisationsübergreifende Super Admin-Berechtigungen erteilen. Seine Rollen in den Organisationen bleiben unverändert.",
   "They will keep their organization roles but lose cross-organization access.":
     "Er behält seine Organisationsrollen, verliert jedoch den organisationsübergreifenden Zugriff.",
+  "Manage users for organization #{orgId}": "Benutzer der Organisation #{orgId} verwalten",
 };
 
 export const fr: Record<string, string> = {
@@ -175,6 +176,7 @@ export const fr: Record<string, string> = {
     "Accordez à un utilisateur existant des capacités de Super Admin inter-organisations. Ses rôles dans les organisations restent inchangés.",
   "They will keep their organization roles but lose cross-organization access.":
     "Il conservera ses rôles dans les organisations mais perdra l'accès inter-organisations.",
+  "Manage users for organization #{orgId}": "Gérer les utilisateurs de l'organisation n° {orgId}",
 };
 
 export const es: Record<string, string> = {
@@ -261,4 +263,5 @@ export const es: Record<string, string> = {
     "Conceda a un usuario existente capacidades de Super Admin entre organizaciones. Sus roles en las organizaciones no cambian.",
   "They will keep their organization roles but lose cross-organization access.":
     "Mantendrá sus roles en las organizaciones pero perderá el acceso entre organizaciones.",
+  "Manage users for organization #{orgId}": "Gestionar los usuarios de la organización n.º {orgId}",
 };

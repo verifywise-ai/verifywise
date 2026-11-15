@@ -41,6 +41,7 @@ vi.mock("../../../../../application/hooks/useUsers", () => ({
 }));
 
 import VendorRiskInsights from "..";
+import HeatCellNotice from "../HeatCellNotice";
 
 /** Names the fixtures put on screen; the user's own data is never translated. */
 const FIXTURES = new Set([
@@ -62,12 +63,9 @@ const FIXTURES = new Set([
 /** Matches an element whose text includes `text`, read literally. */
 const containing = (text: string) => new RegExp(text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
 
-/** Renders the panel open on one report's tab, or closed with no tab given. */
-const renderOpen = (tab?: string) => {
-  localStorage.setItem(
-    "vendor-risk-insights",
-    JSON.stringify(tab ? { open: true, tab } : { open: false, tab: "heatMap" }),
-  );
+/** Renders the insights on one report's tab, or on the heat map with no tab given. */
+const renderOpen = (tab = "heatMap") => {
+  localStorage.setItem("vendor-risk-insights", JSON.stringify({ tab }));
   renderWithProviders(
     <VendorRiskInsights
       risks={[vendorRisk({ risk_id: 1 })]}
@@ -94,21 +92,10 @@ describe.each(LANGS)("vendor risk insights in %s", (lang) => {
     resetAudit();
   });
 
-  // Closed, so the heat map's own axis labels stay out of this audit; the tabs
-  // are audited with each report below.
-  it("translates the closed panel and its filter notice", async () => {
-    renderWithProviders(
-      <VendorRiskInsights
-        risks={[vendorRisk({ risk_id: 1 })]}
-        selectedCell={{ likelihood: 3, severity: 4 }}
-        onSelectCell={vi.fn()}
-        onOpenRisk={vi.fn()}
-      />,
-    );
+  it("translates the heat map filter notice of the Risks tab and its way back", async () => {
+    renderWithProviders(<HeatCellNotice onClear={vi.fn()} />);
 
     for (const key of [
-      "Insights",
-      "Heat map, blast radius, duplicates and framework coverage of vendor risks.",
       "The table shows only the risks in the selected heat map cell.",
       "Show all risks",
     ]) {
@@ -123,7 +110,10 @@ describe.each(LANGS)("vendor risk insights in %s", (lang) => {
 
     expect(
       await screen.findByText(
-        tr(lang, "Vendor risks by likelihood and severity. Select a cell to filter the table."),
+        tr(
+          lang,
+          "Vendor risks by likelihood and severity. Select a cell to see its risks in the Risks tab.",
+        ),
       ),
     ).toBeInTheDocument();
     expect(

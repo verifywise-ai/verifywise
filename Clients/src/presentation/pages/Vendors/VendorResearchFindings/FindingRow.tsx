@@ -186,7 +186,7 @@ export default function FindingRow({
   const { t, lang } = useTranslation();
   const [open, setOpen] = useState(false);
   const disabled = busy !== null;
-  // The buttons are all named "Preview" and "Dismiss": they are described by the risk they decide on.
+  // The buttons are all named "Preview suggested risk" and "Dismiss": they are described by the risk they decide on.
   const riskId = useId();
   const detailsId = useId();
   // A list cached before the field existed has none; an empty sentence is no sentence.
@@ -341,7 +341,7 @@ export default function FindingRow({
               onClick={() => onPreview(finding)}
               sx={controlHeightSx}
             >
-              Preview
+              Preview suggested risk
             </CustomizableButton>
           </Stack>
         )}

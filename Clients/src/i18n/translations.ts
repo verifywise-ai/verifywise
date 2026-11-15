@@ -5442,9 +5442,6 @@ export const translations: Record<string, Record<string, string>> = {
     "{count} suggested": "{count} vorgeschlagen",
     "{likelihood} likelihood, {severity} severity: {count} risks":
       "Wahrscheinlichkeit {likelihood}, Schweregrad {severity}: {count} Risiken",
-    "Filtering by heat map cell": "Gefiltert nach Heatmap-Zelle",
-    "The table now shows only vendor risks in the selected cell. Select the cell again to see all risks.":
-      "Die Tabelle zeigt jetzt nur Anbieterrisiken in der gewählten Zelle. Wählen Sie die Zelle erneut, um alle Risiken zu sehen.",
     "Vendor risk {id}": "Anbieterrisiko {id}",
     "No project risk inherits from a vendor risk yet. Open a vendor risk and link the project risks it applies to from its Linked risks tab.":
       "Noch erbt kein Projektrisiko von einem Anbieterrisiko. Öffnen Sie ein Anbieterrisiko und verknüpfen Sie auf dessen Registerkarte „Verknüpfte Risiken“ die Projektrisiken, für die es gilt.",
@@ -11061,9 +11058,6 @@ export const translations: Record<string, Record<string, string>> = {
     "{count} suggested": "{count} suggéré(s)",
     "{likelihood} likelihood, {severity} severity: {count} risks":
       "Probabilité {likelihood}, gravité {severity} : {count} risques",
-    "Filtering by heat map cell": "Filtrage par cellule de la carte thermique",
-    "The table now shows only vendor risks in the selected cell. Select the cell again to see all risks.":
-      "Le tableau n'affiche plus que les risques fournisseurs de la cellule sélectionnée. Sélectionnez à nouveau la cellule pour voir tous les risques.",
     "Vendor risk {id}": "Risque fournisseur {id}",
     "No project risk inherits from a vendor risk yet. Open a vendor risk and link the project risks it applies to from its Linked risks tab.":
       "Aucun risque de projet n'hérite encore d'un risque fournisseur. Ouvrez un risque fournisseur et liez les risques de projet auxquels il s'applique depuis son onglet « Risques liés ».",
@@ -16563,9 +16557,6 @@ export const translations: Record<string, Record<string, string>> = {
     "{count} suggested": "{count} sugeridos",
     "{likelihood} likelihood, {severity} severity: {count} risks":
       "Probabilidad {likelihood}, gravedad {severity}: {count} riesgos",
-    "Filtering by heat map cell": "Filtrando por celda del mapa de calor",
-    "The table now shows only vendor risks in the selected cell. Select the cell again to see all risks.":
-      "La tabla ahora muestra solo los riesgos del proveedor de la celda seleccionada. Seleccione la celda de nuevo para ver todos los riesgos.",
     "Vendor risk {id}": "Riesgo del proveedor {id}",
     "No project risk inherits from a vendor risk yet. Open a vendor risk and link the project risks it applies to from its Linked risks tab.":
       "Ningún riesgo de proyecto hereda todavía de un riesgo del proveedor. Abra un riesgo del proveedor y vincule los riesgos de proyecto a los que se aplica desde su pestaña «Riesgos vinculados».",

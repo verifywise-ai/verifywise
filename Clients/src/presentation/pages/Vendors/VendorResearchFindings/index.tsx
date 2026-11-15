@@ -1,26 +1,12 @@
 import { useEffect, useId, useMemo, useRef, useState } from "react";
-import {
-  Accordion,
-  AccordionDetails,
-  AccordionSummary,
-  Box,
-  Stack,
-  Typography,
-} from "@mui/material";
+import { Box, Stack, Typography } from "@mui/material";
 import { useSearchParams } from "react-router";
-import { CheckCircle2, ChevronDown, Info, Settings2, X } from "lucide-react";
-import Chip from "../../../components/Chip";
+import { CheckCircle2, Info, Settings2, X } from "lucide-react";
 import Select from "../../../components/Inputs/Select";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import AddNewRisk from "../../../components/Modals/NewRisk";
 import { textStyles } from "../../../themes/typography";
-import {
-  sectionSx,
-  summaryDescriptionSx,
-  summaryHeaderSx,
-  summaryTitleSx,
-} from "../../RiskInheritanceGraph/DismissalAnalytics/styles";
 import { alertTextSx, infoAlertSx, successAlertSx } from "../../RiskInheritanceGraph/reportStyles";
 import useTranslation from "../../../../application/hooks/useTranslation";
 import { useAuth } from "../../../../application/hooks/useAuth";
@@ -31,9 +17,10 @@ import {
   useAcceptFinding,
   useDismissFinding,
   useFollowedResearchVendor,
+  useFollowedResearchVendorWhileOpen,
   useLatestVendorResearch,
   useVendorResearchConfig,
-  useVendorRiskFindings,
+  useVendorRiskFindingPages,
 } from "../../../../application/hooks/useVendorResearch";
 import { readVendorResearchError } from "../../../../application/repository/vendorResearch.repository";
 import type { ResearchAlert } from "../../../../application/utils/vendorResearchAlerts";
@@ -69,12 +56,14 @@ import { controlHeightSx, iconControlSx } from "./styles";
 
 /** The URL parameter a notification link uses to open the section on one vendor. */
 const VENDOR_PARAM = "findingsVendorId";
-/** The most the server sends in one answer. Normally that is everything pending. */
+/** The most the server sends in one answer, and so the size of a page of the list. */
 const FINDINGS_LIMIT = 200;
 /** The value of the filter option that stands for every vendor. */
 const ALL_VENDORS = "all";
 /** The rows while the list has not been read: one array, so that what is computed from it holds. */
 const NO_ROWS: VendorRiskFinding[] = [];
+/** The line that says nothing is pending, and takes the focus when the last finding is decided. */
+const emptyTextSx = { ...textStyles.body, color: "text.secondary" };
 
 interface VendorResearchFindingsProps {
   /** The vendor's assignee is the owner a preview starts on, when that user is in the organization. */
@@ -100,10 +89,9 @@ interface VendorResearchFindingsProps {
  * saving there accepts it with what is on screen, in one request. Closing the form changes
  * nothing, and the finding stays pending.
  *
- * Collapsible like the insights beside it: open by default when something is pending, a vendor
- * came from the URL, or a run was followed from the vendors table, closed to its header
- * otherwise; the user's own toggle wins. The findings are AI-written from web sources, so the
- * header always says to verify them.
+ * It is the content of the Research findings tab of the Vendors page, which holds its title and
+ * the count of what is pending. The findings are AI-written from web sources, so the top of the
+ * tab always says to verify them.
  */
 export default function VendorResearchFindings({
   vendors,
@@ -124,9 +112,13 @@ export default function VendorResearchFindings({
   const initialVendorId = urlVendorId ?? followedVendorId;
   const [seenUrlVendorId, setSeenUrlVendorId] = useState(urlVendorId);
   const [vendorId, setVendorId] = useState(initialVendorId);
-  const [openChoice, setOpenChoice] = useState<boolean | null>(null);
-  const [openByDefault, setOpenByDefault] = useState(initialVendorId !== null);
   const [lastAcceptedRiskId, setLastAcceptedRiskId] = useState<number | null>(null);
+  // The start on the vendors table can be answered after the person has come here: the run is
+  // followed then too, as the one that was there when the section opened would have been.
+  useFollowedResearchVendorWhileOpen((followed) => {
+    setVendorId(followed);
+    setLastAcceptedRiskId(null);
+  });
   const [dismissing, setDismissing] = useState<VendorRiskFinding | null>(null);
   // The window where an Admin picks the LLM keys. It reads nothing until it is open.
   const [settingsOpen, setSettingsOpen] = useState(false);
@@ -136,8 +128,10 @@ export default function VendorResearchFindings({
   // A decision has been answered (it worked, or it was refused) and the section waits for the
   // list to show what became of the finding. `around` are the rows next to it, nearest first.
   const [answered, setAnswered] = useState<{ id: number; around: number[] } | null>(null);
-  // The rows on screen, by finding, and the heading of the section: the places focus is sent to.
+  // The rows on screen, by finding, the line that says there are none, and the note at the top of
+  // the section: the places focus is sent to, in that order.
   const rowElements = useRef(new Map<number, HTMLLIElement>());
+  const emptyElement = useRef<HTMLElement | null>(null);
   const headingElement = useRef<HTMLElement | null>(null);
   // The headings of the groups of findings are named after this, so that each list is labelled.
   const headingsId = useId();
@@ -147,13 +141,13 @@ export default function VendorResearchFindings({
     if (urlVendorId !== null) {
       setVendorId(urlVendorId);
       setLastAcceptedRiskId(null);
-      setOpenChoice(null);
-      setOpenByDefault(true);
     }
   }
 
   const config = useVendorResearchConfig();
-  const findings = useVendorRiskFindings({
+  // Read in pages of the server's cap: one vendor can have more pending findings than one answer
+  // holds, and the rest are read with "Load more".
+  const findings = useVendorRiskFindingPages({
     status: "pending",
     ...(vendorId !== null ? { vendorId } : {}),
     limit: FINDINGS_LIMIT,
@@ -172,13 +166,9 @@ export default function VendorResearchFindings({
   );
   const shown = useMemo(() => groups.flatMap((group) => group.rows), [groups]);
   const summary = useMemo(() => summarizeFindings(rows, total), [rows, total]);
-  // Once something is pending the section stays open by default, also when the user then picks
-  // a vendor that has nothing: it must not fold up under their hands.
-  if (!openByDefault && total > 0) setOpenByDefault(true);
-  const expanded = openChoice ?? openByDefault;
   // The latest run of the chosen vendor, read here once for the summary above the findings and the
-  // credits under them. Nothing of it is on screen while the section is closed, so it is not read.
-  const latest = useLatestVendorResearch(expanded ? vendorId : null);
+  // credits under them.
+  const latest = useLatestVendorResearch(vendorId);
 
   const notConfigured = config.data !== undefined && !config.data.hasLlmKey;
   // Only an Admin chooses the keys (the server refuses everyone else), and there is nothing to
@@ -360,7 +350,7 @@ export default function VendorResearchFindings({
         rowElements.current.get(rowId)?.querySelector<HTMLElement>("button:not(:disabled)"),
       )
       .find((button): button is HTMLElement => button != null);
-    (target ?? headingElement.current)?.focus();
+    (target ?? emptyElement.current ?? headingElement.current)?.focus();
   }, [answered, findings.isFetching, rows, dismissing, previewing, busy]);
 
   /**
@@ -451,7 +441,7 @@ export default function VendorResearchFindings({
       <Stack sx={{ alignItems: "center", gap: "4px", py: "24px", textAlign: "center" }}>
         {notConfigured ? (
           <>
-            <Typography sx={{ ...textStyles.body, color: "text.secondary" }}>
+            <Typography ref={emptyElement} tabIndex={-1} sx={emptyTextSx}>
               Vendor research is not set up.
             </Typography>
             {isAdmin && (
@@ -461,7 +451,7 @@ export default function VendorResearchFindings({
             )}
           </>
         ) : (
-          <Typography sx={{ ...textStyles.body, color: "text.secondary" }}>
+          <Typography ref={emptyElement} tabIndex={-1} sx={emptyTextSx}>
             No pending research findings.
           </Typography>
         )}
@@ -471,162 +461,162 @@ export default function VendorResearchFindings({
 
   return (
     <>
-      <Accordion
-        expanded={expanded}
-        onChange={(_event, open) => setOpenChoice(open)}
-        sx={sectionSx}
-      >
-        <AccordionSummary expandIcon={<ChevronDown size={18} />}>
-          <Box sx={{ ...summaryHeaderSx, alignItems: "center" }}>
-            {/* Focus goes here when the last pending finding has been decided. */}
-            <Typography ref={headingElement} tabIndex={-1} sx={summaryTitleSx}>
-              Research findings
-            </Typography>
-            {findings.data !== undefined && (
-              <Chip
-                label={fill(t("Pending: {count}"), { count: total })}
-                variant={total > 0 ? "warning" : "default"}
-                uppercase={false}
+      <Stack sx={{ gap: "16px" }}>
+        {/* Focus goes here when a decision leaves no row to take it (and nothing says the list is
+            empty). The findings are AI-written from web sources, so the tab always says to verify
+            them. */}
+        <Typography
+          ref={headingElement}
+          tabIndex={-1}
+          sx={{ ...textStyles.body, color: "text.tertiary" }}
+        >
+          AI-suggested from web sources. Verify before accepting.
+        </Typography>
+        {lastAcceptedRiskId !== null && (
+          <Box sx={successAlertSx} role="status">
+            <CheckCircle2 size={16} />
+            <Typography sx={alertTextSx}>Risk added to the register.</Typography>
+            <Stack direction="row" sx={{ ml: "auto", alignItems: "center", gap: "4px" }}>
+              <CustomizableButton
                 size="small"
-              />
-            )}
-            <Typography sx={summaryDescriptionSx}>
-              AI-suggested from web sources. Verify before accepting.
-            </Typography>
-          </Box>
-        </AccordionSummary>
-        <AccordionDetails sx={{ p: 8 }}>
-          {expanded ? (
-            <Stack sx={{ gap: "16px" }}>
-              {lastAcceptedRiskId !== null && (
-                <Box sx={successAlertSx} role="status">
-                  <CheckCircle2 size={16} />
-                  <Typography sx={alertTextSx}>Risk added to the register.</Typography>
-                  <Stack direction="row" sx={{ ml: "auto", alignItems: "center", gap: "4px" }}>
-                    <CustomizableButton
-                      size="small"
-                      variant="text"
-                      sx={controlHeightSx}
-                      onClick={() => onOpenRisk(lastAcceptedRiskId)}
-                    >
-                      Open risk
-                    </CustomizableButton>
-                    <CustomizableButton
-                      iconOnly
-                      size="small"
-                      variant="text"
-                      sx={iconControlSx}
-                      ariaLabel="Close"
-                      icon={<X size={16} />}
-                      onClick={() => setLastAcceptedRiskId(null)}
-                    />
-                  </Stack>
-                </Box>
-              )}
-
-              <Stack
-                direction="row"
-                sx={{
-                  alignItems: "flex-end",
-                  justifyContent: "space-between",
-                  gap: "12px",
-                  flexWrap: "wrap",
-                }}
+                variant="text"
+                sx={controlHeightSx}
+                onClick={() => onOpenRisk(lastAcceptedRiskId)}
               >
-                <Select
-                  id="research-findings-vendor"
-                  label="Vendor"
-                  value={vendorId ?? ALL_VENDORS}
-                  items={vendorOptions}
-                  sx={{ width: "260px" }}
-                  onChange={(event) => {
-                    const next = event.target.value;
-                    setVendorId(next === ALL_VENDORS ? null : Number(next));
-                    setLastAcceptedRiskId(null);
-                  }}
-                />
-                {canChooseKeys && (
-                  <CustomizableButton
-                    variant="outlined"
-                    startIcon={<Settings2 size={16} />}
-                    onClick={() => setSettingsOpen(true)}
-                    sx={controlHeightSx}
-                  >
-                    Research settings
-                  </CustomizableButton>
-                )}
-              </Stack>
+                Open risk
+              </CustomizableButton>
+              <CustomizableButton
+                iconOnly
+                size="small"
+                variant="text"
+                sx={iconControlSx}
+                ariaLabel="Close"
+                icon={<X size={16} />}
+                onClick={() => setLastAcceptedRiskId(null)}
+              />
+            </Stack>
+          </Box>
+        )}
 
-              {/* What is pending, in two sentences, and where the research of the chosen vendor
+        <Stack
+          direction="row"
+          sx={{
+            alignItems: "flex-end",
+            justifyContent: "space-between",
+            gap: "12px",
+            flexWrap: "wrap",
+          }}
+        >
+          <Select
+            id="research-findings-vendor"
+            label="Vendor"
+            value={vendorId ?? ALL_VENDORS}
+            items={vendorOptions}
+            sx={{ width: "260px" }}
+            onChange={(event) => {
+              const next = event.target.value;
+              setVendorId(next === ALL_VENDORS ? null : Number(next));
+              setLastAcceptedRiskId(null);
+            }}
+          />
+          {canChooseKeys && (
+            <CustomizableButton
+              variant="outlined"
+              startIcon={<Settings2 size={16} />}
+              onClick={() => setSettingsOpen(true)}
+              sx={controlHeightSx}
+            >
+              Research settings
+            </CustomizableButton>
+          )}
+        </Stack>
+
+        {/* What is pending, in two sentences, and where the research of the chosen vendor
                   stands. The run is there for a vendor with nothing pending too: it must stay
                   researchable. */}
-              {(summarized || vendorId !== null) && (
-                <Stack
-                  sx={{
-                    gap: "12px",
-                    p: "16px",
-                    border: "1px solid",
-                    borderColor: "border.dark",
-                    borderRadius: "4px",
-                    backgroundColor: "background.accent",
-                  }}
+        {(summarized || vendorId !== null) && (
+          <Stack
+            sx={{
+              gap: "12px",
+              p: "16px",
+              border: "1px solid",
+              borderColor: "border.dark",
+              borderRadius: "4px",
+              backgroundColor: "background.accent",
+            }}
+          >
+            {summarized && (
+              <Stack sx={{ gap: "4px" }}>
+                <Typography
+                  sx={{ ...textStyles.bodyLarge, fontWeight: 500, color: "text.primary" }}
                 >
-                  {summarized && (
-                    <Stack sx={{ gap: "4px" }}>
-                      <Typography
-                        sx={{ ...textStyles.bodyLarge, fontWeight: 500, color: "text.primary" }}
-                      >
-                        {pendingSentence(summary, t)}
-                      </Typography>
-                      {topics !== null && (
-                        <Typography sx={{ ...textStyles.body, color: "text.secondary" }}>
-                          {topics}
-                        </Typography>
-                      )}
-                    </Stack>
-                  )}
-                  {vendorId !== null && (
-                    <RunSummary
-                      key={vendorId}
-                      latest={latest}
-                      vendorId={vendorId}
-                      vendorName={vendorName}
-                      canStart={canEdit}
-                      notConfigured={notConfigured}
-                      onNotify={onNotify}
-                    />
-                  )}
-                </Stack>
-              )}
-
-              {!findings.isError && total > rows.length && (
-                <Box sx={{ ...infoAlertSx, mb: 0 }}>
-                  <Info size={16} />
-                  <Typography sx={alertTextSx}>
-                    {fill(
-                      t(
-                        "Showing {shown} of {total} pending findings. Choose a vendor to see the rest.",
-                      ),
-                      { shown: rows.length, total },
-                    )}
-                  </Typography>
-                </Box>
-              )}
-
-              {/* Said once for all the rows it is about, where each of them used to say it. */}
-              {legend !== null && (
-                <Typography sx={{ ...textStyles.bodySmall, color: "text.tertiary" }}>
-                  {legend}
+                  {pendingSentence(summary, t)}
                 </Typography>
+                {topics !== null && (
+                  <Typography sx={{ ...textStyles.body, color: "text.secondary" }}>
+                    {topics}
+                  </Typography>
+                )}
+              </Stack>
+            )}
+            {vendorId !== null && (
+              <RunSummary
+                key={vendorId}
+                latest={latest}
+                vendorId={vendorId}
+                vendorName={vendorName}
+                canStart={canEdit}
+                notConfigured={notConfigured}
+                onNotify={onNotify}
+              />
+            )}
+          </Stack>
+        )}
+
+        {/* With every vendor listed, the rest is reached by choosing a vendor; one vendor's
+                  list reads the rest with "Load more" under it instead. */}
+        {!findings.isError && vendorId === null && total > rows.length && (
+          <Box sx={{ ...infoAlertSx, mb: 0 }}>
+            <Info size={16} />
+            <Typography sx={alertTextSx}>
+              {fill(
+                t("Showing {shown} of {total} pending findings. Choose a vendor to see the rest."),
+                { shown: rows.length, total },
               )}
+            </Typography>
+          </Box>
+        )}
 
-              {renderFindings()}
+        {/* Said once for all the rows it is about, where each of them used to say it. */}
+        {legend !== null && (
+          <Typography sx={{ ...textStyles.bodySmall, color: "text.tertiary" }}>{legend}</Typography>
+        )}
 
-              {vendorId !== null && <ResearchCredits run={latest.data} />}
-            </Stack>
-          ) : null}
-        </AccordionDetails>
-      </Accordion>
+        {renderFindings()}
+
+        {/* The summary above says how many are pending; this reads the next page of them. */}
+        {vendorId !== null && !findings.isError && findings.hasMore && (
+          <Box>
+            <CustomizableButton
+              variant="outlined"
+              sx={controlHeightSx}
+              // Busy while any read of the list is on its way: a next page asked for during
+              // a refresh would be read from the old pages against the new list.
+              loading={findings.isFetching}
+              onClick={findings.loadMore}
+            >
+              Load more
+            </CustomizableButton>
+          </Box>
+        )}
+
+        {/* The lists the findings on screen cite are credited whatever the latest run did;
+                  the run's own lines are credited for one vendor, where the run is shown. */}
+        <ResearchCredits
+          run={vendorId !== null ? latest.data : undefined}
+          findings={findings.isError ? NO_ROWS : rows}
+        />
+      </Stack>
 
       {settingsOpen && canChooseKeys && (
         <ResearchSettingsModal onClose={() => setSettingsOpen(false)} onNotify={onNotify} />

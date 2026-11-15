@@ -92,6 +92,7 @@ vi.mock("../../../../components/Modals/NewRisk", async () => ({
 
 import * as repository from "../../../../../application/repository/vendorResearch.repository";
 import { joinAttributions } from "../../../../../application/utils/vendorResearchText";
+import { TURN_QUIET_MS } from "../../../../../application/hooks/useVendorResearch";
 import VendorResearchFindings from "..";
 
 const mocks = {
@@ -115,7 +116,10 @@ const VENDORS = [
   { id: 8, vendor_name: "Zeta Labs" },
 ];
 
-const renderSection = (route = "/vendors/risks?findingsVendorId=7", vendors = VENDORS) => {
+const renderSection = (
+  route = "/vendors/research-findings?findingsVendorId=7",
+  vendors = VENDORS,
+) => {
   const handlers = { onOpenRisk: vi.fn(), onNotify: vi.fn() };
   renderWithProviders(<VendorResearchFindings vendors={vendors} {...handlers} />, { route });
   return handlers;
@@ -141,6 +145,8 @@ const REGISTER_WORDS = {
 /** What the server says of a label that is the earlier confidence of a finding. */
 const EARLIER_LINE =
   "Rated before the source rules; this is the earlier confidence level until the label is recomputed.";
+/** What the server says of that label once the finding was accepted or dismissed. */
+const DECIDED_EARLIER_LINE = "Rated with the earlier confidence rule.";
 
 /** A cited source as the credibility rule saw it: a page of a host nobody reviewed, by default. */
 const citedSource = (overrides: Partial<CredibilitySource> = {}): CredibilitySource => ({
@@ -654,7 +660,7 @@ const START_OUTCOMES: Array<{
     arrange: () =>
       mocks.start.mockResolvedValueOnce({ run: run({ status: "queued" }), alreadyRunning: false }),
     variant: "success",
-    key: "Research started for {vendorName}. Findings appear on the Risks tab.",
+    key: "Research started for {vendorName}. Findings appear on the Research findings tab.",
     values: { vendorName: "Acme Cloud" },
   },
   {
@@ -717,7 +723,6 @@ const OUTCOMES = ["risks found", "nothing found", "could not be researched", "sk
  * test.
  */
 const registerComposedText = (lang: (typeof LANGS)[number]) => {
-  for (const count of [0, 1, 2, 3, 250]) tr(lang, "Pending: {count}", { count });
   for (const category of CATEGORIES) {
     for (const outcome of OUTCOMES) {
       tr(lang, "{category}: {outcome}", {
@@ -762,14 +767,12 @@ describe.each(LANGS)("research findings in %s", (lang) => {
       likelihood: tr(lang, likelihood),
     });
 
-  it("translates the header, the filter, the summary and a populated list", async () => {
+  it("translates the note, the filter, the summary and a populated list", async () => {
     renderSection();
 
-    expect(await screen.findByText(tr(lang, "Research findings"))).toBeInTheDocument();
     expect(
-      screen.getByText(tr(lang, "AI-suggested from web sources. Verify before accepting.")),
+      await screen.findByText(tr(lang, "AI-suggested from web sources. Verify before accepting.")),
     ).toBeInTheDocument();
-    expect(await screen.findByText(tr(lang, "Pending: {count}", { count: 2 }))).toBeInTheDocument();
     expect(screen.getByText(tr(lang, "Vendor"))).toBeInTheDocument();
     expect(
       await screen.findByRole("list", { name: tr(lang, "Pending research findings") }),
@@ -802,7 +805,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
       "High Risk",
       "Credibility",
       "Medium",
-      "Preview",
+      "Preview suggested risk",
       "Dismiss",
       "Why it matters to you",
       "What to do",
@@ -827,7 +830,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
       { id: 7, vendor_name: "Other" },
       { id: 8, vendor_name: "High" },
     ];
-    renderSection("/vendors/risks?findingsVendorId=7", vendors);
+    renderSection("/vendors/research-findings?findingsVendorId=7", vendors);
 
     const filter = await screen.findByRole("combobox");
     expect(filter).toHaveTextContent(/^Other$/);
@@ -1070,7 +1073,6 @@ describe.each(LANGS)("research findings in %s", (lang) => {
   });
 
   it("translates the line of every credibility rule", async () => {
-    tr(lang, "Pending: {count}", { count: RATIONALES.length });
     mocks.list.mockResolvedValue({
       rows: RATIONALES.map((entry, index) =>
         finding({
@@ -1101,7 +1103,13 @@ describe.each(LANGS)("research findings in %s", (lang) => {
   it("translates the note of a label the backfill wrote, and the line and the legend of an earlier estimate", async () => {
     mocks.list.mockResolvedValue({
       rows: [
-        finding({ credibility: "medium", credibility_basis: { rule: "legacy_confidence" } }),
+        // It carries the line the server writes for such a label once its finding was decided,
+        // so that the screen could show it: it must word the row itself instead.
+        finding({
+          credibility: "medium",
+          credibility_basis: { rule: "legacy_confidence" },
+          credibility_rationale: DECIDED_EARLIER_LINE,
+        }),
         secondFinding({
           credibility: "low",
           credibility_basis: {
@@ -1140,6 +1148,8 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     expect(legacy.queryByText(tr(lang, "Confidence"))).not.toBeInTheDocument();
     // The screen words the line itself: the server's line is not shown in any language.
     expect(screen.queryByText(tr(lang, EARLIER_LINE))).not.toBeInTheDocument();
+    expect(screen.queryByText(tr(lang, DECIDED_EARLIER_LINE))).not.toBeInTheDocument();
+    expect(screen.queryByText(DECIDED_EARLIER_LINE)).not.toBeInTheDocument();
     // An open row says that its label was rated again; only the earlier estimate has the asterisk.
     const backfilled = within(await openRow(secondFinding().risk_description));
     const sentence = tr(lang, "Low: only the vendor's own claims support it.");
@@ -2079,18 +2089,25 @@ describe.each(LANGS)("research findings in %s", (lang) => {
 
   it("translates the run that is still going after polling stopped", async () => {
     vi.useFakeTimers();
-    mocks.latest.mockResolvedValue(run({ status: "running" }));
+    // A run in its research loop, given up on after TURN_QUIET_MS without a move.
+    mocks.latest.mockResolvedValue(run({ status: "running", progress: progress() }));
     renderSection();
 
     await act(async () => {
       await vi.advanceTimersByTimeAsync(10);
     });
     await act(async () => {
-      await vi.advanceTimersByTimeAsync(120_000);
+      await vi.advanceTimersByTimeAsync(TURN_QUIET_MS);
     });
 
     expect(screen.getByText(tr(lang, "Still running. Check back later."))).toBeInTheDocument();
     expect(screen.getByRole("button", { name: tr(lang, "Check again") })).toBeInTheDocument();
+    // What the run said it was doing while it was followed, in the person's language (the lines
+    // go once polling stops; the audit keeps every text it saw).
+    tr(lang, "Reading a page: {category}", { category: tr(lang, "Certifications") });
+    const covered = [tr(lang, "Security incidents"), tr(lang, "Certifications")].join(", ");
+    tr(lang, "Researched so far: {categories}", { categories: covered });
+    tr(lang, "Searches: {searches}, pages read: {pages}", { searches: 2, pages: 1 });
     expectNoUntranslatedText(lang, FIXTURES);
   });
 
@@ -2164,7 +2181,8 @@ describe.each(LANGS)("research findings in %s", (lang) => {
 
   it("translates the notice that more findings are pending than shown", async () => {
     mocks.list.mockResolvedValue({ rows: [finding(), secondFinding()], total: 250 });
-    renderSection();
+    // With every vendor listed: one vendor's list reads the rest with "Load more" instead.
+    renderSection("/vendors/research-findings");
 
     expect(
       await screen.findByText(
@@ -2174,6 +2192,15 @@ describe.each(LANGS)("research findings in %s", (lang) => {
         }),
       ),
     ).toBeInTheDocument();
+
+    expectNoUntranslatedText(lang, FIXTURES);
+  });
+
+  it("translates the button that reads more of one vendor's pending findings", async () => {
+    mocks.list.mockResolvedValue({ rows: [finding(), secondFinding()], total: 250 });
+    renderSection();
+
+    expect(await screen.findByRole("button", { name: tr(lang, "Load more") })).toBeInTheDocument();
 
     expectNoUntranslatedText(lang, FIXTURES);
   });
@@ -2197,7 +2224,9 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     renderSection();
     const row = (await screen.findByText(finding().risk_description)).closest("li") as HTMLElement;
 
-    await userEvent.click(within(row).getByRole("button", { name: tr(lang, "Preview") }));
+    await userEvent.click(
+      within(row).getByRole("button", { name: tr(lang, "Preview suggested risk") }),
+    );
 
     const dialog = await screen.findByRole("dialog", { name: tr(lang, "Review suggested risk") });
     expect(
@@ -2225,7 +2254,9 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     });
     const { onNotify } = renderSection();
     const row = (await screen.findByText(finding().risk_description)).closest("li") as HTMLElement;
-    await userEvent.click(within(row).getByRole("button", { name: tr(lang, "Preview") }));
+    await userEvent.click(
+      within(row).getByRole("button", { name: tr(lang, "Preview suggested risk") }),
+    );
     const dialog = await screen.findByRole("dialog", { name: tr(lang, "Review suggested risk") });
 
     await userEvent.click(within(dialog).getByRole("button", { name: tr(lang, "Save") }));
@@ -2248,7 +2279,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     });
     const onNotify = vi.fn();
     renderWithProviders(<SectionWithAlert onNotify={onNotify} />, {
-      route: "/vendors/risks?findingsVendorId=7",
+      route: "/vendors/research-findings?findingsVendorId=7",
     });
     const row = (await screen.findByText(finding().risk_description)).closest("li") as HTMLElement;
     await userEvent.click(within(row).getByRole("button", { name: tr(lang, "Dismiss") }));
@@ -2270,10 +2301,12 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     mocks.accept.mockRejectedValueOnce(refusal(404, "Finding not found"));
     const onNotify = vi.fn();
     renderWithProviders(<SectionWithAlert onNotify={onNotify} />, {
-      route: "/vendors/risks?findingsVendorId=7",
+      route: "/vendors/research-findings?findingsVendorId=7",
     });
     const row = (await screen.findByText(finding().risk_description)).closest("li") as HTMLElement;
-    await userEvent.click(within(row).getByRole("button", { name: tr(lang, "Preview") }));
+    await userEvent.click(
+      within(row).getByRole("button", { name: tr(lang, "Preview suggested risk") }),
+    );
     const dialog = await screen.findByRole("dialog", { name: tr(lang, "Review suggested risk") });
 
     await userEvent.click(within(dialog).getByRole("button", { name: tr(lang, "Save") }));
@@ -2421,7 +2454,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
   it("translates the message after the research settings were saved", async () => {
     const onNotify = vi.fn();
     renderWithProviders(<SectionWithAlert onNotify={onNotify} />, {
-      route: "/vendors/risks?findingsVendorId=7",
+      route: "/vendors/research-findings?findingsVendorId=7",
     });
     const dialog = await openSettings();
     await within(dialog).findAllByRole("combobox");
@@ -2440,7 +2473,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
     mocks.saveSettings.mockRejectedValueOnce(refusal(404));
     const onNotify = vi.fn();
     renderWithProviders(<SectionWithAlert onNotify={onNotify} />, {
-      route: "/vendors/risks?findingsVendorId=7",
+      route: "/vendors/research-findings?findingsVendorId=7",
     });
     const dialog = await openSettings();
     await within(dialog).findAllByRole("combobox");
@@ -2459,7 +2492,7 @@ describe.each(LANGS)("research findings in %s", (lang) => {
       arrange();
       const onNotify = vi.fn();
       renderWithProviders(<SectionWithAlert onNotify={onNotify} />, {
-        route: "/vendors/risks?findingsVendorId=7",
+        route: "/vendors/research-findings?findingsVendorId=7",
       });
 
       await userEvent.click(

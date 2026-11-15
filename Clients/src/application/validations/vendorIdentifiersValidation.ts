@@ -6,6 +6,8 @@
  * stores it; an empty field is no value, null, which clears the identifier.
  */
 
+import { withoutControlCharacters } from "./otherNamesValidation";
+
 export interface IdentifierCheck {
   accepted: boolean;
   message: string;
@@ -65,9 +67,12 @@ export function checkCountry(text: string): IdentifierCheck {
     : refused("Country must be a two-letter ISO 3166-1 code, such as DE");
 }
 
-/** The company registration number: at most 64 characters, its white space made single. */
+/**
+ * The company registration number: at most 64 characters, its white space made single and without
+ * the control characters the server drops.
+ */
 export function checkRegistrationNumber(text: string): IdentifierCheck {
-  const number = text.trim().replace(/\s+/g, " ");
+  const number = withoutControlCharacters(text).replace(/\s+/g, " ").trim();
   if (number === "") return accepted(null);
   return number.length > MAX_REGISTRATION_NUMBER_CHARS
     ? refused(`Registration number must be at most ${MAX_REGISTRATION_NUMBER_CHARS} characters`)

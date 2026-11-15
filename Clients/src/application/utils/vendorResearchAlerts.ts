@@ -36,9 +36,12 @@ export function alertForStarted(
   }
   return {
     variant: "success",
-    body: fill(t("Research started for {vendorName}. Findings appear on the Risks tab."), {
-      vendorName,
-    }),
+    body: fill(
+      t("Research started for {vendorName}. Findings appear on the Research findings tab."),
+      {
+        vendorName,
+      },
+    ),
   };
 }
 

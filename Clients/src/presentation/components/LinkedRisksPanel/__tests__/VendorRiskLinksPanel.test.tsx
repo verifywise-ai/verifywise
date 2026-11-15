@@ -287,6 +287,13 @@ describe("VendorRiskLinksPanel link form", () => {
 
     // The toolbar button has the same label as the card's title.
     expect(screen.getAllByText("Link a project risk")).toHaveLength(2);
+    // The flag follows the level of this vendor risk, the parent, not that of the project risk:
+    // the card names it, so that "its" cannot be read as the child's own level.
+    expect(
+      screen.getByText(
+        "The project risk becomes a child of this vendor risk and is flagged for review when the level of this vendor risk changes.",
+      ),
+    ).toBeInTheDocument();
     const labels = screen.getAllByRole("button").map((button) => button.textContent);
     expect(labels.indexOf("Cancel")).toBeGreaterThan(-1);
     expect(labels.indexOf("Cancel")).toBeLessThan(labels.indexOf("Link"));

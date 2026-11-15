@@ -18,7 +18,12 @@ export type ResearchCategory =
 export type ResearchRunStatus = "queued" | "running" | "completed" | "failed";
 /** Who started a run: the system after a vendor was created, a person, or the scheduled scan. */
 export type ResearchTrigger = "auto" | "manual" | "scheduled";
-export type CategoryOutcome = "findings" | "nothing_found" | "search_failed" | "skipped";
+/**
+ * `over_cap`: risks of the category held up and the cap of one run cut them all; the next run is
+ * to raise them. A run stored before this outcome existed kept such a category as `nothing_found`.
+ */
+export type CategoryOutcome =
+  "findings" | "nothing_found" | "over_cap" | "search_failed" | "skipped";
 
 /** What happened to one category in a run. */
 export interface CategorySummaryEntry {

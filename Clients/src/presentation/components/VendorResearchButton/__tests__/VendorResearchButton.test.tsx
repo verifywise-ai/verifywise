@@ -145,7 +145,7 @@ describe("when research is not set up", () => {
   });
 });
 
-// The findings section on the Risks tab takes a failed request as "set up" as well. A button that
+// The Research findings tab takes a failed request as "set up" as well. A button that
 // stayed disabled, with nothing to say why, until the page is opened again would be worse than a
 // start that the server can still refuse: it answers 409, and the message says "not set up".
 describe("when the settings cannot be loaded", () => {
@@ -227,7 +227,7 @@ describe("when the settings cannot be loaded", () => {
     expect(mocks.start).toHaveBeenCalledWith(7);
     expect(onNotify).toHaveBeenCalledWith({
       variant: "success",
-      body: "Research started for Acme Cloud. Findings appear on the Risks tab.",
+      body: "Research started for Acme Cloud. Findings appear on the Research findings tab.",
     });
     await waitFor(() => expect(researchButton()).toBeEnabled());
   });
@@ -260,7 +260,7 @@ describe("starting the research", () => {
     expect(mocks.start).toHaveBeenCalledWith(7);
     expect(onNotify).toHaveBeenCalledWith({
       variant: "success",
-      body: "Research started for Acme Cloud. Findings appear on the Risks tab.",
+      body: "Research started for Acme Cloud. Findings appear on the Research findings tab.",
     });
     await waitFor(() => expect(researchButton()).toBeEnabled());
   });
@@ -343,9 +343,9 @@ describe("starting the research", () => {
     expect(mocks.start).toHaveBeenCalledTimes(1);
   });
 
-  // The Risks tab cannot see a run that was started here, so a started run is left for it to
-  // follow. The hint is one entry of the query cache (VENDOR_RESEARCH_FOLLOW_KEY).
-  describe("leaving the run for the Risks tab to follow", () => {
+  // The Research findings tab cannot see a run that was started here, so a started run is left
+  // for it to follow. The hint is one entry of the query cache (VENDOR_RESEARCH_FOLLOW_KEY).
+  describe("leaving the run for the Research findings tab to follow", () => {
     const hint = (queryClient: { getQueryData: (key: readonly string[]) => unknown }) =>
       queryClient.getQueryData(VENDOR_RESEARCH_FOLLOW_KEY);
 
@@ -403,6 +403,27 @@ describe("starting the research", () => {
 
       await waitFor(() => expect(onNotify).toHaveBeenCalledTimes(1));
       expect(hint(queryClient)).toBeUndefined();
+    });
+
+    // The click on the vendors table is answered some time later, and the person may have left the
+    // table for another tab by then. The button is gone, and the start still leaves its vendor and
+    // tells the page.
+    it("leaves the vendor and tells the page when the button is gone before the answer comes", async () => {
+      const request = deferred<StartResult>();
+      mocks.start.mockReturnValue(request.promise);
+      const { onNotify, queryClient, unmount } = await renderWithSettings(SET_UP);
+
+      await userEvent.click(researchButton());
+      await waitFor(() => expect(mocks.start).toHaveBeenCalledWith(7));
+      unmount();
+      expect(hint(queryClient)).toBeUndefined();
+
+      await act(async () =>
+        request.resolve({ run: run({ status: "queued" }), alreadyRunning: false }),
+      );
+
+      await waitFor(() => expect(hint(queryClient)).toBe(7));
+      expect(onNotify).toHaveBeenCalledTimes(1);
     });
 
     it("leaves nothing while the request is still on its way", async () => {

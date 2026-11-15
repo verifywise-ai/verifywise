@@ -46,6 +46,8 @@ export const de: Record<string, string> = {
   "Get notified when assessments change": "Benachrichtigung bei Änderungen der Bewertungen",
   "Tracked apps are included in the weekly change digest, so configured recipients hear about score, grade, or policy changes.":
     "Verfolgte Apps sind in der wöchentlichen Änderungsübersicht enthalten, sodass konfigurierte Empfänger über Änderungen an Punktzahl, Note oder Richtlinie informiert werden.",
+  "Choose who receives a notification when a tracked app's assessment changes materially. If no recipients are set, no digest is sent.":
+    "Wählen Sie, wer eine Benachrichtigung erhält, wenn sich die Bewertung einer verfolgten App wesentlich ändert. Wenn keine Empfänger festgelegt sind, wird keine Zusammenfassung versendet.",
 };
 
 export const fr: Record<string, string> = {
@@ -92,6 +94,8 @@ export const fr: Record<string, string> = {
   "Get notified when assessments change": "Être averti lorsque les évaluations changent",
   "Tracked apps are included in the weekly change digest, so configured recipients hear about score, grade, or policy changes.":
     "Les applications suivies sont incluses dans le récapitulatif hebdomadaire des modifications, afin que les destinataires configurés soient informés des changements de score, de note ou de politique.",
+  "Choose who receives a notification when a tracked app's assessment changes materially. If no recipients are set, no digest is sent.":
+    "Choisissez qui reçoit une notification lorsque l'évaluation d'une application suivie change de manière importante. Si aucun destinataire n'est défini, aucun résumé n'est envoyé.",
 };
 
 export const es: Record<string, string> = {
@@ -139,4 +143,6 @@ export const es: Record<string, string> = {
   "Get notified when assessments change": "Reciba avisos cuando cambien las evaluaciones",
   "Tracked apps are included in the weekly change digest, so configured recipients hear about score, grade, or policy changes.":
     "Las aplicaciones seguidas se incluyen en el resumen semanal de cambios, de modo que los destinatarios configurados se enteran de los cambios de puntuación, calificación o política.",
+  "Choose who receives a notification when a tracked app's assessment changes materially. If no recipients are set, no digest is sent.":
+    "Elija quién recibe una notificación cuando la evaluación de una aplicación seguida cambia de forma importante. Si no se define ningún destinatario, no se envía ningún resumen.",
 };

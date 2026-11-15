@@ -30,6 +30,8 @@ import palette from "../../../themes/palette";
 import { sectionTitleSx, useCardSx, ProviderIcon } from "../shared";
 import CustomizableSkeleton from "../../../components/Skeletons";
 import { EmptyState } from "../../../components/EmptyState";
+import useTranslation from "../../../../application/hooks/useTranslation";
+import { fill } from "../../../../i18n/fill";
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -98,6 +100,7 @@ const formatCost = (n: number) => {
 export default function ModelsPage() {
   const cardSx = useCardSx();
   const navigate = useNavigate();
+  const { t } = useTranslation();
   const { tab: urlTab } = useParams<{ tab: string }>();
   const VALID_TABS = TABS.map((t) => t.value);
   const activeTab = urlTab && VALID_TABS.includes(urlTab) ? urlTab : "catalog";
@@ -271,7 +274,10 @@ export default function ModelsPage() {
   return (
     <PageHeaderExtended
       title="Models"
-      description={`Browse ${cleanModels.length.toLocaleString()} LLM models across ${providers.length - 1} providers.`}
+      description={fill(t("Browse {models} LLM models across {providers} providers."), {
+        models: cleanModels.length.toLocaleString(),
+        providers: providers.length - 1,
+      })}
       tipBoxEntity="ai-gateway-models"
       helpArticlePath="ai-gateway/models"
     >

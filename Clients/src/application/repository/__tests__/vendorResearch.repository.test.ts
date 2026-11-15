@@ -199,6 +199,49 @@ describe("listVendorRiskFindings", () => {
 
     await expect(listVendorRiskFindings({ status: "pending" })).resolves.toEqual(page);
   });
+
+  describe("the global error toast", () => {
+    it("is left on when no option is given: the call is the url alone, as it was", async () => {
+      mockGet.mockResolvedValue(success({ rows: [], total: 0 }));
+
+      await listVendorRiskFindings({ status: "pending" });
+
+      expect(mockGet.mock.calls[0]).toEqual(["/v1/vendor-risk-findings?status=pending"]);
+    });
+
+    it("is left on when the option is false or empty", async () => {
+      mockGet.mockResolvedValue(success({ rows: [], total: 0 }));
+
+      await listVendorRiskFindings({ status: "pending" }, {});
+      await listVendorRiskFindings({ status: "pending" }, { suppressGlobalErrorToast: false });
+
+      expect(mockGet.mock.calls).toEqual([
+        ["/v1/vendor-risk-findings?status=pending"],
+        ["/v1/vendor-risk-findings?status=pending"],
+      ]);
+    });
+
+    it("is turned off for a caller that asks, with the same url", async () => {
+      mockGet.mockResolvedValue(success({ rows: [], total: 5 }));
+
+      await expect(
+        listVendorRiskFindings({ status: "pending", limit: 1 }, { suppressGlobalErrorToast: true }),
+      ).resolves.toEqual({ rows: [], total: 5 });
+
+      expect(mockGet).toHaveBeenCalledTimes(1);
+      expect(mockGet).toHaveBeenCalledWith("/v1/vendor-risk-findings?status=pending&limit=1", {
+        suppressGlobalErrorToast: true,
+      });
+    });
+
+    it("still rethrows an APIError with the server's message when the toast is off", async () => {
+      mockGet.mockRejectedValue(serverRefusal(500, "Boom", { message: "Boom", data: "Boom" }));
+
+      await expect(
+        listVendorRiskFindings({ status: "pending", limit: 1 }, { suppressGlobalErrorToast: true }),
+      ).rejects.toBeInstanceOf(APIError);
+    });
+  });
 });
 
 describe("startVendorResearch", () => {

@@ -20,7 +20,13 @@ vi.mock(
 
 // The organization's keys come from the LLM keys hook, newest first, as the server lists them.
 const llmKeys = vi.hoisted(() => ({
-  current: { keys: [] as unknown[], loading: false },
+  current: { keys: [] as unknown[], loading: false } as {
+    keys: unknown[];
+    loading: boolean;
+    isError?: boolean;
+    isFetching?: boolean;
+    refetch?: () => Promise<unknown>;
+  },
 }));
 vi.mock("../../../../../application/hooks/useLLMKeys", () => ({
   useLLMKeys: () => llmKeys.current,
@@ -289,6 +295,64 @@ describe("while it loads", () => {
     await within(dialog).findAllByRole("combobox");
     expect(within(dialog).queryByRole("alert")).not.toBeInTheDocument();
     expect(mocks.settings).toHaveBeenCalledTimes(2);
+  });
+});
+
+// The keys are read by another request than the settings. When that one fails, the window must
+// not show the saved keys as the default, or saving would write the default over them.
+describe("when the keys cannot be read", () => {
+  const SAVED = { researchKeyId: 20, analysisKeyId: 10, scanIntervalDays: null };
+
+  it.each([
+    ["with no list", [] as LLMKeysModel[]],
+    ["with a list from before", KEYS],
+  ])("says the settings could not be loaded and saves nothing (%s)", async (_name, cached) => {
+    mocks.settings.mockResolvedValue(SAVED);
+    llmKeys.current = { keys: cached, loading: false, isError: true, refetch: vi.fn() };
+    renderModal();
+    const dialog = await screen.findByRole("dialog", { name: "Research settings" });
+
+    const alert = await within(dialog).findByRole("alert");
+    expect(alert).toHaveTextContent("Could not load the research settings.");
+    expect(within(dialog).queryByRole("combobox")).not.toBeInTheDocument();
+    const save = within(dialog).getByRole("button", { name: "Save" });
+    expect(save).toBeDisabled();
+    await userEvent.click(save);
+    expect(mocks.save).not.toHaveBeenCalled();
+  });
+
+  it("reads the keys again on Retry, and then shows the saved keys", async () => {
+    mocks.settings.mockResolvedValue(SAVED);
+    const refetch = vi.fn(async () => {
+      llmKeys.current = { keys: KEYS, loading: false };
+      return {};
+    });
+    llmKeys.current = { keys: [], loading: false, isError: true, refetch };
+    const view = renderWithProviders(
+      <ResearchSettingsModal onClose={vi.fn()} onNotify={vi.fn()} />,
+    );
+    const dialog = await screen.findByRole("dialog", { name: "Research settings" });
+
+    await userEvent.click(await within(dialog).findByRole("button", { name: "Retry" }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+    // The settings were read: only the keys are asked for again.
+    expect(mocks.settings).toHaveBeenCalledTimes(1);
+
+    view.rerender(<ResearchSettingsModal onClose={vi.fn()} onNotify={vi.fn()} />);
+    const { research, analysis } = selectsOf(await openWindow());
+    expect(research).toHaveTextContent(DEEP);
+    expect(analysis).toHaveTextContent(FAST);
+  });
+
+  it("shows the skeleton while the keys are read again", async () => {
+    llmKeys.current = { keys: [], loading: false, isError: true, isFetching: true };
+    renderModal();
+    const dialog = await screen.findByRole("dialog", { name: "Research settings" });
+
+    expect(
+      await within(dialog).findByRole("status", { name: "Loading research settings" }),
+    ).toBeVisible();
+    expect(within(dialog).getByRole("button", { name: "Save" })).toBeDisabled();
   });
 });
 

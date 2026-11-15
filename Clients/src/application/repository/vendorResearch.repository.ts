@@ -69,12 +69,17 @@ export async function saveVendorResearchSettings(
   }
 }
 
-export async function listVendorRiskFindings(params: {
-  status?: FindingStatus;
-  vendorId?: number;
-  limit?: number;
-  offset?: number;
-}): Promise<{ rows: VendorRiskFinding[]; total: number }> {
+export async function listVendorRiskFindings(
+  params: {
+    status?: FindingStatus;
+    vendorId?: number;
+    limit?: number;
+    offset?: number;
+  },
+  // A caller that shows the failure itself (a count beside a tab label has no room for it) turns
+  // the global toast off.
+  options: { suppressGlobalErrorToast?: boolean } = {},
+): Promise<{ rows: VendorRiskFinding[]; total: number }> {
   // A parameter is sent when it is set, so `offset: 0` is sent too.
   const query = new URLSearchParams();
   if (params.status !== undefined) query.set("status", params.status);
@@ -83,11 +88,13 @@ export async function listVendorRiskFindings(params: {
   if (params.offset !== undefined) query.set("offset", String(params.offset));
   const queryString = query.toString();
 
+  const url = `/v1/vendor-risk-findings${queryString ? `?${queryString}` : ""}`;
+  type Answer = { message: string; data: { rows: VendorRiskFinding[]; total: number } };
+
   try {
-    const response = await apiServices.get<{
-      message: string;
-      data: { rows: VendorRiskFinding[]; total: number };
-    }>(`/v1/vendor-risk-findings${queryString ? `?${queryString}` : ""}`);
+    const response = options.suppressGlobalErrorToast
+      ? await apiServices.get<Answer>(url, { suppressGlobalErrorToast: true })
+      : await apiServices.get<Answer>(url);
     return extractData<{ rows: VendorRiskFinding[]; total: number }>(response);
   } catch (error) {
     throw toAPIError(error, "Failed to fetch the research findings");

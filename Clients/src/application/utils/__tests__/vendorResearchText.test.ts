@@ -113,6 +113,19 @@ const FIXED_NOTES: Array<[outcome: CategoryOutcome, stored: string, sentence: st
     "Possible risks were found but could not be verified or are already recorded",
     "Possible risks were found but could not be verified, or are already recorded.",
   ],
+  // The server's NOTES.overCap (Servers/services/vendorResearch/summary.ts), on its own outcome.
+  [
+    "over_cap",
+    "More risks were found than one run keeps",
+    "More risks were found than one run keeps.",
+  ],
+  // The same note on `nothing_found`: how a run stored before the cap had an outcome of its own
+  // kept a capped category. The sentence stays; the line says nothing was found.
+  [
+    "nothing_found",
+    "More risks were found than one run keeps",
+    "More risks were found than one run keeps.",
+  ],
   ["findings", "1 potential risk found", "1 potential risk found"],
   ["findings", "3 potential risks found", "3 potential risks found"],
   ["search_failed", "The search was not available", "The search was not available."],
@@ -129,7 +142,13 @@ const RETIRED_NOTES: Array<[outcome: CategoryOutcome, stored: string]> = [
   ["search_failed", "The search failed"],
 ];
 
-const ALL_OUTCOMES: CategoryOutcome[] = ["findings", "nothing_found", "search_failed", "skipped"];
+const ALL_OUTCOMES: CategoryOutcome[] = [
+  "findings",
+  "nothing_found",
+  "over_cap",
+  "search_failed",
+  "skipped",
+];
 
 const entry = (
   outcome: CategoryOutcome,
@@ -319,7 +338,17 @@ describe("describeCategoryNote", () => {
   it.each(FIXED_NOTES)(
     "takes the %s note %j as a fixed sentence for that outcome only",
     (outcome, stored) => {
-      for (const other of ALL_OUTCOMES.filter((candidate) => candidate !== outcome)) {
+      // The outcomes that the table itself gives this phrase (the cap's note has two) are left out.
+      const others = ALL_OUTCOMES.filter(
+        (candidate) =>
+          candidate !== outcome &&
+          !FIXED_NOTES.some(([owner, phrase]) => owner === candidate && phrase === stored),
+      );
+      // Only the cap's note has a second owner: `nothing_found`, for runs stored before `over_cap`.
+      expect(ALL_OUTCOMES.length - others.length).toBe(
+        stored === "More risks were found than one run keeps" ? 2 : 1,
+      );
+      for (const other of others) {
         // Never a sentence of ours; the model's own where nothing was found, hidden elsewhere.
         expect(describeCategoryNote(entry(other, stored))).toEqual(
           other === "nothing_found"
@@ -373,7 +402,7 @@ describe("describeCategoryNote", () => {
 });
 
 describe("labels and the per-category line", () => {
-  it("builds the line from the category and the outcome, never from the note", () => {
+  it("builds the line from the category and the outcome, never from a note the model wrote", () => {
     expect(describeCategoryLine(entry("nothing_found", "Anything the model wrote"))).toBe(
       "Security incidents: nothing found",
     );
@@ -421,6 +450,79 @@ describe("labels and the per-category line", () => {
     expect(outcomeLabel("mystery" as never)).toBe("unknown");
     expect(dismissReasonLabel("mystery" as never)).toBe("Other");
     expect(describeCategoryLine(null as never)).toBe("Other: unknown");
+  });
+
+  // The server's NOTES.overCap: the risks of the category held up, and the cap of the run cut them,
+  // to be raised by the next run. The server gives that category the outcome `over_cap`, and the
+  // line is read from the outcome alone (RV6C-1): on `nothing_found` the note may be the model's.
+  describe("a category whose risks the cap of the run cut", () => {
+    const OVER_CAP = "More risks were found than one run keeps";
+
+    it("says the risks were found and left for the next run, from the outcome", () => {
+      expect(describeCategoryLine(entry("over_cap", OVER_CAP, "ai_specific"))).toBe(
+        "AI-specific risks: risks found, left for the next run",
+      );
+      expect(describeCategoryLine({ category: "availability", outcome: "over_cap" })).toBe(
+        "Availability: risks found, left for the next run",
+      );
+      expect(outcomeLabel("over_cap")).toBe("risks found, left for the next run");
+    });
+
+    it("keeps the sentence of the note under that line", () => {
+      expect(describeCategoryNote(entry("over_cap", OVER_CAP))).toEqual({
+        kind: "fixed",
+        text: "More risks were found than one run keeps.",
+      });
+    });
+
+    it("shows no other note under that line, whatever it says", () => {
+      for (const other of [
+        "No risks found in the sources reviewed",
+        "1 potential risk found",
+        "A note the model wrote",
+        `${OVER_CAP}.`,
+      ]) {
+        expect(describeCategoryNote(entry("over_cap", other))).toBeNull();
+      }
+    });
+
+    // RV6C-1: the model can write the very words of the cap's note for a category in which nothing
+    // was found, and a run stored before the cap had an outcome of its own kept a capped category
+    // the same way. Neither turns the line into a claim that risks were found.
+    it("never reads the line from the note: the cap's words on nothing_found say nothing was found", () => {
+      for (const note of [OVER_CAP, `  ${OVER_CAP}  `, `${OVER_CAP}.`, OVER_CAP.toLowerCase()]) {
+        expect(describeCategoryLine(entry("nothing_found", note))).toBe(
+          "Security incidents: nothing found",
+        );
+      }
+      expect(describeCategoryLine(entry("findings", OVER_CAP))).toBe(
+        "Security incidents: risks found",
+      );
+      expect(describeCategoryLine(entry("skipped", OVER_CAP))).toBe("Security incidents: skipped");
+      expect(describeCategoryLine(entry("search_failed", OVER_CAP))).toBe(
+        "Security incidents: could not be researched",
+      );
+    });
+
+    it("still shows the cap's sentence under the line of a run stored the old way", () => {
+      expect(describeCategoryNote(entry("nothing_found", OVER_CAP))).toEqual({
+        kind: "fixed",
+        text: "More risks were found than one run keeps.",
+      });
+    });
+
+    it("still reads a stored entry without a note, or with an odd one", () => {
+      expect(describeCategoryLine({ category: "availability", outcome: "nothing_found" })).toBe(
+        "Availability: nothing found",
+      );
+      expect(
+        describeCategoryLine({
+          category: "availability",
+          outcome: "nothing_found",
+          note: 7 as never,
+        }),
+      ).toBe("Availability: nothing found");
+    });
   });
 });
 
@@ -1208,6 +1310,9 @@ const NAME_ONLY_NOTE = "Matched by name only: this may be another company.";
 const LEGACY_SENTENCE =
   "Rated before the source rules; this is the earlier confidence level until the label is recomputed.";
 
+/** The line the server gives an accepted or dismissed finding rated by it (services/vendorResearch/credibilityText.ts). */
+const DECIDED_LEGACY_SENTENCE = "Rated with the earlier confidence rule.";
+
 describe("credibilityRationale", () => {
   it.each(RULE_SENTENCES)("words %s as the server's line does", (_name, basis, sentence) => {
     expect(credibilityRationale(basis, english, "en")).toEqual({ sentence, stale: null });
@@ -1697,6 +1802,38 @@ describe("the labels the backfill wrote (M3)", () => {
     });
   });
 
+  it("a pending finding's label carried over from the confidence is the earlier rating until it is recomputed", () => {
+    expect(credibilityRationale({ rule: "legacy_confidence" }, english, "en", "pending")).toEqual({
+      sentence: LEGACY_SENTENCE,
+      stale: null,
+    });
+  });
+
+  it.each(["accepted", "dismissed"])(
+    "the label of a finding that is %s, carried over from the confidence, keeps that rating, as the server says",
+    (status) => {
+      expect(credibilityRationale({ rule: "legacy_confidence" }, english, "en", status)).toEqual({
+        sentence: DECIDED_LEGACY_SENTENCE,
+        stale: null,
+      });
+    },
+  );
+
+  it("the status of a finding changes nothing for a label a rule decided", () => {
+    const basis = basisOf("unverified", [cited()]);
+    expect(credibilityRationale(basis, english, "en", "dismissed")).toEqual(
+      credibilityRationale(basis, english, "en", "pending"),
+    );
+  });
+
+  it.each(LANGS)("words the decided earlier rating in %s", (lang) => {
+    const t = (key: string) => translations[lang][key] ?? key;
+    const { sentence } = credibilityRationale({ rule: "legacy_confidence" }, t, "en", "accepted");
+    expect(sentence).not.toBe(DECIDED_LEGACY_SENTENCE);
+    expect(sentence).toBe(translations[lang][DECIDED_LEGACY_SENTENCE]);
+    expect(sentence).not.toBe(translations[lang][LEGACY_SENTENCE]);
+  });
+
   it("a label the backfill decided again reads its rule's sentence, then that it was rated again", () => {
     expect(
       credibilityRationale(
@@ -2043,6 +2180,12 @@ describe("coverageLines", () => {
       expect(failed.notChecked).toBe("Not checked: the National Vulnerability Database");
       expect(failed.attributions).toEqual([]);
 
+      // The answer could not be refreshed, but the run was offered the records it had stored: the
+      // findings may cite them, so the notice the NVD's terms ask for is shown.
+      const offeredStored = nvd({ checked: false, outcome: "failed", strong: 1 });
+      expect(offeredStored.notChecked).toBe("Not checked: the National Vulnerability Database");
+      expect(offeredStored.attributions).toEqual([NOTICES.nvd]);
+
       // A vendor with nothing to ask the NVD by (no domain, no product): not a gap of the run.
       const unasked = nvd({ checked: false, outcome: "not_researched", last_success_at: null });
       expect(unasked.checked).toBeNull();
@@ -2075,6 +2218,18 @@ describe("coverageLines", () => {
       );
       expect(lines.none).toBe("No records in the CVE Program as of 10 Oct 2026");
       expect(lines.attributions).toEqual([NOTICES.sec, cveNotice(2026), NOTICES.un_sanctions]);
+
+      // An answer of the SEC that could not be refreshed still offered its stored filing: credited.
+      const failed = linesOf(
+        m2({
+          sources: [
+            listCopy("sec", { mode: "read_through", checked: false, outcome: "failed", strong: 1 }),
+          ],
+          lookups: [],
+        }),
+      );
+      expect(failed.notChecked).toBe("Not checked: SEC EDGAR");
+      expect(failed.attributions).toEqual([NOTICES.sec]);
     });
 
     it("writes the year of the CVE notice from the UTC clock, at each call", () => {
@@ -2644,7 +2799,7 @@ describe("translation", () => {
       "availability",
       "financial_health",
     ] as const) {
-      for (const outcome of ["findings", "nothing_found", "search_failed", "skipped"] as const) {
+      for (const outcome of ALL_OUTCOMES) {
         describeCategoryLine(entry(outcome, "", category), t);
       }
     }
@@ -2675,6 +2830,7 @@ describe("translation", () => {
     nameOnlyNote(basisOf("name_only", [], true), t);
     // The labels that were decided before the rules, or again by them.
     credibilityRationale({ rule: "legacy_confidence" }, t, "en");
+    credibilityRationale({ rule: "legacy_confidence" }, t, "en", "dismissed");
     credibilityRationale(
       { ...basisOf("unverified", [cited()]), rule: "backfill_unverified" },
       t,
@@ -2752,6 +2908,7 @@ describe("translation", () => {
         "Matched by name only: this may be another company.",
         "Earlier rating",
         LEGACY_SENTENCE,
+        DECIDED_LEGACY_SENTENCE,
         "Rated again with the current rule.",
         "Trusted press",
         "Delisted",

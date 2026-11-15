@@ -73,6 +73,7 @@ const CATEGORY_LABELS: Record<ResearchCategory, string> = {
 const OUTCOME_LABELS: Record<CategorySummaryEntry["outcome"], string> = {
   findings: "risks found",
   nothing_found: "nothing found",
+  over_cap: "risks found, left for the next run",
   search_failed: "could not be researched",
   skipped: "skipped",
 };
@@ -99,11 +100,20 @@ export const dismissReasonLabel = (reason: DismissReason, t: Translate = transla
   t(labelFor(DISMISS_REASON_LABELS, reason) ?? "Other");
 
 /**
- * "Security incidents: nothing found". Built from the category and the outcome alone, never
- * from the note, so what the line says does not depend on text the model wrote.
+ * The server's note (NOTES.overCap in Servers/services/vendorResearch/summary.ts) on a category
+ * whose risks held up and that the cap of one run cut: the outcome `over_cap`, and the next run is
+ * to raise those risks. A run stored before that outcome existed kept it under `nothing_found`.
+ */
+const OVER_CAP_NOTE = "More risks were found than one run keeps";
+
+/**
+ * "Security incidents: nothing found". Built from the category and the outcome alone, never from
+ * the note, so what the line says does not depend on text the model wrote: on `nothing_found` the
+ * note may be the model's, whatever words it used.
  */
 export function describeCategoryLine(
-  entry: Pick<CategorySummaryEntry, "category" | "outcome">,
+  entry: Pick<CategorySummaryEntry, "category" | "outcome"> &
+    Partial<Pick<CategorySummaryEntry, "note">>,
   t: Translate = translateKey,
 ): string {
   return fill(t("{category}: {outcome}"), {
@@ -277,6 +287,13 @@ const NOTHING_FOUND_NOTES = new Map<string, string>([
     "Possible risks were found but could not be verified or are already recorded",
     "Possible risks were found but could not be verified, or are already recorded.",
   ],
+  // How a run stored before the cap had an outcome of its own kept a capped category.
+  [OVER_CAP_NOTE, "More risks were found than one run keeps."],
+]);
+
+/** The risks held up, and the cap of one run took them. */
+const OVER_CAP_NOTES = new Map<string, string>([
+  [OVER_CAP_NOTE, "More risks were found than one run keeps."],
 ]);
 
 const SEARCH_FAILED_NOTES = new Map<string, string>([
@@ -356,6 +373,8 @@ function fixedCategoryNote(outcome: unknown, note: string, t: Translate): string
           )
         : null;
     }
+    case "over_cap":
+      return fixedSentence(OVER_CAP_NOTES, note, t);
     case "search_failed":
       return fixedSentence(SEARCH_FAILED_NOTES, note, t);
     default:
@@ -551,12 +570,20 @@ const NAME_ONLY_NOTE = "Matched by name only: this may be another company.";
 const BACKFILL_NOTE = "Rated again with the current rule.";
 
 /**
- * What a label that is the earlier confidence of a finding says: the server's own line for it
- * (controllers/vendorResearch.ctrl.ts), so that the English screen says what the server says. No
- * rule decided the label, so no rule's sentence goes with it.
+ * What a label that is the earlier confidence of a pending finding says: the server's own line for
+ * it (LEGACY_RATIONALE in controllers/vendorResearch.ctrl.ts), so that the English screen says what
+ * the server says. No rule decided the label, so no rule's sentence goes with it; the backfill can
+ * still rate it again.
  */
 const LEGACY_NOTE =
   "Rated before the source rules; this is the earlier confidence level until the label is recomputed.";
+
+/**
+ * What the same label says once the finding was accepted or dismissed: nothing rates a decided
+ * finding again, so it keeps that label for good (LEGACY_NOTE in
+ * services/vendorResearch/credibilityText.ts).
+ */
+const DECIDED_LEGACY_NOTE = "Rated with the earlier confidence rule.";
 
 /** The muted note beside a label that is the earlier confidence of a finding. */
 const EARLIER_RATING_NOTE = "Earlier rating";
@@ -852,15 +879,21 @@ export interface CredibilityWords {
  * A label the backfill wrote says so: one it decided again by the rule reads the rule's sentence,
  * then that it was rated again. A label that is the earlier confidence of a finding (the backfill
  * carried it over from a decided finding, and the server reads it so for a finding of a run before
- * the rule) says only that, in the server's words.
+ * the rule) says only that, in the server's words: for a finding whose `status` is given and is
+ * not pending, that it keeps the earlier rating; otherwise that it is the earlier rating until the
+ * label is recomputed.
  */
 export function credibilityRationale(
   basis: StoredCredibilityBasis | null | undefined,
   t: Translate,
   lang: string,
+  status?: string | null,
 ): CredibilityWords {
   if (basis === null || typeof basis !== "object") return { sentence: "", stale: null };
-  if (basis.rule === "legacy_confidence") return { sentence: t(LEGACY_NOTE), stale: null };
+  if (basis.rule === "legacy_confidence") {
+    const decided = typeof status === "string" && status !== "pending";
+    return { sentence: t(decided ? DECIDED_LEGACY_NOTE : LEGACY_NOTE), stale: null };
+  }
   const rule = String(basis.rule);
   if (!rule.startsWith(BACKFILL_PREFIX)) return ruleWords(basis as CredibilityBasis, t, lang);
   const decided = rule.slice(BACKFILL_PREFIX.length);
@@ -1170,14 +1203,16 @@ export function coverageLines(coverage: RunCoverage, t: Translate, lang: string)
       },
     ),
     off: lists.length > 0 && lists.every((source) => source.outcome === "off"),
-    // The credit follows the data: a list shown when found is credited only when it offered a
-    // record, whether or not it failed (a read-through list offers the records it had stored); a
-    // run that offered none of a list shows nothing of it and owes it nothing.
+    // The credit follows the data: every list that offered a record is credited, whether or not
+    // it failed (a read-through list, the NVD or the SEC among them, offers the records it had
+    // stored when its answer could not be refreshed, and the findings may cite them); a list
+    // shown when found is credited only then, and any other list also when it was checked. A run
+    // that offered none of a list shown when found shows nothing of it and owes it nothing.
     attributions: [
       ...new Set(
         lists
-          .filter((source) =>
-            shownWhenFound(source) ? heldRecords(source) : source.checked === true,
+          .filter(
+            (source) => heldRecords(source) || (!shownWhenFound(source) && source.checked === true),
           )
           .map((source) => ATTRIBUTIONS[source.id]),
       ),

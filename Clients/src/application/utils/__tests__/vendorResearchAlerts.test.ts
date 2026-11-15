@@ -20,7 +20,7 @@ describe("alertForStarted", () => {
   it("says the research started and where the findings will appear", () => {
     expect(alertForStarted({ alreadyRunning: false }, "Acme Cloud")).toEqual({
       variant: "success",
-      body: "Research started for Acme Cloud. Findings appear on the Risks tab.",
+      body: "Research started for Acme Cloud. Findings appear on the Research findings tab.",
     });
   });
 
@@ -134,7 +134,7 @@ describe("translation", () => {
   it("looks up the dictionary for every message, so that the check below has something to check", () => {
     expect(keysRequested()).toEqual(
       expect.arrayContaining([
-        "Research started for {vendorName}. Findings appear on the Risks tab.",
+        "Research started for {vendorName}. Findings appear on the Research findings tab.",
         "Research is already running for {vendorName}.",
         "Research ran recently. Try again in {minutes} min.",
         "The daily research limit for your organization was reached. Try again tomorrow.",

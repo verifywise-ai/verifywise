@@ -71,6 +71,46 @@ test.describe("Vendors Page", () => {
     await expect(page).toHaveURL(/\/vendors$/, { timeout: 10_000 });
   });
 
+  test("has Research findings and Insights tabs beside Vendors and Risks", async ({
+    authedPage: page,
+  }) => {
+    await page.goto("/vendors");
+
+    await expect(page.getByRole("tab", { name: /^research findings/i })).toBeVisible({
+      timeout: 10_000,
+    });
+    await expect(page.getByRole("tab", { name: /^insights/i })).toBeVisible();
+  });
+
+  test("clicking Research findings tab navigates to /vendors/research-findings", async ({
+    authedPage: page,
+  }) => {
+    await page.goto("/vendors");
+    const findingsTab = page.getByRole("tab", { name: /^research findings/i });
+    await expect(findingsTab).toBeVisible({ timeout: 10_000 });
+    await findingsTab.click();
+    await expect(page).toHaveURL(/\/vendors\/research-findings/, { timeout: 10_000 });
+    await expect(findingsTab).toHaveAttribute("aria-selected", "true");
+  });
+
+  test("clicking Insights tab navigates to /vendors/insights", async ({ authedPage: page }) => {
+    await page.goto("/vendors");
+    const insightsTab = page.getByRole("tab", { name: /^insights/i });
+    await expect(insightsTab).toBeVisible({ timeout: 10_000 });
+    await insightsTab.click();
+    await expect(page).toHaveURL(/\/vendors\/insights/, { timeout: 10_000 });
+    await expect(insightsTab).toHaveAttribute("aria-selected", "true");
+  });
+
+  test("a notification link to the Risks tab with findings lands on the Research findings tab", async ({
+    authedPage: page,
+  }) => {
+    await page.goto("/vendors/risks?findingsVendorId=1");
+    await expect(page).toHaveURL(/\/vendors\/research-findings\?findingsVendorId=1/, {
+      timeout: 10_000,
+    });
+  });
+
   // --- Tier 2: Search & Filter ---
 
   test("searching for nonexistent vendor filters results", async ({ authedPage: page }) => {

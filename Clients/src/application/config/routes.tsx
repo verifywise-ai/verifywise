@@ -287,6 +287,24 @@ export const createRoutes = (
         }
       />{" "}
       {/* Risks tab */}
+      <Route
+        path="research-findings"
+        element={
+          <Suspense fallback={<LazyFallback />}>
+            <Vendors />
+          </Suspense>
+        }
+      />{" "}
+      {/* Research findings tab */}
+      <Route
+        path="insights"
+        element={
+          <Suspense fallback={<LazyFallback />}>
+            <Vendors />
+          </Suspense>
+        }
+      />{" "}
+      {/* Insights tab */}
     </Route>
 
     <Route

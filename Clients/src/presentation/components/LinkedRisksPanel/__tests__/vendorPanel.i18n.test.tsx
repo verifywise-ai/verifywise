@@ -152,6 +152,14 @@ describe.each(LANGS)("vendor risk linked risks tab in %s", (lang) => {
         ),
       ),
     ).toBeInTheDocument();
+    expect(
+      screen.getByText(
+        tr(
+          lang,
+          "The project risk becomes a child of this vendor risk and is flagged for review when the level of this vendor risk changes.",
+        ),
+      ),
+    ).toBeInTheDocument();
 
     await userEvent.click(screen.getByPlaceholderText(tr(lang, "Search risks")));
     const listbox = await screen.findByRole("listbox");

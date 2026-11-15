@@ -14,6 +14,8 @@ import {
   BarChart3,
   AlertTriangle,
   Building,
+  Activity,
+  Sparkles,
   Settings,
   FileText,
   Brain,
@@ -69,6 +71,10 @@ export const routeMapping: Record<string, string> = {
 
   // Vendor management
   "/vendors": "Vendor management",
+  // The tabs of the Vendors page, which the dynamic pattern for a vendor would call "Vendor details".
+  "/vendors/risks": "Vendor risks",
+  "/vendors/research-findings": "Research findings",
+  "/vendors/insights": "Insights",
 
   // Settings
   "/settings": "Settings",
@@ -231,6 +237,9 @@ export const routeIconMapping: Record<string, () => React.ReactNode> = {
 
   // Vendor management
   "/vendors": () => React.createElement(Building, { size: 14, strokeWidth: 1.5 }),
+  "/vendors/risks": () => React.createElement(AlertTriangle, { size: 14, strokeWidth: 1.5 }),
+  "/vendors/research-findings": () => React.createElement(Sparkles, { size: 14, strokeWidth: 1.5 }),
+  "/vendors/insights": () => React.createElement(Activity, { size: 14, strokeWidth: 1.5 }),
 
   // Model inventory
   "/model-inventory": () => React.createElement(ListIcon, { size: 14, strokeWidth: 1.5 }),
