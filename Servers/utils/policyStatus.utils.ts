@@ -221,13 +221,13 @@ export const assertPolicyUpdateAllowed = async (params: {
 /**
  * Checks that every policy may be archived. A policy with a pending approval
  * request blocks the whole batch: one 400 names the blocked policies and
- * nothing changes.
+ * nothing changes. Returns each locked policy's current status, for history.
  */
 export const assertPoliciesCanBeArchived = async (
   organizationId: number,
   policyIds: number[],
   transaction: Transaction,
-): Promise<void> => {
+): Promise<Array<{ id: number; status: string }>> => {
   const rows = await lockPolicyStatusRows(organizationId, policyIds, transaction);
   const blocked = rows
     .map((row) => ({
@@ -239,7 +239,7 @@ export const assertPoliciesCanBeArchived = async (
       }),
     }))
     .filter((b) => b.error !== null);
-  if (blocked.length === 0) return;
+  if (blocked.length === 0) return rows.map(({ id, status }) => ({ id, status }));
 
   const pendingOnly = blocked.every((b) => b.error === POLICY_STATUS_MESSAGES.pendingRequest);
   if (!pendingOnly) {

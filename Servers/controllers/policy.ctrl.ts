@@ -805,12 +805,34 @@ export class PolicyController {
           });
 
           if (action === "archive") {
-            await assertPoliciesCanBeArchived(req.organizationId!, ids, transaction);
-            await bulkArchivePoliciesQuery(req.organizationId!, ids, req.userId!, transaction);
+            const previous = await assertPoliciesCanBeArchived(
+              req.organizationId!,
+              ids,
+              transaction,
+            );
+            await bulkArchivePoliciesQuery(
+              req.organizationId!,
+              ids,
+              req.userId!,
+              transaction,
+              previous,
+            );
           } else if (action === "set_reviewer") {
-            await bulkSetPoliciesReviewerQuery(req.organizationId!, ids, reviewerId!, transaction);
+            await bulkSetPoliciesReviewerQuery(
+              req.organizationId!,
+              ids,
+              reviewerId!,
+              req.userId!,
+              transaction,
+            );
           } else {
-            await bulkSetPoliciesTagsQuery(req.organizationId!, ids, tags!, transaction);
+            await bulkSetPoliciesTagsQuery(
+              req.organizationId!,
+              ids,
+              tags!,
+              req.userId!,
+              transaction,
+            );
           }
         },
       );

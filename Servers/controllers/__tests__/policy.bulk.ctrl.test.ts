@@ -144,7 +144,7 @@ describe("bulkUpdatePolicies", () => {
     expect(mockAssertOrgOwnsIds).toHaveBeenCalledWith(
       expect.objectContaining({ table: "policy_manager", ids: [1, 2, 3], organizationId: 4 }),
     );
-    expect(mockArchive).toHaveBeenCalledWith(4, [1, 2, 3], 9, expect.anything());
+    expect(mockArchive).toHaveBeenCalledWith(4, [1, 2, 3], 9, expect.anything(), undefined);
     expect(mockSetReviewer).not.toHaveBeenCalled();
     expect(mockSetTags).not.toHaveBeenCalled();
     expect(res.status).toHaveBeenCalledWith(200);
@@ -159,12 +159,19 @@ describe("bulkUpdatePolicies", () => {
     mockWithBulkTransaction.mockImplementationOnce(async (_options: any, handler: any) =>
       handler(tx),
     );
+    const locked = [
+      { id: 1, status: "Draft" },
+      { id: 2, status: "Archived" },
+    ];
+    (assertPoliciesCanBeArchived as jest.Mock<any>).mockResolvedValueOnce(locked);
     const req = createReq({ ids: [1, 2], action: "archive" });
     const res = createRes();
 
     await PolicyController.bulkUpdatePolicies(req as Request, res as Response);
 
     expect(assertPoliciesCanBeArchived).toHaveBeenCalledWith(4, [1, 2], tx);
+    // The statuses read under the lock reach the history writer.
+    expect(mockArchive).toHaveBeenCalledWith(4, [1, 2], 9, tx, locked);
     const gateOrder = (assertPoliciesCanBeArchived as jest.Mock).mock.invocationCallOrder[0];
     expect(gateOrder).toBeLessThan(mockArchive.mock.invocationCallOrder[0]);
   });
@@ -208,7 +215,7 @@ describe("bulkUpdatePolicies", () => {
 
     await PolicyController.bulkUpdatePolicies(req as Request, res as Response);
 
-    expect(mockSetReviewer).toHaveBeenCalledWith(4, [10, 11], 7, expect.anything());
+    expect(mockSetReviewer).toHaveBeenCalledWith(4, [10, 11], 7, 9, expect.anything());
     expect(res.status).toHaveBeenCalledWith(200);
   });
 
@@ -232,7 +239,13 @@ describe("bulkUpdatePolicies", () => {
 
     await PolicyController.bulkUpdatePolicies(req as Request, res as Response);
 
-    expect(mockSetTags).toHaveBeenCalledWith(4, [1], ["AI ethics", "Privacy"], expect.anything());
+    expect(mockSetTags).toHaveBeenCalledWith(
+      4,
+      [1],
+      ["AI ethics", "Privacy"],
+      9,
+      expect.anything(),
+    );
     expect(res.status).toHaveBeenCalledWith(200);
   });
 

@@ -17,7 +17,8 @@ import { findUsersNotInOrganization, parseReferencedIds } from "./user.utils";
 import { POLICY_REVIEW_DATE_SQL, toReviewDateValue } from "./policyReviewDate.utils";
 import { runInSavepoint } from "../config/changeHistory.config";
 import logger from "./logger/fileLogger";
-import { recordEntityDeletion } from "./changeHistory.base.utils";
+import { recordEntityDeletion, recordUpdateChanges } from "./changeHistory.base.utils";
+import { recordPolicyStatusChange } from "./policyApprovalDecision.utils";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 
 /**
@@ -669,6 +670,7 @@ export const bulkArchivePoliciesQuery = async (
   ids: number[],
   userId: number,
   transaction: Transaction,
+  previousStatuses: Array<{ id: number; status: string }> = [],
 ): Promise<void> => {
   if (ids.length === 0) return;
 
@@ -689,6 +691,78 @@ export const bulkArchivePoliciesQuery = async (
       transaction,
     },
   );
+
+  // One status-change entry per policy whose status actually changed, from the
+  // status read under the row lock. Best-effort and savepointed.
+  for (const { id, status } of previousStatuses) {
+    if (status === "Archived") continue;
+    try {
+      await runInSavepoint(
+        () => recordPolicyStatusChange(organizationId, id, userId, status, "Archived", transaction),
+        transaction,
+      );
+    } catch (error) {
+      logger.error(`Error recording policy archive history: ${error}`);
+    }
+  }
+};
+
+type PolicyBulkSnapshot = Map<number, { tags: string[]; assigned_reviewer_ids: number[] }>;
+
+/** The tracked bulk-editable values (tags, reviewers) of the policies, by id. */
+const snapshotPolicyBulkValues = async (
+  organizationId: number,
+  ids: number[],
+  transaction: Transaction,
+): Promise<PolicyBulkSnapshot> => {
+  const rows = (await sequelize.query(
+    `SELECT pm.id,
+            COALESCE(pm.tags, ARRAY[]::text[]) AS tags,
+            COALESCE(
+              ARRAY(
+                SELECT r.user_id FROM policy_manager__assigned_reviewer_ids r
+                WHERE r.organization_id = pm.organization_id AND r.policy_manager_id = pm.id
+                ORDER BY r.user_id
+              ),
+              ARRAY[]::int[]
+            ) AS assigned_reviewer_ids
+     FROM policy_manager pm
+     WHERE pm.organization_id = :organizationId AND pm.id IN (:ids)`,
+    { replacements: { organizationId, ids }, type: QueryTypes.SELECT, transaction },
+  )) as Array<{ id: number; tags: string[]; assigned_reviewer_ids: number[] }>;
+  return new Map(
+    rows.map((r) => [
+      Number(r.id),
+      { tags: r.tags, assigned_reviewer_ids: r.assigned_reviewer_ids.map(Number) },
+    ]),
+  );
+};
+
+/**
+ * Records one history entry per policy whose `field` differs between the two
+ * snapshots, as the acting user. Policies with equal values get none.
+ */
+const recordBulkFieldHistory = async (
+  field: "tags" | "assigned_reviewer_ids",
+  organizationId: number,
+  userId: number,
+  before: PolicyBulkSnapshot,
+  after: PolicyBulkSnapshot,
+  transaction: Transaction,
+): Promise<void> => {
+  for (const [id, prior] of before) {
+    const current = after.get(id);
+    if (!current) continue;
+    await recordUpdateChanges(
+      "policy",
+      id,
+      { [field]: prior[field] },
+      { [field]: current[field] },
+      userId,
+      organizationId,
+      transaction,
+    );
+  }
 };
 
 /**
@@ -703,10 +777,12 @@ export const bulkSetPoliciesReviewerQuery = async (
   organizationId: number,
   ids: number[],
   reviewerId: number,
+  userId: number,
   transaction: Transaction,
 ): Promise<void> => {
   if (ids.length === 0) return;
   await assertPolicyUsersInOrganization([reviewerId], "reviewerId", organizationId, transaction);
+  const before = await snapshotPolicyBulkValues(organizationId, ids, transaction);
 
   await sequelize.query(
     `DELETE FROM policy_manager__assigned_reviewer_ids
@@ -725,6 +801,16 @@ export const bulkSetPoliciesReviewerQuery = async (
      ON CONFLICT (policy_manager_id, user_id) DO NOTHING`,
     { replacements: { organizationId, ids, reviewerId }, transaction },
   );
+
+  const after = await snapshotPolicyBulkValues(organizationId, ids, transaction);
+  await recordBulkFieldHistory(
+    "assigned_reviewer_ids",
+    organizationId,
+    userId,
+    before,
+    after,
+    transaction,
+  );
 };
 
 /**
@@ -738,9 +824,11 @@ export const bulkSetPoliciesTagsQuery = async (
   organizationId: number,
   ids: number[],
   tags: PolicyTag[],
+  userId: number,
   transaction: Transaction,
 ): Promise<void> => {
   if (ids.length === 0) return;
+  const before = await snapshotPolicyBulkValues(organizationId, ids, transaction);
 
   await sequelize.query(
     `UPDATE policy_manager
@@ -756,4 +844,7 @@ export const bulkSetPoliciesTagsQuery = async (
       transaction,
     },
   );
+
+  const after = await snapshotPolicyBulkValues(organizationId, ids, transaction);
+  await recordBulkFieldHistory("tags", organizationId, userId, before, after, transaction);
 };

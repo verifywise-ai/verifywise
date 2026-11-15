@@ -1,0 +1,70 @@
+import { describe, expect, it, jest } from "@jest/globals";
+
+jest.mock("../../database/db", () => ({ sequelize: { query: jest.fn() } }));
+jest.mock("../logger/fileLogger", () => ({
+  __esModule: true,
+  default: { error: jest.fn(), info: jest.fn(), warn: jest.fn(), debug: jest.fn() },
+}));
+
+import { htmlExcerpt, getEntityConfig } from "../../config/changeHistory.config";
+import { trackEntityChanges } from "../changeHistory.base.utils";
+
+describe("htmlExcerpt", () => {
+  it("strips tags, decodes basic entities and collapses whitespace", () => {
+    expect(
+      htmlExcerpt("<h1>Data  &amp; AI</h1>\n<p>Use&nbsp;it &lt;well&gt; &quot;now&quot;</p>"),
+    ).toBe('Data & AI Use it <well> "now"');
+  });
+
+  it("cuts to 120 characters with a trailing ellipsis", () => {
+    const out = htmlExcerpt(`<p>${"a".repeat(200)}</p>`);
+    expect(out).toBe(`${"a".repeat(120)}…`);
+    expect(htmlExcerpt("b".repeat(120))).toBe("b".repeat(120));
+  });
+
+  it("is - for empty text", () => {
+    expect(htmlExcerpt("<p> </p>")).toBe("-");
+  });
+});
+
+describe("policy content history", () => {
+  it("tracks content_html under the label Content", () => {
+    const config = getEntityConfig("policy");
+    expect(config.fieldsToTrack).toContain("content_html");
+    expect(config.fieldLabels.content_html).toBe("Content");
+  });
+
+  it("records an edit as an excerpt of old and new text", async () => {
+    const changes = await trackEntityChanges(
+      "policy",
+      { content_html: "<p>Old text</p>" },
+      { content_html: "<p>New <b>text</b></p>" },
+    );
+    expect(changes).toEqual([{ fieldName: "Content", oldValue: "Old text", newValue: "New text" }]);
+  });
+
+  it("records nothing when the content is absent or equal", async () => {
+    expect(await trackEntityChanges("policy", { content_html: "<p>x</p>" }, {})).toEqual([]);
+    expect(
+      await trackEntityChanges(
+        "policy",
+        { content_html: "<p>x</p>" },
+        { content_html: "<p>x</p> " },
+      ),
+    ).toEqual([]);
+    expect(
+      await trackEntityChanges("policy", { content_html: null }, { content_html: "" }),
+    ).toEqual([]);
+  });
+
+  it("records an edit past the excerpt even though both excerpts are equal", async () => {
+    const head = "a".repeat(130);
+    const changes = await trackEntityChanges(
+      "policy",
+      { content_html: `<p>${head}1</p>` },
+      { content_html: `<p>${head}2</p>` },
+    );
+    expect(changes).toHaveLength(1);
+    expect(changes[0].oldValue).toBe(changes[0].newValue);
+  });
+});

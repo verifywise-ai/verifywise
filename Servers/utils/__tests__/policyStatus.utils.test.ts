@@ -425,7 +425,10 @@ describe("assertPoliciesCanBeArchived", () => {
         { id: 2, title: "B", status: "Published" },
       ] as any)
       .mockResolvedValueOnce([] as any);
-    await expect(assertPoliciesCanBeArchived(1, [1, 2], tx)).resolves.toBeUndefined();
+    await expect(assertPoliciesCanBeArchived(1, [1, 2], tx)).resolves.toEqual([
+      { id: 1, status: "Draft" },
+      { id: 2, status: "Published" },
+    ]);
   });
 
   it("names every blocked policy, with a translatable key", async () => {
@@ -454,7 +457,9 @@ describe("assertPoliciesCanBeArchived", () => {
     mockQuery
       .mockResolvedValueOnce([{ id: 1, title: "A", status: "Archived" }] as any)
       .mockResolvedValueOnce([{ entity_id: 1 }] as any);
-    await expect(assertPoliciesCanBeArchived(1, [1], tx)).resolves.toBeUndefined();
+    await expect(assertPoliciesCanBeArchived(1, [1], tx)).resolves.toEqual([
+      { id: 1, status: "Archived" },
+    ]);
   });
 
   it("locks the batch in id order before reading pending requests", async () => {
@@ -472,12 +477,12 @@ describe("assertPoliciesCanBeArchived", () => {
 
   it("does not read pending requests when no policy row is found", async () => {
     mockQuery.mockResolvedValueOnce([] as any);
-    await expect(assertPoliciesCanBeArchived(1, [9], tx)).resolves.toBeUndefined();
+    await expect(assertPoliciesCanBeArchived(1, [9], tx)).resolves.toEqual([]);
     expect(mockQuery).toHaveBeenCalledTimes(1);
   });
 
   it("does not query for an empty list", async () => {
-    await expect(assertPoliciesCanBeArchived(1, [], tx)).resolves.toBeUndefined();
+    await expect(assertPoliciesCanBeArchived(1, [], tx)).resolves.toEqual([]);
     expect(mockQuery).not.toHaveBeenCalled();
   });
 });
