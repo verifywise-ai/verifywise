@@ -37,6 +37,7 @@ import {
 import { SlackNotificationRoutingType } from "../domain.layer/enums/slack.enum";
 
 import { translateError } from "../utils/i18n.utils";
+import { normaliseHttpUrl } from "../utils/publicUrl.utils";
 import { MAX_POSTGRES_ID } from "../utils/validations/aiAppBulkValidation.utils";
 const fileName = "slackWebhook.ctrl.ts";
 
@@ -151,12 +152,39 @@ export function isValidSlackOAuthCode(code: unknown): code is string {
   );
 }
 
+/** Path Slack returns the browser to; the client sends the same redirect URI. */
+const SLACK_REDIRECT_PATH = "/extensions/slack/settings";
+
+/** Slack's errors for a redirect_uri that does not match the authorize request or the app. */
+const REDIRECT_URI_ERRORS = new Set(["bad_redirect_uri", "redirect_uri_mismatch"]);
+
+export const SLACK_REDIRECT_MISMATCH_MESSAGE =
+  "Slack rejected the return address. FRONTEND_URL must match the address you open VerifyWise at.";
+export const SLACK_CODE_REFUSED_MESSAGE =
+  "Slack did not accept the authorization code. Add Slack again.";
+export const SLACK_MISSING_PERMISSIONS_MESSAGE =
+  "Slack did not grant the permissions VerifyWise needs. Add Slack again and allow every permission.";
+
 /**
- * Exchange the authorization code with Slack. Slack refusing it (a used,
- * expired or foreign code) throws a ValidationException with a fixed message:
- * Slack's own error is logged here, never sent to the client. Anything else
- * (no SLACK_API_URL, network failure, a body that is not JSON) throws a
- * generic error.
+ * The redirect URI sent with the code exchange. It must equal the one the
+ * browser sent to Slack (`${window.location.origin}/extensions/slack/settings`),
+ * so trailing slashes in FRONTEND_URL are dropped.
+ */
+export function slackRedirectUri(
+  frontendUrl: string | undefined = process.env.FRONTEND_URL,
+): string {
+  const base = normaliseHttpUrl(frontendUrl) ?? (frontendUrl ?? "").trim().replace(/\/+$/, "");
+  return `${base}${SLACK_REDIRECT_PATH}`;
+}
+
+/**
+ * Exchange the authorization code with Slack. Slack refusing it throws a
+ * ValidationException with a fixed message: a redirect URI that does not
+ * match (FRONTEND_URL differs from the address the browser used) gets its own
+ * admin-facing message, anything else (a used, expired or foreign code) the
+ * generic one. Slack's own error is logged here, never sent to the client.
+ * Anything else (no SLACK_API_URL, network failure, a body that is not JSON)
+ * throws a generic error.
  */
 async function validateSlackOAuth(code: string): Promise<any> {
   let data: any;
@@ -169,7 +197,7 @@ async function validateSlackOAuth(code: string): Promise<any> {
       client_id: process.env.SLACK_CLIENT_ID || "",
       client_secret: process.env.SLACK_CLIENT_SECRET || "",
       code: code,
-      redirect_uri: `${process.env.FRONTEND_URL}/extensions/slack/settings`,
+      redirect_uri: slackRedirectUri(),
     };
     const tokenResponse = await fetch(url, {
       method: "POST",
@@ -189,10 +217,16 @@ async function validateSlackOAuth(code: string): Promise<any> {
       .replace(/[^a-z0-9_]/gi, "")
       .slice(0, 64);
     logger.warn(`Slack refused the OAuth code: ${reason}`);
-    throw new ValidationException(
-      "Slack did not accept the authorization code. Add Slack again.",
-      "code",
-    );
+    if (REDIRECT_URI_ERRORS.has(reason)) {
+      throw new ValidationException(SLACK_REDIRECT_MISMATCH_MESSAGE, "redirect_uri");
+    }
+    throw new ValidationException(SLACK_CODE_REFUSED_MESSAGE, "code");
+  }
+  // The user token invites the bot to the channel. Slack only issues it when
+  // the authorize request asked for user scopes and the installer allowed them.
+  if (typeof data.authed_user?.access_token !== "string" || !data.authed_user.access_token) {
+    logger.warn("Slack returned no user token: the user scopes were not granted");
+    throw new ValidationException(SLACK_MISSING_PERMISSIONS_MESSAGE, "authed_user");
   }
   return data;
 }
@@ -515,12 +549,17 @@ export async function deleteUnlinkedSlackConnection(req: Request, res: Response)
       functionName,
       fileName,
     );
-    await logEvent(
-      "Delete",
-      `Unlinked slackWebhook deleted: ID ${connectionId}`,
-      req.userId!,
-      req.organizationId!,
-    );
+    // The row is gone: a failing audit write is logged, not turned into a 500.
+    try {
+      await logEvent(
+        "Delete",
+        `Unlinked slackWebhook deleted: ID ${connectionId}`,
+        req.userId!,
+        req.organizationId!,
+      );
+    } catch (auditError) {
+      logger.error("❌ Could not record the unlinked slackWebhook delete:", auditError);
+    }
     return res.status(204).send();
   } catch (error) {
     logStructured(

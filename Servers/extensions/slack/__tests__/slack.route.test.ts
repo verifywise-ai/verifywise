@@ -68,9 +68,13 @@ jest.mock("../../../utils/slackWebhook.utils", () => ({
 
 import * as queries from "../../../utils/slackWebhook.utils";
 import { SlackWebhookModel } from "../../../domain.layer/models/slackNotification/slackWebhook.model";
-import { sendImmediateMessage } from "../../../services/slack/slackNotificationService";
+import {
+  inviteBotToChannel,
+  sendImmediateMessage,
+} from "../../../services/slack/slackNotificationService";
 import { logEvent } from "../../../utils/logger/dbLogger";
 import slackRoutes from "../slack.route";
+import { slackRedirectUri } from "../../../controllers/slackWebhook.ctrl";
 
 const q = queries as jest.Mocked<typeof queries>;
 
@@ -380,6 +384,63 @@ describe("create: the authorization code", () => {
     expect(q.createNewSlackWebhookQuery).not.toHaveBeenCalled();
   });
 
+  it.each(["bad_redirect_uri", "redirect_uri_mismatch"])(
+    "answers 400 with the FRONTEND_URL message when Slack reports %s",
+    async (error) => {
+      global.fetch = jest.fn(async () => ({ json: async () => ({ ok: false, error }) })) as any;
+
+      const res = await call("post", BASE).send({ code: "abc" });
+
+      expect(res.status).toBe(400);
+      expect(res.body.data).toBe(
+        "Slack rejected the return address. FRONTEND_URL must match the address you open VerifyWise at.",
+      );
+      expect(JSON.stringify(res.body)).not.toContain(error);
+      expect(q.createNewSlackWebhookQuery).not.toHaveBeenCalled();
+    },
+  );
+
+  it("sends the redirect URI built from FRONTEND_URL without its trailing slashes", async () => {
+    const previous = process.env.FRONTEND_URL;
+    process.env.FRONTEND_URL = "https://app.example.com//";
+    try {
+      await call("post", BASE).send({ code: "abc" });
+    } finally {
+      process.env.FRONTEND_URL = previous;
+    }
+
+    const body = (global.fetch as jest.Mock).mock.calls[0][1].body as URLSearchParams;
+    expect(body.get("redirect_uri")).toBe("https://app.example.com/extensions/slack/settings");
+  });
+
+  it.each([
+    ["no authed_user", { authed_user: undefined }],
+    ["an authed_user without a token", { authed_user: { id: "U1" } }],
+  ])(
+    "answers 400 asking for every permission when Slack returns %s, without inviting",
+    async (_label, overrides) => {
+      global.fetch = jest.fn(async () => ({
+        json: async () => ({ ...oauthResponse, ...overrides }),
+      })) as any;
+
+      const res = await call("post", BASE).send({ code: "abc" });
+
+      expect(res.status).toBe(400);
+      expect(res.body.data).toBe(
+        "Slack did not grant the permissions VerifyWise needs. Add Slack again and allow every permission.",
+      );
+      expect(inviteBotToChannel).not.toHaveBeenCalled();
+      expect(q.createNewSlackWebhookQuery).not.toHaveBeenCalled();
+    },
+  );
+
+  it("invites the bot with the user token Slack returned", async () => {
+    const res = await call("post", BASE).send({ code: "abc" });
+
+    expect(res.status).toBe(201);
+    expect(inviteBotToChannel).toHaveBeenCalledWith("xoxp-user", "C1", "B1");
+  });
+
   it("answers 500 with a generic message when Slack cannot be reached", async () => {
     global.fetch = jest.fn(async () => {
       throw new Error("connect ECONNREFUSED 10.0.0.1:443");
@@ -415,6 +476,16 @@ describe("unlinked connections (no organization): the caller's own only", () => 
     expect(logEvent).toHaveBeenCalledWith("Delete", "Unlinked slackWebhook deleted: ID 5", 9, 42);
   });
 
+  it("still answers 204 when the audit write after the delete fails", async () => {
+    q.deleteUnlinkedSlackConnectionQuery.mockResolvedValue(true);
+    (logEvent as jest.Mock).mockRejectedValueOnce(new Error("event_logs down"));
+
+    const res = await call("delete", `${UNLINKED}/5`);
+
+    expect(res.status).toBe(204);
+    expect(q.deleteUnlinkedSlackConnectionQuery).toHaveBeenCalledWith(5, 9);
+  });
+
   // The query deletes only where organization_id IS NULL and user_id is the
   // caller, so another user's unlinked row and an organization's connection
   // both come back false.
@@ -441,5 +512,16 @@ describe("unlinked connections (no organization): the caller's own only", () => 
   it("answers 500 when the query fails", async () => {
     q.getUnlinkedSlackConnectionsQuery.mockRejectedValue(new Error("db down"));
     expect((await call("get", UNLINKED)).status).toBe(500);
+  });
+});
+
+describe("slackRedirectUri", () => {
+  it.each([
+    ["https://app.example.com", "https://app.example.com/extensions/slack/settings"],
+    ["https://app.example.com/", "https://app.example.com/extensions/slack/settings"],
+    [" https://app.example.com/// ", "https://app.example.com/extensions/slack/settings"],
+    ["http://localhost:5173/", "http://localhost:5173/extensions/slack/settings"],
+  ])("builds the redirect URI from %j", (frontendUrl, expected) => {
+    expect(slackRedirectUri(frontendUrl)).toBe(expected);
   });
 });
