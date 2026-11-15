@@ -34,14 +34,13 @@ import {
   inviteBotToChannel,
   sendImmediateMessage,
 } from "../services/slack/slackNotificationService";
-import { SlackNotificationRoutingType } from "../domain.layer/enums/slack.enum";
+import { SlackNotificationRoutingType, isSlackRoutingType } from "../domain.layer/enums/slack.enum";
 
 import { translateError } from "../utils/i18n.utils";
 import { normaliseHttpUrl } from "../utils/publicUrl.utils";
 import { MAX_POSTGRES_ID } from "../utils/validations/aiAppBulkValidation.utils";
 const fileName = "slackWebhook.ctrl.ts";
 
-const ROUTING_TYPES: readonly string[] = Object.values(SlackNotificationRoutingType);
 const UPDATABLE_FIELDS = new Set(["routing_type", "is_active"]);
 
 /** The :id route parameter as a positive INTEGER, or null when it is not one. */
@@ -77,10 +76,7 @@ export function parseSlackWebhookUpdate(
   const data: SlackWebhookUpdate = {};
   if ("routing_type" in input) {
     const routing = input.routing_type;
-    if (
-      !Array.isArray(routing) ||
-      !routing.every((item) => typeof item === "string" && ROUTING_TYPES.includes(item))
-    ) {
+    if (!Array.isArray(routing) || !routing.every(isSlackRoutingType)) {
       return { ok: false, message: "routing_type must be a list of notification types" };
     }
     data.routing_type = [...new Set(routing as SlackNotificationRoutingType[])];
