@@ -413,7 +413,7 @@ describe("policy.ctrl", () => {
         createReq({
           params: { id: "1" },
           // sanitizes to an empty string, which the write skips
-          body: { content_html: "<script>alert(1)</script>", status: "Draft" },
+          body: { content_html: "<style>p{color:red}</style>", status: "Draft" },
         }),
         res,
       );
