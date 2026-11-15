@@ -1,4 +1,8 @@
 jest.setTimeout(60000);
+// Creating a connection encrypts the Slack token, and tools/createSecureValue
+// reads the algorithm when it loads. Every deployment sets it (Helm, Ansible,
+// install.sh); the integration environment does not, so use the same default.
+process.env.ENCRYPTION_ALGORITHM ??= "aes-256-cbc";
 
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../../database/db";
