@@ -5,23 +5,23 @@ import { translateError } from "../../utils/i18n.utils";
 import {
   buildExcelTemplate,
   importRisks,
-  RISK_IMPORT_MESSAGES,
   RiskImportError,
-  RiskImportMessage,
   RiskImportRow,
 } from "./riskImport.service";
 
 const fileName = "riskImport.ctrl.ts";
 
-const MESSAGE_KEYS = Object.keys(RISK_IMPORT_MESSAGES) as RiskImportMessage[];
-
 /**
- * Translate the messages the import itself words (row cap, refused inserts).
- * The per-field validation messages are left as they are.
+ * Translate the messages the import itself words (row cap, refused inserts),
+ * which carry their `messageKey`. The per-field validation messages are left
+ * as they are. The key and params are internal and not sent.
  */
-function translateImportError(req: Request, error: RiskImportError): RiskImportError {
-  const key = MESSAGE_KEYS.find((k) => RISK_IMPORT_MESSAGES[k] === error.message);
-  return key ? { ...error, message: req.t!(RISK_IMPORT_MESSAGES[key]) } : error;
+export function translateImportError(
+  req: Request,
+  error: RiskImportError,
+): Pick<RiskImportError, "row" | "field" | "message"> {
+  const { messageKey, params, ...rest } = error;
+  return messageKey ? { ...rest, message: req.t!(messageKey, params) } : rest;
 }
 
 export async function downloadExcelTemplate(req: Request, res: Response): Promise<void> {

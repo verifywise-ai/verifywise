@@ -14,6 +14,8 @@ import {
 import { calculateRiskLevel, normalizeCurrentRiskLevel } from "../../utils/riskLevel.utils";
 import { isInvalidDateCell, riskCalendarDateFromCell } from "../../utils/riskCalendarDate.utils";
 import logger from "../../utils/logger/fileLogger";
+import { translate } from "../../utils/i18n.utils";
+import { MAX_IMPORT_ROWS } from "../importLimits";
 
 /**
  * Server-side risk-import extension logic. Two entry points:
@@ -28,19 +30,18 @@ import logger from "../../utils/logger/fileLogger";
  *     import is rolled back.
  */
 
-/** Most rows one import may hold (the same cap as the framework import). */
-export const MAX_IMPORT_ROWS = 5000;
-
 /** Hidden sheet in the template that holds the user list for the owner and approver dropdowns. */
 export const LISTS_SHEET_NAME = "Lists";
 
 /**
- * Messages the import adds to its result. The controller translates these
- * (and only these) through this map, so the i18n scanner sees each one.
+ * Messages the import adds to its result. An error carrying one of these sets
+ * `messageKey` to it (the en.json key) and `params` for its placeholders; the
+ * controller translates from the key. Kept in this map so the i18n scanner
+ * sees each one.
  */
 export const RISK_IMPORT_MESSAGES = {
   tooManyRows:
-    "This file has more than 5000 rows. Split it into smaller files and import each one.",
+    "This file has more than {max} rows. Split it into smaller files and import each one.",
   enumValue: "A value in this row is not one of the allowed options.",
   requiredValue: "A required value in this row is empty.",
   valueTooLong: "A value in this row is too long.",
@@ -257,6 +258,23 @@ export interface RiskImportError {
   row: number;
   field: string;
   message: string;
+  /** The en.json key (one of RISK_IMPORT_MESSAGES) `message` was made from; the controller translates from it. */
+  messageKey?: (typeof RISK_IMPORT_MESSAGES)[RiskImportMessage];
+  /** Values for the placeholders in that message. */
+  params?: Record<string, string | number>;
+}
+
+/** A row error worded by the import itself, carrying its key for translation. */
+function keyedError(
+  row: number,
+  field: string,
+  key: RiskImportMessage,
+  params?: Record<string, string | number>,
+): RiskImportError {
+  const messageKey = RISK_IMPORT_MESSAGES[key];
+  // The English text, placeholders filled; the controller re-translates from the key.
+  const message = translate("en", messageKey, params);
+  return { row, field, message, messageKey, ...(params ? { params } : {}) };
 }
 
 export interface RiskImportResult {
@@ -434,11 +452,7 @@ export function rowInsertError(row: number, err: unknown): RiskImportError {
   const key = code ? DB_ERROR_MESSAGES[code] : undefined;
   const column =
     key === "requiredValue" && typeof original?.column === "string" ? original.column : undefined;
-  return {
-    row,
-    field: column ?? "general",
-    message: RISK_IMPORT_MESSAGES[key ?? "rowNotSaved"],
-  };
+  return keyedError(row, column ?? "general", key ?? "rowNotSaved");
 }
 
 export async function importRisks(
@@ -450,7 +464,7 @@ export async function importRisks(
       success: false,
       imported: 0,
       failed: rows.length,
-      errors: [{ row: 0, field: "file", message: RISK_IMPORT_MESSAGES.tooManyRows }],
+      errors: [keyedError(0, "file", "tooManyRows", { max: MAX_IMPORT_ROWS })],
       importedAt: new Date().toISOString(),
     };
   }

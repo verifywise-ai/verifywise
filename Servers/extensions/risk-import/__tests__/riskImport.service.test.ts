@@ -12,13 +12,13 @@ import { sequelize } from "../../../database/db";
 import { findUsersNotInOrganization } from "../../../utils/user.utils";
 import {
   LISTS_SHEET_NAME,
-  MAX_IMPORT_ROWS,
   RISK_IMPORT_MESSAGES,
   RiskImportRow,
   buildExcelTemplate,
   importRisks,
   rowInsertError,
 } from "../riskImport.service";
+import { MAX_IMPORT_ROWS } from "../../importLimits";
 
 const mockQuery = sequelize.query as jest.Mock;
 const mockTransaction = sequelize.transaction as jest.Mock;
@@ -55,7 +55,15 @@ describe("importRisks row cap", () => {
       success: false,
       imported: 0,
       failed: MAX_IMPORT_ROWS + 1,
-      errors: [{ row: 0, field: "file", message: RISK_IMPORT_MESSAGES.tooManyRows }],
+      errors: [
+        {
+          row: 0,
+          field: "file",
+          message: `This file has more than ${MAX_IMPORT_ROWS} rows. Split it into smaller files and import each one.`,
+          messageKey: RISK_IMPORT_MESSAGES.tooManyRows,
+          params: { max: MAX_IMPORT_ROWS },
+        },
+      ],
     });
     expect(mockOutsideUsers).not.toHaveBeenCalled();
     expect(mockTransaction).not.toHaveBeenCalled();
@@ -133,13 +141,18 @@ describe("importRisks savepoints", () => {
 
 describe("rowInsertError", () => {
   it.each([
-    ["22P02", RISK_IMPORT_MESSAGES.enumValue],
-    ["22001", RISK_IMPORT_MESSAGES.valueTooLong],
-    ["22007", RISK_IMPORT_MESSAGES.invalidDate],
-    ["22008", RISK_IMPORT_MESSAGES.invalidDate],
-    ["23505", RISK_IMPORT_MESSAGES.rowNotSaved],
-  ])("maps %s to a short sentence", (code, message) => {
-    expect(rowInsertError(5, dbError(code))).toEqual({ row: 5, field: "general", message });
+    ["22P02", "enumValue"],
+    ["22001", "valueTooLong"],
+    ["22007", "invalidDate"],
+    ["22008", "invalidDate"],
+    ["23505", "rowNotSaved"],
+  ] as const)("maps %s to a short sentence carrying its key", (code, messageKey) => {
+    expect(rowInsertError(5, dbError(code))).toEqual({
+      row: 5,
+      field: "general",
+      message: RISK_IMPORT_MESSAGES[messageKey],
+      messageKey: RISK_IMPORT_MESSAGES[messageKey],
+    });
   });
 
   it("names the empty column for a not-null violation", () => {
@@ -147,6 +160,7 @@ describe("rowInsertError", () => {
       row: 3,
       field: "risk_owner",
       message: RISK_IMPORT_MESSAGES.requiredValue,
+      messageKey: RISK_IMPORT_MESSAGES.requiredValue,
     });
   });
 
@@ -155,6 +169,7 @@ describe("rowInsertError", () => {
       row: 2,
       field: "general",
       message: RISK_IMPORT_MESSAGES.rowNotSaved,
+      messageKey: RISK_IMPORT_MESSAGES.rowNotSaved,
     });
     expect(rowInsertError(2, null).message).toBe(RISK_IMPORT_MESSAGES.rowNotSaved);
   });

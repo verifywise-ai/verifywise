@@ -1488,7 +1488,7 @@
   "Slack did not accept the authorization code. Add Slack again.": "Slack n'a pas accepté le code d'autorisation. Ajoutez Slack à nouveau.",
   "Slack rejected the return address. FRONTEND_URL must match the address you open VerifyWise at.": "Slack a refusé l'adresse de retour. FRONTEND_URL doit correspondre à l'adresse à laquelle vous ouvrez VerifyWise.",
   "Slack did not grant the permissions VerifyWise needs. Add Slack again and allow every permission.": "Slack n'a pas accordé les autorisations dont VerifyWise a besoin. Ajoutez Slack à nouveau et acceptez toutes les autorisations.",
-  "This file has more than 5000 rows. Split it into smaller files and import each one.": "Ce fichier contient plus de 5000 lignes. Divisez-le en fichiers plus petits et importez-les un par un.",
+  "This file has more than {max} rows. Split it into smaller files and import each one.": "Ce fichier contient plus de {max} lignes. Divisez-le en fichiers plus petits et importez-les un par un.",
   "A value in this row is not one of the allowed options.": "Une valeur de cette ligne ne fait pas partie des options autorisées.",
   "A required value in this row is empty.": "Une valeur obligatoire de cette ligne est vide.",
   "A value in this row is too long.": "Une valeur de cette ligne est trop longue.",
