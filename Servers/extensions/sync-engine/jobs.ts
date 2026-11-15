@@ -1,3 +1,4 @@
+import { isExtensionEnabledForOrganization } from "../../middleware/requireExtensionEnabled.middleware";
 import logger, { logStructured } from "../../utils/logger/fileLogger";
 import {
   type ExtensionSyncJobData,
@@ -159,14 +160,21 @@ export function parseRunJobData(data: unknown): {
 }
 
 /**
- * Worker entry for `extension_sync_run`. The run is claimed here, at pickup.
- * If another run holds the claim, a manual job records a `skipped` row (a user
- * is waiting on "Sync now") and a scheduled job records nothing. Enablement is
- * not checked at pickup.
+ * Worker entry for `extension_sync_run`. Enablement is checked first: a job
+ * for an organization that disabled the extension after it was queued is
+ * dropped before the claim, so it writes no run row (the extension's run
+ * routes are gated for that organization, so nobody waits on one). Otherwise
+ * the run is claimed here, at pickup. If another run holds the claim, a manual
+ * job records a `skipped` row (a user is waiting on "Sync now") and a
+ * scheduled job records nothing.
  */
 export async function runExtensionSyncJob(data: unknown): Promise<"ran" | "skipped"> {
   const job = parseRunJobData(data);
   const { key } = job.provider;
+  if (!(await isExtensionEnabledForOrganization(key, job.orgId))) {
+    logger.info(`extension_sync_run ${key} org ${job.orgId}: skipped, extension is not enabled`);
+    return "skipped";
+  }
   let run;
   try {
     run = await claimRun(key, job.orgId, job.kind, job.triggeredBy);

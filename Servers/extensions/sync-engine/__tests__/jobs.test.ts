@@ -19,7 +19,11 @@ jest.mock("../claim", () => ({
 }));
 jest.mock("../schedule", () => ({ findDueRuns: jest.fn() }));
 jest.mock("../status", () => ({ hasLiveRun: jest.fn(), latestStatusRunId: jest.fn() }));
+jest.mock("../../../middleware/requireExtensionEnabled.middleware", () => ({
+  isExtensionEnabledForOrganization: jest.fn(),
+}));
 
+import { isExtensionEnabledForOrganization } from "../../../middleware/requireExtensionEnabled.middleware";
 import { enqueueExtensionSyncRun } from "../../../services/automations/automationProducer";
 import {
   claimRun,
@@ -46,6 +50,7 @@ const mockEnqueue = enqueueExtensionSyncRun as jest.Mock;
 const mockClaim = claimRun as jest.Mock;
 const mockFindDue = findDueRuns as jest.Mock;
 const mockSweep = closeStaleRunsForProvider as jest.Mock;
+const mockEnabled = isExtensionEnabledForOrganization as jest.Mock;
 
 const jira: SyncProvider = {
   key: "jira-assets",
@@ -82,6 +87,7 @@ beforeEach(() => {
   mockClaim.mockResolvedValue(CLAIMED);
   mockFindDue.mockResolvedValue([]);
   mockSweep.mockResolvedValue([]);
+  mockEnabled.mockResolvedValue(true);
 });
 
 describe("runExtensionSyncTick", () => {
@@ -171,8 +177,31 @@ describe("runExtensionSyncJob", () => {
     expect(mockClaim).toHaveBeenCalledWith("jira-assets", 5, "manual", 8);
     expect(createRunContext).toHaveBeenCalledWith(jira, CLAIMED, { x: 1 });
     expect(runClaimed).toHaveBeenCalledWith(jira, { fake: "ctx" });
-    // Enablement and readiness are not checked at pickup.
+    expect(mockEnabled).toHaveBeenCalledWith("jira-assets", 5);
+    // Readiness is not checked at pickup.
     expect(mockReadiness).not.toHaveBeenCalled();
+  });
+
+  it.each(["manual", "scheduled"])(
+    "drops a %s job for an org that disabled the extension, before claiming",
+    async (kind) => {
+      mockEnabled.mockResolvedValue(false);
+      await expect(
+        runExtensionSyncJob({ key: "jira-assets", orgId: 5, kind, triggeredBy: 8 }),
+      ).resolves.toBe("skipped");
+      expect(mockEnabled).toHaveBeenCalledWith("jira-assets", 5);
+      expect(mockClaim).not.toHaveBeenCalled();
+      expect(recordSkippedRun).not.toHaveBeenCalled();
+      expect(runClaimed).not.toHaveBeenCalled();
+    },
+  );
+
+  it("fails the job when the enablement lookup fails, claiming nothing", async () => {
+    mockEnabled.mockRejectedValue(new Error("db blip"));
+    await expect(
+      runExtensionSyncJob({ key: "jira-assets", orgId: 5, kind: "manual", triggeredBy: 8 }),
+    ).rejects.toThrow("db blip");
+    expect(mockClaim).not.toHaveBeenCalled();
   });
 
   it("records a skipped row for a manual job when another run is live", async () => {
