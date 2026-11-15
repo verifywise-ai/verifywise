@@ -208,15 +208,6 @@ export class PolicyController {
     try {
       const policyId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
       const userId = req.userId!;
-      // Get existing policy for change tracking
-      const existingPolicyResult = await getPolicyByIdQuery(req.organizationId!, policyId);
-
-      if (!existingPolicyResult || existingPolicyResult.length === 0) {
-        await transaction.rollback();
-        return res.status(404).json(STATUS_CODE[404]({}));
-      }
-
-      const existingPolicy = existingPolicyResult[0];
 
       const policyData = {
         ...pickEditablePolicyFields(req.body),
@@ -240,6 +231,14 @@ export class PolicyController {
         nextContentHtml: written.content_html,
         transaction,
       });
+
+      // The stored row for change tracking, read in the transaction after the
+      // lock above, so the history compares against what this update replaces.
+      const [existingPolicy] = await getPolicyByIdQuery(req.organizationId!, policyId, transaction);
+      if (!existingPolicy) {
+        await transaction.rollback();
+        return res.status(404).json(STATUS_CODE[404]({}));
+      }
 
       const policy = await updatePolicyByIdQuery(
         policyId,

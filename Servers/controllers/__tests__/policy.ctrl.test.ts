@@ -580,6 +580,9 @@ describe("policy.ctrl", () => {
 
   describe("updatePolicy", () => {
     it("should return 404 when policy is not found", async () => {
+      const { sequelize } = require("../../database/db");
+      // The lock finds no row in the organization; neither does the read.
+      (sequelize.query as jest.Mock<any>).mockResolvedValueOnce([]);
       mockGetById.mockResolvedValue([] as any);
       const req = createReq({ params: { id: "99" }, body: { title: "Policy two" } });
       const res = createRes();
@@ -605,11 +608,35 @@ describe("policy.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(404);
     });
     it("should return 500 on error", async () => {
+      lockUnlockedRow();
       mockGetById.mockRejectedValue(new Error("DB error"));
       const req = createReq({ params: { id: "1" }, body: { title: "Policy two" } });
       const res = createRes();
       await PolicyController.updatePolicy(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
+    });
+    it("tracks changes against the row read in the transaction after the lock", async () => {
+      const { sequelize } = require("../../database/db");
+      lockUnlockedRow();
+      const lockedRead = { id: 1, title: "P1", status: "Draft" };
+      mockGetById.mockResolvedValue([lockedRead] as any);
+      mockUpdate.mockResolvedValue({ id: 1, title: "Policy two" } as any);
+      const res = createRes();
+      await PolicyController.updatePolicy(
+        createReq({ params: { id: "1" }, body: { title: "Policy two" } }),
+        res,
+      );
+      expect(res.status).toHaveBeenCalledWith(202);
+      // Read once, on the update transaction, after the FOR UPDATE lock.
+      expect(mockGetById).toHaveBeenCalledTimes(1);
+      const [orgId, id, transaction] = mockGetById.mock.calls[0];
+      expect([orgId, id]).toEqual([1, 1]);
+      expect(transaction).toBeDefined();
+      const lockOrder = (sequelize.query as jest.Mock<any>).mock.invocationCallOrder[0];
+      const lockSql = (sequelize.query as jest.Mock<any>).mock.calls[0][0] as string;
+      expect(lockSql).toContain("FOR UPDATE");
+      expect(mockGetById.mock.invocationCallOrder[0]).toBeGreaterThan(lockOrder);
+      expect((trackPolicyChanges as jest.Mock<any>).mock.calls.at(-1)![0]).toBe(lockedRead);
     });
   });
 
