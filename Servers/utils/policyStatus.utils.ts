@@ -182,6 +182,25 @@ const lockPolicyStatusRows = async (
   return rows.map((r) => ({ ...r, id: Number(r.id), has_pending: pending.has(Number(r.id)) }));
 };
 
+type PolicyTextFields = { title?: unknown; content_html?: unknown };
+/** The update with title and content possibly removed (empty ones are not written). */
+type PolicyFieldsWritten<T extends PolicyTextFields> = Omit<T, keyof PolicyTextFields> &
+  Partial<Pick<T, keyof PolicyTextFields>>;
+
+/**
+ * The fields of a policy update that are actually written: updatePolicyByIdQuery
+ * skips an empty title or content, so neither is a change, for the pending
+ * text lock or for the history. Shared by the REST editor and the advisor.
+ */
+export const policyFieldsWritten = <T extends PolicyTextFields>(
+  data: T,
+): PolicyFieldsWritten<T> => {
+  const written: PolicyFieldsWritten<T> = { ...data };
+  if (!written.title) delete written.title;
+  if (!written.content_html) delete written.content_html;
+  return written;
+};
+
 /**
  * Checks an update against the stored row and the pending request: the status
  * by the status rules, the title and content by the pending lock. Pass what
@@ -221,13 +240,13 @@ export const assertPolicyUpdateAllowed = async (params: {
 /**
  * Checks that every policy may be archived. A policy with a pending approval
  * request blocks the whole batch: one 400 names the blocked policies and
- * nothing changes.
+ * nothing changes. Returns each locked policy's current status, for history.
  */
 export const assertPoliciesCanBeArchived = async (
   organizationId: number,
   policyIds: number[],
   transaction: Transaction,
-): Promise<void> => {
+): Promise<Array<{ id: number; status: string }>> => {
   const rows = await lockPolicyStatusRows(organizationId, policyIds, transaction);
   const blocked = rows
     .map((row) => ({
@@ -239,7 +258,7 @@ export const assertPoliciesCanBeArchived = async (
       }),
     }))
     .filter((b) => b.error !== null);
-  if (blocked.length === 0) return;
+  if (blocked.length === 0) return rows.map(({ id, status }) => ({ id, status }));
 
   const pendingOnly = blocked.every((b) => b.error === POLICY_STATUS_MESSAGES.pendingRequest);
   if (!pendingOnly) {

@@ -84,15 +84,22 @@ export async function deletePolicy(id: number): Promise<void> {
   }
 }
 
-export async function importDocxToHtml(file: File): Promise<{ html: string; warnings: string[] }> {
+export interface DocxImportResponse {
+  html: string;
+  warnings: string[];
+  /** Images in the document that were not imported. Absent on older servers. */
+  skippedImages?: number;
+}
+
+export async function importDocxToHtml(file: File): Promise<DocxImportResponse> {
   try {
     const formData = new FormData();
     formData.append("file", file);
     const response = await apiServices.post<{
       message: string;
-      data: { html: string; warnings: string[] };
+      data: DocxImportResponse;
     }>("/policies/import/docx", formData, { headers: { "Content-Type": "multipart/form-data" } });
-    return extractData<{ html: string; warnings: string[] }>(response);
+    return extractData<DocxImportResponse>(response);
   } catch (error: any) {
     throw new APIError("Failed to import DOCX file", error?.response?.status, error);
   }
@@ -158,4 +165,12 @@ export async function approvePolicyDirectly(
     { suppressGlobalErrorToast: true },
   );
   return extractData<PolicyManagerModel>(response);
+}
+
+/** Policies assigned directly to each folder: { [folderId]: count }. */
+export async function getPolicyFolderCounts(): Promise<Record<number, number>> {
+  const response = await apiServices.get<{ message: string; data: Record<number, number> }>(
+    "/v1/policies/folder-counts",
+  );
+  return extractData<Record<number, number>>(response);
 }

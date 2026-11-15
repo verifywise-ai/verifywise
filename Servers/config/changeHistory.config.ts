@@ -158,7 +158,49 @@ export interface EntityConfig {
   fieldsToTrack: string[];
   fieldLabels: { [key: string]: string };
   fieldFormatters?: { [key: string]: FieldFormatter };
+  /**
+   * Per-field comparison key. When set, a change is recorded only if the key
+   * differs between the old and new value, instead of the formatted strings.
+   * For fields whose formatted value is a lossy summary (e.g. a text excerpt).
+   */
+  fieldComparators?: { [key: string]: (value: unknown) => string };
 }
+
+/** Longest excerpt of rich text kept in a history entry. */
+export const HISTORY_EXCERPT_LENGTH = 120;
+
+/** Tags that separate words; any other tag (b, i, span, a...) is dropped without a space. */
+const BLOCK_TAG =
+  /<\/?(?:p|div|li|ul|ol|br|hr|h[1-6]|tr|td|th|table|thead|tbody|blockquote|pre|section|article|header|footer)\b[^>]*>/gi;
+
+const BASIC_ENTITIES: { [key: string]: string } = {
+  "&nbsp;": " ",
+  "&amp;": "&",
+  "&lt;": "<",
+  "&gt;": ">",
+  "&quot;": '"',
+  "&#39;": "'",
+  "&apos;": "'",
+};
+
+/**
+ * A readable one-line excerpt of an HTML value: tags stripped, basic entities
+ * decoded, whitespace collapsed, cut to HISTORY_EXCERPT_LENGTH characters with
+ * a trailing ellipsis when cut. An empty result is "-".
+ */
+export const htmlExcerpt = (value: unknown): string => {
+  const text = String(value ?? "")
+    .replace(BLOCK_TAG, " ")
+    .replace(/<[^>]*>/g, "")
+    .replace(/&(?:nbsp|amp|lt|gt|quot|apos|#39);/g, (m) => BASIC_ENTITIES[m])
+    .replace(/\s+/g, " ")
+    .trim();
+  if (!text) return "-";
+  return text.length > HISTORY_EXCERPT_LENGTH ? `${text.slice(0, HISTORY_EXCERPT_LENGTH)}…` : text;
+};
+
+/** The HTML as stored, compared without surrounding whitespace; null equals empty. */
+const normalizedHtml = (value: unknown): string => String(value ?? "").trim();
 
 /**
  * Generic field formatters that can be reused across entities
@@ -700,9 +742,11 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       "next_review_date",
       "policy_owner_id",
       "assigned_reviewer_ids",
+      "content_html",
     ],
     fieldLabels: {
       title: "Title",
+      content_html: "Content",
       status: "Status",
       tags: "Tags",
       next_review_date: "Next review date",
@@ -714,7 +758,11 @@ export const ENTITY_CONFIGS: { [key in EntityType]: EntityConfig } = {
       next_review_date: GENERIC_FORMATTERS.calendarDate,
       policy_owner_id: GENERIC_FORMATTERS.user,
       assigned_reviewer_ids: GENERIC_FORMATTERS.userArray,
+      content_html: async (value: unknown): Promise<string> => htmlExcerpt(value),
     },
+    // The excerpt is a summary: compare the HTML so an edit past the excerpt
+    // is still recorded.
+    fieldComparators: { content_html: normalizedHtml },
   },
 
   incident: {

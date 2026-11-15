@@ -731,13 +731,13 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
       },
       policy: {
         tableView: `
-          SELECT * FROM policies
+          SELECT * FROM policy_manager
           WHERE organization_id = $1
           ORDER BY id DESC
           LIMIT 100;
         `,
         singleRecord: `
-          SELECT * FROM policies
+          SELECT * FROM policy_manager
           WHERE id = $1 AND organization_id = $2
           LIMIT 1;
         `,
@@ -911,9 +911,17 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
               created_at: record.created_at,
               updated_at: record.updated_at,
             };
+          case "policy":
+            // policy_manager has no description and keeps its update time in
+            // last_updated_at.
+            return {
+              id: record.id,
+              name: record.title,
+              created_at: record.created_at,
+              updated_at: record.last_updated_at,
+            };
           case "vendor":
           case "project":
-          case "policy":
           case "risk":
           default:
             // Generic fallback for other resource types

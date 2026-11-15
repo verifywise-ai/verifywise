@@ -6,12 +6,17 @@ import {
   submitPolicyForApproval,
   approvePolicyDirectly,
   getPolicyApprovalState,
+  getPolicyFolderCounts,
 } from "../../controllers/policyApproval.ctrl";
 
 const router = express.Router();
 
 // Policy approval through the generic approval workflows. These replace the
 // deprecated legacy /policies/:id/review/* endpoints (ADR 0001 §7).
+
+// Policies per folder for the policies folder sidebar. Any member of the
+// organization may read it. Registered before the /:id routes.
+router.get("/folder-counts", authenticateJWT, getPolicyFolderCounts);
 
 // Approval state for the editor: any member of the organization may read it.
 router.get("/:id/approval", authenticateJWT, getPolicyApprovalState);

@@ -143,7 +143,11 @@ Every row is recorded in policy change history with the user who acted (none for
 
 A policy request can only come from submit for approval. The generic `POST /approval-requests` and the advisor's `agent_create_approval_request` refuse `entity_type 'policy'` with a `400` ("Submit the policy for approval from the policy").
 
-In the advisor, `agent_submit_policy_for_review` submits and `agent_approve_policy_review` approves directly. The approval gate queues a direct approval for an Admin's sign-off (rule `policy-review-requires-reviewer`) and then runs it as the user who asked, so the tool refuses a non-Admin and an organization with a usable workflow before anything is queued (`assertPolicyDirectApprovalPossible`); the service checks both again when it runs. `agent_withdraw_approval_request` follows the REST withdraw rules (requester only, pending only; see [Approvals](./approvals.md)).
+In the advisor, `agent_submit_policy_for_review` submits and `agent_approve_policy_review` approves directly. The approval gate queues a direct approval for an Admin's sign-off (rule `policy-review-requires-reviewer`) and then runs it as the user who asked, so the tool refuses a non-Admin and an organization with a usable workflow before anything is queued (`assertPolicyDirectApprovalPossible`); the service checks both again when it runs. `agent_withdraw_approval_request` follows the REST withdraw rules (requester only, pending only; see [Approvals](./approvals.md)). `get_policy_review_status` reads the same approval state as `GET /api/v1/policies/:id/approval` (`getPolicyApprovalState`), with the acting user's role in the organization.
+
+The advisor's `agent_create_policy` and `agent_update_policy` write through the same code as the REST create and update: the field checks (`getPolicyFieldErrors` in `utils/validations/policiesValidation.utils.ts`), `createPolicyQuery` / `updatePolicyByIdQuery` (tag check, jsonb-bound tags, owner and reviewers, the `policy_added` / `policy_updated` automations) and the policy history, as the acting user. Which fields count as written (an empty title or content is skipped) is `policyFieldsWritten` in `utils/policyStatus.utils.ts`, shared by both paths for the pending lock and the history.
+
+Policy share links (`resource_type 'policy'`) read the `policy_manager` table, scoped to the link's organization (they read a `policies` table before, which does not exist). With essential fields only, a shared policy shows its id, title (`name`), `created_at` and `updated_at` from `last_updated_at`. The advisor no longer lists tool names that did not exist.
 
 If the requester is also an approver on the workflow, they can decide their own request. That is a workflow configuration choice; the notification skips them, but the decision is not blocked.
 
@@ -196,6 +200,8 @@ enum LinkedObjectType {
 | DELETE | `/policies/:id` | Delete policy |
 
 Deleting a policy rejects its pending approval request in the same transaction ("The policy was deleted."), and the requester is notified after the commit. The advisor's `agent_delete_policy` does the same. Both go through `rejectPendingPolicyRequestOnDelete`, which locks the policy row (`FOR UPDATE`, by organization) before it reads the pending request, as submit does, so a submit racing the delete cannot leave a pending request on a deleted policy.
+
+`deletePolicyByIdQuery(organizationId, id, userId, transaction)` also removes, in the same transaction and filtered by `organization_id`, the rows that point at the policy without a foreign key: `policy_folder_mappings`, `ce_marking_policies`, `task_entity_links` (`entity_type 'policy'`) and `share_links` (`resource_type 'policy'`). `policy_change_history` is kept on purpose. It then records a deletion entry for the acting user (`recordEntityDeletion`). That write is best-effort and savepointed, so a failure never fails the delete, and it is skipped when there is no acting user. The advisor's `agent_delete_policy` uses the same query.
 
 ### Policy approval (v1)
 
@@ -258,7 +264,15 @@ These keep their old behaviour, frozen: they write only `review_status`, `review
 
 ### Bulk actions
 
-`PATCH /policies/bulk` takes `{ ids, action: "archive" | "set_reviewer" | "set_tags" }`. `set_reviewer` replaces each policy's team members (`policy_manager__assigned_reviewer_ids`) with the one user, skipping a policy that user owns, and no longer sets `review_status`. `archive` goes through the status gate.
+`PATCH /policies/bulk` takes `{ ids, action: "archive" | "set_reviewer" | "set_tags" }`. `set_reviewer` replaces each policy's team members (`policy_manager__assigned_reviewer_ids`) with the one user, skipping a policy that user owns, and no longer sets `review_status`. `archive` goes through the status gate. Bulk actions record one history entry per policy that actually changed, as the acting user: a Status change for archive (read under the row lock, so a policy that was already archived gets none), a Tags change for `set_tags` and a Reviewers change for `set_reviewer`. They start no automations.
+
+### Policy folder counts (v1)
+
+| Method | Endpoint | Description |
+|--------|----------|-------------|
+| GET | `/api/v1/policies/folder-counts` | Policies per folder |
+
+Returns `{ data: { [folderId]: count } }`. Any member of the organization may read it. Counts are direct assignments (no roll-up into parent folders), filtered by `organization_id`, and a mapping whose policy no longer exists is not counted. A folder with no policies is absent from the map. The policies folder sidebar reads it to show policy counts (`getPolicyFolderCountsQuery` in `utils/policyFolder.utils.ts`).
 
 ### Policy Tags
 
@@ -374,6 +388,10 @@ onerror, onload, onclick, onmouseover
 - Image dimension detection
 - 1-inch margins
 
+### DOCX import
+
+`POST /policies/import/docx` converts the file to sanitized HTML (mammoth) and writes nothing. Images are not imported: mammoth inlines them as `data:` URIs and the sanitizer drops those. The response adds `skippedImages`, the number of such images (additive, the existing fields are unchanged), and the editor shows "{count} image(s) from the document weren't imported. Add them with the image button in the toolbar." (en/de/fr/es, plural forms).
+
 ### Filename Format
 
 ```
@@ -408,7 +426,7 @@ POST /policy-linked/:policyId/linked-objects
 }
 ```
 
-`object_type` must be `risk` (ids from `risks`) or `evidence` (ids from `files`), otherwise 400. The policy must belong to the caller's organization (404) and so must every object (403). Ids already linked are skipped, and the policy row is locked while linking so concurrent requests cannot create duplicates. The response stays 201 (legacy contract) and adds `linked: <count>`, the number of links actually created. REST and the advisor's `agent_link_object_to_policy` both go through `linkObjectsToPolicyQuery` (`utils/policyLinkedObject.utils.ts`).
+`object_type` must be `risk` (ids from `risks`) or `evidence` (ids from `files`), otherwise 400. The policy must belong to the caller's organization (404) and so must every object (403). Ids already linked are skipped, and the policy row is locked while linking so concurrent requests cannot create duplicates. The response stays 201 (legacy contract) and adds `linked: <count>`, the number of links actually created. REST and the advisor's `agent_link_object_to_policy` both go through `linkObjectsToPolicyQuery` (`utils/policyLinkedObject.utils.ts`). When linking or unlinking fails, the editor shows one error and keeps the modal open.
 
 ## Change History
 
@@ -416,7 +434,9 @@ POST /policy-linked/:policyId/linked-objects
 
 - Policy creation
 - Field updates (old → new value)
-- Policy deletion
+- Policy deletion (as the acting user; see [Policy CRUD](#policy-crud))
+- Content edits: field "Content", with a plain-text excerpt of at most 120 characters (tags stripped, entities decoded, cut with an ellipsis). A change is recorded only when the stored HTML actually changed, even if the excerpts match (`htmlExcerpt` and `fieldComparators` in `config/changeHistory.config.ts`)
+- Bulk archive, set reviewer and set tags: one entry per changed policy
 
 ### History Entry
 

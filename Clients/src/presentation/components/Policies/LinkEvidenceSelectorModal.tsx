@@ -238,10 +238,9 @@ const LinkEvidenceSelectorModal: React.FC<LinkEvidenceSelectorModalProps> = ({
     try {
       setLoading(true);
       await onSubmit(selected);
-      toast("success", "Evidence linked successfully!");
       onClose();
     } catch {
-      toast("error", "Failed to link evidence.");
+      // The caller already reported the failure; stay open so the selection is kept.
     } finally {
       setLoading(false);
     }

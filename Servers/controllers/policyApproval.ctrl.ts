@@ -12,6 +12,7 @@ import {
   NotFoundException,
   ValidationException,
 } from "../domain.layer/exceptions/custom.exception";
+import { getPolicyFolderCountsQuery } from "../utils/policyFolder.utils";
 import * as policyApprovalService from "../services/policies/policyApproval.service";
 import { policyValidationExceptionResponse } from "./policy.ctrl";
 import { translateError } from "../utils/i18n.utils";
@@ -209,5 +210,27 @@ export async function getPolicyApprovalState(req: Request, res: Response) {
       sendDomainError(req, res, error) ??
       res.status(500).json(STATUS_CODE[500](translateError(req, error)))
     );
+  }
+}
+
+// GET /v1/policies/folder-counts
+/** Policies per folder for the policies folder sidebar: { [folderId]: count }. */
+export async function getPolicyFolderCounts(req: Request, res: Response) {
+  const userId = req.userId!;
+  const organizationId = req.organizationId!;
+  try {
+    const counts = await getPolicyFolderCountsQuery(organizationId);
+    return res.status(200).json(STATUS_CODE[200](counts));
+  } catch (error) {
+    await logFailure({
+      eventType: "Read",
+      description: "Failed to read policy folder counts",
+      functionName: "getPolicyFolderCounts",
+      fileName: FILE_NAME,
+      error: error as Error,
+      userId,
+      organizationId,
+    });
+    return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
 }

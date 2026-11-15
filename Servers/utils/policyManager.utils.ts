@@ -15,7 +15,13 @@ import {
 } from "./customField.utils";
 import { findUsersNotInOrganization, parseReferencedIds } from "./user.utils";
 import { POLICY_REVIEW_DATE_SQL, toReviewDateValue } from "./policyReviewDate.utils";
+import { runInSavepoint } from "../config/changeHistory.config";
+import logger from "./logger/fileLogger";
+import { recordEntityDeletion, recordUpdateChanges } from "./changeHistory.base.utils";
+import { recordPolicyStatusChange } from "./policyApprovalDecision.utils";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
+import { deleteNotificationsByEntityQuery } from "./notification.utils";
+import { NotificationEntityType } from "../domain.layer/interfaces/i.notification";
 
 /**
  * Tenant guard for policy owners and reviewers: every id must be a member of
@@ -540,9 +546,44 @@ export const updatePolicyByIdQuery = async (
   return updatedPolicy;
 };
 
+/**
+ * Removes the rows that point at policies without a foreign key, which would
+ * otherwise survive the policies' delete: custom field values, folder
+ * mappings, CE marking links, task links, share links and in-app
+ * notifications. Run it in the delete's transaction, before the policies go.
+ * policy_change_history is kept on purpose. Shared by the single policy delete
+ * and the demo data delete.
+ */
+export const deletePolicyLeftoversQuery = async (
+  organizationId: number,
+  policyIds: number[],
+  transaction: Transaction,
+): Promise<void> => {
+  if (policyIds.length === 0) return;
+  for (const id of policyIds) {
+    await deleteAllCustomFieldValuesForEntityQuery("policy", id, organizationId, transaction);
+    await deleteNotificationsByEntityQuery(
+      NotificationEntityType.POLICY,
+      id,
+      organizationId,
+      transaction,
+    );
+  }
+  const leftovers = [
+    `DELETE FROM policy_folder_mappings WHERE organization_id = :organizationId AND policy_id IN (:ids)`,
+    `DELETE FROM ce_marking_policies WHERE organization_id = :organizationId AND policy_id IN (:ids)`,
+    `DELETE FROM task_entity_links WHERE organization_id = :organizationId AND entity_type = 'policy' AND entity_id IN (:ids)`,
+    `DELETE FROM share_links WHERE organization_id = :organizationId AND resource_type = 'policy' AND resource_id IN (:ids)`,
+  ];
+  for (const sql of leftovers) {
+    await sequelize.query(sql, { replacements: { organizationId, ids: policyIds }, transaction });
+  }
+};
+
 export const deletePolicyByIdQuery = async (
   organizationId: number,
   id: number,
+  userId: number | null,
   transaction: Transaction,
 ) => {
   // Get policy data with reviewer IDs BEFORE deleting (CASCADE will delete mappings)
@@ -554,7 +595,7 @@ export const deletePolicyByIdQuery = async (
 
   const deletedPolicyData = policyToDelete[0] as any;
 
-  await deleteAllCustomFieldValuesForEntityQuery("policy", id, organizationId, transaction);
+  await deletePolicyLeftoversQuery(organizationId, [id], transaction);
 
   // Delete the policy (CASCADE will handle mapping table deletion)
   await sequelize.query(
@@ -565,6 +606,21 @@ export const deletePolicyByIdQuery = async (
       type: QueryTypes.DELETE,
     },
   );
+
+  // Best-effort and savepointed: a failed history write never fails the delete.
+  // No acting user means no entry: recordEntityDeletion takes a user id and has
+  // no system flag, so a null actor would read as an anonymous user's change
+  // rather than a system one.
+  if (userId) {
+    try {
+      await runInSavepoint(
+        () => recordEntityDeletion("policy", id, userId, organizationId, transaction),
+        transaction,
+      );
+    } catch (error) {
+      logger.error(`Error recording policy deletion history: ${error}`);
+    }
+  }
 
   const automations = (await sequelize.query(
     `SELECT
@@ -640,6 +696,7 @@ export const bulkArchivePoliciesQuery = async (
   ids: number[],
   userId: number,
   transaction: Transaction,
+  previousStatuses: Array<{ id: number; status: string }> = [],
 ): Promise<void> => {
   if (ids.length === 0) return;
 
@@ -660,6 +717,95 @@ export const bulkArchivePoliciesQuery = async (
       transaction,
     },
   );
+
+  // One status-change entry per policy whose status actually changed, from the
+  // status read under the row lock. Best-effort and savepointed.
+  for (const { id, status } of previousStatuses) {
+    if (status === "Archived") continue;
+    try {
+      await runInSavepoint(
+        () => recordPolicyStatusChange(organizationId, id, userId, status, "Archived", transaction),
+        transaction,
+      );
+    } catch (error) {
+      logger.error(`Error recording policy archive history: ${error}`);
+    }
+  }
+};
+
+type PolicyBulkValues = {
+  tags: string[];
+  assigned_reviewer_ids: number[];
+  policy_owner_id: number | null;
+};
+type PolicyBulkSnapshot = Map<number, PolicyBulkValues>;
+
+/**
+ * The tracked bulk-editable values (tags, reviewers) of the policies, by id,
+ * with the owner the reviewer rule needs.
+ */
+const snapshotPolicyBulkValues = async (
+  organizationId: number,
+  ids: number[],
+  transaction: Transaction,
+): Promise<PolicyBulkSnapshot> => {
+  const rows = (await sequelize.query(
+    `SELECT pm.id,
+            pm.policy_owner_id,
+            COALESCE(pm.tags, ARRAY[]::text[]) AS tags,
+            COALESCE(
+              ARRAY(
+                SELECT r.user_id FROM policy_manager__assigned_reviewer_ids r
+                WHERE r.organization_id = pm.organization_id AND r.policy_manager_id = pm.id
+                ORDER BY r.user_id
+              ),
+              ARRAY[]::int[]
+            ) AS assigned_reviewer_ids
+     FROM policy_manager pm
+     WHERE pm.organization_id = :organizationId AND pm.id IN (:ids)`,
+    { replacements: { organizationId, ids }, type: QueryTypes.SELECT, transaction },
+  )) as Array<{
+    id: number;
+    tags: string[];
+    assigned_reviewer_ids: number[];
+    policy_owner_id: number | null;
+  }>;
+  return new Map(
+    rows.map((r) => [
+      Number(r.id),
+      {
+        tags: r.tags,
+        assigned_reviewer_ids: r.assigned_reviewer_ids.map(Number),
+        policy_owner_id: r.policy_owner_id === null ? null : Number(r.policy_owner_id),
+      },
+    ]),
+  );
+};
+
+/**
+ * Records one history entry per policy whose `field` changed, as the acting
+ * user: `afterValue` derives the written value from the policy's prior values,
+ * so no second read is needed. Policies with equal values get none.
+ */
+const recordBulkFieldHistory = async <F extends "tags" | "assigned_reviewer_ids">(
+  field: F,
+  organizationId: number,
+  userId: number,
+  before: PolicyBulkSnapshot,
+  afterValue: (prior: PolicyBulkValues) => PolicyBulkValues[F],
+  transaction: Transaction,
+): Promise<void> => {
+  for (const [id, prior] of before) {
+    await recordUpdateChanges(
+      "policy",
+      id,
+      { [field]: prior[field] },
+      { [field]: afterValue(prior) },
+      userId,
+      organizationId,
+      transaction,
+    );
+  }
 };
 
 /**
@@ -674,10 +820,12 @@ export const bulkSetPoliciesReviewerQuery = async (
   organizationId: number,
   ids: number[],
   reviewerId: number,
+  userId: number,
   transaction: Transaction,
 ): Promise<void> => {
   if (ids.length === 0) return;
   await assertPolicyUsersInOrganization([reviewerId], "reviewerId", organizationId, transaction);
+  const before = await snapshotPolicyBulkValues(organizationId, ids, transaction);
 
   await sequelize.query(
     `DELETE FROM policy_manager__assigned_reviewer_ids
@@ -696,6 +844,16 @@ export const bulkSetPoliciesReviewerQuery = async (
      ON CONFLICT (policy_manager_id, user_id) DO NOTHING`,
     { replacements: { organizationId, ids, reviewerId }, transaction },
   );
+
+  // The insert above skips a policy the reviewer owns, leaving it with none.
+  await recordBulkFieldHistory(
+    "assigned_reviewer_ids",
+    organizationId,
+    userId,
+    before,
+    (prior) => (prior.policy_owner_id === reviewerId ? [] : [reviewerId]),
+    transaction,
+  );
 };
 
 /**
@@ -709,9 +867,11 @@ export const bulkSetPoliciesTagsQuery = async (
   organizationId: number,
   ids: number[],
   tags: PolicyTag[],
+  userId: number,
   transaction: Transaction,
 ): Promise<void> => {
   if (ids.length === 0) return;
+  const before = await snapshotPolicyBulkValues(organizationId, ids, transaction);
 
   await sequelize.query(
     `UPDATE policy_manager
@@ -727,4 +887,7 @@ export const bulkSetPoliciesTagsQuery = async (
       transaction,
     },
   );
+
+  // The update writes the sent list as is, in order.
+  await recordBulkFieldHistory("tags", organizationId, userId, before, () => tags, transaction);
 };

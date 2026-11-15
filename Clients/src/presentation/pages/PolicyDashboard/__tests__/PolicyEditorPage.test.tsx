@@ -506,4 +506,77 @@ describe("PolicyEditorPage", () => {
       expect(document.querySelector(".edit-title-icon")).not.toBeNull();
     });
   });
+  describe("DOCX import", () => {
+    const saved = {
+      id: 7,
+      title: "Saved title",
+      status: "Draft",
+      tags: ["Privacy"],
+      content_html: "<p>c</p>",
+      next_review_date: "2027-01-01",
+      policy_owner_id: null,
+      assigned_reviewer_ids: [],
+    };
+
+    const importFile = async () => {
+      mockParams = { id: "7" };
+      mockGetPolicyById.mockResolvedValue(saved);
+      const setContent = vi.fn();
+      vi.mocked(useEditor).mockReturnValue({
+        setEditable: vi.fn(),
+        isEditable: true,
+        isEmpty: true,
+        getHTML: () => "",
+        commands: { setContent },
+        state: { tr: { setMeta: () => ({}) }, doc: { descendants: () => {} } },
+        view: { dispatch: vi.fn() },
+      } as any);
+      renderWithProviders(<PolicyEditorPage />, { route: "/policies/7/edit" });
+      await waitFor(() =>
+        expect(screen.getByTestId("form-title")).toHaveTextContent("Saved title"),
+      );
+      const input = document.querySelector('input[type="file"]') as HTMLInputElement;
+      const file = new File(["x"], "policy.docx");
+      await act(async () => {
+        fireEvent.change(input, { target: { files: [file] } });
+      });
+      return setContent;
+    };
+
+    it("warns that images were skipped and still applies the imported text", async () => {
+      mockImportDocxToHtml.mockResolvedValue({ html: "<p>hi</p>", warnings: [], skippedImages: 3 });
+      const setContent = await importFile();
+
+      expect(
+        await screen.findByText(
+          "3 images from the document weren't imported. Add them with the image button in the toolbar.",
+        ),
+      ).toBeInTheDocument();
+      expect(setContent).toHaveBeenCalled();
+    });
+
+    it("uses the singular for one skipped image", async () => {
+      mockImportDocxToHtml.mockResolvedValue({ html: "<p>hi</p>", warnings: [], skippedImages: 1 });
+      await importFile();
+
+      expect(
+        await screen.findByText(
+          "1 image from the document wasn't imported. Add it with the image button in the toolbar.",
+        ),
+      ).toBeInTheDocument();
+    });
+
+    it("shows no image warning when nothing was skipped, and never the raw style warnings", async () => {
+      mockImportDocxToHtml.mockResolvedValue({
+        html: "<p>hi</p>",
+        warnings: ["Unrecognised paragraph style"],
+        skippedImages: 0,
+      });
+      const setContent = await importFile();
+
+      await waitFor(() => expect(setContent).toHaveBeenCalled());
+      expect(screen.queryByText(/weren't imported|wasn't imported/)).not.toBeInTheDocument();
+      expect(screen.queryByText(/Unrecognised paragraph style/)).not.toBeInTheDocument();
+    });
+  });
 });

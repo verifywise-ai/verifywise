@@ -47,13 +47,16 @@ import { translateError } from "../utils/i18n.utils";
 import { roleHasPermission } from "../utils/rolePermissions.utils";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 import { sanitizeUserHtml } from "../utils/sanitization.utils";
-import { POLICY_STATUS_ENUM } from "../utils/validations/policiesValidation.utils";
-import { isReviewDateString } from "../utils/policyReviewDate.utils";
+import {
+  getPolicyFieldErrors,
+  PolicyFieldError,
+} from "../utils/validations/policiesValidation.utils";
 import { rejectPendingPolicyRequestOnDelete } from "../services/policies/policyApproval.service";
 import {
   assertPoliciesCanBeArchived,
   assertPolicyStatusChange,
   assertPolicyUpdateAllowed,
+  policyFieldsWritten,
 } from "../utils/policyStatus.utils";
 
 /**
@@ -84,48 +87,13 @@ const EDITABLE_POLICY_FIELDS = [
   "assigned_reviewer_ids",
 ] as const;
 
-type PolicyFieldError = { field: string; message: string };
-
 /**
  * Field checks for create (`isCreate`: title required) and update (only the
- * fields sent). They reject only input the database used to fail on with a
- * 500 (P-L6): the legacy endpoint is frozen (Servers/CLAUDE.md), so a short
- * title, duplicate tags or many reviewers are accepted as before. Returns translated, field-keyed errors the editor shows
- * under each input.
+ * fields sent), translated for the editor. The rules are shared with the
+ * advisor's policy tools (getPolicyFieldErrors).
  */
-function policyFieldErrors(req: Request, data: Partial<IPolicy>, isCreate: boolean) {
-  const errors: PolicyFieldError[] = [];
-  const t = req.t!;
-  const { title, status, tags, next_review_date: reviewDate } = data as Record<string, unknown>;
-  if (
-    (isCreate || title !== undefined) &&
-    // title is VARCHAR(255) NOT NULL; the stored value is untrimmed.
-    (typeof title !== "string" || title.trim() === "" || title.length > 255)
-  ) {
-    errors.push({ field: "title", message: t("Enter a title of up to 255 characters") });
-  }
-  // policy_manager_status_check limits status to POLICY_STATUS_ENUM.
-  if (
-    status !== undefined &&
-    !POLICY_STATUS_ENUM.includes(status as (typeof POLICY_STATUS_ENUM)[number])
-  ) {
-    errors.push({ field: "status", message: t("Choose a valid status") });
-  }
-
-  if (tags !== undefined && (!Array.isArray(tags) || tags.some((tag) => !PolicyTagsSet.has(tag)))) {
-    errors.push({ field: "tags", message: t("Choose tags from the list") });
-  }
-  // null or "" clears the date; anything else must be YYYY-MM-DD or a full ISO timestamp.
-  if (
-    reviewDate !== undefined &&
-    reviewDate !== null &&
-    reviewDate !== "" &&
-    !isReviewDateString(reviewDate)
-  ) {
-    errors.push({ field: "next_review_date", message: t("Enter a valid next review date") });
-  }
-  return errors;
-}
+const policyFieldErrors = (req: Request, data: Partial<IPolicy>, isCreate: boolean) =>
+  getPolicyFieldErrors(data, isCreate, req.t!);
 
 /** 400 body carrying field errors, in the shape other controllers use. */
 export const policyValidationResponse = (errors: PolicyFieldError[]) =>
@@ -240,15 +208,6 @@ export class PolicyController {
     try {
       const policyId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
       const userId = req.userId!;
-      // Get existing policy for change tracking
-      const existingPolicyResult = await getPolicyByIdQuery(req.organizationId!, policyId);
-
-      if (!existingPolicyResult || existingPolicyResult.length === 0) {
-        await transaction.rollback();
-        return res.status(404).json(STATUS_CODE[404]({}));
-      }
-
-      const existingPolicy = existingPolicyResult[0];
 
       const policyData = {
         ...pickEditablePolicyFields(req.body),
@@ -262,16 +221,24 @@ export class PolicyController {
       }
       // Status moves by hand only within the rules (pending request, workflow-only
       // statuses); title and content are locked while a request is pending.
-      // updatePolicyByIdQuery writes title and content only when non-empty, so
-      // an empty value is not a change.
+      // An empty title or content is not written, so it is not a change.
+      const written = policyFieldsWritten(policyData);
       await assertPolicyUpdateAllowed({
         organizationId: req.organizationId!,
         policyId,
-        nextStatus: policyData.status,
-        nextTitle: policyData.title || undefined,
-        nextContentHtml: policyData.content_html || undefined,
+        nextStatus: written.status,
+        nextTitle: written.title,
+        nextContentHtml: written.content_html,
         transaction,
       });
+
+      // The stored row for change tracking, read in the transaction after the
+      // lock above, so the history compares against what this update replaces.
+      const [existingPolicy] = await getPolicyByIdQuery(req.organizationId!, policyId, transaction);
+      if (!existingPolicy) {
+        await transaction.rollback();
+        return res.status(404).json(STATUS_CODE[404]({}));
+      }
 
       const policy = await updatePolicyByIdQuery(
         policyId,
@@ -282,8 +249,8 @@ export class PolicyController {
       );
 
       if (policy) {
-        // Track and record changes
-        const changes = await trackPolicyChanges(existingPolicy as unknown as IPolicy, policyData);
+        // Track what was written, not what was sent.
+        const changes = await trackPolicyChanges(existingPolicy as unknown as IPolicy, written);
         if (changes.length > 0) {
           await recordMultipleFieldChanges(
             policyId,
@@ -327,7 +294,12 @@ export class PolicyController {
       // A pending approval request on the policy is rejected with the delete.
       await rejectPendingPolicyRequestOnDelete(req.organizationId!, policyId, transaction);
 
-      const deleted = await deletePolicyByIdQuery(req.organizationId!, policyId, transaction);
+      const deleted = await deletePolicyByIdQuery(
+        req.organizationId!,
+        policyId,
+        req.userId!,
+        transaction,
+      );
 
       if (deleted) {
         await transaction.commit();
@@ -443,7 +415,7 @@ export class PolicyController {
         return res.status(400).json(STATUS_CODE[400](req.t!("Only .docx files are supported")));
       }
 
-      const { html, warnings } = await convertDocxToHtml(req.file.buffer);
+      const { html, warnings, skippedImages } = await convertDocxToHtml(req.file.buffer);
 
       await logSuccess({
         eventType: "Read",
@@ -454,7 +426,7 @@ export class PolicyController {
         organizationId,
       });
 
-      return res.status(200).json(STATUS_CODE[200]({ html, warnings }));
+      return res.status(200).json(STATUS_CODE[200]({ html, warnings, skippedImages }));
     } catch (error) {
       await logFailure({
         eventType: "Read",
@@ -800,12 +772,34 @@ export class PolicyController {
           });
 
           if (action === "archive") {
-            await assertPoliciesCanBeArchived(req.organizationId!, ids, transaction);
-            await bulkArchivePoliciesQuery(req.organizationId!, ids, req.userId!, transaction);
+            const previous = await assertPoliciesCanBeArchived(
+              req.organizationId!,
+              ids,
+              transaction,
+            );
+            await bulkArchivePoliciesQuery(
+              req.organizationId!,
+              ids,
+              req.userId!,
+              transaction,
+              previous,
+            );
           } else if (action === "set_reviewer") {
-            await bulkSetPoliciesReviewerQuery(req.organizationId!, ids, reviewerId!, transaction);
+            await bulkSetPoliciesReviewerQuery(
+              req.organizationId!,
+              ids,
+              reviewerId!,
+              req.userId!,
+              transaction,
+            );
           } else {
-            await bulkSetPoliciesTagsQuery(req.organizationId!, ids, tags!, transaction);
+            await bulkSetPoliciesTagsQuery(
+              req.organizationId!,
+              ids,
+              tags!,
+              req.userId!,
+              transaction,
+            );
           }
         },
       );

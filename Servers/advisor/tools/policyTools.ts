@@ -164,6 +164,24 @@ export const toolsDefinition: any[] = [
   {
     type: "function",
     function: {
+      name: "get_policy_review_status",
+      description:
+        "Get the approval state of one policy: the pending approval request (workflow, current step, who requested it), the last approval decision with its comment, the organization's usable policy approval workflows, and whether the current user can submit it for approval, approve it directly or withdraw the request. Use this before suggesting agent_submit_policy_for_review or agent_approve_policy_review.",
+      parameters: {
+        type: "object",
+        properties: {
+          policy_id: {
+            type: "number",
+            description: "The ID of the policy.",
+          },
+        },
+        required: ["policy_id"],
+      },
+    },
+  },
+  {
+    type: "function",
+    function: {
       name: "agent_create_policy",
       description:
         "Create a new policy in the policy management system. Requires human confirmation before execution.",

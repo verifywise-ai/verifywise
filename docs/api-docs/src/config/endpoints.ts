@@ -12487,6 +12487,17 @@ export const v1PoliciesEndpoints: Endpoint[] = [
     ],
     tag: "v1: Policies",
   },
+  {
+    method: 'GET',
+    path: '/v1/policies/folder-counts',
+    summary: "Get Policy Folder Counts",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "v1: Policies",
+  },
 ];
 
 // v1: Use Case Settings endpoints

@@ -2,6 +2,18 @@
 // Spread into ../translations.ts. Other areas stay in that file for now.
 
 export const de: Record<string, string> = {
+  "Linked, but the list couldn't be refreshed. Reopen this window to see it.":
+    "Verknüpft, aber die Liste konnte nicht aktualisiert werden. Öffnen Sie dieses Fenster erneut, um sie zu sehen.",
+  "Couldn't link the selected risks. Try again.":
+    "Die ausgewählten Risiken konnten nicht verknüpft werden. Versuchen Sie es erneut.",
+  "Couldn't link the selected evidence. Try again.":
+    "Die ausgewählten Nachweise konnten nicht verknüpft werden. Versuchen Sie es erneut.",
+  "Couldn't unlink this item. Try again.":
+    "Dieser Eintrag konnte nicht getrennt werden. Versuchen Sie es erneut.",
+  "{count} image from the document wasn't imported. Add it with the image button in the toolbar.":
+    "{count} Bild aus dem Dokument wurde nicht importiert. Fügen Sie es mit der Bildschaltfläche in der Symbolleiste hinzu.",
+  "{count} images from the document weren't imported. Add them with the image button in the toolbar.":
+    "{count} Bilder aus dem Dokument wurden nicht importiert. Fügen Sie sie mit der Bildschaltfläche in der Symbolleiste hinzu.",
   "Create new policies": "Neue Richtlinien erstellen",
   "Create from templates": "Aus Vorlagen erstellen",
   "Replace all": "Alle ersetzen",
@@ -116,6 +128,17 @@ export const de: Record<string, string> = {
 };
 
 export const fr: Record<string, string> = {
+  "Linked, but the list couldn't be refreshed. Reopen this window to see it.":
+    "Lié, mais la liste n'a pas pu être actualisée. Rouvrez cette fenêtre pour la voir.",
+  "Couldn't link the selected risks. Try again.":
+    "Impossible de lier les risques sélectionnés. Réessayez.",
+  "Couldn't link the selected evidence. Try again.":
+    "Impossible de lier les preuves sélectionnées. Réessayez.",
+  "Couldn't unlink this item. Try again.": "Impossible de dissocier cet élément. Réessayez.",
+  "{count} image from the document wasn't imported. Add it with the image button in the toolbar.":
+    "{count} image du document n'a pas été importée. Ajoutez-la avec le bouton d'image de la barre d'outils.",
+  "{count} images from the document weren't imported. Add them with the image button in the toolbar.":
+    "{count} images du document n'ont pas été importées. Ajoutez-les avec le bouton d'image de la barre d'outils.",
   "Create new policies": "Créer de nouvelles politiques",
   "Create from templates": "Créer à partir de modèles",
   "Replace all": "Tout remplacer",
@@ -231,6 +254,18 @@ export const fr: Record<string, string> = {
 };
 
 export const es: Record<string, string> = {
+  "Linked, but the list couldn't be refreshed. Reopen this window to see it.":
+    "Vinculado, pero no se pudo actualizar la lista. Vuelva a abrir esta ventana para verla.",
+  "Couldn't link the selected risks. Try again.":
+    "No se pudieron vincular los riesgos seleccionados. Inténtelo de nuevo.",
+  "Couldn't link the selected evidence. Try again.":
+    "No se pudieron vincular las evidencias seleccionadas. Inténtelo de nuevo.",
+  "Couldn't unlink this item. Try again.":
+    "No se pudo desvincular este elemento. Inténtelo de nuevo.",
+  "{count} image from the document wasn't imported. Add it with the image button in the toolbar.":
+    "{count} imagen del documento no se importó. Agréguela con el botón de imagen de la barra de herramientas.",
+  "{count} images from the document weren't imported. Add them with the image button in the toolbar.":
+    "{count} imágenes del documento no se importaron. Agréguelas con el botón de imagen de la barra de herramientas.",
   "Create new policies": "Crear nuevas políticas",
   "Create from templates": "Crear a partir de plantillas",
   "Replace all": "Reemplazar todo",

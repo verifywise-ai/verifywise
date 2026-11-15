@@ -89,6 +89,7 @@ jest.mock("../../domain.layer/exceptions/custom.exception", () => ({
 }));
 
 import { PolicyController } from "../policy.ctrl";
+import { trackPolicyChanges } from "../../utils/policyChangeHistory.utils";
 import {
   getAllPoliciesQuery,
   getPolicyByIdQuery,
@@ -402,6 +403,42 @@ describe("policy.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(202);
     });
 
+    it("does not track a content that sanitizes to empty, as it is not written", async () => {
+      const existing = { id: 1, title: "P1", status: "Draft", content_html: "<p>Old</p>" };
+      mockGetById.mockResolvedValue([existing] as any);
+      lockRow("Draft");
+      mockUpdate.mockResolvedValue({ id: 1 } as any);
+      const res = createRes();
+      await PolicyController.updatePolicy(
+        createReq({
+          params: { id: "1" },
+          // sanitizes to an empty string, which the write skips
+          body: { content_html: "<style>p{color:red}</style>", status: "Draft" },
+        }),
+        res,
+      );
+      expect(res.status).toHaveBeenCalledWith(202);
+      const tracked = (trackPolicyChanges as jest.Mock<any>).mock.calls.at(-1)![1];
+      expect(tracked).not.toHaveProperty("content_html");
+      expect(tracked.status).toBe("Draft");
+    });
+
+    it("tracks a real content change with the value that was written", async () => {
+      const existing = { id: 1, title: "P1", status: "Draft", content_html: "<p>Old</p>" };
+      mockGetById.mockResolvedValue([existing] as any);
+      lockRow("Draft");
+      mockUpdate.mockResolvedValue({ id: 1 } as any);
+      const res = createRes();
+      await PolicyController.updatePolicy(
+        createReq({ params: { id: "1" }, body: { content_html: "<p>New</p>", status: "Draft" } }),
+        res,
+      );
+      expect(res.status).toHaveBeenCalledWith(202);
+      const [old, tracked] = (trackPolicyChanges as jest.Mock<any>).mock.calls.at(-1)!;
+      expect(old).toBe(existing);
+      expect(tracked.content_html).toBe("<p>New</p>");
+    });
+
     it("publishes an approved policy and locks the row in the update transaction", async () => {
       mockGetById.mockResolvedValue([{ id: 1, title: "P1", status: "Approved" }] as any);
       lockRow("Approved");
@@ -543,6 +580,9 @@ describe("policy.ctrl", () => {
 
   describe("updatePolicy", () => {
     it("should return 404 when policy is not found", async () => {
+      const { sequelize } = require("../../database/db");
+      // The lock finds no row in the organization; neither does the read.
+      (sequelize.query as jest.Mock<any>).mockResolvedValueOnce([]);
       mockGetById.mockResolvedValue([] as any);
       const req = createReq({ params: { id: "99" }, body: { title: "Policy two" } });
       const res = createRes();
@@ -568,11 +608,35 @@ describe("policy.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(404);
     });
     it("should return 500 on error", async () => {
+      lockUnlockedRow();
       mockGetById.mockRejectedValue(new Error("DB error"));
       const req = createReq({ params: { id: "1" }, body: { title: "Policy two" } });
       const res = createRes();
       await PolicyController.updatePolicy(req, res);
       expect(res.status).toHaveBeenCalledWith(500);
+    });
+    it("tracks changes against the row read in the transaction after the lock", async () => {
+      const { sequelize } = require("../../database/db");
+      lockUnlockedRow();
+      const lockedRead = { id: 1, title: "P1", status: "Draft" };
+      mockGetById.mockResolvedValue([lockedRead] as any);
+      mockUpdate.mockResolvedValue({ id: 1, title: "Policy two" } as any);
+      const res = createRes();
+      await PolicyController.updatePolicy(
+        createReq({ params: { id: "1" }, body: { title: "Policy two" } }),
+        res,
+      );
+      expect(res.status).toHaveBeenCalledWith(202);
+      // Read once, on the update transaction, after the FOR UPDATE lock.
+      expect(mockGetById).toHaveBeenCalledTimes(1);
+      const [orgId, id, transaction] = mockGetById.mock.calls[0];
+      expect([orgId, id]).toEqual([1, 1]);
+      expect(transaction).toBeDefined();
+      const lockOrder = (sequelize.query as jest.Mock<any>).mock.invocationCallOrder[0];
+      const lockSql = (sequelize.query as jest.Mock<any>).mock.calls[0][0] as string;
+      expect(lockSql).toContain("FOR UPDATE");
+      expect(mockGetById.mock.invocationCallOrder[0]).toBeGreaterThan(lockOrder);
+      expect((trackPolicyChanges as jest.Mock<any>).mock.calls.at(-1)![0]).toBe(lockedRead);
     });
   });
 
@@ -639,7 +703,7 @@ describe("policy.ctrl", () => {
       const reject = rejectPendingPolicyRequestOnDelete as jest.Mock;
       expect(reject).toHaveBeenCalledWith(1, 7, expect.anything());
       // Same transaction object as the delete.
-      expect(reject.mock.calls[0][2]).toBe(mockDelete.mock.calls[0][2]);
+      expect(reject.mock.calls[0][2]).toBe(mockDelete.mock.calls[0][3]);
       expect(res.status).toHaveBeenCalledWith(202);
     });
     it("should return 404 when policy is not found", async () => {

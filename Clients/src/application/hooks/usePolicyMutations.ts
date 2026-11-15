@@ -69,6 +69,8 @@ export function useDeletePolicy() {
     },
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: tagQueryKeys.all });
+      // The deleted policy's folder mappings are gone; refresh the sidebar counts.
+      queryClient.invalidateQueries({ queryKey: policyQueryKeys.folderCounts() });
     },
     onError: (error, _id, context) => {
       if (context?.snapshots) {

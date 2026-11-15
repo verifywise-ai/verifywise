@@ -63,6 +63,10 @@ export const policyManagementContent: ArticleContent = {
       ],
     },
     {
+      type: 'paragraph',
+      text: 'The folder sidebar shows how many policies each folder holds. The count covers policies filed directly in that folder, not the ones in its subfolders.',
+    },
+    {
       type: 'heading',
       id: 'status-cards',
       level: 2,
@@ -191,7 +195,7 @@ export const policyManagementContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'To delete a policy, use the delete action in the policy table. Deleted policies can\'t be recovered, so consider archiving instead if you might need to reference them later.',
+      text: 'To delete a policy, use the delete action in the policy table. Deleting a policy also removes its folder placement, its share links and its links to tasks. Deleted policies can\'t be recovered, so consider archiving instead if you might need to reference them later.',
     },
     {
       type: 'callout',
