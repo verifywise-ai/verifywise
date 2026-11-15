@@ -40,7 +40,6 @@ describe("describeFetchError", () => {
     );
     expect(describeFetchError(err, 30)).toBe(
       "The URL resolves to a loopback address, which is not allowed",
-      "blocked-address",
     );
   });
 
@@ -114,7 +113,6 @@ describe("describeConnectionTestError", () => {
     );
     expect(describeConnectionTestError(err, 30)).toBe(
       "The server answered with a redirect (HTTP 302), which is not followed",
-      "redirect",
     );
   });
 
