@@ -38,6 +38,7 @@ import { PolicyMetadataSidebar } from "./PolicyEditor/PolicyMetadataSidebar";
 import { PolicyReviewPanel } from "./PolicyEditor/PolicyReviewPanel";
 import { isPolicyFormDirty } from "./PolicyEditor/policyFormDirty";
 import { radiusPx } from "../../themes/palette";
+import { fill, pluralKey } from "../../../i18n/fill";
 import { toDateOnlyString } from "../../tools/isoDateToString";
 
 // ── Component ─────────────────────────────────────────────────────────
@@ -49,7 +50,7 @@ export default function PolicyEditorPage() {
   const updatePolicyMutation = useUpdatePolicy();
   const can = useCanCheck();
   const readOnly = !can("policy.edit");
-  const { t } = useTranslation();
+  const { t, lang } = useTranslation();
 
   const isNew = !id;
   const templateId = searchParams.get("templateId");
@@ -93,6 +94,7 @@ export default function PolicyEditorPage() {
   const [exportError, setExportError] = useState<string | null>(null);
   const [isImporting, setIsImporting] = useState(false);
   const [importError, setImportError] = useState<string | null>(null);
+  const [importNotice, setImportNotice] = useState<string | null>(null);
   const [pendingImportFile, setPendingImportFile] = useState<File | null>(null);
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [editedTitle, setEditedTitle] = useState("");
@@ -490,11 +492,27 @@ export default function PolicyEditorPage() {
     if (textLocked) return;
     setIsImporting(true);
     setImportError(null);
+    setImportNotice(null);
     try {
-      const { html } = await importDocxToHtml(file);
+      const { html, skippedImages = 0 } = await importDocxToHtml(file);
       const sanitized = sanitizeRichText(html);
       if (editor) {
         editor.commands.setContent(sanitized);
+      }
+      if (skippedImages > 0) {
+        setImportNotice(
+          fill(
+            t(
+              pluralKey(
+                lang,
+                skippedImages,
+                "{count} image from the document wasn't imported. Add it with the image button in the toolbar.",
+                "{count} images from the document weren't imported. Add them with the image button in the toolbar.",
+              ),
+            ),
+            { count: skippedImages },
+          ),
+        );
       }
     } catch {
       setImportError("Failed to import DOCX file. Please try again.");
@@ -689,6 +707,18 @@ export default function PolicyEditorPage() {
       >
         <Alert onClose={() => setImportError(null)} severity="error" sx={{ width: "100%" }}>
           {importError}
+        </Alert>
+      </Snackbar>
+
+      {/* Import notice snackbar: the document imported, but some images did not */}
+      <Snackbar
+        open={Boolean(importNotice)}
+        autoHideDuration={8000}
+        onClose={() => setImportNotice(null)}
+        anchorOrigin={{ vertical: "top", horizontal: "center" }}
+      >
+        <Alert onClose={() => setImportNotice(null)} severity="warning" sx={{ width: "100%" }}>
+          {importNotice}
         </Alert>
       </Snackbar>
 

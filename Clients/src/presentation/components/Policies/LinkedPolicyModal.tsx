@@ -129,9 +129,15 @@ const LinkedPolicyModal: React.FC<LinkedPolicyModalProps> = ({ onClose, policyId
   // REMOVE LINK
   // ------------------------------------
   const handleRemove = async (type: string, id: number) => {
-    await deleteEntityById({
-      routeUrl: `/policy-linked/${id}/linked-objects`,
-    });
+    try {
+      await deleteEntityById({
+        routeUrl: `/policy-linked/${id}/linked-objects`,
+      });
+    } catch {
+      // The link is still there, so leave the list as it is.
+      handleToast("error", "Couldn't unlink this item. Try again.");
+      return;
+    }
 
     if (type === "risk") setRisks((prev) => prev.filter((i) => i.id !== id));
     if (type === "evidence") setEvidence((prev) => prev.filter((i) => i.id !== id));
@@ -169,7 +175,15 @@ const LinkedPolicyModal: React.FC<LinkedPolicyModalProps> = ({ onClose, policyId
         body: `${objectType} linked successfully!`,
       });
     } catch (error) {
-      handleToast("error", `Failed to link ${objectType} with error ${error}.`);
+      // Report once here, then rethrow so the selector modal stays open and
+      // does not run its own success path.
+      handleToast(
+        "error",
+        objectType === "evidence"
+          ? "Couldn't link the selected evidence. Try again."
+          : "Couldn't link the selected risks. Try again.",
+      );
+      throw error;
     }
   };
 

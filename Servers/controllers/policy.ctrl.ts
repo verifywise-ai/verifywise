@@ -416,7 +416,7 @@ export class PolicyController {
         return res.status(400).json(STATUS_CODE[400](req.t!("Only .docx files are supported")));
       }
 
-      const { html, warnings } = await convertDocxToHtml(req.file.buffer);
+      const { html, warnings, skippedImages } = await convertDocxToHtml(req.file.buffer);
 
       await logSuccess({
         eventType: "Read",
@@ -427,7 +427,7 @@ export class PolicyController {
         organizationId,
       });
 
-      return res.status(200).json(STATUS_CODE[200]({ html, warnings }));
+      return res.status(200).json(STATUS_CODE[200]({ html, warnings, skippedImages }));
     } catch (error) {
       await logFailure({
         eventType: "Read",
