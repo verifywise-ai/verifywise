@@ -59,7 +59,6 @@ export class JiraUpstreamError extends Error {
  */
 export const JIRA_NUMERIC_ID_PATTERN = /^\d{1,18}$/;
 
-
 /**
  * Message key for an id that is not a numeric Jira id, shared by the route
  * validators, the client and the selection writes. `{field}` is the API name

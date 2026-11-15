@@ -1525,7 +1525,7 @@ describe("selected ids follow the client's numeric Jira id rule", () => {
     ["selected_schema_id", "../../api"],
     ["selected_object_type_id", "OBJ-1"],
   ])("saveConfig refuses a non-numeric %s before writing", async (field, id) => {
-    mockQuery.mockResolvedValueOnce([{ id: 1, api_token_encrypted: "enc" }]);
+    mockQuery.mockResolvedValueOnce([{ id: 1, api_token_encrypted: "enc", ...base }]);
 
     const err = await saveConfig(5, 3, { ...base, [field]: id }).catch((e) => e);
 
@@ -1536,7 +1536,9 @@ describe("selected ids follow the client's numeric Jira id rule", () => {
   });
 
   it("saveConfig stores numeric ids and null for missing or empty ones", async () => {
-    mockQuery.mockResolvedValueOnce([{ id: 1, api_token_encrypted: "enc" }]).mockResolvedValue([]);
+    mockQuery
+      .mockResolvedValueOnce([{ id: 1, api_token_encrypted: "enc", ...base }])
+      .mockResolvedValue([]);
 
     await saveConfig(5, 3, { ...base, selected_schema_id: "3", selected_object_type_id: "" });
 
