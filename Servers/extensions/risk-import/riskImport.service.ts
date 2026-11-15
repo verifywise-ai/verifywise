@@ -728,7 +728,8 @@ export async function importRisks(
         await sequelize.query(`ROLLBACK TO SAVEPOINT ${savepoint}`, { transaction });
         // The database's own text can name tables and columns: keep it in the
         // log and give the caller a fixed message.
-        logger.error(`Risk import row ${rowIndex} could not be saved: ${err?.message ?? err}`);
+        const detail = String(err?.message ?? err).replace(/[\r\n\t\u2028\u2029]+/g, " ");
+        logger.error(`Risk import row ${rowIndex} could not be saved: ${detail}`);
         insertErrors.push(
           rowError(rowIndex, "general", {
             i18nKey: "This row could not be saved. Check its values and try again.",
