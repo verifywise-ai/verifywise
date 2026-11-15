@@ -17,7 +17,7 @@ The Slack extension routes manage the organization's Slack connections. Connecti
 
 **Router:** Express Router
 
-This is the only mount. The legacy `/api/slackWebhooks` router was removed.
+`/api/slackWebhooks` (`Servers/routes/slackWebhook.route.ts`) is a deprecated legacy alias with the same six operations (`GET /`, `GET /:id`, `POST /`, `PATCH /:id`, `DELETE /:id`, `POST /:id/send`), the same handlers and the same Admin-only, organization-scoped behaviour. It is kept per ADR 0001 and slated for removal; the client uses the extension path.
 
 ## API Endpoints
 

@@ -13,7 +13,8 @@ tags:
       Every route needs the Slack extension enabled for the caller's
       organization (403 otherwise) and the extension.admin permission (Admin).
       Connections belong to the organization: another organization's id
-      answers 404. The legacy /slackWebhooks mount was removed.
+      answers 404. The legacy /slackWebhooks paths are a deprecated alias of
+      these operations with the same gates and behaviour, slated for removal.
   - name: GitHub Integration
     description: Manage GitHub Personal Access Token for private repository access (Admin only)
   - name: Webhooks

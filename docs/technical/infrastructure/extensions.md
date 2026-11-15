@@ -972,11 +972,16 @@ organization, so they never send. The API filters by organization too, so no
 Admin can list, change or delete them. There is no cleanup path for them in
 the app.
 
-### Removed
+### Legacy alias
 
-The legacy `/api/slackWebhooks` router (JWT only, no extension gate, no role
-check) and its `slackWebhookCreateLimiter` were removed. Connection creation
-is limited by `slackWorkspaceCreateLimiter` on the extension route.
+`/api/slackWebhooks` (`routes/slackWebhook.route.ts`) is a deprecated alias of
+`/api/extensions/slack/oauth/workspaces`. It used to be JWT only, with no
+extension gate and no role check. It now mounts the same handlers behind the
+same gates (JWT, Slack enabled, `extension.admin`,
+`slackWorkspaceCreateLimiter` on create), so it has the same Admin-only,
+organization-scoped behaviour. It is kept per ADR 0001 and slated for removal
+in a dedicated PR after a release cycle. The client uses the extension path.
+The old `slackWebhookCreateLimiter` was removed.
 
 ---
 

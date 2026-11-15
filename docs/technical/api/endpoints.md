@@ -732,7 +732,7 @@ All change history endpoints follow the same pattern:
 
 ### Slack Webhooks
 
-The legacy `/api/slackWebhooks` mount was removed. Slack connections are managed only through `/api/extensions/slack/oauth/workspaces` (see [Per-extension routes](#per-extension-routes)).
+`/api/slackWebhooks` is a deprecated legacy alias of `/api/extensions/slack/oauth/workspaces` (see [Per-extension routes](#per-extension-routes)), kept per ADR 0001 and slated for removal in a dedicated PR. It has the same six operations (`GET /`, `GET /:id`, `POST /`, `PATCH /:id`, `DELETE /:id`, `POST /:id/send`), the same handlers and the same Admin-only, organization-scoped behaviour: JWT, the Slack extension enabled, `extension.admin`, and `slackWorkspaceCreateLimiter` on create. The client uses the extension path.
 
 ---
 

@@ -156,6 +156,13 @@ const PROTECTED_ROUTES = [
     path: "/oauth/workspaces",
     limiter: "slackWorkspaceCreateLimiter",
   },
+  // Deprecated alias of the route above; same limiter until it is removed.
+  {
+    mount: "/api/slackWebhooks",
+    method: "post",
+    path: "/",
+    limiter: "slackWorkspaceCreateLimiter",
+  },
 ] as const;
 
 describe("rate limiter wiring", () => {

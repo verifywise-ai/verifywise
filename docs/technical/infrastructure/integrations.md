@@ -146,7 +146,7 @@ Slack is the `slack` extension. The client uses the gated extension routes:
 | DELETE | `/api/extensions/slack/oauth/workspaces/:id` | Delete connection |
 | POST | `/api/extensions/slack/oauth/workspaces/:id/send` | Send a test message (400 if the connection is inactive) |
 
-Every route needs JWT, the Slack extension enabled for the caller's organization, and `extension.admin` (Admin). Connections belong to the organization: owner and organization come from the token, and another organization's id answers 404. This is the only mount; the legacy `/api/slackWebhooks` router was removed. Delivery rules (organization, enablement, active, routing, `delivery_scope`) are in [Extensions → Slack](./extensions.md#slack-connections-and-delivery).
+Every route needs JWT, the Slack extension enabled for the caller's organization, and `extension.admin` (Admin). Connections belong to the organization: owner and organization come from the token, and another organization's id answers 404. The deprecated legacy alias `/api/slackWebhooks` (`routes/slackWebhook.route.ts`) mounts the same handlers behind the same gates, with the same Admin-only, organization-scoped behaviour; it is kept per ADR 0001 and slated for removal. The client uses the extension path. Delivery rules (organization, enablement, active, routing, `delivery_scope`) are in [Extensions → Slack](./extensions.md#slack-connections-and-delivery).
 
 ### OAuth Flow
 

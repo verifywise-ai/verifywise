@@ -10,7 +10,8 @@
  * handler filters by the caller's organization, so another organization's id
  * answers 404.
  *
- * This is the only mount. The legacy /api/slackWebhooks router was removed.
+ * The deprecated legacy alias /api/slackWebhooks (routes/slackWebhook.route.ts)
+ * mounts the same handlers behind the same gates until its removal PR.
  */
 
 import express from "express";
