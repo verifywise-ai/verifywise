@@ -258,7 +258,11 @@ export const extensionsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: '**Where it shows up:** a **View lifecycle** button on each row in **Model inventory**, and a lifecycle section on each model\'s detail page.',
+      text: '**Where it shows up:** a **View lifecycle** button on each row in **Model inventory** opens the model\'s lifecycle page.',
+    },
+    {
+      type: 'paragraph',
+      text: 'Admins set up the phases and items. Admins and Editors fill in a model\'s lifecycle: answers, documents, people and approvers. Other roles can view it. Only the person named as an approver can approve or reject their own approval, Admins included. To change an approver, an Admin or Editor removes them and adds someone else.',
     },
     {
       type: 'heading',
@@ -309,7 +313,7 @@ export const extensionsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: '**Where it shows up:** imported objects appear as use cases under **Use cases**. To refresh them later, click **Sync Now** in the **Import & Sync** section.',
+      text: '**Where it shows up:** imported objects appear as use cases under **Use cases**. The list shows members the imported use cases that appear in their use case list, and opening one follows the same access rules as any other use case page; Admins see all of them. Only Admins can pick the schema and object type. To refresh imported use cases later, click **Sync Now** in the **Import & Sync** section.',
     },
     {
       type: 'callout',
@@ -429,6 +433,9 @@ export const extensionsContent: ArticleContent = {
         { action: 'Import risks from Excel (Risk Import)', roles: 'Admin, Editor' },
         { action: 'Bulk upload datasets (Dataset Bulk Upload)', roles: 'Admin, Editor' },
         { action: 'Sync models from MLflow or Azure AI Foundry', roles: 'Admin, Editor' },
+        { action: 'Set up lifecycle phases and items (Model Lifecycle)', roles: 'Admin' },
+        { action: 'Fill in a model\'s lifecycle: answers, documents, people, approvers (Model Lifecycle)', roles: 'Admin, Editor' },
+        { action: 'Approve or reject a lifecycle approval (Model Lifecycle)', roles: 'The named approver only' },
         { action: 'See the Jira key on imported incidents (Jira incidents)', roles: 'Anyone who can see incidents' },
       ],
     },

@@ -23,6 +23,7 @@ interface PolicyRow {
   status: string;
   next_review_date: string | null;
   author_id: number | null;
+  policy_owner_id?: number | null;
 }
 
 export const policyRenewalWorkflow: WorkflowDefinition = {
@@ -62,7 +63,7 @@ export const policyRenewalWorkflow: WorkflowDefinition = {
         }
 
         const rows = (await sequelize.query(
-          `SELECT id, title, status, next_review_date, author_id
+          `SELECT id, title, status, next_review_date, author_id, policy_owner_id
              FROM policy_manager
             WHERE organization_id = :orgId AND id = :policyId
             LIMIT 1`,
@@ -100,16 +101,42 @@ export const policyRenewalWorkflow: WorkflowDefinition = {
     },
     {
       id: "notify_owner",
-      description: "Send a renewal reminder to the policy author",
+      description:
+        "Send a renewal reminder to the policy owner, or the author when the owner is not a member",
       agent: "policy",
       isWrite: false,
       handler: async (ctx) => {
         const policy = ctx.results.fetch_policy as PolicyRow | undefined;
-        if (!policy?.author_id) {
-          return { type: "skip", reason: "Policy has no author_id" };
+        if (!policy) return { type: "skip", reason: "Policy has no owner or author" };
+        // Only current members of the organization are told, as in the daily
+        // review reminder sweep: the owner, else the author.
+        const candidates = [policy.policy_owner_id, policy.author_id].filter(
+          (id): id is number => id !== null && id !== undefined,
+        );
+        if (candidates.length === 0) {
+          return { type: "skip", reason: "Policy has no owner or author" };
+        }
+        const members = new Set(
+          (
+            (await sequelize.query(
+              `SELECT user_id FROM organization_members
+                WHERE organization_id = :orgId AND user_id IN (:ids)`,
+              {
+                replacements: { orgId: ctx.organizationId, ids: candidates },
+                type: QueryTypes.SELECT,
+              },
+            )) as Array<{ user_id: number }>
+          ).map((row) => Number(row.user_id)),
+        );
+        const recipientId = candidates.find((id) => members.has(Number(id)));
+        if (recipientId === undefined) {
+          return {
+            type: "skip",
+            reason: "Neither the policy owner nor the author is a member of the organization",
+          };
         }
         await sendInAppNotification(ctx.organizationId, {
-          user_id: policy.author_id,
+          user_id: recipientId,
           type: NotificationType.POLICY_DUE_SOON,
           title: `Policy renewal due: ${policy.title}`,
           message: `"${policy.title}" needs review by ${new Date(
@@ -120,7 +147,7 @@ export const policyRenewalWorkflow: WorkflowDefinition = {
           entity_name: policy.title,
           metadata: { workflow_run_id: ctx.workflowRunId },
         });
-        return { type: "ok", output: { notified: policy.author_id } };
+        return { type: "ok", output: { notified: recipientId } };
       },
     },
     {

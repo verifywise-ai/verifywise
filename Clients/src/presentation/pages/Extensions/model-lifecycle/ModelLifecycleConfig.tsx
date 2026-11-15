@@ -36,6 +36,7 @@ import {
   Settings,
 } from "lucide-react";
 import { LifecycleItem, useLifecycleConfig } from "./useModelLifecycle";
+import { useCan } from "../../../../application/hooks/useCan";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import {
   background,
@@ -159,6 +160,8 @@ const ITEM_TYPES = [
 
 export default function ModelLifecycleConfig() {
   const { phases, loading, refresh, setPhases } = useLifecycleConfig(true);
+  // Phase and item setup is an extension.admin action on the server.
+  const canConfigure = useCan("extension.admin");
   const [saving, setSaving] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
 
@@ -393,7 +396,9 @@ export default function ModelLifecycleConfig() {
               color: VW_COLORS.textTertiary,
             }}
           >
-            No lifecycle phases configured yet. Click the button below to add phases.
+            {canConfigure
+              ? "No lifecycle phases configured yet. Click the button below to add phases."
+              : "No lifecycle phases yet. An Admin can add them."}
           </Typography>
         ) : (
           <Stack sx={{ gap: 4 }}>
@@ -473,20 +478,22 @@ export default function ModelLifecycleConfig() {
         )}
 
         {/* Configure Button */}
-        <CustomizableButton
-          variant="outlined"
-          color="secondary"
-          startIcon={<Settings size={16} />}
-          onClick={() => setConfigOpen(true)}
-          sx={{ alignSelf: "flex-start" }}
-        >
-          Configure Phases
-        </CustomizableButton>
+        {canConfigure && (
+          <CustomizableButton
+            variant="outlined"
+            color="secondary"
+            startIcon={<Settings size={16} />}
+            onClick={() => setConfigOpen(true)}
+            sx={{ alignSelf: "flex-start" }}
+          >
+            Configure Phases
+          </CustomizableButton>
+        )}
       </Stack>
 
       {/* Configuration Dialog */}
       <Dialog
-        open={configOpen}
+        open={configOpen && canConfigure}
         onClose={() => setConfigOpen(false)}
         maxWidth="md"
         fullWidth

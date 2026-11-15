@@ -3,7 +3,7 @@ import { STATUS_CODE } from "../../utils/statusCode.utils";
 import logger, { logStructured } from "../../utils/logger/fileLogger";
 import { translateError } from "../../utils/i18n.utils";
 import { logFailure, logProcessing, logSuccess } from "../../utils/logger/logHelper";
-import { JiraAssetsClient, JiraUpstreamError } from "./jira.client";
+import { JiraAssetsClient, JiraInvalidIdError, JiraUpstreamError } from "./jira.client";
 import {
   BackgroundJobsUnavailableError,
   hasPendingExtensionSyncJob,
@@ -64,6 +64,7 @@ function logContext(req: Request, functionName: string) {
 function isExpectedError(err: unknown): boolean {
   return (
     err instanceof JiraConfigValidationError ||
+    err instanceof JiraInvalidIdError ||
     err instanceof JiraNotConfiguredError ||
     err instanceof JiraUseCaseNotFoundError ||
     err instanceof SyncNotReadyError ||
@@ -96,6 +97,7 @@ async function requireClient(organizationId: number): Promise<JiraAssetsClient> 
  * getApiErrorReason, as the MLflow tab does.
  *
  * - JiraConfigValidationError → 400
+ * - JiraInvalidIdError (nothing sent to Jira or saved) → 400, translated
  * - JiraNotConfiguredError, JiraUseCaseNotFoundError → 404
  * - SyncNotReadyError (Jira readiness for "Sync now") → its status (404 or 400) with the reason
  * - SyncInProgressError (engine claim taken) → 409 with JIRA_SYNC_IN_PROGRESS_MESSAGE
@@ -108,6 +110,9 @@ async function requireClient(organizationId: number): Promise<JiraAssetsClient> 
 function sendError(req: Request, res: Response, err: unknown, functionName: string) {
   if (err instanceof SyncNotReadyError) {
     return res.status(err.status).json(STATUS_CODE[err.status](err.message));
+  }
+  if (err instanceof JiraInvalidIdError) {
+    return res.status(400).json(STATUS_CODE[400](translateError(req, err)));
   }
   if (err instanceof JiraConfigValidationError) {
     return res.status(400).json(STATUS_CODE[400](err.message));
@@ -359,7 +364,7 @@ export async function getSyncHistoryCtrl(req: Request, res: Response): Promise<a
 
 export async function listUseCasesCtrl(req: Request, res: Response): Promise<any> {
   try {
-    const useCases = await listUseCases(orgId(req));
+    const useCases = await listUseCases(orgId(req), { userId: uid(req), role: req.role! });
     return res.status(200).json(STATUS_CODE[200](useCases));
   } catch (err: any) {
     return res.status(500).json(STATUS_CODE[500](err.message));

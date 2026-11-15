@@ -323,12 +323,13 @@ async function getPolicyDocumentationData(
       { type: QueryTypes.SELECT, replacements: { organizationId } },
     )) as { count: string }[];
 
-    // Overdue policies — past review date and not currently published
+    // Overdue policies: review day has passed and the policy is not retired
     const overdueResult = (await sequelize.query(
       `SELECT COUNT(*) as count FROM policy_manager
        WHERE organization_id = :organizationId
-       AND next_review_date < NOW()
-       AND status != 'Published'`,
+       AND next_review_date::date < CURRENT_DATE
+       AND status IS DISTINCT FROM 'Archived'
+       AND status IS DISTINCT FROM 'Deprecated'`,
       { type: QueryTypes.SELECT, replacements: { organizationId } },
     )) as { count: string }[];
 

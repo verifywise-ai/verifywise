@@ -29,7 +29,7 @@ export const EMAIL_TEMPLATES = {
   MEMBER_ROLE_CHANGED_EDITOR_TO_ADMIN: "member-role-changed-editor-to-admin.mjml",
 
   // Policy templates
-  POLICY_DUE_SOON: "policy-due-soon.mjml",
+  POLICY_REVIEW_REMINDER: "policy-review-reminder.mjml",
 
   // Task templates
   TASK_ASSIGNED: "task-assigned.mjml",

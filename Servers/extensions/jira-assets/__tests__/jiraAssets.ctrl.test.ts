@@ -31,6 +31,7 @@ jest.mock("../jiraAssets.service", () => {
     importObjects: jest.fn(),
     updateSelection: jest.fn(),
     removeMissingUseCases: jest.fn(),
+    listUseCases: jest.fn(),
     deleteUseCaseByProjectId: jest.fn(),
     JIRA_RUN_CODES: {
       abandoned: "abandoned",
@@ -44,7 +45,8 @@ jest.mock("../jiraAssets.service", () => {
 });
 jest.mock("../jira.client", () => {
   class JiraUpstreamError extends Error {}
-  return { JiraUpstreamError };
+  class JiraInvalidIdError extends Error {}
+  return { JiraUpstreamError, JiraInvalidIdError };
 });
 jest.mock("../../../services/automations/automationProducer", () => {
   class BackgroundJobsUnavailableError extends Error {}
@@ -65,11 +67,14 @@ jest.mock("../../../utils/i18n.utils", () => ({
 }));
 
 import { logFailure, logProcessing, logSuccess } from "../../../utils/logger/logHelper";
+import { translateError } from "../../../utils/i18n.utils";
 import {
   deleteUseCaseCtrl,
+  getAttributes,
   getObjects,
   getSyncHistoryCtrl,
   getSyncStatusCtrl,
+  listUseCasesCtrl,
   patchSelection,
   postImport,
   postSync,
@@ -90,12 +95,13 @@ import {
   JiraNotConfiguredError,
   JiraUseCaseDeleteFailedError,
   JiraUseCaseNotFoundError,
+  listUseCases,
   loadFullConfig,
   removeMissingUseCases,
   RunSupersededError,
   updateSelection,
 } from "../jiraAssets.service";
-import { JiraUpstreamError } from "../jira.client";
+import { JiraInvalidIdError, JiraUpstreamError } from "../jira.client";
 import { SyncInProgressError, SyncNotReadyError } from "../../sync-engine/errors";
 import { startManualRun } from "../../sync-engine/jobs";
 
@@ -283,6 +289,49 @@ describe("GET /object-types/:id/objects (import picker)", () => {
       message: "OK",
       data: { objects: [], hasMore: true, nextStartAt: 2000 },
     });
+  });
+});
+
+describe("an id the Jira client refuses", () => {
+  it("answers 400 with the translated reason, not a 500", async () => {
+    (loadFullConfig as jest.Mock).mockResolvedValue({
+      jira_base_url: "https://x",
+      workspace_id: "w",
+      email: "e",
+    });
+    const invalid = new JiraInvalidIdError("objectTypeId");
+    (clientFromConfig as jest.Mock).mockReturnValue({
+      getAttributes: jest.fn(async () => {
+        throw invalid;
+      }),
+    });
+    (translateError as jest.Mock).mockReturnValueOnce(
+      "objectTypeId muss eine numerische Jira-ID sein",
+    );
+    const request = { ...req, params: { objectTypeId: "x" } };
+    const res = mockRes();
+
+    await getAttributes(request, res);
+
+    expect(translateError).toHaveBeenCalledWith(request, invalid);
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "Bad Request",
+      data: "objectTypeId muss eine numerische Jira-ID sein",
+    });
+  });
+});
+
+describe("GET /use-cases", () => {
+  it("lists the use cases the caller can see", async () => {
+    (listUseCases as jest.Mock).mockResolvedValueOnce([{ project_id: 50 }]);
+    const res = mockRes();
+
+    await listUseCasesCtrl({ ...req, role: "Editor" }, res);
+
+    expect(listUseCases).toHaveBeenCalledWith(5, { userId: 8, role: "Editor" });
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({ message: "OK", data: [{ project_id: 50 }] });
   });
 });
 

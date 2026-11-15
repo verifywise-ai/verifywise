@@ -25,6 +25,7 @@ function arrange(before: Record<string, unknown>, after: Record<string, unknown>
   mockQuery.mockImplementation(async (sql: string) => {
     if (sql.startsWith("SELECT * FROM risks")) return [[{ id: 1, ...before }], 1];
     if (sql.includes("UPDATE risks")) return [{ dataValues: { id: 1, ...after } }];
+    if (sql.includes("FROM automation_triggers")) return [];
     return [[], 0];
   });
 }

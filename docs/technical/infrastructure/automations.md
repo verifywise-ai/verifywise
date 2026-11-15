@@ -72,13 +72,13 @@ export const automationQueue = new Queue("automation-actions", {
 
 **Queue Name:** `slack-notifications`
 
-Handles Slack channel notifications for policy due dates.
+No longer receives scheduled jobs. It used to run the 9 AM `slack-notification-policy` job; policy review reminders now come from `policy_review_reminder_sweep`, which sends its Slack messages directly. The queue remains so startup can remove that retired scheduler and the worker can finish a job queued before the upgrade without sending.
 
 ```typescript
 // File: Servers/services/slack/slackProducer.ts
 
-export const slackQueue = new Queue("slack-notifications", {
-  connection: { url: process.env.REDIS_URL }
+export const notificationQueue = new Queue("slack-notifications", {
+  connection: { url: REDIS_URL },
 });
 ```
 
@@ -95,7 +95,7 @@ Recurring (cron) jobs only — see [On-Demand Jobs](#on-demand-jobs) below for j
 | `pmm_hourly_check` | `0 * * * *` | Every hour | PMM cycle processing |
 | `report_scheduler_tick` | `*/15 * * * *` | Every 15 minutes | Template-first scheduled report dispatch |
 | `extension_sync_tick` | `*/5 * * * *` | Every 5 minutes | Sync engine: queues one `extension_sync_run` per org whose schedule is due (interval and failure backoff) for every extension with a sync provider (see [Extensions → Scheduled sync](./extensions.md#scheduled-sync)). Retires the old `jira_assets_scheduled_sync_check` scheduler, whose name the worker still accepts for one release |
-| `slack-notification-policy` | `0 9 * * *` | Daily at 9 AM | Slack policy due notifications |
+| `policy_review_reminder_sweep` | `0 8 * * *` | Daily at 8 AM | Policy review reminders: once within 7 days of the review date, once overdue, to owner and reviewers (in-app, email, Slack). Replaced `send_policy_due_soon_notification` and `slack-notification-policy`, whose schedulers startup removes (see [Policies](../domains/policies.md)) |
 
 ### Cron Pattern Reference
 
@@ -444,6 +444,10 @@ CREATE INDEX idx_automation_execution_logs_automation_id
 CREATE INDEX idx_automation_execution_logs_triggered_at
   ON automation_execution_logs(triggered_at DESC);
 ```
+
+### Dispatch of risk and policy events
+
+Risk and policy triggers run every action of every active automation, ordered by automation id and then action order, enqueued one after another after the save commits (`getEventAutomationActionsQuery`, `enqueueAutomationActions` in `Servers/utils/automation/automationActions.utils.ts`). Automations that existed before every-action dispatch keep their old behaviour until someone edits and saves them: only the event's first action runs (`automations.legacy_first_action_only`, set by migration `20261114200100-legacy-automation-first-action`; the dispatch keeps the single first legacy row by action order, then automation id). Saving the automation in the editor clears the flag; the active toggle does not. New automations run every action. Other triggers (AI Detection) use `getActiveAutomationActionsQuery` and always run every action.
 
 ### Seeded Triggers
 

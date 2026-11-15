@@ -8,8 +8,9 @@ import { uploadOrganizationFile, createFileEntityLink } from "../../repositories
 import { STATUS_CODE } from "../../utils/statusCode.utils";
 import { logStructured } from "../../utils/logger/fileLogger";
 import { logRollbackFailure } from "../../utils/logger/logHelper";
-
 import { translateError } from "../../utils/i18n.utils";
+import { ValidationException } from "../../domain.layer/exceptions/custom.exception";
+
 /**
  * Upload one file and create an associated dataset record.
  *
@@ -135,6 +136,11 @@ export async function uploadDatasetFile(req: Request, res: Response) {
           rollbackError,
         });
       }
+    }
+
+    // A linked model or use case outside the organization (dataset utils guard).
+    if (error instanceof ValidationException) {
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
     }
 
     logStructured(

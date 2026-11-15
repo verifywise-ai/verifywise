@@ -368,6 +368,23 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     baseRoute: "/api/v1/imported-framework-assessments",
     testFile: "imported-framework-assessment.isolation.test.ts",
   },
+  {
+    // Model Lifecycle extension. Setup rows are keyed by the caller's
+    // organization; every per-model row is reached through a model and an
+    // item that must both be in the organization, so a hand-written file
+    // covers all seven tables.
+    name: "model-lifecycle",
+    tables: [
+      "model_lifecycle_phases",
+      "model_lifecycle_items",
+      "model_lifecycle_values",
+      "model_lifecycle_item_files",
+      "model_lifecycle_item_people",
+      "model_lifecycle_item_approvals",
+      "model_lifecycle_change_history",
+    ],
+    baseRoute: "/api/extensions/model-lifecycle",
+  },
 ];
 
 /** Flat set of all tenant-scoped tables declared in the registry. */

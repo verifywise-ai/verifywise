@@ -374,6 +374,8 @@ export const de: Record<string, string> = {
     "Es sind noch keine Lebenszyklusphasen konfiguriert. Klicken Sie auf die Schaltfläche unten, um Phasen hinzuzufügen.",
   "No lifecycle phases configured. Contact an administrator to set up the model lifecycle.":
     "Keine Lebenszyklusphasen konfiguriert. Wenden Sie sich an einen Administrator, um den Modelllebenszyklus einzurichten.",
+  "No lifecycle phases yet. An Admin can add them.":
+    "Noch keine Lebenszyklusphasen. Ein Admin kann sie hinzufügen.",
   "No use case found": "Kein Anwendungsfall gefunden",
   "No workspaces connected": "Keine Workspaces verbunden",
   "Notification Routing": "Benachrichtigungsweiterleitung",
@@ -894,6 +896,8 @@ export const fr: Record<string, string> = {
     "Aucune phase de cycle de vie configurée pour le moment. Cliquez sur le bouton ci-dessous pour ajouter des phases.",
   "No lifecycle phases configured. Contact an administrator to set up the model lifecycle.":
     "Aucune phase de cycle de vie configurée. Contactez un administrateur pour configurer le cycle de vie du modèle.",
+  "No lifecycle phases yet. An Admin can add them.":
+    "Aucune phase de cycle de vie pour le moment. Un Admin peut en ajouter.",
   "No use case found": "Aucun cas d'utilisation trouvé",
   "No workspaces connected": "Aucun espace de travail connecté",
   "Notification Routing": "Routage des notifications",
@@ -1413,6 +1417,8 @@ export const es: Record<string, string> = {
     "Aún no se han configurado fases del ciclo de vida. Haga clic en el botón de abajo para añadir fases.",
   "No lifecycle phases configured. Contact an administrator to set up the model lifecycle.":
     "No hay fases del ciclo de vida configuradas. Póngase en contacto con un administrador para configurar el ciclo de vida del modelo.",
+  "No lifecycle phases yet. An Admin can add them.":
+    "Aún no hay fases del ciclo de vida. Un Admin puede añadirlas.",
   "No use case found": "No se encontró ningún caso de uso",
   "No workspaces connected": "No hay espacios de trabajo conectados",
   "Notification Routing": "Enrutamiento de notificaciones",
