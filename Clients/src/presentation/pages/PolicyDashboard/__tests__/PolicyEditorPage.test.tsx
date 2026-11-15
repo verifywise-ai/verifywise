@@ -1,15 +1,16 @@
 import React from "react";
-import { screen, fireEvent, waitFor } from "@testing-library/react";
+import { screen, fireEvent, waitFor, act } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 
 const mockNavigate = vi.fn();
+let mockParams: { id?: string } = {};
 vi.mock("../../../../application/hooks/useAuth", () => ({
   useAuth: () => ({ userRoleName: "Admin" }),
 }));
 
 vi.mock("react-router", async () => {
   const actual: any = await vi.importActual("react-router");
-  return { ...actual, useNavigate: () => mockNavigate };
+  return { ...actual, useNavigate: () => mockNavigate, useParams: () => mockParams };
 });
 
 // Keep real Extension/NodeViewWrapper/ReactNodeViewRenderer (needed by
@@ -136,6 +137,7 @@ vi.mock("../../../../application/repository/file.repository", () => ({
 }));
 
 import PolicyEditorPage from "../PolicyEditorPage";
+import { dispatchPolicyApprovalChanged } from "../../../../application/events/policyEvents";
 
 describe("PolicyEditorPage", () => {
   beforeAll(() => {
@@ -145,6 +147,7 @@ describe("PolicyEditorPage", () => {
 
   beforeEach(() => {
     vi.clearAllMocks();
+    mockParams = {};
     mockUsers = [];
     mockGetAllTags.mockResolvedValue(["AI ethics", "Privacy"]);
     mockCreatePolicy.mockResolvedValue({ id: 42, title: "AI Ethics Policy" });
@@ -291,5 +294,33 @@ describe("PolicyEditorPage", () => {
     await waitFor(() => {
       expect(screen.getByText("New policy from template")).toBeInTheDocument();
     });
+  });
+
+  it("keeps unsaved edits when an approval decision changes the status", async () => {
+    mockParams = { id: "7" };
+    const saved = {
+      id: 7,
+      title: "Saved title",
+      status: "Under Review",
+      tags: ["Privacy"],
+      content_html: "<p>c</p>",
+      policy_owner_id: null,
+      assigned_reviewer_ids: [],
+    };
+    mockGetPolicyById.mockResolvedValueOnce(saved);
+    renderWithProviders(<PolicyEditorPage />, { route: "/policies/7/edit" });
+    await waitFor(() => expect(screen.getByTestId("form-title")).toHaveTextContent("Saved title"));
+
+    // An unsaved edit, then the approval requests modal approves the request.
+    fireEvent.click(screen.getByTestId("fill-valid-form"));
+    await waitFor(() =>
+      expect(screen.getByTestId("form-title")).toHaveTextContent("AI Ethics Policy"),
+    );
+    mockGetPolicyById.mockResolvedValueOnce({ ...saved, status: "Approved" });
+    act(() => dispatchPolicyApprovalChanged({ policyId: 7, status: "approved" }));
+
+    await waitFor(() => expect(screen.getByTestId("form-status")).toHaveTextContent("Approved"));
+    expect(mockGetPolicyById).toHaveBeenLastCalledWith("7");
+    expect(screen.getByTestId("form-title")).toHaveTextContent("AI Ethics Policy");
   });
 });

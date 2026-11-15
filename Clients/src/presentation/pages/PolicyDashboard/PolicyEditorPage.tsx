@@ -246,11 +246,20 @@ export default function PolicyEditorPage() {
   // post-save setPolicy() (same id, new object) refreshes metadata but does NOT
   // clobber formData.content — the editor owns content and holds the live value.
   const seededContentPolicyId = useRef<number | null>(null);
+  // Set by an approval reload: the next seed takes only the status from the
+  // policy, so unsaved edits to the other fields survive.
+  const approvalReloadSeed = useRef(false);
   // The content last loaded or saved, for the unsaved-changes check.
   const [savedContent, setSavedContent] = useState("");
   useEffect(() => {
     if (policy) {
       const isNewPolicyIdentity = seededContentPolicyId.current !== policy.id;
+      const approvalOnly = approvalReloadSeed.current && !isNewPolicyIdentity;
+      approvalReloadSeed.current = false;
+      if (approvalOnly) {
+        setFormData((prev) => ({ ...prev, status: policy.status || "Draft" }));
+        return;
+      }
       if (isNewPolicyIdentity) setSavedContent(policy.content_html || "");
       setFormData((prev) => ({
         title: policy.title || "",
@@ -301,6 +310,8 @@ export default function PolicyEditorPage() {
     editor?.setEditable(!readOnly);
   }, [editor, readOnly]);
 
+  const knownUserIds = useMemo(() => new Set(users.map((u) => u.id)), [users]);
+
   // ── Save (validation, create/update, custom-fields flush, navigation) ──
   const {
     save,
@@ -318,6 +329,7 @@ export default function PolicyEditorPage() {
     policy,
     setPolicy,
     formData,
+    knownUserIds,
     editor,
     formRef,
     customFieldsRef,
@@ -333,22 +345,30 @@ export default function PolicyEditorPage() {
   const { data: approvalState } = usePolicyApproval(policy?.id);
   const hasPendingApproval = Boolean(approvalState?.pending_request);
 
-  const knownUserIds = useMemo(() => new Set(users.map((u) => u.id)), [users]);
   const hasUnsavedChanges = useMemo(
     () => (policy ? isPolicyFormDirty({ policy, formData, knownUserIds, savedContent }) : true),
     [policy, formData, knownUserIds, savedContent],
   );
 
-  // An approval action changes the status server-side: reload the policy's
-  // metadata, keeping content_html so the editor is not rebuilt.
+  // An approval action changes only the status server-side: take the new
+  // status (and last-updated stamp) into the saved policy and the form, and
+  // leave every other field alone, so unsaved edits are kept and still show
+  // as unsaved.
   const policyId = policy?.id;
   const reloadPolicy = useCallback(async () => {
     if (!policyId) return;
     try {
       const fresh = await getPolicyById(String(policyId));
-      setPolicy((prev) =>
-        prev && prev.id === fresh.id ? { ...fresh, content_html: prev.content_html } : prev,
-      );
+      setPolicy((prev) => {
+        if (!prev || prev.id !== fresh.id) return prev;
+        approvalReloadSeed.current = true;
+        return {
+          ...prev,
+          status: fresh.status,
+          last_updated_by: fresh.last_updated_by,
+          last_updated_at: fresh.last_updated_at,
+        };
+      });
     } catch {
       // The approval section has already refreshed; a failed reload leaves the old metadata.
     }

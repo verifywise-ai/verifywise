@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { isPolicyFormDirty } from "../policyFormDirty";
+import { isPolicyFormDirty, policyOwnerIdToSave } from "../policyFormDirty";
 import type { PolicyFormData } from "../../../../types/interfaces/i.policy";
 import type { PolicyManagerModel } from "../../../../../domain/models/Common/policy/policyManager.model";
 
@@ -58,5 +58,43 @@ describe("isPolicyFormDirty", () => {
         savedContent: "<p>saved</p>",
       }),
     ).toBe(false);
+  });
+
+  it("is clean when the saved owner is not in the user list and the owner field is empty", () => {
+    // The editor seeds the owner as empty when it cannot show them.
+    const unknownOwner = { ...policy, policy_owner_id: 77 } as PolicyManagerModel;
+    expect(
+      isPolicyFormDirty({
+        policy: unknownOwner,
+        formData: { ...clean, policyOwner: null },
+        knownUserIds,
+        savedContent: "<p>saved</p>",
+      }),
+    ).toBe(false);
+  });
+});
+
+describe("policyOwnerIdToSave", () => {
+  const withOwner = (id: number | null) =>
+    ({ ...policy, policy_owner_id: id }) as PolicyManagerModel;
+
+  it("sends the picked owner", () => {
+    expect(policyOwnerIdToSave({ policy: withOwner(77), formOwnerId: 3, knownUserIds })).toBe(3);
+  });
+
+  it("clears an owner the user list knows when the field is emptied", () => {
+    expect(policyOwnerIdToSave({ policy: withOwner(2), formOwnerId: null, knownUserIds })).toBe(
+      null,
+    );
+  });
+
+  it("leaves out an owner the field could not show, so saving keeps them", () => {
+    expect(
+      policyOwnerIdToSave({ policy: withOwner(77), formOwnerId: null, knownUserIds }),
+    ).toBeUndefined();
+  });
+
+  it("sends null for a new policy with no owner", () => {
+    expect(policyOwnerIdToSave({ policy: null, formOwnerId: null, knownUserIds })).toBe(null);
   });
 });

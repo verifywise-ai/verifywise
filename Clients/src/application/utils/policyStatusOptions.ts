@@ -23,6 +23,13 @@ export type PolicyStatus = (typeof POLICY_STATUSES)[number];
 /** Statuses a new policy may be created with (server: POLICY_CREATE_STATUSES). */
 export const POLICY_CREATE_STATUSES: readonly PolicyStatus[] = ["Draft", "Archived", "Deprecated"];
 
+/**
+ * Statuses a policy can be submitted for approval or approved directly from
+ * (server: SUBMITTABLE_STATUSES in services/policies/policyApproval.service.ts).
+ * Any other status reaches Approved only through these.
+ */
+export const POLICY_APPROVABLE_STATUSES: readonly PolicyStatus[] = ["Draft", "Under Review"];
+
 /** Server: POLICY_INVALID_STATUS_TRANSITIONS (messages omitted). */
 export const POLICY_INVALID_STATUS_TRANSITIONS: ReadonlyArray<{
   from: PolicyStatus;

@@ -16,12 +16,10 @@ import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { useTranslation } from "../../../../application/hooks/useTranslation";
 import { fill } from "../../../../i18n/fill";
 import { radiusPx } from "../../../themes/palette";
+import { POLICY_APPROVABLE_STATUSES } from "../../../../application/utils/policyStatusOptions";
 
 /** Server limit for a direct-approve comment. */
 const MAX_COMMENT_LENGTH = 2000;
-
-/** Statuses a policy can be submitted or approved from (server rule). */
-const APPROVABLE_STATUSES = ["Draft", "Under Review"];
 
 export interface PolicyApprovalSectionProps {
   /** null while the policy is new and unsaved. */
@@ -135,7 +133,9 @@ export function PolicyApprovalSection({
 
   const pending = data.pending_request;
   const usable = data.usable_workflows;
-  const isApprovable = policyStatus !== null && APPROVABLE_STATUSES.includes(policyStatus);
+  const isApprovable =
+    policyStatus !== null &&
+    (POLICY_APPROVABLE_STATUSES as readonly string[]).includes(policyStatus);
   const showNoWorkflowHint = !pending && usable.length === 0 && !isAdmin && isApprovable;
 
   let decisionLine: string | null = null;
@@ -158,10 +158,6 @@ export function PolicyApprovalSection({
   const singleWorkflow = usable.length === 1 ? usable[0] : null;
   const commentTooLong = comment.length > MAX_COMMENT_LENGTH;
 
-  const afterChange = () => {
-    onPolicyChanged?.();
-  };
-
   const openSubmit = () => {
     submitMutation.reset();
     setWorkflowId("");
@@ -179,7 +175,7 @@ export function PolicyApprovalSection({
       {
         onSuccess: () => {
           setSubmitOpen(false);
-          afterChange();
+          onPolicyChanged?.();
         },
       },
     );
@@ -198,7 +194,7 @@ export function PolicyApprovalSection({
       {
         onSuccess: () => {
           setApproveOpen(false);
-          afterChange();
+          onPolicyChanged?.();
         },
       },
     );
@@ -212,7 +208,7 @@ export function PolicyApprovalSection({
       {
         onSuccess: () => {
           setWithdrawOpen(false);
-          afterChange();
+          onPolicyChanged?.();
         },
         onError: (error) => {
           setWithdrawOpen(false);

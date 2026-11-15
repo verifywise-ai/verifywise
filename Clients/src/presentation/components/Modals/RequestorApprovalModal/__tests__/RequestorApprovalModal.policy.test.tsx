@@ -110,4 +110,31 @@ describe("RequestorApprovalModal policy requests", () => {
       }),
     );
   });
+
+  it("tells the policy pages when the requester withdraws the request", async () => {
+    // Only in the requester's own list, opened from a link.
+    repo.getPendingApprovals.mockReset();
+    repo.getPendingApprovals.mockResolvedValue({ data: [] });
+    repo.getMyApprovalRequests.mockResolvedValue({
+      data: [{ id: 1, request_name: "Acceptable use policy", status: "Pending" }],
+    });
+    repo.getApprovalRequestById.mockResolvedValue(policyRequest("Pending"));
+    repo.withdrawRequest.mockResolvedValue({ data: {} });
+    renderWithProviders(
+      <RequestorApprovalModal isOpen={true} onClose={vi.fn()} initialRequestId={1} />,
+    );
+    await screen.findByText("Ada Lovelace");
+
+    fireEvent.click(screen.getByRole("button", { name: "Withdraw" }));
+    const confirmButtons = await screen.findAllByRole("button", { name: "Withdraw" });
+    fireEvent.click(confirmButtons[confirmButtons.length - 1]);
+
+    await waitFor(() => expect(repo.withdrawRequest).toHaveBeenCalledWith({ id: 1 }));
+    await waitFor(() =>
+      expect(policyEvents.dispatchPolicyApprovalChanged).toHaveBeenCalledWith({
+        policyId: 42,
+        status: "withdrawn",
+      }),
+    );
+  });
 });

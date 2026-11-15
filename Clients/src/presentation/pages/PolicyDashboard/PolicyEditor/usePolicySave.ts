@@ -5,12 +5,15 @@ import { useCreatePolicy, useUpdatePolicy } from "../../../../application/hooks/
 import { PolicyManagerModel } from "../../../../domain/models/Common/policy/policyManager.model";
 import { PolicyFormData, PolicyFormErrors } from "../../../types/interfaces/i.policy";
 import { type CustomFieldsSectionHandle } from "../../../components/CustomFieldsSection";
+import { policyOwnerIdToSave } from "./policyFormDirty";
 
 export interface UsePolicySaveParams {
   isNew: boolean;
   policy: PolicyManagerModel | null;
   setPolicy: Dispatch<SetStateAction<PolicyManagerModel | null>>;
   formData: PolicyFormData;
+  /** Ids of the users the owner and team member fields can show. */
+  knownUserIds: ReadonlySet<number>;
   editor: Editor | null;
   formRef: RefObject<HTMLDivElement | null>;
   customFieldsRef: RefObject<CustomFieldsSectionHandle | null>;
@@ -39,6 +42,7 @@ export function usePolicySave({
   policy,
   setPolicy,
   formData,
+  knownUserIds,
   editor,
   formRef,
   customFieldsRef,
@@ -84,7 +88,11 @@ export function usePolicySave({
       content_html: html,
       // Sent as "YYYY-MM-DD" so the stored date is the one the user picked.
       next_review_date: formData.nextReviewDate || undefined,
-      policy_owner_id: formData.policyOwner?.id ?? null,
+      policy_owner_id: policyOwnerIdToSave({
+        policy: isNew ? null : policy,
+        formOwnerId: formData.policyOwner?.id ?? null,
+        knownUserIds,
+      }),
       assigned_reviewer_ids: formData.assignedReviewers
         .map((u) => u.id)
         .filter((id) => id !== formData.policyOwner?.id),

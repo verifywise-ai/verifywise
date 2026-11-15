@@ -113,7 +113,7 @@ export const policyApprovalContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'When your organization has no policy approval workflow, an Admin sees an **Approve** button in the Approval section of a Draft or Under Review policy, and can add an optional comment of up to 2,000 characters. Other users see "An Admin approves this policy. Your organization has no policy approval workflow."',
+      text: 'When your organization has no policy approval workflow, an Admin sees an **Approve** button in the Approval section of a Draft or Under Review policy, and can add an optional comment of up to 2,000 characters. On a Draft or Under Review policy with no pending request, other users see "An Admin approves this policy. Your organization has no policy approval workflow."',
     },
     {
       type: 'paragraph',
