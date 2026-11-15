@@ -250,3 +250,84 @@ describe("ExtensionService.getRuntimeConfiguration (server-side decryption)", ()
     expect(cfg).toEqual({});
   });
 });
+
+describe("ExtensionService responses never carry stored configuration", () => {
+  // The stored row holds the secret as ciphertext; neither it nor the
+  // plaintext may appear anywhere in a response, for any endpoint.
+  const STORED_ROW = {
+    id: 7,
+    organization_id: 1,
+    extension_id: EXT.id,
+    enabled: true,
+    configuration: {
+      tracking_server_url: "https://mlflow.example.com",
+      auth_method: "token",
+      api_token: "enc(super-secret)",
+    },
+  };
+
+  function expectNoStoredConfiguration(result: Record<string, unknown>) {
+    const enablement = result.enablement as Record<string, unknown> | null;
+    expect(enablement).not.toBeNull();
+    expect("configuration" in (enablement as Record<string, unknown>)).toBe(false);
+    expect(enablement?.id).toBe(7);
+    // Redacted top-level copy keeps the non-secret values.
+    expect((result.configuration as Record<string, unknown>).tracking_server_url).toBe(
+      "https://mlflow.example.com",
+    );
+    const payload = JSON.stringify(result);
+    expect(payload).not.toContain("super-secret");
+    expect(payload).not.toContain("enc(");
+  }
+
+  beforeEach(() => {
+    resetMocks();
+    mockExtension.findByKey.mockResolvedValue(EXT as never);
+    mockExtension.findAll.mockResolvedValue([EXT] as never);
+    mockConfigField.findByExtensionId.mockResolvedValue(FIELDS as never);
+    mockEnablement.findByExtensionId.mockResolvedValue(STORED_ROW as never);
+    mockEnablement.findAllForOrg.mockResolvedValue([STORED_ROW] as never);
+    mockEnablement.enable.mockResolvedValue(STORED_ROW as never);
+    mockEnablement.disable.mockResolvedValue({ ...STORED_ROW, enabled: false } as never);
+    mockEnablement.updateConfiguration.mockResolvedValue(STORED_ROW as never);
+  });
+
+  it("listAll", async () => {
+    const [result] = await ExtensionService.listAll(1);
+    expectNoStoredConfiguration(result);
+  });
+
+  it("getByKey", async () => {
+    expectNoStoredConfiguration(await ExtensionService.getByKey("mlflow", 1));
+  });
+
+  it("enable", async () => {
+    expectNoStoredConfiguration(
+      await ExtensionService.enable("mlflow", 1, 1, {
+        tracking_server_url: "https://mlflow.example.com",
+        auth_method: "token",
+      }),
+    );
+  });
+
+  it("disable", async () => {
+    expectNoStoredConfiguration(await ExtensionService.disable("mlflow", 1));
+  });
+
+  it("updateConfiguration", async () => {
+    expectNoStoredConfiguration(
+      await ExtensionService.updateConfiguration("mlflow", 1, {
+        tracking_server_url: "https://mlflow.example.com",
+        auth_method: "token",
+        api_token: "super-secret",
+      }),
+    );
+  });
+
+  it("returns a null enablement when the extension is not enabled", async () => {
+    mockEnablement.findByExtensionId.mockResolvedValue(null as never);
+    const result = await ExtensionService.getByKey("mlflow", 1);
+    expect(result.enablement).toBeNull();
+    expect(result.configuration).toEqual({});
+  });
+});

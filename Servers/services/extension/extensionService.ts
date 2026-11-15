@@ -190,8 +190,19 @@ export class ExtensionService {
       configFields: configFields.map((f) => ExtensionConfigFieldModel.toJSON(f)),
       enabled: enablement?.enabled ?? false,
       configuration: this.redactSecrets(configuration, configFields),
-      enablement: enablement ? ExtensionEnablementModel.toJSON(enablement) : null,
+      enablement: enablement ? this.publicEnablement(enablement) : null,
     };
+  }
+
+  /**
+   * The enablement row as sent to clients. The stored `configuration` holds
+   * secret values (encrypted, but still ciphertext a reader could take away),
+   * so it is left out; the redacted top-level `configuration` is the only
+   * copy clients get.
+   */
+  private static publicEnablement(enablement: IExtensionEnablement): Record<string, unknown> {
+    const { configuration: _stored, ...rest } = ExtensionEnablementModel.toJSON(enablement);
+    return rest;
   }
 
   /**
