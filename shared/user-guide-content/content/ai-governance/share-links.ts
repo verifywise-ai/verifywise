@@ -21,7 +21,7 @@ export const shareLinksContent: ArticleContent = {
     {
       type: 'ordered-list',
       items: [
-        { text: 'Navigate to the resource you want to share (e.g., a project, risk, or report).' },
+        { text: 'Open the **Model inventory**. The app offers share links from there.' },
         { text: 'Click the **Share** button.' },
         { text: 'Choose what fields to include in the shared view.' },
         { text: 'Set an expiration date (how long the link stays active).' },
@@ -85,8 +85,8 @@ export const shareLinksContent: ArticleContent = {
         { key: 'roles', label: 'Required role', width: '50%' },
       ],
       rows: [
-        { action: 'Create share links', roles: 'Admin or Editor' },
-        { action: 'View active share links', roles: 'Admin or Editor' },
+        { action: 'Create share links', roles: 'Any signed-in member' },
+        { action: 'View active share links', roles: 'Any signed-in member' },
         { action: 'Revoke share links', roles: 'Creator (any role can revoke a link they created)' },
         { action: 'Access shared view (external)', roles: 'Anyone with the link' },
       ],

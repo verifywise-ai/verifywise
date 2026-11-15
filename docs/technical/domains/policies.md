@@ -11,7 +11,7 @@ A Policy in VerifyWise is a rich-text governance document for establishing AI go
 - Approval through approval workflows, or by an Admin when the organization has none
 - 19 predefined governance tags
 - PDF and DOCX export
-- Link to risks, evidence, and controls
+- Link to risks and evidence (the link route accepts only these two; `control` stays in the type enum and the linked-objects response, which groups rows by `control`, `risk` and `evidence`)
 - Change history tracking
 - Review date scheduling
 
@@ -194,7 +194,9 @@ enum LinkedObjectType {
 | Method | Endpoint | Description |
 |--------|----------|-------------|
 | GET | `/policies/` | List all policies |
-| GET | `/policies/:id` | Get policy by ID |
+| GET | `/policies/:id` | Get policy by ID. 404 when the policy does not exist or belongs to another organization (`getPolicyById` in `controllers/policy.ctrl.ts`) |
+
+The change history (`GET /policy-change-history/:id`) and linked-objects (`GET /policy-linked/:policyId/linked-objects`) reads do not check that the policy exists. For a policy outside the organization they still answer 200 with empty data. That legacy contract is frozen.
 | POST | `/policies/` | Create policy |
 | PUT | `/policies/:id` | Update policy |
 | DELETE | `/policies/:id` | Delete policy |
@@ -264,7 +266,7 @@ These keep their old behaviour, frozen: they write only `review_status`, `review
 
 ### Bulk actions
 
-`PATCH /policies/bulk` takes `{ ids, action: "archive" | "set_reviewer" | "set_tags" }`. `set_reviewer` replaces each policy's team members (`policy_manager__assigned_reviewer_ids`) with the one user, skipping a policy that user owns, and no longer sets `review_status`. `archive` goes through the status gate. Bulk actions record one history entry per policy that actually changed, as the acting user: a Status change for archive (read under the row lock, so a policy that was already archived gets none), a Tags change for `set_tags` and a Reviewers change for `set_reviewer`. They start no automations.
+`PATCH /policies/bulk` takes `{ ids, action: "archive" | "set_reviewer" | "set_tags" }`. `set_reviewer` replaces each policy's team members (`policy_manager__assigned_reviewer_ids`) with the one user, skipping a policy that user owns, and no longer sets `review_status`. `archive` goes through the status gate. Archived policies are not hidden: they stay in the list with the Archived status, and the status filter shows only them (the confirm dialog in `PolicyTable.tsx` says so). Bulk actions record one history entry per policy that actually changed, as the acting user: a Status change for archive (read under the row lock, so a policy that was already archived gets none), a Tags change for `set_tags` and a Reviewers change for `set_reviewer`. They start no automations.
 
 ### Policy folder counts (v1)
 
@@ -286,6 +288,8 @@ Returns `{ data: { [folderId]: count } }`. Any member of the organization may re
 |--------|----------|-------------|
 | GET | `/policies/:id/export/pdf` | Download as PDF |
 | GET | `/policies/:id/export/docx` | Download as DOCX |
+
+Both exports keep non-Latin letters in the file name. `Content-Disposition` carries an ASCII `filename` for old clients and the real name in `filename*=UTF-8''...` (`contentDispositionAttachment` in `utils/contentDisposition.utils.ts`, used by `exportPolicyPDF` and `exportPolicyDOCX` in `controllers/policy.ctrl.ts`). When the ASCII form has no letters or digits left, the fallback name is `policy`.
 
 ### Linked Objects
 
@@ -397,6 +401,8 @@ onerror, onload, onclick, onmouseover
 ```
 [sanitized_title]_[YYYY-MM-DD].[pdf|docx]
 ```
+
+The title keeps letters of any script (`\p{L}`), digits, spaces (turned into `_`) and hyphens, cut to 50 characters (`generateFilename` in `services/policies/policyExporter.ts`).
 
 ## Linked Objects
 
