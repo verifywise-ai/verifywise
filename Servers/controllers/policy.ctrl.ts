@@ -143,6 +143,9 @@ export class PolicyController {
   static async getPolicyById(req: Request, res: Response) {
     try {
       const policyId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+      if (isNaN(policyId)) {
+        return res.status(400).json(STATUS_CODE[400](req.t!("Invalid policy ID")));
+      }
       const policy = await getPolicyByIdQuery(req.organizationId!, policyId);
 
       if (policy && policy.length > 0) {

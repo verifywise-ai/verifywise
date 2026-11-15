@@ -191,6 +191,14 @@ describe("policy.ctrl", () => {
       await PolicyController.getPolicyById(req, res);
       expect(res.status).toHaveBeenCalledWith(404);
     });
+    it("should return 400 for a non-numeric id without querying", async () => {
+      mockGetById.mockClear();
+      const req = createReq({ params: { id: "abc" } });
+      const res = createRes();
+      await PolicyController.getPolicyById(req, res);
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(mockGetById).not.toHaveBeenCalled();
+    });
     it("should return 500 on error", async () => {
       mockGetById.mockRejectedValue(new Error("DB error"));
       const req = createReq({ params: { id: "1" } });
