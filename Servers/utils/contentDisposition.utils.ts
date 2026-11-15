@@ -13,7 +13,7 @@ export function contentDispositionAttachment(filename: string): string {
 
   const asciiBase = base
     .normalize("NFKD")
-    .replace(/[̀-ͯ]/g, "")
+    .replace(/[\u0300-\u036f]/g, "")
     .replace(/[^A-Za-z0-9_.-]+/g, "_")
     .replace(/^_+|_+$/g, "");
   const fallback = `${asciiBase.replace(/[-_.]/g, "") ? asciiBase : "policy"}${extension}`;
