@@ -968,9 +968,10 @@ The migration filled `organization_id` from the owner's membership only when
 the owner belonged to exactly one organization. Connections whose owner
 belonged to several organizations, or whose owner is gone or had no
 membership, keep `organization_id = NULL`. Delivery always filters by
-organization, so they never send. The API filters by organization too, so no
-Admin can list, change or delete them. There is no cleanup path for them in
-the app.
+organization, so they stop sending. The API filters by organization too, so
+they stay invisible to every organization: no Admin can list, change or
+delete them. Removing them needs a separate cleanup step, planned with the
+Slack setup work; there is no cleanup path in the app today.
 
 ### Legacy alias
 

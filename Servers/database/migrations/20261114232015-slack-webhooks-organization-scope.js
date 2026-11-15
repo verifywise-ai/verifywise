@@ -16,7 +16,10 @@
  *   send their events into another org's Slack. Those rows stay NULL, as do
  *   rows whose owner is gone (user_id NULL after ON DELETE SET NULL) or has no
  *   membership. Delivery always filters by organization, so those rows never
- *   send again; they can only be removed. The column stays nullable for them.
+ *   send again, and every management route filters by organization too, so
+ *   they stay invisible to every organization: no route can list or remove
+ *   them. Removing them needs a separate cleanup step, planned with the Slack
+ *   setup work. The column stays nullable for them.
  * - delivery_scope: 'user' for every existing row, so an existing connection
  *   keeps sending only the events its owner triggers (quiet start) until an
  *   Admin saves its routing again. New rows default to 'organization'.
