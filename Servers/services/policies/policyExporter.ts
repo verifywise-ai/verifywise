@@ -950,10 +950,11 @@ export async function generatePolicyDOCX(
  */
 export function generateFilename(title: string, extension: "pdf" | "docx"): string {
   const sanitized = title
-    .replace(/[^\p{L}\p{N}\s-]/gu, "")
-    .replace(/\s+/g, "_")
-    .substring(0, 50);
+    .replace(/[^\p{L}\p{M}\p{N}\s-]/gu, "")
+    .replace(/\s+/g, "_");
+  // Cut by code point so a surrogate pair is never split in half.
+  const shortened = Array.from(sanitized).slice(0, 50).join("");
 
   const date = new Date().toISOString().split("T")[0];
-  return `${sanitized}_${date}.${extension}`;
+  return `${shortened}_${date}.${extension}`;
 }

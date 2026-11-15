@@ -53,3 +53,18 @@ export const filenameFromContentDisposition = (disposition: unknown, fallback: s
   const plain = /filename\s*=\s*"?([^";]+)"?/i.exec(disposition);
   return plain?.[1].trim() || fallback;
 };
+
+/**
+ * Fallback download name for an exported policy: the title with punctuation
+ * removed (letters, combining marks, digits, spaces and hyphens are kept, so
+ * non-Latin scripts survive), spaces turned into underscores, plus the date.
+ * Used only when the server sends no Content-Disposition filename.
+ *
+ * @param {string} title - The policy title
+ * @param {string} extension - File extension without the dot
+ * @returns {string} The fallback filename
+ */
+export const policyDownloadFallbackName = (title: string, extension: string): string => {
+  const base = title.replace(/[^\p{L}\p{M}\p{N}\s-]/gu, "").replace(/\s+/g, "_");
+  return `${base}_${new Date().toISOString().split("T")[0]}.${extension}`;
+};

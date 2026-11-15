@@ -40,7 +40,10 @@ import { isPolicyFormDirty } from "./PolicyEditor/policyFormDirty";
 import { radiusPx } from "../../themes/palette";
 import { fill, pluralKey } from "../../../i18n/fill";
 import { toDateOnlyString } from "../../tools/isoDateToString";
-import { filenameFromContentDisposition } from "../../utils/browserDownload.utils";
+import {
+  filenameFromContentDisposition,
+  policyDownloadFallbackName,
+} from "../../utils/browserDownload.utils";
 
 // ── Component ─────────────────────────────────────────────────────────
 export default function PolicyEditorPage() {
@@ -433,7 +436,7 @@ export default function PolicyEditorPage() {
 
       const blob = await response.blob();
       const contentDisposition = response.headers.get("Content-Disposition");
-      let filename = `${formData.title.replace(/[^\p{L}\p{N}\s-]/gu, "").replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.${format}`;
+      let filename = policyDownloadFallbackName(formData.title, format);
 
       filename = filenameFromContentDisposition(contentDisposition, filename);
 

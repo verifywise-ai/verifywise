@@ -21,7 +21,10 @@ import { formatCustomFieldValue } from "../CustomFieldsSection/formatCustomField
 import useFormattedDate from "../../../application/hooks/useFormattedDate";
 import { useCanCheck } from "../../../application/hooks/useCan";
 import { toDateOnlyString } from "../../tools/isoDateToString";
-import { filenameFromContentDisposition } from "../../utils/browserDownload.utils";
+import {
+  filenameFromContentDisposition,
+  policyDownloadFallbackName,
+} from "../../utils/browserDownload.utils";
 
 const tableHeaders = [
   { id: "title", name: "Title" },
@@ -192,7 +195,7 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
 
       const blob = await response.blob();
       const contentDisposition = response.headers.get("Content-Disposition");
-      let filename = `${title.replace(/[^\p{L}\p{N}\s-]/gu, "").replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.pdf`;
+      let filename = policyDownloadFallbackName(title, "pdf");
 
       filename = filenameFromContentDisposition(contentDisposition, filename);
 
@@ -225,7 +228,7 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
 
       const blob = await response.blob();
       const contentDisposition = response.headers.get("Content-Disposition");
-      let filename = `${title.replace(/[^\p{L}\p{N}\s-]/gu, "").replace(/\s+/g, "_")}_${new Date().toISOString().split("T")[0]}.docx`;
+      let filename = policyDownloadFallbackName(title, "docx");
 
       filename = filenameFromContentDisposition(contentDisposition, filename);
 

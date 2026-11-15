@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { triggerBrowserDownload, filenameFromContentDisposition } from "../browserDownload.utils";
+import {
+  triggerBrowserDownload,
+  filenameFromContentDisposition,
+  policyDownloadFallbackName,
+} from "../browserDownload.utils";
 
 describe("triggerBrowserDownload", () => {
   beforeEach(() => {
@@ -76,5 +80,19 @@ describe("filenameFromContentDisposition", () => {
   it("returns the fallback when the header is missing or has no filename", () => {
     expect(filenameFromContentDisposition(undefined, "fallback.csv")).toBe("fallback.csv");
     expect(filenameFromContentDisposition("attachment", "fallback.csv")).toBe("fallback.csv");
+  });
+});
+
+describe("policyDownloadFallbackName", () => {
+  it("strips punctuation and underscores spaces", () => {
+    expect(policyDownloadFallbackName("Data: policy (v2)!", "pdf")).toMatch(
+      /^Data_policy_v2_\d{4}-\d{2}-\d{2}\.pdf$/,
+    );
+  });
+
+  it("keeps combining marks", () => {
+    expect(policyDownloadFallbackName("नीति दस्तावेज़", "docx")).toMatch(
+      /^नीति_दस्तावेज़_\d{4}-\d{2}-\d{2}\.docx$/,
+    );
   });
 });

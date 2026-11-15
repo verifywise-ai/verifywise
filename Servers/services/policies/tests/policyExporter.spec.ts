@@ -159,6 +159,19 @@ describe("policyExporter", () => {
       expect(generateFilename("政策 2026", "pdf")).toBe("政策_2026_2026-03-15.pdf");
     });
 
+    it("keeps combining marks (Devanagari, decomposed accents)", () => {
+      expect(generateFilename("नीति दस्तावेज़", "pdf")).toBe("नीति_दस्तावेज़_2026-03-15.pdf");
+      expect(generateFilename("Cafe\u0301 policy", "pdf")).toBe("Cafe\u0301_policy_2026-03-15.pdf");
+    });
+
+    it("never splits a surrogate pair when truncating", () => {
+      const name = generateFilename("\u{20000}".repeat(30), "pdf");
+      expect(name).toBe(`${"\u{20000}".repeat(30)}_2026-03-15.pdf`);
+      const long = generateFilename("\u{20000}".repeat(80), "pdf");
+      expect(Array.from(long.split("_2026")[0])).toHaveLength(50);
+      expect(() => encodeURIComponent(long)).not.toThrow();
+    });
+
     it("collapses runs of whitespace into a single underscore", () => {
       expect(generateFilename("Multi   Word    Title", "pdf")).toBe(
         "Multi_Word_Title_2026-03-15.pdf",

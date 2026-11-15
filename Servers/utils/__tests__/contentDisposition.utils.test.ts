@@ -26,4 +26,10 @@ describe("contentDispositionAttachment", () => {
     expect(value).not.toMatch(/[\r\n]/);
     expect(value.match(/"/g)).toHaveLength(2);
   });
+
+  it("does not throw on a lone surrogate", () => {
+    const value = contentDispositionAttachment("a\uD840b.pdf");
+    expect(value).toContain("%EF%BF%BD");
+    expect(() => contentDispositionAttachment("\uDC00.pdf")).not.toThrow();
+  });
 });
