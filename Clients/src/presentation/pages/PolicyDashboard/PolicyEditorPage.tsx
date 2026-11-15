@@ -43,6 +43,7 @@ import { toDateOnlyString } from "../../tools/isoDateToString";
 import {
   filenameFromContentDisposition,
   policyDownloadFallbackName,
+  triggerBrowserDownload,
 } from "../../utils/browserDownload.utils";
 
 // ── Component ─────────────────────────────────────────────────────────
@@ -436,9 +437,10 @@ export default function PolicyEditorPage() {
 
       const blob = await response.blob();
       const contentDisposition = response.headers.get("Content-Disposition");
-      let filename = policyDownloadFallbackName(formData.title, format);
-
-      filename = filenameFromContentDisposition(contentDisposition, filename);
+      const filename = filenameFromContentDisposition(
+        contentDisposition,
+        policyDownloadFallbackName(formData.title, format),
+      );
 
       const finalBlob =
         format === "docx"
@@ -447,14 +449,7 @@ export default function PolicyEditorPage() {
             })
           : blob;
 
-      const url = window.URL.createObjectURL(finalBlob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      document.body.appendChild(a);
-      a.click();
-      document.body.removeChild(a);
-      window.URL.revokeObjectURL(url);
+      triggerBrowserDownload(finalBlob, filename);
     } catch (error: any) {
       clearTimeout(timeout);
       setExportError(

@@ -60,7 +60,13 @@ describe("POST /api/v1/risk-import/import", () => {
   });
 
   it("answers 401 without a token", async () => {
-    expect((await request(app).post(V1).send({ csvData: [{}] })).status).toBe(401);
+    expect(
+      (
+        await request(app)
+          .post(V1)
+          .send({ csvData: [{}] })
+      ).status,
+    ).toBe(401);
     expect(importRisks).not.toHaveBeenCalled();
   });
 

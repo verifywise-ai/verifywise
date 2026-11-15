@@ -57,7 +57,8 @@ export const filenameFromContentDisposition = (disposition: unknown, fallback: s
 /**
  * Fallback download name for an exported policy: the title with punctuation
  * removed (letters, combining marks, digits, spaces and hyphens are kept, so
- * non-Latin scripts survive), spaces turned into underscores, plus the date.
+ * non-Latin scripts survive), spaces turned into underscores, cut to 50
+ * code points like the server's name, plus the date.
  * Used only when the server sends no Content-Disposition filename.
  *
  * @param {string} title - The policy title
@@ -65,6 +66,8 @@ export const filenameFromContentDisposition = (disposition: unknown, fallback: s
  * @returns {string} The fallback filename
  */
 export const policyDownloadFallbackName = (title: string, extension: string): string => {
-  const base = title.replace(/[^\p{L}\p{M}\p{N}\s-]/gu, "").replace(/\s+/g, "_");
+  const sanitized = title.replace(/[^\p{L}\p{M}\p{N}\s-]/gu, "").replace(/\s+/g, "_");
+  // Cut by code point, like the server, so a surrogate pair is never split.
+  const base = Array.from(sanitized).slice(0, 50).join("");
   return `${base}_${new Date().toISOString().split("T")[0]}.${extension}`;
 };

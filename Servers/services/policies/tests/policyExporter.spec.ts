@@ -172,6 +172,12 @@ describe("policyExporter", () => {
       expect(() => encodeURIComponent(long)).not.toThrow();
     });
 
+    it("drops lone surrogates so the name always encodes", () => {
+      const name = generateFilename("a\uD840b \uDC00c", "pdf");
+      expect(name).toBe("ab_c_2026-03-15.pdf");
+      expect(() => encodeURIComponent(name)).not.toThrow();
+    });
+
     it("collapses runs of whitespace into a single underscore", () => {
       expect(generateFilename("Multi   Word    Title", "pdf")).toBe(
         "Multi_Word_Title_2026-03-15.pdf",

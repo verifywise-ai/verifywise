@@ -24,6 +24,7 @@ import { toDateOnlyString } from "../../tools/isoDateToString";
 import {
   filenameFromContentDisposition,
   policyDownloadFallbackName,
+  triggerBrowserDownload,
 } from "../../utils/browserDownload.utils";
 
 const tableHeaders = [
@@ -195,18 +196,11 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
 
       const blob = await response.blob();
       const contentDisposition = response.headers.get("Content-Disposition");
-      let filename = policyDownloadFallbackName(title, "pdf");
-
-      filename = filenameFromContentDisposition(contentDisposition, filename);
-
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      const filename = filenameFromContentDisposition(
+        contentDisposition,
+        policyDownloadFallbackName(title, "pdf"),
+      );
+      triggerBrowserDownload(blob, filename);
     } catch (error) {
       console.error("Failed to export PDF:", error);
     }
@@ -228,18 +222,11 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
 
       const blob = await response.blob();
       const contentDisposition = response.headers.get("Content-Disposition");
-      let filename = policyDownloadFallbackName(title, "docx");
-
-      filename = filenameFromContentDisposition(contentDisposition, filename);
-
-      const url = window.URL.createObjectURL(blob);
-      const link = document.createElement("a");
-      link.href = url;
-      link.download = filename;
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-      window.URL.revokeObjectURL(url);
+      const filename = filenameFromContentDisposition(
+        contentDisposition,
+        policyDownloadFallbackName(title, "docx"),
+      );
+      triggerBrowserDownload(blob, filename);
     } catch (error) {
       console.error("Failed to export DOCX:", error);
     }

@@ -289,7 +289,7 @@ Returns `{ data: { [folderId]: count } }`. Any member of the organization may re
 | GET | `/policies/:id/export/pdf` | Download as PDF |
 | GET | `/policies/:id/export/docx` | Download as DOCX |
 
-Both exports keep non-Latin letters in the file name. `Content-Disposition` carries an ASCII `filename` for old clients and the real name in `filename*=UTF-8''...` (`contentDispositionAttachment` in `utils/contentDisposition.utils.ts`, used by `exportPolicyPDF` and `exportPolicyDOCX` in `controllers/policy.ctrl.ts`). When the ASCII form has no letters or digits left, the fallback name is `policy`.
+Both exports keep non-Latin letters in the file name. `exportPolicyPDF` and `exportPolicyDOCX` in `controllers/policy.ctrl.ts` name the download with Express `res.attachment(filename)`, which builds `Content-Disposition` through the `content-disposition` package: a quoted ASCII `filename` for old clients (characters outside Latin-1 become `?`) plus `filename*=UTF-8''...` with the real name, and it never throws for names `generateFilename` produces (it drops lone surrogates). `attachment()` also sets `Content-Type` from the extension, so the controller sets the explicit PDF or DOCX type after it.
 
 ### Linked Objects
 
@@ -402,7 +402,7 @@ onerror, onload, onclick, onmouseover
 [sanitized_title]_[YYYY-MM-DD].[pdf|docx]
 ```
 
-The title keeps letters of any script (`\p{L}`), digits, spaces (turned into `_`) and hyphens, cut to 50 characters (`generateFilename` in `services/policies/policyExporter.ts`).
+The title keeps letters of any script (`\p{L}`), digits, spaces (turned into `_`) and hyphens, cut to 50 code points (`generateFilename` in `services/policies/policyExporter.ts`).
 
 ## Linked Objects
 

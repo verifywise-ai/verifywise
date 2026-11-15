@@ -35,7 +35,6 @@ import {
   generatePolicyDOCX,
   generateFilename,
 } from "../services/policies/policyExporter";
-import { contentDispositionAttachment } from "../utils/contentDisposition.utils";
 import { convertDocxToHtml, DOCX_ALLOWED_MIMES } from "../services/policies/policyImporter";
 import {
   notifyReviewRequested,
@@ -338,8 +337,10 @@ export class PolicyController {
 
       const filename = generateFilename(policy.title, "pdf");
 
+      // attachment() writes Content-Disposition (ASCII fallback + filename*) and
+      // guesses the type from the extension; the explicit type goes after it.
+      res.attachment(filename);
       res.setHeader("Content-Type", "application/pdf");
-      res.setHeader("Content-Disposition", contentDispositionAttachment(filename));
       res.setHeader("Content-Length", pdfBuffer.length);
 
       return res.send(pdfBuffer);
@@ -375,11 +376,11 @@ export class PolicyController {
 
       const filename = generateFilename(policy.title, "docx");
 
+      res.attachment(filename);
       res.setHeader(
         "Content-Type",
         "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
       );
-      res.setHeader("Content-Disposition", contentDispositionAttachment(filename));
       res.setHeader("Content-Length", docxBuffer.length);
 
       return res.send(docxBuffer);

@@ -90,6 +90,12 @@ describe("policyDownloadFallbackName", () => {
     );
   });
 
+  it("cuts the title to 50 code points without splitting a surrogate pair", () => {
+    const name = policyDownloadFallbackName("\u{20000}".repeat(80), "pdf");
+    expect(Array.from(name.split("_2")[0])).toHaveLength(50);
+    expect(() => encodeURIComponent(name)).not.toThrow();
+  });
+
   it("keeps combining marks", () => {
     expect(policyDownloadFallbackName("नीति दस्तावेज़", "docx")).toMatch(
       /^नीति_दस्तावेज़_\d{4}-\d{2}-\d{2}\.docx$/,
