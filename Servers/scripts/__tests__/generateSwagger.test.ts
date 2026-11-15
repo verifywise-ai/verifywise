@@ -6,8 +6,10 @@ import {
   expressPathToOpenApiPath,
   deriveTag,
   mergeSwagger,
+  findUnmatchedDeprecations,
   Endpoint,
 } from "../generateSwagger";
+import { API_DEPRECATIONS, ApiDeprecation, deprecationNotice } from "../apiDeprecations";
 
 describe("generateSwagger", () => {
   describe("parseRouteFile", () => {
@@ -294,6 +296,91 @@ export default router;
       expect(userOpId).not.toBe(projectOpId);
       expect(userOpId).toBeTruthy();
       expect(projectOpId).toBeTruthy();
+    });
+  });
+
+  describe("deprecation list (ADR 0001 §7)", () => {
+    const endpoint = (roles: string[] = []): Endpoint => ({
+      method: "put",
+      routePath: "/:id/review/approve",
+      handlerName: "PolicyController.approveReview",
+      auth: true,
+      roles,
+      path: "/api/policies/:id/review/approve",
+      openApiPath: "/policies/{id}/review/approve",
+      tag: "Policies",
+      basePath: "/api/policies",
+      routeFile: "policy.route.ts",
+    });
+    const entry: ApiDeprecation = {
+      method: "put",
+      path: "/policies/{id}/review/approve",
+      sunset: "not before v9.9.0",
+      replacement: "Use POST /v1/things instead.",
+    };
+    const existing = (description: string) => ({
+      paths: {
+        "/policies/{id}/review/approve": {
+          put: { description, responses: { "200": { description: "OK" } } },
+        },
+      },
+    });
+
+    it("marks a listed operation deprecated and puts the notice first", () => {
+      const merged = mergeSwagger([endpoint()], existing("Approves the review.\n"), [entry]);
+      const op = merged.paths["/policies/{id}/review/approve"].put;
+      expect(op.deprecated).toBe(true);
+      expect(op.description).toBe(`${deprecationNotice(entry)}\n\nApproves the review.\n`);
+    });
+
+    it("keeps the notice ahead of the role note", () => {
+      const merged = mergeSwagger([endpoint(["Admin"])], existing("Approves the review."), [entry]);
+      const op = merged.paths["/policies/{id}/review/approve"].put;
+      expect(op.description).toBe(
+        `${deprecationNotice(entry)}\n\nApproves the review. Requires role: Admin`,
+      );
+    });
+
+    it("is stable across regenerations (no description growth)", () => {
+      const once = mergeSwagger([endpoint(["Admin"])], existing("Approves the review.\n"), [entry]);
+      const twice = mergeSwagger([endpoint(["Admin"])], once, [entry]);
+      const thrice = mergeSwagger([endpoint(["Admin"])], twice, [entry]);
+      expect(thrice).toEqual(once);
+    });
+
+    it("uses the notice alone when the operation had no description", () => {
+      const merged = mergeSwagger([endpoint()], {}, [entry]);
+      expect(merged.paths["/policies/{id}/review/approve"].put.description).toBe(
+        deprecationNotice(entry),
+      );
+    });
+
+    it("removes the notice and the flag when an entry leaves the list", () => {
+      const deprecated = mergeSwagger([endpoint()], existing("Approves the review.\n"), [entry]);
+      const restored = mergeSwagger([endpoint()], deprecated, []);
+      const op = restored.paths["/policies/{id}/review/approve"].put;
+      expect(op.deprecated).toBeUndefined();
+      expect(op.description).toBe("Approves the review.\n");
+    });
+
+    it("leaves operations that are not listed untouched", () => {
+      const merged = mergeSwagger([endpoint()], existing("Approves the review."), []);
+      const op = merged.paths["/policies/{id}/review/approve"].put;
+      expect(op.deprecated).toBeUndefined();
+      expect(op.description).toBe("Approves the review.");
+    });
+
+    it("reports entries that match no endpoint", () => {
+      const stale: ApiDeprecation = { ...entry, path: "/policies/{id}/gone" };
+      expect(findUnmatchedDeprecations([endpoint()], [entry, stale])).toEqual([stale]);
+    });
+
+    it("lists the three legacy policy review endpoints", () => {
+      expect(API_DEPRECATIONS.map((d) => `${d.method} ${d.path}`)).toEqual([
+        "post /policies/{id}/review/request",
+        "put /policies/{id}/review/approve",
+        "put /policies/{id}/review/reject",
+      ]);
     });
   });
 });

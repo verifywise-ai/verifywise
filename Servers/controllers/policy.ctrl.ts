@@ -128,11 +128,11 @@ function policyFieldErrors(req: Request, data: Partial<IPolicy>, isCreate: boole
 }
 
 /** 400 body carrying field errors, in the shape other controllers use. */
-const policyValidationResponse = (errors: PolicyFieldError[]) =>
+export const policyValidationResponse = (errors: PolicyFieldError[]) =>
   STATUS_CODE[400]({ message: errors[0].message, errors });
 
 /** 400 body for a ValidationException from the write path (tags, owner, reviewers). */
-const policyValidationExceptionResponse = (req: Request, error: ValidationException) =>
+export const policyValidationExceptionResponse = (req: Request, error: ValidationException) =>
   policyValidationResponse([
     {
       field: (error.metadata?.field as string | undefined) ?? "body",

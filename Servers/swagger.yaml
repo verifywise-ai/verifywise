@@ -7925,6 +7925,8 @@ tags:
   -
     name: 'v1: Intake submissions'
   -
+    name: 'v1: Policies'
+  -
     name: 'v1: Shadow AI'
   -
     name: 'v1: Use Case Settings'
@@ -17446,7 +17448,7 @@ paths:
       tags:
         - Policies
       summary: 'Request review for a policy'
-      description: "Sets the policy review status to pending_review and sends in-app notifications to each specified reviewer.\n"
+      description: "**Deprecated.** Sunset: not before v2.7.0. Submit with POST /v1/policies/{id}/submit-for-approval and decide through the approval requests endpoints (/approval-requests), or, when the organization has no policy approval workflow, an Admin approves with POST /v1/policies/{id}/approve.\n\nSets the policy review status to pending_review and sends in-app notifications to each specified reviewer.\n"
       operationId: PolicyController.requestReview
       security:
         -
@@ -17492,12 +17494,13 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+      deprecated: true
   '/policies/{id}/review/approve':
     put:
       tags:
         - Policies
       summary: 'Approve a policy review'
-      description: "Sets the policy review status to approved and sends an in-app notification to the policy author.\n"
+      description: "**Deprecated.** Sunset: not before v2.7.0. Submit with POST /v1/policies/{id}/submit-for-approval and decide through the approval requests endpoints (/approval-requests), or, when the organization has no policy approval workflow, an Admin approves with POST /v1/policies/{id}/approve.\n\nSets the policy review status to approved and sends an in-app notification to the policy author.\n"
       operationId: PolicyController.approveReview
       security:
         -
@@ -17536,12 +17539,13 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+      deprecated: true
   '/policies/{id}/review/reject':
     put:
       tags:
         - Policies
       summary: 'Reject a policy review (request changes)'
-      description: "Sets the policy review status to changes_requested and sends an in-app notification to the policy author. A comment is required.\n"
+      description: "**Deprecated.** Sunset: not before v2.7.0. Submit with POST /v1/policies/{id}/submit-for-approval and decide through the approval requests endpoints (/approval-requests), or, when the organization has no policy approval workflow, an Admin approves with POST /v1/policies/{id}/approve.\n\nSets the policy review status to changes_requested and sends an in-app notification to the policy author. A comment is required.\n"
       operationId: PolicyController.rejectReview
       security:
         -
@@ -17582,6 +17586,7 @@ paths:
           $ref: '#/components/responses/NotFound'
         '500':
           $ref: '#/components/responses/InternalServerError'
+      deprecated: true
   '/policies/folders/{folderId}/policies':
     get:
       tags:
@@ -28976,6 +28981,48 @@ paths:
       tags:
         - 'v1: V1/Change Notices'
       operationId: setChangeNoticeDismissedHandler
+      security:
+        -
+          bearerAuth: []
+  '/v1/policies/{id}/approval':
+    get:
+      summary: 'Get Policy Approval State'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Policies'
+      operationId: getPolicyApprovalState
+      security:
+        -
+          bearerAuth: []
+  '/v1/policies/{id}/submit-for-approval':
+    post:
+      summary: 'Submit Policy For Approval'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Policies'
+      operationId: submitPolicyForApproval
+      security:
+        -
+          bearerAuth: []
+  '/v1/policies/{id}/approve':
+    post:
+      summary: 'Approve Policy Directly'
+      responses:
+        '200':
+          description: Success
+        '500':
+          description: 'Internal server error'
+      tags:
+        - 'v1: Policies'
+      operationId: approvePolicyDirectly
       security:
         -
           bearerAuth: []
