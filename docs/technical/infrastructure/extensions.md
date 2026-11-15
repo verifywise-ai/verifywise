@@ -183,8 +183,10 @@ written:
   is stored, compared by the stored-secret guard and encrypted.
 - `jira_base_url` must be an `http` or `https` URL with a host and no user name
   or password in it, and must pass the static checks of `assertSafeOutboundUrl`
-  (no DNS lookup at save). The Jira client runs the same checks before it
-  connects. A loopback host such as `localhost` is refused unless
+  (no DNS lookup at save). The check is `assertSafeOutboundUrl` itself: the
+  `code` on its `UnsafeOutboundUrlError` (`invalid-url`, `credentials`,
+  `blocked-address`) picks the save message. The Jira client runs the same
+  checks before it connects. A loopback host such as `localhost` is refused unless
   `OUTBOUND_ALLOW_LOOPBACK=true`. Link-local and cloud metadata addresses are
   always refused.
 - `workspace_id` must match the client's `WORKSPACE_ID_PATTERN`
@@ -334,7 +336,7 @@ router.use(requireExtensionEnabled("mlflow"));
 | No `req.organizationId` | 401 "User not authenticated" |
 | Key not in the catalog | 404 "Extension '`<key>`' not found in catalog" |
 | No enablement row, or `enabled = false` | 403 "Extension '`<key>`' is not enabled for this organization" |
-| Lookup error | 500 with the translated generic "Internal server error". The cause is logged with the extension key and organization and is not sent to the client. |
+| Lookup error | 500 with the translated generic "Internal server error". The cause is logged with the extension key and organization (`logStructuredError`: the structured log line plus the stack in the tenant log) and is not sent to the client. |
 
 The key → id lookup is cached in process. The catalog only changes through
 migrations.
@@ -348,7 +350,7 @@ to a runner that returns `{ success, message, testedAt }`:
 |-----|--------|
 | `mlflow` | Stored runtime config overlaid with the submitted config (`overlayOnStored`, which applies the [stored-secret rule](#stored-secrets-and-changed-addresses)) → `testConnection` in `extensions/mlflow/mlflow.service.ts`. Reports "The server answered HTTP <status>" or "Could not reach the server". |
 | `azure-ai-foundry` | Same pattern → `testConnection` in `extensions/azure-ai-foundry/azureAiFoundry.service.ts` |
-| `jira-assets` | Submitted config. If no `api_token` is submitted, the stored token comes from `jira_assets_config`, unless the base URL, workspace, email or deployment type changed (then a failed result asks for the token again). Then `clientFromConfig(...).testConnection()`. A refused base URL is a failed result, not a 500, and an error answer reads "Jira returned HTTP <status>" without Jira's reply (its start goes to the server log). |
+| `jira-assets` | Submitted config, first checked by `parseJiraConnection` as a save checks it (trimmed text, base URL, workspace ID, deployment type, email on cloud). An invalid field is a failed result with the translated save message, not a 400 or 500. If no `api_token` is submitted, the stored token comes from `jira_assets_config`, unless the base URL, workspace, email or deployment type changed (then a failed result asks for the token again); with no token either way the result is "API Token is required". Then `clientFromConfig(...).testConnection()` with the trimmed fields. An error answer reads "Jira returned HTTP <status>" without Jira's reply (its start goes to the server log). |
 | `jira-incidents` | `testConnection(orgId, submitted)` in `extensions/jira-incidents/jiraIncidents.config.ts`: submitted fields overlaid on `jira_incidents_config`; a changed site URL or email needs a submitted token; checks `/myself`, then the three project permissions when a project is known. Never throws. |
 
 Any other key returns **200** with `success: false` and "Test connection is not
@@ -482,15 +484,20 @@ and ignores it.
   an Admin removes them explicitly.
 - Shadow AI **Start governance** with `start_lifecycle` set seeds the new
   model's lifecycle only when model-lifecycle is enabled for the organization.
-  `startGovernance` (`shadowAi.ctrl.ts`) calls `startLifecycleForModel` in
-  `extensions/model-lifecycle/modelLifecycle.service.ts`, which writes nothing
-  and returns false when the extension is disabled or the enablement lookup
-  fails. Otherwise it inserts one `model_lifecycle_values` row per active item
-  of an active phase, under a savepoint in the governance transaction, with
-  `ON CONFLICT DO NOTHING`. A failure rolls back to the savepoint and is logged,
-  and governance still succeeds. `lifecycle_initialized` in the response is its
-  result. The **Start lifecycle review** toggle in the Shadow AI form is shown
-  whether or not the extension is enabled.
+  `startGovernance` (`shadowAi.ctrl.ts`) first calls `canStartLifecycle` in
+  `extensions/model-lifecycle/modelLifecycle.service.ts`, before it opens the
+  governance transaction, so the enablement lookup never waits for a second
+  pooled connection while the transaction holds one. It answers false when the
+  extension is disabled or the lookup fails (logged). Only on true does the
+  controller call `startLifecycleForModel` inside the transaction: one
+  `INSERT INTO model_lifecycle_values ... SELECT` over the organization's active
+  items of active phases, under a savepoint, with `ON CONFLICT DO NOTHING` and
+  `RETURNING id`. It returns true only when a row was inserted. A failure rolls
+  back to the savepoint and is logged, and governance still succeeds.
+  `lifecycle_initialized` in the response is its result. The **Start lifecycle
+  review** toggle in the Shadow AI form (`GovernanceWizardModal`) is shown only
+  when `useExtensions().isEnabled("model-lifecycle")` is true (hidden while the
+  extensions list loads), and the form sends `start_lifecycle` only then.
 
 ---
 
@@ -617,10 +624,15 @@ up after 5 seconds with `BackgroundJobsUnavailableError` (503). The worker
 (`runExtensionSyncJob`) validates the payload, then checks enablement with
 `isExtensionEnabledForOrganization` (the lookup the gate uses). A job for an
 organization that disabled the extension after it was queued, manual or
-scheduled, is logged at info and returns `skipped` without claiming, so no run
-row is written. The extension's run routes are gated for that organization, so
-nobody waits on one. If the enablement lookup throws, the job fails with
-nothing claimed. Otherwise the worker claims at pickup. If a run is live, a
+scheduled, is logged (`logStructured`) and returns `skipped` without claiming,
+so no run row is written. The extension's run routes are gated for that
+organization, so nobody waits on one. If the enablement lookup throws, the
+cause is logged with its stack (`logStructuredError`) and the job fails with
+nothing claimed and no run row: whether the extension is on is unknown, so
+nothing is written behind its gate. A client waiting on "Sync now" still
+resolves, because the failed job is removed: the status shows nothing queued,
+nothing running and no newer run, and `decidePoll` (`useExtensionSync.ts`)
+ends with "The sync did not start. Try again." after three polls. Otherwise the worker claims at pickup. If a run is live, a
 manual job records a `skipped` row (no token, "Another sync or import was
 running, so this sync did not start.") and a scheduled job records nothing.
 
