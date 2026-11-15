@@ -953,10 +953,14 @@ connection (by id and organization).
 ### Deadline reminders
 
 The deadline sweep's 1-day Slack leg sends one post per risk or model risk to
-the organization-wide connections, on the run where at least one recipient is
-newly notified. Each recipient's own user-scope connections still get a post
-for that recipient. An organization-wide channel therefore gets one post per
-row, not one per recipient.
+the organization-wide connections, on the first run that notifies anyone about
+that row and deadline: at least one recipient is newly notified and none was
+notified before. A later run that only reaches a new recipient (a new Admin,
+an owner change, a retry after a failed write) does not post to the shared
+channel again. A recipient whose send failed counts as neither. Each
+recipient's own user-scope connections still get a post for that recipient.
+An organization-wide channel therefore gets one post per row and deadline,
+not one per recipient. A rescheduled deadline re-arms it.
 
 ### Connections without an organization
 

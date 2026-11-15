@@ -243,6 +243,7 @@ export async function runDeadlineEscalationSweep(
     scanned += leg.rows.length;
     for (const row of leg.rows) {
       let anyFresh = false;
+      let anyAlready = false;
       for (const recipientId of recipientsFor(row, adminIds)) {
         try {
           const { fresh, sent } = await leg.send(
@@ -253,6 +254,7 @@ export async function runDeadlineEscalationSweep(
             baseUrl,
           );
           anyFresh = anyFresh || fresh;
+          anyAlready = anyAlready || !fresh;
           if (leg.count === "emailed") emailed += sent;
           else slacked += sent;
         } catch (error) {
@@ -262,9 +264,13 @@ export async function runDeadlineEscalationSweep(
           );
         }
       }
-      // Organization-wide Slack connections: one post per row, on the run that
-      // first notifies someone about it (the per-recipient records dedup it).
-      if (leg.count === "slacked" && anyFresh) {
+      // Organization-wide Slack connections: one post per row and deadline, on
+      // the first run that notifies anyone about it. A run where some recipient
+      // already had their 1-day record (a new Admin, an owner change, a retry
+      // after a failed write) is not the first, so the shared channel is not
+      // posted to again. A recipient whose send threw counts as neither fresh
+      // nor already notified.
+      if (leg.count === "slacked" && anyFresh && !anyAlready) {
         try {
           const slack = await sendDeadlineDueSoonSlackNotification(
             organizationId,

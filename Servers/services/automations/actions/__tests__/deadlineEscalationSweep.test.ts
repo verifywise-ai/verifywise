@@ -163,13 +163,55 @@ describe("runDeadlineEscalationSweep", () => {
     expect(summary.slacked).toBe(0);
   });
 
-  it("one recipient new, one already told → one organization post", async () => {
+  it("first night → exactly one organization post", async () => {
     const row = riskRow({ deadline: new Date(Date.now() + 1 * DAY) });
     mockRisks.mockImplementation(async (_org: number, days: number) =>
       days === DEADLINE_SLACK_DAYS ? [row] : [],
     );
-    // Admin 9 already has the notice; owner 5 does not.
+
+    await runDeadlineEscalationSweep(1);
+
+    expect(mockSlack.mock.calls.filter((call) => call[1] === null)).toHaveLength(1);
+  });
+
+  it("one recipient new, one already told → no organization post", async () => {
+    const row = riskRow({ deadline: new Date(Date.now() + 1 * DAY) });
+    mockRisks.mockImplementation(async (_org: number, days: number) =>
+      days === DEADLINE_SLACK_DAYS ? [row] : [],
+    );
+    // Admin 9 already has the notice; owner 5 does not (owner changed, or a
+    // retry after a failed write). The channel already heard about this row.
     mockDedup.mockImplementation(async (_org: number, recipientId: number) => recipientId === 9);
+
+    await runDeadlineEscalationSweep(1);
+
+    expect(mockSlack.mock.calls.map((call) => call[1])).toEqual([5]);
+  });
+
+  it("new admin joins after the first night → no organization post", async () => {
+    const row = riskRow({ deadline: new Date(Date.now() + 1 * DAY) });
+    mockRisks.mockImplementation(async (_org: number, days: number) =>
+      days === DEADLINE_SLACK_DAYS ? [row] : [],
+    );
+    // Owner 5 and admin 9 were told on the first night; admin 12 is new.
+    mockAdmins.mockResolvedValue([9, 12]);
+    mockDedup.mockImplementation(async (_org: number, recipientId: number) => recipientId !== 12);
+
+    await runDeadlineEscalationSweep(1);
+
+    expect(mockSlack.mock.calls.map((call) => call[1])).toEqual([12]);
+  });
+
+  it("a recipient whose send throws counts as neither fresh nor already told", async () => {
+    const row = riskRow({ deadline: new Date(Date.now() + 1 * DAY) });
+    mockRisks.mockImplementation(async (_org: number, days: number) =>
+      days === DEADLINE_SLACK_DAYS ? [row] : [],
+    );
+    // Admin 9's dedup lookup fails; owner 5 is fresh. Still the first run.
+    mockDedup.mockImplementation(async (_org: number, recipientId: number) => {
+      if (recipientId === 9) throw new Error("db blip");
+      return false;
+    });
 
     await runDeadlineEscalationSweep(1);
 
