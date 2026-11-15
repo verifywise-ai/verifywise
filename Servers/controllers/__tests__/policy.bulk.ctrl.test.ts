@@ -48,6 +48,9 @@ jest.mock("../../services/policies/policyExporter", () => ({
   generateFilename: jest.fn(),
 }));
 
+jest.mock("../../services/policies/policyApproval.service", () => ({
+  rejectPendingPolicyRequestOnDelete: jest.fn<any>().mockResolvedValue(null),
+}));
 jest.mock("../../services/policies/policyImporter", () => ({
   convertDocxToHtml: jest.fn(),
   DOCX_ALLOWED_MIMES: [],

@@ -37,6 +37,9 @@ jest.mock("../../services/policies/policyExporter", () => ({
   generatePolicyDOCX: jest.fn().mockResolvedValue(Buffer.from("docx")),
   generateFilename: jest.fn().mockReturnValue("file.pdf"),
 }));
+jest.mock("../../services/policies/policyApproval.service", () => ({
+  rejectPendingPolicyRequestOnDelete: jest.fn<any>().mockResolvedValue(null),
+}));
 jest.mock("../../services/policies/policyImporter", () => ({
   convertDocxToHtml: jest.fn().mockResolvedValue({ html: "<p>hi</p>", warnings: [] }),
   DOCX_ALLOWED_MIMES: ["application/vnd.openxmlformats-officedocument.wordprocessingml.document"],
@@ -94,6 +97,7 @@ import {
   deletePolicyByIdQuery,
 } from "../../utils/policyManager.utils";
 import { generatePolicyPDF } from "../../services/policies/policyExporter";
+import { rejectPendingPolicyRequestOnDelete } from "../../services/policies/policyApproval.service";
 import { convertDocxToHtml } from "../../services/policies/policyImporter";
 import {
   ForbiddenException,
@@ -399,6 +403,17 @@ describe("policy.ctrl", () => {
       const req = createReq({ params: { id: "1" } });
       const res = createRes();
       await PolicyController.deletePolicyById(req, res);
+      expect(res.status).toHaveBeenCalledWith(202);
+    });
+    it("rejects a pending approval request inside the delete transaction", async () => {
+      mockDelete.mockResolvedValue({ id: 1 } as any);
+      const req = createReq({ params: { id: "7" } });
+      const res = createRes();
+      await PolicyController.deletePolicyById(req, res);
+      const reject = rejectPendingPolicyRequestOnDelete as jest.Mock;
+      expect(reject).toHaveBeenCalledWith(1, 7, expect.anything());
+      // Same transaction object as the delete.
+      expect(reject.mock.calls[0][2]).toBe(mockDelete.mock.calls[0][2]);
       expect(res.status).toHaveBeenCalledWith(202);
     });
     it("should return 404 when policy is not found", async () => {

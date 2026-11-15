@@ -842,6 +842,8 @@ export const notifyApprovalComplete = async (
    * that don't pass it.
    */
   entityType?: string,
+  /** approval_requests.entity_id, for entity types whose link needs it (policy). */
+  entityId?: number,
 ): Promise<void> => {
   const requester = await getUserById(requesterId);
 
@@ -850,8 +852,22 @@ export const notifyApprovalComplete = async (
   // approval workflow, just add a row here.
   const labelFor = (
     et?: string,
-  ): { label: string; entity: NotificationEntityType; url: string } => {
+  ): { label: string; entity: NotificationEntityType; url: string; entityId?: number } => {
     switch (et) {
+      case "policy":
+        if (entityId) {
+          return {
+            label: "Policy",
+            entity: NotificationEntityType.POLICY,
+            url: buildEntityUrl(NotificationEntityType.POLICY, entityId),
+            entityId,
+          };
+        }
+        return {
+          label: "Policy",
+          entity: NotificationEntityType.POLICY,
+          url: `/policies`,
+        };
       case "ai_action":
         return {
           label: "AI action",
@@ -887,7 +903,7 @@ export const notifyApprovalComplete = async (
     }
   };
 
-  const { label, entity, url } = labelFor(entityType);
+  const { label, entity, url, entityId: linkedId } = labelFor(entityType);
 
   await sendInAppNotification(
     organizationId,
@@ -897,7 +913,7 @@ export const notifyApprovalComplete = async (
       title: `${label} fully approved`,
       message: `Your ${label.toLowerCase()} "${useCase.name}" has been fully approved`,
       entity_type: entity,
-      entity_id: useCase.id,
+      entity_id: linkedId ?? useCase.id,
       entity_name: useCase.name,
       action_url: url,
     },

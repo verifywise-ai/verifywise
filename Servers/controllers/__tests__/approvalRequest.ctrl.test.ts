@@ -55,6 +55,9 @@ jest.mock("../../services/inAppNotification.service", () => ({
   notifyApprovalComplete: jest.fn<any>().mockResolvedValue(undefined),
   notifyApprovalAutoApproved: jest.fn<any>().mockResolvedValue(undefined),
   sendInAppNotification: jest.fn<any>().mockResolvedValue(undefined),
+  buildEntityUrl: jest.fn((type: string, id: number) =>
+    type === "policy" ? `/policies/${id}/edit` : "/overview",
+  ),
 }));
 
 jest.mock("../../services/notification.service", () => ({
@@ -694,13 +697,13 @@ describe("approvalRequest.ctrl", () => {
     const flushNotifications = () => new Promise((resolve) => setImmediate(resolve));
 
     /** Route each query by its SQL so the test does not depend on call order. */
-    const routeQueries = (entityType: string | null) => {
+    const routeQueries = (entityType: string | null, entityId: number | null = null) => {
       (sequelize.query as jest.Mock<any>).mockImplementation((sql: any) => {
         if (typeof sql === "string" && sql.includes("COUNT(*)")) {
           return Promise.resolve([{ count: "3" }]);
         }
         if (typeof sql === "string" && sql.includes("entity_type")) {
-          return Promise.resolve([{ entity_type: entityType }]);
+          return Promise.resolve([{ entity_type: entityType, entity_id: entityId }]);
         }
         return Promise.resolve([{ name: "Jane", surname: "Roe" }]);
       });
@@ -730,6 +733,7 @@ describe("approvalRequest.ctrl", () => {
         // The looked-up entity_type is forwarded so the notification text
         // matches the artifact rather than defaulting to "Use case".
         "ai_action",
+        undefined,
       );
     });
 
@@ -754,6 +758,32 @@ describe("approvalRequest.ctrl", () => {
         expect.anything(),
         expect.any(String),
         undefined,
+        undefined,
+      );
+    });
+
+    it("forwards a policy request's entity id so the notification links to the policy", async () => {
+      const mockTransaction = { commit: jest.fn(), rollback: jest.fn() };
+      (sequelize.transaction as any).mockResolvedValue(mockTransaction);
+      routeQueries("policy", 55);
+      mockProcessApprovalQuery.mockResolvedValue({
+        type: "requester_approved",
+        requestName: "Acceptable use",
+        requesterId: 42,
+      } as any);
+
+      const req = createReq({ params: { id: "1" }, body: {} });
+      const res = createRes();
+      await approveRequest(req as Request, res as Response);
+      await flushNotifications();
+
+      expect(mockNotifyApprovalComplete).toHaveBeenCalledWith(
+        1,
+        42,
+        expect.anything(),
+        expect.any(String),
+        "policy",
+        55,
       );
     });
 
@@ -1051,6 +1081,69 @@ describe("approvalRequest.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(500);
     });
 
+    it("links a rejected policy request to the policy", async () => {
+      const req = createReq({ params: { id: "9" }, body: { comments: "Fix section 2" } });
+      const res = createRes();
+      const mockTransaction = { commit: jest.fn(), rollback: jest.fn() };
+      (sequelize.transaction as any).mockResolvedValue(mockTransaction);
+      mockProcessApprovalQuery.mockResolvedValue({
+        type: "requester_rejected",
+        requestName: "Acceptable use",
+        requesterId: 4,
+        entityType: "policy",
+        entityId: 55,
+      } as any);
+
+      await rejectRequest(req as Request, res as Response);
+      await new Promise((resolve) => setImmediate(resolve));
+
+      expect(res.status).toHaveBeenCalledWith(200);
+      expect(mockSendInAppNotification).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          user_id: 4,
+          entity_type: "policy",
+          entity_id: 55,
+          action_url: expect.stringContaining("/policies/55/edit"),
+        }),
+        true,
+        expect.objectContaining({
+          variables: expect.objectContaining({
+            rejection_reason: "Fix section 2",
+            request_url: expect.stringContaining("/policies/55/edit"),
+          }),
+        }),
+      );
+    });
+
+    it("keeps the use case entity and approval-workflows link for other requests", async () => {
+      const req = createReq({ params: { id: "9" }, body: { comments: "No" } });
+      const res = createRes();
+      const mockTransaction = { commit: jest.fn(), rollback: jest.fn() };
+      (sequelize.transaction as any).mockResolvedValue(mockTransaction);
+      mockProcessApprovalQuery.mockResolvedValue({
+        type: "requester_rejected",
+        requestName: "Chatbot",
+        requesterId: 4,
+        entityType: "use_case",
+        entityId: 3,
+      } as any);
+
+      await rejectRequest(req as Request, res as Response);
+      await new Promise((resolve) => setImmediate(resolve));
+
+      expect(mockSendInAppNotification).toHaveBeenCalledWith(
+        1,
+        expect.objectContaining({
+          entity_type: "use_case",
+          entity_id: 9,
+          action_url: expect.stringContaining("/approval-workflows"),
+        }),
+        true,
+        expect.anything(),
+      );
+    });
+
     it("returns 403 and sends no notification when a non-approver rejects", async () => {
       const req = createReq({ params: { id: "1" }, body: { comments: "No" } });
       const res = createRes();
@@ -1126,10 +1219,33 @@ describe("approvalRequest.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(403);
     });
 
+    it.each(["Approved", "Rejected", "Withdrawn"])(
+      "returns 409 and withdraws nothing when the request is %s",
+      async (status) => {
+        mockGetApprovalRequestByIdQuery.mockResolvedValue({
+          id: 1,
+          requested_by: 1,
+          status,
+        } as any);
+        const req = createReq({ params: { id: "1" }, userId: 1 });
+        const res = createRes();
+        const mockTransaction = { commit: jest.fn(), rollback: jest.fn() };
+        (sequelize.transaction as any).mockResolvedValue(mockTransaction);
+
+        await withdrawRequest(req as Request, res as Response);
+
+        expect(res.status).toHaveBeenCalledWith(409);
+        expect(mockTransaction.rollback).toHaveBeenCalled();
+        expect(mockTransaction.commit).not.toHaveBeenCalled();
+        expect(mockWithdrawApprovalRequestQuery).not.toHaveBeenCalled();
+      },
+    );
+
     it("should return 200 when withdrawal is successful", async () => {
       const mockRequest = {
         id: 1,
         requested_by: 1, // Same user
+        status: "Pending",
       };
       mockGetApprovalRequestByIdQuery.mockResolvedValue(mockRequest as any);
       mockWithdrawApprovalRequestQuery.mockResolvedValue(undefined as any);
@@ -1176,6 +1292,7 @@ describe("approvalRequest.ctrl", () => {
       const mockRequest = {
         id: 1,
         requested_by: 1,
+        status: "Pending",
       };
       mockGetApprovalRequestByIdQuery.mockResolvedValue(mockRequest as any);
       mockWithdrawApprovalRequestQuery.mockResolvedValue(undefined as any);

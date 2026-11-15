@@ -48,8 +48,10 @@ import {
   notifyApprovalComplete,
   notifyApprovalAutoApproved,
   sendInAppNotification,
+  buildEntityUrl,
 } from "../services/inAppNotification.service";
 import { notifyRequesterStepCompleted } from "../services/notification.service";
+import { notifyFirstStepApprovers } from "../services/approvalRequestNotification.service";
 import {
   NotificationType,
   NotificationEntityType,
@@ -205,39 +207,15 @@ export async function createApprovalRequest(req: Request, res: Response): Promis
           return;
         }
 
-        // Get requester name
-        const requesterResult = await sequelize.query<{ name: string; surname: string }>(
-          `SELECT name, surname FROM users WHERE id = :userId`,
-          { replacements: { userId }, type: QueryTypes.SELECT },
-        );
-        const requester = requesterResult[0];
-        const requesterName = requester
-          ? `${requester.name} ${requester.surname}`.trim()
-          : "Someone";
-
-        // Get first step approvers
-        const firstStep = workflowSteps.find((s: any) => s.step_number === 1) as any;
-        if (firstStep && firstStep.approvers && firstStep.approvers.length > 0) {
-          for (const approver of firstStep.approvers) {
-            const approverId =
-              typeof approver === "object" ? (approver as any).approver_id : approver;
-            if (approverId !== userId) {
-              await notifyApprovalRequested(
-                organizationId,
-                approverId,
-                {
-                  id: request.id!,
-                  name: request_name,
-                  workflowName: (workflow as any).workflow_title || (workflow as any).name,
-                  stepNumber: 1,
-                  totalSteps: workflowSteps.length,
-                },
-                requesterName,
-                baseUrl,
-              );
-            }
-          }
-        }
+        await notifyFirstStepApprovers({
+          organizationId,
+          requestId: request.id!,
+          requestName: request_name,
+          requesterId: userId,
+          workflow: workflow as any,
+          workflowSteps,
+          baseUrl,
+        });
       } catch (notifyError) {
         console.error("Failed to send approval request notifications:", notifyError);
       }
@@ -535,8 +513,11 @@ export async function approveRequest(req: Request, res: Response): Promise<any> 
             // Look up entity_type so the notification title/message
             // matches the artifact ("AI action fully approved" instead
             // of always "Use case fully approved").
-            const [entityRow] = await sequelize.query<{ entity_type: string | null }>(
-              `SELECT entity_type FROM approval_requests WHERE organization_id = :organizationId AND id = :requestId`,
+            const [entityRow] = await sequelize.query<{
+              entity_type: string | null;
+              entity_id: number | null;
+            }>(
+              `SELECT entity_type, entity_id FROM approval_requests WHERE organization_id = :organizationId AND id = :requestId`,
               { replacements: { organizationId, requestId }, type: QueryTypes.SELECT },
             );
 
@@ -550,6 +531,7 @@ export async function approveRequest(req: Request, res: Response): Promise<any> 
               },
               baseUrl,
               entityRow?.entity_type ?? undefined,
+              entityRow?.entity_id ?? undefined,
             );
           }
         } catch (notifyError) {
@@ -679,6 +661,17 @@ export async function rejectRequest(req: Request, res: Response): Promise<any> {
             ? `${requester.name} ${requester.surname}`.trim()
             : "User";
 
+          // A rejected policy links to the policy, where the requester sees
+          // the comment and can edit and resubmit. Other entities keep the
+          // approval-workflows link.
+          const policyId =
+            notificationInfo.entityType === "policy" && notificationInfo.entityId
+              ? notificationInfo.entityId
+              : null;
+          const requestUrl = policyId
+            ? `${baseUrl}${buildEntityUrl(NotificationEntityType.POLICY, policyId)}`
+            : `${baseUrl}/approval-workflows`;
+
           // Send rejection notification
           await sendInAppNotification(
             organizationId,
@@ -687,10 +680,12 @@ export async function rejectRequest(req: Request, res: Response): Promise<any> {
               type: NotificationType.APPROVAL_REJECTED,
               title: "Approval request rejected",
               message: `${rejectorName} rejected your approval request: ${notificationInfo.requestName}`,
-              entity_type: NotificationEntityType.USE_CASE,
-              entity_id: requestId,
+              entity_type: policyId
+                ? NotificationEntityType.POLICY
+                : NotificationEntityType.USE_CASE,
+              entity_id: policyId ?? requestId,
               entity_name: notificationInfo.requestName,
-              action_url: `${baseUrl}/approval-workflows`,
+              action_url: requestUrl,
             },
             true,
             {
@@ -701,7 +696,7 @@ export async function rejectRequest(req: Request, res: Response): Promise<any> {
                 rejector_name: rejectorName,
                 request_name: notificationInfo.requestName,
                 rejection_reason: comments || "No reason provided",
-                request_url: `${baseUrl}/approval-workflows`,
+                request_url: requestUrl,
               },
             },
           );
@@ -768,6 +763,15 @@ export async function withdrawRequest(req: Request, res: Response): Promise<any>
       return res
         .status(403)
         .json(STATUS_CODE[403](req.t!("Only the requestor can withdraw this request")));
+    }
+
+    // A decided request keeps its outcome: withdrawing it would move its
+    // entity (a use case, a policy) back as if it had never been decided.
+    if (request.status !== ApprovalRequestStatus.PENDING) {
+      await transaction.rollback();
+      return res
+        .status(409)
+        .json(STATUS_CODE[409](req.t!("Only a pending request can be withdrawn")));
     }
 
     await withdrawApprovalRequestQuery(requestId, organizationId, transaction, {

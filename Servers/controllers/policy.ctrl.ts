@@ -49,6 +49,7 @@ import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper
 import { sanitizeUserHtml } from "../utils/sanitization.utils";
 import { POLICY_STATUS_ENUM } from "../utils/validations/policiesValidation.utils";
 import { isReviewDateString } from "../utils/policyReviewDate.utils";
+import { rejectPendingPolicyRequestOnDelete } from "../services/policies/policyApproval.service";
 
 /**
  * Only a reviewer assigned to the policy, or an Admin, may approve or reject
@@ -303,6 +304,9 @@ export class PolicyController {
     const transaction = await sequelize.transaction();
     try {
       const policyId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+
+      // A pending approval request on the policy is rejected with the delete.
+      await rejectPendingPolicyRequestOnDelete(req.organizationId!, policyId, transaction);
 
       const deleted = await deletePolicyByIdQuery(req.organizationId!, policyId, transaction);
 
