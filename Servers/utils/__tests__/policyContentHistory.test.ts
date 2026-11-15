@@ -20,6 +20,9 @@ describe("htmlExcerpt", () => {
     expect(htmlExcerpt("<scr<script>ipt>x</p>")).not.toMatch(/<[a-z]/i);
     expect(htmlExcerpt("<p>score &lt; 5 and risk &gt; 3</p>")).toBe("score < 5 and risk > 3");
     expect(htmlExcerpt("1 &amp;lt;b&amp;gt; 2")).toBe("1 &lt;b&gt; 2");
+    const started = Date.now();
+    expect(htmlExcerpt("<".repeat(200_000) + "x")).toBe(`${"<".repeat(120)}…`);
+    expect(Date.now() - started).toBeLessThan(1_000);
   });
 
   it("cuts to 120 characters with a trailing ellipsis", () => {

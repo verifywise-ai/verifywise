@@ -171,7 +171,7 @@ export const HISTORY_EXCERPT_LENGTH = 120;
 
 /** Tags that separate words; any other tag (b, i, span, a...) is dropped without a space. */
 const BLOCK_TAG =
-  /<\/?(?:p|div|li|ul|ol|br|hr|h[1-6]|tr|td|th|table|thead|tbody|blockquote|pre|section|article|header|footer)\b[^>]*>/gi;
+  /<\/?(?:p|div|li|ul|ol|br|hr|h[1-6]|tr|td|th|table|thead|tbody|blockquote|pre|section|article|header|footer)\b[^<>]*>/gi;
 
 const BASIC_ENTITIES: { [key: string]: string } = {
   "&nbsp;": " ",
@@ -185,15 +185,15 @@ const BASIC_ENTITIES: { [key: string]: string } = {
 
 /**
  * Strip the HTML's tags until none is left, so removing one can't join the
- * rest into a new tag. Runs on the stored HTML, where a literal "<" in the text
- * is always encoded (&lt;), so every "<" here starts a tag.
+ * rest into a new tag. A tag can't contain "<", so each match stops at the
+ * next one: linear work per pass even with many unclosed "<".
  */
 const stripTags = (html: string): string => {
   let previous: string;
   let text = html;
   do {
     previous = text;
-    text = text.replace(BLOCK_TAG, " ").replace(/<[^>]*>/g, "");
+    text = text.replace(BLOCK_TAG, " ").replace(/<[^<>]*>/g, "");
   } while (text !== previous);
   return text;
 };
