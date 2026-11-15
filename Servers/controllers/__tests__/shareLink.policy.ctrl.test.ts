@@ -30,7 +30,7 @@ function createRes(): any {
   return res;
 }
 
-function shareLink(resourceId: number) {
+function shareLink(resourceId: number, shareAllFields = true) {
   return {
     id: 1,
     organization_id: 9,
@@ -38,7 +38,7 @@ function shareLink(resourceId: number) {
     resource_id: resourceId,
     is_enabled: true,
     expires_at: null,
-    settings: { shareAllFields: true },
+    settings: { shareAllFields },
   };
 }
 
@@ -69,5 +69,36 @@ describe("getSharedDataByToken policy share links", () => {
     expect(sql).not.toMatch(/FROM policies\b/);
     expect(sql).toMatch(/id = \$1 AND organization_id = \$2/);
     expect(opts.bind).toEqual([3, 9]);
+  });
+
+  it("maps a policy's essential fields from policy_manager columns", async () => {
+    queryMock.mockReset();
+    queryMock.mockResolvedValueOnce([shareLink(0, false)] as never).mockResolvedValueOnce([
+      {
+        id: 3,
+        title: "Policy",
+        content_html: "<p>Body</p>",
+        created_at: "2026-01-01T00:00:00.000Z",
+        last_updated_at: "2026-02-01T00:00:00.000Z",
+      },
+    ] as never);
+    const res = createRes();
+    const req: any = {
+      params: { token: "tok" },
+      organizationId: 9,
+      userId: 1,
+      t: (s: string) => s,
+    };
+    await getSharedDataByToken(req, res);
+
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json.mock.calls[0][0].data).toEqual([
+      {
+        id: 3,
+        name: "Policy",
+        created_at: "2026-01-01T00:00:00.000Z",
+        updated_at: "2026-02-01T00:00:00.000Z",
+      },
+    ]);
   });
 });
