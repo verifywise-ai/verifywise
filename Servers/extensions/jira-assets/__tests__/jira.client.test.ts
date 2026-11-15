@@ -2,6 +2,7 @@ import {
   JiraAssetsClient,
   JiraInvalidIdError,
   JiraUpstreamError,
+  jiraId,
   MAX_PAGES,
   PAGE_SIZE,
   PICKER_MAX_RESULTS,
@@ -548,8 +549,56 @@ describe("Jira id validation", () => {
   });
 });
 
+describe("jiraId", () => {
+  it("returns the raw numeric string, encoding nothing", () => {
+    expect(jiraId("123456789012345678", "objectTypeId")).toBe("123456789012345678");
+    expect(jiraId(42, "objectId")).toBe("42");
+  });
+
+  it("names the field in a translatable error", () => {
+    const err = (() => {
+      try {
+        return jiraId("../x", "schemaId");
+      } catch (e) {
+        return e;
+      }
+    })() as JiraInvalidIdError;
+
+    expect(err).toBeInstanceOf(JiraInvalidIdError);
+    expect(err.message).toBe("schemaId must be a numeric Jira id");
+    expect(err.i18nKey).toBe("{field} must be a numeric Jira id");
+    expect(err.i18nVars).toEqual({ field: "schemaId" });
+  });
+
+  it("refuses an unsafe integer", () => {
+    expect(() => jiraId(2 ** 60, "objectId")).toThrow(JiraInvalidIdError);
+  });
+});
+
+describe("where the object type id goes", () => {
+  it("cloud: one attribute lookup in the path and the raw id in the AQL body", async () => {
+    cloudPages({ values: [], isLast: true });
+
+    await cloud().getObjectsPage("12");
+
+    const urls = mockFetch.mock.calls.map(([url]) => String(url));
+    expect(urls.filter((u) => u.includes("/attributes"))).toEqual([
+      "https://api.atlassian.com/jsm/assets/workspace/ws-1/v1/objecttype/12/attributes",
+    ]);
+    expect(JSON.parse(objectCalls()[0][1].body)).toEqual({ qlQuery: "objectTypeId = 12" });
+  });
+
+  it("data center: the IQL query is encoded once", async () => {
+    mockFetch.mockResolvedValueOnce(ok({ objectEntries: [], pageSize: 1 }));
+
+    await datacenter().getObjectsPage("12");
+
+    expect(String(objectCalls()[0][0])).toContain("&iql=objectTypeId%3D12&");
+  });
+});
+
 describe("upstream error details", () => {
-  it("echoes at most 200 characters of Jira's error body", async () => {
+  it("echoes at most 500 characters of Jira's error body", async () => {
     mockFetch.mockResolvedValueOnce({ ok: false, status: 500, text: async () => "x".repeat(1000) });
 
     const err = await cloud()
@@ -557,6 +606,6 @@ describe("upstream error details", () => {
       .catch((e) => e);
 
     expect(err).toBeInstanceOf(JiraUpstreamError);
-    expect(err.message).toBe(`Jira returned 500: ${"x".repeat(200)}`);
+    expect(err.message).toBe(`Jira returned 500: ${"x".repeat(500)}`);
   });
 });

@@ -60,31 +60,49 @@ export class JiraUpstreamError extends Error {
 export const JIRA_NUMERIC_ID_PATTERN = /^\d{1,18}$/;
 
 /** Most characters of Jira's error body echoed in a JiraUpstreamError. */
-const ERROR_BODY_MAX_CHARS = 200;
+const ERROR_BODY_MAX_CHARS = 500;
 
 /**
- * An id that is not a numeric Jira id reached the client. Nothing was sent
- * to Jira. Controllers map it to 400 with this message.
+ * Message key for an id that is not a numeric Jira id, shared by the route
+ * validators, the client and the selection writes. `{field}` is the API name
+ * of the id (`schemaId`, `selected_object_type_id`, ...).
+ */
+export const JIRA_INVALID_ID_KEY = "{field} must be a numeric Jira id";
+
+/**
+ * An id that is not a numeric Jira id. Nothing was sent to Jira and nothing
+ * was saved. Controllers map it to 400 and translate it (translateError reads
+ * `i18nKey` / `i18nVars`).
  */
 export class JiraInvalidIdError extends Error {
-  constructor(message: string) {
-    super(message);
+  readonly i18nKey = JIRA_INVALID_ID_KEY;
+  readonly i18nVars: { field: string };
+
+  constructor(field: string) {
+    super(JIRA_INVALID_ID_KEY.replace("{field}", field));
     this.name = "JiraInvalidIdError";
+    this.i18nVars = { field };
   }
 }
 
 /**
- * The id as a path/query value: a numeric Jira id, or JiraInvalidIdError.
- * Data Center sends ids as JSON numbers, so an integer is accepted too.
- * Encoded as well, as defence in depth should the pattern ever widen.
+ * The id as a plain numeric string, or JiraInvalidIdError naming `field`.
+ * Data Center sends ids as JSON numbers, so a safe integer is accepted too.
+ * Returned raw: callers encode it where it goes into a URL path segment, and
+ * nowhere else (IQL query strings are encoded once as a whole, AQL JSON
+ * bodies take it as is).
  */
-function jiraId(value: unknown, what: string): string {
+export function jiraId(value: unknown, field: string): string {
   const text = typeof value === "number" && Number.isSafeInteger(value) ? String(value) : value;
   if (typeof text !== "string" || !JIRA_NUMERIC_ID_PATTERN.test(text)) {
-    throw new JiraInvalidIdError(`${what} must be a numeric Jira id`);
+    throw new JiraInvalidIdError(field);
   }
-  return encodeURIComponent(text);
+  return text;
 }
+
+/** jiraId, encoded for a URL path segment. */
+const jiraIdSegment = (value: unknown, field: string): string =>
+  encodeURIComponent(jiraId(value, field));
 
 /** One import-picker page. `nextStartAt` is the offset for "Load more". */
 export interface ObjectPage {
@@ -241,7 +259,7 @@ export class JiraAssetsClient {
   }
 
   async getObjectTypes(schemaId: string): Promise<JiraObjectType[]> {
-    const id = jiraId(schemaId, "Schema id");
+    const id = jiraIdSegment(schemaId, "schemaId");
     if (this.deploymentType === "datacenter") {
       const result = await this.request<JiraObjectType[]>(`objectschema/${id}/objecttypes/flat`);
       return Array.isArray(result) ? result : [];
@@ -252,16 +270,19 @@ export class JiraAssetsClient {
   }
 
   async getAttributes(objectTypeId: string): Promise<JiraAttribute[]> {
-    const id = jiraId(objectTypeId, "Object type id");
+    const id = jiraIdSegment(objectTypeId, "objectTypeId");
     const result = await this.request<JiraAttribute[]>(`objecttype/${id}/attributes`);
     return Array.isArray(result) ? result : [];
   }
 
-  /** id→name map for an object type's attributes, attached to each object as `_attrIdToName`. */
+  /**
+   * id→name map for an object type's attributes, attached to each object as
+   * `_attrIdToName`. `objectTypeId` is one the caller already passed through
+   * jiraId.
+   */
   private async attributeNames(objectTypeId: string, deadline?: AbortSignal) {
-    const id = jiraId(objectTypeId, "Object type id");
     const result = await this.request<JiraAttribute[]>(
-      `objecttype/${id}/attributes`,
+      `objecttype/${encodeURIComponent(objectTypeId)}/attributes`,
       "GET",
       undefined,
       deadline,
@@ -279,7 +300,7 @@ export class JiraAssetsClient {
    * to mean there may be more. Nothing destructive depends on it.
    */
   async getObjectsPage(objectTypeId: string, startAt: number = 0): Promise<ObjectPage> {
-    const typeId = jiraId(objectTypeId, "Object type id");
+    const typeId = jiraId(objectTypeId, "objectTypeId");
     const offset = Math.max(0, Math.floor(startAt) || 0);
     if (this.deploymentType === "datacenter") {
       const page = Math.floor(offset / PICKER_MAX_RESULTS) + 1;
@@ -340,7 +361,7 @@ export class JiraAssetsClient {
     objectTypeId: string,
     options: { onPage?: () => Promise<void>; deadline?: AbortSignal } = {},
   ): Promise<ObjectFetchResult> {
-    const typeId = jiraId(objectTypeId, "Object type id");
+    const typeId = jiraId(objectTypeId, "objectTypeId");
     const deadline = options.deadline ?? AbortSignal.timeout(WORKER_SYNC_DEADLINE_MS);
     const objects: JiraObject[] = [];
     try {
@@ -409,7 +430,7 @@ export class JiraAssetsClient {
   }
 
   async getObjectById(objectId: string): Promise<JiraObject> {
-    return this.request<JiraObject>(`object/${jiraId(objectId, "Object id")}`);
+    return this.request<JiraObject>(`object/${jiraIdSegment(objectId, "objectId")}`);
   }
 
   async testConnection(): Promise<{ success: boolean; error?: string }> {

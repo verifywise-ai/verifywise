@@ -8,6 +8,7 @@
   "{days} days": "{days} days",
   "{days} days overdue": "{days} days overdue",
   "{field} must be a list of ids": "{field} must be a list of ids",
+  "{field} must be a numeric Jira id": "{field} must be a numeric Jira id",
   "{field} must be text": "{field} must be text",
   "{key} must be a whole number from {min} to {max}": "{key} must be a whole number from {min} to {max}",
   "{label} — \"{metric}\" = {value} breached its monitoring threshold.": "{label} — \"{metric}\" = {value} breached its monitoring threshold.",

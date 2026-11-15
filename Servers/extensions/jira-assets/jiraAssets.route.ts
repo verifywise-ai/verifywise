@@ -1,11 +1,14 @@
-import express from "express";
+import express, { NextFunction, Request, Response } from "express";
 import { param } from "express-validator";
 import authenticateJWT from "../../middleware/auth.middleware";
 import authorize from "../../middleware/accessControl.middleware";
 import { requireExtensionEnabled } from "../../middleware/requireExtensionEnabled.middleware";
 import { validate } from "../../middleware/validate.middleware";
 import { requireProjectAccess } from "../../middleware/projectAccess.middleware";
-import { JIRA_NUMERIC_ID_PATTERN } from "./jira.client";
+import { requestHasPermission } from "../../utils/rolePermissions.utils";
+import { STATUS_CODE } from "../../utils/statusCode.utils";
+import { JIRA_INVALID_ID_KEY, JIRA_NUMERIC_ID_PATTERN } from "./jira.client";
+import { isObjectTypeInUse } from "./jiraAssets.service";
 import {
   deleteUseCaseCtrl,
   getAttributes,
@@ -33,7 +36,29 @@ import {
  * here before the controller (the client checks again before any request).
  */
 const jiraIdParam = (name: string) =>
-  validate(param(name).matches(JIRA_NUMERIC_ID_PATTERN).withMessage(`${name} must be a Jira id`));
+  validate(
+    param(name)
+      .matches(JIRA_NUMERIC_ID_PATTERN)
+      .withMessage((_value, { req }) => req.t!(JIRA_INVALID_ID_KEY, { field: name })),
+  );
+
+/**
+ * Members (no "extension.admin") may read the attribute schema only of an
+ * object type the organization uses: the configured one or the type of an
+ * imported use case. Anything else is 403, so the route cannot be used to
+ * make arbitrary Jira calls with the organization's credentials. Admins pass.
+ * Runs after jiraIdParam, so the id is numeric here.
+ */
+async function requireObjectTypeInUse(req: Request, res: Response, next: NextFunction) {
+  try {
+    if (await requestHasPermission(req, "extension.admin")) return next();
+    const objectTypeId = String(req.params.objectTypeId);
+    if (await isObjectTypeInUse(req.organizationId!, objectTypeId)) return next();
+    return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
+  } catch (error) {
+    return next(error);
+  }
+}
 
 const router = express.Router();
 router.use(authenticateJWT);
@@ -72,9 +97,15 @@ router.get(
   jiraIdParam("schemaId"),
   getObjectTypes,
 );
-// Open to members: a use case's Settings tab (JiraUseCaseSettings) reads the
-// object type's attribute schema to list every attribute.
-router.get("/object-types/:objectTypeId/attributes", jiraIdParam("objectTypeId"), getAttributes);
+// Open to members for the object types the organization uses: a use case's
+// Settings tab (JiraUseCaseSettings) reads the object type's attribute schema
+// to list every attribute.
+router.get(
+  "/object-types/:objectTypeId/attributes",
+  jiraIdParam("objectTypeId"),
+  requireObjectTypeInUse,
+  getAttributes,
+);
 router.get(
   "/object-types/:objectTypeId/objects",
   authorize("extension.admin"),

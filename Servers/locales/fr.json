@@ -8,6 +8,7 @@
   "{days} days": "{days} jours",
   "{days} days overdue": "il y a {days} jours",
   "{field} must be a list of ids": "{field} doit être une liste d'ID",
+  "{field} must be a numeric Jira id": "{field} doit être un identifiant Jira numérique",
   "{field} must be text": "{field} doit être du texte",
   "{key} must be a whole number from {min} to {max}": "{key} doit être un nombre entier de {min} à {max}",
   "{label} — \"{metric}\" = {value} breached its monitoring threshold.": "{label} — « {metric} » = {value} a dépassé son seuil de surveillance.",

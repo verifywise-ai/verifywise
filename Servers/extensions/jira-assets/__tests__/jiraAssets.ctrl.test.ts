@@ -67,6 +67,7 @@ jest.mock("../../../utils/i18n.utils", () => ({
 }));
 
 import { logFailure, logProcessing, logSuccess } from "../../../utils/logger/logHelper";
+import { translateError } from "../../../utils/i18n.utils";
 import {
   deleteUseCaseCtrl,
   getAttributes,
@@ -292,25 +293,31 @@ describe("GET /object-types/:id/objects (import picker)", () => {
 });
 
 describe("an id the Jira client refuses", () => {
-  it("answers 400 with the reason, not a 500", async () => {
+  it("answers 400 with the translated reason, not a 500", async () => {
     (loadFullConfig as jest.Mock).mockResolvedValue({
       jira_base_url: "https://x",
       workspace_id: "w",
       email: "e",
     });
+    const invalid = new JiraInvalidIdError("objectTypeId");
     (clientFromConfig as jest.Mock).mockReturnValue({
       getAttributes: jest.fn(async () => {
-        throw new JiraInvalidIdError("Object type id must be a numeric Jira id");
+        throw invalid;
       }),
     });
+    (translateError as jest.Mock).mockReturnValueOnce(
+      "objectTypeId muss eine numerische Jira-ID sein",
+    );
+    const request = { ...req, params: { objectTypeId: "x" } };
     const res = mockRes();
 
-    await getAttributes({ ...req, params: { objectTypeId: "x" } }, res);
+    await getAttributes(request, res);
 
+    expect(translateError).toHaveBeenCalledWith(request, invalid);
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
       message: "Bad Request",
-      data: "Object type id must be a numeric Jira id",
+      data: "objectTypeId muss eine numerische Jira-ID sein",
     });
   });
 });

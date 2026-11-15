@@ -68,7 +68,10 @@ jest.mock("../jiraAssets.ctrl", () => {
   );
 });
 
+jest.mock("../jiraAssets.service", () => ({ isObjectTypeInUse: jest.fn(async () => true) }));
+
 import * as ctrl from "../jiraAssets.ctrl";
+import { isObjectTypeInUse } from "../jiraAssets.service";
 import { getProjectAccessQuery, getProjectReadAccessQuery } from "../../../utils/project.utils";
 import jiraAssetsRoutes from "../jiraAssets.route";
 
@@ -77,7 +80,6 @@ app.use(express.json());
 app.use("/api/extensions/jira-assets", jiraAssetsRoutes);
 
 const base = "/api/extensions/jira-assets";
-const ROLES = ["Admin", "Editor", "Reviewer", "Auditor"] as const;
 
 beforeEach(() => jest.clearAllMocks());
 
@@ -107,18 +109,56 @@ describe("discovery routes used only by the admin configuration panel", () => {
       expect((ctrl as any)[handler]).not.toHaveBeenCalled();
     });
   });
+});
 
-  it("keeps GET /object-types/:objectTypeId/attributes open to every role", async () => {
-    // The use case Settings tab (JiraUseCaseSettings) reads the attribute
-    // schema for any member who can open the use case.
-    for (const role of ROLES) {
-      const res = await request(app)
-        .get(`${base}/object-types/12/attributes`)
-        .set("x-test-role", role);
+describe("GET /object-types/:objectTypeId/attributes", () => {
+  // The use case Settings tab (JiraUseCaseSettings) reads the attribute
+  // schema for any member who can open the use case, but only of an object
+  // type the organization uses.
+  const inUse = isObjectTypeInUse as jest.Mock;
+  const path = `${base}/object-types/12/attributes`;
+
+  it("lets an Admin read any object type without the in-use check", async () => {
+    const res = await request(app).get(path).set("x-test-role", "Admin");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ handler: "getAttributes" });
+    expect(inUse).not.toHaveBeenCalled();
+  });
+
+  it.each(["Editor", "Reviewer", "Auditor"])(
+    "lets an %s read an object type the organization uses",
+    async (role) => {
+      inUse.mockResolvedValueOnce(true);
+
+      const res = await request(app).get(path).set("x-test-role", role);
 
       expect(res.status).toBe(200);
       expect(res.body).toEqual({ handler: "getAttributes" });
-    }
+      expect(inUse).toHaveBeenCalledWith(42, "12");
+    },
+  );
+
+  it.each(["Editor", "Reviewer", "Auditor"])(
+    "answers 403 to an %s for any other object type",
+    async (role) => {
+      inUse.mockResolvedValueOnce(false);
+
+      const res = await request(app).get(path).set("x-test-role", role);
+
+      expect(res.status).toBe(403);
+      expect(res.body).toEqual({ message: "Forbidden", data: "Access denied" });
+      expect(ctrl.getAttributes).not.toHaveBeenCalled();
+    },
+  );
+
+  it("hands a failed lookup to the error handler, not the controller", async () => {
+    inUse.mockRejectedValueOnce(new Error("db down"));
+
+    const res = await request(app).get(path).set("x-test-role", "Editor");
+
+    expect(res.status).toBe(500);
+    expect(ctrl.getAttributes).not.toHaveBeenCalled();
   });
 });
 
@@ -159,6 +199,17 @@ describe("Jira ids in the path", () => {
 
       expect(res.status).toBe(200);
     });
+  });
+
+  it("answers with the shared message key and the field name", async () => {
+    const res = await request(app)
+      .get(`${base}/schemas/abc/object-types`)
+      .set("x-test-role", "Admin");
+
+    expect(res.status).toBe(400);
+    expect(res.body.data.errors).toEqual([
+      { field: "schemaId", message: "{field} must be a numeric Jira id", location: "params" },
+    ]);
   });
 
   it("validates the attributes id for a non-admin too", async () => {

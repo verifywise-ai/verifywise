@@ -68,6 +68,31 @@ async function addMember(orgId: number, projectId: number, userId: number): Prom
   );
 }
 
+/** A group in the organization with `userId` in it, attached to the use case. */
+async function shareThroughGroup(
+  orgId: number,
+  projectId: number,
+  userId: number,
+  createdBy: number,
+): Promise<void> {
+  const [rows] = await sequelize.query(
+    `INSERT INTO verifywise.groups (organization_id, name, created_by)
+     VALUES (:orgId, :name, :createdBy) RETURNING id`,
+    { replacements: { orgId, name: `Jira group ${Date.now()}`, createdBy } },
+  );
+  const groupId = (rows as Array<{ id: number }>)[0].id;
+  await sequelize.query(
+    `INSERT INTO group_members (group_id, user_id, organization_id)
+     VALUES (:groupId, :userId, :orgId)`,
+    { replacements: { groupId, userId, orgId } },
+  );
+  await sequelize.query(
+    `INSERT INTO project_groups (project_id, group_id, organization_id)
+     VALUES (:projectId, :groupId, :orgId)`,
+    { replacements: { projectId, groupId, orgId } },
+  );
+}
+
 const listedProjects = (body: any): number[] =>
   (body.data as Array<{ project_id: number }>).map((row) => row.project_id).sort((a, b) => a - b);
 
@@ -99,6 +124,8 @@ describe("Jira Assets use case visibility", () => {
     await enableJiraAssets(otherOrg, otherAdminId);
 
     return {
+      orgId,
+      adminId,
       shared,
       adminOnly,
       outsiders,
@@ -153,6 +180,21 @@ describe("Jira Assets use case visibility", () => {
       );
       expect(allowedProgress.status).toBe(200);
     }
+  });
+
+  it("lets an Editor who reaches a use case only through a group list and open it", async () => {
+    const { orgId, adminId, adminOnly } = await seed();
+    const groupUserId = await user(orgId, "Editor");
+    await shareThroughGroup(orgId, adminOnly, groupUserId, adminId);
+    const groupUser = await apiAs(orgId, groupUserId, "Editor");
+
+    const list = await groupUser.get("/api/extensions/jira-assets/use-cases");
+    expect(list.status).toBe(200);
+    expect(listedProjects(list.body)).toEqual([adminOnly]);
+
+    const useCase = await groupUser.get(`/api/extensions/jira-assets/use-cases/${adminOnly}`);
+    expect(useCase.status).toBe(200);
+    expect(useCase.body.data.id).toBe(adminOnly);
   });
 
   it("answers 404 to another organization's Admin for the use case", async () => {
