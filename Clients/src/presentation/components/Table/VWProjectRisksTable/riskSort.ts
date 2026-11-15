@@ -19,12 +19,19 @@ const getSeverityValue = (severity: string | null | undefined): number => {
   return 0;
 };
 
-const sortValue = (risk: RiskModel, key: string): string | number | null => {
+/** Resolves a risk's owner to the display name the Owner column shows. */
+export type OwnerNameLookup = (risk: RiskModel) => string;
+
+const sortValue = (
+  risk: RiskModel,
+  key: string,
+  ownerName: OwnerNameLookup,
+): string | number | null => {
   switch (key) {
     case "risk_name":
       return lower(risk.risk_name);
     case "risk_owner":
-      return risk.risk_owner ?? 0;
+      return lower(ownerName(risk));
     case "severity":
       return getSeverityValue(risk.severity);
     case "mitigation_status":
@@ -43,15 +50,19 @@ const sortValue = (risk: RiskModel, key: string): string | number | null => {
   }
 };
 
-/** Comparator for the risk table. Unknown keys keep the original order. */
+/**
+ * Comparator for the risk table. Unknown keys keep the original order. The
+ * Owner column sorts by the owner's display name, so pass a lookup for it.
+ */
 export const compareRisks = (
   a: RiskModel,
   b: RiskModel,
   key: string,
   direction: RiskSortDirection,
+  ownerName: OwnerNameLookup = () => "",
 ): number => {
-  const aValue = sortValue(a, key);
-  const bValue = sortValue(b, key);
+  const aValue = sortValue(a, key, ownerName);
+  const bValue = sortValue(b, key, ownerName);
   if (aValue === null || bValue === null) return 0;
 
   const sign = direction === "asc" ? 1 : -1;

@@ -33,6 +33,7 @@ import { TableEmptyStateLayout } from "../TableEmptyStateLayout";
 import { IVWProjectRisksTable } from "../../../types/interfaces/i.risk";
 import { RiskModel } from "../../../../domain/models/Common/risks/risk.model";
 import { compareRisks } from "./riskSort";
+import { userSortName } from "../../../../application/utils/userSort";
 import { text, border } from "../../../themes/palette";
 import Checkbox from "../../Inputs/Checkbox";
 import ConfirmationModal from "../../Dialogs/ConfirmationModal";
@@ -273,6 +274,10 @@ const VWProjectRisksTable = ({
     });
   }, []);
 
+  const { users } = useUsers();
+
+  const ownerName = useCallback((risk: RiskModel) => userSortName(users, risk.risk_owner), [users]);
+
   // Sort the risks based on current sort configuration
   const sortedRows = useMemo(() => {
     if (!rows || !sortConfig.key || !sortConfig.direction) {
@@ -283,9 +288,9 @@ const VWProjectRisksTable = ({
 
     const direction = sortConfig.direction;
     return sortableRows.sort((a: RiskModel, b: RiskModel) =>
-      compareRisks(a, b, sortConfig.key, direction),
+      compareRisks(a, b, sortConfig.key, direction, ownerName),
     );
-  }, [rows, sortConfig]);
+  }, [rows, sortConfig, ownerName]);
 
   // Ensure page is valid when rows are empty
   const validPage =
@@ -342,7 +347,6 @@ const VWProjectRisksTable = ({
     [selectableRows],
   );
 
-  const { users } = useUsers();
   const [ownerDialogOpen, setOwnerDialogOpen] = useState(false);
   const [categoryDialogOpen, setCategoryDialogOpen] = useState(false);
   const [pendingOwnerId, setPendingOwnerId] = useState<string>("");

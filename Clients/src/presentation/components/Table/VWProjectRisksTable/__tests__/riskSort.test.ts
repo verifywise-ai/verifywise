@@ -91,3 +91,26 @@ describe("compareRisks", () => {
     expect(sortIds(rows, "risk_level_autocalculated", "desc")).toEqual([3, 2, 1]);
   });
 });
+
+describe("compareRisks owner column", () => {
+  const names: Record<number, string> = { 1: "zoe Adams", 2: "Bob Young", 3: "alice Yu" };
+  const ownerName = (r: RiskModel) => names[(r as any).risk_owner] ?? "";
+  const rows = [
+    risk({ id: 1, risk_owner: 1 }),
+    risk({ id: 2, risk_owner: 2 }),
+    risk({ id: 3, risk_owner: 3 }),
+    risk({ id: 4, risk_owner: null }),
+  ];
+  const ids = (direction: "asc" | "desc") =>
+    [...rows]
+      .sort((a, b) => compareRisks(a, b, "risk_owner", direction, ownerName))
+      .map((r) => (r as any).id);
+
+  it("sorts by display name, ignoring case, not by user id", () => {
+    expect(ids("asc")).toEqual([4, 3, 2, 1]);
+  });
+
+  it("reverses for descending", () => {
+    expect(ids("desc")).toEqual([1, 2, 3, 4]);
+  });
+});
