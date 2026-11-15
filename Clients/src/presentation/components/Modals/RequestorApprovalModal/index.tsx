@@ -82,6 +82,7 @@ import DetailField from "./DetailField";
 import EntityDetailsSection from "./EntityDetailsSection";
 import { extractEntityDetails } from "./entityTypeConfig";
 import { dispatchFileApprovalChanged } from "../../../../application/events/fileEvents";
+import { dispatchPolicyApprovalChanged } from "../../../../application/events/policyEvents";
 import { dispatchAiActionCompleted } from "../../../../application/events/aiActionEvents";
 import CustomException from "../../../../infrastructure/exceptions/customeException";
 import Alert from "../../Alert";
@@ -333,6 +334,11 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({
       dispatchFileApprovalChanged({ status: "approved" });
     }
 
+    // A policy's final approval sets it to Approved: refresh the policy pages.
+    if (entityChanged && requestDetails?.entityType === "policy") {
+      dispatchPolicyApprovalChanged({ policyId: requestDetails?.policyId, status: "approved" });
+    }
+
     // If this was an AI write action (e.g. agent_create_risk), tell
     // any background page showing that entity's table to refetch.
     // The AI executor runs inside the approve transaction that completes
@@ -368,6 +374,11 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({
       // If this was a file rejection, dispatch event to refresh file lists
       if (requestDetails?.entityType === "file") {
         dispatchFileApprovalChanged({ status: "rejected" });
+      }
+
+      // A rejected policy request moves the policy back to Draft.
+      if (requestDetails?.entityType === "policy") {
+        dispatchPolicyApprovalChanged({ policyId: requestDetails?.policyId, status: "rejected" });
       }
 
       // Rejected AI actions still dispatch — the toolName lets a
@@ -407,6 +418,11 @@ const RequestorApprovalModal: FC<IRequestorApprovalProps> = ({
         type: "info",
         message: "Request withdrawn successfully!",
       });
+
+      // A withdrawn policy request moves the policy back to Draft.
+      if (requestDetails?.entityType === "policy") {
+        dispatchPolicyApprovalChanged({ policyId: requestDetails?.policyId, status: "withdrawn" });
+      }
 
       fetchRequestsData();
 

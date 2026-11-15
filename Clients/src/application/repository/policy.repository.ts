@@ -3,7 +3,7 @@
 import { apiServices } from "../../infrastructure/api/networkServices";
 import { APIError } from "../tools/error";
 import { PolicyManagerModel } from "../../domain/models/Common/policy/policyManager.model";
-import { PolicyInput } from "../../domain/interfaces/i.policy";
+import { PolicyApprovalState, PolicyInput } from "../../domain/interfaces/i.policy";
 
 function extractData<T>(response: { data: { data: T } }): T {
   return response.data.data;
@@ -115,4 +115,43 @@ export async function bulkUpdatePolicies(
   } catch (error: any) {
     throw new APIError("Failed to perform bulk policy update", error?.response?.status, error);
   }
+}
+
+// ── Approval (api/v1/policies) ──────────────────────────────────────
+// These rethrow the request error untouched: its message is the server's
+// translated reason (for example "This policy already has a pending approval
+// request"), which the approval section shows in place of a global toast.
+
+export async function getPolicyApproval(id: number): Promise<PolicyApprovalState> {
+  const response = await apiServices.get<{ message: string; data: PolicyApprovalState }>(
+    `/v1/policies/${id}/approval`,
+    { suppressGlobalErrorToast: true },
+  );
+  return extractData<PolicyApprovalState>(response);
+}
+
+export async function submitPolicyForApproval(
+  id: number,
+  workflowId?: number,
+): Promise<{ request_id: number; policy: PolicyManagerModel }> {
+  // workflow_id must be a JSON number; the server rejects a string.
+  const body = workflowId === undefined ? {} : { workflow_id: Number(workflowId) };
+  const response = await apiServices.post<{
+    message: string;
+    data: { request_id: number; policy: PolicyManagerModel };
+  }>(`/v1/policies/${id}/submit-for-approval`, body, { suppressGlobalErrorToast: true });
+  return extractData<{ request_id: number; policy: PolicyManagerModel }>(response);
+}
+
+export async function approvePolicyDirectly(
+  id: number,
+  comment?: string,
+): Promise<PolicyManagerModel> {
+  const body = comment ? { comment } : {};
+  const response = await apiServices.post<{ message: string; data: PolicyManagerModel }>(
+    `/v1/policies/${id}/approve`,
+    body,
+    { suppressGlobalErrorToast: true },
+  );
+  return extractData<PolicyManagerModel>(response);
 }

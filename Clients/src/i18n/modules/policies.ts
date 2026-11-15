@@ -79,6 +79,38 @@ export const de: Record<string, string> = {
     "Die Richtlinie wurde als Organisationsvorlage gespeichert.",
   "Update the name, description and category of this organization template. To change its content, use Edit content.":
     "Aktualisieren Sie Name, Beschreibung und Kategorie dieser Organisationsvorlage. Um den Inhalt zu ändern, verwenden Sie „Inhalt bearbeiten“.",
+  "Withdraw the approval request to change the status.":
+    "Ziehen Sie die Genehmigungsanfrage zurück, um den Status zu ändern.",
+  "Submit for approval": "Zur Genehmigung einreichen",
+  "Save the policy before submitting it for approval.":
+    "Speichern Sie die Richtlinie, bevor Sie sie zur Genehmigung einreichen.",
+  "Could not load the approval status.": "Der Genehmigungsstatus konnte nicht geladen werden.",
+  "Approved by {name} on {date}": "Genehmigt von {name} am {date}",
+  "Approved on {date}": "Genehmigt am {date}",
+  "Changes requested by {name}": "Änderungen angefordert von {name}",
+  "Changes requested": "Änderungen angefordert",
+  "Waiting for approval in {workflow}": "Wartet auf Genehmigung in {workflow}",
+  "Requested by {name} on {date}": "Angefordert von {name} am {date}",
+  "Requested on {date}": "Angefordert am {date}",
+  "An Admin approves this policy. Your organization has no policy approval workflow.":
+    "Ein Admin genehmigt diese Richtlinie. Ihre Organisation hat keinen Genehmigungsworkflow für Richtlinien.",
+  "Withdraw request": "Anfrage zurückziehen",
+  "Save your changes before sending the policy for approval.":
+    "Speichern Sie Ihre Änderungen, bevor Sie die Richtlinie zur Genehmigung senden.",
+  "{workflow} approves this policy. It stays under review until a decision.":
+    "{workflow} genehmigt diese Richtlinie. Sie bleibt bis zur Entscheidung in Prüfung.",
+  "Choose the workflow that approves this policy.":
+    "Wählen Sie den Workflow, der diese Richtlinie genehmigt.",
+  "Select a workflow": "Workflow auswählen",
+  "Approve policy": "Richtlinie genehmigen",
+  "Your organization has no policy approval workflow, so you approve it here.":
+    "Ihre Organisation hat keinen Genehmigungsworkflow für Richtlinien, daher genehmigen Sie sie hier.",
+  "Comment must be 2000 characters or fewer": "Der Kommentar darf höchstens 2000 Zeichen lang sein",
+  "Withdraw approval request?": "Genehmigungsanfrage zurückziehen?",
+  "The policy goes back to draft. You can submit it again later.":
+    "Die Richtlinie wird wieder zum Entwurf. Sie können sie später erneut einreichen.",
+  "Replaces the team members of each selected policy with this user.":
+    "Ersetzt die Teammitglieder jeder ausgewählten Richtlinie durch diesen Benutzer.",
 };
 
 export const fr: Record<string, string> = {
@@ -159,6 +191,39 @@ export const fr: Record<string, string> = {
     "La politique a été enregistrée comme modèle de l'organisation.",
   "Update the name, description and category of this organization template. To change its content, use Edit content.":
     "Modifiez le nom, la description et la catégorie de ce modèle de l'organisation. Pour modifier son contenu, utilisez « Modifier le contenu ».",
+  "Withdraw the approval request to change the status.":
+    "Retirez la demande d'approbation pour modifier le statut.",
+  "Submit for approval": "Soumettre pour approbation",
+  "Save the policy before submitting it for approval.":
+    "Enregistrez la politique avant de la soumettre pour approbation.",
+  "Could not load the approval status.": "Impossible de charger le statut d'approbation.",
+  "Approved by {name} on {date}": "Approuvée par {name} le {date}",
+  "Approved on {date}": "Approuvée le {date}",
+  "Changes requested by {name}": "Modifications demandées par {name}",
+  "Changes requested": "Modifications demandées",
+  "Waiting for approval in {workflow}": "En attente d'approbation dans {workflow}",
+  "Requested by {name} on {date}": "Demandée par {name} le {date}",
+  "Requested on {date}": "Demandée le {date}",
+  "An Admin approves this policy. Your organization has no policy approval workflow.":
+    "Un administrateur approuve cette politique. Votre organisation n'a pas de workflow d'approbation des politiques.",
+  "Withdraw request": "Retirer la demande",
+  "Save your changes before sending the policy for approval.":
+    "Enregistrez vos modifications avant d'envoyer la politique pour approbation.",
+  "{workflow} approves this policy. It stays under review until a decision.":
+    "{workflow} approuve cette politique. Elle reste en revue jusqu'à la décision.",
+  "Choose the workflow that approves this policy.":
+    "Choisissez le workflow qui approuve cette politique.",
+  "Select a workflow": "Sélectionner un workflow",
+  "Approve policy": "Approuver la politique",
+  "Your organization has no policy approval workflow, so you approve it here.":
+    "Votre organisation n'a pas de workflow d'approbation des politiques, vous l'approuvez donc ici.",
+  "Comment must be 2000 characters or fewer":
+    "Le commentaire doit comporter 2000 caractères au maximum",
+  "Withdraw approval request?": "Retirer la demande d'approbation ?",
+  "The policy goes back to draft. You can submit it again later.":
+    "La politique repasse en brouillon. Vous pourrez la soumettre à nouveau plus tard.",
+  "Replaces the team members of each selected policy with this user.":
+    "Remplace les membres de l'équipe de chaque politique sélectionnée par cet utilisateur.",
 };
 
 export const es: Record<string, string> = {
@@ -239,4 +304,35 @@ export const es: Record<string, string> = {
     "La política se guardó como plantilla de la organización.",
   "Update the name, description and category of this organization template. To change its content, use Edit content.":
     "Actualice el nombre, la descripción y la categoría de esta plantilla de la organización. Para cambiar su contenido, use Editar contenido.",
+  "Withdraw the approval request to change the status.":
+    "Retire la solicitud de aprobación para cambiar el estado.",
+  "Submit for approval": "Enviar para aprobación",
+  "Save the policy before submitting it for approval.":
+    "Guarde la política antes de enviarla para aprobación.",
+  "Could not load the approval status.": "No se pudo cargar el estado de aprobación.",
+  "Approved by {name} on {date}": "Aprobada por {name} el {date}",
+  "Approved on {date}": "Aprobada el {date}",
+  "Changes requested by {name}": "Cambios solicitados por {name}",
+  "Changes requested": "Cambios solicitados",
+  "Waiting for approval in {workflow}": "Esperando aprobación en {workflow}",
+  "Requested by {name} on {date}": "Solicitada por {name} el {date}",
+  "Requested on {date}": "Solicitada el {date}",
+  "An Admin approves this policy. Your organization has no policy approval workflow.":
+    "Un administrador aprueba esta política. Su organización no tiene un flujo de aprobación de políticas.",
+  "Withdraw request": "Retirar solicitud",
+  "Save your changes before sending the policy for approval.":
+    "Guarde sus cambios antes de enviar la política para aprobación.",
+  "{workflow} approves this policy. It stays under review until a decision.":
+    "{workflow} aprueba esta política. Permanece en revisión hasta que haya una decisión.",
+  "Choose the workflow that approves this policy.": "Elija el flujo que aprueba esta política.",
+  "Select a workflow": "Seleccionar un flujo",
+  "Approve policy": "Aprobar política",
+  "Your organization has no policy approval workflow, so you approve it here.":
+    "Su organización no tiene un flujo de aprobación de políticas, así que la aprueba aquí.",
+  "Comment must be 2000 characters or fewer": "El comentario debe tener 2000 caracteres o menos",
+  "Withdraw approval request?": "¿Retirar la solicitud de aprobación?",
+  "The policy goes back to draft. You can submit it again later.":
+    "La política vuelve a borrador. Puede enviarla de nuevo más tarde.",
+  "Replaces the team members of each selected policy with this user.":
+    "Reemplaza a los miembros del equipo de cada política seleccionada por este usuario.",
 };

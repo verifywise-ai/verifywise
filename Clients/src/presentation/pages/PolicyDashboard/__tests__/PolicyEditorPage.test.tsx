@@ -65,6 +65,7 @@ vi.mock("../../../components/Policies/PolicyForm", () => ({
   default: ({ formData, setFormData }: any) => (
     <div data-testid="policy-form">
       <span data-testid="form-title">{formData.title}</span>
+      <span data-testid="form-status">{formData.status}</span>
       <button
         data-testid="fill-valid-form"
         onClick={() => {
@@ -115,6 +116,18 @@ vi.mock("../../../../application/repository/policy.repository", () => ({
   importDocxToHtml: (...args: any[]) => mockImportDocxToHtml(...args),
   createPolicy: (...args: any[]) => mockCreatePolicy(...args),
   updatePolicy: (...args: any[]) => mockUpdatePolicy(...args),
+  getPolicyApproval: vi.fn().mockResolvedValue({
+    usable_workflows: [],
+    pending_request: null,
+    review_status: null,
+    review_comment: null,
+    reviewed_by: null,
+    reviewed_by_name: null,
+    reviewed_at: null,
+    can_submit: false,
+    can_approve_directly: false,
+    can_withdraw: false,
+  }),
 }));
 
 const mockUploadFileToManager = vi.fn();
@@ -152,6 +165,13 @@ describe("PolicyEditorPage", () => {
     expect(screen.getByTestId("editor-content")).toBeInTheDocument();
     expect(screen.getByTestId("custom-fields-section")).toBeInTheDocument();
     expect(screen.getByTestId("page-breadcrumbs")).toBeInTheDocument();
+  });
+
+  it("starts a new policy as a draft", async () => {
+    renderWithProviders(<PolicyEditorPage />, { route: "/policies/new" });
+    await waitFor(() => {
+      expect(screen.getByTestId("form-status")).toHaveTextContent("Draft");
+    });
   });
 
   it("does not show history/export/import actions for a brand new policy", async () => {

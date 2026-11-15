@@ -35,6 +35,7 @@ import { AlertProps } from "../../types/alert.types";
 import { PolicyManagerModel } from "../../../domain/models/Common/policy/policyManager.model";
 import { PolicyManagerProps } from "../../types/interfaces/i.policy";
 import { usePolicies } from "../../../application/hooks/usePolicies";
+import { usePolicyApprovalChangedListener } from "../../../application/hooks/usePolicyApproval";
 import PolicyStatusCard from "./PolicyStatusCard";
 import { ExportMenu } from "../../components/Table/ExportMenu";
 import useUsers from "../../../application/hooks/useUsers";
@@ -88,6 +89,8 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
     isLoading,
     error: policiesError,
   } = usePolicies({ suppressGlobalErrorToast: true });
+  // Refetch when a policy request is decided from the approval requests modal.
+  usePolicyApprovalChangedListener();
   const deletePolicyMutation = useDeletePolicy();
   const [flashRowId, setFlashRowId] = useState<number | null>(null);
   const can = useCanCheck();

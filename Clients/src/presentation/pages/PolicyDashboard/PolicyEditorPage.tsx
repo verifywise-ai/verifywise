@@ -14,6 +14,10 @@ import {
   importDocxToHtml,
 } from "../../../application/repository/policy.repository";
 import { useUpdatePolicy } from "../../../application/hooks/usePolicyMutations";
+import {
+  usePolicyApproval,
+  usePolicyApprovalChangedListener,
+} from "../../../application/hooks/usePolicyApproval";
 import { usePolicyTemplate } from "../../../application/hooks/usePolicyTemplates";
 import useUsers from "../../../application/hooks/useUsers";
 import { useCanCheck } from "../../../application/hooks/useCan";
@@ -31,6 +35,7 @@ import { PolicyContentEditor } from "./PolicyEditor/PolicyContentEditor";
 import { PolicyHeader } from "./PolicyEditor/PolicyHeader";
 import { PolicyMetadataSidebar } from "./PolicyEditor/PolicyMetadataSidebar";
 import { PolicyReviewPanel } from "./PolicyEditor/PolicyReviewPanel";
+import { isPolicyFormDirty } from "./PolicyEditor/policyFormDirty";
 import { radiusPx } from "../../themes/palette";
 import { toDateOnlyString } from "../../tools/isoDateToString";
 
@@ -124,7 +129,8 @@ export default function PolicyEditorPage() {
 
   const [formData, setFormData] = useState<PolicyFormData>({
     title: "",
-    status: "Under Review",
+    // A new policy starts as a draft; it goes under review only by submitting it (P-L13).
+    status: "Draft",
     tags: [],
     nextReviewDate: "",
     policyOwner: null,
@@ -240,9 +246,12 @@ export default function PolicyEditorPage() {
   // post-save setPolicy() (same id, new object) refreshes metadata but does NOT
   // clobber formData.content — the editor owns content and holds the live value.
   const seededContentPolicyId = useRef<number | null>(null);
+  // The content last loaded or saved, for the unsaved-changes check.
+  const [savedContent, setSavedContent] = useState("");
   useEffect(() => {
     if (policy) {
       const isNewPolicyIdentity = seededContentPolicyId.current !== policy.id;
+      if (isNewPolicyIdentity) setSavedContent(policy.content_html || "");
       setFormData((prev) => ({
         title: policy.title || "",
         status: policy.status || "Draft",
@@ -317,7 +326,42 @@ export default function PolicyEditorPage() {
     resetErrors,
     setEditedTitle,
     setIsEditingTitle,
+    onSaved: setSavedContent,
   });
+
+  // ── Approval ──────────────────────────────────────────────────────
+  const { data: approvalState } = usePolicyApproval(policy?.id);
+  const hasPendingApproval = Boolean(approvalState?.pending_request);
+
+  const knownUserIds = useMemo(() => new Set(users.map((u) => u.id)), [users]);
+  const hasUnsavedChanges = useMemo(
+    () => (policy ? isPolicyFormDirty({ policy, formData, knownUserIds, savedContent }) : true),
+    [policy, formData, knownUserIds, savedContent],
+  );
+
+  // An approval action changes the status server-side: reload the policy's
+  // metadata, keeping content_html so the editor is not rebuilt.
+  const policyId = policy?.id;
+  const reloadPolicy = useCallback(async () => {
+    if (!policyId) return;
+    try {
+      const fresh = await getPolicyById(String(policyId));
+      setPolicy((prev) =>
+        prev && prev.id === fresh.id ? { ...fresh, content_html: prev.content_html } : prev,
+      );
+    } catch {
+      // The approval section has already refreshed; a failed reload leaves the old metadata.
+    }
+  }, [policyId]);
+
+  // The approval requests modal decided or withdrew this policy's request.
+  const handleApprovalChangedElsewhere = useCallback(
+    (detail?: { policyId?: number }) => {
+      if (detail?.policyId == null || detail.policyId === policyId) reloadPolicy();
+    },
+    [policyId, reloadPolicy],
+  );
+  usePolicyApprovalChangedListener(handleApprovalChangedElsewhere);
 
   const displayErrors = useMemo(
     () => ({ ...validationErrors, ...serverErrors }),
@@ -540,6 +584,10 @@ export default function PolicyEditorPage() {
             entityId={isNew ? null : (policy?.id ?? null)}
             onPendingChange={customFieldsGate.onPendingChange}
             readOnly={readOnly}
+            savedStatus={isNew ? null : policy?.status || "Draft"}
+            hasPendingApproval={hasPendingApproval}
+            hasUnsavedChanges={hasUnsavedChanges}
+            onApprovalChanged={reloadPolicy}
           />
 
           <PolicyContentEditor

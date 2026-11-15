@@ -19,6 +19,8 @@ export interface UsePolicySaveParams {
   resetErrors: () => void;
   setEditedTitle: Dispatch<SetStateAction<string>>;
   setIsEditingTitle: Dispatch<SetStateAction<boolean>>;
+  /** Called after a successful save with the form content that was saved. */
+  onSaved?: (savedFormContent: string) => void;
 }
 
 /**
@@ -45,6 +47,7 @@ export function usePolicySave({
   resetErrors,
   setEditedTitle,
   setIsEditingTitle,
+  onSaved,
 }: UsePolicySaveParams) {
   const navigate = useNavigate();
   const createPolicyMutation = useCreatePolicy();
@@ -113,6 +116,7 @@ export function usePolicySave({
           ? ({ ...savedPolicy, content_html: prev.content_html } as PolicyManagerModel)
           : savedPolicy,
       );
+      onSaved?.(formData.content);
 
       // Flush any locally-staged custom field changes (create OR update).
       let cfFlushFailed = false;
