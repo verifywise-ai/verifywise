@@ -4,15 +4,15 @@ interface NamedUser {
   surname?: string | null;
 }
 
+/** Display name by user id (as a string), built once so a sort does not search the list per comparison. */
+export const buildUserSortNames = (users: NamedUser[]): Map<string, string> =>
+  new Map(users.map((u) => [String(u.id), `${u.name ?? ""} ${u.surname ?? ""}`.trim()]));
+
 /** The display name a person column sorts by; empty when the user is unknown. */
 export const userSortName = (
-  users: NamedUser[],
+  names: Map<string, string>,
   id: number | string | null | undefined,
-): string => {
-  if (id === null || id === undefined) return "";
-  const user = users.find((u) => String(u.id) === String(id));
-  return user ? `${user.name ?? ""} ${user.surname ?? ""}`.trim() : "";
-};
+): string => (id === null || id === undefined ? "" : (names.get(String(id)) ?? ""));
 
 /** Case-insensitive, locale-aware comparison of two display names. */
 export const compareNames = (a: string, b: string): number =>

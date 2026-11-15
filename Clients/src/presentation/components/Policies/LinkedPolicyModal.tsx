@@ -191,7 +191,12 @@ const LinkedPolicyModal: React.FC<LinkedPolicyModalProps> = ({ onClose, policyId
 
     setAlert({
       variant: "success",
-      body: objectType === "evidence" ? "Evidence linked" : "Risk linked",
+      body:
+        objectType === "evidence"
+          ? "Evidence linked"
+          : objectIds.length === 1
+            ? "Risk linked"
+            : "Risks linked",
     });
   };
 

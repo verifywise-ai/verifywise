@@ -33,7 +33,7 @@ import { TableEmptyStateLayout } from "../TableEmptyStateLayout";
 import { IVWProjectRisksTable } from "../../../types/interfaces/i.risk";
 import { RiskModel } from "../../../../domain/models/Common/risks/risk.model";
 import { compareRisks } from "./riskSort";
-import { userSortName } from "../../../../application/utils/userSort";
+import { buildUserSortNames, userSortName } from "../../../../application/utils/userSort";
 import { text, border } from "../../../themes/palette";
 import Checkbox from "../../Inputs/Checkbox";
 import ConfirmationModal from "../../Dialogs/ConfirmationModal";
@@ -276,7 +276,11 @@ const VWProjectRisksTable = ({
 
   const { users } = useUsers();
 
-  const ownerName = useCallback((risk: RiskModel) => userSortName(users, risk.risk_owner), [users]);
+  const userNames = useMemo(() => buildUserSortNames(users), [users]);
+  const ownerName = useCallback(
+    (risk: RiskModel) => userSortName(userNames, risk.risk_owner),
+    [userNames],
+  );
 
   // Sort the risks based on current sort configuration
   const sortedRows = useMemo(() => {

@@ -81,6 +81,17 @@ describe("LinkedPolicyModal", () => {
       expect(await screen.findByText("Risk linked")).toBeInTheDocument();
     });
 
+    it("says risks, in the plural, when several are linked at once", async () => {
+      await renderModal();
+      mockCreateLinked.mockResolvedValue({});
+
+      await act(async () => {
+        await riskSelectorProps.onSubmit([11, 12]);
+      });
+
+      expect(await screen.findByText("Risks linked")).toBeInTheDocument();
+    });
+
     it.each([
       ["risk", () => riskSelectorProps, "Couldn't link the selected risks. Try again."],
       ["evidence", () => evidenceSelectorProps, "Couldn't link the selected evidence. Try again."],
