@@ -368,6 +368,15 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     baseRoute: "/api/v1/imported-framework-assessments",
     testFile: "imported-framework-assessment.isolation.test.ts",
   },
+  {
+    // Slack extension connections. Every connection belongs to an
+    // organization; management routes and delivery filter by it, so a
+    // hand-written file covers the routes and the delivery query.
+    name: "slack-webhooks",
+    tables: ["slack_webhooks"],
+    baseRoute: "/api/extensions/slack",
+    testFile: "slack-webhooks.isolation.test.ts",
+  },
 ];
 
 /** Flat set of all tenant-scoped tables declared in the registry. */

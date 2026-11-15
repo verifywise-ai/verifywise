@@ -1,10 +1,11 @@
 import { Column, DataType, ForeignKey, Model, Table } from "sequelize-typescript";
 import { ISlackWebhook } from "../../interfaces/i.slackWebhook";
 import { UserModel } from "../user/user.model";
+import { OrganizationModel } from "../organization/organization.model";
 import { numberValidation } from "../../validations/number.valid";
 import { ValidationException, NotFoundException } from "../../exceptions/custom.exception";
 import { decryptText, encryptText } from "../../../tools/createSecureValue";
-import { SlackNotificationRoutingType } from "../../enums/slack.enum";
+import { SlackDeliveryScope, SlackNotificationRoutingType } from "../../enums/slack.enum";
 
 @Table({
   tableName: "slack_webhooks",
@@ -18,6 +19,13 @@ export class SlackWebhookModel extends Model<SlackWebhookModel> implements ISlac
     primaryKey: true,
   })
   id?: number;
+
+  @ForeignKey(() => OrganizationModel)
+  @Column({
+    type: DataType.INTEGER,
+    allowNull: true,
+  })
+  organization_id?: number | null;
 
   @Column({
     type: DataType.STRING,
@@ -96,6 +104,14 @@ export class SlackWebhookModel extends Model<SlackWebhookModel> implements ISlac
     type: DataType.ARRAY(DataType.ENUM(...Object.values(SlackNotificationRoutingType))),
   })
   routing_type?: SlackNotificationRoutingType[];
+
+  @Column({
+    type: DataType.TEXT,
+    allowNull: false,
+    defaultValue: SlackDeliveryScope.ORGANIZATION,
+    validate: { isIn: [Object.values(SlackDeliveryScope)] },
+  })
+  delivery_scope?: SlackDeliveryScope;
 
   /**
    * Create a new slack webhook with comprehensive validation

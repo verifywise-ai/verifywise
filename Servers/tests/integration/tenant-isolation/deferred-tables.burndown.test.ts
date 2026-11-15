@@ -35,8 +35,11 @@ const AUDIT_SCRIPT_PATH = path.resolve(
  * changeHistory.base.utils, which filters by organization_id — pending a
  * dedicated isolation wave. Unlike a burndown drop, this bump is an
  * intentional, documented addition, not drift.
+ *
+ * Lowered 2026-11-14 to 214: slack_webhooks moved to the registry, covered by
+ * slack-webhooks.isolation.test.ts.
  */
-const DEFERRED_BASELINE_CEILING = 215;
+const DEFERRED_BASELINE_CEILING = 214;
 
 function countDeferredScopedTables(): { count: number; names: string[] } {
   const source = fs.readFileSync(AUDIT_SCRIPT_PATH, "utf8");
