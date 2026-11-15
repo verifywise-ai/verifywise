@@ -54,7 +54,7 @@ All three catalog tables are created by
 | `category` | `CHECK` limited to `communication`, `ml_ops`, `data_management`, `version_control`, `monitoring`, `security`, `analytics`. A new category is a schema change. |
 | `icon_path` | Path under `Clients/public/assets/extensions/` (set by `20260818124348-extension-icon-paths.js`) |
 | `documentation_url`, `support_url` | Optional links |
-| `requires_configuration` | Drives the "Configuration required" label and the **Test connection** button |
+| `requires_configuration` | Drives the "Configuration required" label. The page **Test connection** button is keyed on having config fields, not on this flag |
 | `features` (JSONB array), `tags` (TEXT[]) | Catalog metadata |
 
 The catalog is not tenant-scoped. It is the same for every organization.
@@ -456,15 +456,15 @@ and ignores it.
   [Secrets and validation](#secrets-and-validation)).
 - **Disable** sets `enabled = false`. Configuration, secrets and all
   extension-owned data (synced models, lifecycle phases, Jira use cases, Slack
-  webhooks) are **kept**. Re-enabling restores access to them. Both the catalog
-  and the settings page ask for confirmation first (`ConfirmDisableModal`),
-  with one sentence per extension on what stops
-  (`Extensions/disableCopy.ts`, falling back to a generic sentence for a key
-  with no entry). The sentences are checked against the code: the gate on the
+  webhooks) are **kept**. Re-enabling restores access to them.
+- Both the catalog and the settings page ask for confirmation before a disable
+  (`ConfirmDisableModal`). It shows one sentence per extension on what stops
+  (`Extensions/disableCopy.ts`, with a generic fallback for a key that has no
+  entry). The sentences are checked against the code: the gate on the
   extension's routes, the `isEnabled(key)` checks that hide its UI, and the jobs
   that skip organizations where it is off. Cancel, the close button and Escape
-  do nothing while the disable request is in flight. While Slack is disabled, no Slack notification is sent
-  for that organization.
+  do nothing while the disable request is in flight.
+- While Slack is disabled, no Slack notification is sent for that organization.
 - **There is no uninstall** and no way to purge an extension's data from the
   UI or API.
 - While disabled, the gate returns 403 on every `/api/extensions/<key>/...`
