@@ -83,6 +83,12 @@ export default function ExtensionSettingsPage() {
     setTestResult(null);
   }, []);
 
+  // A connection result describes the values it tested, so an edit clears it.
+  const handleFormChange = useCallback((values: ExtensionConfigFormValues) => {
+    setFormValues(values);
+    setTestResult(null);
+  }, []);
+
   const load = useCallback(async () => {
     if (!key) return;
     setLoading(true);
@@ -345,7 +351,7 @@ export default function ExtensionSettingsPage() {
                 initialValues={extension.configuration}
                 secretsSet={extension.secretsSet}
                 disabled={busy !== null}
-                onChange={setFormValues}
+                onChange={handleFormChange}
               />
               {configFields.some((f) => f.isSecret) && (
                 <Box sx={{ mt: "12px" }}>

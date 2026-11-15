@@ -5452,8 +5452,6 @@ export const de: Record<string, string> = {
   "Extension settings": "Erweiterungseinstellungen",
   "Extensions": "Erweiterungen",
   "Key": "Schlüssel",
-  "Password/token fields are stored encrypted. Leave blank to keep the existing value.":
-    "Passwort-/Token-Felder werden verschlüsselt gespeichert. Leer lassen, um den vorhandenen Wert beizubehalten.",
   "Specific extension settings page": "Spezifische Erweiterungseinstellungsseite",
   "Sync Interval": "Synchronisierungsintervall",
   "This extension has no configuration.": "Diese Erweiterung hat keine Konfiguration.",
@@ -11037,8 +11035,6 @@ export const fr: Record<string, string> = {
   "Extension settings": "Paramètres de l'extension",
   "Extensions": "Extensions",
   "Key": "Clé",
-  "Password/token fields are stored encrypted. Leave blank to keep the existing value.":
-    "Les champs mot de passe/jeton sont stockés chiffrés. Laissez vide pour conserver la valeur existante.",
   "Specific extension settings page": "Page de paramètres d'extension spécifique",
   "Sync Interval": "Intervalle de synchronisation",
   "This extension has no configuration.": "Cette extension n'a pas de configuration.",
@@ -16510,8 +16506,6 @@ export const es: Record<string, string> = {
   "Extension settings": "Configuración de la extensión",
   "Extensions": "Extensiones",
   "Key": "Clave",
-  "Password/token fields are stored encrypted. Leave blank to keep the existing value.":
-    "Los campos de contraseña/token se almacenan cifrados. Deje en blanco para mantener el valor existente.",
   "Specific extension settings page": "Página de configuración de extensión específica",
   "Sync Interval": "Intervalo de sincronización",
   "This extension has no configuration.": "Esta extensión no tiene configuración.",

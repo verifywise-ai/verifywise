@@ -248,6 +248,21 @@ describe("ExtensionSettingsPage", () => {
     ).toBe(result);
   });
 
+  it("clears the connection result when a field is edited", async () => {
+    mockGetExtensionByKey.mockResolvedValue(makeExtension());
+    mockTestConnection.mockResolvedValue({ success: false, message: "Could not reach MLflow." });
+    renderPage();
+
+    fireEvent.change(await screen.findByLabelText(/Tracking server URL/), {
+      target: { value: "https://mlflow.example.com" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Test connection" }));
+    expect(await screen.findByText("Could not reach MLflow.")).toBeInTheDocument();
+
+    fireEvent.change(input("experiment"), { target: { value: "prod" } });
+    expect(screen.queryByText("Could not reach MLflow.")).not.toBeInTheDocument();
+  });
+
   it("offers Test connection after Enable too", async () => {
     mockGetExtensionByKey.mockResolvedValue(makeExtension({ enabled: true }));
     renderPage();
@@ -298,6 +313,29 @@ describe("ExtensionSettingsPage", () => {
     fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(mockDisable).not.toHaveBeenCalled();
+  });
+
+  it("keeps the dialog open while the disable is in flight", async () => {
+    mockGetExtensionByKey.mockResolvedValue(makeExtension({ enabled: true }));
+    let finish: (value: Extension) => void = () => {};
+    mockDisable.mockImplementation(
+      () =>
+        new Promise<Extension>((resolve) => {
+          finish = resolve;
+        }),
+    );
+    renderPage();
+
+    fireEvent.click(await screen.findByRole("button", { name: "Disable" }));
+    const dialog = await screen.findByRole("dialog");
+    fireEvent.click(within(dialog).getByRole("button", { name: "Disable" }));
+    await waitFor(() => expect(mockDisable).toHaveBeenCalledTimes(1));
+
+    fireEvent.click(within(dialog).getByRole("button", { name: "Cancel" }));
+    expect(screen.getByRole("dialog")).toBeInTheDocument();
+
+    finish(makeExtension({ enabled: false }));
+    await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
   it("keeps unsaved edits when the extension is disabled", async () => {

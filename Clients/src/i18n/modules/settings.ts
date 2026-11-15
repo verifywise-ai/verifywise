@@ -270,6 +270,16 @@ export const de: Record<string, string> = {
     "Die Datei konnte nicht entfernt werden. Versuchen Sie es erneut.",
   "Could not upload the file. Try again.":
     "Die Datei konnte nicht hochgeladen werden. Versuchen Sie es erneut.",
+  "Not saved. Try again.": "Nicht gespeichert. Versuchen Sie es erneut.",
+  "Where it shows up": "Wo es erscheint",
+  "Could not change this extension. Try again.":
+    "Diese Erweiterung konnte nicht geändert werden. Versuchen Sie es erneut.",
+  "AI risks → Add new risk → Import from Excel":
+    "KI-Risiken → Neues Risiko hinzufügen → Aus Excel importieren",
+  "Datasets → Bulk upload": "Datensätze → Massen-Upload",
+  "Frameworks → Manage frameworks → Import framework from Excel":
+    "Rahmenwerke → Rahmenwerke verwalten → Rahmenwerk aus Excel importieren",
+  "Import framework from Excel": "Rahmenwerk aus Excel importieren",
   "Configuration saved.": "Konfiguration gespeichert.",
   "Configure Model Lifecycle": "Modelllebenszyklus konfigurieren",
   "Configure Phases": "Phasen konfigurieren",
@@ -861,6 +871,16 @@ export const fr: Record<string, string> = {
   "Click to upload documents": "Cliquez pour téléverser des documents",
   "Could not remove the file. Try again.": "Impossible de supprimer le fichier. Réessayez.",
   "Could not upload the file. Try again.": "Impossible de téléverser le fichier. Réessayez.",
+  "Not saved. Try again.": "Non enregistré. Réessayez.",
+  "Where it shows up": "Où cela apparaît",
+  "Could not change this extension. Try again.":
+    "Impossible de modifier cette extension. Réessayez.",
+  "AI risks → Add new risk → Import from Excel":
+    "Risques IA → Ajouter un nouveau risque → Importer depuis Excel",
+  "Datasets → Bulk upload": "Jeux de données → Téléversement en masse",
+  "Frameworks → Manage frameworks → Import framework from Excel":
+    "Référentiels → Gérer les référentiels → Importer un référentiel depuis Excel",
+  "Import framework from Excel": "Importer un référentiel depuis Excel",
   "Configuration saved.": "Configuration enregistrée.",
   "Configure Model Lifecycle": "Configurer le cycle de vie du modèle",
   "Configure Phases": "Configurer les phases",
@@ -1451,6 +1471,16 @@ export const es: Record<string, string> = {
   "Click to upload documents": "Haga clic para cargar documentos",
   "Could not remove the file. Try again.": "No se pudo quitar el archivo. Inténtelo de nuevo.",
   "Could not upload the file. Try again.": "No se pudo cargar el archivo. Inténtelo de nuevo.",
+  "Not saved. Try again.": "No se guardó. Inténtelo de nuevo.",
+  "Where it shows up": "Dónde aparece",
+  "Could not change this extension. Try again.":
+    "No se pudo cambiar esta extensión. Inténtelo de nuevo.",
+  "AI risks → Add new risk → Import from Excel":
+    "Riesgos de IA → Añadir nuevo riesgo → Importar desde Excel",
+  "Datasets → Bulk upload": "Conjuntos de datos → Subida masiva",
+  "Frameworks → Manage frameworks → Import framework from Excel":
+    "Marcos → Gestionar marcos → Importar marco desde Excel",
+  "Import framework from Excel": "Importar marco desde Excel",
   "Configuration saved.": "Configuración guardada.",
   "Configure Model Lifecycle": "Configurar el ciclo de vida del modelo",
   "Configure Phases": "Configurar fases",

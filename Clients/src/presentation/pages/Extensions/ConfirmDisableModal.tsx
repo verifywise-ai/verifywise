@@ -30,7 +30,11 @@ export default function ConfirmDisableModal({
   return (
     <StandardModal
       isOpen={isOpen}
-      onClose={onCancel}
+      // Cancel, the close icon and Escape do nothing while the disable is in
+      // flight, so the dialog cannot vanish before the outcome is known.
+      onClose={() => {
+        if (!isSubmitting) onCancel();
+      }}
       title="Disable this extension?"
       description="This applies to everyone in this organization."
       onSubmit={onConfirm}

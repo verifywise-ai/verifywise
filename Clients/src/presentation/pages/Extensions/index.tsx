@@ -6,7 +6,8 @@ import { PageHeaderExtended } from "../../components/Layout/PageHeaderExtended";
 import { useExtensions } from "../../../application/contexts/Extensions.context";
 import { Extension } from "../../../domain/types/extensions";
 import { useCan, usePermissionsSettled } from "../../../application/hooks/useCan";
-import { radiusPx } from "../../themes/palette";
+import { radiusPx, status } from "../../themes/palette";
+import ConfirmDisableModal from "./ConfirmDisableModal";
 
 // Map backend enum snake_case to display strings. `category` mirrors the DB
 // CHECK constraint on verifywise.extensions.category.
@@ -23,6 +24,24 @@ const CATEGORY_LABEL: Record<string, string> = {
 const humanizeCategory = (raw: string): string =>
   CATEGORY_LABEL[raw] ?? raw.replace(/_/g, " ").replace(/^./, (c) => c.toUpperCase());
 
+// Where an enabled extension without a settings page appears, using the
+// labels the sidebar and pages show: "AI risks" (sidebar) → "Add new risk"
+// (RiskManagement) → "Import from Excel" (RiskImportMenuItem); "Datasets"
+// (sidebar) → "Bulk upload" (BulkUploadButton); "Frameworks" (sidebar) →
+// "Manage frameworks" → "Import framework from Excel" (Framework page menu).
+const WHERE_IT_SHOWS_UP: Record<string, string> = {
+  "risk-import": "AI risks → Add new risk → Import from Excel",
+  "dataset-bulk-upload": "Datasets → Bulk upload",
+  "framework-import": "Frameworks → Manage frameworks → Import framework from Excel",
+};
+
+const TOGGLE_FAILED_FALLBACK = "Could not change this extension. Try again.";
+
+const errorMessageOf = (err: unknown): string => {
+  const message = (err as { message?: unknown } | null)?.message;
+  return typeof message === "string" && message.trim() ? message : TOGGLE_FAILED_FALLBACK;
+};
+
 function ExtensionCard({
   extension,
   onToggle,
@@ -34,6 +53,10 @@ function ExtensionCard({
 }) {
   const theme = useTheme();
   const [busy, setBusy] = useState(false);
+  const [confirmDisableOpen, setConfirmDisableOpen] = useState(false);
+  // The server's reason the last enable or disable failed, shown under the
+  // buttons until the next attempt.
+  const [toggleError, setToggleError] = useState<string | null>(null);
   const isEnabled = extension.enabled;
   // `requiresConfiguration` is a marker on the extension catalog, but some
   // extensions (e.g. model-lifecycle) mark themselves as needing configuration
@@ -65,13 +88,31 @@ function ExtensionCard({
     : hasPreEnableFields
       ? "Configure to enable"
       : "Enable";
+  const whereItShowsUp = !hasPostEnableSurface ? WHERE_IT_SHOWS_UP[extension.key] : undefined;
+
+  const runToggle = async () => {
+    setBusy(true);
+    setToggleError(null);
+    try {
+      await onToggle(extension);
+    } catch (err) {
+      setToggleError(errorMessageOf(err));
+    } finally {
+      setBusy(false);
+    }
+  };
+
   const primaryOnClick = () => {
     if (isEnabled || hasPreEnableFields) {
       onConfigure(extension);
       return;
     }
-    setBusy(true);
-    onToggle(extension).finally(() => setBusy(false));
+    void runToggle();
+  };
+
+  const confirmDisable = async () => {
+    await runToggle();
+    setConfirmDisableOpen(false);
   };
 
   return (
@@ -115,29 +156,31 @@ function ExtensionCard({
             {extension.displayName}
           </Typography>
         </Stack>
-        {isEnabled && (
-          <Box
+        <Box
+          sx={{
+            px: "8px",
+            py: "2px",
+            borderRadius: radiusPx.sm,
+            backgroundColor: isEnabled ? theme.palette.status.success.bg : status.default.bg,
+            border: `1px solid ${
+              isEnabled
+                ? (theme.palette.status.success.border ?? theme.palette.status.success.main)
+                : status.default.border
+            }`,
+            flexShrink: 0,
+          }}
+        >
+          <Typography
             sx={{
-              px: "8px",
-              py: "2px",
-              borderRadius: radiusPx.sm,
-              backgroundColor: theme.palette.status.success.bg,
-              border: `1px solid ${theme.palette.status.success.border ?? theme.palette.status.success.main}`,
-              flexShrink: 0,
+              fontSize: 11,
+              fontWeight: 500,
+              color: isEnabled ? theme.palette.status.success.text : status.default.text,
+              lineHeight: 1.5,
             }}
           >
-            <Typography
-              sx={{
-                fontSize: 11,
-                fontWeight: 500,
-                color: theme.palette.status.success.text,
-                lineHeight: 1.5,
-              }}
-            >
-              Enabled
-            </Typography>
-          </Box>
-        )}
+            {isEnabled ? "Enabled" : "Disabled"}
+          </Typography>
+        </Box>
       </Stack>
 
       <Typography
@@ -162,6 +205,17 @@ function ExtensionCard({
         {extension.description}
       </Typography>
 
+      {isEnabled && whereItShowsUp && (
+        <Stack sx={{ mt: "8px" }} spacing="2px">
+          <Typography sx={{ fontSize: 12, fontWeight: 500, color: theme.palette.text.secondary }}>
+            Where it shows up
+          </Typography>
+          <Typography sx={{ fontSize: 12, color: theme.palette.text.tertiary }}>
+            {whereItShowsUp}
+          </Typography>
+        </Stack>
+      )}
+
       <Stack direction="row" spacing={1} sx={{ mt: "16px" }}>
         {showPrimary && (
           <CustomizableButton
@@ -181,21 +235,43 @@ function ExtensionCard({
             size="small"
             isDisabled={busy}
             onClick={() => {
-              setBusy(true);
-              onToggle(extension).finally(() => setBusy(false));
+              setToggleError(null);
+              setConfirmDisableOpen(true);
             }}
           >
             Disable
           </CustomizableButton>
         )}
       </Stack>
+
+      {toggleError && (
+        <Typography
+          role="alert"
+          sx={{
+            mt: "8px",
+            fontSize: 12,
+            color: theme.palette.status.error?.text ?? status.error.text,
+          }}
+        >
+          {toggleError}
+        </Typography>
+      )}
+
+      <ConfirmDisableModal
+        isOpen={confirmDisableOpen}
+        extensionKey={extension.key}
+        extensionName={extension.displayName}
+        isSubmitting={busy}
+        onCancel={() => setConfirmDisableOpen(false)}
+        onConfirm={confirmDisable}
+      />
     </Box>
   );
 }
 
 export default function ExtensionsPage() {
   const theme = useTheme();
-  const { extensions, loading, error, enable, disable } = useExtensions();
+  const { extensions, loading, error, refetch, enable, disable } = useExtensions();
   const canManageExtensions = useCan("extension.admin");
   const settled = usePermissionsSettled();
   const navigate = useNavigate();
@@ -228,9 +304,17 @@ export default function ExtensionsPage() {
           <CircularProgress size={24} sx={{ color: theme.palette.primary.main }} />
         </Box>
       ) : error ? (
-        <Typography sx={{ fontSize: 13, color: theme.palette.status.error?.text ?? "error.main" }}>
-          {error}
-        </Typography>
+        <Stack spacing="12px" alignItems="flex-start">
+          <Typography
+            role="alert"
+            sx={{ fontSize: 13, color: theme.palette.status.error?.text ?? status.error.text }}
+          >
+            {error}
+          </Typography>
+          <CustomizableButton variant="outlined" onClick={() => void refetch()}>
+            Try again
+          </CustomizableButton>
+        </Stack>
       ) : (
         <Box
           display="grid"
