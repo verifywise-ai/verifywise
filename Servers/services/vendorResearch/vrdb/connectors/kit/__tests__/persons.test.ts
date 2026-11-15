@@ -21,6 +21,7 @@ import {
   looksLikePersonEs,
 } from "../persons";
 import type { OrgEvidence, PracticeReason } from "../persons";
+import { lineOf } from "../clean";
 
 const cp = (...codes: number[]): string => String.fromCodePoint(...codes);
 
@@ -1242,5 +1243,38 @@ describe("a name of 100 KB: the answer is right and comes at once", () => {
     const answer = run();
     expect(Date.now() - started).toBeLessThan(LIMIT_100_KB_MS);
     expect(answer).toBe(expected);
+  });
+});
+
+describe("a name that lineOf cleaned of hidden characters between a letter and its mark", () => {
+  // The rules expect a composed line. A zero-width space or a soft hyphen before an accent used to
+  // leave the letter and the mark apart after lineOf, and the rules then read a natural person's
+  // name as an organisation's (they fail open: the caller keeps the row).
+  const ACUTE = cp(0x301);
+  const ZWSP = cp(0x200b);
+  const SHY = cp(0xad);
+
+  it.each([
+    ["a zero-width space", ZWSP],
+    ["a soft hyphen", SHY],
+  ])("still reads a person's name with %s before each accent", (_name, hidden) => {
+    const composed = `Ysmar${cp(0xe9)} Tolbr${cp(0xe9)}k`;
+    const hiddenName = lineOf(`Ysmare${hidden}${ACUTE} Tolbre${hidden}${ACUTE}k`, 200);
+    expect(hiddenName).toBe(composed);
+    expect(looksLikePersonEs(hiddenName)).toBe(looksLikePersonEs(composed));
+    expect(looksLikePerson(hiddenName)).toBe(looksLikePerson(composed));
+    expect(looksLikePersonEs(hiddenName)).toBe(true);
+    expect(looksLikePerson(hiddenName)).toBe(true);
+  });
+
+  it("still reads an upper-case Spanish name with hidden characters before its accents", () => {
+    const hiddenName = lineOf(
+      `YSMARI${ZWSP}${ACUTE}A TO${SHY}${ACUTE}LBREK FALQUI${ZWSP}${ACUTE}REZ`,
+      200,
+    );
+    const composed = `YSMAR${cp(0xcd)}A T${cp(0xd3)}LBREK FALQU${cp(0xcd)}REZ`;
+    expect(hiddenName).toBe(composed);
+    expect(looksLikePersonEs(hiddenName)).toBe(looksLikePersonEs(composed));
+    expect(looksLikePersonEs(hiddenName)).toBe(true);
   });
 });

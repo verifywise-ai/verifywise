@@ -349,7 +349,7 @@ describe("euDgCompConnector", () => {
     it("is the snapshot connector of the list, at version 1, whether it is made with a sleep or exported", () => {
       for (const own of [connector, euDgCompConnector]) {
         expect(own.id).toBe("eu_dg_comp");
-        expect(own.version).toBe(1);
+        expect(own.version).toBe(2);
         expect(own.kind).toBeUndefined();
       }
     });
@@ -403,7 +403,7 @@ describe("euDgCompConnector", () => {
       const snapshot = await downloadOf(files);
 
       expect(snapshot.bodies).toHaveLength(1);
-      expect(snapshot.etag).toBe("k1:");
+      expect(snapshot.etag).toBe("k2:");
       expect(snapshot.lastModified).toBeNull();
       expect(snapshot.bytes).toBe(
         Buffer.byteLength(files[AT_URL].body as string) +
@@ -2069,6 +2069,19 @@ describe("euDgCompConnector", () => {
       expect(keys.every((key) => key.startsWith("name:"))).toBe(true);
       // Five spellings give ten keys at the most: each as written and without its legal form.
       expect(keys.length).toBeLessThanOrEqual(10);
+    });
+
+    it("keys an undertaking written with a slash form (A/S) by the name without it too, and ids it so", async () => {
+      const cases = [
+        atCase({ number: "AT.99790", cartel: "Cartel", companies: ["Slashco A/S"] }),
+        atCase({ number: "AT.99791", cartel: "Cartel", companies: ["Slashco"] }),
+      ];
+      const records = await recordsOf(filesOf([...baseAt(), ...cases]));
+
+      // One undertaking, whichever way a case writes it: never a record of `Slashco A/S` alone.
+      expect(recordOfId(records, "slashcoas")).toBeUndefined();
+      const keys = recordOfId(records, "slashco")?.matchKeys ?? [];
+      expect(keys).toEqual(expect.arrayContaining(["name:slashcoas", "name:slashco"]));
     });
 
     it("keeps the id of an undertaking whatever the order of the cases of the file", async () => {

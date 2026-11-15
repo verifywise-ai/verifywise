@@ -185,7 +185,13 @@ export type ResearchRunStatus = "queued" | "running" | "completed" | "failed";
  * scheduled scan of the organization (`scheduled`), which analyses only the sources that are new.
  */
 export type ResearchTrigger = "auto" | "manual" | "scheduled";
-export type CategoryOutcome = "findings" | "nothing_found" | "search_failed" | "skipped";
+/**
+ * What a category came to in a run. `over_cap`: risks of the category held up and the cap of one
+ * run cut them all, so the next run is to raise them (a summary stored before it was added reads
+ * `nothing_found` with a note about the cap).
+ */
+export type CategoryOutcome =
+  "findings" | "nothing_found" | "over_cap" | "search_failed" | "skipped";
 
 /** What happened to one category in a run. */
 export interface CategorySummaryEntry {

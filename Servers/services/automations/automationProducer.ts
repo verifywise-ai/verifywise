@@ -12,7 +12,8 @@ const DAY_SECONDS = 24 * 60 * 60;
  * recipients and message bodies.
  */
 const COMPLETED_JOB_RETENTION = { age: DAY_SECONDS, count: 1000 };
-const FAILED_JOB_RETENTION = { age: 7 * DAY_SECONDS, count: 5000 };
+/** Also the failed retention of every scheduler template, the Slack queue's included. */
+export const FAILED_JOB_RETENTION = { age: 7 * DAY_SECONDS, count: 5000 };
 
 // Create a new queue (connected to Redis using environment variable)
 export const automationQueue = new Queue("automation-actions", {
@@ -734,6 +735,16 @@ export async function scheduleFileExpirySweep() {
   // Notifies uploaders when files.expiry_date is within the 7-day pre-expiry
   // window (T-6..T-0). No state written back — the window itself is the dedup.
   // No obliterate here — the repeatable add is idempotent by repeat key.
+  // v2.5.x scheduled this sweep as "evidence_expiry_sweep". The worker has no
+  // handler for that name, so on an install upgraded from v2.5.x it would fail
+  // every day and keep each failed job (its template has removeOnFail: false).
+  try {
+    await automationQueue.removeJobScheduler("evidence_expiry_sweep");
+  } catch (error) {
+    logger.warn(
+      `Could not remove the old evidence expiry sweep scheduler: ${(error as Error).message}`,
+    );
+  }
   await automationQueue.upsertJobScheduler(
     "file_expiry_sweep",
     { pattern: "30 4 * * *" },

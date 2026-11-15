@@ -45,12 +45,22 @@ import {
   visit,
 } from "yaml";
 import { FetchError } from "../../../webResearch/guardedFetch";
-import { joinSentences, sentence } from "../../records/sentence";
+import { sentence } from "../../records/sentence";
 import { cleanText, cutAtCodePoint } from "../../text";
 import { nameKeysOf } from "../keys";
 import type { ParsedRecord } from "../types";
 import { decodeEntities } from "../xmlScan";
-import { type Connector, NotTheListError, type ParseResult, bodyText, dayOf } from "./types";
+import { boundMarkRuns, dayText, lineOf, withoutAngles } from "./kit/clean";
+import {
+  EU_LEGAL_FORMS,
+  EU_ORG_WORDS,
+  GENERIC_LEGAL_FORMS,
+  GENERIC_ORG_WORDS,
+  looksLikePerson,
+} from "./kit/persons";
+import { RECORD_SUMMARY_MAX, RECORD_TITLE_MAX } from "./kit/record";
+import { summaryWithClosing } from "./kit/summary";
+import { type Connector, NotTheListError, type ParseResult, bodyText } from "./types";
 
 /** What the text of a record begins with, and what the analysis prompt names it by. */
 export const ATLAS_RECORD_MARK = "MITRE ATLAS";
@@ -294,15 +304,25 @@ const LINE_BREAKING_TAG = /^\/?(?:br|hr|p|div|li|ul|ol|table|tr|td|th|h[1-6])(?!
 /** A blank line: a line feed, any white space but a line feed, a line feed. */
 const BLANK_LINE = /\n[^\S\n]*\n/;
 
+/** A character of UNSEEN out, a line feed and a tab kept. */
+const unseenOut = (character: string): string =>
+  character === "\n" || character === "\t" ? character : "";
+
 /**
  * The text in the form every later step expects: compatibility forms folded (a full-width `<` is a
  * `<`), one kind of line ending, and nothing a reader cannot see. Without this, a character that a
- * later step removes could join two halves of a tag.
+ * later step removes could join two halves of a tag. As in the kit's `lineOf`, the characters
+ * nobody sees go before the fold and every run of marks is cut to MARK_RUN_MAX (`boundMarkRuns`):
+ * the fold sorts the marks of a run in the time of its square, and a run that hidden characters
+ * split would be joined by taking them out after it. They are taken out after the fold as well,
+ * which changes nothing on a folded text but keeps the promise whatever the fold gives.
  */
 function normalise(text: string): string {
-  return cleanText(text.normalize("NFKC"))
+  const seen = cleanText(text).replace(OTHER_LINE_ENDINGS, "\n").replace(UNSEEN, unseenOut);
+  return boundMarkRuns(seen)
+    .normalize("NFKC")
     .replace(OTHER_LINE_ENDINGS, "\n")
-    .replace(UNSEEN, (character) => (character === "\n" || character === "\t" ? character : ""));
+    .replace(UNSEEN, unseenOut);
 }
 
 /** The index after the end of a tag that starts at `from` (after its name): `>` ends it, `<` does not. */
@@ -593,9 +613,15 @@ function typeOf(value: unknown): CaseStudyType | null {
   return text === "exercise" ? "Exercise" : null;
 }
 
-/** The day of a `start-date`: YYYY-MM-DD and a day that exists; null for anything else. */
+/**
+ * The day of a `start-date`: YYYY-MM-DD and a day that exists in the years a store holds (`dayText`:
+ * year 0000 is none, and one such date would fail the whole write of the list); null for anything
+ * else, which leaves the case study out as unreadable.
+ */
 function startDayOf(value: unknown): string | null {
-  return typeof value === "string" && ISO_DAY.test(value) ? dayOf(value) : null;
+  return typeof value === "string" && ISO_DAY.test(value) && dayText(value) === value
+    ? value
+    : null;
 }
 
 /**
@@ -608,6 +634,214 @@ function shownDayOf(day: string, granularity: unknown): string {
   return precision === "month" ? day.slice(0, 7) : day;
 }
 
+// ---------------------------------------------------------------------------------------------
+// The actor (the natural-persons rule)
+// ---------------------------------------------------------------------------------------------
+
+/**
+ * The words that describe an actor without naming anyone: a closed set, so that no name can hide in
+ * it. A number written in digits is such a word as well.
+ */
+const ACTOR_DESCRIPTORS: ReadonlySet<string> = new Set([
+  "unknown",
+  "unidentified",
+  "anonymous",
+  "multiple",
+  "several",
+  "one",
+  "two",
+  "three",
+  "actor",
+  "actors",
+  "individual",
+  "individuals",
+  "threat",
+  "bad",
+  "malicious",
+  "attacker",
+  "attackers",
+  "distinct",
+  "identified",
+  "commercial",
+  "entities",
+  "companies",
+  "users",
+  "researchers",
+]);
+
+/** The small words between the names of an organisation: they end a run of capitalised words. */
+const ACTOR_FUNCTION_WORDS: ReadonlySet<string> = new Set([
+  "a",
+  "an",
+  "at",
+  "by",
+  "from",
+  "in",
+  "on",
+  "to",
+  "with",
+]);
+
+/** The small words that say where the words after them work: an organisation follows them. */
+const AFFILIATION_WORDS: ReadonlySet<string> = new Set(["at", "from"]);
+
+/** The parts of an actor: it is split at commas, semicolons, colons, brackets, slashes, `&` and `and`. */
+const ACTOR_PARTS = /[,;:()[\]\/&]|\s+and\s+/iu;
+const DIGITS_ONLY = /^\p{Nd}+$/u;
+const CAPITALISED = /^\p{Lu}[\p{L}'’.-]*$/u;
+
+/** A word of an actor as the word lists hold it: lower case, the stops and brackets off both ends. */
+const plainWord = (word: string): string => {
+  // A scan from both ends, not `^[...]+|[...]+$`, which takes time in the square of a long run.
+  const stops = `.,;:()'’"`;
+  let start = 0;
+  let end = word.length;
+  while (start < end && stops.includes(word[start])) start += 1;
+  while (end > start && stops.includes(word[end - 1])) end -= 1;
+  return word.slice(start, end).toLowerCase();
+};
+
+/**
+ * The particles of a person's name that the kit's lists hold as organisation words or legal forms
+ * (`de`, `la`, `y`...): they are no evidence of an organisation, and they do not end a run of
+ * capitalised words (`Casey de Sample` is a run of two).
+ */
+const NAME_PARTICLES: ReadonlySet<string> = new Set([
+  "of",
+  "the",
+  "and",
+  "for",
+  "de",
+  "del",
+  "la",
+  "las",
+  "los",
+  "el",
+  "en",
+  "para",
+  "por",
+  "y",
+  "e",
+  "da",
+  "di",
+  "du",
+  "le",
+  "van",
+  "von",
+  "der",
+  "den",
+]);
+
+/**
+ * The shortest organisation word or legal form that counts as evidence: a form of one or two
+ * letters (`Na`, `Se`, `AG`) is also a short name or a part of one.
+ */
+const ORG_EVIDENCE_MIN_CHARS = 3;
+
+const isOrgWord = (word: string): boolean =>
+  GENERIC_ORG_WORDS.has(word) ||
+  GENERIC_LEGAL_FORMS.has(word) ||
+  EU_ORG_WORDS.has(word) ||
+  EU_LEGAL_FORMS.has(word.split(".").join(""));
+
+/** An organisation word or legal form that is evidence of an organisation: no particle, no short form. */
+const isOrgEvidence = (word: string): boolean =>
+  !NAME_PARTICLES.has(word) &&
+  word.split(".").join("").length >= ORG_EVIDENCE_MIN_CHARS &&
+  isOrgWord(word);
+
+/**
+ * Whether a part of an actor is clearly no natural person: every word of it describes and names
+ * no one (`ACTOR_DESCRIPTORS`, a number), or it holds an organisation word or a legal form of the
+ * kit's lists (`isOrgEvidence`) and every other word is a describing word, a number, a small word
+ * between names or a capitalised word, with no two capitalised words side by side once the others
+ * are set aside (`Researchers at Example University` is an organisation's; `Casey Sample at
+ * Example University` is not clearly one). Each capitalised word stands in a group (the words
+ * between two small words, describing words or numbers) that holds organisation evidence and no
+ * other such word, so a lone name beside an organisation (`Sample at Example Labs`) or two around
+ * one (`Casey Bank Jr`) is unclear; a group of one capitalised word and one organisation word is
+ * clear only after `at` or `from` (`at Example University`), and a part of two capitalised words
+ * is never clear (`Casey Bank`, `Casey Church`: an organisation word is also a surname). A particle of a name (`de`) neither ends nor breaks a run or a group, and any
+ * other word (a handle, a word in lower case) makes the part unclear. A part that looks like a
+ * person's name (`looksLikePerson`) never is clearly no person.
+ */
+function isClearlyNoPerson(part: string): boolean {
+  const words = part.split(/\s+/u).filter((word) => word !== "");
+  if (words.length === 0) return true;
+  const plain = words.map(plainWord);
+  if (plain.every((word) => ACTOR_DESCRIPTORS.has(word) || DIGITS_ONLY.test(word))) return true;
+  if (looksLikePerson(part) || !plain.some(isOrgEvidence)) return false;
+  // Two capitalised words have the shape of a person's name whatever they are: an organisation
+  // word is also a surname (`Casey Bank`, `Casey Church`), so it does not tell them apart.
+  const named = words.filter((_word, index) => !NAME_PARTICLES.has(plain[index]));
+  if (named.length === 2 && named.every((word) => CAPITALISED.test(word))) return false;
+  let run = 0;
+  // The group of words between two breaks (a small word, a describing word, a number): how many
+  // words it has, how many are capitalised words of no organisation, whether one is evidence of an
+  // organisation, and whether `at` or `from` opens it.
+  let size = 0;
+  let names = 0;
+  let evidence = false;
+  let afterAffiliation = false;
+  // A capitalised word is an organisation's only beside the organisation words of its own group
+  // (`at Example University`): alone (`Sample at Example Labs`) it is a name, and so are two
+  // around an organisation word (`Casey Bank Jr`). A group of one such word and one organisation
+  // word has the shape of a person's name too, and is read as an organisation's only after a word
+  // that says where someone works (`Researchers at Example University`, not `Casey Bank at Example
+  // University` or `By Casey Church`).
+  const groupIsUnclear = (): boolean =>
+    names > 0 && (!evidence || names > 1 || (size === 2 && !afterAffiliation));
+  for (const [index, word] of words.entries()) {
+    const set = plain[index];
+    if (NAME_PARTICLES.has(set)) continue;
+    const small = ACTOR_FUNCTION_WORDS.has(set);
+    if (small || (!isOrgWord(set) && (ACTOR_DESCRIPTORS.has(set) || DIGITS_ONLY.test(set)))) {
+      if (groupIsUnclear()) return false;
+      size = 0;
+      names = 0;
+      evidence = false;
+      afterAffiliation = AFFILIATION_WORDS.has(set);
+      run = 0;
+    } else if (isOrgWord(set)) {
+      size += 1;
+      evidence ||= isOrgEvidence(set);
+      run = 0;
+    } else if (CAPITALISED.test(word)) {
+      size += 1;
+      names += 1;
+      run += 1;
+      if (run >= 2) return false;
+    } else {
+      return false;
+    }
+  }
+  return !groupIsUnclear();
+}
+
+/**
+ * The actor of a case study as a record may show it, or "" when it must not be shown. ATLAS writes
+ * the actor of an exercise as the researchers who ran it, by their own names or a handle, and no
+ * record of the database holds a natural person's name (spec D4.14). So the actor is shown only
+ * when every part of it is clearly no person (`isClearlyNoPerson`): a description ("Unknown Threat
+ * Actor", "Two individuals") or an organisation. Anything else is left out, a bare word or handle
+ * included: when the rule is unsure, the actor goes. "Unknown" alone says nothing and goes too.
+ * The rule reads the actor as a line of the kit (`lineOf`), which the person rules expect.
+ */
+export function atlasActorOf(actor: string): string {
+  const line = lineOf(actor, MAX_ACTOR_CHARS);
+  if (line === "" || line.toLowerCase() === "unknown") return "";
+  const parts = line.split(ACTOR_PARTS).map((part) => part.trim().replace(/^and\s+/iu, ""));
+  // The line that was judged is the text shown.
+  return parts.every(isClearlyNoPerson) ? line : "";
+}
+
+/** The phrase that the analysis prompt reads as the way the vendor was matched (kit/record.ts). */
+const LOOKUP_NOTE = /lookup\s+note/gi;
+
+/** A text of a record as the kit's records have it: no angle bracket, no lookup note of its own. */
+const recordText = (text: string): string =>
+  withoutAngles(text).replace(LOOKUP_NOTE, "lookup-note");
+
 /** The record of one case study; null when it cannot be read (a skipped entry). */
 function recordOf(key: string, entry: unknown): ParsedRecord | null {
   if (!isFields(entry)) return null;
@@ -619,27 +853,39 @@ function recordOf(key: string, entry: unknown): ParsedRecord | null {
   if (type === null || day === null || name === "") return null;
 
   const target = fieldOf(entry.target, MAX_TARGET_CHARS);
-  const actor = fieldOf(entry.actor, MAX_ACTOR_CHARS);
+  // ATLAS fills the actor for 27 of the 77, writes "Unknown" for some of them, and names the
+  // researchers of some exercises: only an actor that is clearly no person is shown.
+  const actor = atlasActorOf(fieldOf(entry.actor, MAX_ACTOR_CHARS));
   const references = Array.isArray(entry.references) ? entry.references.length : null;
-  const summary = joinSentences([
-    `${ATLAS_RECORD_MARK} case study (atlas.mitre.org).`,
-    sentence("Case study", id),
-    sentence("Name", name),
-    sentence("Type", TYPE_TEXT[type]),
-    sentence("Target, as ATLAS records it", target),
-    // ATLAS fills the actor for 27 of the 77, and writes "Unknown" for some of them.
-    sentence("Actor, as ATLAS records it", actor.toLowerCase() === "unknown" ? "" : actor),
-    sentence("Start date", shownDayOf(day, entry["start-date-granularity"])),
-    sentence("Summary", fieldOf(entry.description, ATLAS_SUMMARY_CHARS)),
+  // The bounds of the kit's records (kit/record.ts): the lookup appends a note and "As of" to a
+  // record matched by name, which every ATLAS record is, and the evidence pack cuts a snippet at
+  // 1,500 characters, so the summary keeps to RECORD_SUMMARY_MAX. The count of the references
+  // stays whole and last; the sentences before it are cut, with a marker.
+  const summary = summaryWithClosing(
+    [
+      `${ATLAS_RECORD_MARK} case study (atlas.mitre.org).`,
+      sentence("Case study", id),
+      sentence("Name", name),
+      sentence("Type", TYPE_TEXT[type]),
+      sentence("Target, as ATLAS records it", target),
+      sentence("Actor, as ATLAS records it", actor),
+      sentence("Start date", shownDayOf(day, entry["start-date-granularity"])),
+      sentence("Summary", fieldOf(entry.description, ATLAS_SUMMARY_CHARS)),
+    ],
     references === null ? "" : sentence("References listed", String(references)),
-  ]);
+    RECORD_SUMMARY_MAX,
+  );
   return {
     sourceRecordId: id,
     recordType: "ai_case_study",
-    title: `${id}: ${name}`,
-    summary,
+    title: recordText(lineOf(`${id}: ${name}`, RECORD_TITLE_MAX)),
+    summary: recordText(summary),
     url: `${CASE_STUDY_PAGE}${id}`,
-    identifiers: { caseStudyId: id, type, ...(target === "" ? {} : { target }) },
+    identifiers: {
+      caseStudyId: id,
+      type,
+      ...(target === "" ? {} : { target: recordText(target) }),
+    },
     matchKeys: atlasKeysOf(target),
     publishedAt: day,
     sourceUpdatedAt: null,
@@ -652,7 +898,10 @@ const formatOf = (value: unknown): string =>
 
 export const atlasConnector: Connector = {
   id: "atlas",
-  version: 1,
+  // 2: the kit's record bounds (no year 0, a summary of at most RECORD_SUMMARY_MAX, no angle
+  // bracket, no lookup note of its own) and the actor shown only when it is clearly no person.
+  // 3: the hidden characters go before the fold, and a run of marks is cut to MARK_RUN_MAX.
+  version: 3,
   async download(fetch, validators) {
     const manifest = await fetch(ATLAS_MANIFEST_URL, {}, MANIFEST_LIMITS);
     // Nothing was sent to make a 304 an answer; one is not the manifest.

@@ -65,7 +65,7 @@ import { ResearchTarget } from "./target";
 import type { TraceRecorder } from "./trace";
 import { verifierPasses } from "./verifier";
 import { applyCaps, newValidationReport, validateFindings } from "./validation";
-import { type SnippetCheck, checkSnippetFindings } from "./verifySnippets";
+import { type SnippetCheck, VERIFY_TIMEOUT_MS, checkSnippetFindings } from "./verifySnippets";
 
 /** One deadline for the model call, retries and self-correction included. */
 export const MODEL_TIMEOUT_MS = 120_000;
@@ -86,8 +86,13 @@ export interface AnalysisInput {
   pack: EvidenceSource[];
   /**
    * Where the sources of the pack came from, by address (see `provenanceOf`): the database of a
-   * record, the canonical address a copy claims. Only the credibility labels read it; none when
-   * absent.
+   * record, the change of a terms page of the vendor's own site, the canonical address a copy
+   * claims. The prompt of the analysis reads it (buildUserPrompt, since vr-16): a record's
+   * `database` attribute and a change's `change` attribute are written from it, and the rules for
+   * records and for changes of terms key on them. The credibility labels read it too. Every caller
+   * with records or changes in the pack must pass it: left out, every source is written as an
+   * ordinary page, and those rules are silently off (no hedge on a record that names an entity, no
+   * hold on a register entry, no reading of a change as one of terms).
    */
   provenance?: ReadonlyMap<string, SourceProvenance>;
   /**
@@ -112,9 +117,15 @@ export interface AnalysisInput {
   generate: typeof generateObjectWithSelfCorrection;
   /**
    * What the vendor already has, read once the model has answered: the active risks of its
-   * register, and its earlier findings of any status.
+   * register, and its earlier findings of any status. `forgotten`, when there is one, names the URLs
+   * that no run remembers having shown (see `dropDuplicates`), read from the memory of the sources.
+   * Without the memory there is none.
    */
-  loadKnown: () => Promise<{ existingRisks: KnownRisk[]; priorFindings: PriorFinding[] }>;
+  loadKnown: () => Promise<{
+    existingRisks: KnownRisk[];
+    priorFindings: PriorFinding[];
+    forgotten?: (url: string) => boolean;
+  }>;
   trace: TraceRecorder;
   /**
    * The page reader of the research run. With one, a finding that rests on snippets alone is
@@ -144,6 +155,11 @@ export type Analysed =
       credibility: Credibility[];
       /** The candidates that held up and were dropped as repeats. */
       duplicatesDropped: number;
+      /**
+       * The candidates that held up, were no repeats, and that the caps cut (see applyCaps): new
+       * risks that a later run is to raise. The pipeline does not remember the sources they cite.
+       */
+      capped: NewFinding[];
       /** The answer of the model, for the notes and for the categories it proposed a risk in. */
       output: AnyResearchOutput;
     }
@@ -249,7 +265,7 @@ export async function analyse(input: AnalysisInput): Promise<Analysed> {
       model,
       schema: credibilityOutputSchema,
       system: buildSystemPrompt(now),
-      prompt: buildUserPrompt(target, pack, input.materiality ?? null, events),
+      prompt: buildUserPrompt(target, pack, input.materiality ?? null, events, input.provenance),
       temperature: 0,
       innerMaxRetries: 2,
       maxSelfCorrectionAttempts: 2,
@@ -295,7 +311,7 @@ export async function analyse(input: AnalysisInput): Promise<Analysed> {
     trace.dropped(`citation.${reason}`, count);
   }
 
-  const { existingRisks, priorFindings } = await input.loadKnown();
+  const { existingRisks, priorFindings, forgotten } = await input.loadKnown();
   if (input.signal?.aborted) return { ok: false, error: new AnalysisAbandoned() };
   const repeats: DedupeReport = { reasons: {} };
   const { kept: notRepeated, dropped } = dropDuplicates(
@@ -304,12 +320,14 @@ export async function analyse(input: AnalysisInput): Promise<Analysed> {
     priorFindings,
     repeats,
     eventIdsByUrl(events, pack),
+    { forgotten },
   );
   for (const [reason, count] of Object.entries(repeats.reasons)) {
     trace.dropped(`duplicate.${reason}`, count);
   }
   const capped = applyCaps(notRepeated);
   if (capped.length < notRepeated.length) trace.dropped("cap", notRepeated.length - capped.length);
+  const cut = notRepeated.filter((finding) => !capped.includes(finding));
 
   const labelled = (
     checks: readonly SnippetCheck[],
@@ -327,6 +345,7 @@ export async function analyse(input: AnalysisInput): Promise<Analysed> {
       kept: capped,
       credibility: labelled(unchecked(capped), await withFilers(capped, input)),
       duplicatesDropped: dropped,
+      capped: cut,
       output,
     };
   }
@@ -342,6 +361,9 @@ export async function analyse(input: AnalysisInput): Promise<Analysed> {
           target,
           readPage: input.readPage,
           trace,
+          // The run's abandon signal, beside the check's own deadline: once the run is abandoned no
+          // page read is started, and the ones in flight are aborted.
+          signal: anyOf(AbortSignal.timeout(VERIFY_TIMEOUT_MS), input.signal),
         }),
     input.verifier === true
       ? verifierPasses({
@@ -368,6 +390,7 @@ export async function analyse(input: AnalysisInput): Promise<Analysed> {
     kept,
     credibility: labelled(passed, await withFilers(kept, input)),
     duplicatesDropped: dropped,
+    capped: cut,
     output,
   };
 }

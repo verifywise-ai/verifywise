@@ -1,5 +1,5 @@
 /**
- * The category summary of a run: what became of each category, as one of the four outcomes and a
+ * The category summary of a run: what became of each category, as one of the five outcomes and a
  * note from a closed set of phrases, which the UI maps to translated sentences.
  *
  * It is made from the calls of the research loop, so that "looked and found nothing" is never
@@ -24,8 +24,13 @@ import { cleanText, cutAtCodePoint } from "./text";
 export const NOTES = {
   /** Answered, and the model proposed nothing and wrote no note. */
   nothingFound: "No risks found in the sources reviewed",
-  /** The model proposed a risk and none stayed: validation, de-duplication or the cap took it. */
+  /** The model proposed a risk and none stayed: validation or de-duplication took it. */
   unconfirmed: "Possible risks were found but could not be verified or are already recorded",
+  /**
+   * The model proposed a risk that held up and none of the category stayed: the caps of the run
+   * took the risks that held up (and the verifier, when on, the ones the caps kept).
+   */
+  overCap: "More risks were found than one run keeps",
   /** Worked on, and every call was a search that failed. */
   searchUnavailable: "The search was not available",
   /** Worked on, no call answered, and a page could not be read. */
@@ -91,7 +96,9 @@ function modelNoteFor(
  *    news that was never searched. A category of the vendor's site is not this rule: its pages
  *    carry it, and its failed searches are counted by rule 7.
  * 6. The model proposed a risk in it and none stayed: `nothing_found`, the possible risks were not
- *    confirmed.
+ *    confirmed; or, when the cap of the run cut a risk of it (`capped`), `over_cap`: more risks
+ *    were found than one run keeps. The cap has an outcome of its own, so that what the UI says of
+ *    the category never rests on the note, which on `nothing_found` may be text the model wrote.
  * 7. A search or a page of it failed: `nothing_found`, and the note counts them: the searches, the
  *    pages, or both.
  * 8. A scheduled run (`freshCategories` is given) and the category has no new source: `nothing_found`,
@@ -115,6 +122,8 @@ export function summariseCategories(input: {
    * that analysed every source.
    */
   freshCategories?: ReadonlySet<ResearchCategory>;
+  /** The categories of the risks that held up and that the caps cut. */
+  capped?: ReadonlySet<ResearchCategory>;
 }): CategorySummaryEntry[] {
   return RESEARCH_CATEGORIES.map((category): CategorySummaryEntry => {
     if (input.skippedNoDomain.includes(category)) {
@@ -145,6 +154,9 @@ export function summariseCategories(input: {
       return { category, outcome: "search_failed", note: NOTES.searchUnavailable };
     }
 
+    if (input.capped?.has(category) === true) {
+      return { category, outcome: "over_cap", note: NOTES.overCap };
+    }
     if (input.proposed.has(category)) {
       return { category, outcome: "nothing_found", note: NOTES.unconfirmed };
     }

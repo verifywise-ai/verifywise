@@ -67,9 +67,14 @@ export const getAllVendorsQuery = async (organizationId: number): Promise<IVendo
   return vendorsWithDetails;
 };
 
+/**
+ * @param transaction When the caller holds a transaction, pass it: both queries then run on its
+ *   connection instead of taking a second one from the pool.
+ */
 export const getVendorByIdQuery = async (
   id: number,
   organizationId: number,
+  transaction?: Transaction,
 ): Promise<IVendor | null> => {
   const result = await sequelize.query(
     `SELECT * FROM vendors WHERE organization_id = :organizationId AND id = :id`,
@@ -77,6 +82,7 @@ export const getVendorByIdQuery = async (
       replacements: { organizationId, id },
       mapToModel: true,
       model: VendorModel,
+      ...(transaction ? { transaction } : {}),
     },
   );
   if (!result.length) return null;
@@ -86,6 +92,7 @@ export const getVendorByIdQuery = async (
       replacements: { organizationId, vendor_id: id },
       mapToModel: true,
       model: VendorsProjectsModel,
+      ...(transaction ? { transaction } : {}),
     },
   );
   const vendor = result[0] as VendorModel;

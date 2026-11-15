@@ -212,7 +212,7 @@ describe("the queue of the vendor risk database", () => {
 });
 
 describe("enqueueRelabel", () => {
-  it("adds the status job of a list, one waiting per list, by an id without a colon (Ruling 12)", async () => {
+  it("adds the status job of a list, deduplicated per list by an id without a colon (Ruling 12)", async () => {
     const queue = fakeQueue();
 
     await enqueueRelabel("ofac", queue);
@@ -222,14 +222,35 @@ describe("enqueueRelabel", () => {
       [
         "vrdb_relabel",
         { sourceId: "ofac" },
-        { ...VRDB_RELABEL_JOB_OPTIONS, jobId: "vrdb_relabel_ofac" },
+        {
+          ...VRDB_RELABEL_JOB_OPTIONS,
+          deduplication: { id: "vrdb_relabel_ofac", keepLastIfActive: true },
+        },
       ],
       [
         "vrdb_relabel",
         { sourceId: "cve" },
-        { ...VRDB_RELABEL_JOB_OPTIONS, jobId: "vrdb_relabel_cve" },
+        {
+          ...VRDB_RELABEL_JOB_OPTIONS,
+          deduplication: { id: "vrdb_relabel_cve", keepLastIfActive: true },
+        },
       ],
     ]);
+  });
+
+  it("keeps a change that lands while the status job of its list runs: no fixed job id, the next job kept", async () => {
+    // BullMQ drops an add whose job id exists, the running job's included, before it looks at the
+    // deduplication; with `keepLastIfActive` an add during the run is queued when the run ends
+    // (bullmq 6.5.3, includes/storeDeduplicatedNextJob.lua and requeueDeduplicatedJob.lua).
+    const queue = fakeQueue();
+
+    await enqueueRelabel("kev", queue);
+
+    const [, , opts] = queue.add.mock.calls[0];
+    expect(opts.jobId).toBeUndefined();
+    expect(opts.deduplication).toEqual({ id: "vrdb_relabel_kev", keepLastIfActive: true });
+    // A deduplication with a time to live would end it while the job still runs.
+    expect(opts.deduplication.ttl).toBeUndefined();
   });
 
   it("retries a failed status job as a failed sync is, and keeps no settled job", () => {

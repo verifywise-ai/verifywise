@@ -753,6 +753,21 @@ describe("recordOf", () => {
         expect(keysOf({ names: [decomposed, NFC_NAME] })).toEqual([key]);
       });
 
+      it.each([
+        ["a soft hyphen", 0xad],
+        ["a zero-width space", 0x200b],
+      ])("make the same key of a name in NFD with %s before each accent", (_name, hiddenCode) => {
+        // The hidden character used to stop the fold and leave the letter and the accent apart,
+        // so the key lost its accents (name:societegenerale) and missed the NFC name's key.
+        const hidden = NFC_NAME.normalize("NFD").replace(/\u{301}/gu, `${cp(hiddenCode)}\u{301}`);
+        const key = `name:soci${cp(0xe9)}t${cp(0xe9)}g${cp(0xe9)}n${cp(0xe9)}rale`;
+        expect(keysOf({ names: [hidden] })).toEqual([key]);
+        expect(keysOf({ names: [hidden, NFC_NAME] })).toEqual([key]);
+        expect(recordOf(draft({ title: `Example list: ${hidden}` })).title).toBe(
+          `Example list: ${NFC_NAME}`,
+        );
+      });
+
       it("make the ASCII key of a name written in full-width letters", () => {
         const wide = cp(0xff2d, 0xff49, 0xff43, 0xff52, 0xff4f, 0xff53, 0xff4f, 0xff46, 0xff54);
         expect(keysOf({ names: [wide] })).toEqual(["name:microsoft"]);

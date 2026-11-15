@@ -103,6 +103,44 @@ const EMPTY = csvOf([]);
 const parseAds = (rows: readonly Cells[], options?: Parameters<typeof csvOf>[1]) =>
   parse(csvOf(rows, options), EMPTY, EMPTY);
 
+/** Every timer of the fake clock but `Date`: a test moves the day of the parse and nothing else. */
+const NOT_THE_DATE = [
+  "hrtime",
+  "nextTick",
+  "performance",
+  "queueMicrotask",
+  "requestAnimationFrame",
+  "cancelAnimationFrame",
+  "requestIdleCallback",
+  "cancelIdleCallback",
+  "setImmediate",
+  "clearImmediate",
+  "setInterval",
+  "clearInterval",
+  "setTimeout",
+  "clearTimeout",
+] as const;
+
+/** The day of the parse as `now`, for what `run` does. */
+function parsedOn<T>(now: string, run: () => T): T {
+  jest.useFakeTimers({ now: new Date(now), doNotFake: [...NOT_THE_DATE] });
+  try {
+    return run();
+  } finally {
+    jest.useRealTimers();
+  }
+}
+
+// A row dated after the week that follows the day of the parse is unreadable, so the tests parse on
+// a fixed day: the months of the fixtures and of the tests are before it, whatever the clock says.
+const PARSE_DAY = "2026-12-15T12:00:00Z";
+beforeEach(() => {
+  jest.useFakeTimers({ now: new Date(PARSE_DAY), doNotFake: [...NOT_THE_DATE] });
+});
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 /** The sentence of a record text that starts with the label, whole, with its full stop. */
 function sentenceOf(summary: string, label: string): string {
   const start = summary.indexOf(`${label}: `);
@@ -909,6 +947,27 @@ describe("nhtsaConnector.parse, the reports of a group", () => {
     expect(records[0].summary).toContain("Reporting entity: Cobalt Drive, Inc. Automation:");
   });
 
+  it("takes the characters that no reader sees out of the entity and the cells: zero-width, bidirectional and tag characters", () => {
+    // The tag characters U+E0049 U+E0047 spell "IG" to a model and show nothing to a reader.
+    const hidden = `\u200B\u202E${String.fromCodePoint(0xe0049, 0xe0047)}\uFEFF`;
+
+    const { records } = parseAds([
+      {
+        "Reporting Entity": `Cobalt${hidden} Drive Inc`,
+        State: `C${hidden}A`,
+        "Crash With": `S${hidden}UV`,
+      },
+    ]);
+
+    expect(records).toHaveLength(1);
+    const [record] = records;
+    expect(record.title).toBe("NHTSA crash reports: Cobalt Drive Inc (Automated Driving System)");
+    expect(record.summary).toContain("Reporting entity: Cobalt Drive Inc. Automation:");
+    for (const text of [record.title, record.summary, JSON.stringify(record.identifiers)]) {
+      expect(text).not.toMatch(/\p{Cf}/u);
+    }
+  });
+
   it("reads a name that holds the replacement character of a byte that was not UTF-8", () => {
     const name = `Caf${String.fromCharCode(0xfffd)} Motors LLC`;
 
@@ -1049,6 +1108,53 @@ describe("nhtsaConnector.parse, the rows it cannot read", () => {
     expect(records[0].identifiers).toMatchObject({ reports: 102 });
   });
 
+  // One mistyped row used to date its entity's record in the future, where no lookback ever leaves
+  // it, and move the range and the year counts of the record; its submission month became the
+  // version of the copy.
+  it("skips and counts a row whose incident month is after the week that follows the day of the parse", () => {
+    const result = parsedOn("2026-11-12T10:00:00Z", () =>
+      parseAds([
+        { "Incident Date": "AUG-2026", "Report Submission Date": "SEP-2026" },
+        {
+          "Report ID": "91999-00001",
+          "Incident Date": "AUG-2062",
+          "Report Submission Date": "DEC-2099",
+        },
+      ]),
+    );
+
+    expect(result).toMatchObject({ skipped: 1, errors: 0, sourceVersion: "2026-09" });
+    expect(result.records).toHaveLength(1);
+    expect(result.records[0].publishedAt).toBe("2026-08-01");
+    expect(result.records[0].identifiers).toMatchObject({ reports: 1 });
+    expect(result.records[0].summary).not.toContain("2062");
+  });
+
+  it("reads an incident month that the week after the day of the parse reaches, and none after it", () => {
+    const rows: Cells[] = [{ "Incident Date": "DEC-2026", "Report Submission Date": "NOV-2026" }];
+    // A week after 2026-11-18 is still November; a week after 2026-11-25 is in December.
+    expect(parsedOn("2026-11-18T12:00:00Z", () => parseAds(rows))).toMatchObject({ skipped: 1 });
+    const reached = parsedOn("2026-11-25T12:00:00Z", () => parseAds(rows));
+    expect(reached).toMatchObject({ skipped: 0, sourceVersion: "2026-11" });
+    expect(reached.records[0].publishedAt).toBe("2026-12-01");
+  });
+
+  it("does not skip a report whose submission month is after the week that follows the day of the parse, and never takes it as the version of the list", () => {
+    const result = parsedOn("2026-11-12T10:00:00Z", () =>
+      parseAds([
+        { "Incident Date": "AUG-2026", "Report Submission Date": "SEP-2026" },
+        {
+          "Report ID": "91999-00001",
+          "Incident Date": "JUL-2026",
+          "Report Submission Date": "DEC-2099",
+        },
+      ]),
+    );
+
+    expect(result).toMatchObject({ skipped: 0, errors: 0, sourceVersion: "2026-09" });
+    expect(result.records[0].identifiers).toMatchObject({ reports: 2 });
+  });
+
   it("gives no version of the list when no submission month can be read", () => {
     const result = parseAds([
       { "Report Submission Date": "" },
@@ -1143,9 +1249,9 @@ describe("nhtsaConnector.download", () => {
       ...over,
     }) as Awaited<ReturnType<ConnectorFetch>>;
 
-  it("is the connector of nhtsa_sgo, version 1, with the mark its texts begin with", () => {
+  it("is the connector of nhtsa_sgo, version 2, with the mark its texts begin with", () => {
     expect(nhtsaConnector.id).toBe("nhtsa_sgo");
-    expect(nhtsaConnector.version).toBe(1);
+    expect(nhtsaConnector.version).toBe(2);
     expect(NHTSA_RECORD_MARK).toBe("NHTSA Standing General Order crash reports");
   });
 

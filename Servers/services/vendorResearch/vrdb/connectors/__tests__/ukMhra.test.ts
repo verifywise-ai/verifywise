@@ -872,6 +872,16 @@ describe("mhraEntriesOf, the entries of a weekly list text", () => {
       "Product code: 123",
       "Software: 4.2",
       "Software version: 4.2",
+      "Product codes: 123",
+      // The field lines of the older layouts, which once made records of a manufacturer
+      // "Device description", "Product Listing", "Updated FSN" and "Please refer...".
+      "Device description: surgical, cryogenic",
+      "DEVICE DESCRIPTION: infusion systems",
+      "Device: Example Pump",
+      "Device models: X-100",
+      "Product Listing: 27602176",
+      "Updated FSN: 2021/010/008/701/047",
+      "Please refer to the letter sent to customers: https://example.org/letter",
     ])("is not a block that begins with the words of a model line: %s", (line) => {
       expect(mhraEntriesOf(joinBlocks([line, "MHRA reference: 1111111"]))).toEqual([]);
       expect(
@@ -886,10 +896,117 @@ describe("mhraEntriesOf, the entries of a weekly list text", () => {
       ["Referral Example", "Referral Example: Pump"],
       ["Lotsby Example", "Lotsby Example: Pump"],
       ["Softwarehouse Example", "Softwarehouse Example: Pump"],
+      ["Devices Example", "Devices Example: Pump"],
+      ["Device Example Technologies", "Device Example Technologies: Pump"],
+      ["Updatedmed Example", "Updatedmed Example: Pump"],
+      ["Pleasant Example", "Pleasant Example: Pump"],
     ])("is a block that only begins with the letters of such a word: %s", (maker, heading) => {
       expect(mhraEntriesOf(joinBlocks([heading, "MHRA reference: 1111111"]))).toEqual([
         { manufacturer: maker, product: "Pump", reference: "1111111" },
       ]);
+    });
+
+    it("gives no entry in the layout of 2015, whose manufacturer line has no colon", () => {
+      // A list of 2015: the maker on a line of its own, then the date, then `Device description:`.
+      const text = joinBlocks([
+        "Frostline Example",
+        "07 April 2015",
+        "Device description: surgical, cryogenic",
+        "Model: FX-100, 100-1001",
+        "MHRA reference: 2015/004/013/291/008",
+        "Examplemed: Example Pump",
+        "09 April 2015",
+        "Device description: infusion systems",
+        "Model: X-100",
+        "MHRA reference: 2015/004/013/291/009",
+      ]);
+      expect(mhraEntriesOf(text)).toEqual([
+        { manufacturer: "Examplemed", product: "Example Pump", reference: "2015/004/013/291/009" },
+      ]);
+    });
+
+    it("finds the maker's heading after a field line that once took its place", () => {
+      const text = joinBlocks([
+        "Examplemed: First Pump",
+        "MHRA reference: 2021/010/008/701/047",
+        "The above FSN has been updated.",
+        "Updated FSN: 2021/010/008/701/047",
+        "Secondmed: Second Pump",
+        "October 2021",
+        "MHRA reference: 2021/010/014/579/015",
+      ]);
+      expect(mhraEntriesOf(text)).toEqual([
+        { manufacturer: "Examplemed", product: "First Pump", reference: "2021/010/008/701/047" },
+        { manufacturer: "Secondmed", product: "Second Pump", reference: "2021/010/014/579/015" },
+      ]);
+    });
+
+    it.each<string>([
+      "Response form: 27721232",
+      "Reply form: 27721232",
+      "RESPONSE FORMS: 27721232",
+      "Customer response form: 27721232",
+      "Distributor reply form: 27721232",
+      "Customer letter: 27721232",
+    ])("is not the label of a form or a letter that goes with a notice: %s", (line) => {
+      expect(mhraEntriesOf(joinBlocks([line, "MHRA reference: 1111111"]))).toEqual([]);
+      expect(
+        mhraEntriesOf(joinBlocks([line, "Examplemed: Example Pump", "MHRA reference: 1111111"])),
+      ).toEqual([{ manufacturer: "Examplemed", product: "Example Pump", reference: "1111111" }]);
+    });
+
+    it("gives the notice after a response form to its maker (the list of 18 to 22 December 2023)", () => {
+      const text = joinBlocks([
+        "Smiths Medical: Medfusion Syringe Infusion Pump",
+        "21 December 2023",
+        "MHRA reference: 27721232",
+        "Response form: 27721232",
+        "Smiths Medical: Medfusion Syringe Infusion Pump",
+        "21 December 2023",
+        "MHRA reference: 27723265",
+      ]);
+      expect(mhraEntriesOf(text)).toEqual([
+        {
+          manufacturer: "Smiths Medical",
+          product: "Medfusion Syringe Infusion Pump",
+          reference: "27721232",
+        },
+        {
+          manufacturer: "Smiths Medical",
+          product: "Medfusion Syringe Infusion Pump",
+          reference: "27723265",
+        },
+      ]);
+    });
+
+    it.each<[string, string]>([
+      // A list of 2019 whose maker line has no colon: the model line is no maker.
+      ["a model code", "04S68-01: Level Sensor, Bulk Solution"],
+      // A list of 2015: the notice's own number, before a semicolon.
+      ["a notice number before a semicolon", "FA-2015-6; MDSS ref.: MDD15.065"],
+      ["a code of two letters", "AB-1234: Example Pump"],
+      ["more digits than letters", "MDS-24-5154-B: Example Pump"],
+      ["no letter at all", "2019-03-11: Example Pump"],
+    ])("is no maker when its head is %s, and the entry gives no row", (_name, heading) => {
+      expect(mhraEntriesOf(joinBlocks([heading, "MHRA reference: 1111111"]))).toEqual([]);
+      // Nor does a later block of the segment take the maker's place.
+      expect(
+        mhraEntriesOf(
+          joinBlocks(["Abbott Example", heading, "Other: Example line", "MHRA reference: 1111111"]),
+        ),
+      ).toEqual([]);
+    });
+
+    it.each<[string, string]>([
+      ["B·R·A·H·M·S", "B·R·A·H·M·S: PlGF Plus KRYPTOR"],
+      ["3M Company", "3M Company: 3M Ranger"],
+      // `&amp;` read as `;` by the lists' own text: the maker is still the maker.
+      ["Drägerwerk AG ; Co. KGaA", "Drägerwerk AG ; Co. KGaA : Atlan Family"],
+      ["KLS Martin SE ; Co. KG", "KLS Martin SE ; Co. KG: RECONPLATE 26-HOLE PREFORM"],
+      ["Abc", "Abc: Example Pump"],
+    ])("is a maker whose name is short or written with marks: %s", (maker, heading) => {
+      const entries = mhraEntriesOf(joinBlocks([heading, "MHRA reference: 1111111"]));
+      expect(entries?.map((entry) => entry.manufacturer)).toEqual([maker]);
     });
 
     it("is not a block with nothing before its colon: the search goes on to the next block", () => {
@@ -1253,7 +1370,7 @@ describe("the connector of the list", () => {
   describe("what it is", () => {
     it("is the connector of uk_mhra, and exports the mark that its records begin with", () => {
       expect(ukMhraConnector.id).toBe("uk_mhra");
-      expect(ukMhraConnector.version).toBe(1);
+      expect(ukMhraConnector.version).toBe(3);
       expect(MARK).toBe("UK MHRA field safety notice lists");
     });
 
@@ -1748,6 +1865,21 @@ describe("the connector of the list", () => {
         "name:examplemedinc",
         "name:examplemed",
         "name:examplemedltd",
+      ]);
+    });
+
+    it("is one manufacturer whether a list writes its legal form with a slash (A/S) or not at all", async () => {
+      const entries = ["Examplemed A/S", "Examplemed", "Examplemed"].map((maker, at) => ({
+        maker,
+        product: "Pump",
+        reference: refOf(150 + at),
+      }));
+      const { parsed, snapshot } = await runOf([oneList(entries), ...GOOD]);
+      expect(idsOf(parsed)).not.toContain("mhra-fsn:examplemedas");
+      expect(rowOfKey(snapshot, "examplemed").count).toBe(3);
+      expect(recordOfId(parsed, "mhra-fsn:examplemed").matchKeys).toEqual([
+        "name:examplemed",
+        "name:examplemedas",
       ]);
     });
 

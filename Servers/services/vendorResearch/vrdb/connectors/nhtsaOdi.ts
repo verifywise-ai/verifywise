@@ -100,6 +100,7 @@ import {
   isYear,
   keyNamesOf,
   nameCleaner,
+  latestPlausibleDay,
   optionalDay,
   readEnvelope,
   streamFlatFile,
@@ -335,6 +336,8 @@ class OdiReducer {
   /** The (investigation, component) and (investigation, manufacturer) pairs held: capped, since a file chooses them. */
   private pairs = 0;
   private newestDay: string | null = null;
+  /** A row dated after this day is unreadable (see FUTURE_DAYS_TOLERATED): the day of the download is read once. */
+  private readonly latestDay = latestPlausibleDay();
 
   /** One line of the file: a Buffer valid during the call, or null for a line too long to read. */
   push(line: Buffer | null): void {
@@ -360,8 +363,8 @@ class OdiReducer {
     if (fields === null) return null;
     const [id, component, cell, opened, closed, campaign, subject] = fields;
     if (!INVESTIGATION_ID.test(id)) return null;
-    const odate = optionalDay(opened);
-    const cdate = optionalDay(closed);
+    const odate = optionalDay(opened, this.latestDay);
+    const cdate = optionalDay(closed, this.latestDay);
     if (odate === undefined || cdate === undefined) return null;
     const manufacturer = this.cleanName(cell);
     if (manufacturer === null) return null;

@@ -30,8 +30,8 @@ import {
   loopScopeOf,
   unescapeFromPrompt,
 } from "../prompts";
+import { CONTINUATION_INDENT, CONTINUED_MARK } from "../policySnapshots";
 import * as promptsModule from "../prompts";
-import { CHANGE_MARK } from "../policySnapshots";
 import { NAME_ONLY_LOOKUP_NOTE, OFAC_RECORD_MARK } from "../records/ofac";
 import { AIID_RECORD_MARK } from "../vrdb/connectors/aiid";
 import { ATLAS_RECORD_MARK } from "../vrdb/connectors/atlas";
@@ -128,20 +128,28 @@ describe("the versions of the prompts", () => {
   // to vr-11; the verifier prompt naming the database of a record moved it to vr-12; the analysis
   // prompt naming the AI databases moved it to vr-13, naming the US Consolidated Screening List
   // and the FDA recalls of AI-enabled devices to vr-14, and wording the lists of 2026-11-10 by their
-  // class to vr-15. A stored run says which prompt it asked with.
+  // class to vr-15, and keying the rules of the records and of a change on the attributes that only
+  // code writes, not on the words a text begins with, to vr-16, and hedging the SEC sentence for a filing
+  // matched by name only to vr-17, and saying that a line of a change that begins with the continued
+  // mark is a part of one long clause to vr-18, and saying that a line that begins with two spaces
+  // continues the line before it, and that one that begins with the continued mark is quoted on
+  // its own, to vr-19. A stored run says which prompt it asked with.
   it("names the version of the analysis prompt that every run asks with", () => {
-    expect(CREDIBILITY_PROMPT_VERSION).toBe("vr-15");
+    expect(CREDIBILITY_PROMPT_VERSION).toBe("vr-19");
   });
 
-  it("changes only the bullets of the lists from vr-14: the rest of the prompt is its text, character for character", () => {
+  it("pins the rest of the prompt, outside the bullets of the lists, character for character", () => {
     // vr-15 added Canada's list to the sanctions bullet and, after the AI bullet, the bullets of the
     // AI incident lists, the enforcement and case lists, the product safety lists, the data breach
-    // list and the registers, and nothing else. They all stand one after the other. The digest is of
-    // the prompt with these bullets cut out, taken from the vr-14 text: a change anywhere else is a
-    // new version, and moves the version and this digest together.
+    // list and the registers. They all stand one after the other. vr-16 keyed the rules of the
+    // records and of a change on the attributes that code writes, which changed the rest of the
+    // prompt too: the digest is of the vr-16 text with these bullets cut out, vr-17 hedged the
+    // SEC sentence, vr-18 added the sentence of the continued mark and vr-19 the sentences of a
+    // continued line and of a line that begins with the continued mark. A change anywhere else
+    // is a new version, and moves the version and this digest together.
     const text = buildSystemPrompt(NOW);
     const first = text.indexOf(
-      "- A source whose text begins with the name of a sanctions list is an entry of that list:",
+      "- A source whose database attribute names a sanctions list is an entry of that list:",
     );
     const last = text.indexOf("\nHow to rate a risk:");
     expect(first).toBeGreaterThan(0);
@@ -163,7 +171,7 @@ describe("the versions of the prompts", () => {
     const rest = text.slice(0, first) + text.slice(last);
 
     expect(createHash("sha256").update(rest, "utf8").digest("hex")).toBe(
-      "bfbcc34db83ed21770395fe09ea5f728395cf28fa73acd1d79a7817639918c8a",
+      "90894567976c2eb75a576034c463ec9ed2b9b174b5c9af33cf8ededa50c9e908",
     );
   });
 
@@ -260,7 +268,7 @@ describe("buildSystemPrompt", () => {
 
   it("tells the model what a record of a public database is, and that a vulnerability is about a product", () => {
     expect(prompt).toContain(
-      "A source whose text begins with the name of a public database (the CISA Known Exploited Vulnerabilities Catalog, the National Vulnerability Database, the CVE Program, Have I Been Pwned or SEC EDGAR) is a record of that database, matched to the vendor by its name or domain. A record of a vulnerability is about a flaw in a product and not about a breach of the vendor's own systems: write which it is. The CISA catalog lists only vulnerabilities that are exploited in the wild, and the NVD and the CVE Program list flaws, most of which are not. A record of SEC EDGAR is a Form 8-K that the vendor itself filed under Item 1.05 to report a material cybersecurity incident in its own systems: it is the vendor's own statement to its investors, filed with a regulator.",
+      "A source whose database attribute names a public database (the CISA Known Exploited Vulnerabilities Catalog, the National Vulnerability Database, the CVE Program, Have I Been Pwned or SEC EDGAR) is a record of that database, matched to the vendor by its name or domain. A record of a vulnerability is about a flaw in a product and not about a breach of the vendor's own systems: write which it is. The CISA catalog lists only vulnerabilities that are exploited in the wild, and the NVD and the CVE Program list flaws, most of which are not. A record of SEC EDGAR is a Form 8-K that a company filed under Item 1.05 to report a material cybersecurity incident in its own systems: it is the company's own statement to its investors, filed with a regulator. It is the vendor's own filing when its text has no Lookup note. With one, the vendor was matched to the company by name only: write it as the filing of a company of that name, not as the vendor's own statement.",
     );
   });
 
@@ -284,26 +292,38 @@ describe("buildSystemPrompt", () => {
 
   it("tells the model what a record of a status page is, and that a minor incident alone is no risk", () => {
     expect(prompt).toContain(
-      "A source whose text begins with Status page is the incident history that the vendor published on its own status page: a minor incident alone is not a risk, and the page lists only its latest incidents, from the day the record names.",
+      `A source with database="the vendor's status page" is the incident history that the vendor published on its own status page: a minor incident alone is not a risk, and the page lists only its latest incidents, from the day the record names.`,
     );
   });
 
   it("tells the model what a page change is, when it is a risk, and how to quote it", () => {
     expect(prompt).toContain(
-      `A source whose text begins with ${CHANGE_MARK} is the difference between two visits to a page of the vendor's own website that states its terms: the lines under Added: are new on the page and the lines under Removed: are gone from it. Raise a risk only when a changed line is itself an adverse term, a new subprocessor or AI provider, a weaker commitment or a lost certification. Rewording, a new date or a change of layout is not a risk. Quote a line without its Added: or Removed: mark and without its dash.`,
+      `A source with change="terms" is the difference between two visits to a page of the vendor's own website that states its terms: the lines under Added: are new on the page and the lines under Removed: are gone from it. Raise a risk only when a changed line is itself an adverse term, a new subprocessor or AI provider, a weaker commitment or a lost certification. Rewording, a new date or a change of layout is not a risk. Quote a line without its Added: or Removed: mark and without its dash.`,
+    );
+  });
+
+  // A long clause of a terms page is kept in parts, and every part after the first begins with the
+  // continued mark (policySnapshots.ts). A change shows a part that continues the part shown right
+  // before it indented, without its bullet and mark, and any other part with both: the model may
+  // quote across the first kind of joint, never across the second.
+  it("tells the model that a line of a change that begins with the continued mark is a part of one long clause", () => {
+    expect(CONTINUED_MARK.trim()).toBe("\u2026");
+    expect(CONTINUATION_INDENT).toBe("  ");
+    expect(prompt).toContain(
+      `Quote a line without its Added: or Removed: mark and without its dash. A line that begins with two spaces and no dash continues the line before it on the page: the two are one clause, with one space between them, and a quote may run across them. A line that begins with ${CONTINUED_MARK.trim()} is a later part of a long clause: quote it on its own, never with the line before it.`,
     );
   });
 
   it("tells the model what a record of a sanctions list is: a match by name only, at most one risk, and a check of who the vendor is", () => {
     expect(prompt).toContain(
-      `A source whose text begins with the name of a sanctions list is an entry of that list: ${OFAC_RECORD_MARK} (the United States Treasury), ${UK_RECORD_MARK} (the United Kingdom), ${EU_RECORD_MARK} (the European Union), ${UN_RECORD_MARK} (the United Nations Security Council), ${CANADA_SEMA_RECORD_MARK} (Canada) or ${CSL_RECORD_MARK} (the consolidated list of the export control and sanctions lists of the United States Departments of Commerce, State and Treasury: its List line names the list, and a listing on the Entity List or the Military End User List means that an export licence is required, not that the entity is sanctioned). When its text has a Lookup note, the vendor was matched to the entry by its name only: it may be another company. It shows that an entity of that name is on the list, never that the vendor is: write the risk as "An entity named <the name of the entry> is on <the list>". Raise at most one risk from it, in legal_regulatory, rate its likelihood Possible at most, and make the action plan a check of who the vendor is against the entry: its address, its country, its owners and the identifiers it lists.`,
+      `A source whose database attribute names a sanctions list is an entry of that list: ${OFAC_RECORD_MARK} (the United States Treasury), ${UK_RECORD_MARK} (the United Kingdom), ${EU_RECORD_MARK} (the European Union), ${UN_RECORD_MARK} (the United Nations Security Council), ${CANADA_SEMA_RECORD_MARK} (Canada) or ${CSL_RECORD_MARK} (the consolidated list of the export control and sanctions lists of the United States Departments of Commerce, State and Treasury: its List line names the list, and a listing on the Entity List or the Military End User List means that an export licence is required, not that the entity is sanctioned). When its text has a Lookup note, the vendor was matched to the entry by its name only: it may be another company. It shows that an entity of that name is on the list, never that the vendor is: write the risk as "An entity named <the name of the entry> is on <the list>". Raise at most one risk from it, in legal_regulatory, rate its likelihood Possible at most, and make the action plan a check of who the vendor is against the entry: its address, its country, its owners and the identifiers it lists.`,
     );
   });
 
   it("names the screening list among the sanctions lists, and says that a listing on the Entity List is a licence requirement and not a sanction", () => {
     const sanctions = prompt.slice(
-      prompt.indexOf("- A source whose text begins with the name of a sanctions list"),
-      prompt.indexOf("- A source whose text begins with the name of an AI database"),
+      prompt.indexOf("- A source whose database attribute names a sanctions list"),
+      prompt.indexOf("- A source whose database attribute names an AI database"),
     );
 
     // The six lists in the bullet, each by the mark its records begin with, in this order: Canada's
@@ -711,13 +731,13 @@ describe("the bounds that the system prompt states", () => {
   });
 
   // The analysis text of the prompt version "vr-2" has these lines, with counts as words and limits
-  // as digits; "vr-3" to "vr-15" left these lines as they were. Writing their numbers from the
+  // as digits; "vr-3" to "vr-19" left these lines as they were. Writing their numbers from the
   // constants must not change a character of them, line breaks included, or the stored version
   // would no longer describe the prompt.
   it("writes the lines that hold a number exactly as the vr-2 text has them", () => {
     const lines = buildSystemPrompt(NOW).split("\n");
 
-    expect(CREDIBILITY_PROMPT_VERSION).toBe("vr-15");
+    expect(CREDIBILITY_PROMPT_VERSION).toBe("vr-19");
     for (const line of [
       "- Every risk cites at least one source and at most five. Each citation is a source id and a",
       "  at most 300 characters. Do not quote the title, the URL or the vendor block.",
@@ -2226,9 +2246,9 @@ describe("the prompt of the credibility rules", () => {
       "FDA list of AI-enabled medical devices",
     ]);
     const sanctions =
-      "- A source whose text begins with the name of a sanctions list is an entry of that list:";
+      "- A source whose database attribute names a sanctions list is an entry of that list:";
     const ai =
-      "- A source whose text begins with the name of an AI database is an entry of that database:";
+      "- A source whose database attribute names an AI database is an entry of that database:";
 
     expect(prompt).toContain(sanctions);
     expect(prompt).toContain(
@@ -2266,10 +2286,10 @@ describe("the prompt of the credibility rules", () => {
 
   it("names the UN list among the sanctions lists, and the CVE Program among the databases", () => {
     expect(prompt).toContain(
-      `- A source whose text begins with the name of a sanctions list is an entry of that list: ${OFAC_RECORD_MARK} (the United States Treasury), ${UK_RECORD_MARK} (the United Kingdom), ${EU_RECORD_MARK} (the European Union), ${UN_RECORD_MARK} (the United Nations Security Council), ${CANADA_SEMA_RECORD_MARK} (Canada) or ${CSL_RECORD_MARK} (the consolidated list of the export control and sanctions lists of the United States Departments of Commerce, State and Treasury:`,
+      `- A source whose database attribute names a sanctions list is an entry of that list: ${OFAC_RECORD_MARK} (the United States Treasury), ${UK_RECORD_MARK} (the United Kingdom), ${EU_RECORD_MARK} (the European Union), ${UN_RECORD_MARK} (the United Nations Security Council), ${CANADA_SEMA_RECORD_MARK} (Canada) or ${CSL_RECORD_MARK} (the consolidated list of the export control and sanctions lists of the United States Departments of Commerce, State and Treasury:`,
     );
     expect(prompt).toContain(
-      "- A source whose text begins with the name of a public database (the CISA Known Exploited Vulnerabilities Catalog, the National Vulnerability Database, the CVE Program, Have I Been Pwned or SEC EDGAR) is a record of that database, matched to the vendor by its name or domain.",
+      "- A source whose database attribute names a public database (the CISA Known Exploited Vulnerabilities Catalog, the National Vulnerability Database, the CVE Program, Have I Been Pwned or SEC EDGAR) is a record of that database, matched to the vendor by its name or domain.",
     );
     expect(prompt).toContain(
       "The CISA catalog lists only vulnerabilities that are exploited in the wild, and the NVD and the CVE Program list flaws, most of which are not.",
@@ -2323,12 +2343,12 @@ describe("the prompt of the lists of 2026-11-10 (vr-15)", () => {
   // The bullets of the lists, by the words each begins with, in the order they stand in the prompt:
   // the sanctions bullet and the AI database bullet are the ones of before, the other five are new.
   const BULLETS = [
-    ["sanctions", "- A source whose text begins with the name of a sanctions list"],
-    ["AI database", "- A source whose text begins with the name of an AI database"],
-    ["AI incident", "- A source whose text begins with the name of an AI incident list"],
-    ["enforcement", "- A source whose text begins with the name of an enforcement or case list"],
-    ["product safety", "- A source whose text begins with the name of a product safety list"],
-    ["data breach", `- A source whose text begins with ${CALIFORNIA_BREACHES_RECORD_MARK}`],
+    ["sanctions", "- A source whose database attribute names a sanctions list"],
+    ["AI database", "- A source whose database attribute names an AI database"],
+    ["AI incident", "- A source whose database attribute names an AI incident list"],
+    ["enforcement", "- A source whose database attribute names an enforcement or case list"],
+    ["product safety", "- A source whose database attribute names a product safety list"],
+    ["data breach", `- A source whose database attribute names ${CALIFORNIA_BREACHES_RECORD_MARK}`],
     [
       "register",
       "- An entry of the AI incident, enforcement, product safety and data breach lists above is dated",
@@ -2348,31 +2368,31 @@ describe("the prompt of the lists of 2026-11-10 (vr-15)", () => {
   describe("the five bullets that this version adds", () => {
     it("words the AI incident lists: an entry counted for one company or product, matched by name only, at most one risk in ai_specific", () => {
       expect(prompt).toContain(
-        `- A source whose text begins with the name of an AI incident list is an entry of that list, counted for one company or product: ${CHARLOTIN_RECORD_MARK} (court decisions on fabricated or false content in a filing, which name the AI tool that was used: naming the tool does not show that the tool caused the error) or ${PIPEROLL_RECORD_MARK} (incidents of AI agents that one editor records: reports that nobody else has checked). The vendor was matched to it by name only, so its text has the Lookup note: it may be another company, or a product of another company. It shows that the list holds an entry of that name, never that the vendor did what the entry records. From each entry raise at most one risk, in ai_specific: write it as "An entity named <the name of the entry> appears in <the list>", rate its likelihood Possible at most, and make the action plan a check of who the vendor is against the entry.`,
+        `- A source whose database attribute names an AI incident list is an entry of that list, counted for one company or product: ${CHARLOTIN_RECORD_MARK} (court decisions on fabricated or false content in a filing, which name the AI tool that was used: naming the tool does not show that the tool caused the error) or ${PIPEROLL_RECORD_MARK} (incidents of AI agents that one editor records: reports that nobody else has checked). The vendor was matched to it by name only, so its text has the Lookup note: it may be another company, or a product of another company. It shows that the list holds an entry of that name, never that the vendor did what the entry records. From each entry raise at most one risk, in ai_specific: write it as "An entity named <the name of the entry> appears in <the list>", rate its likelihood Possible at most, and make the action plan a check of who the vendor is against the entry.`,
       );
     });
 
     it("words the enforcement and case lists: an entry summarised for one party, no finding or ruling, at most one risk in legal_regulatory", () => {
       expect(prompt).toContain(
-        `- A source whose text begins with the name of an enforcement or case list is an entry of that list, summarised for one party: ${EU_DG_COMP_RECORD_MARK} (antitrust, cartel and Digital Markets Act cases of the European Commission; mergers are not in it), ${FTC_PENALTIES_RECORD_MARK} (civil penalty orders of the US Federal Trade Commission), ${FTC_COMPETITION_RECORD_MARK} (antitrust actions of the US Federal Trade Commission, whose parties are read from the titles of the matters), ${UK_CMA_RECORD_MARK} (cases of the UK Competition and Markets Authority that can end in an intervention or an enforcement outcome), ${UK_OFSI_RECORD_MARK} (notices of the UK Office of Financial Sanctions Implementation of a penalty or a disclosure for a breach of financial sanctions: a notice is not a designation, and the party is not on a sanctions list because of it) or ${CO_SIC_PENALTIES_RECORD_MARK} (consumer protection sanctions of Colombia's Superintendencia de Industria y Comercio, which may later be annulled). The vendor was matched to it by name only, so its text has the Lookup note: it may be another company. It shows that the list names a party of that name, never that the vendor broke a rule or is guilty of anything: a case, an investigation or a notice is not a finding or a ruling, and a decision or a penalty that the entry names is about the party of the entry. From each entry raise at most one risk, in legal_regulatory: write it as "An entity named <the name of the entry> appears in <the list>", rate its likelihood Possible at most, and make the action plan a check of who the vendor is against the entry.`,
+        `- A source whose database attribute names an enforcement or case list is an entry of that list, summarised for one party: ${EU_DG_COMP_RECORD_MARK} (antitrust, cartel and Digital Markets Act cases of the European Commission; mergers are not in it), ${FTC_PENALTIES_RECORD_MARK} (civil penalty orders of the US Federal Trade Commission), ${FTC_COMPETITION_RECORD_MARK} (antitrust actions of the US Federal Trade Commission, whose parties are read from the titles of the matters), ${UK_CMA_RECORD_MARK} (cases of the UK Competition and Markets Authority that can end in an intervention or an enforcement outcome), ${UK_OFSI_RECORD_MARK} (notices of the UK Office of Financial Sanctions Implementation of a penalty or a disclosure for a breach of financial sanctions: a notice is not a designation, and the party is not on a sanctions list because of it) or ${CO_SIC_PENALTIES_RECORD_MARK} (consumer protection sanctions of Colombia's Superintendencia de Industria y Comercio, which may later be annulled). The vendor was matched to it by name only, so its text has the Lookup note: it may be another company. It shows that the list names a party of that name, never that the vendor broke a rule or is guilty of anything: a case, an investigation or a notice is not a finding or a ruling, and a decision or a penalty that the entry names is about the party of the entry. From each entry raise at most one risk, in legal_regulatory: write it as "An entity named <the name of the entry> appears in <the list>", rate its likelihood Possible at most, and make the action plan a check of who the vendor is against the entry.`,
       );
     });
 
     it("words the product safety lists: an entry summarised for one maker or filer, no finding of a defect, at most one risk in legal_regulatory", () => {
       expect(prompt).toContain(
-        `- A source whose text begins with the name of a product safety list is an entry of that list, summarised for one maker or filer: ${NHTSA_RECALLS_RECORD_MARK} (vehicle and equipment recall campaigns that the filer reported to NHTSA since 2010), ${NHTSA_ODI_RECORD_MARK} (investigations of vehicle and equipment defects by NHTSA's Office of Defects Investigation) or ${UK_MHRA_RECORD_MARK} (field safety notices of medical device manufacturers that the UK MHRA lists). A recall or a field safety notice is the maker's own correction of a product, and an investigation is not a finding that a defect exists. The vendor was matched to it by name only, so its text has the Lookup note: it may be another company. From each entry raise at most one risk, in legal_regulatory: write it as "An entity named <the name of the entry> appears in <the list>", rate its likelihood Possible at most, and make the action plan a check of who the vendor is against the entry.`,
+        `- A source whose database attribute names a product safety list is an entry of that list, summarised for one maker or filer: ${NHTSA_RECALLS_RECORD_MARK} (vehicle and equipment recall campaigns that the filer reported to NHTSA since 2010), ${NHTSA_ODI_RECORD_MARK} (investigations of vehicle and equipment defects by NHTSA's Office of Defects Investigation) or ${UK_MHRA_RECORD_MARK} (field safety notices of medical device manufacturers that the UK MHRA lists). A recall or a field safety notice is the maker's own correction of a product, and an investigation is not a finding that a defect exists. The vendor was matched to it by name only, so its text has the Lookup note: it may be another company. From each entry raise at most one risk, in legal_regulatory: write it as "An entity named <the name of the entry> appears in <the list>", rate its likelihood Possible at most, and make the action plan a check of who the vendor is against the entry.`,
       );
     });
 
     it("words the data breach list: the organisation's own report, at most one risk in security_incidents", () => {
       expect(prompt).toContain(
-        `- A source whose text begins with ${CALIFORNIA_BREACHES_RECORD_MARK} is an entry of the list of data breach notices filed with the California Attorney General, summarised for one organisation: the organisation itself reported a breach of personal data, and the entry says nothing about its cause or its harm. The vendor was matched to it by name only, so its text has the Lookup note: it may be another company. From each entry raise at most one risk, in security_incidents: write it as "An entity named <the name of the entry> reported a data breach to the California Attorney General", rate its likelihood Possible at most, and make the action plan a check of who the vendor is against the entry and of the dates it lists.`,
+        `- A source whose database attribute names ${CALIFORNIA_BREACHES_RECORD_MARK} is an entry of the list of data breach notices filed with the California Attorney General, summarised for one organisation: the organisation itself reported a breach of personal data, and the entry says nothing about its cause or its harm. The vendor was matched to it by name only, so its text has the Lookup note: it may be another company. From each entry raise at most one risk, in security_incidents: write it as "An entity named <the name of the entry> reported a data breach to the California Attorney General", rate its likelihood Possible at most, and make the action plan a check of who the vendor is against the entry and of the dates it lists.`,
       );
     });
 
     it("words the registers and status lists: the register's own statement, no risk and no evidence of safety, and the date of an entry of the lists above", () => {
       expect(prompt).toContain(
-        `- An entry of the AI incident, enforcement, product safety and data breach lists above is dated by its newest matter, and the lookback window of its category applies to that date. A source whose text begins with the name of a register or status list is an entry of that register, a state as of the day of the copy that its text names: ${CANADA_AI_REGISTER_RECORD_MARK}, ${OMB_AI_INVENTORY_RECORD_MARK}, ${NL_ALGORITMEREGISTER_RECORD_MARK} and ${UK_ATRS_RECORD_MARK} (public bodies' own statements that an AI system or an algorithm they use names the vendor as its supplier), ${EPOCH_AI_RECORD_MARK} (AI models that a research organisation lists by developer), ${FMTI_RECORD_MARK} (how much a developer of foundation models disclosed, as a research team scored it), ${C2PA_CONFORMING_RECORD_MARK} (products that the C2PA accepted as conformant to its content provenance specification), ${FEDRAMP_RECORD_MARK} (the authorisation status of cloud offerings with the US government), ${DISCLOSE_IO_RECORD_MARK} (vulnerability disclosure policies that contributors report) or ${GLEIF_RECORD_MARK} (the reference data of a legal entity identifier, which the entity reports and its issuer validates). Such an entry raises no risk, whatever it says, and a vendor that is missing from a register is no risk either. Use it only as context in the description of another risk that other sources show, and write what it says as the register's statement: the register lists the vendor, never more. A register entry is never evidence that the vendor or its product is safe, compliant or approved, and a supplier named by a public body or a developer named in an index is context, never an accusation.`,
+        `- An entry of the AI incident, enforcement, product safety and data breach lists above is dated by its newest matter, and the lookback window of its category applies to that date. A source whose database attribute names a register or status list is an entry of that register, a state as of the day of the copy that its text names: ${CANADA_AI_REGISTER_RECORD_MARK}, ${OMB_AI_INVENTORY_RECORD_MARK}, ${NL_ALGORITMEREGISTER_RECORD_MARK} and ${UK_ATRS_RECORD_MARK} (public bodies' own statements that an AI system or an algorithm they use names the vendor as its supplier), ${EPOCH_AI_RECORD_MARK} (AI models that a research organisation lists by developer), ${FMTI_RECORD_MARK} (how much a developer of foundation models disclosed, as a research team scored it), ${C2PA_CONFORMING_RECORD_MARK} (products that the C2PA accepted as conformant to its content provenance specification), ${FEDRAMP_RECORD_MARK} (the authorisation status of cloud offerings with the US government), ${DISCLOSE_IO_RECORD_MARK} (vulnerability disclosure policies that contributors report) or ${GLEIF_RECORD_MARK} (the reference data of a legal entity identifier, which the entity reports and its issuer validates). Such an entry raises no risk, whatever it says, and a vendor that is missing from a register is no risk either. Use it only as context in the description of another risk that other sources show, and write what it says as the register's statement: the register lists the vendor, never more. A register entry is never evidence that the vendor or its product is safe, compliant or approved, and a supplier named by a public body or a developer named in an index is context, never an accusation.`,
       );
     });
   });
@@ -2392,9 +2412,7 @@ describe("the prompt of the lists of 2026-11-10 (vr-15)", () => {
     it.each(NEW_LISTS)(
       "%s: its mark occurs once in the prompt, among the bullets of the lists",
       (_id, _constant, mark) => {
-        const first = text.indexOf(
-          "- A source whose text begins with the name of a sanctions list",
-        );
+        const first = text.indexOf("- A source whose database attribute names a sanctions list");
         const last = text.indexOf("\nHow to rate a risk:");
         const at = text.indexOf(mark);
 

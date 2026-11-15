@@ -410,10 +410,10 @@ const SAMPLE_SUMMARY = [
 
 describe("canadaAiRegisterConnector", () => {
   describe("what it is", () => {
-    it("is the connector of canada_ai_register, a snapshot connector at version 1", () => {
+    it("is the connector of canada_ai_register, a snapshot connector at version 2", () => {
       for (const connector of [canadaAiRegisterConnector, createCanadaAiRegisterConnector()]) {
         expect(connector.id).toBe("canada_ai_register");
-        expect(connector.version).toBe(1);
+        expect(connector.version).toBe(2);
         expect(connector.kind).toBeUndefined();
         expect(typeof connector.download).toBe("function");
         expect(typeof connector.parse).toBe("function");
@@ -567,7 +567,7 @@ describe("canadaAiRegisterConnector", () => {
       const snapshot = await download(CSV);
 
       expect(snapshot.bodies).toHaveLength(1);
-      expect(snapshot.etag).toBe("k1:");
+      expect(snapshot.etag).toBe("k2:");
       expect(snapshot.lastModified).toBe(COMPOSITE);
       expect(snapshot.bytes).toBe(Buffer.byteLength(packageText()) + Buffer.byteLength(CSV));
     });
@@ -576,7 +576,7 @@ describe("canadaAiRegisterConnector", () => {
       const snapshot = await download(CSV, {
         csvFile: { etag: '"0xSTORAGE"', lastModified: "Sat, 14 Mar 2026 09:26:53 GMT" },
       });
-      expect(snapshot.etag).toBe("k1:");
+      expect(snapshot.etag).toBe("k2:");
       expect(snapshot.lastModified).toBe(COMPOSITE);
     });
 
@@ -637,7 +637,7 @@ describe("canadaAiRegisterConnector", () => {
 
       it("is not sent to the file: a stored validator that equals the composite changes nothing about the second request", async () => {
         const fetch = fakeFetch(filesOf(CSV));
-        await newConnector().download(fetch, { etag: "k1:", lastModified: "not the composite" });
+        await newConnector().download(fetch, { etag: "k2:", lastModified: "not the composite" });
         expect(fetch.calls.map((call) => call.validators)).toEqual([{}, {}]);
       });
 
@@ -1512,6 +1512,14 @@ describe("canadaAiRegisterConnector", () => {
       expect(vendorOf(records[0])).toBe("Open Acme");
       expect(records[0].identifiers.systems).toBe(2);
       expect(records[0].matchKeys).toEqual(["name:openacme"]);
+    });
+
+    it("keys a vendor written with a slash legal form (A/S) by the name without it too, and ids it so", async () => {
+      // The real register names one so (Milestone Systems A/S): version 2 rebuilds its id and keys.
+      const records = await recordsOf(registerCsv([{ id: "2526-AS-001", vendor: "Danspin A/S" }]));
+      expect(records.map((record) => record.sourceRecordId)).toEqual(["danspin"]);
+      expect(vendorOf(records[0])).toBe("Danspin A/S");
+      expect(records[0].matchKeys).toEqual(["name:danspinas", "name:danspin"]);
     });
 
     it("keeps 'Acme Zorbix' apart from 'Acme': a product is not its maker", async () => {

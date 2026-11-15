@@ -242,6 +242,8 @@ const MAINTENANCE_LABELS: ReadonlySet<string> = new Set([
   "in progress",
   "verifying",
   "completed",
+  // incident.io's word for a maintenance that is over.
+  "complete",
 ]);
 const INCIDENT_LABELS: ReadonlySet<string> = new Set([
   "investigating",
@@ -252,17 +254,27 @@ const INCIDENT_LABELS: ReadonlySet<string> = new Set([
 ]);
 
 /**
- * A maintenance is told by the labels of its updates (Statuspage writes the status of each update
- * in bold): it has one of a maintenance and none of an incident. An entry with no label is an
- * incident. The white space around a label is bounded: a run of it without end would cost time in
- * proportion to its square.
+ * The label of each update: Statuspage writes `<strong>Scheduled</strong>`, incident.io writes
+ * `<b>Status: Scheduled (Sat, 14 Nov 2026 14:00:00 GMT - ...)</b>`. Of the second, the label is
+ * the words before the dates. Every piece is bounded, and the label stops where the dates begin,
+ * so that a tag that is never closed costs a few steps and not the square of its length.
  */
-function isMaintenance(markup: string): boolean {
-  const labels = [...markup.matchAll(/<strong>\s{0,20}([^<]{1,40}?)\s{0,20}<\/strong>/gi)].map(
-    (label) => label[1].toLowerCase(),
-  );
+const LABEL =
+  /<(strong|b)>\s{0,20}(?:status:\s{0,20})?([^<(\s][^<(]{0,39})(?:\([^<]{0,200})?<\/\1>/gi;
+
+/** incident.io titles a maintenance "Maintenance: <name>". */
+const MAINTENANCE_TITLE = /^maintenance:/i;
+
+/**
+ * A maintenance is told by the labels of its updates (Statuspage and incident.io write the status
+ * of each update in bold) and by a title of a maintenance: it has one of a maintenance and no
+ * label of an incident, so an incident whose title or words speak of maintenance stays one. An
+ * entry with neither is an incident.
+ */
+function isMaintenance(markup: string, title: string): boolean {
+  const labels = [...markup.matchAll(LABEL)].map((label) => label[2].trim().toLowerCase());
   return (
-    labels.some((label) => MAINTENANCE_LABELS.has(label)) &&
+    (MAINTENANCE_TITLE.test(title) || labels.some((label) => MAINTENANCE_LABELS.has(label))) &&
     !labels.some((label) => INCIDENT_LABELS.has(label))
   );
 }
@@ -283,12 +295,13 @@ function entryOf(body: string): StatusEntry | null {
   const day = dayOf(elementOf(shell, "published")) ?? dayOf(elementOf(shell, "updated"));
   if (day === null) return null;
   const update = updateOf(body);
+  const title = cut(textOfMarkup(xmlText(elementOf(body, "title") ?? "")), MAX_TITLE_CHARS);
   return {
     id: incidentIdOf(pageLinkOf(shell)),
-    title: cut(textOfMarkup(xmlText(elementOf(body, "title") ?? "")), MAX_TITLE_CHARS),
+    title,
     day,
     text: cut(update.text, MAX_TEXT_CHARS),
-    maintenance: isMaintenance(update.markup),
+    maintenance: isMaintenance(update.markup, title),
   };
 }
 

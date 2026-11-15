@@ -64,6 +64,10 @@ const PUBLIC = [
   "2a00:1450:4001:81b::200e",
   "2003::1",
   "2001:4860::1",
+  // Just past the IETF protocol block 2001::/23, and the neighbours of the Azure host endpoint.
+  "2001:200::1",
+  "168.63.129.15",
+  "168.63.129.17",
   "64:ff9c::1",
   // Between fc00::/7 and fe80::/10: in none of the ranges of the design.
   "fe00::1",
@@ -104,6 +108,18 @@ const NOT_PUBLIC = [
   "::808:808",
   "2002:a9fe:a9fe::1",
   "2002:808:808::1",
+  // SIIT's IPv4-translated form, holding 127.0.0.1, 10.0.0.1 and a public address.
+  "::ffff:0:7f00:1",
+  "::ffff:0:a00:1",
+  "::ffff:0:808:808",
+  // Teredo, and the rest of the IETF protocol block it is in.
+  "2001:0:4136:e378:8000:63bf:3fff:fdd2",
+  "2001::1",
+  "2001:2::1",
+  "2001:1ff:ffff::1",
+  // Azure's host endpoint (WireServer), and the deprecated 6to4 relays.
+  "168.63.129.16",
+  "192.88.99.1",
   "100::1",
   "2001:db8::1",
   "fc00::1",

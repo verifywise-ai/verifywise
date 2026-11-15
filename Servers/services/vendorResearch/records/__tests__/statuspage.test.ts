@@ -330,6 +330,92 @@ describe("parseStatusFeed", () => {
     });
   });
 
+  describe("the maintenance of an incident.io status page", () => {
+    /** An entry as incident.io writes it: the status of the latest update in bold, after "Status:". */
+    const incidentIo = (title: string, status: string, id: string): string => `<entry>
+        <title type="html"><![CDATA[${title}]]></title>
+        <id>https://status.example.com//incidents/${id}</id>
+        <link href="https://status.example.com//incidents/${id}"/>
+        <updated>2031-04-15T16:20:06.360Z</updated>
+        <content type="html"><![CDATA[<b>Status: ${status}</b><br/><br/>The work on the database of Example Ltd.<br/><br/><b>Affected components</b>
+          <ul>
+          <li>Database (Under maintenance)</li>
+          </ul>]]></content>
+    </entry>`;
+    const incidentIoFeed = (entries: string[]): string => `<?xml version="1.0" encoding="utf-8"?>
+<feed xmlns="http://www.w3.org/2005/Atom">
+    <id>https://status.example.com/</id>
+    <title>Example status</title>
+    <updated>2031-04-19T21:25:21.966Z</updated>
+    <generator>incident.io</generator>
+    ${entries.join("\n    ")}
+</feed>`;
+    const DATES = "(Sat, 12 Apr 2031 14:00:00 GMT - Sat, 12 Apr 2031 16:00:00 GMT)";
+
+    it("marks a maintenance by its status, Scheduled or Complete with the dates after it", () => {
+      const feed = parseStatusFeed(
+        incidentIoFeed([
+          incidentIo("Maintenance: Database upgrade", `Scheduled ${DATES}`, "01AAA"),
+          incidentIo("Maintenance: Database upgrade", `Complete ${DATES}`, "01BBB"),
+          incidentIo("Maintenance: Database upgrade", `In progress ${DATES}`, "01CCC"),
+        ]),
+      ) as StatusFeed;
+
+      expect(feed.entries.map((it) => it.maintenance)).toEqual([true, true, true]);
+    });
+
+    it("marks a maintenance by the title incident.io gives it when its status names none", () => {
+      const feed = parseStatusFeed(
+        incidentIoFeed([incidentIo("Maintenance: Database upgrade", "Planned", "01AAA")]),
+      ) as StatusFeed;
+
+      expect(feed.entries[0].maintenance).toBe(true);
+    });
+
+    it("keeps an incident whose title speaks of maintenance an incident: its status is one of an incident", () => {
+      const feed = parseStatusFeed(
+        incidentIoFeed([
+          incidentIo("Database Scheduled Maintenance", "Resolved", "01AAA"),
+          incidentIo("Maintenance: Database upgrade", "Investigating", "01BBB"),
+        ]),
+      ) as StatusFeed;
+
+      expect(feed.entries.map((it) => it.maintenance)).toEqual([false, false]);
+    });
+
+    it("counts a maintenance and never gives it as a record", () => {
+      const feed = parseStatusFeed(
+        incidentIoFeed([
+          incidentIo("Maintenance: Database upgrade", `Complete ${DATES}`, "01AAA"),
+          incidentIo("Degraded API", "Resolved", "01BBB"),
+        ]),
+      ) as StatusFeed;
+
+      const { records } = statusRecords(feed, {
+        host: "status.example.com",
+        cutoff: CUTOFF,
+        now: NOW,
+      });
+
+      expect(records.map((record) => record.title)).toEqual([
+        "Example status: incident history",
+        "Degraded API",
+      ]);
+      expect(records[0].text).toContain("Incidents since 2030-04-20: 1. Scheduled maintenance: 1.");
+    });
+
+    it("reads a bold tag that is never closed, after a long label, within a short time", () => {
+      const xml = incidentIoFeed([
+        `<entry><updated>2031-04-12T09:30:00Z</updated><content type="html"><![CDATA[${"<b>Status: x".repeat(20_000)}${"(".repeat(1_000)}${"y".repeat(100_000)}]]></content></entry>`,
+      ]);
+      const startedAt = performance.now();
+
+      parseStatusFeed(xml);
+
+      expect(performance.now() - startedAt).toBeLessThan(10_000);
+    });
+  });
+
   it("uses the summary when an entry has no content", () => {
     const xml = feedOf([
       `<entry><published>2031-04-12T09:30:00Z</published><link href="https://status.acme.com/incidents/abc123"/><title>T</title><summary type="text">Only a summary.</summary></entry>`,

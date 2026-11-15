@@ -3211,6 +3211,67 @@ describe("createWebSession", () => {
     });
   });
 
+  describe("a vendor domain that is a host where many have pages", () => {
+    // The vendor's website is github.com/acme-widgets: its domain is github.com.
+    const stranger = "https://github.com/mallory/acme-widgets-legal/blob/main/privacy-policy.md";
+
+    it("does not let a page of the host be read without a search result", async () => {
+      const { session, readPage } = setup({ domain: "github.com" });
+
+      expect(await session.read(stranger, "legal_regulatory")).toEqual({
+        ok: false,
+        reason: "not_from_search",
+      });
+      expect(readPage).not.toHaveBeenCalled();
+    });
+
+    it("does not mark a page of the host that a search returned as the vendor's own", async () => {
+      const { session } = setup({
+        domain: "www.github.com",
+        aliasDomains: ["notion.site"],
+        answers: [[result(stranger), result("https://acme.notion.site/terms")]],
+      });
+
+      await session.search("Acme Widgets privacy policy", "web", "legal_regulatory");
+      expect((await session.read(stranger, "legal_regulatory")).ok).toBe(true);
+      expect((await session.read("https://acme.notion.site/terms", "legal_regulatory")).ok).toBe(
+        true,
+      );
+
+      expect(session.snapshot().ledger.map((entry) => [entry.url, entry.onVendorSite])).toEqual([
+        [stranger, false],
+        ["https://acme.notion.site/terms", false],
+      ]);
+    });
+
+    it("asks whether a search result on the host is about the vendor", async () => {
+      const { session } = setup({
+        domain: "github.com",
+        answers: [[result(stranger)]],
+        isRelevant: () => false,
+      });
+
+      const outcome = await session.search("Acme Widgets", "web", "legal_regulatory");
+
+      expect(outcome).toMatchObject({ ok: true, results: [] });
+    });
+
+    it("keeps a vendor's site under such a host as its own", async () => {
+      const { session } = setup({ domain: "acme.github.io" });
+
+      expect((await session.read("https://acme.github.io/privacy", "legal_regulatory")).ok).toBe(
+        true,
+      );
+      expect(await session.read("https://mallory.github.io/privacy", "legal_regulatory")).toEqual({
+        ok: false,
+        reason: "not_from_search",
+      });
+      expect(session.snapshot().ledger).toMatchObject([
+        { url: "https://acme.github.io/privacy", onVendorSite: true },
+      ]);
+    });
+  });
+
   describe("a domain that is the vendor's website too", () => {
     const aliasDomains = ["acme.net"];
 

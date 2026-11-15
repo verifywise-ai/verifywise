@@ -162,7 +162,8 @@ const ISO_DAY = /^(\d{4})-(\d{2})-(\d{2})(?:$|[T ])/;
 
 /**
  * A day of a list as YYYY-MM-DD, from `dd/mm/yyyy` or from an ISO 8601 date or date and time (its
- * own day, whatever the zone); null for anything else, a day that does not exist included.
+ * own day, whatever the zone); null for anything else, a day that does not exist and a day of year
+ * 0000 included.
  */
 export function dayOf(text: string | null | undefined): string | null {
   const value = (text ?? "").trim();
@@ -175,6 +176,8 @@ export function dayOf(text: string | null | undefined): string | null {
       : null;
   if (parts === null) return null;
   const day = parts.join("-");
+  // There is no year 0000 for Postgres, which would refuse the whole write of the list.
+  if (day < "0001-01-01") return null;
   const date = new Date(`${day}T00:00:00Z`);
   return Number.isNaN(date.getTime()) || date.toISOString().slice(0, 10) !== day ? null : day;
 }

@@ -21,6 +21,7 @@
  * breach"). A caller that has the text of a page does not give it, because the address of a page
  * is the one that was asked for and the page can answer from somewhere else.
  */
+import { isSharedPlatformHost } from "./sharedHosts";
 import type { ResearchTarget } from "./target";
 
 const escapeRegExp = (text: string) => text.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -38,7 +39,12 @@ export function wholeWord(term: string): RegExp | null {
   return new RegExp(`(?<![\\p{L}\\p{N}])${pattern}(?![\\p{L}\\p{N}])`, "iu");
 }
 
-/** The forms of a company that follow a name in a record and not in an article. */
+/**
+ * The forms of a company that follow a name in a record and not in an article. A form written with
+ * a slash (the Danish A/S, I/S, K/S and P/S, the N/V and the S/A) is a token of its own, slash
+ * included, so that `Danspin A/S` is `Danspin` as `Danspin AS` is, and no other word with a slash
+ * is one.
+ */
 const LEGAL_FORMS: ReadonlySet<string> = new Set([
   "inc",
   "incorporated",
@@ -68,6 +74,12 @@ const LEGAL_FORMS: ReadonlySet<string> = new Set([
   "lp",
   "llp",
   "pvt",
+  "a/s",
+  "i/s",
+  "k/s",
+  "p/s",
+  "n/v",
+  "s/a",
 ]);
 
 const bare = (token: string): string => token.toLowerCase().replace(/[.,]/g, "");
@@ -101,11 +113,15 @@ export function shortName(name: string): string {
 
 /**
  * The terms that name a vendor, as the matcher takes them: its name and its other names, each as
- * written and trimmed and without the legal form, and the domain.
+ * written and trimmed and without the legal form, and the domain. The domain is no term when it is
+ * exactly a host where many have pages (`github.com`, sharedHosts.ts): a page that names that host
+ * is about the platform or about any of its users, and says nothing of this vendor. A host under
+ * one (`acme.github.io`) is the vendor's site alone, so a page that names it names the vendor.
  */
 function termsOf(target: ResearchTarget): string[] {
   const names = [target.name, ...(target.aliases ?? [])];
-  const terms = [...names.flatMap((name) => [name, shortName(name)]), target.domain ?? ""];
+  const domain = target.domain && !isSharedPlatformHost(target.domain) ? target.domain : "";
+  const terms = [...names.flatMap((name) => [name, shortName(name)]), domain];
   return [...new Set(terms.map((term) => term.trim()).filter((term) => term !== ""))];
 }
 

@@ -204,6 +204,129 @@
       "name": "a form the list does not have is a name of its own",
       "text": "Acme Analytics, S.L.",
       "names": ["Acme Analytics", "S.L."]
+    },
+    {
+      "name": "a legal form written with a slash",
+      "text": "Acme, A/S",
+      "names": ["Acme, A/S"]
+    },
+    {
+      "name": "a legal form written with a slash in lower case",
+      "text": "Acme, a/s",
+      "names": ["Acme, a/s"]
+    },
+    {
+      "name": "the other legal forms written with a slash",
+      "text": "Acme, I/S; Beta, K/S; Gamma, P/S; Delta, N/V; Epsilon, S/A",
+      "names": ["Acme, I/S", "Beta, K/S", "Gamma, P/S", "Delta, N/V", "Epsilon, S/A"]
+    },
+    {
+      "name": "a word with a slash that is no legal form is a name of its own",
+      "text": "Acme, A/B",
+      "names": ["Acme", "A/B"]
+    }
+  ],
+  "storedLength": [
+    {
+      "name": "8 names of 61 characters separated by semicolons: 495 typed, 502 stored",
+      "lengths": [61, 61, 61, 61, 61, 61, 61, 61],
+      "separator": ";",
+      "accepted": false
+    },
+    {
+      "name": "8 names of 61 characters on lines of their own: 495 typed, 502 stored",
+      "lengths": [61, 61, 61, 61, 61, 61, 61, 61],
+      "separator": "\n",
+      "accepted": false
+    },
+    {
+      "name": "8 names of 61 characters separated by a comma and a space: 502 typed",
+      "lengths": [61, 61, 61, 61, 61, 61, 61, 61],
+      "separator": ", ",
+      "accepted": false
+    },
+    {
+      "name": "8 names of 60 characters separated by semicolons: 494 stored",
+      "lengths": [60, 60, 60, 60, 60, 60, 60, 60],
+      "separator": ";",
+      "accepted": true
+    },
+    {
+      "name": "names separated by semicolons that are exactly 500 characters stored",
+      "lengths": [61, 61, 61, 61, 61, 61, 60, 60],
+      "separator": ";",
+      "accepted": true
+    },
+    {
+      "name": "names separated by semicolons that are 501 characters stored",
+      "lengths": [61, 61, 61, 61, 61, 61, 61, 60],
+      "separator": ";",
+      "accepted": false
+    }
+  ],
+  "controlCharacters": [
+    {
+      "name": "a name of one letter and a control character",
+      "text": "A\u0001",
+      "accepted": false,
+      "message": "Each of the other names must be between 2 and 80 characters",
+      "stored": "A"
+    },
+    {
+      "name": "a name of one letter after a NUL",
+      "text": "Meta, F\u0000",
+      "accepted": false,
+      "message": "Each of the other names must be between 2 and 80 characters",
+      "stored": "Meta, F"
+    },
+    {
+      "name": "a name of one letter and two bells",
+      "text": "X\u0007\u0007",
+      "accepted": false,
+      "message": "Each of the other names must be between 2 and 80 characters",
+      "stored": "X"
+    },
+    {
+      "name": "nothing but control characters",
+      "text": "\u0001\u0002",
+      "accepted": true,
+      "message": "",
+      "stored": ""
+    },
+    {
+      "name": "control characters inside names",
+      "text": "Face\u0000book, Insta\u001fgram",
+      "accepted": true,
+      "message": "",
+      "stored": "Facebook, Instagram"
+    },
+    {
+      "name": "a DEL inside a name",
+      "text": "Ac\u007fme",
+      "accepted": true,
+      "message": "",
+      "stored": "Acme"
+    },
+    {
+      "name": "a tab, which is white space and stays a space",
+      "text": "Acme\tCloud",
+      "accepted": true,
+      "message": "",
+      "stored": "Acme Cloud"
+    },
+    {
+      "name": "a name of 80 letters and a NUL",
+      "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\u0000",
+      "accepted": true,
+      "message": "",
+      "stored": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
+    },
+    {
+      "name": "a name of 81 letters with a NUL inside",
+      "text": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx\u0000xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "accepted": false,
+      "message": "Each of the other names must be between 2 and 80 characters",
+      "stored": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx"
     }
   ]
 }

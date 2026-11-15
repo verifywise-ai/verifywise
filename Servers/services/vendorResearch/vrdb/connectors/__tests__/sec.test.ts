@@ -19,6 +19,7 @@ import {
 import type { FetchJson } from "../../../records/types";
 import type { ResearchTarget } from "../../../target";
 import { SEC_CONTACT } from "../../gates";
+import { createSharedSpacer } from "../../../records/sharedSpacer";
 import { secConnector, secUserAgent } from "../sec";
 
 const NOW = new Date("2026-10-31T12:00:00Z");
@@ -231,11 +232,27 @@ describe("secConnector", () => {
 
   it("asks nothing when the SEC's turn is refused, and finds no key", async () => {
     const { fetchJson, asked } = answering({ [SEC_TICKERS_URL]: tickers });
+    const refused = turns(false);
 
     await expect(
-      secConnector(CONTACT, { spacer: turns(false).spacer }).keyOf(BRISE, { signal, fetchJson }),
+      secConnector(CONTACT, { spacer: refused.spacer }).keyOf(BRISE, { signal, fetchJson }),
     ).rejects.toThrow();
     expect(asked).toEqual([]);
+    // A refused turn is no other run's abort: it is not asked again.
+    expect(refused.taken()).toBe(1);
+  });
+
+  it("asks the SEC once when it answers the tickers file with a status: no second request", async () => {
+    const { fetchJson, asked } = answering({
+      [SEC_TICKERS_URL]: new FetchError("blocked_by_site", undefined, { status: 429 }),
+    });
+    const { spacer, taken } = turns();
+
+    await expect(
+      secConnector(CONTACT, { spacer }).keyOf(BRISE, { signal, fetchJson }),
+    ).rejects.toMatchObject({ status: 429 });
+    expect(asked).toHaveLength(1);
+    expect(taken()).toBe(1);
   });
 
   it("only Item 1.05 filings are records", async () => {
@@ -483,6 +500,118 @@ describe("secConnector", () => {
       secConnector(CONTACT, { spacer: turns().spacer }).fetch("cpe:brisenetworks", ctx(fetchJson)),
     ).rejects.toThrow("The SEC is asked by a CIK");
     expect(asked).toEqual([]);
+  });
+
+  describe("two runs that share a load, one of them stopped", () => {
+    /**
+     * A spacer whose first turn waits until the run that asked for it is stopped, and every later
+     * turn is granted at once. The stopped turn answers as the shared spacer does: false when the
+     * run is stopped before or during its wait on Redis (`refuses`, the default), or a rejection
+     * with the run's abort when it is stopped during the pause that follows (`rejects`).
+     */
+    function firstTurnWaitsForAbort(stopped: "refuses" | "rejects" = "refuses") {
+      let calls = 0;
+      const spacer = async (turnSignal: AbortSignal): Promise<boolean> => {
+        calls += 1;
+        if (calls > 1) return true;
+        await new Promise<void>((resolve, reject) => {
+          const end = () => (stopped === "rejects" ? reject(turnSignal.reason) : resolve());
+          if (turnSignal.aborted) return end();
+          turnSignal.addEventListener("abort", end, { once: true });
+        });
+        return false;
+      };
+      return { spacer, calls: () => calls };
+    }
+    const stop = (controller: AbortController) =>
+      controller.abort(new DOMException("The run was stopped.", "TimeoutError"));
+    const settled = (promise: Promise<unknown>) =>
+      promise.then(
+        (value) => ({ value }),
+        (error: unknown) => ({ error }),
+      );
+
+    it("gives the run that was not stopped its filings, without the text the stopped run was reading", async () => {
+      const { fetchJson } = answering({ [SUBMISSIONS]: submissions() });
+      const { fetchPage } = archive();
+      const connector = secConnector(CONTACT, {
+        spacer: firstTurnWaitsForAbort().spacer,
+        fetchPage,
+      });
+      const stopped = new AbortController();
+      const live = new AbortController();
+
+      // Both runs ask for the same filing: the second shares the load the first started.
+      const first = settled(
+        connector.fetch(KEY, { ...ctx(fetchJson, runReader), signal: stopped.signal }),
+      );
+      const second = settled(
+        connector.fetch(KEY, { ...ctx(fetchJson, runReader), signal: live.signal }),
+      );
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      stop(stopped);
+
+      expect(await first).toHaveProperty("error");
+      const answer = await second;
+      expect(answer).toHaveProperty("value");
+      const { records } = (answer as { value: { records: Array<{ summary: string }> } }).value;
+      expect(records).toHaveLength(1);
+      expect(records[0].summary).not.toContain("Item 1.05:");
+    });
+
+    it.each(["refuses", "rejects"] as const)(
+      "finds the key of the run that was not stopped when the stopped turn %s: it asks for the tickers file again",
+      async (stoppedTurn) => {
+        const { fetchJson, asked } = answering({ [SEC_TICKERS_URL]: tickers });
+        const turnsOf = firstTurnWaitsForAbort(stoppedTurn);
+        const connector = secConnector(CONTACT, { spacer: turnsOf.spacer });
+        const stopped = new AbortController();
+        const live = new AbortController();
+
+        const first = settled(connector.keyOf(BRISE, { signal: stopped.signal, fetchJson }));
+        const second = settled(connector.keyOf(BRISE, { signal: live.signal, fetchJson }));
+        await new Promise((resolve) => setTimeout(resolve, 20));
+        stop(stopped);
+
+        expect(await first).toHaveProperty("error");
+        expect(await second).toEqual({ value: { key: KEY, weak: true } });
+        expect(asked.filter((it) => it.url === SEC_TICKERS_URL)).toHaveLength(1);
+        expect(turnsOf.calls()).toBe(2);
+      },
+    );
+
+    it("finds the key of the run that was not stopped with the shared spacer, whose Redis wait the stop ends", async () => {
+      // The shared spacer answers false, and does not reject, when the run is stopped during its
+      // wait on Redis: the live run took that for a busy SEC and failed its key lookup.
+      const stopped = new AbortController();
+      const live = new AbortController();
+      // The first answer of Redis comes only after the stop, so the stop always lands in the wait.
+      let evals = 0;
+      const redis = {
+        eval: () => {
+          evals += 1;
+          if (evals > 1) return Promise.resolve<unknown>(0);
+          return new Promise<unknown>((resolve) => {
+            stopped.signal.addEventListener("abort", () => resolve(0), { once: true });
+          });
+        },
+      };
+      const spacer = createSharedSpacer(
+        { limit: 5, windowMs: 1_000, maxWaitMs: 20_000 },
+        { redis, key: "test:sec" },
+      );
+      const { fetchJson, asked } = answering({ [SEC_TICKERS_URL]: tickers });
+      const connector = secConnector(CONTACT, { spacer });
+
+      const first = settled(connector.keyOf(BRISE, { signal: stopped.signal, fetchJson }));
+      const second = settled(connector.keyOf(BRISE, { signal: live.signal, fetchJson }));
+      await new Promise((resolve) => setTimeout(resolve, 20));
+      stop(stopped);
+
+      expect(await first).toHaveProperty("error");
+      expect(await second).toEqual({ value: { key: KEY, weak: true } });
+      expect(asked.filter((it) => it.url === SEC_TICKERS_URL)).toHaveLength(1);
+    });
   });
 
   it("cannot read a document that is no list of filings, or the list of another registrant", async () => {

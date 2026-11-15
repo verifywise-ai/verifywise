@@ -5,8 +5,10 @@
  *
  * A vendor is due when no run that counts (`COUNTS_AS_A_RUN`) was created for it within the
  * interval, whoever started that run, so a run by hand or the automatic one after the vendor was
- * created puts the vendor back to the end of the line. The vendors that were researched longest ago,
- * or never, come first (`listDueVendorsQuery`).
+ * created puts the vendor back to the end of the line. A run that failed after it started holds the
+ * vendor back for a day only (FAILED_RUN_BACKOFF_DAYS), so a run that failed for a passing reason is
+ * tried again the next day; the share of the cap below bounds what a vendor that keeps failing
+ * costs. The vendors that were researched longest ago, or never, come first (`listDueVendorsQuery`).
  *
  * The scan is the lowest priority of the three ways to start a run. It uses at most half of the
  * daily run cap of the organization, counted over the runs of the last 24 hours whoever started
@@ -15,12 +17,23 @@
  * person's is (`startVendorResearch`), so it checks the same things: the vendor is still there, the
  * organization still has an LLM key, no run is already on its way, and the cap holds.
  *
+ * One pass starts at most `scanPassRuns` runs over all the organizations together: the runs a
+ * worker can begin within the 15 minutes after which a queued run is not started
+ * (`markRunRunningQuery`), at the typical length of a run. A pass that queued more would leave the
+ * last runs in the queue past that limit, to be swept as "timed out" without having started, and
+ * the same vendors would be picked again the next hour. The pass begins at another organization
+ * each hour, so the organizations that do not fit in one pass are not always the same ones. A
+ * single organization is never held back by it: the bound is at least SCAN_BATCH_SIZE. The jobs of
+ * the scan are also taken after every waiting run that a person or a new vendor started
+ * (`SCHEDULED_RUN_PRIORITY` in queue.ts).
+ *
  * An organization goes on its own: a failure in one is logged by the name of the error and the others
  * are still scanned. Only the failure to find the organizations rejects, so that the job fails and
  * the next hour tries again.
  */
 import logger from "../../utils/logger/fileLogger";
 import {
+  STALE_RUN_MINUTES,
   countRunsSinceQuery,
   listDueVendorsQuery,
   listScanOrganizationsQuery,
@@ -32,6 +45,31 @@ import { startVendorResearch } from "./trigger";
 export const SCAN_BATCH_SIZE = 5;
 
 const DAY_MS = 24 * 60 * 60 * 1000;
+const HOUR_MS = 60 * 60 * 1000;
+
+/**
+ * The minutes a run typically holds its worker slot: up to 5 for the research loop, 2 for the
+ * analysis and about half a minute for the checks after it (see queue.ts).
+ */
+const TYPICAL_RUN_MINUTES = 7.5;
+
+/**
+ * The most runs one pass of the scan starts over all the organizations: what `workerConcurrency`
+ * slots can begin within STALE_RUN_MINUTES when each run takes TYPICAL_RUN_MINUTES, and never fewer
+ * than SCAN_BATCH_SIZE, so that one organization scans as it did. A host with several worker
+ * processes can begin more; the bound then only leaves them some room for the runs people start.
+ */
+export function scanPassRuns(workerConcurrency: number): number {
+  const rounds = Math.max(1, Math.floor(STALE_RUN_MINUTES / TYPICAL_RUN_MINUTES));
+  return Math.max(SCAN_BATCH_SIZE, workerConcurrency * rounds);
+}
+
+/** The organizations from the one at `offset` on, then those before it, each once. */
+function rotated<T>(items: readonly T[], offset: number): T[] {
+  if (items.length === 0) return [];
+  const start = offset % items.length;
+  return [...items.slice(start), ...items.slice(0, start)];
+}
 
 export interface ScanSummary {
   /** The organizations that chose an interval. */
@@ -72,10 +110,10 @@ async function scanOrganization(
   organizationId: number,
   intervalDays: number,
   now: Date,
-  tally: { started: number },
+  tally: { started: number; left: number },
 ): Promise<void> {
   const runsInLastDay = await countRunsSinceQuery(organizationId, new Date(now.getTime() - DAY_MS));
-  const room = roomOf(runsInLastDay);
+  const room = Math.min(roomOf(runsInLastDay), tally.left);
   if (room === 0) return;
 
   const vendorIds = await listDueVendorsQuery({ organizationId, intervalDays, limit: room });
@@ -88,7 +126,10 @@ async function scanOrganization(
     });
     if (result.ok) {
       // A run that was already on its way is that run, not one that the scan started.
-      if (!result.alreadyRunning) tally.started += 1;
+      if (!result.alreadyRunning) {
+        tally.started += 1;
+        tally.left -= 1;
+      }
     } else if (LEAVES_THE_ORGANIZATION.has(result.error.code)) {
       return;
     }
@@ -102,8 +143,11 @@ export async function runVendorResearchScan(
   const now = (options.now ?? (() => new Date()))();
   const organizations = await listScanOrganizationsQuery();
 
-  const tally = { started: 0 };
-  for (const { organizationId, intervalDays } of organizations) {
+  const tally = { started: 0, left: scanPassRuns(getVendorResearchConfig().workerConcurrency) };
+  // The hour since the epoch picks the first organization, so each takes its turn at the front.
+  const first = Math.floor(now.getTime() / HOUR_MS);
+  for (const { organizationId, intervalDays } of rotated(organizations, first)) {
+    if (tally.left <= 0) break;
     try {
       await scanOrganization(organizationId, intervalDays, now, tally);
     } catch (error) {

@@ -41,6 +41,8 @@ import {
   keyNamesOf,
   nameCleaner,
   namesOfSpelling,
+  FUTURE_DAYS_TOLERATED,
+  latestPlausibleDay,
   optionalDay,
   plausibleDay,
   readEnvelope,
@@ -610,6 +612,23 @@ describe("the days of the flat files", () => {
     expect(optionalDay("99991231")).toBeUndefined();
     expect(optionalDay(" ")).toBeUndefined();
   });
+
+  // One mistyped row dated 2099 used to become the newest day of the file, which anchors the year
+  // counts of every record, the window of open investigations and the version of the copy.
+  it("refuses a day after the last one a download may carry, and takes that day itself", () => {
+    expect(plausibleDay("20261118", "2026-11-18")).toBe("2026-11-18");
+    expect(plausibleDay("20261119", "2026-11-18")).toBeNull();
+    expect(plausibleDay("20990101", "2026-11-18")).toBeNull();
+    expect(optionalDay("20990101", "2026-11-18")).toBeUndefined();
+    expect(optionalDay("", "2026-11-18")).toBeNull();
+    expect(optionalDay("20260131", "2026-11-18")).toBe("2026-01-31");
+  });
+
+  it("allows a week after the day of the download, for a clock or a zone that is a little ahead", () => {
+    expect(FUTURE_DAYS_TOLERATED).toBe(7);
+    expect(latestPlausibleDay(new Date("2026-11-11T23:30:00Z"))).toBe("2026-11-18");
+    expect(latestPlausibleDay(new Date("2026-12-28T00:00:00Z"))).toBe("2027-01-04");
+  });
 });
 
 describe("the cleaning of cells and names", () => {
@@ -802,11 +821,21 @@ describe("isCleanLine: the check of a cell that a download stored", () => {
     }
   });
 
-  it("takes the line of a name that a second cleaning would change: the download wrote it once, and its reader takes it as written", () => {
-    // A soft hyphen between a letter and a combining mark is dropped by the cleaning, which leaves the mark loose;
-    // cleaning that line again would compose the mark with the letter, so the line is not a fixed point of the cleaning.
+  it("takes the line of a name that holds a hidden character between a letter and its mark: it is composed in one cleaning", () => {
+    // A soft hyphen between a letter and a combining mark is dropped before the fold, so the mark is composed with the
+    // letter at once and the line is a fixed point of the cleaning: the download wrote it once, and its reader takes it as written.
     const once = withoutAngles(lineOf(`Zeta${cp(0xad, 0x308)} Motors Inc.`, ENTITY_NAME_MAX));
-    expect(once).toBe(`Zeta${cp(0x308)} Motors Inc.`);
+    expect(once).toBe(`Zet${cp(0xe4)} Motors Inc.`);
+    expect(lineOf(once, ENTITY_NAME_MAX)).toBe(once);
+
+    expect(isCleanLine(once, ENTITY_NAME_MAX)).toBe(true);
+  });
+
+  it("takes the line of a name that a second cleaning would change: the download wrote it once, and its reader takes it as written", () => {
+    // Sixteen U+0344 are within the bound of a run of marks before the fold, which expands each into
+    // two marks; a second cleaning cuts that run of thirty-two to sixteen. The line is no fixed point
+    // of the cleaning, and the check must not ask that it be one.
+    const once = withoutAngles(lineOf(`Zeta${cp(0x344).repeat(16)} Motors Inc.`, ENTITY_NAME_MAX));
     expect(lineOf(once, ENTITY_NAME_MAX)).not.toBe(once);
 
     expect(isCleanLine(once, ENTITY_NAME_MAX)).toBe(true);

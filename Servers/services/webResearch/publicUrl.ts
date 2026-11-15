@@ -94,9 +94,17 @@ export function parsePublicUrl(raw: string): URL {
 
 /**
  * The ranges that are not public, as listed in section 7.2 of the design. `::ffff:0:0/96` is
- * blocked as a whole, so an IPv4 address written in IPv6 form is refused whatever it holds. Three
- * more IPv6 prefixes carry an IPv4 address and are blocked for the same reason: an AAAA record
- * under one of them could reach an internal IPv4 address through a translator or a tunnel.
+ * blocked as a whole, so an IPv4 address written in IPv6 form is refused whatever it holds. The
+ * other IPv6 prefixes that carry an IPv4 address are blocked for the same reason: an AAAA record
+ * under one of them could reach an internal IPv4 address through a translator or a tunnel. They
+ * are the IPv4-compatible form (`::/96`), the IPv4-translated form of SIIT (`::ffff:0:0:0/96`,
+ * RFC 2765), NAT64 (`64:ff9b::/96`, `64:ff9b:1::/48`), 6to4 (`2002::/16`) and Teredo (`2001::/32`,
+ * inside the IETF protocol block `2001::/23`, which holds no website). Transition forms whose
+ * prefix belongs to a network of its own (ISATAP, 6rd, a NAT64 prefix that an operator chose) have
+ * no fixed range and cannot be listed.
+ *
+ * One public IPv4 address is listed too: 168.63.129.16, the host endpoint (WireServer) of Azure,
+ * which every virtual machine there reaches and which answers for the host, not for a website.
  *
  * There is one list per family, and an address is only checked against the list of its own
  * family. Node matches an IPv4 address against an IPv6 range as if it were IPv4-mapped, so in one
@@ -108,10 +116,14 @@ for (const [network, prefix] of [
   ["10.0.0.0", 8],
   ["100.64.0.0", 10],
   ["127.0.0.0", 8],
+  // Azure's host endpoint (WireServer): public in form, but reachable only from inside Azure.
+  ["168.63.129.16", 32],
   ["169.254.0.0", 16],
   ["172.16.0.0", 12],
   ["192.0.0.0", 24],
   ["192.0.2.0", 24],
+  // The anycast relays of 6to4 (deprecated by RFC 7526): a tunnel, not a website.
+  ["192.88.99.0", 24],
   ["192.168.0.0", 16],
   ["198.18.0.0", 15],
   ["198.51.100.0", 24],
@@ -129,10 +141,15 @@ for (const [network, prefix] of [
   // The deprecated IPv4-compatible form: ::7f00:1 is 127.0.0.1. It holds the two entries above.
   ["::", 96],
   ["::ffff:0:0", 96],
+  // SIIT's IPv4-translated form (RFC 2765): ::ffff:0:7f00:1 is 127.0.0.1 too.
+  ["::ffff:0:0:0", 96],
   ["64:ff9b::", 96],
   // RFC 8215 local-use NAT64; the /96 above does not cover it.
   ["64:ff9b:1::", 48],
   ["100::", 64],
+  // The IETF protocol assignments (RFC 2928), Teredo (2001::/32) among them: its addresses lead
+  // into a tunnel whose far end the address names, not to a website.
+  ["2001::", 23],
   ["2001:db8::", 32],
   // 6to4: the IPv4 address sits in bits 16 to 47.
   ["2002::", 16],

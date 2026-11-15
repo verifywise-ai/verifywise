@@ -33,7 +33,12 @@ export interface Breach {
   attribution: string;
 }
 
-const NAME = /^[A-Za-z0-9]{1,100}$/;
+/**
+ * The name of a breach is the last segment of the address of its record. HIBP's names have
+ * hyphens ("7-Eleven"), so a hyphen, a dot and an underscore are allowed after the first character,
+ * which is a letter or a digit, so that a name is never "." or "..", which would change the path.
+ */
+const NAME = /^[A-Za-z0-9][A-Za-z0-9._-]{0,99}$/;
 const DAY = /^\d{4}-\d{2}-\d{2}/;
 const textOf = (value: unknown): string => (typeof value === "string" ? value : "");
 

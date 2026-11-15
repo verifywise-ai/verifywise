@@ -1,4 +1,11 @@
-import { ALLOW_ALL, DISALLOW_ALL, createRobotsChecker, parseRobots } from "../robots";
+import {
+  ALLOW_ALL,
+  DISALLOW_ALL,
+  ROBOTS_MAX_BYTES,
+  createRobotsChecker,
+  parseRobots,
+  robotsTextOf,
+} from "../robots";
 
 type FetchRobots = (robotsUrl: string) => Promise<{ status: number; text: string }>;
 
@@ -427,6 +434,43 @@ describe("parseRobots", () => {
       expect(DISALLOW_ALL.isAllowed("/")).toBe(false);
       expect(DISALLOW_ALL.isAllowed("/a/b?c=d")).toBe(false);
     });
+  });
+});
+
+describe("robotsTextOf", () => {
+  it("reads at least the 500 KiB that RFC 9309 asks a crawler to parse", () => {
+    expect(ROBOTS_MAX_BYTES).toBeGreaterThanOrEqual(500 * 1024);
+  });
+
+  it("leaves a file that was read whole as it is, a last line with no line break included", () => {
+    expect(robotsTextOf("User-agent: *\nDisallow: /private", false)).toBe(
+      "User-agent: *\nDisallow: /private",
+    );
+  });
+
+  it("drops the last line of a file that was cut, which the cut may have shortened", () => {
+    const cut = robotsTextOf("User-agent: *\nDisallow: /private/\nAllow: /", true);
+    expect(cut).toBe("User-agent: *\nDisallow: /private/\n");
+    expect(parseRobots(cut).isAllowed("/private/page")).toBe(false);
+  });
+
+  it("knows a line break of any kind", () => {
+    expect(robotsTextOf("User-agent: *\r\nDisallow: /a\r\nAllow: /", true)).toBe(
+      "User-agent: *\r\nDisallow: /a\r\n",
+    );
+    expect(robotsTextOf("User-agent: *\rDisallow: /a\rAllow: /", true)).toBe(
+      "User-agent: *\rDisallow: /a\r",
+    );
+  });
+
+  it("keeps a file that was cut right after a line break whole", () => {
+    expect(robotsTextOf("User-agent: *\nDisallow: /a\n", true)).toBe(
+      "User-agent: *\nDisallow: /a\n",
+    );
+  });
+
+  it("is empty for a file that was cut inside its first line", () => {
+    expect(robotsTextOf("User-agent: *", true)).toBe("");
   });
 });
 

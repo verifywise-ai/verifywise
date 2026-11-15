@@ -22,6 +22,7 @@ import {
 } from "../../webResearch/guardedFetch";
 import {
   type FilingRole,
+  MAX_SHARED_LOAD_RETRIES,
   accessionOfFiling,
   createEdgarFilerResolver,
   parseFilingRoles,
@@ -820,6 +821,158 @@ describe("createEdgarFilerResolver", () => {
       expect(await Promise.all([first, second])).toEqual(["vendor", "vendor"]);
       expect(fetchHeader).toHaveBeenCalledTimes(1);
       expect(spacer).toHaveBeenCalledTimes(1);
+    });
+
+    describe("a shared request that the run which started it stops (R4-PL-3)", () => {
+      /** A fetch that answers after the test releases it, and fails with an abort on its signal. */
+      function slowFetch() {
+        const releases: Array<() => void> = [];
+        const fetchHeader = jest.fn(
+          (url: string, options?: GuardedFetchOptions) =>
+            new Promise<GuardedResponse>((resolve, reject) => {
+              options?.signal?.addEventListener("abort", () =>
+                reject(Object.assign(new Error("aborted"), { name: "AbortError" })),
+              );
+              releases.push(() =>
+                resolve({
+                  url,
+                  status: 200,
+                  contentType: "text/plain",
+                  body: Buffer.from(asTags("10-K", [["FILER", QUILLON]])),
+                  truncated: false,
+                }),
+              );
+            }),
+        );
+        const releaseAll = () => releases.splice(0).forEach((release) => release());
+        return { fetchHeader, releaseAll };
+      }
+      const tick = () => new Promise((resolve) => setImmediate(resolve));
+
+      it("asks once more for a run whose own signal is live, under its own signal, and logs nothing for it", async () => {
+        const { fetchHeader, releaseAll } = slowFetch();
+        const spacer = jest.fn(async (turnSignal: AbortSignal) => !turnSignal.aborted);
+        const resolver = createEdgarFilerResolver({ contact: CONTACT, spacer, fetch: fetchHeader });
+        const stopped = new AbortController();
+        const live = new AbortController().signal;
+
+        const first = resolver(FILING, QUILLON, stopped.signal);
+        const second = resolver(FILING, QUILLON, live);
+        const third = resolver(FILING, QUILLON, live);
+        await tick();
+        stopped.abort();
+        expect(await first).toBeNull();
+        await tick();
+        releaseAll();
+
+        expect(await second).toBe("vendor");
+        expect(await third).toBe("vendor");
+        // The two live runs share the second request, and it waits on a live signal.
+        expect(fetchHeader).toHaveBeenCalledTimes(2);
+        expect(fetchHeader.mock.calls[1][1]?.signal).toBe(live);
+        // Only the run that was stopped says its header could not be read.
+        expect(logger.warn).toHaveBeenCalledTimes(1);
+      });
+
+      // RVS-1: the run that asks again first starts the new request under its own signal and the
+      // other live runs share it; when that run is stopped too, a live run asks once more.
+      it("asks again for a live run whose second shared request another run stopped, under its own signal", async () => {
+        const { fetchHeader, releaseAll } = slowFetch();
+        const spacer = jest.fn(async (turnSignal: AbortSignal) => !turnSignal.aborted);
+        const resolver = createEdgarFilerResolver({ contact: CONTACT, spacer, fetch: fetchHeader });
+        const a = new AbortController();
+        const b = new AbortController();
+        const c = new AbortController();
+
+        const first = resolver(FILING, QUILLON, a.signal);
+        const second = resolver(FILING, QUILLON, b.signal);
+        const third = resolver(FILING, QUILLON, c.signal);
+        await tick();
+        a.abort();
+        expect(await first).toBeNull();
+        await tick();
+        // The second request waits on the signal of the run that asked again first.
+        expect(fetchHeader).toHaveBeenCalledTimes(2);
+        expect(fetchHeader.mock.calls[1][1]?.signal).toBe(b.signal);
+        b.abort();
+        expect(await second).toBeNull();
+        await tick();
+        releaseAll();
+
+        expect(await third).toBe("vendor");
+        expect(fetchHeader).toHaveBeenCalledTimes(3);
+        expect(fetchHeader.mock.calls[2][1]?.signal).toBe(c.signal);
+        expect(c.signal.aborted).toBe(false);
+        // Only the two runs that were stopped say their header could not be read.
+        expect(logger.warn).toHaveBeenCalledTimes(2);
+      });
+
+      // Each try is started by another run that was stopped, so the tries are bounded; past
+      // MAX_SHARED_LOAD_RETRIES the live run gives up as before.
+      it("gives up for a live run after a bounded number of stopped shared requests", async () => {
+        const { fetchHeader } = slowFetch();
+        const spacer = jest.fn(async (turnSignal: AbortSignal) => !turnSignal.aborted);
+        const resolver = createEdgarFilerResolver({ contact: CONTACT, spacer, fetch: fetchHeader });
+        const live = new AbortController();
+        const stoppers = Array.from(
+          { length: MAX_SHARED_LOAD_RETRIES + 1 },
+          () => new AbortController(),
+        );
+
+        const runs = stoppers.map((stopper) => resolver(FILING, QUILLON, stopper.signal));
+        const watched = resolver(FILING, QUILLON, live.signal);
+        for (const stopper of stoppers) {
+          await tick();
+          stopper.abort();
+          await tick();
+        }
+
+        expect(await Promise.all(runs)).toEqual(stoppers.map(() => null));
+        // Each stopped run started one request at most; the live run joined each.
+        expect(fetchHeader.mock.calls.every(([, options]) => options?.signal !== live.signal)).toBe(
+          true,
+        );
+        expect(await watched).toBeNull();
+        expect(fetchHeader).toHaveBeenCalledTimes(MAX_SHARED_LOAD_RETRIES + 1);
+        expect(live.signal.aborted).toBe(false);
+      });
+
+      it("does not ask again for a run that was stopped itself", async () => {
+        const { fetchHeader } = slowFetch();
+        const resolver = createEdgarFilerResolver({
+          contact: CONTACT,
+          spacer: async () => true,
+          fetch: fetchHeader,
+        });
+        const stopped = new AbortController();
+
+        const only = resolver(FILING, QUILLON, stopped.signal);
+        await tick();
+        stopped.abort();
+
+        expect(await only).toBeNull();
+        expect(fetchHeader).toHaveBeenCalledTimes(1);
+      });
+
+      it("does not ask again when a shared request fails while its signal is live", async () => {
+        let fail: (error: unknown) => void = () => undefined;
+        const fetchHeader = jest.fn(
+          () => new Promise<GuardedResponse>((_resolve, reject) => (fail = reject)),
+        );
+        const resolver = createEdgarFilerResolver({
+          contact: CONTACT,
+          spacer: async () => true,
+          fetch: fetchHeader,
+        });
+
+        const first = resolver(FILING, QUILLON, signal);
+        const second = resolver(FILING, QUILLON, signal);
+        await tick();
+        fail(new FetchError("unreachable"));
+
+        expect(await Promise.all([first, second])).toEqual([null, null]);
+        expect(fetchHeader).toHaveBeenCalledTimes(1);
+      });
     });
 
     it("keeps an answer for 24 hours", async () => {

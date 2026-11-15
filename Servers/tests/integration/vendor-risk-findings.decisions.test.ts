@@ -677,8 +677,9 @@ describe("POST /api/v1/vendor-risk-findings/:id/accept", () => {
         .post(acceptUrl(finding.id))
         .send({ risk_description: "An edited description", frameworks: [987654321] });
 
-      // The failed link aborts the transaction: no risk, no history, the finding is still pending.
-      expect(res.status).toBe(500);
+      // The id is refused before the link is written, as a 400 the person can act on, and the
+      // accept is rolled back: no risk, no history, the finding is still pending.
+      expect(res.status).toBe(400);
       expect(await findingOf(finding.id)).toEqual(PENDING);
       await expectRegisterUntouched();
       expect(await countAll("frameworks_vendorrisks")).toBe(0);
@@ -729,6 +730,42 @@ describe("POST /api/v1/vendor-risk-findings/:id/accept", () => {
     });
     expect(recomputeJobs()).toHaveLength(1);
   });
+
+  it("accepts as many different findings at once as the pool has connections, without running it dry", async () => {
+    // An accept holds one pooled connection for its transaction. If any of its queries ran outside
+    // that transaction it would need a second one, and as many accepts as the pool has connections
+    // would each hold one and wait for another: no database request is served until the acquire
+    // timeout (60 s by default).
+    const pool = (sequelize.connectionManager as unknown as { pool?: { maxSize?: number } }).pool;
+    const poolSize = pool?.maxSize ?? 5;
+    const { owner } = await seedTwoTenantContexts(3);
+    const findings = Array.from({ length: poolSize }, (_, i) => ({
+      ...FINDING,
+      risk_description: `Customer records were exposed in breach number ${i + 1}.`,
+    }));
+    const { inserted } = await seedFindings(owner, "Acme Corp", findings);
+    expect(inserted).toHaveLength(poolSize);
+
+    const requests = inserted.map((finding) =>
+      owner.request.post(acceptUrl(finding.id)).then((res) => res),
+    );
+    let timer: NodeJS.Timeout | undefined;
+    const timedOut = new Promise<"timed out">((resolve) => {
+      timer = setTimeout(() => resolve("timed out"), 20000);
+    });
+    try {
+      const outcome = await Promise.race([Promise.all(requests), timedOut]);
+
+      expect(outcome).not.toBe("timed out");
+      const answers = outcome as Awaited<(typeof requests)[number]>[];
+      expect(answers.map((res) => res.status)).toEqual(inserted.map(() => 200));
+      expect(await risksOf(owner.orgId)).toHaveLength(poolSize);
+    } finally {
+      clearTimeout(timer);
+      // Never leave a request running into the next test.
+      await Promise.allSettled(requests);
+    }
+  }, 120000);
 
   it("answers 409 at once while another decision holds the finding, creating no risk", async () => {
     const { owner } = await seedTwoTenantContexts(3);

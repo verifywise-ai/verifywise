@@ -105,8 +105,14 @@ describe("fdaDayOf", () => {
     ["words", "June 29, 2026"],
     ["nothing", ""],
     ["blanks", "   "],
+    // Postgres has no year 0000: one such day as a published time would fail the write of the list.
+    ["the year 0000", "01/01/0000"],
   ])("rejects %s (%s)", (_label, text) => {
     expect(fdaDayOf(text)).toBeNull();
+  });
+
+  it("reads the year 0001, the first that a store holds", () => {
+    expect(fdaDayOf("01/01/0001")).toBe("0001-01-01");
   });
 
   it("gives null for a value that is missing", () => {
@@ -122,9 +128,9 @@ describe("fdaDayOf", () => {
 });
 
 describe("fdaConnector", () => {
-  it("is the connector of fda_ai_devices, at version 1, with the mark of the list", () => {
+  it("is the connector of fda_ai_devices, at version 2, with the mark of the list", () => {
     expect(fdaConnector.id).toBe("fda_ai_devices");
-    expect(fdaConnector.version).toBe(1);
+    expect(fdaConnector.version).toBe(2);
     expect(FDA_RECORD_MARK).toBe("FDA list of AI-enabled medical devices");
     expect(FDA_RECORD_MARK).toBe(vrdbSourceOf("fda_ai_devices").name);
   });
@@ -344,6 +350,14 @@ describe("fdaConnector.parse", () => {
 
     expect(record?.url).toBe(`${DOCUMENTATION_PAGE}?company=z%C3%A9phyrscansystemssa`);
     expect(record?.matchKeys).toEqual(["name:zéphyrscansystemssa", "name:zéphyrscansystems"]);
+  });
+
+  it("keys a company written with a slash legal form (A/S) by the name without it too", () => {
+    // The real list names companies so (Cercare Medical A/S, Vitrolife A/S): version 2 rebuilds them.
+    const record = parse(csvOf([rowOf({ company: "Danspin A/S" })])).records[0];
+
+    expect(record.sourceRecordId).toBe("danspinas");
+    expect(record.matchKeys).toEqual(["name:danspinas", "name:danspin"]);
   });
 
   it("gives a company whose name is shorter than four letters no name key", () => {
@@ -639,6 +653,34 @@ describe("fdaConnector.parse, the text of the list", () => {
     const { records } = parse(csvOf([rowOf({ device: `Acme Scan${trademark} Pro` })]));
 
     expect(records[0].summary).toContain("Newest: Acme Scan™ Pro (K900001");
+  });
+
+  it("takes the characters that no reader sees out of a device and a company: zero-width, bidirectional and tag characters", () => {
+    // The tag characters U+E0049 U+E0047 spell "IG" to a model and show nothing to a reader.
+    const hidden = `\u200B\u202E${String.fromCodePoint(0xe0049, 0xe0047)}\uFEFF`;
+
+    const { records } = parse(
+      csvOf([rowOf({ device: `Acme${hidden} Scan`, company: `Example${hidden} Labs` })]),
+    );
+
+    expect(records).toHaveLength(1);
+    const [record] = records;
+    expect(record.title).toBe("FDA AI-enabled medical devices: Example Labs");
+    expect(record.summary).toContain("Newest: Acme Scan (K900001");
+    expect(record.identifiers.company).toBe("Example Labs");
+    for (const text of [record.title, record.summary, JSON.stringify(record.identifiers)]) {
+      expect(text).not.toMatch(/\p{Cf}/u);
+    }
+  });
+
+  it("gives no publication day for a row of the year 0000, so that the write of the list never fails on it", () => {
+    const { records, skipped } = parse(
+      csvOf([rowOf({ day: "01/01/0000" }), rowOf({ submission: "K900002" })]),
+    );
+
+    expect(skipped).toBe(1);
+    expect(records).toHaveLength(1);
+    expect(records[0].publishedAt).toBe("2026-06-29");
   });
 
   it("cuts a device name of more than 500 characters and says so, and keeps one of 500", () => {

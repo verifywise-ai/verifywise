@@ -1,4 +1,5 @@
 jest.mock("../../../utils/vendorResearch.utils", () => ({
+  STALE_RUN_MINUTES: 15,
   countRunsSinceQuery: jest.fn(),
   listDueVendorsQuery: jest.fn(),
   listScanOrganizationsQuery: jest.fn(),
@@ -15,7 +16,7 @@ import {
   listDueVendorsQuery,
   listScanOrganizationsQuery,
 } from "../../../utils/vendorResearch.utils";
-import { SCAN_BATCH_SIZE, runVendorResearchScan } from "../scan";
+import { SCAN_BATCH_SIZE, runVendorResearchScan, scanPassRuns } from "../scan";
 import { startVendorResearch } from "../trigger";
 
 type AnyMock = jest.Mock<any, any[]>;
@@ -47,6 +48,7 @@ const loggedText = () =>
 beforeEach(() => {
   jest.resetAllMocks();
   delete process.env.VENDOR_RESEARCH_DAILY_RUN_CAP;
+  delete process.env.VENDOR_RESEARCH_WORKER_CONCURRENCY;
   asMock(listScanOrganizationsQuery).mockResolvedValue([{ organizationId: 3, intervalDays: 14 }]);
   asMock(countRunsSinceQuery).mockResolvedValue(0);
   asMock(listDueVendorsQuery).mockResolvedValue([7, 8, 9]);
@@ -56,6 +58,7 @@ beforeEach(() => {
 
 afterAll(() => {
   delete process.env.VENDOR_RESEARCH_DAILY_RUN_CAP;
+  delete process.env.VENDOR_RESEARCH_WORKER_CONCURRENCY;
 });
 
 describe("runVendorResearchScan", () => {
@@ -188,6 +191,89 @@ describe("runVendorResearchScan", () => {
         [4],
       );
       expect(summary).toEqual({ organizations: 2, started: 3 });
+    });
+  });
+
+  // At :11 every organization used to queue its batch in one pass, in id order. With 5 slots and
+  // runs of several minutes, the runs past the first 10 to 25 waited longer than the 15 minutes
+  // after which a run is not started, and were swept as timed out, the same organizations every hour.
+  describe("one pass over many organizations", () => {
+    const manyOrganizations = (count: number) =>
+      Array.from({ length: count }, (_, index) => ({ organizationId: index + 1, intervalDays: 7 }));
+
+    beforeEach(() => {
+      asMock(listDueVendorsQuery).mockImplementation(async ({ organizationId, limit }) =>
+        Array.from({ length: limit }, (_, index) => organizationId * 100 + index),
+      );
+    });
+
+    it("starts no more runs than the workers can begin within the start limit", async () => {
+      asMock(listScanOrganizationsQuery).mockResolvedValue(manyOrganizations(8));
+
+      const summary = await scan();
+
+      // Five slots, two rounds of 7.5 minutes within the 15: ten runs, not forty.
+      expect(scanPassRuns(5)).toBe(10);
+      expect(summary).toEqual({ organizations: 8, started: 10 });
+      expect(startsMade()).toHaveLength(10);
+    });
+
+    it("asks the last organization it reaches for no more vendors than the pass has left", async () => {
+      asMock(listScanOrganizationsQuery).mockResolvedValue(manyOrganizations(3));
+      asMock(listDueVendorsQuery).mockImplementation(async ({ organizationId, limit }) =>
+        Array.from({ length: organizationId === 1 ? 4 : limit }, (_, index) => index + 1),
+      );
+
+      await scan();
+
+      expect(asMock(listDueVendorsQuery).mock.calls.map(([input]) => input.limit)).toEqual([
+        5, 5, 1,
+      ]);
+    });
+
+    it("begins at another organization each hour, so the same ones are not always left out", async () => {
+      asMock(listScanOrganizationsQuery).mockResolvedValue(manyOrganizations(4));
+      const firstOrganizationAt = async (hoursLater: number) => {
+        jest.clearAllMocks();
+        await runVendorResearchScan({
+          now: () => new Date(NOW.getTime() + hoursLater * 60 * 60 * 1000),
+        });
+        return startsMade()[0][0];
+      };
+
+      const firsts = [];
+      for (let hour = 0; hour < 4; hour += 1) firsts.push(await firstOrganizationAt(hour));
+
+      expect(new Set(firsts)).toEqual(new Set([1, 2, 3, 4]));
+    });
+
+    it("leaves one organization's batch as it was, whatever the number of slots", () => {
+      expect(scanPassRuns(1)).toBe(SCAN_BATCH_SIZE);
+      expect(scanPassRuns(2)).toBeGreaterThanOrEqual(SCAN_BATCH_SIZE);
+    });
+
+    it("reads the number of slots from the environment of the process", async () => {
+      process.env.VENDOR_RESEARCH_WORKER_CONCURRENCY = "10";
+      asMock(listScanOrganizationsQuery).mockResolvedValue(manyOrganizations(8));
+
+      const summary = await scan();
+
+      expect(summary.started).toBe(20);
+    });
+
+    it("does not count a run that was already on its way against the pass", async () => {
+      asMock(listScanOrganizationsQuery).mockResolvedValue(manyOrganizations(3));
+      let call = 0;
+      asMock(startVendorResearch).mockImplementation(async () => {
+        call += 1;
+        return call <= 5
+          ? { ok: true, run: { id: call }, alreadyRunning: true }
+          : started(100 + call);
+      });
+
+      const summary = await scan();
+
+      expect(summary.started).toBe(10);
     });
   });
 

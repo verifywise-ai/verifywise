@@ -39,6 +39,8 @@ jest.mock("../../services/automations/automationProducer", () => ({
 jest.mock("../../utils/riskLink.utils", () => ({
   getVendorNoticeContextQuery: jest.fn(),
 }));
+// The membership lookup behind the action owner check; the check itself runs for real.
+jest.mock("../../utils/user.utils", () => ({ findUsersNotInOrganization: jest.fn() }));
 jest.mock("../../utils/logger/fileLogger", () => ({
   __esModule: true,
   default: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
@@ -52,6 +54,7 @@ jest.mock("../../utils/statusCode.utils", () => ({
   STATUS_CODE: {
     200: (d: unknown) => ({ message: "OK", data: d }),
     201: (d: unknown) => ({ message: "Created", data: d }),
+    400: (d: unknown) => ({ message: "Bad Request", data: d }),
     500: (d: unknown) => ({ message: "Internal Server Error", data: d }),
     503: (d: unknown) => ({ message: "Service Unavailable", data: d }),
   },
@@ -72,6 +75,7 @@ import { notifyVendorRiskCandidates } from "../../services/riskLinks/vendorCandi
 import { enqueueVendorRiskLinkRecompute } from "../../services/automations/automationProducer";
 import { getVendorNoticeContextQuery } from "../../utils/riskLink.utils";
 import logger from "../../utils/logger/fileLogger";
+import { findUsersNotInOrganization } from "../../utils/user.utils";
 import { logFailure, logSuccess } from "../../utils/logger/logHelper";
 import { createVendorRisk } from "../vendorRisk.ctrl";
 
@@ -379,6 +383,37 @@ describe("createVendorRisk", () => {
         description: "Vendor risk creation returned null",
       }),
     );
+  });
+
+  it("answers 400 for an action owner of another organization, writes nothing and tells nobody", async () => {
+    // User 77 belongs to another organization only.
+    asMock(findUsersNotInOrganization).mockResolvedValue([77]);
+    const res = makeRes();
+
+    await createVendorRisk(makeReq({ body: { ...requestBody, action_owner: 77 } }), res);
+    await flush();
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "Bad Request",
+      data: "The action owner must be a user of your organization",
+    });
+    expect(asMock(findUsersNotInOrganization)).toHaveBeenCalledWith([77], ORG_ID, transaction);
+    expect(transaction.rollback).toHaveBeenCalledTimes(1);
+    expect(transaction.commit).not.toHaveBeenCalled();
+    expect(createNewVendorRiskQuery).not.toHaveBeenCalled();
+    expect(notifyUserAssigned).not.toHaveBeenCalled();
+    expect(enqueueVendorRiskLinkRecompute).not.toHaveBeenCalled();
+  });
+
+  it("creates the risk for an action owner of the organization", async () => {
+    asMock(findUsersNotInOrganization).mockResolvedValue([]);
+    const res = makeRes();
+
+    await createVendorRisk(makeReq({ body: { ...requestBody, action_owner: 9 } }), res);
+
+    expect(res.status).toHaveBeenCalledWith(201);
+    expect(asMock(findUsersNotInOrganization)).toHaveBeenCalledWith([9], ORG_ID, transaction);
   });
 
   // The one deliberate behaviour change of the extraction: the original left the transaction open.

@@ -53,7 +53,8 @@ describe("slackProducer", () => {
           data: { type: "policies" },
           opts: expect.objectContaining({
             removeOnComplete: true,
-            removeOnFail: false,
+            // A week, at most 5000, as every scheduler of the automation queue: never for good.
+            removeOnFail: { age: 604_800, count: 5000 },
           }),
         }),
       );

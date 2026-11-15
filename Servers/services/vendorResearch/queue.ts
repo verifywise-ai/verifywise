@@ -18,6 +18,7 @@
  */
 import { type JobsOptions, Queue } from "bullmq";
 import { REDIS_URL } from "../../database/redis";
+import type { ResearchTrigger } from "../../domain.layer/interfaces/i.vendorResearch";
 
 /** The name of the queue of the research runs. The producer and the worker must agree on it. */
 export const VENDOR_RESEARCH_QUEUE = "vendor-research";
@@ -66,18 +67,40 @@ export const VENDOR_RESEARCH_JOB_OPTIONS: JobsOptions = {
   removeOnFail: true,
 };
 
-/** Research one vendor in the background, for a run that was just created as queued. */
+/**
+ * The BullMQ priority of the job of a scheduled run. BullMQ takes a job with no priority before any
+ * job with one, so the run a person asked for, and the automatic one after a vendor is created,
+ * which have none, are taken before the runs the hourly scan queued that are still waiting,
+ * however many it queued. They can still wait for the scheduled runs that are already running to
+ * free a place, which the bound of a scan pass keeps within the 15 minutes after which a run is
+ * not started (`markRunRunningQuery`, see scan.ts). Scheduled runs keep their order among
+ * themselves (one priority).
+ */
+export const SCHEDULED_RUN_PRIORITY = 10;
+
+/** The options of the job of a run: those of every run, and the priority of a scheduled one. */
+export const jobOptionsFor = (triggerType: ResearchTrigger | undefined): JobsOptions =>
+  triggerType === "scheduled"
+    ? { ...VENDOR_RESEARCH_JOB_OPTIONS, priority: SCHEDULED_RUN_PRIORITY }
+    : VENDOR_RESEARCH_JOB_OPTIONS;
+
+/**
+ * Research one vendor in the background, for a run that was just created as queued. `triggerType`
+ * sets the priority of the job (see SCHEDULED_RUN_PRIORITY); a caller that leaves it out queues
+ * the job with none, as a person's run.
+ */
 export async function enqueueVendorResearch(
   organizationId: number,
   vendorId: number,
   runId: number,
+  triggerType?: ResearchTrigger,
 ) {
   return vendorResearchQueue.add(
     VENDOR_RESEARCH_JOB,
     { organizationId, vendorId, runId },
     {
       jobId: vendorResearchJobId(organizationId, vendorId, runId),
-      ...VENDOR_RESEARCH_JOB_OPTIONS,
+      ...jobOptionsFor(triggerType),
     },
   );
 }

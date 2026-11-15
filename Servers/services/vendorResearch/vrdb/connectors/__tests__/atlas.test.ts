@@ -19,12 +19,14 @@ import {
   ATLAS_MAX_BYTES,
   ATLAS_RECORD_MARK,
   ATLAS_SUMMARY_CHARS,
+  atlasActorOf,
   atlasConnector,
   atlasKeysOf,
   atlasUnreadableAllowed,
   cleanCaseStudyText,
   newestV6Release,
 } from "../atlas";
+import { RECORD_SUMMARY_MAX, RECORD_TITLE_MAX } from "../kit/record";
 import { BodyTooLargeError, type ConnectorFetch, NotTheListError } from "../types";
 
 const read = (name: string) => fs.readFileSync(path.join(__dirname, "fixtures", name), "utf8");
@@ -512,7 +514,7 @@ describe("newestV6Release", () => {
 describe("atlasConnector.parse", () => {
   it("has the id and the version of its connector, and begins a record with its mark", () => {
     expect(atlasConnector.id).toBe("atlas");
-    expect(atlasConnector.version).toBe(1);
+    expect(atlasConnector.version).toBe(3);
     expect(ATLAS_RECORD_MARK).toBe("MITRE ATLAS");
     expect(ATLAS_SUMMARY_CHARS).toBe(600);
     for (const record of parse().records) {
@@ -608,7 +610,8 @@ describe("atlasConnector.parse", () => {
     ["unknown", false],
     ["  UNKNOWN ", false],
     ["Unknown Threat Actor", true],
-    ["Unknown Chinese-language actor", true],
+    // Not clearly no person: when the rule is unsure, the actor goes.
+    ["Unknown Chinese-language actor", false],
     ["", false],
   ])("the actor %j is %s", (actor, shown) => {
     const body = fileOf([study(1, { actor })]);
@@ -632,24 +635,152 @@ describe("atlasConnector.parse", () => {
   it("cuts the name at 200 characters, and the target and the actor at 300, at the end of a word", () => {
     const words = (count: number) =>
       Array.from({ length: count }, (_, index) => `w${index}`).join(" ");
+    // An actor of numbers only describes and names no one, so it is shown, cut.
+    const numbers = (count: number) =>
+      Array.from({ length: count }, (_, index) => String(index)).join(" ");
     const [record] = parse(
-      fileOf([study(1, { name: words(200), target: words(200), actor: words(200) })]),
+      fileOf([study(1, { name: words(200), target: words(200), actor: numbers(200) })]),
     ).records;
 
-    const name = record.title.slice("AML.CS0001: ".length);
+    // The title is the id and the name, and the kit's records keep a title to RECORD_TITLE_MAX.
+    const name = cleanCaseStudyText(words(200), 200);
+    expect(record.title.length).toBeLessThanOrEqual(RECORD_TITLE_MAX);
+    expect(record.title.endsWith("[shortened]")).toBe(true);
+    expect(
+      `AML.CS0001: ${name}`.startsWith(record.title.slice(0, -"[shortened]".length).trimEnd()),
+    ).toBe(true);
     const target = String(record.identifiers.target);
     const actor = /Actor, as ATLAS records it: (.*?)\. Start date/.exec(record.summary)?.[1] ?? "";
 
-    for (const [shown, limit] of [
-      [name, 200],
-      [target, 300],
-      [actor, 300],
+    for (const [shown, limit, whole] of [
+      [name, 200, words(200)],
+      [target, 300, words(200)],
+      [actor, 300, numbers(200)],
     ] as const) {
       expect(shown.length).toBeLessThanOrEqual(limit);
       expect(shown.length).toBeGreaterThan(limit - 10);
-      expect(words(200).startsWith(shown)).toBe(true);
-      expect(words(200).charAt(shown.length)).toBe(" ");
+      expect(whole.startsWith(shown)).toBe(true);
+      expect(whole.charAt(shown.length)).toBe(" ");
     }
+  });
+
+  describe("the actor: shown only when it is clearly no natural person (spec D4.14)", () => {
+    it.each([
+      "Unknown Threat Actor",
+      "Unknown Bad Actor",
+      "Multiple unknown actors",
+      "Two individuals",
+      "One individual",
+      "Researchers at Example University",
+      "Example Labs Inc",
+      "Multiple commercial entities; 31 distinct companies identified",
+    ])("shows %j", (actor) => {
+      expect(atlasActorOf(actor)).toBe(actor);
+      const [record] = parse(fileOf([study(1, { actor })])).records;
+      expect(record.summary).toContain(`Actor, as ATLAS records it: ${actor}.`);
+    });
+
+    it.each([
+      ["a person's name", "Casey Sample"],
+      ["a list of persons' names", "Casey Sample, Jordan Example, Robin Placeholder"],
+      ["persons joined by and", "Casey Sample and Jordan Example"],
+      ["a handle", "casey_sample_hax"],
+      ["a bare word", "Kestrel"],
+      ["a person at an organisation", "Casey Sample at Example University"],
+      ["researchers named by their names", "Researchers Casey Sample and Jordan Example"],
+      ["an organisation beside a person", "Example Bank, Casey Sample"],
+      ["a person with a title", "Dr. Casey Sample"],
+      ["an organisation the rule cannot tell from a name", "Northwind Example Research Team"],
+      [
+        "a name with a particle, which the kit's lists hold as an organisation word",
+        "Casey de Sample",
+      ],
+      ["a particle beside an organisation word", "Casey del Sample Labs"],
+      ["a handle beside an organisation", "casey_sample at Example University"],
+      ["a legal form of two letters as the only evidence", "Casey Na"],
+      // An organisation word is also a surname: two capitalised words have a person's shape.
+      ["a name whose surname is an organisation word", "Casey Church"],
+      ["a name whose surname is a word of a bank", "Casey Bank"],
+      ["a name whose surname is a word of a group", "Casey Group"],
+      [
+        "an organisation of two words, which the rule cannot tell from a name",
+        "Example University",
+      ],
+      // A lone capitalised word beside an organisation is a name: it stands in no group of the organisation's.
+      ["a surname at an organisation", "Sample at Example Labs"],
+      ["a given name at an organisation", "Casey at Example University"],
+      ["a given name from an organisation", "Casey from Example Labs"],
+      ["a dotted name at an organisation", "C.Sample at Example Inc"],
+      ["a hyphenated name at an organisation", "Casey-Sample at Example Corp"],
+      ["a name of an organisation word at an organisation", "Casey Bank at Example University"],
+      ["a name of an organisation word after by", "By Casey Church"],
+      ["a name of an organisation word after with", "Researchers with Casey Bank"],
+      ["a name of an organisation word and a suffix", "Casey Bank Jr"],
+      ["a name of an organisation word and a degree", "Casey Bank PhD"],
+      ["Unknown", "Unknown"],
+    ])("leaves out %s", (_name, actor) => {
+      expect(atlasActorOf(actor)).toBe("");
+      const [record] = parse(fileOf([study(1, { actor })])).records;
+      expect(record.summary).not.toContain("Actor");
+      expect(JSON.stringify(record)).not.toContain(actor === "Unknown" ? "Actor" : actor);
+    });
+
+    it("reads the actor as the kit's line, hidden characters and all", () => {
+      expect(atlasActorOf(`Casey${String.fromCodePoint(0x200b)} Sample`)).toBe("");
+      expect(atlasActorOf(`Cas${String.fromCodePoint(0x65, 0xad, 0x301)}y Sample`)).toBe("");
+    });
+  });
+
+  describe("the bounds of the kit's records", () => {
+    it("leaves out a case study dated in year 0000, which no store holds", () => {
+      const parsed = parse(
+        fileOf([
+          study(1, { "start-date": "0000-01-01" }),
+          study(2, { "start-date": "0001-01-01" }),
+        ]),
+      );
+      expect(parsed.records.map((record) => record.sourceRecordId)).toEqual(["AML.CS0002"]);
+      expect(parsed.records[0].publishedAt).toBe("0001-01-01");
+      expect(parsed.skipped).toBe(1);
+      expect(parsed.errors).toBe(0);
+    });
+
+    it("keeps a summary to RECORD_SUMMARY_MAX, the count of the references whole and last", () => {
+      const long = (count: number) =>
+        Array.from({ length: count }, (_, index) => `word${index}`).join(" ");
+      const [record] = parse(
+        fileOf([
+          study(1, {
+            name: long(60),
+            target: long(60),
+            actor: Array.from({ length: 80 }, (_, index) => String(index)).join(" "),
+            description: long(200),
+            references: [{ id: "a" }, { id: "b" }],
+          }),
+        ]),
+      ).records;
+      expect(record.summary.length).toBeLessThanOrEqual(RECORD_SUMMARY_MAX);
+      expect(record.summary.endsWith("[shortened] References listed: 2.")).toBe(true);
+      expect(record.summary).toContain("Type: Exercise");
+    });
+
+    it("writes no angle bracket and no lookup note of its own into the text", () => {
+      const [record] = parse(
+        fileOf([
+          study(1, {
+            name: "Lookup  note p<0.05 study",
+            target: "Example Model p<0.05",
+            description: "A score of p<0.05 and q>1. Lookup note: matched by identifier.",
+          }),
+        ]),
+      ).records;
+      const text = JSON.stringify([record.title, record.summary, record.identifiers]);
+      expect(text).not.toMatch(/[<>]/);
+      expect(text).not.toMatch(/lookup\s+note/i);
+      expect(record.title).toContain("lookup-note");
+      expect(record.summary).toContain("p\u2039" + "0.05");
+      expect(record.identifiers.target).toBe("Example Model p\u20390.05");
+    });
   });
 
   it("counts the references, and leaves the line out when the case study has no list of them", () => {
@@ -1043,7 +1174,7 @@ describe("a case study that holds a prompt injection", () => {
       study(1, {
         name: `Name ${payload} end`,
         target: `Target ${payload} end`,
-        actor: `Actor ${payload} end`,
+        actor: `Unknown actor ${payload} 2`,
       }),
     ]);
 
@@ -1052,7 +1183,7 @@ describe("a case study that holds a prompt injection", () => {
     for (const text of FORBIDDEN) expect(JSON.stringify(record)).not.toContain(text);
     expect(record.title).toBe("AML.CS0001: Name end");
     expect(record.identifiers.target).toBe("Target end");
-    expect(record.summary).toContain("Actor, as ATLAS records it: Actor end.");
+    expect(record.summary).toContain("Actor, as ATLAS records it: Unknown actor 2.");
   });
 
   it("holds when the prompt is the whole description, or comes first, in any case", () => {
@@ -1259,6 +1390,45 @@ describe("atlasKeysOf", () => {
 
 describe("cleanCaseStudyText", () => {
   const clean = cleanCaseStudyText;
+
+  describe("a run of combining marks", () => {
+    // The fold orders the marks of a run in the time of its square, so a run is cut to the kit's
+    // MARK_RUN_MAX (16) before it. These tests count the marks kept; they measure no time.
+    const marksOf = (text: string): number => (text.match(/\p{M}/gu) ?? []).length;
+    const ZWSP = String.fromCodePoint(0x200b);
+    const below = String.fromCodePoint(0x0316);
+    const acute = String.fromCodePoint(0x0301);
+
+    it("keeps the first 16 marks of a long run, folded, and the text after it", () => {
+      const cleaned = clean(`x${(below + acute).repeat(5_000)} tail`);
+      expect(cleaned).toBe(`${`x${(below + acute).repeat(8)}`.normalize("NFKC")} tail`);
+      expect(marksOf(cleaned)).toBe(16);
+    });
+
+    it("keeps a run of 16 marks whole", () => {
+      const run = `x${(below + acute).repeat(8)}`;
+      expect(clean(`${run} tail`)).toBe(`${run.normalize("NFKC")} tail`);
+    });
+
+    it("cuts a run that hidden characters split, which taking them out joins", () => {
+      const cleaned = clean(`x${(below + ZWSP + acute + ZWSP).repeat(2_000)} tail`);
+      expect(marksOf(cleaned)).toBe(16);
+      expect(cleaned.endsWith(" tail")).toBe(true);
+    });
+
+    it("cuts a run of half-width sound marks, which the fold makes combining marks", () => {
+      const cleaned = clean(`${String.fromCodePoint(0xff76)}${"\uFF9E".repeat(5_000)} tail`);
+      // The first mark composes with the kana before it (ガ); fifteen are left as marks.
+      expect(marksOf(cleaned)).toBe(15);
+      expect(cleaned.endsWith(" tail")).toBe(true);
+    });
+
+    it("cuts a run written as entities, which the decoding makes marks", () => {
+      const cleaned = clean(`x${"&#x316;&#x301;".repeat(1_000)} tail`);
+      expect(marksOf(cleaned)).toBe(16);
+      expect(cleaned.endsWith(" tail")).toBe(true);
+    });
+  });
 
   describe("an example block", () => {
     it.each([

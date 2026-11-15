@@ -1,5 +1,6 @@
 import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../database/db";
+import { asyncLocalStorage } from "./context/context";
 import {
   CategorySummaryEntry,
   DismissReason,
@@ -106,19 +107,67 @@ const ERROR_MAX_LENGTH = 500;
  * `vendor_research_runs_active_uniq` when the vendor already has a queued or
  * running run.
  */
-export const createRunQuery = async (input: {
-  organizationId: number;
-  vendorId: number;
-  triggerType: ResearchTrigger;
-  requestedBy: number | null;
-}): Promise<IVendorResearchRun> => {
+export const createRunQuery = async (
+  input: {
+    organizationId: number;
+    vendorId: number;
+    triggerType: ResearchTrigger;
+    requestedBy: number | null;
+  },
+  transaction?: Transaction,
+): Promise<IVendorResearchRun> => {
   const rows = (await sequelize.query(
     `INSERT INTO vendor_research_runs (organization_id, vendor_id, trigger_type, status, requested_by)
      VALUES (:organizationId, :vendorId, :triggerType, 'queued', :requestedBy)
      RETURNING ${RUN_COLUMNS}`,
-    { replacements: input, type: QueryTypes.SELECT },
+    { replacements: input, type: QueryTypes.SELECT, transaction },
   )) as IVendorResearchRun[];
   return rows[0];
+};
+
+/**
+ * Runs `work` in a transaction that holds the organization's start lock, a transaction-level
+ * advisory lock keyed by the organization. The checks of a start (the active run, the cooldown and
+ * the daily cap) and the insert of its run are separate statements, so without the lock two starts
+ * at the same moment both read the state before either insert: starts for different vendors could
+ * each pass the cap, and the second start of one vendor would read the first one's new run as the
+ * last run and answer with a cooldown instead of that run. With the lock, a start waits until the
+ * one before it has committed, and its reads (READ COMMITTED) then see that start's run.
+ *
+ * Every query of `work` must be given the transaction, or it runs outside the lock. The lock is
+ * released when the transaction ends, so `work` must not wait on anything slow (the queue).
+ *
+ * Inside a request whose queries run in its RLS transaction (RLS Phase 2: the transaction that ran
+ * `SET LOCAL app.current_org`, kept in `asyncLocalStorage`), the work runs in a savepoint of that
+ * transaction instead of a transaction of its own. A transaction of its own would run on a second
+ * pooled connection without the organization setting, where the row-level policy of
+ * `vendor_research_runs` hides every run and refuses the insert, and each start would hold two
+ * connections at once. The savepoint keeps one connection and the setting, and a failure of the
+ * work (a unique violation) rolls back to it and leaves the request's transaction usable. The lock
+ * is a transaction lock, so in that mode it is held until the request commits or rolls back, also
+ * while the start queues its job (at most ENQUEUE_TIMEOUT_MS); a second start of the organization
+ * waits that long, and then reads the committed run. Outside a request (the scan, a worker), or
+ * when the request's transaction has already ended (an automatic start that the request did not
+ * wait for), the work runs in a transaction of its own, as before.
+ */
+export const withRunStartLockQuery = <T>(
+  organizationId: number,
+  work: (transaction: Transaction) => Promise<T>,
+): Promise<T> => {
+  const locked = async (transaction: Transaction): Promise<T> => {
+    await sequelize.query(
+      `SELECT pg_advisory_xact_lock(hashtext('vendor_research_run_start'), :organizationId)`,
+      { replacements: { organizationId }, type: QueryTypes.SELECT, transaction },
+    );
+    return work(transaction);
+  };
+  const request = asyncLocalStorage.getStore()?.transaction;
+  // `finished` is set by Sequelize once a transaction committed or rolled back; it is not typed.
+  const requestIsOpen =
+    request !== undefined && !(request as Transaction & { finished?: string }).finished;
+  return requestIsOpen
+    ? sequelize.transaction({ transaction: request }, locked)
+    : sequelize.transaction(locked);
 };
 
 /**
@@ -187,13 +236,14 @@ export const failStaleRunsQuery = async (
 const findRun = async (
   condition: string,
   replacements: { organizationId: number; vendorId?: number; runId?: number },
+  transaction?: Transaction,
 ): Promise<IVendorResearchRun | null> => {
   const rows = (await sequelize.query(
     `SELECT ${RUN_COLUMNS} FROM vendor_research_runs
      WHERE organization_id = :organizationId AND ${condition}
      ORDER BY created_at DESC, id DESC
      LIMIT 1`,
-    { replacements, type: QueryTypes.SELECT },
+    { replacements, type: QueryTypes.SELECT, transaction },
   )) as IVendorResearchRun[];
   return rows[0] ?? null;
 };
@@ -202,11 +252,13 @@ const findRun = async (
 export const getActiveRunQuery = (
   organizationId: number,
   vendorId: number,
+  transaction?: Transaction,
 ): Promise<IVendorResearchRun | null> =>
-  findRun("vendor_id = :vendorId AND status IN ('queued', 'running')", {
-    organizationId,
-    vendorId,
-  });
+  findRun(
+    "vendor_id = :vendorId AND status IN ('queued', 'running')",
+    { organizationId, vendorId },
+    transaction,
+  );
 
 /** The vendor's newest run, whatever its status. */
 export const getLatestRunQuery = (
@@ -250,20 +302,52 @@ export const getRunTraceQuery = async (
  * search and call a model as soon as the worker came back, beyond a cap that no longer sees them.
  * It is left queued, and the sweep (`failStaleRunsQuery`) ends it as "timed out" without it ever
  * having started, which counts for nothing. The pipeline treats the `false` as a skipped run.
+ *
+ * The same statement writes the run to the ledger of the daily cap (`vendor_research_run_ledger`,
+ * with the run's `created_at`), so that the run still counts once its vendor is deleted and the
+ * run's row goes with it (see `countRunsSinceQuery`). Only a run that starts is written: a run that
+ * never started spent nothing. It also drops at most LEDGER_PRUNE_BATCH of the organization's
+ * ledger rows older than LEDGER_RETENTION_DAYS, through the index on (organization_id,
+ * created_at), so the ledger stays small without a scan of its own.
  */
 export const markRunRunningQuery = async (
   organizationId: number,
   runId: number,
 ): Promise<boolean> => {
   const started = (await sequelize.query(
-    `UPDATE vendor_research_runs SET status = 'running', started_at = NOW()
-     WHERE organization_id = :organizationId AND id = :runId AND status = 'queued'
-       AND created_at >= NOW() - (${STALE_RUN_MINUTES} * INTERVAL '1 minute')
-     RETURNING id`,
+    `WITH started AS (
+       UPDATE vendor_research_runs SET status = 'running', started_at = NOW()
+       WHERE organization_id = :organizationId AND id = :runId AND status = 'queued'
+         AND created_at >= NOW() - (${STALE_RUN_MINUTES} * INTERVAL '1 minute')
+       RETURNING id, organization_id, created_at
+     ), ledger AS (
+       INSERT INTO vendor_research_run_ledger (organization_id, run_id, created_at)
+       SELECT organization_id, id, created_at FROM started
+       ON CONFLICT (run_id) DO NOTHING
+     ), pruned AS (
+       DELETE FROM vendor_research_run_ledger
+       WHERE id IN (
+         SELECT id FROM vendor_research_run_ledger
+         WHERE organization_id = :organizationId
+           AND created_at < NOW() - (${LEDGER_RETENTION_DAYS} * INTERVAL '1 day')
+           AND EXISTS (SELECT 1 FROM started)
+         LIMIT ${LEDGER_PRUNE_BATCH}
+       )
+     )
+     SELECT id FROM started`,
     { replacements: { organizationId, runId }, type: QueryTypes.SELECT },
   )) as Array<{ id: number }>;
   return started.length > 0;
 };
+
+/**
+ * Days a row of the ledger of the daily cap is kept. The cap looks back one day; the rest is margin
+ * for a clock or a window that is read late.
+ */
+export const LEDGER_RETENTION_DAYS = 7;
+
+/** At most this many old ledger rows are dropped by one start (see `markRunRunningQuery`). */
+export const LEDGER_PRUNE_BATCH = 50;
 
 /**
  * Writes where a running run is (see `RunProgress`), replacing what it wrote before. It touches
@@ -383,7 +467,8 @@ export const finishRunQuery = async (
  *   stopped counting can only end that way and never searches.
  *
  * A running run counts however long it has run, and so do a completed run and a run that failed
- * after it started: they searched, or may still be searching.
+ * after it started: they searched, or may still be searching. (The scan, `listDueVendorsQuery`,
+ * lets a run that failed after it started hold its vendor back for FAILED_RUN_BACKOFF_DAYS only.)
  */
 const COUNTS_AS_A_RUN = `NOT (
   (status = 'failed' AND started_at IS NULL)
@@ -397,24 +482,43 @@ const COUNTS_AS_A_RUN = `NOT (
 export const getLastRunCreatedAtQuery = async (
   organizationId: number,
   vendorId: number,
+  transaction?: Transaction,
 ): Promise<Date | null> => {
   const rows = (await sequelize.query(
     `SELECT MAX(created_at) AS created_at FROM vendor_research_runs
      WHERE organization_id = :organizationId AND vendor_id = :vendorId AND ${COUNTS_AS_A_RUN}`,
-    { replacements: { organizationId, vendorId }, type: QueryTypes.SELECT },
+    { replacements: { organizationId, vendorId }, type: QueryTypes.SELECT, transaction },
   )) as Array<{ created_at: Date | null }>;
   return rows[0]?.created_at ?? null;
 };
 
 /**
  * The organization's runs created at or after `since`, whatever their status and trigger type,
- * except the runs that do not count (see `COUNTS_AS_A_RUN`).
+ * except the runs that do not count (see `COUNTS_AS_A_RUN`), plus the runs that started and no
+ * longer exist.
+ *
+ * A run's row goes with its vendor (ON DELETE CASCADE), and a run that started has searched and
+ * called a model, or still does: a run that is running when its vendor is deleted goes on until it
+ * ends. Such a run is still counted, through the row that `markRunRunningQuery` wrote for it in
+ * `vendor_research_run_ledger`, a table that holds no vendor data and goes only with the
+ * organization. A run that exists is counted through its own row, as before, and never through the
+ * ledger, so it counts once and its age and status keep deciding.
  */
-export const countRunsSinceQuery = async (organizationId: number, since: Date): Promise<number> => {
+export const countRunsSinceQuery = async (
+  organizationId: number,
+  since: Date,
+  transaction?: Transaction,
+): Promise<number> => {
   const rows = (await sequelize.query(
-    `SELECT COUNT(*)::int AS count FROM vendor_research_runs
-     WHERE organization_id = :organizationId AND created_at >= :since AND ${COUNTS_AS_A_RUN}`,
-    { replacements: { organizationId, since }, type: QueryTypes.SELECT },
+    `SELECT (
+       SELECT COUNT(*) FROM vendor_research_runs
+       WHERE organization_id = :organizationId AND created_at >= :since AND ${COUNTS_AS_A_RUN}
+     )::int + (
+       SELECT COUNT(*) FROM vendor_research_run_ledger l
+       WHERE l.organization_id = :organizationId AND l.created_at >= :since
+         AND NOT EXISTS (SELECT 1 FROM vendor_research_runs r WHERE r.id = l.run_id)
+     )::int AS count`,
+    { replacements: { organizationId, since }, type: QueryTypes.SELECT, transaction },
   )) as Array<{ count: number }>;
   return rows[0].count;
 };
@@ -711,7 +815,9 @@ export const saveVendorResearchSettingsQuery = async (
 
 /**
  * The keys (see `sourceKey` in services/webResearch/urlCanon.ts) of the documents that the runs of
- * the vendor showed to the model. A scheduled run analyses the sources whose key is not among them.
+ * the vendor showed to the model, and the key of each page change it was shown (`changeKeyOf` in
+ * services/vendorResearch/sourceMemory.ts: the page key, `#changed-` and eight hex digits). A
+ * scheduled run analyses the sources whose key is not among them.
  */
 export const getKnownSourceKeysQuery = async (
   organizationId: number,
@@ -877,11 +983,21 @@ export const listScanOrganizationsQuery = async (): Promise<
   }));
 };
 
+/** How long a run that failed after it started holds its vendor back from the scan. */
+export const FAILED_RUN_BACKOFF_DAYS = 1;
+
 /**
  * The vendors of the organization whose scan is due, at most `limit` of them: the vendors with no
  * run that counts (see `COUNTS_AS_A_RUN`) first, in the order they were added, then those whose
- * newest run, of any trigger, is older than the interval, the one researched longest ago first.
- * A demo vendor is never researched.
+ * newest run, of any trigger, is older than the interval (but for a failed run, below), the one
+ * researched longest ago first. A demo vendor is never researched.
+ *
+ * A run that failed after it started counts for the cooldown and the daily cap, which it spent, but
+ * for the scan only for FAILED_RUN_BACKOFF_DAYS: it failed for a passing reason as often as not (a
+ * rate limit, an outage, a restarted worker), and would otherwise hold its vendor back for a whole
+ * interval. A vendor whose runs keep failing is then tried once a day, and the scan's share of the
+ * daily cap bounds what that costs. The order still goes by the newest run that counts, failed or
+ * not, so that such a vendor does not take the first places of every batch.
  */
 export const listDueVendorsQuery = async (input: {
   organizationId: number;
@@ -892,14 +1008,18 @@ export const listDueVendorsQuery = async (input: {
     `SELECT v.id
      FROM vendors v
      LEFT JOIN LATERAL (
-       SELECT MAX(r.created_at) AS last_at
+       SELECT MAX(r.created_at) AS last_at,
+              MAX(r.created_at) FILTER (
+                WHERE r.status <> 'failed'
+                   OR r.created_at >= NOW() - (${FAILED_RUN_BACKOFF_DAYS} * INTERVAL '1 day')
+              ) AS holding_at
        FROM vendor_research_runs r
        WHERE r.organization_id = v.organization_id AND r.vendor_id = v.id AND ${COUNTS_AS_A_RUN}
      ) newest ON TRUE
      WHERE v.organization_id = :organizationId
        AND v.is_demo = false
-       AND (newest.last_at IS NULL
-            OR newest.last_at < NOW() - (:intervalDays * INTERVAL '1 day'))
+       AND (newest.holding_at IS NULL
+            OR newest.holding_at < NOW() - (:intervalDays * INTERVAL '1 day'))
      ORDER BY newest.last_at ASC NULLS FIRST, v.id ASC
      LIMIT :limit`,
     { replacements: input, type: QueryTypes.SELECT },

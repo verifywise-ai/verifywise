@@ -1,6 +1,7 @@
 import { Queue } from "bullmq";
 import logger from "../../utils/logger/fileLogger";
 import { REDIS_URL } from "../../database/redis";
+import { FAILED_JOB_RETENTION } from "../automations/automationProducer";
 
 // Create a new queue (connected to Redis using environment variable)
 export const notificationQueue = new Queue("slack-notifications", {
@@ -21,7 +22,8 @@ export async function scheduleDailyNotification() {
       data: { type: "policies" },
       opts: {
         removeOnComplete: true,
-        removeOnFail: false,
+        // The start no longer empties this queue, so a failed run must not stay in Redis for good.
+        removeOnFail: FAILED_JOB_RETENTION,
       },
     },
   );

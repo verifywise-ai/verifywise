@@ -43,7 +43,7 @@
 import { FetchError } from "../../../webResearch/guardedFetch";
 import { shortName } from "../../identity";
 import { joinSentences, sentence } from "../../records/sentence";
-import { cleanText, cutAtCodePoint } from "../../text";
+import { cleanText, cutAtCodePoint, withoutHiddenCharacters } from "../../text";
 import { cveVendorKey } from "../keys";
 import type { ParsedRecord } from "../types";
 import { type ZipLimits, forEachZipEntry } from "../zip";
@@ -139,8 +139,11 @@ const objectOf = (value: unknown): Fields | null =>
   typeof value === "object" && value !== null && !Array.isArray(value) ? (value as Fields) : null;
 const listOf = (value: unknown): unknown[] => (Array.isArray(value) ? value : []);
 const textOf = (value: unknown): string => (typeof value === "string" ? value : "");
-/** A field as one line of plain text. */
-const plain = (value: unknown): string => cleanText(textOf(value)).replace(/\s+/g, " ").trim();
+/** A field as one line of plain text, without the characters nobody sees. */
+const plain = (value: unknown): string =>
+  withoutHiddenCharacters(cleanText(textOf(value)))
+    .replace(/\s+/g, " ")
+    .trim();
 /** Whether a vendor or a product is a placeholder (n/a, unknown, unspecified) and so names none. */
 const isNa = (text: string): boolean => NO_VALUE.has(text.trim().toLowerCase());
 
@@ -239,6 +242,19 @@ function instantOf(value: unknown): string | null {
   return Number.isNaN(time) ? null : new Date(time).toISOString();
 }
 
+/**
+ * The record's last update (`dateUpdated`) as the copy stores it: the instant in UTC, read as
+ * `instantOf` reads it, so that a time without a zone is the same instant in every process (the
+ * store reads a time without a zone in the zone of the process); a day alone stays that day, which
+ * the store reads as its UTC midnight; null for none it can read.
+ */
+function updatedAtOf(value: unknown): string | null {
+  const instant = instantOf(value);
+  if (instant !== null) return instant;
+  const text = textOf(value).trim();
+  return /^\d{4}-\d{2}-\d{2}$/.test(text) ? dayOf(text) : null;
+}
+
 function rejectedRecordOf(id: string, meta: Fields, containers: Fields | null): ParsedRecord {
   const rejectedAt = instantOf(meta.dateRejected);
   const text = joinSentences([
@@ -260,7 +276,7 @@ function rejectedRecordOf(id: string, meta: Fields, containers: Fields | null): 
     // A rejected record names no product: the copy keeps the keys it was matched by.
     matchKeys: [],
     publishedAt: dayOf(textOf(meta.datePublished)),
-    sourceUpdatedAt: plain(meta.dateUpdated) || null,
+    sourceUpdatedAt: updatedAtOf(meta.dateUpdated),
     status: "rejected",
     // The copy dates the rejection by the CVE Program's day, also for a record loaded months later.
     ...(rejectedAt === null ? {} : { statusChangedAt: rejectedAt }),
@@ -323,7 +339,7 @@ export function readCveRecord(json: unknown, window: { from: string }): CveReadi
       identifiers: { cveID: id, state: "PUBLISHED" },
       matchKeys: keysOf(vendors),
       publishedAt: published,
-      sourceUpdatedAt: plain(meta.dateUpdated) || null,
+      sourceUpdatedAt: updatedAtOf(meta.dateUpdated),
     },
   };
 }
@@ -521,7 +537,10 @@ async function lastHourOf(fetch: ConnectorFetch, day: string): Promise<string | 
 export const cveConnector: IncrementalConnector = {
   kind: "incremental",
   id: "cve",
-  version: 2,
+  // 3: the last update of a record is stored as an instant in UTC (a time without a zone was read
+  // in the zone of the process). The version only enters the hash of a download: the days already
+  // applied are not read again, and a new baseline restates the rows a skewed zone wrote.
+  version: 3,
   async download(fetch, cursor, now) {
     const window = { from: cveWindowStart(now) };
     const yesterday = yesterdayOf(now);

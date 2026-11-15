@@ -13,10 +13,11 @@
 import { FetchError } from "../../../../webResearch/guardedFetch";
 import type { ParsedRecord } from "../../types";
 import * as zipModule from "../../zip";
-import { unreadableAllowed } from "../kit/clean";
+import { lineOf, unreadableAllowed } from "../kit/clean";
 import { type Fetched, createFileConnector } from "../kit/fileConnector";
 import * as streamModule from "../kit/stream";
 import {
+  ENTITY_NAME_MAX,
   ENVELOPE_CONTENT_TYPE,
   FLAT_LINE_BYTES_MAX,
   NHTSA_DOCUMENTATION_URL,
@@ -1272,6 +1273,29 @@ describe("rows that cannot be read", () => {
     },
   );
 
+  // One mistyped row used to become the newest day of the file: the year counts of every record
+  // then covered 2096 to 2099, the window of open investigations moved with them, and the copy's
+  // version was 2099-01-01.
+  it.each([
+    ["opened", { odate: "20990101", cdate: "" }],
+    ["closed", { odate: "20250312", cdate: "20990101" }],
+  ])(
+    "reads a row %s after the day of the download as a line that cannot be read, so no day of the file moves",
+    async (_label, days) => {
+      const outlier = line({ id: "PE99001", mfr: "Example Motors", ...days });
+      const before = await envelopeOfLines(FILE);
+      const after = await envelopeOfLines([...FILE, outlier]);
+
+      expect(after.meta).toEqual({
+        ...before.meta,
+        lines: FILE.length + 1,
+        rows: FILE.length + 1,
+        unreadable: 1,
+      });
+      expect(after.entities).toEqual(before.entities);
+    },
+  );
+
   it("reads a name of exactly the cap, and a long cell that cleans to a name that fits", async () => {
     const edge = `${"Q".repeat(77)} Co`;
     const spaced = `Spaced${" ".repeat(300)}Motors${cp(0x200b).repeat(300)} Inc.`;
@@ -1775,9 +1799,9 @@ describe("hostile cells", () => {
     expect(hostile?.matchKeys.every((key) => /^name:[\p{L}\p{N}]+$/u.test(key))).toBe(true);
   });
 
-  it("keep a name that a second cleaning would change: the list is not refused for it", async () => {
-    // A soft hyphen between a letter and a combining mark is dropped by the cleaning, which leaves the mark loose;
-    // cleaning the line again would compose them. The download cleans a name once, and the reader of it takes the line as written.
+  it("composes a letter and its mark that a hidden character separates: the name is clean after one cleaning", async () => {
+    // A soft hyphen between a letter and a combining mark is dropped before the fold, so the mark is composed with the
+    // letter in the one cleaning: the line is a fixed point of it, and the reader of the download takes it as written.
     const lines = [
       ...FILE,
       line({
@@ -1792,10 +1816,38 @@ describe("hostile cells", () => {
     const snapshot = await snapshotOf(lines);
     const { records } = nhtsaOdiConnector.parse(snapshot);
 
-    expect(bodyOf(snapshot).rows.find((row) => row.id === "zetamotors")?.display).toBe(
-      `Zeta${cp(0x0308)} Motors Inc.`,
+    expect(bodyOf(snapshot).rows.find((row) => row.id === `zet${cp(0xe4)}motors`)?.display).toBe(
+      `Zet${cp(0xe4)} Motors Inc.`,
     );
-    expect(hasRecord(records, "zetamotors")).toBe(true);
+    expect(hasRecord(records, `zet${cp(0xe4)}motors`)).toBe(true);
+  });
+
+  it("keep a name that a second cleaning would change: the list is not refused for it", async () => {
+    // Sixteen U+0344 are within the bound of a run of marks before the fold, which expands each into
+    // two marks; cleaning the line again cuts that run to sixteen. The download cleans a name once,
+    // and the reader of it takes the line as written (isCleanLine does not ask for a fixed point).
+    const lines = [
+      ...FILE,
+      line({
+        id: "PE25601",
+        comp: "TIRES",
+        mfr: `Zeta${cp(0x344).repeat(16)} Motors Inc.`,
+        odate: "20250601",
+        cdate: "20250901",
+      }),
+    ];
+
+    const snapshot = await snapshotOf(lines);
+    const { records } = nhtsaOdiConnector.parse(snapshot);
+
+    const row = bodyOf(snapshot).rows.find(
+      (candidate) =>
+        candidate.display.startsWith("Zet") && candidate.display.endsWith(" Motors Inc."),
+    );
+    expect(row).toBeDefined();
+    const display = row?.display ?? "";
+    expect(lineOf(display, ENTITY_NAME_MAX)).not.toBe(display);
+    expect(hasRecord(records, row?.id ?? "")).toBe(true);
   });
 
   it("do not make a name a person: a name that has the shape of one is a business here", async () => {

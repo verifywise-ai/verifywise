@@ -24,6 +24,14 @@ import {
   sourceMentionsVendor,
   validateFindings,
 } from "../validation";
+import {
+  CONTINUATION_INDENT,
+  CONTINUED_MARK,
+  MAX_LINE_CHARS,
+  type PolicyPage,
+  comparePages,
+  linesOf,
+} from "../policySnapshots";
 
 type Candidate = CredibilityOutput["findings"][number];
 
@@ -1524,6 +1532,96 @@ describe("validateFindings report", () => {
     expect(report.citations).toEqual({ quote_is_only_the_name: 1 });
   });
 
+  // A page names the vendor by an alias as often as by its name, and the vendor-mention check takes
+  // either, so a quote that is only the alias says nothing more than one that is only the name.
+  it("removes a quote that is only one of the vendor's other names, or its possessive", () => {
+    const target: ResearchTarget = {
+      name: "Example Platforms",
+      domain: "example.com",
+      provides: "Social media",
+      aliases: ["Samplebook", "Sample Social"],
+    };
+    const report = newValidationReport();
+    const pack = [
+      source({
+        title: "Example Platforms breach",
+        content: "Example Platforms confirmed on Monday that attackers copied customer records.",
+      }),
+      source({
+        id: "S2",
+        url: "https://www.reuters.com/a",
+        title: "Samplebook",
+        content: "Samplebook is a site. Sample Social is its app. Samplebook's users.",
+      }),
+    ];
+
+    const findings = validateFindings(
+      {
+        findings: [
+          candidate({
+            evidence: [
+              { source_id: "S1", quote: "attackers copied customer records" },
+              { source_id: "S2", quote: "Samplebook" },
+            ],
+          }),
+          candidate({
+            risk_description: "A second claim.",
+            evidence: [
+              { source_id: "S1", quote: "attackers copied customer records" },
+              { source_id: "S2", quote: "Sample Social" },
+            ],
+          }),
+          candidate({
+            risk_description: "A third claim.",
+            evidence: [
+              { source_id: "S1", quote: "attackers copied customer records" },
+              { source_id: "S2", quote: "Samplebook's" },
+            ],
+          }),
+        ],
+        category_notes: [],
+      },
+      pack,
+      target,
+      [...RESEARCH_CATEGORIES],
+      report,
+    );
+
+    expect(findings.map((finding) => finding.sources.map((s) => s.url))).toEqual([
+      ["https://news.example.com/acme-breach"],
+      ["https://news.example.com/acme-breach"],
+      ["https://news.example.com/acme-breach"],
+    ]);
+    expect(report.citations).toEqual({ quote_is_only_the_name: 3 });
+  });
+
+  it("keeps a quote with a word beyond the alias, and a vendor with no aliases as before", () => {
+    const report = newValidationReport();
+    const findings = validateFindings(
+      {
+        findings: [
+          candidate({
+            evidence: [
+              { source_id: "S1", quote: "attackers copied customer records" },
+              { source_id: "S2", quote: "Samplebook was fined" },
+            ],
+          }),
+        ],
+        category_notes: [],
+      },
+      [
+        source(),
+        source({ id: "S2", url: "https://www.reuters.com/a", content: "Samplebook was fined." }),
+      ],
+      { ...TARGET, aliases: ["Samplebook"] },
+      [...RESEARCH_CATEGORIES],
+      report,
+    );
+
+    expect(findings[0].sources).toHaveLength(2);
+    expect(report.citations).toEqual({});
+  });
+
   it("tells a source that is not about the vendor from a quote that is not in it", () => {
     const { report } = validated(
       [candidate({ evidence: [{ source_id: "S1", quote: "attackers copied customer records" }] })],
@@ -1666,5 +1764,388 @@ describe("applyCaps", () => {
 
     expect(labels(findings)).toEqual(["minor", "major"]);
     expect(capped).not.toBe(findings);
+  });
+});
+
+// RVP-5, RV6P-3: a change shows a long clause as parts. A part that continues the part shown right
+// before it, cut from it where a blank was, is shown indented in place of its bullet and continued
+// mark, so that the text of the change holds the clause; any other part keeps its bullet and mark.
+// The quote check joins no lines of its own.
+describe("validateFindings on a change of a page of the vendor's terms", () => {
+  const OPENING =
+    "The provider processes customer data only to provide the services and for no other purpose, "
+      .repeat(6)
+      .trim();
+  const NEVER =
+    "The provider will never use customer data to train artificial intelligence models.";
+  const MAY =
+    "The provider may use customer data to train artificial intelligence models unless the customer opts out in writing.";
+  const NOW = new Date("2031-04-20T12:00:00Z");
+  const page = (text: string): PolicyPage => ({
+    url: "https://acme.com/dpa",
+    key: "acme.com/dpa",
+    kind: "dpa",
+    title: "DPA",
+    text,
+  });
+  /** The source the change of the clause makes, as the pack shows it. */
+  function changeSource(): EvidenceSource {
+    const [write] = comparePages({
+      pages: [page(`${OPENING} ${NEVER}`)],
+      stored: new Map(),
+      now: NOW,
+    }).writes;
+    const [entry] = comparePages({
+      pages: [page(`${OPENING} ${MAY}`)],
+      stored: new Map([[write.pageKey, { ...write, lastSeenAt: new Date("2031-01-01") }]]),
+      now: NOW,
+    }).entries;
+    return {
+      id: "S1",
+      category: entry.category,
+      kind: "page",
+      onVendorSite: true,
+      url: entry.url,
+      title: entry.title,
+      content: entry.content,
+      publishedAt: entry.publishedAt,
+    };
+  }
+  const citing = (quote: string): Candidate =>
+    candidate({
+      category: "ai_specific",
+      risk_description:
+        "The data processing addendum now lets the vendor train models on our data.",
+      evidence: [{ source_id: "S1", quote }],
+    });
+
+  // The change shows the second part right after the first, indented in place of its bullet and
+  // mark (describeChange), so that its text, whitespace squeezed, holds the clause as the page does.
+  it("is a change whose changed sentence straddles two parts of the clause", () => {
+    const kept = linesOf(`${OPENING} ${MAY}`);
+    expect(kept).toHaveLength(2);
+    expect(kept.some((line) => line.includes(MAY))).toBe(false);
+    const { content } = changeSource();
+    expect(content).toContain(`\n${CONTINUATION_INDENT}${kept[1].slice(CONTINUED_MARK.length)}`);
+    expect(content).not.toContain(CONTINUED_MARK);
+    expect(normaliseForQuote(content)).toContain(normaliseForQuote(MAY));
+  });
+
+  it("takes a quote of the changed sentence across the joint of two parts", () => {
+    const report = newValidationReport();
+    const findings = validateFindings(
+      { findings: [citing(MAY)], category_notes: [] },
+      [changeSource()],
+      TARGET,
+      [...RESEARCH_CATEGORIES],
+      report,
+    );
+
+    expect(report.citations).toEqual({});
+    expect(findings).toHaveLength(1);
+    expect(findings[0].sources[0].quote).toBe(MAY);
+  });
+
+  it("still takes a quote of one part as it is shown", () => {
+    const tail = "artificial intelligence models unless the customer opts out in writing.";
+    const shown = changeSource()
+      .content.split("\n")
+      .find((line) => line.startsWith(CONTINUATION_INDENT));
+    expect(shown).toBe(`${CONTINUATION_INDENT}${tail}`);
+
+    expect(
+      validate(
+        [citing("artificial intelligence models unless the customer opts out")],
+        [changeSource()],
+      ),
+    ).toHaveLength(1);
+  });
+
+  // No source has its lines joined by the quote check: a text that shows the two parts as two
+  // bullets, the second with the continued mark, does not hold the sentence, on a page that is not
+  // a change or on one that is (RV6P-3: the change itself shows a joint that is one).
+  it("refuses the same quote from a page that is not a change", () => {
+    const asBullets = changeSource().content.replace(
+      `\n${CONTINUATION_INDENT}`,
+      `\n- ${CONTINUED_MARK}`,
+    );
+    expect(asBullets).toContain(`\n- ${CONTINUED_MARK}artificial`);
+    expect(validate([citing(MAY)], [{ ...changeSource(), content: asBullets }])).toEqual([]);
+    const report = newValidationReport();
+    const notAChange = { ...changeSource(), url: "https://acme.com/dpa", content: asBullets };
+
+    const findings = validateFindings(
+      { findings: [citing(MAY)], category_notes: [] },
+      [notAChange],
+      TARGET,
+      [...RESEARCH_CATEGORIES],
+      report,
+    );
+
+    expect(findings).toEqual([]);
+    expect(report.citations).toEqual({ quote_not_in_source: 1 });
+  });
+
+  it("refuses the same quote from a page of another site that looks like a change", () => {
+    const asBullets = changeSource().content.replace(
+      `\n${CONTINUATION_INDENT}`,
+      `\n- ${CONTINUED_MARK}`,
+    );
+    const offSite = { ...changeSource(), onVendorSite: false, content: asBullets };
+    const report = newValidationReport();
+
+    const findings = validateFindings(
+      { findings: [citing(MAY)], category_notes: [] },
+      [offSite],
+      TARGET,
+      [...RESEARCH_CATEGORIES],
+      report,
+    );
+
+    expect(findings).toEqual([]);
+    expect(report.citations).toEqual({ quote_not_in_source: 1 });
+  });
+
+  // A line that begins with the continued mark after a line too short to be a part of a long
+  // clause is a line of its own on the page: a quote may not join the two.
+  it("does not join a line that begins with the continued mark to a short line before it", () => {
+    const source = {
+      ...changeSource(),
+      content: [
+        "Page change: the data processing addendum on the vendor's website changed between 2031-01-01 and 2031-04-20.",
+        "Added:",
+        "- The provider may use customer data to train",
+        `- ${CONTINUED_MARK}artificial intelligence models unless the customer opts out in writing.`,
+      ].join("\n"),
+    };
+    const report = newValidationReport();
+
+    const findings = validateFindings(
+      { findings: [citing(MAY)], category_notes: [] },
+      [source],
+      TARGET,
+      [...RESEARCH_CATEGORIES],
+      report,
+    );
+
+    expect(findings).toEqual([]);
+    expect(report.citations).toEqual({ quote_not_in_source: 1 });
+  });
+
+  // Only the tail of a long clause changed, so its continued part follows an unrelated added
+  // clause that is long, but not so long that the first word of the part could not have fitted.
+  it("does not join a continued part to a long unrelated line it could not have been cut from", () => {
+    const unrelated =
+      `The provider keeps logs of access to the services ${"for the security of the services ".repeat(9)}`.trim();
+    expect(unrelated.length).toBeGreaterThan(300);
+    expect(unrelated.length + 1 + "artificial".length).toBeLessThan(MAX_LINE_CHARS - 1);
+    const source = {
+      ...changeSource(),
+      content: [
+        "Page change: the data processing addendum on the vendor's website changed between 2031-01-01 and 2031-04-20.",
+        "Added:",
+        `- ${unrelated}`,
+        `- ${CONTINUED_MARK}artificial intelligence models unless the customer opts out in writing.`,
+      ].join("\n"),
+    };
+
+    expect(
+      validate(
+        [citing("for the security of the services artificial intelligence models unless")],
+        [source],
+      ),
+    ).toEqual([]);
+  });
+
+  // Every joint that the kept lines make of a long clause is read as the space it stands for.
+  it("joins every joint of the long clauses of a change", () => {
+    let seed = 7;
+    const next = () => {
+      seed = (seed * 1103515245 + 12345) % 2147483648;
+      return seed;
+    };
+    for (let round = 0; round < 30; round += 1) {
+      const words: string[] = [];
+      const size = 700 + (next() % 1500);
+      while (words.join(" ").length < size) {
+        words.push("abcdefghijklmnopqrstuvwxyz".slice(0, 1 + (next() % 15)).repeat(1));
+      }
+      const clause = `The provider ${words.join(" ")} and the customer.`;
+      const parts = linesOf(clause);
+      expect(parts.length).toBeGreaterThan(1);
+      const [write] = comparePages({ pages: [page(NEVER)], stored: new Map(), now: NOW }).writes;
+      const [entry] = comparePages({
+        pages: [page(clause)],
+        stored: new Map([[write.pageKey, { ...write, lastSeenAt: new Date("2031-01-01") }]]),
+        now: NOW,
+      }).entries;
+      const source: EvidenceSource = {
+        id: "S1",
+        category: entry.category,
+        kind: "page",
+        onVendorSite: true,
+        url: entry.url,
+        title: entry.title,
+        content: entry.content,
+        publishedAt: entry.publishedAt,
+      };
+      for (let index = 1; index < parts.length; index += 1) {
+        const left = parts[index - 1].replace(CONTINUED_MARK, "").slice(-40);
+        const right = parts[index].slice(CONTINUED_MARK.length, CONTINUED_MARK.length + 40);
+        const quote = `${left} ${right}`;
+        expect(clause).toContain(quote);
+        const report = newValidationReport();
+        validateFindings(
+          { findings: [citing(quote)], category_notes: [] },
+          [source],
+          TARGET,
+          [...RESEARCH_CATEGORIES],
+          report,
+        );
+        expect({ round, index, citations: report.citations }).toEqual({
+          round,
+          index,
+          citations: {},
+        });
+      }
+    }
+  });
+
+  // A joint is read as the space it stands for, and nothing else is: a quote that leaves a word
+  // out at the joint is not on the page.
+  it("refuses a quote across the joint that leaves a word out", () => {
+    expect(
+      validate([citing(MAY.replace("to train artificial", "to artificial"))], [changeSource()]),
+    ).toEqual([]);
+  });
+
+  /** The source that the change of a page from `oldText` to `newText` makes. */
+  function sourceOfChange(oldText: string, newText: string): EvidenceSource {
+    const [write] = comparePages({ pages: [page(oldText)], stored: new Map(), now: NOW }).writes;
+    const [entry] = comparePages({
+      pages: [page(newText)],
+      stored: new Map([[write.pageKey, { ...write, lastSeenAt: new Date("2031-01-01") }]]),
+      now: NOW,
+    }).entries;
+    return {
+      id: "S1",
+      category: entry.category,
+      kind: "page",
+      onVendorSite: true,
+      url: entry.url,
+      title: entry.title,
+      content: entry.content,
+      publishedAt: entry.publishedAt,
+    };
+  }
+  const citationsOf = (quote: string, source: EvidenceSource) => {
+    const report = newValidationReport();
+    const findings = validateFindings(
+      { findings: [citing(quote)], category_notes: [] },
+      [source],
+      TARGET,
+      [...RESEARCH_CATEGORIES],
+      report,
+    );
+    return { kept: findings.length, citations: report.citations };
+  };
+  const ACCEPTED = { kept: 1, citations: {} };
+  const REFUSED = { kept: 0, citations: { quote_not_in_source: 1 } };
+  /** A clause of `count` words, each unlike the others, with the words of `edits` in their place. */
+  const wordsClause = (tag: string, count: number, edits: Record<number, string>) =>
+    `Acme ${Array.from({ length: count }, (_, index) => edits[index] ?? `${tag}${index}x`).join(" ")}.`;
+
+  // RV6P-3, probe rvp5_skip.js: a word changed in the first part and one in the third, so the
+  // second part did not change and is not shown. A quote may not run from the first part to the
+  // third: the text between is left out.
+  describe("a long clause whose middle part did not change", () => {
+    const oldText = wordsClause("w", 260, { 10: "never", 230: "keeps" });
+    const newText = wordsClause("w", 260, { 10: "often", 230: "sells" });
+
+    it("shows the first and the third part, not the second", () => {
+      const parts = linesOf(newText);
+      expect(parts).toHaveLength(3);
+      const { content } = sourceOfChange(oldText, newText);
+      expect(content).toContain(parts[0]);
+      expect(content).not.toContain(parts[1].slice(CONTINUED_MARK.length, 60));
+      expect(content).toContain(parts[2].slice(CONTINUED_MARK.length));
+    });
+
+    it("refuses a quote from the end of the first part to the start of the third", () => {
+      const quote = " w112x w113x w114x w115x w116x w216x w217x w218x w219x w220x ";
+      expect(newText).not.toContain(quote.trim());
+      expect(citationsOf(quote, sourceOfChange(oldText, newText))).toEqual(REFUSED);
+    });
+
+    it("takes a quote inside the third part, and one inside the first", () => {
+      const source = sourceOfChange(oldText, newText);
+      expect(citationsOf("w228x w229x sells w231x w232x", source)).toEqual(ACCEPTED);
+      expect(citationsOf("w9x often w11x w12x", source)).toEqual(ACCEPTED);
+    });
+
+    it("refuses made-up text", () => {
+      expect(citationsOf("w12x w13x w99x", sourceOfChange(oldText, newText))).toEqual(REFUSED);
+    });
+  });
+
+  // RV6P-3, probe rvp5_two.js: the second part of clause B and the second part of clause A changed.
+  // The two lines follow each other in the change, but not on the page.
+  it.each(["Added:", "Removed:"])(
+    "refuses a quote that glues a part of one clause to a part of another (%s)",
+    (section) => {
+      const oldText = `${wordsClause("b", 300, { 150: "keeps" })}\n${wordsClause("a", 200, { 150: "never" })}`;
+      const newText = `${wordsClause("b", 300, { 150: "sells" })}\n${wordsClause("a", 200, { 150: "often" })}`;
+      const source = sourceOfChange(oldText, newText);
+      const lines = source.content.split("\n");
+      const first = lines[lines.indexOf(section) + 1];
+      const second = lines[lines.indexOf(section) + 2];
+      expect(second.startsWith(`- ${CONTINUED_MARK}`)).toBe(true);
+      const quote = `${first.slice(-30)} ${second.slice(4, 34)}`;
+      expect(newText).not.toContain(quote.trim());
+      expect(oldText).not.toContain(quote.trim());
+
+      expect(citationsOf(quote, source)).toEqual(REFUSED);
+    },
+  );
+
+  // The nearest neighbour: when every part of the clause changed, the parts are shown one after
+  // the other and a quote across a joint is a quote of the page.
+  it("takes a quote across a joint of parts that are shown one after the other", () => {
+    const oldText = wordsClause("w", 260, { 10: "never", 130: "keeps", 230: "keeps" });
+    const newText = wordsClause("w", 260, { 10: "often", 130: "sells", 230: "sells" });
+    const parts = linesOf(newText);
+    expect(parts).toHaveLength(3);
+    const left = parts[0].slice(-30);
+    const right = parts[1].slice(CONTINUED_MARK.length, CONTINUED_MARK.length + 30);
+    const quote = `${left} ${right}`;
+    expect(newText).toContain(quote);
+
+    expect(citationsOf(quote, sourceOfChange(oldText, newText))).toEqual(ACCEPTED);
+  });
+
+  // RV6D-3, probe cjkjoint.js: a clause with no blank is cut at the limit, in the middle of a word.
+  // The kept lines do not say whether a blank stood at the cut, so a quote may not run across it:
+  // neither with a space that the page never had, nor (the limit of the check) without one.
+  describe("a long clause cut where no blank is", () => {
+    const head = "\u5f53\u793e\u306f\u9867\u5ba2\u30c7\u30fc\u30bf".repeat(80).slice(0, 580);
+    const OLD = `${head}\u5f53\u793e\u306f\u4eba\u5de5\u77e5\u80fd\u306b\u6c7a\u3057\u3066\u4f7f\u7528\u3057\u307e\u305b\u3093\u3002`;
+    const NEW = `${head}\u5f53\u793e\u306f\u4eba\u5de5\u77e5\u80fd\u306b\u4f7f\u7528\u3059\u308b\u3053\u3068\u304c\u3042\u308a\u307e\u3059\u3002\u9867\u5ba2\u304c\u62d2\u5426\u3057\u306a\u3044\u9650\u308a\u3002`;
+
+    it("is cut at the limit", () => {
+      expect(NEW).not.toContain(" ");
+      expect(linesOf(NEW)[0]).toHaveLength(MAX_LINE_CHARS);
+    });
+
+    it("refuses a quote across the cut with a space the page never had", () => {
+      const quote = `${NEW.slice(585, 600)} ${NEW.slice(600, 615)}`;
+      expect(citationsOf(quote, sourceOfChange(OLD, NEW))).toEqual(REFUSED);
+    });
+
+    it("refuses a quote across the cut as the page has it, and takes one on each side of it", () => {
+      const source = sourceOfChange(OLD, NEW);
+      expect(citationsOf(NEW.slice(585, 615), source)).toEqual(REFUSED);
+      expect(citationsOf(NEW.slice(585, 600), source)).toEqual(ACCEPTED);
+      expect(citationsOf(NEW.slice(600, 615), source)).toEqual(ACCEPTED);
+    });
   });
 });

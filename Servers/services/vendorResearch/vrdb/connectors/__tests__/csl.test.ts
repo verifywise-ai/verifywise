@@ -14,6 +14,7 @@ import { leiOf } from "../../__tests__/helpers/lei";
 import { isLei, matchOf, vendorKeys } from "../../keys";
 import { vrdbSourceOf } from "../../sources";
 import type { ParsedRecord } from "../../types";
+import { LINE_INPUT_MAX, MARK_RUN_MAX } from "../kit/clean";
 import {
   CSL_ALLOWED_TYPES,
   CSL_LISTS,
@@ -27,6 +28,7 @@ import {
   CSL_URL,
   createCslConnector,
   cslConnector,
+  cslNamesOf,
   cslUnreadableAllowed,
 } from "../csl";
 import {
@@ -249,9 +251,9 @@ function hasLoneSurrogate(text: string): boolean {
 // ---------------------------------------------------------------------------------------------
 
 describe("cslConnector", () => {
-  it("is the connector of csl, at version 1, with the mark of the list", () => {
+  it("is the connector of csl, at version 3, with the mark of the list", () => {
     expect(cslConnector.id).toBe("csl");
-    expect(cslConnector.version).toBe(1);
+    expect(cslConnector.version).toBe(3);
     expect(createCslConnector().id).toBe("csl");
     expect(CSL_RECORD_MARK).toBe("US Consolidated Screening List");
     expect(CSL_RECORD_MARK).toBe(vrdbSourceOf("csl").name);
@@ -1741,6 +1743,126 @@ describe("the match keys", () => {
     ).toBeNull();
   });
 
+  // The lists write a note into the name itself, and a name with no other name that lacks it was
+  // keyed only with the note: a vendor that bears the entity's own name did not find the entry
+  // (165 of the real entries, the 16 of the successor clause among them).
+  it.each([
+    [
+      "an alias in a bracket at its end",
+      elOf("Quarrow Aviation Industry Co., Ltd. (QAVI)"),
+      ["Quarrow Aviation Industry Co., Ltd.", "QAVI"],
+    ],
+    [
+      "a place in a bracket at its end",
+      elOf("Brindle Test Technology Co., Ltd. (Hong Kong)"),
+      ["Brindle Test Technology Co., Ltd."],
+    ],
+    [
+      "the successor clause of the State lists",
+      elOf(
+        "Marrowgate Bearings LLC (Russian entity); and any successor, sub-unit, or subsidiary thereof",
+        {
+          source: SOURCE.isn,
+        },
+      ),
+      ["Marrowgate Bearings LLC", "Marrowgate Bearings LLC (Russian entity)"],
+    ],
+  ] as Array<[string, RawEntry, string[]]>)(
+    "is found by the name without %s",
+    async (_name, raw, plainNames) => {
+      const { records } = await runOf(fileOf([raw]));
+      expect(records).toHaveLength(1);
+      for (const name of plainNames) {
+        expect(
+          matchOf(records[0].matchKeys, vendorKeys({ name, domain: null, provides: "" })),
+        ).toMatchObject({
+          method: "name_exact",
+          strength: "weak",
+        });
+      }
+      // The id stays that of the name as listed.
+      expect(records[0].sourceRecordId).toBe(
+        `${raw.source === SOURCE.isn ? "isn" : "el"}:${String(raw.name)
+          .toLowerCase()
+          .replace(/[^a-z0-9]/g, "")}`,
+      );
+    },
+  );
+
+  it("keys the names of a note after the names as listed, so that the cap keeps every listed one", async () => {
+    const { records } = await runOf(
+      fileOf([
+        elOf("Quarrow Optics Co., Ltd. (QOPT)", { alt_names: ["Quarrow Lenses Co., Ltd."] }),
+      ]),
+    );
+    expect(records[0].matchKeys.filter((key) => key.startsWith("name:"))).toEqual([
+      "name:quarrowopticscoltdqopt",
+      "name:quarrowlensescoltd",
+      "name:quarrowlenses",
+      "name:quarrowopticscoltd",
+      "name:quarrowoptics",
+      "name:qopt",
+    ]);
+  });
+
+  it("reads the names that a listed name also stands for", () => {
+    expect(cslNamesOf("Quarrow Aviation Industry Co., Ltd. (QAVI)")).toEqual([
+      "Quarrow Aviation Industry Co., Ltd.",
+      "QAVI",
+    ]);
+    expect(cslNamesOf("Quarrow Electronics Research Institute (CETC 55)")).toEqual([
+      "Quarrow Electronics Research Institute",
+      "CETC 55",
+    ]);
+    expect(cslNamesOf("National Quarrow Center Changsha (NQC-CS)")).toEqual([
+      "National Quarrow Center Changsha",
+      "NQC-CS",
+    ]);
+    // The clause, written with a semicolon after it, without a blank before it, or after a comma.
+    for (const clause of [
+      "; and any successor, sub-unit, or subsidiary thereof",
+      "; and any successor, sub-unit, or subsidiary thereof;",
+      ";and any successor, sub-unit, or subsidiary thereof;",
+      ", and any successor, sub-unit, or subsidiary thereof",
+    ]) {
+      expect(cslNamesOf(`Futwell Trading Co. Ltd${clause}`)).toEqual(["Futwell Trading Co. Ltd"]);
+    }
+    expect(
+      cslNamesOf(
+        "Futwell Trading Co. Ltd (China); and any successor, sub-unit, or subsidiary thereof",
+      ),
+    ).toEqual(["Futwell Trading Co. Ltd (China)", "Futwell Trading Co. Ltd"]);
+    // A name with no note stands for nothing else.
+    expect(cslNamesOf("Quarrow Optics Co., Ltd.")).toEqual([]);
+  });
+
+  it.each([
+    ["a bracket in the middle of a name", "Smartquill (Hong Kong) Co., Limited", []],
+    ["a bracket in the middle of a person's name", "JAMES L. (LONG) QUARROW", []],
+    ["a bracket of words in lower case", "Quarrow Logix (Private)", ["Quarrow Logix"]],
+    ["a nationality", "Ruhollah Quarrowi (Iranian national)", ["Ruhollah Quarrowi"]],
+    [
+      "a second bracket after a first one",
+      "Quarrow Science Foreign Affairs Bureau (QSFAB) (DPRK)",
+      ["Quarrow Science Foreign Affairs Bureau (QSFAB)"],
+    ],
+    [
+      "a bracket of capitals in a name of capitals alone",
+      "PJSC QUARROW BANK (KIEV)",
+      ["PJSC QUARROW BANK"],
+    ],
+    [
+      "a legal form in a bracket",
+      "Quarrow Telecom Research Institute (GMBH)",
+      ["Quarrow Telecom Research Institute"],
+    ],
+  ] as Array<[string, string, string[]]>)(
+    "takes no alias and no part of the name from %s",
+    (_name, name, names) => {
+      expect(cslNamesOf(name)).toEqual(names);
+    },
+  );
+
   it("holds no key of an address: a vendor named after a street or a city of an entry finds nothing", () => {
     for (const record of fixtureRun.records) {
       for (const key of record.matchKeys) {
@@ -2513,5 +2635,114 @@ describe("cslConnector.parse", () => {
 
     expect(parsed.root).toBe("consolidated.json");
     expect(parsed.records).toHaveLength(100);
+  });
+});
+
+// ---------------------------------------------------------------------------------------------
+
+describe("the fold of a field: bounded before NFKC, as the kit's lineOf is", () => {
+  const ACUTE = "́";
+  const GRAVE_BELOW = "̖";
+
+  it("keeps the first MARK_RUN_MAX marks of a run, so that the fold never sorts a long one", async () => {
+    // Marks of two classes in the worst order: the fold sorts them by insertion, in the square of
+    // the run's length, and the projection runs in one synchronous call. The run is cut before the
+    // fold, so the remark keeps the first MARK_RUN_MAX marks in the order written; a fold of the
+    // whole run would put the marks below first and keep hundreds of them.
+    const run = `${ACUTE.repeat(10_000)}${GRAVE_BELOW.repeat(10_000)}`;
+    const { records, errors } = await runOf(
+      fileOf([elOf("Marked Optics Ltd", { remarks: `x${run} end` })]),
+    );
+
+    expect(errors).toBe(0);
+    expect(records[0].summary).toContain(`Remarks: x${ACUTE.repeat(MARK_RUN_MAX)} end.`);
+  });
+
+  it("keeps a run of MARK_RUN_MAX marks or fewer as the fold writes it", async () => {
+    const { records } = await runOf(
+      fileOf([elOf("Short Run Optics Ltd", { remarks: `x${ACUTE}${GRAVE_BELOW} end` })]),
+    );
+
+    expect(records[0].summary).toContain(`Remarks: x${GRAVE_BELOW}${ACUTE} end.`);
+  });
+
+  it("reads a field to LINE_INPUT_MAX units: a text beyond them is never seen", async () => {
+    const { records } = await runOf(
+      fileOf([
+        elOf("Long Remark Optics Ltd", {
+          remarks: `Kept note.${" ".repeat(LINE_INPUT_MAX)}ZZ-BEYOND`,
+        }),
+      ]),
+    );
+
+    expect(records[0].summary).toContain("Remarks: Kept note.");
+    expect(records[0].summary).not.toContain("ZZ-BEYOND");
+  });
+
+  it("refuses a name or another name longer than LINE_INPUT_MAX units: a cut name would be another name", async () => {
+    for (const entry of [
+      elOf(`Padded Optics Ltd${" ".repeat(LINE_INPUT_MAX)}Holdings`),
+      elOf("Other Name Optics Ltd", {
+        alt_names: [`Padded Optics Ltd${" ".repeat(LINE_INPUT_MAX)}Holdings`],
+      }),
+    ]) {
+      const result = await runOf(fileOf([elOf("Good Optics Ltd"), entry]));
+
+      expect(idsOfRecords(result.records)).toEqual(["el:goodopticsltd"]);
+      expect(JSON.parse(result.snapshot.bodies[0]).unreadable).toBe(1);
+    }
+  });
+});
+
+describe("a day of the year 0000: no publication day, so that the write of the list never fails on it", () => {
+  it.each([
+    ["an ISO date", "0000-06-01"],
+    ["an ISO date and time", "0000-06-01T00:00:00+00:00"],
+    ["a month, a day and a year", "6/1/0000"],
+  ])("gives no day for %s (%s), and that is no error", async (_label, text) => {
+    const { records, errors } = await runOf(
+      fileOf([elOf("Year Zero Optics Ltd", { start_date: text })]),
+    );
+
+    expect(errors).toBe(0);
+    expect(records).toHaveLength(1);
+    expect(records[0].publishedAt).toBeNull();
+  });
+
+  it("reads the year 0001, the first that a store holds", async () => {
+    const { records } = await runOf(
+      fileOf([elOf("Year One Optics Ltd", { start_date: "0001-06-01" })]),
+    );
+
+    expect(records[0].publishedAt).toBe("0001-06-01");
+  });
+});
+
+describe("the hidden characters of a field: out before the fold, as the kit's lineOf takes them", () => {
+  const ZERO_WIDTH = String.fromCodePoint(0x200b);
+  const ACUTE = String.fromCodePoint(0x301);
+  const COMPOSED = `Soci${String.fromCodePoint(0xe9)}t${String.fromCodePoint(0xe9)} Optics`;
+
+  it("composes a letter and its mark that a zero-width character separates: the vendor's key matches", async () => {
+    // The zero-width space stopped the fold from composing the e and its mark, and taking it out
+    // after the fold left them apart: the loose mark then fell out of the key.
+    const { records } = await runOf(fileOf([elOf(`Socie${ZERO_WIDTH}${ACUTE}te${ACUTE} Optics`)]));
+
+    expect(records).toHaveLength(1);
+    expect(records[0].title).toContain(COMPOSED);
+    expect(records[0].title).not.toContain(ZERO_WIDTH);
+    const vendor = { name: COMPOSED, domain: null, provides: "" };
+    expect(matchOf(records[0].matchKeys, vendorKeys(vendor))).toMatchObject({
+      method: "name_exact",
+    });
+  });
+
+  it("bounds a run of marks that hidden characters split: they go before the run is counted", async () => {
+    const split = Array.from({ length: 40 }, () => `${ACUTE.repeat(3)}${ZERO_WIDTH}`).join("");
+    const { records } = await runOf(
+      fileOf([elOf("Split Run Optics Ltd", { remarks: `x${split} end` })]),
+    );
+
+    expect(records[0].summary).toContain(`Remarks: x${ACUTE.repeat(MARK_RUN_MAX)} end.`);
   });
 });

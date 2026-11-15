@@ -7,7 +7,9 @@ import type { VendorRiskModel } from "../../../domain.layer/models/vendorRisk/ve
 // Every module that reaches the database or opens a queue is replaced by a factory: a bare
 // jest.mock(path) would still load the real module to build the automock, and the real create
 // service loads the BullMQ producer, which opens a queue.
-jest.mock("../../../database/db", () => ({ sequelize: { transaction: jest.fn() } }));
+jest.mock("../../../database/db", () => ({
+  sequelize: { transaction: jest.fn(), query: jest.fn() },
+}));
 jest.mock("../../../utils/vendorResearch.utils", () => ({
   getFindingByIdQuery: jest.fn(),
   markFindingAcceptedQuery: jest.fn(),
@@ -62,6 +64,8 @@ const FINDING_ID = 11;
 const RISK_ID = 42;
 const ASSIGNEE = 9;
 const OTHER_USER = 12;
+/** How many frameworks the mocked frameworks table holds (ids 1 to this). */
+const FRAMEWORK_COUNT = 100;
 
 const PENDING: IVendorRiskFinding = {
   id: FINDING_ID,
@@ -163,6 +167,14 @@ beforeEach(() => {
     events.push("post-commit");
   });
   asMock(markFindingDismissedQuery).mockResolvedValue(DISMISSED);
+  // The frameworks table: every id up to FRAMEWORK_COUNT is a framework.
+  asMock(sequelize.query).mockImplementation(
+    async (sql: string, options: { replacements: { ids: number[] } }) => {
+      if (!sql.includes("FROM frameworks")) throw new Error(`unexpected query: ${sql}`);
+      events.push("frameworks");
+      return options.replacements.ids.filter((id) => id <= FRAMEWORK_COUNT).map((id) => ({ id }));
+    },
+  );
 });
 
 const accept = (extra: { actionOwner?: number | null; edits?: FindingEdits } = {}) =>
@@ -215,7 +227,9 @@ describe("acceptFinding", () => {
       forUpdate: true,
       noWait: true,
     });
-    expect(getVendorByIdQuery).toHaveBeenCalledWith(VENDOR, ORG);
+    // In the accept's own transaction: a lookup outside it would take a second pooled connection
+    // while the transaction holds one, and as many accepts as the pool has would run it dry.
+    expect(getVendorByIdQuery).toHaveBeenCalledWith(VENDOR, ORG, transaction);
     expect(createVendorRiskInTransaction).toHaveBeenCalledWith(
       {
         vendor_id: VENDOR,
@@ -295,6 +309,7 @@ describe("acceptFinding", () => {
         "find",
         "vendor",
         "owner",
+        "frameworks",
         "create",
         "mark",
         "commit",
@@ -482,10 +497,31 @@ describe("acceptFinding", () => {
         ["a list with a negative number", [-1]],
         ["a list with a fraction", [1.5]],
         ["a list with a number beyond the safe integers", [Number.MAX_SAFE_INTEGER + 2]],
+        ["a list with a number beyond a Postgres integer", [2147483648]],
         ["a list with null", [null]],
         ["a list of 101 frameworks", Array.from({ length: 101 }, (_, index) => index + 1)],
       ])("refuses frameworks that are %s", async (_label, value) => {
         await expectRefusedOutright({ frameworks: value }, "frameworks");
+      });
+
+      it("refuses, with a 400 and before anything is written, a framework that does not exist", async () => {
+        const error = await rejection(accept({ edits: { frameworks: [3, FRAMEWORK_COUNT + 1] } }));
+
+        expect(error).toBeInstanceOf(ValidationException);
+        expect(error.message).toBe("Invalid frameworks");
+        expect((error as ValidationException).metadata.field).toBe("frameworks");
+        // Checked inside the transaction, which rolls back: the finding stays pending.
+        expect(events).toEqual(["begin", "find", "vendor", "owner", "frameworks", "rollback"]);
+        expect(asMock(sequelize.query).mock.calls[0][1]).toMatchObject({ transaction });
+        expectNothingCreated();
+      });
+
+      it("takes the largest framework id a Postgres integer holds", async () => {
+        asMock(sequelize.query).mockImplementation(async () => [{ id: 2147483647 }]);
+
+        await accept({ edits: { frameworks: [2147483647] } });
+
+        expect(created().frameworks).toEqual([2147483647]);
       });
 
       it("takes a list of 100 frameworks", async () => {
@@ -649,7 +685,7 @@ describe("acceptFinding", () => {
 
       await expect(accept()).rejects.toBeInstanceOf(NotFoundException);
 
-      expect(getVendorByIdQuery).toHaveBeenCalledWith(VENDOR, ORG);
+      expect(getVendorByIdQuery).toHaveBeenCalledWith(VENDOR, ORG, transaction);
       expectNothingCreated();
     });
   });

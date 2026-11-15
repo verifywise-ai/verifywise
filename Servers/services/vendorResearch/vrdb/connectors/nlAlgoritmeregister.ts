@@ -292,7 +292,7 @@ interface ProviderRow {
   algorithms: number;
   /** The public bodies that published them, counted by org_id. */
   bodies: number;
-  /** The bodies' names, those with most descriptions first. */
+  /** The bodies' names, one for each body (the name of its newest description), those with most descriptions first. */
   bodyNames: string[];
   status: Record<StatusKey, number>;
   /** The descriptions that their body labels a high-risk AI system. */
@@ -449,12 +449,23 @@ function providersOf(line: string): Array<{ key: string; name: string }> {
   return [...providers].map(([key, name]) => ({ key, name }));
 }
 
+/**
+ * A public body of a provider's descriptions, by its org_id: how many of them it published, and the
+ * one name it is shown by, that of its newest description (a body that was renamed, after a merger
+ * of municipalities, keeps its old name on its older descriptions).
+ */
+interface Body {
+  descriptions: number;
+  name: string;
+  published: string;
+}
+
 /** What the rows say of one provider, while they are read. */
 interface Group {
   spellings: Map<string, number>;
   algorithms: number;
-  bodies: Set<string>;
-  bodyNames: Map<string, number>;
+  /** By org_id: the bodies are counted and named by the same key, so the text never names more than it counts. */
+  bodies: Map<string, Body>;
   status: Record<StatusKey, number>;
   highRisk: number;
   newest: string;
@@ -463,8 +474,7 @@ interface Group {
 const newGroup = (): Group => ({
   spellings: new Map(),
   algorithms: 0,
-  bodies: new Set(),
-  bodyNames: new Map(),
+  bodies: new Map(),
   status: { inUse: 0, inDevelopment: 0, outOfUse: 0 },
   highRisk: 0,
   newest: "",
@@ -495,15 +505,44 @@ function addDescription(groups: Map<string, Group>, description: Description): b
     group.algorithms += 1;
     group.status[description.status] += 1;
     if (description.highRisk) group.highRisk += 1;
-    group.bodies.add(description.orgId);
-    group.bodyNames.set(
-      description.organization,
-      (group.bodyNames.get(description.organization) ?? 0) + 1,
-    );
+    addBody(group.bodies, description);
     group.spellings.set(name, (group.spellings.get(name) ?? 0) + 1);
     if (description.published > group.newest) group.newest = description.published;
   }
   return true;
+}
+
+/**
+ * Counts a description for its body, whose name becomes that of the description when it is the
+ * newest (on one day, the first by text), so that no order of rows decides.
+ */
+function addBody(bodies: Map<string, Body>, description: Description): void {
+  const { orgId, organization: name, published } = description;
+  const body = bodies.get(orgId);
+  if (body === undefined) {
+    bodies.set(orgId, { descriptions: 1, name, published });
+    return;
+  }
+  body.descriptions += 1;
+  if (
+    published > body.published ||
+    (published === body.published && compareText(name, body.name) < 0)
+  ) {
+    body.name = name;
+    body.published = published;
+  }
+}
+
+/**
+ * The descriptions of the bodies by their names: one name for each body, and two bodies of one name
+ * are one entry, so that there are never more names than bodies.
+ */
+function bodyCountsOf(bodies: ReadonlyMap<string, Body>): Map<string, number> {
+  const counts = new Map<string, number>();
+  for (const body of bodies.values()) {
+    counts.set(body.name, (counts.get(body.name) ?? 0) + body.descriptions);
+  }
+  return counts;
 }
 
 /** The entries of a count map, the largest count first and then by text, so that no order of rows decides. */
@@ -538,7 +577,7 @@ function rowOf(key: string, group: Group): ProviderRow {
     names: spellings.slice(0, NAMES_MAX),
     algorithms: group.algorithms,
     bodies: group.bodies.size,
-    bodyNames: bodyNamesOf(group.bodyNames),
+    bodyNames: bodyNamesOf(bodyCountsOf(group.bodies)),
     status: group.status,
     highRisk: group.highRisk,
     newestPublished: group.newest,
@@ -673,6 +712,8 @@ function isProviderRow(value: unknown): value is ProviderRow {
     bodies > algorithms ||
     !isTexts(bodyNames, BODY_NAMES_MAX, ORGANIZATION_CELL_MAX) ||
     bodyNames.length < 1 ||
+    // One name for each body at most: the text counts the bodies and names some of them.
+    bodyNames.length > bodies ||
     !isObject(status) ||
     !isCount(status.inUse) ||
     !isCount(status.inDevelopment) ||
@@ -784,7 +825,9 @@ function newestDay(rows: readonly ProviderRow[]): string | null {
 
 export const nlAlgoritmeregisterConnector: Connector = createFileConnector<ProviderRow>({
   id: "nl_algoritmeregister",
-  version: 1,
+  // 2: one name for each body (by its org_id, the name of its newest description), so a renamed
+  // body is no longer named twice: the bodies' names change on an unchanged register.
+  version: 2,
   root: ROOT,
   sortKey: (row) => row.id,
   files: [{ url: FILE_URL, maxBytes: 33_554_432, contentTypes: ["text/csv"], timeoutMs: 180_000 }],

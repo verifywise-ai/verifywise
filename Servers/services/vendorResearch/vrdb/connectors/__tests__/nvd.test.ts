@@ -64,7 +64,7 @@ describe("nvdConnector", () => {
 
     expect(asked).toEqual([{ url: nvdUrl("brisenetworks", NOW), maxBytes: NVD_MAX_BYTES }]);
     const query = new URL(asked[0].url).searchParams;
-    expect(query.get("virtualMatchString")).toBe("cpe:2.3:a:brisenetworks");
+    expect(query.get("virtualMatchString")).toBe("cpe:2.3:*:brisenetworks");
     expect(query.get("cvssV3Severity")).toBe("CRITICAL");
     expect(query.get("pubStartDate")).toBe("2026-07-04T00:00:00.000");
     expect(query.get("pubEndDate")).toBe("2026-10-31T23:59:59.999");

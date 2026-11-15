@@ -8,7 +8,10 @@
  * only when the finding matched a risk, since an unmatched finding has no label to be held to.
  *
  * The bars are precision, label agreement, no High that the labeller rates Low, no sanctions match
- * stated as a fact, and a coverage with no list that failed. Recall is reported and has no bar:
+ * stated as a fact, and a coverage with no list that failed. A list of a researched category that
+ * had never synced when the run was made is recorded as failed (vrdb/lookup.ts), so the runs are
+ * started once every active list of those categories has synced; only the first run of a row is
+ * scored, so a vendor run too early is run again on a new row. Recall is reported and has no bar:
  * a run keeps at most three findings of a category and eight of a run, so it cannot recall every
  * risk a careful analyst would raise.
  */
@@ -32,11 +35,19 @@ import type {
 /** The bars of D6.4 that are a measure: precision and label agreement. Recall has none. */
 export const GOLDEN_BARS = { precision: 0.9, agreement: 0.8 } as const;
 
-/** The lists whose record matched by name may be another company (spec, risk A). */
+/**
+ * The lists whose record matched by name may be another company (spec, risk A): the sanctions
+ * lists of the credibility prompt, whose rule asks every one of them for "An entity named … is on
+ * …" (prompts.ts). The lists of enforcement actions and AI incidents use other words and are not
+ * held to these.
+ */
 const SANCTIONS_LISTS: ReadonlySet<string> = new Set<VrdbSourceId>([
   "ofac",
   "uk_sanctions",
   "eu_fsf",
+  "un_sanctions",
+  "canada_sema",
+  "csl",
 ]);
 
 /**
@@ -253,10 +264,14 @@ export function meetsBars(report: GoldenReport): GoldenVerdict {
   const failed = report.coverageFailed;
   if (failed.length > 0) {
     const which = failed.map((ref) => `${ref.name}: ${ref.sources.join(", ")}`).join("; ");
+    // A list that had never synced is recorded as failed: say so, since starting the runs before
+    // every active list of the researched categories has synced is the usual cause.
+    const hint =
+      "a list that had not synced yet when the run was made counts as failed: once every active list of the researched categories has synced, run each such vendor again on a new vendor row and point its vendorId in the labels at that row (only the first run of a row is scored)";
     reasons.push(
       failed.length === 1
-        ? `1 vendor's run could not check every list (${which})`
-        : `${failed.length} vendors' runs could not check every list (${which})`,
+        ? `1 vendor's run could not check every list (${which}); ${hint}`
+        : `${failed.length} vendors' runs could not check every list (${which}); ${hint}`,
     );
   }
   return { ok: reasons.length === 0, reasons };

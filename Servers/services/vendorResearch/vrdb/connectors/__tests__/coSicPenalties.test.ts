@@ -530,20 +530,79 @@ describe("coSicPenaltiesConnector", () => {
       expect(failure).toBeInstanceOf(NotTheListError);
     });
 
-    it("is not the list when the data holds one row fewer than the count says: a list that is cut is no list", async () => {
+    /** A fetch of the files whose count answers are these, one after the other, and what it was asked. */
+    const recountingFetch = (rows: readonly Raw[], counts: readonly number[]) => {
+      const files = filesOf(rows);
+      const inner = fakeFetch(files);
+      const events: string[] = [];
+      let asked = 0;
+      const fetch: ConnectorFetch = async (url, validators, limits) => {
+        events.push(`get ${url}`);
+        if (url === COUNT_URL) {
+          const count = counts[Math.min(asked, counts.length - 1)];
+          asked += 1;
+          files[COUNT_URL] = { body: `[{"count":"${count}"}]\n`, contentType: JSON_TYPE };
+        }
+        return inner(url, validators, limits);
+      };
+      const slept = jest.fn(async (ms: number): Promise<void> => {
+        events.push(`sleep ${ms}`);
+      });
+      return { fetch, events, own: createCoSicPenaltiesConnector({ sleep: slept }) };
+    };
+
+    // The dataset reloaded between the two requests, or one of its copies lagged: the download was
+    // refused as no list (wrong_root), which the worker never asks again, and the weekly list went a
+    // week without a sync.
+    it.each([
+      ["fewer", -1],
+      ["more", 1],
+    ])(
+      "asks the count once more when the data holds %s rows than the count says, and fails as unreachable when it still differs, so that the worker asks again",
+      async (_name, off) => {
+        const rows = withFiller(UNO);
+        const { fetch, events, own } = recountingFetch(rows, [rows.length - off]);
+
+        const failure = await failureOf(own.download(fetch, {}));
+
+        expect(failure).toBeInstanceOf(FetchError);
+        expect((failure as FetchError).reason).toBe("unreachable");
+        expect((failure as Error).message).not.toMatch(/datos|https?:/i);
+        expect(events).toEqual([
+          `get ${COUNT_URL}`,
+          "sleep 1000",
+          `get ${DATA_URL}`,
+          "sleep 1000",
+          `get ${COUNT_URL}`,
+        ]);
+      },
+    );
+
+    it("takes the list when the count asked once more agrees with the rows: the dataset was reloaded between the two requests", async () => {
       const rows = withFiller(UNO);
-      const failure = await failureOf(
-        connector.download(fakeFetch(filesOf(rows.slice(0, -1), String(rows.length))), {}),
-      );
-      expect(failure).toBeInstanceOf(NotTheListError);
+      const { fetch, events, own } = recountingFetch(rows, [rows.length - 1, rows.length]);
+
+      const answer = await own.download(fetch, {});
+      if (answer === "unchanged") throw new Error("unchanged");
+
+      expect(events).toEqual([
+        `get ${COUNT_URL}`,
+        "sleep 1000",
+        `get ${DATA_URL}`,
+        "sleep 1000",
+        `get ${COUNT_URL}`,
+      ]);
+      const reference = await download(filesOf(rows));
+      expect(answer.bodies).toEqual(reference.bodies);
     });
 
-    it("is not the list when the data holds one row more than the count says: the list changed between the two requests", async () => {
+    it("asks the count once only when the rows are as many as it says", async () => {
       const rows = withFiller(UNO);
-      const failure = await failureOf(
-        connector.download(fakeFetch(filesOf(rows, String(rows.length - 1))), {}),
-      );
-      expect(failure).toBeInstanceOf(NotTheListError);
+      const { fetch, events, own } = recountingFetch(rows, [rows.length]);
+
+      await own.download(fetch, {});
+
+      expect(events).toEqual([`get ${COUNT_URL}`, "sleep 1000", `get ${DATA_URL}`]);
     });
 
     it("is not the list when it has fewer than 3,000 rows, and is when it has 3,000", async () => {

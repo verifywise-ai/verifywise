@@ -31,10 +31,11 @@ import { getVendorRiskSuggestions as getVendorRiskSuggestionsService } from "../
 import { triggerVendorOnboarding } from "../services/workflows/triggers";
 import { notifyVendorRiskCandidates } from "../services/riskLinks/vendorCandidates";
 import { triggerAutoResearch } from "../services/vendorResearch/trigger";
+import { isUserOfOrganization } from "../services/vendorResearch/assignee";
 import { enqueueVendorRiskLinkRecomputeBatch } from "../services/automations/automationProducer";
 import { getActiveVendorRiskIdsQuery } from "../utils/vendorRiskLink.utils";
 import logger from "../utils/logger/fileLogger";
-import { QueryTypes } from "sequelize";
+import { QueryTypes, Transaction } from "sequelize";
 
 import { translateError } from "../utils/i18n.utils";
 // Helper function to get user name
@@ -47,6 +48,61 @@ async function getUserNameById(userId: number): Promise<string> {
     return `${result[0].name} ${result[0].surname}`.trim();
   }
   return "Someone";
+}
+
+/**
+ * An id off the wire that is a positive whole number a float holds exactly, or NaN: "12abc", "abc",
+ * "-3" and "1.5" are not ids (`parseInt` would read "12abc" as 12).
+ */
+const positiveId = (value: unknown): number => {
+  const id = toId(value);
+  return Number.isSafeInteger(id) && id > 0 ? id : NaN;
+};
+
+/** Whether a user field of a vendor holds a user: the model reads null, 0 and nothing as no user. */
+const namesAUser = (value: unknown): boolean =>
+  value !== undefined && value !== null && value !== "" && Number(value) !== 0;
+
+/**
+ * Refuses an assignee or a reviewer who is not a user of the organization. The user is told of the
+ * assignment by email with the vendor's name and what it provides, and nothing in the database ties
+ * these fields to the vendor's organization, so a user of another organization would be sent them.
+ *
+ * `before` is the stored vendor on an update: a user who is already stored there is not checked
+ * again, because the form sends every field back and is not told of it a second time. Without that,
+ * a vendor whose assignee has since left the organization could not be edited at all.
+ *
+ * @throws ValidationException when the assignee or the reviewer is not a user of the organization
+ */
+async function checkVendorUsers(
+  vendor: { assignee?: unknown; reviewer?: unknown },
+  organizationId: number,
+  transaction: Transaction,
+  before?: { assignee?: unknown; reviewer?: unknown },
+): Promise<void> {
+  const isNew = (value: unknown, stored: unknown): boolean =>
+    namesAUser(value) && (before === undefined || Number(value) !== Number(stored));
+
+  if (
+    isNew(vendor.assignee, before?.assignee) &&
+    !(await isUserOfOrganization(positiveId(vendor.assignee), organizationId, transaction))
+  ) {
+    throw new ValidationException(
+      "The assignee must be a user of your organization",
+      "assignee",
+      vendor.assignee,
+    );
+  }
+  if (
+    isNew(vendor.reviewer, before?.reviewer) &&
+    !(await isUserOfOrganization(positiveId(vendor.reviewer), organizationId, transaction))
+  ) {
+    throw new ValidationException(
+      "The reviewer must be a user of your organization",
+      "reviewer",
+      vendor.reviewer,
+    );
+  }
 }
 
 export async function getAllVendors(req: Request, res: Response): Promise<any> {
@@ -265,8 +321,22 @@ export async function createVendor(req: Request, res: Response): Promise<any> {
  * 0001, sections 2 and 5).
  */
 export async function createVendorV1(req: Request, res: Response): Promise<any> {
+  if (!isJsonObject(req.body)) return refuseBody(req, res);
   return createVendorFrom(req, res, req.body);
 }
+
+/**
+ * True for a body that is a JSON object. Express leaves `req.body` undefined for a request without
+ * a body or with another content type than JSON, and a JSON body can also be a list, a text, a
+ * number or null; the shared create and update read fields of it, so such a body failed there with
+ * a TypeError (a 500). The legacy routes keep that behaviour (ADR 0001, section 1).
+ */
+const isJsonObject = (body: unknown): body is Record<string, unknown> =>
+  typeof body === "object" && body !== null && !Array.isArray(body);
+
+/** The 400 for a v1 vendor write whose body is not a JSON object, before any transaction. */
+const refuseBody = (req: Request, res: Response) =>
+  res.status(400).json(STATUS_CODE[400](req.t!("The request body must be a JSON object")));
 
 async function createVendorFrom(req: Request, res: Response, vendorData: Request["body"]) {
   const transaction = await sequelize.transaction();
@@ -313,6 +383,8 @@ async function createVendorFrom(req: Request, res: Response, vendorData: Request
 
     // Check if vendor can be modified (demo restrictions)
     vendorModel.canBeModified();
+
+    await checkVendorUsers(vendorModel, req.organizationId!, transaction);
 
     const createdVendor = await createNewVendorQuery(vendorModel, req.organizationId!, transaction);
 
@@ -468,7 +540,9 @@ async function createVendorFrom(req: Request, res: Response, vendorData: Request
  * before anything reads the body.
  */
 export async function updateVendorById(req: Request, res: Response): Promise<any> {
-  return updateVendorByIdFrom(req, res, withoutV1OnlyVendorFields(req.body));
+  // The frozen legacy contract keeps its own reading of the id.
+  const vendorId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
+  return updateVendorByIdFrom(req, res, withoutV1OnlyVendorFields(req.body), vendorId);
 }
 
 /**
@@ -476,12 +550,23 @@ export async function updateVendorById(req: Request, res: Response): Promise<any
  * 0001, sections 2 and 5).
  */
 export async function updateVendorByIdV1(req: Request, res: Response): Promise<any> {
-  return updateVendorByIdFrom(req, res, req.body);
+  // Refused before the shared update opens its transaction: "abc" would reach the query as NaN (a
+  // 500), and "12abc" would update vendor 12, as the other v1 vendor routes already refuse.
+  const vendorId = positiveId(req.params.id);
+  if (Number.isNaN(vendorId)) {
+    return res.status(400).json(STATUS_CODE[400](req.t!("Invalid vendor ID")));
+  }
+  if (!isJsonObject(req.body)) return refuseBody(req, res);
+  return updateVendorByIdFrom(req, res, req.body, vendorId);
 }
 
-async function updateVendorByIdFrom(req: Request, res: Response, updateData: Request["body"]) {
+async function updateVendorByIdFrom(
+  req: Request,
+  res: Response,
+  updateData: Request["body"],
+  vendorId: number,
+) {
   const transaction = await sequelize.transaction();
-  const vendorId = parseInt(Array.isArray(req.params.id) ? req.params.id[0] : req.params.id);
 
   logProcessing({
     description: `starting updateVendorById for ID ${vendorId}`,
@@ -556,6 +641,8 @@ async function updateVendorByIdFrom(req: Request, res: Response, updateData: Req
 
     // Validate updated data
     await vendorModel.validateVendorData();
+
+    await checkVendorUsers(vendorModel, req.organizationId!, transaction, existingVendor);
 
     const vendor = await updateVendorByIdQuery(
       {

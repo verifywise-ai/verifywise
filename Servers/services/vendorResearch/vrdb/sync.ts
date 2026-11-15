@@ -1,13 +1,19 @@
 /**
  * The mirror job of one list (spec D4.7): download it through the page guard, with the validators
- * of the last download; answer `unchanged` on a 304, or when the bodies hash as the last success's
- * did with the same version of the connector; otherwise parse, check, and write the copy in one
- * transaction.
+ * of the last download when the same version of the connector read it (the stored etag carries
+ * that version), and with none after a new version; answer `unchanged` on a 304 to validators that
+ * were sent, or when the bodies hash as the last success's did with the same version of the
+ * connector; otherwise parse, check, and write the copy in one transaction.
  *
  * A download that is not the whole list never reaches the copy: a body cut at its limit, a
  * document that is not the list, one that parsed with errors, an empty one, and one that holds
  * more than a fifth fewer records than the copy's active ones all fail the sync, and the copy
- * stays as it was. Every attempt gets a run row. A failure stores and logs a fixed code and the
+ * stays as it was. The shrink guard does not apply to the sync that first applies the reading of a
+ * new version of the connector (the stored etag's marker names another version, or none): a new
+ * reading may have fewer records by design, and its parse is no loss of the list. A connector older
+ * than the version the marker names (two versions side by side, or code rolled back) leaves the
+ * copy alone: it answers `unchanged` without a download and notes nothing on the list. Every attempt
+ * gets a run row. A failure stores and logs a fixed code and the
  * list's id, never a message: an error can carry an address, and the EU file's carries a token.
  *
  * A list read by its changes (the CVE records, Ruling 8 of the M2 plan) keeps the last day it
@@ -103,6 +109,52 @@ function hashOf(version: number, bodies: readonly string[]): string {
   for (const body of bodies) hash.update(`${body.length}:${body}`);
   return hash.digest("hex");
 }
+
+/**
+ * The marker that the sync of a list taken whole puts in front of the etag it stores: the version
+ * of the connector that read the download. A 304 is `unchanged` before the version is hashed, so
+ * validators stored by another version would keep that version's records until the file changes
+ * (Ruling 7 of the M2 plan says that a new version parses an unchanged file again). The marker is
+ * stored also when the server sent no etag, so that it always says which version read the file.
+ */
+const versionMarkerOf = (version: number): string => `cv${version}:`;
+
+/**
+ * Whether the connector of this version read the copy's last download: its etag carries this
+ * version's marker. Another version, or code that wrote no marker, did not.
+ */
+function readBySameVersion(state: VrdbSourceState | undefined, version: number): boolean {
+  const stored = state?.etag ?? null;
+  return stored !== null && stored.startsWith(versionMarkerOf(version));
+}
+
+/**
+ * The version of the connector that the copy's last download names in its marker, or null for an
+ * etag without a marker (code before the marker, or none stored), which counts as older.
+ */
+function storedVersionOf(state: VrdbSourceState | undefined): number | null {
+  const match = /^cv([1-9]\d*):/.exec(state?.etag ?? "");
+  return match === null ? null : Number(match[1]);
+}
+
+/**
+ * The validators to send for the stored ones: those of the last download, without the marker,
+ * when the connector of this version read it; none when another version read it, or code that
+ * wrote no marker, so that the file is downloaded and parsed again. Both go together: the date
+ * (or a connector's own validator kept there) is of the same download as the etag.
+ */
+function validatorsToSend(
+  state: VrdbSourceState | undefined,
+  version: number,
+): { etag: string | null; lastModified: string | null } {
+  if (!readBySameVersion(state, version)) return { etag: null, lastModified: null };
+  const etag = (state?.etag ?? "").slice(versionMarkerOf(version).length);
+  return { etag: etag === "" ? null : etag, lastModified: state?.lastModified ?? null };
+}
+
+/** The etag to store for a download that the connector of this version read. */
+const storedEtagOf = (etag: string | null, version: number): string =>
+  `${versionMarkerOf(version)}${etag ?? ""}`;
 
 /**
  * The texts the download of a list read by its changes is hashed over: the bodies it keeps and,
@@ -203,12 +255,27 @@ async function syncWhole(
   try {
     const state = await attempt.start(definition);
 
-    const snapshot = await connector.download(fetch, {
-      etag: state?.etag ?? null,
-      lastModified: state?.lastModified ?? null,
-    });
+    // A newer version of the connector read the copy (two versions side by side in a rollout, or
+    // code rolled back): this older reader does not apply its own reading over it, or the copy
+    // would flap between the two readings with no shrink guard. It downloads nothing and leaves
+    // the list as the newer reader left it, not fresher and not failed.
+    const storedVersion = storedVersionOf(state);
+    if (storedVersion !== null && storedVersion > connector.version) {
+      logger.info(
+        `vendor risk database: ${id} was read by a newer version of its connector (${storedVersion}), so this older reader (${connector.version}) leaves it`,
+      );
+      await attempt.finish({ outcome: "unchanged" });
+      return { outcome: "unchanged" };
+    }
+
+    const sent = validatorsToSend(state, connector.version);
+    const snapshot = await connector.download(fetch, sent);
     const at = now();
     if (snapshot === "unchanged") {
+      // Nothing was sent that a 304 could answer: a server that answers so is no proof that the
+      // copy is current, and after a new version it would keep the old reading. A download to try
+      // again, as one that did not reach the file.
+      if (sent.etag === null && sent.lastModified === null) throw new FetchError("unreachable");
       await attempt.finish({ outcome: "unchanged" }, { outcome: "unchanged", at });
       return { outcome: "unchanged" };
     }
@@ -222,7 +289,10 @@ async function syncWhole(
         {
           outcome: "unchanged",
           at,
-          validators: { etag: snapshot.etag, lastModified: snapshot.lastModified },
+          validators: {
+            etag: storedEtagOf(snapshot.etag, connector.version),
+            lastModified: snapshot.lastModified,
+          },
         },
       );
       return { outcome: "unchanged" };
@@ -235,7 +305,17 @@ async function syncWhole(
     const seen = new Set(parsed.records.map((record) => record.sourceRecordId)).size;
     if (seen === 0) throw new Refused("empty");
     const active = state?.activeRecords ?? 0;
-    if (active > 0 && (active - seen) / active > SHRINK_LIMIT) throw new Refused("shrank");
+    if (active > 0 && (active - seen) / active > SHRINK_LIMIT) {
+      // A new version of the connector may read the same list into fewer records by design (a
+      // filter, a new grouping): the parse of a new reading is no loss of the list, so the guard
+      // does not apply to the sync that first applies it. The empty, root, error and size guards
+      // above still do, and once applied the copy carries this version's marker and is guarded.
+      // A copy without a marker gets here too; an older version left the copy alone above.
+      if (readBySameVersion(state, connector.version)) throw new Refused("shrank");
+      logger.info(
+        `vendor risk database: ${id} is read by a new version of its connector, so the shrink guard does not apply to this sync (${active} to ${seen} records)`,
+      );
+    }
 
     const counts = await store.applyVrdbSnapshotQuery({
       sourceId: id,
@@ -243,7 +323,7 @@ async function syncWhole(
       missingStatus,
       rawSnapshotHash: download.rawSnapshotHash,
       sourceVersion: parsed.sourceVersion,
-      etag: snapshot.etag,
+      etag: storedEtagOf(snapshot.etag, connector.version),
       lastModified: snapshot.lastModified,
       at,
     });

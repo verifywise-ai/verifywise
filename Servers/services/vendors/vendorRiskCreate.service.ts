@@ -1,5 +1,6 @@
 import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../../database/db";
+import { ValidationException } from "../../domain.layer/exceptions/custom.exception";
 import { IVendorRisk } from "../../domain.layer/interfaces/i.vendorRisk";
 import { VendorRiskModel } from "../../domain.layer/models/vendorRisk/vendorRisk.model";
 import logger from "../../utils/logger/fileLogger";
@@ -8,10 +9,12 @@ import {
   createNewVendorRiskQuery,
   createVendorRiskFrameworkAssociations,
 } from "../../utils/vendorRisk.utils";
+import { toId } from "../../utils/validations/validation.utils";
 import { recordVendorRiskCreation } from "../../utils/vendorRiskChangeHistory.utils";
 import { enqueueVendorRiskLinkRecompute } from "../automations/automationProducer";
 import { notifyUserAssigned } from "../inAppNotification.service";
 import { notifyVendorRiskCandidates } from "../riskLinks/vendorCandidates";
+import { isUserOfOrganization } from "../vendorResearch/assignee";
 
 /**
  * Creating a vendor risk does more than insert a row. The rules live here, in two halves, so any
@@ -52,10 +55,40 @@ async function getUserNameById(userId: number): Promise<string> {
 }
 
 /**
+ * Refuses an action owner who is not a user of the organization. The action owner is told of the
+ * risk by email, with its text and the vendor's name, and nothing in the database ties the owner to
+ * the organization, so a user of another organization is refused before anything is written. No
+ * owner (null, 0, nothing) is told nothing and needs no check. The create and the update of a
+ * vendor risk (`updateVendorRiskById`) both call it.
+ *
+ * @throws ValidationException when the action owner is not a user of the organization
+ */
+export async function assertActionOwnerOfOrganization(
+  actionOwner: unknown,
+  organizationId: number,
+  transaction: Transaction,
+): Promise<void> {
+  if (!actionOwner) return;
+  const ownerId = toId(actionOwner);
+  const isOwnUser =
+    Number.isSafeInteger(ownerId) &&
+    (await isUserOfOrganization(ownerId, organizationId, transaction));
+  if (!isOwnUser) {
+    throw new ValidationException(
+      "The action owner must be a user of your organization",
+      "action_owner",
+      actionOwner,
+    );
+  }
+}
+
+/**
  * Insert a vendor risk, link its frameworks and record its creation, inside `transaction`.
  *
  * Neither commits nor rolls back: that stays with the caller. Returns null when the insert
  * yields no row; a failed insert or history write rejects, so the caller can roll back.
+ *
+ * @throws ValidationException when the action owner is not a user of the organization
  */
 export async function createVendorRiskInTransaction(
   input: CreateVendorRiskInput,
@@ -66,6 +99,8 @@ export async function createVendorRiskInTransaction(
   // The factory is typed for IVendorRisk, whose action_owner predates unassigned owners; it
   // copies the field as it is, null included.
   const vendorRiskModel = await VendorRiskModel.createNewVendorRisk(input as IVendorRisk);
+
+  await assertActionOwnerOfOrganization(input.action_owner, organizationId, transaction);
 
   const created = await createNewVendorRiskQuery(vendorRiskModel, organizationId, transaction);
   if (!created) return null;

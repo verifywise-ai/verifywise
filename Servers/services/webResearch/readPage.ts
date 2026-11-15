@@ -31,7 +31,7 @@ import {
   readPdf as readPdfDocument,
 } from "./pdfText";
 import type { PageRenderer } from "./renderPage";
-import { createRobotsChecker } from "./robots";
+import { ROBOTS_MAX_BYTES, createRobotsChecker, robotsTextOf } from "./robots";
 import { extractScriptedText } from "./scriptedText";
 import { type PageIdentity, extractPageIdentity } from "./siteIdentity";
 import { WebCache, cacheRobots, readCachedRobots, withPageCache } from "./webCache";
@@ -90,6 +90,12 @@ const SITEMAP_PATH = /\/sitemap[^/]*\.xml$/i;
 const SNIFF_BYTES = 2048;
 const CHARSET_IN_HEADER = /charset\s*=\s*"?([^";\s]+)/i;
 const CHARSET_IN_META = /<meta\s[^<>]*?charset\s*=\s*["']?\s*([^"'\s/>;]+)/i;
+/**
+ * The media types whose body may name its charset in a `<meta>` tag: HTML, and a body that came
+ * with no type. In any other type (CSV, JSON, XML, plain text) a `<meta charset>` is data, a cell
+ * or a string that a third party wrote, and must not choose how the whole body is read.
+ */
+const MARKUP_MEDIA_TYPES: ReadonlySet<string> = new Set(["", "text/html", "application/xhtml+xml"]);
 
 /** The decoder for a charset label, or null for a missing label and for one that is not known. */
 function decoderFor(label: string | undefined): TextDecoder | null {
@@ -102,16 +108,18 @@ function decoderFor(label: string | undefined): TextDecoder | null {
 }
 
 /**
- * The body as text. The charset is taken from the Content-Type header, else from a
- * `<meta charset>` in the first 2 KB of the body, else it is UTF-8; a label that is not known is
- * passed over. A byte that is not valid in the charset becomes U+FFFD, and a byte order mark is
- * dropped.
+ * The body as text. The charset is taken from the Content-Type header, else, for an HTML body or
+ * one with no type (MARKUP_MEDIA_TYPES), from a `<meta charset>` in the first 2 KB of the body,
+ * else it is UTF-8; a label that is not known is passed over. A byte that is not valid in the
+ * charset becomes U+FFFD, and a byte order mark is dropped.
  */
 export function decodeBody(body: Buffer, contentType: string): string {
+  const fromMeta = () =>
+    MARKUP_MEDIA_TYPES.has(mediaTypeOf(contentType))
+      ? decoderFor(CHARSET_IN_META.exec(body.subarray(0, SNIFF_BYTES).toString("latin1"))?.[1])
+      : null;
   const decoder =
-    decoderFor(CHARSET_IN_HEADER.exec(contentType)?.[1]) ??
-    decoderFor(CHARSET_IN_META.exec(body.subarray(0, SNIFF_BYTES).toString("latin1"))?.[1]) ??
-    new TextDecoder("utf-8");
+    decoderFor(CHARSET_IN_HEADER.exec(contentType)?.[1]) ?? fromMeta() ?? new TextDecoder("utf-8");
   return decoder.decode(body);
 }
 
@@ -211,11 +219,14 @@ export function createPageReader(
     try {
       const answer = await fetch(robotsUrl, {
         allowedContentTypes: ["text/plain", ANY_CONTENT_TYPE],
-        maxBytes: 65_536,
+        maxBytes: ROBOTS_MAX_BYTES,
         headerTimeoutMs: 5_000,
         totalTimeoutMs: 5_000,
       });
-      const text = { status: 200 as const, text: decodeBody(answer.body, answer.contentType) };
+      const text = {
+        status: 200 as const,
+        text: robotsTextOf(decodeBody(answer.body, answer.contentType), answer.truncated),
+      };
       if (cache !== undefined) cacheRobots(cache, origin, text);
       return text;
     } catch (error) {

@@ -1121,7 +1121,7 @@ describe("the engine", () => {
       expect(feed.robotsCalls).toHaveLength(1);
     });
 
-    it("is asked as the page reader asks it, with the request's own time limit: any type is read, in 20 seconds, at 64 KiB", async () => {
+    it("is asked as the page reader asks it, with the request's own time limit: any type is read, in 20 seconds, at 500 KiB", async () => {
       const feed = fakeGdelt([bodyOf([raw()])]);
       const robotsOptions: Array<GuardedFetchOptions | undefined> = [];
       const fetch = ((url: string, options?: GuardedFetchOptions) => {
@@ -1143,7 +1143,7 @@ describe("the engine", () => {
       expect(robotsOptions).toEqual([
         {
           allowedContentTypes: ["text/plain", "*/*"],
-          maxBytes: 65_536,
+          maxBytes: 512_000,
           headerTimeoutMs: 20_000,
           totalTimeoutMs: 20_000,
         },

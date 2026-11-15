@@ -188,8 +188,10 @@ const COMPOUND_SUFFIXES: ReadonlySet<string> = new Set([
 /**
  * The platforms of bug bounty programs and of documents. A policy on one of them is the platform's
  * page, and the host says nothing of who wrote it: a key on `hackerone.com` would match the vendor
- * of that name to the programs of 98 other companies. They are not in the list of shared hosts
- * (sharedHosts.ts), which is about hosts of users' pages, so the list keeps them out itself.
+ * of that name to the programs of 98 other companies. The bug bounty platforms are not in the list
+ * of shared hosts (sharedHosts.ts), which is about hosts of users' pages, so this list keeps them
+ * out itself. The document hosts (notion.so, docs.google.com, drive.google.com) are shared hosts
+ * too, and stay here so that this list says on its own which hosts a policy key never takes.
  */
 const PLATFORMS: readonly string[] = [
   "bugcrowd.com",

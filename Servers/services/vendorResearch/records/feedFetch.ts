@@ -15,12 +15,11 @@ import {
   guardedFetch,
 } from "../../webResearch/guardedFetch";
 import { decodeBody } from "../../webResearch/readPage";
-import { createRobotsChecker } from "../../webResearch/robots";
+import { ROBOTS_MAX_BYTES, createRobotsChecker, robotsTextOf } from "../../webResearch/robots";
 import type { FetchText } from "./types";
 
 /** Atom, as Statuspage and incident.io serve it, and the XML types a site may serve it as. */
 const FEED_TYPES = ["application/atom+xml", "application/xml", "text/xml"];
-const ROBOTS_MAX_BYTES = 65_536;
 const ROBOTS_TIMEOUT_MS = 5_000;
 
 export const fetchFeed: FetchText = async (url, { maxBytes, signal }) => {
@@ -34,7 +33,10 @@ export const fetchFeed: FetchText = async (url, { maxBytes, signal }) => {
         totalTimeoutMs: ROBOTS_TIMEOUT_MS,
         signal,
       });
-      return { status: 200, text: decodeBody(answer.body, answer.contentType) };
+      return {
+        status: 200,
+        text: robotsTextOf(decodeBody(answer.body, answer.contentType), answer.truncated),
+      };
     } catch (error) {
       // A missing file, and a site that refuses to show it, are a 4xx: nothing is disallowed.
       if (

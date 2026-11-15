@@ -13,7 +13,11 @@
  *
  * The bare address of the dataset gives a window of 1,000 rows out of 3,938, so it is never used,
  * and a list is the list only when its rows are exactly N (a dataset that was replaced between the
- * two requests, or an answer that was cut, is not): fewer than 3,000 rows, N of 50,000 or more (what
+ * two requests, or an answer that was cut, is not). When the rows are another number, the count is
+ * asked once more, a second later: a count that now agrees is taken, and one that still differs
+ * fails the download as unreachable, which the worker asks again (a dataset reloaded between the two
+ * requests, or a copy of it that lags, passes; a format refusal would leave the weekly list a week
+ * older). Fewer than 3,000 rows, N of 50,000 or more (what
  * one request cannot hold), or an earliest sanction after 2014-12-31 is no list either. A list that
  * is not whole fails the download and never gives part of itself. The two requests are asked in full
  * every time, with no validators: the ETag of the portal is one of each query.
@@ -520,23 +524,55 @@ async function answerOf(ask: ConnectorFetch, request: RequestSpec) {
   return response;
 }
 
+/** Whether a number of rows is one that the list can have (the bounds of `read`). */
+const isListSize = (rows: number): boolean => rows >= MIN_ROWS && rows < MAX_ROWS;
+
+/** The answers of a download as the reader takes them: the count first, then the list. */
+const fetchedOf = (
+  count: Awaited<ReturnType<typeof answerOf>>,
+  data: Awaited<ReturnType<typeof answerOf>>,
+): Fetched => ({
+  buffers: [count.body, data.body],
+  contentTypes: [count.contentType, data.contentType],
+  // The validators of the portal belong to one query each: nothing is stored to compare with.
+  etag: null,
+  lastModified: null,
+  bytes: count.body.length + data.body.length,
+});
+
 /**
  * The count, a pause of the second that the host asks for, and then the list; every answer from the
- * pinned host and no body that was cut (`pinnedFetch`).
+ * pinned host and no body that was cut (`pinnedFetch`). When the count and the list can be read and
+ * the list holds another number of rows than the count says, the portal reloaded the dataset between
+ * the two requests, or two of its copies answered them: the count is asked once more, after the
+ * pause, and the download fails as unreachable when it still differs, so that the worker asks again
+ * later. A refusal of the format would leave the weekly list without a sync for a week. An answer
+ * that cannot be read, and a count or a list of a size that the list cannot have (an empty array),
+ * is the reader's to refuse.
  */
 async function fetchFiles(fetch: ConnectorFetch, sleep: Sleep): Promise<Fetched> {
   const ask = pinnedFetch(fetch, PIN);
   const count = await answerOf(ask, COUNT_REQUEST);
   await pauseFor("www.datos.gov.co", sleep);
   const data = await answerOf(ask, DATA_REQUEST);
-  return {
-    buffers: [count.body, data.body],
-    contentTypes: [count.contentType, data.contentType],
-    // The validators of the portal belong to one query each: nothing is stored to compare with.
-    etag: null,
-    lastModified: null,
-    bytes: count.body.length + data.body.length,
-  };
+  const fetched = fetchedOf(count, data);
+  const counted = countOf(textOf(fetched, 0));
+  const rows = readJsonArray(textOf(fetched, 1), MAX_ROWS);
+  if (
+    counted === null ||
+    rows === null ||
+    rows.more ||
+    rows.items.length === counted ||
+    !isListSize(counted) ||
+    !isListSize(rows.items.length)
+  ) {
+    return fetched;
+  }
+  await pauseFor("www.datos.gov.co", sleep);
+  const again = await answerOf(ask, COUNT_REQUEST);
+  const recounted = fetchedOf(again, data);
+  if (countOf(textOf(recounted, 0)) !== rows.items.length) throw new FetchError("unreachable");
+  return recounted;
 }
 
 /** `1234567` as `1,234,567`, in no locale. */

@@ -1,6 +1,9 @@
+import { createHash } from "node:crypto";
 import { type FetchedPage, PageReadError } from "../../webResearch/readPage";
+import { cleanText, cutAtCodePoint } from "../text";
 import {
   CHANGE_MARK,
+  CONTINUED_MARK,
   MAX_CHANGE_CHARS,
   MAX_CHANGE_LINE_CHARS,
   MAX_LINE_CHARS,
@@ -18,6 +21,7 @@ import {
   hashOf,
   linesOf,
   policyKindOf,
+  snapshotsToKeep,
 } from "../policySnapshots";
 
 const NOW = new Date("2031-04-20T12:00:00Z");
@@ -32,6 +36,28 @@ const CLAUSE_C =
   "We keep customer content for 30 days after the end of the contract and then delete it.";
 const CLAUSE_D =
   "Our subprocessors process customer content only on our instructions and under contract.";
+
+/** The hash the code kept before long lines were split: the plain SHA-256 of the body. */
+const oldHashOf = (lines: readonly string[]): string =>
+  createHash("sha256").update(lines.join("\n")).digest("hex");
+
+/**
+ * The lines as the code kept them before long lines were split: a long line cut at MAX_LINE_CHARS,
+ * the rest of it dropped, and, before the second trim (`trimmed` false), the cut ending in a space.
+ */
+function oldLinesOf(text: string, trimmed: boolean): string[] {
+  const lines: string[] = [];
+  let chars = 0;
+  for (const raw of cleanText(text).split("\n")) {
+    const cut = cutAtCodePoint(raw.replace(/\s+/g, " ").trim(), MAX_LINE_CHARS);
+    const line = trimmed ? cut.trimEnd() : cut;
+    if (!/[\p{L}\p{N}]/u.test(line)) continue;
+    if (lines.length >= MAX_SNAPSHOT_LINES || chars + line.length + 1 > MAX_SNAPSHOT_CHARS) break;
+    lines.push(line);
+    chars += line.length + 1;
+  }
+  return lines;
+}
 
 describe("policyKindOf", () => {
   it.each([
@@ -103,6 +129,34 @@ describe("linesOf", () => {
     expect(line).toHaveLength(MAX_LINE_CHARS);
   });
 
+  // A line cut where a space is must not end in that space: the kept body is read with linesOf
+  // again by the next run, which would trim it, and the same paragraph would then be a change.
+  it("never ends a part of a long line in a space, so that the lines of a kept body are the lines again", () => {
+    const paragraph = `${"x".repeat(MAX_LINE_CHARS - 1)} and the rest of a long clause`;
+
+    const lines = linesOf(paragraph);
+
+    expect(lines).toEqual([
+      "x".repeat(MAX_LINE_CHARS - 1),
+      `${CONTINUED_MARK}and the rest of a long clause`,
+    ]);
+    expect(linesOf(lines.join("\n"))).toEqual(lines);
+  });
+
+  // The whole of a long clause is compared: a change after its first MAX_LINE_CHARS characters is
+  // a change of one of its parts.
+  it("keeps a long line whole, as parts no longer than MAX_LINE_CHARS, split at a blank", () => {
+    const clause = long("clause", 400);
+
+    const lines = linesOf(clause);
+
+    expect(lines.length).toBeGreaterThan(3);
+    expect(lines.every((line) => line.length <= MAX_LINE_CHARS)).toBe(true);
+    expect(lines.slice(1).every((line) => line.startsWith(CONTINUED_MARK))).toBe(true);
+    expect(lines.map((line) => line.replace(CONTINUED_MARK, "")).join(" ")).toBe(clause);
+    expect(linesOf(lines.join("\n"))).toEqual(lines);
+  });
+
   it("keeps at most MAX_SNAPSHOT_LINES lines", () => {
     const text = Array.from(
       { length: MAX_SNAPSHOT_LINES + 50 },
@@ -132,6 +186,34 @@ describe("linesOf", () => {
     const startedAt = Date.now();
     linesOf(text);
     expect(Date.now() - startedAt).toBeLessThan(500);
+  });
+});
+
+describe("comparePages on the largest page", () => {
+  // The page text is a third party's, up to the two megabytes of HTML the reader takes, and the
+  // whole of it is read once more for the lines that are still on the page.
+  it("compares a page of one line of two megabytes in a moment", () => {
+    const text = long("clause", 300_000);
+    const page: PolicyPage = {
+      url: "https://acme.com/terms",
+      key: "acme.com/terms",
+      kind: "terms",
+      title: "Terms",
+      text,
+    };
+    const [write] = comparePages({ pages: [page], stored: new Map(), now: NOW }).writes;
+    const changed = { ...page, text: `New clause. ${text}` };
+    const startedAt = Date.now();
+
+    const result = comparePages({
+      pages: [changed],
+      stored: new Map([[page.key, { hash: write.hash, body: write.body, lastSeenAt: NOW }]]),
+      now: NOW,
+    });
+
+    expect(Date.now() - startedAt).toBeLessThan(2000);
+    expect(write.body.length).toBeLessThanOrEqual(MAX_SNAPSHOT_CHARS);
+    expect(result.counts.changed + result.counts.minor).toBe(1);
   });
 });
 
@@ -255,6 +337,89 @@ describe("describeChange", () => {
     ["security", "the security page"],
   ] as const)("names a page of kind %s as %s", (kind, words) => {
     expect(describeChange({ added: [CLAUSE_A], removed: [] }, { ...input, kind })).toContain(words);
+  });
+});
+
+// RV6P-3, RV6D-3: which parts of a long clause a change shows as one stretch of the page.
+describe("the joints of the parts of a long clause in a change", () => {
+  const input = { kind: "terms", since: "2031-03-01", until: "2031-04-20" } as const;
+  const words = (tag: string, count: number, edits: Record<number, string> = {}) =>
+    Array.from({ length: count }, (_, index) => edits[index] ?? `${tag}${index}x`).join(" ");
+
+  it("joins the parts of a clause that changed all through, and shows them as the page has them", () => {
+    const before = linesOf(words("w", 260, { 10: "a", 130: "b", 230: "c" }));
+    const after = linesOf(words("w", 260, { 10: "d", 130: "e", 230: "f" }));
+    expect(after).toHaveLength(3);
+
+    const change = diffLines(before, after);
+
+    expect(change).toEqual({
+      added: after,
+      removed: before,
+      addedJoined: [1, 2],
+      removedJoined: [1, 2],
+    });
+    const text = describeChange(change!, input);
+    expect(text).toContain(
+      `Added:\n- ${after[0]}\n  ${after[1].slice(CONTINUED_MARK.length)}\n  ${after[2].slice(CONTINUED_MARK.length)}`,
+    );
+    expect(text.replace(/\s+/g, " ")).toContain(words("w", 260, { 10: "d", 130: "e", 230: "f" }));
+  });
+
+  it("does not join a part to a line it was not next to on the page", () => {
+    const before = linesOf(words("w", 260, { 10: "a", 230: "c" }));
+    const after = linesOf(words("w", 260, { 10: "d", 230: "f" }));
+
+    const change = diffLines(before, after);
+
+    expect(change).toEqual({ added: [after[0], after[2]], removed: [before[0], before[2]] });
+    expect(describeChange(change!, input)).toContain(`Added:\n- ${after[0]}\n- ${after[2]}`);
+  });
+
+  it("does not join a part to the part before it when that one was cut where no blank was", () => {
+    const clause = (tail: string) => `${"\u30c7".repeat(650)} ${tail}`;
+    const after = linesOf(clause("the provider sells customer data"));
+    expect(after[0]).toHaveLength(MAX_LINE_CHARS);
+    const before = linesOf(clause("the provider keeps customer data"));
+    const change = diffLines([before[0].replace("\u30c7", "\u30c6"), before[1]], after);
+
+    expect(change?.addedJoined).toBeUndefined();
+    expect(describeChange(change!, input)).toContain(`\n- ${after[1]}`);
+  });
+
+  it("joins a part one short of the limit that has a blank in its second half", () => {
+    const first = `${"a".repeat(400)} ${"b".repeat(MAX_LINE_CHARS - 402)}`;
+    expect(first).toHaveLength(MAX_LINE_CHARS - 1);
+    const after = linesOf(`${first} tail of the clause that the vendor changed`);
+    expect(after[0]).toBe(first);
+
+    expect(diffLines([], after)?.addedJoined).toEqual([1]);
+  });
+
+  it("shows a continued part whole, and counts it as a line in the room of the change", () => {
+    const clauses = Array.from({ length: 30 }, (_, index) =>
+      linesOf(words(`c${index}q`, 200)),
+    ).flat();
+    const change = diffLines([], clauses)!;
+    expect(change.addedJoined?.length).toBeGreaterThan(20);
+
+    const text = describeChange(change, input);
+
+    expect(text.length).toBeLessThanOrEqual(MAX_CHANGE_CHARS + 300);
+    const shown = text.split("\n").filter((line) => line.startsWith("- ") || line.startsWith("  "));
+    const hidden = Number(/(\d+) more added lines? (?:is|are) not shown/.exec(text)?.[1]);
+    expect(shown.length + hidden).toBe(clauses.length);
+    for (const line of shown) expect(line.length).toBeLessThanOrEqual(MAX_CHANGE_LINE_CHARS + 2);
+  });
+
+  // The kept lines do not say that a page line which itself begins with the continued mark is not
+  // a part: one right after a line as long as a part is shown as continuing it (the limit).
+  it("takes a page line that begins with the continued mark after a long line as a part of it", () => {
+    const long = `${words("w", 80)} end`;
+    expect(long.length).toBeGreaterThan(MAX_LINE_CHARS / 2);
+    const lines = [long, `${CONTINUED_MARK}and more of the terms, a line of its own`];
+
+    expect(diffLines([], lines)?.addedJoined).toEqual([1]);
   });
 });
 
@@ -400,6 +565,416 @@ describe("comparePages", () => {
     expect(result.writes[0].body).toContain("May 9, 2026");
   });
 
+  describe("a long paragraph cut where a space is", () => {
+    // Character MAX_LINE_CHARS of the paragraph is a space.
+    const PARAGRAPH = `${"We process personal data to provide the services. ".repeat(12).slice(0, MAX_LINE_CHARS - 1)} ${CLAUSE_A}`;
+    /** The body and the hash as the code before the fix kept them: the cut line ends in a space. */
+    const keptByOldCode = (lines: string[]): StoredSnapshot => ({
+      hash: oldHashOf(lines),
+      body: lines.join("\n"),
+      lastSeenAt: new Date("2031-03-01T08:00:00Z"),
+    });
+    const OLD_CUT = cutOld(PARAGRAPH);
+
+    function cutOld(paragraph: string): string {
+      return paragraph.replace(/\s+/g, " ").trim().slice(0, MAX_LINE_CHARS);
+    }
+
+    it("is a case where the old cut ended in a space", () => {
+      expect(OLD_CUT.endsWith(" ")).toBe(true);
+    });
+
+    it("makes no change of a page that changed only in a date", () => {
+      const before = [PARAGRAPH, CLAUSE_B, "Last updated: March 3, 2026"];
+      const after = [PARAGRAPH, CLAUSE_B, "Last updated: May 9, 2026"];
+      const page = pageOf("privacy", "privacy", after);
+      const stored = new Map([[page.key, storedOf(before)]]);
+
+      const result = comparePages({ pages: [page], stored, now: NOW });
+
+      expect(result.entries).toEqual([]);
+      expect(result.counts).toEqual({ first: 0, unchanged: 0, changed: 0, minor: 1 });
+    });
+
+    it("makes no change of a page kept by the old code, whose cut line ends in a space", () => {
+      const page = pageOf("privacy", "privacy", [PARAGRAPH, CLAUSE_B, "Last updated: May 9, 2026"]);
+      const stored = new Map([
+        [page.key, keptByOldCode([OLD_CUT, CLAUSE_B, "Last updated: March 3, 2026"])],
+      ]);
+
+      const result = comparePages({ pages: [page], stored, now: NOW });
+
+      expect(result.entries).toEqual([]);
+      expect(result.counts).toEqual({ first: 0, unchanged: 0, changed: 0, minor: 1 });
+    });
+
+    it("takes the same page kept by the old code as no change, and keeps it without the space", () => {
+      const page = pageOf("privacy", "privacy", [PARAGRAPH, CLAUSE_B]);
+      const stored = new Map([[page.key, keptByOldCode([OLD_CUT, CLAUSE_B])]]);
+
+      const result = comparePages({ pages: [page], stored, now: NOW });
+
+      expect(result.entries).toEqual([]);
+      // The hash of the old body held the space, so the page is written again, as a minor change.
+      expect(result.counts).toEqual({ first: 0, unchanged: 0, changed: 0, minor: 1 });
+      // It is kept as the code keeps it now: the long paragraph whole, in parts.
+      const now = linesOf([PARAGRAPH, CLAUSE_B].join("\n"));
+      expect(now[0]).toBe(OLD_CUT.trimEnd().slice(0, now[0].length));
+      expect(result.writes[0].body).toBe(now.join("\n"));
+      expect(result.writes[0].hash).toBe(hashOf(now));
+    });
+  });
+
+  describe("a clause longer than MAX_LINE_CHARS", () => {
+    const OPENING = long("The provider processes customer data only to provide the services", 10);
+    const NEVER =
+      "The provider will never use customer data to train artificial intelligence models.";
+    const MAY =
+      "The provider may use customer data to train artificial intelligence models unless the customer opts out.";
+
+    it("is longer than one kept line before its last sentence", () => {
+      expect(OPENING.length).toBeGreaterThan(MAX_LINE_CHARS);
+    });
+
+    // R4-PL-2: the lines were cut before they were hashed, so this change was invisible.
+    it("makes a change of a sentence after its first MAX_LINE_CHARS characters", () => {
+      const page = pageOf("dpa", "dpa", [`${OPENING} ${MAY}`, CLAUSE_C]);
+      const stored = new Map([[page.key, storedOf([`${OPENING} ${NEVER}`, CLAUSE_C])]]);
+
+      const result = comparePages({ pages: [page], stored, now: NOW });
+
+      expect(result.counts).toEqual({ first: 0, unchanged: 0, changed: 1, minor: 0 });
+      const [entry] = result.entries;
+      expect(entry.content).toContain("may use customer data to train artificial intelligence");
+      expect(entry.content).toContain("will never use customer data to train");
+    });
+
+    it("finds nothing in the same page against the text it kept itself", () => {
+      const page = pageOf("dpa", "dpa", [`${OPENING} ${NEVER}`, CLAUSE_C]);
+      const first = comparePages({ pages: [page], stored: new Map(), now: NOW });
+      const [write] = first.writes;
+      const stored = new Map([
+        [page.key, { hash: write.hash, body: write.body, lastSeenAt: new Date(NOW) }],
+      ]);
+
+      const result = comparePages({ pages: [page], stored, now: NOW });
+
+      expect(result.counts).toEqual({ first: 0, unchanged: 1, changed: 0, minor: 0 });
+    });
+
+    // The first run after long lines were split must not take their tails, which the old body
+    // never held, for added lines; both ways the old code cut a line are read.
+    it.each([
+      ["with the second trim", true],
+      ["before the second trim", false],
+    ])("takes the same page kept by the old code %s as no change", (_, trimmed) => {
+      const page = pageOf("dpa", "dpa", [`${OPENING} ${NEVER}`, CLAUSE_C]);
+      const old = oldLinesOf(page.text, trimmed);
+      const stored = new Map([
+        [
+          page.key,
+          {
+            hash: oldHashOf(old),
+            body: old.join("\n"),
+            lastSeenAt: new Date("2031-03-01T08:00:00Z"),
+          },
+        ],
+      ]);
+
+      const result = comparePages({ pages: [page], stored, now: NOW });
+
+      expect(result.entries).toEqual([]);
+      expect(result.counts).toEqual({ first: 0, unchanged: 0, changed: 0, minor: 1 });
+      expect(result.writes[0].body).toBe(linesOf(page.text).join("\n"));
+    });
+
+    it("still makes a change of a page kept by the old code in what the old code kept", () => {
+      const page = pageOf("dpa", "dpa", [`${OPENING} ${NEVER}`, CLAUSE_A]);
+      const old = oldLinesOf([`${OPENING} ${NEVER}`, CLAUSE_B].join("\n"), true);
+      const stored = new Map([
+        [page.key, { hash: oldHashOf(old), body: old.join("\n"), lastSeenAt: new Date(NOW) }],
+      ]);
+
+      const result = comparePages({ pages: [page], stored, now: NOW });
+
+      expect(result.counts.changed).toBe(1);
+      expect(result.entries[0].content).toContain(`Added:\n- ${CLAUSE_A}`);
+      expect(result.entries[0].content).toContain(`Removed:\n- ${CLAUSE_B}`);
+      expect(result.entries[0].content).not.toContain(CONTINUED_MARK);
+    });
+  });
+
+  describe("a page longer than the limits", () => {
+    const clause = (index: number) =>
+      `Section ${index}. ${long(`The customer keeps every right in customer data number ${index}`, 4)}`;
+    const CLAUSES = Array.from({ length: 600 }, (_, index) => clause(index + 1));
+    // Longer than the room the limits leave after the last kept clause, so that one falls out.
+    const INSERTED = `Section 0. ${long("The provider may use customer data to train its models", 8)}`;
+    /** The page as comparePages keeps it on a first visit: the hash says the limits cut it. */
+    const keptBy = (lines: string[]): StoredSnapshot => {
+      const [write] = comparePages({
+        pages: [pageOf("terms", "terms", lines)],
+        stored: new Map(),
+        now: NOW,
+      }).writes;
+      return { hash: write.hash, body: write.body, lastSeenAt: new Date(NOW) };
+    };
+
+    it("is longer than the limits, and the clause added at the top pushes a kept one out", () => {
+      expect(CLAUSES.join("\n").length).toBeGreaterThan(MAX_SNAPSHOT_CHARS);
+      const kept = linesOf(CLAUSES.join("\n"));
+      expect(linesOf([INSERTED, ...CLAUSES].join("\n"))).not.toContain(kept[kept.length - 1]);
+    });
+
+    // R4-PL-5: the clause that the insertion pushed past the limits is still on the page.
+    it("reports a clause added at the top, and no clause pushed past the limits as removed", () => {
+      const page = pageOf("terms", "terms", [INSERTED, ...CLAUSES]);
+      const stored = new Map([[page.key, keptBy(CLAUSES)]]);
+
+      const result = comparePages({ pages: [page], stored, now: NOW });
+
+      expect(result.counts.changed).toBe(1);
+      const { content } = result.entries[0];
+      expect(content).toContain(`Added:\n- ${INSERTED}`);
+      expect(content).not.toContain("Removed:");
+    });
+
+    it("reports a clause removed at the top, and no clause that comes in at the end as added", () => {
+      const page = pageOf("terms", "terms", CLAUSES.slice(1));
+      const stored = new Map([[page.key, keptBy(CLAUSES)]]);
+
+      const result = comparePages({ pages: [page], stored, now: NOW });
+
+      expect(result.counts.changed).toBe(1);
+      const { content } = result.entries[0];
+      expect(content).toContain(`Removed:\n- ${CLAUSES[0]}`);
+      expect(content).not.toContain("Added:");
+    });
+
+    // A page that the limits did not cut, though it comes close to them, is whole: a clause added
+    // at its end is a change.
+    it("reports a clause added at the end of a page that comes close to the limits but was not cut", () => {
+      const whole: string[] = [];
+      let chars = 0;
+      for (const each of CLAUSES) {
+        if (chars + each.length + 1 > MAX_SNAPSHOT_CHARS - 2 * MAX_LINE_CHARS) break;
+        whole.push(each);
+        chars += each.length + 1;
+      }
+      // A last clause that brings the page to 300 characters under the limit.
+      const last = `Final section. ${"z".repeat(MAX_SNAPSHOT_CHARS - 300 - chars - 1 - 15)}`;
+      whole.push(last);
+      chars += last.length + 1;
+      const appended = "The provider may share customer data with its advertising partners.";
+      expect(chars + MAX_LINE_CHARS + 1).toBeGreaterThan(MAX_SNAPSHOT_CHARS);
+      expect(chars + appended.length + 1).toBeLessThanOrEqual(MAX_SNAPSHOT_CHARS);
+      const page = pageOf("terms", "terms", [...whole, appended]);
+      const stored = new Map([[page.key, keptBy(whole)]]);
+
+      const result = comparePages({ pages: [page], stored, now: NOW });
+
+      expect(result.counts.changed).toBe(1);
+      expect(result.entries[0].content).toContain(`Added:\n- ${appended}`);
+    });
+
+    // RVP-3: a clause inserted near the end of the kept window pushes the kept lines after it past
+    // the limits. Those lines are still on the page after it, and two of them make an anchor pair
+    // (see keptWindowLength), so it is inside the kept window.
+    describe("a clause inserted near the end of the kept window", () => {
+      // Longer than two kept clauses, and no longer than one kept line.
+      const NEW = `${long("The provider may use customer data to train its artificial intelligence models", 7)}.`;
+      const keptLines = () => keptBy(CLAUSES).body.split("\n");
+      const inserted = (at: number, line = NEW) => {
+        const lines = [...CLAUSES];
+        lines.splice(at, 0, line);
+        return lines;
+      };
+      const compare = (lines: string[]) =>
+        comparePages({
+          pages: [pageOf("terms", "terms", lines)],
+          stored: new Map([["acme.com/terms", keptBy(CLAUSES)]]),
+          now: NOW,
+        });
+
+      it("is a page cut by the limits, whose last kept clauses the insertion pushes out", () => {
+        expect(NEW.length).toBeGreaterThan(2 * (CLAUSES[0].length + 1));
+        expect(NEW.length).toBeLessThanOrEqual(MAX_LINE_CHARS);
+        const kept = keptLines();
+        expect(kept.length).toBeLessThan(CLAUSES.length);
+        const after = linesOf(inserted(kept.length - 2).join("\n"));
+        expect(after).not.toContain(kept[kept.length - 1]);
+      });
+
+      it.each([2, 3])(
+        "reports the clause inserted %i lines before the end of the kept window",
+        (back) => {
+          const lines = inserted(keptLines().length - back);
+          // The clause is inside what the limits keep of the new page.
+          expect(linesOf(lines.join("\n"))).toContain(NEW);
+
+          const result = compare(lines);
+
+          expect(result.counts.changed).toBe(1);
+          expect(result.entries[0].content).toContain(`Added:\n- ${NEW}`);
+          expect(result.entries[0].content).not.toContain("Removed:");
+        },
+      );
+
+      // A line after the last kept one may have been on the page past the old limit.
+      it("does not report a clause inserted right after the kept window", () => {
+        const result = compare(inserted(keptLines().length));
+
+        expect(result.entries).toEqual([]);
+      });
+
+      // A kept line that the page repeats past the cut does not make the lines before the repeat
+      // part of the kept window. Wave 10: the window ends at the last two kept lines that are each
+      // once in the kept body and once on the page, next to each other in both (RV8P-1..4). After
+      // the clause inserted here come one such line and the repeated one, so the clause is after
+      // the window: nothing old is shown as added, and the clause is not shown either.
+      const repeatedAtTheEnd = (insertAt: number) => {
+        const kept = keptLines();
+        // As long as the clause it stands for, so that it is the last kept line.
+        const boilerplate = "Back to the top of the terms of service of the provider ".padEnd(
+          CLAUSES[kept.length - 1].length,
+          "-",
+        );
+        const withHeading = [...CLAUSES];
+        withHeading[kept.length - 1] = boilerplate;
+        withHeading[kept.length + 20] = boilerplate;
+        const keptWithHeading = keptBy(withHeading);
+        expect(keptWithHeading.body.split("\n").slice(-1)[0]).toBe(boilerplate);
+        const now = [...withHeading];
+        now.splice(kept.length - insertAt, 0, NEW);
+        return comparePages({
+          pages: [pageOf("terms", "terms", now)],
+          stored: new Map([["acme.com/terms", keptWithHeading]]),
+          now: NOW,
+        });
+      };
+
+      it("does not report a clause inserted before one unique kept line and a repeated one", () => {
+        expect(repeatedAtTheEnd(2).entries).toEqual([]);
+      });
+
+      // The nearest neighbour: one line earlier, two unique kept lines follow the clause.
+      it("reports only the inserted clause when two unique kept lines follow it", () => {
+        const result = repeatedAtTheEnd(3);
+        expect(result.counts.changed).toBe(1);
+        expect(result.entries[0].content).toBe(
+          describeChange(
+            { added: [NEW], removed: [] },
+            { kind: "terms", since: "2031-04-20", until: "2031-04-20" },
+          ),
+        );
+      });
+    });
+
+    // FD-1: the old code kept fewer characters of each long line, so a line more can fit now.
+    it("takes a long page kept by the old code as no change, though a line more fits now", () => {
+      const paragraph = (index: number) =>
+        `${`Clause ${index} `.padEnd(599, "x")} ${"y".repeat(100)}`;
+      const tail = "The vendor may use customer content to train its models ".padEnd(300, "z");
+      const text = [...Array.from({ length: 166 }, (_, index) => paragraph(index)), tail].join(
+        "\n",
+      );
+      const old = oldLinesOf(text, false);
+      expect(old.join("\n")).not.toContain("train its models");
+      const page: PolicyPage = { ...pageOf("terms", "terms", []), text };
+      const stored = new Map([
+        [page.key, { hash: oldHashOf(old), body: old.join("\n"), lastSeenAt: new Date(NOW) }],
+      ]);
+
+      const result = comparePages({ pages: [page], stored, now: NOW });
+
+      expect(result.entries).toEqual([]);
+      expect(result.counts).toEqual({ first: 0, unchanged: 0, changed: 0, minor: 1 });
+    });
+
+    // RVP-1: the old code counted each long line cut where a space is as 601 characters; read back
+    // and trimmed, it is 600. With many of them the read-back count is far under what the old code
+    // counted, so the cut must be judged by the kept body itself.
+    describe("kept by the old code with many long clauses cut at a space", () => {
+      /** 599 characters of a clause, a space at character MAX_LINE_CHARS, then its rest. */
+      const longClause = (index: number) =>
+        `${`Clause ${index} `.padEnd(599, "x")} and the rest of clause ${index} goes on past the cut.`;
+      const TAIL = `THE TAIL CLAUSE: we may share customer content with our partners for advertising. ${"w".repeat(500)}`;
+      /** A page whose lines up to the tail the old code counted as `storedCount` characters. */
+      function pageCounted(storedCount: number, tail = TAIL): string {
+        const lines = Array.from({ length: 100 }, (_, index) => longClause(index));
+        let chars = 100 * (MAX_LINE_CHARS + 1);
+        let index = 0;
+        while (chars < storedCount - 200) {
+          lines.push(
+            `Short clause number ${index++} of the privacy policy, padded `.padEnd(199, "y"),
+          );
+          chars += 200;
+        }
+        lines.push("z".repeat(storedCount - chars - 1));
+        lines.push(tail);
+        return lines.join("\n");
+      }
+      const keptByOldCode = (text: string, trimmed: boolean): StoredSnapshot => {
+        const old = oldLinesOf(text, trimmed);
+        return { hash: oldHashOf(old), body: old.join("\n"), lastSeenAt: new Date(NOW) };
+      };
+      const page = (text: string): PolicyPage => ({ ...pageOf("privacy", "privacy", []), text });
+
+      it("takes the unchanged page as no change, stored count 99,450", () => {
+        const text = pageCounted(99_450);
+        const kept = keptByOldCode(text, false);
+        expect(kept.body.length + 1).toBe(99_450);
+        expect(kept.body).not.toContain("THE TAIL CLAUSE");
+
+        const result = comparePages({
+          pages: [page(text)],
+          stored: new Map([["acme.com/privacy", kept]]),
+          now: NOW,
+        });
+
+        expect(result.entries).toEqual([]);
+        expect(result.counts).toEqual({ first: 0, unchanged: 0, changed: 0, minor: 1 });
+      });
+
+      it.each([false, true])(
+        "takes the unchanged page as no change for every stored count from 99,000 to 100,000 (trimmed %s)",
+        (trimmed) => {
+          const counts: number[] = [];
+          for (let count = 99_000; count <= 100_000; count += 37) counts.push(count);
+          counts.push(99_398, 99_399, 99_400, 99_401, 99_409, 99_410, 99_999);
+          for (const count of counts) {
+            const text = pageCounted(count);
+            const result = comparePages({
+              pages: [page(text)],
+              stored: new Map([["acme.com/privacy", keptByOldCode(text, trimmed)]]),
+              now: NOW,
+            });
+            expect({ count, entries: result.entries }).toEqual({ count, entries: [] });
+          }
+        },
+      );
+
+      // The nearest neighbour: a body that ends far enough under the limit that the old code would
+      // have kept one more line of any kind is whole, so a line appended to the page is a change.
+      it("reports a clause appended to a page kept whole by the old code", () => {
+        const text = pageCounted(98_000, "The last clause of the policy as it was, kept whole.");
+        const kept = keptByOldCode(text, false);
+        expect(kept.body).toContain("kept whole");
+        const appended =
+          "We may share customer content with our partners for advertising purposes.";
+
+        const result = comparePages({
+          pages: [page(`${text}\n${appended}`)],
+          stored: new Map([["acme.com/privacy", kept]]),
+          now: NOW,
+        });
+
+        expect(result.counts.changed).toBe(1);
+        expect(result.entries[0].content).toContain(`Added:\n- ${appended}`);
+      });
+    });
+  });
+
   it("goes through every page on its own", () => {
     const terms = pageOf("terms", "terms", [CLAUSE_A]);
     const dpa = pageOf("dpa", "dpa", [CLAUSE_C, CLAUSE_D]);
@@ -515,6 +1090,31 @@ describe("collectPolicyPages", () => {
     expect(collector.pages().map((page) => [page.url, page.kind])).toEqual([
       ["https://trust.acme.com/trust", "security"],
       ["https://www.acme-cloud.com/privacy", "privacy"],
+    ]);
+  });
+
+  it("notes no page of a host where many have pages, though the vendor's website is on it", async () => {
+    // The vendor's website is github.com/acme-widgets: a stranger's page on the host that calls
+    // itself a privacy policy is not the vendor's terms page.
+    const collector = collectPolicyPages(readerOf(), ["github.com", "www.notion.site"]);
+
+    await collector.read(
+      "https://github.com/mallory/acme-widgets-legal/blob/main/privacy-policy.md",
+    );
+    await collector.read("https://gist.github.com/mallory/privacy");
+    await collector.read("https://notion.site/privacy");
+
+    expect(collector.pages()).toEqual([]);
+  });
+
+  it("keeps a vendor's site under a host where many have pages, and a domain beside a shared alias", async () => {
+    const collector = collectPolicyPages(readerOf(), ["acme.github.io", "github.com"]);
+
+    await collector.read("https://acme.github.io/privacy");
+    await collector.read("https://mallory.github.io/privacy");
+
+    expect(collector.pages().map((page) => [page.url, page.kind])).toEqual([
+      ["https://acme.github.io/privacy", "privacy"],
     ]);
   });
 
@@ -637,5 +1237,67 @@ describe("collectPolicyPages", () => {
       "acme.com/privacy",
       "acme.com/terms",
     ]);
+  });
+});
+
+describe("snapshotsToKeep", () => {
+  const pageOf = (path: string, lines: string[]): PolicyPage => ({
+    url: `https://acme.com/${path}`,
+    key: `acme.com/${path}`,
+    kind: "terms",
+    title: path,
+    text: lines.join("\n"),
+  });
+  const storedOf = (lines: string[]): StoredSnapshot => {
+    const normalised = linesOf(lines.join("\n"));
+    return {
+      hash: hashOf(normalised),
+      body: normalised.join("\n"),
+      lastSeenAt: new Date("2031-03-01T08:00:00Z"),
+    };
+  };
+  // Two pages that changed, one that did not, one seen for the first time.
+  const changedA = pageOf("terms", [CLAUSE_A]);
+  const changedB = pageOf("dpa", [CLAUSE_C]);
+  const same = pageOf("privacy", [CLAUSE_D]);
+  const first = pageOf("subprocessors", [CLAUSE_B]);
+  const comparison = comparePages({
+    pages: [changedA, changedB, same, first],
+    stored: new Map([
+      [changedA.key, storedOf([CLAUSE_B])],
+      [changedB.key, storedOf([CLAUSE_D])],
+      [same.key, storedOf([CLAUSE_D])],
+    ]),
+    now: NOW,
+  });
+  const [changeA, changeB] = comparison.entries;
+  const keys = (writes: { pageKey: string }[]) => writes.map((write) => write.pageKey);
+
+  it("keeps every page when every change was shown", () => {
+    const kept = snapshotsToKeep(comparison, [changeA, changeB]);
+
+    expect(kept.withheld).toBe(0);
+    expect(kept.writes).toEqual(comparison.writes);
+  });
+
+  it("does not keep a page whose change was not shown, and keeps the pages that made no change", () => {
+    const kept = snapshotsToKeep(comparison, [changeB]);
+
+    expect(kept.withheld).toBe(1);
+    expect(keys(kept.writes)).toEqual([changedB.key, same.key, first.key]);
+  });
+
+  it("does not keep a page whose change was shown with its text cut", () => {
+    const kept = snapshotsToKeep(comparison, [
+      { url: changeA.url, content: changeA.content.slice(0, 50) },
+      changeB,
+    ]);
+
+    expect(kept.withheld).toBe(1);
+    expect(keys(kept.writes)).toEqual([changedB.key, same.key, first.key]);
+  });
+
+  it("keeps the pages that made no change when nothing was shown", () => {
+    expect(keys(snapshotsToKeep(comparison, []).writes)).toEqual([same.key, first.key]);
   });
 });

@@ -25,7 +25,9 @@
  *   the copy was out of date; another record is matched as its database's records are.
  *
  * A page is classified by the address that answered it, when it answered from another (a
- * redirect): the vendor's site is decided by that address too.
+ * redirect): the vendor's site is decided by that address too. A search result is classified by
+ * the address it cites: the snippet check takes no page that answered from another site as its
+ * page (verifySnippets.ts), so a text another host served never earns the cited host's label.
  *
  * Then the label, the first step that applies:
  *

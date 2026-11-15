@@ -51,7 +51,12 @@ const tokensOf = (finding: KnownRisk) =>
  * - at or above ACTIVE_RISK_THRESHOLD similar to an active risk of the vendor,
  * - at or above PRIOR_FINDING_THRESHOLD similar to an earlier finding of the vendor, whatever its
  *   status, or in the same category and citing a URL (compared as an exact string) that finding
- *   cited,
+ *   cited. A URL that `options.forgotten` names is one no run remembers having shown: the caps of
+ *   the run that showed it cut a candidate that cited it (pipeline.ts), and that candidate is to be
+ *   raised again. A change of a page of the vendor's terms is remembered under a key of its own
+ *   (`changeKeyOf` in sourceMemory.ts); one shown by a run from before those keys is not. Sharing such a URL drops a candidate only when it is also at or above
+ *   ACTIVE_RISK_THRESHOLD similar to the finding that cited it, so that the risk the caps cut is
+ *   stored while a repeat of the finding in other words is still dropped,
  * - at or above PRIOR_FINDING_THRESHOLD similar to a candidate of this run that was kept. Of two
  *   similar candidates the first is kept. A dropped candidate is not compared with later ones.
  * - about an event that a candidate of this run that was kept is about already: every source it
@@ -68,7 +73,9 @@ export function dropDuplicates(
   priorFindings: PriorFinding[],
   report?: DedupeReport,
   events: ReadonlyMap<string, string> = new Map(),
+  options: { forgotten?: (url: string) => boolean } = {},
 ): { kept: NewFinding[]; dropped: number } {
+  const forgotten = options.forgotten ?? (() => false);
   const riskTokens = existingRisks.map(tokensOf);
   const priors = priorFindings.map((finding) => ({
     category: finding.category,
@@ -95,7 +102,13 @@ export function dropDuplicates(
     }
     if (
       priors.some(
-        (prior) => prior.category === candidate.category && urls.some((url) => prior.urls.has(url)),
+        (prior) =>
+          prior.category === candidate.category &&
+          urls.some(
+            (url) =>
+              prior.urls.has(url) &&
+              (!forgotten(url) || jaccard(tokens, prior.tokens) >= ACTIVE_RISK_THRESHOLD),
+          ),
       )
     ) {
       return "same_source";

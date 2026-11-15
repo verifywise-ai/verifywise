@@ -197,6 +197,8 @@ describe("the credibility of a finding, stored and served", () => {
 describe("a finding of a run before the credibility rule (M3 Part B1)", () => {
   const LEGACY_RATIONALE =
     "Rated before the source rules; this is the earlier confidence level until the label is recomputed.";
+  /** The line of the same label once the finding was decided: nothing relabels a decided finding. */
+  const DECIDED_LEGACY_RATIONALE = "Rated with the earlier confidence rule.";
   const { credibility: _label, credibility_basis: _basis, ...withoutLabel } = FINDING;
 
   /** A finding as the runs before the rule stored it: a confidence, and no label. */
@@ -278,9 +280,10 @@ describe("a finding of a run before the credibility rule (M3 Part B1)", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.data).toMatchObject({
+      status: "dismissed",
       credibility: "high",
       credibility_basis: { rule: "legacy_confidence" },
-      credibility_rationale: LEGACY_RATIONALE,
+      credibility_rationale: DECIDED_LEGACY_RATIONALE,
     });
   });
 });

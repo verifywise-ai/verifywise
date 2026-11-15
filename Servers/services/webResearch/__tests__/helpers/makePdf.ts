@@ -1,10 +1,17 @@
+import { deflateSync } from "node:zlib";
+
 /**
  * A PDF writer for the tests of the PDF reader: a document of pages of text lines in Helvetica,
  * with the cross-reference table written out so that no reader has to repair the file.
  *
  * `info` becomes the document information dictionary (`Title`, `CreationDate`, `ModDate`).
+ * With `flate`, each content stream is compressed with FlateDecode, as most writers do.
  */
-export function makePdf(pages: string[][], info: Record<string, string> = {}): Buffer {
+export function makePdf(
+  pages: string[][],
+  info: Record<string, string> = {},
+  options: { flate?: boolean } = {},
+): Buffer {
   const objects: Array<string | null> = [];
   const add = (body: string | null): number => objects.push(body);
   const escape = (text: string) => text.replace(/([()\\])/g, "\\$1");
@@ -17,8 +24,13 @@ export function makePdf(pages: string[][], info: Record<string, string> = {}): B
     const stream = `BT /F1 11 Tf 14 TL 50 740 Td ${lines
       .map((line) => `(${escape(line)}) Tj T*`)
       .join(" ")} ET`;
+    // A latin1 string carries the compressed bytes unchanged into the latin1 file.
+    const data = options.flate
+      ? deflateSync(Buffer.from(stream, "latin1")).toString("latin1")
+      : stream;
+    const filter = options.flate ? " /Filter /FlateDecode" : "";
     const content = add(
-      `<< /Length ${Buffer.byteLength(stream, "latin1")} >>\nstream\n${stream}\nendstream`,
+      `<< /Length ${Buffer.byteLength(data, "latin1")}${filter} >>\nstream\n${data}\nendstream`,
     );
     const page = add(
       `<< /Type /Page /Parent ${pageTree} 0 R /MediaBox [0 0 612 792] ` +

@@ -511,6 +511,25 @@ describe("createFileConnector", () => {
       expect(second).toBe("unchanged");
     });
 
+    it("fails as unreachable a 304 to a request that sent no validator, after a version bump", async () => {
+      // A server or a cache that answers 304 to an unconditional GET: taking it for "unchanged"
+      // would keep the reading of version 2.
+      const sent: unknown[] = [];
+      const alwaysNotModified: ConnectorFetch = async (url, validators) => {
+        sent.push(validators);
+        return { notModified: true, url };
+      };
+      const error = await failureOf(
+        createFileConnector(SPEC).download(alwaysNotModified, {
+          etag: 'k2:"e1"',
+          lastModified: DATE,
+        }),
+      );
+      expect(sent).toEqual([{}]);
+      expect(error).toBeInstanceOf(FetchError);
+      expect((error as FetchError).reason).toBe("unreachable");
+    });
+
     it("sends no validators for an etag that older code stored, which has no prefix", async () => {
       const fetch = fakeFetch(FILE());
       const answer = await createFileConnector(SPEC).download(fetch, {
@@ -1370,8 +1389,23 @@ describe("createFileConnector", () => {
     it("answers unchanged when the spec does, and reads nothing", async () => {
       const reader = jest.fn(read);
       const spec = specWith({ read: reader, fetchFiles: async () => "unchanged" });
-      expect(await createFileConnector(spec).download(fakeFetch({}), {})).toBe("unchanged");
+      expect(await createFileConnector(spec).download(fakeFetch({}), { etag: 'k3:"e1"' })).toBe(
+        "unchanged",
+      );
       expect(reader).not.toHaveBeenCalled();
+    });
+
+    it("fails as unreachable an unchanged of the spec when no validator was sent", async () => {
+      const spec = specWith({ fetchFiles: async () => "unchanged" });
+      // Nothing stored, and an etag of another version: no validator goes out either way.
+      for (const stored of [
+        {},
+        { etag: 'k2:"e1"', lastModified: "Tue, 03 Nov 2026 10:00:00 GMT" },
+      ]) {
+        const error = await failureOf(createFileConnector(spec).download(fakeFetch({}), stored));
+        expect(error).toBeInstanceOf(FetchError);
+        expect((error as FetchError).reason).toBe("unreachable");
+      }
     });
 
     it("fails what it fetched that is not the list, as such", async () => {

@@ -30,6 +30,25 @@ const UNWANTED_CONTROL_CHARACTERS = /[\u0000-\u0008\u000B\u000C\u000E-\u001F]/g;
 const LONE_SURROGATES = /[\uD800-\uDFFF]/gu;
 
 /**
+ * Characters no reader sees: the format characters (zero-width, bidirectional, soft hyphen, byte
+ * order mark, tags), the default-ignorable ones outside that category (the variation selectors, the
+ * fillers, the rest of the tag block U+E0000 to U+E0FFF), and the Braille pattern blank (U+2800),
+ * which shows nothing either. A text a list or a database wrote can hide words for the model in
+ * them, which no person reading the record would see; the list kit takes out the same characters
+ * (vrdb/connectors/kit/clean.ts).
+ */
+const HIDDEN_CHARACTERS = /[\p{Cf}\p{Default_Ignorable_Code_Point}\u{2800}]/gu;
+
+/**
+ * The text without the characters nobody sees (`HIDDEN_CHARACTERS`). For the text of a record of a
+ * list or a database, which goes into the prompt; page text and the model's answers keep them
+ * (`cleanText`). Linear in the length of the text.
+ */
+export function withoutHiddenCharacters(text: string): string {
+  return text.replace(HIDDEN_CHARACTERS, "");
+}
+
+/**
  * Removes the control characters and replaces each lone surrogate with U+FFFD. Postgres refuses a
  * NUL character in a text column and in JSONB, and a lone surrogate in JSONB (JSON.stringify
  * writes it as an escape sequence), so one such character in text that a third party or the model

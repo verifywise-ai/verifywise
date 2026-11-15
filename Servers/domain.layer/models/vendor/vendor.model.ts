@@ -25,31 +25,76 @@ import {
   validateReviewStatus,
   validateSecCik,
 } from "../../../utils/validations/vendorValidation.utils";
+import type { ValidationResult } from "../../../utils/validations/validation.utils";
 import {
   ValidationException,
   BusinessLogicException,
   NotFoundException,
 } from "../../exceptions/custom.exception";
 
-/** Each identifier with its check and the form it is stored in (vendorValidation.utils.ts). */
+/** Each identifier with the form it is stored in (vendorValidation.utils.ts). */
 const IDENTIFIER_RULES = [
-  ["country", validateCountry, normalizeCountry],
-  ["registration_number", validateRegistrationNumber, normalizeRegistrationNumber],
-  ["lei", validateLei, normalizeLei],
-  ["sec_cik", validateSecCik, normalizeSecCik],
+  ["country", normalizeCountry],
+  ["registration_number", normalizeRegistrationNumber],
+  ["lei", normalizeLei],
+  ["sec_cik", normalizeSecCik],
 ] as const;
+
+/**
+ * The check of an identifier. A switch over direct calls rather than a table of functions, so that
+ * the i18n check of the server messages (`npm run i18n:check-en`) can follow each check to the
+ * messages it returns.
+ */
+function validateIdentifier(field: keyof IVendorIdentifiers, value: unknown): ValidationResult {
+  switch (field) {
+    case "country":
+      return validateCountry(value);
+    case "registration_number":
+      return validateRegistrationNumber(value);
+    case "lei":
+      return validateLei(value);
+    case "sec_cik":
+      return validateSecCik(value);
+  }
+}
 
 /**
  * Checks each identifier `identifiers` gives and sets its stored form on the vendor; one that is
  * not given is left as it is.
  */
 function applyIdentifiers(vendor: IVendorIdentifiers, identifiers: IVendorIdentifiers): void {
-  for (const [field, validate, normalize] of IDENTIFIER_RULES) {
+  for (const [field, normalize] of IDENTIFIER_RULES) {
     const value = identifiers[field];
     if (value === undefined) continue;
-    const result = validate(value);
+    const result = validateIdentifier(field, value);
     if (!result.isValid) throw new ValidationException(result.message!, field, value);
     vendor[field] = normalize(value);
+  }
+}
+
+/** The text fields of a vendor, each with the message for a value that is not text. */
+const TEXT_FIELD_MESSAGES = {
+  vendor_name: "Vendor name must be text",
+  vendor_provides: "Vendor provides must be text",
+  website: "Website must be text",
+  vendor_contact_person: "Vendor contact person must be text",
+  review_result: "Review result must be text",
+} as const;
+
+/**
+ * Refuses a text field that is given and is not text (a number, true, a list, an object), before
+ * anything trims it: such a value failed there with a TypeError, a 500. A value that reads as empty
+ * (undefined, null, "", 0, false) is left to the checks of each field, which call a required one
+ * missing and clear the review result, as they always did.
+ */
+function checkTextTypes(fields: Partial<Record<keyof typeof TEXT_FIELD_MESSAGES, unknown>>): void {
+  for (const field of Object.keys(TEXT_FIELD_MESSAGES) as (keyof typeof TEXT_FIELD_MESSAGES)[]) {
+    const value = fields[field];
+    if (value && typeof value !== "string") {
+      // Looked up in the map at the throw, so that the i18n check of the server messages
+      // (`npm run i18n:check-en`) finds every message of the map.
+      throw new ValidationException(TEXT_FIELD_MESSAGES[field], field, value);
+    }
   }
 }
 
@@ -370,6 +415,14 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
     other_names?: string | null,
     identifiers: IVendorIdentifiers = {},
   ): Promise<VendorModel> {
+    checkTextTypes({
+      vendor_name,
+      vendor_provides,
+      website,
+      vendor_contact_person,
+      review_result,
+    });
+
     // Validate required fields
     if (!vendor_name || vendor_name.trim().length === 0) {
       throw new ValidationException("Vendor name is required", "vendor_name", vendor_name);
@@ -511,6 +564,8 @@ export class VendorModel extends Model<VendorModel> implements IVendor {
       other_names?: string | null;
     } & IVendorIdentifiers,
   ): Promise<void> {
+    checkTextTypes(updateData);
+
     // Validate vendor_name if provided
     if (updateData.vendor_name !== undefined) {
       if (!updateData.vendor_name || updateData.vendor_name.trim().length === 0) {

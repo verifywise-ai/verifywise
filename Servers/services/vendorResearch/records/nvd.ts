@@ -3,8 +3,10 @@
  * scores. The API needs no key (5 requests in 30 seconds without one). The records here are the
  * critical ones (CVSS 9.0 and above) published in the last 120 days, for the products of one CPE
  * vendor: the vendor part of a CPE name (`cpe:2.3:a:fortinet:...`) is matched whole by the API, so
- * a vendor that is not the one the token names finds nothing. The NVD is a work of the United
- * States government and free to use.
+ * a vendor that is not the one the token names finds nothing. The part of the CPE name is any
+ * (`cpe:2.3:*:fortinet`): applications (`a`), operating systems and firmware (`o`, FortiOS,
+ * PAN-OS) and hardware (`h`), in one request, since a vendor's critical CVEs are as often in its
+ * firmware as in its software. The NVD is a work of the United States government and free to use.
  *
  * The vendor risk database reads the NVD through (vrdb/connectors/nvd.ts), which takes the address,
  * the parser and the text of a record from here. The run no longer asks the NVD itself (M3 Part B).
@@ -30,7 +32,8 @@ export function nvdWindowStart(now: Date, cutoff?: string): string {
 
 export function nvdUrl(token: string, now: Date, cutoff?: string): string {
   const query = new URLSearchParams({
-    virtualMatchString: `cpe:2.3:a:${token}`,
+    // Any part: an application, an operating system or firmware, and hardware.
+    virtualMatchString: `cpe:2.3:*:${token}`,
     cvssV3Severity: "CRITICAL",
     pubStartDate: `${nvdWindowStart(now, cutoff)}T00:00:00.000`,
     pubEndDate: `${dayOf(now)}T23:59:59.999`,

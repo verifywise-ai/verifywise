@@ -47,6 +47,12 @@
  * its pages and its subdomains' can be read without a search, are marked as the vendor's own, are
  * exempt from the lookback and are not asked about relevance.
  *
+ * A domain that is exactly a host where many have pages (`github.com`, `notion.site`: see
+ * vendorResearch/sharedHosts.ts) has no such standing, whether it is the vendor's domain or an
+ * alias: the vendor whose website is `github.com/acme` owns none of the host's other pages, and
+ * what is marked as the vendor's own is trusted to speak for the vendor. Its pages are read as any
+ * other site's are. A site under such a host (`acme.github.io`) keeps its standing.
+ *
  * A read that failed (the page was not found, the site refused us, nothing answered) gives its unit
  * back, at most six times a run: it added nothing to the evidence, and the trace of real runs showed
  * sites that refuse most of their pages using up the whole budget on failures. A page that failed
@@ -84,6 +90,7 @@ import { isOnDomain } from "./publicUrl";
 import { FetchedPage, PageReadError, PageReader, ReadFailureReason } from "./readPage";
 import { REPEATED_QUERY_JACCARD, queryWords, similarity } from "./queryMatch";
 import { acceptCanonical, crossSiteCanonical, resolveAddress } from "./urlCanon";
+import { isSharedPlatformHost } from "../vendorResearch/sharedHosts";
 import type { VrdbRecordMeta } from "../vendorResearch/vrdb/types";
 import { SearchEngine, SearchEngineError, SearchKind, SearchResult } from "./webSearch";
 
@@ -336,7 +343,9 @@ export interface WebSessionOptions<C extends string> {
   readPage: PageReader;
   /**
    * The vendor's domain, or null. Its pages (and its subdomains') may be read without a search
-   * result and are exempt from the lookback.
+   * result and are exempt from the lookback. A domain that is exactly a host where many have pages
+   * (`github.com`, see vendorResearch/sharedHosts.ts) is taken as none: its pages are not the
+   * vendor's own.
    */
   domain: string | null;
   /**
@@ -364,7 +373,8 @@ export interface WebSessionOptions<C extends string> {
   closedHosts?: readonly string[];
   /**
    * Other domains that are the vendor's website: they are treated as `domain` is (its pages and
-   * those of its subdomains can be read without a search and are the vendor's own).
+   * those of its subdomains can be read without a search and are the vendor's own), and one that
+   * is exactly a host where many have pages is none either.
    */
   aliasDomains?: readonly string[];
 }
@@ -530,9 +540,15 @@ interface Pool {
 export function createWebSession<C extends string>(options: WebSessionOptions<C>): WebSession<C> {
   const { engine, readPage, domain, cutoffs, isRelevant, normalizeQuery } = options;
   const closedHosts = new Set((options.closedHosts ?? []).map((host) => host.toLowerCase()));
-  /** The vendor's domain and the domains that are its website too. */
+  /**
+   * The vendor's domain and the domains that are its website too. A host where many have pages
+   * (`github.com`, sharedHosts.ts) is no own domain, though the vendor's website is a page on it:
+   * every other page there is a stranger's, and a page marked as the vendor's own is trusted to
+   * speak for it (a change of one of its terms pages above all, see evidence.ts). A vendor's site
+   * under such a host (`acme.github.io`) is the vendor's alone and stays its own.
+   */
   const ownDomains = [domain, ...(options.aliasDomains ?? [])].filter(
-    (own): own is string => own !== null && own !== "",
+    (own): own is string => own !== null && own !== "" && !isSharedPlatformHost(own),
   );
   // Field by field, so that a limit given as undefined keeps its default.
   const limits: SessionLimits = {

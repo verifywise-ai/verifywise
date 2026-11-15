@@ -1544,12 +1544,25 @@ describe("aiidConnector.download", () => {
 
 describe("aiidConnector in the sync", () => {
   /** The queries of the sync in memory, as much as a sync of a list taken whole uses. */
-  function memoryStore() {
+  function memoryStore(etag: string | null = null) {
     const applied: VrdbSnapshotWrite[] = [];
     const finished: Array<{ outcome: string; errorCode?: string }> = [];
     const store: SyncStore = {
       upsertVrdbSourceQuery: async () => undefined,
-      getVrdbSourceStatesQuery: async () => [],
+      getVrdbSourceStatesQuery: async () =>
+        etag === null
+          ? []
+          : [
+              {
+                id: "aiid",
+                lastSuccessAt: new Date("2026-11-04T04:11:00Z"),
+                lastOutcome: "ok",
+                sourceVersion: DATE,
+                etag,
+                lastModified: "Mon, 02 Nov 2026 10:04:27 GMT",
+                activeRecords: 3,
+              },
+            ],
       lastSuccessfulHashQuery: async () => null,
       startVrdbSyncRunQuery: async () => 1,
       finishVrdbSyncRunQuery: async (_run, result) => {
@@ -1573,8 +1586,8 @@ describe("aiidConnector in the sync", () => {
     return { store, applied, finished };
   }
 
-  async function run(fetch: ConnectorFetch) {
-    const memory = memoryStore();
+  async function run(fetch: ConnectorFetch, etag: string | null = null) {
+    const memory = memoryStore(etag);
     const outcome = await syncSource("aiid", {
       store: memory.store,
       connector: aiidConnector,
@@ -1598,7 +1611,8 @@ describe("aiidConnector in the sync", () => {
       sourceId: "aiid",
       missingStatus: "withdrawn",
       sourceVersion: DATE,
-      etag: '"export-1"',
+      // The sync stores the etag behind the version of the connector that read the file.
+      etag: `cv${aiidConnector.version}:"export-1"`,
       lastModified: "Mon, 02 Nov 2026 10:04:27 GMT",
     });
     expect(applied[0].records.map((record) => record.recordType)).toEqual([
@@ -1608,13 +1622,30 @@ describe("aiidConnector in the sync", () => {
     ]);
   });
 
-  it("answers unchanged on a 304", async () => {
+  it("answers unchanged on a 304 to the validators this version stored", async () => {
     const fetch: ConnectorFetch = async (url) =>
       url === AIID_SNAPSHOTS_URL ? answer(PAGE, { url }) : { notModified: true, url };
 
-    const { outcome, applied } = await run(fetch);
+    const { outcome, applied } = await run(fetch, `cv${aiidConnector.version}:"export-1"`);
 
     expect(outcome).toEqual({ outcome: "unchanged" });
+    expect(applied).toEqual([]);
+  });
+
+  it("fails a 304 as fetch_failed when no validator was sent: another version stored them", async () => {
+    const sent: unknown[] = [];
+    const fetch: ConnectorFetch = async (url, validators) => {
+      if (url === AIID_SNAPSHOTS_URL) return answer(PAGE, { url });
+      sent.push(validators);
+      return { notModified: true, url };
+    };
+
+    // An OLDER version's marker: a reader leaves a list stored by a newer version alone (round 13),
+    // so the marker of another version that this test needs is the one before the connector's own.
+    const { outcome, applied } = await run(fetch, `cv${aiidConnector.version - 1}:"export-1"`);
+
+    expect(sent).toEqual([{ etag: null, lastModified: null }]);
+    expect(outcome).toEqual({ outcome: "failed", errorCode: "fetch_failed" });
     expect(applied).toEqual([]);
   });
 

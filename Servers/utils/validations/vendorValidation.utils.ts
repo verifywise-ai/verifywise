@@ -187,6 +187,18 @@ export const otherNamesIn = (text: string): string[] => {
   return names;
 };
 
+/**
+ * The C0 control characters that are not white space, and DEL. Postgres takes no NUL in a text, and
+ * Sequelize writes one in a replacement as the two characters backslash and 0, so a text that held
+ * one would be stored as another, longer text than the one that was checked. Tabs and line breaks
+ * are white space and stay: they separate other names and collapse into a space in a registration
+ * number.
+ */
+const CONTROL_CHARACTERS = /[\u0000-\u0008\u000E-\u001F\u007F]/g;
+
+/** `text` without its control characters (see `CONTROL_CHARACTERS`). */
+const withoutControlCharacters = (text: string): string => text.replace(CONTROL_CHARACTERS, "");
+
 /** The names once each, however they are written; the first way a name was written stays. */
 const distinctNames = (names: readonly string[]): string[] => {
   const seen = new Set<string>();
@@ -199,31 +211,45 @@ const distinctNames = (names: readonly string[]): string[] => {
 };
 
 /**
- * Validates the other names of a vendor: optional text of at most 500 characters that holds at most
- * 8 names (a legal form after a comma is part of the name before it, see `otherNamesIn`), each of 2
- * to 80 characters with a letter or a digit in it. A name that is written twice counts once.
+ * Validates the other names of a vendor: optional text of at most 500 characters, as typed and as
+ * stored (see `normalizeOtherNames`), that holds at most 8 names (a legal form after a comma is
+ * part of the name before it, see `otherNamesIn`), each of 2 to 80 characters with a letter or a
+ * digit in it. A name that is written twice counts once.
  */
 export const validateOtherNames = (value: any): ValidationResult => {
+  // The messages below are literals, not templates of `limits`, so that the i18n check of the
+  // server messages (`npm run i18n:check-en`) finds each key; a test holds them to the limits.
   const limits = VENDOR_VALIDATION_LIMITS.OTHER_NAMES;
   if (value === undefined || value === null) return { isValid: true };
   if (typeof value !== "string") {
     return { isValid: false, message: "Other names must be text", code: "INVALID_TYPE" };
   }
-  const text = value.trim();
+  // Measured as stored: without control characters (see `normalizeOtherNames`).
+  const text = withoutControlCharacters(value).trim();
   if (text.length > limits.MAX_CHARS) {
     return {
       isValid: false,
-      message: `Other names must be at most ${limits.MAX_CHARS} characters`,
+      message: "Other names must be at most 500 characters",
       code: "TOO_LONG",
     };
   }
   const names = otherNamesIn(text);
+  // The stored text joins the names with a comma and a space (see `normalizeOtherNames`), which is
+  // longer than a semicolon or a line break. It is held to the same limit, so that the stored text
+  // passes this check again when the edit form sends it back.
+  if (distinctNames(names).join(", ").length > limits.MAX_CHARS) {
+    return {
+      isValid: false,
+      message: "Other names must be at most 500 characters with a comma and a space between names",
+      code: "TOO_LONG",
+    };
+  }
   if (
     names.some((name) => name.length < limits.MIN_NAME_CHARS || name.length > limits.MAX_NAME_CHARS)
   ) {
     return {
       isValid: false,
-      message: `Each of the other names must be between ${limits.MIN_NAME_CHARS} and ${limits.MAX_NAME_CHARS} characters`,
+      message: "Each of the other names must be between 2 and 80 characters",
       code: "INVALID_NAME_LENGTH",
     };
   }
@@ -237,7 +263,7 @@ export const validateOtherNames = (value: any): ValidationResult => {
   if (distinctNames(names).length > limits.MAX_NAMES) {
     return {
       isValid: false,
-      message: `Other names can list at most ${limits.MAX_NAMES} names`,
+      message: "Other names can list at most 8 names",
       code: "TOO_MANY",
     };
   }
@@ -251,7 +277,7 @@ export const validateOtherNames = (value: any): ValidationResult => {
  */
 export const normalizeOtherNames = (value: unknown): string | null => {
   if (typeof value !== "string") return null;
-  const names = distinctNames(otherNamesIn(value));
+  const names = distinctNames(otherNamesIn(withoutControlCharacters(value)));
   return names.length === 0 ? null : names.join(", ");
 };
 
@@ -291,10 +317,14 @@ export const ISO_COUNTRY_CODES: readonly string[] = [
 const identifierText = (value: unknown): string | undefined =>
   typeof value === "string" ? value.trim() : undefined;
 
-/** The result for an identifier that is not text, null or undefined. */
-const notText = (label: string): ValidationResult => ({
+/**
+ * The result for an identifier that is not text, null or undefined. The whole message is passed
+ * as a literal, so that the i18n check of the server messages (`npm run i18n:check-en`) finds
+ * each key.
+ */
+const notText = (message: string): ValidationResult => ({
   isValid: false,
-  message: `${label} must be text`,
+  message,
   code: "INVALID_TYPE",
 });
 
@@ -302,7 +332,7 @@ const notText = (label: string): ValidationResult => ({
 export const validateCountry = (value: unknown): ValidationResult => {
   if (value === undefined || value === null) return { isValid: true };
   const text = identifierText(value);
-  if (text === undefined) return notText("Country");
+  if (text === undefined) return notText("Country must be text");
   if (text === "" || ISO_COUNTRY_CODES.includes(text.toUpperCase())) return { isValid: true };
   return {
     isValid: false,
@@ -317,19 +347,24 @@ export const normalizeCountry = (value: unknown): string | null => {
   return text ? text.toUpperCase() : null;
 };
 
-/** The registration number as it is checked and stored: trimmed, inner white space collapsed. */
-const registrationNumberOf = (text: string): string => text.replace(/\s+/g, " ");
+/**
+ * The registration number as it is checked and stored: without control characters, trimmed, inner
+ * white space collapsed.
+ */
+const registrationNumberOf = (text: string): string =>
+  withoutControlCharacters(text).replace(/\s+/g, " ").trim();
 
 /** The vendor's company registration number: optional text of at most 64 characters. */
 export const validateRegistrationNumber = (value: unknown): ValidationResult => {
   if (value === undefined || value === null) return { isValid: true };
   const text = identifierText(value);
-  if (text === undefined) return notText("Registration number");
+  if (text === undefined) return notText("Registration number must be text");
   const max = VENDOR_VALIDATION_LIMITS.REGISTRATION_NUMBER.MAX;
   if (registrationNumberOf(text).length > max) {
     return {
       isValid: false,
-      message: `Registration number must be at most ${max} characters`,
+      // A literal, not a template, so that the i18n check finds its key; a test holds it to `max`.
+      message: "Registration number must be at most 64 characters",
       code: "TOO_LONG",
     };
   }
@@ -339,7 +374,8 @@ export const validateRegistrationNumber = (value: unknown): ValidationResult => 
 /** The registration number as it is stored; null when there is none. */
 export const normalizeRegistrationNumber = (value: unknown): string | null => {
   const text = identifierText(value);
-  return text ? registrationNumberOf(text) : null;
+  const stored = text ? registrationNumberOf(text) : "";
+  return stored === "" ? null : stored;
 };
 
 /** The LEI as it is checked and stored: without white space, in upper case. */
@@ -366,7 +402,7 @@ export const isValidLei = (lei: string): boolean =>
 export const validateLei = (value: unknown): ValidationResult => {
   if (value === undefined || value === null) return { isValid: true };
   const text = identifierText(value);
-  if (text === undefined) return notText("LEI");
+  if (text === undefined) return notText("LEI must be text");
   if (text === "") return { isValid: true };
   const lei = leiOf(text);
   if (!/^[A-Z0-9]{18}[0-9]{2}$/.test(lei)) {
@@ -396,7 +432,7 @@ export const normalizeLei = (value: unknown): string | null => {
 export const validateSecCik = (value: unknown): ValidationResult => {
   if (value === undefined || value === null) return { isValid: true };
   const text = identifierText(value);
-  if (text === undefined) return notText("SEC CIK");
+  if (text === undefined) return notText("SEC CIK must be text");
   if (text === "" || /^[0-9]{1,10}$/.test(text)) return { isValid: true };
   return { isValid: false, message: "SEC CIK must be one to ten digits", code: "INVALID_FORMAT" };
 };
@@ -407,8 +443,13 @@ export const normalizeSecCik = (value: unknown): string | null => {
   return text ? text.padStart(10, "0") : null;
 };
 
-/** The identifiers of a vendor, each with how it is stored. */
+/**
+ * The identifiers of a vendor and its other names, each with how it is stored. The other names are
+ * here too because the change history compares the stored value with the one sent: "Meta,FB" sent
+ * for a stored "Meta, FB" is no change.
+ */
 const IDENTIFIER_NORMALIZERS = {
+  other_names: normalizeOtherNames,
   country: normalizeCountry,
   registration_number: normalizeRegistrationNumber,
   lei: normalizeLei,
@@ -416,8 +457,8 @@ const IDENTIFIER_NORMALIZERS = {
 } as const;
 
 /**
- * `data` with each identifier it gives in the form it is stored, and the other fields as they are:
- * what the change history records.
+ * `data` with each identifier and the other names it gives in the form they are stored, and the
+ * other fields as they are: what the change history records.
  */
 export const withNormalizedIdentifiers = <T extends Record<string, unknown>>(data: T): T => {
   const normalized: Record<string, unknown> = { ...data };

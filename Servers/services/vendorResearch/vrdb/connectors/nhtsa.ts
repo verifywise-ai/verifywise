@@ -41,10 +41,12 @@
 import { FetchError } from "../../../webResearch/guardedFetch";
 import { compactName } from "../../records/match";
 import { joinSentences, sentence } from "../../records/sentence";
-import { cleanText, cutAtCodePoint } from "../../text";
+import { cutAtCodePoint } from "../../text";
 import { nameKeysOf } from "../keys";
 import { vrdbSourceOf } from "../sources";
 import type { ParsedRecord } from "../types";
+import { flatText } from "./kit/clean";
+import { latestPlausibleDay } from "./nhtsaFlat";
 import { readCsv } from "./ofac";
 import { type Connector, bodyText } from "./types";
 
@@ -220,16 +222,27 @@ interface Report {
   severity: NhtsaSeverity;
 }
 
-/** A cell as one line: without control characters, white space as single blanks, cut at `max`. */
-const lineOf = (cell: string, max: number): string =>
-  cutAtCodePoint(cleanText(cell).replace(/\s+/g, " ").trim(), max).trimEnd();
+/**
+ * A cell as one line: without control characters and without the characters that no reader sees
+ * (zero-width, bidirectional and tag characters, which can spell words to the model that a reader of
+ * the record never sees), white space as single blanks (the kit's `flatText`), cut at `max`.
+ */
+const lineOf = (cell: string, max: number): string => cutAtCodePoint(flatText(cell), max).trimEnd();
 
-/** The report a row holds; null when the row cannot be read. */
+/**
+ * The report a row holds; null when the row cannot be read. An incident month after `latest` (the
+ * month of `latestPlausibleDay` of the parse, `YYYY-MM`) is a mistyped row, not news, and the row
+ * cannot be read: it would date its entity's record in the future, which no lookback ever leaves, and
+ * move the range and the year counts of the record. A submission month after it is one that cannot
+ * be read (null), as an empty one is: the row still counts, and that month never becomes the version
+ * of the list.
+ */
 function reportOf(
   row: readonly string[],
   width: number,
   columns: Columns,
   automation: Automation,
+  latest: string,
 ): Report | null {
   // A row of another width is shifted or cut: its cells are not the columns of the header.
   if (row.length !== width) return null;
@@ -239,7 +252,9 @@ function reportOf(
   const key = cutAtCodePoint(compactName(entity), MAX_KEY_CHARS);
   if (!REPORT_ID.test(id) || !VERSION.test(version) || key === "") return null;
   const incident = row[columns.incident].trim();
-  const month = nhtsaMonthOf(incident);
+  const read = nhtsaMonthOf(incident);
+  if (read !== null && read > latest) return null;
+  const month = read;
   // A report the file dates nowhere has an empty date, and Y in `Incident Date - Unknown`: it
   // counts, without a month. A date that is there, is not a month and is not flagged as unknown is
   // a changed format.
@@ -247,6 +262,7 @@ function reportOf(
     incident === "" ||
     (columns.incidentUnknown !== -1 && row[columns.incidentUnknown].trim().toUpperCase() === "Y");
   if (month === null && !unknown) return null;
+  const submitted = nhtsaMonthOf(row[columns.submitted]);
   return {
     id,
     version: Number(version),
@@ -254,7 +270,7 @@ function reportOf(
     entity,
     key,
     month,
-    submitted: nhtsaMonthOf(row[columns.submitted]),
+    submitted: submitted !== null && submitted > latest ? null : submitted,
     state: lineOf(row[columns.state], MAX_CELL_CHARS),
     crashWith: lineOf(row[columns.crashWith], MAX_CELL_CHARS),
     severity: nhtsaSeverityOf(row[columns.severity]),
@@ -270,8 +286,11 @@ interface FileReading {
   cut: boolean;
 }
 
-/** One file as reports; null when it is not the list (no header, or a column missing). */
-function readFile(text: string, automation: Automation): FileReading | null {
+/**
+ * One file as reports; null when it is not the list (no header, or a column missing). `latest` is
+ * the last month a report may carry (see `reportOf`).
+ */
+function readFile(text: string, automation: Automation, latest: string): FileReading | null {
   // A byte order mark in front of a quoted first cell would hide the quote from the reader. The
   // header counts as a row, so the reader stops one row past the limit of reports.
   const csv = readCsv(text.charCodeAt(0) === 0xfeff ? text.slice(1) : text, NHTSA_MAX_ROWS + 1);
@@ -284,7 +303,7 @@ function readFile(text: string, automation: Automation): FileReading | null {
   for (const row of body) {
     if (row.every((cell) => cell.trim() === "")) continue;
     reading.rows += 1;
-    const report = reportOf(row, header.length, columns, automation);
+    const report = reportOf(row, header.length, columns, automation, latest);
     if (report === null) reading.unreadable += 1;
     else reading.reports.push(report);
   }
@@ -468,7 +487,10 @@ const FILE_LIMITS = {
 
 export const nhtsaConnector: Connector = {
   id: "nhtsa_sgo",
-  version: 1,
+  // 2: an incident month after the week that follows the day of the parse makes its row unreadable,
+  // and such a submission month is none (`reportOf`): records and the version can change on
+  // unchanged files.
+  version: 2,
   // Three files and one pair of validators: a 304 on one would say nothing of the others, so all
   // three are asked in full and the sync's hash of the three tells an unchanged list.
   async download(fetch) {
@@ -487,8 +509,10 @@ export const nhtsaConnector: Connector = {
   },
   parse(snapshot) {
     const readings: FileReading[] = [];
+    // The day of the parse is read once, so that every row of the three files has one bound.
+    const latest = latestPlausibleDay().slice(0, 7);
     for (const [at, file] of FILES.entries()) {
-      const reading = readFile(snapshot.bodies[at] ?? "", file.automation);
+      const reading = readFile(snapshot.bodies[at] ?? "", file.automation, latest);
       if (reading === null) return { records: [], errors: 1, sourceVersion: null, root: null };
       readings.push(reading);
     }

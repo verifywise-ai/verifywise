@@ -84,9 +84,10 @@ const answer = (
   body: string,
   contentType: string,
   etag: string | null = null,
+  url = "",
 ): ConditionalResponse => ({
   notModified: false,
-  url: "",
+  url,
   status: 200,
   contentType,
   body: Buffer.from(body),
@@ -100,8 +101,8 @@ function server(feed: string = RSS) {
   const calls: Parameters<ConnectorFetch>[] = [];
   const fetch: ConnectorFetch = async (...args) => {
     calls.push(args);
-    if (args[0] === EU_FEED_URL) return answer(feed, "text/xml");
-    if (args[0] === FILE_URL) return answer(XML, "application/xml", '"f2"');
+    if (args[0] === EU_FEED_URL) return answer(feed, "text/xml", null, EU_FEED_URL);
+    if (args[0] === FILE_URL) return answer(XML, "application/xml", '"f2"', FILE_URL);
     throw new Error("an address the test does not serve");
   };
   return { fetch, calls };
@@ -447,7 +448,7 @@ describe("euConnector.parse, the UN reference number", () => {
 describe("euConnector.version", () => {
   it("is 4: the websites are domain keys, the title is the first English alias, an alias is read from its parts, and the UN reference number is in the text", () => {
     // Each changes what `parse` gives from the same file, so the sync has to parse it again.
-    expect(euConnector.version).toBe(4);
+    expect(euConnector.version).toBe(5);
   });
 });
 
@@ -519,14 +520,80 @@ describe("euConnector.download", () => {
 
   it("answers unchanged on a 304 of the file", async () => {
     const fetch: ConnectorFetch = async (url) =>
-      url === EU_FEED_URL ? answer(RSS, "text/xml") : { notModified: true, url };
+      url === EU_FEED_URL ? answer(RSS, "text/xml", null, url) : { notModified: true, url };
 
     await expect(euConnector.download(fetch, { etag: '"f1"' })).resolves.toBe("unchanged");
   });
 
+  /**
+   * A fetch that serves the feed and the file, the answers coming from the addresses given (where
+   * the page guard says it ended after the redirects), and records what it was asked.
+   */
+  function redirected(at: { feed?: string; file?: string; notModified?: boolean }) {
+    const calls: string[] = [];
+    const fetch: ConnectorFetch = async (url) => {
+      calls.push(url);
+      if (url === EU_FEED_URL) return answer(RSS, "text/xml", null, at.feed ?? url);
+      if (url !== FILE_URL) throw new Error("an address the test does not serve");
+      if (at.notModified) return { notModified: true, url: at.file ?? url };
+      return answer(XML, "application/xml", '"f2"', at.file ?? url);
+    };
+    return { fetch, calls };
+  }
+
+  const elsewhere =
+    "https://lists.example.org/fsd/fsf/public/files/xmlFullSanctionsList_1_1/content?token=x";
+
+  it.each([
+    ["on another host", elsewhere],
+    ["on the operator's host under another path", "https://webgate.ec.europa.eu/fsd/other.xml"],
+    ["over http", FILE_URL.replace("https:", "http:")],
+    ["on another port", FILE_URL.replace("europa.eu/", "europa.eu:8443/")],
+  ])("refuses a file that answered %s after the redirects", async (_case, url) => {
+    const { fetch } = redirected({ file: url });
+
+    const error = await euConnector.download(fetch, {}).catch((caught: Error) => caught);
+
+    expect(error).toMatchObject({ name: "FetchError", reason: "not_allowed" });
+    expect(String((error as Error).message)).not.toMatch(/fixture-token|example/);
+  });
+
+  it("refuses a 304 of the file that answered on another host", async () => {
+    const { fetch } = redirected({ file: elsewhere, notModified: true });
+
+    await expect(euConnector.download(fetch, { etag: '"f1"' })).rejects.toMatchObject({
+      name: "FetchError",
+      reason: "not_allowed",
+    });
+  });
+
+  it("refuses a feed that answered on another host, and asks for no file", async () => {
+    const { fetch, calls } = redirected({ feed: "https://feeds.example.org/fsd/fsf/public/rss" });
+
+    await expect(euConnector.download(fetch, {})).rejects.toMatchObject({
+      name: "FetchError",
+      reason: "not_allowed",
+    });
+    expect(calls).toEqual([EU_FEED_URL]);
+  });
+
+  it("accepts a file and a feed that answered on the operator's host after a redirect there", async () => {
+    const moved = FILE_URL.replace("content?token=fixture-token", "content?token=moved");
+    const { fetch } = redirected({
+      feed: "https://webgate.ec.europa.eu/fsd/fsf/public/rss/",
+      file: moved,
+    });
+
+    await expect(euConnector.download(fetch, {})).resolves.toMatchObject({ bodies: [XML] });
+    const notModified = redirected({ file: moved, notModified: true });
+    await expect(euConnector.download(notModified.fetch, { etag: '"f1"' })).resolves.toBe(
+      "unchanged",
+    );
+  });
+
   it("never names the file's address in an error", async () => {
     const fetch: ConnectorFetch = async (url) => {
-      if (url === EU_FEED_URL) return answer(RSS, "text/xml");
+      if (url === EU_FEED_URL) return answer(RSS, "text/xml", null, url);
       throw new Error(`failed at ${url}`);
     };
 

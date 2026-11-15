@@ -290,6 +290,60 @@ describe("dropDuplicates", () => {
       }
     });
 
+    // A source that no run remembers was cut from the memory with a candidate the caps cut, which
+    // the next scheduled run raises again (R4-PL-1, R4TR-2).
+    describe("a source that no run remembers", () => {
+      const forgotten = (url: string) => url === SOURCE_URL;
+
+      it("does not drop a candidate that only shares it with an earlier finding", () => {
+        const candidates = [candidate(["alpha", "bravo"], { sources: [cited(SOURCE_URL)] })];
+        const report: DedupeReport = { reasons: {} };
+
+        const result = dropDuplicates(
+          candidates,
+          [],
+          [prior(["xray", "yankee"], { sources: [cited(SOURCE_URL)] })],
+          report,
+          new Map(),
+          { forgotten },
+        );
+
+        expect(result).toEqual({ kept: candidates, dropped: 0 });
+        expect(report.reasons).toEqual({});
+      });
+
+      it("still drops a candidate that says what the earlier finding said in other words", () => {
+        const report: DedupeReport = { reasons: {} };
+
+        const result = dropDuplicates(
+          [candidate(["alpha", "bravo", "charlie", "delta"], { sources: [cited(SOURCE_URL)] })],
+          [],
+          [prior(["alpha", "bravo", "xray", "yankee", "zulu"], { sources: [cited(SOURCE_URL)] })],
+          report,
+          new Map(),
+          { forgotten },
+        );
+
+        expect(result.dropped).toBe(1);
+        expect(report.reasons).toEqual({ same_source: 1 });
+      });
+
+      it("still drops a candidate that shares another source, which a run remembers", () => {
+        const other = "https://news.example.com/other-story";
+
+        const result = dropDuplicates(
+          [candidate(["alpha", "bravo"], { sources: [cited(SOURCE_URL), cited(other)] })],
+          [],
+          [prior(["xray", "yankee"], { sources: [cited(other)] })],
+          undefined,
+          new Map(),
+          { forgotten },
+        );
+
+        expect(result.dropped).toBe(1);
+      });
+    });
+
     it("keeps a candidate when the earlier finding in its category cites other pages and says other things", () => {
       const candidates = [candidate(["alpha", "bravo"])];
 

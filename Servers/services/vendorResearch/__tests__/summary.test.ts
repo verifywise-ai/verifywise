@@ -104,6 +104,7 @@ describe("the notes", () => {
     expect(NOTES).toEqual({
       nothingFound: "No risks found in the sources reviewed",
       unconfirmed: "Possible risks were found but could not be verified or are already recorded",
+      overCap: "More risks were found than one run keeps",
       searchUnavailable: "The search was not available",
       pagesUnreadable: "The pages could not be read",
       timeLimit: "Not researched: the time limit was reached",
@@ -496,6 +497,64 @@ describe("summariseCategories", () => {
         category: "security_incidents",
         outcome: "nothing_found",
         note: "Possible risks were found but could not be verified or are already recorded",
+      });
+    });
+
+    // R4TR-1: a risk that the cap of the run cut held up, so it was neither unverified nor known.
+    // RV6C-1: the category has an outcome of its own, so that what the UI says of it never rests on
+    // the note, which on `nothing_found` may be text the model wrote.
+    it("says more risks were found than one run keeps when the cap cut every risk of the category", () => {
+      expect(
+        securityWith([searched("security_incidents")], {
+          proposed: new Set<ResearchCategory>(["security_incidents"]),
+          capped: new Set<ResearchCategory>(["security_incidents"]),
+        }),
+      ).toEqual({
+        category: "security_incidents",
+        outcome: "over_cap",
+        note: "More risks were found than one run keeps",
+      });
+    });
+
+    it("gives the cap's outcome also when a call of the category failed, as long as one answered", () => {
+      expect(
+        securityWith([searchFailed("security_incidents"), searched("security_incidents")], {
+          proposed: new Set<ResearchCategory>(["security_incidents"]),
+          capped: new Set<ResearchCategory>(["security_incidents"]),
+        }),
+      ).toEqual({
+        category: "security_incidents",
+        outcome: "over_cap",
+        note: "More risks were found than one run keeps",
+      });
+    });
+
+    // The nearest neighbour: the model writes the very words of the cap's note for a category in
+    // which nothing was proposed and nothing was cut. Its note never gives the category the cap's
+    // outcome.
+    it("keeps a category nothing was found in when the model's note is the cap's phrase", () => {
+      expect(
+        securityWith([searched("security_incidents")], {
+          modelNotes: [{ category: "security_incidents", note: NOTES.overCap }],
+        }),
+      ).toEqual({
+        category: "security_incidents",
+        outcome: "nothing_found",
+        note: "More risks were found than one run keeps",
+      });
+    });
+
+    it("counts the kept findings of a category whose other risks the cap cut", () => {
+      expect(
+        securityWith([searched("security_incidents")], {
+          kept: [keptIn("security_incidents")],
+          proposed: new Set<ResearchCategory>(["security_incidents"]),
+          capped: new Set<ResearchCategory>(["security_incidents"]),
+        }),
+      ).toEqual({
+        category: "security_incidents",
+        outcome: "findings",
+        note: "1 potential risk found",
       });
     });
 

@@ -124,10 +124,12 @@ const toRunResponse = (run: IVendorResearchRun): RunResponse => ({
 });
 
 /**
- * The line of a label that is the earlier confidence of a finding: a finding of a run before the
- * credibility rule, which the findings queries give its confidence as the label and the basis
- * `{ "rule": "legacy_confidence" }` (utils/vendorResearch.utils.ts), or which the backfill gave the
- * same basis. No rule decided it, so it has no rule's sentence; every such finding gets this one.
+ * The line of a label that is the earlier confidence of a pending finding: a finding of a run before
+ * the credibility rule, which the findings queries give its confidence as the label and the basis
+ * `{ "rule": "legacy_confidence" }` (utils/vendorResearch.utils.ts). No rule decided it, so it has
+ * no rule's sentence; the backfill can still relabel it. An accepted or dismissed finding keeps the
+ * confidence it was decided by for good (the backfill gives it that basis, and nothing relabels a
+ * decided finding), so it gets credibilityRationale's line for that basis (LEGACY_NOTE) instead.
  */
 const LEGACY_RATIONALE =
   "Rated before the source rules; this is the earlier confidence level until the label is recomputed.";
@@ -143,7 +145,7 @@ const withRationale = <T extends IVendorRiskFinding>(
   const line =
     basis === null
       ? ""
-      : basis.rule === LEGACY_CONFIDENCE_RULE
+      : basis.rule === LEGACY_CONFIDENCE_RULE && finding.status === "pending"
         ? LEGACY_RATIONALE
         : credibilityRationale(basis);
   return { ...finding, credibility_rationale: line === "" ? null : line };
@@ -567,7 +569,9 @@ export async function saveResearchSettings(req: Request, res: Response): Promise
       description: "refused the LLM key choice of the vendor research: not a key id or null",
       functionName,
       fileName: FILE_NAME,
-      error: new ValidationException("researchKeyId and analysisKeyId must be a key id or null"),
+      error: new ValidationException(
+        "researchKeyId and analysisKeyId must each be an LLM key ID or null",
+      ),
       userId: req.userId!,
       organizationId: req.organizationId!,
     });

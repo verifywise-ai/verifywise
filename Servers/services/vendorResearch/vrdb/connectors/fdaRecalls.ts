@@ -99,7 +99,9 @@
  * is weak. A recall is an event, dated by the earliest day of initiation of its products.
  *
  * A product that cannot be read (a recall number or an event number of another form, no readable
- * day of initiation) is left out, and a report whose class cannot be read leaves its product
+ * day of initiation, or one after the week that follows the day of the download or of the parse,
+ * `latestPlausibleDay` of nhtsaFlat.ts: a mistyped day would date its recall in the future, which no
+ * lookback ever leaves) is left out, and a report whose class cannot be read leaves its product
  * without one; each is counted (the first in `skipped`, the second in `classSkipped`), up to ten or
  * a hundredth of the rows when that is more, as the CVE records are (connectors/cve.ts); more is a
  * new format, and they are reported as `errors`. The rows that a hundredth is taken of are the
@@ -123,6 +125,7 @@ import {
   isFdaAddress,
   readFdaListRows,
 } from "./fda";
+import { latestPlausibleDay } from "./nhtsaFlat";
 import {
   BodyTooLargeError,
   type Connector,
@@ -269,10 +272,18 @@ const cellOf = (value: unknown, max: number): string => shorten(lineOf(stringOf(
 const isObject = (value: unknown): value is Record<string, unknown> =>
   typeof value === "object" && value !== null && !Array.isArray(value);
 
-/** A day of an answer: `YYYY-MM-DD`, and a day that exists; null for anything else. */
+/**
+ * Whether a text is `YYYY-MM-DD` and a day that a store holds: it exists, and its year is not 0000,
+ * which the date parser accepts but Postgres has not (one such day as the published time of a
+ * record would fail the whole write of the list; the kit's `dayText` refuses it too).
+ */
+const isStoredDay = (text: string): boolean =>
+  DAY.test(text) && text >= "0001-01-01" && dayOf(text) === text;
+
+/** A day of an answer: `YYYY-MM-DD`, and a day that a store holds; null for anything else. */
 function dayText(value: unknown): string | null {
   const text = lineOf(stringOf(value));
-  return DAY.test(text) && dayOf(text) === text ? text : null;
+  return isStoredDay(text) ? text : null;
 }
 
 /** The rows that may be left out: ten, or a hundredth of the rows when that is more. */
@@ -301,7 +312,7 @@ function classificationDayOf(value: unknown): string | null {
   const found = typeof value === "string" ? CLASSIFICATION_DAY.exec(value) : null;
   if (found === null) return null;
   const day = `${found[1]}-${found[2]}-${found[3]}`;
-  return dayOf(day) === day ? day : null;
+  return isStoredDay(day) ? day : null;
 }
 
 /** What the enforcement reports say of one recall: its class, and the day the FDA classified it. */
@@ -384,15 +395,21 @@ interface Product {
 
 /**
  * A product of an answer, or of the projection, as a `Product`; null when it cannot be read: the
- * recall number or the event number is not of its form, or the day of initiation is none. Only
+ * recall number or the event number is not of its form, or the day of initiation is none or after
+ * `latest` (`latestPlausibleDay`, read once by the download and once by the parse). Only
  * these fields are read: nothing else of the product is looked at. The class and its day are none
  * here: the recall endpoint has none, and the class stage gives them.
  */
-function productOf(raw: Record<string, unknown>, matched: readonly string[]): Product | null {
+function productOf(
+  raw: Record<string, unknown>,
+  matched: readonly string[],
+  latest: string,
+): Product | null {
   const number = lineOf(stringOf(raw.product_res_number));
   const event = lineOf(stringOf(raw.res_event_number));
   const initiated = dayText(raw.event_date_initiated);
   if (!RECALL_NUMBER.test(number) || !EVENT_NUMBER.test(event) || initiated === null) return null;
+  if (initiated > latest) return null;
   return {
     product_res_number: number,
     res_event_number: event,
@@ -479,14 +496,14 @@ function joinedRowsOf(rows: readonly FdaListRow[], matched: ReadonlySet<string>)
  * that is none of the three is no class); its day is kept only with a class, and only when it is a
  * day.
  */
-function readProduct(value: unknown): Product | null {
+function readProduct(value: unknown, latest: string): Product | null {
   if (!isObject(value) || !Array.isArray(value.matched)) return null;
   const matched = value.matched.filter(
     (term): term is string => typeof term === "string" && TERM.test(term),
   );
   // A product that carries no term of the list was never joined, and a term that is none is not one.
   if (matched.length === 0 || matched.length !== value.matched.length) return null;
-  const product = productOf(value, matched);
+  const product = productOf(value, matched, latest);
   if (product === null || !isRecallClass(value.class)) return product;
   return { ...product, class: value.class, classDay: dayText(value.classDay) };
 }
@@ -736,8 +753,9 @@ const parse: Connector["parse"] = (snapshot) => {
   // The products that were left out, and the reports that gave no class: rows that cannot be read.
   let unreadable = shape.skipped + shape.classSkipped;
   const products = new Map<string, Product>();
+  const latest = latestPlausibleDay();
   for (const value of shape.products) {
-    const product = readProduct(value);
+    const product = readProduct(value, latest);
     if (product === null) unreadable += 1;
     else if (!products.has(product.product_res_number)) {
       products.set(product.product_res_number, product);
@@ -944,8 +962,12 @@ export function createFdaRecallsConnector({ sleep = wait }: { sleep?: Sleep } = 
     id: "fda_device_recalls",
     // 2: a product carries its class and the day it was classified (the enforcement reports), and
     // the validator carries the day of their last update: a copy of version 1 is read again.
-    version: 2,
+    // 3: a product initiated after the week that follows the day of the download is left out and
+    // counted (`productOf`): records can change on an unchanged list.
+    version: 3,
     async download(fetch, validators) {
+      // The day of the download is read once: every product of every answer has one bound.
+      const latest = latestPlausibleDay();
       let requests = 0;
       let bytes = 0;
 
@@ -1011,7 +1033,7 @@ export function createFdaRecallsConnector({ sleep = wait }: { sleep?: Sleep } = 
           }
           const matched = matchedOf(raw, wanted);
           if (matched.length === 0) continue;
-          const product = productOf(raw, matched);
+          const product = productOf(raw, matched, latest);
           if (product === null) unreadable += 1;
           else found.push(product);
         }

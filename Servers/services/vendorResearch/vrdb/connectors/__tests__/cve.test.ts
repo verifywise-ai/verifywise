@@ -340,6 +340,43 @@ describe("parseCveRecord", () => {
     }
   });
 
+  it("states the day of the last update as an instant in UTC, as it reads the day of a rejection", () => {
+    // A time without a zone is UTC in the CVE record format; the store would read it in the zone of
+    // the process (an operator's machine for the baseline), so the record states the instant itself.
+    const cases: Array<[unknown, string | null]> = [
+      ["2005-05-02T04:00:00", "2005-05-02T04:00:00.000Z"],
+      ["2005-05-02T04:00:00.123", "2005-05-02T04:00:00.123Z"],
+      ["2005-05-02T04:00:00Z", "2005-05-02T04:00:00.000Z"],
+      ["2005-05-02T06:00:00+02:00", "2005-05-02T04:00:00.000Z"],
+      // A day alone stays a day: the store reads it as its UTC midnight in every zone.
+      ["2005-05-02", "2005-05-02"],
+      ["not a date", null],
+      ["", null],
+      [20050502, null],
+      [undefined, null],
+    ];
+    for (const [dateUpdated, expected] of cases) {
+      const rejectedOne = rejected("CVE-2026-1009");
+      const rejectedMeta: Record<string, unknown> = { ...rejectedOne.cveMetadata, dateUpdated };
+      const publishedOne = critical("CVE-2026-1011");
+      const publishedMeta: Record<string, unknown> = { ...publishedOne.cveMetadata, dateUpdated };
+      if (dateUpdated === undefined) {
+        delete rejectedMeta.dateUpdated;
+        delete publishedMeta.dateUpdated;
+      }
+
+      const fromRejected = asRecord(
+        parseCveRecord({ ...rejectedOne, cveMetadata: rejectedMeta }, WINDOW),
+      );
+      const fromPublished = asRecord(
+        parseCveRecord({ ...publishedOne, cveMetadata: publishedMeta }, WINDOW),
+      );
+
+      expect([dateUpdated, fromRejected.sourceUpdatedAt]).toEqual([dateUpdated, expected]);
+      expect([dateUpdated, fromPublished.sourceUpdatedAt]).toEqual([dateUpdated, expected]);
+    }
+  });
+
   it("takes the highest base score of any metric of the CNA and of every ADP", () => {
     const fromAdp = asRecord(
       parseCveRecord(
@@ -1283,8 +1320,8 @@ describe("cveConnector.parse", () => {
   /** Entries that do not parse. */
   const unreadable = (count: number): string[] => Array.from({ length: count }, () => "{not json");
 
-  it("is the second version of the parsing, which tolerates a few records it cannot read", () => {
-    expect(cveConnector.version).toBe(2);
+  it("is the third version of the parsing, which tolerates a few records it cannot read and states the last update in UTC", () => {
+    expect(cveConnector.version).toBe(3);
   });
 
   it("applies a day with a few records that do not parse, and counts them", () => {

@@ -27,6 +27,8 @@ jest.mock("../../inAppNotification.service", () => ({
 jest.mock("../../riskLinks/vendorCandidates", () => ({
   notifyVendorRiskCandidates: jest.fn(),
 }));
+// The membership lookup behind isUserOfOrganization; the check itself runs for real.
+jest.mock("../../../utils/user.utils", () => ({ findUsersNotInOrganization: jest.fn() }));
 jest.mock("../../../utils/logger/fileLogger", () => ({
   __esModule: true,
   default: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
@@ -44,6 +46,8 @@ import { enqueueVendorRiskLinkRecompute } from "../../automations/automationProd
 import { notifyUserAssigned } from "../../inAppNotification.service";
 import { notifyVendorRiskCandidates } from "../../riskLinks/vendorCandidates";
 import logger from "../../../utils/logger/fileLogger";
+import { findUsersNotInOrganization } from "../../../utils/user.utils";
+import { ValidationException } from "../../../domain.layer/exceptions/custom.exception";
 import {
   CreateVendorRiskInput,
   createVendorRiskInTransaction,
@@ -56,6 +60,9 @@ const asMock = (fn: unknown): AnyMock => fn as AnyMock;
 const ORG_ID = 1;
 const USER_ID = 7;
 const FRONTEND_URL = "https://app.example.test";
+/** A user of the organization, and one of another organization only. */
+const MEMBER = 9;
+const STRANGER = 77;
 
 const input: CreateVendorRiskInput = {
   vendor_id: 5,
@@ -98,6 +105,10 @@ beforeEach(() => {
     return [];
   });
   process.env.FRONTEND_URL = FRONTEND_URL;
+  asMock(findUsersNotInOrganization).mockImplementation(
+    async (ids: number[], organizationId: number) =>
+      ids.filter((id) => !(organizationId === ORG_ID && id === MEMBER)),
+  );
 });
 
 afterAll(() => {
@@ -159,6 +170,65 @@ describe("createVendorRiskInTransaction", () => {
     expect(warning).toContain("Could not create framework associations");
     expect(warning).toContain('relation "frameworks_vendorrisks" does not exist');
     expect(rest).toEqual([]);
+  });
+
+  describe("the action owner", () => {
+    it("refuses a user of another organization before anything is written", async () => {
+      const call = createVendorRiskInTransaction(
+        { ...input, action_owner: STRANGER },
+        USER_ID,
+        ORG_ID,
+        transaction,
+      );
+
+      await expect(call).rejects.toBeInstanceOf(ValidationException);
+      await expect(call).rejects.toThrow("The action owner must be a user of your organization");
+      expect(findUsersNotInOrganization).toHaveBeenCalledWith([STRANGER], ORG_ID, transaction);
+      expect(createNewVendorRiskQuery).not.toHaveBeenCalled();
+      expect(recordVendorRiskCreation).not.toHaveBeenCalled();
+    });
+
+    it.each([[MEMBER], [String(MEMBER)]])(
+      "takes %p, a user of the organization, looked up in the transaction",
+      async (owner) => {
+        const created = await createVendorRiskInTransaction(
+          { ...input, action_owner: owner as number },
+          USER_ID,
+          ORG_ID,
+          transaction,
+        );
+
+        expect(created).toBe(insertedRisk);
+        expect(findUsersNotInOrganization).toHaveBeenCalledWith([MEMBER], ORG_ID, transaction);
+      },
+    );
+
+    it.each([
+      ["a fraction", 9.5],
+      ["text that is not an id", "nine"],
+    ])("refuses %s", async (_label, owner) => {
+      await expect(
+        createVendorRiskInTransaction(
+          { ...input, action_owner: owner as number },
+          USER_ID,
+          ORG_ID,
+          transaction,
+        ),
+      ).rejects.toBeInstanceOf(ValidationException);
+      expect(createNewVendorRiskQuery).not.toHaveBeenCalled();
+    });
+
+    it.each([[null], [0]])("looks nobody up for %p, which is no owner", async (owner) => {
+      await createVendorRiskInTransaction(
+        { ...input, action_owner: owner },
+        USER_ID,
+        ORG_ID,
+        transaction,
+      );
+
+      expect(findUsersNotInOrganization).not.toHaveBeenCalled();
+      expect(createNewVendorRiskQuery).toHaveBeenCalledTimes(1);
+    });
   });
 
   it("records the creation in the change history, inside the transaction, when a user is known", async () => {

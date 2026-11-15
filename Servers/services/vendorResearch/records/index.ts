@@ -14,12 +14,23 @@
  * Each database is a record of one category (RECORD_CATEGORY) and is asked only when the run
  * researches it, with the lookback of that category. The hosts of the status page are guesses, so
  * where none is found the answer is empty, and a guess that fails is no failure of a database.
+ *
+ * A vendor whose website is a page on a host where many have pages (`github.com/acme`, see
+ * sharedHosts.ts) does not own that host: its breaches and its status page are the platform's. So
+ * for such a domain a breach is the vendor's only when HIBP names it by a name of the vendor, and
+ * a status page only when its feed does, as for a guess outside the vendor's domain. The platform
+ * researched as a vendor of its own keeps its records: a vendor one of whose names is the brand of
+ * the host (LinkedIn at linkedin.com) keeps every breach of the domain, those that HIBP names with
+ * a suffix ("LinkedInScrape2023") included, and its status page names it. This uses
+ * `isSharedHost`: a host under a shared one (`acme.github.io`) has the platform's brand too.
  */
 import { FetchError, guardedFetch } from "../../webResearch/guardedFetch";
 import { type VendorResearchConfig, getVendorResearchConfig } from "../config";
 import { fetchFeed } from "./feedFetch";
 import { type Breach, HIBP_MAX_BYTES, hibpRecords, hibpUrl, parseHibp } from "./hibp";
-import { nameKeys } from "./match";
+import { isSharedHost } from "../sharedHosts";
+import { brandOf } from "../identity";
+import { compactName, matchesVendor, nameKeys } from "./match";
 import { createMemo } from "./memo";
 import type { SpacerLimits } from "./spacer";
 import {
@@ -192,6 +203,13 @@ export function createRecordsLookup(deps: RecordsDeps = {}): RecordsLookup {
       cutoffs?.[RECORD_CATEGORY[source]];
     const keys = nameKeys(target);
     const lookups: Array<Promise<RecordsOutcome>> = [];
+    const sharedHost = target.domain !== null && isSharedHost(target.domain);
+    // The platform researched as a vendor of its own (LinkedIn at linkedin.com): HIBP names its
+    // later breaches with a suffix ("LinkedInScrape2023"), which no name of the vendor equals, and
+    // every breach of its domain is its own. Only a name of the vendor that is the brand of the
+    // host tells it, never a name that begins the brand ("Link" is not LinkedIn).
+    const platformIsVendor =
+      sharedHost && target.domain !== null && keys.includes(compactName(brandOf(target.domain)));
 
     if (serves("hibp") && target.domain !== null) {
       const domain = target.domain;
@@ -201,7 +219,13 @@ export function createRecordsLookup(deps: RecordsDeps = {}): RecordsLookup {
           const list = await breaches.get(url, async () =>
             parseHibp(await get(url, { maxBytes: HIBP_MAX_BYTES, signal })),
           );
-          return hibpRecords(list, { domain, cutoff: cutoffOf("hibp") });
+          const ofVendor =
+            sharedHost && !platformIsVendor
+              ? list.filter(
+                  (breach) => matchesVendor(breach.title, keys) || matchesVendor(breach.name, keys),
+                )
+              : list;
+          return hibpRecords(ofVendor, { domain, cutoff: cutoffOf("hibp") });
         }),
       );
     }
@@ -213,7 +237,9 @@ export function createRecordsLookup(deps: RecordsDeps = {}): RecordsLookup {
           const found = await Promise.all(
             hosts.map(async ({ host, own }) => {
               const feed = await feedOf(host, signal);
-              return feed !== null && (own || statusFeedNamesVendor(feed, keys)) ? feed : null;
+              // The host of a platform is not the vendor's own, whatever its name.
+              const owned = own && !sharedHost;
+              return feed !== null && (owned || statusFeedNamesVendor(feed, keys)) ? feed : null;
             }),
           );
           const index = found.findIndex((feed) => feed !== null);

@@ -114,6 +114,7 @@ import {
   isYear,
   keyNamesOf,
   nameCleaner,
+  latestPlausibleDay,
   plausibleDay,
   readEnvelope,
   streamFlatFile,
@@ -337,6 +338,8 @@ class RecallReducer {
   private noEntityRows = 0;
   private earliestDay: string | null = null;
   private newestDay: string | null = null;
+  /** A row dated after this day is unreadable (see FUTURE_DAYS_TOLERATED): the day of the download is read once. */
+  private readonly latestDay = latestPlausibleDay();
 
   /** One line of the file: a Buffer valid during the call, or null for a line too long to read. */
   push(line: Buffer | null): void {
@@ -367,7 +370,7 @@ class RecallReducer {
     // The type letter of the number is one of E, V, T, C (the pattern); the row must say the same.
     if (type !== campno.charAt(2)) return null;
     // The report day is required on every row: a filer always has a day.
-    const rcdate = plausibleDay(reported);
+    const rcdate = plausibleDay(reported, this.latestDay);
     if (rcdate === null) return null;
     const filer = this.cleanName(cell);
     if (filer === null) return null;

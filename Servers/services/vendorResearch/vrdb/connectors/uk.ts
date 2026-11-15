@@ -17,7 +17,7 @@
  */
 import { joinSentences, sentence } from "../../records/sentence";
 import { isSharedHost } from "../../sharedHosts";
-import { cleanText } from "../../text";
+import { cleanText, withoutHiddenCharacters } from "../../text";
 import { domainKey, hostsOf, identifierKeysOf, nameKeysOf } from "../keys";
 import { vrdbSourceOf } from "../sources";
 import type { ParsedRecord } from "../types";
@@ -55,7 +55,10 @@ function recordOf(designation: XmlElement): ParsedRecord | null {
   const names = designation.children
     .filter((child) => child.name === "Names")
     .flatMap((group) => group.children.filter((child) => child.name === "Name"))
-    .map((name) => ({ name: cleanText(nameOf(name)), type: childText(name, ["NameType"]) ?? "" }))
+    .map((name) => ({
+      name: withoutHiddenCharacters(cleanText(nameOf(name))),
+      type: childText(name, ["NameType"]) ?? "",
+    }))
     .filter((name) => name.name !== "");
   if (id === null || names.length === 0) return null;
   const primary = names.find((name) => name.type.toLowerCase() === "primary name") ?? names[0];

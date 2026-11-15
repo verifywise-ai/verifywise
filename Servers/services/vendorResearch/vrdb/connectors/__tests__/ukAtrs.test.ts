@@ -13,6 +13,7 @@
 import { FetchError } from "../../../../webResearch/guardedFetch";
 import type { ParsedRecord } from "../../types";
 import type { Sleep } from "../kit/pause";
+import { identifierKeysOf, matchOf, vendorKeys } from "../../keys";
 import { RECORD_SUMMARY_MAX } from "../kit/record";
 import { UK_ATRS_RECORD_MARK, createUkAtrsConnector, ukAtrsConnector } from "../ukAtrs";
 import {
@@ -291,7 +292,7 @@ describe("ukAtrsConnector", () => {
   describe("the connector", () => {
     it("is the connector of the list, in the snapshot form, with the mark of its records", () => {
       expect(ukAtrsConnector.id).toBe("uk_atrs");
-      expect(ukAtrsConnector.version).toBe(1);
+      expect(ukAtrsConnector.version).toBe(10);
       expect(ukAtrsConnector.kind).toBeUndefined();
       expect(MARK).toBe("UK Algorithmic Transparency Records");
     });
@@ -789,11 +790,6 @@ describe("ukAtrsConnector", () => {
         ["Quillon Data", "Zorbex Analytics"],
       ],
       [
-        "an ampersand with blanks",
-        "Zorbex Analytics & Quillon Data",
-        ["Quillon Data", "Zorbex Analytics"],
-      ],
-      [
         "the word and before a capital",
         "Zorbex Analytics and Quillon Data",
         ["Quillon Data", "Zorbex Analytics"],
@@ -818,6 +814,46 @@ describe("ukAtrsConnector", () => {
         "Quillon Data",
         "Zorbex Analytics",
       ]);
+    });
+
+    it("does not split at an ampersand, with blanks or without: one firm's name holds it", async () => {
+      // As the Canada and OMB registers: the halves of `Ernst & Young LLP` are no supplier that a
+      // body wrote, and their keys are the names of other firms.
+      expect(await suppliersOf("Example & Sample LLP")).toEqual(["Example & Sample LLP"]);
+      expect(await suppliersOf("Zorbex Analytics & Quillon Data")).toEqual([
+        "Zorbex Analytics & Quillon Data",
+      ]);
+      expect(await suppliersOf("Example & Sample LLP; Quillon Data")).toEqual([
+        "Example & Sample LLP",
+        "Quillon Data",
+      ]);
+    });
+
+    it("drops an ampersand or a plus that ends or begins a line: the firms of the two lines are two", async () => {
+      // A real cell: `PolyAI &` and `Sopra Steria` on two lines. The sign is no part of either name.
+      expect(await suppliersOf("Zorbex Analytics &\nQuillon Data")).toEqual([
+        "Quillon Data",
+        "Zorbex Analytics",
+      ]);
+      expect(await suppliersOf("Zorbex Analytics\n& Quillon Data")).toEqual([
+        "Quillon Data",
+        "Zorbex Analytics",
+      ]);
+      expect(await suppliersOf("Zorbex Analytics +\nQuillon Data")).toEqual([
+        "Quillon Data",
+        "Zorbex Analytics",
+      ]);
+      expect(await suppliersOf("Zorbex Analytics &")).toEqual(["Zorbex Analytics"]);
+      // The legal form before the sign goes as it does at the end of a line: one entity, not two.
+      const { records } = await runOf([
+        resultFor(1, "Zorbex Analytics Ltd &\nQuillon Data"),
+        resultFor(2, "Zorbex Analytics Ltd"),
+      ]);
+      expect(idsOf(records)).toEqual(["atrs:quillondata", "atrs:zorbexanalytics"]);
+      expect(recordOfId(records, "zorbexanalytics").title).toBe(
+        "ATRS supplier: Zorbex Analytics Ltd",
+      );
+      expect(JSON.stringify(records)).not.toContain("&");
     });
 
     it("does not split an ampersand or a slash that has no word on both sides", async () => {
@@ -990,6 +1026,43 @@ describe("ukAtrsConnector", () => {
         expect(await suppliersOf(`Zorbex Analytics; ${postcode}`)).toEqual(["Zorbex Analytics"]);
       },
     );
+
+    it("refuses the lines of a postal address that ends in a postcode: building, street, town and country", async () => {
+      // The shape of two real cells: each supplier written with its address, line by line or by commas.
+      expect(
+        await suppliersOf(
+          "Zorbex Analytics Limited\nKing Example House\n13 Example Square\nBristol\nBS1 4NT\nQuillon Data\n12 Example Street\nLeeds\nLS1 5RU",
+        ),
+      ).toEqual(["Quillon Data", "Zorbex Analytics Limited"]);
+      expect(
+        await suppliersOf("Zorbex Analytics, 93 Example Street, London, United Kingdom, EC2A 4BA,"),
+      ).toEqual(["Zorbex Analytics"]);
+      expect(
+        await suppliersOf("Zorbex Analytics\nUnit 4, Example Park\nExample Road\nM1 1AE"),
+      ).toEqual(["Zorbex Analytics"]);
+    });
+
+    it("keeps the names of an address block that are no line of an address, and names that look like one without a postcode", async () => {
+      // Only the town right before the postcode goes: a second supplier above it stays.
+      expect(await suppliersOf("Zorbex Analytics Ltd\nQuillon Data\nLondon\nEC1A 1BB")).toEqual([
+        "Quillon Data",
+        "Zorbex Analytics Ltd",
+      ]);
+      // A line with a legal form is no town: a firm whose address is only its postcode stays.
+      expect(await suppliersOf("Zorbex Analytics Ltd; Quillon Data Ltd; SW1A 1AA")).toEqual([
+        "Quillon Data Ltd",
+        "Zorbex Analytics Ltd",
+      ]);
+      // The name that begins a block is never a line of its address.
+      expect(await suppliersOf("12 Example Street\nLondon\nEC1A 1BB")).toEqual([
+        "12 Example Street",
+      ]);
+      // No postcode, no address: a name that begins with a digit or ends in House stays.
+      expect(await suppliersOf("3D Quillon Labs; Zorbex House")).toEqual([
+        "3D Quillon Labs",
+        "Zorbex House",
+      ]);
+    });
 
     it("refuses a name that holds a colon or a quotation mark, straight or curly", async () => {
       expect(await suppliersOf("Supplier: Zorbex Analytics")).toEqual([]);
@@ -1170,7 +1243,9 @@ describe("ukAtrsConnector", () => {
 
     it.each([
       ["eight digits", "12345678", "12345678"],
-      ["seven digits", "1234567", "1234567"],
+      // Seven digits are a number whose leading zero was dropped: the zero is put back.
+      ["seven digits", "1234567", "01234567"],
+      ["seven digits inside a sentence", "Company number 7654321.", "07654321"],
       ["two letters and six digits", "SC123456", "SC123456"],
       ["a number inside a sentence", "Registered in England, number 12345678 (Zorbex)", "12345678"],
       ["a number with blanks around it", "  12345678\t", "12345678"],
@@ -1191,6 +1266,53 @@ describe("ukAtrsConnector", () => {
     ])("gives no number key for %s", async (_name, cell) => {
       const records = await cellOf(cell);
       expect(records[0].matchKeys.some((key) => key.startsWith("regno:"))).toBe(false);
+    });
+
+    it.each(["1234567", "01234567"])(
+      "keys the number %s as the vendor may have stored it: with its leading zero and without",
+      async (written) => {
+        // A vendor's number is keyed as it is written: a record keyed only regno:01234567 lost the
+        // vendor that stored 1234567, which matched it before the zero was put back.
+        const [record] = await cellOf(written);
+        const regnos = record.matchKeys.filter((key) => key.startsWith("regno:"));
+        expect(regnos).toEqual(["regno:01234567", "regno:1234567"]);
+        expect(record.identifiers).toMatchObject({ companiesHouse: ["01234567"] });
+        expect(record.summary).toContain("Companies House number given: 01234567.");
+        for (const vendor of ["1234567", "01234567"]) {
+          const keys = vendorKeys({
+            name: "Zorbex Analytics Ltd",
+            domain: null,
+            provides: "",
+            identifiers: { registrationNumber: vendor },
+          });
+          expect(matchOf(record.matchKeys, keys)).toMatchObject({ method: "identifier" });
+        }
+      },
+    );
+
+    it("keys a number of eight digits that begins with no zero as written only", async () => {
+      const [record] = await cellOf("12345678");
+      expect(record.matchKeys.filter((key) => key.startsWith("regno:"))).toEqual([
+        "regno:12345678",
+      ]);
+    });
+
+    it("gives a number of seven digits the key of the vendor's eight-character number", async () => {
+      const [record] = await cellOf("1234567");
+      expect(record.matchKeys).toContain("regno:01234567");
+      expect(record.identifiers).toMatchObject({ companiesHouse: ["01234567"] });
+      expect(record.matchKeys).toEqual(
+        expect.arrayContaining(
+          identifierKeysOf(["01234567"]).filter((key) => key.startsWith("regno:")),
+        ),
+      );
+      // The same number written with and without its zero by two records of one supplier is one.
+      const { records } = await runOf([
+        resultFor(1, "Zorbex Analytics Ltd", { number: "1234567" }),
+        resultFor(2, "Zorbex Analytics Ltd", { number: "01234567" }),
+      ]);
+      expect(records).toHaveLength(1);
+      expect(records[0].identifiers).toMatchObject({ companiesHouse: ["01234567"] });
     });
 
     it("gives the number to the supplier only when the record has one supplier and one number", async () => {
@@ -1222,7 +1344,7 @@ describe("ukAtrsConnector", () => {
       expect(two[0].matchKeys.some((key) => key.startsWith("regno:"))).toBe(false);
     });
 
-    it("counts a country, a postcode and a name of the prose list as no supplier, so that the number goes to the supplier left", async () => {
+    it("counts a country, a postcode and a placeholder as no supplier, so that the number goes to the supplier left", async () => {
       const records = await cellOf(
         "12345678",
         "Zorbex Analytics Ltd; United Kingdom; SW1A 1AA; N/A",
@@ -1231,13 +1353,567 @@ describe("ukAtrsConnector", () => {
       expect(records[0].matchKeys).toContain("regno:12345678");
     });
 
+    it("gives no number when the cell names another firm that the rule does not accept", async () => {
+      // A real cell: the first firm is refused for its prose (and half a bracket), and the number
+      // section names it. The number is not the one firm's that is left.
+      const records = await cellOf(
+        "Zorbex - 05653869",
+        "Zorbex Analytics (Supplier of the platform, who integrated the bot with the channel)\nQuillon Data (the product being used)",
+      );
+      expect(idsOf(records)).toEqual(["atrs:quillondata"]);
+      expect(records[0].matchKeys.some((key) => key.startsWith("regno:"))).toBe(false);
+      expect(records[0].summary).not.toContain("Companies House number given");
+      const prose = await cellOf("12345678", "Quillon Data\nThe tool is supplied by a partner");
+      expect(prose[0].matchKeys.some((key) => key.startsWith("regno:"))).toBe(false);
+    });
+
+    it.each([
+      ["a web address", "Zorbex Analytics Ltd\nwww.zorbex.co.uk"],
+      ["a bare domain", "Zorbex Analytics Ltd\nzorbex.co.uk"],
+      ["an address with a scheme", "Zorbex Analytics Ltd\nhttps://zorbex.example"],
+      ["a label of an address", "Zorbex Analytics Ltd\nContact: https://zorbex.example"],
+      ["a contact line", "Zorbex Analytics Ltd\nContact: sales team"],
+      ["a clause about the supplier", "Zorbex Analytics Ltd, a company registered in England"],
+    ])(
+      "gives the number to the one supplier beside %s: it names no other firm",
+      async (_name, supplier) => {
+        const records = await cellOf("12345678", supplier);
+        expect(idsOf(records)).toEqual(["atrs:zorbexanalytics"]);
+        expect(records[0].matchKeys).toContain("regno:12345678");
+      },
+    );
+
+    it.each([
+      ["a firm after a label", "Zorbex Analytics Ltd\nSubcontractor: Quillon Data"],
+      ["a firm whose name has a capital inside", "Zorbex Analytics Ltd\niProov"],
+      ["a firm of one word in lower case", "Zorbex Analytics Ltd\nquillon"],
+      ["a label of a firm with capitals", "Zorbex Analytics Ltd\nContact: Quillon Data"],
+    ])(
+      "still gives no number beside %s: the number may be the other firm's",
+      async (_name, supplier) => {
+        const records = await cellOf("12345678", supplier);
+        expect(idsOf(records)).toEqual(["atrs:zorbexanalytics"]);
+        expect(records[0].matchKeys.some((key) => key.startsWith("regno:"))).toBe(false);
+      },
+    );
+
+    it.each([
+      ["a firm after and", "Zorbex Analytics Ltd\nand Quillon Data Ltd"],
+      ["a firm after with", "Zorbex Analytics Ltd\nwith Quillon Data Ltd"],
+      ["a firm that supplies it", "Zorbex Analytics Ltd, supplied by Quillon Data Ltd"],
+      ["a partner firm", "Zorbex Analytics Ltd, in partnership with Quillon Data Ltd"],
+      ["a supporting firm", "Zorbex Analytics Ltd, supported by Quillon Data Ltd"],
+      ["a subcontracted firm", "Zorbex Analytics Ltd, subcontracted to Quillon Data Ltd"],
+      ["its partner", "Zorbex Analytics Ltd, and its partner Quillon Data Ltd"],
+      ["a clause in lower case", "Zorbex Analytics Ltd\nthe tool is supplied by Quillon Data Ltd"],
+      ["a firm in lower case", "Zorbex Analytics Ltd\nquillon data ltd"],
+      ["a role and a firm in lower case", "Zorbex Analytics Ltd\nsubcontractor quillon data ltd"],
+      ["a firm with capitals and no form", "Zorbex Analytics Ltd\nwith Quillon Data"],
+      ["a group", "Zorbex Analytics Ltd, part of the Quillon group"],
+      ["a parent", "Zorbex Analytics Ltd, a subsidiary of Quillon Holdings"],
+      ["a trading name", "Zorbex Analytics Ltd, trading as Quillon"],
+      ["a place that is no country of the kingdom", "Zorbex Analytics Ltd, registered in Delaware"],
+      [
+        "a firm before its web address",
+        "Zorbex Analytics Ltd\nQuillon Data Ltd: www.quillon.example",
+      ],
+      [
+        "a firm before its address with a scheme",
+        "Zorbex Analytics Ltd\nQuillon Data Ltd: https://q.example",
+      ],
+      [
+        "a firm of one word before its web address",
+        "Zorbex Analytics Ltd\nQuillon: www.quillon.example",
+      ],
+      ["a partner in lower case", "Zorbex Analytics Ltd\nPartner: quillon data"],
+      [
+        "a firm in brackets after a web address",
+        "Zorbex Analytics Ltd\nwww.quillon.example (Quillon Data Ltd)",
+      ],
+      ["a partner's web address", "Zorbex Analytics Ltd\nPartner: https://quillon.example"],
+    ])("gives no number beside %s: the part names a second firm", async (_name, supplier) => {
+      // A clause in lower case and a label were read as no firm whatever they named, so the
+      // number went to the first supplier although it may be the other firm's.
+      const records = await cellOf("12345678", supplier);
+      expect(idsOf(records)).toEqual(["atrs:zorbexanalytics"]);
+      expect(records[0].matchKeys.some((key) => key.startsWith("regno:"))).toBe(false);
+    });
+
+    it.each([
+      [
+        "a clause about the company",
+        "Zorbex Analytics Ltd, a company registered in England and Wales",
+      ],
+      ["its form", "Zorbex Analytics Ltd, a private limited company"],
+      ["the kingdom", "Zorbex Analytics Ltd, a company registered in the UK"],
+      ["the register", "Zorbex Analytics Ltd, a company registered with Companies House"],
+      ["a telephone label", "Zorbex Analytics Ltd\nTel: 020 7946 0000"],
+      ["an e-mail label", "Zorbex Analytics Ltd\nEmail: sales at zorbex dot example"],
+      ["a web site label", "Zorbex Analytics Ltd\nWebsite: www.zorbex.co.uk"],
+      ["a label of two words", "Zorbex Analytics Ltd\nWeb site: https://zorbex.example"],
+      [
+        "its own name in brackets after its web address",
+        "Zorbex Analytics Ltd\nwww.zorbex.co.uk (Zorbex Analytics Ltd)",
+      ],
+      [
+        "its own name before its web address",
+        "Zorbex Analytics Ltd\nZorbex Analytics Ltd: www.zorbex.co.uk",
+      ],
+      [
+        "its short name before its address",
+        "Zorbex Analytics Ltd\nZorbex Analytics: https://zorbex.example",
+      ],
+    ])(
+      "still gives the number to the one supplier beside %s: no other firm is named",
+      async (_name, supplier) => {
+        const records = await cellOf("12345678", supplier);
+        expect(idsOf(records)).toEqual(["atrs:zorbexanalytics"]);
+        expect(records[0].matchKeys).toContain("regno:12345678");
+      },
+    );
+
+    // The table of the review of the one-firm rule (wave 8): whether the number goes to the one
+    // supplier beside each part, pinned.
+    it.each<[string, boolean]>([
+      [`Zorbex Analytics Ltd\nand Quillon Data Ltd`, false],
+      [`Zorbex Analytics Ltd\nwith Quillon Data Ltd`, false],
+      [`Zorbex Analytics Ltd, supplied by Quillon Data Ltd`, false],
+      [`Zorbex Analytics Ltd, in partnership with Quillon Data Ltd`, false],
+      [`Zorbex Analytics Ltd, supported by Quillon Data Ltd`, false],
+      [`Zorbex Analytics Ltd, subcontracted to Quillon Data Ltd`, false],
+      [`Zorbex Analytics Ltd, and its partner Quillon Data Ltd`, false],
+      [`Zorbex Analytics Ltd\nQuillon Data Ltd: www.quillon.example`, false],
+      [`Zorbex Analytics Ltd\nQuillon Data Ltd: https://quillon.example`, false],
+      [`Zorbex Analytics Ltd\nthe tool is supplied by Quillon Data Ltd`, false],
+      [`Zorbex Analytics Ltd\nThe tool is supplied by Quillon Data Ltd`, false],
+      [`Zorbex Analytics Ltd\nquillon data ltd`, false],
+      [`Zorbex Analytics Ltd\nsubcontractor quillon data ltd`, false],
+      [`Zorbex Analytics Ltd\nPartner: quillon`, false],
+      [`Zorbex Analytics Ltd\nPartner: quillon data`, false],
+      [`Zorbex Analytics Ltd\nwith Quillon Data`, false],
+      [`Zorbex Analytics Ltd\nwww.zorbex.co.uk`, true],
+      [`Zorbex Analytics Ltd\nzorbex.co.uk`, true],
+      [`Zorbex Analytics Ltd\nhttps://zorbex.example`, true],
+      [`Zorbex Analytics Ltd\nContact: https://zorbex.example`, true],
+      [`Zorbex Analytics Ltd\nContact: sales team`, true],
+      [`Zorbex Analytics Ltd, a company registered in England`, true],
+      [`Zorbex Analytics Ltd\nTel: 020 7946 0000`, true],
+      [`Zorbex Analytics Ltd\nPhone: +44 20 7946 0000`, true],
+      [`Zorbex Analytics Ltd\nEmail: sales at zorbex dot example`, true],
+      [`Zorbex Analytics Ltd\nSubcontractor: Quillon Data`, false],
+      [`Zorbex Analytics Ltd\niProov`, false],
+      [`Zorbex Analytics Ltd\nquillon`, false],
+      [`Zorbex Analytics Ltd\nContact: Quillon Data`, false],
+      [`Zorbex Analytics Ltd\nQuillon.ai`, false],
+      [`Zorbex Analytics Ltd / Quillon Data`, false],
+      [`Zorbex Analytics Ltd\nRegistered in England and Wales`, false],
+      [`Zorbex Analytics Ltd, a private limited company`, true],
+      [`Zorbex Analytics Ltd, a company registered in England and Wales`, true],
+      [`Zorbex Analytics Ltd, registered in Delaware`, false],
+      [`Zorbex Analytics Ltd, part of the Quillon group`, false],
+      [`Zorbex Analytics Ltd, a company registered with Companies House`, true],
+      [`Zorbex Analytics Ltd\nZorbex Analytics Ltd: www.zorbex.co.uk`, true],
+      [`Zorbex Analytics Ltd\nWebsite: www.zorbex.co.uk`, true],
+      [`Zorbex Analytics Ltd\nWeb site: https://zorbex.example`, true],
+      [`Zorbex Analytics Ltd, a provider of AI tools`, false],
+      [`Zorbex Analytics Ltd\nregistered office: 1 Example Street`, false],
+      [`Zorbex Analytics Ltd\nContact details: sales@zorbex.example`, true],
+      [`Zorbex Analytics Ltd, trading as Quillon`, false],
+      [`Zorbex Analytics Ltd, with quillon data ltd`, false],
+      [`Zorbex Analytics Ltd`, true],
+      [`Zorbex Analytics Ltd, a subsidiary of Quillon Holdings`, false],
+      [`Zorbex Analytics Ltd\nZorbex Analytics: https://zorbex.example`, true],
+      [`Zorbex Analytics Ltd\nQuillon: www.quillon.example`, false],
+      [`Zorbex Analytics Ltd\nwith quillon data`, true],
+      [`Zorbex Analytics Ltd, a company registered in the UK`, true],
+      [`Zorbex Analytics Ltd\nContact: main partner: quillon`, false],
+      [`Zorbex Analytics Ltd\nW: www.zorbex.co.uk`, true],
+      [`Zorbex Analytics Ltd\nWeb address: https://zorbex.example`, true],
+      [`Zorbex Analytics Ltd\nContact us: sales team`, true],
+      [`Zorbex Analytics Ltd\nEmail address: sales at zorbex dot example`, true],
+      [`Zorbex Analytics Ltd\nTelephone number: 020 7946 0000`, true],
+      [`Zorbex Analytics Ltd\nT: 020 7946 0000`, true],
+      [`Zorbex Analytics Ltd\nContact: Quillon Data Ltd: www.quillon.example`, false],
+      [`Zorbex Analytics Ltd\nZorbex Analytics Ltd: Quillon Data Ltd`, false],
+      [`Zorbex Analytics Ltd\nMore information: www.zorbex.co.uk`, true],
+      // Wave 9: a web address anywhere in a part is details, and the names around it and in the
+      // bracket after it are read; a label may close with a dot.
+      [`Zorbex Analytics Ltd\nZorbex Analytics Ltd - https://zorbex.co.uk`, true],
+      [`Zorbex Analytics Ltd\nWebsite - https://zorbex.co.uk`, true],
+      [`Zorbex Analytics Ltd\nWebsite https://zorbex.co.uk`, true],
+      [`Zorbex Analytics Ltd\nSee https://zorbex.co.uk`, true],
+      [`Zorbex Analytics Ltd\nVisit https://zorbex.co.uk`, true],
+      [`Zorbex Analytics Ltd\nSee: https://zorbex.co.uk`, true],
+      [`Zorbex Analytics Ltd\nWebsite: https://zorbex.co.uk`, true],
+      [`Zorbex Analytics Ltd\nTel.: 020 7946 0000`, true],
+      [`Zorbex Analytics Ltd\nwww.zorbex.co.uk - Zorbex Analytics Ltd`, true],
+      [`Zorbex Analytics Ltd\nwww.zorbex.co.uk (Zorbex Analytics Ltd)`, true],
+      [`Zorbex Analytics Ltd\nZorbex Analytics Ltd: www.zorbex.co.uk (Zorbex Analytics Ltd)`, true],
+      [`Zorbex Analytics Ltd\nContact: Zorbex Analytics Ltd - www.zorbex.co.uk`, true],
+      [`Zorbex Analytics Ltd\nhttps://zorbex.co.uk:8080`, true],
+      [`Zorbex Analytics Ltd\nhttps://www.zorbex.co.uk`, true],
+      [`Zorbex Analytics Ltd\nhttp://www.quillon.example/about us`, true],
+      [
+        `Zorbex Analytics Ltd\nhttps://quillon.example (a company registered in England and Wales)`,
+        true,
+      ],
+      [`Zorbex Analytics Ltd\nthrough www.quillon.example`, true],
+      [`Zorbex Analytics Ltd\nwww.zorbex.co.uk - Quillon Data Ltd`, false],
+      [`Zorbex Analytics Ltd\nwww.zorbex.co.uk ${cp(0x2013)} Quillon Data Ltd`, false],
+      [`Zorbex Analytics Ltd\nhttps://zorbex.co.uk Quillon Data Ltd`, false],
+      [`Zorbex Analytics Ltd\nwww.quillon.example Quillon Data Ltd`, false],
+      [
+        `Zorbex Analytics Ltd\nhttps://zorbex.co.uk https://quillon.example Quillon Data Ltd`,
+        false,
+      ],
+      [`Zorbex Analytics Ltd\nZorbex Analytics Ltd: www.zorbex.co.uk (Quillon Data Ltd)`, false],
+      [`Zorbex Analytics Ltd\nZorbex Analytics Ltd: 020 7946 0000 (Quillon Data Ltd)`, false],
+      [`Zorbex Analytics Ltd\nwww.quillon.example (in partnership with Quillon Data Ltd)`, false],
+      [`Zorbex Analytics Ltd\nhttps://quillon.example (via Quillon Data)`, false],
+      [`Zorbex Analytics Ltd\nwww.quillon.example (supplied by quillon data ltd)`, false],
+      [`Zorbex Analytics Ltd\nwww.quillon.example (quillon)`, false],
+      [`Zorbex Analytics Ltd\nwww.quillon.example (Quillon Data Ltd)`, false],
+      [`Zorbex Analytics Ltd\nwww.quillon.example (Quillon Data Ltd) and more`, false],
+      [`Zorbex Analytics Ltd\nWebsite https://zorbex.co.uk (Quillon Data Ltd)`, false],
+      [`Zorbex Analytics Ltd\nWebsite: www.quillon.example (Quillon Data Ltd)`, false],
+      [`Zorbex Analytics Ltd\nEmail: sales@quillon.example (Quillon Data Ltd)`, false],
+      [`Zorbex Analytics Ltd\nEmail: sales@quillon.example (via Quillon Data)`, false],
+      [`Zorbex Analytics Ltd\nQuillon Data Ltd - https://quillon.example`, false],
+      [`Zorbex Analytics Ltd\nQuillon Data Ltd https://quillon.example`, false],
+      [`Zorbex Analytics Ltd\nContact: Quillon Data Ltd - www.quillon.example`, false],
+      [`Zorbex Analytics Ltd\nsupplied by Quillon Data Ltd - www.quillon.example`, false],
+      [`Zorbex Analytics Ltd\nPartner: https://quillon.example`, false],
+      [`Zorbex Analytics Ltd\nwww.zorbex.co.uk (a product of Zorbex Analytics Ltd)`, false],
+      [`Zorbex Analytics Ltd\nquillon - www.quillon.example`, true],
+      [`Zorbex Analytics Ltd\nMore information: https://zorbex.co.uk/about`, false],
+      [`Zorbex Analytics Ltd\nCompany number: 12345678`, false],
+      [`Zorbex Analytics Ltd\nZorbex: www.zorbex.co.uk`, false],
+      [`Zorbex Analytics Ltd\nQuillon Data Ltd: sales@quillon.example`, true],
+      // A part that names no one of its own (a number, a country, an e-mail address, the deploying
+      // body) with a firm in the bracket after it.
+      [`Zorbex Analytics Ltd\n020 7946 0000 (Quillon Data Ltd)`, false],
+      [`Zorbex Analytics Ltd\nUnited Kingdom (Quillon Data Ltd)`, false],
+      [`Zorbex Analytics Ltd\nSales@quillon.example (Quillon Data Ltd)`, false],
+      [`Zorbex Analytics Ltd\nEngland (Zorbex Analytics Ltd)`, true],
+      // Residual, pinned: an alias in the bracket after the own details is read as a firm.
+      [`Zorbex Analytics Ltd\nZorbex Analytics Ltd: www.zorbex.co.uk (ZAL)`, false],
+      // Wave 10: a piece around a web address names no one only in a shape no firm's name has
+      // (joiners alone, a label, or words without a capital before the first address and no
+      // colon); a head before a colon and a word with a capital anywhere name a firm.
+      [`Zorbex Analytics Ltd\niProov: https://www.iproov.com`, false],
+      [`Zorbex Analytics Ltd\niProov - https://www.iproov.com`, false],
+      [`Zorbex Analytics Ltd\niProov https://www.iproov.com`, false],
+      [`Zorbex Analytics Ltd\neBay: www.ebay.co.uk`, false],
+      [`Zorbex Analytics Ltd\nquillon: www.quillon.example`, false],
+      [`Zorbex Analytics Ltd\nquillon data: https://quillon.example`, false],
+      [`Zorbex Analytics Ltd\npartner quillon data: www.quillon.example`, false],
+      [`Zorbex Analytics Ltd\nsubcontractor quillon: https://quillon.example`, false],
+      [`Zorbex Analytics Ltd\nzorbex: https://zorbex.co.uk`, false],
+      [`Zorbex Analytics Ltd\nfor more details: https://zorbex.co.uk`, false],
+      [`Zorbex Analytics Ltd\nhttps://zorbex.co.uk quillon data: https://quillon.example`, false],
+      [`Zorbex Analytics Ltd\nwww.zorbex.co.uk (powered by iProov)`, false],
+      [`Zorbex Analytics Ltd\nwww.zorbex.co.uk (powered by eBay)`, false],
+      [`Zorbex Analytics Ltd\nvia iProov - https://www.iproov.com`, false],
+      [`Zorbex Analytics Ltd\nwith iProov`, false],
+      [`Zorbex Analytics Ltd\nsupplied by eBay`, false],
+      [`Zorbex Analytics Ltd\nzorbex analytics ltd: https://zorbex.co.uk`, true],
+      [`Zorbex Analytics Ltd\nContact us: https://zorbex.co.uk`, true],
+      [`Zorbex Analytics Ltd\nhttps://zorbex.co.uk and https://zorbex.com`, true],
+      [`Zorbex Analytics Ltd\nhttps://zorbex.co.uk or www.zorbex.com`, true],
+      [`Zorbex Analytics Ltd\nhttps://zorbex.co.uk AND https://zorbex.com`, true],
+      [
+        `Zorbex Analytics Ltd\nhttps://zorbex.co.uk${cp(0xa0)}and${cp(0xa0)}https://zorbex.com`,
+        true,
+      ],
+      [`Zorbex Analytics Ltd\nhttps://zorbex.co.uk and/or https://zorbex.com`, true],
+      [`Zorbex Analytics Ltd\nhttps://zorbex.co.uk & https://zorbex.com`, true],
+      [`Zorbex Analytics Ltd\nhttps://zorbex.co.uk or call 020 7946 0000`, true],
+      [`Zorbex Analytics Ltd\nhttps://zorbex.co.uk and quillon`, false],
+      [`Zorbex Analytics Ltd\nhttps://zorbex.co.uk and Quillon Data Ltd`, false],
+      [`Zorbex Analytics Ltd\nhttps://zorbex.co.uk and Oracle`, false],
+      [`Zorbex Analytics Ltd\nhttps://zorbex.co.uk orange`, false],
+      [`Zorbex Analytics Ltd\n6point6 - https://6point6.co.uk`, false],
+      [`Zorbex Analytics Ltd\n8x8 https://8x8.com`, false],
+      [`Zorbex Analytics Ltd\n(quillon) https://quillon.example`, false],
+      [`Zorbex Analytics Ltd\n020 7946 0000: https://zorbex.co.uk`, true],
+      // Residual, pinned: label words alone before a web address are read as a label, also when a
+      // firm has that name.
+      [`Zorbex Analytics Ltd\nLink - https://link.example`, true],
+      // Wave 11: a name shaped like a host with a capital anywhere, beside its own address, is a
+      // second firm, as `iProov` is; a host in lower case, a label and its details, a number or an
+      // e-mail address name no one.
+      [`Zorbex Analytics Ltd\nQuillon.ai https://quillon.ai`, false],
+      [`Zorbex Analytics Ltd\nQuillon.ai - https://quillon.ai`, false],
+      [`Zorbex Analytics Ltd\nQuillon.AI https://quillon.ai`, false],
+      [`Zorbex Analytics Ltd\nQUILLON.AI https://quillon.ai`, false],
+      [`Zorbex Analytics Ltd\n(Quillon.ai) https://quillon.ai`, false],
+      [`Zorbex Analytics Ltd, Quillon.ai https://quillon.ai`, false],
+      [`Zorbex Analytics Ltd and Quillon.ai https://quillon.ai`, false],
+      [`Zorbex Analytics Ltd\nhttps://zorbex.co.uk, Quillon.ai https://quillon.ai`, false],
+      [`Zorbex Analytics Ltd\nhttps://zorbex.co.uk Quillon.ai https://quillon.ai`, false],
+      [`Zorbex Analytics Ltd\nzorbex.co.uk https://zorbex.co.uk`, true],
+      [`Zorbex Analytics Ltd\nContact: 020 7946 0000 https://zorbex.co.uk`, true],
+      [`Zorbex Analytics Ltd\nWebsite: zorbex.co.uk https://zorbex.co.uk`, true],
+      // Wave 12: a host written as a name names a firm after a label too (`hostNamesAFirm` in every
+      // position), and this own host is not the supplier's whole short name: withheld (it was given).
+      [`Zorbex Analytics Ltd\nWebsite: Zorbex.co.uk https://zorbex.co.uk`, false],
+      [`Zorbex Analytics Ltd\nEmail: info@zorbex.co.uk https://zorbex.co.uk`, true],
+      [`Zorbex Analytics Ltd\nInfo@Zorbex.co.uk https://zorbex.co.uk`, true],
+      [`Zorbex Analytics Ltd\n+44 20 7946 0000 https://zorbex.co.uk`, true],
+      [`Zorbex Analytics Ltd\nregistered in England https://zorbex.co.uk`, true],
+      [`Zorbex Analytics Ltd\nZorbex Analytics https://zorbex.co.uk`, true],
+      // Residual, pinned: a host in lower case is read as an address (no firm), and the own host
+      // written with a capital is read as a second firm unless its first label is the supplier's
+      // whole short name (the number is withheld: the safe side; `Digital.ai` beside Digital Health
+      // Ltd is another firm).
+      [`Zorbex Analytics Ltd\nquillon.ai https://quillon.ai`, true],
+      [`Zorbex Analytics Ltd\nZorbex.co.uk https://zorbex.co.uk`, false],
+      [`Zorbex Analytics Ltd\nZorbex.ai https://zorbex.ai`, false],
+      // Residual, pinned (wave 11): a word with a capital anywhere in a clause in lower case names a
+      // firm (`with iProov`, `supplied by eBay`), so a product word written so withholds the number
+      // too; the same clause without it gives it.
+      [`Zorbex Analytics Ltd, a provider of eLearning software`, false],
+      [`Zorbex Analytics Ltd, providing iOS apps`, false],
+      [`Zorbex Analytics Ltd, a provider of mHealth apps`, false],
+      [`Zorbex Analytics Ltd, supplier of the iPhone app`, false],
+      [`Zorbex Analytics Ltd\nbuilt with eLearning standards`, false],
+      [`Zorbex Analytics Ltd\ndeveloper of the eConsult tool`, false],
+      [`Zorbex Analytics Ltd, a provider of learning software`, true],
+      // Wave 12 (RV11A-2): a host written as a name (a capital anywhere) names a firm in every
+      // position: a bracket, a line of its own, beside an address (`hostNamesAFirm`).
+      [`Zorbex Analytics Ltd\nhttps://zorbex.co.uk (iQuillon.ai)`, false],
+      [`Zorbex Analytics Ltd\nhttps://zorbex.co.uk (quillon.AI)`, false],
+      [`Zorbex Analytics Ltd\n020 7946 0000 (iQuillon.ai)`, false],
+      [`Zorbex Analytics Ltd\niQuillon.ai`, false],
+      [`Zorbex Analytics Ltd; quillon.AI`, false],
+      [`Zorbex Analytics Ltd\nhttps://zorbex.co.uk Quillon.co.uk`, false],
+      [`Zorbex Analytics Ltd\nhttps://zorbex.co.uk (zorbex.co.uk)`, true],
+      [`Zorbex Analytics Ltd\nhttps://zorbex.co.uk (Zorbex.co.uk)`, false],
+      // Initials of a firm are no detail: a second firm in every position.
+      [`Zorbex Analytics Ltd\nI.B.M`, false],
+      [`Zorbex Analytics Ltd\nhttps://zorbex.co.uk K.P.M.G`, false],
+      [`Zorbex Analytics Ltd\nhttps://zorbex.co.uk (B.T.)`, false],
+      [`Zorbex Analytics Ltd\nE.Y. https://ey.example`, false],
+      // Wave 12 (RV11A-1): a host needs a top level of two letters or more and a label that no public
+      // host has: a detail glued with a dot, initials and GOV.UK are no host, in any position.
+      [`Zorbex Analytics Ltd\nhttps://zorbex.co.uk Tel.02079460000`, true],
+      [`Zorbex Analytics Ltd\nhttps://zorbex.co.uk No.12345678`, true],
+      [`Zorbex Analytics Ltd\nhttps://zorbex.co.uk Reg.No.12345678`, true],
+      [`Zorbex Analytics Ltd\nhttps://zorbex.co.uk Est.2015`, true],
+      [`Zorbex Analytics Ltd\nhttps://zorbex.co.uk ISO.27001`, true],
+      [`Zorbex Analytics Ltd\nhttps://zorbex.co.uk U.K.`, true],
+      [`Zorbex Analytics Ltd\nhttps://zorbex.co.uk U.K`, true],
+      [`Zorbex Analytics Ltd\nhttps://www.gov.uk GOV.UK`, true],
+      [`Zorbex Analytics Ltd\nNHS.UK https://www.nhs.uk`, true],
+      [`Zorbex Analytics Ltd\nwww.zorbex.co.uk Phone.02079460000`, true],
+      [`Zorbex Analytics Ltd\nTel.02079460000`, true],
+      [`Zorbex Analytics Ltd\nGOV.UK`, true],
+      [`Zorbex Analytics Ltd\nhttps://zorbex.co.uk (Tel.02079460000)`, true],
+      // Residual, pinned: words joined by a dot that end in a word of two letters or more have the
+      // shape of a host, and with a capital they name a firm (the safe side).
+      [`Zorbex Analytics Ltd\nhttps://zorbex.co.uk Cyber.Essentials`, false],
+      // Wave 12 (RV11A-3): a legal form followed only by details (a telephone number, a label) ends
+      // the name of a firm in a clause in lower case.
+      [`Zorbex Analytics Ltd\nquillon data ltd 020 7946 0001`, false],
+      [`Zorbex Analytics Ltd\nquillon data ltd - 020 7946 0001`, false],
+      [`Zorbex Analytics Ltd\nquillon data ltd tel 020 7946 0001`, false],
+      [`Zorbex Analytics Ltd\na company registered in England 020 7946 0000`, true],
+      // Wave 13 (RV12A-1): the capital test reads every word of a clause again (r11), so a label
+      // word with a capital in a clause in lower case names a firm (`supplied by Link`), and this
+      // one-firm cell withholds as it did in r11: the residual CAPITAL_LABEL_IN_CLAUSE, the safe side.
+      [`Zorbex Analytics Ltd\nregistered in England Tel 020 7946 0000`, false],
+      [`Zorbex Analytics Ltd\nregistered in England tel 020 7946 0000`, true],
+    ])(
+      "gives the number beside %j as the table of the one-firm rule pins it (%s)",
+      async (supplier, given) => {
+        const records = await cellOf("12345678", supplier);
+        expect(idsOf(records)).toContain("atrs:zorbexanalytics");
+        const zorbex = records.find((record) => record.sourceRecordId === "atrs:zorbexanalytics");
+        expect(zorbex?.matchKeys.includes("regno:12345678")).toBe(given);
+        if (!given) {
+          expect(
+            records.some((record) => record.matchKeys.some((key) => key.startsWith("regno:"))),
+          ).toBe(false);
+        }
+      },
+    );
+
+    it.each<[string, string, boolean]>([
+      [`Zorbex Ltd\nZorbex.co.uk https://zorbex.co.uk`, "zorbex", true],
+      [`Zorbex Ltd\nZorbex.co.uk`, "zorbex", true],
+      [`Zorbex Ltd\nWebsite: Zorbex.co.uk https://zorbex.co.uk`, "zorbex", true],
+      [`Zorbex Ltd\nhttps://zorbex.co.uk (Zorbex.co.uk)`, "zorbex", true],
+      [`Zorbex Ltd\nhttps://zorbex.co.uk (ZORBEX.CO.UK)`, "zorbex", true],
+      [`Digital Health Ltd\nDigital.ai https://digital.ai`, "digitalhealth", false],
+      [`Digital Health Ltd\nhttps://digitalhealth.example (Digital.ai)`, "digitalhealth", false],
+    ])(
+      "tells the own host of a supplier by its whole short name (wave 12): %j gives the number to %s: %s",
+      async (supplier, key, given) => {
+        const records = await cellOf("12345678", supplier);
+        expect(idsOf(records)).toEqual([`atrs:${key}`]);
+        expect(records[0].matchKeys.includes("regno:12345678")).toBe(given);
+      },
+    );
+
+    // Wave 13 (RV12A-1, RV12A-2): a second firm named by label words in a clause in lower case
+    // withholds the number again, in every layout of the clause (r11); details alone need six digits
+    // or more, so a supplier named by a label and a short number gives its row and its number.
+    const LABEL_FIRMS = [
+      "Link",
+      "LINK",
+      "Visit",
+      "Further",
+      "Mail",
+      "Info",
+      "Contact",
+      "Site",
+      "Web",
+      "Details",
+      "Address",
+      "Number",
+      "Homepage",
+      "Enquiries",
+      "Information",
+    ];
+    const CLAUSES: Array<(firm: string) => string> = [
+      (firm) => `supplied by ${firm}`,
+      (firm) => `with ${firm}`,
+      (firm) => `in partnership with ${firm}`,
+      (firm) => `subcontracted to ${firm}`,
+      (firm) => `a reseller of ${firm}`,
+      (firm) => `powered by ${firm}`,
+      (firm) => `via ${firm}`,
+      (firm) => `using software from ${firm}`,
+      (firm) => `supplied by ${firm} 020 7946 0000`,
+    ];
+    it.each(LABEL_FIRMS)(
+      "withholds the number beside a firm named %j in every clause in lower case (wave 13)",
+      async (firm) => {
+        for (const clause of CLAUSES) {
+          const records = await cellOf("12345678", `Zorbex Analytics Ltd\n${clause(firm)}`);
+          const zorbex = records.find((record) => record.sourceRecordId === "atrs:zorbexanalytics");
+          expect([clause(firm), zorbex?.matchKeys.includes("regno:12345678")]).toEqual([
+            clause(firm),
+            false,
+          ]);
+        }
+      },
+    );
+
+    it.each<[string, string, boolean]>([
+      // RV12A-2: a label and a short number is a name.
+      [`Link 360`, "link360", true],
+      [`Contact 365`, "contact365", true],
+      [`Site 1`, "site1", true],
+      [`Info 24`, "info24", true],
+      [`Zorbex Analytics Ltd\nLink 360`, "zorbexanalytics", false],
+      [`Zorbex Analytics Ltd\nInfo 24`, "zorbexanalytics", false],
+      // A telephone number after a label is still details (wave 12).
+      [`Zorbex Analytics Ltd\nPhone 020 7946 0000`, "zorbexanalytics", true],
+      [`Zorbex Analytics Ltd\nTel 020 7946 0000`, "zorbexanalytics", true],
+      // RV11A-3: a legal form that only details follow in a clause in lower case names a firm.
+      [`Zorbex Analytics Ltd\nquillon data ltd 020 7946 0001`, "zorbexanalytics", false],
+      [`Zorbex Analytics Ltd\nquillon data ltd - 020 7946 0001`, "zorbexanalytics", false],
+      [`Zorbex Analytics Ltd\nquillon data ltd tel 020 7946 0001`, "zorbexanalytics", false],
+      // RV12A-3: a bracket that names a firm by a legal form or a host written as a name, after the
+      // supplier's name or on a line of its own, withholds the number.
+      [`Zorbex Analytics Ltd (Quillon Data Ltd)`, "zorbexanalytics", false],
+      [`Zorbex Analytics Ltd\n(Quillon Data Ltd)`, "zorbexanalytics", false],
+      [`(Quillon Data Ltd)\nZorbex Analytics Ltd`, "zorbexanalytics", false],
+      [`Zorbex Analytics Ltd, (Quillon Data Ltd)`, "zorbexanalytics", false],
+      [`Zorbex Analytics Ltd (via Quillon Data Ltd)`, "zorbexanalytics", false],
+      [`Zorbex Analytics Ltd (in partnership with Quillon Data Ltd)`, "zorbexanalytics", false],
+      [`Zorbex Analytics Ltd (a subsidiary of Quillon Group plc)`, "zorbexanalytics", false],
+      [`Zorbex Analytics Ltd (Quillon Data GmbH)`, "zorbexanalytics", false],
+      [`Zorbex Analytics Ltd (iQuillon.ai)`, "zorbexanalytics", false],
+      [`Zorbex Analytics Ltd\n(iQuillon.ai)`, "zorbexanalytics", false],
+      [`Zorbex Analytics Ltd (in partnership with QUILLON.AI)`, "zorbexanalytics", false],
+      [`PEARL ANALYTICS LIMITED (Quillon Data Ltd)\nTel 020 7946 0000`, "pearlanalytics", false],
+      [`Mavro Systems Ltd\n(Q2 Analytics Ltd)\nEst.2015`, "mavrosystems", false],
+      // Its neighbours: an alias, the supplier's other name and its own name keep the number.
+      [`Amazon Web Services (AWS)`, "amazonwebservices", true],
+      [`Amazon Web Services\n(AWS)`, "amazonwebservices", true],
+      [`KL Discovery Limited (KLD)`, "kldiscovery", true],
+      [`PriceWaterhouseCoopers LLP (PwC)`, "pricewaterhousecoopers", true],
+      [`Zorbex Analytics Ltd (trading as Zorbex Ltd)`, "zorbexanalytics", true],
+      [`Zorbex Analytics Ltd (formerly Zorbex Data Ltd)`, "zorbexanalytics", true],
+      [`Zorbex Analytics Ltd (Zorbex Analytics Limited)`, "zorbexanalytics", true],
+      [`Zorbex Analytics Ltd (the Ltd company)`, "zorbexanalytics", true],
+      [`Zorbex Analytics Ltd (Company No. 12345678)`, "zorbexanalytics", true],
+      // The residual BRACKET_PLAIN_NAME: a bracket with a plain name of words alone is not read.
+      [`Zorbex Analytics Ltd (Quillon Data)`, "zorbexanalytics", true],
+      [`Zorbex Analytics Ltd (in partnership with Quillon Data)`, "zorbexanalytics", true],
+      // The residual JOINED_IN_ONE_NAME: one accepted name that a joiner makes of two firms.
+      [`Mavro Systems Ltd with Q2 Analytics Ltd`, "mavrosystemsltdwithq2analytics", true],
+    ])("gives the number of %j to %s: %s (wave 13)", async (supplier, key, given) => {
+      const records = await cellOf("12345678", supplier);
+      const record = records.find((candidate) => candidate.sourceRecordId === `atrs:${key}`);
+      expect(record).toBeDefined();
+      expect(record?.matchKeys.includes("regno:12345678")).toBe(given);
+    });
+
+    it.each([
+      `And Zorbex Ltd\nAnd Zorbex Ltd - https://zorbex.co.uk`,
+      `And Zorbex Ltd\nAnd Zorbex Ltd: https://zorbex.co.uk`,
+    ])(
+      "gives the number to a supplier whose name opens with the word and, beside its web address: %j",
+      async (supplier) => {
+        const records = await cellOf("12345678", supplier);
+        expect(idsOf(records)).toEqual(["atrs:andzorbex"]);
+        expect(records[0].matchKeys).toContain("regno:12345678");
+      },
+    );
+
+    it("reads the bracket after the name of the deploying body: a firm in it is a second firm", async () => {
+      const { records } = await runOf([
+        resultOf({
+          supplier: "Zorbex Analytics Ltd\nExample Borough Council (Quillon Data Ltd)",
+          number: "12345678",
+        }),
+      ]);
+      expect(idsOf(records)).toEqual(["atrs:zorbexanalytics"]);
+      expect(records[0].matchKeys.some((key) => key.startsWith("regno:"))).toBe(false);
+    });
+
+    it("gives the number to a supplier whose name is a domain, and none when it is a second firm", async () => {
+      const alone = await cellOf("12345678", "Quillon.ai");
+      expect(alone[0].matchKeys).toContain("regno:12345678");
+      // The accept rule takes a domain with a capital as a supplier: two suppliers, no number.
+      const second = await cellOf("12345678", "Zorbex Analytics Ltd\nQuillon.ai");
+      expect(idsOf(second)).toEqual(["atrs:quillonai", "atrs:zorbexanalytics"]);
+      expect(
+        second.every((record) => !record.matchKeys.some((key) => key.startsWith("regno:"))),
+      ).toBe(true);
+    });
+
+    it("gives the number to a supplier whose name is a domain beside its own address, and none when the domain beside an address is a second firm's", async () => {
+      // Wave 11: the own name, in any case, is the supplier's (its key is the supplier's key).
+      for (const own of ["Zorbex.io - https://zorbex.io", "ZORBEX.IO https://zorbex.io"]) {
+        const records = await cellOf("12345678", `Zorbex.io Ltd\n${own}`);
+        expect(idsOf(records)).toEqual(["atrs:zorbexio"]);
+        expect(records[0].matchKeys).toContain("regno:12345678");
+      }
+      const second = await cellOf("12345678", "Zorbex.io Ltd\nQuillon.ai https://quillon.ai");
+      expect(idsOf(second)).toEqual(["atrs:zorbexio"]);
+      expect(second[0].matchKeys.some((key) => key.startsWith("regno:"))).toBe(false);
+    });
+
+    it("gives the number to a supplier written with its postal address: the lines of the address are no suppliers", async () => {
+      const records = await cellOf(
+        "12521363",
+        "Zorbex Analytics, 93 Example Street, London, United Kingdom, EC2A 4BA,",
+      );
+      expect(idsOf(records)).toEqual(["atrs:zorbexanalytics"]);
+      expect(records[0].matchKeys).toContain("regno:12521363");
+    });
+
     it("gives no number when the section of the number was cut at its limit: a cut number is no number", async () => {
       // 1,001 characters: the cut leaves the first seven digits of the number, which are no number.
       const cut = await cellOf(`${"x".repeat(992)} 12345678`);
       expect(cut[0].matchKeys.some((key) => key.startsWith("regno:"))).toBe(false);
       // 1,000 characters are not cut: the limit is not the end.
       const whole = await cellOf(`${"x".repeat(992)} 1234567`);
-      expect(whole[0].matchKeys).toContain("regno:1234567");
+      expect(whole[0].matchKeys).toContain("regno:01234567");
     });
 
     it("gives no number when the cell of the supplier was cut: a name may have been lost with its sisters", async () => {
@@ -2265,5 +2941,290 @@ describe("ukAtrsConnector", () => {
         expect(authority.endsWith(" [shortened]")).toBe(true);
       }
     });
+  });
+});
+
+/**
+ * The property test of the rule of the number (wave 12): a seeded generator builds supplier cells of
+ * one firm (the supplier and its details: telephone numbers, labels, its own host, details glued with
+ * a dot, public hosts, clauses) and of two firms (a second firm written in every way: a name with a
+ * legal form, in lower case, with details after it, a word with a capital inside, a host written as a
+ * name), each in every position (a line of its own, after a semicolon, a comma, a slash or a plus,
+ * beside a web address on either side, in the bracket after an address or a number, as a head before
+ * a colon), and reads them through the connector, a thousand records to a search. Post-conditions:
+ * (A-a) a one-firm cell gives the number; (A-b) a two-firm cell withholds it; (A-c) the same text
+ * gets the same verdict in every position; (A-d) no throw. The NAMED residual families, told by how
+ * the cell was built and each one hit:
+ * - HEAD_BEFORE_COLON: a head before a colon that is no label names someone (header rule).
+ * - LOWER_WORD_BEFORE_ADDRESS: one word in lower case before the first address names no one.
+ * - COMMA_SPLITS_A_BRACKET: a comma inside a bracket cuts it, and half a bracket counts.
+ * - OWN_HOST_SHORTER_THAN_NAME: the supplier's own host written with a capital is told from another
+ *   firm's only when its first label is the supplier's whole short name (`Zorbex.co.uk` beside
+ *   `Zorbex Ltd`, not beside `Zorbex Analytics Ltd`): withheld, the safe side.
+ */
+describe("the rule of the number, as a seeded generator reads it (wave 12)", () => {
+  const randomOf = (seed: number): (() => number) => {
+    let state = seed >>> 0;
+    return () => {
+      state = (state + 0x6d2b79f5) >>> 0;
+      let t = state;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  };
+  const pick = <T>(random: () => number, items: readonly T[]): T =>
+    items[Math.floor(random() * items.length)];
+
+  const SUPPLIERS = [
+    "Zorbex Analytics Ltd",
+    "Zorbex Analytics Limited",
+    "Zorbex Data plc",
+    "Zorbex Ltd",
+  ];
+  const SECOND_FIRMS = [
+    "Quillon Data Ltd",
+    "QUILLON DATA LTD",
+    "Quillon-Data Ltd",
+    "quillon data ltd",
+    "quillon data limited",
+    "quillon data ltd 020 7946 0001",
+    "quillon data ltd - 020 7946 0001",
+    "quillon data ltd tel 020 7946 0001",
+    "quillon data plc +44 20 7946 0001",
+    "iQuillon",
+    "iQuillon.ai",
+    "iQuillon.co.uk",
+    "Quillon.co.uk",
+    "QUILLON.AI",
+    "quillon.AI",
+    "Quillon.ai",
+    "Quillon.ai/about",
+    "6point6",
+    "Quillon",
+    "quillon",
+    "supplied by Quillon Data Ltd",
+    "part of the Quillon group",
+    "I.B.M",
+    "E.Y.",
+    "K.P.M.G",
+  ];
+  const DETAILS = [
+    "020 7946 0000",
+    "+44 20 7946 0000",
+    "Tel: 020 7946 0000",
+    "Phone 020 7946 0000",
+    "T: 020 7946 0000",
+    "Email: sales@zorbex.example",
+    "zorbex.co.uk",
+    "Zorbex.co.uk",
+    "ZORBEX.CO.UK",
+    "Website: Zorbex.co.uk",
+    "Tel.02079460000",
+    "Tel.020-7946-0000",
+    "Mob.07700900123",
+    "No.12345678",
+    "Reg.No.12345678",
+    "Est.2015",
+    "ISO.27001",
+    "V2.1",
+    "U.K",
+    "U.K.",
+    "GOV.UK",
+    "NHS.UK",
+    "gov.scot",
+    "a company registered in England",
+    "a private limited company",
+    "registered in England, 020 7946 0000",
+    "sales team",
+    "Contact: sales team",
+  ];
+  type Position = (supplier: string, text: string, two: boolean) => string;
+  const POSITIONS: Record<string, Position> = {
+    line: (supplier, text) => `${supplier}\n${text}`,
+    semicolon: (supplier, text) => `${supplier}; ${text}`,
+    comma: (supplier, text) => `${supplier}, ${text}`,
+    slash: (supplier, text) => `${supplier} / ${text}`,
+    plus: (supplier, text) => `${supplier} + ${text}`,
+    after: (supplier, text) => `${supplier}\nhttps://zorbex.co.uk ${text}`,
+    afterAnd: (supplier, text) => `${supplier}\nhttps://zorbex.co.uk and ${text}`,
+    before: (supplier, text, two) =>
+      `${supplier}\n${text} ${two ? "https://quillon.example" : "https://zorbex.co.uk"}`,
+    bracket: (supplier, text) => `${supplier}\nhttps://zorbex.co.uk (${text})`,
+    numberBracket: (supplier, text) => `${supplier}\n020 7946 0000 (${text})`,
+    head: (supplier, text) => `${supplier}\n${text}: 020 7946 0000`,
+  };
+
+  /** The family of a named residual that a cell belongs to by how it was built, or null. */
+  function residualOf(
+    text: string,
+    two: boolean,
+    position: string,
+    supplier: string,
+  ): string | null {
+    if (!two && position === "head") return "HEAD_BEFORE_COLON";
+    // The own host is told apart only by the supplier's whole short name (`Zorbex Ltd`).
+    if (!two && /(?:Zorbex|ZORBEX)\.(?:co\.uk|CO\.UK)/.test(text) && supplier !== "Zorbex Ltd")
+      return "OWN_HOST_SHORTER_THAN_NAME";
+    if (two && position === "before" && /^\p{Ll}+$/u.test(text)) return "LOWER_WORD_BEFORE_ADDRESS";
+    if (!two && text.includes(",") && (position === "bracket" || position === "numberBracket"))
+      return "COMMA_SPLITS_A_BRACKET";
+    return null;
+  }
+
+  /** A tag of letters for cell `at`, so that every cell has a supplier and a second firm of its own. */
+  const tagOf = (at: number): string =>
+    `q${String.fromCharCode(97 + (Math.floor(at / 676) % 26))}${String.fromCharCode(97 + (Math.floor(at / 26) % 26))}${String.fromCharCode(97 + (at % 26))}`;
+  const tagged = (text: string, tag: string): string =>
+    text
+      .replace(/Zorbex/g, `Zorbex${tag}`)
+      .replace(/zorbex/g, `zorbex${tag}`)
+      .replace(/ZORBEX/g, `ZORBEX${tag.toUpperCase()}`)
+      .replace(/Quillon/g, `Quillon${tag}`)
+      .replace(/quillon/g, `quillon${tag}`)
+      .replace(/QUILLON/g, `QUILLON${tag.toUpperCase()}`);
+
+  it("holds A-a to A-d on five seeds of 2,000 cells, and every named residual is hit", async () => {
+    interface Built {
+      text: string;
+      two: boolean;
+      position: string;
+      supplier: string;
+      cell: string;
+    }
+    const built: Built[] = [];
+    for (const seed of [1, 2, 3, 4, 5]) {
+      const random = randomOf(seed);
+      for (let at = 0; at < 2_000; at += 1) {
+        const two = random() < 0.5;
+        const text = pick(random, two ? SECOND_FIRMS : DETAILS);
+        const position = pick(random, Object.keys(POSITIONS));
+        const supplier = pick(random, SUPPLIERS);
+        built.push({
+          text,
+          two,
+          position,
+          supplier,
+          cell: POSITIONS[position](supplier, text, two),
+        });
+      }
+    }
+    const bugs: string[] = [];
+    const residuals = new Set<string>();
+    const verdicts = new Map<string, Set<boolean>>();
+    for (let start = 0; start < built.length; start += 1_000) {
+      const chunk = built.slice(start, start + 1_000);
+      const results = chunk.map((one, at) =>
+        resultOf({
+          n: start + at,
+          supplier: tagged(one.cell, tagOf(at)),
+          number: String(20_000_000 + at),
+          authority: "zz-test-body",
+        }),
+      );
+      const { records } = await runOf(results);
+      const given = new Set(records.flatMap((record) => record.matchKeys));
+      chunk.forEach((one, at) => {
+        const gives = given.has(`regno:${20_000_000 + at}`);
+        const residual = residualOf(one.text, one.two, one.position, one.supplier);
+        if (gives === one.two) {
+          if (residual === null)
+            bugs.push(`${one.two ? "A-b" : "A-a"} ${JSON.stringify(one.cell)}`);
+          else residuals.add(residual);
+        }
+        if (residual === null) {
+          const key = `${one.text}|${one.supplier}`;
+          const seen = verdicts.get(key) ?? new Set<boolean>();
+          seen.add(gives);
+          verdicts.set(key, seen);
+        }
+      });
+    }
+    expect(bugs.slice(0, 20)).toEqual([]);
+    const mixed = [...verdicts].filter(([, seen]) => seen.size > 1).map(([text]) => text);
+    expect(mixed).toEqual([]);
+    expect([...residuals].sort()).toEqual([
+      "COMMA_SPLITS_A_BRACKET",
+      "HEAD_BEFORE_COLON",
+      "LOWER_WORD_BEFORE_ADDRESS",
+      "OWN_HOST_SHORTER_THAN_NAME",
+    ]);
+  });
+
+  it("reads hostile cells of the new shapes at the limit of a cell in one search, without a blow-up of the time", async () => {
+    const units = [
+      "a.",
+      "A.",
+      "Tel.0",
+      "a.b1 ",
+      "Phone 1 ",
+      "quillon data ltd 020 ",
+      "iQ.ai ",
+      "U.K. ",
+      "Zorbex.co.uk ",
+      "-.",
+      "a.aa.",
+      "q ltd 1 tel ",
+    ];
+    const results = units.map((unit, at) =>
+      resultOf({
+        n: at,
+        supplier: `Zorbex Analytics Ltd\n${unit.repeat(Math.ceil(990 / unit.length)).slice(0, 990)}`,
+        number: "12345678",
+      }),
+    );
+    const started = Date.now();
+    await runOf(results);
+    expect(Date.now() - started).toBeLessThan(10_000);
+  });
+});
+
+describe("the named residuals of the number (wave 14)", () => {
+  /** GIVE or withhold the number 12345678, and the keys of the records, or none. */
+  const verdictOf = async (cell: string): Promise<string> => {
+    const { records } = await runOf([resultOf({ supplier: cell, number: "12345678" })]);
+    if (records.length === 0) return "none";
+    const given = records.some((record) => record.matchKeys.includes("regno:12345678"));
+    const keys = records.map((record) => record.sourceRecordId.replace(/^atrs:/, "")).sort();
+    return `${given ? "GIVE" : "withhold"} ${keys.join(",")}`;
+  };
+
+  it.each<[string, string, string]>([
+    // RV13A-3 (OPEN, as round 11): a clause in lower case that ends in label words alone keeps them
+    // (ukAtrs.ts, `clauseNamesAFirm`: a trailing run of label words is put aside nowhere), so the
+    // firm in it is not read and the number is given, as round 11 gave it.
+    ["RV13A-3", "Zorbex Analytics Ltd\nquillon data ltd tel", "GIVE zorbexanalytics"],
+    [
+      "RV13A-3",
+      "Zorbex Analytics Ltd\nsupplied by quillon data ltd contact",
+      "GIVE zorbexanalytics",
+    ],
+    ["RV13A-3", "Zorbex Analytics Ltd\nzorbex analytics ltd tel", "GIVE zorbexanalytics"],
+    // Its neighbours: a capitalised label word is a firm (withheld); a telephone number is put aside.
+    ["RV13A-3", "Zorbex Analytics Ltd\nwith Link", "withhold zorbexanalytics"],
+    ["RV13A-3", "Zorbex Analytics Ltd\nwith link", "GIVE zorbexanalytics"],
+    [
+      "RV13A-3",
+      "Zorbex Analytics Ltd\nquillon data ltd tel 020 7946 0001",
+      "withhold zorbexanalytics",
+    ],
+    // RV13A-4 (OPEN, since wave 12): a short label with a dot or a number is read as details.
+    ["RV13A-4", "Zorbex Analytics Ltd\nChannel.4", "GIVE zorbexanalytics"],
+    ["RV13A-4", "Zorbex Analytics Ltd\nStudio.24", "GIVE zorbexanalytics"],
+    ["RV13A-4", "Zorbex Analytics Ltd\nContact 365 247", "GIVE zorbexanalytics"],
+    // RV13A-5 (OPEN, as round 11): a firm in a bracket that a second bracket follows.
+    ["RV13A-5", "Zorbex Ltd (Quillon Data Ltd) (UK)", "GIVE zorbex"],
+    // RV13A-1 (safe side): the supplier's own other name with a legal form reads as a second firm.
+    ["RV13A-1", "SSCL (Shared Services Connected Ltd)", "withhold sscl"],
+    ["RV13A-1", "Conversations By Ami Ltd (Ami Ltd)", "withhold conversationsbyami"],
+    ["RV13A-1", "Tessaly AI (UK) Ltd (previously Tessaly AI Limited)", "withhold tessalyai"],
+    // RV13A-2 (safe side): a product name of the shape of a host in a bracket.
+    ["RV13A-2", "Mavro Systems Ltd (Node.js)", "withhold mavrosystems"],
+    // RV13D-1: the slash of `t/a` splits the cell first, so the bracket gives no record at all;
+    // `trading as` written out is the supplier's own other name and keeps the number.
+    ["RV13D-1", "Zorbex Analytics Ltd (t/a Zorbex Ltd)", "none"],
+    ["RV13D-1", "Zorbex Analytics Ltd (trading as Zorbex Ltd)", "GIVE zorbexanalytics"],
+  ])("%s: reads %j as %j", async (_finding, cell, verdict) => {
+    expect(await verdictOf(cell)).toBe(verdict);
   });
 });

@@ -286,6 +286,33 @@ describe("lineOf", () => {
       expect(lineOf(`e${ACUTE}`, 100)).toBe(cp(0xe9));
     });
 
+    // A hidden character between a letter and its mark used to stop the fold from composing them,
+    // and was taken out only after the fold: the line kept the bare letter and the mark apart.
+    it.each([
+      ["a zero-width space", 0x200b],
+      ["a soft hyphen", 0xad],
+      ["a zero-width joiner", 0x200d],
+      ["a combining grapheme joiner", 0x34f],
+    ])("composes a letter and its mark with %s between them", (_name, code) => {
+      const line = lineOf(`Ysmare${cp(code)}${ACUTE} Tolbr${cp(0x65, code, 0x301)}k`, 100);
+      expect(line).toBe(`Ysmar${cp(0xe9)} Tolbr${cp(0xe9)}k`);
+      expect(line.normalize("NFKC")).toBe(line);
+    });
+
+    it("gives a line that the fold leaves as it is, whatever hidden characters it held", () => {
+      const cells = [
+        `e${ZWSP}${ACUTE}`,
+        `${cp(0x41, 0xad, 0x30a)}ngstr${cp(0x6f, 0x200b, 0x308)}m`,
+        `Soci${cp(0x65, 0xad, 0x301)}t${cp(0x65, 0x200b, 0x301)}`,
+        `${cp(0xff21)}${ZWSP}${ACUTE}`,
+      ];
+      for (const cell of cells) {
+        const line = lineOf(cell, 100);
+        expect(line.normalize("NFKC")).toBe(line);
+        expect(line).toBe(cell.replace(/[\u{200b}\u{ad}]/gu, "").normalize("NFKC"));
+      }
+    });
+
     it("turns the blanks of other scripts into one blank", () => {
       expect(lineOf(`x${NBSP}${NBSP}y${cp(0x3000)}z${cp(0x2028)}w`, 100)).toBe("x y z w");
     });
@@ -360,6 +387,14 @@ describe("lineOf", () => {
         `x${ACUTE.repeat(MARK_RUN_MAX)}`,
       );
       expect(lineOf(`x${ACUTE.repeat(400)}`, 100)).toBe(`x${ACUTE.repeat(MARK_RUN_MAX)}`);
+    });
+
+    it("counts a run that hidden characters split as one run", () => {
+      // Taken out after the bound, the hidden characters let each piece pass as a short run.
+      const split = `x${`${ACUTE.repeat(10)}${ZWSP}`.repeat(16)}`;
+      expect(lineOf(split, 400)).toBe(`x${ACUTE.repeat(MARK_RUN_MAX)}`);
+      const shy = `x${`${ACUTE}${cp(0xad)}`.repeat(175)}`;
+      expect(lineOf(shy, 400)).toBe(`x${ACUTE.repeat(MARK_RUN_MAX)}`);
     });
 
     it("limits each run by itself", () => {

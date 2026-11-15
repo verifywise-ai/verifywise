@@ -32,7 +32,12 @@ import type { SearchEngineId } from "../../services/webResearch/webSearch";
 import type { LedgerEntry } from "../../services/webResearch/webSession";
 import { MAX_EVIDENCE_BYTES } from "../../services/vendorResearch/evidence";
 import { PipelineDeps, runVendorResearch } from "../../services/vendorResearch/pipeline";
-import { type PolicyPage, hashOf, linesOf } from "../../services/vendorResearch/policySnapshots";
+import {
+  CONTINUED_MARK,
+  type PolicyPage,
+  hashOf,
+  linesOf,
+} from "../../services/vendorResearch/policySnapshots";
 import { CREDIBILITY_PROMPT_VERSION } from "../../services/vendorResearch/prompts";
 import type { ResearchResult } from "../../services/vendorResearch/researchAgent";
 import { ResearchOutput, researchOutputSchema } from "../../services/vendorResearch/schema";
@@ -1103,6 +1108,46 @@ describe("the pages where the vendor states its terms against the real tables", 
       ]);
     },
   );
+
+  // RV6P-3: a long clause is kept in parts. A change shows a part that continues the part before it
+  // indented, without its bullet and continued mark, so the prompt holds the clause as the page
+  // does, a quote across the joint is taken, and the change shown is the one the run keeps.
+  it("shows a long clause that changed all through as one stretch, and takes a quote across its joint", async () => {
+    const clause = (word: string) =>
+      `We ${word} customer content ${Array.from({ length: 120 }, (_, index) => `w${index}x`).join(" ")} for ${word} purposes.`;
+    const NEW_CLAUSE = clause("share");
+    const parts = linesOf(NEW_CLAUSE);
+    expect(parts).toHaveLength(2);
+    const joint = `${parts[0].slice(-20)} ${parts[1].slice(CONTINUED_MARK.length, CONTINUED_MARK.length + 20)}`;
+    expect(NEW_CLAUSE).toContain(joint);
+    const seed = await seedAcme();
+    await researchAcme(
+      seed,
+      makeDeps({}, fakeModelAnswering([]), [privacyPolicy(clause("keep"), RETENTION)]),
+      "manual",
+    );
+    const deps = makeDeps(
+      {},
+      fakeModelAnswering([{ ...POLICY_FINDING, evidence: [{ source_id: "S1", quote: joint }] }]),
+      [privacyPolicy(NEW_CLAUSE, RETENTION)],
+    );
+
+    const { result, run } = await researchAcme(seed, deps, "manual");
+
+    expect(result).toEqual({ outcome: "completed", findingsCreated: 1 });
+    expect(promptOf(deps)).toContain(
+      `Added:\n- ${parts[0]}\n  ${parts[1].slice(CONTINUED_MARK.length)}`,
+    );
+    const [finding] = await getFindingsForVendorQuery(seed.orgId, seed.vendorId);
+    expect(finding.sources).toEqual([
+      expect.objectContaining({ url: run.evidence?.[0].url, quote: joint }),
+    ]);
+    // The change was shown whole, so the run keeps the page.
+    const normalised = linesOf([NEW_CLAUSE, RETENTION].join("\n"));
+    expect(await snapshotsOf(seed)).toEqual([
+      expect.objectContaining({ body: normalised.join("\n"), captured_run_id: run.id }),
+    ]);
+  });
 
   it("shows a scheduled run the change of a page whose address it knows", async () => {
     const seed = await seedAcme();

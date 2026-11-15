@@ -15,6 +15,7 @@ jest.mock("../../../../utils/vrdb.utils", () => ({}));
 const mockRedis = { status: "ready", eval: jest.fn(async (): Promise<unknown> => 0) };
 jest.mock("../../../../database/redis", () => ({ __esModule: true, default: mockRedis }));
 
+import { NAME_ONLY_LOOKUP_NOTE } from "../../records/ofac";
 import { SEC_TICKERS_URL } from "../../records/sec";
 import type { FetchJson } from "../../records/types";
 import type { ResearchTarget } from "../../target";
@@ -102,6 +103,22 @@ describe("the SEC in the lookup, once Q4 is open", () => {
     });
 
     expect(secOf(result)?.records[0].vrdb.strength).toBe("strong");
+  });
+
+  it("tells the model that a filing of a CIK found by name may be another company's (TR4-LLM-1)", () => {
+    const weak = offer([filing("0001262039-26-000003", "2026-10-05")]);
+    const strong = offer([filing("0001262039-26-000003", "2026-10-05")], {
+      target: { ...BRISE, identifiers: { secCik: CIK } },
+      weak: false,
+    });
+
+    expect(secOf(weak)?.records[0].text).toBe(
+      `SEC EDGAR (sec.gov). Company: Brise Networks, Inc. Form: 8-K. Filed: 2026-10-05. ${NAME_ONLY_LOOKUP_NOTE} As of 2026-10-31.`,
+    );
+    // A CIK a person stored is the vendor's: its filing carries no such note.
+    expect(secOf(strong)?.records[0].text).toBe(
+      "SEC EDGAR (sec.gov). Company: Brise Networks, Inc. Form: 8-K. Filed: 2026-10-05. As of 2026-10-31.",
+    );
   });
 
   it("leaves out a filing older than the lookback, and counts it old", () => {

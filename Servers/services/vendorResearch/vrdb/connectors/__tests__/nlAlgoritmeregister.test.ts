@@ -276,9 +276,9 @@ const SAMPLE_SUMMARY = [
 
 describe("nlAlgoritmeregisterConnector", () => {
   describe("what it is", () => {
-    it("is the connector of nl_algoritmeregister, a snapshot connector at version 1", () => {
+    it("is the connector of nl_algoritmeregister, a snapshot connector at version 2", () => {
       expect(nlAlgoritmeregisterConnector.id).toBe("nl_algoritmeregister");
-      expect(nlAlgoritmeregisterConnector.version).toBe(1);
+      expect(nlAlgoritmeregisterConnector.version).toBe(2);
       expect(nlAlgoritmeregisterConnector.kind).toBeUndefined();
       expect(typeof nlAlgoritmeregisterConnector.download).toBe("function");
       expect(typeof nlAlgoritmeregisterConnector.parse).toBe("function");
@@ -314,6 +314,39 @@ describe("nlAlgoritmeregisterConnector", () => {
         publishedAt: "2026-05-20",
         sourceUpdatedAt: null,
       });
+    });
+
+    it("names a body that was renamed once, by its newest name, and counts it once", async () => {
+      // One org_id under two names (a merger of municipalities): the text counted one body and
+      // named two, and the identifiers said 1 body beside 2 names.
+      const records = await recordsOf(
+        registerCsv([
+          {
+            provider: "Example Works",
+            organization: "Gemeente Oudnaam",
+            orgId: "gm0042",
+            published: "2025-01-10 09:00:00.000000+00:00",
+          },
+          {
+            provider: "Example Works",
+            organization: "Gemeente Nieuwnaam",
+            orgId: "gm0042",
+            published: "2026-03-02 09:00:00.000000+00:00",
+          },
+          {
+            provider: "Example Works",
+            organization: "Gemeente Oudnaam",
+            orgId: "gm0042",
+            published: "2024-06-01 09:00:00.000000+00:00",
+          },
+        ]),
+      );
+      const record = records.find((candidate) => candidate.sourceRecordId === "exampleworks");
+      expect(record?.identifiers).toMatchObject({ bodies: 1, bodyNames: ["Gemeente Nieuwnaam"] });
+      expect(record?.summary).toContain("3 algorithm descriptions from 1 public body name it");
+      expect(record?.summary).toContain(
+        "Published by Gemeente Nieuwnaam; newest published 2026-03-02.",
+      );
     });
 
     it("gives records that are well formed and begin with the mark", async () => {
@@ -384,7 +417,7 @@ describe("nlAlgoritmeregisterConnector", () => {
     it("gives one snapshot: the body of the providers, the prefix of the version alone as etag, the size", async () => {
       const snapshot = await download(CSV);
       expect(snapshot.bodies).toHaveLength(1);
-      expect(snapshot.etag).toBe("k1:");
+      expect(snapshot.etag).toBe("k2:");
       expect(snapshot.lastModified).toBeNull();
       expect(snapshot.bytes).toBe(Buffer.byteLength(CSV));
     });
@@ -407,7 +440,7 @@ describe("nlAlgoritmeregisterConnector", () => {
 
     it("keeps the kit's flow for a server that starts to send a validator: unchanged, with the validator sent back without the prefix", async () => {
       const first = await download(CSV, { etag: 'W/"synthetic"' });
-      expect(first.etag).toBe('k1:W/"synthetic"');
+      expect(first.etag).toBe('k2:W/"synthetic"');
 
       const fetch = fakeFetch(filesOf(CSV, { etag: 'W/"synthetic"' }));
       const answer = await nlAlgoritmeregisterConnector.download(fetch, {

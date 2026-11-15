@@ -72,18 +72,48 @@ describe("fetchFeed", () => {
     expect(options?.beforeRequest).toEqual(expect.any(Function));
   });
 
-  it("reads robots.txt with a small size and a short time, whatever its type, and with the signal", async () => {
+  it("reads robots.txt to the size RFC 9309 asks of a crawler and in a short time, whatever its type, and with the signal", async () => {
     website({ [ROBOTS]: response("", { contentType: "text/plain" }), [FEED]: response("<feed/>") });
 
     await fetchFeed(FEED, { maxBytes: 99, signal });
 
     expect(guarded.mock.calls.find(([url]) => url === ROBOTS)?.[1]).toEqual({
       allowedContentTypes: ["text/plain", "*/*"],
-      maxBytes: 65_536,
+      maxBytes: 512_000,
       headerTimeoutMs: 5_000,
       totalTimeoutMs: 5_000,
       signal,
     });
+  });
+
+  it("parses only the whole lines of a robots.txt that was cut at the limit", async () => {
+    // The file went on `Disallow: /history.atomic`; the cut left `Disallow: /history.atom`, which
+    // would refuse this feed. The last line may be shortened, so it is dropped and the whole lines
+    // before it decide: the first one allows the feed.
+    const requested = website({
+      [ROBOTS]: response("User-agent: *\nAllow: /\nDisallow: /history.atom", {
+        contentType: "text/plain",
+        truncated: true,
+      }),
+      [FEED]: response("<feed/>"),
+    });
+
+    await expect(fetchFeed(FEED, { maxBytes: 99, signal })).resolves.toBe("<feed/>");
+    expect(requested).toContain(FEED);
+  });
+
+  it("keeps the last line of a robots.txt that was not cut", async () => {
+    const requested = website({
+      [ROBOTS]: response("User-agent: *\nAllow: /\nDisallow: /history.atom", {
+        contentType: "text/plain",
+      }),
+      [FEED]: response("<feed/>"),
+    });
+
+    await expect(fetchFeed(FEED, { maxBytes: 99, signal })).rejects.toMatchObject({
+      reason: "blocked_by_robots",
+    });
+    expect(requested).not.toContain(FEED);
   });
 
   it("does not ask for a feed that robots.txt disallows to our robot, and says why", async () => {

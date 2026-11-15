@@ -94,6 +94,12 @@ export interface Recording {
     rows: VrdbRow[];
     states: VrdbSourceState[];
     readThrough?: Array<{ id: VrdbSourceId } & ReadThroughOutcome>;
+    /**
+     * False for a run whose records were switched off (VENDOR_RESEARCH_RECORDS): the lookup gave
+     * every list as off and read no copy, and a replay gives the same. Absent, a replay reads the
+     * copies as it always did.
+     */
+    enabled?: false;
   };
 }
 

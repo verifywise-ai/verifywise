@@ -1,4 +1,10 @@
-import { brandOf, createVendorMatcher, isLegalFormOrArticle, wholeWord } from "../identity";
+import {
+  brandOf,
+  createVendorMatcher,
+  isLegalFormOrArticle,
+  shortName,
+  wholeWord,
+} from "../identity";
 import { ResearchTarget, buildTarget } from "../target";
 
 const target = (overrides: Partial<ResearchTarget> = {}): ResearchTarget => ({
@@ -85,6 +91,24 @@ describe("createVendorMatcher", () => {
     expect(mentions(source({ content: "Read acme-analytics.com/trust for the report" }))).toBe(
       true,
     );
+  });
+
+  it("does not take the domain of a platform where many have pages as a name of the vendor", () => {
+    const mentions = createVendorMatcher(target({ name: "Zeta Labs", domain: "github.com" }));
+
+    expect(mentions(source({ content: "The code is at github.com/someone/repo" }))).toBe(false);
+    expect(mentions(source({ url: "https://github.com/someone/repo" }))).toBe(false);
+    // The name still names it.
+    expect(mentions(source({ content: "Zeta Labs shipped a fix" }))).toBe(true);
+  });
+
+  it("takes the vendor's own site under a platform where many have pages as a name of the vendor", () => {
+    const mentions = createVendorMatcher(
+      target({ name: "Zeta Labs", domain: "zeta-labs.github.io" }),
+    );
+
+    expect(mentions(source({ content: "We tried zeta-labs.github.io last week" }))).toBe(true);
+    expect(mentions(source({ content: "We tried other.github.io last week" }))).toBe(false);
   });
 
   it("does not take a domain that only ends like the vendor's", () => {
@@ -250,6 +274,13 @@ describe("isLegalFormOrArticle", () => {
     "L.P.",
     "LLP",
     "Pvt.",
+    "A/S",
+    "a/s",
+    "I/S",
+    "K/S",
+    "P/S",
+    "N/V",
+    "S/A",
     "The",
     "the",
   ])("is true for %p", (word) => {
@@ -262,6 +293,35 @@ describe("isLegalFormOrArticle", () => {
       expect(isLegalFormOrArticle(word)).toBe(false);
     },
   );
+});
+
+describe("shortName and the legal forms written with a slash", () => {
+  it.each([
+    ["Danspin A/S", "Danspin"],
+    ["Coloplast A/S", "Coloplast"],
+    ["ETAC A/S.", "ETAC"],
+    ["Example I/S", "Example"],
+    ["Example K/S", "Example"],
+    ["Example P/S", "Example"],
+    ["Example N/V", "Example"],
+    ["Example S/A", "Example"],
+    ["Danfoss A/S, Inc.", "Danfoss"],
+  ])("takes the form off %p", (name, short) => {
+    expect(shortName(name)).toBe(short);
+  });
+
+  it.each([
+    // Not at the end: only the forms behind a name are taken off.
+    ["A/S Example", "A/S Example"],
+    ["Example A/S Holding", "Example A/S Holding"],
+    // A form alone, or a slash form that is none, stays.
+    ["A/S", "A/S"],
+    ["Example A/B", "Example A/B"],
+    ["Example AS/S", "Example AS/S"],
+    ["Input/Output", "Input/Output"],
+  ])("leaves %p as %p", (name, short) => {
+    expect(shortName(name)).toBe(short);
+  });
 });
 
 describe("brandOf", () => {

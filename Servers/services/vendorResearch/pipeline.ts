@@ -12,16 +12,19 @@
  * A scheduled run (the scan of an organization that chose one) analyses only the sources that no
  * earlier run showed to the model: the sources of every completed run are remembered by the key of
  * their document (see sourceMemory.ts), and a scheduled run sets the ones it remembers apart before
- * the evidence pack is built. When nothing is left, it completes without an analysis. The memory is
- * written after the run is saved, because a memory that cannot be written costs a later run some
- * work again and must not cost this one its findings.
+ * the evidence pack is built. When nothing is left, it completes without an analysis. A run of
+ * another kind analyses every source; it reads the memory only for its de-duplication. A source
+ * that a new risk the caps cut cites is not remembered, so that a later run raises that risk.
+ * The memory is written after the run is saved, because a memory that cannot be written costs a
+ * later run some work again and must not cost this one its findings.
  *
  * Every run, whatever started it, keeps the text of the pages where the vendor states its terms
  * that the research read (see policySnapshots.ts), and compares them with the text that earlier runs
  * kept: a page that changed becomes a source of its own, the lines added and the lines removed, and
  * joins the evidence ahead of the other sources of its category. Those pages are written after the
  * run is saved too, and only for a run that completed: a page is never kept in the place of one
- * whose change was not shown to the model.
+ * whose change was not shown to the model. That holds for a change that the evidence pack dropped
+ * to stay under its limit as well: its page is not kept, and the next run shows the change.
  *
  * What the loop leaves decides how the run goes on. A model error of the loop fails the run when
  * no usable source was found, and so does a loop that never got an answer from the web and left
@@ -102,6 +105,8 @@ import {
   SnapshotWrite,
   type SourceCategory,
   VendorResearchKeyChoice,
+  VRDB_SOURCE_IDS,
+  type VrdbSourceId,
 } from "../../domain.layer/interfaces/i.vendorResearch";
 import { getLLMKeysWithKeyQuery } from "../../utils/llmKey.utils";
 import logger from "../../utils/logger/fileLogger";
@@ -131,13 +136,13 @@ import { type EdgarFilerResolver, createEdgarFilerResolver } from "./edgarFiler"
 import { type SourceProvenance, buildEvidencePack, isBlockedEntry, provenanceOf } from "./evidence";
 import { selectKeys } from "./keySelection";
 import { buildMateriality } from "./materiality";
-import { type PolicyPage, comparePages } from "./policySnapshots";
+import { type PolicyPage, comparePages, snapshotsToKeep } from "./policySnapshots";
 import { CREDIBILITY_PROMPT_VERSION } from "./prompts";
 // Types only: the researcher is injected, so loading the pipeline loads no web module.
 import type { ResearchResult, VendorResearcher } from "./researchAgent";
 import type { AnyResearchOutput } from "./schema";
 import { type SearchSpec, searchEngineOf } from "./searchEngineOf";
-import { keysOfSources, splitKnownSources } from "./sourceMemory";
+import { changeKeysOf, forgottenIn, keysOfSources, splitKnownSources } from "./sourceMemory";
 import { REGISTRY_VERSION } from "./sourceRegistry/entries";
 import { summariseCategories, workedCategories } from "./summary";
 import { buildTarget } from "./target";
@@ -170,6 +175,11 @@ export interface PipelineDeps {
    * By default RUN_TIME_LIMIT_MINUTES. A test gives a short one.
    */
   runTimeLimitMs?: number;
+  /**
+   * Adds the status job of a list of the vendor risk database (vrdb/queue.ts). By default the
+   * queue's own, loaded on the first use; a test gives its own so that no test opens Redis.
+   */
+  enqueueRelabel?: (sourceId: VrdbSourceId) => Promise<void>;
 }
 
 /**
@@ -577,15 +587,18 @@ function citedBy(
 
 /**
  * The keys of the sources that earlier runs showed to the model for the vendor, or null when they
- * cannot be read: a memory must not fail a run, so the run then analyses every source. The error
- * can name a host or a query, so only its name is logged.
+ * cannot be read: a memory must not fail a run. `consequence` says in the log what the run does
+ * without it. The error can name a host or a query, so only its name is logged.
  */
-async function readKnownSources(args: RunArgs): Promise<ReadonlySet<string> | null> {
+async function readKnownSources(
+  args: RunArgs,
+  consequence: string,
+): Promise<ReadonlySet<string> | null> {
   try {
     return await getKnownSourceKeysQuery(args.organizationId, args.vendorId);
   } catch (error) {
     logger.warn(
-      `${tag(args)}: the sources of the earlier runs could not be read, so every source is analysed (error ${errorName(error)})`,
+      `${tag(args)}: the sources of the earlier runs could not be read, so ${consequence} (error ${errorName(error)})`,
     );
     return null;
   }
@@ -789,15 +802,22 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
 
   // A scheduled run sets the sources apart that earlier runs showed to the model. The memory is
   // read after the research, which does not depend on it; when it cannot be read, the run goes on
-  // as one that analyses everything.
-  const known = args.triggerType === "scheduled" ? await readKnownSources(args) : null;
+  // as one that analyses everything, and its de-duplication keeps the old rule (see `loadKnown`
+  // below), which the one warning says too.
+  const known =
+    args.triggerType === "scheduled"
+      ? await readKnownSources(
+          args,
+          "every source is analysed and a source that a stored finding cites drops a candidate of its category",
+        )
+      : null;
   const split = known === null ? null : splitKnownSources(found.entries, known);
   if (split !== null && split.skipped > 0) trace.dropped("source.already_seen", split.skipped);
 
   // The pages where the vendor states its terms, compared with the ones earlier runs kept, in every
   // kind of run. A change is a source like the others and comes first among the sources of its
   // category, so that the pack drops it last. It is set beside the split above and not under it:
-  // its address carries the hash of the new text, so it is the address of no source that was shown.
+  // the split knows a source by its document, and the document of a change is its page.
   const policies = await comparePolicyPages(args, found.policyPages ?? [], now, trace);
 
   // Built first: the failed-run rule asks whether anything usable is left, and an entry with an
@@ -809,8 +829,23 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
   const pack = buildEvidencePack(entries, { dropBlocked: true });
   const provenance = provenanceOf(entries);
   // What the model is shown is what the next scheduled run will not show it again, and a source
-  // that was set apart is still there to be seen.
-  const remember = [...keysOfSources(pack), ...(split?.knownKeys ?? [])];
+  // that was set apart is still there to be seen. A change is not remembered as its document: that
+  // is its page (the key drops the fragment), and a pack that holds the change but not the page
+  // showed the model only what changed. The page is remembered when the pack holds it. A change
+  // that was shown is remembered under a key of its own (`changeKeyOf`), which sets no source
+  // apart and tells the de-duplication that it was shown. The analysis takes out the sources of
+  // the candidates that its caps cut (see below).
+  const changeUrls = new Set(policies.entries.map((entry) => entry.url));
+  const remember = [
+    ...keysOfSources(pack.filter((source) => !changeUrls.has(source.url))),
+    ...changeKeysOf(pack.filter((source) => changeUrls.has(source.url))),
+    ...(split?.knownKeys ?? []),
+  ];
+  // A page is kept only when the model was shown its change: the pack drops sources to stay under
+  // its limit, changes too, and a page kept in the place of a change that was not shown would hide
+  // that change from every later run. A page that is not kept shows its change to the next run.
+  const snapshots = snapshotsToKeep(policies, pack);
+  if (snapshots.withheld > 0) trace.dropped("page.change_not_shown", snapshots.withheld);
 
   const researchable = researchableCategories(target);
   const skippedNoDomain = RESEARCH_CATEGORIES.filter(
@@ -822,6 +857,7 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
     kept: NewFinding[],
     proposed: ReadonlySet<ResearchCategory>,
     modelNotes: AnyResearchOutput["category_notes"],
+    capped?: ReadonlySet<ResearchCategory>,
   ) =>
     summariseCategories({
       skippedNoDomain,
@@ -831,6 +867,7 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
       modelNotes,
       stoppedBecause: found.stoppedBecause,
       freshCategories,
+      capped,
     });
 
   // The failed-run rule, in this order. A model call that rejected with nothing in it leaves the
@@ -853,7 +890,7 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
   if (pack.length === 0) {
     // The web answered and nothing usable came back (for a scheduled run: nothing that is new), so
     // there is nothing to ask the model about.
-    return complete([], 0, summaryOf([], new Set(), []), remember, policies.writes);
+    return complete([], 0, summaryOf([], new Set(), []), remember, snapshots.writes);
   }
 
   writeProgress({
@@ -878,7 +915,9 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
     // The scorecard goes to the analysis only: the loop turns the vendor into web searches.
     materiality: buildMateriality(vendor),
     pack,
-    // Where the sources came from, for the credibility labels the analysis returns.
+    // Where the sources came from: the analysis prompt writes the database of a record and the
+    // change of a terms page from it (vr-16), and the credibility labels read it. Without it the
+    // rules for records and changes would be silently off.
     provenance,
     // Who filed a filing under the stored CIK, for those labels: asked of the SEC only while its
     // gate is open, since the request names the contact of Q4.
@@ -896,18 +935,47 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
     // Aborted when the run timed out: the analysis, the verifier and the EDGAR lookups stop.
     signal: progress.abandoned.signal,
     loadKnown: async () => {
-      const [existingRisks, priorFindings] = await Promise.all([
+      const [existingRisks, priorFindings, memory] = await Promise.all([
         // Only the active risks. The default of the query is the same, but the rule is said here.
         getVendorRisksByVendorIdQuery(vendorId, organizationId, "active"),
         getFindingsForVendorQuery(organizationId, vendorId),
+        // A scheduled run has read the memory already. Any other run reads it here, for the
+        // de-duplication only: it has shown the model every source, and still does.
+        known !== null || args.triggerType === "scheduled"
+          ? known
+          : readKnownSources(
+              args,
+              "a source that a stored finding cites drops a candidate of its category",
+            ),
       ]);
-      return { existingRisks, priorFindings };
+      // A source that a stored finding cites and no run remembers was cut from the memory with a
+      // candidate that the caps cut (see below): the de-duplication lets that candidate back in.
+      // A change is looked up by its own key, which a run remembers when it showed the change.
+      // Without the memory, it cannot tell such a source, and the old rule holds.
+      const forgotten = memory === null ? undefined : forgottenIn(memory);
+      return { existingRisks, priorFindings, forgotten };
     },
   });
   if (!analysed.ok) {
     return stop(`Model call failed: ${modelFailurePhrase(args, "the analysis", analysed.error)}`);
   }
-  const { kept, duplicatesDropped: dropped, output } = analysed;
+  const { kept, duplicatesDropped: dropped, output, capped } = analysed;
+  // A candidate that the caps cut is new and was not stored, so the next run is to raise it: the
+  // sources it cites are not remembered, even one that a stored finding cites too, so that a
+  // scheduled run shows them to the model again (a run of another kind shows it every source). Its
+  // stored findings are then repeats, and leave their places under the caps. Every run reads the
+  // memory before its de-duplication, so it knows the source is not remembered and does not drop
+  // the raised risk only because a stored finding of its category cites the source too (see
+  // `dropDuplicates`).
+  const citedByCut = capped.flatMap((finding) => finding.sources);
+  const cut = new Set([...keysOfSources(citedByCut), ...changeKeysOf(citedByCut)]);
+  // Nor is a page kept whose change such a candidate cites: the next run sees the change again only
+  // when it compares the page with the text kept before.
+  const cutUrls = new Set(citedByCut.map((source) => source.url));
+  const keptPages = snapshotsToKeep(
+    policies,
+    pack.filter((source) => !cutUrls.has(source.url)),
+  ).writes;
   // Each label goes with its finding at once, so that nothing can part them later.
   const findings = kept.map((finding, index) =>
     withCredibility(finding, analysed.credibility[index], provenance),
@@ -923,9 +991,10 @@ async function research(args: RunArgs, deps: PipelineDeps, progress: Progress): 
       findings,
       new Set(output.findings.map((candidate) => candidate.category)),
       output.category_notes,
+      new Set(capped.map((finding) => finding.category)),
     ),
-    remember,
-    policies.writes,
+    remember.filter((key) => !cut.has(key)),
+    keptPages,
   );
 }
 
@@ -978,6 +1047,7 @@ class RunAlreadyEnded extends Error {}
 async function completeRun(
   args: RunArgs,
   { findings, payload, remember, snapshots }: Extract<Decision, { kind: "complete" }>,
+  enqueue: (sourceId: VrdbSourceId) => Promise<void> = enqueueRelabelOfQueue,
 ): Promise<PipelineResult> {
   const { organizationId, vendorId, runId } = args;
   logger.info(
@@ -1011,7 +1081,55 @@ async function completeRun(
   // The transaction has committed and the run is completed. Nothing below this line can fail it.
   await rememberSources(args, remember);
   await saveSnapshots(args, snapshots);
+  relabelCitedLists(args, findings, enqueue);
   return { outcome: "completed", findingsCreated: findings.length };
+}
+
+const isVrdbSourceId = (value: unknown): value is VrdbSourceId =>
+  typeof value === "string" && (VRDB_SOURCE_IDS as readonly string[]).includes(value);
+
+/** The lists of the vendor risk database whose records the findings cite, each once. */
+export function listsCitedBy(findings: readonly NewFinding[]): VrdbSourceId[] {
+  const lists = new Set<VrdbSourceId>();
+  for (const finding of findings) {
+    for (const source of finding.credibility_basis?.sources ?? []) {
+      const list = source.record?.source;
+      if (isVrdbSourceId(list)) lists.add(list);
+    }
+  }
+  return [...lists];
+}
+
+async function enqueueRelabelOfQueue(sourceId: VrdbSourceId): Promise<void> {
+  const { enqueueRelabel } = await import("./vrdb/queue");
+  await enqueueRelabel(sourceId);
+}
+
+/**
+ * Adds the status job of every list whose records the saved findings cite. The run was offered the
+ * records that were active when it started, and a sync that changed the status of one of them
+ * while the run was going found none of these findings to relabel: the job reads the statuses of
+ * today and relabels a finding whose record changed since, and changes nothing otherwise. The job
+ * is deduplicated by list (vrdb/queue.ts) and adds no run. It is not waited for, and a failure is
+ * logged: a Redis that stalls must not hold the end of the run, and the next change of the list
+ * adds the job again.
+ */
+function relabelCitedLists(
+  args: RunArgs,
+  findings: readonly NewFinding[],
+  enqueue: (sourceId: VrdbSourceId) => Promise<void>,
+): void {
+  for (const list of listsCitedBy(findings)) {
+    void (async () => {
+      try {
+        await enqueue(list);
+      } catch (error) {
+        logger.warn(
+          `${tag(args)}: the status job of ${list} could not be added (error ${errorName(error)})`,
+        );
+      }
+    })();
+  }
 }
 
 /**
@@ -1070,5 +1188,5 @@ export async function runVendorResearch(
     await recordFailure(decision.payload);
     return { outcome: decision.outcome, findingsCreated: 0 };
   }
-  return completeRun(args, decision);
+  return completeRun(args, decision, deps.enqueueRelabel);
 }

@@ -325,6 +325,129 @@ describe("createRecordsLookup", () => {
   });
 });
 
+describe("a vendor whose website is a page on a platform where many have pages", () => {
+  const onPlatform = buildTarget({
+    vendor_name: "Example Widgets Ltd",
+    website: "https://github.com/example-widgets",
+    vendor_provides: "Widgets",
+  });
+  const platformBreach = {
+    ...breach,
+    Name: "ExamplePlatform",
+    Title: "Example Platform",
+    Domain: "github.com",
+  };
+  // Only the host is real: it is one of the shared hosts. The breach and the feed are invented.
+  const PLATFORM_HIBP = hibpUrl("github.com");
+  const PLATFORM_FEED = "https://status.github.com/history.atom";
+
+  it("is the platform's domain, which the test relies on", () => {
+    expect(onPlatform.domain).toBe("github.com");
+  });
+
+  it("does not take the platform's breaches or its status page as the vendor's own", async () => {
+    const { fetchJson } = scripted({ [PLATFORM_HIBP]: [platformBreach] });
+    const { fetchFeed } = feeds({
+      [PLATFORM_FEED]: feedXml(["2026-10-20"], "Example Platform Status"),
+    });
+
+    const outcomes = await createRecordsLookup({ fetchJson, fetchFeed })(
+      input({ target: onPlatform, researchable: BOTH }),
+    );
+
+    expect(outcomes.map((o) => [o.source, o.outcome, o.records.length])).toEqual([
+      ["hibp", "empty", 0],
+      ["statuspage", "empty", 0],
+    ]);
+  });
+
+  it("keeps a breach or a status page of the platform that names the vendor", async () => {
+    const named = { ...platformBreach, Name: "ExampleWidgets", Title: "Example Widgets" };
+    const { fetchJson } = scripted({ [PLATFORM_HIBP]: [platformBreach, named] });
+    const { fetchFeed } = feeds({
+      [PLATFORM_FEED]: feedXml(["2026-10-20"], "Example Widgets Status"),
+    });
+
+    const outcomes = await createRecordsLookup({ fetchJson, fetchFeed })(
+      input({ target: onPlatform, researchable: BOTH }),
+    );
+
+    expect(outcomes.map((o) => [o.source, o.outcome])).toEqual([
+      ["hibp", "ok"],
+      ["statuspage", "ok"],
+    ]);
+    expect(outcomes[0].records.map((record) => record.url)).toEqual([
+      "https://haveibeenpwned.com/api/v3/breach/ExampleWidgets",
+    ]);
+  });
+
+  it("keeps the platform's records when the platform itself is the vendor: they carry its name", async () => {
+    const platform = buildTarget({
+      vendor_name: "Example Platform Inc.",
+      website: "https://github.com",
+      vendor_provides: "Code hosting",
+    });
+    const { fetchJson } = scripted({ [PLATFORM_HIBP]: [platformBreach] });
+    const { fetchFeed } = feeds({
+      [PLATFORM_FEED]: feedXml(["2026-10-20"], "Example Platform Status"),
+    });
+
+    const outcomes = await createRecordsLookup({ fetchJson, fetchFeed })(
+      input({ target: platform, researchable: BOTH }),
+    );
+
+    expect(outcomes.map((o) => [o.source, o.outcome])).toEqual([
+      ["hibp", "ok"],
+      ["statuspage", "ok"],
+    ]);
+  });
+
+  // A breach that HIBP names after the platform with a suffix, as it names the later breaches of
+  // the platforms (a scrape of a year). Invented: only the host is real.
+  const suffixedBreach = {
+    ...platformBreach,
+    Name: "GitHubScrape2026",
+    Title: "GitHub Scraped Data (2026)",
+  };
+
+  it("keeps every breach of the platform's domain when a name of the vendor is the platform's brand", async () => {
+    const platform = buildTarget({
+      vendor_name: "GitHub",
+      website: "https://github.com",
+      vendor_provides: "Code hosting",
+    });
+    const { fetchJson } = scripted({ [PLATFORM_HIBP]: [suffixedBreach] });
+
+    const outcomes = await createRecordsLookup({ fetchJson, fetchFeed: feeds({}).fetchFeed })(
+      input({ target: platform }),
+    );
+
+    expect(outcomes.map((o) => [o.source, o.outcome, o.records.length])).toEqual([
+      ["hibp", "ok", 1],
+    ]);
+    expect(outcomes[0].records[0].url).toBe(
+      "https://haveibeenpwned.com/api/v3/breach/GitHubScrape2026",
+    );
+  });
+
+  it("does not give the platform's breaches to a vendor whose name only begins its brand", async () => {
+    const beginsBrand = buildTarget({
+      vendor_name: "Gith",
+      website: "https://github.com/gith",
+      vendor_provides: "Widgets",
+    });
+    const { fetchJson } = scripted({ [PLATFORM_HIBP]: [suffixedBreach] });
+
+    const outcomes = await createRecordsLookup({ fetchJson, fetchFeed: feeds({}).fetchFeed })(
+      input({ target: beginsBrand }),
+    );
+
+    expect(outcomes.map((o) => [o.source, o.outcome, o.records.length])).toEqual([
+      ["hibp", "empty", 0],
+    ]);
+  });
+});
+
 describe("mergeSameAddress", () => {
   const record = (cve: string, text: string): SourceRecord => ({
     url: `https://nvd.nist.gov/vuln/detail/${cve}`,

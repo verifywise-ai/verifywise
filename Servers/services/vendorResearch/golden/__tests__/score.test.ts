@@ -231,6 +231,49 @@ describe("scoreGoldenSet", () => {
     );
   });
 
+  it.each(["un_sanctions", "canada_sema", "csl"] as const)(
+    "holds an entry of %s matched by name only to the same words as one of OFAC",
+    (sourceId) => {
+      const vendor: GoldenVendor = {
+        ...ACME,
+        expected: [{ category: "legal_regulatory", anyOf: ["list"], label: "low" }],
+      };
+      const entry = (strength: "weak" | "strong"): FindingSource => ({
+        ...ofacRecord,
+        publisher: sourceId,
+        record: {
+          source_id: sourceId,
+          record_id: 4101,
+          status: "active",
+          match_strength: strength,
+        },
+      });
+      const legal = (description: string, source: FindingSource) =>
+        finding({
+          category: "legal_regulatory",
+          credibility: "low",
+          risk_description: description,
+          sources: [source],
+        });
+      const asFact = "Acme is on the list.";
+      const runs = [
+        run(1, [
+          legal(asFact, entry("weak")),
+          legal(
+            "An entity named Acme Limited is on the list; it may not be the vendor.",
+            entry("weak"),
+          ),
+          // A match by the vendor's verified website is about the vendor.
+          legal("Acme is on the list by its website.", entry("strong")),
+        ]),
+      ];
+
+      const report = scoreGoldenSet([vendor], runs);
+
+      expect(report.sanctionsAsFact.map((item) => item.finding)).toEqual([asFact]);
+    },
+  );
+
   it("a trap that appears counts as a false positive", () => {
     const vendor: GoldenVendor = {
       ...ACME,
@@ -398,7 +441,7 @@ describe("meetsBars", () => {
 
     expect(report.coverageFailed).toEqual([{ vendorId: 1, name: "Acme", sources: ["kev"] }]);
     expect(meetsBars(report).reasons).toEqual([
-      "1 vendor's run could not check every list (Acme: kev)",
+      "1 vendor's run could not check every list (Acme: kev); a list that had not synced yet when the run was made counts as failed: once every active list of the researched categories has synced, run each such vendor again on a new vendor row and point its vendorId in the labels at that row (only the first run of a row is scored)",
     ]);
   });
 

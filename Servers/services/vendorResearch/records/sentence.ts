@@ -1,4 +1,4 @@
-import { cleanText } from "../text";
+import { cleanText, withoutHiddenCharacters } from "../text";
 
 const isFullStopOrBlank = (char: string): boolean => char === "." || /\s/.test(char);
 
@@ -15,12 +15,22 @@ function withoutTrailingStops(text: string): string {
   return end === text.length ? text : text.slice(0, end);
 }
 
-/** "Label: value." with one full stop, or nothing for a field a database leaves empty. */
+/**
+ * "Label: value." with one full stop, or nothing for a field a database leaves empty. The value
+ * loses the control characters and the characters nobody sees (`withoutHiddenCharacters`): the
+ * sentence is part of a record's text, which the model reads.
+ */
 export const sentence = (label: string, value: string): string => {
-  const clean = withoutTrailingStops(cleanText(value));
+  const clean = withoutTrailingStops(withoutHiddenCharacters(cleanText(value)));
   return clean === "" ? "" : `${label}: ${clean}.`;
 };
 
-/** The sentences that are not empty, as one text. */
+/**
+ * The sentences that are not empty, as one text, without the characters nobody sees: a part that
+ * is not a `sentence` (a record's stored text, a quoted name) loses them here.
+ */
 export const joinSentences = (parts: readonly string[]): string =>
-  parts.filter((part) => part !== "").join(" ");
+  parts
+    .map(withoutHiddenCharacters)
+    .filter((part) => part !== "")
+    .join(" ");

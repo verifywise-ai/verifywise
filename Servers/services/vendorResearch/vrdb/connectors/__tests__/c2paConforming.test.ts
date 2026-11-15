@@ -291,7 +291,7 @@ describe("c2paConformingConnector", () => {
   describe("the connector", () => {
     it("is the snapshot connector of the list, at its first version", () => {
       expect(c2paConformingConnector.id).toBe("c2pa_conforming");
-      expect(c2paConformingConnector.version).toBe(1);
+      expect(c2paConformingConnector.version).toBe(2);
       expect(c2paConformingConnector.kind).toBeUndefined();
       expect(MARK).toBe("C2PA Conforming Products List");
     });
@@ -312,7 +312,7 @@ describe("c2paConformingConnector", () => {
 
     it("keeps the validators of the file behind the version of its reading", async () => {
       const { snapshot } = await run(fillers());
-      expect(snapshot.etag).toBe(`k1:${ETAG}`);
+      expect(snapshot.etag).toBe(`k2:${ETAG}`);
       expect(snapshot.lastModified).toBe(LAST_MODIFIED);
     });
 
@@ -767,6 +767,14 @@ describe("c2paConformingConnector", () => {
         "name:quillworksgmbh",
         "name:quillworks",
       ]);
+    });
+
+    it("takes a legal form written with a slash (A/S) off the name for its second key", async () => {
+      const { byId } = await run([
+        ...fillers(),
+        product({ n: 10592, applicant: "Quillworks A/S" }),
+      ]);
+      expect(byId.get("quillworksas")?.matchKeys).toEqual(["name:quillworksas", "name:quillworks"]);
     });
 
     it("keeps a record whose applicant is too short to be a name key, with no key of it", async () => {
@@ -2682,7 +2690,7 @@ describe("c2paConformingConnector", () => {
       );
       const error = await failureOf(
         c2paConformingConnector.download(fetch, {
-          etag: `k1:${ETAG}`,
+          etag: `k2:${ETAG}`,
           lastModified: LAST_MODIFIED,
         }),
       );

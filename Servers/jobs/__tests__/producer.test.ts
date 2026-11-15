@@ -36,6 +36,7 @@ interface MockQueueState {
   jobs: Map<string, MockJobRecord>;
   schedulers: Map<string, MockSchedulerRecord>;
   getJobSchedulers(): Promise<MockSchedulerRecord[]>;
+  removeJobScheduler(id: string): Promise<boolean>;
 }
 
 const mockQueues = new Map<string, MockQueueState>();
@@ -122,7 +123,19 @@ jest.mock("../../utils/logger/fileLogger", () => ({
   default: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
 }));
 
+// The states of the vendor risk database's lists, which the start reads to queue first syncs, come
+// from here and not from vrdb_sources, so the suite needs no database (sequelize.query is spied on
+// below to prove it). The default: no list was ever copied.
+jest.mock("../../utils/vrdb.utils", () => ({
+  ...jest.requireActual("../../utils/vrdb.utils"),
+  getVrdbSourceStatesQuery: jest.fn(async () => []),
+}));
+
 import { addAllJobs } from "../producer";
+import { sequelize } from "../../database/db";
+import { getVrdbSourceStatesQuery } from "../../utils/vrdb.utils";
+import { activeMirrors } from "../../services/vendorResearch/vrdb/sources";
+import { vrdbFirstSyncJobId } from "../../services/vendorResearch/vrdb/queue";
 import {
   enqueueAutomationAction,
   enqueueExtensionSyncRun,
@@ -137,6 +150,7 @@ function queue(name: string): MockQueueState {
 
 const automationQueue = () => queue("automation-actions");
 const slackQueue = () => queue("slack-notifications");
+const vrdbQueue = () => queue("vendor-risk-database");
 
 // The keys BullMQ 5's Queue.add(name, data, { repeat: { pattern } }) stored the
 // schedules under: md5 of `name:jobId:endDate:tz:pattern`.
@@ -144,11 +158,30 @@ const BULLMQ5_REPORT_NOTIFICATION_KEY = "ee622aa7a3e7de48f86831ede5b5a722"; // s
 const BULLMQ5_SLACK_POLICY_KEY = "8681a526dd19fcc26cca0f74aab804e6"; // slack-notification-policy::::0 9 * * *
 
 describe("addAllJobs", () => {
+  const recordsBefore = process.env.VENDOR_RESEARCH_RECORDS;
+  let query: jest.SpyInstance;
+
   beforeEach(() => {
+    // The records on, as by default, whatever the machine's environment says.
+    process.env.VENDOR_RESEARCH_RECORDS = "true";
+    // No call of addAllJobs may reach a database: a query fails here instead of connecting.
+    query = jest
+      .spyOn(sequelize, "query")
+      .mockRejectedValue(new Error("addAllJobs reached the database"));
     for (const state of mockQueues.values()) {
       state.jobs.clear();
       state.schedulers.clear();
     }
+  });
+
+  afterEach(() => {
+    expect(query).not.toHaveBeenCalled();
+    query.mockRestore();
+  });
+
+  afterAll(() => {
+    if (recordsBefore === undefined) delete process.env.VENDOR_RESEARCH_RECORDS;
+    else process.env.VENDOR_RESEARCH_RECORDS = recordsBefore;
   });
 
   it("leaves the one-off jobs that are queued or running where they are", async () => {
@@ -223,16 +256,91 @@ describe("addAllJobs", () => {
     );
   });
 
-  it("keeps the failed runs of no automation scheduler forever", async () => {
+  it("removes the evidence expiry sweep v2.5.x scheduled under its old name", async () => {
+    // As BullMQ 6 stored it: a scheduler that has run, keeping every failed run.
+    automationQueue().schedulers.set("evidence_expiry_sweep", {
+      key: "evidence_expiry_sweep",
+      name: "evidence_expiry_sweep",
+      next: Date.now() + 60_000,
+      pattern: "30 4 * * *",
+      iterationCount: 40,
+      template: { opts: { removeOnComplete: true, removeOnFail: false } },
+    });
+
+    await addAllJobs();
+
+    const automationSchedulers = [...automationQueue().schedulers.keys()];
+    expect(automationSchedulers).not.toContain("evidence_expiry_sweep");
+    expect(automationSchedulers).toContain("file_expiry_sweep");
+  });
+
+  it("still registers the file expiry sweep when the old scheduler cannot be removed", async () => {
+    const removal = jest
+      .spyOn(automationQueue(), "removeJobScheduler")
+      .mockRejectedValue(new Error("Connection is closed."));
+    try {
+      await addAllJobs();
+    } finally {
+      removal.mockRestore();
+    }
+
+    expect([...automationQueue().schedulers.keys()]).toContain("file_expiry_sweep");
+  });
+
+  it("keeps the failed runs of no automation or Slack scheduler forever", async () => {
     await addAllJobs();
 
     // BullMQ keeps a failed job for good when its removeOnFail is false or unset.
-    const keptForever = [...automationQueue().schedulers.values()]
+    const schedulers = [
+      ...automationQueue().schedulers.values(),
+      ...slackQueue().schedulers.values(),
+    ];
+    expect(schedulers.map(({ key }) => key)).toContain("slack-notification-policy");
+    const keptForever = schedulers
       .filter(({ template }) => {
         const removeOnFail = template?.opts?.removeOnFail;
         return removeOnFail === false || removeOnFail === undefined;
       })
       .map(({ key }) => key);
     expect(keptForever).toEqual([]);
+  });
+
+  it("queues a first sync of each list copied whole that was never copied, without a database", async () => {
+    jest.mocked(getVrdbSourceStatesQuery).mockResolvedValueOnce([]);
+
+    await addAllJobs();
+
+    const active = activeMirrors();
+    expect(getVrdbSourceStatesQuery).toHaveBeenCalledWith(active.map(({ id }) => id));
+    // A list read by its changes (the CVE records) gets its first copy from a baseline instead.
+    const copiedWhole = active.filter(({ missingStatus }) => missingStatus !== null);
+    expect(copiedWhole.length).toBeGreaterThan(0);
+    expect([...vrdbQueue().jobs.keys()].sort()).toEqual(
+      copiedWhole.map(({ id }) => vrdbFirstSyncJobId(id)).sort(),
+    );
+  });
+
+  it("queues no first sync of a list that was copied", async () => {
+    const [copied, ...others] = activeMirrors().filter(
+      ({ missingStatus }) => missingStatus !== null,
+    );
+    jest.mocked(getVrdbSourceStatesQuery).mockResolvedValueOnce([
+      {
+        id: copied.id,
+        lastSuccessAt: new Date("2026-11-01T00:00:00Z"),
+        lastOutcome: "ok",
+        sourceVersion: null,
+        etag: null,
+        lastModified: null,
+        activeRecords: 10,
+        cursor: null,
+      },
+    ]);
+
+    await addAllJobs();
+
+    const firstSyncs = [...vrdbQueue().jobs.keys()];
+    expect(firstSyncs).not.toContain(vrdbFirstSyncJobId(copied.id));
+    expect(firstSyncs.sort()).toEqual(others.map(({ id }) => vrdbFirstSyncJobId(id)).sort());
   });
 });

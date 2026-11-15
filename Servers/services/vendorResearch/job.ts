@@ -49,10 +49,14 @@ async function notifyAssignee(
     const assignee = vendor?.assignee ?? null;
     if (!vendor || assignee === null) return;
 
-    // Vendor writes do not check the assignee, and the foreign key behind it accepts any user, so
-    // it can be someone of another organization. The notice would be stored under the vendor's
-    // organization, for a user who never reads it: nothing is written, as for the action owner of
-    // an accepted finding. Nothing that someone must read is logged either, and no name.
+    // The vendor create and update of the API refuse a new assignee of another organization, but
+    // the stored assignee can still be one: a user who has since left the organization (a stored
+    // assignee is not checked again), a vendor stored before that check, or one written by a writer
+    // that does not check (the advisor's vendor functions, services/vendor.service.ts, the demo
+    // driver), and the foreign key behind it accepts any user. The notice would be stored under
+    // the vendor's organization, for a user who never reads it: nothing is written, as for the
+    // action owner of an accepted finding. Nothing that someone must read is logged either, and no
+    // name.
     if (!(await isUserOfOrganization(assignee, organizationId))) {
       logger.debug(
         `vendor research run ${runId} (vendor ${vendorId}, org ${organizationId}): no notice, the assignee, user ${assignee}, is not a user of the organization`,

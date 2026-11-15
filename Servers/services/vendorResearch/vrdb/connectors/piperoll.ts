@@ -75,7 +75,9 @@
  * corroborated, corrected, disputed or withdrawn, its `url` is not the entry's own page, its title,
  * cause or severity is empty, its `sort_date` is no day, a month with day 00, or a year with month
  * and day 00 (41 of the 110 real dates are of the last two kinds; they are read as a precision and
- * a first day), or it gives a name whose compact form is over 160 characters. An entry that is
+ * a first day), its first day is after the week that follows the day of the download
+ * (`latestPlausibleDay` of nhtsaFlat.ts: a mistyped year would keep its names in the lookback of
+ * the events for good and become the version of the copy), or it gives a name whose compact form is over 160 characters. An entry that is
  * withdrawn counts nowhere. The unreadable ones are counted and left to the kit's allowance.
  *
  * The record of a name holds the counts by the registry's own status word and by severity key, the
@@ -106,6 +108,7 @@ import {
   createFileConnector,
 } from "./kit/fileConnector";
 import { jsonOf } from "./kit/json";
+import { latestPlausibleDay } from "./nhtsaFlat";
 import { RECORD_SUMMARY_MAX, UnreadableEntry, recordOf } from "./kit/record";
 import { summaryWithClosing } from "./kit/summary";
 import { textOf } from "./kit/text";
@@ -577,8 +580,15 @@ function namesOf(title: string, operatorType: unknown): string[] | null {
   return names;
 }
 
-/** The entry that an item of the file is, or why it is none. */
-function readEntry(item: unknown, occurrences: ReadonlyMap<string, number>): Reading {
+/**
+ * The entry that an item of the file is, or why it is none. `latest` is the last first day that an
+ * entry may have (`latestPlausibleDay`, read once for the file).
+ */
+function readEntry(
+  item: unknown,
+  occurrences: ReadonlyMap<string, number>,
+  latest: string,
+): Reading {
   if (!isObject(item)) return UNREADABLE;
   const { id } = item;
   if (typeof id !== "string" || !ENTRY_ID.test(id) || (occurrences.get(id) ?? 0) > 1) {
@@ -597,6 +607,7 @@ function readEntry(item: unknown, occurrences: ReadonlyMap<string, number>): Rea
   const severity = lineOf(item.severity_key, SEVERITY_CHARS);
   const date = sortDateOf(item.sort_date);
   if (title === "" || cause === "" || severity === "" || date === null) return UNREADABLE;
+  if (date.day > latest) return UNREADABLE;
   const names = namesOf(title, item.operator_type);
   if (names === null) return UNREADABLE;
   return {
@@ -715,8 +726,9 @@ function read(fetched: Fetched): ReadResult<NameRow> | null {
   }
   const entries: Entry[] = [];
   let unreadable = 0;
+  const latest = latestPlausibleDay();
   for (const item of items) {
-    const reading = readEntry(item, occurrences);
+    const reading = readEntry(item, occurrences, latest);
     if (reading.kind === "unreadable") unreadable += 1;
     else if (reading.kind === "entry") entries.push(reading.entry);
   }
@@ -810,7 +822,9 @@ function recordFor(row: NameRow): ParsedRecord {
 
 const SPEC: ListSpec<NameRow> = {
   id: "piperoll",
-  version: 1,
+  // 2: an entry dated after the week that follows the day of the download is unreadable
+  // (`readEntry`): records and the version can change on an unchanged file.
+  version: 2,
   root: "registry.json",
   sortKey: (row) => row.id,
   files: [

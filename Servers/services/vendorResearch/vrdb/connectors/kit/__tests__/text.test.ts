@@ -63,6 +63,14 @@ describe("textOf", () => {
       expect(textOf(fetchedOf([[html, "text/html"]]), 0)).toContain(`caf${cp(0xe9)}`);
     });
 
+    it("is not chosen by a meta tag inside a CSV or a JSON file: there it is a cell or a string", () => {
+      const name = `Soci${cp(0xe9)}t${cp(0xe9)} G${cp(0xe9)}n${cp(0xe9)}rale`;
+      const csv = `name,notes\n"${name}","<meta x charset=windows-1252>"`;
+      expect(textOf(fetchedOf([[csv, "text/csv"]]), 0)).toBe(csv);
+      const json = `[{"name":"${name}","html":"<meta charset='windows-1252'>"}]`;
+      expect(textOf(fetchedOf([[json, "application/json"]]), 0)).toBe(json);
+    });
+
     it("passes over a charset that is not known, and reads UTF-8", () => {
       expect(textOf(fetchedOf([["abc", "text/csv; charset=no-such-charset"]]), 0)).toBe("abc");
     });

@@ -589,7 +589,9 @@ function summaryOf(row: EuUndertaking): string {
 export function createEuDgCompConnector({ sleep = realSleep }: { sleep?: Sleep } = {}): Connector {
   return createFileConnector<EuUndertaking>({
     id: "eu_dg_comp",
-    version: 1,
+    // 2: a slash form (A/S) is a legal form: the undertaking is keyed without it too, and its id is
+    // that of the name without it.
+    version: 2,
     root: "case-data",
     sortKey: (row) => row.id,
     fetchFiles: (fetch) => fetchFiles(fetch, sleep),

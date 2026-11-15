@@ -55,7 +55,7 @@ import {
   listFindingsQuery,
 } from "../../utils/vendorResearch.utils";
 import { saveVendorResearchSettings } from "../../services/vendorResearch/settings.service";
-import { credibilityRationale } from "../../services/vendorResearch/credibilityText";
+import { credibilityRationale, LEGACY_NOTE } from "../../services/vendorResearch/credibilityText";
 import { createTraceRecorder } from "../../services/vendorResearch/trace";
 import { startVendorResearch } from "../../services/vendorResearch/trigger";
 import { acceptFinding, dismissFinding } from "../../services/vendorResearch/findings.service";
@@ -960,6 +960,7 @@ describe("listVendorRiskFindings", () => {
     const LEGACY_ROW = {
       id: 1,
       vendor_name: "Acme",
+      status: "pending",
       credibility: "medium",
       credibility_basis: { rule: "legacy_confidence" },
     };
@@ -994,6 +995,24 @@ describe("listVendorRiskFindings", () => {
         ...LEGACY_ROW,
         credibility_rationale: LEGACY_LINE,
       });
+    });
+
+    it("says of an accepted or dismissed finding that it keeps the earlier rating", async () => {
+      const decided = ["accepted", "dismissed"].map((status, i) => ({
+        ...LEGACY_ROW,
+        id: 10 + i,
+        status,
+      }));
+      mockListFindingsQuery.mockResolvedValue({ rows: [LEGACY_ROW, ...decided], total: 3 } as any);
+      const res = createMockRes();
+
+      await listVendorRiskFindings(createMockReq(), res);
+
+      expect(bodyOf(res).data.rows.map((row: any) => row.credibility_rationale)).toEqual([
+        LEGACY_LINE,
+        "Rated with the earlier confidence rule.",
+        "Rated with the earlier confidence rule.",
+      ]);
     });
 
     it("leaves the line of a label a run gave as it was", async () => {
@@ -1354,7 +1373,9 @@ describe("dismissVendorRiskFinding", () => {
     });
   });
 
-  it("answers a finding that reads with the legacy rule with the fixed sentence", async () => {
+  it("answers a decided finding that reads with the legacy rule with the sentence that it keeps that rating", async () => {
+    // A decided finding keeps the confidence it was decided by: neither the backfill nor the status
+    // job ever relabels it, so its line does not promise a recompute.
     mockDismissFinding.mockResolvedValue({
       ...DISMISSED_FINDING,
       credibility: "low",
@@ -1365,9 +1386,9 @@ describe("dismissVendorRiskFinding", () => {
     await dismissVendorRiskFinding(dismissReq({ reason: "other" }), res);
 
     expect(res.status).toHaveBeenCalledWith(200);
-    expect(bodyOf(res).data.credibility_rationale).toBe(
-      "Rated before the source rules; this is the earlier confidence level until the label is recomputed.",
-    );
+    expect(bodyOf(res).data.status).toBe("dismissed");
+    expect(bodyOf(res).data.credibility_rationale).toBe("Rated with the earlier confidence rule.");
+    expect(bodyOf(res).data.credibility_rationale).toBe(LEGACY_NOTE);
   });
 
   it("dismisses without a note", async () => {

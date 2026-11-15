@@ -57,8 +57,11 @@ export interface PageText {
   canonicalUrl: string | null;
 }
 
-/** The same size as the fetch limit; a page that is longer is read as far as this. */
-const MAX_HTML_CHARS = 2_097_152;
+/**
+ * The same size as the fetch limit; a page that is longer is read as far as this. A page that a
+ * browser builds is cut to it inside the browser (see renderPage.ts).
+ */
+export const MAX_HTML_CHARS = 2_097_152;
 /**
  * How many entries of its stack of open tags the parser may search, counted once for every `<` of
  * the page. A `<` can make it search the whole stack twice (an end tag with an svg name inside a

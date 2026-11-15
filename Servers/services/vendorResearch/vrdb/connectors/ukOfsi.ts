@@ -15,7 +15,8 @@
  * A record says that the list holds a notice that names the party, and that a notice is not a
  * designation: a penalty is OFSI's civil finding of a breach, and nothing in a record says that the
  * vendor did anything. The match is by the NAME alone (weak), and a name is read from text, so a
- * shape that is not known gives NO party and never a wrong one.
+ * shape that is not known is meant to give no party rather than a wrong one; the named residuals
+ * (vendors.md) are the known exceptions.
  *
  * What is read. Of a notice: its `title`, its `link`, its `public_timestamp`, and, only for a
  * disclosure notice whose title is a date, its `description` up to the end of the party list. The
@@ -113,8 +114,32 @@
  * person, and the other sides stay parties (`Casey Sample t/a Example Services`, `Casey Sample
  * (Example Ltd)`). A bracket is one part: a comma, the word and or a dash inside it splits nothing,
  * its inside is read as a text of its own, and a bracket that a cut left open reads to the end of
- * the text. The persons are dropped and the other parts are the parties; one company that holds the
- * word and in that shape is recorded under its first part alone. A title that opens with the shape
+ * the text. The persons are dropped and the other parts are the parties. A part that goes on with
+ * the name before it (`Co Ltd`, `Sons Ltd`, `Partners LLP`, `Co. KG`, or after an ampersand a part
+ * of generic words alone that opens with a word of an organisation, `Trading Company Limited`) is
+ * never a party of its own: it is joined to that name as written (`Svarog Shipping & Trading
+ * Company Limited and Casey Sample` gives the one company), also when a side person stands in its
+ * bracket or after its marker (the person is put aside and counted), left out after a name that a
+ * legal form of any list or a status ends (`endsAFirmName`: `Kovex s.r.o.`, `Kovex Trading FZE`),
+ * and left out with the person whose firm it names (`Casey Sample (in liquidation) and Sons Ltd and
+ * Kovex Ltd` gives `Kovex Ltd`). After the word and, such a part is a part of its own and is never
+ * joined: where the slot is split, `Standard Chartered Bank and Trust Bank` is cut into two parts, and
+ * the part of generic words alone (`Trust Bank`) then gets no record (a description gives
+ * `standardcharteredbank`); a title that lists no person is one slot and one key. A party that a cut of the slot
+ * gave, whatever the path, whose every word is generic gets no record (`hasDistinctiveWord`, read on
+ * the words of the key's name, `shortName`: a leading `The` is no word of it): a tail word, a word
+ * of an organisation, a legal form, a word of a status, and a connective, a word of a role or a
+ * joiner written in lower case (`Van Shipping Ltd` keeps `Van`). So `Sons Ltd`, `Co Ltd`, `The Sons
+ * Ltd` and `Trading Company Limited` cut from a list never become a record, and neither does a
+ * real firm of generic words alone that a list names (a description that lists `Kovex Ltd and Trust
+ * Bank` gives `kovex`; a title read as one slot gives one key for the whole of it), the accepted
+ * cost; the residual AND_FIRM: `Svarog Shipping and Trading Company Limited and Casey Sample` gives
+ * `Svarog Shipping` alone. A party that is the whole slot and holds a capital letter (`SAS AB`, `EV
+ * Group`, `Partners Group AG`) is the name the notice gives and is never gated (`oneParty` in
+ * `ofsiReadingOf`; a whole slot in lower case is gated, and `Sons Ltd` as a whole title gives
+ * `ofsi:sons`, as at version 7). A word of an organisation that a
+ * word in lower case follows ends no name (`Bank of Example and Gozo Islands` is one company), so a
+ * person after such a company (`Bank of Example and Casey Sample`) stays in its one party. A title that opens with the shape
  * and ends with a legal form (`Example Bread and Sons Ltd`), and a list whose company has neither a
  * legal form nor an organisation word, cannot be told from one name that holds the word and: it
  * stays one party. A notice that names a person next to a party shows its kind alone as its title,
@@ -138,8 +163,8 @@
  * sole trader's marker is read, so a marker that follows a comma stays in front of its party
  * (`trading as Example Services`); a title reads it right. A role after a comma that holds a word
  * of an organisation or has five words or more (`Casey Sample, owner of the company`) is put aside
- * by a title of one slot, which drops the person; a description keeps that part as a party of its
- * own, for a role has four words at most and none of an organisation. A lower-case part of a list
+ * by a title of one slot, which drops the person; a description reads that part as a party of its
+ * own, which the gate of generic words then drops. A lower-case part of a list
  * is read as a role and left out, so a name that is written in lower case alone is lost from a
  * list. A tail of legal forms alone is the company's even when it is a role (`Casey Sample, co`,
  * for co-owner): the person stays in that party, and a title that is a list and ends so has no
@@ -177,7 +202,8 @@
  * `and director` makes its notice unreadable. A bracket whose inside begins with `and` (`Example Ltd
  * (and director Casey Sample)`) stays in its party with the person, a name made of initials alone
  * (`J.R. K.L.`) is kept as a party, `et al` after a company (`Example Ltd et al`) stays in its party,
- * and a role in a bracket after a person (`Casey Sample (director)`) is kept as a party of its own.
+ * and a role in a bracket after a person (`Casey Sample (director)`) is a part of its own, which the
+ * gate of generic words drops.
  *
  * Days. A notice's day is the Europe/London calendar day of its `public_timestamp` (43 of the
  * timestamps are local midnight written in UTC, so the UTC day would be the day before in summer);
@@ -330,6 +356,28 @@ const TRADING_MARKER = new RegExp(`,? (?:${TRADING_MARKERS.join("|")}) `, "i");
  */
 const SLASHED_LEAD = /^(?:t\/a|d\/b\/a|a\/k\/a|f\/k\/a|n\/k\/a|c\/o|and\/or)$/i;
 /**
+ * A marker of a trade name (TRADING_MARKERS) or a joiner written with slashes that opens a text, and
+ * the blank after it. TRADING_MARKER needs a blank before the marker, which the start of a text
+ * never has: the inside of a bracket (`Casey Sample (trading as Example Services)`) and a part of a
+ * description after a comma (`t/a Example Services`) keep the marker. There it is no part of the
+ * name, so it is taken off (`withoutLeadingMarker`), else the party, its id and its one key would
+ * hold it (`tradingasexampleservices`) and never match the business. It is taken off there only:
+ * a title's slot, or a part of it, that opens with `AKA`, `DBA`, `FKA` or `Formerly` is a company's
+ * own name (`AKA Brands Limited`, `DBA Group SRL`), which would lose its key and get the key of a
+ * common word (`group`).
+ */
+const LEADING_MARKER = new RegExp(`^(?:${[...TRADING_MARKERS, "c/o", "and/or"].join("|")}) `, "i");
+
+/**
+ * The text without the marker that opens it (LEADING_MARKER), when what is left is a party
+ * (`partyOf`); the text as it is otherwise (`Casey Sample (formerly Ltd)`: a legal form alone is no
+ * party), so that taking the marker off never makes a notice unreadable.
+ */
+function withoutLeadingMarker(text: string): string {
+  const rest = text.replace(LEADING_MARKER, "");
+  return rest !== text && partyOf(rest) !== null ? rest : text;
+}
+/**
  * A bracket that holds no bracket, closed or (at the end of the text) not: the group of an alias, or
  * of a name. A text that a cut left open (`Example Ltd (Casey Sample`) reads to its end.
  */
@@ -367,8 +415,11 @@ const NAME_WORD = new RegExp(
   `^${NAME_PART}(?:\\p{Pd}${NAME_PART}|['’]${NAME_PART}|['’][\\p{Ll}\\p{M}]+)*['’]?$`,
   "u",
 );
-/** A name word that an article in lower case leads, joined to it by a hyphen: `al-Sample`. */
-const ARTICLE_NAME = /^(?:al|el)-(.+)$/u;
+/**
+ * A name word that an article in lower case leads, joined to it by a hyphen of any kind (`\p{Pd}`,
+ * as NAME_WORD joins its parts): `al-Sample`, `al` and U+2010 before `Sample`.
+ */
+const ARTICLE_NAME = /^(?:al|el)\p{Pd}(.+)$/u;
 /**
  * A name word that `d'` or `l'` in lower case leads: `d'Arcy`, `l'Estrange`. What follows the
  * prefix is read as a name word (`isNameWord`), which begins with a capital: `d'arcy` is none.
@@ -708,9 +759,32 @@ function consistsOfLegalForms(words: string): boolean {
   return each.every((word) => word.length === 1) && isLegalForm(each.join(""));
 }
 
-/** Whether a word is a word of a person's name: a name word, or one that an article in lower case leads. */
-function isNameWord(word: string): boolean {
+/**
+ * A given name whose second part a hyphen joins in lower case (`Ji-sung`, `Ki-moon`, `Hyun-woo`,
+ * `Abdul-rahman`): a capitalised part, then one to six letters in lower case. It is read by the
+ * person rule alone (`isNameWord`); a word of an organisation or a legal form still makes the name a
+ * company's (`Coca-cola Ltd`), and a first part that is a tail of a firm (`Co-op`) is none.
+ */
+const HYPHENED_GIVEN_NAME = new RegExp(`^(${NAME_PART})\\p{Pd}\\p{Ll}{1,6}$`, "u");
+
+/**
+ * Legal forms that no other list of this file names (`Oyj` of Finland, `Lda` of Portugal), read by
+ * ONE rule only: a hyphened given name (HYPHENED_GIVEN_NAME) is none before them, so `Agro-trade
+ * Kovex Oyj` keeps the key it had at version 7. They end no name and make no word generic, and
+ * `Kovex Oyj` is still read as a person, as it always was (an unknown form).
+ */
+const HYPHEN_RULE_FORMS: ReadonlySet<string> = new Set(["oyj", "lda"]);
+
+/**
+ * Whether a word is a word of a person's name: a name word, or one that an article in lower case
+ * leads. A given name that a hyphen joins in lower case (HYPHENED_GIVEN_NAME) is one only when
+ * `hyphened` is set: `isPersonShaped` clears it when the name ends in a legal form of ANY list
+ * (`isFormWord`), so `Agro-trade Kovex FZE` and `Hi-tech SE` keep the key they had at version 7.
+ */
+function isNameWord(word: string, hyphened = true): boolean {
   if (NAME_WORD.test(word)) return true;
+  const given = hyphened ? HYPHENED_GIVEN_NAME.exec(word) : null;
+  if (given !== null && !FIRM_TAIL_WORDS.has(formOf(given[1]))) return true;
   const led = ARTICLE_NAME.exec(word) ?? ELISION_NAME.exec(word);
   return led !== null && NAME_WORD.test(led[1]);
 }
@@ -844,12 +918,103 @@ function isSuffixPart(part: string): boolean {
 }
 
 /**
+ * The words of the status of a company in liquidation, administration or receivership: `in
+ * liquidation`, `in voluntary liquidation`, `in creditors' voluntary liquidation`, `In
+ * Liquidation`. The case makes no difference, and the words are bounded.
+ */
+const STATUS_WORDS = `in (?:[\\p{L}${APOSTROPHES}]{1,20} ){0,2}(?:liquidation|administration|receivership)`;
+/** The inside of a bracket that is a status (STATUS_WORDS): a side of no one (`sidesOf`). */
+const STATUS_INSIDE = new RegExp(`^${STATUS_WORDS}$`, "iu");
+/**
+ * The status of a company in brackets at the end of a part: `(in liquidation)`, `(in voluntary
+ * liquidation)`, `(in administration)`, `(In Receivership)`. When a list is split into its parts, a
+ * part loses it (`withoutStatus`), so that `Kovex Trading Ltd (in liquidation) and Casey Sample`
+ * gives the company the key of its name, as the bracket did when it split the slot. A part that is
+ * the whole slot keeps it. The part is a line (one blank between words).
+ */
+const STATUS_IN_BRACKETS = new RegExp(`\\s?\\(${STATUS_WORDS}\\)$`, "iu");
+/** A part that is a status in brackets and nothing else: `Kovex Trading Ltd, (in liquidation)`. */
+const STATUS_PART = new RegExp(`^\\(${STATUS_WORDS}\\)$`, "iu");
+
+/**
+ * A part without the status in brackets at its end (STATUS_IN_BRACKETS), before or after a bracket
+ * alias (ALIAS), which stays: `Kovex Trading Ltd (in liquidation) (KTL)` is `Kovex Trading Ltd
+ * (KTL)`, whose party is `Kovex Trading Ltd`. A part without a status is returned as it is.
+ */
+function withoutStatus(part: string): string {
+  const alias = ALIAS.exec(part);
+  const head = alias === null ? part : part.slice(0, alias.index);
+  const bare = head.replace(STATUS_IN_BRACKETS, "");
+  if (bare === head) return part;
+  return alias === null ? bare : `${bare}${alias[0]}`;
+}
+
+/**
  * Whether a part of a list is an aside: the words of a role alone (`isRoleFragment`), `et al` alone
- * (`al` is a particle of a name, so the words of a role never hold it) or a suffix alone
- * (`isSuffixPart`). It is no party and no person, and a list leaves it out.
+ * (`al` is a particle of a name, so the words of a role never hold it), a suffix alone
+ * (`isSuffixPart`) or a status in brackets alone (STATUS_PART: `Kovex Trading Ltd, (in
+ * liquidation) and Casey Sample`). It is no party and no person, and a list leaves it out.
  */
 const isAside = (part: string): boolean =>
-  isRoleFragment(part) || ET_AL_ALONE.test(part) || isSuffixPart(part);
+  isRoleFragment(part) || ET_AL_ALONE.test(part) || isSuffixPart(part) || STATUS_PART.test(part);
+
+/**
+ * The words that go on with the name of a firm after a person's name in it, in lower case: `Casey
+ * Sample & Sons`, `& Co`, `and Partners`, `& Associates Ltd` (`continuesName`).
+ */
+const FIRM_TAIL_WORDS: ReadonlySet<string> = new Set([
+  "son",
+  "sons",
+  "daughter",
+  "daughters",
+  "brother",
+  "brothers",
+  "bros",
+  "sister",
+  "sisters",
+  "associate",
+  "associates",
+  "partner",
+  "partners",
+  "company",
+  "co",
+  "cie",
+  "family",
+  // The same words of other languages: `& Söhne`, `& Fils`, `& Figli`, `& Sønner`, `& Zonen`, `& Hijos`.
+  "söhne",
+  "sohne",
+  "fils",
+  "figli",
+  "sønner",
+  "zonen",
+  "hijos",
+  "filhos",
+]);
+
+/** Whether the last word of a text is a word of FIRM_TAIL_WORDS (`Kovex & Sons`, `Kovex & Cie`). */
+function endsInTailWord(text: string): boolean {
+  const words = text.split(" ");
+  return FIRM_TAIL_WORDS.has(formOf(unquoteWord(words[words.length - 1])));
+}
+
+/**
+ * Whether a part of a list goes on with the name before it, whatever its status: without its status
+ * and its alias, it is legal forms alone (`isFormWord`: `Co (in liquidation)`, `Co Ltd`, `Co. KG`) or opens with a word of
+ * FIRM_TAIL_WORDS (`Sons Ltd (in liquidation)`, `Partners LLP`, `Co Trading Ltd`). Its status tells
+ * nothing of where that name begins (`Casey Sample & Co (in liquidation)` is one firm, as `Casey
+ * Sample & Co` is), so it never splits the list. Any other part has a name of its own
+ * (`Kovex Trading Ltd`, `International Shipping Ltd`).
+ */
+function continuesName(part: string): boolean {
+  const written = withoutStatus(part)
+    .replace(ALIAS, "")
+    .split(" ")
+    .filter((word) => word !== "" && word !== "&");
+  return (
+    written.every((word) => isFormWord(word)) ||
+    (written.length > 0 && FIRM_TAIL_WORDS.has(formOf(unquoteWord(written[0]))))
+  );
+}
 
 /**
  * Whether a party has the shape of a person's name: two to five words,
@@ -876,6 +1041,11 @@ function isPersonShaped(party: string): boolean {
   while (suffixes < words.length && SUFFIXES.has(bareOf(words[words.length - 1 - suffixes]))) {
     suffixes += 1;
   }
+  // A hyphened given name (`Ji-sung`) is read as one only when the name ends in no legal form of
+  // any list (`isFormWord`) nor in one of HYPHEN_RULE_FORMS: `Agro-trade Kovex FZE` and
+  // `Agro-trade Kovex Oyj` are firms, as they were at version 7.
+  const last = words[words.length - 1];
+  const hyphened = !isFormWord(last) && !HYPHEN_RULE_FORMS.has(formOf(last));
   let full = 0;
   for (let at = 0; at < words.length; at += 1) {
     const word = words[at];
@@ -886,7 +1056,10 @@ function isPersonShaped(party: string): boolean {
     } else if (!INITIAL.test(word) && !JOINED_INITIALS.test(word)) {
       // A word of one letter, or of joined initials, is an initial, whatever else it is: only a longer
       // word is a name.
-      if (!isNameWord(word) && !isAbbreviation(word, at < titles, at >= words.length - suffixes)) {
+      if (
+        !isNameWord(word, hyphened) &&
+        !isAbbreviation(word, at < titles, at >= words.length - suffixes)
+      ) {
         return false;
       }
       full += 1;
@@ -932,7 +1105,9 @@ const entityKeyOf = (party: string): string => compactName(shortName(party));
  * description is no text, is longer than DESCRIPTION_MAX, does not have that shape, or has no part
  * left.
  */
-function describedCellsOf(description: unknown): { cells: string[]; charities: boolean } | null {
+function describedCellsOf(
+  description: unknown,
+): { cells: string[]; charities: boolean; slot: string } | null {
   // `lineWithin`, not a cut and a compare: a description that does not fit is no description that a
   // notice has, and a cut of it that has 1,000 units or fewer (a blank or a pair of surrogates at
   // the cut) is not a whole line.
@@ -944,17 +1119,254 @@ function describedCellsOf(description: unknown): { cells: string[]; charities: b
   if (found === null) return null;
   const charities = found[1] !== undefined;
   // The word `charities` names the parties organisations: the person rule does not apply, nor does it read them.
-  if (charities) return { cells: found[2].split(PARTY_SEPARATOR), charities };
-  const read = splitOutsideBrackets(found[2], PARTY_SEPARATOR)
-    .filter((cell) => !isAside(cell))
-    .flatMap((cell) => cellsOfSlot(cell));
-  return read.length === 0 ? null : { cells: read, charities };
+  if (charities) return { cells: found[2].split(PARTY_SEPARATOR), charities, slot: found[2] };
+  const parts = cutsOutsideBrackets(found[2], PARTY_SEPARATOR);
+  const unmarked = afterCommasWithoutMarker(
+    found[2],
+    parts.map((cut) => cut.part),
+  );
+  // A part that goes on with the name before it is no party of its own (`firmsOfCuts`): `Kovex and
+  // Sons Ltd` is one firm, and `Casey Sample and Sons Ltd` gives no `sons`.
+  const read = firmsOfCuts(
+    unmarked
+      .map((part, at) => ({ part, separator: parts[at].separator }))
+      .filter((cut) => !isAside(cut.part)),
+    (part) => part,
+  ).flatMap((cell) => cellsOfSlot(cell));
+  return read.length === 0 ? null : { cells: read, charities, slot: found[2] };
+}
+
+/**
+ * The parts of a description's list (`text` split at PARTY_SEPARATOR, outside brackets), each part
+ * that a comma opens without the marker that begins it (`withoutLeadingMarker`): `Casey Sample, t/a
+ * Example Services` names `Example Services`. The first part, and a part after the word and, are
+ * names as written (`by AKA Brands Limited`). The parts and their separators make the text again,
+ * so the separator before a part is found where the parts before it end.
+ */
+function afterCommasWithoutMarker(text: string, parts: readonly string[]): string[] {
+  let at = 0;
+  return parts.map((part, index) => {
+    const afterComma = index > 0 && text.startsWith(", ", at);
+    if (index > 0) at += afterComma ? ", ".length : " and ".length;
+    at += part.length;
+    return afterComma ? withoutLeadingMarker(part) : part;
+  });
+}
+
+/**
+ * The words in lower case that join the words of one name (`Bank of ...`, `Banco de ...`, `Trading
+ * House for ...`): after a word of an organisation, one of them says that the company's name goes on.
+ * A word that a hyphen joins to the next is one only after a particle of HYPHEN_CONNECTIVES
+ * (`al-Kovex`), and one that an apostrophe joins only after an elided head of ELIDED_CONNECTIVES
+ * (`d'Italia`): a compound such as `e-Solutions` or `do-it` is no connective. Any other word in
+ * lower case (`s.r.o.`, `eood`) is not.
+ */
+const NAME_CONNECTIVES: ReadonlySet<string> = new Set([
+  "of",
+  "for",
+  "the",
+  "in",
+  "on",
+  "at",
+  "to",
+  "de",
+  "du",
+  "des",
+  "del",
+  "della",
+  "delle",
+  "dei",
+  "di",
+  "da",
+  "do",
+  "dos",
+  "das",
+  "la",
+  "le",
+  "les",
+  "el",
+  "al",
+  "an",
+  "van",
+  "von",
+  "der",
+  "den",
+  "zu",
+  "und",
+  "et",
+  "y",
+  "e",
+  "für",
+  "pour",
+  "per",
+]);
+/** The heads that an apostrophe joins to the next word: `d'Italia`, `l'Union`. */
+const ELIDED_CONNECTIVES: ReadonlySet<string> = new Set(["d", "l"]);
+/** The particles that a hyphen joins to the next word: `al-Kovex`, `el-Kovex`. */
+const HYPHEN_CONNECTIVES: ReadonlySet<string> = new Set(["al", "el"]);
+/**
+ * A word in lower case joined to the next by a hyphen (any of `\p{Pd}`; U+2212 is folded to one)
+ * or by an apostrophe (APOSTROPHES): the head, and whether the joiner is an apostrophe.
+ */
+const JOINED_WORD = new RegExp(`^(\\p{Ll}+)(?:(\\p{Pd})|[${APOSTROPHES}])\\p{L}`, "u");
+
+/**
+ * Whether a word as written is a connective of a name: a word of NAME_CONNECTIVES, or a word joined
+ * to the next whose head the joiner allows (HYPHEN_CONNECTIVES after a hyphen, ELIDED_CONNECTIVES
+ * after an apostrophe). The hyphens and apostrophes are read alike whatever their code point
+ * (`foldedOf`, JOINED_WORD). A word with a dot never is one.
+ */
+function isNameConnective(written: string): boolean {
+  const word = foldedOf(written.replace(/,$/, ""));
+  if (word.includes(".")) return false;
+  if (NAME_CONNECTIVES.has(word)) return true;
+  const joined = JOINED_WORD.exec(word);
+  if (joined === null) return false;
+  return joined[2] === undefined
+    ? ELIDED_CONNECTIVES.has(joined[1])
+    : HYPHEN_CONNECTIVES.has(joined[1]);
+}
+
+/**
+ * A legal form written in lower case with dots, that no list of this rule holds: `s.r.o.`, `o.o.`
+ * (of `sp. z o.o.`), `d.o.o.`, `a.s.`, `e.V.`. It ends a part that holds a word of an organisation.
+ */
+const DOTTED_FORM = /^\p{Ll}\p{L}{0,2}(?:\.\p{L}{1,3})+\.?$/u;
+
+/**
+ * The legal forms that end a firm's name and that no other list of this file holds, lower case and
+ * without dots (`formOf`): the German partnerships (`KG`, `KGaA`, `OHG`, `mbB`, `Co. KG`), the
+ * European company (`SE`), the forms of the free zones of the Emirates (`FZE`, `FZCO`, `FZ-LLC`,
+ * `DMCC`), of the Balkans (`AD`, `EOOD`, `OOD`, `DOO`), of central Europe (`s.r.o.`, `a.s.`,
+ * `sp. z o.o.` and `e.V.` without their dots, `Zrt`, `Nyrt`) and of Malaysia (`Sdn`, `Bhd`). They are NO
+ * part of the person rule's own test of a firm (`isPersonShaped` ends a person's name with
+ * LEGAL_FORMS and LAST_WORD_FORMS alone): `Casey Sample AD` must stay a person. The person rule reads
+ * them in ONE place: a hyphened given name (`Ji-sung`) is no name word before a form of any list
+ * (`isFormWord`), so `Agro-trade Kovex AD` is no person. Otherwise they only say that the name of a
+ * firm that is no person has ended (`endsAFirmName`) and that a word is no word of a name of its own
+ * (`isGenericWord`).
+ */
+const MORE_FIRM_FORMS: ReadonlySet<string> = new Set([
+  "kg",
+  "kgaa",
+  "ohg",
+  "mbb",
+  "se",
+  "fze",
+  "fzco",
+  "fz-llc",
+  "fzllc",
+  "dmcc",
+  "ad",
+  "eood",
+  "ood",
+  "doo",
+  "sro",
+  "spzoo",
+  "zoo",
+  "ev",
+  "zrt",
+  "nyrt",
+  "sdn",
+  "bhd",
+  // The forms of the former Soviet states (`CJSC`, `ZAO`, `OAO`, `PAO`, `AO`, `TOO`), of Denmark
+  // (`ApS`), of the Gulf (`WLL`, `W.L.L.`), of Brazil and Portugal (`Ltda`) and of Belgium (`NV/SA`).
+  "cjsc",
+  "zao",
+  "oao",
+  "pao",
+  "ao",
+  "too",
+  "aps",
+  "wll",
+  "ltda",
+  "nv/sa",
+]);
+
+/**
+ * Whether a word, as written, is a legal form of ANY list that this file knows: the person rule's
+ * own (LEGAL_FORMS), the forms of the keys (`isLegalForm`: `co`, `pty`, `srl`), LAST_WORD_FORMS,
+ * MORE_FIRM_FORMS, a form in lower case with dots that no list names (DOTTED_FORM: `s.r.o.`, `o.o.`
+ * of `sp. z o.o.`, `a.s.`, `e.V.`), and `AS` or `A.S.` when it is not written as the word `as` (which
+ * a role holds: `as director`). It is the ONE test of a legal form of the rules of a firm's name
+ * (`endsAFirmName`, `continuesName`, `isGenericWord`, `splitAtPossessives`); the person rule keeps
+ * its narrower lists, so that a person is never read as a company because of a rarer form, except
+ * for a hyphened given name before it (`isPersonShaped`: `Agro-trade Kovex FZE` is a firm; the
+ * residual HYPHEN_GIVEN_FORM_SURNAME, `Ji-sung Ao`, is read as one too).
+ */
+function isFormWord(written: string): boolean {
+  const bare = unquoteWord(written);
+  const word = formOf(bare);
+  return (
+    isLegalForm(word) ||
+    LAST_WORD_FORMS.has(word) ||
+    MORE_FIRM_FORMS.has(word) ||
+    DOTTED_FORM.test(bare) ||
+    (word === "as" && bare !== "as")
+  );
+}
+
+/** An unknown legal form in capitals: two to five capitals (`ZRT`, `SPRL`). */
+const CAPITALS_FORM = /^\p{Lu}{2,5}$/u;
+
+/**
+ * Whether a part of a list closes the name of a firm, so that nothing goes on with it: a status in
+ * brackets ends it (`Kovex (in liquidation)`), or, its alias put aside, its last word is a legal
+ * form of any list (`isFormWord`: `Kovex Ltd`, `Kovex Trading FZE`, `Kovex s.r.o.`, `Kovex GmbH &
+ * Co. KG`), its last two are `Sdn Bhd`, or it is a part of two words or more that is no person's
+ * name and ends in an unknown form in capitals that is no word of an organisation (`Kovex Trading
+ * ZRT`). A word of an organisation alone ends no name here (`Svarog Shipping & Trading Company
+ * Limited` goes on after `Shipping`): that is what `endsOrganisation` adds. This is the ONE test of
+ * the end of a firm's name: `firmsOfCuts`, `ampersandGoesOn`, `endsOrganisation` and
+ * `splitAtPossessives` all read it.
+ */
+function endsAFirmName(part: string): boolean {
+  if (withoutStatus(part) !== part) return true;
+  const words = part
+    .replace(ALIAS, "")
+    .split(" ")
+    .filter((word) => word !== "");
+  if (words.length === 0) return false;
+  const last = words[words.length - 1];
+  if (isFormWord(last) || endsInMoreForms(words)) return true;
+  const written = unquoteWord(last);
+  return (
+    words.length >= 2 &&
+    CAPITALS_FORM.test(written) &&
+    !NOT_A_PERSON.has(formOf(written)) &&
+    !FIRM_TAIL_WORDS.has(formOf(written)) &&
+    !isPersonShaped(words.join(" "))
+  );
 }
 
 /** Whether the last word of a party is a legal form or a word of an organisation's name: the name ends there. */
 function closesName(party: string): boolean {
   const words = party.split(" ").map(unquoteWord);
   return NOT_A_PERSON.has(formOf(words[words.length - 1])) || endsInMoreForms(words);
+}
+
+/**
+ * Whether a part of a list that is no person is an organisation, so that a person after it is a
+ * party of its own: it ends a name (`closesName`), ends in a form of the keys (`isLegalForm`: `co`,
+ * `pty`, `srl`, which also end a company at a possessive), or holds a word of an organisation's
+ * name or a legal form of this rule that no connective of a name follows (`Example Trading FZE`:
+ * a form that no list knows after a word that no person's name holds). Without the last two, a
+ * company that ends in a form that only the keys know, or in none, kept the person after it in its
+ * own party, key and title. A connective after the organisation's word (`of`, `for`, `the`, `de`,
+ * `al-`: NAME_CONNECTIVES) says that the name goes on, and its words after the word and are still
+ * the company's: `Bank of Valletta and Gozo Islands` and `Trading House of Ural and Volga Region`
+ * are one party each, not a shorter company and a person. Any other word in lower case is no
+ * connective: a legal form that no list knows (`Kovex Trading s.r.o.`, `sp. z o.o.`, `eood`) still
+ * ends the company. A part whose name has ended (`endsAFirmName`: a legal form of any list, `Kovex
+ * s.r.o.`, `Kovex GmbH & Co. KG`) is an organisation too.
+ */
+function endsOrganisation(party: string): boolean {
+  if (closesName(party) || endsAFirmName(party)) return true;
+  const written = party.split(" ").map(unquoteWord);
+  const words = written.map(formOf);
+  return words.some(
+    (word, at) => NOT_A_PERSON.has(word) && !written.slice(at + 1).some(isNameConnective),
+  );
 }
 
 /**
@@ -975,23 +1387,33 @@ const isInside = (spans: ReadonlyArray<readonly [number, number]>, at: number): 
   spans.some(([start, end]) => at > start && at < end);
 
 /**
- * `text.split(separator)`, except that a separator inside a bracket group (BRACKET_GROUP) is left
- * alone: `Example Ltd (Casey Sample, director)` is one part, whose inside is read as a text of its
- * own (`sidesOf`).
+ * A part of a list and the separator that comes before it in the text (`""` for the first part):
+ * ` & `, ` and `, `, `, or the possessive and its blank (`'s `) where `splitAtPossessives` cut.
  */
-function splitOutsideBrackets(text: string, separator: RegExp): string[] {
+interface Cut {
+  part: string;
+  separator: string;
+}
+
+/**
+ * The cuts of `text.split(separator)`, each with the separator before it, except that a separator
+ * inside a bracket group (BRACKET_GROUP) is left alone: `Example Ltd (Casey Sample, director)` is
+ * one part, whose inside is read as a text of its own (`sidesOf`).
+ */
+function cutsOutsideBrackets(text: string, separator: RegExp): Cut[] {
   const spans = bracketSpansOf(text);
-  if (spans.length === 0) return text.split(separator);
-  const parts: string[] = [];
+  const cuts: Cut[] = [];
   let from = 0;
+  let before = "";
   for (const found of text.matchAll(new RegExp(separator.source, "g"))) {
     const at = found.index ?? 0;
     if (isInside(spans, at)) continue;
-    parts.push(text.slice(from, at));
+    cuts.push({ part: text.slice(from, at), separator: before });
+    before = found[0];
     from = at + found[0].length;
   }
-  parts.push(text.slice(from));
-  return parts;
+  cuts.push({ part: text.slice(from), separator: before });
+  return cuts;
 }
 
 /**
@@ -1017,38 +1439,349 @@ function lastWordsOf(text: string, from: number, end: number, count: number): st
 }
 
 /**
+ * The end of `text.slice(from, end)` without the bracket groups (`bracketSpansOf`) that close at its
+ * end, one after the other, and the blanks before each: `Example Ltd (EBL) (in liquidation)` ends
+ * after `Ltd`. A group that opens before `from` is kept; `end` when no group closes there.
+ */
+function endBeforeBrackets(
+  text: string,
+  spans: ReadonlyArray<readonly [number, number]>,
+  from: number,
+  end: number,
+): number {
+  let stop = end;
+  for (;;) {
+    const group = spans.find(([start, close]) => close === stop && start >= from);
+    if (group === undefined || text[stop - 1] !== ")") return stop;
+    stop = group[0];
+    while (stop > from && text[stop - 1] === " ") stop -= 1;
+  }
+}
+
+/**
  * `text` cut where a legal form or a word of an organisation's name is followed by a possessive, outside
  * brackets, the possessive and its blank left out: `Example Ltd's director Casey Sample` is
  * `Example Ltd` and `director Casey Sample`. The company ends at the form, and the rest is the next
- * part, which a list reads as it reads any part. The forms are those that the rule knows: its own
- * (`LEGAL_FORMS`), the organisation words, the forms of LAST_WORD_FORMS and the forms of the keys
- * (`isLegalForm`: `co`, `pty`, ...), in any case, with their dots or without. A possessive after
- * any other word is the name's own (`Casey Sample's Example Ltd`, `Alden Brook's`): no cut.
+ * part, which a list reads as it reads any part. The forms are those that end a firm's name
+ * (`endsAFirmName`: a form of any list, in any case, with their dots or without) and the words of
+ * an organisation (`closesName`). A possessive after
+ * any other word is the name's own (`Casey Sample's Example Ltd`, `Alden Brook's`): no cut. The
+ * bracket groups that close right before the possessive are stepped over, and the words before them
+ * are read (`Example Ltd (EBL)'s director`, `Example Ltd (in liquidation)'s director`): the part
+ * keeps the groups, and a list takes the alias and the status off it as it does elsewhere.
  */
-function splitAtPossessives(text: string): string[] {
+function splitAtPossessives(text: string): Cut[] {
   const spans = bracketSpansOf(text);
-  const parts: string[] = [];
+  const parts: Cut[] = [];
   let from = 0;
+  let before = "";
   for (const found of text.matchAll(POSSESSIVE)) {
     const at = found.index ?? 0;
     if (isInside(spans, at)) continue;
-    const words = lastWordsOf(text, from, at, 2);
+    const end = endBeforeBrackets(text, spans, from, at);
+    const words = lastWordsOf(text, from, end, 2);
     if (words.length === 0) continue;
-    const closing = closesName(words.join(" ")) || isLegalForm(formOf(words[words.length - 1]));
+    // A status in brackets ends a name as a form does: `Alden Brook (In Liquidation)'s Kovex Ltd`.
+    const status = withoutStatus(text.slice(from, at)) !== text.slice(from, at);
+    const closing = status || closesName(words.join(" ")) || endsAFirmName(words.join(" "));
     if (!closing) continue;
-    parts.push(text.slice(from, at));
+    parts.push({ part: text.slice(from, at), separator: before });
+    before = found[0];
     from = at + found[0].length;
   }
-  parts.push(text.slice(from));
+  parts.push({ part: text.slice(from), separator: before });
   return parts;
 }
 
 /**
- * The parts of a slot: the cuts at TITLE_SEPARATOR outside brackets, each cut again at its
- * possessives.
+ * The parts of a slot, each with the separator before it: the cuts at TITLE_SEPARATOR outside
+ * brackets, each cut again at its possessives (the first piece of a cut keeps the cut's separator).
  */
-const partsOfSlot = (slot: string): string[] =>
-  splitOutsideBrackets(slot, TITLE_SEPARATOR).flatMap((part) => splitAtPossessives(part));
+const cutsOfSlot = (slot: string): Cut[] =>
+  cutsOutsideBrackets(slot, TITLE_SEPARATOR).flatMap(({ part, separator }) =>
+    splitAtPossessives(part).map((piece, at) =>
+      at === 0 ? { part: piece.part, separator } : piece,
+    ),
+  );
+
+/**
+ * Whether the part after ` & ` goes on with the name of a firm before it, so that the two are one
+ * firm (`Svarog Shipping & Trading Company Limited`; the caller asks only after an ampersand, so
+ * `Svarog Shipping and Trading Company Limited` is two parts): the part opens with a word of an organisation's name (`Trading`, `Services`,
+ * `Holdings`) and has no word of a name of its own (`hasNoNameOfItsOwn`), and the part before it
+ * has not ended a name (`endsAFirmName`: `Kovex Ltd and Trading Services Ltd` is a firm and a part
+ * that is no firm). A part with a name of its own (`Kovex & Quillon Ltd`, `Alpha Trading and Beta
+ * Services Ltd`) still lists two parties. The caller makes sure that neither holds a person.
+ */
+function ampersandGoesOn(before: string, part: string): boolean {
+  if (endsAFirmName(before)) return false;
+  const first = formOf(unquoteWord(withoutStatus(part).split(" ")[0]));
+  return ORGANISATION_WORDS.includes(first) && hasNoNameOfItsOwn(part);
+}
+
+/** A word that is an alias in brackets alone: `(KSL)`. */
+const ALIAS_WORD = /^\([“"']?[A-Z]{2,8}[”"']?\)$/u;
+
+/**
+ * The words of a status (STATUS_WORDS) that a party may still hold, in any case (STATUS_WORDS_OF_A_PARTY),
+ * and the words of a role (`director`, `owner`), the joiners of a title (`and/or`, `as well as`,
+ * `plus`) and the words `sp` and `z` of the form `sp. z o.o.`, which are such words only when they
+ * are written in lower case (ROLE_AND_JOINER_WORDS): no word of a name of a firm.
+ */
+const STATUS_WORDS_OF_A_PARTY: ReadonlySet<string> = new Set([
+  "in",
+  "voluntary",
+  "compulsory",
+  "creditors",
+  "creditors'",
+  "members",
+  "members'",
+  "liquidation",
+  "administration",
+  "receivership",
+]);
+const ROLE_AND_JOINER_WORDS: ReadonlySet<string> = new Set([
+  "director",
+  "directors",
+  "owner",
+  "owners",
+  "officer",
+  "manager",
+  "shareholder",
+  "founder",
+  "chairman",
+  "its",
+  "his",
+  "her",
+  "their",
+  "former",
+  "sole",
+  "trader",
+  "and",
+  "or",
+  "with",
+  "et",
+  "al",
+  // The joiners of a title (TITLE_SEPARATOR), which a slot that is one party may still hold.
+  "and/or",
+  "together",
+  "as",
+  "well",
+  "plus",
+  "c/o",
+  "vs",
+  "versus",
+  // The words of `sp. z o.o.` before its dotted end.
+  "sp",
+  "z",
+]);
+
+/**
+ * Whether a word, as written, is GENERIC: no word of a name of its own. It is a word of
+ * FIRM_TAIL_WORDS (`Sons`, `Co`, `Partners`), a word of an organisation (`Trading`, `Group`), a legal
+ * form of any list (`isFormWord`), a word of a status, a connective of a name, a word of a role or a
+ * joiner in lower case that stands alone (`of`, `de`, `director`, `plus`; `Le`, `Van` and `Plus` with a
+ * capital are words of a name), an alias in brackets alone (`(KSL)`), or no letter and no digit at
+ * all (`&`, `-`). The brackets and the quotes around a word are put aside first. Every other word
+ * (`Kovex`, `Watch`, `Mart`, `3i`) is DISTINCTIVE. This is the ONE classifier of the words of a
+ * firm's name: the join of a tail (`hasNoNameOfItsOwn`) and the gate on every key
+ * (`hasDistinctiveWord`) read it, so they cannot drift apart.
+ */
+function isGenericWord(written: string): boolean {
+  if (ALIAS_WORD.test(written)) return true;
+  const bare = written.replace(/^[(\[]+|[)\],;:]+$/gu, "");
+  if (!/[\p{L}\p{N}]/u.test(bare)) return true;
+  const word = formOf(unquoteWord(bare));
+  return (
+    FIRM_TAIL_WORDS.has(word) ||
+    NOT_A_PERSON.has(word) ||
+    isFormWord(bare) ||
+    STATUS_WORDS_OF_A_PARTY.has(word) ||
+    // A connective, a word of a role or a joiner that stands as a word of its own and is written in
+    // lower case; one with a capital is a word of a name (`Le`, `Van`, `An`, `Plus`), and one joined
+    // to a name (`al-Kovex`, `d'Italia`) holds that name.
+    (word === bare.toLowerCase().replace(/[.,]/g, "") &&
+      unquoteWord(bare) === unquoteWord(bare).toLowerCase() &&
+      (NAME_CONNECTIVES.has(word) || ROLE_AND_JOINER_WORDS.has(word)))
+  );
+}
+
+/**
+ * Whether a part of a list is the tail of a firm's name and nothing else: it goes on with the name
+ * before it (`continuesName`) and has no word of a name of its own (`hasNoNameOfItsOwn`): `Sons
+ * Ltd`, `Co. KG`, `Sons FZE`, `Partners SE`.
+ */
+const isTailOfAFirm = (part: string): boolean => continuesName(part) && hasNoNameOfItsOwn(part);
+
+/**
+ * Whether a tail of a firm's name (`isTailOfAFirm`) that may have the shape of a person's name is a
+ * tail all the same: its last word, its status and its alias aside, is a legal form written in
+ * capitals, a hyphen between them allowed, or with a dot (`Sons FZE`, `Partners SE`, `Sons OOO`,
+ * `Sons FZ-LLC`, `Co. KG`). `Son Co` and `Son Le` may
+ * be a person's name, and stay one.
+ */
+function isShapedTailOfAFirm(part: string): boolean {
+  if (!isTailOfAFirm(part)) return false;
+  const words = withoutStatus(part)
+    .replace(ALIAS, "")
+    .split(" ")
+    .filter((word) => word !== "");
+  const last = unquoteWord(words[words.length - 1] ?? "");
+  const capitals = last.length >= 2 && /^\p{Lu}+(?:\p{Pd}\p{Lu}+)*$/u.test(last);
+  return isFormWord(last) && (capitals || last.includes("."));
+}
+
+/**
+ * Whether a part of a list has no word of a name of its own: without its status, every word is
+ * generic (`isGenericWord`: `Sons Ltd`, `Co Trading Ltd`, `Partners Holdings Ltd`, `Trading Company
+ * Limited`, `Co. KG`, `Sons OOO`). `Company Watch Ltd`, `Family Mart Ltd` and `Bank of Valletta` have
+ * one: each is a firm of its own, never the tail of the name before it.
+ */
+const hasNoNameOfItsOwn = (part: string): boolean =>
+  withoutStatus(part)
+    .split(" ")
+    .filter((word) => word !== "")
+    .every(isGenericWord);
+
+/**
+ * Whether a name has a DISTINCTIVE word (one that `isGenericWord` does not take for generic). It is
+ * the final gate of every key that a cut of the slot gave (`ofsiReadingOf`; a party that is the whole
+ * slot and holds a capital letter is not gated: `oneParty`): a party made of generic words alone
+ * (`Sons Ltd`, `Co Ltd`, `Trading Company Limited`, `Co. KG`, `Partners JSC`) is the tail of a firm
+ * whose name a list cut, or a firm whose whole name is generic words, and it gets no record, whatever
+ * the path of the cut that gave it. The cost, accepted: a real firm whose whole name is generic
+ * words (`Partners Group AG`, `International Bank`) has no record when a list names it beside
+ * another party.
+ */
+const hasDistinctiveWord = (name: string): boolean =>
+  name
+    .split(" ")
+    .filter((word) => word !== "")
+    .some((word) => !isGenericWord(word));
+
+/** The forms of a German partnership that go on with a name that a form ended: `GmbH & Co. KG`. */
+const PARTNERSHIP_FORMS: ReadonlySet<string> = new Set(["kg", "kgaa", "ohg"]);
+
+/**
+ * Whether a part after ` & ` that is made of legal forms alone and ends in the form of a German
+ * partnership (`Co. KG`, `Co. KGaA`) goes on with a name that a form has ended: `Kovex GmbH & Co. KG`
+ * is one firm, whose form is `GmbH & Co. KG`.
+ */
+function partnershipGoesOn(separator: string, part: string): boolean {
+  if (separator !== " & ") return false;
+  const words = withoutStatus(part)
+    .replace(ALIAS, "")
+    .split(" ")
+    .filter((word) => word !== "");
+  return (
+    words.length > 0 &&
+    words.every((word) => isFormWord(word)) &&
+    PARTNERSHIP_FORMS.has(formOf(words[words.length - 1]))
+  );
+}
+
+/**
+ * The part that a part of a list opens with, with its side persons put aside, and the cells that
+ * follow it: the part itself when it holds no person; when it does, its cells (`cellsOfSlot`: the
+ * side persons of a bracket or of a marker, `Trading Company Limited (Casey Sample, director)`, and
+ * the persons that a joiner of a title or a possessive adds, `Sons Ltd with Casey Sample`), the
+ * first of them as the lead when it holds no person. A tail of a firm's name that has the shape of a
+ * person's name and no word that is not generic (`isShapedTailOfAFirm`: `Sons FZE`, `Partners SE`) is a lead
+ * as it is when `afterAFirm` (the part before it is no person's): `Halvex and Sons FZE` is one firm,
+ * and `Casey Sample & Sons FZE` is still read as two persons. Null when the part holds a person and
+ * no lead without one.
+ */
+function leadOf(part: string, afterAFirm: boolean): { lead: string; rest: string[] } | null {
+  if (!holdsPerson(part)) return { lead: part, rest: [] };
+  if (afterAFirm && isShapedTailOfAFirm(part)) return { lead: part, rest: [] };
+  const cells = cellsOfSlot(part);
+  if (cells.length < 2) return null;
+  if (holdsPerson(cells[0]) && !(afterAFirm && isShapedTailOfAFirm(cells[0]))) return null;
+  return { lead: cells[0], rest: cells.slice(1) };
+}
+
+/**
+ * The texts that a list gives once it is split, from its parts (`cuts`, asides left out): a part
+ * that goes on with the name before it is never a party of its own. A part goes on with that name
+ * when its lead (`leadOf`: the part with its side persons put aside) is a party, holds no person,
+ * and `continuesName` with no name of its own (`Co Ltd`, `Sons Ltd (in liquidation)`, `Partners
+ * LLP`, `Co. KG`), or, after ` & ` and a part with no person, `ampersandGoesOn` (`Svarog Shipping &
+ * Trading Company Limited`; after ` and ` it is a part of its own, as at version 7). It is joined to the part before it with the separator
+ * between them as written (`Kovex & Sons Ltd and Casey Sample` gives `Kovex & Sons Ltd`), and the
+ * persons of its sides follow as parts of their own, so that they are counted and never reach a key.
+ * When the part before it holds a person, the firm is named after that person (`Casey Sample (in
+ * liquidation) and Sons Ltd`): its tail is left out with it, and only the person's part is read, so
+ * that it is counted. A tail after a part that already ends a name (`endsAFirmName`: `Kovex Ltd (in
+ * liquidation) & Co`, `Kovex s.r.o. and Partners Group AG`) is left out too, except the form of a
+ * German partnership (`partnershipGoesOn`: `Kovex GmbH & Co. KG`). `bare` gives the text of each part
+ * that is read (`withoutStatus` for a title).
+ *
+ * `sideAt` is the index (in `cuts`) of the first part whose person stands beside a firm's name, given
+ * only when every person of the list is such a side person (`cellsOfSlot`), and Infinity otherwise.
+ * After it, a part that follows ` & ` joins the part before it when that part is the only one of its
+ * group, holds no person, has no status and does not end a name (no legal form, no word of an
+ * organisation, no word of FIRM_TAIL_WORDS): `Kovex Ltd (Casey Sample, director) and Ernst & Young
+ * LLP` gives `Ernst & Young LLP` whole, as the slot gave it before it was a list (version 11). A part
+ * before the side person's (`Ernst & Young LLP and Kovex Ltd (Casey Sample, director)`) and a part
+ * after ` and ` (`Morgan and Wexley Ltd`) are still cut.
+ */
+function firmsOfCuts(
+  cuts: readonly Cut[],
+  bare: (part: string) => string,
+  sideAt = Infinity,
+): string[] {
+  const groups: Array<{ parts: string[]; separators: string[]; person: boolean }> = [];
+  const open = (part: string, separator: string, person: boolean): void => {
+    groups.push({ parts: [part], separators: [separator], person });
+  };
+  for (const [cutAt, { part, separator }] of cuts.entries()) {
+    const last = groups[groups.length - 1];
+    // A part that is no party (`Ltd` alone: `partyOf`) stays a cell of its own, and the notice is
+    // unreadable, as it always was: it is never joined to a name.
+    const led = last === undefined ? null : leadOf(part, !last.person);
+    if (last === undefined || led === null || partyOf(bare(led.lead)) === null) {
+      open(part, separator, holdsPerson(part));
+      continue;
+    }
+    const before = last.parts[last.parts.length - 1];
+    const tail = isTailOfAFirm(led.lead);
+    // Only after ` & `: a part of generic words alone after ` and ` is a cut part of its own, never
+    // glued to the name before (`Standard Chartered Bank and Trust Bank` is cut into two parts, and
+    // `Trust Bank`, of generic words alone, then gets no record).
+    const joined = separator === " & " && !last.person && ampersandGoesOn(before, led.lead);
+    // The ` & ` inside the name of a firm listed after a firm with a side person (`sideAt`).
+    const inFirm =
+      cutAt > sideAt &&
+      separator === " & " &&
+      !last.person &&
+      last.parts.length === 1 &&
+      !holdsPerson(before) &&
+      withoutStatus(before) === before &&
+      !endsAFirmName(before) &&
+      !endsOrganisation(before) &&
+      !endsInTailWord(before);
+    if (inFirm) {
+      last.parts.push(led.lead);
+      last.separators.push(separator);
+      for (const cell of led.rest) open(cell, "", holdsPerson(cell));
+      continue;
+    }
+    if (!tail && !joined) {
+      open(part, separator, led.rest.length > 0);
+      continue;
+    }
+    if (last.person || !endsAFirmName(before) || partnershipGoesOn(separator, led.lead)) {
+      last.parts.push(led.lead);
+      last.separators.push(separator);
+    }
+    for (const cell of led.rest) open(cell, "", holdsPerson(cell));
+  }
+  return groups.map(({ parts, separators, person }) =>
+    person
+      ? bare(parts[0])
+      : parts.map((part, at) => (at === 0 ? "" : separators[at]) + bare(part)).join(""),
+  );
+}
 
 /**
  * The sides of a text that a bracket that is no alias or, failing that, a sole trader's marker
@@ -1057,22 +1790,28 @@ const partsOfSlot = (slot: string): string[] =>
  * words after it (every marker of the text), except a side that is the words of a role alone
  * (`isRoleFragment`): a cell that opens with a longer linker (`acting on behalf of Casey Sample`) has
  * `acting` before the marker that is found in it (`on behalf of`), and that word is no side.
+ * A bracket that holds a status (STATUS_INSIDE: `in liquidation`, `In Liquidation`) is taken off
+ * the text outside and is no side: it names no one, so `Casey Sample (In Liquidation)` is the side
+ * `Casey Sample`, a person, and the status is never counted as one.
  * A side is never empty, and is shorter than the text.
  */
 function sidesOf(text: string): string[] | null {
   const insides: string[] = [];
+  let statuses = 0;
   const outside = text.replace(BRACKET_GROUP, (group: string, inside: string) => {
     const words = inside.trim();
     if (ALIAS_INSIDE.test(words)) return group;
-    insides.push(words);
+    if (STATUS_INSIDE.test(words)) statuses += 1;
+    else insides.push(withoutLeadingMarker(words));
     return " ";
   });
-  if (insides.length > 0) {
+  if (insides.length > 0 || statuses > 0) {
     const outer = outside
       .replace(/\s+/g, " ")
       .replace(/ ([,;])/g, "$1")
       .trim();
-    return [outer, ...insides].filter((side) => side !== "");
+    const sides = [outer, ...insides].filter((side) => side !== "");
+    return sides.length > 0 ? sides : null;
   }
   if (TRADING_MARKER.test(text)) {
     return text.split(TRADING_MARKER).filter((side) => side !== "" && !isRoleFragment(side));
@@ -1094,14 +1833,40 @@ function holdsPerson(text: string): boolean {
 }
 
 /**
+ * Whether a party holds a person only on a side (`sidesOf`: a bracket or a marker) and a side of it is
+ * no person (or the tail of a firm's name, `isShapedTailOfAFirm`: `Sons FZE`) and ends a firm's name
+ * (`endsOrganisation`): `Zentrix Limited f/k/a Casey Sample`. A party of the shape of a person's
+ * name is none.
+ */
+function besidesAName(party: string): boolean {
+  if (isPersonShaped(party)) return false;
+  const sides = sidesOf(party);
+  // Only the FIRST side: a firm that a person's marker or bracket follows. A person before the
+  // marker (`Casey Quarby t/a Svarog Shipping & Trading Company Limited`) leaves the slot to its
+  // sides, so the firm after the marker keeps its whole name.
+  const first = sides?.[0];
+  return (
+    first !== undefined &&
+    (!holdsPerson(first) || isShapedTailOfAFirm(first)) &&
+    partyOf(first) !== null &&
+    endsOrganisation(first)
+  );
+}
+
+/** The two cuts that may stand inside the name of one firm (`Ernst & Young LLP`, `Ernst and Young LLP`). */
+const AMPERSAND_OR_AND: ReadonlySet<string> = new Set([" & ", " and "]);
+
+/**
  * The cells of the slot of a title, or of a part of a description: the slot is ONE party, unless it
  * reads as a list that holds a person, and then each part is a cell
  * (split at TITLE_SEPARATOR, and again after a legal form or a word of an organisation that a
- * possessive follows, `Example Ltd's director Casey Sample`: `partsOfSlot`; an aside is left out,
+ * possessive follows, `Example Ltd's director Casey Sample`: `cutsOfSlot`; an aside is left out,
  * `isAside`). It reads so when every part has the shape of a person's name, or when a part with
  * that shape comes after a part that ends a name with a legal form or a word of an organisation's
- * name (`Example Ltd & Casey Sample`). A slot that opens with the shape and ends with a legal form
- * (`Example Bread and Sons Ltd`) cannot be told from one company that holds the word and, and stays
+ * name (`Example Ltd & Casey Sample`), or after a part that is no person and ends in a form of the
+ * keys or holds such a word anywhere (`endsOrganisation`: `Example Trading FZE and Casey Sample`,
+ * `Example Trading Co's director Casey Sample`). A slot that opens with the shape and ends with a
+ * legal form (`Example Bread and Sons Ltd`) cannot be told from one company that holds the word and, and stays
  * one party; so does every slot with no part of that shape. A role at the end of the slot after a
  * comma that is made of legal forms alone (`Example Sample, corp`) is the company's: it stays with
  * the part before it, and the slot is read as if it had one part less. A sole trader and
@@ -1110,37 +1875,128 @@ function holdsPerson(text: string): boolean {
  * the slot, so the reading ends.
  */
 function cellsOfSlot(slot: string): string[] {
-  const parts = partsOfSlot(slot);
+  const cuts = cutsOfSlot(slot);
   // The tail that closes the slot after a comma and is made of legal forms alone is the company's, no
   // role: it stays with the part before it. A part in the middle of a list, and a part of a
   // description outside a bracket, is still left out as a role.
-  const tail = parts[parts.length - 1];
+  const tail = cuts[cuts.length - 1].part;
   if (isRoleFragment(tail) && consistsOfLegalForms(tail) && slot.endsWith(`, ${tail}`)) {
-    parts.splice(-2, 2, `${parts[parts.length - 2]}, ${tail}`);
+    const before = cuts[cuts.length - 2];
+    cuts.splice(-2, 2, { part: `${before.part}, ${tail}`, separator: before.separator });
   }
+  const parts = cuts.map((cut) => cut.part);
   if (parts.length >= 2) {
     let persons = 0;
     let named = 0;
     let closed = false;
     let personAfterName = false;
-    for (const part of parts) {
+    // The parts that end in a status in brackets, hold no person and do not go on with the name
+    // before them (`continuesName`): companies, whatever their order.
+    let statuses = 0;
+    let continuing = 0;
+    // A part with a name (a person's, or one that does not go on with the name before it) that a
+    // status in brackets ends has come: the name ends there, so such a part after it is another party.
+    let statusEndedName = false;
+    let partAfterStatus = false;
+    // Whether the part before (an aside apart) held a person: null before the first.
+    let lastHeld: boolean | null = null;
+    let tailAfterName = false;
+    // The parts whose person stands beside a firm's name (`besidesAName`), and the index of the first
+    // of them: when every person is such a side person, a ` & ` after it is read inside the name of
+    // a firm (`firmsOfCuts`).
+    let besides = 0;
+    let sideAt = Infinity;
+    // Whether the side person of a part may make the slot a list (`besidesAName`): not when the part
+    // follows a cut at ` & ` or ` and ` after a part that holds no person, inside a name that has
+    // not ended (`Ernst & Young LLP (Casey Sample, director)` has the part `Young LLP (...)`), unless
+    // its first side is the tail of a firm that joins the name before it all the same (`Torvik &
+    // Sons AB f/k/a Casey Sample`): the slot then stays whole as at version 7, its side person put
+    // aside (`sidesOf`).
+    const sideReadable = (at: number, party: string, afterPerson: boolean): boolean =>
+      named === 1 ||
+      afterPerson ||
+      !AMPERSAND_OR_AND.has(cuts[at].separator) ||
+      isTailOfAFirm(sidesOf(party)?.[0] ?? "");
+    for (const [at, part] of parts.entries()) {
       if (isAside(part)) continue;
       named += 1;
-      const party = partyOf(part);
+      // A status tells nothing of the words before it: every reading of the part below is of the
+      // part without it (`Kovex & Co (in liquidation)'s director` reads as `Kovex & Co's director`).
+      const bare = withoutStatus(part);
+      const party = partyOf(bare);
       if (party === null) {
-        // A legal form on its own (`Example, Ltd and Casey Sample`) ends the name before it.
-        if (isLegalFormsOnly(part)) closed = true;
+        // A legal form on its own (`Example, Ltd and Casey Sample`) ends the name before it, its alias
+        // aside as `partyOf` sets it aside (`Kovexbank, N.A. (KNA) and Casey Sample`).
+        if (isLegalFormsOnly(bare.replace(ALIAS, ""))) closed = true;
+        lastHeld = false;
         continue;
       }
-      if (holdsPerson(part)) {
+      const endsInStatus = bare !== part;
+      // A tail of a firm's name that has the shape of a person's name (`Sons FZE`, `Partners SE`)
+      // after a part that is no person is that firm's tail, as `leadOf` reads it: no person.
+      const shaped = holdsPerson(part);
+      const holds: boolean = shaped && !(lastHeld === false && isShapedTailOfAFirm(part));
+      const afterPerson = lastHeld === true;
+      lastHeld = holds;
+      // Such a tail after a name that has ended still makes the slot a list, as it did when it was
+      // read as a person: `Casey Sample & Kovex Management & Söhne FZE` is read part by part, so the
+      // person never reaches the firm's key (the tail joins the firm, `firmsOfCuts`).
+      if (shaped && !holds && closed) tailAfterName = true;
+      // A part that goes on with a name is no other party: `Example Bread (in liquidation) and Sons
+      // Ltd` gives no `sons`.
+      if (statusEndedName && (holds || !continuesName(part))) partAfterStatus = true;
+      // A part that goes on with the name before it adds no party of its own (`Brothers (in
+      // liquidation)` after a person's name): it never stops a list of persons and companies.
+      if (!holds && continuesName(part)) continuing += 1;
+      if (holds) {
         persons += 1;
-        if (closed) personAfterName = true;
-      } else if (closesName(party)) {
+        // A part that holds a person beside a name that is no person's (`Zentrix Limited f/k/a Casey
+        // Sample`, `Kovex Ltd (Casey Sample, director)`) is a firm and a person already: the list is
+        // read part by part, so that the person is put aside and the firm keeps its own key
+        // (`sideReadable` says where).
+        if (besidesAName(party)) {
+          besides += 1;
+          // Its index among the parts that are no aside: the cuts that `firmsOfCuts` reads.
+          if (sideAt === Infinity) sideAt = named - 1;
+        }
+        if (closed || (sideReadable(at, party, afterPerson) && besidesAName(party))) {
+          personAfterName = true;
+        }
+        if (endsInStatus) statusEndedName = true;
+      } else if (endsInStatus && !continuesName(part)) {
+        // A status in brackets ends the name of a company as a legal form does, and only a company
+        // has one: `Kovex (in liquidation) and Casey Sample` and `Casey Sample and Kovex Trading Ltd
+        // (in liquidation)` list a company and a person. A part that goes on with the name before it
+        // (`continuesName`: `Co (in liquidation)`) counts as no company.
+        statuses += 1;
+        closed = true;
+        statusEndedName = true;
+      } else if (endsInStatus || endsOrganisation(party) || endsInTailWord(party)) {
+        // A status in brackets and a word of FIRM_TAIL_WORDS end the name of a firm too (`Kovex &
+        // Sons (in liquidation) and Casey Sample`, `Kovex & Sons and Casey Sample`), even where they
+        // do not tell where it begins: the person after it is a party of their own.
         closed = true;
       }
     }
-    if (named > 0 && (persons === named || personAfterName)) {
-      return parts.filter((part) => !isAside(part)).flatMap((part) => cellsOfSlot(part));
+    // Persons, companies with a status, and the parts that go on with a name before them: a list once
+    // a status has ended a name (`Casey Sample (in liquidation) & Co Ltd` drops the person and its
+    // firm; `Casey Sample & Co (in liquidation)`, whose status ends no person's name, stays one firm).
+    const personsAndCompanies =
+      persons > 0 && (statuses > 0 || statusEndedName) && persons + statuses + continuing === named;
+    // `Casey Sample (In Liquidation) and Kovex Trading Ltd`: the status ends the person's name, and
+    // what follows it is another party.
+    const splitAtStatus = persons > 0 && partAfterStatus;
+    if (tailAfterName) personAfterName = true;
+    if (
+      named > 0 &&
+      (persons === named || personAfterName || personsAndCompanies || splitAtStatus)
+    ) {
+      return firmsOfCuts(
+        cuts.filter((cut) => !isAside(cut.part)),
+        withoutStatus,
+        persons > 0 && besides === persons ? sideAt : Infinity,
+        // A text that is the slot again (the tail joined the one firm it follows) is read no further.
+      ).flatMap((text) => (text === slot ? [text] : cellsOfSlot(text)));
     }
   }
   const sides = sidesOf(slot);
@@ -1176,13 +2032,20 @@ export function ofsiReadingOf(title: unknown, description: unknown): OfsiReading
 
   let cells: string[];
   let charities = false;
+  // The text of the parties as a whole: the slot of the title, or the list of the description.
+  let whole = slot;
   if (kind === "disclosure" && DATE_TITLE.test(slot)) {
     const described = describedCellsOf(description);
     if (described === null) return UNREADABLE;
-    ({ cells, charities } = described);
+    ({ cells, charities, slot: whole } = described);
   } else {
     cells = cellsOfSlot(slot);
   }
+  // A party that is the whole slot (one cell, the slot itself) and is written as a name (a capital in
+  // it) is the name the notice gives, never a part that a cut left: the gate of generic words is not
+  // applied to it (`SAS AB`, `EV Group`). A slot in lower case alone is the words of a role (`its
+  // director, the owner`), and is gated as any part is.
+  const oneParty = cells.length === 1 && cells[0] === whole && /\p{Lu}/u.test(whole);
   if (cells.length > MAX_PARTIES_PER_NOTICE) return UNREADABLE;
 
   const parties: string[] = [];
@@ -1196,6 +2059,11 @@ export function ofsiReadingOf(title: unknown, description: unknown): OfsiReading
       persons += 1;
       continue;
     }
+    // The final gate of every key that a cut gave, whatever the path (a title, a description, a
+    // list, a re-split): a part of generic words alone is no firm's own name (`hasDistinctiveWord`).
+    // It reads the words of the key's name (`shortName`: `The Sons Ltd` is `Sons Ltd`). A party that
+    // is the whole slot and holds a capital letter (`oneParty`) is the notice's own name: not gated.
+    if (!oneParty && !hasDistinctiveWord(shortName(party))) continue;
     if (nameKeysOf([party]).length === 0) continue;
     const key = entityKeyOf(party);
     // A key that does not fit is no key, and a cut of it is never one (as uk_mhra refuses a
@@ -1355,7 +2223,59 @@ function toRecord(row: OfsiRow): ParsedRecord {
 export function createUkOfsiConnector({ sleep = realSleep }: { sleep?: Sleep } = {}): Connector {
   return createFileConnector<OfsiRow>({
     id: "uk_ofsi",
-    version: 1,
+    // 2: a trade-name marker that opens a bracket or a part of a description after a comma is no
+    // part of the party, and a person after a company that ends in a form of the keys is a party of
+    // their own (`endsOrganisation`): parties, ids and keys change on an unchanged list. Still 2,
+    // unreleased: a word of an organisation that a word in lower case follows (`Bank of ...`) ends
+    // no company.
+    // 3: only a connective of a name (`of`, `de`, `al-`) after a word of an organisation goes on with
+    // the company; a legal form in lower case (`s.r.o.`, `sp. z o.o.`, `eood`) ends it, and the
+    // person after it is a party of their own again.
+    // 4: a hyphen or an apostrophe joins a connective whatever its code point, and only after
+    // `al`/`el` (hyphen) or `d`/`l` (apostrophe): `e-Solutions` ends the company; a part split off a
+    // person loses a status in brackets (`Kovex Trading Ltd (in liquidation)`: key kovextrading).
+    // 5: a status in any case, before or after an alias, or that a separator sets apart, is no party
+    // and no person; a possessive after a bracket ends the company (`Kovex Trading Ltd (EBL)'s
+    // director`); an article joined by any hyphen leads a name (`al` and U+2010 before `Sample`): the person is dropped.
+    // 6: a status ends a name only on a part that does not go on with the name before it: `J
+    // Sample & Co (in liquidation)` and `& Sons Ltd (in liquidation)` are one firm again (no `co` or
+    // `sons` key, no lost record); a part after a person's name that a status ends (`Casey Sample (In
+    // Liquidation) and Kovex Trading Ltd`, `... (In Liquidation)'s Kovex Trading Ltd`) is another
+    // party, and the person is dropped.
+    // 7: a status tells nothing of the words before it (`Kovex & Co (in liquidation)'s director` drops
+    // the director, as `Kovex & Co's director` does); a status and a tail word (`Sons`, `Cie`) end a
+    // firm's name; a split list joins a tail of a firm's name after ` & ` to the name before it
+    // (`Svarog Shipping & Trading Company Limited`, `Kovex & Sons Ltd` keep their key; a part with a
+    // word of its own is still cut there, `Ernst & Young LLP and Casey Sample` gives `ernst` and
+    // `young`) and gives no record of a tail (`sons`, `co`, `trading`, `pty ltd`).
+    // 8: one test of the end of a firm's name for every path (`endsAFirmName`: a legal form of any
+    // list, `s.r.o.`, `FZE`, `DMCC`, `KG`, `SE`, `AD`, `Sdn Bhd`), so a firm keeps its own key next to a
+    // generic part (`Kovex s.r.o. and Partners Group AG`); a part of generic words alone goes on with a
+    // name that has not ended after ` and ` too, and after its side persons are put aside (`Svarog
+    // Shipping and Trading Company Limited`, `... Limited (Casey Sample, director)`), also in a
+    // description where a title's joiner follows it (`Kovex and Sons Ltd with Casey Sample`); and one
+    // final gate gives no record to a name of generic words alone (`hasDistinctiveWord`: no `sons`,
+    // `co`, `trading`, `cokg`, `partnersjsc`, whatever the path; `Partners Group AG` has none either).
+    // 9: the wave-12 rules narrowed back where they moved a firm's key (r11's reading): a marker's
+    // side person is put aside only when the firm comes first (`Casey Quarby t/a Svarog Shipping &
+    // Trading Company Limited` keeps its whole key again); a part of generic words alone joins the
+    // name before it only after ` & ` (`Standard Chartered Bank and Trust Bank` keeps
+    // `standardcharteredbank`); the gate of generic words skips a party that is the whole slot (`SAS
+    // AB`, `AB Bank Limited`, `EV Group` keep their key) and reads the words of `shortName` (`The Sons
+    // Ltd` cut from a list gives none); a tail of the shape of a person after an ended name makes the
+    // slot a list again (no person in a whole-slot key); more forms (`CJSC`, `ZAO`, `ApS`, `WLL`,
+    // `Ltda`, `NV/SA`), `Sons FZ-LLC` as a tail, `Ji-sung Park` as a person, and an alias after a
+    // comma-set form (`Kovexbank, N.A. (KNA) and Casey Quarby`).
+    // 10: two rules of version 9 narrowed back to the reading of version 7: the side person of a part
+    // after a cut at ` & ` or ` and ` inside a name that has not ended no longer splits the slot
+    // (`Ernst & Young LLP (Casey Sample, director)`, `Marks & Spencer Group plc (formerly Casey
+    // Sample)` keep their whole key again; `sideReadable`), and a hyphened given name is no name word
+    // before a legal form of any list (`Agro-trade Kovex FZE`, `Hi-tech SE` keep their key again).
+    // 11: a firm that is listed AFTER a firm with a side person (`Kovex Ltd (Casey Sample, director)
+    // and Ernst & Young LLP`, `Kovex Ltd (formerly Casey Sample); Tate & Lyle PLC`; `sideAt` is the
+    // first part that has a side person, wherever it stands in the slot) keeps the ` & ` inside its
+    // name (`firmsOfCuts`): no `ernst`, `young`, `tate`, `lyle` records; the firm's whole key instead.
+    version: 11,
     root: "search.json",
     sortKey: (row) => row.key,
     pin: GOVUK_PIN,

@@ -28,6 +28,7 @@
 import { createHash } from "crypto";
 import { cleanText } from "../vendorResearch/text";
 import { parsePublicUrl } from "./publicUrl";
+import { ROBOTS_MAX_BYTES } from "./robots";
 // Types only, so that readPage and webSearch can use this module without a cycle.
 import type { FetchedPage, PageReader } from "./readPage";
 import type { PageIdentity } from "./siteIdentity";
@@ -48,12 +49,19 @@ export const CACHE_TTL_SECONDS: Record<CacheKind, number> = {
 
 /**
  * The most bytes of one entry. A larger value is not kept, so that a run of long pages cannot fill
- * the Redis that the queues share. A robots.txt is never read past 64 KiB, and a feed past 1 MiB
- * holds at most ten results of about 1 KiB. A GDELT index is up to 250 articles of a title and an
- * address, about a kilobyte each at the most: a larger one is an answer to leave out.
+ * the Redis that the queues share. A feed past 1 MiB holds at most ten results of about 1 KiB. A
+ * GDELT index is up to 250 articles of a title and an address, about a kilobyte each at the most: a
+ * larger one is an answer to leave out.
+ *
+ * A robots.txt is never read past ROBOTS_MAX_BYTES (500 KiB), and its entry is its status, a line
+ * break and its text, with nothing escaped (see cacheRobots). The text is the file decoded, where a
+ * byte gives at most one character of at most 3 bytes in UTF-8 (a byte that is not valid becomes
+ * U+FFFD, and a character of a charset of two bytes is at most 3), so the entry of any file that was
+ * read fits in 3 times ROBOTS_MAX_BYTES and a few bytes: no robots.txt is fetched again because its
+ * entry was too long.
  */
 export const MAX_ENTRY_BYTES: Record<CacheKind, number> = {
-  robots: 65_536,
+  robots: 3 * ROBOTS_MAX_BYTES + 16,
   page: 524_288,
   search: 65_536,
   gdelt: 262_144,
@@ -484,13 +492,20 @@ export async function readCachedRobots(
   cache: WebCache,
   origin: string,
 ): Promise<RobotsAnswer | null> {
-  const value = parseJson(await lookup(cache, "robots", origin));
-  if (!isRecord(value) || typeof value.text !== "string") return null;
-  if (value.status !== 200 && value.status !== 404) return null;
-  return { status: value.status, text: value.text };
+  const value = await lookup(cache, "robots", origin);
+  if (value === null) return null;
+  const lineBreak = value.indexOf("\n");
+  const status = value.slice(0, Math.max(0, lineBreak));
+  // An entry of another form (the JSON that an older version kept) is a miss.
+  if (status !== "200" && status !== "404") return null;
+  return { status: status === "200" ? 200 : 404, text: value.slice(lineBreak + 1) };
 }
 
-/** Keeps the answer for the origin. It does not wait for the store. */
+/**
+ * Keeps the answer for the origin as its status, a line break and its text. Not as JSON: JSON
+ * writes a line break in 2 bytes and a control character in 6, so a long file of short lines would
+ * pass the limit of an entry (MAX_ENTRY_BYTES) and never be kept. It does not wait for the store.
+ */
 export function cacheRobots(cache: WebCache, origin: string, answer: RobotsAnswer): void {
-  keep(cache, "robots", origin, JSON.stringify({ status: answer.status, text: answer.text }));
+  keep(cache, "robots", origin, `${answer.status}\n${answer.text}`);
 }

@@ -564,7 +564,8 @@ function recordFor(row: ApplicantRow): ParsedRecord {
 
 const SPEC: ListSpec<ApplicantRow> = {
   id: "c2pa_conforming",
-  version: 1,
+  // 2: a slash form (A/S) is a legal form: the applicant is keyed without it too.
+  version: 2,
   root: "conforming-products-list.json",
   sortKey: (row) => row.id,
   files: [

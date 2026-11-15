@@ -202,6 +202,13 @@ export const tenantIsolationRegistry: IsolationEntity[] = [
     tables: ["vendor_research_snapshots"],
     baseRoute: "/api/v1/vendors/:id/research",
   },
+  // No route of its own: the worker writes it when a run starts, and the start of a run reads it
+  // (the daily cap). It holds no vendor data and outlives the run's vendor.
+  {
+    name: "vendor_research_run_ledger",
+    tables: ["vendor_research_run_ledger"],
+    baseRoute: "/api/v1/vendors/:id/research",
+  },
   // No route of its own: the research pipeline writes it.
   {
     name: "vendor_vrdb_matches",

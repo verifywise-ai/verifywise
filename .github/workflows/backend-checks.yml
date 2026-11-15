@@ -150,7 +150,7 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        suite: [isolation-matrix, regression-suites, risk-links, smoke-and-audit]
+        suite: [isolation-matrix, regression-suites, risk-links, vendor-research, smoke-and-audit]
         # (#4680) The isolation pack must be proven with the RLS runtime flag
         # both off (current default) and on (RLS_ENFORCEMENT_ENABLED=true), so
         # the flag can be flipped in production without losing the guarantee.
@@ -160,6 +160,8 @@ jobs:
           - suite: regression-suites
             rls: on
           - suite: risk-links
+            rls: on
+          - suite: vendor-research
             rls: on
           - suite: smoke-and-audit
             rls: on
@@ -194,6 +196,18 @@ jobs:
           - 5432:5432
         options: >-
           --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+      # Only the vendor research suites need a real Redis (vendorResearch.enqueue
+      # queues through BullMQ); every other suite mocks it in tests/integration/setup.ts.
+      # An empty image starts no service container.
+      redis:
+        image: ${{ matrix.suite == 'vendor-research' && 'redis:7' || '' }}
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
@@ -255,6 +269,18 @@ jobs:
       - name: Run risk link integration suites
         if: matrix.suite == 'risk-links'
         run: npm run test:integration -- --testPathPatterns='tests/integration/riskLinks\.'
+
+      # The vendor research and vendor risk database suites (vendorResearch.*,
+      # vrdb.*, vendor-research*, vendor-risk-findings.*, vendorRisks.*) ran in no
+      # job either. Prefixes rather than names, like the risk link step, so a new
+      # suite of these areas runs without editing this file; anchored to
+      # `tests/integration/` so their tenant-isolation/ files stay in the isolation
+      # matrix, and vendors.test.ts stays in the regression suites.
+      - name: Run vendor research integration suites
+        if: matrix.suite == 'vendor-research'
+        env:
+          REDIS_URL: redis://localhost:6379/0
+        run: npm run test:integration -- --testPathPatterns='tests/integration/(vendorResearch|vrdb|vendor-research|vendor-risk-findings|vendorRisks)[.-]'
 
       - name: Run deadline-summary smoke test
         if: matrix.suite == 'smoke-and-audit'

@@ -88,6 +88,7 @@ import {
   updateVendorByIdQuery,
 } from "../../utils/vendor.utils";
 import { createVendor, createVendorV1, updateVendorById, updateVendorByIdV1 } from "../vendor.ctrl";
+import { logFailure } from "../../utils/logger/logHelper";
 
 type AnyMock = jest.Mock<(...args: any[]) => any>;
 const asMock = (fn: unknown): AnyMock => fn as AnyMock;
@@ -363,5 +364,53 @@ describe.each([
     expect(res.status).toHaveBeenCalledWith(400);
     expect(transaction.rollback).toHaveBeenCalledTimes(1);
     expect(updateVendorByIdQuery).not.toHaveBeenCalled();
+  });
+});
+
+// Express leaves req.body undefined for a request without a body or with another content type than
+// JSON, and a JSON body can be a list, a text, a number or null. The v1 routes answer 400 for any of
+// these before a transaction is opened or a failure is logged, where they answered 500 with a
+// TypeError ("Cannot read properties of undefined (reading 'vendor_name')").
+const NOT_AN_OBJECT: Array<[string, unknown]> = [
+  ["no body", undefined],
+  ["null", null],
+  ["a list", [CREATE_BODY]],
+  ["a text", "vendor_name=Acme"],
+  ["a number", 5],
+];
+
+/** A request whose body is `body` as it is, not a copy of an object. */
+const rawReq = (body: unknown, params: Record<string, string> = {}) =>
+  ({
+    body,
+    params,
+    userId: USER_ID,
+    role: "Admin",
+    organizationId: ORG_ID,
+    t: (key: string) => key,
+  }) as unknown as Request;
+
+describe.each([
+  ["POST /v1/vendors", (body: unknown, res: Response) => createVendorV1(rawReq(body), res)],
+  [
+    "PATCH /v1/vendors/:id",
+    (body: unknown, res: Response) =>
+      updateVendorByIdV1(rawReq(body, { id: String(VENDOR_ID) }), res),
+  ],
+])("%s with a body that is not a JSON object", (_route, call) => {
+  it.each(NOT_AN_OBJECT)("answers 400 for %s, before anything else runs", async (_label, body) => {
+    const res = makeRes();
+
+    await call(body, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "Bad Request",
+      data: "The request body must be a JSON object",
+    });
+    expect(sequelize.transaction).not.toHaveBeenCalled();
+    expect(logFailure).not.toHaveBeenCalled();
+    expect((VendorModel as any).createNewVendor).not.toHaveBeenCalled();
+    expect(model.updateVendor).not.toHaveBeenCalled();
   });
 });

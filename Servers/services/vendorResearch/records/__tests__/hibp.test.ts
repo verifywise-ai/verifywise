@@ -83,6 +83,25 @@ describe("parseHibp", () => {
     expect(parsed.map((item) => item.name)).toEqual(["Good"]);
   });
 
+  it("keeps a breach whose name has a hyphen, a dot or an underscore, and its record is at that name", () => {
+    const parsed = parseHibp([
+      raw({ Name: "7-Example" }),
+      raw({ Name: "Example.Shop" }),
+      raw({ Name: "Example_Ltd" }),
+    ]);
+
+    expect(parsed.map((item) => item.name)).toEqual(["7-Example", "Example.Shop", "Example_Ltd"]);
+    const { records } = hibpRecords(parsed.slice(0, 1), { domain: "brise.example" });
+    expect(records[0].url).toBe("https://haveibeenpwned.com/api/v3/breach/7-Example");
+  });
+
+  it.each([".", "..", "-Example", "Example/Other", "Example%2F"])(
+    "leaves out a name that could change the path of its record: %p",
+    (name) => {
+      expect(parseHibp([raw({ Name: name })])).toEqual([]);
+    },
+  );
+
   it("takes a name of a hundred characters and leaves out one of a hundred and one", () => {
     const parsed = parseHibp([raw({ Name: "A".repeat(100) }), raw({ Name: "B".repeat(101) })]);
 

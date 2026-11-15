@@ -100,18 +100,23 @@ function cursorOf(value: unknown): { day: string } | null {
 
 /**
  * A date of a record as an instant Postgres reads the same in every time zone: a day is its UTC
- * midnight. A value that is no date is null, so that one bad date does not fail the sync.
+ * midnight. A value that is no date is null, so that one bad date does not fail the sync. So is a
+ * year that Postgres does not read: there is no year 0000, and JavaScript writes a year before it or
+ * after 9999 with a sign and six digits (`-000001-…`, `+010000-…`).
  */
 function instantOf(value: string | null): string | null {
   if (value === null) return null;
+  let iso: string;
   if (DAY.test(value)) {
     const midnight = new Date(`${value}T00:00:00.000Z`);
-    return !Number.isNaN(midnight.getTime()) && midnight.toISOString().startsWith(value)
-      ? midnight.toISOString()
-      : null;
+    if (Number.isNaN(midnight.getTime()) || !midnight.toISOString().startsWith(value)) return null;
+    iso = midnight.toISOString();
+  } else {
+    const instant = new Date(value);
+    if (Number.isNaN(instant.getTime())) return null;
+    iso = instant.toISOString();
   }
-  const instant = new Date(value);
-  return Number.isNaN(instant.getTime()) ? null : instant.toISOString();
+  return /^\d{4}-/.test(iso) && !iso.startsWith("0000-") ? iso : null;
 }
 
 interface StoredRecord {
@@ -541,7 +546,9 @@ export const applyVrdbSnapshotQuery = async (
  * and notes the success on the list with the day as its cursor and its version and its number of
  * active records:
  * - a new record is inserted with its status; a stored one takes its content and status, and a
- *   record that comes without keys (a rejected CVE names no product) keeps those it had;
+ *   rejected record that comes without keys (a rejected CVE names no product) keeps those it had,
+ *   so that the rejection reaches the findings that cite it; an active record without keys loses
+ *   them (a CNA that corrected the affected vendor to "n/a" no longer names the vendor);
  * - a change of status, and a new record that is not active, is dated `at`;
  * - a stored record that is not among the changes stays as it is: nothing leaves the copy, but for
  *   the ids in `retire`;
@@ -600,8 +607,9 @@ export const applyVrdbDeltaQuery = async (
       for (const [id, record] of batch) {
         const old = before.get(id);
         const status = record.status ?? "active";
+        // Only a rejection keeps the keys it had: an active record names its products itself.
         const row = storedRecordOf(
-          old !== undefined && record.matchKeys.length === 0
+          old !== undefined && record.matchKeys.length === 0 && status === "rejected"
             ? { ...record, matchKeys: old.match_keys }
             : record,
         );

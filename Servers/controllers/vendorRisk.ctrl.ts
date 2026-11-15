@@ -13,6 +13,7 @@ import {
   getVendorRisksByFrameworkIdQuery,
 } from "../utils/vendorRisk.utils";
 import { VendorRiskModel } from "../domain.layer/models/vendorRisk/vendorRisk.model";
+import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 import { logProcessing, logSuccess, logFailure } from "../utils/logger/logHelper";
 import {
   trackVendorRiskChanges,
@@ -20,10 +21,12 @@ import {
 } from "../utils/vendorRiskChangeHistory.utils";
 import { notifyUserAssigned } from "../services/inAppNotification.service";
 import {
+  assertActionOwnerOfOrganization,
   CreateVendorRiskInput,
   createVendorRiskInTransaction,
   runVendorRiskPostCommitEffects,
 } from "../services/vendors/vendorRiskCreate.service";
+import { toId } from "../utils/validations/validation.utils";
 import { enqueueVendorRiskLinkRecompute } from "../services/automations/automationProducer";
 import logger from "../utils/logger/fileLogger";
 import { QueryTypes } from "sequelize";
@@ -284,6 +287,20 @@ export async function createVendorRisk(req: Request, res: Response): Promise<any
     return res.status(503).json(STATUS_CODE[503]({}));
   } catch (error) {
     await transaction.rollback();
+    // A request the create refuses (an action owner of another organization) is the caller's to
+    // correct, not a failure of the server.
+    if (error instanceof ValidationException) {
+      await logFailure({
+        eventType: "Create",
+        description: `Validation failed: ${error.message}`,
+        functionName: "createVendorRisk",
+        fileName: "vendorRisk.ctrl.ts",
+        error: error as Error,
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+    }
     await logFailure({
       eventType: "Create",
       description: "Failed to create vendor risk",
@@ -326,6 +343,15 @@ export async function updateVendorRiskById(req: Request, res: Response): Promise
         organizationId: req.organizationId!,
       });
       return res.status(404).json(STATUS_CODE[404]({}));
+    }
+
+    // The action owner is emailed the risk's text and the vendor's name, so a new owner must be a
+    // user of the organization, as on the create. An owner the request leaves as it is stored is not
+    // checked again: a risk whose owner has since left the organization can still be edited.
+    const requestedOwner: unknown = updatedVendorRisk.action_owner;
+    const storedOwner: unknown = (existingVendorRisk as { action_owner?: unknown }).action_owner;
+    if (requestedOwner && toId(requestedOwner) !== toId(storedOwner)) {
+      await assertActionOwnerOfOrganization(requestedOwner, req.organizationId!, transaction);
     }
 
     // Create model from existing data for change tracking
@@ -389,9 +415,11 @@ export async function updateVendorRiskById(req: Request, res: Response): Promise
       );
 
       // Notify action_owner if changed to a new user
+      // Compared as ids, as the check above does: the stored owner sent again as text ("8") is not
+      // a new owner, is not checked, and so must not be told again either.
       const oldActionOwner = (existingVendorRisk as any).action_owner;
       const newActionOwner = updatedVendorRisk.action_owner;
-      if (newActionOwner && newActionOwner !== oldActionOwner) {
+      if (newActionOwner && toId(newActionOwner) !== toId(oldActionOwner)) {
         const assignerName = await getUserNameById(req.userId!);
         const baseUrl = process.env.FRONTEND_URL || "http://localhost:5173";
 
@@ -450,6 +478,19 @@ export async function updateVendorRiskById(req: Request, res: Response): Promise
     return res.status(404).json(STATUS_CODE[404]({}));
   } catch (error) {
     await transaction.rollback();
+    // An action owner of another organization is the caller's to correct, as on the create.
+    if (error instanceof ValidationException) {
+      await logFailure({
+        eventType: "Update",
+        description: `Validation failed: ${error.message}`,
+        functionName: "updateVendorRiskById",
+        fileName: "vendorRisk.ctrl.ts",
+        error: error as Error,
+        userId: req.userId!,
+        organizationId: req.organizationId!,
+      });
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+    }
     await logFailure({
       eventType: "Update",
       description: "Failed to update vendor risk",

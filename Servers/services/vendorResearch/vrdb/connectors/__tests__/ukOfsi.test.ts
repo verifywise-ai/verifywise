@@ -12,6 +12,8 @@
  * `fakeFetch` and hand-written fetches answer, and the pause between two pages is a mock.
  */
 import { FetchError } from "../../../../webResearch/guardedFetch";
+import { shortName } from "../../../identity";
+import { compactName } from "../../../records/match";
 import { MAX_RECORDS } from "../../../records/types";
 import { vrdbSourceOf } from "../../sources";
 import { SHORTENED, lineOf } from "../kit/clean";
@@ -680,6 +682,21 @@ describe("ofsiReadingOf, the title and the description of a notice", () => {
     it("counts a party once, whatever the spelling of its legal form", () => {
       const description = `${BY} Examplebank Limited and Examplebank Ltd`;
       expect(partiesOf(TITLE, description)).toEqual(["Examplebank Limited"]);
+    });
+
+    it("ends a company at a legal form written with a slash (A/S, N/V, S/A), so the person after it goes", () => {
+      // identity.ts knows these forms: before it did, the person stayed in the company's party.
+      for (const form of ["A/S", "a/s", "I/S", "K/S", "P/S", "N/V", "S/A"]) {
+        for (const list of [
+          `Danspin ${form} and Casey Sample`,
+          `Danspin ${form}, Casey Sample`,
+          `Danspin ${form}'s director Casey Sample`,
+        ]) {
+          expect(ofsiReadingOf(`${PENALTY_OF}${list}`, "")).toEqual(
+            only("monetary penalty", `Danspin ${form}`),
+          );
+        }
+      }
     });
 
     it("is unreadable for a list of parties that is not one: an and after a comma, a legal form alone, an empty party", () => {
@@ -1402,8 +1419,9 @@ describe("ofsiReadingOf, the title and the description of a notice", () => {
         description: { shape: "unreadable" },
       });
       const formsAlone: Array<[string, unknown]> = [
-        ["pty ltd", kept("disclosure", "pty ltd")],
-        ["co ltd", kept("disclosure", "co ltd")],
+        // A tail of forms alone after the person goes with the person: no `pty ltd` party (wave 11).
+        ["pty ltd", gone("disclosure")],
+        ["co ltd", gone("disclosure")],
         ["s a", gone("disclosure")],
       ];
       for (const [tail, description] of formsAlone) {
@@ -1416,8 +1434,10 @@ describe("ofsiReadingOf, the title and the description of a notice", () => {
       // A form among the words of a role: the person with a role, put aside as a person.
       const formAmongWords: Array<[string, unknown]> = [
         ["co owner", gone("disclosure")],
-        ["owner of ltd", kept("disclosure", "owner of ltd")],
-        ["ltd owner", kept("disclosure", "ltd owner")],
+        // Wave 12: a part of generic words alone (a role and a form) is still read as a part, and the
+        // final gate of the keys gives it no record (`ownerofltd`, `ltdowner` were junk keys).
+        ["owner of ltd", gone("disclosure")],
+        ["ltd owner", gone("disclosure")],
       ];
       for (const [tail, description] of formAmongWords) {
         const reading = readings(`Casey Sample, ${tail}`);
@@ -1425,14 +1445,16 @@ describe("ofsiReadingOf, the title and the description of a notice", () => {
         expect(reading.disclosure).toEqual(gone("disclosure"));
         expect(reading.description).toEqual(description);
       }
-      // The same tail after a company that is no person: one party in a title, two in a description.
+      // The same tail after a company that is no person: one party in a title, and in a description the
+      // company alone (the tail of forms alone after a legal form is no party: wave 11).
       expect(readings("Otherco PLC, pty ltd")).toEqual({
         penalty: kept("monetary penalty", "Otherco PLC, pty ltd", 0),
         disclosure: kept("disclosure", "Otherco PLC, pty ltd", 0),
         description: {
           shape: "notice",
           kind: "disclosure",
-          parties: ["Otherco PLC", "pty ltd"],
+          // A tail of forms alone after a name that a legal form ends is no party (wave 11).
+          parties: ["Otherco PLC"],
           persons: 0,
         },
       });
@@ -1557,10 +1579,10 @@ describe("ofsiReadingOf, the title and the description of a notice", () => {
     });
 
     it("keeps a tail of legal forms with the party that it closes, in a list that a person splits, and puts a role that holds a form aside", () => {
-      // A tail that holds a form of this rule's own list is no role fragment: it is neither merged nor
-      // left out, and a list that a person splits has it as a party of its own (as a description does),
-      // whether it is forms alone or a role that holds one.
-      for (const tail of ["pty ltd", "co ltd", "ltd owner", "owner of ltd"]) {
+      // A tail that holds a form of this rule's own list is no role fragment: it is not merged. Forms
+      // alone after a name that a legal form ends are left out (no `pty ltd` or `co ltd` party: wave
+      // 11); a role that holds one is a party of its own in a list that a person splits.
+      for (const tail of ["pty ltd", "co ltd"]) {
         expect(
           ofsiReadingOf(
             `${PENALTY}Examplecorp Limited and Casey Sample and Otherco PLC, ${tail}`,
@@ -1569,7 +1591,22 @@ describe("ofsiReadingOf, the title and the description of a notice", () => {
         ).toEqual({
           shape: "notice",
           kind: "monetary penalty",
-          parties: ["Examplecorp Limited", "Otherco PLC", tail],
+          parties: ["Examplecorp Limited", "Otherco PLC"],
+          persons: 1,
+        });
+      }
+      // Wave 12: the role that holds a form is still a part of its own, and the final gate of the
+      // keys gives a part of generic words alone no record.
+      for (const tail of ["ltd owner", "owner of ltd"]) {
+        expect(
+          ofsiReadingOf(
+            `${PENALTY}Examplecorp Limited and Casey Sample and Otherco PLC, ${tail}`,
+            "",
+          ),
+        ).toEqual({
+          shape: "notice",
+          kind: "monetary penalty",
+          parties: ["Examplecorp Limited", "Otherco PLC"],
           persons: 1,
         });
       }
@@ -1746,16 +1783,24 @@ describe("ofsiReadingOf, the title and the description of a notice", () => {
     });
 
     it("keeps a part made of particles: a particle is a word of a name, never of a role", () => {
+      // Wave 12: the part is read (the notice is readable), and the final gate of the keys gives a part
+      // of connectives alone no record.
       expect(ofsiReadingOf(DATE_TITLE, `${BY} ${COMPANY}, van al, Otherco PLC`)).toEqual({
         shape: "notice",
         kind: "disclosure",
-        parties: [COMPANY, "van al", "Otherco PLC"],
+        parties: [COMPANY, "Otherco PLC"],
+        persons: 0,
+      });
+      expect(ofsiReadingOf(DATE_TITLE, `${BY} ${COMPANY}, van Kovex, Otherco PLC`)).toEqual({
+        shape: "notice",
+        kind: "disclosure",
+        parties: [COMPANY, "van Kovex", "Otherco PLC"],
         persons: 0,
       });
     });
 
     it("keeps a part of lower-case words that holds a legal form or a word of an organisation: a name, no role", () => {
-      for (const part of ["example holdings", "example limited", "the trust"]) {
+      for (const part of ["example holdings", "example limited"]) {
         expect(ofsiReadingOf(DATE_TITLE, `${BY} ${COMPANY}, ${part}, Otherco PLC`)).toEqual({
           shape: "notice",
           kind: "disclosure",
@@ -1763,6 +1808,13 @@ describe("ofsiReadingOf, the title and the description of a notice", () => {
           persons: 0,
         });
       }
+      // Wave 12: a part of generic words alone (`the trust`) gets no record (the final gate).
+      expect(ofsiReadingOf(DATE_TITLE, `${BY} ${COMPANY}, the trust, Otherco PLC`)).toEqual({
+        shape: "notice",
+        kind: "disclosure",
+        parties: [COMPANY, "Otherco PLC"],
+        persons: 0,
+      });
     });
 
     it("is unreadable when a description has nothing left but roles, and reads a title of roles as one party, as it was", () => {
@@ -1770,7 +1822,9 @@ describe("ofsiReadingOf, the title and the description of a notice", () => {
       expect(ofsiReadingOf(DATE_TITLE, `${BY} its owner, director`)).toEqual({
         shape: "unreadable",
       });
-      expect(partiesOf(`${PENALTY}its director, the owner`)).toEqual(["its director, the owner"]);
+      // Wave 12: the title of roles is still one readable party, and the final gate of the keys gives
+      // it no record (no word of it is a name).
+      expect(partiesOf(`${PENALTY}its director, the owner`)).toEqual([]);
     });
 
     it("keeps a name whose rest, once the role is taken off, holds a legal form or a word of an organisation", () => {
@@ -1803,10 +1857,8 @@ describe("ofsiReadingOf, the title and the description of a notice", () => {
       for (const party of ["Mrs. Casey Sample", "its director Casey Sample", "Casey DeSample"]) {
         expect(partiesOf(DATE_TITLE, `${BY} charities ${party}`)).toEqual([party]);
       }
-      expect(partiesOf(DATE_TITLE, `${BY} charities Example Aid, owner`)).toEqual([
-        "Example Aid",
-        "owner",
-      ]);
+      // Wave 12: the final gate of the keys holds for charities too: `owner` alone is no name.
+      expect(partiesOf(DATE_TITLE, `${BY} charities Example Aid, owner`)).toEqual(["Example Aid"]);
     });
   });
 
@@ -1906,6 +1958,9 @@ describe("ofsiReadingOf, the title and the description of a notice", () => {
         "Examplecorp Limited, Ltd and Casey Sample",
         // A legal form on its own ends the name before it: the part after it is a person, and a list.
         "Examplecorp, Ltd and Casey Sample",
+        // A part that is no party is never joined to the name before it (wave 11): still unreadable.
+        "Kovex Ltd, Ltd and Casey Sample",
+        "Casey Sample (in liquidation), (KTL) and Kovex Ltd",
       ]) {
         expect(ofsiReadingOf(`${PENALTY}${slot}`, "")).toEqual({ shape: "unreadable" });
       }
@@ -2222,19 +2277,29 @@ describe("ofsiReadingOf, the title and the description of a notice", () => {
         parties: [COMPANY, "Otherco Limited"],
         persons: 1,
       });
-      // A person in a bracket of one part is counted, and the rest of the title is read as the title
-      // of two companies is, as one party: no person-shaped part follows a company.
-      expect(readings(`${COMPANY} (${PERSON}), Otherco PLC`).penalty).toEqual({
+      // A person in a bracket of one part is counted. Wave 12: a part that holds a person beside a
+      // firm's name (`besidesAName`) makes the title a list, so each company keeps its own key (it was
+      // one party of both names before).
+      for (const joiner of [", ", " and ", " & "]) {
+        expect(readings(`${COMPANY} (${PERSON})${joiner}Otherco PLC`).penalty).toEqual({
+          shape: "notice",
+          kind: "monetary penalty",
+          parties: [COMPANY, "Otherco PLC"],
+          persons: 1,
+        });
+      }
+      expect(readings(`${COMPANY} f/k/a ${PERSON}; Otherco PLC`).penalty).toEqual({
         shape: "notice",
         kind: "monetary penalty",
-        parties: [`${COMPANY}, Otherco PLC`],
+        parties: [COMPANY, "Otherco PLC"],
         persons: 1,
       });
-      expect(readings(`${COMPANY} (${PERSON}) and Otherco PLC`).penalty).toEqual({
+      // A bracket that holds no person beside the name keeps the title one party.
+      expect(readings(`${COMPANY} (Otherco Limited), Thirdco PLC`).penalty).toEqual({
         shape: "notice",
         kind: "monetary penalty",
-        parties: [`${COMPANY} and Otherco PLC`],
-        persons: 1,
+        parties: [`${COMPANY} (Otherco Limited), Thirdco PLC`],
+        persons: 0,
       });
     });
 
@@ -2516,6 +2581,51 @@ describe("ofsiReadingOf, the title and the description of a notice", () => {
         }
       },
     );
+
+    it.each(["trading as", "t/a", "T/A", "Trading As", "formerly", "d/b/a"])(
+      "takes %s off the business when it opens a bracket: the party and its key hold the name alone",
+      (marker) => {
+        // The marker needs a blank before it to divide a text, and the inside of a bracket has none:
+        // the business side kept the marker in its name, its id and its one key.
+        const read = readings(`${PERSON} (${marker} Example Services)`);
+        expect(read.penalty).toEqual(kept("monetary penalty", "Example Services"));
+        expect(read.disclosure).toEqual(kept("disclosure", "Example Services"));
+        expect(read.description).toEqual(kept("disclosure", "Example Services"));
+      },
+    );
+
+    it("takes a marker off a cell of a description that a comma opens, and keeps a cell that is nothing else", () => {
+      expect(partiesOf(DATE_TITLE_OF, `${BY_OF} ${PERSON}, t/a Example Services`)).toEqual([
+        "Example Services",
+      ]);
+      // Without the marker the cell is a legal form alone, which is no party: it is read as written.
+      expect(partiesOf(`${PENALTY_OF}${PERSON} (formerly Ltd)`)).toEqual(["formerly Ltd"]);
+    });
+
+    it.each(["AKA Brands Limited", "DBA Group SRL", "FKA Holdings Ltd", "Formerly Example Ltd"])(
+      "keeps %s whole: a marker word that begins a company's own name is part of it",
+      (company) => {
+        // The marker came off every cell, a title's slot included, which renamed the company and
+        // gave it the key of a common word (`name:group`) instead of its own.
+        const read = readings(company);
+        expect(read.penalty).toEqual(kept("monetary penalty", company, 0));
+        expect(read.disclosure).toEqual(kept("disclosure", company, 0));
+        expect(read.description).toEqual(kept("disclosure", company, 0));
+        expect(partiesOf(`${PENALTY_OF}${company} and ${PERSON}`)).toEqual([company]);
+        expect(partiesOf(DATE_TITLE_OF, `${BY_OF} ${PERSON} and ${company}`)).toEqual([company]);
+      },
+    );
+
+    it("takes the marker off a part of a description after a comma only, never after the word and", () => {
+      expect(partiesOf(DATE_TITLE_OF, `${BY_OF} Example Ltd, aka Example Services`)).toEqual([
+        "Example Ltd",
+        "Example Services",
+      ]);
+      expect(partiesOf(DATE_TITLE_OF, `${BY_OF} Example Ltd and DBA Group SRL`)).toEqual([
+        "Example Ltd",
+        "DBA Group SRL",
+      ]);
+    });
 
     it.each(MARKERS)(
       "counts a person for each side of %s that names one, and a company that trades as a company is one party",
@@ -2812,9 +2922,1917 @@ describe("ofsiReadingOf, the title and the description of a notice", () => {
       },
     );
 
-    it("does not cut after AS followed by 's: the residual of the closing forms, a word of a role that a surname can be", () => {
-      const slot = "Alden Brook AS's director Quilla Quarrin";
-      expect(partiesOf(`${PENALTY_OF}${slot}`)).toEqual([slot]);
+    it.each([
+      [
+        "a form of the keys and a possessive",
+        "Example Trading Co's director Casey Sample",
+        "Example Trading Co",
+      ],
+      [
+        "a form that no list knows and the word and",
+        "Example Trading FZE and Casey Sample",
+        "Example Trading FZE",
+      ],
+      ["FZCO and the word and", "Example Holdings FZCO and Casey Sample", "Example Holdings FZCO"],
+      ["Pty and the word and", "Example Group Pty and Casey Sample", "Example Group Pty"],
+      [
+        "SRL and an ampersand",
+        "Example International SRL & Casey Sample",
+        "Example International SRL",
+      ],
+    ])(
+      "keeps the person out of a company that holds a word of an organisation and ends in %s",
+      (_name, slot, company) => {
+        // The company side is no person (it holds Trading, Holdings, Group or International), so the
+        // person after it is a party of its own and is left out, however the company ends: the whole
+        // slot was one party before, which held the person in its name, key and title.
+        const read = readings(slot);
+        expect(read.penalty).toEqual(kept("monetary penalty", company));
+        expect(read.disclosure).toEqual(kept("disclosure", company));
+        expect(read.description).toEqual(kept("disclosure", company));
+      },
+    );
+
+    it.each([
+      "Bank of Quarrowby and the Arab Countries SAL",
+      "Bank of Brindlemere and Gozo Islands",
+      "Trading House of Quarrowby and Volga Region",
+      "Shipping Corporation of Eastern and Western Seas",
+    ])(
+      "keeps %s whole in a title: a word in lower case after the word of an organisation says that the name goes on",
+      (company) => {
+        // The organisation word at the front was read as the end of a company: the title was
+        // recorded under its first part, another company's name, the rest counted as a person, and
+        // the notice lost its link and its title.
+        const read = readings(company);
+        expect(read.penalty).toEqual(kept("monetary penalty", company, 0));
+        expect(read.disclosure).toEqual(kept("disclosure", company, 0));
+      },
+    );
+
+    it("still drops a person after a company whose word of an organisation only words with a capital follow", () => {
+      expect(partiesOf(`${PENALTY_OF}Bank Quarrowby Iran and Casey Sample`)).toEqual([
+        "Bank Quarrowby Iran",
+      ]);
+      // The residual: after `Bank of ...` nothing tells the end of the company, and the slot is one
+      // party, as it was before any word of an organisation was read anywhere in a part.
+      expect(partiesOf(`${PENALTY_OF}Bank of Quarrowby and Casey Sample`)).toEqual([
+        "Bank of Quarrowby and Casey Sample",
+      ]);
+      // The same residual for a connective that a hyphen joins to the next word.
+      expect(partiesOf(`${PENALTY_OF}Bank al-Kovex and Casey Sample`)).toEqual([
+        "Bank al-Kovex and Casey Sample",
+      ]);
+    });
+
+    it.each([
+      ["Kovex Trading s.r.o. and Casey Sample", "Kovex Trading s.r.o."],
+      ["Kovex Trading sp. z o.o. and Casey Sample", "Kovex Trading sp. z o.o."],
+      ["Kovex Shipping d.o.o. and Casey Sample", "Kovex Shipping d.o.o."],
+      ["Kovex Trading a.s. and Casey Sample", "Kovex Trading a.s."],
+      ["Kovex Group e.V. and Casey Sample", "Kovex Group e.V."],
+      ["Kovex Shipping eood and Casey Sample", "Kovex Shipping eood"],
+      ["Kovex Trading S.R.O. and Casey Sample", "Kovex Trading S.R.O."],
+      ["Bank of Kovex s.r.o. and Casey Sample", "Bank of Kovex s.r.o."],
+    ])(
+      "drops the person after %s: a legal form in lower case is no connective of a name",
+      (slot, company) => {
+        // A word in lower case after Trading, Shipping or Group was read as the name going on, so
+        // the person stayed in the company's party, id, key and title.
+        const read = readings(slot);
+        expect(read.penalty).toEqual(kept("monetary penalty", company));
+        expect(read.disclosure).toEqual(kept("disclosure", company));
+      },
+    );
+
+    it("keeps the person out of the record of a company whose legal form is in lower case", async () => {
+      const { parsed } = await runOf([
+        ...plainDocs(),
+        penalty(
+          "example-lower-form",
+          "Kovex Trading s.r.o. and Casey Sample",
+          "2026-01-01T10:00:00Z",
+        ),
+      ]);
+      const record = recordOfId(parsed, "ofsi:kovextradingsro");
+      expect(record.title).toBe("OFSI notice: Kovex Trading s.r.o.");
+      expect(record.matchKeys).toContain("name:kovextradingsro");
+      expect(JSON.stringify(parsed.records)).not.toContain("Casey");
+    });
+
+    it.each([
+      ["a hyphen (U+2010)", `Bank al${cp(0x2010)}Kovex and Volga Quarrin`],
+      ["a minus sign (U+2212)", `Bank al${cp(0x2212)}Kovex and Volga Quarrin`],
+      ["a modifier apostrophe (U+02BC)", `Bank d${cp(0x02bc)}Italia and Volga Quarrin`],
+      ["a typographic apostrophe (U+2019)", `Bank d${cp(0x2019)}Italia and Volga Quarrin`],
+      ["the straight apostrophe", "Bank l'Union and Volga Quarrin"],
+      ["the ASCII hyphen", "Bank el-Kovex and Volga Quarrin"],
+    ])("keeps a name whose connective is joined to the next word by %s whole", (_name, company) => {
+      // The joiner was matched against the ASCII hyphen and two apostrophes only: the same name
+      // written with another hyphen or the modifier apostrophe was cut at the connective, and its
+      // second half dropped as a person.
+      const read = readings(company);
+      expect(read.penalty).toEqual(kept("monetary penalty", company, 0));
+      expect(read.disclosure).toEqual(kept("disclosure", company, 0));
+    });
+
+    it("reads a non-breaking hyphen (U+2011) as the hyphen that the list writes in its place", () => {
+      expect(partiesOf(`${PENALTY_OF}Bank al${cp(0x2011)}Kovex and Volga Quarrin`)).toEqual([
+        `Bank al${cp(0x2010)}Kovex and Volga Quarrin`,
+      ]);
+    });
+
+    it.each([
+      ["Kovex Group e-Solutions and Casey Sample", "Kovex Group e-Solutions"],
+      ["Kovex Shipping e-commerce and Casey Sample", "Kovex Shipping e-commerce"],
+      ["Kovex Services do-it and Casey Sample", "Kovex Services do-it"],
+      ["Kovex Group y-Tech and Casey Sample", "Kovex Group y-Tech"],
+      ["Kovex Group de-Solutions and Casey Sample", "Kovex Group de-Solutions"],
+      [
+        `Kovex Group e${cp(0x2010)}Solutions and Casey Sample`,
+        `Kovex Group e${cp(0x2010)}Solutions`,
+      ],
+      [`Bank d${cp(0x2010)}Italia and Casey Sample`, `Bank d${cp(0x2010)}Italia`],
+      ["Bank d-Italia and Casey Sample", "Bank d-Italia"],
+    ])(
+      "drops the person after %s: a word that a hyphen joins is a connective only after al or el",
+      (slot, company) => {
+        // Any connective before a hyphen made the word one (`e-`, `y-`, `do-`), so a compound such
+        // as e-Solutions said that the company's name went on, and the person after the word and
+        // stayed in its party, id, key and title. An elided `d` or `l` is joined by an apostrophe
+        // only.
+        const read = readings(slot);
+        expect(read.penalty).toEqual(kept("monetary penalty", company));
+        expect(read.disclosure).toEqual(kept("disclosure", company));
+      },
+    );
+
+    it("keeps the connectives of a name that stand alone as they were: e and y between words, and of", () => {
+      expect(partiesOf(`${PENALTY_OF}Kovex Group e Solutions and Casey Sample`)).toEqual([
+        "Kovex Group e Solutions and Casey Sample",
+      ]);
+      // The residual pinned as it is: connectives of other languages that the closed list does not
+      // hold end the company. Wave 12: a form of any list (`eood`) ends a firm's name after `of` too,
+      // so the person after it is dropped (it was kept in the party before).
+      expect(partiesOf(`${PENALTY_OF}Bank voor Kovex and Volga Quarrin`)).toEqual([
+        "Bank voor Kovex",
+      ]);
+      expect(partiesOf(`${PENALTY_OF}Bank of Kovex eood and Casey Sample`)).toEqual([
+        "Bank of Kovex eood",
+      ]);
+      expect(partiesOf(`${PENALTY_OF}Bank as-Salam and Casey Sample`)).toEqual(["Bank as-Salam"]);
+    });
+
+    it.each([
+      ["Kovex Trading Ltd (in liquidation) and Casey Sample", "Kovex Trading Ltd"],
+      ["Kovex Trading Ltd (in administration) and Casey Sample", "Kovex Trading Ltd"],
+      ["Kovex Trading Ltd (in voluntary liquidation) & Casey Sample", "Kovex Trading Ltd"],
+      ["Kovex Shipping (in receivership) and Casey Sample", "Kovex Shipping"],
+      ["Kovex Trading Ltd (in liquidation), Casey Sample", "Kovex Trading Ltd"],
+    ])(
+      "gives the company of %s its name without the status in brackets, and drops the person",
+      (slot, company) => {
+        // The company closed before the bracket, so the status stayed in its party and key
+        // (kovextradingltdinliquidation) and a vendor of the name no longer matched it; before
+        // that, the bracket split the slot and the status was a party of its own.
+        const read = readings(slot);
+        expect(read.penalty).toEqual(kept("monetary penalty", company));
+        expect(read.disclosure).toEqual(kept("disclosure", company));
+      },
+    );
+
+    it("keeps a status in brackets where no person follows, and a bracket that is no status", () => {
+      expect(partiesOf(`${PENALTY_OF}Kovex Trading Ltd (in liquidation)`)).toEqual([
+        "Kovex Trading Ltd (in liquidation)",
+      ]);
+      expect(
+        partiesOf(`${PENALTY_OF}Kovex Trading Ltd (formerly Volga Trading Ltd) and Casey Sample`),
+      ).toEqual(["Kovex Trading Ltd (formerly Volga Trading Ltd)"]);
+      expect(partiesOf(`${PENALTY_OF}Travelex (UK) Ltd and Casey Sample`)).toEqual([
+        "Travelex (UK) Ltd",
+      ]);
+      // A status that no bracket holds is read as words of the name, as before.
+      expect(partiesOf(`${PENALTY_OF}Kovex Bank in administration and Casey Sample`)).toEqual([
+        "Kovex Bank in administration and Casey Sample",
+      ]);
+    });
+
+    it("gives the record of a company in liquidation the key of its name when a person follows", async () => {
+      const { parsed } = await runOf([
+        ...plainDocs(),
+        penalty(
+          "example-in-liquidation",
+          "Kovex Trading Ltd (in liquidation) and Casey Sample",
+          "2026-01-01T10:00:00Z",
+        ),
+      ]);
+      const record = recordOfId(parsed, "ofsi:kovextrading");
+      expect(record.title).toBe("OFSI notice: Kovex Trading Ltd");
+      expect(record.matchKeys).toEqual(
+        expect.arrayContaining(["name:kovextradingltd", "name:kovextrading"]),
+      );
+      expect(JSON.stringify(parsed.records)).not.toContain("Casey");
+      expect(JSON.stringify(parsed.records)).not.toContain("liquidation");
+    });
+
+    // The table of the review of the connective and status rules (wave 8): every title of it as
+    // its penalty title and as the list of a description, pinned. The description splits its list
+    // at the word and whatever the rule of a title says, and keeps a status in brackets there.
+    it.each<[string, string[], number, string[], number]>([
+      [
+        `Bank al${cp(0x2010)}Kovex and Volga Quarrin`,
+        [`Bank al${cp(0x2010)}Kovex and Volga Quarrin`],
+        0,
+        [`Bank al${cp(0x2010)}Kovex`],
+        1,
+      ],
+      [
+        `Bank al${cp(0x2011)}Kovex and Volga Quarrin`,
+        [`Bank al${cp(0x2010)}Kovex and Volga Quarrin`],
+        0,
+        [`Bank al${cp(0x2010)}Kovex`],
+        1,
+      ],
+      [
+        `Bank al${cp(0x2212)}Kovex and Volga Quarrin`,
+        [`Bank al${cp(0x2212)}Kovex and Volga Quarrin`],
+        0,
+        [`Bank al${cp(0x2212)}Kovex`],
+        1,
+      ],
+      [
+        `Bank d${cp(0x02bc)}Italia and Volga Quarrin`,
+        [`Bank d${cp(0x02bc)}Italia and Volga Quarrin`],
+        0,
+        [`Bank d${cp(0x02bc)}Italia`],
+        1,
+      ],
+      [
+        `Bank d${cp(0x2019)}Italia and Volga Quarrin`,
+        [`Bank d${cp(0x2019)}Italia and Volga Quarrin`],
+        0,
+        [`Bank d${cp(0x2019)}Italia`],
+        1,
+      ],
+      [
+        `Bank d'Italia and Volga Quarrin`,
+        [`Bank d'Italia and Volga Quarrin`],
+        0,
+        [`Bank d'Italia`],
+        1,
+      ],
+      [
+        `Bank al-Kovex and Volga Quarrin`,
+        [`Bank al-Kovex and Volga Quarrin`],
+        0,
+        [`Bank al-Kovex`],
+        1,
+      ],
+      [
+        `Bank l'Union and Volga Quarrin`,
+        [`Bank l'Union and Volga Quarrin`],
+        0,
+        [`Bank l'Union`],
+        1,
+      ],
+      [
+        `Bank d${cp(0x2010)}Italia and Volga Quarrin`,
+        [`Bank d${cp(0x2010)}Italia`],
+        1,
+        [`Bank d${cp(0x2010)}Italia`],
+        1,
+      ],
+      [`Bank d-Italia and Volga Quarrin`, [`Bank d-Italia`], 1, [`Bank d-Italia`], 1],
+      [
+        `Kovex Group e-Solutions and Casey Sample`,
+        [`Kovex Group e-Solutions`],
+        1,
+        [`Kovex Group e-Solutions`],
+        1,
+      ],
+      [
+        `Kovex Shipping e-commerce and Casey Sample`,
+        [`Kovex Shipping e-commerce`],
+        1,
+        [`Kovex Shipping e-commerce`],
+        1,
+      ],
+      [
+        `Kovex Services do-it and Casey Sample`,
+        [`Kovex Services do-it`],
+        1,
+        [`Kovex Services do-it`],
+        1,
+      ],
+      [`Kovex Group y-Tech and Casey Sample`, [`Kovex Group y-Tech`], 1, [`Kovex Group y-Tech`], 1],
+      [
+        `Kovex Group e${cp(0x2010)}Solutions and Casey Sample`,
+        [`Kovex Group e${cp(0x2010)}Solutions`],
+        1,
+        [`Kovex Group e${cp(0x2010)}Solutions`],
+        1,
+      ],
+      [
+        `Kovex Trading e-commerce Ltd and Casey Sample`,
+        [`Kovex Trading e-commerce Ltd`],
+        1,
+        [`Kovex Trading e-commerce Ltd`],
+        1,
+      ],
+      [
+        `Bank of Valletta and Gozo Islands`,
+        [`Bank of Valletta and Gozo Islands`],
+        0,
+        [`Bank of Valletta`],
+        1,
+      ],
+      [
+        `Trading House of Ural and Volga Region`,
+        [`Trading House of Ural and Volga Region`],
+        0,
+        [`Trading House of Ural`],
+        1,
+      ],
+      [
+        `Bank of Kovex and Casey Sample`,
+        [`Bank of Kovex and Casey Sample`],
+        0,
+        [`Bank of Kovex`],
+        1,
+      ],
+      [
+        `Holdings for Africa and Casey Sample`,
+        [`Holdings for Africa and Casey Sample`],
+        0,
+        [`Holdings for Africa`],
+        1,
+      ],
+      [
+        `Kovex Trading s.r.o. and Casey Sample`,
+        [`Kovex Trading s.r.o.`],
+        1,
+        [`Kovex Trading s.r.o.`],
+        1,
+      ],
+      [
+        `Kovex Trading sp. z o.o. and Casey Sample`,
+        [`Kovex Trading sp. z o.o.`],
+        1,
+        [`Kovex Trading sp. z o.o.`],
+        1,
+      ],
+      [
+        `Kovex Trading d.o.o. and Casey Sample`,
+        [`Kovex Trading d.o.o.`],
+        1,
+        [`Kovex Trading d.o.o.`],
+        1,
+      ],
+      [`Kovex Trading a.s. and Casey Sample`, [`Kovex Trading a.s.`], 1, [`Kovex Trading a.s.`], 1],
+      [`Kovex Trading e.V. and Casey Sample`, [`Kovex Trading e.V.`], 1, [`Kovex Trading e.V.`], 1],
+      [`Kovex Trading eood and Casey Sample`, [`Kovex Trading eood`], 1, [`Kovex Trading eood`], 1],
+      [
+        `Bank of Kovex s.r.o. and Casey Sample`,
+        [`Bank of Kovex s.r.o.`],
+        1,
+        [`Bank of Kovex s.r.o.`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (in liquidation) and Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd (in liquidation)`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (in administration) and Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd (in administration)`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (in liquidation)`,
+        [`Kovex Trading Ltd (in liquidation)`],
+        0,
+        [`Kovex Trading Ltd (in liquidation)`],
+        0,
+      ],
+      [`Kovex Trading Ltd and Casey Sample`, [`Kovex Trading Ltd`], 1, [`Kovex Trading Ltd`], 1],
+      [
+        `Kovex Bank in administration and Casey Sample`,
+        [`Kovex Bank in administration and Casey Sample`],
+        0,
+        [`Kovex Bank in administration`],
+        1,
+      ],
+      [`Bank voor Kovex and Volga Quarrin`, [`Bank voor Kovex`], 1, [`Bank voor Kovex`], 1],
+      [`Bank im Kovex and Volga Quarrin`, [`Bank im Kovex`], 1, [`Bank im Kovex`], 1],
+      [
+        `Bank of Kovex eood and Casey Sample`,
+        // Wave 12: `eood` ends the firm's name (`endsAFirmName`): the person is dropped.
+        [`Bank of Kovex eood`],
+        1,
+        [`Bank of Kovex eood`],
+        1,
+      ],
+      [
+        `Bank al-Kovex and Casey Sample`,
+        [`Bank al-Kovex and Casey Sample`],
+        0,
+        [`Bank al-Kovex`],
+        1,
+      ],
+      [`Bank as-Salam and Casey Sample`, [`Bank as-Salam`], 1, [`Bank as-Salam`], 1],
+      [
+        `Kovex Trading Ltd (in liquidation) & Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (KTL) and Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd`],
+        1,
+      ],
+      [`Travelex (UK) Ltd and Casey Sample`, [`Travelex (UK) Ltd`], 1, [`Travelex (UK) Ltd`], 1],
+      [
+        `Kovex Trading Ltd (formerly Volga Trading Ltd) and Casey Sample`,
+        [`Kovex Trading Ltd (formerly Volga Trading Ltd)`],
+        1,
+        [`Kovex Trading Ltd (formerly Volga Trading Ltd)`],
+        1,
+      ],
+      [
+        `Kovex Group de-Solutions and Casey Sample`,
+        [`Kovex Group de-Solutions`],
+        1,
+        [`Kovex Group de-Solutions`],
+        1,
+      ],
+      [
+        `Banca dell'Umbria and Volga Quarrin`,
+        [`Banca dell'Umbria and Volga Quarrin`],
+        0,
+        [`Banca dell'Umbria`],
+        1,
+      ],
+      [
+        `Kovex Group e Solutions and Casey Sample`,
+        [`Kovex Group e Solutions and Casey Sample`],
+        0,
+        [`Kovex Group e Solutions`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (in voluntary liquidation) and Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd (in voluntary liquidation)`],
+        1,
+      ],
+      [
+        `Kovex Shipping (in liquidation) and Casey Sample`,
+        [`Kovex Shipping`],
+        1,
+        [`Kovex Shipping (in liquidation)`],
+        1,
+      ],
+      [
+        `Bank el-Kovex and Casey Sample`,
+        [`Bank el-Kovex and Casey Sample`],
+        0,
+        [`Bank el-Kovex`],
+        1,
+      ],
+      [
+        `Bank el${cp(0x2212)}Kovex and Casey Sample`,
+        [`Bank el${cp(0x2212)}Kovex and Casey Sample`],
+        0,
+        [`Bank el${cp(0x2212)}Kovex`],
+        1,
+      ],
+      // A status in capitals is a status (wave 9): no longer a second person, and the description
+      // keeps it as it keeps `(in liquidation)`.
+      [
+        `Kovex Trading Ltd (In Liquidation) and Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd (In Liquidation)`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (in liquidation), Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd (in liquidation)`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (in creditors${cp(0x02bc)} voluntary liquidation) and Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd (in creditors${cp(0x02bc)} voluntary liquidation)`],
+        1,
+      ],
+      [`Bank an-Nur and Casey Sample`, [`Bank an-Nur`], 1, [`Bank an-Nur`], 1],
+      [`Bank at-Tadamon and Casey Sample`, [`Bank at-Tadamon`], 1, [`Bank at-Tadamon`], 1],
+      // Wave 9, the review of the status, possessive and article rules: a status in brackets in
+      // any case, before or after an alias, or set apart by a separator, is no party and no person,
+      // and ends the name of a company (a list of it and a person is split, whatever the order); a
+      // possessive after a bracket ends the company; an article joined by a hyphen of any kind leads
+      // a name. The rows whose party still holds a person are residuals of other rules (`Bank of`
+      // without a status, a person before the bracket, a bracket after a person and a possessive).
+      [
+        `Kovex Trading Ltd (IN LIQUIDATION) and Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd (IN LIQUIDATION)`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd, (in liquidation) and Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd`],
+        1,
+      ],
+      [
+        `Casey Sample and Kovex Trading Ltd (in liquidation)`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd (in liquidation)`],
+        1,
+      ],
+      // Wave 10: the status ends the person's name, and the company after it is another party.
+      [
+        `Casey Sample (in liquidation) and Kovex Trading Ltd`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd`],
+        1,
+      ],
+      [
+        `Kovex Trading (in liquidation) and Casey Sample`,
+        [`Kovex Trading`],
+        1,
+        [`Kovex Trading (in liquidation)`],
+        1,
+      ],
+      [`Kovex (in liquidation) and Casey Sample`, [`Kovex`], 1, [`Kovex (in liquidation)`], 1],
+      [
+        `Kovex Bank (in liquidation) and Casey Sample`,
+        [`Kovex Bank`],
+        1,
+        [`Kovex Bank (in liquidation)`],
+        1,
+      ],
+      [
+        `Bank of Kovex (in liquidation) and Casey Sample`,
+        [`Bank of Kovex`],
+        1,
+        [`Bank of Kovex (in liquidation)`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (EBL) (in liquidation) and Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd (EBL) (in liquidation)`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (in liquidation) (EBL) and Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd (in liquidation)`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (in liquidation) and Casey Sample (in liquidation)`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd (in liquidation)`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (in liquidation) and Alden Brook Ltd (in liquidation) and Casey Sample`,
+        [`Kovex Trading Ltd`, `Alden Brook Ltd`],
+        1,
+        [`Kovex Trading Ltd (in liquidation)`, `Alden Brook Ltd (in liquidation)`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (in liquidation)'s director Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (in Liquidation) and Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd (in Liquidation)`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd's director Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (EBL)'s director Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd${cp(0x2019)}s director Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd${cp(0x02bc)}s director Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (in liquidation) and its director Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd (in liquidation)`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (in liquidation) and director Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd (in liquidation)`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (in liquidation) and CASEY SAMPLE`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd (in liquidation)`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (in liquidation) and Casey d'Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd (in liquidation)`],
+        1,
+      ],
+      [
+        `Kovex Trading (in liquidation) Ltd and Casey Sample`,
+        [`Kovex Trading (in liquidation) Ltd`],
+        1,
+        [`Kovex Trading (in liquidation) Ltd`],
+        1,
+      ],
+      [`Kovex Trading Ltd and Casey el-Sample`, [`Kovex Trading Ltd`], 1, [`Kovex Trading Ltd`], 1],
+      [
+        `Kovex Trading Ltd and Casey Sample-Lee`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd and Casey al${cp(0x2010)}Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd`],
+        1,
+      ],
+      [`Casey al${cp(0x2010)}Sample`, [], 1, [], 1],
+      [
+        `Kovex Trading Ltd and Mr Ahmed al${cp(0x2010)}Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd and Casey al${cp(0x2013)}Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd and Casey al${cp(0x2014)}Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd`],
+        1,
+      ],
+      [`Casey al${cp(0x2212)}Sample`, [], 1, [], 1],
+      [`Casey al${cp(0xfe63)}Sample`, [], 1, [], 1],
+      [
+        `Kovex Trading Ltd; (in liquidation) and Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd; (in liquidation)`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd, (in administration), Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd / (in receivership) / Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (in liquidation) (KTL) and Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd (in liquidation)`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (in liquidation) (${cp(0x201c)}KTL${cp(0x201d)}) and Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd (in liquidation)`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd, (In Liquidation) and Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd, (in liquidation)`,
+        [`Kovex Trading Ltd, (in liquidation)`],
+        0,
+        [`Kovex Trading Ltd`],
+        0,
+      ],
+      [`Casey Sample, (in liquidation)`, [], 1, [], 1],
+      [`(in liquidation) and Casey Sample`, [], 1, [], 1],
+      [
+        `Kovex Trading Ltd & (in liquidation) & Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (in liquidation) (KTL), Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd (in liquidation)`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (In Liquidation) (KTL) and Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd (In Liquidation)`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (in Liquidation) & Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (IN ADMINISTRATION) and Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd (IN ADMINISTRATION)`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (In Receivership) and Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd (In Receivership)`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (In Liquidation)`,
+        [`Kovex Trading Ltd (In Liquidation)`],
+        0,
+        [`Kovex Trading Ltd (In Liquidation)`],
+        0,
+      ],
+      [`Casey Sample (In Liquidation)`, [], 1, [], 1],
+      [
+        `Kovex Trading Ltd (in liquidation) (formerly Kovex Ltd) and Casey Sample`,
+        [`Kovex Trading Ltd (in liquidation) (formerly Kovex Ltd)`],
+        1,
+        [`Kovex Trading Ltd (in liquidation) (formerly Kovex Ltd)`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (in liquidation)${cp(0x2019)}s director Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (KTL)${cp(0x2019)}s director Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (${cp(0x201c)}KTL${cp(0x201d)})'s director Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (KTL) (in liquidation)'s director Casey Sample`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (formerly Kovex Ltd)'s director Casey Sample`,
+        [`Kovex Trading Ltd (formerly Kovex Ltd)`],
+        1,
+        [`Kovex Trading Ltd (formerly Kovex Ltd)`],
+        1,
+      ],
+      [
+        `Kovex Trading (in liquidation)'s director Casey Sample`,
+        [`Kovex Trading`],
+        1,
+        [`Kovex Trading`],
+        1,
+      ],
+      [
+        `Casey Sample (Kovex)'s director Alden Brook`,
+        [`Casey Sample (Kovex)'s director Alden Brook`],
+        0,
+        [`Casey Sample (Kovex)'s director Alden Brook`],
+        0,
+      ],
+      [
+        `Casey Sample (KTL)'s director Alden Brook`,
+        [`Casey Sample (KTL)'s director Alden Brook`],
+        0,
+        [`Casey Sample (KTL)'s director Alden Brook`],
+        0,
+      ],
+      // Wave 10: a status ends the person's name, so the possessive after it ends it too.
+      [
+        `Alden Brook (in liquidation)'s Kovex Trading Ltd`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (in liquidation)'s director Casey Sample and Alden Brook Ltd`,
+        [`Kovex Trading Ltd`, `Alden Brook Ltd`],
+        1,
+        [`Kovex Trading Ltd`, `Alden Brook Ltd`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd ()'s director Casey Sample`,
+        [`Kovex Trading Ltd ()`],
+        1,
+        [`Kovex Trading Ltd ()`],
+        1,
+      ],
+      [
+        `(KTL)'s director Casey Sample`,
+        [`(KTL)'s director Casey Sample`],
+        0,
+        [`(KTL)'s director Casey Sample`],
+        0,
+      ],
+      [
+        `Kovex Trading Ltd's director Casey Sample (in liquidation)`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd and Casey Sample al${cp(0x2010)}Lee`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd`],
+        1,
+      ],
+      [`Casey el${cp(0x2010)}Sample-Lee`, [], 1, [], 1],
+      [
+        `Bank al${cp(0x2013)}Kovex and Volga Quarrin`,
+        [`Bank al${cp(0x2013)}Kovex and Volga Quarrin`],
+        0,
+        [`Bank al${cp(0x2013)}Kovex`],
+        1,
+      ],
+      [
+        `Bank el${cp(0x2010)}Kovex and Casey Sample`,
+        [`Bank el${cp(0x2010)}Kovex and Casey Sample`],
+        0,
+        [`Bank el${cp(0x2010)}Kovex`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd and Casey al${cp(0x2010)}sample`,
+        [`Kovex Trading Ltd and Casey al${cp(0x2010)}sample`],
+        0,
+        [`Kovex Trading Ltd`, `Casey al${cp(0x2010)}sample`],
+        0,
+      ],
+      [
+        `Kovex al${cp(0x2010)}Trading Ltd`,
+        [`Kovex al${cp(0x2010)}Trading Ltd`],
+        0,
+        [`Kovex al${cp(0x2010)}Trading Ltd`],
+        0,
+      ],
+      [
+        `Al${cp(0x2010)}Kovex Trading Ltd and Casey Sample`,
+        [`Al${cp(0x2010)}Kovex Trading Ltd`],
+        1,
+        [`Al${cp(0x2010)}Kovex Trading Ltd`],
+        1,
+      ],
+      [
+        `Casey Sample and Kovex Trading Ltd (In Liquidation)`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd (In Liquidation)`],
+        1,
+      ],
+      [`Kovex (In Liquidation) and Casey Sample`, [`Kovex`], 1, [`Kovex (In Liquidation)`], 1],
+      [
+        `Bank of Kovex (IN LIQUIDATION) and Casey Sample`,
+        [`Bank of Kovex`],
+        1,
+        [`Bank of Kovex (IN LIQUIDATION)`],
+        1,
+      ],
+      // Wave 10: `Sons Ltd` has no name of its own, so its status is no company's: one firm, as
+      // without the status. The description is split at the word and before it is read (residual).
+      [
+        `Casey Sample and Sons Ltd (in liquidation)`,
+        [`Casey Sample and Sons Ltd (in liquidation)`],
+        0,
+        // Wave 11: the tail of the firm named after the person goes with the person (no `sons` key).
+        [],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd (in liquidation) and Alden Brook Ltd (in liquidation)`,
+        [`Kovex Trading Ltd (in liquidation) and Alden Brook Ltd (in liquidation)`],
+        0,
+        [`Kovex Trading Ltd (in liquidation)`, `Alden Brook Ltd (in liquidation)`],
+        0,
+      ],
+      [
+        `Kovex Trading Ltd and Alden Brook Ltd (in liquidation)`,
+        [`Kovex Trading Ltd and Alden Brook Ltd (in liquidation)`],
+        0,
+        [`Kovex Trading Ltd`, `Alden Brook Ltd (in liquidation)`],
+        0,
+      ],
+      // Wave 10: `Sons Ltd` has no name of its own, so its status is no company's: one firm, as
+      // without the status. The description is split at the word and before it is read (residual).
+      [
+        `Example Bread and Sons Ltd (in liquidation)`,
+        [`Example Bread and Sons Ltd (in liquidation)`],
+        0,
+        // Wave 11: the tail of the firm named after the person goes with the person (no `sons` key).
+        [],
+        1,
+      ],
+      // Wave 10: a status ends a name only on a part that has one (a person's, or a word of its
+      // own): a part of legal forms and the words that close a firm's name (`Co`, `Sons`,
+      // `Partners`) is the end of the name before it, and a part with a name after a status is
+      // another party.
+      [
+        `Casey Sample & Co (in liquidation)`,
+        [`Casey Sample & Co (in liquidation)`],
+        0,
+        [`Casey Sample & Co (in liquidation)`],
+        0,
+      ],
+      [
+        `J Sample & Co (in liquidation)`,
+        [`J Sample & Co (in liquidation)`],
+        0,
+        [`J Sample & Co (in liquidation)`],
+        0,
+      ],
+      [
+        `Casey Sample & Co. (in liquidation)`,
+        [`Casey Sample & Co. (in liquidation)`],
+        0,
+        [`Casey Sample & Co. (in liquidation)`],
+        0,
+      ],
+      [
+        `Casey Sample & Co Ltd (in liquidation)`,
+        [`Casey Sample & Co Ltd (in liquidation)`],
+        0,
+        [`Casey Sample & Co Ltd (in liquidation)`],
+        0,
+      ],
+      [
+        `Casey Sample & Co Limited (in liquidation)`,
+        [`Casey Sample & Co Limited (in liquidation)`],
+        0,
+        [`Casey Sample & Co Limited (in liquidation)`],
+        0,
+      ],
+      [
+        `Casey Sample & Co (KTL) (in liquidation)`,
+        [`Casey Sample & Co (KTL) (in liquidation)`],
+        0,
+        [`Casey Sample & Co (KTL) (in liquidation)`],
+        0,
+      ],
+      [
+        `Casey Sample & Co (in liquidation) (KTL)`,
+        [`Casey Sample & Co (in liquidation)`],
+        0,
+        [`Casey Sample & Co (in liquidation)`],
+        0,
+      ],
+      [
+        `Casey Sample and Co (In Administration)`,
+        [`Casey Sample and Co (In Administration)`],
+        0,
+        // Wave 11: the tail of the firm named after the person goes with the person (no `co` key).
+        [],
+        1,
+      ],
+      [
+        `Casey Sample & Sons (in liquidation)`,
+        [`Casey Sample & Sons (in liquidation)`],
+        0,
+        [`Casey Sample & Sons (in liquidation)`],
+        0,
+      ],
+      [
+        `Casey Sample & Son Ltd (in liquidation)`,
+        [`Casey Sample & Son Ltd (in liquidation)`],
+        0,
+        [`Casey Sample & Son Ltd (in liquidation)`],
+        0,
+      ],
+      [
+        `Casey Sample & Daughters Ltd (in liquidation)`,
+        [`Casey Sample & Daughters Ltd (in liquidation)`],
+        0,
+        [`Casey Sample & Daughters Ltd (in liquidation)`],
+        0,
+      ],
+      [
+        `Casey Sample & Brothers (in liquidation)`,
+        [`Casey Sample & Brothers (in liquidation)`],
+        0,
+        [`Casey Sample & Brothers (in liquidation)`],
+        0,
+      ],
+      [
+        `Casey Sample and Partners (in administration)`,
+        [`Casey Sample and Partners (in administration)`],
+        0,
+        // Wave 11: the tail of the firm named after the person goes with the person (no `partners` key).
+        [],
+        1,
+      ],
+      [
+        `Casey Sample & Partners (In Administration)`,
+        [`Casey Sample & Partners (In Administration)`],
+        0,
+        [`Casey Sample & Partners (In Administration)`],
+        0,
+      ],
+      [
+        `Lloyd George and Partners LLP (in administration)`,
+        [`Lloyd George and Partners LLP (in administration)`],
+        0,
+        // Wave 11: the tail of the firm named after the person goes with the person (no `partners` key).
+        [],
+        1,
+      ],
+      [
+        `Casey Sample and Company (in liquidation)`,
+        [`Casey Sample and Company (in liquidation)`],
+        0,
+        // Wave 11: the tail of the firm named after the person goes with the person (no `company` key).
+        [],
+        1,
+      ],
+      [
+        `Casey Sample and Associates Ltd (in administration)`,
+        [`Casey Sample and Associates Ltd (in administration)`],
+        0,
+        // Wave 11: the tail of the firm named after the person goes with the person (no `associates` key).
+        [],
+        1,
+      ],
+      [
+        `Casey Sample & Partners Holdings Ltd (in liquidation)`,
+        [`Casey Sample & Partners Holdings Ltd (in liquidation)`],
+        0,
+        [`Casey Sample & Partners Holdings Ltd (in liquidation)`],
+        0,
+      ],
+      [
+        `J. Sample & Sons Ltd (In Liquidation)`,
+        [`J. Sample & Sons Ltd (In Liquidation)`],
+        0,
+        [`J. Sample & Sons Ltd (In Liquidation)`],
+        0,
+      ],
+      [
+        `Example Bread (in liquidation) and Sons Ltd`,
+        // Wave 11: a status ends the person's name, and the tail after it (`Sons Ltd`) goes with the
+        // person: no `sons` key, and the person is counted in the title as in the description.
+        [],
+        1,
+        [],
+        1,
+      ],
+      [
+        `Casey Sample & Co (in liquidation) and Alden Brook Ltd`,
+        [`Casey Sample & Co (in liquidation) and Alden Brook Ltd`],
+        0,
+        [`Casey Sample & Co (in liquidation)`, `Alden Brook Ltd`],
+        0,
+      ],
+      [
+        `Alden Brook Ltd and Casey Sample & Co (in liquidation)`,
+        [`Alden Brook Ltd`],
+        1,
+        [`Alden Brook Ltd`, `Casey Sample & Co (in liquidation)`],
+        0,
+      ],
+      [
+        `Casey Sample & Kovex Trading Ltd (in liquidation)`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd`],
+        1,
+      ],
+      [`Casey Sample & Kovex (in liquidation)`, [`Kovex`], 1, [`Kovex`], 1],
+      [
+        `Casey Sample (In Liquidation) and Kovex Trading Ltd`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd`],
+        1,
+      ],
+      [
+        `Casey Sample (IN LIQUIDATION) and Kovex Trading Ltd`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd`],
+        1,
+      ],
+      [`Casey Sample (In Liquidation) and Kovex Ltd`, [`Kovex Ltd`], 1, [`Kovex Ltd`], 1],
+      [
+        `Alden Brook (In Liquidation)'s Kovex Trading Ltd`,
+        [`Kovex Trading Ltd`],
+        1,
+        [`Kovex Trading Ltd`],
+        1,
+      ],
+      [`Casey Sample & Co`, [`Casey Sample & Co`], 0, [`Casey Sample & Co`], 0],
+      [
+        `Casey Sample (in bankruptcy) and Kovex Ltd`,
+        [`Casey Sample (in bankruptcy) and Kovex Ltd`],
+        0,
+        [`in bankruptcy`, `Kovex Ltd`],
+        1,
+      ],
+      // A part that opens with a word of an organisation's name is a part of its own after the
+      // person, who is dropped; one that opens with a word that goes on with a firm's name (`Sons`,
+      // `Co`, `Partners`) is the end of that firm's name. Wave 12: a part of generic words alone gets
+      // no record (the final gate of the keys: `internationalshipping`, `holdings` were no firm's own
+      // name); the person is still dropped.
+      [`Casey Sample and International Shipping Ltd (in liquidation)`, [], 1, [], 1],
+      [`Casey Sample & Trading Services Ltd (in liquidation)`, [], 1, [], 1],
+      [`Casey Sample and Holdings Ltd (in liquidation)`, [], 1, [], 1],
+      [`Casey Sample & Group Holdings Ltd (in liquidation)`, [], 1, [], 1],
+      [
+        `Casey Sample and Kovex Shipping Ltd (in liquidation)`,
+        [`Kovex Shipping Ltd`],
+        1,
+        [`Kovex Shipping Ltd (in liquidation)`],
+        1,
+      ],
+      [
+        `Casey Sample and Bank of Kovex (in liquidation)`,
+        [`Bank of Kovex`],
+        1,
+        [`Bank of Kovex (in liquidation)`],
+        1,
+      ],
+      [
+        `Casey Sample & Sons Trading Ltd (in liquidation)`,
+        [`Casey Sample & Sons Trading Ltd (in liquidation)`],
+        0,
+        [`Casey Sample & Sons Trading Ltd (in liquidation)`],
+        0,
+      ],
+      [
+        `Casey Sample and Partners Holdings Ltd (in liquidation)`,
+        [`Casey Sample and Partners Holdings Ltd (in liquidation)`],
+        0,
+        // Wave 11: the tail of the firm named after the person goes with the person (no `partners` key).
+        [],
+        1,
+      ],
+      [
+        `Casey Sample & Co Trading Ltd (in liquidation)`,
+        [`Casey Sample & Co Trading Ltd (in liquidation)`],
+        0,
+        [`Casey Sample & Co Trading Ltd (in liquidation)`],
+        0,
+      ],
+      // Wave 11: a status tells nothing of the words before it (`Kovex & Co (in liquidation)'s
+      // director` reads as `Kovex & Co's director`); a tail word and a status end a firm's name; a
+      // split list never cuts a firm at ` & ` or ` and ` (its tail is joined to it, or goes with the
+      // person whose firm it names, or is left out after a legal form), so no `sons`, `co`, `trading`.
+      [`Kovex & Co (in liquidation)'s director Casey Sample`, [`Kovex & Co`], 1, [`Kovex & Co`], 1],
+      [`Kovex & Co (In Liquidation)'s Director Casey Sample`, [`Kovex & Co`], 1, [`Kovex & Co`], 1],
+      [
+        `Kovex & Co (KTL) (in liquidation)'s director Casey Sample`,
+        [`Kovex & Co`],
+        1,
+        [`Kovex & Co`],
+        1,
+      ],
+      [`J Sample & Co (in liquidation)'s director Jane Doe`, [], 2, [], 2],
+      [`Kovex & Co's director Casey Sample`, [`Kovex & Co`], 1, [`Kovex & Co`], 1],
+      [
+        `Svarog Shipping & Trading Company Limited and Casey Sample`,
+        [`Svarog Shipping & Trading Company Limited`],
+        1,
+        [`Svarog Shipping & Trading Company Limited`],
+        1,
+      ],
+      [
+        `Svarog Shipping & Trading Company Limited's director Casey Sample`,
+        [`Svarog Shipping & Trading Company Limited`],
+        1,
+        [`Svarog Shipping & Trading Company Limited`],
+        1,
+      ],
+      [
+        `Svarog Shipping & Trading Company Limited (in liquidation) and Casey Sample`,
+        [`Svarog Shipping & Trading Company Limited`],
+        1,
+        [`Svarog Shipping & Trading Company Limited (in liquidation)`],
+        1,
+      ],
+      [
+        `Casey Sample (In Liquidation) and Svarog Shipping & Trading Company Limited`,
+        [`Svarog Shipping & Trading Company Limited`],
+        1,
+        [`Svarog Shipping & Trading Company Limited`],
+        1,
+      ],
+      [`Kovex & Sons Ltd and Casey Sample`, [`Kovex & Sons Ltd`], 1, [`Kovex & Sons Ltd`], 1],
+      [
+        `Kovex & Sons Ltd (in liquidation)'s director Casey Sample`,
+        [`Kovex & Sons Ltd`],
+        1,
+        [`Kovex & Sons Ltd`],
+        1,
+      ],
+      [`Kovex & Co Ltd and Casey Sample`, [`Kovex & Co Ltd`], 1, [`Kovex & Co Ltd`], 1],
+      [`Kovex & Co Ltd`, [`Kovex & Co Ltd`], 0, [`Kovex & Co Ltd`], 0],
+      [
+        `Kovex & Company Ltd and Casey Sample`,
+        [`Kovex & Company Ltd`],
+        1,
+        [`Kovex & Company Ltd`],
+        1,
+      ],
+      [
+        `Kovex & Partners LLP and Casey Sample`,
+        [`Kovex & Partners LLP`],
+        1,
+        [`Kovex & Partners LLP`],
+        1,
+      ],
+      [
+        `Casey Sample (In Liquidation) and Kovex & Co Ltd`,
+        [`Kovex & Co Ltd`],
+        1,
+        [`Kovex & Co Ltd`],
+        1,
+      ],
+      [
+        `Casey Sample (in liquidation) and Sons Ltd and Kovex Ltd`,
+        [`Kovex Ltd`],
+        1,
+        [`Kovex Ltd`],
+        1,
+      ],
+      [
+        `Casey Sample (in liquidation) and Sons Ltd and Kovex & Co Ltd`,
+        [`Kovex & Co Ltd`],
+        1,
+        [`Kovex & Co Ltd`],
+        1,
+      ],
+      [
+        `Casey Sample and Associates (in liquidation) and Kovex Ltd`,
+        [`Casey Sample and Associates (in liquidation) and Kovex Ltd`],
+        0,
+        [`Kovex Ltd`],
+        1,
+      ],
+      [
+        `Kovex Trading (in liquidation) and Partners LLP and Casey Sample`,
+        [`Kovex Trading`],
+        1,
+        [`Kovex Trading (in liquidation)`],
+        1,
+      ],
+      [
+        `Kovex Ltd (in liquidation) & Co and Casey Sample`,
+        [`Kovex Ltd`],
+        1,
+        [`Kovex Ltd (in liquidation) & Co`],
+        1,
+      ],
+      [`Kovex, Co Ltd and Casey Sample`, [`Kovex, Co Ltd`], 1, [`Kovex, Co Ltd`], 1],
+      [`Kovex and Co Ltd and Casey Sample`, [`Kovex and Co Ltd`], 1, [`Kovex and Co Ltd`], 1],
+      [
+        `Kovex and Sons Ltd (in liquidation) and Casey Sample`,
+        [`Kovex and Sons Ltd`],
+        1,
+        [`Kovex and Sons Ltd (in liquidation)`],
+        1,
+      ],
+      [
+        `Kovex Trading and Sons and Casey Sample`,
+        [`Kovex Trading and Sons`],
+        1,
+        [`Kovex Trading and Sons`],
+        1,
+      ],
+      [
+        `Kovex & Sons Ltd and Casey Sample and Partners LLP`,
+        [`Kovex & Sons Ltd`],
+        1,
+        [`Kovex & Sons Ltd`],
+        1,
+      ],
+      [`Kovex & Sons Ltd / Casey Sample`, [`Kovex & Sons Ltd`], 1, [`Kovex & Sons Ltd`], 1],
+      [`Kovex & Sons Ltd plus Casey Sample`, [`Kovex & Sons Ltd`], 1, [`Kovex & Sons Ltd`], 1],
+      [
+        `Casey Sample, Kovex & Sons Ltd, Jane Doe`,
+        [`Kovex & Sons Ltd`],
+        2,
+        [`Kovex & Sons Ltd`],
+        2,
+      ],
+      [
+        `Kovex Shipping & Trading Ltd and Casey Sample & Jane Doe`,
+        [`Kovex Shipping & Trading Ltd`],
+        2,
+        [`Kovex Shipping & Trading Ltd`],
+        2,
+      ],
+      [
+        `Bank of Kovex & Trust Company and Casey Sample`,
+        [`Bank of Kovex & Trust Company`],
+        1,
+        [`Bank of Kovex & Trust Company`],
+        1,
+      ],
+      [
+        `Kovex Ltd & Alden Brook Ltd and Casey Sample`,
+        [`Kovex Ltd`, `Alden Brook Ltd`],
+        1,
+        [`Kovex Ltd & Alden Brook Ltd`],
+        1,
+      ],
+      [
+        `Kovex Trading Ltd & Alden Brook Shipping Ltd and Casey Sample`,
+        [`Kovex Trading Ltd`, `Alden Brook Shipping Ltd`],
+        1,
+        [`Kovex Trading Ltd & Alden Brook Shipping Ltd`],
+        1,
+      ],
+      [
+        `Kovex Ltd & Trading Services Ltd and Casey Sample`,
+        // Wave 12: the generic part after a name that a form ended gets no record.
+        [`Kovex Ltd`],
+        1,
+        [`Kovex Ltd & Trading Services Ltd`],
+        1,
+      ],
+      [
+        `Kovex & Quillon Ltd and Casey Sample`,
+        [`Kovex`, `Quillon Ltd`],
+        1,
+        [`Kovex & Quillon Ltd`],
+        1,
+      ],
+      [`Kovex & Sons, Casey Sample`, [`Kovex & Sons`], 1, [`Kovex & Sons`], 1],
+      [`Kovex & Sons and Casey Sample`, [`Kovex & Sons`], 1, [`Kovex & Sons`], 1],
+      [`Kovex & Cie and Casey Sample`, [`Kovex & Cie`], 1, [`Kovex & Cie`], 1],
+      [`Kovex & Daughters with Casey Sample`, [`Kovex & Daughters`], 1, [`Kovex & Daughters`], 1],
+      [
+        `Kovex & Sons (in liquidation) and Casey Sample`,
+        [`Kovex & Sons`],
+        1,
+        [`Kovex & Sons (in liquidation)`],
+        1,
+      ],
+      // Wave 11: a status that ends a person's name ends a list of the person, its firm's tail and
+      // companies with a status (`continuing` parts count as no party of their own).
+      [`Casey Sample (in liquidation) & Co Ltd`, [], 1, [], 1],
+      [`Casey Sample (in liquidation) & Sons`, [], 1, [], 1],
+      [`Jane Doe (in liquidation) (KTL) & Son's Cie (in liquidation)`, [], 2, [], 2],
+      [`Volga Quarrin (KTL); Brothers's Family (in liquidation) (KTL)`, [], 2, [], 2],
+      [
+        `Anne-Marie Dupont (KTL), Brothers (in liquidation)'s Kovex (In Administration)`,
+        [`Kovex`],
+        1,
+        // The description splits at the comma first: the part after it is read whole (as wave 9 did).
+        [`Brothers (in liquidation)'s Kovex (In Administration)`],
+        1,
+      ],
+      // Wave 11: a part that opens with a tail word but has a word of a name of its own (`Company
+      // Watch Ltd`, `Family Mart Ltd`) is a firm of its own, never a tail; an alias inside a tail
+      // (`Sons (KSL) Ltd`) is no such word.
+      [
+        `Kovex Ltd and Company Watch Ltd`,
+        [`Kovex Ltd and Company Watch Ltd`],
+        0,
+        [`Kovex Ltd`, `Company Watch Ltd`],
+        0,
+      ],
+      [
+        `Kovex Trading and Family Mart Ltd`,
+        [`Kovex Trading and Family Mart Ltd`],
+        0,
+        [`Kovex Trading`, `Family Mart Ltd`],
+        0,
+      ],
+      [
+        `Casey Sample and Company Watch Ltd`,
+        [`Casey Sample and Company Watch Ltd`],
+        0,
+        [`Company Watch Ltd`],
+        1,
+      ],
+      [
+        `Kovex & Company Watch Ltd and Casey Sample`,
+        [`Kovex`, `Company Watch Ltd`],
+        1,
+        [`Kovex & Company Watch Ltd`],
+        1,
+      ],
+      [
+        `Kovex & Sons (KSL) Ltd and Casey Sample`,
+        [`Kovex & Sons (KSL) Ltd`],
+        1,
+        [`Kovex & Sons (KSL) Ltd`],
+        1,
+      ],
+      [
+        `Kovex & Bank of Valletta and Casey Sample`,
+        [`Kovex & Bank of Valletta and Casey Sample`],
+        0,
+        [`Kovex & Bank of Valletta`],
+        1,
+      ],
+      // Residual, pinned: a part of generic words alone after a name that a legal form ends is a
+      // tail and is left out, also when a firm has that name (`Partners Group AG`).
+      [`Kovex Ltd and Partners Group AG and Casey Sample`, [`Kovex Ltd`], 1, [`Kovex Ltd`], 1],
+      // Residual, pinned: a possessive after a word of FIRM_TAIL_WORDS ends no name (cutting there
+      // made `Volga Quarrin; Brothers's Family (in liquidation)` keep the person), so the slot is
+      // one party.
+      [
+        `Kovex & Son's director Casey Sample`,
+        [`Kovex & Son's director Casey Sample`],
+        0,
+        [`Kovex & Son's director Casey Sample`],
+        0,
+      ],
+      [`Casey Sample & Sons and Jane Doe`, [], 2, [`Casey Sample & Sons`], 1],
+      [`Casey Sample & Co Ltd's director Jane Doe`, [], 2, [], 2],
+      [`Example Bread & Sons Ltd and Casey Sample`, [], 2, [`Example Bread & Sons Ltd`], 1],
+      [`Kovex Ltd and Casey Sample and Sons`, [`Kovex Ltd`], 1, [`Kovex Ltd`], 1],
+      [`Kovex and Sons Ltd`, [`Kovex and Sons Ltd`], 0, [`Kovex and Sons Ltd`], 0],
+      [`Casey Sample and Sons`, [`Casey Sample and Sons`], 0, [], 1],
+      [`Kovex Family Trust and Casey Sample`, [`Kovex Family Trust`], 1, [`Kovex Family Trust`], 1],
+      [`Kovex Ltd and Alden Son`, [`Kovex Ltd`], 1, [`Kovex Ltd`], 1],
+      // Wave 12 (RV11-OFSI-1): every legal form that ends a firm's name ends it on every path, so a
+      // generic part after it is left out and the firm keeps its own key.
+      [
+        `Kovex Trading FZE and Partners Group AG`,
+        [`Kovex Trading FZE and Partners Group AG`],
+        0,
+        [`Kovex Trading FZE`],
+        0,
+      ],
+      [
+        `Kovex s.r.o. and Partners Group AG`,
+        [`Kovex s.r.o. and Partners Group AG`],
+        0,
+        [`Kovex s.r.o.`],
+        0,
+      ],
+      [
+        `Kovex s.r.o. and Partners Group AG and Casey Sample`,
+        [`Kovex s.r.o.`],
+        1,
+        [`Kovex s.r.o.`],
+        1,
+      ],
+      [
+        `Kovex d.o.o. and Partners Group AG and Casey Sample`,
+        [`Kovex d.o.o.`],
+        1,
+        [`Kovex d.o.o.`],
+        1,
+      ],
+      [
+        `Kovex sp. z o.o. and Partners Group AG and Casey Sample`,
+        [`Kovex sp. z o.o.`],
+        1,
+        [`Kovex sp. z o.o.`],
+        1,
+      ],
+      [`Kovex a.s. and Partners Group AG and Casey Sample`, [`Kovex a.s.`], 1, [`Kovex a.s.`], 1],
+      [`Kovex e.V. and Partners Group AG and Casey Sample`, [`Kovex e.V.`], 1, [`Kovex e.V.`], 1],
+      [
+        `Kovex Trading FZE and Partners Group AG and Casey Sample`,
+        [`Kovex Trading FZE`],
+        1,
+        [`Kovex Trading FZE`],
+        1,
+      ],
+      [
+        `Kovex Trading FZE and Sons Ltd`,
+        [`Kovex Trading FZE and Sons Ltd`],
+        0,
+        [`Kovex Trading FZE`],
+        0,
+      ],
+      [
+        `Kovex Trading DMCC and Co Ltd`,
+        [`Kovex Trading DMCC and Co Ltd`],
+        0,
+        [`Kovex Trading DMCC`],
+        0,
+      ],
+      // Wave 13 (RV12-OD-2): a part of generic words alone after ` and ` is NOT joined to the name
+      // before it (wave 12 joined it, and `Standard Chartered Bank and Trust Bank` became one key that
+      // names neither firm). The cut part gives no record (the gate), and the firm before it keeps the
+      // key of r11: the residual AND_FIRM (`Svarog Shipping` alone). A title of one slot is one party.
+      [
+        `Svarog Shipping and Trading Company Limited and Casey Sample`,
+        [`Svarog Shipping`],
+        1,
+        [`Svarog Shipping`],
+        1,
+      ],
+      [
+        `Svarog Shipping and Trading Company Limited`,
+        [`Svarog Shipping and Trading Company Limited`],
+        0,
+        [`Svarog Shipping`],
+        0,
+      ],
+      [
+        `Kovex Trading and Shipping Ltd and Casey Sample`,
+        [`Kovex Trading`],
+        1,
+        [`Kovex Trading`],
+        1,
+      ],
+      [
+        `Standard Chartered Bank and Trust Bank`,
+        [`Standard Chartered Bank and Trust Bank`],
+        0,
+        [`Standard Chartered Bank`],
+        0,
+      ],
+      [`Wise Payments and Trust Bank`, [`Wise Payments and Trust Bank`], 0, [`Wise Payments`], 0],
+      [`Citibank and Charity Bank`, [`Citibank and Charity Bank`], 0, [`Citibank`], 0],
+      [
+        `Standard Chartered Bank and Trust Bank and Casey Sample`,
+        [`Standard Chartered Bank`],
+        1,
+        [`Standard Chartered Bank`],
+        1,
+      ],
+      // After ` & ` the part still goes on with the name (r11 and wave 12 alike).
+      [
+        `Svarog Shipping & Trading Company Limited and Casey Sample`,
+        [`Svarog Shipping & Trading Company Limited`],
+        1,
+        [`Svarog Shipping & Trading Company Limited`],
+        1,
+      ],
+      [
+        `Alpha Trading and Beta Services Ltd and Casey Sample`,
+        [`Alpha Trading`, `Beta Services Ltd`],
+        1,
+        [`Alpha Trading`, `Beta Services Ltd`],
+        1,
+      ],
+      // A generic part after a name that has ended is no firm and gives no record.
+      [
+        `Kovex Ltd and Trading Company Limited and Casey Sample`,
+        [`Kovex Ltd`],
+        1,
+        [`Kovex Ltd`],
+        1,
+      ],
+      [`Kovex Ltd and Trading Ltd and Casey Sample`, [`Kovex Ltd`], 1, [`Kovex Ltd`], 1],
+      [`Partners Group AG and Casey Sample`, [], 1, [], 1],
+      // A side person of the tail (a bracket, a marker) neither blocks the join nor reaches a key.
+      [
+        `Svarog Shipping & Trading Company Limited (Casey Sample, director)`,
+        [`Svarog Shipping & Trading Company Limited`],
+        1,
+        [`Svarog Shipping & Trading Company Limited`],
+        1,
+      ],
+      [
+        `Svarog Shipping & Trading Company Limited f/k/a Casey Sample`,
+        [`Svarog Shipping & Trading Company Limited`],
+        1,
+        [`Svarog Shipping & Trading Company Limited`],
+        1,
+      ],
+      [`J Sample & Sons Ltd (Xavier Doe, director)`, [], 2, [], 2],
+      // A tail that ends in a form of any list goes on with the firm (`& Co. KG`, `& Sons OOO`).
+      [
+        `Kovex GmbH & Co. KG and Casey Sample`,
+        [`Kovex GmbH & Co. KG`],
+        1,
+        [`Kovex GmbH & Co. KG`],
+        1,
+      ],
+      [
+        `Kovex & Co. KG (in liquidation) and Casey Sample`,
+        [`Kovex & Co. KG`],
+        1,
+        [`Kovex & Co. KG (in liquidation)`],
+        1,
+      ],
+      [`Kovex & Sons OOO and Casey Sample`, [`Kovex & Sons OOO`], 1, [`Kovex & Sons OOO`], 1],
+      [
+        `Kovex & Partners JSC and Casey Sample`,
+        [`Kovex & Partners JSC`],
+        1,
+        [`Kovex & Partners JSC`],
+        1,
+      ],
+      [
+        `Kovex & Sons Sdn Bhd and Casey Sample`,
+        [`Kovex & Sons Sdn Bhd`],
+        1,
+        [`Kovex & Sons Sdn Bhd`],
+        1,
+      ],
+      [
+        `Kovex & Partners SE and Casey Sample`,
+        [`Kovex & Partners SE`],
+        1,
+        [`Kovex & Partners SE`],
+        1,
+      ],
+      [
+        `Kovex & Partners mbB and Casey Sample`,
+        [`Kovex & Partners mbB`],
+        1,
+        [`Kovex & Partners mbB`],
+        1,
+      ],
+      [`Kovex & Sons Kft. and Casey Sample`, [`Kovex & Sons Kft.`], 1, [`Kovex & Sons Kft.`], 1],
+      [`Kovex & Söhne GmbH and Casey Sample`, [`Kovex & Söhne GmbH`], 1, [`Kovex & Söhne GmbH`], 1],
+      // A tail that a title-only joiner follows in a description goes on with the name before it.
+      [
+        `Kovex and Sons Ltd with Casey Sample`,
+        [`Kovex and Sons Ltd`],
+        1,
+        [`Kovex and Sons Ltd`],
+        1,
+      ],
+      [
+        `Kovex and Sons Ltd's owner Casey Sample`,
+        [`Kovex and Sons Ltd`],
+        1,
+        [`Kovex and Sons Ltd`],
+        1,
+      ],
+      [`Casey Sample and Sons Ltd & Jane Doe`, [], 2, [], 2],
+      [`Casey Sample, Co Ltd / Jane Doe`, [], 2, [], 2],
+      [`Kovex Ltd and Co Ltd & Casey Sample`, [`Kovex Ltd`], 1, [`Kovex Ltd`], 1],
+      [`Lloyd George and Partners LLP & Omar Lindqvist`, [], 2, [], 2],
+      [
+        `Alpha Trading Ltd and Beta Services Ltd`,
+        [`Alpha Trading Ltd and Beta Services Ltd`],
+        0,
+        [`Alpha Trading Ltd`, `Beta Services Ltd`],
+        0,
+      ],
+      // Wave 12, the neighbours of the generic words: a connective or a joiner with a capital is a
+      // word of a name (`Le`, `Van`, `An`), so a person whose words are such words stays a person
+      // after a firm, and a tail with a person's shape goes on with a firm only when its form is in
+      // capitals or has a dot (`Sons FZE`; `Son Co` may be a person's name).
+      [`Kovex Trading Ltd and Son Le`, [`Kovex Trading Ltd`], 1, [`Kovex Trading Ltd`], 1],
+      [`Kovex Trading and Son Van Le`, [`Kovex Trading`], 1, [`Kovex Trading`], 1],
+      [`Kovex Ltd, Co Van An`, [`Kovex Ltd`], 1, [`Kovex Ltd`], 1],
+      [`Kovex Trading & Son Le`, [`Kovex Trading`], 1, [`Kovex Trading`], 1],
+      [`Kovex Trading and Son Co`, [`Kovex Trading`], 1, [`Kovex Trading`], 1],
+      [`Van Shipping Ltd and Casey Sample`, [`Van Shipping Ltd`], 1, [`Van Shipping Ltd`], 1],
+      [
+        `Kovex Trading and Sons FZE`,
+        [`Kovex Trading and Sons FZE`],
+        0,
+        [`Kovex Trading and Sons FZE`],
+        0,
+      ],
+      [`Casey Sample & Sons FZE`, [], 2, [], 2],
+    ])(
+      "reads %s as the table of the connectives, the statuses, the possessives and the articles pins it",
+      (slot, parties, persons, described, describedPersons) => {
+        const read = readings(slot);
+        expect(read.penalty).toEqual({
+          shape: "notice",
+          kind: "monetary penalty",
+          parties,
+          persons,
+        });
+        expect(read.disclosure).toEqual({ shape: "notice", kind: "disclosure", parties, persons });
+        expect(read.description).toEqual({
+          shape: "notice",
+          kind: "disclosure",
+          parties: described,
+          persons: describedPersons,
+        });
+      },
+    );
+
+    it("keeps a firm whose name ends in `& Co` in liquidation as its own record, and hides the notice of a person whose name a status ends", async () => {
+      const { parsed } = await runOf([
+        ...plainDocs(),
+        penalty("example-co-status", "J Sample & Co (in liquidation)", "2026-01-01T10:00:00Z"),
+        penalty(
+          "example-co-ltd-status",
+          "Alden Brook & Co Ltd (in liquidation)",
+          "2026-01-02T10:00:00Z",
+        ),
+        penalty(
+          "example-person-status",
+          "Volga Quarrin (In Liquidation) and Kovex Trading Ltd",
+          "2026-01-03T10:00:00Z",
+        ),
+      ]);
+      expect(recordOfId(parsed, "ofsi:jsamplecoinliquidation").url).toContain("example-co-status");
+      expect(recordOfId(parsed, "ofsi:aldenbrookcoltdinliquidation").url).toContain(
+        "example-co-ltd-status",
+      );
+      expect(parsed.records.some((record) => record.sourceRecordId === "ofsi:co")).toBe(false);
+      const kovex = recordOfId(parsed, "ofsi:kovextrading");
+      expect(kovex.title).toBe("OFSI notice: Kovex Trading Ltd");
+      expect(kovex.url).toBe(COLLECTION_PAGE);
+      const text = JSON.stringify(parsed.records);
+      expect(text).not.toContain("Quarrin");
+      expect(text).not.toContain("example-person-status");
+    });
+
+    it("drops the director of a firm whose name `& Co` and a status end, and keeps a firm that a split list cut at ` & ` whole, with no record for its tail", async () => {
+      const { parsed } = await runOf([
+        ...plainDocs(),
+        penalty(
+          "example-co-status-director",
+          "Ostrava & Co (in liquidation)'s director Volga Quarrin",
+          "2026-01-01T10:00:00Z",
+        ),
+        penalty(
+          "example-amp-firm",
+          "Svarog Shipping & Trading Company Limited and Quilla Quarrin",
+          "2026-01-02T10:00:00Z",
+        ),
+        penalty("example-amp-sons", "Halvex & Sons Ltd and Volga Quarrin", "2026-01-03T10:00:00Z"),
+        penalty(
+          "example-status-co-ltd",
+          "Volga Quarrin (In Liquidation) and Kovex & Co Ltd",
+          "2026-01-04T10:00:00Z",
+        ),
+        penalty(
+          "example-status-sons",
+          "Quilla Quarrin (in liquidation) and Sons Ltd and Torvik Ltd",
+          "2026-01-05T10:00:00Z",
+        ),
+      ]);
+      const ids = parsed.records.map((record) => record.sourceRecordId);
+      for (const [id, title] of [
+        ["ofsi:ostrava", "OFSI notice: Ostrava & Co"],
+        ["ofsi:svarogshippingtrading", "OFSI notice: Svarog Shipping & Trading Company Limited"],
+        ["ofsi:halvexsons", "OFSI notice: Halvex & Sons Ltd"],
+        ["ofsi:kovex", "OFSI notice: Kovex & Co Ltd"],
+        ["ofsi:torvik", "OFSI notice: Torvik Ltd"],
+      ]) {
+        const record = recordOfId(parsed, id);
+        expect(record.title).toBe(title);
+        expect(record.url).toBe(COLLECTION_PAGE);
+      }
+      for (const junk of ["ofsi:co", "ofsi:sons", "ofsi:trading", "ofsi:svarogshipping"]) {
+        expect(ids).not.toContain(junk);
+      }
+      const text = JSON.stringify(parsed.records);
+      for (const word of ["Quarrin", "quarrin", "director", "liquidation"]) {
+        expect(text).not.toContain(word);
+      }
+      // Every one of these notices names a person: none of their pages is linked.
+      for (const slug of [
+        "co-status-director",
+        "amp-firm",
+        "amp-sons",
+        "status-co-ltd",
+        "status-sons",
+      ]) {
+        expect(text).not.toContain(`example-${slug}`);
+      }
+    });
+
+    it("never puts a person whose surname an article leads with a typographic hyphen into a record", async () => {
+      const { parsed } = await runOf([
+        ...plainDocs(),
+        penalty(
+          "example-article-joined",
+          `Kovex Trading Ltd and Casey al${cp(0x2010)}Sample`,
+          "2026-01-01T10:00:00Z",
+        ),
+        penalty("example-article-alone", `Casey el${cp(0x2013)}Sample`, "2026-01-02T10:00:00Z"),
+        penalty(
+          "example-status-apart",
+          "Kovex Trading Ltd, (in liquidation) and Quilla Quarrin",
+          "2026-01-03T10:00:00Z",
+        ),
+        penalty(
+          "example-status-possessive",
+          "Kovex Trading Ltd (in liquidation)'s director Volga Quarrin",
+          "2026-01-04T10:00:00Z",
+        ),
+      ]);
+      const record = recordOfId(parsed, "ofsi:kovextrading");
+      expect(record.title).toBe("OFSI notice: Kovex Trading Ltd");
+      const text = JSON.stringify(parsed.records);
+      for (const word of ["Casey", "caseyalsample", "caseyelsample", "Quarrin", "quarrin"]) {
+        expect(text).not.toContain(word);
+      }
+      expect(text).not.toContain("liquidation");
+    });
+
+    it("cuts after AS in capitals followed by 's, and reads the firm whose only form is AS as a person: the residual of the closing forms", () => {
+      // Wave 12: `AS` written so is a legal form of the rules of a firm's name (`isFormWord`), so the
+      // possessive cuts there and the director is dropped (before, the slot was one party with the
+      // person in its key). `Alden Brook AS` still has the shape of a person's name (`AS` is no form of
+      // the person rule), so it goes too: the residual of a firm whose only form is `AS`.
+      expect(readings("Alden Brook AS's director Quilla Quarrin").penalty).toEqual(
+        gone("monetary penalty", 2),
+      );
+      // The word `as` of a role is no form: no cut.
+      const role = "Alden Brook as's director Quilla Quarrin";
+      expect(partiesOf(`${PENALTY_OF}${role}`)).toEqual([role]);
     });
 
     it("ends the company at a form in capitals followed by 'S: the case makes no difference", () => {
@@ -3608,7 +5626,7 @@ describe("the connector of the list", () => {
   describe("what it is", () => {
     it("is the connector of uk_ofsi, and exports the mark that its records begin with", () => {
       expect(ukOfsiConnector.id).toBe("uk_ofsi");
-      expect(ukOfsiConnector.version).toBe(1);
+      expect(ukOfsiConnector.version).toBe(11);
       expect(MARK).toBe("UK OFSI financial sanctions enforcement notices");
     });
 
@@ -5704,5 +7722,452 @@ describe("the connector of the list", () => {
         ukOfsiConnector.parse({ bodies: [], etag: null, lastModified: null, bytes: 0 }).root,
       ).toBeNull();
     });
+  });
+});
+
+/**
+ * The property test of the rules of a firm's name (wave 12): a seeded generator builds titles and
+ * descriptions from parts (persons, firms of every family of legal forms, firms with `&` and `and`
+ * inside, firms of generic words alone, tails, statuses, side persons, possessives) joined by every
+ * separator, one to three parts in every order, and reads each through `ofsiReadingOf` (the real
+ * path) and, per seed, through the connector. It is deterministic: five seeds of 2,000 cases.
+ *
+ * Post-conditions. (P-a) every party holds a distinctive word (a generated name word or a person's);
+ * (P-b) no person token reaches a party, a key, an id, a title or a link; (P-c) a firm that ends in a
+ * legal form, holds a distinctive word and holds no person keeps its own whole key next to another
+ * firm or a person in a list (a description, or a title that a person makes a list of; a tail after
+ * it may go on with it); (P-d) no throw; (P-e) no reading takes 100 ms. A counter-example is a bug or
+ * one of the NAMED residual families below, each told by how the case was built, never by its output,
+ * and each must be hit, so that a residual never hides a new bug:
+ * - FIRM_NAMED_AFTER_PERSON: a firm named after a person (`Casey Sample & Sons`) keeps the name.
+ * - PERSON_FIRST_IN_TITLE: a title whose list opens with a person is one party (header residual).
+ * - SPACED_DASH_IN_TITLE: a spaced dash joins a firm and a person in a title (header residual).
+ */
+describe("the rules of a firm's name, as a seeded generator reads them (wave 12)", () => {
+  type Kind = "person" | "firm" | "generic" | "personFirm" | "tail";
+  interface Part {
+    text: string;
+    kind: Kind;
+    /** The person of a firm named after one. */
+    who?: string;
+  }
+  interface Case {
+    text: string;
+    parts: Part[];
+    separators: string[];
+  }
+
+  /** mulberry32: a small seeded generator, the same numbers on every run. */
+  const randomOf = (seed: number): (() => number) => {
+    let state = seed >>> 0;
+    return () => {
+      state = (state + 0x6d2b79f5) >>> 0;
+      let t = state;
+      t = Math.imul(t ^ (t >>> 15), t | 1);
+      t ^= t + Math.imul(t ^ (t >>> 7), t | 61);
+      return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
+    };
+  };
+  const pick = <T>(random: () => number, items: readonly T[]): T =>
+    items[Math.floor(random() * items.length)];
+
+  // Name words that are part of no generic word and of no other name word, so that a hit is real.
+  const FIRSTS = ["Zyqa", "Vorlin", "Quessa", "Ilvane", "Draxa"];
+  const LASTS = ["Brazzle", "Tromwick", "Ovelny", "Pexwold", "Grumlet"];
+  const PERSON_TOKENS = [...FIRSTS, ...LASTS].map((word) => word.toLowerCase());
+  // Persons whose every word is also a generic word of a firm's name in lower case (`Son`, `Co`,
+  // `Le`, `Van`, `An`, `Do`, `La`, `Partner`, `Family`): found by their whole name.
+  const GENERIC_PERSONS = [
+    "Son Le",
+    "Co Van An",
+    "Do La",
+    "Son Van Le",
+    "An Do",
+    "Le Van Son",
+    "Partner Le",
+    "Family Van Do",
+  ];
+  const NAMES = [
+    "Kovex",
+    "Halvex",
+    "Torvik",
+    "Bank of Ostrava",
+    "Zentrix (ZTX)",
+    "Quorvane",
+    "Ostrava",
+  ];
+  const NAME_TOKENS = ["kovex", "halvex", "torvik", "ostrava", "zentrix", "quorvane"];
+  const ORGANISATION = ["Trading", "Shipping", "Holdings", "Services", "Group", "International"];
+  const FORMS = [
+    "Ltd",
+    "Limited",
+    "LLC",
+    "FZE",
+    "FZCO",
+    "DMCC",
+    "s.r.o.",
+    "sp. z o.o.",
+    "d.o.o.",
+    "a.s.",
+    "e.V.",
+    "GmbH",
+    "S.A.",
+    "B.V.",
+    "Pte Ltd",
+    "JSC",
+    "OOO",
+    "A/S",
+    "N.V.",
+    "Inc",
+    "plc",
+    "LLP",
+    "LP",
+    "KG",
+    "GmbH & Co. KG",
+    "SE",
+    "EOOD",
+    "AD",
+    "Sdn Bhd",
+    "Kft.",
+    "Oy",
+    "AB",
+    "Corp",
+  ];
+  // The forms that leave a one-word name before them a company for the person rule; the others come
+  // after a word of an organisation (`Kovex FZE` has the shape of a person's name: a residual of
+  // the person rule, not of this test).
+  const AFTER_ONE_WORD = new Set([
+    "Ltd",
+    "Limited",
+    "LLC",
+    "s.r.o.",
+    "sp. z o.o.",
+    "d.o.o.",
+    "a.s.",
+    "e.V.",
+    "GmbH",
+    "S.A.",
+    "B.V.",
+    "Pte Ltd",
+    "JSC",
+    "OOO",
+    "N.V.",
+    "Inc",
+    "plc",
+    "LLP",
+    "LP",
+    "GmbH & Co. KG",
+    "Sdn Bhd",
+    "Kft.",
+    "Oy",
+    "AB",
+    "Corp",
+  ]);
+  const GENERIC = [
+    "Partners Group AG",
+    "Family Holdings Ltd",
+    "International Bank",
+    "Trading Company Limited",
+    "Sons Ltd",
+    "Co Ltd",
+    "Brothers Trading Co Ltd",
+  ];
+  const TAILS = [
+    "& Sons",
+    "& Co",
+    "and Sons Ltd",
+    "& Partners LLP",
+    "& Co. KG",
+    "and Partners",
+    "& Söhne GmbH",
+    "& Fils",
+    "& Co (in liquidation)",
+    "& Associates Ltd",
+    "and Family Ltd",
+    "& Bros",
+  ];
+  const TAIL_PARTS = ["Sons Ltd", "Co", "Partners LLP", "Co. KG", "Sons OOO"];
+  const TITLE_SEPARATORS = [
+    ", ",
+    " and ",
+    " & ",
+    " / ",
+    "; ",
+    " with ",
+    " and/or ",
+    " together with ",
+    " as well as ",
+    " plus ",
+    " c/o ",
+    " vs ",
+    ", and ",
+    " - ",
+  ];
+  const DESCRIPTION_SEPARATORS = [", ", " and "];
+
+  function personOf(random: () => number): string {
+    if (random() < 0.15) return pick(random, GENERIC_PERSONS);
+    const first = pick(random, FIRSTS);
+    const last = pick(random, LASTS);
+    return pick(random, [
+      `${first} ${last}`,
+      `${first} ${last}-${pick(random, LASTS)}`,
+      `${first} O'${last}`,
+      `${first[0]}. ${last}`,
+      `Dr ${first} ${last}`,
+      `${first} ${last} Jr`,
+      `its director ${first} ${last}`,
+      `Mrs. ${first} ${last}`,
+      `${first} van ${last}`,
+      `${first[0]}.${last[0]}. ${last}`,
+    ]);
+  }
+
+  function firmOf(random: () => number): string {
+    const name = pick(random, NAMES);
+    const form = pick(random, FORMS);
+    const plain =
+      random() < 0.5 || !AFTER_ONE_WORD.has(form)
+        ? `${name} ${pick(random, ORGANISATION)} ${form}`
+        : `${name} ${form}`;
+    const shape = random();
+    if (shape < 0.08)
+      return `${name} ${pick(random, ORGANISATION)} & ${pick(random, ORGANISATION)} ${form}`;
+    if (shape < 0.14) return `${name} & Sons ${form}`;
+    if (shape < 0.18) return `${name} and Sons ${form}`;
+    return plain;
+  }
+
+  function partOf(random: () => number): Part {
+    const shape = random();
+    if (shape < 0.3) return { text: personOf(random), kind: "person" };
+    if (shape < 0.7) {
+      const firm = firmOf(random);
+      const side = random();
+      if (side < 0.15) return { text: `${firm} (in liquidation)`, kind: "firm" };
+      if (side < 0.22) return { text: `${firm} (${personOf(random)}, director)`, kind: "firm" };
+      if (side < 0.27) return { text: `${firm} f/k/a ${personOf(random)}`, kind: "firm" };
+      if (side < 0.32) return { text: `${firm}'s director ${personOf(random)}`, kind: "firm" };
+      return { text: firm, kind: "firm" };
+    }
+    if (shape < 0.82) return { text: pick(random, GENERIC), kind: "generic" };
+    if (shape < 0.92) {
+      const who = personOf(random);
+      return { text: `${who} ${pick(random, TAILS)}`, kind: "personFirm", who };
+    }
+    return { text: pick(random, TAIL_PARTS), kind: "tail" };
+  }
+
+  function caseOf(random: () => number, described: boolean): Case {
+    const count = 1 + Math.floor(random() * 3);
+    const parts = Array.from({ length: count }, () => partOf(random));
+    const separators = parts
+      .slice(1)
+      .map(() => pick(random, described ? DESCRIPTION_SEPARATORS : TITLE_SEPARATORS));
+    const text = parts.map((part, at) => (at === 0 ? "" : separators[at - 1]) + part.text).join("");
+    return { text, parts, separators };
+  }
+
+  const keyOf = (party: string): string => compactName(shortName(party));
+  /** The firm of a part, its status, its side person and its possessive put aside. */
+  const coreOf = (firm: string): string =>
+    firm
+      .replace(/ \((?:in liquidation|[^()]*director)\)$/, "")
+      .replace(/ f\/k\/a .*$/, "")
+      .replace(/'s director .*$/, "");
+  const holdsPersonToken = (text: string): boolean =>
+    PERSON_TOKENS.some((token) => text.toLowerCase().includes(token));
+  /** Whether a party (or its key) holds a person of the case: a token, or a generic person whole. */
+  const holdsPersonOf = (found: Case, party: string): boolean =>
+    holdsPersonToken(party) ||
+    holdsPersonToken(keyOf(party)) ||
+    GENERIC_PERSONS.some(
+      (person) =>
+        found.text.includes(person) &&
+        (party.includes(person) || keyOf(party).includes(keyOf(person))),
+    );
+
+  /** What a case breaks: each finding is a post-condition (`P-...`) or a named residual (`R ...`). */
+  function findingsOf(
+    found: Case,
+    described: boolean,
+    reading: ReturnType<typeof ofsiReadingOf>,
+  ): string[] {
+    const findings: string[] = [];
+    if (reading.shape !== "notice") return findings;
+    const [first] = found.parts;
+    for (const party of reading.parties) {
+      const named = NAME_TOKENS.some((token) => party.toLowerCase().includes(token));
+      const person = holdsPersonOf(found, party);
+      // Wave 13 (RV12-OD-1, P-7): a party that is the whole slot is the name the notice gives and is
+      // never gated (`SAS AB`, `EV Group`), so a whole slot of generic words (`Partners Group AG`)
+      // keeps its key, as in r11. P-a holds for every party that a cut gave.
+      const wholeSlot = reading.parties.length === 1 && party === found.text;
+      if (!named && !person && !wholeSlot) findings.push(`P-a ${party}`);
+      if (person) {
+        if (
+          found.parts.some((part) => part.kind === "personFirm" && party.includes(part.who ?? ""))
+        )
+          findings.push("R FIRM_NAMED_AFTER_PERSON");
+        else if (
+          !described &&
+          (first.kind === "person" || first.kind === "personFirm") &&
+          party.startsWith(first.text.split(" ")[0])
+        )
+          findings.push("R PERSON_FIRST_IN_TITLE");
+        else if (!described && found.separators.includes(" - "))
+          findings.push("R SPACED_DASH_IN_TITLE");
+        else findings.push(`P-b ${party}`);
+      }
+    }
+    const keys = reading.parties.map(keyOf);
+    const titleList =
+      !described &&
+      first.kind === "firm" &&
+      found.parts.some((part, at) => at > 0 && part.kind === "person");
+    if (found.parts.length >= 2 && (described || titleList)) {
+      for (const part of found.parts) {
+        if (part.kind !== "firm") continue;
+        const own = [keyOf(coreOf(part.text)), keyOf(part.text)];
+        // A tail that follows the firm in the list goes on with it: its key may go on after the firm's.
+        if (!own.some((wanted) => keys.some((key) => key === wanted || key.startsWith(wanted)))) {
+          findings.push(
+            !described && found.separators.includes(" - ")
+              ? "R SPACED_DASH_IN_TITLE"
+              : `P-c ${part.text}`,
+          );
+        }
+      }
+    }
+    return findings;
+  }
+
+  const SEEDS = [1, 2, 3, 4, 5];
+  const CASES = 2_000;
+
+  it("holds P-a to P-e on five seeds of 2,000 titles and descriptions, and every named residual is hit", () => {
+    const bugs: string[] = [];
+    const residuals = new Map<string, number>();
+    let slowest = 0;
+    let slowestCase: [string, boolean] = ["", false];
+    for (const seed of SEEDS) {
+      const random = randomOf(seed);
+      for (let at = 0; at < CASES; at += 1) {
+        for (const described of [false, true]) {
+          const found = caseOf(random, described);
+          const start = performance.now();
+          const reading = described
+            ? ofsiReadingOf(DATE_TITLE_OF, `${BY_OF} ${found.text}`)
+            : ofsiReadingOf(`${PENALTY_OF}${found.text}`, "");
+          const took = performance.now() - start;
+          if (took > slowest) {
+            slowest = took;
+            slowestCase = [found.text, described];
+          }
+          for (const finding of findingsOf(found, described, reading)) {
+            if (finding.startsWith("R ")) residuals.set(finding, (residuals.get(finding) ?? 0) + 1);
+            else bugs.push(`${described ? "D" : "T"} ${JSON.stringify(found.text)}: ${finding}`);
+          }
+        }
+      }
+    }
+    expect(bugs.slice(0, 20)).toEqual([]);
+    expect([...residuals.keys()].sort()).toEqual([
+      "R FIRM_NAMED_AFTER_PERSON",
+      "R PERSON_FIRST_IN_TITLE",
+      "R SPACED_DASH_IN_TITLE",
+    ]);
+    // A single sample may be slowed by the machine: the slowest case is timed again, the best of three.
+    const [text, described] = slowestCase;
+    const again = Array.from({ length: 3 }, () => {
+      const start = performance.now();
+      if (described) ofsiReadingOf(DATE_TITLE_OF, `${BY_OF} ${text}`);
+      else ofsiReadingOf(`${PENALTY_OF}${text}`, "");
+      return performance.now() - start;
+    });
+    expect(Math.min(...again)).toBeLessThan(100);
+  });
+
+  it.each([
+    "Kovex & Sons FZE f/k/a Casey Sample and ",
+    "Sons SE (Casey Sample, director), ",
+    "Trading Company Limited and ",
+    "Kovex s.r.o.'s director Casey Sample; ",
+    "Casey Sample (in liquidation) & Sons Ltd and ",
+    "Sons FZE ",
+    "& Co. KG & ",
+    "(a (b (c ",
+    "Partners Group AG and/or ",
+    "Son Le, ",
+  ])(
+    "reads a hostile title and description of %j at the limits and at 20,000 characters in under 100 ms",
+    (unit) => {
+      for (const [length, described] of [
+        [300 - PENALTY_OF.length, false],
+        [1_000 - BY_OF.length - 1, true],
+        [20_000, false],
+        [20_000, true],
+      ] as const) {
+        const text = unit
+          .repeat(Math.ceil(length / unit.length))
+          .slice(0, length)
+          .trim();
+        const times = Array.from({ length: 3 }, () => {
+          const start = performance.now();
+          if (described) ofsiReadingOf(DATE_TITLE_OF, `${BY_OF} ${text}`);
+          else ofsiReadingOf(`${PENALTY_OF}${text}`, "");
+          return performance.now() - start;
+        });
+        expect(Math.min(...times)).toBeLessThan(100);
+      }
+    },
+  );
+
+  it("never puts a generated person into an id, a title, a name or a link of a record, and gives no record of generic words alone", async () => {
+    for (const seed of SEEDS) {
+      const random = randomOf(seed);
+      const docs = [...plainDocs()];
+      for (let at = 0; docs.length < PARTIES.length + 60; at += 1) {
+        const described = at % 2 === 1;
+        const found = caseOf(random, described);
+        const reading = described
+          ? ofsiReadingOf(DATE_TITLE_OF, `${BY_OF} ${found.text}`)
+          : ofsiReadingOf(`${PENALTY_OF}${found.text}`, "");
+        // The cases of a named residual keep a person in a party by design: they are pinned above.
+        if (findingsOf(found, described, reading).some((finding) => finding.startsWith("R ")))
+          continue;
+        // Wave 13: a whole slot of generic words is the notice's own name and keeps its record (P-a
+        // above); its id is no name of the generator's, so it is left out of this check of ids.
+        const genericWhole = (party: string): boolean =>
+          party === found.text && !NAME_TOKENS.some((token) => party.toLowerCase().includes(token));
+        if (reading.shape === "notice" && reading.parties.some(genericWhole)) continue;
+        // GOV.UK makes the end of the address of a page from its title: here it holds every word.
+        const slug = `example-${seed}-${at}-${compact(found.text)}`;
+        docs.push(
+          described
+            ? notice(slug, "Disclosure notice: 08 September 2025", `${dayAt(200 + at)}T10:00:00Z`, {
+                description: `${BY_OF} ${found.text}`,
+              })
+            : penalty(slug, found.text, `${dayAt(200 + at)}T10:00:00Z`),
+        );
+      }
+      const { parsed } = await runOf(docs);
+      expect(parsed.records.length).toBeGreaterThan(PARTIES.length);
+      for (const record of parsed.records) {
+        const text = JSON.stringify(record).toLowerCase();
+        for (const token of PERSON_TOKENS) expect(text).not.toContain(token);
+        // A generic person as written, a word apart (its compact form is in words such as `and/or`).
+        const written = JSON.stringify(record);
+        for (const person of GENERIC_PERSONS) {
+          expect(written).not.toMatch(new RegExp(`(?<![\\p{L}])${person}(?![\\p{L}])`, "u"));
+        }
+        const id = record.sourceRecordId;
+        const own =
+          id.startsWith("ofsi:") &&
+          (NAME_TOKENS.some((token) => id.includes(token)) ||
+            PARTIES.some((party) => idOfParty(party) === id));
+        expect(own).toBe(true);
+      }
+    }
   });
 });

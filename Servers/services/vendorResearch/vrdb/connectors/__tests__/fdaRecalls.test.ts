@@ -535,9 +535,9 @@ function sentenceOf(summary: string, label: string): string {
 const NOT_THE_LIST = { records: [], errors: 1, sourceVersion: null, root: null };
 
 describe("fdaRecallsConnector", () => {
-  it("is the connector of fda_device_recalls, at version 2, with the mark its texts begin with", () => {
+  it("is the connector of fda_device_recalls, at version 3, with the mark its texts begin with", () => {
     expect(fdaRecallsConnector.id).toBe("fda_device_recalls");
-    expect(fdaRecallsConnector.version).toBe(2);
+    expect(fdaRecallsConnector.version).toBe(3);
     expect(FDA_RECALL_RECORD_MARK).toBe("FDA medical device recalls (openFDA)");
     expect(createFdaRecallsConnector().id).toBe("fda_device_recalls");
   });
@@ -2908,6 +2908,7 @@ describe("fdaRecallsConnector.download, the class stage: what the answers give",
     ["a month that does not exist", "20241305"],
     ["a month of zero", "20240005"],
     ["a day of zero", "20240300"],
+    ["a day of the year 0000", "00000305"],
     ["a day with a blank before it", " 20240305"],
     ["a day with a time", "20240305T0000"],
     ["a day in words", "yesterday"],
@@ -3502,6 +3503,13 @@ describe("fdaRecallsConnector.download, the projection of the answers", () => {
     ["a day of initiation in another form", { event_date_initiated: "08/07/2026" }],
     ["a day of initiation that does not exist", { event_date_initiated: "2026-02-30" }],
     ["a day of initiation with a time", { event_date_initiated: "2026-08-07T00:00:00" }],
+    // Postgres has no year 0000: as the published day of a record it would fail the whole write.
+    ["a day of initiation in the year 0000", { event_date_initiated: "0000-03-01" }],
+    // A mistyped year used to date the recall in the future, where no lookback ever leaves it.
+    [
+      "a day of initiation after the week that follows the day of the download",
+      { event_date_initiated: "2062-01-03" },
+    ],
   ])("skips and counts a product with %s, and keeps the others", async (_label, over) => {
     const csv = csvOf(kRows(2));
     const products = [rawProduct(1, over), rawProduct(2)];
@@ -3512,6 +3520,33 @@ describe("fdaRecallsConnector.download, the projection of the answers", () => {
     expect(projection.products.map((product) => product.matched)).toEqual([["K900002"]]);
     expect(projection.skipped).toBe(1);
     expect(parse(snapshot)).toMatchObject({ errors: 0, skipped: 1 });
+  });
+
+  it("skips and counts a stored product whose day of initiation is after the week that follows the day of the parse", async () => {
+    const csv = csvOf(kRows(2));
+    const snapshot = await fetched(serve({ csv, products: [rawProduct(1), rawProduct(2)] }));
+    const before = parse(snapshot);
+    const projection = projectionOf(snapshot);
+    projection.products[0].event_date_initiated = "2062-01-03";
+
+    const after = parse({ ...snapshot, bodies: [JSON.stringify(projection)] });
+
+    expect(before).toMatchObject({ errors: 0, skipped: 0 });
+    expect(after).toMatchObject({ errors: 0, skipped: 1 });
+    expect(after.records).toHaveLength(before.records.length - 1);
+    expect(after.records.map((record) => record.publishedAt)).not.toContain("2062-01-03");
+  });
+
+  it("keeps a product initiated within the week that follows the day of the download", async () => {
+    const soon = new Date(Date.now() + 5 * 24 * 60 * 60 * 1000).toISOString().slice(0, 10);
+    const csv = csvOf(kRows(1));
+    const snapshot = await fetched(
+      serve({ csv, products: [rawProduct(1, { event_date_initiated: soon })] }),
+    );
+
+    expect(projectionOf(snapshot).skipped).toBe(0);
+    expect(parse(snapshot)).toMatchObject({ errors: 0, skipped: 0 });
+    expect(parse(snapshot).records[0].publishedAt).toBe(soon);
   });
 
   it("skips and counts a result that is not an object, and leaves the products that carry no number alone", async () => {

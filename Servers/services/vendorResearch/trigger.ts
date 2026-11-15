@@ -11,9 +11,18 @@
  * 4. the cooldown of a manual start has passed (an automatic start does not wait),
  * 5. the organization is under its daily cap.
  *
- * Then the queued run is created and its job queued. The partial unique index on the runs lets one
- * active run through for each vendor, so a second start that gets past step 3 at the same moment
- * meets the index and returns the run that won. A queue that does not take the job within
+ * Then the queued run is created and its job queued. Steps 3 to 5 and the insert of the run run in
+ * one transaction that holds the organization's start lock (`withRunStartLockQuery`), so the starts
+ * of one organization take their turn: a start that comes a moment after another one sees that
+ * start's run, as the active run of its vendor (the same vendor: it returns that run, never a
+ * cooldown) and in the count of the daily cap (another vendor: the cap holds however many starts
+ * come at once). The job is queued after the commit, so the worker always finds the run and the
+ * lock is never held while the queue is waited on. Under RLS Phase 2 (off by default) the lock's
+ * transaction is a savepoint of the request's RLS transaction (see `withRunStartLockQuery`): there
+ * the run commits, and the lock is let go, only with the request, after the job was queued, as
+ * every write of such a request does. The partial unique index on the runs still lets
+ * one active run through for each vendor; a start that meets it anyway returns the run that won. A
+ * queue that does not take the job within
  * ENQUEUE_TIMEOUT_MS is a queue that refused it: the run ends as failed ("could not enqueue", which
  * counts toward neither limit) and the start answers `enqueue_failed`.
  */
@@ -32,6 +41,7 @@ import {
   finishRunQuery,
   getActiveRunQuery,
   getLastRunCreatedAtQuery,
+  withRunStartLockQuery,
 } from "../../utils/vendorResearch.utils";
 import { getVendorResearchConfig } from "./config";
 import { enqueueVendorResearch } from "./queue";
@@ -40,6 +50,8 @@ const MINUTE_MS = 60_000;
 /**
  * The daily cap counts the runs of a rolling 24 hours, but not those that failed before they
  * started or that have waited in the queue for longer than the stale limit (see `COUNTS_AS_A_RUN`).
+ * It also counts the runs that started and no longer exist, through `vendor_research_run_ledger`
+ * (the runs of a deleted vendor: their spend happened).
  */
 const DAY_MS = 24 * 60 * MINUTE_MS;
 /** What a run records when its job could not be queued. */
@@ -107,10 +119,11 @@ async function enqueueWithTimeout(
   organizationId: number,
   vendorId: number,
   runId: number,
+  triggerType: ResearchTrigger,
 ): Promise<void> {
   let timer: ReturnType<typeof setTimeout> | undefined;
   try {
-    const adding = enqueueVendorResearch(organizationId, vendorId, runId);
+    const adding = enqueueVendorResearch(organizationId, vendorId, runId, triggerType);
     // Belt and braces: `Promise.race` already attaches a handler to `adding`, so a rejection that
     // comes after the timer has won is handled either way. This keeps that true whatever happens to
     // the race, because an unhandled rejection ends the process on Node 22.
@@ -152,34 +165,49 @@ export async function startVendorResearch(args: {
 
   await failStaleRunsQuery(organizationId, vendorId, STALE_RUN_MINUTES);
 
-  const active = await getActiveRunQuery(organizationId, vendorId);
-  if (active) return { ok: true, run: active, alreadyRunning: true };
-
-  // With a cooldown of zero there is nothing to wait for, whatever the clocks say.
-  if (triggerType === "manual" && config.manualCooldownMinutes > 0) {
-    const lastRunAt = await getLastRunCreatedAtQuery(organizationId, vendorId);
-    if (lastRunAt) {
-      const waitMs = lastRunAt.getTime() + config.manualCooldownMinutes * MINUTE_MS - Date.now();
-      if (waitMs > 0) return fail("cooldown", Math.ceil(waitMs / 1000));
-    }
-  }
-
-  const runsInLastDay = await countRunsSinceQuery(organizationId, new Date(Date.now() - DAY_MS));
-  if (runsInLastDay >= config.dailyRunCap) return fail("daily_cap");
-
-  let run: IVendorResearchRun;
+  let decision: { answer: StartResearchResult } | { created: IVendorResearchRun };
   try {
-    run = await createRunQuery({ organizationId, vendorId, triggerType, requestedBy });
+    decision = await withRunStartLockQuery(organizationId, async (transaction) => {
+      const active = await getActiveRunQuery(organizationId, vendorId, transaction);
+      if (active) return { answer: { ok: true, run: active, alreadyRunning: true } };
+
+      // With a cooldown of zero there is nothing to wait for, whatever the clocks say.
+      if (triggerType === "manual" && config.manualCooldownMinutes > 0) {
+        const lastRunAt = await getLastRunCreatedAtQuery(organizationId, vendorId, transaction);
+        if (lastRunAt) {
+          const waitMs =
+            lastRunAt.getTime() + config.manualCooldownMinutes * MINUTE_MS - Date.now();
+          if (waitMs > 0) return { answer: fail("cooldown", Math.ceil(waitMs / 1000)) };
+        }
+      }
+
+      const runsInLastDay = await countRunsSinceQuery(
+        organizationId,
+        new Date(Date.now() - DAY_MS),
+        transaction,
+      );
+      if (runsInLastDay >= config.dailyRunCap) return { answer: fail("daily_cap") };
+
+      const created = await createRunQuery(
+        { organizationId, vendorId, triggerType, requestedBy },
+        transaction,
+      );
+      return { created };
+    });
   } catch (error) {
     if (!isUniqueViolation(error)) throw error;
-    // A start that came a moment before this one created the run: it is the run to return.
+    // A run created outside the lock got there first. The violation aborted the lock's transaction,
+    // which is rolled back by now (a transaction of its own, or the savepoint inside the request's
+    // RLS transaction, which leaves that transaction usable), so the winner is read outside it.
     const winner = await getActiveRunQuery(organizationId, vendorId);
     if (!winner) throw error;
     return { ok: true, run: winner, alreadyRunning: true };
   }
+  if ("answer" in decision) return decision.answer;
+  const run = decision.created;
 
   try {
-    await enqueueWithTimeout(organizationId, vendorId, run.id);
+    await enqueueWithTimeout(organizationId, vendorId, run.id, triggerType);
   } catch (error) {
     logger.error(
       `${tag(organizationId, vendorId)}: run ${run.id} could not be queued: ${describeError(error)}`,

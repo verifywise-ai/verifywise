@@ -46,8 +46,8 @@ export const VRDB_SYNC_JOB_OPTIONS: JobsOptions = {
 };
 
 /**
- * A failed status job is tried again as a failed sync is. A settled one is not kept either: it
- * would keep its id, and BullMQ would add no later status job of its list.
+ * A failed status job is tried again as a failed sync is. A settled one is not kept either: nothing
+ * reads it, and BullMQ ends its deduplication when it settles (see `vrdbRelabelJobId`).
  */
 export const VRDB_RELABEL_JOB_OPTIONS: JobsOptions = VRDB_SYNC_JOB_OPTIONS;
 
@@ -63,8 +63,14 @@ export const vrdbSchedulerId = (id: VrdbSourceId): string => `vrdb_sync_${id}`;
 export const vrdbFirstSyncJobId = (id: VrdbSourceId): string => `vrdb_sync_first_${id}`;
 
 /**
- * The id of the status job of a list. BullMQ adds nothing while a job of the id is waiting or
- * running, so one waits per list, and the changes of several syncs are relabeled by one job.
+ * The deduplication id of the status job of a list. While a job of the list waits, an add is
+ * dropped: the waiting job reads the findings when it starts, so the changes of several syncs are
+ * relabeled by one job. While one runs, an add is kept as the next job of the list (BullMQ's
+ * `keepLastIfActive`), which BullMQ queues when the running one ends: the running job may have read
+ * the findings before the change was written, and a status job dropped then would leave the label
+ * stale until the next change of the list. So at most one runs and one waits per list. It is no job
+ * id: BullMQ drops an add whose job id exists before it looks at the deduplication, the running
+ * job's included.
  */
 export const vrdbRelabelJobId = (id: VrdbSourceId): string => `vrdb_relabel_${id}`;
 
@@ -76,7 +82,10 @@ export async function enqueueRelabel(
   await queue.add(
     VRDB_RELABEL_JOB,
     { sourceId },
-    { ...VRDB_RELABEL_JOB_OPTIONS, jobId: vrdbRelabelJobId(sourceId) },
+    {
+      ...VRDB_RELABEL_JOB_OPTIONS,
+      deduplication: { id: vrdbRelabelJobId(sourceId), keepLastIfActive: true },
+    },
   );
 }
 

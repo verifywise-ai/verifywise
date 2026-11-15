@@ -19,12 +19,19 @@
  * - `govukRowsOf` reads those bytes. It gives the rows only when every page states the same
  *   `total`, begins where it was asked, and the links of the results are, once each, as many as the
  *   `total`; any other set of pages is no search and gives null, which the reader of a list turns
- *   into "not the list".
+ *   into "not the list", and the sync does not try that again.
+ * - Pages that are each a page of a search but disagree (a later page with another `total`, or more
+ *   or fewer distinct links than the `total` over two pages or more) are a search that moved
+ *   between two requests, which a download a minute later may not meet. `govukSearchPages` checks
+ *   the pages it fetched the way `govukRowsOf` reads them, and fails such a download as
+ *   `FetchError("unreachable")`, which the sync tries again, instead of leaving a weekly list a
+ *   week older as "not the list".
  *
- * Both are bounded and none of them throws for what an answer holds. The text of a page is read
- * with `textOf` and parsed with `jsonOf` (kit/text.ts, kit/json.ts): a byte order mark, a charset,
- * a text that is not JSON and nesting past the kit's cap are all handled there. No error holds an
- * address or a word of an answer, and nothing is logged.
+ * Both are bounded, and none of them throws for what an answer holds but those failures of a
+ * download. The text of a page is read with `textOf` and parsed with `jsonOf` (kit/text.ts,
+ * kit/json.ts): a byte order mark, a charset, a text that is not JSON and nesting past the kit's
+ * cap are all handled there. No error holds an address or a word of an answer, and nothing is
+ * logged.
  */
 import { FetchError } from "../../../webResearch/guardedFetch";
 import type { Pin } from "./kit/address";
@@ -120,7 +127,7 @@ function pageCountOf(first: PageAnswer, pageSize: number): number | null {
  * A first page that is not a page of a search (not JSON, no count `total`, no list `results`), or
  * that says the search needs more than `maxPages` pages, fails as `NotTheListError`, with no other
  * request sent. A 304 that comes from the pin is `FetchError("unreachable")`: nothing was sent that
- * it could answer. Any failure of any page, the pause's included, is the failure of the call and
+ * it could answer. So are pages that disagree (`govukRowsOf`): the search moved between two requests. Any failure of any page, the pause's included, is the failure of the call and
  * passes on as it is: the pages that were fetched are dropped, and a partial list is never given.
  * The options are those of the caller's code, not of an answer: one that is not a whole number
  * above zero is a bug and fails the call with a plain `Error` before any request.
@@ -156,13 +163,67 @@ export async function govukSearchPages(
   }, maxPages);
 
   const buffers = answers.map((answer) => answer.body);
-  return {
+  const fetched: Fetched = {
     buffers,
     contentTypes: answers.map((answer) => answer.contentType),
     etag: null,
     lastModified: null,
     bytes: buffers.reduce((sum, buffer) => sum + buffer.length, 0),
   };
+  // Pages that disagree are a search that moved between two requests: a failure of this download,
+  // which the sync tries again, not a file that is not the list (which it would not try again).
+  if (searchOf(fetched, pageSize) === "moved") throw new FetchError("unreachable");
+  return fetched;
+}
+
+/**
+ * What the pages that `govukSearchPages` fetched are: one consistent search, and its rows; pages
+ * that are not a search (`no_search`); or pages of a search that disagree in a way that only two
+ * requests can (`moved`): a later page that states another `total`, or, over two pages or more,
+ * more or fewer distinct links than the `total`. See `govukRowsOf` for the checks. It stops at the
+ * first fault, whichever kind it is.
+ */
+function searchOf(fetched: Fetched, pageSize: number): GovukRows | "no_search" | "moved" {
+  const pages = fetched.buffers.length;
+  if (!isWhole(pageSize) || pages === 0) return "no_search";
+
+  let total = 0;
+  const links = new Set<string>();
+  const rows: Array<Record<string, unknown>> = [];
+  for (let index = 0; index < pages; index += 1) {
+    const page = jsonOf(textOf(fetched, index));
+    if (!isObject(page)) return "no_search";
+    const { total: stated, start, results } = page;
+    if (!isCount(stated) || !Array.isArray(results)) return "no_search";
+    if (index === 0) {
+      total = stated;
+      // The pages that were fetched cannot hold the search that the first page describes.
+      if (total > pageSize * pages) return "no_search";
+    } else if (stated !== total) {
+      return "moved";
+    }
+    // An answer that says where it begins must begin where it was asked, or it is another page: a
+    // server that does not page as asked, not a search that moved.
+    if (start !== undefined && start !== index * pageSize) return "no_search";
+
+    for (const row of results) {
+      if (!isObject(row)) return "no_search";
+      const { link } = row;
+      if (typeof link !== "string" || !link.startsWith("/")) return "no_search";
+      if (links.has(link)) continue;
+      // One more distinct link than the search holds: a count that is wrong is no list. Over two
+      // requests or more the search moved between them; one answer that disagrees with itself
+      // did not move.
+      if (links.size >= total) return pages > 1 ? "moved" : "no_search";
+      links.add(link);
+      rows.push(row);
+    }
+  }
+  // Fewer distinct links than the search holds: over two requests or more, a result moved to a
+  // page that was already read.
+  if (links.size !== total) return pages > 1 ? "moved" : "no_search";
+  // `total + 0` writes a total of minus zero as zero.
+  return { total: total + 0, rows };
 }
 
 /**
@@ -175,45 +236,13 @@ export async function govukSearchPages(
  * links than `total`, or fewer, is a search that moved between two requests. The rows come back in
  * the order of the pages, as the plain objects that `JSON.parse` made: none is copied onto another
  * object, so that a `__proto__` key of a result stays a key of its own. A `pageSize` that is not a
- * whole number above zero, and no page at all, give null.
+ * whole number above zero, and no page at all, give null. A search that moved never reaches it from
+ * `govukSearchPages`, which fails such a download as unreachable.
  *
  * Pure, and linear in the text of the pages: it stops at the first fault, and at the first result
  * that no `total` has room for, so that a page of a million results is not walked to its end.
  */
 export function govukRowsOf(fetched: Fetched, options: { pageSize: number }): GovukRows | null {
-  const { pageSize } = options;
-  const pages = fetched.buffers.length;
-  if (!isWhole(pageSize) || pages === 0) return null;
-
-  let total = 0;
-  const links = new Set<string>();
-  const rows: Array<Record<string, unknown>> = [];
-  for (let index = 0; index < pages; index += 1) {
-    const page = jsonOf(textOf(fetched, index));
-    if (!isObject(page)) return null;
-    const { total: stated, start, results } = page;
-    if (!isCount(stated) || !Array.isArray(results)) return null;
-    if (index === 0) {
-      total = stated;
-      // The pages that were fetched cannot hold the search that the first page describes.
-      if (total > pageSize * pages) return null;
-    } else if (stated !== total) {
-      return null;
-    }
-    // An answer that says where it begins must begin where it was asked, or it is another page.
-    if (start !== undefined && start !== index * pageSize) return null;
-
-    for (const row of results) {
-      if (!isObject(row)) return null;
-      const { link } = row;
-      if (typeof link !== "string" || !link.startsWith("/")) return null;
-      if (links.has(link)) continue;
-      // One more distinct link than the search holds: it moved, and a count that is wrong is no list.
-      if (links.size >= total) return null;
-      links.add(link);
-      rows.push(row);
-    }
-  }
-  // `total + 0` writes a total of minus zero as zero.
-  return links.size === total ? { total: total + 0, rows } : null;
+  const search = searchOf(fetched, options.pageSize);
+  return typeof search === "string" ? null : search;
 }

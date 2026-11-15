@@ -216,6 +216,20 @@ class NotKnown extends Error {
   }
 }
 
+/** A shared load that failed because the run that started it was stopped; `failure` is why. */
+/**
+ * The most times a run whose own signal is live asks again after a shared load that another run
+ * started was stopped by that run (see `filerRoleOf`). Each such load is started by another run,
+ * so the tries end anyway; the bound keeps them few.
+ */
+export const MAX_SHARED_LOAD_RETRIES = 3;
+
+class LoadStopped extends Error {
+  constructor(readonly failure: unknown) {
+    super("stopped");
+  }
+}
+
 /** The name of an error, for a log line: its message can carry an address. */
 function errorName(error: unknown): string {
   return error instanceof Error && /^[A-Za-z_$][\w$.]{0,59}$/.test(error.name)
@@ -281,17 +295,46 @@ export function createEdgarFilerResolver(deps: EdgarFilerDeps = {}): EdgarFilerR
     );
   }
 
+  /**
+   * The parties of an accession, from the memory or from a load that waits on the signal of the
+   * run that starts it. Runs that ask at once share that load, so when the run that started it is
+   * stopped, the load fails for all of them: that failure is marked, so that a run whose own
+   * signal is live asks again (R4-PL-3): the first to ask starts the new load under its own signal
+   * and the others share it. When that run is stopped as well, a live run asks again, up to
+   * MAX_SHARED_LOAD_RETRIES times (RVS-1).
+   */
+  const partiesOf = (
+    accession: string,
+    cik: string,
+    agent: string,
+    signal: AbortSignal,
+  ): Promise<ReadonlySet<number>> =>
+    filers.get(accession, () =>
+      filersOf(accession, cik, agent, signal).catch((error: unknown) => {
+        throw signal.aborted ? new LoadStopped(error) : error;
+      }),
+    );
+
   return async function filerRoleOf(url, storedCik, signal) {
     if (userAgent === null) return null;
     const accession = accessionOfFiling(url);
     if (accession === null || !CIK_DIGITS.test(storedCik)) return null;
     try {
-      const filing = await filers.get(accession, () =>
-        filersOf(accession, storedCik, userAgent, signal),
-      );
+      let filing: ReadonlySet<number> | undefined;
+      for (let tries = 0; filing === undefined; tries += 1) {
+        try {
+          filing = await partiesOf(accession, storedCik, userAgent, signal);
+        } catch (error) {
+          // Another run's load, stopped by that run: this run was not, so it asks again. The run
+          // that asks again first starts the new load under its own signal, and it can be stopped
+          // too, so a live run asks while that happens, up to MAX_SHARED_LOAD_RETRIES times.
+          if (!(error instanceof LoadStopped) || signal.aborted) throw error;
+          if (tries >= MAX_SHARED_LOAD_RETRIES) throw error;
+        }
+      }
       return filing.has(Number(storedCik)) ? "vendor" : "other";
     } catch (error) {
-      logFailure(error);
+      logFailure(error instanceof LoadStopped ? error.failure : error);
       return null;
     }
   };

@@ -178,6 +178,58 @@ describe("runEvalCase", () => {
     expect(run.credibility[0]).toMatchObject({ label: "low", basis: { rule: "unverified" } });
   });
 
+  describe("the model of the analysis", () => {
+    // Two models the scripted generate is handed; it never calls them, it only answers by schema.
+    const RESEARCH = { name: "the model of the research" };
+    const ANALYSIS = { name: "the model of the analysis" };
+    const modelsAsked = async (deps: Parameters<typeof runEvalCase>[1]) => {
+      const scripted = createScriptedGenerate(BASE.recording);
+      const calls: Array<{ schema: unknown; model: unknown }> = [];
+      const generate = (async (params: { schema: unknown; model: unknown }) => {
+        calls.push({ schema: params.schema, model: params.model });
+        return scripted(params as never);
+      }) as typeof scripted;
+      const run = await runEvalCase({ ...BASE, verifier: true }, { generate, ...deps });
+      const analysis = calls.filter(
+        (call) => call.schema === credibilityOutputSchema || call.schema === verifierSchema,
+      );
+      const research = calls.filter((call) => !analysis.includes(call));
+      return { run, analysis, research };
+    };
+
+    it("is the model the organization chose for the analysis, as in the product", async () => {
+      const { run, analysis, research } = await modelsAsked({
+        model: RESEARCH,
+        modelId: "research-id",
+        analysis: { model: ANALYSIS, modelId: "analysis-id" },
+      });
+
+      expect(research.length).toBeGreaterThan(0);
+      for (const call of research) expect(call.model).toBe(RESEARCH);
+      // The analysis and the verifier: the chosen model itself, never wrapped by what the loop
+      // learned about the model of the research.
+      expect(analysis.map((call) => call.schema)).toEqual([
+        credibilityOutputSchema,
+        verifierSchema,
+      ]);
+      for (const call of analysis) expect(call.model).toBe(ANALYSIS);
+      // The trace names the model of each call, so that budgets tuned from it see both.
+      const byPurpose = (purpose: string) =>
+        run.trace.modelCalls.filter((call) => call.purpose === purpose).map((call) => call.model);
+      expect(byPurpose("loop").every((model) => model === "research-id")).toBe(true);
+      expect(byPurpose("analysis")).toEqual(["analysis-id"]);
+    });
+
+    it("is the model of the research when the organization chose none", async () => {
+      const { run, analysis } = await modelsAsked({ model: RESEARCH, modelId: "research-id" });
+
+      for (const call of analysis) expect(call.model).toBe(RESEARCH);
+      expect(
+        run.trace.modelCalls.filter((call) => call.purpose === "analysis").map((c) => c.model),
+      ).toEqual(["research-id"]);
+    });
+  });
+
   it("records the trace of the run, with the tokens of the calls estimated from the text", async () => {
     const run = await runEvalCase(BASE);
 

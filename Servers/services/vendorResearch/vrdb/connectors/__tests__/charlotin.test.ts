@@ -223,7 +223,7 @@ describe("charlotinConnector", () => {
       expect(charlotinConnector.id).toBe("charlotin");
       expect(charlotinConnector.kind).toBeUndefined();
       expect(Number.isInteger(charlotinConnector.version)).toBe(true);
-      expect(charlotinConnector.version).toBeGreaterThanOrEqual(1);
+      expect(charlotinConnector.version).toBe(2);
       expect(MARK).toBe("AI Hallucination Cases database");
     });
 
@@ -342,6 +342,22 @@ describe("charlotinConnector", () => {
     ])("splits %j into its tools", async (cell, keys) => {
       expect(await keysOfCell(cell)).toEqual(keys);
     });
+
+    it.each<[string, string[], string]>([
+      ["Examplex+ AI", ["examplexai"], "Examplex+ AI"],
+      ["Examplex+AI", ["examplexai"], "Examplex+AI"],
+      ["Examplex +AI", ["examplexai"], "Examplex +AI"],
+    ])(
+      "keeps a plus without a blank on each side in the name of %j: one tool, shown as written",
+      async (cell, keys, shown) => {
+        const { parsed } = await runOf([rowOf({ "AI Tool": cell })]);
+        expect(idsOf(parsed)).toEqual(keys);
+        const record = recordOfId(parsed, keys[0]);
+        expect(record.title).toBe(`${MARK}: ${shown}`);
+        expect(record.summary).toContain(`AI tool: ${shown}.`);
+        expect(record.identifiers.tool).toBe(shown);
+      },
+    );
 
     it.each<[string, string[]]>([
       ["Acmelaw's AI tools", ["acmelawaitools"]],
@@ -664,7 +680,7 @@ describe("charlotinConnector", () => {
         [
           `${MARK} (damiencharlotin.com), an AI incident list.`,
           SENTENCE_TWO,
-          "AI tool as written: Zetabot.",
+          "AI tool: Zetabot.",
           "Decisions that name it: 5, dated 2022-06-06 to 2026-05-01.",
           "By year: 2026 2, 2025 1, 2024 1.",
           "Filed by: lawyers 2, self-represented litigants 1, others 2.",
@@ -1062,7 +1078,7 @@ describe("charlotinConnector", () => {
           expect(String(record.identifiers.tool)).not.toContain("[shortened]");
           expect(record.title).toBe(`${MARK}: ${lineOf(name, 60)}`);
           expect(record.title.endsWith(SHORTENED)).toBe(true);
-          expect(record.summary).toContain(`AI tool as written: ${lineOf(name, 60)}.`);
+          expect(record.summary).toContain(`AI tool: ${lineOf(name, 60)}.`);
           expect(record.summary).not.toContain(name);
         },
       );

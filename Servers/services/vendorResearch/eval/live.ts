@@ -11,15 +11,26 @@
  * in a real run are not known yet. The calls that the search of the key makes to its model are
  * told to the trace of the run, so that `--trace` shows them with the rest.
  *
- * Nothing is written to the vendor, its findings or its runs. With `record` the web and the model
- * are recorded as they answer (see recorder.ts).
+ * As in the product, the run looks the vendor up in the public databases it asks itself (Have I
+ * Been Pwned and the status page, records/) and in the copies of the lists of the vendor risk
+ * database, both behind the records switch (VENDOR_RESEARCH_RECORDS). The sources the database
+ * reads through (the NVD, GLEIF, the SEC) are not asked: a read-through stores its answer in the
+ * database and spends the turns at those sources that the workers of the product share, so a live
+ * run is offered none of them and its coverage names them as not researched.
+ *
+ * Nothing is written to the vendor, its findings or its runs, and no match of the vendor risk
+ * database is kept. With `record` the web, the model and the databases are recorded as they
+ * answer (see recorder.ts).
  */
 import { generateObjectWithSelfCorrection } from "../../../advisor/llmSelfCorrect";
 import { createPageReader } from "../../webResearch/readPage";
+import { getVendorResearchConfig } from "../config";
 import { resolveOrgModel } from "../pipeline";
+import { sharedRecordsLookup } from "../records";
 import { type RunHooks, createRunSearch } from "../researchAgent";
 import { buildTarget } from "../target";
 import { createTraceRecorder } from "../trace";
+import { type LookupStore, createVrdbLookup, databaseLookupStore } from "../vrdb/lookup";
 import type { LiveOptions } from "./cli";
 import { createRecorder } from "./recorder";
 import { type CaseRun, runEvalCase } from "./runCase";
@@ -31,6 +42,7 @@ export async function runLive(
 ): Promise<{ run: CaseRun; recording: Recording | null }> {
   const resolved = await resolveOrgModel(options.orgId);
   if (!resolved) throw new Error("The organization has no LLM key");
+  const config = getVendorResearchConfig();
 
   // The search of the key writes its calls to the model into this trace, before the run starts it.
   const trace = createTraceRecorder();
@@ -56,8 +68,17 @@ export async function runLive(
     }).engine,
     readPage: createPageReader(),
     generate: generateObjectWithSelfCorrection,
+    // The lookup of the process, as the product's; none when the records are switched off.
+    records: sharedRecordsLookup(config),
+    // The copies are read as the product reads them, and the match of a vendor that is not stored
+    // is not kept.
+    vrdbStore: {
+      ...databaseLookupStore,
+      recordMatches: async () => undefined,
+    } satisfies LookupStore,
   };
-  const recorder = record ? createRecorder(live) : null;
+  const recorder = record ? createRecorder({ ...live, vrdbEnabled: config.records }) : null;
+  const { records, vrdbStore } = recorder ?? live;
 
   const evalCase: EvalCase = {
     id: "live",
@@ -85,9 +106,27 @@ export async function runLive(
     targets: {},
     gaps: {},
   };
+  const { engine, readPage, generate } = recorder ?? live;
   const run = await runEvalCase(evalCase, {
-    ...(recorder ?? live),
+    engine,
+    readPage,
+    generate,
+    ...(records === undefined ? {} : { records }),
+    // No vendor row and no read-through: see the module comment.
+    ...(vrdbStore === undefined
+      ? {}
+      : {
+          vrdb: createVrdbLookup({
+            store: vrdbStore,
+            organizationId: options.orgId,
+            vendorId: 0,
+            enabled: config.records,
+          }),
+        }),
     model: resolved.model,
+    modelId: resolved.modelId,
+    // The analysis and its verifier use the key the organization chose for them, as in the product.
+    ...(resolved.analysis ? { analysis: resolved.analysis } : {}),
     trace,
     // As in the product, a wait of the news engine for a pause of GDELT moves the clock of the
     // routine work, and a refusal is counted and traced.

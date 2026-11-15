@@ -69,8 +69,8 @@ interface StoredRun {
  * The store of vrdb.utils.ts in memory, with the same rules: a changed record takes its new
  * content, one that returns is active again, one the list no longer holds takes the missing
  * status, and a success notes its version, validators and number of active records. The changes
- * of a list read by its changes are upserted with their status, never delisting, a record that
- * comes without keys keeps its own, and the success notes the cursor. The ids a day retires lose
+ * of a list read by its changes are upserted with their status, never delisting, a rejected record
+ * that comes without keys keeps its own, and the success notes the cursor. The ids a day retires lose
  * their keys and keep their content (a stored rejection becomes active), unless the same day
  * writes them; one the copy does not hold, and one that has no keys and is active already, are
  * left alone.
@@ -180,7 +180,7 @@ function memoryStore() {
         const before = records.get(key);
         const status = record.status ?? "active";
         const kept =
-          before !== undefined && record.matchKeys.length === 0
+          before !== undefined && record.matchKeys.length === 0 && status === "rejected"
             ? { ...record, matchKeys: before.record.matchKeys }
             : record;
         if (!before) {
@@ -343,7 +343,8 @@ describe("syncSource", () => {
       lastOutcome: "ok",
       lastSuccessAt: T0,
       sourceVersion: "2026-10-29",
-      etag: '"v1"',
+      // The etag is stored behind the version of the connector that read the download.
+      etag: 'cv1:"v1"',
       activeRecords: 2,
     });
   });
@@ -430,14 +431,14 @@ describe("syncSource", () => {
 
     expect(notModified).toEqual({ outcome: "unchanged" });
     expect(sameBody).toEqual({ outcome: "unchanged" });
-    // The stored validators go with each download.
+    // The stored validators go with each download, without the version marker.
     expect(seenValidators[1]).toEqual({ etag: '"v1"', lastModified: null });
     // Nothing was parsed or written again, and the new validators were kept.
     expect(memory.runs.map((run) => run.result?.outcome)).toEqual(["ok", "unchanged", "unchanged"]);
     expect(memory.sources.get("uk_sanctions")).toMatchObject({
       lastOutcome: "unchanged",
       lastSuccessAt: new Date(T0.getTime() + 2 * HOUR_MS),
-      etag: '"v2"',
+      etag: 'cv1:"v2"',
     });
     // The connector's version goes first, then each body with its length.
     const expectedHash = createHash("sha256")
@@ -468,6 +469,90 @@ describe("syncSource", () => {
       counts: { seen: 1, inserted: 0, updated: 1, statusChanged: 0 },
     });
     expect(memory.recordsOf("uk_sanctions")[0].record.matchKeys).toContain("regno:123456");
+  });
+
+  it("a new connector version sends no validators, and re-parses a file the server would call current", async () => {
+    const memory = memoryStore();
+    const body = snapshotOf(
+      { records: [recordOf("A")] },
+      { etag: '"e1"', lastModified: "Fri, 30 Oct 2026 09:00:00 GMT" },
+    );
+    const before = fakeConnector("uk_sanctions", [body, "unchanged"]);
+    await sync("uk_sanctions", memory, before.connector);
+    // The same version sends what it stored, and a 304 to it is unchanged.
+    expect(await sync("uk_sanctions", memory, before.connector)).toEqual({
+      outcome: "unchanged",
+    });
+    expect(before.seenValidators[1]).toEqual({
+      etag: '"e1"',
+      lastModified: "Fri, 30 Oct 2026 09:00:00 GMT",
+    });
+
+    // Version 2 reads a key from the same body that version 1 did not. A server that honours the
+    // validators of version 1 would answer 304; version 2 sends none, so it gets the file again.
+    const after = fakeConnector("uk_sanctions", [body], 2, (record) => ({
+      ...record,
+      matchKeys: [...record.matchKeys, "regno:123456"],
+    }));
+    const result = await sync("uk_sanctions", memory, after.connector);
+
+    expect(after.seenValidators[0]).toEqual({ etag: null, lastModified: null });
+    expect(result).toEqual({
+      outcome: "ok",
+      counts: { seen: 1, inserted: 0, updated: 1, statusChanged: 0 },
+    });
+    expect(memory.recordsOf("uk_sanctions")[0].record.matchKeys).toContain("regno:123456");
+    expect(memory.sources.get("uk_sanctions")?.etag).toBe('cv2:"e1"');
+  });
+
+  it("a connector that keeps its own validator in the date gets none after a new version", async () => {
+    // The FDA's device recalls keep a composite validator of their own in last_modified.
+    const memory = memoryStore();
+    const composite = "recalls:2026-10-29;enforcement:2026-10-29;list:0123456789abcdef";
+    const body = snapshotOf({ records: [recordOf("A")] }, { lastModified: composite });
+    const before = fakeConnector("fda_device_recalls", [body, "unchanged"]);
+    await sync("fda_device_recalls", memory, before.connector);
+    expect(await sync("fda_device_recalls", memory, before.connector)).toEqual({
+      outcome: "unchanged",
+    });
+    expect(before.seenValidators[1]).toEqual({ etag: null, lastModified: composite });
+
+    const after = fakeConnector("fda_device_recalls", [body], 2);
+    await sync("fda_device_recalls", memory, after.connector);
+    expect(after.seenValidators[0]).toEqual({ etag: null, lastModified: null });
+  });
+
+  it("sends no validators that older code stored without the version marker: one download, then as usual", async () => {
+    const memory = memoryStore();
+    const body = snapshotOf({ records: [recordOf("A")] }, { etag: '"e1"' });
+    const { connector, seenValidators } = fakeConnector("kev", [body, body, "unchanged"]);
+    await sync("kev", memory, connector);
+    // As code before the marker stored it.
+    Object.assign(memory.sources.get("kev") ?? {}, { etag: '"e1"', lastModified: null });
+
+    expect(await sync("kev", memory, connector)).toEqual({ outcome: "unchanged" });
+    expect(seenValidators[1]).toEqual({ etag: null, lastModified: null });
+    // The same body hashed as the last success: the marked etag is stored, and sent next time.
+    expect(memory.sources.get("kev")?.etag).toBe('cv1:"e1"');
+    expect(await sync("kev", memory, connector)).toEqual({ outcome: "unchanged" });
+    expect(seenValidators[2]).toEqual({ etag: '"e1"', lastModified: null });
+  });
+
+  it("fails as fetch_failed a 304 to a request that sent no validator, and keeps the copy", async () => {
+    const memory = memoryStore();
+    const { connector, seenValidators } = fakeConnector("kev", [
+      snapshotOf({ records: [recordOf("K1")] }),
+      "unchanged",
+    ]);
+    await sync("kev", memory, connector);
+
+    // The file had no validators, so none is sent, and a 304 answers nothing that was asked.
+    const result = await sync("kev", memory, connector);
+
+    expect(seenValidators[1]).toEqual({ etag: null, lastModified: null });
+    expect(result).toEqual({ outcome: "failed", errorCode: "fetch_failed" });
+    expect(memory.sources.get("kev")).toMatchObject({ lastOutcome: "failed", lastSuccessAt: T0 });
+    expect(activeIds(memory, "kev")).toEqual(["K1"]);
   });
 
   it("marks records missing from a sanctions list delisted, and from KEV withdrawn", async () => {
@@ -538,6 +623,270 @@ describe("syncSource", () => {
     expect(shrunk.sources.get("ofac")).toMatchObject({ activeRecords: 100, lastError: "shrank" });
     expect(passed.outcome).toBe("ok");
     expect(activeIds(kept, "ofac")).toHaveLength(80);
+  });
+
+  it("a new connector version applies a reading with fewer records once, then guards again", async () => {
+    const records = (count: number) => idsUpTo(count).map((id) => recordOf(id));
+    const memory = memoryStore();
+    const before = fakeConnector("ofac", [snapshotOf({ records: records(100) }, { etag: '"e1"' })]);
+    await sync("ofac", memory, before.connector);
+
+    // Version 2 reads the same file into fewer records by design (a filter that drops rows): the
+    // parse of a new reading is not a loss of the list, so the shrink guard does not refuse it.
+    const after = fakeConnector(
+      "ofac",
+      [
+        snapshotOf({ records: records(60) }, { etag: '"e1"' }),
+        snapshotOf({ records: records(40) }, { etag: '"e2"' }),
+      ],
+      2,
+    );
+    const bumped = await sync("ofac", memory, after.connector);
+
+    expect(after.seenValidators[0]).toEqual({ etag: null, lastModified: null });
+    expect(bumped).toEqual({
+      outcome: "ok",
+      counts: { seen: 60, inserted: 0, updated: 0, statusChanged: 40 },
+    });
+    expect(activeIds(memory, "ofac")).toHaveLength(60);
+    expect(memory.sources.get("ofac")).toMatchObject({ activeRecords: 60, etag: 'cv2:"e1"' });
+    const noted = jest
+      .mocked(logger.info)
+      .mock.calls.map(([line]) => String(line))
+      .filter((line) => line.includes("shrink guard"));
+    expect(noted).toEqual([
+      "vendor risk database: ofac is read by a new version of its connector, so the shrink guard does not apply to this sync (100 to 60 records)",
+    ]);
+
+    // The same version again: a fifth fewer is a loss of the list, refused as before.
+    expect(await sync("ofac", memory, after.connector)).toEqual({
+      outcome: "failed",
+      errorCode: "shrank",
+    });
+    expect(activeIds(memory, "ofac")).toHaveLength(60);
+  });
+
+  it("a new connector version is still refused for an empty, wrong or broken download", async () => {
+    const records = (count: number) => idsUpTo(count).map((id) => recordOf(id));
+    const memory = memoryStore();
+    const before = fakeConnector("ofac", [snapshotOf({ records: records(10) }, { etag: '"e1"' })]);
+    await sync("ofac", memory, before.connector);
+
+    const after = fakeConnector(
+      "ofac",
+      [
+        snapshotOf({ records: [] }),
+        snapshotOf({ records: records(2), root: null }),
+        snapshotOf({ records: records(2), errors: 1 }),
+        new NotTheListError(),
+      ],
+      2,
+    );
+    const codes = [];
+    for (let run = 0; run < 4; run += 1) codes.push(await sync("ofac", memory, after.connector));
+
+    expect(codes).toEqual([
+      { outcome: "failed", errorCode: "empty" },
+      { outcome: "failed", errorCode: "wrong_root" },
+      { outcome: "failed", errorCode: "parse_errors" },
+      { outcome: "failed", errorCode: "wrong_root" },
+    ]);
+    expect(activeIds(memory, "ofac")).toHaveLength(10);
+    expect(memory.sources.get("ofac")).toMatchObject({ activeRecords: 10, etag: 'cv1:"e1"' });
+  });
+
+  it("a copy whose etag older code stored without the marker is read again like a new version", async () => {
+    const records = (count: number) => idsUpTo(count).map((id) => recordOf(id));
+    const memory = memoryStore();
+    const { connector } = fakeConnector("kev", [
+      snapshotOf({ records: records(10) }, { etag: '"e1"' }),
+      snapshotOf({ records: records(5) }, { etag: '"e1"' }),
+    ]);
+    await sync("kev", memory, connector);
+    // As code before the marker stored it: the validators are not sent, and the reading applies.
+    Object.assign(memory.sources.get("kev") ?? {}, { etag: '"e1"' });
+
+    expect((await sync("kev", memory, connector)).outcome).toBe("ok");
+    expect(activeIds(memory, "kev")).toHaveLength(5);
+  });
+
+  it("two connector versions side by side: the older one leaves the newer reading alone", async () => {
+    const records = (count: number) => idsUpTo(count).map((id) => recordOf(id));
+    const memory = memoryStore();
+    const clock = clockFrom(T0);
+    // A rolling deploy: replicas of version 7 and version 8 take the syncs of one list in turn,
+    // and the same file reads as 100 records to version 7 and as 60 to version 8.
+    const older = fakeConnector(
+      "ofac",
+      Array.from({ length: 4 }, () => snapshotOf({ records: records(100) }, { etag: '"e1"' })),
+      7,
+    );
+    const newer = fakeConnector(
+      "ofac",
+      Array.from({ length: 4 }, () => snapshotOf({ records: records(60) }, { etag: '"e1"' })),
+      8,
+    );
+
+    const answers = [];
+    for (const replica of [older, newer, older, newer, older]) {
+      clock.advance(60 * 60 * 1000);
+      answers.push(await sync("ofac", memory, replica.connector, clock.now));
+    }
+
+    expect(answers.map((answer) => answer.outcome)).toEqual([
+      "ok",
+      "ok",
+      "unchanged",
+      "unchanged",
+      "unchanged",
+    ]);
+    // The first apply of version 8 is the one sync without the shrink guard; after it the copy
+    // stays at version 8's reading, and no later sync changes a status.
+    expect(answers[1].counts?.statusChanged).toBe(40);
+    expect(answers.slice(2).every((answer) => answer.counts === undefined)).toBe(true);
+    expect(activeIds(memory, "ofac")).toHaveLength(60);
+    // The older replicas download nothing; version 8 sends its own validators again.
+    expect(older.seenValidators).toHaveLength(1);
+    expect(newer.seenValidators[1]).toEqual({ etag: '"e1"', lastModified: null });
+    const state = memory.sources.get("ofac");
+    expect(state).toMatchObject({ activeRecords: 60, etag: 'cv8:"e1"', lastError: null });
+    const noted = jest
+      .mocked(logger.info)
+      .mock.calls.map(([line]) => String(line))
+      .filter((line) => line.includes("newer version"));
+    expect(noted).toEqual([
+      "vendor risk database: ofac was read by a newer version of its connector (8), so this older reader (7) leaves it",
+      "vendor risk database: ofac was read by a newer version of its connector (8), so this older reader (7) leaves it",
+    ]);
+    expect(jest.mocked(logger.warn)).not.toHaveBeenCalled();
+  });
+
+  it("side by side, a changed file is applied by the newer version under its guard only", async () => {
+    const records = (count: number) => idsUpTo(count).map((id) => recordOf(id));
+    const memory = memoryStore();
+    const older = fakeConnector(
+      "ofac",
+      [snapshotOf({ records: records(100) }, { etag: '"e1"' })],
+      7,
+    );
+    const newer = fakeConnector(
+      "ofac",
+      [
+        snapshotOf({ records: records(60) }, { etag: '"e1"' }),
+        snapshotOf({ records: records(50) }, { etag: '"e2"' }),
+        snapshotOf({ records: records(30) }, { etag: '"e3"' }),
+      ],
+      8,
+    );
+
+    const answers = [];
+    for (const replica of [older, newer, older, newer, older, newer]) {
+      answers.push(await sync("ofac", memory, replica.connector));
+    }
+
+    // Version 8 reads a new file within the limit (60 to 50) and applies it; past it (50 to 30)
+    // it is refused as before. Version 7 leaves the copy alone in between, with no download.
+    expect(answers).toEqual([
+      expect.objectContaining({ outcome: "ok" }),
+      expect.objectContaining({ outcome: "ok" }),
+      { outcome: "unchanged" },
+      expect.objectContaining({ outcome: "ok" }),
+      { outcome: "unchanged" },
+      { outcome: "failed", errorCode: "shrank" },
+    ]);
+    expect(older.seenValidators).toHaveLength(1);
+    expect(newer.seenValidators.slice(1)).toEqual([
+      { etag: '"e1"', lastModified: null },
+      { etag: '"e2"', lastModified: null },
+    ]);
+    expect(activeIds(memory, "ofac")).toHaveLength(50);
+    expect(memory.sources.get("ofac")).toMatchObject({ etag: 'cv8:"e2"', lastError: "shrank" });
+  });
+
+  it("after a rollback, an operator who clears the stored marker lets the older code read the list again", async () => {
+    const records = (count: number) => idsUpTo(count).map((id) => recordOf(id));
+    const memory = memoryStore();
+    const newer = fakeConnector(
+      "ofac",
+      [snapshotOf({ records: records(60) }, { etag: '"e1"' })],
+      8,
+    );
+    await sync("ofac", memory, newer.connector);
+
+    const older = fakeConnector(
+      "ofac",
+      [snapshotOf({ records: records(100) }, { etag: '"e1"' })],
+      7,
+    );
+    expect(await sync("ofac", memory, older.connector)).toEqual({ outcome: "unchanged" });
+
+    // The operator's step: the stored etag of the list is cleared. The older reading then applies
+    // once, as a reading of another version, and the copy carries version 7's marker.
+    Object.assign(memory.sources.get("ofac") ?? {}, { etag: null });
+    expect(await sync("ofac", memory, older.connector)).toEqual({
+      outcome: "ok",
+      counts: { seen: 100, inserted: 40, updated: 0, statusChanged: 0 },
+    });
+    expect(older.seenValidators).toEqual([{ etag: null, lastModified: null }]);
+    expect(memory.sources.get("ofac")).toMatchObject({ activeRecords: 100, etag: 'cv7:"e1"' });
+  });
+
+  it("an older reader neither marks the list fresher nor failed, and its run counts as no failure", async () => {
+    const records = (count: number) => idsUpTo(count).map((id) => recordOf(id));
+    const memory = memoryStore();
+    const clock = clockFrom(T0);
+    const newer = fakeConnector(
+      "ofac",
+      [snapshotOf({ records: records(10) }, { etag: '"e1"', lastModified: "Mon" })],
+      3,
+    );
+    await sync("ofac", memory, newer.connector, clock.now);
+    const before = { ...memory.sources.get("ofac") };
+
+    clock.advance(24 * 60 * 60 * 1000);
+    const older = fakeConnector("ofac", [snapshotOf({ records: records(20) })], 2);
+    expect(await sync("ofac", memory, older.connector, clock.now)).toEqual({
+      outcome: "unchanged",
+    });
+
+    // The copy and its bookkeeping are as the newer reader left them: not checked again by this
+    // reader, so not fresher, and no failure.
+    expect(memory.sources.get("ofac")).toEqual(before);
+    expect(older.seenValidators).toEqual([]);
+    expect(activeIds(memory, "ofac")).toHaveLength(10);
+    const lastRun = memory.runs[memory.runs.length - 1];
+    expect(lastRun.result).toEqual({ outcome: "unchanged" });
+    expect(lastRun.finishedAt).toEqual(clock.now());
+  });
+
+  it("a marker of a much larger version than the code's is left alone too; one of the same is guarded", async () => {
+    const records = (count: number) => idsUpTo(count).map((id) => recordOf(id));
+    const memory = memoryStore();
+    const first = fakeConnector("ofac", [snapshotOf({ records: records(100) }, { etag: '"e1"' })]);
+    await sync("ofac", memory, first.connector);
+
+    for (const etag of ['cv12:"e1"', "cv99999999999999999999:"]) {
+      Object.assign(memory.sources.get("ofac") ?? {}, { etag });
+      const older = fakeConnector("ofac", [snapshotOf({ records: records(50) })], 11);
+      expect(await sync("ofac", memory, older.connector)).toEqual({ outcome: "unchanged" });
+      expect(older.seenValidators).toEqual([]);
+      expect(memory.sources.get("ofac")?.etag).toBe(etag);
+    }
+    expect(activeIds(memory, "ofac")).toHaveLength(100);
+
+    // Its own marker: the shrink guard applies, as it always did.
+    Object.assign(memory.sources.get("ofac") ?? {}, { etag: 'cv11:"e1"' });
+    const same = fakeConnector("ofac", [snapshotOf({ records: records(50) })], 11);
+    expect(await sync("ofac", memory, same.connector)).toEqual({
+      outcome: "failed",
+      errorCode: "shrank",
+    });
+    // A marker of a smaller version (cv1 read by version 11 is older; cv10 is not cv1): a new
+    // reading for version 11, applied once without the guard.
+    Object.assign(memory.sources.get("ofac") ?? {}, { etag: 'cv1:"e1"' });
+    const bumped = fakeConnector("ofac", [snapshotOf({ records: records(50) })], 11);
+    expect((await sync("ofac", memory, bumped.connector)).outcome).toBe("ok");
+    expect(activeIds(memory, "ofac")).toHaveLength(50);
   });
 
   it("a body cut at the size limit fails as too_large and keeps the mirror", async () => {
@@ -631,7 +980,7 @@ describe("syncSource", () => {
 
   it("writes a sync run row for every attempt", async () => {
     const memory = memoryStore();
-    const first = snapshotOf({ records: [recordOf("A")] });
+    const first = snapshotOf({ records: [recordOf("A")] }, { etag: '"v1"' });
     const { connector } = fakeConnector("uk_sanctions", [
       first,
       "unchanged",
@@ -715,7 +1064,7 @@ describe("syncSource", () => {
   it("an unchanged sync counts as a success", async () => {
     const memory = memoryStore();
     const { connector } = fakeConnector("kev", [
-      snapshotOf({ records: [recordOf("K1")] }),
+      snapshotOf({ records: [recordOf("K1")] }, { lastModified: "Fri, 30 Oct 2026 09:00:00 GMT" }),
       "unchanged",
     ]);
     const clock = clockFrom(T0);

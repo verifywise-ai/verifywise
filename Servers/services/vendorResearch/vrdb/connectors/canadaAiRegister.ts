@@ -707,7 +707,9 @@ export function createCanadaAiRegisterConnector({
 }: { sleep?: Sleep } = {}): Connector {
   return createFileConnector<VendorRow>({
     id: "canada_ai_register",
-    version: 1,
+    // 2: a legal form written with a slash (A/S) is a legal form (identity.ts): a vendor is keyed
+    // without it too, and its id is that of the name without it.
+    version: 2,
     root: ROOT,
     sortKey: (row) => row.id,
     fetchFiles: (fetch, validators) => fetchRegister(fetch, validators, sleep),

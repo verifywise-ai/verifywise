@@ -21,6 +21,35 @@ import {
 
 jest.setTimeout(30_000);
 
+/** Every timer of the fake clock but `Date`: a test moves the day of the download and nothing else. */
+const NOT_THE_DATE = [
+  "hrtime",
+  "nextTick",
+  "performance",
+  "queueMicrotask",
+  "requestAnimationFrame",
+  "cancelAnimationFrame",
+  "requestIdleCallback",
+  "cancelIdleCallback",
+  "setImmediate",
+  "clearImmediate",
+  "setInterval",
+  "clearInterval",
+  "setTimeout",
+  "clearTimeout",
+] as const;
+const setDay = (now: string): void => {
+  jest.useFakeTimers({ now: new Date(now), doNotFake: [...NOT_THE_DATE] });
+};
+
+// An entry dated after the week that follows the day of the download is unreadable, so the tests
+// download on a fixed day: every day that they write (up to 2026-12-01) is before it.
+const DOWNLOAD_DAY = "2026-12-20T12:00:00Z";
+beforeEach(() => setDay(DOWNLOAD_DAY));
+afterEach(() => {
+  jest.useRealTimers();
+});
+
 const MARK = PIPEROLL_RECORD_MARK;
 const FILE_URL = "https://piperoll.org/registry.json";
 const ETAG = 'W/"7c1d-4464e"';
@@ -261,9 +290,9 @@ async function oneRecord(over: Partial<Spec>) {
 
 describe("piperollConnector", () => {
   describe("the connector", () => {
-    it("is the snapshot connector of the list, at its first version", () => {
+    it("is the snapshot connector of the list, at its second version", () => {
       expect(piperollConnector.id).toBe("piperoll");
-      expect(piperollConnector.version).toBe(1);
+      expect(piperollConnector.version).toBe(2);
       expect(piperollConnector.kind).toBeUndefined();
       expect(MARK).toBe("PipeRoll Agent Incident Registry");
     });
@@ -284,7 +313,7 @@ describe("piperollConnector", () => {
 
     it("keeps the validators of the file behind the version of its reading", async () => {
       const { snapshot } = await run(fillers());
-      expect(snapshot.etag).toBe(`k1:${ETAG}`);
+      expect(snapshot.etag).toBe(`k2:${ETAG}`);
       expect(snapshot.lastModified).toBe(LAST_MODIFIED);
     });
 
@@ -545,6 +574,36 @@ describe("piperollConnector", () => {
       const { record, body } = await oneRecord({ sort_date: written });
       expect(record).toBeUndefined();
       expect(body.unreadable).toBe(1);
+    });
+
+    // A mistyped year used to keep the name in the lookback of the events for good, offered first,
+    // and become the version of the copy.
+    it.each([
+      ["a day", "2206-03-04"],
+      ["a month with no day", "2027-01-00"],
+      ["a year with no month and no day", "2027-00-00"],
+    ])(
+      "refuses %s after the week that follows the day of the download, and counts the entry as unreadable",
+      async (_name, written) => {
+        const { result, body, byId } = await run([
+          ...fillers(),
+          entry({ id: "PIR-2026-0300", title: "ZibbleCo agent did a thing", sort_date: written }),
+        ]);
+        expect(byId.get("zibbleco")).toBeUndefined();
+        expect(body.unreadable).toBe(1);
+        expect(result).toMatchObject({ errors: 0, skipped: 1 });
+        expect(result.sourceVersion).toBe(dayAt((FILLERS - 1) * 3));
+      },
+    );
+
+    it("reads a day up to a week after the day of the download, and none after it", async () => {
+      setDay("2026-11-12T10:00:00Z");
+      expect((await oneRecord({ sort_date: "2026-11-19" })).record?.publishedAt).toBe("2026-11-19");
+      const late = await oneRecord({ sort_date: "2026-11-20" });
+      expect(late.record).toBeUndefined();
+      expect(late.body.unreadable).toBe(1);
+      // A month that has begun is read as its first day, which is not in the future.
+      expect((await oneRecord({ sort_date: "2026-11-00" })).record?.publishedAt).toBe("2026-11-01");
     });
 
     it("refuses an entry that has no date, or a date that is no text", async () => {
@@ -3307,7 +3366,7 @@ describe("piperollConnector", () => {
         filesOf(registryText(fillers()), { url: "https://evil.example/registry.json" }),
       );
       const error = await failureOf(
-        piperollConnector.download(fetch, { etag: `k1:${ETAG}`, lastModified: LAST_MODIFIED }),
+        piperollConnector.download(fetch, { etag: `k2:${ETAG}`, lastModified: LAST_MODIFIED }),
       );
       expect(error).toBeInstanceOf(FetchError);
       expect((error as FetchError).reason).toBe("not_allowed");

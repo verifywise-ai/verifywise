@@ -24,6 +24,7 @@ import {
   type SearchKind,
   type SearchResult,
 } from "../webSearch";
+import { ROBOTS_MAX_BYTES } from "../robots";
 import { memoryCache, settle } from "./helpers/memoryCache";
 
 /** A Redis that keeps its data in a map and remembers the commands it was given. */
@@ -1008,19 +1009,36 @@ describe("withPageCache", () => {
 });
 
 describe("the answers of robots.txt", () => {
-  it("are kept as a status and a text under the origin, for the kind robots", async () => {
+  it("are kept as a status, a line break and the text as it is, under the origin, for the kind robots", async () => {
     const { cache, writes } = memoryCache();
 
     cacheRobots(cache, "https://acme.com", { status: 200, text: "User-agent: *\nDisallow: /x" });
     await settle();
 
     expect(writes).toEqual([
-      {
-        kind: "robots",
-        key: "https://acme.com",
-        value: JSON.stringify({ status: 200, text: "User-agent: *\nDisallow: /x" }),
-      },
+      { kind: "robots", key: "https://acme.com", value: "200\nUser-agent: *\nDisallow: /x" },
     ]);
+  });
+
+  // A file of short lines took 2 bytes a line break in JSON, past the limit of an entry, and was
+  // fetched again by every run.
+  it("are kept for any file that was read, however short its lines and whatever its characters", async () => {
+    const { redis, sets } = fakeRedis();
+    const cache = createRedisWebCache(() => redis);
+    const tab = String.fromCharCode(9);
+    const bell = String.fromCharCode(7);
+    const shortLines = "Disallow: /a\n".repeat(Math.floor(ROBOTS_MAX_BYTES / 13));
+    // Every byte invalid in UTF-8: each one is decoded as U+FFFD, 3 bytes.
+    const replaced = String.fromCharCode(0xfffd).repeat(ROBOTS_MAX_BYTES);
+    const controls = `${tab}${bell}\r\n`.repeat(ROBOTS_MAX_BYTES / 4);
+
+    for (const text of [shortLines, replaced, controls]) {
+      cacheRobots(cache, "https://acme.com", { status: 200, text });
+      await settle();
+      expect(await readCachedRobots(cache, "https://acme.com")).toEqual({ status: 200, text });
+    }
+    expect(sets).toHaveLength(3);
+    expect(MAX_ENTRY_BYTES.robots).toBe(3 * ROBOTS_MAX_BYTES + 16);
   });
 
   it.each<[RobotsAnswer]>([
@@ -1041,10 +1059,11 @@ describe("the answers of robots.txt", () => {
   });
 
   it.each([
-    ["text that is not JSON", "nope"],
-    ["a status other than 200 and 404", JSON.stringify({ status: 500, text: "" })],
-    ["a text that is not text", JSON.stringify({ status: 200, text: 5 })],
-    ["no text", JSON.stringify({ status: 200 })],
+    ["no line break", "200"],
+    ["no status", "\nUser-agent: *"],
+    ["a status other than 200 and 404", "500\n"],
+    ["a status with more around it", " 200\nUser-agent: *"],
+    ["the JSON that an older version kept", JSON.stringify({ status: 200, text: "" })],
   ])("are null for an entry that holds %s", async (_name, entry) => {
     const { cache, seed } = memoryCache();
     seed("robots", "https://acme.com", entry);

@@ -1,10 +1,12 @@
 import type { EvidenceSource, NewFinding } from "../../../domain.layer/interfaces/i.vendorResearch";
 import { type FetchedPage, PageReadError, type PageReader } from "../../webResearch/readPage";
+import { credibilityOf } from "../credibility";
 import { buildTarget } from "../target";
 import { createTraceRecorder } from "../trace";
 import {
   VERIFY_READS_PER_FINDING,
   VERIFY_TIMEOUT_MS,
+  answeredOnCitedSite,
   checkSnippetFindings,
   quoteIsOnPage,
   verifySnippetFindings,
@@ -424,7 +426,7 @@ describe("checkSnippetFindings", () => {
     findings: NewFinding[],
     pack: EvidenceSource[],
     readPage: PageReader,
-    extra: { signal?: AbortSignal } = {},
+    extra: { signal?: AbortSignal; trace?: ReturnType<typeof createTraceRecorder> } = {},
   ) => checkSnippetFindings({ findings, pack, target: TARGET, readPage, ...extra });
 
   it("gives no verdict for a finding that cites a page that was read", async () => {
@@ -495,6 +497,334 @@ describe("checkSnippetFindings", () => {
     );
 
     expect(result.verdict).toEqual({ outcome: "unread" });
+  });
+
+  // R4-VC-1: a page that answered from another site is not the cited page, so the text it holds
+  // must not earn the cited site's label.
+  describe("a page that answered from another site", () => {
+    const EXIT = "https://www.ico.org.uk/external-link?url=https%3A%2F%2Fattacker.example%2Fpost";
+    const LANDED = "https://attacker.example/post";
+    /** A reader whose page of `cited` answered from `landed`. */
+    const redirecting = (cited: string, landed: string, text: string) =>
+      jest.fn<ReturnType<PageReader>, Parameters<PageReader>>(async (url) => {
+        if (url !== cited) throw new PageReadError("not_found");
+        return pageOf(landed, text);
+      });
+
+    it("confirms nothing, and the finding is labelled as one nobody could confirm", async () => {
+      const kept = finding([EXIT]);
+      const pack = [source(EXIT)];
+      const trace = createTraceRecorder();
+
+      const [result] = await check([kept], pack, redirecting(EXIT, LANDED, HOLDING), { trace });
+
+      expect(result.verdict).toEqual({ outcome: "unread" });
+      expect(result.finding.snippet_only).toBe(true);
+      expect(trace.snapshot().steps).toEqual([
+        expect.objectContaining({ url: EXIT, outcome: "failed", reason: "redirected_off_site" }),
+      ]);
+      const label = credibilityOf({
+        finding: kept,
+        pack,
+        provenance: new Map(),
+        verdict: result.verdict,
+        target: TARGET,
+      });
+      expect(label.label).not.toBe("high");
+      expect(label.basis.sources[0].reading).toBe("unconfirmed");
+    });
+
+    it("contradicts nothing either, and the next source is tried", async () => {
+      const readPage = jest.fn<ReturnType<PageReader>, Parameters<PageReader>>(async (url) => {
+        if (url === REGULATOR) return pageOf(LANDED, NOT_HOLDING);
+        if (url === OTHER) return pageOf(OTHER, HOLDING);
+        throw new PageReadError("not_found");
+      });
+
+      const [result] = await check(
+        [finding([OTHER, REGULATOR])],
+        [source(OTHER), source(REGULATOR)],
+        readPage,
+      );
+
+      expect(readPage.mock.calls.map(([url]) => url)).toEqual([REGULATOR, OTHER]);
+      expect(result.verdict).toEqual({ outcome: "confirmed", url: OTHER });
+    });
+
+    it.each([
+      ["https://www.ico.org.uk/action/acme-analytics", "https://ico.org.uk/action/acme-analytics"],
+      ["https://ico.org.uk/action/acme-analytics", "https://www.ico.org.uk/action/acme-analytics"],
+      ["http://ico.org.uk/action/acme-analytics", "https://ico.org.uk/action/acme-analytics"],
+      ["https://ico.org.uk/action/old-path", "https://ico.org.uk/action/acme-analytics"],
+    ])("takes the page of %s that answered from %s as the cited site", async (cited, landed) => {
+      const [result] = await check(
+        [finding([cited])],
+        [source(cited)],
+        redirecting(cited, landed, HOLDING),
+      );
+
+      expect(result.verdict).toEqual({ outcome: "confirmed", url: cited });
+    });
+
+    // RVP-2: one publisher of the registry on two of its domains is the cited site.
+    it("takes a page cited on bbc.co.uk that answered from bbc.com as the cited site", async () => {
+      const cited = "https://www.bbc.co.uk/news/articles/c0acme";
+      const kept = finding([cited]);
+      const pack = [source(cited)];
+
+      const [result] = await check(
+        [kept],
+        pack,
+        redirecting(cited, "https://www.bbc.com/news/articles/c0acme", HOLDING),
+      );
+
+      expect(result.verdict).toEqual({ outcome: "confirmed", url: cited });
+      const label = credibilityOf({
+        finding: kept,
+        pack,
+        provenance: new Map(),
+        verdict: result.verdict,
+        target: TARGET,
+      });
+      expect(label.basis.sources[0].reading).toBe("read");
+    });
+
+    // RVP-2, RV6P-4: an explicit group of domains of one organisation counts as one site.
+    it.each([
+      ["https://www.bbc.co.uk/news/articles/c0acme", "https://www.bbc.com/news/articles/c0acme"],
+      ["https://www.bbc.com/news/articles/c0acme", "https://www.bbc.co.uk/news/articles/c0acme"],
+      ["https://abcnews.go.com/Technology/acme", "https://abcnews.com/Technology/acme"],
+      ["https://abcnews.com/Technology/acme", "https://abcnews.go.com/Technology/acme"],
+      // The Government of Canada moved its sites from gc.ca to canada.ca.
+      [
+        "https://www.tbs-sct.gc.ca/pol/doc-eng.aspx?id=32592",
+        "https://www.tbs-sct.canada.ca/pol/doc-eng.aspx?id=32592",
+      ],
+      [
+        "https://www.tbs-sct.gc.ca/pol/doc-eng.aspx?id=32592",
+        "https://www.canada.ca/en/treasury-board-secretariat/acme.html",
+      ],
+      ["https://www.canada.ca/en/acme.html", "https://www.ic.gc.ca/acme"],
+    ])(
+      "takes a page cited on %s that answered from %s as the cited site",
+      async (cited, landed) => {
+        const kept = finding([cited]);
+        const pack = [source(cited)];
+
+        const [result] = await check([kept], pack, redirecting(cited, landed, HOLDING));
+
+        expect(result.verdict).toEqual({ outcome: "confirmed", url: cited });
+        expect(answeredOnCitedSite(cited, landed, TARGET)).toBe(true);
+        // Without the target, only the hosts are compared.
+        expect(answeredOnCitedSite(cited, landed)).toBe(false);
+        const label = credibilityOf({
+          finding: kept,
+          pack,
+          provenance: new Map(),
+          verdict: result.verdict,
+          target: TARGET,
+        });
+        expect(label.basis.sources[0].reading).toBe("read");
+      },
+    );
+
+    it.each([
+      // One entry of the registry holds the authorities of several countries.
+      ["https://www.aepd.es/acme-analytics", "https://www.dataprotection.ie/acme-analytics"],
+      // Two governments under one suffix entry, with the same name in front of it.
+      ["https://www.health.gov.au/acme-analytics", "https://www.health.gov.in/acme-analytics"],
+      // An exit link of a publisher to a page of another site.
+      ["https://www.bbc.co.uk/news/c0acme", "https://acme-analytics-news.example/c0acme"],
+      // RV6P-4: the Norwegian and the Danish authority share a name and an entry of the registry.
+      ["https://www.datatilsynet.no/acme-analytics", "https://www.datatilsynet.dk/acme-analytics"],
+      ["https://www.datatilsynet.dk/acme-analytics", "https://www.datatilsynet.no/acme-analytics"],
+      // Politico's two domains are not in a group of one organisation.
+      ["https://www.politico.com/news/acme", "https://www.politico.eu/article/acme"],
+      // Another site under go.com is not ABC News.
+      ["https://www.espn.go.com/acme", "https://abcnews.com/acme"],
+      // The CBC is not the Government of Canada.
+      ["https://cbc.radio-canada.ca/acme", "https://www.canada.ca/acme"],
+      // Two governments under the one suffix entry of gc.ca, with the same name in front of it.
+      ["https://www.bmi.gov.de/acme", "https://www.bmi.gc.ca/acme"],
+      // Another government domain of the same entry as canada.ca.
+      ["https://www.bk.admin.ch/acme", "https://www.canada.ca/acme"],
+      ["https://www.oesterreich.gv.at/acme", "https://www.canada.ca/acme"],
+      // A host that only ends with the name of a group's domain.
+      ["https://www.evilbbc.com/acme", "https://www.bbc.com/acme"],
+      // Two groups.
+      ["https://www.bbc.com/news/acme", "https://abcnews.com/acme"],
+    ])(
+      "does not take a page cited on %s that answered from %s as the cited site",
+      async (cited, landed) => {
+        const [result] = await check(
+          [finding([cited])],
+          [source(cited)],
+          redirecting(cited, landed, HOLDING),
+        );
+
+        expect(result.verdict).toEqual({ outcome: "unread" });
+        expect(answeredOnCitedSite(cited, landed, TARGET)).toBe(false);
+      },
+    );
+
+    // RV7W-2: a page that answered from the vendor's own site is the vendor's word, whatever
+    // site was cited, so it never counts as the cited site of another publisher.
+    describe("when the page answered from the vendor's own site", () => {
+      const vendorOn = (website: string) =>
+        buildTarget({ vendor_name: "Acme Analytics", website, vendor_provides: "Analytics" });
+      const checkFor = (
+        target: ReturnType<typeof buildTarget>,
+        cited: string,
+        landed: string,
+        ownDomains?: string[],
+      ) => {
+        const kept = finding([cited]);
+        const pack = [source(cited)];
+        const trace = createTraceRecorder();
+        return checkSnippetFindings({
+          findings: [kept],
+          pack,
+          target,
+          readPage: redirecting(cited, landed, HOLDING),
+          trace,
+          ...(ownDomains === undefined ? {} : { ownDomains }),
+        }).then(([result]) => ({ result, kept, pack, trace }));
+      };
+
+      it.each([
+        // A vendor whose domain is in a group of SAME_SITE_GROUPS.
+        ["bbc.co.uk", "https://www.bbc.com/news/acme", "https://www.bbc.co.uk/news/acme"],
+        ["bbc.com", "https://www.bbc.co.uk/news/acme", "https://www.bbc.com/news/acme"],
+        ["abcnews.com", "https://abcnews.go.com/Technology/acme", "https://abcnews.com/acme"],
+        // A vendor whose domain is under a domain of a group.
+        ["tbs-sct.gc.ca", "https://www.canada.ca/en/acme.html", "https://www.tbs-sct.gc.ca/acme"],
+        ["tbs-sct.gc.ca", "https://www.canada.ca/en/acme.html", "https://a.b.tbs-sct.gc.ca/acme"],
+        // The host-within rule: the vendor's site is under the cited host.
+        ["news.bbc.co.uk", "https://www.bbc.co.uk/acme", "https://news.bbc.co.uk/acme"],
+        [
+          "trust.acme-analytics.com",
+          "https://acme-analytics.com/a",
+          "https://trust.acme-analytics.com/a",
+        ],
+      ])(
+        "for a vendor on %s, does not take a page cited on %s that answered from %s as the cited site",
+        async (website, cited, landed) => {
+          const target = vendorOn(website);
+          const { result, kept, pack, trace } = await checkFor(target, cited, landed);
+
+          expect(result.verdict).toEqual({ outcome: "unread" });
+          expect(answeredOnCitedSite(cited, landed, target)).toBe(false);
+          expect(trace.snapshot().steps).toEqual([
+            expect.objectContaining({
+              url: cited,
+              outcome: "failed",
+              reason: "redirected_off_site",
+            }),
+          ]);
+          const label = credibilityOf({
+            finding: kept,
+            pack,
+            provenance: new Map(),
+            verdict: result.verdict,
+            target,
+          });
+          expect(label.basis.sources[0].reading).toBe("unconfirmed");
+        },
+      );
+
+      it.each([
+        // A page cited on the vendor's site does not answer for the group's other domain either.
+        ["bbc.co.uk", "https://www.bbc.co.uk/news/acme", "https://www.bbc.com/news/acme"],
+        ["tbs-sct.gc.ca", "https://www.tbs-sct.gc.ca/acme", "https://www.canada.ca/en/acme.html"],
+      ])(
+        "for a vendor on %s, does not take its own page %s that answered from %s as the cited site",
+        async (website, cited, landed) => {
+          const target = vendorOn(website);
+          const { result } = await checkFor(target, cited, landed);
+
+          expect(result.verdict).toEqual({ outcome: "unread" });
+          expect(answeredOnCitedSite(cited, landed, target)).toBe(false);
+        },
+      );
+
+      it("does not take a page that answered from another domain of the vendor's website", async () => {
+        const target = vendorOn("acme-analytics.com");
+        const cited = "https://www.canada.ca/en/acme.html";
+        const landed = "https://www.acme.gc.ca/acme";
+        const { result } = await checkFor(target, cited, landed, ["acme.gc.ca"]);
+
+        expect(result.verdict).toEqual({ outcome: "unread" });
+        expect(answeredOnCitedSite(cited, landed, target, ["acme.gc.ca"])).toBe(false);
+        // Without the other domain the group still holds.
+        expect(answeredOnCitedSite(cited, landed, target)).toBe(true);
+      });
+
+      it.each([
+        // The group's other domain, but not the vendor's host.
+        ["tbs-sct.gc.ca", "https://www.canada.ca/en/acme.html", "https://www.ic.gc.ca/acme"],
+        ["news.bbc.co.uk", "https://www.bbc.com/news/acme", "https://www.bbc.co.uk/news/acme"],
+        // The cited host itself, for a vendor in its group.
+        ["bbc.co.uk", "https://www.bbc.com/news/acme", "https://www.bbc.com/news/acme-2"],
+        // Both addresses on the vendor's own site.
+        ["bbc.co.uk", "https://www.bbc.co.uk/news/acme", "https://bbc.co.uk/news/acme"],
+        ["acme-analytics.com", OWN, "https://www.acme-analytics.com/security/incident"],
+        ["acme-analytics.com", "https://www.acme-analytics.com/security/incident", OWN],
+        [
+          "trust.acme-analytics.com",
+          "https://trust.acme-analytics.com/a",
+          "https://www.trust.acme-analytics.com/b",
+        ],
+        // A vendor whose website is a page of a shared platform.
+        ["github.com/acme", "https://github.com/acme/a", "https://www.github.com/acme/b"],
+      ])(
+        "for a vendor on %s, still takes a page cited on %s that answered from %s as the cited site",
+        async (website, cited, landed) => {
+          const target = vendorOn(website);
+          const { result } = await checkFor(target, cited, landed);
+
+          expect(result.verdict).toEqual({ outcome: "confirmed", url: cited });
+          expect(answeredOnCitedSite(cited, landed, target)).toBe(true);
+        },
+      );
+
+      it("refuses a lookalike of the vendor's domain as any other site", async () => {
+        const target = vendorOn("bbc.co.uk");
+        expect(
+          answeredOnCitedSite("https://www.bbc.com/a", "https://www.evilbbc.co.uk/a", target),
+        ).toBe(false);
+        // A subdomain of the vendor's domain is the vendor's.
+        expect(
+          answeredOnCitedSite("https://www.bbc.com/a", "https://news.bbc.co.uk/a", target),
+        ).toBe(false);
+      });
+
+      it("compares the hosts alone for a vendor without a domain", () => {
+        const target = vendorOn("");
+        expect(target.domain).toBeNull();
+        expect(
+          answeredOnCitedSite("https://www.bbc.com/a", "https://www.bbc.co.uk/a", target),
+        ).toBe(true);
+        expect(answeredOnCitedSite("https://bbc.co.uk/a", "https://news.bbc.co.uk/a", target)).toBe(
+          true,
+        );
+      });
+    });
+
+    it("tells the sites apart by their hosts", () => {
+      expect(answeredOnCitedSite("https://www.acme.com/a", "https://acme.com/b")).toBe(true);
+      expect(answeredOnCitedSite("https://acme.com/a", "https://news.acme.com/b")).toBe(true);
+      expect(answeredOnCitedSite("https://acme.com/a", "https://acme.com.evil.example/b")).toBe(
+        false,
+      );
+      expect(answeredOnCitedSite("https://agency.gov/a", "https://other-agency.gov/b")).toBe(false);
+      expect(answeredOnCitedSite("https://agency.gov/a", "not an address")).toBe(false);
+      expect(
+        answeredOnCitedSite("https://agency.gov/a", "https://other-agency.gov/b", TARGET),
+      ).toBe(false);
+      // Without the target, only the hosts are compared.
+      expect(answeredOnCitedSite("https://bbc.co.uk/a", "https://bbc.com/a")).toBe(false);
+      expect(answeredOnCitedSite("https://bbc.co.uk/a", "https://bbc.com/a", TARGET)).toBe(true);
+    });
   });
 
   it("returns one check for each finding, in their order", async () => {

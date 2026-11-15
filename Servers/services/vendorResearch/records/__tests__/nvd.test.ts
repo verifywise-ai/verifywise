@@ -41,12 +41,12 @@ describe("nvdWindowStart", () => {
 });
 
 describe("nvdUrl", () => {
-  it("asks for the critical CVEs published in the window, for the products of one CPE vendor", () => {
+  it("asks for the critical CVEs published in the window, for the products of one CPE vendor of any part", () => {
     const url = new URL(nvdUrl("brise", NOW));
 
     expect(url.origin + url.pathname).toBe("https://services.nvd.nist.gov/rest/json/cves/2.0");
     expect(Object.fromEntries(url.searchParams)).toEqual({
-      virtualMatchString: "cpe:2.3:a:brise",
+      virtualMatchString: "cpe:2.3:*:brise",
       cvssV3Severity: "CRITICAL",
       pubStartDate: "2026-07-01T00:00:00.000",
       pubEndDate: "2026-10-28T23:59:59.999",

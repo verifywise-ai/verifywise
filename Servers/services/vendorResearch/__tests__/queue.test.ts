@@ -21,6 +21,7 @@ import {
   VENDOR_RESEARCH_JOB,
   VENDOR_RESEARCH_JOB_OPTIONS,
   VENDOR_RESEARCH_QUEUE,
+  SCHEDULED_RUN_PRIORITY,
   VENDOR_RESEARCH_SCAN_JOB,
   enqueueVendorResearch,
   scheduleVendorResearchScan,
@@ -56,6 +57,25 @@ describe("enqueueVendorResearch", () => {
         removeOnFail: true,
       },
     );
+  });
+
+  // BullMQ takes a job with no priority before any job with one, so a person's run and the
+  // automatic one are taken before the waiting runs of the hourly scan.
+  it("gives the job of a scheduled run a priority, and the job of any other run none", async () => {
+    await enqueueVendorResearch(1, 2, 3, "scheduled");
+    await enqueueVendorResearch(1, 2, 4, "manual");
+    await enqueueVendorResearch(1, 2, 5, "auto");
+
+    const options = mockAdd.mock.calls.map(([, , opts]) => opts);
+    expect(options[0]).toEqual({
+      jobId: "vendor-research-1-2-3",
+      ...VENDOR_RESEARCH_JOB_OPTIONS,
+      priority: SCHEDULED_RUN_PRIORITY,
+    });
+    expect(SCHEDULED_RUN_PRIORITY).toBeGreaterThan(0);
+    expect(options[1]).not.toHaveProperty("priority");
+    expect(options[2]).not.toHaveProperty("priority");
+    expect(VENDOR_RESEARCH_JOB_OPTIONS).not.toHaveProperty("priority");
   });
 
   it("returns what the queue returns", async () => {

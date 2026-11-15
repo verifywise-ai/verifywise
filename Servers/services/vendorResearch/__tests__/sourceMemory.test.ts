@@ -1,4 +1,11 @@
-import { keysOfSources, splitKnownSources } from "../sourceMemory";
+import { dropDuplicates } from "../dedupe";
+import {
+  changeKeyOf,
+  changeKeysOf,
+  forgottenIn,
+  keysOfSources,
+  splitKnownSources,
+} from "../sourceMemory";
 
 const entry = (url: string, extra: Record<string, unknown> = {}) => ({ url, ...extra });
 
@@ -111,5 +118,85 @@ describe("splitKnownSources", () => {
     splitKnownSources(entries, known);
 
     expect(entries).toEqual(copy);
+  });
+});
+
+// RVP-4: a change of a page where the vendor states its terms is remembered under a key of its own.
+describe("the key of a change", () => {
+  const CHANGE = "https://www.acme.com/legal/privacy/#changed-1a2b3c4d";
+
+  it("is the key of the page and the fragment of the change", () => {
+    expect(changeKeyOf(CHANGE)).toBe("acme.com/legal/privacy#changed-1a2b3c4d");
+    expect(changeKeyOf("https://acme.com/legal/privacy")).toBeNull();
+    expect(changeKeyOf("https://acme.com/legal/privacy#section-2")).toBeNull();
+    expect(changeKeyOf("not an address#changed-1a2b3c4d")).toBeNull();
+  });
+
+  it("gives the keys of the changes only, each once", () => {
+    expect(
+      changeKeysOf([entry(CHANGE), entry("https://acme.com/legal/privacy"), entry(CHANGE)]),
+    ).toEqual(["acme.com/legal/privacy#changed-1a2b3c4d"]);
+  });
+
+  it("sets no source apart: a key of a document has no fragment", () => {
+    const known = new Set([changeKeyOf(CHANGE) as string]);
+
+    expect(
+      splitKnownSources([entry("https://acme.com/legal/privacy"), entry(CHANGE)], known).skipped,
+    ).toBe(0);
+  });
+});
+
+describe("forgottenIn", () => {
+  const CHANGE = "https://acme.com/legal/privacy#changed-1a2b3c4d";
+
+  it("looks a change up by its own key, and any other source by its document", () => {
+    const forgotten = forgottenIn(
+      new Set(["acme.com/legal/privacy#changed-1a2b3c4d", "reuters.com/acme"]),
+    );
+
+    expect(forgotten(CHANGE)).toBe(false);
+    expect(forgotten("https://www.reuters.com/acme")).toBe(false);
+    expect(forgotten("https://acme.com/legal/privacy#changed-99999999")).toBe(true);
+    expect(forgotten("https://acme.com/legal/privacy")).toBe(true);
+    expect(forgotten("not an address")).toBe(false);
+  });
+
+  // The probe of the finding: a reworded repeat of a stored finding that cites a change shown again.
+  it("keeps the same_source rule for a change that a run showed", () => {
+    const prior = {
+      category: "ai_specific" as const,
+      risk_description:
+        "The privacy policy now lets Acme use customer content to train its models.",
+      impact_description: "Our data could end up in the vendor's models.",
+      sources: [{ url: CHANGE, title: "t", quote: "q", published_at: null }],
+    };
+    const repeat = {
+      category: "ai_specific" as const,
+      risk_description:
+        "Acme added a clause allowing model training on uploaded files unless an opt-out is filed.",
+      impact_description: "Confidential documents we upload may be used for machine learning.",
+      action_plan: "Ask.",
+      likelihood: "Possible" as const,
+      risk_severity: "Major" as const,
+      risk_level: "High Risk" as const,
+      rationale: null,
+      sources: [{ url: CHANGE, title: "t", quote: "q", published_at: null }],
+    };
+    const shown = new Set(["reuters.com/acme", "acme.com/legal/privacy#changed-1a2b3c4d"]);
+    const report = { reasons: {} };
+
+    const result = dropDuplicates([repeat], [], [prior], report, new Map(), {
+      forgotten: forgottenIn(shown),
+    });
+
+    expect(result.kept).toEqual([]);
+    expect(report.reasons).toEqual({ same_source: 1 });
+    // A change that no run remembers (the caps cut a candidate that cited it) lets it back in.
+    expect(
+      dropDuplicates([repeat], [], [prior], undefined, new Map(), {
+        forgotten: forgottenIn(new Set(["reuters.com/acme"])),
+      }).kept,
+    ).toHaveLength(1);
   });
 });

@@ -14,7 +14,7 @@
  * offered by no later one (KEV, then the NVD, then the CVE List). Each record's text is the list's
  * own, the lookup note for a match by name alone, and the day of the copy or answer ("As of …"). A
  * list with no copy yet is `failed`, one that has not been brought up to date for 48 hours is
- * stale, and the records of a stale copy are offered all the same; a read-through source whose
+ * stale (for a list read by its changes, counted from the end of the last day its copy applied), and the records of a stale copy are offered all the same; a read-through source whose
  * answer could not be refreshed is `failed` and offers its stored records. A list behind a closed
  * gate (gates.ts) is neither looked up nor in the coverage.
  */
@@ -46,6 +46,7 @@ import {
 } from "../records/sharedSpacer";
 import { MAX_RECORDS } from "../records/types";
 import type { ResearchTarget } from "../target";
+import { withoutHiddenCharacters } from "../text";
 import { gleifConnector } from "./connectors/gleif";
 import { nvdConnector } from "./connectors/nvd";
 import { secConnector } from "./connectors/sec";
@@ -53,7 +54,13 @@ import type { ReadThroughConnector } from "./connectors/types";
 import { SEC_CONTACT } from "./gates";
 import { matchOf, vendorKeys } from "./keys";
 import { type ReadThroughDeps, type ReadThroughStore, readThrough } from "./readThrough";
-import { activeReadThroughs, activeVrdbSources, isMirror, isStale } from "./sources";
+import {
+  type MirrorSource,
+  activeReadThroughs,
+  activeVrdbSources,
+  isMirror,
+  isStale,
+} from "./sources";
 import type {
   MatchWrite,
   OfferedRecord,
@@ -161,6 +168,24 @@ function byStrengthAndAge(
 }
 
 /**
+ * When the copy of a mirrored list was last brought up to date, as its records read it: the time
+ * of its last success; for a list read by its changes (the CVE records) the end of the last day it
+ * applied, when that is earlier. A sync of such a list applies at most a week of days, and a
+ * baseline holds the changes up to its own day, while each success, and each sync with no day to
+ * read, notes the time it ran: a copy weeks behind would otherwise read as current. The day of the
+ * records ("As of …"), the staleness and the coverage's day all follow it.
+ */
+function copyUpTo(definition: MirrorSource, state: VrdbSourceState | undefined): Date | null {
+  const lastSuccessAt = state?.lastSuccessAt ?? null;
+  const day = state?.cursor?.day;
+  if (lastSuccessAt === null || definition.missingStatus !== null || day === undefined) {
+    return lastSuccessAt;
+  }
+  const endOfDay = new Date(`${day}T23:59:59.999Z`);
+  return Number.isNaN(endOfDay.getTime()) || endOfDay >= lastSuccessAt ? lastSuccessAt : endOfDay;
+}
+
+/**
  * The records the run is offered from the rows the lookup found, the coverage of every list, and
  * a match row for each offered record. Pure.
  */
@@ -175,7 +200,10 @@ export function offerRecords(input: OfferInput): { outcome: VrdbOutcome; matches
   for (const definition of activeVrdbSources()) {
     const answer = isMirror(definition) ? undefined : input.readThrough.get(definition.id);
     const lastSuccessAt = isMirror(definition)
-      ? (input.states.find((state) => state.id === definition.id)?.lastSuccessAt ?? null)
+      ? copyUpTo(
+          definition,
+          input.states.find((state) => state.id === definition.id),
+        )
       : (answer?.fetchedAt ?? null);
     const stale = lastSuccessAt !== null && isStale(definition, lastSuccessAt, input.now);
     const listed = (
@@ -237,10 +265,14 @@ export function offerRecords(input: OfferInput): { outcome: VrdbOutcome; matches
         !isMirror(definition) && row.retrievedAt !== undefined ? row.retrievedAt : asOf;
       return {
         url: row.url,
-        title: row.title,
+        // A stored record keeps the text its list gave; the characters nobody sees go before the
+        // model reads it, whatever list and whatever version of its connector stored it.
+        title: withoutHiddenCharacters(row.title),
         text: joinSentences([
           row.summary,
-          method === "name_exact" ? NAME_ONLY_LOOKUP_NOTE : "",
+          // A weak match rests on the vendor's name alone: a name key, or a key that was found by
+          // the name (a CIK of the SEC, Q3). Either may be another company's (TR4-LLM-1).
+          strength === "weak" ? NAME_ONLY_LOOKUP_NOTE : "",
           `As of ${recordAsOf}.`,
         ]),
         publishedAt: isEvent(row) ? (row.publishedAt ?? recordAsOf) : recordAsOf,

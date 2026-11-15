@@ -24,8 +24,8 @@
  * names, and never kept. So no rule tells persons apart: none is ever a key.
  *
  * Rule T (the tool cell). It names no tool when it is empty or begins, in any case, with
- * `implied`, `unidentified` or `unknown`. Otherwise it is split on `,` `;` `/` `+` `&` and the
- * words ` and ` and ` or `; in each part the parentheticals are cut (an unclosed `(` to the end),
+ * `implied`, `unidentified` or `unknown`. Otherwise it is split on `,` `;` `/` `&`, a `+` with a
+ * blank on each side (`Lexis+ AI` is one name), and the words ` and ` and ` or `; in each part the parentheticals are cut (an unclosed `(` to the end),
  * double quotes become blanks, a leading `and`, `or` or `with` goes, a possessive `'s` goes, blanks
  * are collapsed and blanks and dots trimmed at the ends. A generic phrase (AI, Gen AI, Internet
  * searches, Google Search, Other generative AI platforms, Other generative AI tools, Premium
@@ -127,8 +127,12 @@ const GENERIC_PHRASES: ReadonlySet<string> = new Set([
   "other generative ai tools",
   "premium westlaw subscription",
 ]);
-/** Where a tool cell is split: a separator, or the word and / or between blanks, in any case. */
-const TOOL_SEPARATORS = /\s*(?:,|;|\/|\+|&|\sand\s|\sor\s)\s*/iu;
+/**
+ * Where a tool cell is split: a separator, a plus between blanks, or the word and / or between
+ * blanks, in any case. A plus with no blank on one side is part of a product's name (`Lexis+ AI`),
+ * which a cut there would rename and key by its first part (`Lexis`).
+ */
+const TOOL_SEPARATORS = /\s*(?:,|;|\/|\s\+\s|&|\sand\s|\sor\s)\s*/iu;
 const DOUBLE_QUOTES = /["\u{201C}\u{201D}]/gu;
 const LEADING_CONNECTIVE = /^(?:and|or|with)\s+/i;
 /** `'s`, or the typographic apostrophe and an s (U+2019), at the end of a word: Westlaw's. */
@@ -431,7 +435,9 @@ function toRecord(row: ToolRow): ParsedRecord {
       [
         `${CHARLOTIN_RECORD_MARK} (damiencharlotin.com), an AI incident list.`,
         WHAT_AN_ENTRY_IS,
-        `AI tool as written: ${display}.`,
+        // The display is the cell's part after the cuts of rule T (no parenthetical, no possessive),
+        // not the cell as the database wrote it: the label claims no more than that.
+        `AI tool: ${display}.`,
         `Decisions that name it: ${row.decisions}, dated ${row.first} to ${row.last}${disputed}.`,
         years === "" ? "" : `By year: ${years}.`,
         roles === "" ? "" : `Filed by: ${roles}.`,
@@ -458,7 +464,9 @@ function toRecord(row: ToolRow): ParsedRecord {
 
 export const charlotinConnector: Connector = createFileConnector<ToolRow>({
   id: "charlotin",
-  version: 1,
+  // 2: the summary says "AI tool:" (no longer "AI tool as written:"), and a plus splits a tool cell
+  // only with a blank on each side (`Lexis+ AI` is one tool): texts and keys change on an unchanged export.
+  version: 2,
   root: "download.csv",
   sortKey: (row) => row.id,
   files: [

@@ -73,6 +73,22 @@ export const YEARS_SHOWN = 4;
 export const YEAR_FIRST = 1900;
 export const YEAR_LAST = 2099;
 
+/**
+ * The days after the day of the download that a row may still carry. A day later than that is a
+ * mistyped row, not news: the newest day of the file anchors the year counts, the window of the
+ * investigations with no close date and the version of the copy, and the row's entity is dated by
+ * it, so one row dated 2099 would empty the year counts of every record and keep its entity in the
+ * lookback for good. Such a row is unreadable, as a row with no real day is. The week allows for a
+ * clock that is a little off and for a list written in a zone ahead of UTC.
+ */
+export const FUTURE_DAYS_TOLERATED = 7;
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** The last day a row of a file downloaded at `now` may carry, YYYY-MM-DD (see FUTURE_DAYS_TOLERATED). */
+export function latestPlausibleDay(now: Date = new Date()): string {
+  return new Date(now.getTime() + FUTURE_DAYS_TOLERATED * DAY_MS).toISOString().slice(0, 10);
+}
+
 /** The most bytes of the JSON that the download hands to the reader of a list. */
 export const ENVELOPE_BYTES_MAX = 16 * 1024 * 1024;
 /** The charset is said, so that a meta tag in a name could never make the decoder choose another. */
@@ -308,9 +324,10 @@ const NOT_IN_A_LINE =
 /**
  * A cell as a row holds it: a text that is not empty, of at most `max` units, that has none of what a
  * clean line cannot have. It checks what the download wrote; it does not clean again, and it does not
- * ask that cleaning the line once more leaves it as it is: it does not, for some names (the first pass
- * drops a soft hyphen between a letter and a combining mark and leaves the mark loose, the second one
- * composes them), and a list would then be "not the list" for the one name that has such a place.
+ * ask that cleaning the line once more leaves it as it is: it does not, for some names (a run of
+ * marks that the fold expands: sixteen U+0344 are within the bound of a run before the fold, which
+ * expands each into two marks, and a second pass cuts that run of thirty-two to sixteen), and a list
+ * would then be "not the list" for the one name that has such a place.
  */
 export const isCleanLine = (value: unknown, max: number): value is string =>
   typeof value === "string" && value !== "" && value.length <= max && !NOT_IN_A_LINE.test(value);
@@ -371,20 +388,22 @@ export function flatMetaOf(value: unknown): FlatMeta | null {
 
 /**
  * A day of the flat files, `20260131`, as `2026-01-31`: eight digits that are a day that exists
- * (`compactDayText` of the kit) in the years YEAR_FIRST to YEAR_LAST; null for anything else.
+ * (`compactDayText` of the kit) in the years YEAR_FIRST to YEAR_LAST, and not after `latest` when it
+ * is given (see `latestPlausibleDay`); null for anything else.
  */
-export function plausibleDay(text: string): string | null {
+export function plausibleDay(text: string, latest?: string): string | null {
   const day = compactDayText(text);
-  return day !== null && isStoredDay(day) ? day : null;
+  return day !== null && isStoredDay(day) && (latest === undefined || day <= latest) ? day : null;
 }
 
 /**
  * A date cell that may be empty: null for an empty cell (no date), the day for a day, and undefined
  * for a cell that is neither, which makes the row unreadable. Nothing around the digits is tolerated.
+ * `latest` is that of `plausibleDay`.
  */
-export function optionalDay(text: string): string | null | undefined {
+export function optionalDay(text: string, latest?: string): string | null | undefined {
   if (text === "") return null;
-  return plausibleDay(text) ?? undefined;
+  return plausibleDay(text, latest) ?? undefined;
 }
 
 const MEMO_KEY_MAX = 200;

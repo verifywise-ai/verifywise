@@ -18,7 +18,7 @@
  * for the process (lookup.ts). A run that reads no pages (it gives no reader) gets no text.
  */
 import { FetchError, guardedFetch } from "../../../webResearch/guardedFetch";
-import { PageReadError, type PageReader, createPageReader } from "../../../webResearch/readPage";
+import { type PageReader, createPageReader } from "../../../webResearch/readPage";
 import { nameKeys } from "../../records/match";
 import { createMemo } from "../../records/memo";
 import {
@@ -45,6 +45,8 @@ import {
   createSharedSpacer,
 } from "../../records/sharedSpacer";
 import type { Spacer } from "../../records/spacer";
+import type { FetchJson } from "../../records/types";
+import { withoutHiddenCharacters } from "../../text";
 import { cikKey } from "../keys";
 import type { ParsedRecord } from "../types";
 import type { ReadThroughConnector } from "./types";
@@ -84,7 +86,9 @@ function recordOf(
   return {
     sourceRecordId: filing.accession,
     recordType: "sec_filing",
-    title,
+    // The company's name is the SEC's text: the characters nobody sees go (its summary is made of
+    // sentences, which lose them already).
+    title: withoutHiddenCharacters(title),
     summary: text,
     url,
     identifiers: {
@@ -109,8 +113,16 @@ export function secConnector(contact: string, deps: SecConnectorDeps = {}): Read
   const registrants = createMemo<Registrant[]>(DAY_MS, 1, clock);
   const excerpts = createMemo<string | null>(DAY_MS, 200, clock);
 
+  /**
+   * The SEC's turn for the run of `signal`. The shared spacer answers false, and does not reject,
+   * when that run is stopped before or during its wait on Redis: the refusal is then the run's
+   * abort, not a busy SEC, so it fails with the abort's reason. A load that other runs share tells
+   * them so (`registrantsOf` asks again for a run whose own signal is live).
+   */
   const turn = async (signal: AbortSignal): Promise<void> => {
-    if (!(await spacer(signal))) throw new TurnRefused();
+    if (await spacer(signal)) return;
+    signal.throwIfAborted();
+    throw new TurnRefused();
   };
 
   /**
@@ -139,6 +151,12 @@ export function secConnector(contact: string, deps: SecConnectorDeps = {}): Read
    * The text of Item 1.05 of a filing; none when it cannot be read, which is no failure, and none
    * when the run reads no pages: the run's reader says that it does, and the connector reads with
    * its own, whose User-Agent the SEC accepts.
+   *
+   * The load is shared by the runs that ask for the filing at once (`excerpts`), and it waits on
+   * the signal of the run that started it. When that run is stopped, the others get its abort: an
+   * excerpt is optional, so a run whose own signal is live takes that, like any other failure of
+   * the load, for no text, and its answer is saved as it would be without it. Only a run that was
+   * stopped itself fails.
    */
   async function excerptOf(
     url: string,
@@ -152,8 +170,35 @@ export function secConnector(contact: string, deps: SecConnectorDeps = {}): Read
         return item105Text((await readerOf()(url, signal)).text);
       });
     } catch (error) {
-      if (error instanceof PageReadError || error instanceof TurnRefused) return null;
-      throw error;
+      if (signal.aborted) throw error;
+      return null;
+    }
+  }
+
+  /**
+   * The SEC's list of registrants, shared by the runs that ask for it at once (`registrants`). The
+   * load waits on the signal of the run that started it, so its failure may be another run's
+   * abort: a run whose own signal is live asks once more (a failed load is forgotten at once), with
+   * a load of its own signal or one another run started since, and a second failure is its own. A
+   * turn the SEC's spacer refused to a live run and an answer of the SEC (a status: 403, 429) are
+   * no abort, and are not asked again: the SEC would be asked twice for one failure. A turn refused
+   * because the run that started the load was stopped fails with that run's abort (`turn`).
+   */
+  async function registrantsOf(signal: AbortSignal, fetchJson: FetchJson): Promise<Registrant[]> {
+    const load = () =>
+      registrants.get(SEC_TICKERS_URL, async () => {
+        await turn(signal);
+        return parseTickers(
+          await fetchJson(SEC_TICKERS_URL, { maxBytes: SEC_TICKERS_MAX_BYTES, signal, userAgent }),
+        );
+      });
+    try {
+      return await load();
+    } catch (error) {
+      const notAnAbort =
+        error instanceof TurnRefused || (error instanceof FetchError && error.status !== undefined);
+      if (signal.aborted || notAnAbort) throw error;
+      return load();
     }
   }
 
@@ -165,12 +210,7 @@ export function secConnector(contact: string, deps: SecConnectorDeps = {}): Read
       // The names of the vendor alone: the brand of its domain is no name of a company.
       const names = nameKeys({ ...target, domain: null });
       if (names.length === 0) return null;
-      const list = await registrants.get(SEC_TICKERS_URL, async () => {
-        await turn(signal);
-        return parseTickers(
-          await fetchJson(SEC_TICKERS_URL, { maxBytes: SEC_TICKERS_MAX_BYTES, signal, userAgent }),
-        );
-      });
+      const list = await registrantsOf(signal, fetchJson);
       const registrant = registrantOf(list, names);
       return registrant === null ? null : { key: cikKey(registrant.cik), weak: true };
     },

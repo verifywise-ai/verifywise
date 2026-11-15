@@ -2,7 +2,8 @@
  * The National Vulnerability Database as a read-through source of the vendor risk database (M2,
  * spec D2.7, Rulings 2 and 3 of the M2 plan). The vendor is asked by its CPE vendor token
  * (records/match.ts `cpeVendorOf`), a strong key; the query is the per-run lookup's (the critical
- * CVEs of the last 119 days, records/nvd.ts) without the run's cutoff, so that one answer serves
+ * CVEs of the last 119 days in the vendor's applications, operating systems, firmware and
+ * hardware, records/nvd.ts) without the run's cutoff, so that one answer serves
  * every run of the key, and the lookback applies when its records are offered. A CVE the NVD
  * rejected is stored rejected, which keeps the same CVE from being offered by any list.
  */

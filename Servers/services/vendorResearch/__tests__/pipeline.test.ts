@@ -377,12 +377,16 @@ let research: jest.Mock<Promise<ResearchResult>, Parameters<VendorResearcher>>;
 let generate: AnyMock;
 let resolveModel: AnyMock;
 
+/** The status job of a list of the vendor risk database: never the queue's, which opens Redis. */
+const enqueueRelabel = jest.fn(async (_sourceId: string) => undefined);
+
 function makeDeps(overrides: Partial<PipelineDeps> = {}): PipelineDeps {
   return {
     research,
     resolveModel,
     generate: generate as unknown as PipelineDeps["generate"],
     now: () => NOW,
+    enqueueRelabel,
     ...overrides,
   };
 }
@@ -831,6 +835,33 @@ describe("runVendorResearch", () => {
         ["availability", "nothing_found", NOTHING_FOUND],
         ["financial_health", "nothing_found", NOTHING_FOUND],
       ]);
+    });
+
+    // R4TR-1: the risk the cap cut held up, so the category is not told it could not be verified.
+    it("tells a category whose every risk the cap of the run cut that more were found than one run keeps", async () => {
+      generate.mockResolvedValue(answer([breachFinding()], []));
+      const real = analysisModule.analyse;
+      const analyse = jest.spyOn(analysisModule, "analyse").mockImplementation(async (input) => {
+        const analysed = await real(input);
+        if (!analysed.ok) return analysed;
+        return { ...analysed, capped: [{ ...EXPECTED_BREACH, category: "ai_specific" }] };
+      });
+
+      try {
+        await run();
+      } finally {
+        analyse.mockRestore();
+      }
+
+      const summary: CategorySummaryEntry[] = onlyFinish().input.categorySummary;
+      expect(summary.find((entry) => entry.category === "ai_specific")).toEqual({
+        category: "ai_specific",
+        outcome: "over_cap",
+        note: "More risks were found than one run keeps",
+      });
+      expect(summary.find((entry) => entry.category === "security_incidents")?.outcome).toBe(
+        "findings",
+      );
     });
 
     it("words the default note for several findings in the plural", async () => {
@@ -1351,6 +1382,57 @@ describe("runVendorResearch", () => {
       }
     });
 
+    // TV4-1: a sync that changed a cited record's status while the run was going found no finding
+    // to relabel, so the run adds the status job of each list its saved findings cite.
+    describe("the status job of the cited lists", () => {
+      beforeEach(() => {
+        enqueueRelabel.mockReset();
+        enqueueRelabel.mockResolvedValue(undefined);
+      });
+
+      it("adds the status job of each list the saved findings cite, once, after the run is saved", async () => {
+        enqueueRelabel.mockImplementation(async (sourceId) => {
+          events.push(`relabel:${sourceId}`);
+        });
+
+        const result = await run();
+
+        expect(result.outcome).toBe("completed");
+        expect(enqueueRelabel.mock.calls).toEqual([["kev"]]);
+        expect(events.indexOf("relabel:kev")).toBeGreaterThan(events.indexOf("commit#1"));
+      });
+
+      it("adds none when no saved finding cites a record of the database", async () => {
+        generate.mockResolvedValue(answer([BREACH_FINDING]));
+
+        await run();
+
+        expect(insertedFindings()).toHaveLength(1);
+        expect(enqueueRelabel).not.toHaveBeenCalled();
+      });
+
+      it("adds none for a run whose findings were not saved", async () => {
+        asMock(finishRunQuery).mockResolvedValue(false);
+
+        const result = await run();
+
+        expect(result.outcome).toBe("failed");
+        expect(enqueueRelabel).not.toHaveBeenCalled();
+      });
+
+      it("completes the run when the job cannot be added", async () => {
+        enqueueRelabel.mockRejectedValue(new Error("redis is down"));
+
+        const result = await run();
+        await new Promise((resolve) => setImmediate(resolve));
+
+        expect(result).toEqual({ outcome: "completed", findingsCreated: 2 });
+        expect(logger.warn).toHaveBeenCalledWith(
+          expect.stringContaining("the status job of kev could not be added (error Error)"),
+        );
+      });
+    });
+
     it("records the coverage of a run, with the cited counts and the registry version, also when it fails", async () => {
       await run();
 
@@ -1403,12 +1485,17 @@ describe("runVendorResearch", () => {
       });
     });
 
-    it("records the prompt version vr-15", async () => {
+    it("records the prompt version vr-19", async () => {
       await run();
 
       expect(onlyFinish().input.promptVersion).toBe(CREDIBILITY_PROMPT_VERSION);
-      // vr-15 is vr-14 with the lists of 2026-11-10 in the analysis prompt.
-      expect(CREDIBILITY_PROMPT_VERSION).toBe("vr-15");
+      // vr-16 is vr-15 with the rules of the records and of a change keyed on the database and change
+      // attributes that the code writes from the provenance of each source. vr-17 hedges the SEC
+      // sentence for a filing matched by name only. vr-18 says that a line of a change that begins
+      // with the continued mark is a part of one long clause. vr-19 says that a line that begins with
+      // two spaces continues the line before it, and that one that begins with the mark is quoted
+      // on its own.
+      expect(CREDIBILITY_PROMPT_VERSION).toBe("vr-19");
       expect(generate.mock.calls[0][0].system).toBe(buildSystemPrompt(NOW));
     });
 
@@ -2889,6 +2976,8 @@ describe("runVendorResearch", () => {
     });
 
     it("drops a candidate of the same category that cites a page an earlier finding cited", async () => {
+      // The run that stored the earlier finding showed the page to the model and remembers it.
+      asMock(getKnownSourceKeysQuery).mockResolvedValue(new Set(["news.example.com/acme-breach"]));
       asMock(getFindingsForVendorQuery).mockResolvedValue([
         priorFinding({
           category: "security_incidents",
@@ -2967,6 +3056,48 @@ describe("runVendorResearch", () => {
 
     const storedLabels = () => insertedFindings().map((stored) => stored.risk_description);
 
+    // R4-PL-1, R4TR-2: the risk the caps of a run cut shares its source with the findings that
+    // run stored; the next run raises it and stores it, whatever started that run.
+    it.each(["scheduled", "manual", "auto"] as const)(
+      "stores in the next %s run the risk that the caps cut, though the stored findings cite its source",
+      async (nextTrigger) => {
+        const kept = ["a1", "a2", "a3"].map((label) => unique(label, "Catastrophic"));
+        const cut = unique("c1", "Minor");
+        generate.mockResolvedValue(answer([...kept, cut]));
+
+        await runVendorResearch({ ...ARGS, triggerType: "manual" }, makeDeps());
+
+        const stored = insertedFindings();
+        expect(stored.map((finding) => finding.risk_description)).toEqual(
+          kept.map((candidate) => candidate.risk_description),
+        );
+        expect(
+          stored.every((finding) => finding.sources.some((source) => source.url === BREACH.url)),
+        ).toBe(true);
+        const remembered = asMock(rememberSourcesQuery).mock.calls.flatMap(([input]) => input.keys);
+        expect(remembered).not.toContain("news.example.com/acme-breach");
+
+        asMock(insertFindingsQuery).mockClear();
+        asMock(getKnownSourceKeysQuery).mockResolvedValue(new Set(remembered));
+        asMock(getFindingsForVendorQuery).mockResolvedValue(
+          stored.map((finding) =>
+            priorFinding({
+              category: finding.category,
+              risk_description: finding.risk_description,
+              impact_description: finding.impact_description,
+              sources: finding.sources,
+            }),
+          ),
+        );
+        generate.mockResolvedValue(answer([cut]));
+
+        const result = await runVendorResearch({ ...ARGS, triggerType: nextTrigger }, makeDeps());
+
+        expect(result).toEqual({ outcome: "completed", findingsCreated: 1 });
+        expect(storedLabels()).toEqual([cut.risk_description]);
+      },
+    );
+
     it("keeps the new risks of a second look: known risks that are more severe do not take their places", async () => {
       const knownInRegister = [unique("k1", "Catastrophic"), unique("k2", "Major")];
       const knownFinding = unique("k3", "Major");
@@ -3042,6 +3173,8 @@ describe("runVendorResearch", () => {
       expect(onlyFinish().input.duplicatesDropped).toBe(2);
     });
 
+    // The candidate the cap cut held up: the category is told that more risks were found than one
+    // run keeps, not that they could not be verified or are already recorded (R4TR-1).
     it("does not show a category as empty when the cap cut its only candidate", async () => {
       research.mockResolvedValue(
         researched({
@@ -3071,8 +3204,8 @@ describe("runVendorResearch", () => {
       const summary: CategorySummaryEntry[] = onlyFinish().input.categorySummary;
       expect(summary[3]).toEqual({
         category: "ai_specific",
-        outcome: "nothing_found",
-        note: UNCONFIRMED,
+        outcome: "over_cap",
+        note: "More risks were found than one run keeps",
       });
     });
   });
@@ -3720,7 +3853,8 @@ describe("runVendorResearch", () => {
   });
 
   // A run remembers the sources it showed to the model, so that a scheduled run can analyse the ones
-  // that are new. Only a scheduled run reads the memory.
+  // that are new. Only a scheduled run sets sources apart; every run reads the memory for its
+  // de-duplication.
   describe("the memory of the sources", () => {
     const KEY = {
       breach: "news.example.com/acme-breach",
@@ -3736,25 +3870,91 @@ describe("runVendorResearch", () => {
       asMock(rememberSourcesQuery).mock.calls.flatMap(([input]) => input.keys);
 
     describe("a run that is not scheduled", () => {
-      it.each(["auto", "manual"] as const)(
-        "analyses every source of an %s run, without reading the memory",
-        async (trigger) => {
-          await runAs(trigger);
+      /** Runs with the analysis watched, and gives what its de-duplication was told is forgotten. */
+      const forgottenOf = async (start: () => Promise<unknown>) => {
+        const real = analysisModule.analyse;
+        let forgotten: ((url: string) => boolean) | undefined;
+        const analyse = jest.spyOn(analysisModule, "analyse").mockImplementation(async (input) =>
+          real({
+            ...input,
+            loadKnown: async () => {
+              const known = await input.loadKnown();
+              forgotten = known.forgotten;
+              return known;
+            },
+          }),
+        );
+        try {
+          await start();
+        } finally {
+          analyse.mockRestore();
+        }
+        return forgotten;
+      };
 
-          expect(getKnownSourceKeysQuery).not.toHaveBeenCalled();
+      // Every source is remembered, so a run that set anything apart would show the model nothing.
+      // It reads the memory once, for the de-duplication only (R4-PL-1, R4TR-2).
+      it.each(["auto", "manual"] as const)(
+        "analyses every source of an %s run, and reads the memory only for the de-duplication",
+        async (trigger) => {
+          asMock(getKnownSourceKeysQuery).mockResolvedValue(new Set(ALL_KEYS));
+
+          const forgotten = await forgottenOf(() => runAs(trigger));
+
           expect(generate).toHaveBeenCalledWith(
             expect.objectContaining({
               prompt: buildUserPrompt(buildTarget(VENDOR_ROW), STANDARD_PACK),
             }),
           );
+          expect(onlyFinish().input.evidence).toEqual(STANDARD_PACK);
+          expect(onlyFinish().input.trace.dropped).not.toHaveProperty("source.already_seen");
+          expect(getKnownSourceKeysQuery).toHaveBeenCalledTimes(1);
+          expect(getKnownSourceKeysQuery).toHaveBeenCalledWith(ORG, VENDOR);
+          expect(forgotten?.(BREACH.url)).toBe(false);
+          expect(forgotten?.("https://news.example.com/never-shown")).toBe(true);
         },
       );
 
       it("analyses every source when it is not told what started it", async () => {
-        await run();
+        asMock(getKnownSourceKeysQuery).mockResolvedValue(new Set(ALL_KEYS));
 
-        expect(getKnownSourceKeysQuery).not.toHaveBeenCalled();
+        const forgotten = await forgottenOf(() => run());
+
         expect(onlyFinish().input.evidence).toEqual(STANDARD_PACK);
+        expect(getKnownSourceKeysQuery).toHaveBeenCalledTimes(1);
+        expect(forgotten?.(BREACH.url)).toBe(false);
+        expect(forgotten?.("https://news.example.com/never-shown")).toBe(true);
+      });
+
+      // RVP-4: the page of a change is remembered only when the model was shown the page, so a
+      // change is known by a key of its own: one that a run showed is not forgotten.
+      it("does not take a change that a run showed as forgotten, and takes one no run remembers as such", async () => {
+        const shown = "https://acme.com/legal/privacy#changed-1a2b3c4d";
+        asMock(getKnownSourceKeysQuery).mockResolvedValue(
+          new Set([...ALL_KEYS, "acme.com/legal/privacy#changed-1a2b3c4d"]),
+        );
+
+        const forgotten = await forgottenOf(() => runAs("manual"));
+
+        expect(forgotten?.(shown)).toBe(false);
+        expect(forgotten?.("https://acme.com/legal/privacy#changed-99999999")).toBe(true);
+        // The page itself is not remembered: only the model was shown its change.
+        expect(forgotten?.("https://acme.com/legal/privacy")).toBe(true);
+      });
+
+      it("keeps the old rule of the de-duplication when the memory cannot be read, and logs only the name of the error", async () => {
+        asMock(getKnownSourceKeysQuery).mockRejectedValue(
+          Object.assign(new Error("connect ECONNREFUSED db.internal:5432"), {
+            name: "SequelizeConnectionError",
+          }),
+        );
+
+        const forgotten = await forgottenOf(() => runAs("manual"));
+
+        expect(forgotten).toBeUndefined();
+        expect(onlyFinish().input).toMatchObject({ status: "completed", evidence: STANDARD_PACK });
+        expect(loggedText()).toContain("SequelizeConnectionError");
+        expect(loggedText()).not.toContain("db.internal");
       });
 
       it("remembers the sources it showed to the model, for its own vendor, after the run is saved", async () => {
@@ -3795,6 +3995,99 @@ describe("runVendorResearch", () => {
         await runAs("manual");
 
         expect(rememberedKeys()).toEqual(ALL_KEYS);
+      });
+
+      // A candidate the caps cut is raised by the next run once the stored ones are known: a source
+      // it cites must stay new for the scheduled scan, even when a kept finding cites it too.
+      it("does not remember a source that a candidate the caps cut cites", async () => {
+        const real = analysisModule.analyse;
+        const analyse = jest.spyOn(analysisModule, "analyse").mockImplementation(async (input) => {
+          const analysed = await real(input);
+          if (!analysed.ok) return analysed;
+          const citing = (url: string): NewFinding => ({
+            ...EXPECTED_BREACH,
+            sources: [{ url, title: "t", quote: "q", published_at: null }],
+          });
+          // The trust page, cited by a cut candidate only, and the breach, cited by the kept
+          // finding and by a cut candidate as well.
+          return { ...analysed, capped: [citing(TRUST_PAGE.url), citing(BREACH.url)] };
+        });
+
+        try {
+          await runAs("manual");
+        } finally {
+          analyse.mockRestore();
+        }
+
+        expect(insertedFindings()).toHaveLength(1);
+        expect(rememberedKeys()).toEqual([KEY.roundup, KEY.privacy]);
+      });
+
+      it("raises in a scheduled run what the caps of an earlier run cut", async () => {
+        // What the earlier run remembered, without the sources of the candidates it cut.
+        asMock(getKnownSourceKeysQuery).mockResolvedValue(new Set([KEY.roundup, KEY.privacy]));
+
+        await runAs("scheduled");
+
+        expect((onlyFinish().input.evidence as EvidenceSource[]).map((s) => s.url)).toEqual([
+          BREACH.url,
+          TRUST_PAGE.url,
+        ]);
+      });
+
+      // The stored finding of the earlier run cites the breach too: the risk that the caps cut is
+      // stored all the same, and not dropped for the source it shares (R4-PL-1, R4TR-2).
+      it("stores in a scheduled run the risk the caps of an earlier run cut, though a stored finding cites its source", async () => {
+        asMock(getKnownSourceKeysQuery).mockResolvedValue(new Set([KEY.roundup, KEY.privacy]));
+        asMock(getFindingsForVendorQuery).mockResolvedValue([
+          priorFinding({
+            category: EXPECTED_BREACH.category,
+            risk_description: "Payroll records of staff were sold on a criminal forum.",
+            impact_description: "Our employees may be targeted by fraud.",
+            sources: [{ url: BREACH.url, title: "t", quote: "q", published_at: null }],
+          }),
+        ]);
+
+        const result = await runAs("scheduled");
+
+        expect(result).toEqual({ outcome: "completed", findingsCreated: 1 });
+        expect(insertedFindings()).toHaveLength(1);
+      });
+
+      // A manual run shows the model every source and reads the memory for its de-duplication, so
+      // it stores the risk too (R4-PL-1, R4TR-2).
+      it("stores the same risk in a manual run, though a stored finding cites its source", async () => {
+        asMock(getKnownSourceKeysQuery).mockResolvedValue(new Set([KEY.roundup, KEY.privacy]));
+        asMock(getFindingsForVendorQuery).mockResolvedValue([
+          priorFinding({
+            category: EXPECTED_BREACH.category,
+            risk_description: "Payroll records of staff were sold on a criminal forum.",
+            impact_description: "Our employees may be targeted by fraud.",
+            sources: [{ url: BREACH.url, title: "t", quote: "q", published_at: null }],
+          }),
+        ]);
+
+        const result = await runAs("manual");
+
+        expect(result).toEqual({ outcome: "completed", findingsCreated: 1 });
+        expect(insertedFindings()).toHaveLength(1);
+        expect(onlyFinish().input.evidence).toEqual(STANDARD_PACK);
+      });
+
+      it("still drops in a manual run a risk that shares a remembered source with a stored finding", async () => {
+        asMock(getKnownSourceKeysQuery).mockResolvedValue(new Set(ALL_KEYS));
+        asMock(getFindingsForVendorQuery).mockResolvedValue([
+          priorFinding({
+            category: EXPECTED_BREACH.category,
+            risk_description: "Payroll records of staff were sold on a criminal forum.",
+            impact_description: "Our employees may be targeted by fraud.",
+            sources: [{ url: BREACH.url, title: "t", quote: "q", published_at: null }],
+          }),
+        ]);
+
+        const result = await runAs("manual");
+
+        expect(result).toEqual({ outcome: "completed", findingsCreated: 0 });
       });
 
       it("remembers nothing for a run that failed", async () => {
@@ -3845,6 +4138,25 @@ describe("runVendorResearch", () => {
     describe("a scheduled run", () => {
       beforeEach(() => {
         asMock(getKnownSourceKeysQuery).mockResolvedValue(new Set([KEY.breach]));
+      });
+
+      // RVD-1: without the memory a scheduled run analyses every source, and its de-duplication
+      // keeps the old rule; the one warning it logs says both.
+      it("says in its one warning both what it analyses and what its de-duplication does, when the memory cannot be read", async () => {
+        asMock(getKnownSourceKeysQuery).mockRejectedValue(
+          Object.assign(new Error("connect ECONNREFUSED db.internal:5432"), {
+            name: "SequelizeConnectionError",
+          }),
+        );
+
+        await runAs("scheduled");
+
+        expect(getKnownSourceKeysQuery).toHaveBeenCalledTimes(1);
+        expect(onlyFinish().input.evidence).toEqual(STANDARD_PACK);
+        expect(loggedText()).toContain(
+          "the sources of the earlier runs could not be read, so every source is analysed and a source that a stored finding cites drops a candidate of its category (error SequelizeConnectionError)",
+        );
+        expect(loggedText()).not.toContain("db.internal");
       });
 
       it("reads the memory of its own vendor, once", async () => {
@@ -4234,10 +4546,101 @@ describe("runVendorResearch", () => {
         ]);
       });
 
+      // The document of a change is its page: a pack that held the change and not the page showed
+      // the model only what changed, so the page must not be remembered as shown (R4-PL-4).
+      describe("in the memory of the sources", () => {
+        const remembered = (): string[] =>
+          asMock(rememberSourcesQuery).mock.calls.flatMap(([input]) => input.keys);
+
+        /** The key the memory holds the change under (RVP-4): the page's, and the fragment. */
+        const changeKey = () => `${POLICY_KEY}${changeSource()?.url.slice(POLICY_URL.length)}`;
+
+        it("remembers the page when the model was shown its text beside the change", async () => {
+          await run();
+
+          expect(changeSource()).toBeDefined();
+          expect([...remembered()].sort()).toEqual([...KEYS_OF_STANDARD_RUN, changeKey()].sort());
+        });
+
+        it("does not remember the page when the model was shown only its change", async () => {
+          readPolicy(NEW_LINES, { entries: [BREACH, ROUNDUP, TRUST_PAGE] });
+
+          await run();
+
+          expect(changeSource()).toBeDefined();
+          expect(remembered()).not.toContain(POLICY_KEY);
+          expect([...remembered()].sort()).toEqual(
+            [...KEYS_OF_STANDARD_RUN.filter((key) => key !== POLICY_KEY), changeKey()].sort(),
+          );
+        });
+
+        it("remembers the change under a key of its own, which no source of a scheduled run is set apart by", async () => {
+          await run();
+
+          expect(changeKey()).toMatch(/^acme\.com\/privacy#changed-[0-9a-f]{8}$/);
+          expect(remembered()).toContain(changeKey());
+        });
+
+        // The risk the caps cut is raised again when the change is shown again: its key is not
+        // remembered, so a stored finding that cites the change does not drop it as same_source.
+        it("does not remember a change that a candidate the caps cut cites", async () => {
+          const real = analysisModule.analyse;
+          const analyse = jest
+            .spyOn(analysisModule, "analyse")
+            .mockImplementation(async (input) => {
+              const analysed = await real(input);
+              if (!analysed.ok) return analysed;
+              const change = input.pack.find((source) => source.url.includes("#changed-"));
+              const cut: NewFinding = {
+                ...EXPECTED_BREACH,
+                category: "ai_specific",
+                sources: [{ url: change?.url ?? "", title: "t", quote: "q", published_at: null }],
+              };
+              return { ...analysed, capped: [cut] };
+            });
+
+          try {
+            await run();
+          } finally {
+            analyse.mockRestore();
+          }
+
+          expect(changeSource()).toBeDefined();
+          expect(remembered()).not.toContain(changeKey());
+          expect(remembered()).not.toContain(POLICY_KEY);
+        });
+      });
+
       it("counts nothing in the trace for a change that was shown", async () => {
         await run();
 
         expect(onlyFinish().input.trace.dropped).toEqual({});
+      });
+
+      // The change is the source of a risk the caps cut: the next run raises it only if it sees the
+      // change again, so the page is not kept in its place.
+      it("does not keep the new text when a candidate that the caps cut cites the change", async () => {
+        const real = analysisModule.analyse;
+        const analyse = jest.spyOn(analysisModule, "analyse").mockImplementation(async (input) => {
+          const analysed = await real(input);
+          if (!analysed.ok) return analysed;
+          const change = input.pack.find((source) => source.url.includes("#changed-"));
+          const cut: NewFinding = {
+            ...EXPECTED_BREACH,
+            category: "ai_specific",
+            sources: [{ url: change?.url ?? "", title: "t", quote: "q", published_at: null }],
+          };
+          return { ...analysed, capped: [cut] };
+        });
+
+        try {
+          await run();
+        } finally {
+          analyse.mockRestore();
+        }
+
+        expect(changeSource()).toBeDefined();
+        expect(writtenPages()).toEqual([]);
       });
 
       it("is analysed alone by a scheduled run for which every other source is known", async () => {
@@ -4343,6 +4746,99 @@ describe("runVendorResearch", () => {
         expect(onlyFinish().input.status).toBe("completed");
         expect(loggedText()).toContain("SequelizeConnectionError");
         expect(loggedText()).not.toContain("db.internal");
+      });
+    });
+
+    // A vendor that republishes four of its legal pages at once, in a run whose pack is full: the
+    // pack is trimmed to its limit, and a change the trim took out was not shown to the model.
+    describe("four large changes in a pack that is over its limit", () => {
+      const KINDS = ["privacy", "terms", "dpa", "subprocessors"] as const;
+      const clauses = (kind: string, version: string) =>
+        Array.from(
+          { length: 20 },
+          (_, index) =>
+            `${kind} ${version} clause ${index}: ${"the vendor may process customer content under these terms ".repeat(6).trim()}`,
+        );
+      const pageOfKind = (kind: (typeof KINDS)[number], version: string): PolicyPage =>
+        policyPage(clauses(kind, version), {
+          url: `https://acme.com/legal/${kind}`,
+          key: `acme.com/legal/${kind}`,
+          kind,
+          title: `Acme ${kind}`,
+        });
+      const oldPages = () =>
+        new Map(KINDS.map((kind) => [`acme.com/legal/${kind}`, kept(clauses(kind, "old"))]));
+      /** Three long pages in every category, so that the pack is well over its limit. */
+      const FILLERS: Entry[] = RESEARCH_CATEGORIES.flatMap((category) =>
+        [1, 2, 3].map((index) =>
+          ledgerEntry({
+            category,
+            kind: "page",
+            url: `https://news.example.com/${category}-${index}`,
+            title: `Acme ${category} ${index}`,
+            content: `Acme ${category} story ${index}. ${"Acme was in the news again this week. ".repeat(210)}`,
+          }),
+        ),
+      );
+      const shownChanges = () =>
+        (onlyFinish().input.evidence as EvidenceSource[])
+          .filter((source) => source.url.includes("#changed-"))
+          .map((source) => source.url.split("#")[0]);
+
+      beforeEach(() => {
+        asMock(getSnapshotsQuery).mockResolvedValue(oldPages());
+        research.mockResolvedValue(
+          researched({
+            entries: FILLERS,
+            policyPages: KINDS.map((kind) => pageOfKind(kind, "new")),
+          }),
+        );
+        generate.mockResolvedValue(answer([], []));
+      });
+
+      it("keeps the new text of a page only when its change was shown to the model", async () => {
+        const result = await run();
+
+        expect(result.outcome).toBe("completed");
+        const shown = shownChanges();
+        // The case is one where the trim takes changes out.
+        expect(shown.length).toBeLessThan(KINDS.length);
+        expect(
+          writtenPages()
+            .map((write) => write.url)
+            .sort(),
+        ).toEqual([...shown].sort());
+        expect(onlyFinish().input.trace.dropped["page.change_not_shown"]).toBe(
+          KINDS.length - shown.length,
+        );
+      });
+
+      it("shows the next run the changes that this one could not show", async () => {
+        await run();
+        const shownFirst = shownChanges();
+        const written = new Map(
+          writtenPages().map((write) => [
+            write.pageKey,
+            { hash: write.hash, body: write.body, lastSeenAt: NOW },
+          ]),
+        );
+        const stored = new Map(
+          [...oldPages()].map(([key, page]) => [key, written.get(key) ?? page]),
+        );
+        jest.clearAllMocks();
+        asMock(getSnapshotsQuery).mockResolvedValue(stored);
+        // The next run reads the same pages, in a pack that has room.
+        research.mockResolvedValue(
+          researched({ policyPages: KINDS.map((kind) => pageOfKind(kind, "new")) }),
+        );
+
+        await run();
+
+        const shownNext = shownChanges();
+        expect([...shownFirst, ...shownNext].sort()).toEqual(
+          KINDS.map((kind) => `https://acme.com/legal/${kind}`).sort(),
+        );
+        expect(shownNext).toHaveLength(KINDS.length - shownFirst.length);
       });
     });
 

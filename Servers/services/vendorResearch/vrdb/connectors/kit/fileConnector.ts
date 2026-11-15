@@ -8,7 +8,8 @@
  * the redirects (`isPinned`), a 304 included, or the download fails as not allowed; a file cut at its
  * limit fails as too large; and what the spec's reader does not take for the list fails as not the
  * list. The reader sees the bytes and nothing is parsed twice. A list of one file is asked with the
- * validators of the last download, and a 304 is `unchanged`; a list of several files is asked in full
+ * validators of the last download, and a 304 is `unchanged` (an `unchanged` when no validator was
+ * sent, a spec's own fetch included, fails as unreachable); a list of several files is asked in full
  * every time, since a snapshot holds one pair of validators and a 304 on one file would say nothing
  * of the others: the sync's hash of the body tells an unchanged list. A list that needs more (a
  * first request that gives the address of the second, a join) fetches for itself (`fetchFiles`),
@@ -427,7 +428,15 @@ export function createFileConnector<P>(spec: ListSpec<P>): Connector {
       } catch (error) {
         throw downloadFailureOf(error);
       }
-      if (fetched === "unchanged") return "unchanged";
+      if (fetched === "unchanged") {
+        // A 304 to a request that sent no validator answers nothing that was asked (a server or a
+        // cache that does not keep the rules): after a new version, taking it for "unchanged" would
+        // keep the old reading of the file. A download to try again, as one that did not reach it.
+        if ((sent.etag ?? null) === null && (sent.lastModified ?? null) === null) {
+          throw new FetchError("unreachable");
+        }
+        return "unchanged";
+      }
 
       const result = readOf(spec, fetched);
       return {

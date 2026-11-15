@@ -24,7 +24,9 @@
  *
  * Where a party is read (the first rule that gives a party wins). Rule M, a merger: the title without
  * a trailing `(OFT)`, `(CC)`, `(CMA)` or `(OFT/CC)` and without its `merger inquiry` tail is split at
- * its slashes, or is `Completed acquisition by A of B` (also anticipated, proposed, minority). Rule
+ * its slashes, except the slash of a legal form written with one (A/S, I/S, K/S, P/S, N/V, S/A: a
+ * one-letter word, the slash, a one-letter word), or is `Completed acquisition by A of B` (also
+ * anticipated, proposed, minority). Rule
  * C, the other types: `Head: tail` where the tail is a consumer protection case, or begins
  * `alleged`, `investigation`, `suspected` or `competition act`, and the head is not rejected by the
  * list of words that name a sector or a product (a head with a legal form is never rejected); the head
@@ -144,7 +146,10 @@ const NAME = "([A-Z][A-Za-z0-9&.\\-]*(?: (?:[A-Z][A-Za-z0-9&.\\-]*|of|and|de|&))
 /** Rule M. */
 const OFT_TAIL = /\s*\((?:OFT|CC|CMA|OFT\/CC)\)\s*$/;
 const MERGER_TAIL = /\s+(?:partnership\s+)?(?:joint venture\s+)?merger inquir(?:y|ies)\s*$/i;
-const SLASH = /\s*\/\s*/;
+const SLASHES = /\s*\/\s*/g;
+/** The legal forms written with a slash between two letters, in upper case: the slash is part of the name. */
+const SLASH_LEGAL_FORMS: ReadonlySet<string> = new Set(["A/S", "I/S", "K/S", "P/S", "N/V", "S/A"]);
+const LETTER_OR_DIGIT = /[\p{L}\p{N}]/u;
 const ACQUISITION = /^(?:completed|anticipated|proposed|minority)\s+acquisition by (.+?) of (.+)$/i;
 const ALIAS = /^(.*?)\s*\((?:now|formerly)\s+(.+?)\)\s*$/i;
 /** Rule C. */
@@ -296,10 +301,42 @@ function partyOf(text: string): Party | null {
 const partiesIn = (parts: readonly string[]): Party[] =>
   parts.flatMap((part) => partyOf(part) ?? []);
 
+/** Whether the character at `index` is a letter or a digit; a position outside the text is neither. */
+const isWordCharAt = (text: string, index: number): boolean =>
+  index >= 0 && index < text.length && LETTER_OR_DIGIT.test(text.charAt(index));
+
+/**
+ * Whether the slash at `index`, with no blank on either side, is the slash of a legal form
+ * (`Danspin A/S`): one letter on each side, each a word by itself, and the pair a form of
+ * SLASH_LEGAL_FORMS. Split there, `Danspin A/S` would be the party `Danspin A`, whose key no vendor
+ * has.
+ */
+const isLegalFormSlash = (text: string, index: number): boolean =>
+  isWordCharAt(text, index - 1) &&
+  !isWordCharAt(text, index - 2) &&
+  isWordCharAt(text, index + 1) &&
+  !isWordCharAt(text, index + 2) &&
+  SLASH_LEGAL_FORMS.has(text.slice(index - 1, index + 2).toUpperCase());
+
+/** The parts of a merger title between its slashes, blanks around them included, legal forms kept whole. */
+function slashParts(core: string): string[] {
+  const parts: string[] = [];
+  let from = 0;
+  for (const slash of core.matchAll(SLASHES)) {
+    const at = slash.index ?? 0;
+    if (slash[0] === "/" && isLegalFormSlash(core, at)) continue;
+    parts.push(core.slice(from, at));
+    from = at + slash[0].length;
+  }
+  parts.push(core.slice(from));
+  return parts;
+}
+
 /** Rule M (a merger): the parties of the slashes, or the buyer and the target of an acquisition. */
 function mergerParties(title: string): Party[] {
   const core = title.replace(OFT_TAIL, "").replace(MERGER_TAIL, "");
-  if (core.includes("/")) return partiesIn(core.split(SLASH));
+  const parts = slashParts(core);
+  if (parts.length > 1) return partiesIn(parts);
   const acquisition = ACQUISITION.exec(core);
   return acquisition === null ? [] : partiesIn([acquisition[1], acquisition[2]]);
 }
@@ -624,7 +661,10 @@ function toRecord(row: CmaEntity): ParsedRecord {
 export function createUkCmaConnector({ sleep = realSleep }: { sleep?: Sleep } = {}): Connector {
   return createFileConnector<CmaEntity>({
     id: "uk_cma",
-    version: 1,
+    // 2: the slash of a legal form (A/S) no longer splits a merger party.
+    // 3: a slash form (A/S) is a legal form: the party is keyed without it too, and its id is that of
+    // the name without it.
+    version: 3,
     root: "search.json",
     sortKey: (row) => row.key,
     pin: GOVUK_PIN,

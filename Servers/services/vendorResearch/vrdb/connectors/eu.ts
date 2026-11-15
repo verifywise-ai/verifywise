@@ -2,7 +2,10 @@
  * The EU consolidated list of financial sanctions (FSF) of the European Commission (spec D2.4). The
  * list's file carries a fixed token in its address (Q2), so the connector reads that address from
  * the operator's RSS feed at every sync, keeps it in a local variable only, and follows it only on
- * the operator's host and the path of the XML 1.1 file. Nothing it hands back holds an address.
+ * the operator's host and the path of the XML 1.1 file. The page guard follows redirects to any
+ * public host, so the answers are checked too: the feed must answer from the operator's host, and
+ * the file (a 304 included) from that host and path, or the download fails as not allowed. Nothing
+ * it hands back holds an address.
  *
  * Only enterprises (classification code E) are read; persons (P) are skipped, and so is an entry
  * delisted on or before the day the file was generated. Each alias (its `wholeName`, else its first,
@@ -26,7 +29,7 @@
 import { FetchError } from "../../../webResearch/guardedFetch";
 import { joinSentences, sentence } from "../../records/sentence";
 import { isSharedHost } from "../../sharedHosts";
-import { cleanText } from "../../text";
+import { cleanText, withoutHiddenCharacters } from "../../text";
 import { domainKey, hostsOf, identifierKeysOf, nameKeysOf } from "../keys";
 import { vrdbSourceOf } from "../sources";
 import type { ParsedRecord } from "../types";
@@ -64,6 +67,16 @@ function isFileAddress(text: string): boolean {
       url.port === "" &&
       url.pathname.includes(FILE_PATH)
     );
+  } catch {
+    return false;
+  }
+}
+
+/** Whether an address is on the operator's host over https, as the feed's answer must be. */
+function isOperatorAddress(text: string): boolean {
+  try {
+    const url = new URL(text);
+    return url.protocol === "https:" && url.hostname === FILE_HOST && url.port === "";
   } catch {
     return false;
   }
@@ -110,7 +123,7 @@ function entryOf(entity: XmlElement): { record: ParsedRecord; delisted: string |
   const aliasEntries = entity.children
     .filter((element) => element.name === "nameAlias")
     .map((alias) => ({
-      name: cleanText(aliasNameOf(alias)),
+      name: withoutHiddenCharacters(cleanText(aliasNameOf(alias))),
       language: (alias.attributes.nameLanguage ?? "").trim().toUpperCase(),
     }))
     .filter((alias) => alias.name !== "");
@@ -202,10 +215,14 @@ export const euConnector: Connector = {
   // without a whole name is read from its first, middle and last names (EU list check), and the
   // UN reference number (unitedNationId, filled for few entries) is in the text too (Q6). Each
   // changes what `parse` gives from the same file, and a new version makes the sync parse a
-  // downloaded file again though its bytes did not change (connectors/types.ts).
-  version: 4,
+  // downloaded file again though its bytes did not change (connectors/types.ts). 5: a legal form
+  // written with a slash (A/S) is taken off a name for its second key, as AS is.
+  version: 5,
   async download(fetch, validators) {
     const feed = await fetch(EU_FEED_URL, {}, FEED_LIMITS);
+    // The guard follows redirects to any public host and says where the answer came from: the
+    // feed names the file, so it must come from the operator's host. The error holds no address.
+    if (!isOperatorAddress(feed.url)) throw new FetchError("not_allowed");
     // Nothing was sent to make a 304 an answer; one is not the feed.
     if (feed.notModified) throw new FetchError("unreachable");
     const address = fileAddressOf(bodyText(feed));
@@ -219,6 +236,10 @@ export const euConnector: Connector = {
       if (error instanceof FetchError || error instanceof BodyTooLargeError) throw error;
       throw new Error("The file of the EU list could not be read.");
     }
+    // The file must come from the operator's host and path after the redirects, a 304 included,
+    // since it says the file at that address is current. The error holds no address: the file's
+    // carries a token.
+    if (!isFileAddress(response.url)) throw new FetchError("not_allowed");
     if (response.notModified) return "unchanged";
     const body = bodyText(response);
     return {

@@ -1,18 +1,28 @@
 import { MAX_EXCERPT_CHARS, MAX_PAGE_PARTS } from "../pageText";
 import {
   MAX_PDF_BYTES,
+  MAX_PDF_INFLATED_BYTES,
   MAX_PDF_PAGES,
+  MAX_PDF_STREAM_INFLATED_BYTES,
   MIN_PDF_TEXT_CHARS,
+  CGROUP_MEMORY_LIMIT_FILES,
   PDF_CONCURRENCY,
+  PDF_MAX_GROWTH_ENV,
+  PDF_MAX_MEMORY_GROWTH_MB,
+  PDF_MIN_MEMORY_GROWTH_MB,
   PDF_TIMEOUT_MS,
   PDF_WORKER_HEAP_MB,
   PdfError,
   PdfRunner,
   RawPdf,
   WORKER_SOURCE,
+  containerMemoryLimit,
   createWorkerRunner,
   looksLikePdf,
   pdfDateToIso,
+  pdfMemoryGrowthMb,
+  pdfStreamLimits,
+  processPdfMemoryGrowthMb,
   readPdf,
   reflowPdfPage,
 } from "../pdfText";
@@ -20,6 +30,7 @@ import { getEventListeners } from "node:events";
 import { appendFileSync, mkdtempSync, rmSync, statSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { deflateSync } from "node:zlib";
 import { makePdf } from "./helpers/makePdf";
 
 const asBody = (text: string) => Buffer.from(`%PDF-1.7\n${text}`, "latin1");
@@ -44,6 +55,27 @@ function runnerOf(result: RawPdf | Error) {
     return result;
   });
   return run;
+}
+
+/**
+ * A one-page PDF whose content stream, a line of text and then spaces, inflates to `size` bytes:
+ * the deflate data is about a thousandth of that.
+ */
+function makeBomb(size: number): Buffer {
+  const text = Buffer.from(`BT /F1 11 Tf 50 740 Td (${SENTENCE}) Tj ET\n`, "latin1");
+  const content = Buffer.alloc(size, 0x20);
+  text.copy(content);
+  const data = deflateSync(content, { level: 9 });
+  const head =
+    "%PDF-1.4\n1 0 obj\n<< /Type /Catalog /Pages 2 0 R >>\nendobj\n" +
+    "2 0 obj\n<< /Type /Pages /Kids [3 0 R] /Count 1 >>\nendobj\n" +
+    "3 0 obj\n<< /Type /Page /Parent 2 0 R /MediaBox [0 0 612 792] /Contents 4 0 R >>\nendobj\n" +
+    `4 0 obj\n<< /Length ${data.length} /Filter /FlateDecode >>\nstream\n`;
+  return Buffer.concat([
+    Buffer.from(head, "latin1"),
+    data,
+    Buffer.from("\nendstream\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n", "latin1"),
+  ]);
 }
 
 /** Breaks a paragraph into lines the way a typesetter does: as many words as fit in `width`. */
@@ -491,13 +523,59 @@ describe("readPdf", () => {
           maxChars: MAX_EXCERPT_CHARS * MAX_PAGE_PARTS,
           timeoutMs: 20_000,
           heapMb: 256,
+          // The part of the memory limit of the machine that runs the test, 1024 with none.
+          memoryGrowthMb: processPdfMemoryGrowthMb(),
         },
         undefined,
       );
       expect([MAX_PDF_BYTES, MAX_PDF_PAGES, PDF_TIMEOUT_MS, PDF_WORKER_HEAP_MB]).toEqual([
         10_485_760, 100, 20_000, 256,
       ]);
+      expect([
+        MAX_PDF_STREAM_INFLATED_BYTES,
+        MAX_PDF_INFLATED_BYTES,
+        PDF_MAX_MEMORY_GROWTH_MB,
+      ]).toEqual([64 * 1024 * 1024, 128 * 1024 * 1024, 1024]);
     });
+
+    // A file of a few kilobytes whose one content stream inflates to more than a stream may: the
+    // library would hold all of it outside the heap of its thread, where no limit of the thread
+    // counts it.
+    it("does not run a file whose stream inflates to more than a stream may", async () => {
+      const run = runnerOf(raw());
+      const bomb = makeBomb(MAX_PDF_STREAM_INFLATED_BYTES + 1);
+      expect(bomb.length).toBeLessThan(MAX_PDF_STREAM_INFLATED_BYTES / 500);
+
+      await expect(readPdf(bomb, { run })).rejects.toMatchObject({
+        name: "PdfError",
+        reason: "too_big",
+      });
+      expect(run).not.toHaveBeenCalled();
+      // The file is built from 64 MiB of spaces and inflated to be counted: slow on a loaded machine.
+    }, 30_000);
+
+    it("runs a file whose streams inflate to no more than a stream may", async () => {
+      const run = runnerOf(raw());
+
+      await readPdf(makeBomb(4 * 1024 * 1024), { run });
+
+      expect(run).toHaveBeenCalledTimes(1);
+    });
+
+    it("counts the streams against the growth allowed for the read, and refuses what would pass it", async () => {
+      const run = runnerOf(raw());
+      // 40 MiB fits the limits of a stream and of a file, but not half of a growth of 64 MiB.
+      const bomb = makeBomb(40 * 1024 * 1024);
+
+      await expect(readPdf(bomb, { run, memoryGrowthMb: 64 })).rejects.toMatchObject({
+        reason: "too_big",
+      });
+      expect(run).not.toHaveBeenCalled();
+
+      await readPdf(bomb, { run, memoryGrowthMb: 1024 });
+      expect(run).toHaveBeenCalledTimes(1);
+      expect(run.mock.calls[0][1].memoryGrowthMb).toBe(1024);
+    }, 30_000);
 
     it("hands on the signal", async () => {
       const run = runnerOf(raw());
@@ -635,6 +713,99 @@ describe("readPdf", () => {
 
 // These run the real library in a real thread. It is the one place where that is checked: the
 // tests above hand `readPdf` a runner, and a runner cannot tell whether the library loads there.
+describe("the growth of the process allowed for a read", () => {
+  const MIB = 1024 * 1024;
+  const HOST = 16 * 1024 * MIB;
+  const [V2, V1] = CGROUP_MEMORY_LIMIT_FILES;
+
+  /** A reader of the files given, and null for any other. */
+  const filesOf = (files: Record<string, string>) => (path: string) => files[path] ?? null;
+  const growthOf = (files: Record<string, string>, env: NodeJS.ProcessEnv = {}) => {
+    const warn = jest.fn();
+    const value = pdfMemoryGrowthMb({ env, readFile: filesOf(files), hostBytes: HOST, warn });
+    return { value, warn };
+  };
+
+  it("reads cgroup v2 first, then cgroup v1", () => {
+    expect(CGROUP_MEMORY_LIMIT_FILES).toEqual([
+      "/sys/fs/cgroup/memory.max",
+      "/sys/fs/cgroup/memory/memory.limit_in_bytes",
+    ]);
+  });
+
+  it("is PDF_MAX_MEMORY_GROWTH_MB when no limit can be read", () => {
+    expect(growthOf({}).value).toBe(PDF_MAX_MEMORY_GROWTH_MB);
+    expect(PDF_MAX_MEMORY_GROWTH_MB).toBe(1024);
+  });
+
+  it("is 30% of the limit of the container: 153 MiB of the 512Mi of the worker pod", () => {
+    expect(growthOf({ [V2]: `${512 * MIB}\n` }).value).toBe(153);
+    expect(growthOf({ [V1]: `${256 * MIB}\n` }).value).toBe(76);
+  });
+
+  it("is no less than PDF_MIN_MEMORY_GROWTH_MB and no more than PDF_MAX_MEMORY_GROWTH_MB", () => {
+    expect(growthOf({ [V2]: String(100 * MIB) }).value).toBe(PDF_MIN_MEMORY_GROWTH_MB);
+    expect(PDF_MIN_MEMORY_GROWTH_MB).toBe(64);
+    expect(growthOf({ [V2]: String(8 * 1024 * MIB) }).value).toBe(PDF_MAX_MEMORY_GROWTH_MB);
+  });
+
+  it.each([
+    ["`max` in cgroup v2, whatever v1 says", { [V2]: "max\n", [V1]: String(256 * MIB) }],
+    ["the huge number that cgroup v1 writes for no limit", { [V1]: "9223372036854771712\n" }],
+    ["a limit as large as the memory of the host", { [V2]: String(HOST) }],
+    ["a limit that is not a number", { [V2]: "lots" }],
+  ])("is PDF_MAX_MEMORY_GROWTH_MB for %s", (_name, files) => {
+    expect(growthOf(files).value).toBe(PDF_MAX_MEMORY_GROWTH_MB);
+  });
+
+  it("goes on to cgroup v1 when the file of v2 cannot be read", () => {
+    expect(containerMemoryLimit(filesOf({ [V1]: String(512 * MIB) }), HOST)).toBe(512 * MIB);
+    expect(containerMemoryLimit(filesOf({}), HOST)).toBeNull();
+  });
+
+  it(`is ${PDF_MAX_GROWTH_ENV} when it is a positive whole number, whatever the limit`, () => {
+    const { value, warn } = growthOf(
+      { [V2]: String(512 * MIB) },
+      { [PDF_MAX_GROWTH_ENV]: " 300 " },
+    );
+    expect(value).toBe(300);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it.each(["0", "-5", "1.5", "lots", "12MB"])(
+    `ignores %j in ${PDF_MAX_GROWTH_ENV}, with one fixed line in the log`,
+    (setting) => {
+      const { value, warn } = growthOf(
+        { [V2]: String(512 * MIB) },
+        { [PDF_MAX_GROWTH_ENV]: setting },
+      );
+      expect(value).toBe(153);
+      expect(warn).toHaveBeenCalledTimes(1);
+      expect(warn).toHaveBeenCalledWith(
+        `${PDF_MAX_GROWTH_ENV} is not a positive whole number of MiB; the default is used.`,
+      );
+    },
+  );
+
+  it(`takes an empty ${PDF_MAX_GROWTH_ENV} as not set`, () => {
+    const { value, warn } = growthOf({}, { [PDF_MAX_GROWTH_ENV]: "  " });
+    expect(value).toBe(PDF_MAX_MEMORY_GROWTH_MB);
+    expect(warn).not.toHaveBeenCalled();
+  });
+
+  it("gives the count of the streams no more than half of it, and no more than its own limits", () => {
+    expect(pdfStreamLimits(1024)).toEqual({
+      maxStreamBytes: MAX_PDF_STREAM_INFLATED_BYTES,
+      maxTotalBytes: MAX_PDF_INFLATED_BYTES,
+    });
+    expect(pdfStreamLimits(153)).toEqual({
+      maxStreamBytes: 64 * MIB,
+      maxTotalBytes: Math.floor((153 * MIB) / 2),
+    });
+    expect(pdfStreamLimits(64)).toEqual({ maxStreamBytes: 32 * MIB, maxTotalBytes: 32 * MIB });
+  });
+});
+
 describe("the worker that reads a PDF", () => {
   const LIMITS = { maxPages: 100, maxChars: 320_000, timeoutMs: 20_000, heapMb: 256 };
 
@@ -692,6 +863,20 @@ describe("the worker that reads a PDF", () => {
     expect(WORKER_SOURCE).toContain("first: workerData.maxPages");
   });
 
+  it("reads a document whose pages are compressed with FlateDecode, as most writers do", async () => {
+    const compressed = makePdf(
+      [["Data Processing Agreement", "We never use customer content to train models."]],
+      { Title: "Acme DPA" },
+      { flate: true },
+    );
+    expect(compressed.includes("/FlateDecode")).toBe(true);
+
+    const pdf = await readPdf(compressed);
+
+    expect(pdf.title).toBe("Acme DPA");
+    expect(pdf.text).toContain("We never use customer content to train models.");
+  });
+
   it("fails on a file that begins like a PDF and is not one", async () => {
     await expect(readPdf(asBody("this is not a document"))).rejects.toMatchObject({
       name: "PdfError",
@@ -705,6 +890,23 @@ describe("the worker that reads a PDF", () => {
     const HOG = "const held = []; while (true) held.push(new Array(100000).fill('x'));";
     const EXIT = "process.exit(3);";
     const NOTHING = "";
+
+    /**
+     * Waits until the resident size of the process has stopped moving: five readings, 60 ms apart,
+     * each within 4 MiB of the one before; gives up after 15 s, so a machine that never settles
+     * still runs the test.
+     */
+    const untilResidentSizeSettles = async () => {
+      const deadline = Date.now() + 15_000;
+      let last = process.memoryUsage.rss();
+      let steady = 0;
+      while (steady < 5 && Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, 60));
+        const now = process.memoryUsage.rss();
+        steady = Math.abs(now - last) < 4 * 1024 * 1024 ? steady + 1 : 0;
+        last = now;
+      }
+    };
 
     it("ends it at the time limit and says it was too slow", async () => {
       const run = createWorkerRunner(SPIN);
@@ -720,6 +922,62 @@ describe("the worker that reads a PDF", () => {
       await expect(run(DPA, { ...LIMITS, heapMb: 16 })).rejects.toMatchObject({
         reason: "too_big",
       });
+    });
+
+    // ArrayBuffers live outside the heap of the thread, where the library keeps what it inflates;
+    // the heap limit does not see them, the memory of the process does.
+    it("ends it when the process grows past its limit outside the heap, and says it was too big", async () => {
+      // The buffers are written again and again, so that a machine under memory pressure cannot compress
+      // their pages out of the resident size that the parent reads.
+      const BUFFERS = `
+        const held = [];
+        for (let index = 0; index < 12; index += 1) {
+          const buffer = new Uint8Array(16 * 1024 * 1024);
+          buffer.fill(1);
+          held.push(buffer);
+        }
+        while (true) {
+          for (const buffer of held) buffer.fill(2);
+        }
+      `;
+      const run = createWorkerRunner(BUFFERS);
+
+      // The guard counts from the resident size at the moment the thread starts. A thread that an
+      // earlier test has just ended is still giving its memory back at that moment (a gigabyte, after
+      // the tests of real files), and the size then falls by as much as the new thread takes, so the
+      // growth would never be seen. The test begins when the size has stopped falling.
+      await untilResidentSizeSettles();
+
+      // The time limit is far above the time that the growth is seen in, so that on a loaded machine
+      // the growth, and not the clock, is what ends the work.
+      await expect(
+        run(DPA, { ...LIMITS, timeoutMs: 90_000, memoryGrowthMb: 64 }),
+      ).rejects.toMatchObject({
+        reason: "too_big",
+      });
+      // A real thread allocates 192 MiB and the parent notices it at its next poll: on a loaded
+      // machine that takes longer than the default 5 s of a test.
+    }, 120_000);
+
+    it("ends it as soon as the process has grown by more than it may", async () => {
+      let resident = 100 * 1024 * 1024;
+      const residentBytes = () => resident;
+      const run = createWorkerRunner(SPIN, { residentBytes, memoryCheckMs: 10 });
+      const result = run(DPA, { ...LIMITS, memoryGrowthMb: 50 });
+      // Growth up to the limit is allowed.
+      resident += 50 * 1024 * 1024;
+      setTimeout(() => (resident += 1), 100);
+
+      await expect(result).rejects.toMatchObject({ reason: "too_big" });
+    });
+
+    it("lets a read that keeps within the growth finish", async () => {
+      const residentBytes = () => 100 * 1024 * 1024;
+      const run = createWorkerRunner(undefined, { residentBytes, memoryCheckMs: 10 });
+
+      const result = await run(DPA, { ...LIMITS, memoryGrowthMb: 1 });
+
+      expect(result.total).toBe(2);
     });
 
     // A thread that is not ended goes on burning a core, and nothing in the result shows it. This

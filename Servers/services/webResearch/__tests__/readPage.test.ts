@@ -13,6 +13,7 @@ import {
 } from "../guardedFetch";
 import { MAX_PDF_BYTES, PdfDocument, PdfError } from "../pdfText";
 import { PageReadError, createPageReader, decodeBody } from "../readPage";
+import { ROBOTS_MAX_BYTES } from "../robots";
 import { memoryCache, settle } from "./helpers/memoryCache";
 
 type Answer = { contentType?: string; body?: string | Buffer; url?: string } | Error;
@@ -96,6 +97,34 @@ describe("decodeBody", () => {
       Buffer.from([0xe9]),
     ]);
     expect(decodeBody(httpEquiv, "")).toContain("café");
+  });
+
+  it("does not take a meta charset from a body that is data, not HTML", () => {
+    // A cell of a CSV, a string of a JSON file or an item of a feed can hold the words of a meta
+    // tag; they must not choose how the whole file is read.
+    const body = Buffer.from(
+      'name,notes\n"Société Générale","<meta x charset=windows-1252>"',
+      "utf8",
+    );
+    for (const contentType of [
+      "text/csv",
+      "application/json",
+      "text/plain",
+      "text/xml",
+      "application/xml",
+      "application/rss+xml",
+      "application/octet-stream",
+    ]) {
+      expect(decodeBody(body, contentType)).toContain('"Société Générale"');
+    }
+    // HTML, in any case of the type, and a body with no type still read it.
+    const html = Buffer.concat([
+      Buffer.from('<meta charset="windows-1252">caf', "latin1"),
+      Buffer.from([0xe9]),
+    ]);
+    for (const contentType of ["text/html", "TEXT/HTML", "application/xhtml+xml", ""]) {
+      expect(decodeBody(html, contentType)).toContain("café");
+    }
   });
 
   it("lets the header win over the meta tag", () => {
@@ -713,7 +742,7 @@ describe("createPageReader", () => {
       const robots = calls.find((call) => call.url === ROBOTS);
       expect(robots?.options).toEqual({
         allowedContentTypes: ["text/plain", ANY_CONTENT_TYPE],
-        maxBytes: 65_536,
+        maxBytes: 512_000,
         headerTimeoutMs: 5_000,
         totalTimeoutMs: 5_000,
       });
@@ -776,6 +805,41 @@ describe("createPageReader", () => {
         });
         const error = await failureOf(read(PRIVATE_URL));
         expect(error.reason).toBe("blocked_by_robots");
+        expect((await read(PUBLIC_URL)).title).toBe("Trust center | Acme");
+        expect(requested).toEqual([ROBOTS, PUBLIC_URL]);
+      });
+
+      // RFC 9309, 2.5: a crawler parses at least 500 KiB of the file. A rule past 64 KiB counts.
+      it("keeps a rule that comes after the first 64 KiB of robots.txt", async () => {
+        const filler = Array.from(
+          { length: 3_000 },
+          (_, index) => `Disallow: /old/${index}-${"x".repeat(20)}\n`,
+        ).join("");
+        const body = `User-agent: *\n${filler}Disallow: /private/\n`;
+        expect(Buffer.byteLength(body)).toBeGreaterThan(100_000);
+        const { read, requested } = readerOver({
+          [ROBOTS]: { headers: { "content-type": "text/plain" }, body },
+          [PRIVATE_URL]: HTML_REPLY,
+          [PUBLIC_URL]: HTML_REPLY,
+        });
+        expect((await failureOf(read(PRIVATE_URL))).reason).toBe("blocked_by_robots");
+        expect((await read(PUBLIC_URL)).title).toBe("Trust center | Acme");
+        expect(requested).toEqual([ROBOTS, PUBLIC_URL]);
+      });
+
+      it("parses the lines of robots.txt before the cut at 500 KiB, without the line the cut shortened", async () => {
+        // The cut falls inside the last line: "Allow: /private/page-of-its-own" becomes "Allow: /",
+        // which would win over the Disallow above it if it were parsed.
+        const head = "User-agent: *\nDisallow: /private/\n";
+        const padding = `# ${"p".repeat(ROBOTS_MAX_BYTES - head.length - 11)}\n`;
+        const body = `${head}${padding}Allow: /private/page-of-its-own\n`;
+        expect(Buffer.byteLength(`${head}${padding}Allow: /`)).toBe(ROBOTS_MAX_BYTES);
+        const { read, requested } = readerOver({
+          [ROBOTS]: { headers: { "content-type": "text/plain" }, body },
+          [PRIVATE_URL]: HTML_REPLY,
+          [PUBLIC_URL]: HTML_REPLY,
+        });
+        expect((await failureOf(read(PRIVATE_URL))).reason).toBe("blocked_by_robots");
         expect((await read(PUBLIC_URL)).title).toBe("Trust center | Acme");
         expect(requested).toEqual([ROBOTS, PUBLIC_URL]);
       });
@@ -1105,7 +1169,7 @@ describe("createPageReader", () => {
         {
           kind: "robots",
           key: "https://acme.com",
-          value: JSON.stringify({ status: 200, text: "User-agent: *\nAllow: /" }),
+          value: "200\nUser-agent: *\nAllow: /",
         },
       ]);
     });
@@ -1126,7 +1190,7 @@ describe("createPageReader", () => {
         {
           kind: "robots",
           key: "https://acme.com",
-          value: JSON.stringify({ status: 404, text: "" }),
+          value: "404\n",
         },
       ]);
       expect(refused.writes.filter((write) => write.kind === "robots")).toEqual([]);

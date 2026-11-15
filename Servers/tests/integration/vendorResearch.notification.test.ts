@@ -93,12 +93,12 @@ describe("notifyAssigneeOfVendorResearch", () => {
       entity_type: "vendor",
       entity_id: vendor,
       entity_name: "Acme Cloud",
-      action_url: `/vendors/risks?findingsVendorId=${vendor}`,
+      action_url: `/vendors/research-findings?findingsVendorId=${vendor}`,
       is_read: false,
       metadata: { run_id: 41, vendor_id: vendor, count: 2 },
     });
     expect(rows[0].message).toBe(
-      '2 potential risks found for "Acme Cloud". Review them in Vendors > Risks.',
+      '2 potential risks found for "Acme Cloud". Review them in Vendors > Research findings.',
     );
   });
 
@@ -115,7 +115,7 @@ describe("notifyAssigneeOfVendorResearch", () => {
 
     const [row] = await notificationRows(seed.orgA);
     expect(row.message).toBe(
-      '1 potential risk found for "Acme Cloud". Review it in Vendors > Risks.',
+      '1 potential risk found for "Acme Cloud". Review it in Vendors > Research findings.',
     );
   });
 

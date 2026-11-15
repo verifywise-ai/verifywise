@@ -14,6 +14,7 @@ import { shortName } from "../identity";
 import { compactName, cpeVendorOf, nameKeys } from "../records/match";
 import { isSharedHost } from "../sharedHosts";
 import type { ResearchTarget } from "../target";
+import { LINE_INPUT_MAX, lineWithin } from "./connectors/kit/clean";
 
 /** The shortest compact name that may match an entry of a sanctions list. */
 const MIN_NAME_KEY_CHARS = 4;
@@ -115,33 +116,58 @@ export function hostsOf(field: string): string[] {
 }
 
 /**
+ * A text of the vendor folded as the list kit folds a cell before it makes keys of it (kit/clean.ts
+ * `lineOf`: NFKC, the characters nobody sees out, kit/record.ts `foldedTexts`), so that a name
+ * typed in NFD, or in full-width letters, gives the keys the records of the kit's lists hold; the
+ * text as it is when nothing is left of it.
+ */
+const foldedText = (text: string): string => lineWithin(text, LINE_INPUT_MAX) ?? text;
+
+/** The vendor with its names folded (`foldedText`); its domain is ASCII already. */
+const foldedTarget = (target: ResearchTarget): ResearchTarget => ({
+  ...target,
+  name: foldedText(target.name),
+  ...(target.aliases === undefined ? {} : { aliases: target.aliases.map(foldedText) }),
+});
+
+/** The texts once each, in order. */
+const distinctOf = (texts: readonly string[]): string[] => [...new Set(texts)];
+
+/**
  * The keys of a vendor: each of its names and the brand of its domain as a KEV vendor and as the
  * vendor of a CVE record's affected product; the vendor part of its CPE names (records/match.ts
  * `cpeVendorOf`); each of its names, when long enough, as a name (a sanctions list is matched by
  * names only, never by the brand); each domain that the website check verified as the vendor's
  * (preflight.ts `verifiedDomainsOf`), unless it is a host where many have pages; and the keys of
- * its identifiers.
+ * its identifiers. The names, the LEI and the registration number give their keys as they are
+ * written and folded as the kit's records fold theirs (`foldedText`): the lists that predate the
+ * kit keep the keys of their text as it is, and the kit's lists the folded ones, so a vendor needs
+ * both to match either.
  */
 export function vendorKeys(
   target: ResearchTarget,
   verifiedDomains: readonly string[] = [],
 ): string[] {
-  const products = nameKeys(target);
-  const names = nameKeys({ ...target, domain: null }).filter(
-    (name) => name.length >= MIN_NAME_KEY_CHARS,
-  );
+  const folded = foldedTarget(target);
+  const products = distinctOf([...nameKeys(target), ...nameKeys(folded)]);
+  const names = distinctOf([
+    ...nameKeys({ ...target, domain: null }),
+    ...nameKeys({ ...folded, domain: null }),
+  ]).filter((name) => name.length >= MIN_NAME_KEY_CHARS);
   const cpe = cpeVendorOf(target);
   const { lei, registrationNumber, secCik } = target.identifiers ?? {};
-  return [
+  return distinctOf([
     ...products.map((name) => `kev:${name}`),
     ...products.map(cveVendorKey),
     ...(cpe === null ? [] : [cpeKey(cpe)]),
     ...names.map((name) => `name:${name}`),
     ...verifiedDomains.filter((domain) => !isSharedHost(domain)).map(domainKey),
-    ...(lei === undefined ? [] : [leiKey(lei)]),
-    ...(registrationNumber === undefined ? [] : identifierKeysOf([registrationNumber])),
+    ...(lei === undefined ? [] : [leiKey(lei), leiKey(foldedText(lei))]),
+    ...(registrationNumber === undefined
+      ? []
+      : identifierKeysOf([registrationNumber, foldedText(registrationNumber)])),
     ...(secCik === undefined ? [] : [cikKey(secCik)]),
-  ];
+  ]);
 }
 
 /**

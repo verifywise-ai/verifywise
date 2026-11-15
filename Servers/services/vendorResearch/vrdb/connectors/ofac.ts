@@ -13,7 +13,7 @@
  */
 import { FetchError } from "../../../webResearch/guardedFetch";
 import { joinSentences, sentence } from "../../records/sentence";
-import { cleanText, cutAtCodePoint } from "../../text";
+import { cleanText, cutAtCodePoint, withoutHiddenCharacters } from "../../text";
 import { compactNamesOf } from "../keys";
 import type { ParsedRecord } from "../types";
 import { type Connector, bodyText } from "./types";
@@ -161,7 +161,7 @@ export interface OfacList {
 
 /** A field of the files as text: without control characters and blanks, and empty when it is the null mark. */
 const valueOf = (field: string | undefined): string => {
-  const value = cleanText(field ?? "").trim();
+  const value = withoutHiddenCharacters(cleanText(field ?? "")).trim();
   return value === NIL ? "" : value;
 };
 
@@ -307,7 +307,7 @@ export function ofacSourceOf(entry: OfacEntry): { url: string; title: string; te
   const shown = entry.aliases.slice(0, MAX_SHOWN_ALIASES);
   const rest = entry.aliases.length - shown.length;
   const aliases = shown.map((alias) => `"${alias.name}" (${alias.type})`).join(", ");
-  const name = cleanText(entry.name);
+  const name = withoutHiddenCharacters(cleanText(entry.name));
   return {
     url: ofacEntryUrl(entry.id),
     title: `OFAC SDN list: ${name}`,

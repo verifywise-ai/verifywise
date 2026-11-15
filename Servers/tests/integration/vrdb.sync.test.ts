@@ -136,7 +136,8 @@ describe("the sync of a list, in the database", () => {
     expect(await sourceRow()).toMatchObject({
       last_outcome: "ok",
       last_error: null,
-      etag: '"v1"',
+      // The sync marks the validator with the version of the connector that read the copy.
+      etag: 'cv1:"v1"',
       source_version: "2026-10-30",
       active_records: 10,
       licence: vrdbSourceOf("ofac").licence,
@@ -165,7 +166,7 @@ describe("the sync of a list, in the database", () => {
     expect(await sourceRow()).toMatchObject({
       last_outcome: "unchanged",
       last_success_at: new Date(T0.getTime() + 18 * HOUR_MS),
-      etag: '"v3"',
+      etag: 'cv1:"v3"',
       active_records: 9,
     });
 
@@ -228,6 +229,60 @@ describe("the sync of a list, in the database", () => {
       source_version: "2026-10-30",
       active_records: 10,
     });
+  });
+
+  it("stores a date that Postgres cannot read as none, and the rest of the list is written", async () => {
+    // Year 0000 does not exist for Postgres, and JavaScript writes a year before 0000 or after 9999
+    // with a sign and six digits: each would fail the write of the whole list.
+    const dated = (id: string, publishedAt: string, sourceUpdatedAt: string): ParsedRecord => ({
+      ...recordOf(id),
+      publishedAt,
+      sourceUpdatedAt,
+    });
+    const result = await sync(
+      fakeConnector([
+        snapshotOf({
+          records: [
+            dated("D1", "0000-01-01", "2026-10-29"),
+            dated("D2", "2026-10-29", "-000001-01-01T00:00:00Z"),
+            dated("D3", "2026-10-29", "+010000-01-01T00:00:00Z"),
+            ...TEN.slice(0, 7),
+          ],
+        }),
+      ]),
+      T0,
+    );
+
+    expect(result).toEqual({
+      outcome: "ok",
+      counts: { seen: 10, inserted: 10, updated: 0, statusChanged: 0 },
+    });
+    const rows = (await sequelize.query(
+      `SELECT source_record_id, published_at, source_updated_at
+       FROM vrdb_records WHERE source_id = 'ofac' AND source_record_id LIKE 'D%' ORDER BY id`,
+      { type: QueryTypes.SELECT },
+    )) as Array<{
+      source_record_id: string;
+      published_at: Date | null;
+      source_updated_at: Date | null;
+    }>;
+    expect(rows).toEqual([
+      {
+        source_record_id: "D1",
+        published_at: null,
+        source_updated_at: new Date("2026-10-29T00:00:00Z"),
+      },
+      {
+        source_record_id: "D2",
+        published_at: new Date("2026-10-29T00:00:00Z"),
+        source_updated_at: null,
+      },
+      {
+        source_record_id: "D3",
+        published_at: new Date("2026-10-29T00:00:00Z"),
+        source_updated_at: null,
+      },
+    ]);
   });
 });
 

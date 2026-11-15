@@ -507,10 +507,15 @@ describe("govukSearchPages", () => {
         files[urlOf(page * 3)] = { body, contentType: JSON_TYPE };
       });
       const fetch = fakeFetch(files);
-      const fetched = await govukSearchPages(fetch, urlOf, optionsOf({ maxPages: 3 }));
+      const failure = await govukSearchPages(fetch, urlOf, optionsOf({ maxPages: 3 })).then(
+        () => undefined,
+        (error: unknown) => error,
+      );
       expect(fetch.calls).toHaveLength(3);
-      expect(fetched.buffers).toHaveLength(3);
-      expect(govukRowsOf(fetched, { pageSize: PAGE_SIZE })).toBeNull();
+      // Pages whose totals disagree are a search that moved between the requests: a download to try
+      // again, not a list.
+      expect(failure).toBeInstanceOf(FetchError);
+      expect((failure as FetchError).reason).toBe("unreachable");
     });
   });
 
@@ -1418,6 +1423,39 @@ describe("the pager as the fetchFiles of a list of the kit's factory", () => {
     files[urlOf(3)] = { body: pageText(rowsBetween(3, 6), 7, 0), contentType: JSON_TYPE };
     const failure = await failureOf(listWith().download(fakeFetch(files), {}));
     expect(failure).toBeInstanceOf(NotTheListError);
+  });
+
+  describe("a search that moved between two requests: a download to try again, not 'not the list'", () => {
+    const unreachable = (failure: unknown) => {
+      expect(failure).toBeInstanceOf(FetchError);
+      expect((failure as FetchError).reason).toBe("unreachable");
+    };
+
+    it("when a case was published between two pages: the later page states another total", async () => {
+      const files = searchFiles(7);
+      files[urlOf(3)] = { body: pageText(rowsBetween(3, 6), 8, 3), contentType: JSON_TYPE };
+      unreachable(await failureOf(listWith().download(fakeFetch(files), {})));
+    });
+
+    it("when the pages shifted: one case seen twice and another never, the total unchanged", async () => {
+      const files = searchFiles(7);
+      // Page 2 begins with the last case of page 1 again; case 5 is never seen.
+      files[urlOf(3)] = {
+        body: pageText([rowOf(2), rowOf(3), rowOf(4)], 7, 3),
+        contentType: JSON_TYPE,
+      };
+      unreachable(await failureOf(listWith().download(fakeFetch(files), {})));
+    });
+
+    it("but one answer that disagrees with itself did not move: it is not the list", async () => {
+      // A search of one page whose total counts a case it does not hold.
+      const files: Record<string, FakeFile> = {
+        [urlOf(0)]: { body: pageText(rowsBetween(0, 2), 3, 0), contentType: JSON_TYPE },
+      };
+      expect(await failureOf(listWith().download(fakeFetch(files), {}))).toBeInstanceOf(
+        NotTheListError,
+      );
+    });
   });
 
   it("fails the download as not allowed when a page was answered from another address", async () => {

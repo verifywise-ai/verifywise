@@ -17,6 +17,7 @@ import type { Credibility } from "../credibility";
 import { buildEvidencePack, provenanceOf } from "../evidence";
 import { type ResearchResult, type RunHooks, createVendorResearcher } from "../researchAgent";
 import { buildMateriality } from "../materiality";
+import type { RecordsLookup } from "../records/types";
 import { type ResearchTarget, buildTarget } from "../target";
 import { type RunTrace, type TraceRecorder, createTraceRecorder } from "../trace";
 import { offerRecords } from "../vrdb/lookup";
@@ -46,8 +47,13 @@ const replayVrdb =
     const readThrough = new Map(
       (copies.readThrough ?? []).map(({ id, ...answer }) => [id, answer] as const),
     );
-    return offerRecords({ ...input, rows, states: copies.states, enabled: true, readThrough })
-      .outcome;
+    return offerRecords({
+      ...input,
+      rows,
+      states: copies.states,
+      enabled: copies.enabled !== false,
+      readThrough,
+    }).outcome;
   };
 
 export interface CaseRun {
@@ -80,14 +86,28 @@ export interface CaseDeps {
   bindHooks?: (hooks: RunHooks) => void;
   readPage?: PageReader;
   generate?: typeof generateObjectWithSelfCorrection;
-  /** The model the calls are made with; a replay has none. */
+  /** The model the calls are made with (the research's, and the analysis's without `analysis`); a replay has none. */
   model?: unknown;
+  /** The id of `model`, for the trace; a replay has none. */
+  modelId?: string;
+  /**
+   * The model of the analysis and its verifier when the organization chose another key for it, as
+   * the product's `resolved.analysis` (pipeline.ts); without it `model` does both.
+   */
+  analysis?: { model: unknown; modelId: string };
   /**
    * The trace the run writes into; a new one when absent. A live run passes its own because the
    * search engine of the key is made before the run and writes the calls of its model into the
    * trace (see researchAgent.ts, `createRunSearch`), which `--trace` then prints with the rest.
    */
   trace?: TraceRecorder;
+  /**
+   * The lookup in the public databases, in place of what the recording holds. A live run passes
+   * the product's, so that it is measured with the records a run of the product has.
+   */
+  records?: RecordsLookup;
+  /** The lookup in the vendor risk database, in place of the copies the recording holds. */
+  vrdb?: VrdbLookup;
 }
 
 export async function runEvalCase(evalCase: EvalCase, deps: CaseDeps = {}): Promise<CaseRun> {
@@ -124,15 +144,30 @@ export async function runEvalCase(evalCase: EvalCase, deps: CaseDeps = {}): Prom
     generate,
     gather: evalCase.gather === true,
     perCategory: evalCase.perCategory === true,
-    // What the databases answered when the case was recorded: the run asks nobody.
-    ...(recording.records === undefined ? {} : { records: async () => recording.records ?? [] }),
+    // The lookups the caller gives (a live run), else what the databases answered when the case
+    // was recorded: a replay asks nobody.
+    ...(deps.records !== undefined
+      ? { records: deps.records }
+      : recording.records === undefined
+        ? {}
+        : { records: async () => recording.records ?? [] }),
     // What the copies of the lists held.
-    ...(recording.vrdb === undefined ? {} : { vrdb: replayVrdb(recording.vrdb) }),
+    ...(deps.vrdb !== undefined
+      ? { vrdb: deps.vrdb }
+      : recording.vrdb === undefined
+        ? {}
+        : { vrdb: replayVrdb(recording.vrdb) }),
   });
 
   const trace = deps.trace ?? createTraceRecorder();
   trace.startPhase("research");
-  const found = await researcher({ target, model, now, trace });
+  const found = await researcher({
+    target,
+    model,
+    ...(deps.modelId === undefined ? {} : { modelId: deps.modelId }),
+    now,
+    trace,
+  });
   trace.stopped(found.stoppedBecause);
 
   const pack = buildEvidencePack(found.entries);
@@ -144,8 +179,15 @@ export async function runEvalCase(evalCase: EvalCase, deps: CaseDeps = {}): Prom
       materiality,
       pack,
       provenance: provenanceOf(found.entries),
-      model,
-      jsonObjectFallback: found.jsonObjectFallback,
+      // As the pipeline does: the model the organization chose for the analysis, else the research's;
+      // what the loop learned about a provider holds only when it is the same model.
+      model: deps.analysis?.model ?? model,
+      ...(deps.analysis
+        ? { modelId: deps.analysis.modelId }
+        : deps.modelId === undefined
+          ? {}
+          : { modelId: deps.modelId }),
+      jsonObjectFallback: deps.analysis ? false : found.jsonObjectFallback,
       now,
       generate,
       trace,

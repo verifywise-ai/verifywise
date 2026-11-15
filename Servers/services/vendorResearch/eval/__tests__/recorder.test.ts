@@ -14,6 +14,10 @@ import { createReplayEngine, createReplayPageReader, createScriptedGenerate } fr
 import { runEvalCase } from "../runCase";
 import { BREACH_TWO_PUBLISHERS } from "../cases/01-breach-two-publishers";
 import { UNKNOWN_VENDOR_NOISE } from "../cases/02-unknown-vendor-noise";
+import { STATUS_PAGE_INCIDENT_HISTORY } from "../cases/19-status-page-incident-history";
+import { SAME_NAME_ON_TWO_LISTS } from "../cases/31-same-name-on-two-lists";
+import type { RecordsLookup } from "../../records/types";
+import { type LookupStore, createVrdbLookup } from "../../vrdb/lookup";
 
 /**
  * The answer of an analysis without the confidence of its findings: the schema of the analysis has
@@ -258,5 +262,205 @@ describe("createRecorder", () => {
     });
 
     expect(recorder.recording()).not.toHaveProperty("hints");
+  });
+
+  describe("the databases of a live run", () => {
+    /** A run of a case whose web and model answer from the case, and whose databases are given. */
+    const recorderOf = (
+      evalCase: typeof STATUS_PAGE_INCIDENT_HISTORY,
+      more: { records?: RecordsLookup; vrdbStore?: LookupStore },
+    ) =>
+      createRecorder({
+        engine: createReplayEngine(evalCase.recording.searches),
+        readPage: createReplayPageReader(evalCase.recording.pages),
+        generate: createScriptedGenerate(evalCase.recording),
+        ...more,
+      });
+    /** The case without what its databases answered: a live run has only what it is given. */
+    const withoutDatabases = (evalCase: typeof STATUS_PAGE_INCIDENT_HISTORY) => {
+      const { records: _records, vrdb: _vrdb, ...recording } = evalCase.recording;
+      return { ...evalCase, recording };
+    };
+
+    it("records what the public databases answered, and the recording gives the same run again", async () => {
+      const evalCase = STATUS_PAGE_INCIDENT_HISTORY;
+      const answered = evalCase.recording.records ?? [];
+      const asked: unknown[] = [];
+      const records: RecordsLookup = async (input) => {
+        asked.push(input.target.name);
+        return answered;
+      };
+      const recorder = recorderOf(evalCase, { records });
+
+      const first = await runEvalCase(withoutDatabases(evalCase), {
+        engine: recorder.engine,
+        readPage: recorder.readPage,
+        generate: recorder.generate,
+        ...(recorder.records === undefined ? {} : { records: recorder.records }),
+      });
+      const recorded = recorder.recording();
+      const second = await runEvalCase({ ...evalCase, recording: recorded });
+
+      expect(asked).toHaveLength(1);
+      expect(recorded.records).toEqual(answered);
+      expect(first.pack.length).toBeGreaterThan(0);
+      expect(second.pack).toEqual(first.pack);
+      expect(second.kept).toEqual(first.kept);
+    });
+
+    it("records what the copies of the vendor risk database held, and the recording gives the same run again", async () => {
+      const evalCase = SAME_NAME_ON_TWO_LISTS;
+      const copies = evalCase.recording.vrdb as NonNullable<Recording["vrdb"]>;
+      const kept: unknown[] = [];
+      const store: LookupStore = {
+        sourceStates: async (ids) => copies.states.filter((state) => ids.includes(state.id)),
+        findRecords: async (_keys, sources) =>
+          copies.rows.filter((row) => sources.includes(row.sourceId)),
+        recordMatches: async (...args) => {
+          kept.push(args);
+        },
+      };
+      const recorder = recorderOf(evalCase, { vrdbStore: store });
+      const vrdb = createVrdbLookup({
+        store: recorder.vrdbStore as LookupStore,
+        organizationId: 1,
+        vendorId: 0,
+        enabled: true,
+      });
+
+      const first = await runEvalCase(withoutDatabases(evalCase), {
+        engine: recorder.engine,
+        readPage: recorder.readPage,
+        generate: recorder.generate,
+        vrdb,
+      });
+      const recorded = recorder.recording();
+      const second = await runEvalCase({ ...evalCase, recording: recorded });
+
+      expect(recorded.vrdb?.rows.map((row) => row.id).sort()).toEqual(
+        copies.rows.map((row) => row.id).sort(),
+      );
+      // The entry of OFAC's list is offered, as in the replay of the case.
+      expect(
+        first.pack.some((source) => source.url.startsWith("https://sanctionssearch.ofac")),
+      ).toBe(true);
+      expect(second.pack).toEqual(first.pack);
+      expect(second.kept).toEqual(first.kept);
+      // The store decides what is kept of a match; the recorder passes the call on.
+      expect(kept).toHaveLength(1);
+    });
+
+    it("keeps empty copies when a read of the store fails: a half read would offer what the run did not", async () => {
+      const recorder = createRecorder({
+        engine: createReplayEngine([]),
+        readPage: createReplayPageReader([]),
+        generate: createScriptedGenerate(BREACH_TWO_PUBLISHERS.recording),
+        vrdbStore: {
+          sourceStates: async () => [],
+          findRecords: async () => {
+            throw new Error("the database is down");
+          },
+          recordMatches: async () => undefined,
+        },
+      });
+      const store = recorder.vrdbStore as LookupStore;
+
+      await store.sourceStates(["ofac"]);
+      await expect(store.findRecords(["name:example"], ["ofac"])).rejects.toThrow(
+        "the database is down",
+      );
+      await store.sourceStates(["ofac"]);
+
+      expect(recorder.recording().vrdb).toEqual({ rows: [], states: [] });
+    });
+
+    it("replays a run whose read of the store failed with the coverage the run had", async () => {
+      const evalCase = SAME_NAME_ON_TWO_LISTS;
+      const store: LookupStore = {
+        sourceStates: async () => [],
+        findRecords: async () => {
+          throw new Error("the database is down");
+        },
+        recordMatches: async () => undefined,
+      };
+      const recorder = recorderOf(evalCase, { vrdbStore: store });
+      const vrdb = createVrdbLookup({
+        store: recorder.vrdbStore as LookupStore,
+        organizationId: 1,
+        vendorId: 0,
+        enabled: true,
+      });
+
+      const first = await runEvalCase(withoutDatabases(evalCase), {
+        engine: recorder.engine,
+        readPage: recorder.readPage,
+        generate: recorder.generate,
+        vrdb,
+      });
+      const recorded = recorder.recording();
+      const second = await runEvalCase({ ...evalCase, recording: recorded });
+
+      const outcomes = first.found.coverage?.sources.map((source) => source.outcome) ?? [];
+      // The live run gave the lists it researches as failed, and offered none of their records.
+      expect(outcomes).toContain("failed");
+      expect(outcomes).not.toContain("found");
+      expect(second.found.coverage).toEqual(first.found.coverage);
+      expect(second.pack).toEqual(first.pack);
+    });
+
+    it("replays a run whose records were off with every list off, as the live run gave them", async () => {
+      const evalCase = SAME_NAME_ON_TWO_LISTS;
+      let reads = 0;
+      const store: LookupStore = {
+        sourceStates: async () => {
+          reads += 1;
+          return [];
+        },
+        findRecords: async () => {
+          reads += 1;
+          return [];
+        },
+        recordMatches: async () => undefined,
+      };
+      const recorder = createRecorder({
+        engine: createReplayEngine(evalCase.recording.searches),
+        readPage: createReplayPageReader(evalCase.recording.pages),
+        generate: createScriptedGenerate(evalCase.recording),
+        vrdbStore: store,
+        vrdbEnabled: false,
+      });
+      const vrdb = createVrdbLookup({
+        store: recorder.vrdbStore as LookupStore,
+        organizationId: 1,
+        vendorId: 0,
+        enabled: false,
+      });
+
+      const first = await runEvalCase(withoutDatabases(evalCase), {
+        engine: recorder.engine,
+        readPage: recorder.readPage,
+        generate: recorder.generate,
+        vrdb,
+      });
+      const recorded = recorder.recording();
+      const second = await runEvalCase({ ...evalCase, recording: recorded });
+
+      expect(reads).toBe(0);
+      expect(recorded.vrdb).toEqual({ rows: [], states: [], enabled: false });
+      const outcomes = first.found.coverage?.sources.map((source) => source.outcome) ?? [];
+      expect(outcomes.length).toBeGreaterThan(0);
+      expect(outcomes.every((outcome) => outcome === "off")).toBe(true);
+      expect(second.found.coverage).toEqual(first.found.coverage);
+      expect(second.pack).toEqual(first.pack);
+    });
+
+    it("records no databases for a run that is given none", () => {
+      const recorder = recorderOf(BREACH_TWO_PUBLISHERS, {});
+
+      expect(recorder.records).toBeUndefined();
+      expect(recorder.vrdbStore).toBeUndefined();
+      expect(recorder.recording()).not.toHaveProperty("records");
+      expect(recorder.recording()).not.toHaveProperty("vrdb");
+    });
   });
 });

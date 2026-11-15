@@ -32,10 +32,11 @@
  */
 import { compactName } from "../../records/match";
 import { joinSentences, sentence } from "../../records/sentence";
-import { cleanText, cutAtCodePoint } from "../../text";
+import { cutAtCodePoint } from "../../text";
 import { nameKeysOf } from "../keys";
 import { vrdbSourceOf } from "../sources";
 import type { ParsedRecord } from "../types";
+import { flatText } from "./kit/clean";
 import { readCsv } from "./ofac";
 import { type Connector, NotTheListError, bodyText } from "./types";
 
@@ -105,6 +106,9 @@ const unreadableAllowed = (rows: number): number =>
 
 /** `YYYY-MM-DD` for a year, a month and a day that exist (month and day of one or two digits). */
 function existingDay(year: string, month: string, day: string): string | null {
+  // Year 0000 passes the date parser, but Postgres has no such year: one such day as the published
+  // time of a record would fail the whole write of the list (the kit's `dayText` refuses it too).
+  if (Number(year) < 1) return null;
   const text = `${year}-${month.padStart(2, "0")}-${day.padStart(2, "0")}`;
   const date = new Date(`${text}T00:00:00Z`);
   // The date parser carries a 30th of February over to March: only a day it gives back as it was
@@ -169,11 +173,12 @@ function windows1252Of(control: string): string {
 
 /**
  * A cell as one line of plain text: no control characters (the ones of windows-1252 are put back),
- * white space collapsed to one blank, none around it. Every step is linear in the cell's length,
+ * none of the characters that no reader sees (zero-width, bidirectional and tag characters, which
+ * can spell words to the model that a reader of the record never sees), white space collapsed to
+ * one blank, none around it (the kit's `flatText`). Every step is linear in the cell's length,
  * whatever it holds.
  */
-const lineOf = (cell: string): string =>
-  cleanText(cell).replace(C1_CONTROLS, windows1252Of).replace(/\s+/g, " ").trim();
+const lineOf = (cell: string): string => flatText(cell.replace(C1_CONTROLS, windows1252Of));
 
 /** The text without the commas and blanks at its end. It looks at the end only, so the time is linear. */
 function withoutTrailingCommas(text: string): string {
@@ -369,7 +374,9 @@ export function readFdaListRows(text: string): FdaListRow[] | null {
 
 export const fdaConnector: Connector = {
   id: "fda_ai_devices",
-  version: 1,
+  // 2: a legal form written with a slash (A/S) is taken off a company's name for its second key, as
+  // AS is (identity.ts).
+  version: 2,
   async download(fetch, validators) {
     const response = await fetch(FDA_URL, validators, {
       maxBytes: FDA_MAX_BYTES,

@@ -392,8 +392,9 @@ describe("listDueVendorsQuery", () => {
       limit: 50,
     });
 
-    // Eight, nine and ten days are inside a fortnight; the vendors with no run that counts are not.
-    expect(due).toEqual([register.never, register.neverStarted]);
+    // Eight and nine days are inside a fortnight; the vendors with no run that counts are not, and
+    // neither is the one whose run failed ten days ago: a failed run holds it back for a day only.
+    expect(due).toEqual([register.never, register.neverStarted, register.oldest]);
   });
 
   it("counts a run that is queued now, whatever the interval", async () => {
@@ -423,6 +424,63 @@ describe("listDueVendorsQuery", () => {
     expect(
       await listDueVendorsQuery({ organizationId: register.orgId, intervalDays: 7, limit: 0 }),
     ).toEqual([]);
+  });
+
+  // A scheduled run that failed after it started (a rate limit, an outage, a restarted worker)
+  // counts for the cooldown and the daily cap, but holds its vendor back for a day only, not for
+  // the whole interval.
+  describe("a run that failed after it started", () => {
+    const due = (orgId: number) =>
+      listDueVendorsQuery({ organizationId: orgId, intervalDays: 7, limit: 50 });
+
+    it("holds the vendor back for a day, and no longer", async () => {
+      const seed = await seedVendor();
+      const named = (vendor_name: string) => createTestVendor(seed.orgId, { vendor_name });
+      const failedTwoDaysAgo = await named("Failed two days ago");
+      const failedHoursAgo = await named("Failed twelve hours ago");
+      const completedTwoDaysAgo = await named("Completed two days ago");
+      const failedBeforeStart = await named("Failed before it started, yesterday");
+      await seedRunAt(seed, failedTwoDaysAgo, 2, "failed");
+      await seedRunAt(seed, failedHoursAgo, 0.5, "failed");
+      await seedRunAt(seed, completedTwoDaysAgo, 2, "completed");
+      await seedRunAt(seed, failedBeforeStart, 0.5, "failed before it started");
+
+      const list = await due(seed.orgId);
+
+      expect(list).toContain(failedTwoDaysAgo);
+      expect(list).not.toContain(failedHoursAgo);
+      expect(list).not.toContain(completedTwoDaysAgo);
+      expect(list).toContain(failedBeforeStart);
+    });
+
+    it("does not make due a vendor that a run completed within the interval", async () => {
+      const seed = await seedVendor();
+      await seedRunAt(seed, seed.vendorId, 3, "completed");
+      await seedRunAt(seed, seed.vendorId, 2, "failed");
+
+      expect(await due(seed.orgId)).toEqual([]);
+    });
+
+    it("makes due a vendor whose last completed run is older than the interval once the failure is a day old", async () => {
+      const seed = await seedVendor();
+      const failedHoursAgo = await createTestVendor(seed.orgId, { vendor_name: "Retried today" });
+      await seedRunAt(seed, seed.vendorId, 8, "completed");
+      await seedRunAt(seed, seed.vendorId, 2, "failed");
+      await seedRunAt(seed, failedHoursAgo, 8, "completed");
+      await seedRunAt(seed, failedHoursAgo, 0.5, "failed");
+
+      expect(await due(seed.orgId)).toEqual([seed.vendorId]);
+    });
+
+    // A vendor whose runs keep failing must not take the first places of every batch.
+    it("orders the vendors by their newest run, the failed ones included", async () => {
+      const seed = await seedVendor();
+      const completedLongAgo = await createTestVendor(seed.orgId, { vendor_name: "Nine days" });
+      await seedRunAt(seed, seed.vendorId, 2, "failed");
+      await seedRunAt(seed, completedLongAgo, 9, "completed");
+
+      expect(await due(seed.orgId)).toEqual([completedLongAgo, seed.vendorId]);
+    });
   });
 
   it("lists the vendors of the organization it is asked about only", async () => {

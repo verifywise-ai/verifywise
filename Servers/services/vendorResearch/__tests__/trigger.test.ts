@@ -9,6 +9,7 @@ jest.mock("../../../utils/vendorResearch.utils", () => ({
   finishRunQuery: jest.fn(),
   getActiveRunQuery: jest.fn(),
   getLastRunCreatedAtQuery: jest.fn(),
+  withRunStartLockQuery: jest.fn(),
 }));
 // The real module opens a BullMQ queue as soon as it is imported.
 jest.mock("../queue", () => ({ enqueueVendorResearch: jest.fn() }));
@@ -32,6 +33,7 @@ import {
   finishRunQuery,
   getActiveRunQuery,
   getLastRunCreatedAtQuery,
+  withRunStartLockQuery,
 } from "../../../utils/vendorResearch.utils";
 import { enqueueVendorResearch } from "../queue";
 import { VendorResearchConfig, getVendorResearchConfig } from "../config";
@@ -112,6 +114,9 @@ const loggedLines = (): string[] =>
 
 const callOrder = (fn: unknown): number => asMock(fn).mock.invocationCallOrder[0];
 
+/** The transaction the start lock hands its work; the queries inside the lock must be given it. */
+const TX = { id: "start-lock-transaction" };
+
 /** The queries and calls that create or queue a run. */
 const expectNothingStarted = () => {
   expect(createRunQuery).not.toHaveBeenCalled();
@@ -132,6 +137,9 @@ beforeEach(() => {
   asMock(createRunQuery).mockResolvedValue(makeRun());
   asMock(enqueueVendorResearch).mockResolvedValue(undefined);
   asMock(finishRunQuery).mockResolvedValue(undefined);
+  asMock(withRunStartLockQuery).mockImplementation(
+    (_organizationId: number, work: (transaction: unknown) => Promise<unknown>) => work(TX),
+  );
 });
 
 afterEach(() => {
@@ -194,7 +202,7 @@ describe("startVendorResearch", () => {
       await start();
 
       expect(failStaleRunsQuery).toHaveBeenCalledWith(ORG, VENDOR, 15);
-      expect(getActiveRunQuery).toHaveBeenCalledWith(ORG, VENDOR);
+      expect(getActiveRunQuery).toHaveBeenCalledWith(ORG, VENDOR, TX);
       expect(callOrder(failStaleRunsQuery)).toBeLessThan(callOrder(getActiveRunQuery));
     });
 
@@ -222,7 +230,7 @@ describe("startVendorResearch", () => {
         error: { code: "cooldown", retryAfterSeconds: 420 },
       });
 
-      expect(getLastRunCreatedAtQuery).toHaveBeenCalledWith(ORG, VENDOR);
+      expect(getLastRunCreatedAtQuery).toHaveBeenCalledWith(ORG, VENDOR, TX);
       expect(countRunsSinceQuery).not.toHaveBeenCalled();
       expectNothingStarted();
     });
@@ -261,7 +269,7 @@ describe("startVendorResearch", () => {
 
       await expect(start()).resolves.toEqual({ ok: false, error: { code: "daily_cap" } });
 
-      expect(countRunsSinceQuery).toHaveBeenCalledWith(ORG, new Date(NOW.getTime() - DAY_MS));
+      expect(countRunsSinceQuery).toHaveBeenCalledWith(ORG, new Date(NOW.getTime() - DAY_MS), TX);
       expectNothingStarted();
     });
 
@@ -290,13 +298,16 @@ describe("startVendorResearch", () => {
         alreadyRunning: false,
       });
 
-      expect(createRunQuery).toHaveBeenCalledWith({
-        organizationId: ORG,
-        vendorId: VENDOR,
-        triggerType: "manual",
-        requestedBy: REQUESTER,
-      });
-      expect(enqueueVendorResearch).toHaveBeenCalledWith(ORG, VENDOR, 42);
+      expect(createRunQuery).toHaveBeenCalledWith(
+        {
+          organizationId: ORG,
+          vendorId: VENDOR,
+          triggerType: "manual",
+          requestedBy: REQUESTER,
+        },
+        TX,
+      );
+      expect(enqueueVendorResearch).toHaveBeenCalledWith(ORG, VENDOR, 42, "manual");
       expect(callOrder(createRunQuery)).toBeLessThan(callOrder(enqueueVendorResearch));
       expect(finishRunQuery).not.toHaveBeenCalled();
     });
@@ -311,6 +322,8 @@ describe("startVendorResearch", () => {
       await expect(start()).resolves.toEqual({ ok: true, run: winner, alreadyRunning: true });
 
       expect(getActiveRunQuery).toHaveBeenCalledTimes(2);
+      // The violation aborted the transaction, so the winner is read outside it.
+      expect(asMock(getActiveRunQuery).mock.calls[1]).toEqual([ORG, VENDOR]);
       expect(enqueueVendorResearch).not.toHaveBeenCalled();
     });
 
@@ -537,13 +550,16 @@ describe("triggerAutoResearch", () => {
   it("creates an automatic run without a requester and queues it", async () => {
     await expect(triggerAutoResearch(autoArgs)).resolves.toBeUndefined();
 
-    expect(createRunQuery).toHaveBeenCalledWith({
-      organizationId: ORG,
-      vendorId: VENDOR,
-      triggerType: "auto",
-      requestedBy: null,
-    });
-    expect(enqueueVendorResearch).toHaveBeenCalledWith(ORG, VENDOR, RUN_ID);
+    expect(createRunQuery).toHaveBeenCalledWith(
+      {
+        organizationId: ORG,
+        vendorId: VENDOR,
+        triggerType: "auto",
+        requestedBy: null,
+      },
+      TX,
+    );
+    expect(enqueueVendorResearch).toHaveBeenCalledWith(ORG, VENDOR, RUN_ID, "auto");
   });
 
   // Each reason that stops an automatic start is logged with the ids and the reason, and nothing is persisted.

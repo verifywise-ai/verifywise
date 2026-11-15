@@ -7,14 +7,19 @@
  * SELECT.
  *
  * There is one set of rules and so one run for each vendor. The runs are ordinary research runs
- * that the labeller starts, after the copies of the lists have synced, one on a vendor row of its
- * own for each vendor: a run drops what repeats the findings and risks its row already has. The
+ * that the labeller starts once every active list of the categories the runs research has synced
+ * at least once (its `last_success_at` is set), not only the sanctions lists and the CVE list: a
+ * run records a list that has never synced as a list that failed, and a failed list misses the
+ * coverage bar. Only the first run of a row is scored, so a vendor that was run too early is run
+ * again on a new row, which the labels then give. Each run is made on a vendor row of its own for
+ * each vendor: a run drops what
+ * repeats the findings and risks its row already has. The
  * labels give that row as `vendorId`; a file of the earlier shape, with a row for each flag
  * (`vendorIds: { off, on }`), is read by its `on` row.
  *
  * The bars are precision of at least 0.9, label agreement of at least 80 %, no finding labelled
  * High that the labeller rates Low, no sanctions match stated as a fact, and a coverage with no list
- * that failed. Recall is reported and has no bar.
+ * that failed (one that had never synced included). Recall is reported and has no bar.
  *
  * Exit codes:
  *   0 - every bar is met

@@ -40,7 +40,8 @@
  * Entries that repeat a name on one list (one name, several orders: 101 names today, 86 of them on
  * the Entity List) are one record, whose fields are those of the entry with the newest start date;
  * the text says how many entries the name has. A record is matched by
- * the names of the entry (a weak match), by the host of each website of its ids (a strong one, as
+ * the names of the entry and the names they stand for without a note of the list (`cslNamesOf`: the
+ * successor clause, a bracket at the end; a weak match), by the host of each website of its ids (a strong one, as
  * for the UK and EU lists) and by the legal entity number or registration number of its ids (an LEI
  * is strong alone, any other number only beside the name, Q1). Never by an address, nor by another
  * kind of identifier: a number of a listed security, a bank code or a person's document is no key.
@@ -60,14 +61,16 @@
  * JSON, is no object, or is not the whole list (the paging fields say so). No address enters a
  * record or an error.
  */
+import { isLegalFormOrArticle } from "../../identity";
 import { compactName } from "../../records/match";
 import { joinSentences, sentence } from "../../records/sentence";
 import { isSharedHost } from "../../sharedHosts";
-import { cleanText, cutAtCodePoint } from "../../text";
+import { cutAtCodePoint } from "../../text";
 import { domainKey, hostsOf, identifierKeysOf, nameKeysOf } from "../keys";
 import { vrdbSourceOf } from "../sources";
 import type { ParsedRecord } from "../types";
 import { fdaDayOf } from "./fda";
+import { LINE_INPUT_MAX, lineOf as kitLineOf } from "./kit/clean";
 import { type Connector, NotTheListError, type ParseResult, bodyText, dayOf } from "./types";
 
 export const CSL_URL =
@@ -271,37 +274,39 @@ const WINDOWS_1252_C1 = [
   0x8d, 0x17d, 0x8f, 0x90, 0x2018, 0x2019, 0x201c, 0x201d, 0x2022, 0x2013, 0x2014, 0x2dc, 0x2122,
   0x161, 0x203a, 0x153, 0x9d, 0x17e, 0x178,
 ];
-const C1_CONTROLS = /[\x80-\x9f]/g;
-const WHITE_SPACE = /\s+/g;
+/** The delete character and the C1 controls. */
+const C1_CONTROLS = /[\x7f-\x9f]/g;
+
 /**
- * Characters a reader does not see (zero-width, the right-to-left overrides, the tag characters
- * that spell ASCII invisibly, the byte order mark, the variation selectors) and the control
- * characters, as the ATLAS connector's `normalise` removes them. Every pattern here is a class under
- * one quantifier, so the time is linear in the text, whatever it holds.
+ * A control character U+0080 to U+009F as windows-1252 reads its byte; nothing for an undefined
+ * one, and nothing for the delete character (U+007F), which the kit's line would write as a blank
+ * inside a word.
  */
-const UNSEEN = /[\p{Cc}\p{Cf}\p{Variation_Selector}]/gu;
-
-/** What an unseen character becomes: a blank for the three that separate words, nothing for the rest. */
-const unseenAs = (character: string): string =>
-  character === "\t" || character === "\n" || character === "\r" ? " " : "";
-
-/** A control character U+0080 to U+009F as windows-1252 reads its byte; nothing for an undefined one. */
 function windows1252Of(control: string): string {
+  if (control === "\x7f") return "";
   const code = WINDOWS_1252_C1[control.charCodeAt(0) - 0x80];
   return code >= 0x80 && code <= 0x9f ? "" : String.fromCodePoint(code);
 }
 
 /**
- * A cell as one line of plain text (R10.1): compatibility forms folded (a full-width `<` is a `<`,
- * which the prompt's escaping then sees), no control, zero-width or bidirectional character (the
- * byte order mark, which `\s` matches, goes with them and is not a blank), white space collapsed to
- * one blank, none around it.
+ * A cell as one line of plain text (R10.1), as every list of the kit has it (kit/clean.ts
+ * `lineOf`): compatibility forms folded (a full-width `<` is a `<`, which the prompt's escaping
+ * then sees), no control, zero-width, bidirectional or other hidden character, white space
+ * collapsed to one blank, none around it. The bytes 0x80 to 0x9F are read as windows-1252 first,
+ * and the delete character goes (`windows1252Of`), which the kit does not do.
+ *
+ * The kit takes the hidden characters out BEFORE it bounds the runs of combining marks and folds:
+ * a zero-width character between a letter and its mark would otherwise stop the fold from
+ * composing them and leave a line whose key is not the key of the vendor's composed name, and
+ * hidden characters set every few marks would hide a run's length from the bound. The bound
+ * (MARK_RUN_MAX before the fold) keeps the fold linear, which matters here: the projection runs in
+ * one synchronous call over a file of up to 64 MiB. A field is read to LINE_INPUT_MAX units, and
+ * no cut is made after the fold (the line's max is unbounded): every field is cut far below that
+ * afterwards, and a name that is longer is unreadable before it gets here (`nameOf`).
  */
 function lineOf(text: string): string {
-  return cleanText(text.replace(C1_CONTROLS, windows1252Of).normalize("NFKC"))
-    .replace(UNSEEN, unseenAs)
-    .replace(WHITE_SPACE, " ")
-    .trim();
+  const read = text.length > LINE_INPUT_MAX ? cutAtCodePoint(text, LINE_INPUT_MAX) : text;
+  return kitLineOf(read.replace(C1_CONTROLS, windows1252Of), Number.POSITIVE_INFINITY);
 }
 
 /**
@@ -324,6 +329,8 @@ function shorten(text: string, max: number): string {
 const keyOf = (name: string): string => cutAtCodePoint(compactName(name), MAX_KEY_CHARS);
 
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}(?:$|[T ])/;
+/** The first day that a store holds: there is no year 0000. */
+const FIRST_DAY = "0001-01-01";
 
 /**
  * A day of the file as YYYY-MM-DD: an ISO date or date and time (`dayOf`), else `M/D/YYYY` with the
@@ -334,7 +341,10 @@ const ISO_DAY = /^\d{4}-\d{2}-\d{2}(?:$|[T ])/;
 function dayFrom(value: unknown): string | null {
   if (typeof value !== "string") return null;
   const text = value.trim();
-  return ISO_DAY.test(text) ? dayOf(text) : fdaDayOf(text);
+  const day = ISO_DAY.test(text) ? dayOf(text) : fdaDayOf(text);
+  // Year 0000 passes the date parser, but Postgres has no such year: one such day as the
+  // published time of a record would fail the whole write of the list (`fdaDayOf` refuses it too).
+  return day !== null && day >= FIRST_DAY ? day : null;
 }
 
 // ---------------------------------------------------------------------------------------------
@@ -406,7 +416,8 @@ function textOf(value: unknown, max: number): string {
 
 /** The name of an entry: text of 1 to 500 characters with a letter or digit in it. */
 function nameOf(value: unknown): string {
-  if (typeof value !== "string") return unreadable();
+  // A name longer than `lineOf` reads cannot be known whole, and a cut name would be another name.
+  if (typeof value !== "string" || value.length > LINE_INPUT_MAX) return unreadable();
   const name = lineOf(value);
   return name === "" || name.length > MAX_NAME_CHARS || keyOf(name) === "" ? unreadable() : name;
 }
@@ -472,7 +483,11 @@ function otherNamesOf(altNames: unknown, issuers: readonly string[], name: strin
     others.push(other);
   };
   // One pass and no list of the cleaned names: an entry with a million of them costs time, not memory.
-  for (const item of itemsOf(altNames)) add(typeof item === "string" ? lineOf(item) : unreadable());
+  for (const item of itemsOf(altNames)) {
+    // As for the name (`nameOf`): a name longer than `lineOf` reads is never read cut.
+    const whole = typeof item === "string" && item.length <= LINE_INPUT_MAX;
+    add(whole ? lineOf(item) : unreadable());
+  }
   issuers.forEach(add);
   return others;
 }
@@ -920,14 +935,63 @@ function summaryOf(list: CslList, entry: CslEntry, count: number): string {
   return `${shorten(body, CSL_MAX_SUMMARY_CHARS - CLOSING.length - 1)} ${CLOSING}`;
 }
 
-/** The keys of a record (R5): its names, the hosts of its websites, the numbers of its ids; no other. */
+/**
+ * The clause that the State lists write at the end of a name (`...; and any successor, sub-unit, or
+ * subsidiary thereof`), with the blanks and the semicolon round it. It is no part of the name.
+ */
+const SUCCESSOR_CLAUSE = /[;,]?\s*and any successor, sub-unit,? or subsidiary thereof\s*;?\s*$/i;
+/** A bracket that ends a name and holds no bracket: `... Co., Ltd. (HAFEI)`. */
+const TRAILING_BRACKET = /^(.*\S) \(([^()]*)\)$/;
+/**
+ * An alias in a trailing bracket: capitals and digits, words joined by a hyphen or a blank
+ * (`HAFEI`, `CETC 55`, `NSCC-CS`). A bracket of words in lower case says where the entity is or
+ * what it is (`(Hong Kong)`, `(Russian national)`, `(Private)`) and names nothing.
+ */
+const ALIAS = /^[A-Z][A-Z0-9]*(?:[- ][A-Z0-9]+)*$/;
+
+/**
+ * The names that a listed name also stands for, besides itself (R5): without the successor clause
+ * of the State lists, and, when it ends in a bracket, the text before it and an alias inside it
+ * (`Hafei Aviation Industry Co., Ltd. (HAFEI)` is also `Hafei Aviation Industry Co., Ltd.` and
+ * `HAFEI`). The listed name is the entity's with a note of the list, and a vendor that bears the
+ * entity's own name must find it. An alias counts only in a name that is not written in capitals
+ * alone, where a bracket of capitals is no sign of one (`(UKRAINE)`, `(HOLDING)`), and only when it
+ * is not a legal form that identity.ts knows (`(GMBH)`), nor a second bracket after a first one
+ * (`Example Bureau (EB) (DPRK)`). Only a bracket at the end is read: one in the middle
+ * (`Smartcom (Hong Kong) Co., Limited`, `James L. (Long) Stephens`) leaves a part that is a common
+ * word or a given name, no name of the entity.
+ */
+export function cslNamesOf(name: string): string[] {
+  const names: string[] = [];
+  const bare = name.replace(SUCCESSOR_CLAUSE, "").trim();
+  if (bare !== name.trim() && bare !== "") names.push(bare);
+  const bracket = TRAILING_BRACKET.exec(bare);
+  if (bracket !== null) {
+    const [, before, inside] = bracket;
+    names.push(before);
+    const alias = inside.trim();
+    const capitalsAlone = before.toUpperCase() === before;
+    const legalForms = alias.split(/[- ]/).every(isLegalFormOrArticle);
+    // A second bracket after a first one is a note of where the entity is (`(SANS FAB) (DPRK)`).
+    const secondNote = before.endsWith(")");
+    if (!capitalsAlone && !secondNote && ALIAS.test(alias) && !legalForms) names.push(alias);
+  }
+  return names;
+}
+
+/**
+ * The keys of a record (R5): its names, the hosts of its websites, the numbers of its ids; no other.
+ * The names as listed come first, and the names they also stand for (`cslNamesOf`) after them, so
+ * that the cap never drops a listed name for one of them.
+ */
 function matchKeysOf(entry: CslEntry): string[] {
   const hostKeys = (entry.websites ?? [])
     .flatMap(hostsOf)
     .filter((host) => !isSharedHost(host))
     .map(domainKey);
+  const listed = [entry.name, ...(entry.other ?? [])];
   return [
-    ...nameKeysOf([entry.name, ...(entry.other ?? [])]).slice(0, CSL_MAX_NAME_KEYS),
+    ...nameKeysOf([...listed, ...listed.flatMap(cslNamesOf)]).slice(0, CSL_MAX_NAME_KEYS),
     ...new Set(hostKeys),
     ...identifierKeysOf((entry.registrations ?? []).map(({ number }) => number)).slice(
       0,
@@ -1033,7 +1097,12 @@ function isCslAddress(text: string): boolean {
 export function createCslConnector(now: () => Date = () => new Date()): Connector {
   return {
     id: "csl",
-    version: 1,
+    // 2: a cell is the kit's line (`lineOf`): the hidden characters go before the fold, so a letter
+    // and its mark that one separated are composed, and runs of marks are bounded; a day of year
+    // 0000 is no day. Names, keys and texts can change on an unchanged file. 3: a name is also
+    // keyed without the successor clause and without a bracket at its end, and by an alias in that
+    // bracket (`cslNamesOf`); a copy synced at 2 before that change keeps its keys otherwise.
+    version: 3,
     async download(fetch, validators) {
       const response = await fetch(CSL_URL, validators, {
         maxBytes: CSL_MAX_BYTES,

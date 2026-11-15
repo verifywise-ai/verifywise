@@ -88,6 +88,14 @@ function firstMarks(run: string): string {
 }
 
 /**
+ * The text with every run of more than MARK_RUN_MAX marks cut to its first MARK_RUN_MAX: what a
+ * text goes through before the fold (NFKC), so that the fold sorts no run longer than that. Take
+ * the hidden characters out first, as `lineOf` does, or they split a run that taking them out
+ * later joins. Linear in the length of the text.
+ */
+export const boundMarkRuns = (text: string): string => text.replace(MARK_RUNS, firstMarks);
+
+/**
  * The text cut so that it and the marker are `max` units together, whatever its length; a cut that
  * leaves nothing of the text gives the marker alone. Where `max` has no room for a marker the text
  * is cut to `max`, and says nothing: a limit that small has no use for a text.
@@ -108,14 +116,16 @@ export function shorten(text: string, max: number): string {
   return text.length <= max ? text : markedCut(text, max);
 }
 
-/** A cell as one clean line before the cut (see `lineOf`). */
+/**
+ * A cell as one clean line before the cut (see `lineOf`). The hidden characters go BEFORE the run of
+ * marks is bounded and before the fold: a zero-width space or a soft hyphen between a letter and its
+ * combining mark would otherwise stop the fold from composing them, and taking it out after the fold
+ * would leave the letter and the mark apart (a line that is not NFKC, which the person rules and the
+ * match keys take for composed), or split a run of marks so that MARK_RUNS does not see its length.
+ * The fold makes no hidden character of any other (every code point checked), so one pass is enough.
+ */
 const flatLineOf = (text: string): string =>
-  cleanText(text)
-    .replace(MARK_RUNS, firstMarks)
-    .normalize("NFKC")
-    .replace(HIDDEN, "")
-    .replace(BREAKS, " ")
-    .trim();
+  boundMarkRuns(cleanText(text).replace(HIDDEN, "")).normalize("NFKC").replace(BREAKS, " ").trim();
 
 /**
  * A value as ONE clean line of at most `max` UTF-16 units: the control characters out and the lone

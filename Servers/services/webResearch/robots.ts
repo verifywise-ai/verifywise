@@ -15,6 +15,24 @@ export interface RobotsRules {
   isAllowed(pathWithQuery: string): boolean;
 }
 
+/**
+ * The most bytes of a robots.txt that are read: 500 KiB, the least that RFC 9309 (2.5) lets a
+ * crawler parse. What lies past it is not read, as the RFC allows.
+ */
+export const ROBOTS_MAX_BYTES = 512_000;
+
+/**
+ * The text of a robots.txt to parse. A file that was cut at ROBOTS_MAX_BYTES (`truncated`) loses
+ * its last line, which the cut may have shortened: `Allow: /private/x` cut to `Allow: /` would
+ * allow the whole site, and a character cut in two is not a character. The lines before it are
+ * whole, and are parsed as the file.
+ */
+export function robotsTextOf(text: string, truncated: boolean): string {
+  if (!truncated) return text;
+  const lastBreak = Math.max(text.lastIndexOf("\n"), text.lastIndexOf("\r"));
+  return lastBreak < 0 ? "" : text.slice(0, lastBreak + 1);
+}
+
 export const ALLOW_ALL: RobotsRules = { isAllowed: () => true };
 export const DISALLOW_ALL: RobotsRules = { isAllowed: () => false };
 

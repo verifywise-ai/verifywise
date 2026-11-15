@@ -14,7 +14,7 @@
  * own (Ruling 13 of the M1 plan).
  */
 import { joinSentences, sentence } from "../../records/sentence";
-import { cleanText } from "../../text";
+import { cleanText, withoutHiddenCharacters } from "../../text";
 import { nameKeysOf } from "../keys";
 import { vrdbSourceOf } from "../sources";
 import type { ParsedRecord } from "../types";
@@ -33,9 +33,9 @@ const MAX_TEXT_CHARS = 1200;
 
 const LIST_PAGE = vrdbSourceOf("un_sanctions").documentationUrl;
 
-/** A field as one line of plain text. */
+/** A field as one line of plain text, without the characters nobody sees. */
 const plain = (text: string | null): string =>
-  cleanText(text ?? "")
+  withoutHiddenCharacters(cleanText(text ?? ""))
     .replace(/\s+/g, " ")
     .trim();
 

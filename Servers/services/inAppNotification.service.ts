@@ -1389,9 +1389,9 @@ export const notifyRiskOfVendorCandidates = async (
 
 /**
  * Tell a vendor's assignee that an automatic research run stored `count` risk findings for the
- * vendor. In-app only. The link opens the findings of the vendor on the Risks tab, not the vendor
- * modal that buildEntityUrl(VENDOR) opens. Returns false when nothing was sent: the vendor has no
- * assignee, or this run was announced already.
+ * vendor. In-app only. The link opens the findings of the vendor on the Research findings tab of
+ * the Vendors page, not the vendor modal that buildEntityUrl(VENDOR) opens. Returns false when
+ * nothing was sent: the vendor has no assignee, or this run was announced already.
  */
 export const notifyAssigneeOfVendorResearch = async (
   organizationId: number,
@@ -1412,18 +1412,18 @@ export const notifyAssigneeOfVendorResearch = async (
           count === 1
             ? translate(
                 lang,
-                '{count} potential risk found for "{vendorName}". Review it in Vendors > Risks.',
+                '{count} potential risk found for "{vendorName}". Review it in Vendors > Research findings.',
                 { count, vendorName: vendor.name },
               )
             : translate(
                 lang,
-                '{count} potential risks found for "{vendorName}". Review them in Vendors > Risks.',
+                '{count} potential risks found for "{vendorName}". Review them in Vendors > Research findings.',
                 { count, vendorName: vendor.name },
               ),
         entity_type: NotificationEntityType.VENDOR,
         entity_id: vendor.id,
         entity_name: vendor.name,
-        action_url: `/vendors/risks?findingsVendorId=${vendor.id}`,
+        action_url: `/vendors/research-findings?findingsVendorId=${vendor.id}`,
         // The sent-record key is run_id, which the unique index reads.
         metadata: { run_id: runId, vendor_id: vendor.id, count },
       },

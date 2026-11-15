@@ -1,5 +1,8 @@
 import type { TokenUsage } from "../../../advisor/llmSelfCorrect";
-import type { EvidenceSource } from "../../../domain.layer/interfaces/i.vendorResearch";
+import {
+  type EvidenceSource,
+  RESEARCH_CATEGORIES,
+} from "../../../domain.layer/interfaces/i.vendorResearch";
 import { PageReadError, type PageReader } from "../../webResearch/readPage";
 import { EDGAR_FILER_TIMEOUT_MS, analyse } from "../analysis";
 import { buildSystemPrompt } from "../prompts";
@@ -333,6 +336,59 @@ describe("analyse", () => {
     // Three per category.
     expect(analysed.ok && analysed.kept).toHaveLength(3);
     expect(trace.snapshot().dropped["cap"]).toBe(1);
+  });
+
+  // The model is told three per category, so an answer within its rules can hold 18 candidates; the
+  // run keeps 8. The pipeline must know which were cut, so that it does not remember their sources.
+  it("returns the candidates that the caps took, with their sources", async () => {
+    const subjects = [
+      ["Ransomware locked the payroll servers", "Salary payments could be delayed"],
+      ["A leaked admin token exposed the billing portal", "Invoices of customers could be read"],
+      ["Employees phished by a fake vendor email", "Mailbox contents might have been copied"],
+      ["An unpatched gateway let intruders into staging", "Test data could be altered"],
+      ["Regulator fined the company over consent banners", "Cookie practices may be unlawful"],
+      ["A class action claims unpaid overtime", "Legal costs could raise prices"],
+      ["Auditors withdrew the ISO certificate", "Controls are no longer attested"],
+      ["Penetration test report is two years old", "Weaknesses may be unknown"],
+      ["SOC report excludes the hosting provider", "Third party controls are unchecked"],
+      ["Training on prompts is enabled by default", "Our inputs could shape their models"],
+      ["Model outputs are kept for five years", "Generated text stays with them"],
+      ["No opt out from human review of chats", "Staff could read our conversations"],
+      ["The cloud region went dark for nine hours", "Payroll runs could miss deadlines"],
+      ["Status page hid a week of degraded service", "Outages may go unreported"],
+      ["Single datacentre with no failover", "One fire could stop everything"],
+      ["Lenders called in a bridge loan", "The vendor could run out of cash"],
+      ["Half the engineering staff was laid off", "Support quality could fall"],
+      ["Auditor raised going concern doubts", "The business may not survive"],
+    ];
+    const pack: EvidenceSource[] = subjects.map((_subject, index) => ({
+      ...PACK[0],
+      id: `S${index + 1}`,
+      category: RESEARCH_CATEGORIES[Math.floor(index / 3)],
+      url: `https://news.example.com/story-${index + 1}`,
+      publishedAt: null,
+    }));
+    const many = subjects.map(([risk, impact], index) => ({
+      ...FINDING,
+      category: RESEARCH_CATEGORIES[Math.floor(index / 3)],
+      risk_description: `${risk}.`,
+      impact_description: `${impact}.`,
+      evidence: [{ source_id: `S${index + 1}`, quote: QUOTE }],
+    }));
+    const { result, trace } = run({ pack, generate: answer(many) as never });
+
+    const analysed = await result;
+
+    if (!analysed.ok) throw new Error("the analysis failed");
+    expect(analysed.kept).toHaveLength(8);
+    expect(trace.snapshot().dropped["cap"]).toBe(10);
+    expect(analysed.capped).toHaveLength(10);
+    const urlsOf = (findings: typeof analysed.kept) =>
+      findings.flatMap((finding) => finding.sources.map((source) => source.url));
+    const kept = urlsOf(analysed.kept);
+    const capped = urlsOf(analysed.capped);
+    expect(new Set([...kept, ...capped]).size).toBe(18);
+    expect(capped.filter((url) => kept.includes(url))).toEqual([]);
   });
 
   it("starts the call in JSON-object mode when the loop learned that the provider needs it", async () => {
@@ -1510,6 +1566,32 @@ describe("analyse", () => {
       await run({ signal: controller.signal, generate: generate as never, verifier: true }).result;
 
       expect(seen).toHaveLength(1);
+    });
+
+    // The snippet check used to get its own 20-second deadline only, so a read in flight went on
+    // after the run was abandoned and the analysis did not answer until the deadline.
+    it("gives the snippet check's page read a signal that aborts with the run", async () => {
+      const controller = new AbortController();
+      let received: AbortSignal | undefined;
+      const readPage = jest.fn(
+        (_url: string, signal: AbortSignal) =>
+          new Promise<never>((_resolve, reject) => {
+            received = signal;
+            signal.addEventListener("abort", () =>
+              reject(new PageReadError("unreachable", "aborted")),
+            );
+          }),
+      );
+
+      const { result } = run({ signal: controller.signal, readPage: readPage as never });
+      for (let turn = 0; turn < 50 && received === undefined; turn += 1) {
+        await new Promise((resolve) => setImmediate(resolve));
+      }
+
+      expect(received?.aborted).toBe(false);
+      controller.abort();
+      expect(received?.aborted).toBe(true);
+      await failedAs(result);
     });
   });
 

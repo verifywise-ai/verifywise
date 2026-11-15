@@ -136,12 +136,16 @@ const wordsOfNormalised = (normalised: string): string[] => normalised.match(WOR
 const DOMAIN_FRAME_WORDS = ["www", "http", "https"];
 
 /**
- * The words of the vendor's own name and of its domain, normalised like a quote, and what a page
- * makes of them. They are what a quote has to go beyond: "Acme", "Acme Analytics",
- * "acme-analytics.com", "www.acme-analytics.com" and "Acme's" say nothing that the name does not.
+ * The words of the vendor's own name, of its other names (`aliases`: a brand, the name the press
+ * uses) and of its domain, normalised like a quote, and what a page makes of them. They are what a
+ * quote has to go beyond: "Acme", "Acme Analytics", "acme-analytics.com", "www.acme-analytics.com"
+ * and "Acme's" say nothing that the name does not, and neither does "Facebook" for Meta Platforms
+ * when Facebook is one of its other names: a page names the vendor by an alias as often as by its
+ * name (the vendor-mention check accepts either, see identity.ts), so a quote that is only the
+ * alias would otherwise count a second publisher for nothing.
  *
  * - `www`, `http` and `https` count as the vendor's own (see DOMAIN_FRAME_WORDS).
- * - So does the possessive of each word of the name and of the domain: the apostrophe is stripped
+ * - So does the possessive of each word of the names and of the domain: the apostrophe is stripped
  *   by `normaliseForQuote`, so "Acme's" is the word "acmes". This is done here, in the comparison
  *   only; the normalisation is shared with the check that the quote is in the page.
  *
@@ -152,6 +156,7 @@ const DOMAIN_FRAME_WORDS = ["www", "http", "https"];
 function vendorOwnWords(target: ResearchTarget): Set<string> {
   const named = [
     ...wordsOfNormalised(normaliseForQuote(target.name)),
+    ...(target.aliases ?? []).flatMap((alias) => wordsOfNormalised(normaliseForQuote(alias))),
     ...wordsOfNormalised(normaliseForQuote(target.domain ?? "")),
   ];
   return new Set([...named, ...named.map((word) => `${word}s`), ...DOMAIN_FRAME_WORDS]);
@@ -387,7 +392,12 @@ function mostSevereFirst(findings: NewFinding[]): NewFinding[] {
 /**
  * The most severe findings first, at most MAX_PER_CATEGORY of a category and MAX_PER_RUN in all.
  * Findings of one severity stay in the order they were given in. The caller applies it after the
- * de-duplication, so that a finding that is already known cannot take the place of a new one.
+ * de-duplication, so that a finding that is already known cannot take the place of a new one: what
+ * the caps cut is raised by a later run, whose stored findings are then repeats. For that the run
+ * does not remember the sources of what was cut (pipeline.ts), so a scheduled run shows them again
+ * (a run of another kind shows every source), and the de-duplication of every run reads the memory
+ * and does not drop the raised risk only for a source that a stored finding of its category cites
+ * too (`dropDuplicates`).
  */
 export function applyCaps(findings: NewFinding[]): NewFinding[] {
   const keptPerCategory = new Map<ResearchCategory, number>();

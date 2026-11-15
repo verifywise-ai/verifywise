@@ -282,7 +282,9 @@ export function buildEvidencePack(
  * address on another site that a page claims as its own, whether the database still stands by the
  * record, what the vendor risk database knows of a record it offered, the address a page answered
  * from, and, for an EDGAR filing under the CIK stored on the vendor, who filed it. The credibility
- * of a finding reads it (see credibility.ts); the model never does.
+ * of a finding reads it (see credibility.ts). The model sees only two facts of it, as attributes
+ * that code writes on a source: the database of a record and the mark of a change of the vendor's
+ * terms (`buildUserPrompt` in prompts.ts, prompt vr-16); the rest it never sees.
  */
 export interface SourceProvenance {
   record?: RecordSourceId;
@@ -297,16 +299,50 @@ export interface SourceProvenance {
    * `provenanceOf` never does. Absent means nobody asked or the SEC could not say.
    */
   edgarFiler?: EdgarFiler;
+  /**
+   * True for the source that a change of a page where the vendor states its terms makes
+   * (`changeEntryOf` in policySnapshots.ts). The analysis writes `change="terms"` on it, and reads a
+   * source as such a change by that attribute only, never by its text (prompt vr-16).
+   */
+  policyChange?: true;
 }
 
 const isRecordSourceId = (value: string): value is RecordSourceId =>
   (RECORD_SOURCE_IDS as readonly string[]).includes(value);
 
+/** The fragment that `changeEntryOf` gives the address of a change: the start of a SHA-256 in hex. */
+export const CHANGE_FRAGMENT = /#changed-[0-9a-f]{8}$/;
+
+/**
+ * What the text of a change begins with: `CHANGE_MARK` of policySnapshots.ts and its colon. It is
+ * written out here, because that module reads the pages of the vendor's site and pulls in the whole
+ * research with it; a test pins the two together.
+ */
+export const CHANGE_TEXT_START = "Page change: ";
+
+/**
+ * True for the entry of a change of a page of the vendor's terms (`changeEntryOf`). The ledger
+ * entry carries no mark of its own, so the entry is known by what only that function makes
+ * together: a page that the session put on the vendor's own site (`onVendorSite`, decided on the
+ * address that answered, which no third party controls), no record, an address that ends in the
+ * fragment of a change, and a text that begins with the mark of a change. A page of a third party
+ * fails the first test whatever its text and address say.
+ */
+function isPolicyChangeEntry(entry: LedgerEntry<ResearchCategory>): boolean {
+  return (
+    entry.onVendorSite === true &&
+    entry.kind === "page" &&
+    entry.record === undefined &&
+    CHANGE_FRAGMENT.test(entry.url) &&
+    entry.content.startsWith(CHANGE_TEXT_START)
+  );
+}
+
 /**
  * The provenance of the ledger's sources, by address: the key is the address the ledger kept for
  * the entry, which is the address the pack shows (see `buildEvidencePack`). A record id that is
  * not one of a database is left out, and an entry with none of a record, a canonical address, a
- * VRDB record and an answering address adds nothing. When two entries share an address, the first
+ * VRDB record, an answering address and the mark of a change of the vendor's terms adds nothing. When two entries share an address, the first
  * in the ledger's order wins.
  */
 export function provenanceOf(
@@ -324,6 +360,7 @@ export function provenanceOf(
       ...(entry.canonicalUrl === undefined ? {} : { canonicalUrl: entry.canonicalUrl }),
       ...(entry.vrdb === undefined ? {} : { vrdb: entry.vrdb }),
       ...(entry.answeredUrl === undefined ? {} : { answeredUrl: entry.answeredUrl }),
+      ...(isPolicyChangeEntry(entry) ? { policyChange: true as const } : {}),
     };
     if (Object.keys(found).length > 0) provenance.set(entry.url, found);
   }

@@ -75,7 +75,7 @@ import { shortName } from "../vendorResearch/identity";
 import { MAX_SNIPPET_CHARS, cleanText, cutAtCodePoint } from "../vendorResearch/text";
 import { ANY_CONTENT_TYPE, FetchError, type GuardedResponse, guardedFetch } from "./guardedFetch";
 import { MAX_URL_CHARS, parsePublicUrl } from "./publicUrl";
-import { type RobotsChecker, createRobotsChecker } from "./robots";
+import { ROBOTS_MAX_BYTES, type RobotsChecker, createRobotsChecker, robotsTextOf } from "./robots";
 import {
   type GdeltArticle,
   type WebCache,
@@ -136,7 +136,6 @@ const REQUEST_TIMEOUT_MS = 20_000;
  * then the request itself (20 seconds). A caller that waits for the pause adds it to the wait.
  */
 export const GDELT_ASK_MS = GDELT_MIN_GAP_MS + REQUEST_TIMEOUT_MS;
-const ROBOTS_MAX_BYTES = 65_536;
 /** The longest `Retry-After` of a 5xx that is waited for: a longer one is a service that wants to be left alone. */
 const MAX_RETRY_AFTER_MS = 5_000;
 
@@ -552,7 +551,10 @@ function robotsOf(fetch: typeof guardedFetch, cache: WebCache | undefined): Robo
         headerTimeoutMs: REQUEST_TIMEOUT_MS,
         totalTimeoutMs: REQUEST_TIMEOUT_MS,
       });
-      const text = { status: 200 as const, text: answer.body.toString("utf8") };
+      const text = {
+        status: 200 as const,
+        text: robotsTextOf(answer.body.toString("utf8"), answer.truncated),
+      };
       if (cache !== undefined) cacheRobots(cache, origin, text);
       return text;
     } catch (error) {

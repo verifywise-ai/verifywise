@@ -21,7 +21,7 @@
  * The messages of the exceptions are shown to the caller, translated by the controller, so each
  * one is written out at its throw and has an entry in locales/{en,de,fr}.json.
  */
-import { Transaction } from "sequelize";
+import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../../database/db";
 import {
   ConflictException,
@@ -66,6 +66,12 @@ const NOTE_MAX_CHARS = 500;
 
 /** The most frameworks one accept can link the new risk to. */
 const MAX_FRAMEWORKS = 100;
+
+/**
+ * The largest framework id: frameworks.id is a Postgres INTEGER. A larger id makes the insert of
+ * the link fail with "out of range", which aborts the transaction and answered 500.
+ */
+const MAX_FRAMEWORK_ID = 2147483647;
 
 /**
  * Whether `text` has at most `max` characters, counted the way Postgres counts them (code points).
@@ -190,7 +196,7 @@ function checkEdits(edits: FindingEdits): CheckedEdits {
     const valid =
       Array.isArray(ids) &&
       ids.length <= MAX_FRAMEWORKS &&
-      ids.every((id) => Number.isSafeInteger(id) && id > 0);
+      ids.every((id) => Number.isSafeInteger(id) && id > 0 && id <= MAX_FRAMEWORK_ID);
     if (!valid) {
       throw new ValidationException("Invalid frameworks", "frameworks");
     }
@@ -214,6 +220,25 @@ function levelOfPair(
   }
   const level = calculateRiskLevel(severity, likelihood);
   return level === null ? finding.risk_level : `${level} Risk`;
+}
+
+/**
+ * Refuses framework ids that name no framework. The link to a framework is a foreign key, and a
+ * failed insert of it aborts the whole Postgres transaction, so the accept failed with a 500 and the
+ * database's message; checked first, it is a 400 the person can act on.
+ *
+ * @throws ValidationException when one of the ids is not a framework
+ */
+async function checkFrameworksExist(ids: number[], transaction: Transaction): Promise<void> {
+  if (ids.length === 0) return;
+  const rows = await sequelize.query<{ id: number }>(
+    "SELECT id FROM frameworks WHERE id IN (:ids)",
+    { replacements: { ids }, type: QueryTypes.SELECT, transaction },
+  );
+  const found = new Set(rows.map((row) => Number(row.id)));
+  if (ids.some((id) => !found.has(id))) {
+    throw new ValidationException("Invalid frameworks", "frameworks");
+  }
 }
 
 /** Postgres error 55P03 (lock_not_available): what `FOR UPDATE NOWAIT` raises for a row that is held. */
@@ -276,9 +301,11 @@ async function resolveActionOwner(
  * The finding is locked FOR UPDATE NOWAIT and its status is checked after the lock, so of two
  * accepts that arrive together one creates the risk and the other is refused with a conflict: it
  * finds the finding accepted, or the first still holds the lock and the lock is refused at once.
- * It does not queue for the lock. A transaction takes its pooled connection when it begins, and
- * the one that holds the lock still needs more connections (the vendor lookup and the change
- * history run outside its transaction), so accepts that waited could use up the pool between them.
+ * It does not queue for the lock. A transaction takes its pooled connection when it begins, so
+ * accepts queued on the lock would each sit on a pooled connection for as long as the holder runs,
+ * and enough of them would leave other requests none. Every query of the accept itself, the vendor
+ * lookup and the change history included, runs in its transaction, so an accept never needs a
+ * second connection while it holds the first.
  * Anything that goes wrong rolls the whole accept back and leaves the finding pending.
  *
  * @param args.actionOwner Absent: the vendor's assignee, when that user belongs to the
@@ -289,8 +316,8 @@ async function resolveActionOwner(
  * @throws NotFoundException when the organization has no such finding or its vendor is gone
  * @throws ConflictException when the finding is no longer pending, or another accept or the
  *   status job holds it at this moment (try again)
- * @throws ValidationException when an edit is not valid, or the action owner is not a user of the
- *   organization
+ * @throws ValidationException when an edit is not valid (a framework that does not exist
+ *   included), or the action owner is not a user of the organization
  * @throws DatabaseException when the register or the finding could not be written
  */
 export async function acceptFinding(args: {
@@ -333,7 +360,7 @@ export async function acceptFinding(args: {
       );
     }
 
-    const vendor = await getVendorByIdQuery(finding.vendor_id, organizationId);
+    const vendor = await getVendorByIdQuery(finding.vendor_id, organizationId, transaction);
     if (!vendor) {
       throw new NotFoundException("Vendor not found", "Vendor", finding.vendor_id);
     }
@@ -356,6 +383,7 @@ export async function acceptFinding(args: {
     // insert aborts the whole transaction (see createVendorRiskInTransaction), so the accept fails
     // as a whole and the finding stays pending. None are passed when none were picked.
     if (edits.frameworks !== undefined && edits.frameworks.length > 0) {
+      await checkFrameworksExist(edits.frameworks, transaction);
       riskInput.frameworks = edits.frameworks;
     }
     const vendorRisk = await createVendorRiskInTransaction(

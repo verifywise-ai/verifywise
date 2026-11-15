@@ -11,9 +11,23 @@ import {
 } from "../validations/vendorValidation.utils";
 
 // The cases are shared with the form (Clients/src/application/validations/tests/otherNamesValidation.test.ts).
-const cases: { names: Array<{ name: string; text: string; names: string[] }> } = JSON.parse(
+const cases: {
+  names: Array<{ name: string; text: string; names: string[] }>;
+  storedLength: Array<{ name: string; lengths: number[]; separator: string; accepted: boolean }>;
+  controlCharacters: Array<{
+    name: string;
+    text: string;
+    accepted: boolean;
+    message: string;
+    stored: string;
+  }>;
+} = JSON.parse(
   readFileSync(resolve(__dirname, "../validations/__fixtures__/otherNames.cases.json"), "utf8"),
 );
+
+/** A text of distinct names of the given lengths ("AAA…", "BBB…"), joined by `separator`. */
+const namesOfLengths = (lengths: number[], separator: string): string =>
+  lengths.map((length, n) => String.fromCharCode(65 + n).repeat(length)).join(separator);
 
 const FIVE = "Alpha, Inc., Beta, LLC, Gamma, Ltd., Delta, GmbH, Epsilon, plc";
 
@@ -170,6 +184,20 @@ describe("a legal form after a comma", () => {
   });
 });
 
+// The form drops the same characters before it measures (otherNamesValidation.ts in Clients).
+describe("the control characters in other names", () => {
+  it.each(cases.controlCharacters)(
+    "are left out, as the cases shared with the form say: $name",
+    ({ text, accepted, message, stored }) => {
+      const result = validateOtherNames(text);
+
+      expect(result.isValid).toBe(accepted);
+      expect(result.message ?? "").toBe(message);
+      expect(normalizeOtherNames(text) ?? "").toBe(stored);
+    },
+  );
+});
+
 describe("the schemas of a vendor", () => {
   it("validate the other names on creation and on update, as an optional field", () => {
     expect(createVendorSchema.other_names("Facebook")).toEqual({ isValid: true });
@@ -186,4 +214,34 @@ describe("the schemas of a vendor", () => {
       { field: "other_names", code: "INVALID_NAME_LENGTH" },
     ]);
   });
+});
+
+describe("the length of the other names as they are stored", () => {
+  it.each(cases.storedLength)(
+    "is held to 500 characters, as the cases shared with the form say: $name",
+    ({ lengths, separator, accepted }) => {
+      expect(validateOtherNames(namesOfLengths(lengths, separator)).isValid).toBe(accepted);
+    },
+  );
+
+  it("refuses names that would be stored longer than 500 characters, in plain words", () => {
+    const typed = namesOfLengths(Array(8).fill(61), ";");
+
+    expect(typed.length).toBe(495);
+    expect(normalizeOtherNames(typed)).toHaveLength(502);
+    expect(validateOtherNames(typed)).toEqual({
+      isValid: false,
+      message: "Other names must be at most 500 characters with a comma and a space between names",
+      code: "TOO_LONG",
+    });
+  });
+
+  it.each(cases.storedLength.filter(({ accepted }) => accepted))(
+    "accepts the stored text of names it accepted, so the vendor can be edited again: $name",
+    ({ lengths, separator }) => {
+      const stored = normalizeOtherNames(namesOfLengths(lengths, separator));
+
+      expect(validateOtherNames(stored)).toEqual({ isValid: true });
+    },
+  );
 });

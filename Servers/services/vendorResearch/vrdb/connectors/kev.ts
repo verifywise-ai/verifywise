@@ -8,7 +8,7 @@
  * one string (`vendorProject`), its KEV key (vrdb/keys.ts), and it is the vendor's only when that
  * string is a name of the vendor.
  */
-import { cleanText } from "../../text";
+import { cleanText, withoutHiddenCharacters } from "../../text";
 import { joinSentences, sentence } from "../../records/sentence";
 import type { ParsedRecord } from "../types";
 import { kevKey } from "../keys";
@@ -107,7 +107,7 @@ export function kevSourceOf(entry: KevEntry): { url: string; title: string; text
     sentence("Due date", entry.dueDate),
     sentence("Known use in ransomware campaigns", entry.knownRansomwareCampaignUse),
   ]);
-  const name = cleanText(entry.vulnerabilityName);
+  const name = withoutHiddenCharacters(cleanText(entry.vulnerabilityName));
   return {
     url: cvePageOf(entry.cveID),
     title: name === "" ? entry.cveID : `${entry.cveID}: ${name}`,

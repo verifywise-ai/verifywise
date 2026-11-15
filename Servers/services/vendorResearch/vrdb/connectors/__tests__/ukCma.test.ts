@@ -245,7 +245,7 @@ describe("ukCmaConnector", () => {
   describe("the connector", () => {
     it("is the connector of the list, in the snapshot form, with the mark of its records", () => {
       expect(ukCmaConnector.id).toBe("uk_cma");
-      expect(ukCmaConnector.version).toBe(1);
+      expect(ukCmaConnector.version).toBe(3);
       expect(ukCmaConnector.kind).toBeUndefined();
       expect(MARK).toBe("UK Competition and Markets Authority cases");
     });
@@ -611,6 +611,66 @@ describe("ukCmaConnector", () => {
       ["no tail at all", "Alphaco / Betaco", ["Alphaco", "Betaco"]],
     ])("splits a title with %s", async (_name, title, expected) => {
       expect(await partiesOf(title)).toEqual(expected);
+    });
+
+    it.each([
+      [
+        "A/S before a slash between blanks",
+        "Alphaco A/S / Betaco Limited merger inquiry",
+        ["Alphaco A/S", "Betaco Limited"],
+      ],
+      [
+        "A/S in the last party",
+        "Betaco Limited / Alphaco A/S merger inquiry (CC)",
+        ["Betaco Limited", "Alphaco A/S"],
+      ],
+      [
+        "A/S beside a bare slash",
+        "Alphaco A/S/Betaco plc merger inquiry",
+        ["Alphaco A/S", "Betaco plc"],
+      ],
+      ["a/s in lower case", "Alphaco a/s / Betaco merger inquiry", ["Alphaco a/s", "Betaco"]],
+      [
+        "I/S, K/S and P/S",
+        "Alphaco I/S / Betaco K/S / Gammaco P/S",
+        ["Alphaco I/S", "Betaco K/S", "Gammaco P/S"],
+      ],
+      ["N/V and S/A", "Alphaco N/V / Betaco S/A merger inquiry", ["Alphaco N/V", "Betaco S/A"]],
+    ])("keeps the slash of a legal form whole: %s", async (_name, title, expected) => {
+      expect(await partiesOf(title)).toEqual([...expected].sort());
+    });
+
+    it.each([
+      // A part of fewer than four letters and digits is no party, so the lone letter goes.
+      ["two letters that are no legal form", "Alphaco X/Y merger inquiry", ["Alphaco X"]],
+      [
+        "a legal form inside a longer word",
+        "AlphacoA/S / Betaco merger inquiry",
+        ["AlphacoA", "Betaco"],
+      ],
+      ["a legal form with a blank around its slash", "Alphaco A / S merger inquiry", ["Alphaco A"]],
+    ])("splits a slash that only looks like a legal form's: %s", async (_name, title, expected) => {
+      expect(await partiesOf(title)).toEqual([...expected].sort());
+    });
+
+    it("gives the key of the party with its legal form, which the vendor of that name has", async () => {
+      const { records } = await runOf([
+        caseOf({ title: "Alphaco A/S / Betaco Limited merger inquiry", type: "mergers" }),
+      ]);
+      expect(records.flatMap((record) => record.matchKeys)).toContain("name:alphacoas");
+      expect(records.flatMap((record) => record.matchKeys)).not.toContain("name:alphacoa");
+    });
+
+    it("keys a party with a slash form by the name without it too, which a vendor named so has", async () => {
+      const { records } = await runOf([
+        caseOf({ title: "Alphaco A/S / Betaco Limited merger inquiry", type: "mergers" }),
+      ]);
+      expect(idsOf(records)).toContain("cma:alphaco");
+      expect(idsOf(records)).not.toContain("cma:alphacoas");
+      const alphaco = records.find((record) => record.matchKeys.includes("name:alphacoas"));
+      expect(alphaco?.matchKeys).toEqual(
+        expect.arrayContaining(["name:alphacoas", "name:alphaco"]),
+      );
     });
 
     it.each([
@@ -2220,28 +2280,30 @@ describe("ukCmaConnector", () => {
       });
     });
 
-    it("fails as not the list when one row is missing across the edge of two pages", async () => {
+    it("fails as unreachable, which the sync tries again, when one row is missing across the edge of two pages", async () => {
       const rows = [merger("Zorbex Systems / Quillon Data merger inquiry"), ...fillers(2_499)];
       const files = pagesOf(rows, { total: 2_500 });
       files[urlAt(1_000)] = {
         body: pageText(rows.slice(1_001, 2_000), 2_500, 1_000),
         contentType: JSON_TYPE,
       };
-      expect(await failureOf(connectorOf().download(fakeFetch(files), {}))).toBeInstanceOf(
-        NotTheListError,
-      );
+      // Pages that disagree are a search that moved between two requests (govukSearch.ts).
+      const failure = await failureOf(connectorOf().download(fakeFetch(files), {}));
+      expect(failure).toBeInstanceOf(FetchError);
+      expect((failure as FetchError).reason).toBe("unreachable");
     });
 
-    it("fails as not the list when the pages state different totals", async () => {
+    it("fails as unreachable, which the sync tries again, when the pages state different totals", async () => {
       const rows = [merger("Zorbex Systems / Quillon Data merger inquiry"), ...fillers(2_499)];
       const files = pagesOf(rows);
       files[urlAt(2_000)] = {
         body: pageText(rows.slice(2_000), 2_501, 2_000),
         contentType: JSON_TYPE,
       };
-      expect(await failureOf(connectorOf().download(fakeFetch(files), {}))).toBeInstanceOf(
-        NotTheListError,
-      );
+      // Pages that disagree are a search that moved between two requests (govukSearch.ts).
+      const failure = await failureOf(connectorOf().download(fakeFetch(files), {}));
+      expect(failure).toBeInstanceOf(FetchError);
+      expect((failure as FetchError).reason).toBe("unreachable");
     });
 
     it("fails as not the list when a row comes twice and the total counts both", async () => {

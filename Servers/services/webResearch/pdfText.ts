@@ -8,11 +8,25 @@
  *
  * - The bytes have been fetched by `guardedFetch` already (address policy, robots.txt, at most
  *   MAX_PDF_BYTES, counted after decompression). Nothing here makes a request.
+ * - Before the library sees the file, its FlateDecode streams are inflated and counted (see
+ *   pdfStreams.ts): a file whose streams give more than MAX_PDF_STREAM_INFLATED_BYTES each, or
+ *   MAX_PDF_INFLATED_BYTES together (less when the growth allowed below is small: see
+ *   pdfStreamLimits), is refused as `too_big`. A file of a few megabytes can unpack to gigabytes,
+ *   and the library holds what it unpacks outside the heap of its thread. The count runs on the
+ *   event loop of this process in pieces of about 10 to 20 ms (pdfStreams.ts), so that the timers
+ *   below keep running while another file is counted.
  * - `pdf-parse` runs in a worker thread of its own, one thread for each file, with a limit on its
  *   heap (PDF_WORKER_HEAP_MB), a time limit (PDF_TIMEOUT_MS) and a limit on the pages it reads
- *   (MAX_PDF_PAGES). The thread is ended when the time is up, when the heap is full and when the
- *   caller gives up. The library's evaluation of font programs is switched off. A thread is not a
- *   sandbox: it bounds time and memory, and does not make a flaw of the library harmless.
+ *   (MAX_PDF_PAGES). The heap limit does not count ArrayBuffers, so the parent also watches the
+ *   memory of the whole process while the thread runs, and ends the thread when it has grown by
+ *   more than the growth allowed (pdfMemoryGrowthMb: a part of the memory limit of the container,
+ *   so that a read is ended well inside that limit; it is no promise that the kernel never ends the
+ *   process first, see pdfMemoryGrowthMb). This is the only bound for what the count of the
+ *   streams cannot see (an encrypted file, a filter it does not decode, a stream inside an object
+ *   stream: see pdfStreams.ts). The thread is ended when the time is up, when the heap is full, when
+ *   the process has grown too much and when the caller gives up. The library's evaluation of font
+ *   programs is switched off. A thread is not a sandbox: it bounds time and memory, and does not
+ *   make a flaw of the library harmless.
  * - At most PDF_CONCURRENCY files are read at once in the process, however many runs are going
  *   (see limiter.ts).
  * - What comes out is text only, cleaned like any text a third party wrote; the text of a failure
@@ -22,10 +36,14 @@
  * copying into `dist/`, and a test can replace it. `pdf-parse` is found by the parent
  * (`require.resolve`) and given to the worker by path, as the worker has no module paths of its own.
  */
+import { readFileSync } from "node:fs";
+import os from "node:os";
 import { Worker } from "node:worker_threads";
+import logger from "../../utils/logger/fileLogger";
 import { cutAtCodePoint } from "../vendorResearch/text";
 import { createLimiter } from "./limiter";
 import { MAX_EXCERPT_CHARS, MAX_PAGE_PARTS, tidyText, toIsoDate } from "./pageText";
+import { checkPdfStreams } from "./pdfStreams";
 
 /** The media types of a PDF. */
 export const PDF_MEDIA_TYPES: readonly string[] = ["application/pdf", "application/x-pdf"];
@@ -46,10 +64,140 @@ export const MAX_PDF_PAGES = 100;
 export const PDF_TIMEOUT_MS = 20_000;
 /** The heap of the thread, in MiB. A thread that needs more is ended. */
 export const PDF_WORKER_HEAP_MB = 256;
+/**
+ * The most the memory of the process (its resident set) may grow while a thread reads a file, in
+ * MiB, at the most: a thread whose read takes the process past the growth allowed is ended as
+ * `too_big`. The growth allowed is PDF_MEMORY_LIMIT_SHARE of the memory limit of the container,
+ * between PDF_MIN_MEMORY_GROWTH_MB and this, and this when no limit can be read (see
+ * pdfMemoryGrowthMb). It is well above what a read needs (the heap, the thread itself, streams of
+ * at most MAX_PDF_STREAM_INFLATED_BYTES), so that the other work of the process does not end a
+ * read by accident.
+ */
+export const PDF_MAX_MEMORY_GROWTH_MB = 1024;
+/** The least growth allowed, in MiB, however small the memory limit of the container. */
+export const PDF_MIN_MEMORY_GROWTH_MB = 64;
+/**
+ * The part of the memory limit of the container that a read may grow the process by. The process
+ * that reads runs every queue of the worker, and its own memory is already a good part of the limit
+ * (the worker pod of the Helm chart and of the manifests has 512 MiB), so a read may take less than
+ * a third: 153 MiB of 512.
+ */
+export const PDF_MEMORY_LIMIT_SHARE = 0.3;
+/** The variable that sets the growth allowed, in MiB, in place of the part of the limit. */
+export const PDF_MAX_GROWTH_ENV = "VENDOR_RESEARCH_PDF_MAX_GROWTH_MB";
+/**
+ * The files that give the memory limit of the container: cgroup v2, then cgroup v1. `max` (v2), or
+ * a value as large as the memory of the host (v1 writes a huge number), is no limit.
+ */
+export const CGROUP_MEMORY_LIMIT_FILES: readonly string[] = [
+  "/sys/fs/cgroup/memory.max",
+  "/sys/fs/cgroup/memory/memory.limit_in_bytes",
+];
+/** How often the parent looks at the memory of the process while a thread reads, in ms. */
+export const PDF_MEMORY_CHECK_MS = 50;
+/** The most bytes one stream of a PDF may inflate to (64 MiB). */
+export const MAX_PDF_STREAM_INFLATED_BYTES = 64 * 1024 * 1024;
+/** The most bytes the streams of a PDF may inflate to together (128 MiB). */
+export const MAX_PDF_INFLATED_BYTES = 128 * 1024 * 1024;
+/** The time the count of the streams may take before the file is too slow. */
+export const PDF_SCAN_TIMEOUT_MS = 5_000;
 /** The files that are read at the same time in the process. */
 export const PDF_CONCURRENCY = 2;
 /** A file with less text than this is a scan, or empty, and is not a page. */
 export const MIN_PDF_TEXT_CHARS = 40;
+
+const MIB = 1024 * 1024;
+
+/** Where the growth allowed for a read comes from; each part can be replaced, for tests. */
+export interface MemoryGrowthSources {
+  env?: NodeJS.ProcessEnv;
+  /** The text of a file, or null when it cannot be read. */
+  readFile?: (path: string) => string | null;
+  /** The memory of the host, in bytes. */
+  hostBytes?: number;
+  warn?: (message: string) => void;
+}
+
+function readTextFile(path: string): string | null {
+  try {
+    return readFileSync(path, "utf8");
+  } catch {
+    return null;
+  }
+}
+
+/**
+ * The memory limit of the container, in bytes, from the first of CGROUP_MEMORY_LIMIT_FILES that
+ * can be read; null when there is none, or none can be read.
+ */
+export function containerMemoryLimit(
+  readFile: (path: string) => string | null = readTextFile,
+  hostBytes: number = os.totalmem(),
+): number | null {
+  for (const path of CGROUP_MEMORY_LIMIT_FILES) {
+    const text = readFile(path)?.trim();
+    if (text === undefined || text === "") continue;
+    if (text === "max") return null;
+    if (!/^\d+$/.test(text)) continue;
+    const bytes = Number(text);
+    return bytes > 0 && bytes < hostBytes ? bytes : null;
+  }
+  return null;
+}
+
+/**
+ * How much the process may grow while a thread reads a file, in MiB. VENDOR_RESEARCH_PDF_MAX_GROWTH_MB
+ * when it is a positive whole number (anything else is ignored, with a line in the log); else
+ * PDF_MEMORY_LIMIT_SHARE of the memory limit of the container, between PDF_MIN_MEMORY_GROWTH_MB
+ * and PDF_MAX_MEMORY_GROWTH_MB; else, with no limit, PDF_MAX_MEMORY_GROWTH_MB.
+ *
+ * The guard that uses it looks at the process every PDF_MEMORY_CHECK_MS, so a read can pass the
+ * growth allowed by what it adds in that time, and the process may already be near its limit when
+ * the read starts: it keeps a read well inside the limit, and is no promise that the kernel never
+ * ends the process first.
+ */
+export function pdfMemoryGrowthMb(sources: MemoryGrowthSources = {}): number {
+  const {
+    env = process.env,
+    readFile = readTextFile,
+    hostBytes = os.totalmem(),
+    warn = (message: string) => logger.warn(message),
+  } = sources;
+  const raw = env[PDF_MAX_GROWTH_ENV];
+  if (raw !== undefined && raw.trim() !== "") {
+    const text = raw.trim();
+    const value = Number(text);
+    if (/^\d+$/.test(text) && Number.isSafeInteger(value) && value > 0) return value;
+    // The value is not repeated: the line is the same whatever was written.
+    warn(`${PDF_MAX_GROWTH_ENV} is not a positive whole number of MiB; the default is used.`);
+  }
+  const limit = containerMemoryLimit(readFile, hostBytes);
+  if (limit === null) return PDF_MAX_MEMORY_GROWTH_MB;
+  const share = Math.floor((limit * PDF_MEMORY_LIMIT_SHARE) / MIB);
+  return Math.min(PDF_MAX_MEMORY_GROWTH_MB, Math.max(PDF_MIN_MEMORY_GROWTH_MB, share));
+}
+
+let processGrowthMb: number | undefined;
+
+/** pdfMemoryGrowthMb of this process, worked out on the first read and kept. */
+export function processPdfMemoryGrowthMb(): number {
+  processGrowthMb ??= pdfMemoryGrowthMb();
+  return processGrowthMb;
+}
+
+/**
+ * The limits of the count of the streams for a growth allowed of `growthMb`: at most
+ * MAX_PDF_INFLATED_BYTES together and MAX_PDF_STREAM_INFLATED_BYTES for one stream, and at most
+ * half the growth allowed together, since the library grows a buffer by doubling it. A file the
+ * count lets through then fits in the growth allowed, as far as its streams are counted.
+ */
+export function pdfStreamLimits(growthMb: number): {
+  maxStreamBytes: number;
+  maxTotalBytes: number;
+} {
+  const maxTotalBytes = Math.min(MAX_PDF_INFLATED_BYTES, Math.floor((growthMb * MIB) / 2));
+  return { maxStreamBytes: Math.min(MAX_PDF_STREAM_INFLATED_BYTES, maxTotalBytes), maxTotalBytes };
+}
 
 /** The longest title that is kept. */
 const MAX_TITLE_CHARS = 300;
@@ -62,6 +210,8 @@ export interface PdfLimits {
   maxChars: number;
   timeoutMs: number;
   heapMb: number;
+  /** How much the process may grow while the thread runs; PDF_MAX_MEMORY_GROWTH_MB when not given. */
+  memoryGrowthMb?: number;
 }
 
 /** What the worker finds in a file, before any of it is cleaned. */
@@ -313,12 +463,30 @@ const { parentPort, workerData } = require("node:worker_threads");
 })();
 `;
 
+export interface WorkerRunnerOptions {
+  /** The resident set of the process in bytes, for tests. */
+  residentBytes?: () => number;
+  /** How often the memory is looked at, in ms, for tests. */
+  memoryCheckMs?: number;
+}
+
 /**
  * A runner that reads the file in a worker thread running `source` (the script of the reader, except
- * in a test), and ends the thread when it answers, when the time is up, when the heap is full and
- * when the caller gives up.
+ * in a test), and ends the thread when it answers, when the time is up, when the heap is full, when
+ * the process has grown by more than `limits.memoryGrowthMb` since the thread started and when the
+ * caller gives up.
+ *
+ * The growth is of the whole process, because the memory of a thread outside its heap cannot be
+ * measured from outside it. Another read, or other work, that makes the process grow at the same
+ * time counts as well: then a read can be ended that would have fitted, which costs one document,
+ * where letting it grow could cost the process.
  */
-export function createWorkerRunner(source: string = WORKER_SOURCE): PdfRunner {
+export function createWorkerRunner(
+  source: string = WORKER_SOURCE,
+  options: WorkerRunnerOptions = {},
+): PdfRunner {
+  const residentBytes = options.residentBytes ?? (() => process.memoryUsage.rss());
+  const memoryCheckMs = options.memoryCheckMs ?? PDF_MEMORY_CHECK_MS;
   return (data, limits, signal) =>
     new Promise<RawPdf>((resolve, reject) => {
       if (signal?.aborted) {
@@ -344,11 +512,13 @@ export function createWorkerRunner(source: string = WORKER_SOURCE): PdfRunner {
       });
 
       let timer: NodeJS.Timeout | undefined;
+      let memoryCheck: NodeJS.Timeout | undefined;
       let settled = false;
       const finish = (settle: () => void) => {
         if (settled) return;
         settled = true;
         if (timer !== undefined) clearTimeout(timer);
+        if (memoryCheck !== undefined) clearInterval(memoryCheck);
         signal?.removeEventListener("abort", onAbort);
         void worker.terminate();
         settle();
@@ -356,6 +526,13 @@ export function createWorkerRunner(source: string = WORKER_SOURCE): PdfRunner {
       const onAbort = () => finish(() => reject(new PdfError("aborted")));
 
       timer = setTimeout(() => finish(() => reject(new PdfError("too_slow"))), limits.timeoutMs);
+      const allowedGrowth = (limits.memoryGrowthMb ?? PDF_MAX_MEMORY_GROWTH_MB) * 1024 * 1024;
+      const startBytes = residentBytes();
+      memoryCheck = setInterval(() => {
+        if (residentBytes() - startBytes > allowedGrowth) {
+          finish(() => reject(new PdfError("too_big")));
+        }
+      }, memoryCheckMs);
       signal?.addEventListener("abort", onAbort, { once: true });
       worker.once("message", (message: { ok?: boolean; pdf?: RawPdf }) =>
         finish(() =>
@@ -389,12 +566,14 @@ export interface ReadPdfOptions {
   run?: PdfRunner;
   /** The clock, for tests. */
   now?: () => number;
+  /** The growth of the process allowed for the read, in MiB, for tests; processPdfMemoryGrowthMb() when not given. */
+  memoryGrowthMb?: number;
 }
 
 /**
  * The text, title and date of a PDF, or a PdfError: the bytes are not a PDF, it has no text to
- * read (a scan), it took too long, it needed too much memory, it could not be read, or the caller
- * gave up. The text is at most what a page can be shown in (MAX_PAGE_PARTS parts), in paragraphs.
+ * read (a scan), it took too long, it needed too much memory or unpacks to too much, it could not
+ * be read, or the caller gave up. The text is at most what a page can be shown in (MAX_PAGE_PARTS parts), in paragraphs.
  */
 export async function readPdf(body: Buffer, options: ReadPdfOptions = {}): Promise<PdfDocument> {
   const { url, signal, run = defaultRunner, now = Date.now } = options;
@@ -402,15 +581,26 @@ export async function readPdf(body: Buffer, options: ReadPdfOptions = {}): Promi
   if (!looksLikePdf(body)) throw new PdfError("not_a_pdf");
 
   const maxChars = MAX_EXCERPT_CHARS * MAX_PAGE_PARTS;
+  const memoryGrowthMb = options.memoryGrowthMb ?? processPdfMemoryGrowthMb();
   const limits: PdfLimits = {
     maxPages: MAX_PDF_PAGES,
     maxChars,
     timeoutMs: PDF_TIMEOUT_MS,
     heapMb: PDF_WORKER_HEAP_MB,
+    memoryGrowthMb,
   };
   const release = await places.take(signal, () => new PdfError("aborted"));
   let raw: RawPdf;
   try {
+    // Counted in the place of the read, so that no more files are unpacked at once than are read.
+    // The limits follow the growth allowed, so that a file whose counted streams would take the
+    // process past it never reaches the library.
+    const streams = await checkPdfStreams(body, {
+      ...pdfStreamLimits(memoryGrowthMb),
+      timeoutMs: PDF_SCAN_TIMEOUT_MS,
+      signal,
+    });
+    if (streams !== "fits") throw new PdfError(streams);
     raw = await run(body, limits, signal);
   } catch (error) {
     throw error instanceof PdfError ? error : new PdfError("unreadable");

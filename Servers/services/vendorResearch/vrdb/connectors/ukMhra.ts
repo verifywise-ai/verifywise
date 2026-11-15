@@ -40,7 +40,14 @@
  * entry; the blocks since the previous reference line are its segment, and its heading is the
  * first block of the segment that has a colon within its first 80 characters, followed by a blank
  * and a character, and does not begin with the word of a model line (Model, Ref, Description,
- * Batch, Serial, Lot, Catalogue, Part, Product code, Software). The manufacturer is what is before the colon, and the
+ * Batch, Serial, Lot, Catalogue, Part, Product code, Software) or of another field line of the lists
+ * (Device description, `Device:` and `Device models:`, Product listing, Product codes, Updated,
+ * Please) or the label of a form or letter that goes with a notice (Response form, Reply form,
+ * Customer letter). A first heading whose head names no maker (fewer than three letters before its
+ * first semicolon, or more digits than letters: a model code such as `04S68-01`) gives the entry no
+ * heading, and no later block takes its place. In the layout of 2015 the manufacturer's line has no colon and the next block is
+ * `Device description: ...`: such an entry has no heading and gives no row, rather than a record
+ * of the manufacturer "Device description". The manufacturer is what is before the colon, and the
  * product is the rest of the line after it (the line that follows when the colon ends its line; the
  * other lines of a block are never read, so that no model or date line can reach the product). The
  * reference is the slash form `YYYY/MMM/DDD/NNN/NNN` of the reference line, else the first number
@@ -127,9 +134,16 @@ const MAX_ANCHORS = 1_000;
 const ANCHOR = "mhra reference";
 /** The heading of an entry: a colon within the first 80 characters, then a blank and a character. */
 const HEADING = /^[^:\n]{1,80}:\s+\S/u;
-/** The first words of the lines of an entry that are no heading. */
+/**
+ * The first words of the lines of an entry that are no heading: the model and field lines, and the
+ * labels of the forms and letters that go with a notice (`Response form: 27721232`).
+ */
 const NOT_A_HEADING =
-  /^(?:Model|Ref|Description|Batch|Serial|Lot|Catalogue|Part|Product code|Software)\b/i;
+  /^(?:(?:Model|Ref|Description|Batch|Serial|Lot|Catalogue|Part|Product codes?|Software|Device description|Product listings?|Updated|Please|(?:(?:Customer|Distributor)\s+)?(?:Response|Reply)\s+forms?|Customer\s+letter)\b|Device(?: models?)?\s*:)/i;
+/** The fewest letters of the head of a heading that names a maker (`Abc`, `B·R·A·H·M·S`). */
+const NAME_MIN_LETTERS = 3;
+const LETTER = /\p{L}/gu;
+const DIGIT = /\p{N}/gu;
 /** What the label of a reference line is, with the colon that may follow it. */
 const ANCHOR_LABEL = /^\s*:?/;
 
@@ -259,10 +273,29 @@ function isAnchor(block: string): boolean {
 /** Whether a block is the heading of an entry: see HEADING and NOT_A_HEADING. */
 const isHeading = (block: string): boolean => HEADING.test(block) && !NOT_A_HEADING.test(block);
 
-/** The first block of `blocks[from, to)` that is the heading of an entry, or null. */
+/**
+ * Whether the head of a heading (the text before its colon) can name a maker: what is before its
+ * first semicolon holds three letters at the least and no more digits than letters. A model code
+ * (`04S68-01`) or the number of a notice (`FA-2015-6; MDSS ref.`) does not; `B·R·A·H·M·S`, `3M
+ * Company` and `Drägerwerk AG ; Co. KGaA` (the `&` of the lists lost) do. Bounded: a head has 80
+ * characters at most (HEADING).
+ */
+function namesAMaker(heading: string): boolean {
+  const head = heading.slice(0, heading.indexOf(":")).split(";")[0];
+  const letters = head.match(LETTER)?.length ?? 0;
+  const digits = head.match(DIGIT)?.length ?? 0;
+  return letters >= NAME_MIN_LETTERS && digits <= letters;
+}
+
+/**
+ * The heading of the entry of `blocks[from, to)`: its first block that is a heading, or null. A
+ * first heading whose head names no maker (`namesAMaker`) gives null too, and no later block takes
+ * its place: in a layout whose maker line has no colon, the next heading is a model or field line,
+ * and the entry gives no row rather than a wrong name.
+ */
 function headingOf(blocks: readonly string[], from: number, to: number): string | null {
   for (let at = from; at < to; at += 1) {
-    if (isHeading(blocks[at])) return blocks[at];
+    if (isHeading(blocks[at])) return namesAMaker(blocks[at]) ? blocks[at] : null;
   }
   return null;
 }
@@ -569,7 +602,10 @@ function toRecord(row: MhraRow): ParsedRecord {
 export function createUkMhraConnector({ sleep = realSleep }: { sleep?: Sleep } = {}): Connector {
   return createFileConnector<MhraRow>({
     id: "uk_mhra",
-    version: 1,
+    // 2: the field lines of the older layouts (Device description, Updated FSN...) are no headings.
+    // 3: a response or reply form and a heading whose head names no maker (a model code) are no
+    // headings, and a slash form (A/S) is a legal form: `Coloplast A/S` is `Coloplast`.
+    version: 3,
     root: "search.json",
     sortKey: (row) => row.key,
     pin: GOVUK_PIN,
