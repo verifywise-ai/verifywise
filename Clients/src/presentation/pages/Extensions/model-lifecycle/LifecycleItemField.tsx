@@ -20,6 +20,8 @@ import { CustomizableButton } from "../../../components/button/customizable-butt
 import Field from "../../../components/Inputs/Field";
 import Select from "../../../components/Inputs/Select";
 import { LifecycleItem, LifecycleValue } from "./useModelLifecycle";
+import { useCan } from "../../../../application/hooks/useCan";
+import { useAuth } from "../../../../application/hooks/useAuth";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import type CustomException from "../../../../infrastructure/exceptions/customeException";
 import {
@@ -58,12 +60,14 @@ function toUserOption(user: User) {
   };
 }
 
-// Custom hook for fetching users
-function useUsers() {
+// Custom hook for fetching users. Read-only viewers never pick a user, so
+// they skip the request.
+function useUsers(enabled = true) {
   const [users, setUsers] = useState<User[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(enabled);
 
   useEffect(() => {
+    if (!enabled) return;
     const fetchUsers = async () => {
       try {
         const response = await apiServices.get<any>("/users");
@@ -80,7 +84,7 @@ function useUsers() {
     };
 
     fetchUsers();
-  }, []);
+  }, [enabled]);
 
   return { users, loading };
 }
@@ -110,6 +114,26 @@ const vwChipSx = {
   borderRadius: radiusPx.sm,
 };
 
+/**
+ * A saved answer shown as plain text to viewers who cannot edit it, or
+ * "Not set" when there is no answer yet.
+ */
+function ReadOnlyValue({ children }: { children?: React.ReactNode }) {
+  const empty = children === undefined || children === null || children === "";
+  return (
+    <Typography
+      sx={{
+        ...textStyles.body,
+        color: empty ? text.subdued : text.primary,
+        whiteSpace: "pre-wrap",
+        wordBreak: "break-word",
+      }}
+    >
+      {empty ? "Not set" : children}
+    </Typography>
+  );
+}
+
 interface LifecycleItemFieldProps {
   modelId: number;
   item: LifecycleItem;
@@ -121,6 +145,10 @@ export default function LifecycleItemField({
   item,
   onValueChanged,
 }: LifecycleItemFieldProps) {
+  // Same keys the server authorizes on: model.edit for answers, people,
+  // approvers and files. Approve/reject is decided per row (own row only).
+  const readOnly = !useCan("model.edit");
+  const { userId: currentUserId } = useAuth();
   const value = item.value;
 
   switch (item.item_type) {
@@ -132,6 +160,7 @@ export default function LifecycleItemField({
           value={value}
           multiline={false}
           onValueChanged={onValueChanged}
+          readOnly={readOnly}
         />
       );
     case "textarea":
@@ -142,6 +171,7 @@ export default function LifecycleItemField({
           value={value}
           multiline
           onValueChanged={onValueChanged}
+          readOnly={readOnly}
         />
       );
     case "documents":
@@ -151,6 +181,7 @@ export default function LifecycleItemField({
           item={item}
           value={value}
           onValueChanged={onValueChanged}
+          readOnly={readOnly}
         />
       );
     case "people":
@@ -160,6 +191,7 @@ export default function LifecycleItemField({
           item={item}
           value={value}
           onValueChanged={onValueChanged}
+          readOnly={readOnly}
         />
       );
     case "classification":
@@ -169,6 +201,7 @@ export default function LifecycleItemField({
           item={item}
           value={value}
           onValueChanged={onValueChanged}
+          readOnly={readOnly}
         />
       );
     case "checklist":
@@ -178,6 +211,7 @@ export default function LifecycleItemField({
           item={item}
           value={value}
           onValueChanged={onValueChanged}
+          readOnly={readOnly}
         />
       );
     case "approval":
@@ -187,6 +221,8 @@ export default function LifecycleItemField({
           item={item}
           value={value}
           onValueChanged={onValueChanged}
+          readOnly={readOnly}
+          currentUserId={currentUserId}
         />
       );
     default:
@@ -208,12 +244,14 @@ function TextFieldRenderer({
   value,
   multiline,
   onValueChanged,
+  readOnly,
 }: {
   modelId: number;
   item: LifecycleItem;
   value: LifecycleValue | null | undefined;
   multiline: boolean;
   onValueChanged?: () => void;
+  readOnly: boolean;
 }) {
   const config = item.config as { placeholder?: string; maxLength?: number };
   const [text, setText] = useState(value?.value_text ?? "");
@@ -236,6 +274,8 @@ function TextFieldRenderer({
       setSaving(false);
     }
   }, [text, modelId, item.id, onValueChanged]);
+
+  if (readOnly) return <ReadOnlyValue>{value?.value_text}</ReadOnlyValue>;
 
   return (
     <Field
@@ -266,11 +306,13 @@ function DocumentsFieldRenderer({
   item,
   value,
   onValueChanged,
+  readOnly,
 }: {
   modelId: number;
   item: LifecycleItem;
   value: LifecycleValue | null | undefined;
   onValueChanged?: () => void;
+  readOnly: boolean;
 }) {
   const files = Array.isArray(value?.files) ? value.files : [];
   const [uploading, setUploading] = useState(false);
@@ -339,6 +381,14 @@ function DocumentsFieldRenderer({
     [modelId, item.id, onValueChanged],
   );
 
+  if (readOnly && files.length === 0) {
+    return (
+      <Typography sx={{ ...textStyles.body, color: text.subdued }}>
+        No files uploaded yet.
+      </Typography>
+    );
+  }
+
   return (
     <Stack sx={{ gap: 6 }}>
       {files.length > 0 && (
@@ -369,21 +419,23 @@ function DocumentsFieldRenderer({
               >
                 {file.filename || `File #${file.file_id}`}
               </Typography>
-              <CustomizableButton
-                iconOnly
-                variant="text"
-                size="medium"
-                ariaLabel="Remove file"
-                onClick={() => handleRemoveFile(file.file_id)}
-                sx={{ "color": VW_COLORS.textAccent, "&:hover": { color: VW_COLORS.error } }}
-              >
-                <Trash2 size={16} />
-              </CustomizableButton>
+              {!readOnly && (
+                <CustomizableButton
+                  iconOnly
+                  variant="text"
+                  size="medium"
+                  ariaLabel="Remove file"
+                  onClick={() => handleRemoveFile(file.file_id)}
+                  sx={{ "color": VW_COLORS.textAccent, "&:hover": { color: VW_COLORS.error } }}
+                >
+                  <Trash2 size={16} />
+                </CustomizableButton>
+              )}
             </Stack>
           ))}
         </Stack>
       )}
-      {failedAction && (
+      {!readOnly && failedAction && (
         <Typography
           role="alert"
           sx={{
@@ -396,48 +448,50 @@ function DocumentsFieldRenderer({
             : "Could not remove the file. Try again."}
         </Typography>
       )}
-      <Box
-        sx={{
-          "border": `1px dashed ${VW_COLORS.borderDark}`,
-          "borderRadius": radiusPx.sm,
-          "pt": 4,
-          "pb": 4,
-          "pl": 6,
-          "pr": 6,
-          "textAlign": "center",
-          "cursor": "pointer",
-          "transition": "all 0.15s ease",
-          "&:hover": {
-            backgroundColor: VW_COLORS.bgAccent,
-            borderColor: VW_COLORS.primary,
-          },
-        }}
-        onClick={() => fileInputRef.current?.click()}
-      >
-        {uploading ? (
-          <CircularProgress size={20} sx={{ color: VW_COLORS.primary }} />
-        ) : (
-          <Stack direction="row" sx={{ gap: 4, justifyContent: "center", alignItems: "center" }}>
-            <Upload size={16} color={text.icon} />
-            <Typography
-              sx={{
-                ...textStyles.body,
-                color: text.tertiary,
-              }}
-            >
-              Click to upload documents
-            </Typography>
-          </Stack>
-        )}
-        <input
-          ref={fileInputRef}
-          type="file"
-          multiple
-          hidden
-          accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.md"
-          onChange={handleFileSelect}
-        />
-      </Box>
+      {!readOnly && (
+        <Box
+          sx={{
+            "border": `1px dashed ${VW_COLORS.borderDark}`,
+            "borderRadius": radiusPx.sm,
+            "pt": 4,
+            "pb": 4,
+            "pl": 6,
+            "pr": 6,
+            "textAlign": "center",
+            "cursor": "pointer",
+            "transition": "all 0.15s ease",
+            "&:hover": {
+              backgroundColor: VW_COLORS.bgAccent,
+              borderColor: VW_COLORS.primary,
+            },
+          }}
+          onClick={() => fileInputRef.current?.click()}
+        >
+          {uploading ? (
+            <CircularProgress size={20} sx={{ color: VW_COLORS.primary }} />
+          ) : (
+            <Stack direction="row" sx={{ gap: 4, justifyContent: "center", alignItems: "center" }}>
+              <Upload size={16} color={text.icon} />
+              <Typography
+                sx={{
+                  ...textStyles.body,
+                  color: text.tertiary,
+                }}
+              >
+                Click to upload documents
+              </Typography>
+            </Stack>
+          )}
+          <input
+            ref={fileInputRef}
+            type="file"
+            multiple
+            hidden
+            accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.txt,.md"
+            onChange={handleFileSelect}
+          />
+        </Box>
+      )}
     </Stack>
   );
 }
@@ -459,13 +513,15 @@ function PeopleFieldRenderer({
   item,
   value,
   onValueChanged,
+  readOnly,
 }: {
   modelId: number;
   item: LifecycleItem;
   value: LifecycleValue | null | undefined;
   onValueChanged?: () => void;
+  readOnly: boolean;
 }) {
-  const { users, loading: usersLoading } = useUsers();
+  const { users, loading: usersLoading } = useUsers(!readOnly);
   // People now come from junction table, not value_json
   const currentPeople: PersonRecord[] = Array.isArray((value as any)?.people)
     ? (value as any).people
@@ -516,6 +572,8 @@ function PeopleFieldRenderer({
     [modelId, item.id, onValueChanged],
   );
 
+  if (readOnly && currentPeople.length === 0) return <ReadOnlyValue />;
+
   return (
     <Stack sx={{ gap: 4 }}>
       {currentPeople.length > 0 && (
@@ -526,7 +584,7 @@ function PeopleFieldRenderer({
               label={getPersonDisplayName(p)}
               size="small"
               variant="outlined"
-              onDelete={() => handleRemove(p.user_id)}
+              onDelete={readOnly ? undefined : () => handleRemove(p.user_id)}
               sx={{
                 ...vwChipSx,
                 "borderColor": border.dark,
@@ -540,26 +598,28 @@ function PeopleFieldRenderer({
           ))}
         </Stack>
       )}
-      <Stack direction="row" alignItems="center" sx={{ gap: 4 }}>
-        <Select
-          id={`lifecycle-people-${item.id}`}
-          ariaLabel={item.name}
-          placeholder={usersLoading ? "Loading users..." : "Select a user..."}
-          value={selectedUserId}
-          items={availableUsers.map(toUserOption)}
-          onChange={(e) => setSelectedUserId(e.target.value as number | "")}
-          sx={{ flex: 1 }}
-        />
-        <CustomizableButton
-          variant="outlined"
-          color="secondary"
-          size="small"
-          onClick={handleAdd}
-          disabled={saving || !selectedUserId}
-        >
-          Add
-        </CustomizableButton>
-      </Stack>
+      {!readOnly && (
+        <Stack direction="row" alignItems="center" sx={{ gap: 4 }}>
+          <Select
+            id={`lifecycle-people-${item.id}`}
+            ariaLabel={item.name}
+            placeholder={usersLoading ? "Loading users..." : "Select a user..."}
+            value={selectedUserId}
+            items={availableUsers.map(toUserOption)}
+            onChange={(e) => setSelectedUserId(e.target.value as number | "")}
+            sx={{ flex: 1 }}
+          />
+          <CustomizableButton
+            variant="outlined"
+            color="secondary"
+            size="small"
+            onClick={handleAdd}
+            disabled={saving || !selectedUserId}
+          >
+            Add
+          </CustomizableButton>
+        </Stack>
+      )}
       {saving && <CircularProgress size={14} sx={{ color: VW_COLORS.primary }} />}
     </Stack>
   );
@@ -574,11 +634,13 @@ function ClassificationFieldRenderer({
   item,
   value,
   onValueChanged,
+  readOnly,
 }: {
   modelId: number;
   item: LifecycleItem;
   value: LifecycleValue | null | undefined;
   onValueChanged?: () => void;
+  readOnly: boolean;
 }) {
   const config = item.config as { levels?: string[] };
   const levels = Array.isArray(config?.levels) ? config.levels : [];
@@ -612,6 +674,7 @@ function ClassificationFieldRenderer({
           <FormControlLabel
             key={level}
             value={level}
+            disabled={readOnly}
             control={
               <Radio
                 size="small"
@@ -654,11 +717,13 @@ function ChecklistFieldRenderer({
   item,
   value,
   onValueChanged,
+  readOnly,
 }: {
   modelId: number;
   item: LifecycleItem;
   value: LifecycleValue | null | undefined;
   onValueChanged?: () => void;
+  readOnly: boolean;
 }) {
   const config = item.config as { defaultItems?: string[] };
   const configItems = Array.isArray(config?.defaultItems) ? config.defaultItems : [];
@@ -716,6 +781,8 @@ function ChecklistFieldRenderer({
     [items, saveItems],
   );
 
+  if (readOnly && items.length === 0) return <ReadOnlyValue />;
+
   return (
     <Stack sx={{ gap: 4 }}>
       {items.map((it, index) => (
@@ -723,6 +790,8 @@ function ChecklistFieldRenderer({
           <Checkbox
             checked={it.checked}
             onChange={() => toggleItem(index)}
+            disabled={readOnly}
+            inputProps={{ "aria-label": it.label }}
             size="small"
             sx={{
               "color": border.dark,
@@ -741,38 +810,42 @@ function ChecklistFieldRenderer({
           >
             {it.label}
           </Typography>
-          <CustomizableButton
-            iconOnly
-            variant="text"
-            color="error"
-            size="small"
-            ariaLabel="Remove item"
-            onClick={() => removeItem(index)}
-          >
-            <X size={16} />
-          </CustomizableButton>
+          {!readOnly && (
+            <CustomizableButton
+              iconOnly
+              variant="text"
+              color="error"
+              size="small"
+              ariaLabel="Remove item"
+              onClick={() => removeItem(index)}
+            >
+              <X size={16} />
+            </CustomizableButton>
+          )}
         </Stack>
       ))}
-      <Stack direction="row" alignItems="center" sx={{ gap: 4 }}>
-        <Field
-          placeholder="Add checklist item..."
-          value={newItemText}
-          onChange={(e) => setNewItemText(e.target.value)}
-          onKeyDown={(e) => {
-            if (e.key === "Enter") addItem();
-          }}
-          sx={{ flex: 1 }}
-        />
-        <CustomizableButton
-          variant="outlined"
-          color="secondary"
-          size="small"
-          onClick={addItem}
-          loading={saving}
-        >
-          Add
-        </CustomizableButton>
-      </Stack>
+      {!readOnly && (
+        <Stack direction="row" alignItems="center" sx={{ gap: 4 }}>
+          <Field
+            placeholder="Add checklist item..."
+            value={newItemText}
+            onChange={(e) => setNewItemText(e.target.value)}
+            onKeyDown={(e) => {
+              if (e.key === "Enter") addItem();
+            }}
+            sx={{ flex: 1 }}
+          />
+          <CustomizableButton
+            variant="outlined"
+            color="secondary"
+            size="small"
+            onClick={addItem}
+            loading={saving}
+          >
+            Add
+          </CustomizableButton>
+        </Stack>
+      )}
     </Stack>
   );
 }
@@ -796,13 +869,17 @@ function ApprovalFieldRenderer({
   item,
   value,
   onValueChanged,
+  readOnly,
+  currentUserId,
 }: {
   modelId: number;
   item: LifecycleItem;
   value: LifecycleValue | null | undefined;
   onValueChanged?: () => void;
+  readOnly: boolean;
+  currentUserId: number | null;
 }) {
-  const { users, loading: usersLoading } = useUsers();
+  const { users, loading: usersLoading } = useUsers(!readOnly);
   // Approvals now come from junction table, not value_json
   const currentApprovals: ApprovalRecord[] = Array.isArray((value as any)?.approvals)
     ? (value as any).approvals
@@ -893,11 +970,14 @@ function ApprovalFieldRenderer({
     }
   };
 
+  if (readOnly && currentApprovals.length === 0) return <ReadOnlyValue />;
+
   return (
     <Stack sx={{ gap: 6 }}>
       {currentApprovals.map((approval) => (
         <Stack
           key={approval.user_id}
+          data-testid={`approver-row-${approval.user_id}`}
           direction="row"
           alignItems="center"
           sx={{
@@ -930,7 +1010,9 @@ function ApprovalFieldRenderer({
               border: "none",
             }}
           />
-          {approval.status === "pending" && (
+          {/* Only the named approver decides their own row, whatever their
+              role (the server rejects anyone else). */}
+          {approval.status === "pending" && approval.user_id === currentUserId && (
             <>
               <CustomizableButton
                 iconOnly
@@ -954,39 +1036,43 @@ function ApprovalFieldRenderer({
               </CustomizableButton>
             </>
           )}
-          <CustomizableButton
-            iconOnly
-            variant="text"
-            size="small"
-            ariaLabel="Remove approver"
-            onClick={() => removeApprover(approval.user_id)}
-            sx={{ "color": VW_COLORS.textAccent, "&:hover": { color: VW_COLORS.error } }}
-          >
-            <Trash2 size={14} />
-          </CustomizableButton>
+          {!readOnly && (
+            <CustomizableButton
+              iconOnly
+              variant="text"
+              size="small"
+              ariaLabel="Remove approver"
+              onClick={() => removeApprover(approval.user_id)}
+              sx={{ "color": VW_COLORS.textAccent, "&:hover": { color: VW_COLORS.error } }}
+            >
+              <Trash2 size={14} />
+            </CustomizableButton>
+          )}
         </Stack>
       ))}
-      <Stack direction="row" alignItems="center" sx={{ gap: 4 }}>
-        <Select
-          id={`lifecycle-approval-${item.id}`}
-          ariaLabel={item.name}
-          placeholder={usersLoading ? "Loading users..." : "Select an approver..."}
-          value={selectedUserId}
-          items={availableUsers.map(toUserOption)}
-          onChange={(e) => setSelectedUserId(e.target.value as number | "")}
-          sx={{ flex: 1 }}
-        />
-        <CustomizableButton
-          variant="outlined"
-          color="secondary"
-          size="small"
-          onClick={addApprover}
-          disabled={saving || !selectedUserId}
-          loading={saving}
-        >
-          Add Approver
-        </CustomizableButton>
-      </Stack>
+      {!readOnly && (
+        <Stack direction="row" alignItems="center" sx={{ gap: 4 }}>
+          <Select
+            id={`lifecycle-approval-${item.id}`}
+            ariaLabel={item.name}
+            placeholder={usersLoading ? "Loading users..." : "Select an approver..."}
+            value={selectedUserId}
+            items={availableUsers.map(toUserOption)}
+            onChange={(e) => setSelectedUserId(e.target.value as number | "")}
+            sx={{ flex: 1 }}
+          />
+          <CustomizableButton
+            variant="outlined"
+            color="secondary"
+            size="small"
+            onClick={addApprover}
+            disabled={saving || !selectedUserId}
+            loading={saving}
+          >
+            Add Approver
+          </CustomizableButton>
+        </Stack>
+      )}
     </Stack>
   );
 }
