@@ -1,6 +1,7 @@
 import { RiskModel } from "../../../../domain/models/Common/risks/risk.model";
 import { riskCalendarDay } from "../../../tools/isoDateToString";
 import { getEffectiveRiskLevel, riskLevelRank } from "../../../../application/utils/riskLevel";
+import { compareNames } from "../../../../application/utils/userSort";
 
 export type RiskSortDirection = "asc" | "desc";
 
@@ -67,7 +68,7 @@ export const compareRisks = (
 
   const sign = direction === "asc" ? 1 : -1;
   if (typeof aValue === "string" && typeof bValue === "string") {
-    return sign * aValue.localeCompare(bValue);
+    return sign * compareNames(aValue, bValue);
   }
   if (aValue < bValue) return -sign;
   if (aValue > bValue) return sign;

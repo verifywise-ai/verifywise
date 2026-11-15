@@ -26,7 +26,12 @@ describe("importRisks", () => {
   });
 
   it("returns the row errors of a 400 instead of throwing", async () => {
-    post.mockRejectedValue({ status: 400, message: "Bad Request", response: { data: result } });
+    // Shaped like CustomException: an Error with the status and the response body.
+    const rejected = Object.assign(new Error("Bad Request"), {
+      status: 400,
+      response: { data: result },
+    });
+    post.mockRejectedValueOnce(rejected);
     expect(await importRisks([{}])).toEqual(result);
   });
 
