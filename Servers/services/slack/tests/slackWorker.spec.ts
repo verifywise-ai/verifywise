@@ -64,7 +64,7 @@ describe("slackWorker", () => {
 
       expect(mockSendPolicyDueSoonNotification).toHaveBeenCalled();
       expect(result.success).toBe(true);
-      expect(result.userId).toBe(42);
+      expect(result.policiesNotified).toBe(42);
       expect(result.sentAt).toMatch(/^\d{4}-/);
     });
 

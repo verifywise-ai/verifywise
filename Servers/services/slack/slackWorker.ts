@@ -8,8 +8,8 @@ export const createNotificationWorker = () => {
     "slack-notifications",
     async (job: Job) => {
       if (job.data.type === "policies") {
-        const userId = await sendPolicyDueSoonNotification();
-        return { success: true, sentAt: new Date().toISOString(), userId };
+        const policiesNotified = await sendPolicyDueSoonNotification();
+        return { success: true, sentAt: new Date().toISOString(), policiesNotified };
       } else {
         throw new Error(`Unknown job type: ${job.data.type}`);
       }
@@ -18,7 +18,6 @@ export const createNotificationWorker = () => {
   );
 
   worker.on("completed", (_job) => {
-    // const userId = job.returnvalue?.userId;
     // logSuccess({
     //   eventType: "Update",
     //   description: "Completed Job Processing",

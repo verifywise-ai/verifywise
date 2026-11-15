@@ -11,8 +11,7 @@ export interface DeadlineSlackNotice {
 /**
  * One Slack send for the deadline sweep's 1-day leg. The per-row and
  * per-recipient loops (with their try/catch) live in the sweep — this helper
- * sends exactly one message, unlike policyDueSoonNotification, whose `return`
- * inside the per-policy loop exits after the first policy.
+ * sends exactly one message.
  *
  * `userId` null: the organization-wide connections, once per row. A user:
  * only that user's own connections, once per recipient — so a shared channel

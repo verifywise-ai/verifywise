@@ -5,114 +5,60 @@ import { getAllOrganizationsQuery } from "../../utils/organization.utils";
 import { sendSlackNotification } from "./slackNotificationService";
 import { SlackNotificationRoutingType } from "../../domain.layer/enums/slack.enum";
 import logger from "../../utils/logger/fileLogger";
-import { getAllUsersQuery } from "../../utils/user.utils";
 
+/**
+ * Daily Slack reminder for policies due soon. Sends one notification per due
+ * policy of every organization, for that organization. The author, when set,
+ * is the event's user (their own connections plus the organization-wide ones);
+ * a policy without an author goes to the organization-wide connections only.
+ *
+ * Each organization and each policy is isolated: a failure is logged and the
+ * job moves on. Returns the number of policies whose notification was sent.
+ */
 export const sendPolicyDueSoonNotification = async (): Promise<number> => {
-  // const functionName = "sendPolicyDueSoonNotification";
-  // const fileName = "policyDueSoonNotification.ts";
-  // logProcessing({
-  //   description: `Sending Slack Notification for Policies due soon across all organizations.`,
-  //   functionName,
-  //   fileName,
-  // });
+  const organizations = await getAllOrganizationsQuery();
+  if (!organizations || organizations.length === 0) return 0;
 
-  try {
-    // Get all organizations
-    const organizations = await getAllOrganizationsQuery();
+  let totalPoliciesProcessed = 0;
 
-    if (!organizations || organizations.length === 0) {
-      // await logSuccess({
-      //   eventType: "Read",
-      //   description: `No organizations found to check for policies due soon.`,
-      //   functionName,
-      //   fileName,
-      // });
-      return 0;
+  for (const organization of organizations) {
+    const organizationId = organization.id;
+    if (organizationId === undefined || organizationId === null) continue;
+
+    let policies: PolicyManagerModel[];
+    try {
+      policies = await getAllPoliciesDueSoonQuery(organizationId);
+    } catch (orgError) {
+      logger.error(`Error processing organization ${organizationId}:`, orgError);
+      continue;
     }
 
-    let totalPoliciesProcessed = 0;
-
-    // Iterate through each organization
-    for (const organization of organizations) {
-      const organizationId = organization.id!;
-      const users = await getAllUsersQuery(organizationId);
-      const admins = users.filter((user) => user.role_id === 1);
-
+    for (const policy of policies) {
       try {
-        // Get all policies due soon for this organization
-        const policies: PolicyManagerModel[] = await getAllPoliciesDueSoonQuery(organizationId);
+        const reviewDate = policy.next_review_date
+          ? formatReviewDate(policy.next_review_date)
+          : "Not set";
 
-        if (policies.length > 0) {
-          // Send notification for each policy
-          for (const policy of policies) {
-            try {
-              let userToNotify: number = 0;
-              // Add author
-              if (policy.author_id) {
-                userToNotify = policy.author_id;
-              }
-
-              // Format the notification message
-              const reviewDate = policy.next_review_date
-                ? formatReviewDate(policy.next_review_date)
-                : "Not set";
-
-              const message = {
-                title: `Policy Review Reminder`,
-                message: `Policy due soon· "${policy.title}" is due on ${reviewDate} and is still incomplete. Next steps: Review Evidence, Assign Editors, Update Status.`,
-              };
-
-              // Send notification to each user
-              if (userToNotify > 0) {
-                try {
-                  await sendSlackNotification(
-                    {
-                      organizationId,
-                      userId: userToNotify,
-                      routingType: SlackNotificationRoutingType.POLICY_REMINDERS_AND_STATUS,
-                    },
-                    message,
-                  );
-                  totalPoliciesProcessed += 1;
-                  return userToNotify;
-                } catch (notificationError) {
-                  // Log but don't stop processing other notifications
-                  logger.error(
-                    `Failed to send notification to user ${userToNotify} for policy ${policy.id}:`,
-                    notificationError,
-                  );
-                }
-              }
-              return userToNotify;
-            } catch (policyError) {
-              logger.error(
-                `Error processing policy ${policy.id} in organization ${organizationId}:`,
-                policyError,
-              );
-            }
-          }
-        }
-        return admins[0].id || 0;
-      } catch (orgError) {
-        logger.error(`Error processing organization ${organizationId}:`, orgError);
+        await sendSlackNotification(
+          {
+            organizationId,
+            userId: policy.author_id || null,
+            routingType: SlackNotificationRoutingType.POLICY_REMINDERS_AND_STATUS,
+          },
+          {
+            title: `Policy Review Reminder`,
+            message: `Policy due soon· "${policy.title}" is due on ${reviewDate} and is still incomplete. Next steps: Review Evidence, Assign Editors, Update Status.`,
+          },
+        );
+        totalPoliciesProcessed += 1;
+      } catch (policyError) {
+        logger.error(
+          `Failed to send the due-soon notification for policy ${policy.id} in organization ${organizationId}:`,
+          policyError,
+        );
       }
     }
-
-    // await logSuccess({
-    //   eventType: "Read",
-    //   description: `Processed ${totalPoliciesProcessed} policies across ${organizations.length} organizations.`,
-    //   functionName,
-    //   fileName,
-    // });
-  } catch (error) {
-    // await logFailure({
-    //   eventType: "Read",
-    //   description: `Failed to send Slack Notifications for Policies due soon.`,
-    //   functionName,
-    //   fileName,
-    //   error: error as Error,
-    // });
-    throw error;
   }
-  return 0;
+
+  return totalPoliciesProcessed;
 };
