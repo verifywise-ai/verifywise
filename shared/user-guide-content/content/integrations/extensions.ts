@@ -313,7 +313,7 @@ export const extensionsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: '**Where it shows up:** imported objects appear as use cases under **Use cases**. To refresh them later, click **Sync Now** in the **Import & Sync** section.',
+      text: '**Where it shows up:** imported objects appear as use cases under **Use cases**. The list shows members the imported use cases that appear in their use case list, and opening one follows the same access rules as any other use case page; Admins see all of them. Only Admins can pick the schema and object type. To refresh imported use cases later, click **Sync Now** in the **Import & Sync** section.',
     },
     {
       type: 'callout',

@@ -1,7 +1,14 @@
-import express from "express";
+import express, { NextFunction, Request, Response } from "express";
+import { param } from "express-validator";
 import authenticateJWT from "../../middleware/auth.middleware";
 import authorize from "../../middleware/accessControl.middleware";
 import { requireExtensionEnabled } from "../../middleware/requireExtensionEnabled.middleware";
+import { validate } from "../../middleware/validate.middleware";
+import { requireProjectAccess } from "../../middleware/projectAccess.middleware";
+import { requestHasPermission } from "../../utils/rolePermissions.utils";
+import { STATUS_CODE } from "../../utils/statusCode.utils";
+import { JIRA_INVALID_ID_KEY, JIRA_NUMERIC_ID_PATTERN } from "./jira.client";
+import { isObjectTypeInUse } from "./jiraAssets.service";
 import {
   deleteUseCaseCtrl,
   getAttributes,
@@ -23,6 +30,36 @@ import {
   removeMissingCtrl,
 } from "./jiraAssets.ctrl";
 
+/**
+ * 400 unless the path parameter is a numeric Jira id. Express has already
+ * decoded it, so "..%2F..%2Fapi%23" arrives as "../../api#" and is refused
+ * here before the controller (the client checks again before any request).
+ */
+const jiraIdParam = (name: string) =>
+  validate(
+    param(name)
+      .matches(JIRA_NUMERIC_ID_PATTERN)
+      .withMessage((_value, { req }) => req.t!(JIRA_INVALID_ID_KEY, { field: name })),
+  );
+
+/**
+ * Members (no "extension.admin") may read the attribute schema only of an
+ * object type the organization uses: the configured one or the type of an
+ * imported use case. Anything else is 403, so the route cannot be used to
+ * make arbitrary Jira calls with the organization's credentials. Admins pass.
+ * Runs after jiraIdParam, so the id is numeric here.
+ */
+async function requireObjectTypeInUse(req: Request, res: Response, next: NextFunction) {
+  try {
+    if (await requestHasPermission(req, "extension.admin")) return next();
+    const objectTypeId = String(req.params.objectTypeId);
+    if (await isObjectTypeInUse(req.organizationId!, objectTypeId)) return next();
+    return res.status(403).json(STATUS_CODE[403](req.t!("Access denied")));
+  } catch (error) {
+    return next(error);
+  }
+}
+
 const router = express.Router();
 router.use(authenticateJWT);
 router.use(requireExtensionEnabled("jira-assets"));
@@ -30,8 +67,11 @@ router.use(requireExtensionEnabled("jira-assets"));
 // Writes (config, sync settings, selection, import, sync, removing missing use
 // cases, use-case delete) need "extension.admin" — the
 // same permission as enabling or configuring an extension in the catalog.
-// Reads stay open to any member of an org with the extension enabled, because
-// the use-case views in the project pages call them.
+// So do the schema, object-type and object listings: only the admin
+// configuration panel calls them, and each one is a live call to Jira with
+// the organization's stored credentials. The other reads stay open to any
+// member of an org with the extension enabled, because the use-case views in
+// the project pages call them.
 
 // Configuration.
 //
@@ -49,11 +89,29 @@ router.patch("/config/sync", authorize("extension.admin"), patchSyncSettings);
 router.patch("/config/selection", authorize("extension.admin"), patchSelection);
 router.get("/vw-attributes", getVwAttributes);
 
-// Schema / object-type discovery
-router.get("/schemas", getSchemas);
-router.get("/schemas/:schemaId/object-types", getObjectTypes);
-router.get("/object-types/:objectTypeId/attributes", getAttributes);
-router.get("/object-types/:objectTypeId/objects", getObjects);
+// Schema / object-type discovery (the configuration panel's pickers)
+router.get("/schemas", authorize("extension.admin"), getSchemas);
+router.get(
+  "/schemas/:schemaId/object-types",
+  authorize("extension.admin"),
+  jiraIdParam("schemaId"),
+  getObjectTypes,
+);
+// Open to members for the object types the organization uses: a use case's
+// Settings tab (JiraUseCaseSettings) reads the object type's attribute schema
+// to list every attribute.
+router.get(
+  "/object-types/:objectTypeId/attributes",
+  jiraIdParam("objectTypeId"),
+  requireObjectTypeInUse,
+  getAttributes,
+);
+router.get(
+  "/object-types/:objectTypeId/objects",
+  authorize("extension.admin"),
+  jiraIdParam("objectTypeId"),
+  getObjects,
+);
 
 // Import + sync
 router.post("/import", authorize("extension.admin"), postImport);
@@ -61,14 +119,20 @@ router.post("/sync", authorize("extension.admin"), postSync);
 router.get("/sync/status", getSyncStatusCtrl);
 router.get("/sync/history", getSyncHistoryCtrl);
 
-// Use cases
+// Use cases. The reads follow use case visibility, as the core use case pages
+// do: the list is scoped in the query, a single use case needs read access to
+// it (403 otherwise).
 router.get("/use-cases", listUseCasesCtrl);
 // Explicit removal of use cases flagged as missing in Jira (syncs never delete).
 router.post("/use-cases/remove-missing", authorize("extension.admin"), removeMissingCtrl);
-router.get("/use-cases/:id", getUseCaseCtrl);
+router.get("/use-cases/:id", requireProjectAccess("id"), getUseCaseCtrl);
 router.delete("/use-cases/:id", authorize("extension.admin"), deleteUseCaseCtrl);
 
 // Custom frameworks progress (rendered inside a JIRA use-case Overview tab)
-router.get("/projects/:projectId/custom-frameworks-progress", getCustomFrameworksProgressCtrl);
+router.get(
+  "/projects/:projectId/custom-frameworks-progress",
+  requireProjectAccess("projectId"),
+  getCustomFrameworksProgressCtrl,
+);
 
 export default router;
