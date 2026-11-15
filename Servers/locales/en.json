@@ -871,6 +871,7 @@
   "Only task creator, assignee, or admin can update status": "Only task creator, assignee, or admin can update status",
   "Only the annotation owner can delete this annotation": "Only the annotation owner can delete this annotation",
   "Only the app's owner or an editor can answer this assessment": "Only the app's owner or an editor can answer this assessment",
+  "Only the assigned approver can record this decision": "Only the assigned approver can record this decision",
   "Only the assignee or someone who can edit training can do this": "Only the assignee or someone who can edit training can do this",
   "Only the gap rules owner can delete these rules": "Only the gap rules owner can delete these rules",
   "Only the note author or admins can delete this note": "Only the note author or admins can delete this note",

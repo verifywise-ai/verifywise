@@ -1,12 +1,14 @@
 import request from "supertest";
 import express from "express";
 
+// The role comes from the x-role header so one app can walk the role matrix;
+// Editor is the default so the id-validation tests below keep their caller.
 jest.mock("../../../middleware/auth.middleware", () => ({
   __esModule: true,
   default: (req: any, _res: any, next: any) => {
     req.userId = 9;
     req.organizationId = 42;
-    req.role = "Editor";
+    req.role = req.headers["x-role"] ?? "Editor";
     req.t = (key: string) => key;
     next();
   },
@@ -14,15 +16,37 @@ jest.mock("../../../middleware/auth.middleware", () => ({
 jest.mock("../../../middleware/requireExtensionEnabled.middleware", () => ({
   requireExtensionEnabled: () => (_req: any, _res: any, next: any) => next(),
 }));
+// Built-in roles resolve against the static permission matrix, so authorize()
+// runs for real; only the roles table lookup is stubbed.
+jest.mock("../../../utils/roleMap", () => ({
+  getRoleByName: jest.fn(async (_orgId: number | null, name: string) =>
+    ["Admin", "Editor", "Reviewer", "Auditor"].includes(name)
+      ? { id: 1, name, organizationId: null }
+      : undefined,
+  ),
+}));
+jest.mock("../../../database/db", () => ({
+  sequelize: { query: jest.fn(async () => []) },
+}));
 jest.mock("../modelLifecycle.service", () => ({
+  listPhases: jest.fn(async () => []),
+  createPhase: jest.fn(async () => ({})),
+  updatePhase: jest.fn(),
+  deletePhase: jest.fn(),
+  reorderPhases: jest.fn(),
+  createItem: jest.fn(),
+  updateItem: jest.fn(async () => ({})),
+  deleteItem: jest.fn(),
+  reorderItems: jest.fn(),
+  getLifecycleForModel: jest.fn(async () => []),
+  getProgressForModel: jest.fn(async () => ({})),
+  upsertValue: jest.fn(async () => ({})),
   detachFile: jest.fn(async () => true),
   attachFile: jest.fn(),
-  deletePhase: jest.fn(),
-  deleteItem: jest.fn(),
-  removeApprover: jest.fn(),
-  createItem: jest.fn(),
-  updatePhase: jest.fn(),
+  addPerson: jest.fn(async () => ({})),
   removePerson: jest.fn(),
+  addApprover: jest.fn(async () => ({})),
+  removeApprover: jest.fn(),
   updateApprovalStatus: jest.fn(),
 }));
 
@@ -125,5 +149,141 @@ describe("POST .../lifecycle/items/:itemId/files body", () => {
 
     expect(res.status).toBe(404);
     expect(svc.attachFile).toHaveBeenCalledWith(42, 1, 2, 9, 99);
+  });
+});
+
+describe("role checks on lifecycle routes", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  const base = "/api/extensions/model-lifecycle";
+  const item = `${base}/models/1/lifecycle/items/2`;
+
+  type Method = "get" | "post" | "put" | "delete";
+  type Route = readonly [label: string, method: Method, path: string, fn: string, body?: object];
+
+  // Lifecycle setup: phases and items. extension.admin (Admin only).
+  const configWrites: Route[] = [
+    ["phase create", "post", `${base}/phases`, "createPhase", { name: "Build" }],
+    ["phase reorder", "put", `${base}/phases/reorder`, "reorderPhases", { orderedIds: [2, 1] }],
+    ["phase update", "put", `${base}/phases/3`, "updatePhase", { name: "Run" }],
+    ["phase delete", "delete", `${base}/phases/3`, "deletePhase"],
+    ["item create", "post", `${base}/phases/3/items`, "createItem", { name: "Owner" }],
+    [
+      "item reorder",
+      "put",
+      `${base}/phases/3/items/reorder`,
+      "reorderItems",
+      { orderedIds: [2, 1] },
+    ],
+    ["item update", "put", `${base}/items/4`, "updateItem", { name: "Owner" }],
+    ["item delete", "delete", `${base}/items/4`, "deleteItem"],
+  ];
+
+  // Per-model answers, files, people and approvers. model.edit (Admin, Editor).
+  const modelWrites: Route[] = [
+    ["value upsert", "put", item, "upsertValue", { value_text: "x" }],
+    ["file attach", "post", `${item}/files`, "attachFile", { fileId: 5 }],
+    ["file detach", "delete", `${item}/files/5`, "detachFile"],
+    ["person add", "post", `${item}/people`, "addPerson", { userId: 3 }],
+    ["person remove", "delete", `${item}/people/3`, "removePerson"],
+    ["approver add", "post", `${item}/approvals`, "addApprover", { userId: 3 }],
+    ["approver remove", "delete", `${item}/approvals/3`, "removeApprover"],
+  ];
+
+  // Reads stay open to every member.
+  const reads: Route[] = [
+    ["config read", "get", `${base}/config`, "listPhases"],
+    ["lifecycle read", "get", `${base}/models/1/lifecycle`, "getLifecycleForModel"],
+    ["progress read", "get", `${base}/models/1/lifecycle/progress`, "getProgressForModel"],
+  ];
+
+  const send = (role: string, [, method, path, , body]: Route) => {
+    const req = request(app)[method](path).set("x-role", role);
+    return body ? req.send(body) : req;
+  };
+
+  const denied = (roles: string[], routes: Route[]) =>
+    roles.flatMap((role) => routes.map((route) => [role, route[0], route] as const));
+
+  it.each(denied(["Editor", "Reviewer", "Auditor"], configWrites))(
+    "answers 403 to %s on %s and changes nothing",
+    async (role, _label, route) => {
+      const res = await send(role, route);
+
+      expect(res.status).toBe(403);
+      expect((svc as any)[route[3]]).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(configWrites.map((route) => [route[0], route] as const))(
+    "lets an Admin through on %s",
+    async (_label, route) => {
+      const res = await send("Admin", route);
+
+      expect(res.status).not.toBe(403);
+      expect((svc as any)[route[3]]).toHaveBeenCalled();
+    },
+  );
+
+  it.each(denied(["Reviewer", "Auditor"], modelWrites))(
+    "answers 403 to %s on %s and changes nothing",
+    async (role, _label, route) => {
+      const res = await send(role, route);
+
+      expect(res.status).toBe(403);
+      expect((svc as any)[route[3]]).not.toHaveBeenCalled();
+    },
+  );
+
+  it.each(
+    ["Admin", "Editor"].flatMap((role) =>
+      modelWrites.map((route) => [role, route[0], route] as const),
+    ),
+  )("lets %s through on %s", async (role, _label, route) => {
+    const res = await send(role, route);
+
+    expect(res.status).not.toBe(403);
+    expect((svc as any)[route[3]]).toHaveBeenCalled();
+  });
+
+  it.each(
+    ["Admin", "Editor", "Reviewer", "Auditor"].flatMap((role) =>
+      reads.map((route) => [role, route[0], route] as const),
+    ),
+  )("lets %s through on %s", async (role, _label, route) => {
+    const res = await send(role, route);
+
+    expect(res.status).toBe(200);
+    expect((svc as any)[route[3]]).toHaveBeenCalled();
+  });
+
+  describe("approval decisions", () => {
+    const decide = (role: string, userId: number) =>
+      request(app)
+        .put(`${item}/approvals/${userId}`)
+        .set("x-role", role)
+        .send({ status: "approved" });
+
+    it.each(["Admin", "Editor", "Reviewer", "Auditor"])(
+      "lets a %s record a decision on their own approval row",
+      async (role) => {
+        (svc.updateApprovalStatus as jest.Mock).mockResolvedValueOnce({ id: 1 });
+
+        const res = await decide(role, 9);
+
+        expect(res.status).toBe(200);
+        expect(svc.updateApprovalStatus).toHaveBeenCalledWith(42, 1, 2, 9, "approved", 9);
+      },
+    );
+
+    it.each(["Admin", "Editor", "Reviewer", "Auditor"])(
+      "answers 403 to a %s deciding for another approver",
+      async (role) => {
+        const res = await decide(role, 10);
+
+        expect(res.status).toBe(403);
+        expect(svc.updateApprovalStatus).not.toHaveBeenCalled();
+      },
+    );
   });
 });

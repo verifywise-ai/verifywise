@@ -1,5 +1,6 @@
 import express from "express";
 import authenticateJWT from "../../middleware/auth.middleware";
+import authorize from "../../middleware/accessControl.middleware";
 import { requireExtensionEnabled } from "../../middleware/requireExtensionEnabled.middleware";
 import { idParamCheck, validateId } from "../../domain.layer/validations/id.valid";
 import { handleValidationErrors } from "../../middleware/validate.middleware";
@@ -41,36 +42,53 @@ for (const name of ["id", "phaseId", "itemId", "fileId", "userId"]) {
   });
 }
 
+// Lifecycle setup (phases and items) is organization configuration: Admins
+// only. Per-model answers, files, people and approvers follow the model
+// inventory's own write permission. Reads stay open to every member, and an
+// approval decision is open to the named approver alone (checked in the
+// controller, with no Admin override).
+const configAdmin = authorize("extension.admin");
+const modelEdit = authorize("model.edit");
+
 // ---- Config (phases + items) ------------------------------------------
 router.get("/config", listConfig);
-router.post("/phases", createPhaseCtrl);
+router.post("/phases", configAdmin, createPhaseCtrl);
 // /phases/reorder MUST be declared before /phases/:id so Express doesn't
 // interpret 'reorder' as a numeric phase id.
-router.put("/phases/reorder", reorderPhasesCtrl);
-router.put("/phases/:id", updatePhaseCtrl);
-router.delete("/phases/:id", deletePhaseCtrl);
-router.post("/phases/:phaseId/items", createItemCtrl);
-router.put("/phases/:phaseId/items/reorder", reorderItemsCtrl);
-router.put("/items/:id", updateItemCtrl);
-router.delete("/items/:id", deleteItemCtrl);
+router.put("/phases/reorder", configAdmin, reorderPhasesCtrl);
+router.put("/phases/:id", configAdmin, updatePhaseCtrl);
+router.delete("/phases/:id", configAdmin, deletePhaseCtrl);
+router.post("/phases/:phaseId/items", configAdmin, createItemCtrl);
+router.put("/phases/:phaseId/items/reorder", configAdmin, reorderItemsCtrl);
+router.put("/items/:id", configAdmin, updateItemCtrl);
+router.delete("/items/:id", configAdmin, deleteItemCtrl);
 
 // ---- Per-model reads + value upsert -----------------------------------
 router.get("/models/:id/lifecycle", getLifecycleCtrl);
 router.get("/models/:id/lifecycle/progress", getProgressCtrl);
-router.put("/models/:id/lifecycle/items/:itemId", upsertValueCtrl);
+router.put("/models/:id/lifecycle/items/:itemId", modelEdit, upsertValueCtrl);
 
 // ---- Files ------------------------------------------------------------
 // fileId is in the body here, so router.param does not see it.
-router.post("/models/:id/lifecycle/items/:itemId/files", validateId("fileId"), attachFileCtrl);
-router.delete("/models/:id/lifecycle/items/:itemId/files/:fileId", detachFileCtrl);
+router.post(
+  "/models/:id/lifecycle/items/:itemId/files",
+  modelEdit,
+  validateId("fileId"),
+  attachFileCtrl,
+);
+router.delete("/models/:id/lifecycle/items/:itemId/files/:fileId", modelEdit, detachFileCtrl);
 
 // ---- People -----------------------------------------------------------
-router.post("/models/:id/lifecycle/items/:itemId/people", addPersonCtrl);
-router.delete("/models/:id/lifecycle/items/:itemId/people/:userId", removePersonCtrl);
+router.post("/models/:id/lifecycle/items/:itemId/people", modelEdit, addPersonCtrl);
+router.delete("/models/:id/lifecycle/items/:itemId/people/:userId", modelEdit, removePersonCtrl);
 
 // ---- Approvals --------------------------------------------------------
-router.post("/models/:id/lifecycle/items/:itemId/approvals", addApproverCtrl);
+router.post("/models/:id/lifecycle/items/:itemId/approvals", modelEdit, addApproverCtrl);
 router.put("/models/:id/lifecycle/items/:itemId/approvals/:userId", updateApprovalStatusCtrl);
-router.delete("/models/:id/lifecycle/items/:itemId/approvals/:userId", removeApproverCtrl);
+router.delete(
+  "/models/:id/lifecycle/items/:itemId/approvals/:userId",
+  modelEdit,
+  removeApproverCtrl,
+);
 
 export default router;

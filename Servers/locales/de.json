@@ -871,6 +871,7 @@
   "Only task creator, assignee, or admin can update status": "Nur Aufgabenersteller, Beauftragter oder Administrator können den Status aktualisieren",
   "Only the annotation owner can delete this annotation": "Nur der Eigentümer der Anmerkung kann diese Anmerkung löschen",
   "Only the app's owner or an editor can answer this assessment": "Nur der Eigentümer der App oder ein Bearbeiter kann diese Bewertung beantworten",
+  "Only the assigned approver can record this decision": "Nur die zugewiesene genehmigende Person kann diese Entscheidung erfassen",
   "Only the assignee or someone who can edit training can do this": "Nur die zugewiesene Person oder jemand mit Bearbeitungsrechten für Schulungen kann dies tun",
   "Only the gap rules owner can delete these rules": "Nur der Eigentümer der Lückenregeln kann diese Regeln löschen",
   "Only the note author or admins can delete this note": "Nur der Autor der Notiz oder Administratoren können diese Notiz löschen",

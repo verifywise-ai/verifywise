@@ -4,6 +4,7 @@ jest.mock("../modelLifecycle.service", () => ({
   reorderPhases: jest.fn(async () => undefined),
   reorderItems: jest.fn(async () => undefined),
   detachFile: jest.fn(),
+  updateApprovalStatus: jest.fn(),
 }));
 
 import * as svc from "../modelLifecycle.service";
@@ -12,6 +13,7 @@ import {
   orderedIdsFrom,
   reorderItemsCtrl,
   reorderPhasesCtrl,
+  updateApprovalStatusCtrl,
 } from "../modelLifecycle.ctrl";
 
 const request = (orderedIds: unknown) =>
@@ -100,5 +102,52 @@ describe("model lifecycle detach file", () => {
     await detachFileCtrl(detachRequest(), res);
 
     expect(res.status).toHaveBeenCalledWith(200);
+  });
+});
+
+describe("model lifecycle approval decision", () => {
+  beforeEach(() => jest.clearAllMocks());
+
+  const decisionRequest = (approverUserId: string, callerId = 7, status = "approved") =>
+    ({
+      params: { id: "10", itemId: "20", userId: approverUserId },
+      body: { status },
+      organizationId: 1,
+      userId: callerId,
+      role: "Admin",
+      t: (key: string) => key,
+    }) as unknown as Request;
+
+  it("answers 403 when the caller is not the named approver, even as an Admin", async () => {
+    const res = response();
+
+    await updateApprovalStatusCtrl(decisionRequest("8"), res);
+
+    expect(res.status).toHaveBeenCalledWith(403);
+    expect(res.json).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: "Only the assigned approver can record this decision",
+      }),
+    );
+    expect(svc.updateApprovalStatus).not.toHaveBeenCalled();
+  });
+
+  it("records the decision when the caller is the named approver", async () => {
+    (svc.updateApprovalStatus as jest.Mock).mockResolvedValueOnce({ id: 3, status: "approved" });
+    const res = response();
+
+    await updateApprovalStatusCtrl(decisionRequest("7"), res);
+
+    expect(svc.updateApprovalStatus).toHaveBeenCalledWith(1, 10, 20, 7, "approved", 7);
+    expect(res.status).toHaveBeenCalledWith(200);
+  });
+
+  it("answers 404 when the caller holds no approval row on the item", async () => {
+    (svc.updateApprovalStatus as jest.Mock).mockResolvedValueOnce(null);
+    const res = response();
+
+    await updateApprovalStatusCtrl(decisionRequest("7"), res);
+
+    expect(res.status).toHaveBeenCalledWith(404);
   });
 });

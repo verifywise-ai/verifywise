@@ -296,6 +296,14 @@ export async function removeApproverCtrl(req: Request, res: Response): Promise<a
 }
 
 export async function updateApprovalStatusCtrl(req: Request, res: Response): Promise<any> {
+  // Only the named approver decides their own row. There is no Admin
+  // override: an Admin who needs another outcome removes or replaces the
+  // approver, which the change history records.
+  if (intParam(req, "userId") !== uid(req)) {
+    return res
+      .status(403)
+      .json(STATUS_CODE[403](req.t!("Only the assigned approver can record this decision")));
+  }
   const status = req.body?.status;
   if (!status || !["pending", "approved", "rejected"].includes(status)) {
     return res
