@@ -73,6 +73,8 @@ interface SlackWorkspace {
   created_at?: string;
   is_active: boolean;
   routing_type?: string[];
+  /** "organization": posts every routed event; "user": only its owner's events. */
+  delivery_scope?: "organization" | "user";
 }
 
 export default function SlackConfiguration() {

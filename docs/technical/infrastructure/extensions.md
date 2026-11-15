@@ -907,8 +907,8 @@ A Slack connection (`slack_webhooks` row) belongs to an organization
 (`organization_id`). `user_id` records the Admin who connected it. Every Admin
 of the organization sees and manages the same list through
 `/api/extensions/slack/oauth/workspaces`. The handlers take the owner and the
-organization from the token and ignore any `userId` in the body or query. The
-list response does not include `organization_id` or `delivery_scope`.
+organization from the token and ignore any `userId` in the body or query.
+Responses include `delivery_scope` (see below) but not `organization_id`.
 
 The table has the `tenant_isolation` RLS policy and a tenant-isolation registry
 entry (`slack-webhooks`). The delivery read and the deactivation write run in

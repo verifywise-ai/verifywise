@@ -280,6 +280,7 @@ export class SlackWebhookModel extends Model<SlackWebhookModel> implements ISlac
       created_at: this.createdAt,
       is_active: this.is_active,
       routing_type: this.routing_type,
+      delivery_scope: this.delivery_scope,
     };
   }
 

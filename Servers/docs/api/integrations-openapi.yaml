@@ -659,6 +659,12 @@ components:
           items:
             $ref: "#/components/schemas/SlackNotificationRoutingType"
           nullable: true
+        delivery_scope:
+          type: string
+          enum: [organization, user]
+          description: |
+            organization: posts every routed event of the organization.
+            user: posts only events whose user is the connection's owner.
 
     CreateSlackWebhookRequest:
       type: object
