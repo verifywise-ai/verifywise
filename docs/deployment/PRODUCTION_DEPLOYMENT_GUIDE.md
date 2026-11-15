@@ -76,6 +76,8 @@ nano .env
 # Generate and set unique secrets
 JWT_SECRET=$(openssl rand -hex 64)
 REFRESH_TOKEN_SECRET=$(openssl rand -hex 64)
+# Required: the backend and worker do not start without it. Upgrading an
+# install that ran without one? See CONFIGURATION_REFERENCE.md, Data encryption.
 ENCRYPTION_KEY=$(openssl rand -base64 32)
 
 # Set strong database password

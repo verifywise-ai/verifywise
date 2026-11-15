@@ -79,11 +79,11 @@ export const extensionsContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Configuration', text: 'A form with the extension\'s connection settings. Password and token fields are stored encrypted. Leave a secret field blank to keep the existing value.' },
+        { bold: 'Configuration', text: 'A form with the extension\'s connection settings. Password and token fields are stored encrypted. Leave a secret field blank to keep the existing value. If you change the server URL or endpoint, enter the token, key or password again; if you change the username, enter the password again. A saved secret is never sent to a changed address.' },
         { bold: 'Extension panel', text: 'Slack, Model Lifecycle, Jira Assets and Jira incidents show their own setup panel here once enabled.' },
         { bold: 'Enable / Disable', text: 'Turns the extension on or off.' },
         { bold: 'Save configuration', text: 'Saves changes to the Configuration form after the extension is enabled. You see "Configuration saved." when it works.' },
-        { bold: 'Test connection', text: 'Checks the saved settings against the external service. Available for MLflow, Azure AI Foundry and Jira incidents. Jira Assets has its own **Test Connection** button in its panel, and Jira incidents also has a **Test connection** button in its panel that checks the values you have typed before you save them.' },
+        { bold: 'Test connection', text: 'Checks the saved settings against the external service. Available for MLflow, Azure AI Foundry and Jira incidents. Jira Assets has its own **Test Connection** button in its panel, and Jira incidents also has a **Test connection** button in its panel that checks the values you have typed before you save them. If the service answers with an error, the result shows only its HTTP status code, not the reply.' },
       ],
     },
     {
@@ -194,7 +194,7 @@ export const extensionsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: '**Where it shows up:** an **MLFlow** tab in **Model inventory**. Click **Sync** there to pull the latest runs. Syncing is manual; nothing syncs on a schedule.',
+      text: '**Where it shows up:** an **MLFlow** tab in **Model inventory**. Admins and Editors can click **Sync** there to pull the latest runs. Syncing is manual; nothing syncs on a schedule.',
     },
     {
       type: 'heading',
@@ -230,7 +230,7 @@ export const extensionsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: '**Where it shows up:** an **Azure AI Foundry** tab in **Model inventory**. Click **Sync** there to refresh the deployments.',
+      text: '**Where it shows up:** an **Azure AI Foundry** tab in **Model inventory**. Admins and Editors can click **Sync** there to refresh the deployments.',
     },
     {
       type: 'heading',
@@ -302,7 +302,7 @@ export const extensionsContent: ArticleContent = {
         { text: 'Click **Enable** on the Jira Assets Integration card, then **Configure**.' },
         { text: 'Choose a **Deployment Type**: JIRA Cloud (Atlassian-hosted) or JIRA Data Center / Server (Self-hosted).' },
         { text: 'Fill in **JIRA Base URL**, then **Workspace ID** (Cloud) or **Insight Object Schema ID** (Data Center), then **Email** and **API Token** (Cloud) or **Username** and **Password / Token** (Data Center).' },
-        { text: 'Click **Test Connection**, then **Save Configuration**.' },
+        { text: 'Click **Test Connection**, then **Save Configuration**. If you later change the deployment type, base URL, workspace or schema ID, or email or username, enter the token or password again.' },
         { text: 'Pick the **Schema** and the **Object Type (AI Systems)** to import from.' },
         { text: 'In the **Import & Sync** section, click **Import**, select the objects you want and click **Import N Selected**. The list shows up to 1,000 objects at a time; if Jira has more, click **Load more**.' },
       ],
@@ -428,6 +428,7 @@ export const extensionsContent: ArticleContent = {
         { action: 'Enable, configure or disable an extension', roles: 'Admin' },
         { action: 'Import risks from Excel (Risk Import)', roles: 'Admin, Editor' },
         { action: 'Bulk upload datasets (Dataset Bulk Upload)', roles: 'Admin, Editor' },
+        { action: 'Sync models from MLflow or Azure AI Foundry', roles: 'Admin, Editor' },
         { action: 'See the Jira key on imported incidents (Jira incidents)', roles: 'Anyone who can see incidents' },
       ],
     },
