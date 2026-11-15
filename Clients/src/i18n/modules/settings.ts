@@ -356,6 +356,15 @@ export const de: Record<string, string> = {
   "Move phase down": "Phase nach unten verschieben",
   "Move phase up": "Phase nach oben verschieben",
   "No attributes available": "Keine Attribute verfügbar",
+  "Ask an Admin to set up Azure AI Foundry.":
+    "Bitten Sie einen Admin, Azure AI Foundry einzurichten.",
+  "Ask an Admin to set up MLflow.": "Bitten Sie einen Admin, MLflow einzurichten.",
+  "Configure the Azure AI Foundry extension to start syncing model deployments.":
+    "Konfigurieren Sie die Azure AI Foundry-Erweiterung, um Modellbereitstellungen zu synchronisieren.",
+  "Configure the MLflow extension to start syncing live data.":
+    "Konfigurieren Sie die MLflow-Erweiterung, um Live-Daten zu synchronisieren.",
+  "No MLflow models have been synced yet.": "Es wurden noch keine MLflow-Modelle synchronisiert.",
+  "No deployments synced yet.": "Noch keine Bereitstellungen synchronisiert.",
   "No deployments synced yet. Click Sync to pull model deployments from Azure AI Foundry.":
     "Noch keine Bereitstellungen synchronisiert. Klicken Sie auf Synchronisieren, um Modellbereitstellungen aus Azure AI Foundry abzurufen.",
   "No frameworks assigned to this use case yet.":
@@ -869,6 +878,15 @@ export const fr: Record<string, string> = {
   "Move phase down": "Déplacer la phase vers le bas",
   "Move phase up": "Déplacer la phase vers le haut",
   "No attributes available": "Aucun attribut disponible",
+  "Ask an Admin to set up Azure AI Foundry.":
+    "Demandez à un administrateur de configurer Azure AI Foundry.",
+  "Ask an Admin to set up MLflow.": "Demandez à un administrateur de configurer MLflow.",
+  "Configure the Azure AI Foundry extension to start syncing model deployments.":
+    "Configurez l'extension Azure AI Foundry pour synchroniser les déploiements de modèles.",
+  "Configure the MLflow extension to start syncing live data.":
+    "Configurez l'extension MLflow pour synchroniser les données en direct.",
+  "No MLflow models have been synced yet.": "Aucun modèle MLflow n'a encore été synchronisé.",
+  "No deployments synced yet.": "Aucun déploiement synchronisé pour le moment.",
   "No deployments synced yet. Click Sync to pull model deployments from Azure AI Foundry.":
     "Aucun déploiement synchronisé pour le moment. Cliquez sur Synchroniser pour importer les déploiements de modèles depuis Azure AI Foundry.",
   "No frameworks assigned to this use case yet.":
@@ -1381,6 +1399,15 @@ export const es: Record<string, string> = {
   "Move phase down": "Mover fase hacia abajo",
   "Move phase up": "Mover fase hacia arriba",
   "No attributes available": "No hay atributos disponibles",
+  "Ask an Admin to set up Azure AI Foundry.":
+    "Pida a un administrador que configure Azure AI Foundry.",
+  "Ask an Admin to set up MLflow.": "Pida a un administrador que configure MLflow.",
+  "Configure the Azure AI Foundry extension to start syncing model deployments.":
+    "Configure la extensión Azure AI Foundry para sincronizar despliegues de modelos.",
+  "Configure the MLflow extension to start syncing live data.":
+    "Configure la extensión MLflow para sincronizar datos en vivo.",
+  "No MLflow models have been synced yet.": "Aún no se han sincronizado modelos de MLflow.",
+  "No deployments synced yet.": "Aún no se han sincronizado despliegues.",
   "No deployments synced yet. Click Sync to pull model deployments from Azure AI Foundry.":
     "Aún no se han sincronizado despliegues. Haga clic en Sincronizar para importar despliegues de modelos desde Azure AI Foundry.",
   "No frameworks assigned to this use case yet.":

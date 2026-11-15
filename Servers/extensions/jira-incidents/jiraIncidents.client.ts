@@ -2,6 +2,7 @@ import { assertSafeOutboundUrl, safeFetch } from "../../utils/safeOutboundUrl";
 import {
   describeFetchError,
   EXTERNAL_SYNC_DEADLINE_MS,
+  logErrorReply,
   requestSignal,
 } from "../../utils/outboundFetch.utils";
 import {
@@ -137,6 +138,12 @@ export class JiraIncidentsClient {
           `Could not reach Jira: ${describeFetchError(err, REQUEST_TIMEOUT_SECONDS)}`,
         );
       }
+      if (!response.ok) {
+        // Status only: the site URL is admin-supplied, so its body is not
+        // shown back. The start of it goes to the server log,
+        // and the body is released before any retry.
+        await logErrorReply("Jira", path, response, [this.authHeader.slice("Basic ".length)]);
+      }
       if (
         response.status === 429 ||
         (response.status === 503 && response.headers.has("retry-after"))
@@ -166,11 +173,7 @@ export class JiraIncidentsClient {
         throw new JiraNotFoundError(404, `Jira returned 404 for ${path.split("?")[0]}`);
       }
       if (!response.ok) {
-        const text = await response.text().catch(() => "");
-        throw new JiraHttpError(
-          response.status,
-          `Jira returned ${response.status}: ${text.slice(0, 300) || "no details"}`,
-        );
+        throw new JiraHttpError(response.status, `Jira returned HTTP ${response.status}`);
       }
       if (response.status === 204) return undefined as T;
       let text: string;

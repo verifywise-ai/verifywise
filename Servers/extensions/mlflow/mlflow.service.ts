@@ -4,6 +4,8 @@ import { ExtensionService } from "../../services/extension/extensionService";
 import { safeFetchWithBase } from "../../utils/safeOutboundUrl";
 import {
   EXTERNAL_SYNC_DEADLINE_MS,
+  RemoteStatusError,
+  describeConnectionTestError,
   describeFetchError,
   requestSignal,
 } from "../../utils/outboundFetch.utils";
@@ -80,9 +82,9 @@ function buildHeaders(config: MLflowConfig): Record<string, string> {
 }
 
 // URL composition goes through utils/safeOutboundUrl.ts — that helper
-// validates protocol, blocks cloud metadata endpoints, and trims trailing
-// slashes with a bounded quantifier (ReDoS-safe). Every fetch below MUST
-// use it.
+// validates protocol, refuses loopback, link-local and metadata targets
+// after DNS resolution, refuses redirects, and trims trailing slashes with a
+// bounded quantifier (ReDoS-safe). Every fetch below MUST use it.
 
 // ---------------------------------------------------------------------------
 // Test connection
@@ -111,10 +113,11 @@ export async function testConnection(config: MLflowConfig): Promise<MLflowTestCo
       },
     );
     if (!response.ok) {
-      const text = await response.text();
+      // Status only: the body of an arbitrary server is not shown back.
+      await response.body?.cancel().catch(() => undefined);
       return {
         success: false,
-        message: `Server returned ${response.status}: ${text || "no details"}`,
+        message: `The server answered HTTP ${response.status}`,
         testedAt: new Date().toISOString(),
       };
     }
@@ -127,7 +130,7 @@ export async function testConnection(config: MLflowConfig): Promise<MLflowTestCo
   } catch (err: any) {
     return {
       success: false,
-      message: `Connection failed: ${describeFetchError(err, requestTimeoutSeconds(config))}`,
+      message: describeConnectionTestError(err, requestTimeoutSeconds(config)),
       testedAt: new Date().toISOString(),
     };
   }
@@ -298,7 +301,9 @@ export async function syncModels(
       },
     );
     if (!experimentsResponse.ok) {
-      throw new Error(`Failed to fetch experiments: HTTP ${experimentsResponse.status}`);
+      throw new RemoteStatusError(
+        `Failed to fetch experiments: HTTP ${experimentsResponse.status}`,
+      );
     }
     const experimentsData: any = await experimentsResponse.json();
     const experiments = experimentsData.experiments || [];
@@ -325,7 +330,7 @@ export async function syncModels(
         signal: requestSignal(requestTimeoutSeconds(config), deadline),
       });
       if (!runsResponse.ok) {
-        throw new Error(`Failed to fetch runs: HTTP ${runsResponse.status}`);
+        throw new RemoteStatusError(`Failed to fetch runs: HTTP ${runsResponse.status}`);
       }
       const runsData: any = await runsResponse.json();
       if (runsData.runs?.length) allRuns.push(...runsData.runs);

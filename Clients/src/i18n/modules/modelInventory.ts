@@ -268,6 +268,7 @@ export const de: Record<string, string> = {
   "Set expiry dates on evidence so you're reminded to update or re-certify documents before they become stale.":
     "Legen Sie Ablaufdaten für Nachweise fest, damit Sie daran erinnert werden, Dokumente zu aktualisieren oder neu zu zertifizieren, bevor sie veralten.",
   "MLFlow": "MLFlow",
+  "MLflow": "MLflow",
   "Only admins can change retention periods":
     "Nur Administratoren können Aufbewahrungsfristen ändern",
 };
@@ -538,6 +539,7 @@ export const fr: Record<string, string> = {
   "Set expiry dates on evidence so you're reminded to update or re-certify documents before they become stale.":
     "Définissez des dates d'expiration sur les preuves afin d'être averti de mettre à jour ou de recertifier les documents avant qu'ils ne deviennent obsolètes.",
   "MLFlow": "MLFlow",
+  "MLflow": "MLflow",
   "Only admins can change retention periods":
     "Seuls les administrateurs peuvent modifier les durées de conservation",
 };
@@ -808,6 +810,7 @@ export const es: Record<string, string> = {
   "Set expiry dates on evidence so you're reminded to update or re-certify documents before they become stale.":
     "Establezca fechas de caducidad en las evidencias para que se le recuerde actualizar o recertificar los documentos antes de que queden obsoletos.",
   "MLFlow": "MLFlow",
+  "MLflow": "MLflow",
   "Only admins can change retention periods":
     "Solo los administradores pueden cambiar los periodos de retención",
 };

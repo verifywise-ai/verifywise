@@ -28,6 +28,10 @@ import { projectVisibilitySql } from "../../utils/projectVisibility.utils";
 import { getRunStatus, listRuns, type RunListRow, type RunView } from "../sync-engine/status";
 import { ABANDONED_RUN_MESSAGE, SKIPPED_RUN_MESSAGE } from "../sync-engine/types";
 import type { Readiness, RunContext, RunResult, RunStatus } from "../sync-engine/types";
+import {
+  STORED_SECRET_MESSAGES,
+  checkStoredSecrets,
+} from "../../services/extension/storedSecretGuard";
 
 export { ABANDONED_RUN_MESSAGE, errorMessage, RunSupersededError, SKIPPED_RUN_MESSAGE };
 
@@ -282,10 +286,11 @@ export async function saveConfig(
   body: JiraAssetsConfig,
 ): Promise<void> {
   const existing = (await sequelize.query(
-    `SELECT id, api_token_encrypted FROM jira_assets_config
+    `SELECT id, api_token_encrypted, jira_base_url, workspace_id, email, deployment_type
+       FROM jira_assets_config
       WHERE organization_id = :organizationId LIMIT 1;`,
     { replacements: { organizationId }, type: QueryTypes.SELECT },
-  )) as Array<{ id: number; api_token_encrypted: string | null }>;
+  )) as Array<{ id: number; api_token_encrypted: string | null } & Record<string, unknown>>;
   const row = existing[0];
   const hasExistingToken = !!(row && row.api_token_encrypted);
 
@@ -294,6 +299,13 @@ export async function saveConfig(
   if (!body.email) throw new JiraConfigValidationError("Email is required");
   if (!body.api_token && !hasExistingToken) {
     throw new JiraConfigValidationError("API Token is required");
+  }
+  // The stored token is never kept for a changed base URL, workspace, email or
+  // deployment type (services/extension/storedSecretGuard.ts).
+  const storedToken = row && { ...row, api_token: row.api_token_encrypted };
+  const tokenCheck = checkStoredSecrets("jira-assets", storedToken, { ...body }, { ...body });
+  if (tokenCheck.blocked) {
+    throw new JiraConfigValidationError(STORED_SECRET_MESSAGES[tokenCheck.blocked]);
   }
   if (body.sync_enabled !== undefined && typeof body.sync_enabled !== "boolean") {
     throw new JiraConfigValidationError("sync_enabled must be true or false");

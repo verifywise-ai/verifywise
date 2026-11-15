@@ -218,7 +218,7 @@ describe("POST /import", () => {
   });
 
   it("returns 502 with Jira's reason when Jira fails", async () => {
-    (importObjects as jest.Mock).mockRejectedValue(new JiraUpstreamError("Jira returned 500: x"));
+    (importObjects as jest.Mock).mockRejectedValue(new JiraUpstreamError("Jira returned HTTP 500"));
     const res = mockRes();
 
     await postImport({ ...req, body: { object_ids: ["1"] } }, res);
@@ -226,7 +226,7 @@ describe("POST /import", () => {
     expect(res.status).toHaveBeenCalledWith(502);
     expect(res.json).toHaveBeenCalledWith({
       message: "Bad Gateway",
-      error: "Jira returned 500: x",
+      error: "Jira returned HTTP 500",
     });
   });
 

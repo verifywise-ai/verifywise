@@ -1,5 +1,7 @@
 // Load .env before anything reads the environment, as the API entry does.
 import "dotenv/config";
+// Fails fast in production when ENCRYPTION_KEY is unset (see resolveEncryptionKey).
+import "../utils/encryption.utils";
 import { Worker } from "bullmq";
 import { createNotificationWorker } from "../services/slack/slackWorker";
 import { createAutomationWorker } from "../services/automations/automationWorker";
