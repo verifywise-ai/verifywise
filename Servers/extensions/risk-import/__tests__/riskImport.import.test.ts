@@ -122,6 +122,20 @@ describe("importRisks", () => {
       expect(result.errors[0].message).toContain("already exists");
     });
 
+    it("catches a non-ASCII existing name that differs only by case", async () => {
+      // PostgreSQL lower() may not fold these letters, so the candidate query
+      // also returns every non-ASCII name and the JS key makes the decision.
+      mockQuery.mockImplementation(async (sql: string) =>
+        sql.includes("FROM risks") ? [{ risk_name: "Ärger mit Übergröße" }] : [],
+      );
+      const result = await strictImport([validRow({ risk_name: "ÄRGER MIT ÜBERGRÖßE" })], 1, 5);
+      expect(result.success).toBe(false);
+      expect(result.errors[0]).toMatchObject({ row: 2, field: "risk_name" });
+      const lookup = mockQuery.mock.calls.find((c) => sqlOf(c).includes("FROM risks"))!;
+      expect(sqlOf(lookup)).toContain("OR risk_name ~ :nonAscii");
+      expect((lookup[1] as any).replacements.nonAscii).toBe("[^\\x01-\\x7F]");
+    });
+
     it("checks existing names inside the insert transaction, after the org lock", async () => {
       await strictImport([validRow()], 9, 5);
       const sqls = mockQuery.mock.calls.map((c) => sqlOf(c));
@@ -144,7 +158,7 @@ describe("importRisks", () => {
       );
       const result = await strictImport([validRow()], 1, 5);
       expect(result.success).toBe(false);
-      expect(result.errors).toEqual([
+      expect(result.errors).toMatchObject([
         { row: 2, field: "risk_name", message: 'A risk named "Model drift" already exists' },
       ]);
       expect(mockTransaction.rollback).toHaveBeenCalledTimes(1);
@@ -183,7 +197,7 @@ describe("importRisks", () => {
       );
       expect(result.success).toBe(false);
       expect(result.imported).toBe(0);
-      expect(result.errors).toEqual([
+      expect(result.errors).toMatchObject([
         { row: 2, field: "general", message: "Failed to import: value too long" },
       ]);
       // Rows 2 and 3 were attempted after the failure instead of tripping on an aborted transaction.

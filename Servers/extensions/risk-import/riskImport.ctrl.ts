@@ -2,7 +2,12 @@ import { Request, Response } from "express";
 import { STATUS_CODE } from "../../utils/statusCode.utils";
 import logger, { logStructured } from "../../utils/logger/fileLogger";
 import { translateError } from "../../utils/i18n.utils";
-import { buildExcelTemplate, importRisks, RiskImportRow } from "./riskImport.service";
+import {
+  buildExcelTemplate,
+  importRisks,
+  RiskImportResult,
+  RiskImportRow,
+} from "./riskImport.service";
 
 const fileName = "riskImport.ctrl.ts";
 
@@ -28,6 +33,25 @@ export async function downloadExcelTemplate(req: Request, res: Response): Promis
   }
 }
 
+/**
+ * Row errors in the caller's language. The service keys each message
+ * (`i18nKey`, found by `npm run i18n:check-en` where it is written), so the
+ * text is translated here from that key. `message` stays a string on both
+ * routes; only /api/v1 also returns the `key` and `params` it came from, so the
+ * legacy response keeps its shape.
+ */
+function translateRowErrors(req: Request, result: RiskImportResult, strict: boolean) {
+  return {
+    ...result,
+    errors: result.errors.map(({ i18nKey, i18nVars, ...error }) => {
+      const message = i18nKey ? req.t!(i18nKey, i18nVars) : error.message;
+      return strict && i18nKey
+        ? { ...error, message, key: i18nKey, ...(i18nVars ? { params: i18nVars } : {}) }
+        : { ...error, message };
+    }),
+  };
+}
+
 async function handleBulkImport(req: Request, res: Response, strict: boolean): Promise<any> {
   const organizationId = (req as any).organizationId as number;
   const csvData = (req.body?.csvData ?? []) as RiskImportRow[];
@@ -47,7 +71,7 @@ async function handleBulkImport(req: Request, res: Response, strict: boolean): P
     // partially-successful batch also come back with success=false and are
     // returned as 400 for the client to display per-row errors.
     const status = result.success ? 200 : 400;
-    return res.status(status).json(STATUS_CODE[status](result));
+    return res.status(status).json(STATUS_CODE[status](translateRowErrors(req, result, strict)));
   } catch (error) {
     logStructured("error", "risk-import bulk insert failed", "bulkImportRisks", fileName);
     logger.error("❌ Error in bulkImportRisks:", error);

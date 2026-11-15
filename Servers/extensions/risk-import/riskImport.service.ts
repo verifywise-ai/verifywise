@@ -3,6 +3,7 @@ import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../../database/db";
 import { recordEntityCreation } from "../../utils/changeHistory.base.utils";
 import { findUsersNotInOrganization } from "../../utils/user.utils";
+import { translate } from "../../utils/i18n.utils";
 import {
   AI_LIFECYCLE_PHASES,
   CURRENT_RISK_LEVEL_VALUES,
@@ -223,7 +224,24 @@ export interface RiskImportRow {
 export interface RiskImportError {
   row: number;
   field: string;
+  /** English text. The controller re-translates it from i18nKey for the caller's language. */
   message: string;
+  /** Key in locales/en.json (named placeholders), with its values in i18nVars. */
+  i18nKey?: string;
+  i18nVars?: Record<string, string | number>;
+}
+
+/**
+ * A row error. Call sites write the key as a literal `i18nKey` so that
+ * `npm run i18n:check-en` finds it; `message` is the English text for callers
+ * without a request translator, and the controller translates from the key.
+ */
+function rowError(
+  row: number,
+  field: string,
+  { i18nKey, i18nVars }: { i18nKey: string; i18nVars?: Record<string, string | number> },
+): RiskImportError {
+  return { row, field, message: translate("en", i18nKey, i18nVars), i18nKey, i18nVars };
 }
 
 export interface RiskImportResult {
@@ -325,114 +343,119 @@ function validateRow(row: RiskImportRow, rowIndex: number, strict: boolean): Ris
   const errors: RiskImportError[] = [];
 
   if (!row.risk_name || row.risk_name.trim().length === 0) {
-    errors.push({ row: rowIndex, field: "risk_name", message: "Risk name is required" });
+    errors.push(rowError(rowIndex, "risk_name", { i18nKey: "Risk name is required" }));
   }
   if (!parseUserId(row.risk_owner)) {
-    errors.push({
-      row: rowIndex,
-      field: "risk_owner",
-      message: "Risk owner must be a valid user ID or selected from dropdown",
-    });
+    errors.push(
+      rowError(rowIndex, "risk_owner", {
+        i18nKey: "Risk owner must be a valid user ID or selected from dropdown",
+      }),
+    );
   }
   if (!row.risk_description || row.risk_description.trim().length === 0) {
-    errors.push({
-      row: rowIndex,
-      field: "risk_description",
-      message: "Risk description is required",
-    });
+    errors.push(
+      rowError(rowIndex, "risk_description", { i18nKey: "Risk description is required" }),
+    );
   }
   // Strict mode requires these like the normal risk form (createRiskSchema):
   // the template marks them with * and likelihood + severity drive the
   // calculated risk level.
   if (!row.ai_lifecycle_phase) {
     if (strict) {
-      errors.push({
-        row: rowIndex,
-        field: "ai_lifecycle_phase",
-        message: "AI lifecycle phase is required",
-      });
+      errors.push(
+        rowError(rowIndex, "ai_lifecycle_phase", { i18nKey: "AI lifecycle phase is required" }),
+      );
     }
   } else if (!inEnum(row.ai_lifecycle_phase, AI_LIFECYCLE_PHASES)) {
-    errors.push({
-      row: rowIndex,
-      field: "ai_lifecycle_phase",
-      message: `Invalid AI lifecycle phase. Must be one of: ${AI_LIFECYCLE_PHASES.join(", ")}`,
-    });
+    errors.push(
+      rowError(rowIndex, "ai_lifecycle_phase", {
+        i18nKey: "Invalid AI lifecycle phase. Must be one of: {values}",
+        i18nVars: { values: AI_LIFECYCLE_PHASES.join(", ") },
+      }),
+    );
   }
   if (!row.likelihood) {
     if (strict) {
-      errors.push({ row: rowIndex, field: "likelihood", message: "Likelihood is required" });
+      errors.push(rowError(rowIndex, "likelihood", { i18nKey: "Likelihood is required" }));
     }
   } else if (!inEnum(row.likelihood, LIKELIHOOD_VALUES)) {
-    errors.push({
-      row: rowIndex,
-      field: "likelihood",
-      message: `Invalid likelihood. Must be one of: ${LIKELIHOOD_VALUES.join(", ")}`,
-    });
+    errors.push(
+      rowError(rowIndex, "likelihood", {
+        i18nKey: "Invalid likelihood. Must be one of: {values}",
+        i18nVars: { values: LIKELIHOOD_VALUES.join(", ") },
+      }),
+    );
   }
   if (!row.severity) {
     if (strict) {
-      errors.push({ row: rowIndex, field: "severity", message: "Severity is required" });
+      errors.push(rowError(rowIndex, "severity", { i18nKey: "Severity is required" }));
     }
   } else if (!inEnum(row.severity, SEVERITY_VALUES)) {
-    errors.push({
-      row: rowIndex,
-      field: "severity",
-      message: `Invalid severity. Must be one of: ${SEVERITY_VALUES.join(", ")}`,
-    });
+    errors.push(
+      rowError(rowIndex, "severity", {
+        i18nKey: "Invalid severity. Must be one of: {values}",
+        i18nVars: { values: SEVERITY_VALUES.join(", ") },
+      }),
+    );
   }
   const categories = splitCategories(row.risk_category);
   if (strict && categories.invalid.length > 0) {
-    errors.push({
-      row: rowIndex,
-      field: "risk_category",
-      message: `Invalid risk category: ${categories.invalid.join(", ")}. Must be one of: ${RISK_CATEGORY_VALUES.join(", ")}`,
-    });
+    errors.push(
+      rowError(rowIndex, "risk_category", {
+        i18nKey: "Invalid risk category: {invalid}. Must be one of: {values}",
+        i18nVars: {
+          invalid: categories.invalid.join(", "),
+          values: RISK_CATEGORY_VALUES.join(", "),
+        },
+      }),
+    );
   }
   if (row.mitigation_status && !inEnum(row.mitigation_status, MITIGATION_STATUS_VALUES)) {
-    errors.push({
-      row: rowIndex,
-      field: "mitigation_status",
-      message: `Invalid mitigation status. Must be one of: ${MITIGATION_STATUS_VALUES.join(", ")}`,
-    });
+    errors.push(
+      rowError(rowIndex, "mitigation_status", {
+        i18nKey: "Invalid mitigation status. Must be one of: {values}",
+        i18nVars: { values: MITIGATION_STATUS_VALUES.join(", ") },
+      }),
+    );
   }
   if (
     row.current_risk_level &&
     !inEnum(normalizeCurrentRiskLevel(row.current_risk_level), CURRENT_RISK_LEVEL_VALUES)
   ) {
-    errors.push({
-      row: rowIndex,
-      field: "current_risk_level",
-      message: `Invalid current risk level. Must be one of: ${CURRENT_RISK_LEVEL_VALUES.join(", ")}`,
-    });
+    errors.push(
+      rowError(rowIndex, "current_risk_level", {
+        i18nKey: "Invalid current risk level. Must be one of: {values}",
+        i18nVars: { values: CURRENT_RISK_LEVEL_VALUES.join(", ") },
+      }),
+    );
   }
   if (row.likelihood_mitigation && !inEnum(row.likelihood_mitigation, LIKELIHOOD_VALUES)) {
-    errors.push({
-      row: rowIndex,
-      field: "likelihood_mitigation",
-      message: `Invalid likelihood mitigation. Must be one of: ${LIKELIHOOD_VALUES.join(", ")}`,
-    });
+    errors.push(
+      rowError(rowIndex, "likelihood_mitigation", {
+        i18nKey: "Invalid likelihood mitigation. Must be one of: {values}",
+        i18nVars: { values: LIKELIHOOD_VALUES.join(", ") },
+      }),
+    );
   }
   if (row.risk_severity && !inEnum(row.risk_severity, RISK_SEVERITY_VALUES)) {
-    errors.push({
-      row: rowIndex,
-      field: "risk_severity",
-      message: `Invalid risk severity. Must be one of: ${RISK_SEVERITY_VALUES.join(", ")}`,
-    });
+    errors.push(
+      rowError(rowIndex, "risk_severity", {
+        i18nKey: "Invalid risk severity. Must be one of: {values}",
+        i18nVars: { values: RISK_SEVERITY_VALUES.join(", ") },
+      }),
+    );
   }
   if (row.deadline && isInvalidDateCell(row.deadline)) {
-    errors.push({
-      row: rowIndex,
-      field: "deadline",
-      message: "Invalid deadline date format. Use YYYY-MM-DD",
-    });
+    errors.push(
+      rowError(rowIndex, "deadline", { i18nKey: "Invalid deadline date format. Use YYYY-MM-DD" }),
+    );
   }
   if (row.date_of_assessment && isInvalidDateCell(row.date_of_assessment)) {
-    errors.push({
-      row: rowIndex,
-      field: "date_of_assessment",
-      message: "Invalid assessment date format. Use YYYY-MM-DD",
-    });
+    errors.push(
+      rowError(rowIndex, "date_of_assessment", {
+        i18nKey: "Invalid assessment date format. Use YYYY-MM-DD",
+      }),
+    );
   }
   return errors;
 }
@@ -483,6 +506,9 @@ const RISK_IMPORT_LOCK_CLASS = 5301;
  */
 const SQL_TRIM_PATTERN = `^[[:space:]\u00a0\ufeff\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+|[[:space:]\u00a0\ufeff\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+$`;
 
+/** Any character outside ASCII, as a PostgreSQL regular expression. */
+const NON_ASCII_PATTERN = "[^\\x01-\\x7F]";
+
 /** One error per row whose name matches an existing, non-deleted risk of the organization. */
 async function existingNameErrors(
   rows: RiskImportRow[],
@@ -492,17 +518,27 @@ async function existingNameErrors(
 ): Promise<RiskImportError[]> {
   const keys = [...new Set(rows.map((row) => nameKey(row.risk_name)).filter((k) => k))];
   if (keys.length === 0) return [];
-  // Only candidates come back: the SQL trims the characters JS trim() strips and
-  // lower-cases, and the JS key below confirms each returned name, so the two
-  // sides agree on whitespace and a large register is not loaded in full.
+  // Only candidates come back, so a large register is not loaded in full. The
+  // SQL trims the characters JS trim() strips and lower-cases, and the JS key
+  // below confirms each returned name. PostgreSQL lower() and JS toLowerCase()
+  // disagree on non-ASCII letters under some collations, so every name with a
+  // non-ASCII character is returned too and left to the JS comparison.
   const existing = (await sequelize.query(
     `SELECT risk_name
        FROM risks
       WHERE organization_id = :organizationId
         AND (is_deleted = false OR is_deleted IS NULL)
-        AND lower(regexp_replace(risk_name, :trimPattern, '', 'g')) = ANY(ARRAY[:keys]::text[])`,
+        AND (
+          lower(regexp_replace(risk_name, :trimPattern, '', 'g')) = ANY(ARRAY[:keys]::text[])
+          OR risk_name ~ :nonAscii
+        )`,
     {
-      replacements: { organizationId, keys, trimPattern: SQL_TRIM_PATTERN },
+      replacements: {
+        organizationId,
+        keys,
+        trimPattern: SQL_TRIM_PATTERN,
+        nonAscii: NON_ASCII_PATTERN,
+      },
       type: QueryTypes.SELECT,
       transaction,
     },
@@ -512,11 +548,12 @@ async function existingNameErrors(
   rows.forEach((row, i) => {
     const key = nameKey(row.risk_name);
     if (key && existingNames.has(key)) {
-      errors.push({
-        row: rowNumbers[i],
-        field: "risk_name",
-        message: `A risk named "${row.risk_name!.trim()}" already exists`,
-      });
+      errors.push(
+        rowError(rowNumbers[i], "risk_name", {
+          i18nKey: 'A risk named "{name}" already exists',
+          i18nVars: { name: row.risk_name!.trim() },
+        }),
+      );
     }
   });
   return errors;
@@ -568,11 +605,9 @@ export async function importRisks(
     for (const field of userFields) {
       const id = parseUserId(row[field]);
       if (id !== null && (!isValidUserId(id) || outsideUserIds.has(id))) {
-        errors.push({
-          row: rowNumbers[i],
-          field,
-          message: "User must be a member of this organization",
-        });
+        errors.push(
+          rowError(rowNumbers[i], field, { i18nKey: "User must be a member of this organization" }),
+        );
       }
     }
   });
@@ -588,11 +623,12 @@ export async function importRisks(
     if (firstRow === undefined) {
       firstRowByName.set(key, rowNumbers[i]);
     } else {
-      errors.push({
-        row: rowNumbers[i],
-        field: "risk_name",
-        message: `A risk named "${row.risk_name!.trim()}" already appears on row ${firstRow} of this file`,
-      });
+      errors.push(
+        rowError(rowNumbers[i], "risk_name", {
+          i18nKey: 'A risk named "{name}" already appears on row {row} of this file',
+          i18nVars: { name: row.risk_name!.trim(), row: firstRow },
+        }),
+      );
     }
   });
 
@@ -686,11 +722,12 @@ export async function importRisks(
         imported++;
       } catch (err: any) {
         await sequelize.query(`ROLLBACK TO SAVEPOINT ${savepoint}`, { transaction });
-        insertErrors.push({
-          row: rowIndex,
-          field: "general",
-          message: `Failed to import: ${err.message}`,
-        });
+        insertErrors.push(
+          rowError(rowIndex, "general", {
+            i18nKey: "Failed to import: {reason}",
+            i18nVars: { reason: err.message },
+          }),
+        );
       }
     }
 

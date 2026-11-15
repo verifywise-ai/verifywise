@@ -9,7 +9,6 @@ jest.mock("../../../middleware/auth.middleware", () => ({
     req.userId = 9;
     req.organizationId = Number(req.headers["x-org"] ?? 42);
     req.role = req.headers["x-role"] ?? "Admin";
-    req.t = (key: string) => key;
     next();
   },
 }));
@@ -40,12 +39,14 @@ jest.mock("../../../extensions/risk-import/riskImport.service", () => ({
   importRisks: jest.fn(),
 }));
 
+import { i18nMiddleware } from "../../../middleware/i18n.middleware";
 import v1Routes from "../risk-import.route";
 import legacyRoutes from "../../../extensions/risk-import/riskImport.route";
 import { importRisks } from "../../../extensions/risk-import/riskImport.service";
 
 const app = express();
 app.use(express.json());
+app.use(i18nMiddleware);
 app.use("/api/v1/risk-import", v1Routes);
 app.use("/api/extensions/risk-import", legacyRoutes);
 
@@ -119,5 +120,57 @@ describe("POST /api/v1/risk-import/import", () => {
       .send({ csvData: [{ risk_name: "A" }] });
     expect(res.status).toBe(200);
     expect(importRisks).toHaveBeenCalledWith([{ risk_name: "A" }], 42, 9, { strict: false });
+  });
+
+  describe("row error messages", () => {
+    const keyed = {
+      ...result,
+      success: false,
+      errors: [
+        {
+          row: 3,
+          field: "likelihood",
+          message: "Likelihood is required",
+          i18nKey: "Likelihood is required",
+        },
+        {
+          row: 4,
+          field: "risk_name",
+          message: 'A risk named "A" already exists',
+          i18nKey: 'A risk named "{name}" already exists',
+          i18nVars: { name: "A" },
+        },
+      ],
+    };
+
+    it("translates the message and adds key and params on the v1 route", async () => {
+      (importRisks as jest.Mock).mockResolvedValue(keyed);
+      const res = await request(app)
+        .post(V1)
+        .set("Authorization", "Bearer t")
+        .set("Accept-Language", "de")
+        .send({ csvData: [{}] });
+      expect(res.status).toBe(400);
+      const [first, second] = res.body.data.errors;
+      expect(first.message).not.toBe("Likelihood is required");
+      expect(first).toMatchObject({ row: 3, field: "likelihood", key: "Likelihood is required" });
+      expect(second.params).toEqual({ name: "A" });
+      expect(second.message).toBe("Ein Risiko mit dem Namen „A“ existiert bereits");
+      expect(first).not.toHaveProperty("i18nKey");
+    });
+
+    it("keeps the legacy shape: translated message, no key or params", async () => {
+      (importRisks as jest.Mock).mockResolvedValue(keyed);
+      const res = await request(app)
+        .post(LEGACY)
+        .set("Authorization", "Bearer t")
+        .set("Accept-Language", "fr")
+        .send({ csvData: [{}] });
+      expect(res.status).toBe(400);
+      for (const error of res.body.data.errors) {
+        expect(Object.keys(error).sort()).toEqual(["field", "message", "row"]);
+      }
+      expect(res.body.data.errors[0].message).not.toBe("Likelihood is required");
+    });
   });
 });
