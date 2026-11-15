@@ -303,6 +303,8 @@ interface SecretFieldRowProps {
  * A secret input. When the server holds a value the field says so and offers
  * Clear, which marks the value for removal (`null`) until the next save;
  * Undo goes back to keeping it. Nothing stored: a plain password input.
+ * A required secret has no Clear (the server rejects a save without it); it
+ * is replaced by typing a new value.
  */
 function SecretFieldRow({ field, value, onChange, disabled, isStored }: SecretFieldRowProps) {
   const theme = useTheme();
@@ -325,7 +327,7 @@ function SecretFieldRow({ field, value, onChange, disabled, isStored }: SecretFi
         autoComplete="new-password"
         helperText={field.helpText ?? undefined}
       />
-      {isStored && (
+      {isStored && !field.isRequired && (
         <Stack direction="row" alignItems="center" spacing="8px" sx={{ mt: "4px" }}>
           {isCleared && (
             <Typography sx={{ fontSize: 12, color: theme.palette.text.tertiary }}>
