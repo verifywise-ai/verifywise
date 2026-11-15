@@ -148,3 +148,44 @@ export function describeConnectionTestError(err: unknown, timeoutSeconds: number
   if (kind === "network") return UNREACHABLE_MESSAGE;
   return `Connection failed: ${reason}`;
 }
+
+/** Most characters of an error reply written to the server log. */
+export const ERROR_REPLY_LOG_MAX_CHARS = 500;
+
+/**
+ * Write the start of a failed answer's body to the server log, then release
+ * the rest. The base URL is admin-supplied, so the body is never put in an
+ * error the user sees; the log keeps the reason for whoever fixes the
+ * connection. Reads at most ERROR_REPLY_LOG_MAX_CHARS characters' worth of
+ * bytes and never throws.
+ */
+export async function logErrorReply(
+  service: string,
+  path: string,
+  response: Response,
+): Promise<void> {
+  let reply = "";
+  try {
+    const reader =
+      typeof response.body?.getReader === "function" ? response.body.getReader() : undefined;
+    if (!reader) {
+      await response.body?.cancel().catch(() => undefined);
+    } else {
+      const decoder = new TextDecoder();
+      // A UTF-8 character is at most 4 bytes.
+      const maxBytes = ERROR_REPLY_LOG_MAX_CHARS * 4;
+      let read = 0;
+      while (read < maxBytes) {
+        const { done, value } = await reader.read();
+        if (done || !value) break;
+        read += value.byteLength;
+        reply += decoder.decode(value, { stream: true });
+      }
+      await reader.cancel().catch(() => undefined);
+    }
+  } catch {
+    // The status alone is still logged.
+  }
+  const shown = reply.slice(0, ERROR_REPLY_LOG_MAX_CHARS).trim() || "no details";
+  logger.warn(`${service} returned HTTP ${response.status} for ${path.split("?")[0]}: ${shown}`);
+}

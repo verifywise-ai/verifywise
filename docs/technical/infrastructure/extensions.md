@@ -235,6 +235,10 @@ What a failure tells the user (`Servers/utils/outboundFetch.utils.ts`):
   Azure AI Foundry test connection say "The server answered HTTP <status>",
   and the Jira incidents and Jira Assets clients "Jira returned HTTP <status>"
   (Jira Assets discovery and import 502s and failed sync runs included).
+  The two Jira clients write the first 500 characters of Jira's reply to the
+  server log (`logErrorReply`, a warning with the status and the request path
+  without its query), so an Admin who cannot connect can ask whoever reads the
+  logs for Jira's reason.
 - Every connect, DNS and TLS failure reads the same, so the text cannot tell
   open ports from closed ones or which names resolve: MLflow and Azure test
   connection show "Could not reach the server", other paths "connection
@@ -302,7 +306,7 @@ to a runner that returns `{ success, message, testedAt }`:
 |-----|--------|
 | `mlflow` | Stored runtime config overlaid with the submitted config (`overlayOnStored`, which applies the [stored-secret rule](#stored-secrets-and-changed-addresses)) → `testConnection` in `extensions/mlflow/mlflow.service.ts`. Reports "The server answered HTTP <status>" or "Could not reach the server". |
 | `azure-ai-foundry` | Same pattern → `testConnection` in `extensions/azure-ai-foundry/azureAiFoundry.service.ts` |
-| `jira-assets` | Submitted config. If no `api_token` is submitted, the stored token comes from `jira_assets_config`, unless the base URL, workspace, email or deployment type changed (then a failed result asks for the token again). Then `clientFromConfig(...).testConnection()`. A refused base URL is a failed result, not a 500, and an error answer reads "Jira returned HTTP <status>" without Jira's reply. |
+| `jira-assets` | Submitted config. If no `api_token` is submitted, the stored token comes from `jira_assets_config`, unless the base URL, workspace, email or deployment type changed (then a failed result asks for the token again). Then `clientFromConfig(...).testConnection()`. A refused base URL is a failed result, not a 500, and an error answer reads "Jira returned HTTP <status>" without Jira's reply (its start goes to the server log). |
 | `jira-incidents` | `testConnection(orgId, submitted)` in `extensions/jira-incidents/jiraIncidents.config.ts`: submitted fields overlaid on `jira_incidents_config`; a changed site URL or email needs a submitted token; checks `/myself`, then the three project permissions when a project is known. Never throws. |
 
 Any other key returns **200** with `success: false` and "Test connection is not

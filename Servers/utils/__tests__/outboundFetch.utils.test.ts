@@ -8,6 +8,7 @@ import {
   RemoteStatusError,
   describeConnectionTestError,
   describeFetchError,
+  logErrorReply,
 } from "../outboundFetch.utils";
 import { UnsafeOutboundUrlError } from "../safeOutboundUrl";
 
@@ -123,5 +124,32 @@ describe("describeConnectionTestError", () => {
     expect(describeConnectionTestError(err, 5)).toBe(
       "Connection failed: request timed out (limit 5s per request, 110s per sync)",
     );
+  });
+});
+
+describe("logErrorReply", () => {
+  beforeEach(() => (logger.warn as jest.Mock).mockClear());
+
+  it("logs the status, the path without its query and the start of the reply", async () => {
+    await logErrorReply(
+      "Jira",
+      "/rest/api/3/myself?x=1",
+      new Response("token expired", { status: 401 }),
+    );
+    expect(logger.warn).toHaveBeenCalledWith(
+      "Jira returned HTTP 401 for /rest/api/3/myself: token expired",
+    );
+  });
+
+  it("logs at most 500 characters of the reply", async () => {
+    await logErrorReply("Jira", "/p", new Response("x".repeat(100_000), { status: 500 }));
+    expect(logger.warn).toHaveBeenCalledWith(`Jira returned HTTP 500 for /p: ${"x".repeat(500)}`);
+  });
+
+  it("says no details for an empty reply, and cancels a body it cannot read", async () => {
+    const cancel = jest.fn().mockResolvedValue(undefined);
+    await logErrorReply("Jira", "/p", { status: 502, body: { cancel } } as unknown as Response);
+    expect(cancel).toHaveBeenCalled();
+    expect(logger.warn).toHaveBeenCalledWith("Jira returned HTTP 502 for /p: no details");
   });
 });

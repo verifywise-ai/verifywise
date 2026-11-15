@@ -2,6 +2,7 @@ import { assertSafeOutboundUrl, safeFetch } from "../../utils/safeOutboundUrl";
 import {
   describeFetchError,
   EXTERNAL_SYNC_DEADLINE_MS,
+  logErrorReply,
   requestSignal,
 } from "../../utils/outboundFetch.utils";
 import {
@@ -167,8 +168,8 @@ export class JiraIncidentsClient {
       }
       if (!response.ok) {
         // Status only: the site URL is admin-supplied, so its body is not
-        // shown back.
-        await response.body?.cancel().catch(() => undefined);
+        // shown back. The start of it goes to the server log.
+        await logErrorReply("Jira", path, response);
         throw new JiraHttpError(response.status, `Jira returned HTTP ${response.status}`);
       }
       if (response.status === 204) return undefined as T;

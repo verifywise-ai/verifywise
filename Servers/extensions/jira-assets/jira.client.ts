@@ -15,6 +15,7 @@ import { assertSafeOutboundUrl, safeFetch } from "../../utils/safeOutboundUrl";
 import {
   EXTERNAL_SYNC_DEADLINE_MS,
   describeFetchError,
+  logErrorReply,
   requestSignal,
 } from "../../utils/outboundFetch.utils";
 
@@ -231,8 +232,8 @@ export class JiraAssetsClient {
     }
     if (!response.ok) {
       // Status only: the base URL is admin-supplied, so its body is not
-      // shown back.
-      await response.body?.cancel().catch(() => undefined);
+      // shown back. The start of it goes to the server log.
+      await logErrorReply("Jira", new URL(rawUrl).pathname, response);
       throw new JiraUpstreamError(`Jira returned HTTP ${response.status}`);
     }
     try {
