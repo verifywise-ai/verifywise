@@ -55,6 +55,9 @@ approval_step_approvers
 └── UNIQUE(workflow_step_id, approver_id)
 ```
 
+`approval_step_approvers` rows are what make a policy workflow usable; see
+[Usable policy workflow](#usable-policy-workflow).
+
 ### Approval Requests Table
 
 ```
@@ -227,6 +230,24 @@ The AI Advisor's approve/reject tools call the same function, so the same
 rules apply to them. They act as the user who confirmed the action and fail
 with an explicit error if no user id reaches them.
 
+Withdraw is checked in `withdrawRequest`:
+
+| Caller or request                    | Response |
+| ------------------------------------ | -------- |
+| Not the requester                    | 403      |
+| Request no longer `Pending`          | 409 ("Only a pending request can be withdrawn") |
+
+A decided request keeps its outcome. Without the 409, withdrawing an approved
+request would move its entity (a use case, a policy) back as if it had never
+been decided. `withdrawApprovalRequestQuery` also matches `status = 'Pending'`
+in its UPDATE and moves no entity when nothing was withdrawn, which covers the
+advisor's withdraw tool too.
+
+`POST /approval-requests` refuses `entity_type: "policy"` with a `400` (field
+`entity_type`, "Submit the policy for approval from the policy"), before any
+workflow read or insert. Policy requests come only from
+`POST /v1/policies/:id/submit-for-approval`; see [Policy requests](#policy-requests).
+
 ## Workflow Configuration
 
 ### Create Workflow Request
@@ -324,6 +345,8 @@ logged and never blocks the in-app notification.
 | Step completed, request advances          | Next step's approvers, plus the requester        | `approveRequest` (`approvalRequest.ctrl.ts`)                                      |
 | Request auto-approved on creation         | The requester only — there is nothing to approve | `notifyApprovalAutoApproved`                                                      |
 | Request rejected / fully approved         | The requester                                    | `rejectRequest` / `approveRequest`                                                |
+| Policy submitted for approval             | Step 1 approvers                                 | `notifyFirstStepApprovers` (`services/approvalRequestNotification.service.ts`)    |
+| Entity deleted with a pending request     | The requester ("System" as rejector)             | file and policy delete                                                            |
 
 All of them are sent **after** the transaction commits and are fire-and-forget: a mail or Redis
 failure is logged, never surfaced as a failed use case. The requester is skipped if they are also
@@ -342,6 +365,74 @@ when the workflow is either:
 
 A workflow with no steps is not an error: no request is created and the use case is saved without
 one.
+
+## Policy requests
+
+Policies use the generic workflow tables with `entity_type = 'policy'`. The
+policy side (statuses, submit, direct approve, the v1 endpoints) is in
+[Policies](./policies.md#statuses-and-approval).
+
+### Usable policy workflow
+
+Only a *usable* workflow can take a policy request: it belongs to the
+organization, has `entity_type = 'policy'`, is active, has at least one step,
+and every step has at least one row in `approval_step_approvers`
+(`getUsablePolicyWorkflows`, `services/policies/policyApproval.service.ts`).
+Approvers are counted with the same organization filter `getWorkflowStepsQuery`
+uses, so a usable workflow always puts approvers on the request it creates.
+
+The "Policy Approval" workflow seeded for every organization by
+`20260413175412-extend-entity-types-and-seed-workflows.js` has one step and no
+approvers, so it is not usable and is ignored. No data migration changes it. An
+organization with no usable policy workflow approves policies through an
+Admin's direct approval instead. Other entity types do not use this rule.
+
+### What a decision does to the policy
+
+`processApprovalQuery` and `withdrawApprovalRequestQuery` call
+`applyPolicyApprovalDecision` (`utils/policyApprovalDecision.utils.ts`) for
+policy requests, inside the caller's transaction, next to the use case and file
+branches:
+
+| Decision                      | Policy status | review_status       |
+| ----------------------------- | ------------- | ------------------- |
+| Final approval                | Approved      | `approved`          |
+| Rejection at any step         | Draft         | `changes_requested` |
+| Withdraw                      | Draft         | NULL                |
+
+Approval and rejection also set `reviewed_by`, `reviewed_at` and
+`review_comment` from the decider. Each UPDATE matches `organization_id`,
+`status = 'Under Review'`, and requires the request to be a policy request for
+this policy on a policy workflow. When no row matches, the decision still goes
+through and a warning is logged; a policy decision is never blocked by the
+policy row. The status change is recorded in policy change history with the
+decider or withdrawer as the actor.
+
+Notifications for policy requests carry `entity_type` POLICY and the policy id:
+
+- Step approvers (step 1 and later steps) get a link to `/approval-requests/:requestId`.
+- The requester's approved and rejected notifications link to the policy editor, `/policies/:id/edit`.
+
+## Deleting an entity with a pending request
+
+`rejectApprovalRequestOnEntityDelete` (`utils/approvalRequest.utils.ts`) rejects
+a pending request when its entity is deleted: the request becomes `Rejected`,
+its pending steps `Rejected`, and its pending approver rows get
+`approval_result = 'Rejected'`, the reason as `comments`, and `approved_at`.
+It locks the request row and does nothing when the request is no longer
+pending.
+
+- **Files**: `removeFile` calls it before deleting the file, in its own
+  transaction.
+- **Policies**: `deletePolicyById` and the advisor's `agent_delete_policy` call
+  it through `rejectPendingPolicyRequestOnDelete`, inside the delete's
+  transaction (the optional fourth argument), with the reason "The policy was
+  deleted."
+
+The requester is notified after the commit. Up to v2.6.8 the third UPDATE
+wrote `status` and `date_responded`, which are not columns of
+`approval_request_step_approvals`, so the rejection failed and a deleted file
+left its request `Pending`. It now writes `approval_result` and `approved_at`.
 
 ## Framework Auto-Creation
 
@@ -518,6 +609,9 @@ CREATE INDEX idx_step_approvals_result ON approval_request_step_approvals(approv
 | `domain.layer/enums/approval-workflow.enum.ts` | Enums               |
 | `utils/approvalWorkflow.utils.ts`              | Workflow queries    |
 | `utils/approvalRequest.utils.ts`               | Request queries     |
+| `utils/policyApprovalDecision.utils.ts`        | Policy decision branch |
+| `services/policies/policyApproval.service.ts`  | Policy submit, usable workflows |
+| `services/approvalRequestNotification.service.ts` | Step 1 approver notifications |
 | `controllers/approvalWorkflow.ctrl.ts`         | Workflow controller |
 | `controllers/approvalRequest.ctrl.ts`          | Request controller  |
 | `routes/approvalWorkflow.route.ts`             | Workflow routes     |
@@ -536,5 +630,6 @@ CREATE INDEX idx_step_approvals_result ON approval_request_step_approvals(approv
 ## Related Documentation
 
 - [Use Cases](./use-cases.md)
+- [Policies](./policies.md)
 - [Compliance Frameworks](./compliance-frameworks.md)
 - [Incident Management](./incidents.md)

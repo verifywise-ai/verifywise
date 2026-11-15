@@ -77,13 +77,15 @@ describe("Policy save correctness", () => {
 
   it("returns the stored values from an update, so a second save keeps them (P-H1)", async () => {
     const ctx = await buildTenantContext();
-    const policyId = await createPolicy(ctx, { status: "Published" });
+    // A new policy cannot start as Published (PR G status gate), so the
+    // update moves a Draft to Deprecated, which may be set by hand.
+    const policyId = await createPolicy(ctx);
 
     const res = await ctx.request
       .put(`/api/policies/${policyId}`)
-      .send({ status: "Draft", tags: ["Security", "Privacy"] });
+      .send({ status: "Deprecated", tags: ["Security", "Privacy"] });
     expect(res.status).toBe(202);
-    expect(res.body.data.status).toBe("Draft");
+    expect(res.body.data.status).toBe("Deprecated");
     expect(res.body.data.tags).toEqual(["Security", "Privacy"]);
   });
 
@@ -92,7 +94,7 @@ describe("Policy save correctness", () => {
     const policyId = await createPolicy(ctx);
     await activatePolicyUpdatedAutomation(ctx.orgId);
 
-    const res = await ctx.request.put(`/api/policies/${policyId}`).send({ status: "Under Review" });
+    const res = await ctx.request.put(`/api/policies/${policyId}`).send({ status: "Archived" });
     expect(res.status).toBe(202);
     expect(mockEnqueue).toHaveBeenCalledTimes(1);
   });
