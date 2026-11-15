@@ -57,26 +57,33 @@ const withOrganizationScope = <T>(
  * The connections a Slack event goes to: active, in the event's organization,
  * routed for its type, and either organization-wide or owned by the user who
  * triggered it. Without a user only organization-wide connections match.
+ * With `ownConnectionsOnly`, only the user's own user-scope connections match.
  */
 export const getDeliverableSlackWebhooksQuery = async (params: {
   organizationId: number;
   userId?: number | null;
   routingType: string;
+  ownConnectionsOnly?: boolean;
 }): Promise<ISlackWebhook[]> => {
-  const { organizationId, userId, routingType } = params;
+  const { organizationId, userId, routingType, ownConnectionsOnly } = params;
   return withOrganizationScope(organizationId, (transaction) =>
     sequelize.query(
       `SELECT * FROM slack_webhooks
         WHERE organization_id = :organizationId
           AND is_active = true
           AND routing_type && ARRAY[:routingType]::text[]
-          AND (delivery_scope = :organizationScope OR user_id = :userId)
+          AND CASE WHEN :ownConnectionsOnly
+                THEN delivery_scope = :userScope AND user_id = :userId
+                ELSE delivery_scope = :organizationScope OR user_id = :userId
+              END
         ORDER BY id`,
       {
         replacements: {
           organizationId,
           routingType,
           organizationScope: SlackDeliveryScope.ORGANIZATION,
+          userScope: SlackDeliveryScope.USER,
+          ownConnectionsOnly: ownConnectionsOnly === true,
           // NULL never equals user_id, so no user means organization-wide rows only.
           userId: userId ?? null,
         },

@@ -73,6 +73,13 @@ export interface SlackNotificationParams {
    * only organization-wide connections match.
    */
   userId?: number | null;
+  /**
+   * Only the user's own (delivery_scope 'user') connections. For senders that
+   * notify several people about one event: they post once without a user for
+   * the organization-wide connections, then per recipient with this set, so a
+   * shared channel gets one post per event instead of one per recipient.
+   */
+  ownConnectionsOnly?: boolean;
   routingType: string;
 }
 
@@ -108,10 +115,13 @@ export const sendSlackNotification = async (
     }
     const userId =
       Number.isInteger(params.userId) && (params.userId as number) > 0 ? params.userId : null;
+    // Own connections only, but no user to own them: nothing can match.
+    if (params.ownConnectionsOnly && userId === null) return NOT_SENT;
     const slackIntegrations: ISlackWebhook[] = await getDeliverableSlackWebhooksQuery({
       organizationId,
       userId,
       routingType,
+      ownConnectionsOnly: params.ownConnectionsOnly === true,
     });
     // No webhook is the normal dev path, not an error — and not a delivery.
     if (slackIntegrations.length === 0) return NOT_SENT;

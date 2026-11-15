@@ -72,9 +72,20 @@ describe("getDeliverableSlackWebhooksQuery", () => {
   it("reads organization-wide connections and the triggering user's own", async () => {
     await getDeliverableSlackWebhooksQuery(params);
     const { sql, options } = deliveryCall();
-    expect(sql).toContain("(delivery_scope = :organizationScope OR user_id = :userId)");
+    expect(sql).toContain("ELSE delivery_scope = :organizationScope OR user_id = :userId END");
     expect(options.replacements.organizationScope).toBe("organization");
     expect(options.replacements.userId).toBe(3);
+    expect(options.replacements.ownConnectionsOnly).toBe(false);
+  });
+
+  it("reads only the user's own user-scope connections when asked", async () => {
+    await getDeliverableSlackWebhooksQuery({ ...params, ownConnectionsOnly: true });
+    const { sql, options } = deliveryCall();
+    expect(sql).toContain(
+      "CASE WHEN :ownConnectionsOnly THEN delivery_scope = :userScope AND user_id = :userId",
+    );
+    expect(options.replacements.ownConnectionsOnly).toBe(true);
+    expect(options.replacements.userScope).toBe("user");
   });
 
   it("matches organization-wide connections only when no user triggered the event", async () => {

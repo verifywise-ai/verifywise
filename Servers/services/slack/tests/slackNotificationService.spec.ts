@@ -126,6 +126,7 @@ describe("slackNotificationService", () => {
         organizationId: 9,
         userId: 1,
         routingType: ROUTING,
+        ownConnectionsOnly: false,
       });
       expect(mockPostMessage).toHaveBeenCalledTimes(2);
     });
@@ -208,7 +209,34 @@ describe("slackNotificationService", () => {
           organizationId: 9,
           userId: null,
           routingType: ROUTING,
+          ownConnectionsOnly: false,
         });
+      },
+    );
+
+    it("asks for the user's own connections only when told to", async () => {
+      mockGetSlackWebhook.mockResolvedValue([]);
+      await sendSlackNotification(
+        { organizationId: 9, userId: 4, ownConnectionsOnly: true, routingType: ROUTING },
+        MESSAGE,
+      );
+      expect(mockGetSlackWebhook).toHaveBeenCalledWith({
+        organizationId: 9,
+        userId: 4,
+        routingType: ROUTING,
+        ownConnectionsOnly: true,
+      });
+    });
+
+    it.each([undefined, null, 0])(
+      "sends nothing for own connections only without a user (%p)",
+      async (userId) => {
+        const result = await sendSlackNotification(
+          { organizationId: 9, userId, ownConnectionsOnly: true, routingType: ROUTING },
+          MESSAGE,
+        );
+        expect(result).toEqual({ attempted: false, delivered: false });
+        expect(mockGetSlackWebhook).not.toHaveBeenCalled();
       },
     );
   });
