@@ -4,6 +4,7 @@ import authenticateJWT from "../../middleware/auth.middleware";
 import authorize from "../../middleware/accessControl.middleware";
 import { requireExtensionEnabled } from "../../middleware/requireExtensionEnabled.middleware";
 import { validate } from "../../middleware/validate.middleware";
+import { requireProjectAccess } from "../../middleware/projectAccess.middleware";
 import { JIRA_NUMERIC_ID_PATTERN } from "./jira.client";
 import {
   deleteUseCaseCtrl,
@@ -87,14 +88,20 @@ router.post("/sync", authorize("extension.admin"), postSync);
 router.get("/sync/status", getSyncStatusCtrl);
 router.get("/sync/history", getSyncHistoryCtrl);
 
-// Use cases
+// Use cases. The reads follow use case visibility, as the core use case pages
+// do: the list is scoped in the query, a single use case needs read access to
+// it (403 otherwise).
 router.get("/use-cases", listUseCasesCtrl);
 // Explicit removal of use cases flagged as missing in Jira (syncs never delete).
 router.post("/use-cases/remove-missing", authorize("extension.admin"), removeMissingCtrl);
-router.get("/use-cases/:id", getUseCaseCtrl);
+router.get("/use-cases/:id", requireProjectAccess("id"), getUseCaseCtrl);
 router.delete("/use-cases/:id", authorize("extension.admin"), deleteUseCaseCtrl);
 
 // Custom frameworks progress (rendered inside a JIRA use-case Overview tab)
-router.get("/projects/:projectId/custom-frameworks-progress", getCustomFrameworksProgressCtrl);
+router.get(
+  "/projects/:projectId/custom-frameworks-progress",
+  requireProjectAccess("projectId"),
+  getCustomFrameworksProgressCtrl,
+);
 
 export default router;

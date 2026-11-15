@@ -31,6 +31,7 @@ jest.mock("../jiraAssets.service", () => {
     importObjects: jest.fn(),
     updateSelection: jest.fn(),
     removeMissingUseCases: jest.fn(),
+    listUseCases: jest.fn(),
     deleteUseCaseByProjectId: jest.fn(),
     JIRA_RUN_CODES: {
       abandoned: "abandoned",
@@ -72,6 +73,7 @@ import {
   getObjects,
   getSyncHistoryCtrl,
   getSyncStatusCtrl,
+  listUseCasesCtrl,
   patchSelection,
   postImport,
   postSync,
@@ -92,6 +94,7 @@ import {
   JiraNotConfiguredError,
   JiraUseCaseDeleteFailedError,
   JiraUseCaseNotFoundError,
+  listUseCases,
   loadFullConfig,
   removeMissingUseCases,
   RunSupersededError,
@@ -309,6 +312,19 @@ describe("an id the Jira client refuses", () => {
       message: "Bad Request",
       data: "Object type id must be a numeric Jira id",
     });
+  });
+});
+
+describe("GET /use-cases", () => {
+  it("lists the use cases the caller can see", async () => {
+    (listUseCases as jest.Mock).mockResolvedValueOnce([{ project_id: 50 }]);
+    const res = mockRes();
+
+    await listUseCasesCtrl({ ...req, role: "Editor" }, res);
+
+    expect(listUseCases).toHaveBeenCalledWith(5, { userId: 8, role: "Editor" });
+    expect(res.status).toHaveBeenCalledWith(200);
+    expect(res.json).toHaveBeenCalledWith({ message: "OK", data: [{ project_id: 50 }] });
   });
 });
 

@@ -13,6 +13,7 @@ import {
   JiraNotConfiguredError,
   jiraReadiness,
   JiraUseCaseDeleteFailedError,
+  listUseCases,
   JiraUseCaseNotFoundError,
   parseSyncIntervalHours,
   removeMissingUseCases,
@@ -1615,6 +1616,33 @@ describe("removal skip reasons", () => {
       expect(swagger).toContain(reason);
       expect(docs).toContain(`\`${reason}\``);
     }
+  });
+});
+
+describe("listUseCases visibility (E-M5)", () => {
+  it("limits a non-admin to the use cases they own, are a member of or reach through a group", async () => {
+    mockQuery.mockResolvedValueOnce([{ project_id: 50 }]);
+
+    const rows = await listUseCases(5, { userId: 8, role: "Editor" });
+
+    expect(rows).toEqual([{ project_id: 50 }]);
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).toContain("p.owner = :visibilityUserId");
+    expect(sql).toContain("FROM projects_members pm");
+    expect(sql).toContain("FROM project_groups pg");
+    // The rule sits in the WHERE clause, before the ORDER BY.
+    expect(sql.indexOf("p.owner = :visibilityUserId")).toBeLessThan(sql.indexOf("ORDER BY"));
+    expect(options.replacements).toEqual({ organizationId: 5, visibilityUserId: 8 });
+  });
+
+  it.each(["Admin", "SuperAdmin"])("leaves the list whole for an %s", async (role) => {
+    mockQuery.mockResolvedValueOnce([]);
+
+    await listUseCases(5, { userId: 8, role });
+
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).not.toContain(":visibilityUserId");
+    expect(options.replacements).toEqual({ organizationId: 5 });
   });
 });
 

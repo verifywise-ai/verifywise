@@ -360,7 +360,7 @@ export async function getSyncHistoryCtrl(req: Request, res: Response): Promise<a
 
 export async function listUseCasesCtrl(req: Request, res: Response): Promise<any> {
   try {
-    const useCases = await listUseCases(orgId(req));
+    const useCases = await listUseCases(orgId(req), { userId: uid(req), role: req.role! });
     return res.status(200).json(STATUS_CODE[200](useCases));
   } catch (err: any) {
     return res.status(500).json(STATUS_CODE[500](err.message));

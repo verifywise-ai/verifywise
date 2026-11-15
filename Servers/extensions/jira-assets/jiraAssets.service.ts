@@ -23,6 +23,7 @@ import {
 import { parseIntervalHours, saveSchedule } from "../sync-engine/schedule";
 import { sqlLastFinishedRun } from "../sync-engine/sql";
 import { legacyHighRiskRole, normalizeHighRiskRoles } from "../../utils/highRiskRoles.utils";
+import { projectVisibilitySql } from "../../utils/projectVisibility.utils";
 import { getRunStatus, listRuns, type RunListRow, type RunView } from "../sync-engine/status";
 import { ABANDONED_RUN_MESSAGE, SKIPPED_RUN_MESSAGE } from "../sync-engine/types";
 import type { Readiness, RunContext, RunResult, RunStatus } from "../sync-engine/types";
@@ -1364,14 +1365,27 @@ export async function runJiraSync(ctx: RunContext): Promise<RunResult> {
 // Use-case reads / delete
 // ---------------------------------------------------------------------------
 
-export async function listUseCases(organizationId: number): Promise<any[]> {
+/**
+ * The organization's Jira-linked use cases the viewer can see, by the rule
+ * that scopes the core use case list (projectVisibilitySql): Admins every
+ * one, everyone else those they own, are a member of or reach through a
+ * group. A link whose project is gone is visible to Admins only.
+ */
+export async function listUseCases(
+  organizationId: number,
+  viewer: { userId: number; role: string },
+): Promise<any[]> {
+  const visibility = projectVisibilitySql("p", viewer);
   return (await sequelize.query(
     `SELECT j.*, p.uc_id, p.project_title AS name
        FROM jira_assets_use_cases j
   LEFT JOIN projects p ON j.project_id = p.id AND p.organization_id = :organizationId
-      WHERE j.organization_id = :organizationId
+      WHERE j.organization_id = :organizationId${visibility.sql}
       ORDER BY j.created_at DESC;`,
-    { replacements: { organizationId }, type: QueryTypes.SELECT },
+    {
+      replacements: { organizationId, ...visibility.replacements },
+      type: QueryTypes.SELECT,
+    },
   )) as any[];
 }
 

@@ -24,6 +24,17 @@ jest.mock("../../../middleware/auth.middleware", () => ({
     next();
   },
 }));
+// requireProjectAccess runs for real; only its access query is stubbed, from
+// the x-test-access header ("allowed" by default).
+jest.mock("../../../utils/project.utils", () => {
+  const access = jest.fn(async () => "allowed");
+  return { getProjectAccessQuery: access, getProjectReadAccessQuery: access };
+});
+jest.mock("../../../utils/logger/logHelper", () => ({
+  logProcessing: jest.fn(),
+  logSuccess: jest.fn(),
+  logFailure: jest.fn(),
+}));
 jest.mock("../../../middleware/requireExtensionEnabled.middleware", () => ({
   requireExtensionEnabled: () => (_req: any, _res: any, next: any) => next(),
 }));
@@ -58,6 +69,7 @@ jest.mock("../jiraAssets.ctrl", () => {
 });
 
 import * as ctrl from "../jiraAssets.ctrl";
+import { getProjectAccessQuery, getProjectReadAccessQuery } from "../../../utils/project.utils";
 import jiraAssetsRoutes from "../jiraAssets.route";
 
 const app = express();
@@ -164,5 +176,72 @@ describe("Jira ids in the path", () => {
       .set("x-test-role", "Auditor");
 
     expect(res.status).toBe(403);
+  });
+});
+
+describe("use case reads follow use case visibility (E-M5)", () => {
+  const readAccess = getProjectReadAccessQuery as jest.Mock;
+
+  describe.each([
+    ["GET /use-cases/:id", `${base}/use-cases/50`, "getUseCaseCtrl"],
+    [
+      "GET /projects/:projectId/custom-frameworks-progress",
+      `${base}/projects/50/custom-frameworks-progress`,
+      "getCustomFrameworksProgressCtrl",
+    ],
+  ] as const)("%s", (_label, path, handler) => {
+    it("answers 403 when the caller cannot see the use case", async () => {
+      readAccess.mockResolvedValueOnce("denied");
+
+      const res = await request(app).get(path).set("x-test-role", "Editor");
+
+      expect(res.status).toBe(403);
+      expect(readAccess).toHaveBeenCalledWith(50, { userId: 9, role: "Editor" }, 42);
+      expect((ctrl as any)[handler]).not.toHaveBeenCalled();
+    });
+
+    it("lets a caller with read access through", async () => {
+      readAccess.mockResolvedValueOnce("allowed");
+
+      const res = await request(app).get(path).set("x-test-role", "Auditor");
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ handler });
+    });
+
+    it("passes an unknown use case on to the handler's own 404", async () => {
+      readAccess.mockResolvedValueOnce("not_found");
+
+      const res = await request(app).get(path).set("x-test-role", "Editor");
+
+      expect(res.status).toBe(200);
+      expect(res.body).toEqual({ handler });
+    });
+  });
+
+  it("answers 400 for a use case id that is not a number", async () => {
+    const res = await request(app).get(`${base}/use-cases/abc`).set("x-test-role", "Editor");
+
+    expect(res.status).toBe(400);
+    expect(ctrl.getUseCaseCtrl).not.toHaveBeenCalled();
+  });
+
+  it("leaves GET /use-cases to the visibility-scoped list (no per-use-case check)", async () => {
+    const res = await request(app).get(`${base}/use-cases`).set("x-test-role", "Auditor");
+
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ handler: "listUseCasesCtrl" });
+    expect(readAccess).not.toHaveBeenCalled();
+  });
+
+  it("keeps DELETE /use-cases/:id admin-only, with no use case access check", async () => {
+    const denied = await request(app).delete(`${base}/use-cases/50`).set("x-test-role", "Editor");
+    const allowed = await request(app).delete(`${base}/use-cases/50`).set("x-test-role", "Admin");
+
+    expect(denied.status).toBe(403);
+    expect(allowed.status).toBe(200);
+    expect(allowed.body).toEqual({ handler: "deleteUseCaseCtrl" });
+    expect(getProjectAccessQuery).not.toHaveBeenCalled();
+    expect(readAccess).not.toHaveBeenCalled();
   });
 });
