@@ -9,6 +9,11 @@ import {
 import { sanitizeForLog, EXTENSION_KEY_PATTERN } from "../utils/validations/validation.utils";
 import { translateError } from "../utils/i18n.utils";
 import { UnsafeOutboundUrlError } from "../utils/safeOutboundUrl";
+import {
+  STORED_SECRET_MESSAGES,
+  checkStoredSecrets,
+  withoutKeys,
+} from "../services/extension/storedSecretGuard";
 // Per-extension connectivity checks live inside each extension's service
 // module. Import them lazily via the dispatch table below to keep this
 // controller from pulling every extension's transitive deps at boot.
@@ -37,20 +42,42 @@ type TestConnectionRunner = (
   organizationId: number,
 ) => Promise<TestConnectionResult>;
 
+const failedTest = (message: string): TestConnectionResult => ({
+  success: false,
+  message,
+  testedAt: new Date().toISOString(),
+});
+
+/**
+ * The submitted payload overlaid on the stored, decrypted configuration, or
+ * the reason the stored secret may not be used: a stored secret is never sent
+ * to a changed address or identity (services/extension/storedSecretGuard.ts).
+ */
+async function overlayOnStored(
+  key: string,
+  submitted: Record<string, unknown>,
+  organizationId: number,
+): Promise<{ config: Record<string, unknown> } | { refused: string }> {
+  const stored = await ExtensionService.getRuntimeConfiguration(key, organizationId);
+  const next = { ...stored, ...submitted };
+  const check = checkStoredSecrets(key, stored, next, submitted);
+  if (check.blocked) return { refused: STORED_SECRET_MESSAGES[check.blocked] };
+  return { config: withoutKeys(next, check.drop) };
+}
+
 const TEST_CONNECTION_DISPATCH: Record<string, TestConnectionRunner> = {
   // MLflow + Azure store their config in extension_enablements.configuration;
   // the caller-submitted payload is overlaid on the stored, decrypted blob
   // before calling the check.
   mlflow: async (submitted, organizationId) => {
-    const stored = await ExtensionService.getRuntimeConfiguration("mlflow", organizationId);
-    return mlflowTestConnection({ ...stored, ...submitted } as any);
+    const overlay = await overlayOnStored("mlflow", submitted, organizationId);
+    if ("refused" in overlay) return failedTest(overlay.refused);
+    return mlflowTestConnection(overlay.config as any);
   },
   "azure-ai-foundry": async (submitted, organizationId) => {
-    const stored = await ExtensionService.getRuntimeConfiguration(
-      "azure-ai-foundry",
-      organizationId,
-    );
-    return azureTestConnection({ ...stored, ...submitted } as any);
+    const overlay = await overlayOnStored("azure-ai-foundry", submitted, organizationId);
+    if ("refused" in overlay) return failedTest(overlay.refused);
+    return azureTestConnection(overlay.config as any);
   },
   // JIRA stores its config in the dedicated jira_assets_config table (see
   // migration 20260819105546-remove-dead-extension-config-fields.js — its
@@ -62,6 +89,10 @@ const TEST_CONNECTION_DISPATCH: Record<string, TestConnectionRunner> = {
     const candidate = { ...(submitted as any) };
     if (!candidate.api_token) {
       const stored = await jiraLoadFullConfig(organizationId);
+      // Never send the stored token to a changed base URL, workspace, email
+      // or deployment type.
+      const check = checkStoredSecrets("jira-assets", stored as any, candidate, submitted);
+      if (check.blocked) return failedTest(STORED_SECRET_MESSAGES[check.blocked]);
       if (stored?.api_token) candidate.api_token = stored.api_token;
     }
     let client: ReturnType<typeof jiraClientFromConfig>;
@@ -70,9 +101,7 @@ const TEST_CONNECTION_DISPATCH: Record<string, TestConnectionRunner> = {
     } catch (err) {
       // A refused base URL (loopback, link-local, metadata, ...) is a failed
       // test, not a server error.
-      if (err instanceof UnsafeOutboundUrlError) {
-        return { success: false, message: err.message, testedAt: new Date().toISOString() };
-      }
+      if (err instanceof UnsafeOutboundUrlError) return failedTest(err.message);
       throw err;
     }
     const result = await client.testConnection();

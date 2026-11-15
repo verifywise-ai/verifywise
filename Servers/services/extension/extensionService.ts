@@ -11,6 +11,7 @@ import {
   ValidationException,
 } from "../../domain.layer/exceptions/custom.exception";
 import { decrypt, encrypt } from "../../utils/encryption.utils";
+import { STORED_SECRET_MESSAGES, checkStoredSecrets, withoutKeys } from "./storedSecretGuard";
 
 /**
  * Registry-layer service. Reads the extensions catalog + per-org enablements,
@@ -70,12 +71,11 @@ export class ExtensionService {
     // Merge input with any previously-stored config so re-enable preserves
     // fields the caller didn't repeat in the enable payload (matches the
     // update-configuration semantics).
-    const merged = this.mergeAndEncrypt(
-      inputConfiguration,
-      existing?.configuration ?? {},
-      configFields,
-    );
-    this.validate(merged, configFields, existing?.configuration ?? null);
+    const previous = existing
+      ? this.reusableConfiguration(key, inputConfiguration, existing.configuration ?? {})
+      : null;
+    const merged = this.mergeAndEncrypt(inputConfiguration, previous ?? {}, configFields);
+    this.validate(merged, configFields, previous);
 
     const enablement = await ExtensionEnablementModel.enable(
       extension.id,
@@ -122,12 +122,13 @@ export class ExtensionService {
       );
     }
     const configFields = await ExtensionConfigFieldModel.findByExtensionId(extension.id);
-    const merged = this.mergeAndEncrypt(
+    const previous = this.reusableConfiguration(
+      key,
       inputConfiguration,
       existing.configuration ?? {},
-      configFields,
     );
-    this.validate(merged, configFields, existing.configuration ?? null);
+    const merged = this.mergeAndEncrypt(inputConfiguration, previous, configFields);
+    this.validate(merged, configFields, previous);
     const enablement = await ExtensionEnablementModel.updateConfiguration(
       extension.id,
       organizationId,
@@ -221,6 +222,23 @@ export class ExtensionService {
       out[k] = v;
     }
     return out;
+  }
+
+  /**
+   * The stored configuration a save may carry secrets over from. A stored
+   * secret is never kept for a changed address or identity (see
+   * storedSecretGuard.ts): the save is refused with "Enter the <secret> again:
+   * the <field> changed." when the new configuration would send it, and the
+   * stale secret is dropped when it would not.
+   */
+  private static reusableConfiguration(
+    key: string,
+    input: Record<string, unknown>,
+    stored: Record<string, unknown>,
+  ): Record<string, unknown> {
+    const check = checkStoredSecrets(key, stored, input ?? {}, input ?? {});
+    if (check.blocked) throw new ValidationException(STORED_SECRET_MESSAGES[check.blocked]);
+    return withoutKeys(stored, check.drop);
   }
 
   /**

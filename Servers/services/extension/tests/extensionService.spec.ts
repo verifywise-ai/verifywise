@@ -331,3 +331,130 @@ describe("ExtensionService responses never carry stored configuration", () => {
     expect(result.configuration).toEqual({});
   });
 });
+
+describe("ExtensionService never keeps a stored secret for a changed address", () => {
+  const MLFLOW_FIELDS = [
+    { field_key: "tracking_server_url", field_type: "url", is_required: true, is_secret: false },
+    {
+      field_key: "auth_method",
+      field_type: "select",
+      is_required: true,
+      is_secret: false,
+      options: [{ value: "none" }, { value: "basic" }, { value: "token" }],
+    },
+    { field_key: "username", field_type: "text", is_required: false, is_secret: false },
+    { field_key: "password", field_type: "password", is_required: false, is_secret: true },
+    { field_key: "api_token", field_type: "password", is_required: false, is_secret: true },
+  ];
+  const AZURE_FIELDS = [
+    { field_key: "project_endpoint", field_type: "url", is_required: true, is_secret: false },
+    { field_key: "api_key", field_type: "password", is_required: true, is_secret: true },
+  ];
+  const TOKEN_ROW = {
+    enabled: true,
+    configuration: {
+      tracking_server_url: "https://mlflow.example.com",
+      auth_method: "token",
+      api_token: "enc(stored-token)",
+    },
+  };
+
+  function setUp(key: string, fields: unknown[], row: unknown) {
+    resetMocks();
+    mockExtension.findByKey.mockResolvedValue({ id: 42, key } as never);
+    mockConfigField.findByExtensionId.mockResolvedValue(fields as never);
+    mockEnablement.findByExtensionId.mockResolvedValue(row as never);
+    mockEnablement.updateConfiguration.mockImplementation(async (...args: any[]) => ({
+      enabled: true,
+      configuration: args[2],
+    }));
+    mockEnablement.enable.mockImplementation(async (...args: any[]) => ({
+      enabled: true,
+      configuration: args[3],
+    }));
+  }
+  const saved = () => mockEnablement.updateConfiguration.mock.calls[0][2] as Record<string, any>;
+
+  it("refuses a changed URL without a token and saves nothing", async () => {
+    setUp("mlflow", MLFLOW_FIELDS, TOKEN_ROW);
+    const save = ExtensionService.updateConfiguration("mlflow", 1, {
+      tracking_server_url: "https://evil.example.com",
+      auth_method: "token",
+    });
+    await expect(save).rejects.toBeInstanceOf(ValidationException);
+    await expect(save).rejects.toThrow(
+      "Enter the API token again: the tracking server URL changed.",
+    );
+    expect(mockEnablement.updateConfiguration).not.toHaveBeenCalled();
+  });
+
+  it("refuses the same on re-enable", async () => {
+    setUp("mlflow", MLFLOW_FIELDS, TOKEN_ROW);
+    await expect(
+      ExtensionService.enable("mlflow", 1, 1, {
+        tracking_server_url: "https://evil.example.com",
+        auth_method: "token",
+      }),
+    ).rejects.toThrow("Enter the API token again: the tracking server URL changed.");
+    expect(mockEnablement.enable).not.toHaveBeenCalled();
+  });
+
+  it("saves a changed URL with a new token", async () => {
+    setUp("mlflow", MLFLOW_FIELDS, TOKEN_ROW);
+    await ExtensionService.updateConfiguration("mlflow", 1, {
+      tracking_server_url: "https://new.example.com",
+      auth_method: "token",
+      api_token: "new-token",
+    });
+    expect(saved().api_token).toBe("enc(new-token)");
+  });
+
+  it("keeps the stored token when the URL is unchanged (trailing slash)", async () => {
+    setUp("mlflow", MLFLOW_FIELDS, TOKEN_ROW);
+    await ExtensionService.updateConfiguration("mlflow", 1, {
+      tracking_server_url: "https://mlflow.example.com/",
+      auth_method: "token",
+    });
+    expect(saved().api_token).toBe("enc(stored-token)");
+  });
+
+  it("refuses a changed username under basic auth without a password", async () => {
+    setUp("mlflow", MLFLOW_FIELDS, {
+      enabled: true,
+      configuration: {
+        tracking_server_url: "https://mlflow.example.com",
+        auth_method: "basic",
+        username: "alice",
+        password: "enc(stored-password)",
+      },
+    });
+    await expect(
+      ExtensionService.updateConfiguration("mlflow", 1, {
+        tracking_server_url: "https://mlflow.example.com",
+        auth_method: "basic",
+        username: "mallory",
+      }),
+    ).rejects.toThrow("Enter the password again: the username changed.");
+  });
+
+  it("drops a stored token the new configuration would not send", async () => {
+    setUp("mlflow", MLFLOW_FIELDS, TOKEN_ROW);
+    await ExtensionService.updateConfiguration("mlflow", 1, {
+      tracking_server_url: "https://new.example.com",
+      auth_method: "none",
+    });
+    expect(saved()).not.toHaveProperty("api_token");
+  });
+
+  it("refuses a changed Azure endpoint without a key", async () => {
+    setUp("azure-ai-foundry", AZURE_FIELDS, {
+      enabled: true,
+      configuration: { project_endpoint: "https://a.example.com/p", api_key: "enc(k)" },
+    });
+    await expect(
+      ExtensionService.updateConfiguration("azure-ai-foundry", 1, {
+        project_endpoint: "https://evil.example.com/p",
+      }),
+    ).rejects.toThrow("Enter the API key again: the project endpoint changed.");
+  });
+});

@@ -1519,9 +1519,11 @@ describe("saveConfig validation", () => {
     workspace_id: "w",
     email: "a@b.co",
   };
+  // The stored row for the same connection (deployment type unset reads as cloud).
+  const stored = { id: 1, api_token_encrypted: "enc", ...base, deployment_type: null };
 
   it("rejects an out-of-range interval before writing", async () => {
-    mockQuery.mockResolvedValueOnce([{ id: 1, api_token_encrypted: "enc" }]);
+    mockQuery.mockResolvedValueOnce([stored]);
 
     await expect(saveConfig(5, 3, { ...base, sync_interval_hours: 500 })).rejects.toBeInstanceOf(
       JiraConfigValidationError,
@@ -1530,7 +1532,7 @@ describe("saveConfig validation", () => {
   });
 
   it("writes the connection without sync columns and the schedule through the engine", async () => {
-    mockQuery.mockResolvedValueOnce([{ id: 1, api_token_encrypted: "enc" }]).mockResolvedValue([]);
+    mockQuery.mockResolvedValueOnce([stored]).mockResolvedValue([]);
     const save = jest.spyOn(engineSchedule, "saveSchedule").mockResolvedValue({
       enabled: true,
       interval_hours: 6,
@@ -1555,7 +1557,7 @@ describe("saveConfig validation", () => {
   });
 
   it("saves only the sync field the body carries, keeping the other", async () => {
-    mockQuery.mockResolvedValueOnce([{ id: 1, api_token_encrypted: "enc" }]).mockResolvedValue([]);
+    mockQuery.mockResolvedValueOnce([stored]).mockResolvedValue([]);
     const save = jest.spyOn(engineSchedule, "saveSchedule").mockResolvedValue({
       enabled: true,
       interval_hours: 6,
@@ -1571,7 +1573,7 @@ describe("saveConfig validation", () => {
       expect.objectContaining({ userId: 3 }),
     );
 
-    mockQuery.mockResolvedValueOnce([{ id: 1, api_token_encrypted: "enc" }]);
+    mockQuery.mockResolvedValueOnce([stored]);
     await saveConfig(5, 3, { ...base, sync_enabled: true });
     expect(save).toHaveBeenLastCalledWith(
       "jira-assets",
@@ -1583,13 +1585,58 @@ describe("saveConfig validation", () => {
   });
 
   it("leaves the schedule alone when the body has no sync fields", async () => {
-    mockQuery.mockResolvedValueOnce([{ id: 1, api_token_encrypted: "enc" }]).mockResolvedValue([]);
+    mockQuery.mockResolvedValueOnce([stored]).mockResolvedValue([]);
     const save = jest.spyOn(engineSchedule, "saveSchedule");
 
     await saveConfig(5, 3, base);
 
     expect(save).not.toHaveBeenCalled();
     save.mockRestore();
+  });
+
+  describe("a stored token is never kept for a changed connection", () => {
+    it.each([
+      [
+        "base URL",
+        { jira_base_url: "https://evil.example.com" },
+        "Enter the API token again: the Jira base URL changed.",
+      ],
+      [
+        "workspace",
+        { workspace_id: "other" },
+        "Enter the API token again: the workspace ID changed.",
+      ],
+      ["email", { email: "b@b.co" }, "Enter the API token again: the email changed."],
+      [
+        "deployment type",
+        { deployment_type: "datacenter" as const },
+        "Enter the API token again: the deployment type changed.",
+      ],
+    ])("refuses a changed %s without a token, before writing", async (_, change, message) => {
+      mockQuery.mockResolvedValueOnce([stored]);
+      await expect(saveConfig(5, 3, { ...base, ...change })).rejects.toThrow(message);
+      expect(mockQuery).toHaveBeenCalledTimes(1);
+    });
+
+    it("saves a changed base URL with a new token", async () => {
+      mockQuery.mockResolvedValueOnce([stored]).mockResolvedValue([]);
+      await saveConfig(5, 3, { ...base, jira_base_url: "https://new.example.com", api_token: "n" });
+      const [updateSql, update] = mockQuery.mock.calls[1];
+      expect(updateSql).toContain("api_token_encrypted = :apiTokenEncrypted");
+      expect(update.replacements.jiraBaseUrl).toBe("https://new.example.com");
+    });
+
+    it("keeps the stored token when the connection is unchanged (a trailing slash is no change)", async () => {
+      mockQuery.mockResolvedValueOnce([stored]).mockResolvedValue([]);
+      await saveConfig(5, 3, {
+        ...base,
+        jira_base_url: "https://x.atlassian.net/",
+        email: " a@b.co ",
+        deployment_type: "cloud",
+      });
+      const [updateSql] = mockQuery.mock.calls[1];
+      expect(updateSql).not.toContain("api_token_encrypted");
+    });
   });
 });
 
