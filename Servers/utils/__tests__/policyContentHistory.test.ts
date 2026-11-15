@@ -13,14 +13,13 @@ describe("htmlExcerpt", () => {
   it("strips tags, decodes basic entities and collapses whitespace", () => {
     expect(
       htmlExcerpt("<h1>Data  &amp; AI</h1>\n<p>Use&nbsp;it &lt;well&gt; &quot;now&quot;</p>"),
-    ).toBe('Data & AI Use it "now"');
+    ).toBe('Data & AI Use it <well> "now"');
   });
 
-  it("leaves no tag behind: encoded and nested tags are stripped too", () => {
-    expect(htmlExcerpt("<p>a &lt;script&gt;alert(1)&lt;/script&gt; b</p>")).toBe("a alert(1) b");
-    expect(htmlExcerpt("<scr<script>ipt>x</p>")).not.toContain("<");
+  it("strips nested tags until none is left and keeps encoded text as text", () => {
+    expect(htmlExcerpt("<scr<script>ipt>x</p>")).not.toMatch(/<[a-z]/i);
+    expect(htmlExcerpt("<p>score &lt; 5 and risk &gt; 3</p>")).toBe("score < 5 and risk > 3");
     expect(htmlExcerpt("1 &amp;lt;b&amp;gt; 2")).toBe("1 &lt;b&gt; 2");
-    expect(htmlExcerpt("a &lt; b")).toBe("a < b");
   });
 
   it("cuts to 120 characters with a trailing ellipsis", () => {

@@ -183,7 +183,11 @@ const BASIC_ENTITIES: { [key: string]: string } = {
   "&apos;": "'",
 };
 
-/** Strip tags until none is left, so removing one can't join the rest into a new tag. */
+/**
+ * Strip the HTML's tags until none is left, so removing one can't join the
+ * rest into a new tag. Runs on the stored HTML, where a literal "<" in the text
+ * is always encoded (&lt;), so every "<" here starts a tag.
+ */
 const stripTags = (html: string): string => {
   let previous: string;
   let text = html;
@@ -195,17 +199,19 @@ const stripTags = (html: string): string => {
 };
 
 /**
- * A readable one-line excerpt of an HTML value: basic entities decoded (&amp;
- * last, so nothing is decoded twice), then tags stripped, whitespace
- * collapsed, cut to HISTORY_EXCERPT_LENGTH characters with a trailing ellipsis
- * when cut. Decoding first means an encoded tag (&lt;b&gt;) is stripped too, so
- * no tag survives into the excerpt. An empty result is "-".
+ * A readable one-line plain-text excerpt of an HTML value: tags stripped,
+ * then basic entities decoded (&amp; last, so nothing is decoded twice),
+ * whitespace collapsed, cut to HISTORY_EXCERPT_LENGTH characters with a
+ * trailing ellipsis when cut. The excerpt is text, not HTML: an encoded
+ * "&lt;" in the policy becomes "<" and must be shown as text. An empty
+ * result is "-".
  */
 export const htmlExcerpt = (value: unknown): string => {
-  const decoded = String(value ?? "")
+  const text = stripTags(String(value ?? ""))
     .replace(/&(?:nbsp|lt|gt|quot|apos|#39);/g, (m) => BASIC_ENTITIES[m])
-    .replace(/&amp;/g, "&");
-  const text = stripTags(decoded).replace(/\s+/g, " ").trim();
+    .replace(/&amp;/g, "&")
+    .replace(/\s+/g, " ")
+    .trim();
   if (!text) return "-";
   return text.length > HISTORY_EXCERPT_LENGTH ? `${text.slice(0, HISTORY_EXCERPT_LENGTH)}…` : text;
 };
