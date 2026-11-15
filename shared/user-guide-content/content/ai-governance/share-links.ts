@@ -54,7 +54,7 @@ export const shareLinksContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Policy share links can only be created through the API. A link to the policy list shows your organization\'s 100 most recently created policies, whatever their status, drafts and archived policies included. With **Share all fields** on, the link also shows the full text of every policy it covers. Data export is on unless you turn it off, so anyone with the link can download what it shows.',
+      text: 'Policy share links can only be created through the API. A link to the policy list shows your organization\'s 100 most recently created policies, whatever their status, drafts and archived policies included. With **Share all fields** on, the link also shows the full text of every policy it covers. If data export is on (the default when a link is created without settings), anyone with the link can download what it shows.',
     },
     {
       type: 'callout',

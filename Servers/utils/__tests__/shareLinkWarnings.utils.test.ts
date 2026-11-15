@@ -7,11 +7,17 @@ const policy = (
 ) => ({ resource_type: "policy", resource_id: resourceId, settings, ...extra });
 
 describe("shareLinkWarnings", () => {
-  it("warns that a policy list link shows every status, and that export is on by default", () => {
-    expect(shareLinkWarnings(policy(0, { shareAllFields: false }))).toEqual([
+  it("warns that a policy list link shows every status", () => {
+    expect(shareLinkWarnings(policy(0, { shareAllFields: false }))).toEqual(["policyList"]);
+    expect(shareLinkWarnings(policy("0" as never, { shareAllFields: false }))).toEqual([
       "policyList",
-      "policyExport",
     ]);
+  });
+
+  it("warns about export only when the shared view offers it", () => {
+    expect(shareLinkWarnings(policy(7, { allowDataExport: true }))).toEqual(["policyExport"]);
+    expect(shareLinkWarnings(policy(7, { allowDataExport: false }))).toEqual([]);
+    expect(shareLinkWarnings(policy(7, {}))).toEqual([]);
   });
 
   it("warns that share all fields shows every column, on a list or one policy", () => {
@@ -61,6 +67,7 @@ describe("shareLinkWarnings", () => {
 describe("isTableViewLink", () => {
   it("is the list for resource id 0 only", () => {
     expect(isTableViewLink(0)).toBe(true);
+    expect(isTableViewLink("0")).toBe(true);
     expect(isTableViewLink(3)).toBe(false);
   });
 });

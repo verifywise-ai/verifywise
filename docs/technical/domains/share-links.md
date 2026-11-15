@@ -129,7 +129,8 @@ enabled, unexpired policy link:
 - `shareAllFields: true` shows every `policy_manager` column of each policy it
   shows, the full policy text included (not joined data such as assigned
   reviewers or tags).
-- Data export is on unless `allowDataExport` is `false`, and it is on by default.
+- Data export is on when `allowDataExport` is truthy, as the shared view decides. A
+  link created without `settings` gets the default, which turns it on.
 
 A disabled or expired link, and every other resource type, returns an empty
 array. Model, vendor, project and risk list links expose their records the same

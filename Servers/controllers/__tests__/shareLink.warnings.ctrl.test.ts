@@ -102,7 +102,7 @@ describe("share link responses carry translated policy exposure warnings", () =>
     expect((res.json.mock.calls[0][0] as any)[0].warnings).toEqual([t(LIST)]);
 
     queryMock.mockResolvedValueOnce([
-      { ...link(0, false), settings: { shareAllFields: false } },
+      { ...link(0, false), settings: { shareAllFields: false, allowDataExport: true } },
       { ...link(0, true), is_enabled: false },
     ] as never);
     const res3 = createRes();

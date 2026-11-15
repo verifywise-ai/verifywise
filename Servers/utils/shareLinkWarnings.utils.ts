@@ -10,11 +10,11 @@
 export type ShareLinkWarning = "policyList" | "policyAllFields" | "policyExport";
 
 /** A link with resource_id 0 shows the resource's list (table view); any other id one record. */
-export const isTableViewLink = (resourceId: number): boolean => resourceId === 0;
+export const isTableViewLink = (resourceId: number | string): boolean => Number(resourceId) === 0;
 
 export const shareLinkWarnings = (link: {
   resource_type: string;
-  resource_id: number;
+  resource_id: number | string;
   settings?: { shareAllFields?: unknown; allowDataExport?: unknown } | null;
   is_enabled?: boolean;
   expires_at?: Date | string | null;
@@ -27,7 +27,8 @@ export const shareLinkWarnings = (link: {
   if (isTableViewLink(link.resource_id)) warnings.push("policyList");
   // Same strict check as the shared view.
   if (link.settings?.shareAllFields === true) warnings.push("policyAllFields");
-  // The shared view offers export unless it is turned off.
-  if (link.settings?.allowDataExport !== false) warnings.push("policyExport");
+  // As the shared view: export is offered when allowDataExport is truthy. A link
+  // created without settings gets the default, which turns it on.
+  if (link.settings?.allowDataExport) warnings.push("policyExport");
   return warnings;
 };
