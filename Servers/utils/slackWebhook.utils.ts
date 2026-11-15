@@ -49,10 +49,13 @@ export const getSlackWebhookByIdAndOrganizationQuery = async (
  * Run `work` in a transaction bound to one organization for row-level
  * security (`app.current_org`, transaction-local). Slack sends run from
  * request handlers and from background jobs alike; an explicit transaction
- * does not inherit a request's RLS scope, so the organization is set here in
- * both cases. Harmless while RLS enforcement is off.
+ * does not inherit a request's RLS scope (the RLS middleware only injects its
+ * transaction when none is passed), so the organization is set here in every
+ * case, including the management writes in controllers/slackWebhook.ctrl.ts.
+ * A managed transaction: it commits when `work` resolves and rolls back when
+ * it throws. Harmless while RLS enforcement is off.
  */
-const withOrganizationScope = <T>(
+export const withOrganizationScope = <T>(
   organizationId: number,
   work: (transaction: Transaction) => Promise<T>,
 ): Promise<T> =>

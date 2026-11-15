@@ -12,7 +12,6 @@
 import { Request, Response } from "express";
 
 import { STATUS_CODE } from "../utils/statusCode.utils";
-import { sequelize } from "../database/db";
 import {
   ValidationException,
   BusinessLogicException,
@@ -25,6 +24,7 @@ import {
   createNewSlackWebhookQuery,
   updateSlackWebhookByIdQuery,
   deleteSlackWebhookByIdQuery,
+  withOrganizationScope,
 } from "../utils/slackWebhook.utils";
 import { SlackWebhookModel } from "../domain.layer/models/slackNotification/slackWebhook.model";
 import {
@@ -171,7 +171,6 @@ async function validateSlackOAuth(code: string): Promise<any> {
 
 export async function createNewSlackWebhook(req: Request, res: Response): Promise<any> {
   const functionName = "createNewSlackWebhook";
-  const transaction = await sequelize.transaction();
 
   logStructured("processing", `starting slackWebhook creation`, functionName, fileName);
 
@@ -194,17 +193,23 @@ export async function createNewSlackWebhook(req: Request, res: Response): Promis
 
     await slackWebhookModel.validateSlackWebhookData();
 
+    // The insert and the bot invite share one transaction, bound to the
+    // caller's organization for RLS: a failed invite rolls the insert back.
     // New rows take the column default delivery_scope = 'organization'.
-    const newSlackWebhook = await createNewSlackWebhookQuery(slackWebhookModel, transaction);
-
-    await inviteBotToChannel(
-      slackWebhookData.authed_user.access_token,
-      slackWebhookData.incoming_webhook.channel_id,
-      slackWebhookData.bot_user_id,
+    const newSlackWebhook = await withOrganizationScope(
+      req.organizationId!,
+      async (transaction) => {
+        const created = await createNewSlackWebhookQuery(slackWebhookModel, transaction);
+        await inviteBotToChannel(
+          slackWebhookData.authed_user.access_token,
+          slackWebhookData.incoming_webhook.channel_id,
+          slackWebhookData.bot_user_id,
+        );
+        return created;
+      },
     );
 
     if (newSlackWebhook) {
-      await transaction.commit();
       logStructured(
         "successful",
         `slackWebhook created: ID ${newSlackWebhook.id}`,
@@ -222,11 +227,8 @@ export async function createNewSlackWebhook(req: Request, res: Response): Promis
 
     logStructured("error", "failed to create slackWebhook", functionName, fileName);
     await logEvent("Error", "slackWebhook creation failed", req.userId!, req.organizationId!);
-    await transaction.rollback();
     return res.status(400).json(STATUS_CODE[400](req.t!("Failed to create slackWebhook")));
   } catch (error) {
-    await transaction.rollback();
-
     if (error instanceof ValidationException) {
       logStructured("error", `validation failed: ${error.message}`, functionName, fileName);
       await logEvent(
@@ -273,19 +275,15 @@ export async function updateSlackWebhookById(req: Request, res: Response): Promi
   }
 
   logStructured("processing", `updating slackWebhook ID ${slackWebhookId}`, functionName, fileName);
-  const transaction = await sequelize.transaction();
 
   try {
     // Saving routing_type also sets delivery_scope = 'organization' (see the query).
-    const updatedSlackWebhook = await updateSlackWebhookByIdQuery(
-      slackWebhookId,
-      req.organizationId!,
-      parsed.data,
-      transaction,
+    // Bound to the caller's organization for RLS; a miss changes no row.
+    const updatedSlackWebhook = await withOrganizationScope(req.organizationId!, (transaction) =>
+      updateSlackWebhookByIdQuery(slackWebhookId, req.organizationId!, parsed.data, transaction),
     );
 
     if (!updatedSlackWebhook) {
-      await transaction.rollback();
       logStructured(
         "error",
         `slackWebhook not found: ID ${slackWebhookId}`,
@@ -301,7 +299,6 @@ export async function updateSlackWebhookById(req: Request, res: Response): Promi
       return res.status(404).json(STATUS_CODE[404](req.t!("SlackWebhook not found")));
     }
 
-    await transaction.commit();
     logStructured(
       "successful",
       `slackWebhook updated: ID ${slackWebhookId}`,
@@ -316,7 +313,6 @@ export async function updateSlackWebhookById(req: Request, res: Response): Promi
     );
     return res.status(202).json(STATUS_CODE[202](updatedSlackWebhook));
   } catch (error) {
-    await transaction.rollback();
     logStructured(
       "error",
       `unexpected error for slackWebhook ID ${slackWebhookId}`,
@@ -382,16 +378,13 @@ export async function deleteSlackWebhookById(req: Request, res: Response): Promi
     functionName,
     fileName,
   );
-  const transaction = await sequelize.transaction();
   try {
-    const deleted = await deleteSlackWebhookByIdQuery(
-      slackWebhookId,
-      req.organizationId!,
-      transaction,
+    // Bound to the caller's organization for RLS; a miss deletes no row.
+    const deleted = await withOrganizationScope(req.organizationId!, (transaction) =>
+      deleteSlackWebhookByIdQuery(slackWebhookId, req.organizationId!, transaction),
     );
 
     if (!deleted) {
-      await transaction.rollback();
       logStructured(
         "error",
         `slackWebhook not found: ID ${slackWebhookId}`,
@@ -407,7 +400,6 @@ export async function deleteSlackWebhookById(req: Request, res: Response): Promi
       return res.status(404).json(STATUS_CODE[404](req.t!("SlackWebhook not found")));
     }
 
-    await transaction.commit();
     logStructured(
       "successful",
       `slackWebhook deleted: ID ${slackWebhookId}`,
@@ -422,7 +414,6 @@ export async function deleteSlackWebhookById(req: Request, res: Response): Promi
     );
     return res.status(204).json(STATUS_CODE[204](deleted));
   } catch (error) {
-    await transaction.rollback();
     logStructured(
       "error",
       `failed to delete slackWebhook: ID ${slackWebhookId}`,

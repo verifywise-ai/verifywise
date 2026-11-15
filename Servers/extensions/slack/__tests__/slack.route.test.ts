@@ -33,11 +33,7 @@ jest.mock("../../../utils/rolePermissions.utils", () => {
     ),
   };
 });
-jest.mock("../../../database/db", () => ({
-  sequelize: {
-    transaction: jest.fn(async () => ({ commit: jest.fn(), rollback: jest.fn() })),
-  },
-}));
+jest.mock("../../../database/db", () => ({ sequelize: {} }));
 jest.mock("../../../utils/logger/fileLogger", () => ({
   __esModule: true,
   default: { debug: jest.fn(), info: jest.fn(), warn: jest.fn(), error: jest.fn() },
@@ -62,6 +58,10 @@ jest.mock("../../../utils/slackWebhook.utils", () => ({
   createNewSlackWebhookQuery: jest.fn(async (data: any) => ({ id: 1, ...data })),
   updateSlackWebhookByIdQuery: jest.fn(async () => null),
   deleteSlackWebhookByIdQuery: jest.fn(async () => false),
+  // The managed, organization-bound transaction: runs the work with a fake one.
+  withOrganizationScope: jest.fn(async (_org: number, work: (t: unknown) => unknown) =>
+    work({ id: "txn" }),
+  ),
 }));
 
 import * as queries from "../../../utils/slackWebhook.utils";
@@ -117,6 +117,7 @@ beforeEach(() => {
   q.getSlackWebhookByIdAndOrganizationQuery.mockResolvedValue(null);
   q.updateSlackWebhookByIdQuery.mockResolvedValue(null);
   q.deleteSlackWebhookByIdQuery.mockResolvedValue(false);
+  q.withOrganizationScope.mockImplementation(async (_org, work) => work({ id: "txn" } as any));
   process.env.SLACK_API_URL = "https://slack.test/api/oauth.v2.access";
   global.fetch = jest.fn(async () => ({ json: async () => oauthResponse })) as any;
 });
@@ -217,6 +218,44 @@ describe("another organization's id answers 404 like a missing one", () => {
     expect(res.status).toBe(404);
     expect(q.getSlackWebhookByIdAndOrganizationQuery).toHaveBeenCalledWith(5, 42);
     expect(sendImmediateMessage).not.toHaveBeenCalled();
+  });
+});
+
+describe("writes run in a transaction bound to the caller's organization (RLS)", () => {
+  it("create inserts and invites the bot inside the scope", async () => {
+    const res = await call("post", BASE).send({ code: "abc" });
+
+    expect(res.status).toBe(201);
+    expect(q.withOrganizationScope).toHaveBeenCalledWith(42, expect.any(Function));
+    expect(q.createNewSlackWebhookQuery.mock.calls[0][1]).toEqual({ id: "txn" });
+  });
+
+  it("update", async () => {
+    q.updateSlackWebhookByIdQuery.mockResolvedValue(connection());
+
+    const res = await call("patch", `${BASE}/5`).send({ is_active: false });
+
+    expect(res.status).toBe(202);
+    expect(q.withOrganizationScope).toHaveBeenCalledWith(42, expect.any(Function));
+    expect(q.updateSlackWebhookByIdQuery.mock.calls[0][3]).toEqual({ id: "txn" });
+  });
+
+  it("delete", async () => {
+    q.deleteSlackWebhookByIdQuery.mockResolvedValue(true);
+
+    const res = await call("delete", `${BASE}/5`);
+
+    expect(res.status).toBe(204);
+    expect(q.withOrganizationScope).toHaveBeenCalledWith(42, expect.any(Function));
+    expect(q.deleteSlackWebhookByIdQuery.mock.calls[0][2]).toEqual({ id: "txn" });
+  });
+
+  it("a failing write inside the scope answers 500 (the scope rolls back)", async () => {
+    q.updateSlackWebhookByIdQuery.mockRejectedValue(new Error("rls denied"));
+
+    const res = await call("patch", `${BASE}/5`).send({ is_active: false });
+
+    expect(res.status).toBe(500);
   });
 });
 
