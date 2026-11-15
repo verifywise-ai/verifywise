@@ -169,6 +169,10 @@ export interface EntityConfig {
 /** Longest excerpt of rich text kept in a history entry. */
 export const HISTORY_EXCERPT_LENGTH = 120;
 
+/** Tags that separate words; any other tag (b, i, span, a...) is dropped without a space. */
+const BLOCK_TAG =
+  /<\/?(?:p|div|li|ul|ol|br|hr|h[1-6]|tr|td|th|table|thead|tbody|blockquote|pre|section|article|header|footer)\b[^>]*>/gi;
+
 const BASIC_ENTITIES: { [key: string]: string } = {
   "&nbsp;": " ",
   "&amp;": "&",
@@ -186,7 +190,8 @@ const BASIC_ENTITIES: { [key: string]: string } = {
  */
 export const htmlExcerpt = (value: unknown): string => {
   const text = String(value ?? "")
-    .replace(/<[^>]*>/g, " ")
+    .replace(BLOCK_TAG, " ")
+    .replace(/<[^>]*>/g, "")
     .replace(/&(?:nbsp|amp|lt|gt|quot|apos|#39);/g, (m) => BASIC_ENTITIES[m])
     .replace(/\s+/g, " ")
     .trim();

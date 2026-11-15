@@ -282,8 +282,12 @@ export class PolicyController {
       );
 
       if (policy) {
-        // Track and record changes
-        const changes = await trackPolicyChanges(existingPolicy as unknown as IPolicy, policyData);
+        // Track what was written: updatePolicyByIdQuery skips an empty title or
+        // content, so those are not a change and must not reach the history.
+        const written: Partial<IPolicy> = { ...policyData };
+        if (!written.title) delete written.title;
+        if (!written.content_html) delete written.content_html;
+        const changes = await trackPolicyChanges(existingPolicy as unknown as IPolicy, written);
         if (changes.length > 0) {
           await recordMultipleFieldChanges(
             policyId,

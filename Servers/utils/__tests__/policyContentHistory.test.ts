@@ -22,6 +22,12 @@ describe("htmlExcerpt", () => {
     expect(htmlExcerpt("b".repeat(120))).toBe("b".repeat(120));
   });
 
+  it("keeps a word whole across inline tags but splits at block tags", () => {
+    expect(htmlExcerpt("<p>Wo<b>rd</b> and <a href='x'>link</a></p><p>Next</p>a<br>b")).toBe(
+      "Word and link Next a b",
+    );
+  });
+
   it("is - for empty text", () => {
     expect(htmlExcerpt("<p> </p>")).toBe("-");
   });

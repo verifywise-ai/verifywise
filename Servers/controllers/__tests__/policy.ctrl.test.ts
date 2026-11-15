@@ -89,6 +89,7 @@ jest.mock("../../domain.layer/exceptions/custom.exception", () => ({
 }));
 
 import { PolicyController } from "../policy.ctrl";
+import { trackPolicyChanges } from "../../utils/policyChangeHistory.utils";
 import {
   getAllPoliciesQuery,
   getPolicyByIdQuery,
@@ -400,6 +401,42 @@ describe("policy.ctrl", () => {
         res,
       );
       expect(res.status).toHaveBeenCalledWith(202);
+    });
+
+    it("does not track a content that sanitizes to empty, as it is not written", async () => {
+      const existing = { id: 1, title: "P1", status: "Draft", content_html: "<p>Old</p>" };
+      mockGetById.mockResolvedValue([existing] as any);
+      lockRow("Draft");
+      mockUpdate.mockResolvedValue({ id: 1 } as any);
+      const res = createRes();
+      await PolicyController.updatePolicy(
+        createReq({
+          params: { id: "1" },
+          // sanitizes to an empty string, which the write skips
+          body: { content_html: "<script>alert(1)</script>", status: "Draft" },
+        }),
+        res,
+      );
+      expect(res.status).toHaveBeenCalledWith(202);
+      const tracked = (trackPolicyChanges as jest.Mock<any>).mock.calls.at(-1)![1];
+      expect(tracked).not.toHaveProperty("content_html");
+      expect(tracked.status).toBe("Draft");
+    });
+
+    it("tracks a real content change with the value that was written", async () => {
+      const existing = { id: 1, title: "P1", status: "Draft", content_html: "<p>Old</p>" };
+      mockGetById.mockResolvedValue([existing] as any);
+      lockRow("Draft");
+      mockUpdate.mockResolvedValue({ id: 1 } as any);
+      const res = createRes();
+      await PolicyController.updatePolicy(
+        createReq({ params: { id: "1" }, body: { content_html: "<p>New</p>", status: "Draft" } }),
+        res,
+      );
+      expect(res.status).toHaveBeenCalledWith(202);
+      const [old, tracked] = (trackPolicyChanges as jest.Mock<any>).mock.calls.at(-1)!;
+      expect(old).toBe(existing);
+      expect(tracked.content_html).toBe("<p>New</p>");
     });
 
     it("publishes an approved policy and locks the row in the update transaction", async () => {
