@@ -8,11 +8,14 @@
  * This migration fills it in and records how far each connection may deliver.
  *
  * - organization_id: rows that already have one keep it. Otherwise it comes
- *   from the owner's organization membership: the single membership, or the
- *   earliest one (joined_at, then organization_id) when the owner has several.
- *   users has no primary or default organization column to prefer. Rows whose
- *   owner is gone (user_id NULL after ON DELETE SET NULL) or has no membership
- *   stay NULL. Delivery always filters by organization, so those rows never
+ *   from the owner's organization membership, but only when the owner
+ *   belongs to exactly one organization. The org a connection was made in is
+ *   not recorded, and users has no primary organization, so an owner with
+ *   several memberships can't be attributed safely: a wrong guess would let
+ *   that org's Admins switch the connection to organization-wide delivery and
+ *   send their events into another org's Slack. Those rows stay NULL, as do
+ *   rows whose owner is gone (user_id NULL after ON DELETE SET NULL) or has no
+ *   membership. Delivery always filters by organization, so those rows never
  *   send again; they can only be removed. The column stays nullable for them.
  * - delivery_scope: 'user' for every existing row, so an existing connection
  *   keeps sending only the events its owner triggers (quiet start) until an
@@ -49,9 +52,10 @@ module.exports = {
         UPDATE verifywise.slack_webhooks sw
            SET organization_id = m.organization_id
           FROM (
-            SELECT DISTINCT ON (user_id) user_id, organization_id
+            SELECT user_id, MIN(organization_id) AS organization_id
               FROM verifywise.organization_members
-             ORDER BY user_id, joined_at ASC, organization_id ASC
+             GROUP BY user_id
+            HAVING COUNT(DISTINCT organization_id) = 1
           ) m
          WHERE sw.organization_id IS NULL
            AND sw.user_id = m.user_id

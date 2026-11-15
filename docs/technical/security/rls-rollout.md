@@ -132,8 +132,9 @@ to the RLS policy migration pattern above.
   means every code path touching registry tables must set the GUC first.
 - `slack_webhooks.organization_id` is backfilled from the owner's membership
   (`20261114232015-slack-webhooks-organization-scope.js`) and carries the
-  policy. It stays nullable: rows whose owner had no organization keep NULL
-  and are invisible under enforcement.
+  policy, only when the owner belongs to exactly one organization. It stays
+  nullable: rows whose owner is gone, has no membership or belongs to several
+  organizations keep NULL, never send, and are invisible under enforcement.
 - Super-admin cross-org reads must go through the owner/bypass role, not the
   app role.
 - Do not use plain `SET` on pooled connections: the org id would leak into
