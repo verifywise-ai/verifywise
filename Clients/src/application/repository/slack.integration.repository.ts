@@ -1,18 +1,19 @@
 import { apiServices } from "../../infrastructure/api/networkServices";
 
+// The organization's Slack connections, behind the Slack extension gate (Admins only).
+const BASE = "/extensions/slack/oauth/workspaces";
+
+/** The organization's connections. The server takes the organization from the session. */
 export async function getSlackIntegrations({
-  id,
   channel,
   signal,
   responseType = "json",
 }: {
-  id: number;
   channel?: string;
   signal?: AbortSignal;
   responseType?: string;
-}): Promise<any> {
-  const response = await apiServices.get(`/slackWebhooks`, {
-    userId: id,
+} = {}): Promise<any> {
+  const response = await apiServices.get(BASE, {
     channel,
     signal,
     responseType,
@@ -29,7 +30,7 @@ export async function getSlackIntegrationById({
   signal?: AbortSignal;
   responseType?: string;
 }): Promise<any> {
-  const response = await apiServices.get(`/slackWebhooks/${id}`, {
+  const response = await apiServices.get(`${BASE}/${id}`, {
     signal,
     responseType,
   });
@@ -37,7 +38,7 @@ export async function getSlackIntegrationById({
 }
 
 export async function createSlackIntegration({ body }: { body: any }): Promise<any> {
-  const response = await apiServices.post("/slackWebhooks", body);
+  const response = await apiServices.post(BASE, body);
   return response.data;
 }
 
@@ -48,7 +49,7 @@ export async function updateSlackIntegration({
   id: number;
   body: any;
 }): Promise<any> {
-  const response = await apiServices.patch(`/slackWebhooks/${id}`, body);
+  const response = await apiServices.patch(`${BASE}/${id}`, body);
   return response;
 }
 
@@ -57,11 +58,11 @@ export async function sendSlackMessage({ id }: { id: number }): Promise<any> {
     title: "Welcome to Verifywise",
     message: "This is a test message from VerifyWise.",
   };
-  const response = await apiServices.post(`/slackWebhooks/${id}/send`, messageBody);
+  const response = await apiServices.post(`${BASE}/${id}/send`, messageBody);
   return response.data;
 }
 
 export async function deleteSlackIntegration({ id }: { id: number }): Promise<any> {
-  const response = await apiServices.delete(`/slackWebhooks/${id}`);
+  const response = await apiServices.delete(`${BASE}/${id}`);
   return response.data;
 }

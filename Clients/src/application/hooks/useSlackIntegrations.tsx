@@ -44,20 +44,19 @@ interface ApiResponse {
 
 export type SlackRoutingType = { routingType: string; id: number[] };
 
-const useSlackIntegrations = (userId: number | null) => {
+/** The organization's Slack connections (the server scopes them to the session's organization). */
+const useSlackIntegrations = () => {
   const [slackIntegrations, setSlackIntegrations] = useState<SlackWebhook[]>([]);
   const [routingData, setRoutingData] = useState<SlackRoutingType[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   const fetchSlackIntegrations = useCallback(async () => {
-    if (!userId) return;
-
     try {
       const controller = new AbortController();
       const signal = controller.signal;
       setLoading(true);
-      const response = await getSlackIntegrations({ id: userId, signal });
+      const response = await getSlackIntegrations({ signal });
 
       const integrations: SlackWebhook[] = (response as ApiResponse).data.map(
         (item: ISlackWebhook): SlackWebhook => ({
@@ -98,7 +97,7 @@ const useSlackIntegrations = (userId: number | null) => {
     } finally {
       setLoading(false);
     }
-  }, [userId]);
+  }, []);
 
   useEffect(() => {
     fetchSlackIntegrations();

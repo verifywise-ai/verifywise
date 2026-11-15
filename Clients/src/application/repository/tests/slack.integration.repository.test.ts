@@ -26,7 +26,7 @@ describe("slack.integration.repository", () => {
   afterEach(vi.clearAllMocks);
 
   describe("getSlackIntegrations", () => {
-    it("should make GET request to /slackWebhooks with userId", async () => {
+    it("should make GET request to the organization's connections without a user id", async () => {
       const mockResponse = {
         data: [
           {
@@ -48,11 +48,10 @@ describe("slack.integration.repository", () => {
 
       vi.mocked(apiServices.get).mockResolvedValue(mockResponse);
 
-      const result = await getSlackIntegrations({ id: 1 });
+      const result = await getSlackIntegrations();
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
-      expect(apiServices.get).toHaveBeenCalledWith("/slackWebhooks", {
-        userId: 1,
+      expect(apiServices.get).toHaveBeenCalledWith("/extensions/slack/oauth/workspaces", {
         channel: undefined,
         signal: undefined,
         responseType: "json",
@@ -76,11 +75,10 @@ describe("slack.integration.repository", () => {
 
       vi.mocked(apiServices.get).mockResolvedValue(mockResponse);
 
-      const result = await getSlackIntegrations({ id: 1, channel: "#alerts" });
+      const result = await getSlackIntegrations({ channel: "#alerts" });
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
-      expect(apiServices.get).toHaveBeenCalledWith("/slackWebhooks", {
-        userId: 1,
+      expect(apiServices.get).toHaveBeenCalledWith("/extensions/slack/oauth/workspaces", {
         channel: "#alerts",
         signal: undefined,
         responseType: "json",
@@ -98,7 +96,7 @@ describe("slack.integration.repository", () => {
 
       vi.mocked(apiServices.get).mockRejectedValue(mockError);
 
-      await expect(getSlackIntegrations({ id: 1 })).rejects.toThrow();
+      await expect(getSlackIntegrations()).rejects.toThrow();
     });
 
     it("should throw error without response property for network errors", async () => {
@@ -106,12 +104,12 @@ describe("slack.integration.repository", () => {
 
       vi.mocked(apiServices.get).mockRejectedValue(networkError);
 
-      await expect(getSlackIntegrations({ id: 1 })).rejects.toThrow("Network timeout");
+      await expect(getSlackIntegrations()).rejects.toThrow("Network timeout");
     });
   });
 
   describe("getSlackIntegrationById", () => {
-    it("should make GET request to /slackWebhooks/:id", async () => {
+    it("should make GET request to /extensions/slack/oauth/workspaces/:id", async () => {
       const mockResponse = {
         data: {
           id: 1,
@@ -130,7 +128,7 @@ describe("slack.integration.repository", () => {
       const result = await getSlackIntegrationById({ id: 1 });
 
       expect(apiServices.get).toHaveBeenCalledTimes(1);
-      expect(apiServices.get).toHaveBeenCalledWith("/slackWebhooks/1", {
+      expect(apiServices.get).toHaveBeenCalledWith("/extensions/slack/oauth/workspaces/1", {
         signal: undefined,
         responseType: "json",
       });
@@ -160,7 +158,7 @@ describe("slack.integration.repository", () => {
   });
 
   describe("createSlackIntegration", () => {
-    it("should make POST request to /slackWebhooks with body", async () => {
+    it("should make POST request to /extensions/slack/oauth/workspaces with body", async () => {
       const mockResponse = {
         data: {
           id: 1,
@@ -183,7 +181,7 @@ describe("slack.integration.repository", () => {
       const result = await createSlackIntegration({ body });
 
       expect(apiServices.post).toHaveBeenCalledTimes(1);
-      expect(apiServices.post).toHaveBeenCalledWith("/slackWebhooks", body);
+      expect(apiServices.post).toHaveBeenCalledWith("/extensions/slack/oauth/workspaces", body);
       expect(result).toEqual(mockResponse.data);
     });
 
@@ -220,7 +218,7 @@ describe("slack.integration.repository", () => {
   });
 
   describe("updateSlackIntegration", () => {
-    it("should make PATCH request to /slackWebhooks/:id with body", async () => {
+    it("should make PATCH request to /extensions/slack/oauth/workspaces/:id with body", async () => {
       const mockResponse = {
         data: {
           id: 1,
@@ -244,7 +242,7 @@ describe("slack.integration.repository", () => {
       const result = await updateSlackIntegration({ id: 1, body });
 
       expect(apiServices.patch).toHaveBeenCalledTimes(1);
-      expect(apiServices.patch).toHaveBeenCalledWith("/slackWebhooks/1", body);
+      expect(apiServices.patch).toHaveBeenCalledWith("/extensions/slack/oauth/workspaces/1", body);
       expect(result).toEqual(mockResponse);
     });
 
@@ -279,7 +277,7 @@ describe("slack.integration.repository", () => {
   });
 
   describe("sendSlackMessage", () => {
-    it("should make POST request to /slackWebhooks/:id/send with default message", async () => {
+    it("should make POST request to /extensions/slack/oauth/workspaces/:id/send with default message", async () => {
       const mockResponse = {
         data: {
           success: true,
@@ -295,7 +293,7 @@ describe("slack.integration.repository", () => {
       const result = await sendSlackMessage({ id: 1 });
 
       expect(apiServices.post).toHaveBeenCalledTimes(1);
-      expect(apiServices.post).toHaveBeenCalledWith("/slackWebhooks/1/send", {
+      expect(apiServices.post).toHaveBeenCalledWith("/extensions/slack/oauth/workspaces/1/send", {
         title: "Welcome to Verifywise",
         message: "This is a test message from VerifyWise.",
       });
@@ -325,7 +323,7 @@ describe("slack.integration.repository", () => {
   });
 
   describe("deleteSlackIntegration", () => {
-    it("should make DELETE request to /slackWebhooks/:id", async () => {
+    it("should make DELETE request to /extensions/slack/oauth/workspaces/:id", async () => {
       const mockResponse = {
         data: {
           message: "Integration deleted successfully",
@@ -339,7 +337,7 @@ describe("slack.integration.repository", () => {
       const result = await deleteSlackIntegration({ id: 1 });
 
       expect(apiServices.delete).toHaveBeenCalledTimes(1);
-      expect(apiServices.delete).toHaveBeenCalledWith("/slackWebhooks/1");
+      expect(apiServices.delete).toHaveBeenCalledWith("/extensions/slack/oauth/workspaces/1");
       expect(result).toEqual(mockResponse.data);
     });
 

@@ -32,7 +32,7 @@ describe("useSlackIntegrations", () => {
       ],
     });
 
-    const { result } = renderHook(() => useSlackIntegrations(1));
+    const { result } = renderHook(() => useSlackIntegrations());
 
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.slackIntegrations).toHaveLength(1);
@@ -41,17 +41,19 @@ describe("useSlackIntegrations", () => {
     expect(result.current.error).toBeNull();
   });
 
-  it("does not fetch when userId is null", async () => {
-    const { result: _result } = renderHook(() => useSlackIntegrations(null));
+  it("asks for the organization's connections without a user id", async () => {
+    mockGetIntegrations.mockResolvedValue({ data: [] });
 
-    // Should stay in loading state since fetch never happens
-    expect(mockGetIntegrations).not.toHaveBeenCalled();
+    const { result } = renderHook(() => useSlackIntegrations());
+
+    await waitFor(() => expect(result.current.loading).toBe(false));
+    expect(mockGetIntegrations).toHaveBeenCalledWith({ signal: expect.any(AbortSignal) });
   });
 
   it("handles error", async () => {
     mockGetIntegrations.mockRejectedValue(new Error("Unauthorized"));
 
-    const { result } = renderHook(() => useSlackIntegrations(1));
+    const { result } = renderHook(() => useSlackIntegrations());
 
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.error).toBe("Unauthorized");
