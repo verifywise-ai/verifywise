@@ -40,6 +40,15 @@ describe("requestTimeoutSeconds", () => {
 });
 
 describe("MLflow sync and connection test", () => {
+  // The fake tracking servers listen on 127.0.0.1, which the outbound
+  // policy refuses unless loopback is allowed.
+  beforeAll(() => {
+    process.env.OUTBOUND_ALLOW_LOOPBACK = "true";
+  });
+  afterAll(() => {
+    delete process.env.OUTBOUND_ALLOW_LOOPBACK;
+  });
+
   it("aborts a request that exceeds the configured timeout", async () => {
     await withServer(
       () => {
@@ -86,7 +95,7 @@ describe("MLflow sync and connection test", () => {
     );
   });
 
-  it("includes the underlying cause of a connection failure", async () => {
+  it("gives one generic reason for a connection failure, whatever its cause", async () => {
     // Grab a free port, then close it so the connection is refused.
     const probe = http.createServer();
     await new Promise<void>((resolve) => probe.listen(0, "127.0.0.1", resolve));
@@ -98,6 +107,64 @@ describe("MLflow sync and connection test", () => {
       timeout: 2,
     });
     expect(result.success).toBe(false);
-    expect(result.error).toMatch(/ECONNREFUSED/);
+    expect(result.error).toBe("connection failed");
+
+    const test = await testConnection({ tracking_server_url: `http://127.0.0.1:${port}` });
+    expect(test).toMatchObject({ success: false, message: "Could not reach the server" });
+  });
+
+  it("reports the status only, never the server's answer", async () => {
+    await withServer(
+      (_req, res) => json(res, 500, { message: "internal secret detail" }),
+      async (url) => {
+        const result = await testConnection({ tracking_server_url: url });
+        expect(result).toMatchObject({ success: false, message: "The server answered HTTP 500" });
+      },
+    );
+  });
+
+  it("does not quote a body that is not JSON", async () => {
+    await withServer(
+      (_req, res) => {
+        res.writeHead(200, { "Content-Type": "text/html" });
+        res.end("<html>internal admin page</html>");
+      },
+      async (url) => {
+        const result = await testConnection({ tracking_server_url: url });
+        expect(result).toMatchObject({
+          success: false,
+          message: "Connection failed: the answer was not valid JSON",
+        });
+      },
+    );
+  });
+
+  it("refuses to follow a redirect", async () => {
+    await withServer(
+      (_req, res) => {
+        res.writeHead(302, { Location: "http://169.254.169.254/latest/meta-data/" });
+        res.end();
+      },
+      async (url) => {
+        const result = await testConnection({ tracking_server_url: url });
+        expect(result).toMatchObject({
+          success: false,
+          message: "The server answered with a redirect (HTTP 302), which is not followed",
+        });
+      },
+    );
+  });
+
+  it("refuses a loopback server unless loopback is allowed", async () => {
+    delete process.env.OUTBOUND_ALLOW_LOOPBACK;
+    try {
+      const result = await testConnection({ tracking_server_url: "http://127.0.0.1:5000" });
+      expect(result).toMatchObject({
+        success: false,
+        message: "The URL resolves to a loopback address, which is not allowed",
+      });
+    } finally {
+      process.env.OUTBOUND_ALLOW_LOOPBACK = "true";
+    }
   });
 });

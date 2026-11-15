@@ -75,7 +75,10 @@ export async function seedReadyConfig(
 }
 
 export async function withMock(): Promise<JiraCloudMock> {
+  // The mock listens on 127.0.0.1: the site URL rule and the outbound
+  // address policy (utils/safeOutboundUrl.ts) each need their override.
   process.env.JIRA_INCIDENTS_ALLOW_LOCAL_SITE_URL = "true";
+  process.env.OUTBOUND_ALLOW_LOOPBACK = "true";
   return startJiraCloudMock();
 }
 

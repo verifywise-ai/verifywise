@@ -475,13 +475,11 @@ describe("errors", () => {
     expect(result).toMatchObject({ complete: false, stoppedReason: "deadline" });
   });
 
-  it("turns a network failure into a JiraUpstreamError with the cause", async () => {
+  it("turns a network failure into a JiraUpstreamError without the cause", async () => {
     mockFetch.mockRejectedValueOnce(
       Object.assign(new TypeError("fetch failed"), { cause: { code: "ECONNREFUSED" } }),
     );
 
-    await expect(cloud().getSchemas()).rejects.toThrow(
-      "Could not reach Jira: fetch failed (ECONNREFUSED)",
-    );
+    await expect(cloud().getSchemas()).rejects.toThrow("Could not reach Jira: connection failed");
   });
 });

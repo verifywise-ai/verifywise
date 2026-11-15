@@ -166,11 +166,10 @@ export class JiraIncidentsClient {
         throw new JiraNotFoundError(404, `Jira returned 404 for ${path.split("?")[0]}`);
       }
       if (!response.ok) {
-        const text = await response.text().catch(() => "");
-        throw new JiraHttpError(
-          response.status,
-          `Jira returned ${response.status}: ${text.slice(0, 300) || "no details"}`,
-        );
+        // Status only: the site URL is admin-supplied, so its body is not
+        // shown back.
+        await response.body?.cancel().catch(() => undefined);
+        throw new JiraHttpError(response.status, `Jira returned HTTP ${response.status}`);
       }
       if (response.status === 204) return undefined as T;
       let text: string;

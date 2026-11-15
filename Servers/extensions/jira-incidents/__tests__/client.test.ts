@@ -2,12 +2,21 @@ import { startJiraCloudMock, JiraCloudMock } from "../../../tests/mocks/jiraClou
 import { JiraIncidentsClient } from "../jiraIncidents.client";
 import {
   JiraAuthError,
+  JiraHttpError,
   JiraNotFoundError,
   JiraRateLimitError,
   JiraUnreachableError,
 } from "../jiraIncidents.errors";
 
 describe("JiraIncidentsClient", () => {
+  // The mock listens on 127.0.0.1, which the outbound policy refuses unless
+  // loopback is allowed.
+  beforeAll(() => {
+    process.env.OUTBOUND_ALLOW_LOOPBACK = "true";
+  });
+  afterAll(() => {
+    delete process.env.OUTBOUND_ALLOW_LOOPBACK;
+  });
   let mock: JiraCloudMock;
   let sleeps: number[];
   const client = (token = "token-1") =>
@@ -48,6 +57,15 @@ describe("JiraIncidentsClient", () => {
     await expect(client().myself()).rejects.toBeInstanceOf(JiraRateLimitError);
     mock.state.failNext.push({ status: 503, retryAfter: 1 }, { status: 503, retryAfter: 1 });
     await expect(client().myself()).rejects.toBeInstanceOf(JiraRateLimitError);
+  });
+
+  it("reports an error status without Jira's answer", async () => {
+    mock.state.failNext.push({ status: 500 });
+    const err = await client()
+      .myself()
+      .catch((e: Error) => e);
+    expect(err).toBeInstanceOf(JiraHttpError);
+    expect((err as Error).message).toBe("Jira returned HTTP 500");
   });
 
   it("pages a search and parses issues", async () => {

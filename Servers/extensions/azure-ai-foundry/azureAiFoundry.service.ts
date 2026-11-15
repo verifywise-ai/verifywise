@@ -4,6 +4,7 @@ import { ExtensionService } from "../../services/extension/extensionService";
 import { safeFetchWithBase } from "../../utils/safeOutboundUrl";
 import {
   EXTERNAL_SYNC_DEADLINE_MS,
+  describeConnectionTestError,
   describeFetchError,
   requestSignal,
 } from "../../utils/outboundFetch.utils";
@@ -64,8 +65,9 @@ export async function loadConfiguration(organizationId: number): Promise<AzureAi
 
 // URL composition goes through utils/safeOutboundUrl.ts. That helper trims
 // trailing slashes with a bounded quantifier (ReDoS-safe), rejects
-// non-http(s) protocols, cloud metadata hosts (169.254.169.254), and
-// URL-embedded credentials. Every fetch below MUST use it.
+// non-http(s) protocols, loopback, link-local and metadata targets (after
+// DNS resolution), redirects, and URL-embedded credentials. Every fetch
+// below MUST use it.
 
 // ---------------------------------------------------------------------------
 // Test connection
@@ -82,9 +84,9 @@ export async function testConnection(
     };
   }
   try {
-    // Outbound URL validation happens inside safeFetchWithBase — any
-    // UnsafeOutboundUrlError falls into the generic catch below and
-    // surfaces as `Connection failed: <reason>`.
+    // Outbound URL validation happens inside safeFetchWithBase — an
+    // UnsafeOutboundUrlError (blocked address, redirect) falls into the
+    // catch below and is shown with its own message.
     const response = await safeFetchWithBase(
       config.project_endpoint,
       "/deployments?api-version=v1&limit=1",
@@ -98,10 +100,11 @@ export async function testConnection(
       },
     );
     if (!response.ok) {
-      const text = await response.text();
+      // Status only: the body of an arbitrary server is not shown back.
+      await response.body?.cancel().catch(() => undefined);
       return {
         success: false,
-        message: `Server returned ${response.status}: ${text || "no details"}`,
+        message: `The server answered HTTP ${response.status}`,
         testedAt: new Date().toISOString(),
       };
     }
@@ -114,7 +117,7 @@ export async function testConnection(
   } catch (err: any) {
     return {
       success: false,
-      message: `Connection failed: ${describeFetchError(err, REQUEST_TIMEOUT_SECONDS)}`,
+      message: describeConnectionTestError(err, REQUEST_TIMEOUT_SECONDS),
       testedAt: new Date().toISOString(),
     };
   }
@@ -258,8 +261,8 @@ export async function discoverAgents(
       },
     );
     if (!response.ok) {
-      const text = await response.text();
-      throw new Error(`Azure AI Foundry returned ${response.status}: ${text}`);
+      await response.body?.cancel().catch(() => undefined);
+      throw new Error(`Azure AI Foundry answered HTTP ${response.status}`);
     }
     const result: any = await response.json();
     const assistants = result.data || [];

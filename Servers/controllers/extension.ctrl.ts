@@ -8,6 +8,7 @@ import {
 } from "../domain.layer/exceptions/custom.exception";
 import { sanitizeForLog, EXTENSION_KEY_PATTERN } from "../utils/validations/validation.utils";
 import { translateError } from "../utils/i18n.utils";
+import { UnsafeOutboundUrlError } from "../utils/safeOutboundUrl";
 // Per-extension connectivity checks live inside each extension's service
 // module. Import them lazily via the dispatch table below to keep this
 // controller from pulling every extension's transitive deps at boot.
@@ -63,13 +64,23 @@ const TEST_CONNECTION_DISPATCH: Record<string, TestConnectionRunner> = {
       const stored = await jiraLoadFullConfig(organizationId);
       if (stored?.api_token) candidate.api_token = stored.api_token;
     }
-    const client = jiraClientFromConfig(candidate);
+    let client: ReturnType<typeof jiraClientFromConfig>;
+    try {
+      client = jiraClientFromConfig(candidate);
+    } catch (err) {
+      // A refused base URL (loopback, link-local, metadata, ...) is a failed
+      // test, not a server error.
+      if (err instanceof UnsafeOutboundUrlError) {
+        return { success: false, message: err.message, testedAt: new Date().toISOString() };
+      }
+      throw err;
+    }
     const result = await client.testConnection();
     return {
       success: result.success,
       message: result.success
         ? "Successfully connected to JIRA Assets"
-        : `Connection failed: ${result.error ?? "unknown error"}`,
+        : `Connection failed: ${withoutRemoteBody(result.error ?? "unknown error")}`,
       testedAt: new Date().toISOString(),
     };
   },
@@ -78,6 +89,16 @@ const TEST_CONNECTION_DISPATCH: Record<string, TestConnectionRunner> = {
   "jira-incidents": (submitted, organizationId) =>
     jiraIncidentsTestConnection(organizationId, submitted),
 };
+
+/**
+ * The Jira Assets client words a non-2xx answer as "Jira returned <status>:
+ * <body>". The base URL is admin-supplied, so a connection test shows the
+ * status only, never what the server sent back.
+ */
+export function withoutRemoteBody(error: string): string {
+  const status = /^Jira returned (\d{3}):/.exec(error);
+  return status ? `Jira returned HTTP ${status[1]}` : error;
+}
 
 function extractKey(req: Request): string {
   const raw = req.params.key;
