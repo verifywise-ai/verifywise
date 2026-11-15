@@ -3,7 +3,7 @@ import { STATUS_CODE } from "../../utils/statusCode.utils";
 import logger, { logStructured } from "../../utils/logger/fileLogger";
 import { translateError } from "../../utils/i18n.utils";
 import { logFailure, logProcessing, logSuccess } from "../../utils/logger/logHelper";
-import { JiraAssetsClient, JiraUpstreamError } from "./jira.client";
+import { JiraAssetsClient, JiraInvalidIdError, JiraUpstreamError } from "./jira.client";
 import {
   BackgroundJobsUnavailableError,
   hasPendingExtensionSyncJob,
@@ -64,6 +64,7 @@ function logContext(req: Request, functionName: string) {
 function isExpectedError(err: unknown): boolean {
   return (
     err instanceof JiraConfigValidationError ||
+    err instanceof JiraInvalidIdError ||
     err instanceof JiraNotConfiguredError ||
     err instanceof JiraUseCaseNotFoundError ||
     err instanceof SyncNotReadyError ||
@@ -95,7 +96,7 @@ async function requireClient(organizationId: number): Promise<JiraAssetsClient> 
  * 5xx in `error` (STATUS_CODE shapes) — the panel reads both through
  * getApiErrorReason, as the MLflow tab does.
  *
- * - JiraConfigValidationError → 400
+ * - JiraConfigValidationError, JiraInvalidIdError (nothing sent to Jira) → 400
  * - JiraNotConfiguredError, JiraUseCaseNotFoundError → 404
  * - SyncNotReadyError (Jira readiness for "Sync now") → its status (404 or 400) with the reason
  * - SyncInProgressError (engine claim taken) → 409 with JIRA_SYNC_IN_PROGRESS_MESSAGE
@@ -109,7 +110,7 @@ function sendError(req: Request, res: Response, err: unknown, functionName: stri
   if (err instanceof SyncNotReadyError) {
     return res.status(err.status).json(STATUS_CODE[err.status](err.message));
   }
-  if (err instanceof JiraConfigValidationError) {
+  if (err instanceof JiraConfigValidationError || err instanceof JiraInvalidIdError) {
     return res.status(400).json(STATUS_CODE[400](err.message));
   }
   if (err instanceof JiraNotConfiguredError || err instanceof JiraUseCaseNotFoundError) {

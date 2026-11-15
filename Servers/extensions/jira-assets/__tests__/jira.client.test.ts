@@ -1,5 +1,6 @@
 import {
   JiraAssetsClient,
+  JiraInvalidIdError,
   JiraUpstreamError,
   MAX_PAGES,
   PAGE_SIZE,
@@ -483,5 +484,79 @@ describe("errors", () => {
     await expect(cloud().getSchemas()).rejects.toThrow(
       "Could not reach Jira: fetch failed (ECONNREFUSED)",
     );
+  });
+});
+
+// E-H3: an id from a request path used to be pasted into the Jira path as is,
+// so "../../../api/2/project#" sent the stored credentials to another Jira API.
+describe("Jira id validation", () => {
+  const bad = [
+    ["a traversal", "../../../api/2/project#"],
+    ["a decoded %2F traversal", "..%2F..%2Fapi"],
+    ["a fragment", "12#"],
+    ["a dot segment", ".."],
+    ["a query", "12?x=1"],
+    ["letters", "abc"],
+    ["a negative number", "-1"],
+    ["a decimal", "1.5"],
+    ["an empty id", ""],
+    ["whitespace", " 12"],
+    ["more than 18 digits", "1".repeat(19)],
+    ["an AQL injection", "1 OR objectTypeId > 0"],
+  ] as const;
+
+  const calls: Array<[string, (c: JiraAssetsClient, id: string) => Promise<unknown>]> = [
+    ["getObjectTypes", (c, id) => c.getObjectTypes(id)],
+    ["getAttributes", (c, id) => c.getAttributes(id)],
+    ["getObjectsPage", (c, id) => c.getObjectsPage(id)],
+    ["getAllObjects", (c, id) => c.getAllObjects(id)],
+    ["getObjectById", (c, id) => c.getObjectById(id)],
+  ];
+
+  describe.each([
+    ["cloud", cloud],
+    ["data center", datacenter],
+  ] as const)("on %s", (_deployment, make) => {
+    describe.each(calls)("%s", (_name, call) => {
+      it.each(bad)("rejects %s without calling Jira", async (_label, id) => {
+        const err = await call(make(), id).catch((e) => e);
+
+        expect(err).toBeInstanceOf(JiraInvalidIdError);
+        expect(mockFetch).not.toHaveBeenCalled();
+      });
+    });
+  });
+
+  it("passes numeric ids through to the path", async () => {
+    mockFetch.mockResolvedValue(ok([]));
+
+    await datacenter().getObjectTypes("7");
+    await datacenter().getAttributes("123456789012345678");
+    await cloud().getObjectById("99");
+    // Data Center sends object ids as JSON numbers; the import passes them on.
+    await datacenter().getObjectById(5 as unknown as string);
+
+    const urls = mockFetch.mock.calls.map(([url]) => String(url));
+    expect(urls[0]).toBe(
+      "https://jira.example.com/rest/insight/1.0/objectschema/7/objecttypes/flat",
+    );
+    expect(urls[1]).toBe(
+      "https://jira.example.com/rest/insight/1.0/objecttype/123456789012345678/attributes",
+    );
+    expect(urls[2]).toBe("https://api.atlassian.com/jsm/assets/workspace/ws-1/v1/object/99");
+    expect(urls[3]).toBe("https://jira.example.com/rest/insight/1.0/object/5");
+  });
+});
+
+describe("upstream error details", () => {
+  it("echoes at most 200 characters of Jira's error body", async () => {
+    mockFetch.mockResolvedValueOnce({ ok: false, status: 500, text: async () => "x".repeat(1000) });
+
+    const err = await cloud()
+      .getSchemas()
+      .catch((e) => e);
+
+    expect(err).toBeInstanceOf(JiraUpstreamError);
+    expect(err.message).toBe(`Jira returned 500: ${"x".repeat(200)}`);
   });
 });

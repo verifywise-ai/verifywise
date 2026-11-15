@@ -44,7 +44,8 @@ jest.mock("../jiraAssets.service", () => {
 });
 jest.mock("../jira.client", () => {
   class JiraUpstreamError extends Error {}
-  return { JiraUpstreamError };
+  class JiraInvalidIdError extends Error {}
+  return { JiraUpstreamError, JiraInvalidIdError };
 });
 jest.mock("../../../services/automations/automationProducer", () => {
   class BackgroundJobsUnavailableError extends Error {}
@@ -67,6 +68,7 @@ jest.mock("../../../utils/i18n.utils", () => ({
 import { logFailure, logProcessing, logSuccess } from "../../../utils/logger/logHelper";
 import {
   deleteUseCaseCtrl,
+  getAttributes,
   getObjects,
   getSyncHistoryCtrl,
   getSyncStatusCtrl,
@@ -95,7 +97,7 @@ import {
   RunSupersededError,
   updateSelection,
 } from "../jiraAssets.service";
-import { JiraUpstreamError } from "../jira.client";
+import { JiraInvalidIdError, JiraUpstreamError } from "../jira.client";
 import { SyncInProgressError, SyncNotReadyError } from "../../sync-engine/errors";
 import { startManualRun } from "../../sync-engine/jobs";
 
@@ -282,6 +284,30 @@ describe("GET /object-types/:id/objects (import picker)", () => {
     expect(res.json).toHaveBeenCalledWith({
       message: "OK",
       data: { objects: [], hasMore: true, nextStartAt: 2000 },
+    });
+  });
+});
+
+describe("an id the Jira client refuses", () => {
+  it("answers 400 with the reason, not a 500", async () => {
+    (loadFullConfig as jest.Mock).mockResolvedValue({
+      jira_base_url: "https://x",
+      workspace_id: "w",
+      email: "e",
+    });
+    (clientFromConfig as jest.Mock).mockReturnValue({
+      getAttributes: jest.fn(async () => {
+        throw new JiraInvalidIdError("Object type id must be a numeric Jira id");
+      }),
+    });
+    const res = mockRes();
+
+    await getAttributes({ ...req, params: { objectTypeId: "x" } }, res);
+
+    expect(res.status).toHaveBeenCalledWith(400);
+    expect(res.json).toHaveBeenCalledWith({
+      message: "Bad Request",
+      data: "Object type id must be a numeric Jira id",
     });
   });
 });
