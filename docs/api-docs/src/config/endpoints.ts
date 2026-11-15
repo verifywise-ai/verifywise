@@ -6465,6 +6465,90 @@ export const intakeFormEndpoints: Endpoint[] = [
 export const integrationEndpoints: Endpoint[] = [
   {
     method: 'GET',
+    path: '/slackWebhooks',
+    summary: "Get All Slack Webhooks",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Integrations",
+  },
+  {
+    method: 'POST',
+    path: '/slackWebhooks',
+    summary: "Create New Slack Webhook",
+    requiresAuth: true,
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Integrations",
+  },
+  {
+    method: 'GET',
+    path: '/slackWebhooks/{id}',
+    summary: "Get Slack Webhook By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Integrations",
+  },
+  {
+    method: 'PATCH',
+    path: '/slackWebhooks/{id}',
+    summary: "Update Slack Webhook By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Success" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Integrations",
+  },
+  {
+    method: 'DELETE',
+    path: '/slackWebhooks/{id}',
+    summary: "Delete Slack Webhook By Id",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 200, description: "Deleted successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Integrations",
+  },
+  {
+    method: 'POST',
+    path: '/slackWebhooks/{id}/send',
+    summary: "Send Slack Message",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The id" },
+    ],
+    responses: [
+      { status: 201, description: "Created successfully" },
+      { status: 401, description: "Unauthorized" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Integrations",
+  },
+  {
+    method: 'GET',
     path: '/integrations/github/token',
     summary: "Get Git Hub Token Status Controller",
     requiresAuth: true,
@@ -6507,72 +6591,6 @@ export const integrationEndpoints: Endpoint[] = [
     responses: [
       { status: 201, description: "Created successfully" },
       { status: 401, description: "Unauthorized" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Integrations",
-  },
-  {
-    method: 'GET',
-    path: '/slackWebhooks',
-    summary: "Get All Slack Webhooks",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Integrations",
-  },
-  {
-    method: 'POST',
-    path: '/slackWebhooks',
-    summary: "Create New Slack Webhook",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Integrations",
-  },
-  {
-    method: 'GET',
-    path: '/slackWebhooks/{id}',
-    summary: "Get Slack Webhook By Id",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Integrations",
-  },
-  {
-    method: 'PATCH',
-    path: '/slackWebhooks/{id}',
-    summary: "Update Slack Webhook By Id",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Integrations",
-  },
-  {
-    method: 'DELETE',
-    path: '/slackWebhooks/{id}',
-    summary: "Delete Slack Webhook By Id",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
-      { status: 500, description: "Internal server error" },
-    ],
-    tag: "Integrations",
-  },
-  {
-    method: 'POST',
-    path: '/slackWebhooks/{id}/send',
-    summary: "Send Slack Message",
-    requiresAuth: true,
-    responses: [
-      { status: 200, description: "Success" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Integrations",

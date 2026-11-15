@@ -17655,6 +17655,142 @@ paths:
           description: Unauthorized
         '500':
           description: 'Internal server error'
+  /slackWebhooks:
+    get:
+      tags:
+        - Integrations
+      summary: 'Get All Slack Webhooks'
+      operationId: slackWebhooks_getAllSlackWebhooks
+      security:
+        -
+          bearerAuth: []
+      responses:
+        '200':
+          description: Success
+        '401':
+          description: Unauthorized
+        '500':
+          description: 'Internal server error'
+    post:
+      tags:
+        - Integrations
+      summary: 'Create New Slack Webhook'
+      operationId: slackWebhooks_createNewSlackWebhook
+      security:
+        -
+          bearerAuth: []
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: 'Created successfully'
+        '401':
+          description: Unauthorized
+        '500':
+          description: 'Internal server error'
+  '/slackWebhooks/{id}':
+    get:
+      tags:
+        - Integrations
+      summary: 'Get Slack Webhook By Id'
+      operationId: slackWebhooks_getSlackWebhookById
+      security:
+        -
+          bearerAuth: []
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: Success
+        '401':
+          description: Unauthorized
+        '500':
+          description: 'Internal server error'
+    patch:
+      tags:
+        - Integrations
+      summary: 'Update Slack Webhook By Id'
+      operationId: slackWebhooks_updateSlackWebhookById
+      security:
+        -
+          bearerAuth: []
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '200':
+          description: Success
+        '401':
+          description: Unauthorized
+        '500':
+          description: 'Internal server error'
+    delete:
+      tags:
+        - Integrations
+      summary: 'Delete Slack Webhook By Id'
+      operationId: slackWebhooks_deleteSlackWebhookById
+      security:
+        -
+          bearerAuth: []
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      responses:
+        '200':
+          description: 'Deleted successfully'
+        '401':
+          description: Unauthorized
+        '500':
+          description: 'Internal server error'
+  '/slackWebhooks/{id}/send':
+    post:
+      tags:
+        - Integrations
+      summary: 'Send Slack Message'
+      operationId: slackWebhooks_sendSlackMessage
+      security:
+        -
+          bearerAuth: []
+      parameters:
+        -
+          name: id
+          in: path
+          required: true
+          schema:
+            type: integer
+      requestBody:
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        '201':
+          description: 'Created successfully'
+        '401':
+          description: Unauthorized
+        '500':
+          description: 'Internal server error'
   /tokens:
     get:
       tags:
@@ -28840,87 +28976,6 @@ paths:
       tags:
         - 'v1: V1/Change Notices'
       operationId: setChangeNoticeDismissedHandler
-      security:
-        -
-          bearerAuth: []
-  /slackWebhooks:
-    get:
-      summary: 'Get All Slack Webhooks'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - Integrations
-      operationId: slackWebhooks_getAllSlackWebhooks
-      security:
-        -
-          bearerAuth: []
-    post:
-      summary: 'Create New Slack Webhook'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - Integrations
-      operationId: slackWebhooks_createNewSlackWebhook
-      security:
-        -
-          bearerAuth: []
-  '/slackWebhooks/{id}':
-    get:
-      summary: 'Get Slack Webhook By Id'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - Integrations
-      operationId: slackWebhooks_getSlackWebhookById
-      security:
-        -
-          bearerAuth: []
-    patch:
-      summary: 'Update Slack Webhook By Id'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - Integrations
-      operationId: slackWebhooks_updateSlackWebhookById
-      security:
-        -
-          bearerAuth: []
-    delete:
-      summary: 'Delete Slack Webhook By Id'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - Integrations
-      operationId: slackWebhooks_deleteSlackWebhookById
-      security:
-        -
-          bearerAuth: []
-  '/slackWebhooks/{id}/send':
-    post:
-      summary: 'Send Slack Message'
-      responses:
-        '200':
-          description: Success
-        '500':
-          description: 'Internal server error'
-      tags:
-        - Integrations
-      operationId: slackWebhooks_sendSlackMessage
       security:
         -
           bearerAuth: []
