@@ -5,6 +5,7 @@ jest.mock("../../../utils/logger/fileLogger", () => ({
   __esModule: true,
   default: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
   logStructured: jest.fn(),
+  logStructuredError: jest.fn(),
 }));
 jest.mock("../providers", () => ({ registerAllSyncProviders: jest.fn() }));
 jest.mock("../../../services/automations/automationProducer", () => ({
@@ -25,6 +26,7 @@ jest.mock("../../../middleware/requireExtensionEnabled.middleware", () => ({
 
 import { isExtensionEnabledForOrganization } from "../../../middleware/requireExtensionEnabled.middleware";
 import { enqueueExtensionSyncRun } from "../../../services/automations/automationProducer";
+import { logStructured, logStructuredError } from "../../../utils/logger/fileLogger";
 import {
   claimRun,
   closeStaleRunsForProvider,
@@ -193,15 +195,30 @@ describe("runExtensionSyncJob", () => {
       expect(mockClaim).not.toHaveBeenCalled();
       expect(recordSkippedRun).not.toHaveBeenCalled();
       expect(runClaimed).not.toHaveBeenCalled();
+      expect(logStructured).toHaveBeenCalledWith(
+        "processing",
+        expect.stringContaining("extension is not enabled"),
+        "runExtensionSyncJob",
+        "jobs.ts",
+      );
     },
   );
 
-  it("fails the job when the enablement lookup fails, claiming nothing", async () => {
-    mockEnabled.mockRejectedValue(new Error("db blip"));
+  it("logs and fails the job when the enablement lookup fails, writing no run row", async () => {
+    const cause = new Error("db blip");
+    mockEnabled.mockRejectedValue(cause);
     await expect(
       runExtensionSyncJob({ key: "jira-assets", orgId: 5, kind: "manual", triggeredBy: 8 }),
     ).rejects.toThrow("db blip");
     expect(mockClaim).not.toHaveBeenCalled();
+    expect(recordSkippedRun).not.toHaveBeenCalled();
+    expect(runClaimed).not.toHaveBeenCalled();
+    expect(logStructuredError).toHaveBeenCalledWith(
+      expect.stringContaining("jira-assets org 5"),
+      cause,
+      "runExtensionSyncJob",
+      "jobs.ts",
+    );
   });
 
   it("records a skipped row for a manual job when another run is live", async () => {

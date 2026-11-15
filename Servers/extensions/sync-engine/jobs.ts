@@ -1,5 +1,5 @@
 import { isExtensionEnabledForOrganization } from "../../middleware/requireExtensionEnabled.middleware";
-import logger, { logStructured } from "../../utils/logger/fileLogger";
+import logger, { logStructured, logStructuredError } from "../../utils/logger/fileLogger";
 import {
   type ExtensionSyncJobData,
   enqueueExtensionSyncRun,
@@ -163,7 +163,12 @@ export function parseRunJobData(data: unknown): {
  * Worker entry for `extension_sync_run`. Enablement is checked first: a job
  * for an organization that disabled the extension after it was queued is
  * dropped before the claim, so it writes no run row (the extension's run
- * routes are gated for that organization, so nobody waits on one). Otherwise
+ * routes are gated for that organization, so nobody waits on one). A failed
+ * lookup is logged and fails the job, again without a run row: whether the
+ * extension is on is unknown, so nothing is written behind its gate. The job
+ * is one attempt and removed on failure, so a client waiting on "Sync now"
+ * sees nothing queued, nothing running and no newer run, and ends with "did
+ * not start" after a few polls (`decidePoll` in useExtensionSync). Otherwise
  * the run is claimed here, at pickup. If another run holds the claim, a manual
  * job records a `skipped` row (a user is waiting on "Sync now") and a
  * scheduled job records nothing.
@@ -171,8 +176,25 @@ export function parseRunJobData(data: unknown): {
 export async function runExtensionSyncJob(data: unknown): Promise<"ran" | "skipped"> {
   const job = parseRunJobData(data);
   const { key } = job.provider;
-  if (!(await isExtensionEnabledForOrganization(key, job.orgId))) {
-    logger.info(`extension_sync_run ${key} org ${job.orgId}: skipped, extension is not enabled`);
+  let enabled: boolean;
+  try {
+    enabled = await isExtensionEnabledForOrganization(key, job.orgId);
+  } catch (err) {
+    logStructuredError(
+      `extension_sync_run ${key} org ${job.orgId}: enablement lookup failed, run not started`,
+      err,
+      "runExtensionSyncJob",
+      fileName,
+    );
+    throw err;
+  }
+  if (!enabled) {
+    logStructured(
+      "processing",
+      `extension_sync_run ${key} org ${job.orgId}: skipped, extension is not enabled`,
+      "runExtensionSyncJob",
+      fileName,
+    );
     return "skipped";
   }
   let run;
