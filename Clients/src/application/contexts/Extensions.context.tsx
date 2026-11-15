@@ -24,6 +24,11 @@ import { useAuth } from "../hooks/useAuth";
  * immediately.
  */
 
+interface ExtensionRequestOptions {
+  /** Set when the caller shows the error itself. */
+  suppressGlobalErrorToast?: boolean;
+}
+
 interface ExtensionsContextValue {
   extensions: Extension[];
   loading: boolean;
@@ -36,8 +41,12 @@ interface ExtensionsContextValue {
   loaded: boolean;
   error: string | null;
   refetch: () => Promise<void>;
-  enable: (key: string, configuration?: Record<string, unknown>) => Promise<Extension>;
-  disable: (key: string) => Promise<Extension>;
+  enable: (
+    key: string,
+    configuration?: Record<string, unknown>,
+    options?: ExtensionRequestOptions,
+  ) => Promise<Extension>;
+  disable: (key: string, options?: ExtensionRequestOptions) => Promise<Extension>;
   updateConfiguration: (key: string, configuration: Record<string, unknown>) => Promise<Extension>;
   isEnabled: (key: string) => boolean;
   getByKey: (key: string) => Extension | undefined;
@@ -109,8 +118,12 @@ export function ExtensionsProvider({ children }: { children: ReactNode }) {
   }, []);
 
   const enable = useCallback(
-    async (key: string, configuration?: Record<string, unknown>) => {
-      const next = await enableExtensionApi({ key, configuration });
+    async (
+      key: string,
+      configuration?: Record<string, unknown>,
+      options?: ExtensionRequestOptions,
+    ) => {
+      const next = await enableExtensionApi({ key, configuration, ...options });
       replaceOne(next);
       return next;
     },
@@ -118,8 +131,8 @@ export function ExtensionsProvider({ children }: { children: ReactNode }) {
   );
 
   const disable = useCallback(
-    async (key: string) => {
-      const next = await disableExtensionApi({ key });
+    async (key: string, options?: ExtensionRequestOptions) => {
+      const next = await disableExtensionApi({ key, ...options });
       replaceOne(next);
       return next;
     },

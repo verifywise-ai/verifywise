@@ -281,11 +281,14 @@ export default function ExtensionsPage() {
     return <Navigate to="/" replace />;
   }
 
+  // The card shows a failed toggle inline, so the global error toast would
+  // repeat it.
   const toggle = async (ext: Extension) => {
+    const quiet = { suppressGlobalErrorToast: true };
     if (ext.enabled) {
-      await disable(ext.key);
+      await disable(ext.key, quiet);
     } else {
-      await enable(ext.key);
+      await enable(ext.key, undefined, quiet);
     }
   };
 

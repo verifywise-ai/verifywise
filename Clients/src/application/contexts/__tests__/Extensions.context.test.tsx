@@ -102,3 +102,34 @@ describe("ExtensionsProvider loaded state", () => {
     expect(result.current.loaded).toBe(true);
   });
 });
+
+describe("ExtensionsProvider enable/disable", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    auth.isAuthenticated = true;
+    auth.organizationId = 1;
+    repo.listExtensions.mockResolvedValue([]);
+  });
+
+  it("passes the toast option through to the repository", async () => {
+    repo.enableExtension.mockResolvedValue(ext("risk-import", true));
+    repo.disableExtension.mockResolvedValue(ext("risk-import", false));
+    const { result } = renderHook(() => useExtensions(), { wrapper });
+    await waitFor(() => expect(result.current.loaded).toBe(true));
+
+    await act(async () => {
+      await result.current.enable("risk-import", undefined, { suppressGlobalErrorToast: true });
+      await result.current.disable("risk-import", { suppressGlobalErrorToast: true });
+    });
+
+    expect(repo.enableExtension).toHaveBeenCalledWith({
+      key: "risk-import",
+      configuration: undefined,
+      suppressGlobalErrorToast: true,
+    });
+    expect(repo.disableExtension).toHaveBeenCalledWith({
+      key: "risk-import",
+      suppressGlobalErrorToast: true,
+    });
+  });
+});

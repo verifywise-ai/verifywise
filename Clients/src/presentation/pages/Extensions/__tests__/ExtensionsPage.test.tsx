@@ -89,7 +89,10 @@ describe("Extensions catalog", () => {
     expect(ctx.disable).not.toHaveBeenCalled();
 
     fireEvent.click(within(dialog).getByRole("button", { name: "Disable" }));
-    await waitFor(() => expect(ctx.disable).toHaveBeenCalledWith("risk-import"));
+    // The card shows a failure inline, so the global toast is suppressed.
+    await waitFor(() =>
+      expect(ctx.disable).toHaveBeenCalledWith("risk-import", { suppressGlobalErrorToast: true }),
+    );
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
   });
 
@@ -123,6 +126,9 @@ describe("Extensions catalog", () => {
     fireEvent.click(screen.getByRole("button", { name: "Enable" }));
     await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
     expect(ctx.enable).toHaveBeenCalledTimes(2);
+    expect(ctx.enable).toHaveBeenCalledWith("risk-import", undefined, {
+      suppressGlobalErrorToast: true,
+    });
   });
 
   it("offers Try again when the list fails to load", () => {
