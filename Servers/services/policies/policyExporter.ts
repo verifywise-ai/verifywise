@@ -949,9 +949,7 @@ export async function generatePolicyDOCX(
  * Generate sanitized filename from title
  */
 export function generateFilename(title: string, extension: "pdf" | "docx"): string {
-  const sanitized = title
-    .replace(/[^\p{L}\p{M}\p{N}\s-]/gu, "")
-    .replace(/\s+/g, "_");
+  const sanitized = title.replace(/[^\p{L}\p{M}\p{N}\s-]/gu, "").replace(/\s+/g, "_");
   // Cut by code point so a surrogate pair is never split in half.
   const shortened = Array.from(sanitized).slice(0, 50).join("");
 
