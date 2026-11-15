@@ -639,3 +639,11 @@ describe("ExtensionService reports which secrets are stored", () => {
     expect(result.secretsSet).toEqual([]);
   });
 });
+
+describe("isFilled (shared with the service)", () => {
+  it("treats undefined, null and an empty string as not set, anything else as set", async () => {
+    const { isFilled } = await import("../storedSecretGuard");
+    expect([undefined, null, ""].map(isFilled)).toEqual([false, false, false]);
+    expect([0, false, " ", "x", []].map(isFilled)).toEqual([true, true, true, true, true]);
+  });
+});

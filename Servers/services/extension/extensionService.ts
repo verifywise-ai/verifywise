@@ -11,9 +11,12 @@ import {
   ValidationException,
 } from "../../domain.layer/exceptions/custom.exception";
 import { decrypt, encrypt } from "../../utils/encryption.utils";
-import { STORED_SECRET_MESSAGES, checkStoredSecrets, withoutKeys } from "./storedSecretGuard";
-
-const isFilled = (v: unknown): boolean => v !== undefined && v !== null && v !== "";
+import {
+  STORED_SECRET_MESSAGES,
+  checkStoredSecrets,
+  isFilled,
+  withoutKeys,
+} from "./storedSecretGuard";
 
 /**
  * Registry-layer service. Reads the extensions catalog + per-org enablements,
