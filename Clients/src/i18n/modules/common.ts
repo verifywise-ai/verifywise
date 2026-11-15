@@ -4787,8 +4787,6 @@ export const de: Record<string, string> = {
   "Add tags": "Tags hinzufügen",
   "Adds to the chosen folder; existing assignments are preserved.":
     "Wird dem ausgewählten Ordner hinzugefügt; bestehende Zuordnungen bleiben erhalten.",
-  "Archived policies will be moved out of the active list. You can still find them via the Archived status filter.":
-    'Archivierte Richtlinien werden aus der aktiven Liste entfernt. Sie sind weiterhin über den Statusfilter "Archiviert" abrufbar.',
   "Archived risks are removed from the risk register, reports and linked policies. Their change history is kept.":
     "Archivierte Risiken werden aus dem Risikoregister, aus Berichten und aus verknüpften Richtlinien entfernt. Ihr Änderungsverlauf bleibt erhalten.",
   "Assign reviewer": "Prüfer zuweisen",

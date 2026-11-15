@@ -177,6 +177,7 @@ const LinkEvidenceSelectorModal: React.FC<LinkEvidenceSelectorModalProps> = ({
       setEvidences(response ?? []);
     } catch (err) {
       console.error(err);
+      setEvidences([]);
       setLoadError(true);
     }
   }, []);

@@ -202,6 +202,7 @@ const LinkRiskSelectorModal: React.FC<LinkRiskSelectorModalProps> = ({
       setRisks(res.data || []);
     } catch (e) {
       console.error("error", e);
+      setRisks([]);
       setLoadError(true);
     }
   }, []);

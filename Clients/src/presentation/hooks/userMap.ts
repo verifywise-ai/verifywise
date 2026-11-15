@@ -1,6 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useState, useMemo } from "react";
 import { getAllEntities } from "../../application/repository/entity.repository";
+import { buildUserSortNames } from "../../application/utils/userSort";
 
 export interface User {
   id: number;
@@ -26,14 +27,8 @@ export const useUserMap = () => {
     fetchUsers();
   }, []);
 
-  // Create a mapping of user IDs to full names
-  const userMap = useMemo(() => {
-    const map = new Map<string, string>();
-    users.forEach((user) => {
-      map.set(user.id.toString(), `${user.name} ${user.surname}`.trim());
-    });
-    return map;
-  }, [users]);
+  // User id (as a string) to full name, built the way the table sorts build it.
+  const userMap = useMemo(() => buildUserSortNames(users), [users]);
 
   return { users, userMap };
 };

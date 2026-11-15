@@ -26,7 +26,11 @@ import {
 import { ITableProps } from "../../../types/interfaces/i.table";
 import { text, border, radiusPx } from "../../../themes/palette";
 import useUsers from "../../../../application/hooks/useUsers";
-import { buildUserSortNames, userSortName } from "../../../../application/utils/userSort";
+import {
+  buildUserSortNames,
+  compareNames,
+  userSortName,
+} from "../../../../application/utils/userSort";
 
 const POLICY_TABLE_SORTING_KEY = "verifywise_policy_table_sorting";
 
@@ -141,13 +145,13 @@ const CustomizablePolicyTable = ({
         bValue = b.next_review_date ? new Date(b.next_review_date).getTime() : 0;
       } else if (sortKey.includes("author")) {
         // The column shows names, so sort by name rather than by user id.
-        aValue = userSortName(userSortNames, a.author_id).toLowerCase();
-        bValue = userSortName(userSortNames, b.author_id).toLowerCase();
+        aValue = userSortName(userSortNames, a.author_id);
+        bValue = userSortName(userSortNames, b.author_id);
       } else if (sortKey.includes("last") || sortKey.includes("updated")) {
         // Handle both "last updated" and "updated by" columns
         if (sortKey.includes("by")) {
-          aValue = userSortName(userSortNames, a.last_updated_by).toLowerCase();
-          bValue = userSortName(userSortNames, b.last_updated_by).toLowerCase();
+          aValue = userSortName(userSortNames, a.last_updated_by);
+          bValue = userSortName(userSortNames, b.last_updated_by);
         } else {
           aValue = a.last_updated_at ? new Date(a.last_updated_at).getTime() : 0;
           bValue = b.last_updated_at ? new Date(b.last_updated_at).getTime() : 0;
@@ -159,7 +163,7 @@ const CustomizablePolicyTable = ({
           const bVal = (b as Record<string, unknown>)[sortKey];
           aValue = String(aVal).toLowerCase();
           bValue = String(bVal).toLowerCase();
-          const comparison = aValue.localeCompare(bValue);
+          const comparison = compareNames(aValue, bValue);
           return sortConfig.direction === "asc" ? comparison : -comparison;
         }
         return 0;
@@ -167,7 +171,7 @@ const CustomizablePolicyTable = ({
 
       // Handle string comparisons
       if (typeof aValue === "string" && typeof bValue === "string") {
-        const comparison = aValue.localeCompare(bValue);
+        const comparison = compareNames(aValue, bValue);
         return sortConfig.direction === "asc" ? comparison : -comparison;
       }
 
