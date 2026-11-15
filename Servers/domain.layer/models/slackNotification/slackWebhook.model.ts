@@ -3,7 +3,7 @@ import { ISlackWebhook } from "../../interfaces/i.slackWebhook";
 import { UserModel } from "../user/user.model";
 import { OrganizationModel } from "../organization/organization.model";
 import { numberValidation } from "../../validations/number.valid";
-import { ValidationException, NotFoundException } from "../../exceptions/custom.exception";
+import { ValidationException } from "../../exceptions/custom.exception";
 import { decryptText, encryptText } from "../../../tools/createSecureValue";
 import { SlackDeliveryScope, SlackNotificationRoutingType } from "../../enums/slack.enum";
 
@@ -193,22 +193,6 @@ export class SlackWebhookModel extends Model<SlackWebhookModel> implements ISlac
   }
 
   /**
-   * Update slack webhook information with validation
-   */
-  async updateSlackWebhook(updateData: {
-    routing_type?: SlackNotificationRoutingType[];
-    is_active?: boolean;
-  }): Promise<void> {
-    if (updateData.routing_type !== undefined) {
-      this.routing_type = updateData.routing_type;
-    }
-
-    if (updateData.is_active !== undefined) {
-      this.is_active = updateData.is_active;
-    }
-  }
-
-  /**
    * Validate data before saving
    */
   async validateSlackWebhookData(): Promise<void> {
@@ -289,38 +273,5 @@ export class SlackWebhookModel extends Model<SlackWebhookModel> implements ISlac
    */
   static fromJSON(json: any): SlackWebhookModel {
     return new SlackWebhookModel(json);
-  }
-
-  /**
-   * Static method to find webhook by ID with validation
-   */
-  static async findByIdWithValidation(id: number): Promise<SlackWebhookModel> {
-    if (!numberValidation(id, 1)) {
-      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
-    }
-
-    const slackWebhook = await SlackWebhookModel.findByPk(id);
-    if (!slackWebhook) {
-      throw new NotFoundException("Slack Webhook not found", "slackWebhook", id);
-    }
-
-    return slackWebhook;
-  }
-
-  /**
-   * Static method to update SlackWebhook by ID
-   */
-  static async updateSlackWebhookById(
-    id: number,
-    updateData: Partial<ISlackWebhook>,
-  ): Promise<[number, SlackWebhookModel[]]> {
-    if (!numberValidation(id, 1)) {
-      throw new ValidationException("Valid ID is required (must be >= 1)", "id", id);
-    }
-
-    return await SlackWebhookModel.update(updateData, {
-      where: { id },
-      returning: true,
-    });
   }
 }
