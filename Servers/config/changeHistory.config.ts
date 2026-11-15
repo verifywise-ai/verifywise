@@ -183,18 +183,29 @@ const BASIC_ENTITIES: { [key: string]: string } = {
   "&apos;": "'",
 };
 
+/** Strip tags until none is left, so removing one can't join the rest into a new tag. */
+const stripTags = (html: string): string => {
+  let previous: string;
+  let text = html;
+  do {
+    previous = text;
+    text = text.replace(BLOCK_TAG, " ").replace(/<[^>]*>/g, "");
+  } while (text !== previous);
+  return text;
+};
+
 /**
- * A readable one-line excerpt of an HTML value: tags stripped, basic entities
- * decoded, whitespace collapsed, cut to HISTORY_EXCERPT_LENGTH characters with
- * a trailing ellipsis when cut. An empty result is "-".
+ * A readable one-line excerpt of an HTML value: basic entities decoded (&amp;
+ * last, so nothing is decoded twice), then tags stripped, whitespace
+ * collapsed, cut to HISTORY_EXCERPT_LENGTH characters with a trailing ellipsis
+ * when cut. Decoding first means an encoded tag (&lt;b&gt;) is stripped too, so
+ * no tag survives into the excerpt. An empty result is "-".
  */
 export const htmlExcerpt = (value: unknown): string => {
-  const text = String(value ?? "")
-    .replace(BLOCK_TAG, " ")
-    .replace(/<[^>]*>/g, "")
-    .replace(/&(?:nbsp|amp|lt|gt|quot|apos|#39);/g, (m) => BASIC_ENTITIES[m])
-    .replace(/\s+/g, " ")
-    .trim();
+  const decoded = String(value ?? "")
+    .replace(/&(?:nbsp|lt|gt|quot|apos|#39);/g, (m) => BASIC_ENTITIES[m])
+    .replace(/&amp;/g, "&");
+  const text = stripTags(decoded).replace(/\s+/g, " ").trim();
   if (!text) return "-";
   return text.length > HISTORY_EXCERPT_LENGTH ? `${text.slice(0, HISTORY_EXCERPT_LENGTH)}…` : text;
 };
