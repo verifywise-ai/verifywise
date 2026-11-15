@@ -564,6 +564,7 @@ export function deriveTag(basePath: string): string {
     "/api/v1/intake-submissions": "Intake submissions",
     "/api/v1/use-case-org-settings": "Use Case Settings",
     "/api/v1/framework-import": "Extensions",
+    "/api/v1/risk-import": "Risk import",
     "/api/v1/policies": "Policies",
     "/api/ai-incident-managements": "Incidents",
     "/api/approval-workflows": "Approval Workflows",

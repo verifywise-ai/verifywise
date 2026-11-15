@@ -19,6 +19,12 @@ jest.mock("../../../utils/changeHistory.base.utils", () => ({
 
 import { buildExcelTemplate, importRisks, RiskImportRow } from "../riskImport.service";
 
+// The /api/v1 contract; the legacy rules are covered in the "legacy" block.
+const strictImport = (rows: RiskImportRow[], org: number, user: number) =>
+  importRisks(rows, org, user, { strict: true });
+const legacyImport = (rows: RiskImportRow[], org: number, user: number) =>
+  importRisks(rows, org, user, { strict: false });
+
 const validRow = (overrides: Partial<RiskImportRow> = {}): RiskImportRow => ({
   risk_name: "Model drift",
   risk_owner: "Ada Lovelace - ada@example.com (ID: 7)",
@@ -51,7 +57,7 @@ describe("importRisks", () => {
       ["risk_name", { risk_name: "" }],
       ["risk_owner", { risk_owner: undefined }],
     ])("rejects a row with no %s", async (field, override) => {
-      const result = await importRisks([validRow(override)], 1, 5);
+      const result = await strictImport([validRow(override)], 1, 5);
       expect(result.success).toBe(false);
       expect(result.errors.map((e) => e.field)).toContain(field);
       expect(mockTransaction.commit).not.toHaveBeenCalled();
@@ -78,7 +84,7 @@ describe("importRisks", () => {
   });
 
   it("reports invalid risk categories by name instead of dropping them", async () => {
-    const result = await importRisks(
+    const result = await strictImport(
       [validRow({ risk_category: "Operational risk, Made up risk, Other bad" })],
       1,
       5,
@@ -93,14 +99,17 @@ describe("importRisks", () => {
       mockQuery.mockImplementation(async (sql: string) =>
         sql.includes("FROM risks") ? [{ risk_name: "Model drift" }] : [],
       );
-      const result = await importRisks([validRow({ risk_name: "  MODEL Drift " })], 9, 5);
+      const result = await strictImport([validRow({ risk_name: "  MODEL Drift " })], 9, 5);
       expect(result.success).toBe(false);
       expect(result.errors[0]).toMatchObject({ row: 2, field: "risk_name" });
       expect(result.errors[0].message).toContain("already exists");
       const lookup = mockQuery.mock.calls.find((c) => sqlOf(c).includes("FROM risks"))!;
       expect(sqlOf(lookup)).toContain("organization_id = :organizationId");
       expect((lookup[1] as any).replacements.organizationId).toBe(9);
-      expect(sqlOf(lookup)).not.toContain("lower(");
+      // Only candidates are fetched: the SQL receives the trimmed, lower-cased keys.
+      expect(sqlOf(lookup)).toContain("lower(regexp_replace(risk_name");
+      expect((lookup[1] as any).replacements.keys).toEqual(["model drift"]);
+      expect((lookup[1] as any).replacements.trimPattern).toContain("\u00a0");
       expect(mockQuery.mock.calls.some((c) => sqlOf(c).includes("INSERT INTO risks"))).toBe(false);
     });
 
@@ -108,13 +117,13 @@ describe("importRisks", () => {
       mockQuery.mockImplementation(async (sql: string) =>
         sql.includes("FROM risks") ? [{ risk_name: "Model drift\u00a0\t" }] : [],
       );
-      const result = await importRisks([validRow()], 1, 5);
+      const result = await strictImport([validRow()], 1, 5);
       expect(result.success).toBe(false);
       expect(result.errors[0].message).toContain("already exists");
     });
 
     it("checks existing names inside the insert transaction, after the org lock", async () => {
-      await importRisks([validRow()], 9, 5);
+      await strictImport([validRow()], 9, 5);
       const sqls = mockQuery.mock.calls.map((c) => sqlOf(c));
       const lock = sqls.findIndex((q) => q.includes("pg_advisory_xact_lock"));
       const lookup = sqls.findIndex((q) => q.includes("FROM risks"));
@@ -133,7 +142,7 @@ describe("importRisks", () => {
       mockQuery.mockImplementation(async (sql: string) =>
         sql.includes("FROM risks") ? [{ risk_name: "model drift" }] : [],
       );
-      const result = await importRisks([validRow()], 1, 5);
+      const result = await strictImport([validRow()], 1, 5);
       expect(result.success).toBe(false);
       expect(result.errors).toEqual([
         { row: 2, field: "risk_name", message: 'A risk named "Model drift" already exists' },
@@ -144,7 +153,7 @@ describe("importRisks", () => {
     });
 
     it("rejects a name repeated earlier in the same file", async () => {
-      const result = await importRisks(
+      const result = await strictImport(
         [validRow(), validRow({ risk_name: "other" }), validRow({ risk_name: "MODEL DRIFT" })],
         1,
         5,
@@ -167,7 +176,7 @@ describe("importRisks", () => {
         }
         return [];
       });
-      const result = await importRisks(
+      const result = await strictImport(
         [validRow({ risk_name: "A" }), validRow({ risk_name: "B" }), validRow({ risk_name: "C" })],
         1,
         5,
@@ -192,7 +201,7 @@ describe("importRisks", () => {
       mockQuery.mockImplementation(async (sql: string) =>
         sql.includes("INSERT INTO risks") ? [{ id: ++id }] : [],
       );
-      const result = await importRisks(
+      const result = await strictImport(
         [validRow({ risk_name: "A" }), validRow({ risk_name: "B" })],
         3,
         77,
@@ -215,7 +224,7 @@ describe("importRisks", () => {
 
   describe("cell values", () => {
     it("accepts numeric and rich-text cells instead of throwing", async () => {
-      const result = await importRisks(
+      const result = await strictImport(
         [
           validRow({
             risk_name: 2024 as unknown as string,
@@ -235,7 +244,7 @@ describe("importRisks", () => {
     });
 
     it("reports a numeric name as a duplicate of the same name in the file", async () => {
-      const result = await importRisks(
+      const result = await strictImport(
         [validRow({ risk_name: 2024 as never }), validRow({ risk_name: "2024" })],
         1,
         5,
@@ -244,14 +253,14 @@ describe("importRisks", () => {
     });
 
     it("still refuses a numeric date cell", async () => {
-      const result = await importRisks([validRow({ deadline: 46022 as never })], 1, 5);
+      const result = await strictImport([validRow({ deadline: 46022 as never })], 1, 5);
       expect(result.errors.map((e) => e.field)).toContain("deadline");
     });
   });
 
   describe("row numbers", () => {
     it("uses the sheet row number sent by the client", async () => {
-      const result = await importRisks(
+      const result = await strictImport(
         [validRow({ row_number: 2 }), validRow({ risk_name: "B", row_number: 9, likelihood: "x" })],
         1,
         5,
@@ -260,7 +269,7 @@ describe("importRisks", () => {
     });
 
     it("falls back to index + 2 when the row number is missing or not a positive integer", async () => {
-      const result = await importRisks(
+      const result = await strictImport(
         [
           validRow({ risk_name: "A", likelihood: "x", row_number: 0 }),
           validRow({ risk_name: "B", likelihood: "x", row_number: 3.5 }),
@@ -277,8 +286,105 @@ describe("importRisks", () => {
         if (sql.includes("INSERT INTO risks")) throw new Error("boom");
         return [];
       });
-      const result = await importRisks([validRow({ row_number: 12 })], 1, 5);
+      const result = await strictImport([validRow({ row_number: 12 })], 1, 5);
       expect(result.errors[0].row).toBe(12);
+    });
+  });
+
+  describe("insert failures", () => {
+    it("skips the creation history for rows after the first failed insert", async () => {
+      let inserts = 0;
+      mockQuery.mockImplementation(async (sql: string) => {
+        if (sql.includes("INSERT INTO risks")) {
+          inserts++;
+          if (inserts === 2) throw new Error("boom");
+          return [{ id: 100 + inserts }];
+        }
+        return [];
+      });
+      const result = await strictImport(
+        [validRow({ risk_name: "A" }), validRow({ risk_name: "B" }), validRow({ risk_name: "C" })],
+        1,
+        5,
+      );
+      expect(result.errors).toHaveLength(1);
+      expect(inserts).toBe(3);
+      // Row A was written before the failure; row C comes after it and is rolled back anyway.
+      expect(mockRecordCreation).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("legacy (strict: false)", () => {
+    const sparse = (overrides: Partial<RiskImportRow> = {}): RiskImportRow => ({
+      risk_name: "Model drift",
+      risk_owner: 7,
+      risk_description: "Accuracy degrades",
+      ...overrides,
+    });
+
+    it("accepts a row without phase, likelihood or severity", async () => {
+      const result = await legacyImport([sparse()], 1, 5);
+      expect(result).toMatchObject({ success: true, imported: 1 });
+    });
+
+    it("still enum-checks phase, likelihood and severity when present", async () => {
+      const result = await legacyImport(
+        [sparse({ ai_lifecycle_phase: "x", likelihood: "y", severity: "z" })],
+        1,
+        5,
+      );
+      expect(result.errors.map((e) => e.field).sort()).toEqual([
+        "ai_lifecycle_phase",
+        "likelihood",
+        "severity",
+      ]);
+    });
+
+    it("still requires name, owner and description", async () => {
+      const result = await legacyImport([{}], 1, 5);
+      expect(result.errors.map((e) => e.field).sort()).toEqual([
+        "risk_description",
+        "risk_name",
+        "risk_owner",
+      ]);
+    });
+
+    it("drops unknown categories silently and keeps the known ones", async () => {
+      const result = await legacyImport(
+        [sparse({ risk_category: "Operational risk, Made up risk" })],
+        1,
+        5,
+      );
+      expect(result.success).toBe(true);
+      expect(mockRecordCreation.mock.calls[0][4]).toMatchObject({
+        risk_category: ["Operational risk"],
+      });
+    });
+
+    it("does not check duplicate names, in the file or in the organization", async () => {
+      mockQuery.mockImplementation(async (sql: string) => {
+        if (sql.includes("INSERT INTO risks")) return [{ id: 1 }];
+        if (sql.includes("FROM risks")) return [{ risk_name: "Model drift" }];
+        return [];
+      });
+      const result = await legacyImport([sparse(), sparse()], 1, 5);
+      expect(result).toMatchObject({ success: true, imported: 2 });
+      expect(mockQuery.mock.calls.some((c) => sqlOf(c).includes("FROM risks"))).toBe(false);
+    });
+
+    it("numbers rows index + 2 and ignores a sent row_number", async () => {
+      const result = await legacyImport(
+        [sparse({ row_number: 40, likelihood: "x" }), sparse({ row_number: 41, likelihood: "x" })],
+        1,
+        5,
+      );
+      expect(result.errors.map((e) => e.row)).toEqual([2, 3]);
+    });
+
+    it("keeps the bug fixes: string coercion and creation history", async () => {
+      const result = await legacyImport([sparse({ impact: 5 as never })], 1, 5);
+      expect(result.success).toBe(true);
+      expect(mockRecordCreation.mock.calls[0][4]).toMatchObject({ impact: "5" });
     });
   });
 });

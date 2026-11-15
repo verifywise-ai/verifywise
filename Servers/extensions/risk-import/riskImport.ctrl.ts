@@ -28,7 +28,7 @@ export async function downloadExcelTemplate(req: Request, res: Response): Promis
   }
 }
 
-export async function bulkImportRisks(req: Request, res: Response): Promise<any> {
+async function handleBulkImport(req: Request, res: Response, strict: boolean): Promise<any> {
   const organizationId = (req as any).organizationId as number;
   const csvData = (req.body?.csvData ?? []) as RiskImportRow[];
 
@@ -42,7 +42,7 @@ export async function bulkImportRisks(req: Request, res: Response): Promise<any>
   }
 
   try {
-    const result = await importRisks(csvData, organizationId, req.userId!);
+    const result = await importRisks(csvData, organizationId, req.userId!, { strict });
     // Validation-only failure = 400 (client error). Insert failures during a
     // partially-successful batch also come back with success=false and are
     // returned as 400 for the client to display per-row errors.
@@ -53,4 +53,14 @@ export async function bulkImportRisks(req: Request, res: Response): Promise<any>
     logger.error("❌ Error in bulkImportRisks:", error);
     return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
   }
+}
+
+/** POST /api/extensions/risk-import/import (legacy, frozen): the accept rules the endpoint always had. */
+export function bulkImportRisks(req: Request, res: Response): Promise<any> {
+  return handleBulkImport(req, res, false);
+}
+
+/** POST /api/v1/risk-import/import: strict rules (required fields, duplicate names, unknown categories). */
+export function bulkImportRisksStrict(req: Request, res: Response): Promise<any> {
+  return handleBulkImport(req, res, true);
 }

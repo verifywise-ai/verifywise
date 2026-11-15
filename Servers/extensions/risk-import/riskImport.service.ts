@@ -315,7 +315,13 @@ function normalizeRow(raw: unknown): RiskImportRow {
   return row as RiskImportRow;
 }
 
-function validateRow(row: RiskImportRow, rowIndex: number): RiskImportError[] {
+/**
+ * Strict rules (the /api/v1 contract): lifecycle phase, likelihood and severity
+ * are required and unknown categories are errors. Lenient rules (the frozen
+ * legacy path) accept what the endpoint accepted before: those three are
+ * optional but enum-checked when present, and unknown categories are dropped.
+ */
+function validateRow(row: RiskImportRow, rowIndex: number, strict: boolean): RiskImportError[] {
   const errors: RiskImportError[] = [];
 
   if (!row.risk_name || row.risk_name.trim().length === 0) {
@@ -335,14 +341,17 @@ function validateRow(row: RiskImportRow, rowIndex: number): RiskImportError[] {
       message: "Risk description is required",
     });
   }
-  // Required like the normal risk form (createRiskSchema): the template marks
-  // these with * and likelihood + severity drive the calculated risk level.
+  // Strict mode requires these like the normal risk form (createRiskSchema):
+  // the template marks them with * and likelihood + severity drive the
+  // calculated risk level.
   if (!row.ai_lifecycle_phase) {
-    errors.push({
-      row: rowIndex,
-      field: "ai_lifecycle_phase",
-      message: "AI lifecycle phase is required",
-    });
+    if (strict) {
+      errors.push({
+        row: rowIndex,
+        field: "ai_lifecycle_phase",
+        message: "AI lifecycle phase is required",
+      });
+    }
   } else if (!inEnum(row.ai_lifecycle_phase, AI_LIFECYCLE_PHASES)) {
     errors.push({
       row: rowIndex,
@@ -351,7 +360,9 @@ function validateRow(row: RiskImportRow, rowIndex: number): RiskImportError[] {
     });
   }
   if (!row.likelihood) {
-    errors.push({ row: rowIndex, field: "likelihood", message: "Likelihood is required" });
+    if (strict) {
+      errors.push({ row: rowIndex, field: "likelihood", message: "Likelihood is required" });
+    }
   } else if (!inEnum(row.likelihood, LIKELIHOOD_VALUES)) {
     errors.push({
       row: rowIndex,
@@ -360,7 +371,9 @@ function validateRow(row: RiskImportRow, rowIndex: number): RiskImportError[] {
     });
   }
   if (!row.severity) {
-    errors.push({ row: rowIndex, field: "severity", message: "Severity is required" });
+    if (strict) {
+      errors.push({ row: rowIndex, field: "severity", message: "Severity is required" });
+    }
   } else if (!inEnum(row.severity, SEVERITY_VALUES)) {
     errors.push({
       row: rowIndex,
@@ -369,7 +382,7 @@ function validateRow(row: RiskImportRow, rowIndex: number): RiskImportError[] {
     });
   }
   const categories = splitCategories(row.risk_category);
-  if (categories.invalid.length > 0) {
+  if (strict && categories.invalid.length > 0) {
     errors.push({
       row: rowIndex,
       field: "risk_category",
@@ -463,6 +476,13 @@ export function parseRow(row: RiskImportRow): Record<string, unknown> {
 /** Advisory-lock class for pg_advisory_xact_lock(class, org): one risk import commit per org at a time. */
 const RISK_IMPORT_LOCK_CLASS = 5301;
 
+/**
+ * Leading/trailing whitespace as JS String.prototype.trim strips it, for the
+ * existing-name pre-filter: ASCII whitespace plus NBSP, BOM, Ogham space mark, U+2000-200A,
+ * line/paragraph separators, narrow NBSP, medium math space, ideographic space.
+ */
+const SQL_TRIM_PATTERN = `^[[:space:]\u00a0\ufeff\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+|[[:space:]\u00a0\ufeff\u1680\u2000-\u200a\u2028\u2029\u202f\u205f\u3000]+$`;
+
 /** One error per row whose name matches an existing, non-deleted risk of the organization. */
 async function existingNameErrors(
   rows: RiskImportRow[],
@@ -470,15 +490,22 @@ async function existingNameErrors(
   organizationId: number,
   transaction?: Transaction,
 ): Promise<RiskImportError[]> {
-  if (!rows.some((row) => nameKey(row.risk_name))) return [];
-  // Compared in JS, with the same key as the in-file check, so NBSP, tabs and
-  // newlines trim identically on both sides.
+  const keys = [...new Set(rows.map((row) => nameKey(row.risk_name)).filter((k) => k))];
+  if (keys.length === 0) return [];
+  // Only candidates come back: the SQL trims the characters JS trim() strips and
+  // lower-cases, and the JS key below confirms each returned name, so the two
+  // sides agree on whitespace and a large register is not loaded in full.
   const existing = (await sequelize.query(
     `SELECT risk_name
        FROM risks
       WHERE organization_id = :organizationId
-        AND (is_deleted = false OR is_deleted IS NULL)`,
-    { replacements: { organizationId }, type: QueryTypes.SELECT, transaction },
+        AND (is_deleted = false OR is_deleted IS NULL)
+        AND lower(regexp_replace(risk_name, :trimPattern, '', 'g')) = ANY(ARRAY[:keys]::text[])`,
+    {
+      replacements: { organizationId, keys, trimPattern: SQL_TRIM_PATTERN },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
   )) as { risk_name: string | null }[];
   const existingNames = new Set(existing.map((r) => nameKey(r.risk_name ?? undefined)));
   const errors: RiskImportError[] = [];
@@ -495,23 +522,34 @@ async function existingNameErrors(
   return errors;
 }
 
+export interface ImportRisksOptions {
+  /**
+   * true (the /api/v1 contract): required phase/likelihood/severity, unknown
+   * categories rejected, duplicate names rejected, the sheet's row numbers
+   * honoured. false (the frozen legacy path): the accept rules the endpoint
+   * had before, with row numbers as index + 2.
+   */
+  strict: boolean;
+}
+
 export async function importRisks(
   rawRows: RiskImportRow[],
   organizationId: number,
   userId: number,
+  { strict }: ImportRisksOptions = { strict: false },
 ): Promise<RiskImportResult> {
   const errors: RiskImportError[] = [];
   const rows = rawRows.map(normalizeRow);
   // The client sends each row's real sheet row (blank rows are dropped before
   // sending); without it, +2 accounts for the header row plus 1-based indexing.
   const rowNumbers = rows.map((row, i) =>
-    Number.isInteger(row.row_number) && (row.row_number as number) > 0
+    strict && Number.isInteger(row.row_number) && (row.row_number as number) > 0
       ? (row.row_number as number)
       : i + 2,
   );
 
   rows.forEach((row, i) => {
-    errors.push(...validateRow(row, rowNumbers[i]));
+    errors.push(...validateRow(row, rowNumbers[i], strict));
   });
 
   // Owner and approver must be members of the importing organization. A value
@@ -545,7 +583,7 @@ export async function importRisks(
   const firstRowByName = new Map<string, number>();
   rows.forEach((row, i) => {
     const key = nameKey(row.risk_name);
-    if (!key) return;
+    if (!strict || !key) return;
     const firstRow = firstRowByName.get(key);
     if (firstRow === undefined) {
       firstRowByName.set(key, rowNumbers[i]);
@@ -568,7 +606,7 @@ export async function importRisks(
 
   if (errors.length > 0) {
     // Already failing: report existing names too, so one pass shows every problem.
-    errors.push(...(await existingNameErrors(rows, rowNumbers, organizationId)));
+    if (strict) errors.push(...(await existingNameErrors(rows, rowNumbers, organizationId)));
     return rejected(errors);
   }
 
@@ -582,7 +620,9 @@ export async function importRisks(
       type: QueryTypes.SELECT,
       transaction,
     });
-    const nameErrors = await existingNameErrors(rows, rowNumbers, organizationId, transaction);
+    const nameErrors = strict
+      ? await existingNameErrors(rows, rowNumbers, organizationId, transaction)
+      : [];
     if (nameErrors.length > 0) {
       await transaction.rollback();
       return rejected(nameErrors);
@@ -630,14 +670,18 @@ export async function importRisks(
           },
         )) as { id: number }[];
         // Same creation entries the risk form writes, on the same transaction.
-        await recordEntityCreation(
-          "risk",
-          inserted[0].id,
-          userId,
-          organizationId,
-          data,
-          transaction,
-        );
+        // Once a row has failed the whole import rolls back, so later rows skip
+        // the history write; their INSERTs still run to report their own errors.
+        if (insertErrors.length === 0) {
+          await recordEntityCreation(
+            "risk",
+            inserted[0].id,
+            userId,
+            organizationId,
+            data,
+            transaction,
+          );
+        }
         await sequelize.query(`RELEASE SAVEPOINT ${savepoint}`, { transaction });
         imported++;
       } catch (err: any) {
