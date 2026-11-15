@@ -3694,7 +3694,7 @@ export const extensionEndpoints: Endpoint[] = [
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
-      { status: 400, description: "code is missing, not a string, blank or over 512 characters, or Slack did not accept it" },
+      { status: 400, description: "code is missing, not a string, blank or over 512 characters; Slack did not accept it; Slack rejected the redirect URI (FRONTEND_URL does not match the address VerifyWise is opened at); or Slack returned no user token (the user scopes were not granted)" },
       { status: 403, description: "Extension not enabled for this organization, or role not allowed" },
       { status: 500, description: "Internal server error" },
     ],

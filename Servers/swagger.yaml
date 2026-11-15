@@ -14148,7 +14148,7 @@ paths:
         '200':
           description: Success
         '400':
-          description: 'code is missing, not a string, blank or over 512 characters, or Slack did not accept it'
+          description: 'code is missing, not a string, blank or over 512 characters; Slack did not accept it; Slack rejected the redirect URI (FRONTEND_URL does not match the address VerifyWise is opened at); or Slack returned no user token (the user scopes were not granted)'
         '403':
           description: 'Extension not enabled for this organization, or role not allowed'
         '500':

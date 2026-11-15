@@ -75,18 +75,31 @@ export const slackIntegrationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'VerifyWise requests the following Slack permissions:',
+      text: 'VerifyWise requests these permissions for its Slack app:',
     },
     {
       type: 'bullet-list',
       items: [
         { bold: 'incoming-webhook', text: 'Post messages to the channel you pick during authorization' },
-        { bold: 'chat:write', text: 'Send messages to channels' },
+        { bold: 'chat:write', text: 'Send messages as the VerifyWise app' },
+        { bold: 'chat:write.public', text: 'Send messages to public channels the app has not joined' },
+        { bold: 'channels:read, groups:read', text: 'See basic details of public and private channels, such as their names' },
       ],
     },
     {
       type: 'paragraph',
-      text: 'These permissions let VerifyWise send notifications but don\'t give it access to read your messages or user data.',
+      text: 'It also asks for these permissions on behalf of the person who adds Slack:',
+    },
+    {
+      type: 'bullet-list',
+      items: [
+        { bold: 'channels:read, groups:read', text: 'Look up the channel you pick' },
+        { bold: 'groups:write.invites', text: 'Add the VerifyWise app to that channel when it is private' },
+      ],
+    },
+    {
+      type: 'paragraph',
+      text: 'These permissions let VerifyWise post notifications to the channel you pick. They don\'t let it read your messages.',
     },
     {
       type: 'heading',
@@ -287,6 +300,8 @@ export const slackIntegrationContent: ArticleContent = {
         { text: 'Make sure you have permission to install apps in your Slack workspace' },
         { text: '"This Slack sign-in could not be verified" means the reply from Slack did not match the tab you started in. Click **Add to Slack** again and finish in the same tab' },
         { text: '"Slack did not accept the authorization code" means the sign-in expired or was already used. Click **Add to Slack** again' },
+        { text: '"Slack did not grant the permissions VerifyWise needs" means Slack returned without the permissions listed above. Click **Add to Slack** again and allow every permission' },
+        { text: '"Slack rejected the return address" means the server setting `FRONTEND_URL` differs from the address you open VerifyWise at. Ask the person who runs your VerifyWise server to correct it' },
         { text: 'Contact your Slack workspace administrator if restrictions are in place' },
       ],
     },

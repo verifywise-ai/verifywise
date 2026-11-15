@@ -382,7 +382,7 @@ enabled can call the route.
 
 | Base path | Routes | Extra roles |
 |-----------|--------|-------------|
-| `/api/extensions/slack` | `GET/POST /oauth/workspaces`, `GET/PATCH/DELETE /oauth/workspaces/:id`, `POST /oauth/workspaces/:id/send`, `GET /oauth/unlinked`, `DELETE /oauth/unlinked/:id` | `extension.admin` (Admin) on every route, reads included. `POST /oauth/workspaces` rate-limited (`slackWorkspaceCreateLimiter`, 10/hour); it answers 400 when `code` is missing, blank or over 512 characters, and 400 with a fixed message when Slack refuses the code. Rows are filtered by the caller's organization (another organization's id answers 404). The `/oauth/unlinked` routes are filtered by the caller's user id instead and reach only their own connections with no organization (`DELETE` answers 204, or 404 for any other row). PATCH takes only `routing_type` (array of known types) and/or `is_active` (boolean), else 400; `POST /:id/send` answers 400 for an inactive connection. See [Slack connections and delivery](#slack-connections-and-delivery). |
+| `/api/extensions/slack` | `GET/POST /oauth/workspaces`, `GET/PATCH/DELETE /oauth/workspaces/:id`, `POST /oauth/workspaces/:id/send`, `GET /oauth/unlinked`, `DELETE /oauth/unlinked/:id` | `extension.admin` (Admin) on every route, reads included. `POST /oauth/workspaces` rate-limited (`slackWorkspaceCreateLimiter`, 10/hour); it answers 400 when `code` is missing, blank or over 512 characters, and 400 with a fixed message when Slack refuses the code, rejects the redirect URI, or returns no user token. Rows are filtered by the caller's organization (another organization's id answers 404). The `/oauth/unlinked` routes are filtered by the caller's user id instead and reach only their own connections with no organization (`DELETE` answers 204, or 404 for any other row). PATCH takes only `routing_type` (array of known types) and/or `is_active` (boolean), else 400; `POST /:id/send` answers 400 for an inactive connection. See [Slack connections and delivery](#slack-connections-and-delivery). |
 | `/api/extensions/mlflow` | `GET /models`, `GET /models/:modelId`, `POST /sync` | `model.edit` (Admin, Editor) on `POST /sync`: it writes model records and calls the server with the stored secret. The model reads are open. |
 | `/api/extensions/azure-ai-foundry` | `GET /models`, `GET /models/:deploymentId`, `POST /sync`, `GET /discover` | `model.edit` (Admin, Editor) on `POST /sync` and `GET /discover`. The model reads are open. `GET /discover` (agent discovery) has the same limits as sync and test connection: 30 seconds per request, 110 seconds overall. On failure it returns no agents and logs the reason. |
 | `/api/extensions/model-lifecycle` | `GET /config`; phases CRUD and reorder; items CRUD and reorder; `GET /models/:id/lifecycle`, `/progress`; item values, files, people and approvals under `/models/:id/lifecycle/items/:itemId/...` `POST .../items/:itemId/files` links only a file of the caller's organization (404 otherwise). | `extension.admin` (Admin) on phase and item create, update, delete and reorder. `model.edit` (Admin, Editor) on value, file, people and approver writes. `PUT .../approvals/:userId` is open to any role but only for the caller's own row (403 otherwise, Admins included; no override). Every `/models/:id/lifecycle...` route answers 404 for a model outside the caller's organization, and item routes 404 for an item outside it; people and approvers must be members of the organization (400). `DELETE .../items/:itemId/files/:fileId` only unlinks: the `files` row stays in the File Manager. Deleting a phase or item also keeps its files. 404 when the item has no link to the file, 400 when an id is not a positive integer up to 2147483647. |
@@ -1025,7 +1025,14 @@ entry (`slack-webhooks`). The delivery read and the deactivation write run in
 **Add to Slack** (`Clients/.../Extensions/slack/SlackConfiguration.tsx`)
 redirects in the same tab. Before leaving, the page stores a random `state`
 (32 bytes from `crypto.getRandomValues`, hex) in `sessionStorage`
-(`slackOAuthState.ts`) and sends it with the authorize request. Slack returns
+(`slackOAuthState.ts`) and sends it with the authorize request. The request
+asks for the bot scopes `incoming-webhook`, `chat:write`, `chat:write.public`,
+`channels:read` and `groups:read`, and the user scopes `channels:read`,
+`groups:read` and `groups:write.invites` (`SLACK_BOT_SCOPES`,
+`SLACK_USER_SCOPES`). Slack returns the installer's user token
+(`authed_user.access_token`) only when user scopes are requested, and the
+server needs it to look up the channel and invite the bot into a private one.
+Slack returns
 to `/extensions/slack/settings` with `?code=&state=`, or `?error=` when the
 user cancels. On return the page clears the query string first, so a refresh
 cannot send the code twice, then:
@@ -1038,9 +1045,26 @@ cannot send the code twice, then:
   `POST /api/extensions/slack/oauth/workspaces`.
 
 The server exchanges the code with Slack using the redirect URI
-`${FRONTEND_URL}/extensions/slack/settings`, so `FRONTEND_URL` must match the
-origin the browser uses. Slack's own error is logged with its characters
-filtered and is never sent to the client.
+`${FRONTEND_URL}/extensions/slack/settings` (trailing slashes in
+`FRONTEND_URL` are dropped), so `FRONTEND_URL` must match the origin the
+browser uses. Slack's own error is logged with its characters filtered and is
+never sent to the client. The create answers 400 with a fixed message when:
+
+- Slack answers `bad_redirect_uri` or `redirect_uri_mismatch`: "Slack rejected
+  the return address. FRONTEND_URL must match the address you open VerifyWise
+  at."
+- Slack returns no user token (the user scopes were not granted): "Slack did
+  not grant the permissions VerifyWise needs. Add Slack again and allow every
+  permission." Nothing is saved and the bot invite is not attempted.
+- Slack refuses the code for any other reason: "Slack did not accept the
+  authorization code. Add Slack again."
+
+The panel reads and writes through `useSlackConnections.ts` (React Query).
+The organization's connections and the caller's unlinked connections have
+separate query keys, and each write refetches only the list it changed after
+cancelling a fetch in flight, so the first load cannot overwrite a connection
+added by the OAuth return. The table shows a loading state only on the first
+load.
 
 Each connection row has its own actions: **Edit routing** opens a dialog with
 that connection's current routing and closes only after the `PATCH`
