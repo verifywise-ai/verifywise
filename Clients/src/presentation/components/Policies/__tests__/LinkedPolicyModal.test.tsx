@@ -105,6 +105,29 @@ describe("LinkedPolicyModal", () => {
     });
   });
 
+  it("resolves and shows a refresh error when the link saves but the list refresh fails", async () => {
+    await renderModal();
+    mockCreateLinked.mockResolvedValue({});
+    mockGetAllEntities.mockRejectedValueOnce(new Error("refresh failed"));
+
+    let rejected = false;
+    await act(async () => {
+      await riskSelectorProps.onSubmit([11]).catch(() => {
+        rejected = true;
+      });
+    });
+
+    // Resolving lets the selector close, so the user isn't invited to link again.
+    expect(rejected).toBe(false);
+    expect(
+      await screen.findByText(
+        "Linked, but the list couldn't be refreshed. Reopen this window to see it.",
+      ),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(/Couldn't link/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/linked successfully/)).not.toBeInTheDocument();
+  });
+
   describe("unlinking", () => {
     it("removes the item and confirms when the delete succeeds", async () => {
       await renderModal();

@@ -2,6 +2,8 @@
 // Spread into ../translations.ts. Other areas stay in that file for now.
 
 export const de: Record<string, string> = {
+  "Linked, but the list couldn't be refreshed. Reopen this window to see it.":
+    "Verknüpft, aber die Liste konnte nicht aktualisiert werden. Öffnen Sie dieses Fenster erneut, um sie zu sehen.",
   "Couldn't link the selected risks. Try again.":
     "Die ausgewählten Risiken konnten nicht verknüpft werden. Versuchen Sie es erneut.",
   "Couldn't link the selected evidence. Try again.":
@@ -126,6 +128,8 @@ export const de: Record<string, string> = {
 };
 
 export const fr: Record<string, string> = {
+  "Linked, but the list couldn't be refreshed. Reopen this window to see it.":
+    "Lié, mais la liste n'a pas pu être actualisée. Rouvrez cette fenêtre pour la voir.",
   "Couldn't link the selected risks. Try again.":
     "Impossible de lier les risques sélectionnés. Réessayez.",
   "Couldn't link the selected evidence. Try again.":
@@ -250,6 +254,8 @@ export const fr: Record<string, string> = {
 };
 
 export const es: Record<string, string> = {
+  "Linked, but the list couldn't be refreshed. Reopen this window to see it.":
+    "Vinculado, pero no se pudo actualizar la lista. Vuelva a abrir esta ventana para verla.",
   "Couldn't link the selected risks. Try again.":
     "No se pudieron vincular los riesgos seleccionados. Inténtelo de nuevo.",
   "Couldn't link the selected evidence. Try again.":

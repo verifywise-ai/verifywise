@@ -157,23 +157,6 @@ const LinkedPolicyModal: React.FC<LinkedPolicyModalProps> = ({ onClose, policyId
         object_type: objectType,
         object_ids: objectIds,
       });
-
-      // Fetch updated linked objects
-      const updated = await getAllEntities({
-        routeUrl: `/policy-linked/${policyId}/linked-objects`,
-      });
-
-      // Set state based on type
-      if (objectType === "risk") {
-        setRisks(updated.data.risks || []);
-      } else if (objectType === "evidence") {
-        setEvidence(updated.data.evidence || []);
-      }
-
-      setAlert({
-        variant: "success",
-        body: `${objectType} linked successfully!`,
-      });
     } catch (error) {
       // Report once here, then rethrow so the selector modal stays open and
       // does not run its own success path.
@@ -185,6 +168,31 @@ const LinkedPolicyModal: React.FC<LinkedPolicyModalProps> = ({ onClose, policyId
       );
       throw error;
     }
+
+    // The link is saved from here on. A failed refresh must not reject, or the
+    // selector stays open and invites a second, duplicate link.
+    try {
+      const updated = await getAllEntities({
+        routeUrl: `/policy-linked/${policyId}/linked-objects`,
+      });
+
+      if (objectType === "risk") {
+        setRisks(updated.data.risks || []);
+      } else if (objectType === "evidence") {
+        setEvidence(updated.data.evidence || []);
+      }
+    } catch {
+      handleToast(
+        "error",
+        "Linked, but the list couldn't be refreshed. Reopen this window to see it.",
+      );
+      return;
+    }
+
+    setAlert({
+      variant: "success",
+      body: `${objectType} linked successfully!`,
+    });
   };
 
   // ------------------------------------
