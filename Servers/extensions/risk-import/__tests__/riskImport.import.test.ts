@@ -91,7 +91,7 @@ describe("importRisks", () => {
   describe("duplicate detection", () => {
     it("rejects a name that already exists in the organization (trimmed, case-insensitive)", async () => {
       mockQuery.mockImplementation(async (sql: string) =>
-        sql.includes("FROM risks") ? [{ name: "model drift" }] : [],
+        sql.includes("FROM risks") ? [{ risk_name: "Model drift" }] : [],
       );
       const result = await importRisks([validRow({ risk_name: "  MODEL Drift " })], 9, 5);
       expect(result.success).toBe(false);
@@ -100,6 +100,46 @@ describe("importRisks", () => {
       const lookup = mockQuery.mock.calls.find((c) => sqlOf(c).includes("FROM risks"))!;
       expect(sqlOf(lookup)).toContain("organization_id = :organizationId");
       expect((lookup[1] as any).replacements.organizationId).toBe(9);
+      expect(sqlOf(lookup)).not.toContain("lower(");
+      expect(mockQuery.mock.calls.some((c) => sqlOf(c).includes("INSERT INTO risks"))).toBe(false);
+    });
+
+    it("matches an existing name that ends in a non-breaking space or tab", async () => {
+      mockQuery.mockImplementation(async (sql: string) =>
+        sql.includes("FROM risks") ? [{ risk_name: "Model drift\u00a0\t" }] : [],
+      );
+      const result = await importRisks([validRow()], 1, 5);
+      expect(result.success).toBe(false);
+      expect(result.errors[0].message).toContain("already exists");
+    });
+
+    it("checks existing names inside the insert transaction, after the org lock", async () => {
+      await importRisks([validRow()], 9, 5);
+      const sqls = mockQuery.mock.calls.map((c) => sqlOf(c));
+      const lock = sqls.findIndex((q) => q.includes("pg_advisory_xact_lock"));
+      const lookup = sqls.findIndex((q) => q.includes("FROM risks"));
+      const insert = sqls.findIndex((q) => q.includes("INSERT INTO risks"));
+      expect(lock).toBeGreaterThanOrEqual(0);
+      expect(lock).toBeLessThan(lookup);
+      expect(lookup).toBeLessThan(insert);
+      expect(mockQuery.mock.calls[lock][1]).toMatchObject({
+        replacements: { organizationId: 9 },
+        transaction: mockTransaction,
+      });
+      expect(mockQuery.mock.calls[lookup][1]).toMatchObject({ transaction: mockTransaction });
+    });
+
+    it("rolls back and reports a name that appeared after the up-front validation", async () => {
+      mockQuery.mockImplementation(async (sql: string) =>
+        sql.includes("FROM risks") ? [{ risk_name: "model drift" }] : [],
+      );
+      const result = await importRisks([validRow()], 1, 5);
+      expect(result.success).toBe(false);
+      expect(result.errors).toEqual([
+        { row: 2, field: "risk_name", message: 'A risk named "Model drift" already exists' },
+      ]);
+      expect(mockTransaction.rollback).toHaveBeenCalledTimes(1);
+      expect(mockTransaction.commit).not.toHaveBeenCalled();
       expect(mockQuery.mock.calls.some((c) => sqlOf(c).includes("INSERT INTO risks"))).toBe(false);
     });
 
@@ -170,6 +210,75 @@ describe("importRisks", () => {
       );
       expect(mockRecordCreation.mock.calls[1][1]).toBe(42);
       expect(mockTransaction.commit).toHaveBeenCalledTimes(1);
+    });
+  });
+
+  describe("cell values", () => {
+    it("accepts numeric and rich-text cells instead of throwing", async () => {
+      const result = await importRisks(
+        [
+          validRow({
+            risk_name: 2024 as unknown as string,
+            risk_description: { richText: [{ text: "Accuracy " }, { text: "drops" }] } as never,
+            impact: 5 as unknown as string,
+          }),
+        ],
+        1,
+        5,
+      );
+      expect(result).toMatchObject({ success: true, imported: 1 });
+      expect(mockRecordCreation.mock.calls[0][4]).toMatchObject({
+        risk_name: "2024",
+        risk_description: "Accuracy drops",
+        impact: "5",
+      });
+    });
+
+    it("reports a numeric name as a duplicate of the same name in the file", async () => {
+      const result = await importRisks(
+        [validRow({ risk_name: 2024 as never }), validRow({ risk_name: "2024" })],
+        1,
+        5,
+      );
+      expect(result.errors[0].message).toContain("already appears on row 2");
+    });
+
+    it("still refuses a numeric date cell", async () => {
+      const result = await importRisks([validRow({ deadline: 46022 as never })], 1, 5);
+      expect(result.errors.map((e) => e.field)).toContain("deadline");
+    });
+  });
+
+  describe("row numbers", () => {
+    it("uses the sheet row number sent by the client", async () => {
+      const result = await importRisks(
+        [validRow({ row_number: 2 }), validRow({ risk_name: "B", row_number: 9, likelihood: "x" })],
+        1,
+        5,
+      );
+      expect(result.errors[0]).toMatchObject({ row: 9, field: "likelihood" });
+    });
+
+    it("falls back to index + 2 when the row number is missing or not a positive integer", async () => {
+      const result = await importRisks(
+        [
+          validRow({ risk_name: "A", likelihood: "x", row_number: 0 }),
+          validRow({ risk_name: "B", likelihood: "x", row_number: 3.5 }),
+          validRow({ risk_name: "C", likelihood: "x" }),
+        ],
+        1,
+        5,
+      );
+      expect(result.errors.map((e) => e.row)).toEqual([2, 3, 4]);
+    });
+
+    it("reports insert failures on the sheet row", async () => {
+      mockQuery.mockImplementation(async (sql: string) => {
+        if (sql.includes("INSERT INTO risks")) throw new Error("boom");
+        return [];
+      });
+      const result = await importRisks([validRow({ row_number: 12 })], 1, 5);
+      expect(result.errors[0].row).toBe(12);
     });
   });
 });

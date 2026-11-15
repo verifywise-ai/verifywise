@@ -292,7 +292,7 @@ export const extensionsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Columns marked with * in the template are required: Risk Name, Risk Owner, AI Lifecycle Phase, Risk Description, Likelihood and Severity. A row is rejected when a required value is missing, when a risk category is not in the list or when its risk name already exists in your organization or appears twice in the file. Every row with a problem is reported. If any row has one, nothing is imported. Each imported risk gets a creation entry in its change history, under your name. Admins and Editors can import risks.',
+      text: 'Columns marked with * in the template are required: Risk Name, Risk Owner, AI Lifecycle Phase, Risk Description, Likelihood and Severity. A row is rejected when a required value is missing, when a risk category is not in the list or when its risk name already exists in your organization or appears twice in the file. Every row with a problem is reported, with its row number as it appears in your sheet. If any row has one, nothing is imported. Each imported risk gets a creation entry in its change history, under your name. Admins and Editors can import risks.',
     },
     {
       type: 'heading',

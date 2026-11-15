@@ -1,5 +1,5 @@
 import ExcelJS from "exceljs";
-import { QueryTypes } from "sequelize";
+import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../../database/db";
 import { recordEntityCreation } from "../../utils/changeHistory.base.utils";
 import { findUsersNotInOrganization } from "../../utils/user.utils";
@@ -196,6 +196,8 @@ export async function buildExcelTemplate(
 // ---------------------------------------------------------------------------
 
 export interface RiskImportRow {
+  /** The row's real number in the sheet (header = 1). Optional: falls back to index + 2. */
+  row_number?: number;
   risk_name?: string;
   risk_owner?: string | number;
   ai_lifecycle_phase?: string;
@@ -266,6 +268,51 @@ function splitCategories(cell: string | undefined): { valid: string[]; invalid: 
 /** Case-insensitive key two risk names are compared by. */
 function nameKey(name: string | undefined): string {
   return (name ?? "").trim().toLowerCase();
+}
+
+/** Text of a spreadsheet cell value; rich text, hyperlinks and formulas give their displayed text. */
+function cellText(value: unknown): string | undefined {
+  if (value === undefined || value === null) return undefined;
+  if (typeof value === "string") return value;
+  if (typeof value === "number" || typeof value === "boolean") return String(value);
+  if (value instanceof Date) return Number.isNaN(value.getTime()) ? undefined : value.toISOString();
+  if (typeof value === "object") {
+    const cell = value as Record<string, unknown>;
+    if (Array.isArray(cell.richText)) {
+      return cell.richText.map((part) => String((part as { text?: unknown })?.text ?? "")).join("");
+    }
+    if (cell.text !== undefined) return cellText(cell.text);
+    if (cell.result !== undefined) return cellText(cell.result);
+    if (cell.error !== undefined) return cellText(cell.error);
+  }
+  return undefined;
+}
+
+const DATE_FIELDS = ["deadline", "date_of_assessment"] as const;
+const USER_FIELDS = ["risk_owner", "risk_approval"] as const;
+
+/**
+ * The client sends raw cell values, so any field can arrive as a number, date
+ * or object. Every text field becomes a string (or stays undefined) so the
+ * validators never call a string method on a non-string. Dates keep a number
+ * as a number, which validation refuses, and users keep a number as an id.
+ */
+function normalizeRow(raw: unknown): RiskImportRow {
+  const source = (raw && typeof raw === "object" ? raw : {}) as Record<string, unknown>;
+  const row: Record<string, unknown> = {};
+  for (const [key, value] of Object.entries(source)) {
+    if (key === "row_number") {
+      row[key] = value;
+    } else if (
+      (DATE_FIELDS as readonly string[]).includes(key) ||
+      (USER_FIELDS as readonly string[]).includes(key)
+    ) {
+      row[key] = typeof value === "number" ? value : cellText(value);
+    } else {
+      row[key] = cellText(value);
+    }
+  }
+  return row as RiskImportRow;
 }
 
 function validateRow(row: RiskImportRow, rowIndex: number): RiskImportError[] {
@@ -413,22 +460,64 @@ export function parseRow(row: RiskImportRow): Record<string, unknown> {
   };
 }
 
-export async function importRisks(
+/** Advisory-lock class for pg_advisory_xact_lock(class, org): one risk import commit per org at a time. */
+const RISK_IMPORT_LOCK_CLASS = 5301;
+
+/** One error per row whose name matches an existing, non-deleted risk of the organization. */
+async function existingNameErrors(
   rows: RiskImportRow[],
+  rowNumbers: number[],
+  organizationId: number,
+  transaction?: Transaction,
+): Promise<RiskImportError[]> {
+  if (!rows.some((row) => nameKey(row.risk_name))) return [];
+  // Compared in JS, with the same key as the in-file check, so NBSP, tabs and
+  // newlines trim identically on both sides.
+  const existing = (await sequelize.query(
+    `SELECT risk_name
+       FROM risks
+      WHERE organization_id = :organizationId
+        AND (is_deleted = false OR is_deleted IS NULL)`,
+    { replacements: { organizationId }, type: QueryTypes.SELECT, transaction },
+  )) as { risk_name: string | null }[];
+  const existingNames = new Set(existing.map((r) => nameKey(r.risk_name ?? undefined)));
+  const errors: RiskImportError[] = [];
+  rows.forEach((row, i) => {
+    const key = nameKey(row.risk_name);
+    if (key && existingNames.has(key)) {
+      errors.push({
+        row: rowNumbers[i],
+        field: "risk_name",
+        message: `A risk named "${row.risk_name!.trim()}" already exists`,
+      });
+    }
+  });
+  return errors;
+}
+
+export async function importRisks(
+  rawRows: RiskImportRow[],
   organizationId: number,
   userId: number,
 ): Promise<RiskImportResult> {
   const errors: RiskImportError[] = [];
+  const rows = rawRows.map(normalizeRow);
+  // The client sends each row's real sheet row (blank rows are dropped before
+  // sending); without it, +2 accounts for the header row plus 1-based indexing.
+  const rowNumbers = rows.map((row, i) =>
+    Number.isInteger(row.row_number) && (row.row_number as number) > 0
+      ? (row.row_number as number)
+      : i + 2,
+  );
 
   rows.forEach((row, i) => {
-    // +2 accounts for the header row (row 1) plus 1-based indexing.
-    errors.push(...validateRow(row, i + 2));
+    errors.push(...validateRow(row, rowNumbers[i]));
   });
 
   // Owner and approver must be members of the importing organization. A value
   // that is not a positive integer (e.g. 5.5, which PostgreSQL would round to
   // another user id) fails closed instead of skipping the check.
-  const userFields = ["risk_owner", "risk_approval"] as const;
+  const userFields = USER_FIELDS;
   const isValidUserId = (id: number | null): id is number =>
     id !== null && Number.isInteger(id) && id > 0;
   const referencedUserIds = rows.flatMap((row) =>
@@ -442,7 +531,7 @@ export async function importRisks(
       const id = parseUserId(row[field]);
       if (id !== null && (!isValidUserId(id) || outsideUserIds.has(id))) {
         errors.push({
-          row: i + 2,
+          row: rowNumbers[i],
           field,
           message: "User must be a member of this organization",
         });
@@ -451,55 +540,36 @@ export async function importRisks(
   });
 
   // A re-uploaded sheet must not create the same risks twice: reject names
-  // that already exist in this organization or repeat earlier in the file.
+  // that repeat earlier in the file here, and names that already exist in this
+  // organization below (under a lock, so two imports cannot both pass).
   const firstRowByName = new Map<string, number>();
   rows.forEach((row, i) => {
     const key = nameKey(row.risk_name);
     if (!key) return;
     const firstRow = firstRowByName.get(key);
     if (firstRow === undefined) {
-      firstRowByName.set(key, i + 2);
+      firstRowByName.set(key, rowNumbers[i]);
     } else {
       errors.push({
-        row: i + 2,
+        row: rowNumbers[i],
         field: "risk_name",
         message: `A risk named "${row.risk_name!.trim()}" already appears on row ${firstRow} of this file`,
       });
     }
   });
-  if (firstRowByName.size > 0) {
-    const existing = (await sequelize.query(
-      `SELECT DISTINCT lower(btrim(risk_name)) AS name
-         FROM risks
-        WHERE organization_id = :organizationId
-          AND (is_deleted = false OR is_deleted IS NULL)
-          AND lower(btrim(risk_name)) IN (:names)`,
-      {
-        replacements: { organizationId, names: [...firstRowByName.keys()] },
-        type: QueryTypes.SELECT,
-      },
-    )) as { name: string }[];
-    const existingNames = new Set(existing.map((r) => r.name));
-    rows.forEach((row, i) => {
-      if (existingNames.has(nameKey(row.risk_name))) {
-        errors.push({
-          row: i + 2,
-          field: "risk_name",
-          message: `A risk named "${row.risk_name!.trim()}" already exists`,
-        });
-      }
-    });
-  }
+
+  const rejected = (list: RiskImportError[]): RiskImportResult => ({
+    success: false,
+    imported: 0,
+    failed: rows.length,
+    errors: [...list].sort((a, b) => a.row - b.row),
+    importedAt: new Date().toISOString(),
+  });
 
   if (errors.length > 0) {
-    errors.sort((a, b) => a.row - b.row);
-    return {
-      success: false,
-      imported: 0,
-      failed: rows.length,
-      errors,
-      importedAt: new Date().toISOString(),
-    };
+    // Already failing: report existing names too, so one pass shows every problem.
+    errors.push(...(await existingNameErrors(rows, rowNumbers, organizationId)));
+    return rejected(errors);
   }
 
   let imported = 0;
@@ -507,9 +577,20 @@ export async function importRisks(
   const transaction = await sequelize.transaction();
 
   try {
+    await sequelize.query(`SELECT pg_advisory_xact_lock(:lockClass, :organizationId)`, {
+      replacements: { lockClass: RISK_IMPORT_LOCK_CLASS, organizationId },
+      type: QueryTypes.SELECT,
+      transaction,
+    });
+    const nameErrors = await existingNameErrors(rows, rowNumbers, organizationId, transaction);
+    if (nameErrors.length > 0) {
+      await transaction.rollback();
+      return rejected(nameErrors);
+    }
+
     for (let i = 0; i < rows.length; i++) {
       const data = parseRow(rows[i]);
-      const rowIndex = i + 2;
+      const rowIndex = rowNumbers[i];
       // One savepoint per row: a failed INSERT aborts only that row's work, so
       // every later row still runs and reports its own error.
       const savepoint = `risk_import_row_${i}`;

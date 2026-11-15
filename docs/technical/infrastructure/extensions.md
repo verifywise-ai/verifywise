@@ -380,6 +380,9 @@ Client dirs are relative to `Clients/src/presentation/pages/`.
 - Required columns, all marked `*` in the template: Risk Name, Risk Owner, AI Lifecycle Phase, Risk Description, Likelihood, Severity.
 - A category that is not in the allowed list is a row error. It is no longer dropped silently.
 - A risk name is a row error when it already exists in the organization (not deleted, compared case-insensitively after trimming) or when it repeats an earlier row of the same file.
+- Names are compared in JavaScript with one key (`nameKey`: trim, lower case) for both the in-file and the existing-name check, so non-breaking spaces and tabs trim the same way on both sides. The existing-name check runs inside the insert transaction, after `pg_advisory_xact_lock(5301, organizationId)`, so two concurrent imports cannot both add the same name. A name found there rolls the batch back with the same row errors.
+- Cell values: the client sends each cell as the sheet holds it (rich text, hyperlinks and formulas as their displayed text). `importRisks` turns every text field into a string before validation, so a numeric Risk Name (2024) is a name, not a 500. A number in a date field is still refused.
+- Row numbers in errors are the real sheet rows: the client sends `row_number` with each row (blank rows are dropped), and the server falls back to index + 2 when it is missing or not a positive integer.
 - Any validation error imports nothing.
 - When validation passes, the rows are inserted in one transaction, each inside its own savepoint. A failed insert rolls back only that row, so every row reports its own error. Any error means nothing is imported.
 - Each imported risk gets a creation entry in the change history, attributed to the importing user (`recordEntityCreation` with `req.userId`).

@@ -120,7 +120,13 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
           row.eachCell({ includeEmpty: true }, (cell, colNumber) => {
             const key = headers[colNumber - 1];
             if (key) {
-              rowData[key] = cell.value;
+              // Rich text, hyperlinks and formulas are objects; send what the cell shows.
+              rowData[key] =
+                cell.value !== null &&
+                typeof cell.value === "object" &&
+                !(cell.value instanceof Date)
+                  ? cell.text
+                  : cell.value;
             }
           });
 
@@ -128,7 +134,8 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
             (val) => val !== null && val !== undefined && val !== "",
           );
           if (hasData) {
-            data.push(rowData);
+            // Blank rows are dropped, so keep the real sheet row for error messages.
+            data.push({ ...rowData, row_number: rowNumber });
           }
         }
       });
