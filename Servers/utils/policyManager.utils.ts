@@ -584,7 +584,9 @@ export const deletePolicyByIdQuery = async (
   );
 
   // Best-effort and savepointed: a failed history write never fails the delete.
-  // No acting user means no entry (changed_by_user_id must reference a user).
+  // No acting user means no entry: recordEntityDeletion takes a user id and has
+  // no system flag, so a null actor would read as an anonymous user's change
+  // rather than a system one.
   if (userId) {
     try {
       await runInSavepoint(

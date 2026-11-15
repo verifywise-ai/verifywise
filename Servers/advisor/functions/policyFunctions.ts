@@ -775,17 +775,17 @@ const agentUpdatePolicy = createWriteToolFn({
       );
 
       // Field history of what was written, as the acting user; savepointed.
-      if (userId) {
-        await recordUpdateChanges(
-          "policy",
-          policyId,
-          existing,
-          written as Record<string, unknown>,
-          userId,
-          organizationId,
-          transaction,
-        );
-      }
+      // Without a user, an omitted actor (undefined) records a system change:
+      // a null actor, changed_by_system = true. Never user id 0.
+      await recordUpdateChanges(
+        "policy",
+        policyId,
+        existing,
+        written as Record<string, unknown>,
+        userId || undefined,
+        organizationId,
+        transaction,
+      );
 
       await transaction.commit();
       return policy;

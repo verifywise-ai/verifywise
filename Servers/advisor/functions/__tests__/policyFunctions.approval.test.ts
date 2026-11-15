@@ -311,11 +311,20 @@ describe("agent_update_policy fields and history", () => {
     expect(tracked.status).toBe("Draft");
   });
 
-  it("writes no history without an acting user", async () => {
+  it("records the history as a system change without an acting user", async () => {
     mockGetById.mockResolvedValueOnce([stored]);
     mockUpdate.mockResolvedValueOnce({ id: 1 });
     await exec("agent_update_policy")({ policy_id: 1, tags: ["Audit"] }, 42);
-    expect(recordUpdateChanges).not.toHaveBeenCalled();
+    // An omitted actor (undefined) is stored as null with changed_by_system; never user 0.
+    expect(recordUpdateChanges).toHaveBeenCalledWith(
+      "policy",
+      1,
+      stored,
+      expect.objectContaining({ tags: ["Audit"] }),
+      undefined,
+      42,
+      mockTx,
+    );
     expect(mockTx.commit).toHaveBeenCalled();
   });
 });
