@@ -1478,5 +1478,7 @@
   "You have already responded to this step": "Sie haben auf diesen Schritt bereits geantwortet",
   "You have been invited to an organization": "Sie wurden in eine Organisation eingeladen",
   "You've been assigned as {roleType}: {entityName}": "Sie wurden als {roleType} zugewiesen: {entityName}",
-  "Your role changed to project admin on {projectName}": "Ihre Rolle für {projectName} wurde auf Projektadministrator geändert"
+  "Your role changed to project admin on {projectName}": "Ihre Rolle für {projectName} wurde auf Projektadministrator geändert",
+  "This link lists up to 100 of your organization's most recent policies, drafts and archived policies included.": "Dieser Link listet bis zu 100 der neuesten Richtlinien Ihrer Organisation auf, einschließlich Entwürfen und archivierter Richtlinien.",
+  "Share all fields is on: anyone with this link can read the full text and every stored field of the policies it shows.": "Alle Felder teilen ist aktiviert: Jeder mit diesem Link kann den vollständigen Text und alle gespeicherten Felder der angezeigten Richtlinien lesen."
 }

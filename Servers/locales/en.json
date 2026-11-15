@@ -1478,5 +1478,7 @@
   "You have already responded to this step": "You have already responded to this step",
   "You have been invited to an organization": "You have been invited to an organization",
   "You've been assigned as {roleType}: {entityName}": "You've been assigned as {roleType}: {entityName}",
-  "Your role changed to project admin on {projectName}": "Your role changed to project admin on {projectName}"
+  "Your role changed to project admin on {projectName}": "Your role changed to project admin on {projectName}",
+  "This link lists up to 100 of your organization's most recent policies, drafts and archived policies included.": "This link lists up to 100 of your organization's most recent policies, drafts and archived policies included.",
+  "Share all fields is on: anyone with this link can read the full text and every stored field of the policies it shows.": "Share all fields is on: anyone with this link can read the full text and every stored field of the policies it shows."
 }

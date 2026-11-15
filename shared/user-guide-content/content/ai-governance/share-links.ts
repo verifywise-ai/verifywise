@@ -48,6 +48,22 @@ export const shareLinksContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'policy-links',
+      level: 2,
+      text: 'Policy share links',
+    },
+    {
+      type: 'paragraph',
+      text: 'Policy share links can only be created through the API. A link to the policy list shows up to 100 of your organization\'s most recent policies, drafts and archived policies included. With **Share all fields** on, the link also shows the full text of every policy it covers.',
+    },
+    {
+      type: 'callout',
+      variant: 'warning',
+      title: 'Check the warnings',
+      text: 'When you create, update or list a policy share link through the API, the response includes a `warnings` list that says what the link exposes. Read it before you send the link to anyone.',
+    },
+    {
+      type: 'heading',
       id: 'managing',
       level: 2,
       text: 'Managing share links',

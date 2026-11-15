@@ -1,4 +1,5 @@
 import { Request, Response } from "express";
+import { shareLinkWarnings } from "../utils/shareLinkWarnings.utils";
 import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
 import logger, { logStructured } from "../utils/logger/fileLogger";
@@ -111,6 +112,11 @@ export const createShareLink = async (req: Request, res: Response) => {
       created_at: shareLink.created_at,
       updated_at: shareLink.updated_at,
       shareable_url,
+      warnings: shareLinkWarnings(
+        shareLink.resource_type,
+        shareLink.resource_id,
+        shareLink.settings,
+      ).map((w) => req.t!(w)),
     };
 
     return res.status(201).json(STATUS_CODE[201](response));
@@ -220,6 +226,9 @@ export const getShareLinksForResource = async (req: Request, res: Response) => {
         created_at: link.created_at,
         updated_at: link.updated_at,
         shareable_url,
+        warnings: shareLinkWarnings(link.resource_type, link.resource_id, link.settings).map((w) =>
+          req.t!(w),
+        ),
         is_valid,
       };
     });
@@ -493,6 +502,11 @@ export const updateShareLink = async (req: Request, res: Response) => {
       updated_at: updatedLink.updated_at,
       shareable_url,
       is_valid,
+      warnings: shareLinkWarnings(
+        updatedLink.resource_type,
+        updatedLink.resource_id,
+        updatedLink.settings,
+      ).map((w) => req.t!(w)),
     };
 
     return res.status(200).json(STATUS_CODE[200](response));

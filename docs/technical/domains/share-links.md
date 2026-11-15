@@ -58,7 +58,7 @@ CREATE INDEX share_links_created_by_idx ON share_links(created_by);
 | `model` | model_inventories | AI/ML model inventory |
 | `vendor` | vendors | Vendor records |
 | `project` | projects | Project records |
-| `policy` | policies | Policy documents |
+| `policy` | policy_manager | Policy documents |
 | `risk` | projectrisks | Risk records |
 
 ## API Endpoints
@@ -108,10 +108,26 @@ CREATE INDEX share_links_created_by_idx ON share_links(created_by);
     },
     "is_enabled": true,
     "expires_at": null,
-    "shareable_url": "https://app.verifywise.ai/shared/models/abc123def456789..."
+    "shareable_url": "https://app.verifywise.ai/shared/models/abc123def456789...",
+    "warnings": []
   }
 }
 ```
+
+### Exposure warnings
+
+The create (`POST /shares`), update (`PATCH /shares/:id`) and list
+(`GET /shares/:resourceType/:resourceId`) responses carry a `warnings` array of
+translated messages (`utils/shareLinkWarnings.utils.ts`). Policy links can only
+be created through the API, so the response is where the caller learns what a
+link exposes:
+
+- A policy list link (`resource_id` 0) lists up to 100 of the organization's
+  most recent policies of every status, drafts and archived included.
+- `shareAllFields: true` on a policy link shows every stored field, the full
+  policy text included, of each policy it shows.
+
+Other resource types return an empty array.
 
 ### Shared Data Response
 
