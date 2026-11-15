@@ -22,6 +22,10 @@ import {
 } from "@mui/material";
 import { Download, Upload, CheckCircle, XCircle, X } from "lucide-react";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
+import {
+  importRisks,
+  type RiskImportResult,
+} from "../../../../application/repository/riskImport.repository";
 import { brand, icon, radiusPx } from "../../../themes/palette";
 
 interface RiskImportModalProps {
@@ -30,13 +34,7 @@ interface RiskImportModalProps {
   onImportComplete?: () => void;
 }
 
-interface ImportResult {
-  success: boolean;
-  imported: number;
-  failed: number;
-  errors: Array<{ row: number; field: string; message: string }>;
-  importedAt: string;
-}
+type ImportResult = RiskImportResult;
 
 export default function RiskImportModal({ open, onClose, onImportComplete }: RiskImportModalProps) {
   const [loading, setLoading] = useState(false);
@@ -158,11 +156,8 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
       setError(null);
       setImportResult(null);
 
-      const response = await apiServices.post("/extensions/risk-import/import", {
-        csvData: excelData,
-      });
-
-      const payload = (response.data as any)?.data as ImportResult | undefined;
+      // A rejected import resolves with its row errors, so the list renders.
+      const payload = await importRisks(excelData);
       if (payload) {
         setImportResult(payload);
 
