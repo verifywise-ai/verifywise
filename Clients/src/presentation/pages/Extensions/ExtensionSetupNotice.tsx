@@ -1,6 +1,6 @@
 import { useNavigate } from "react-router";
 import { useCan } from "../../../application/hooks/useCan";
-import { VWLink } from "../../components/Link";
+import Alert from "../../components/Alert";
 
 interface ExtensionSetupNoticeProps {
   /** Extension key, used for the settings route (`/extensions/<key>/settings`). */
@@ -12,7 +12,7 @@ interface ExtensionSetupNoticeProps {
 }
 
 /**
- * The "this extension is not set up yet" text on an extension's model tab.
+ * The "this extension is not set up yet" warning on an extension's model tab.
  * Only an Admin can change extension settings, so only an Admin gets the
  * link; everyone else is told who to ask.
  */
@@ -24,19 +24,20 @@ export default function ExtensionSetupNotice({
   const canSetUp = useCan("extension.admin");
   const navigate = useNavigate();
 
-  if (!canSetUp) {
-    return <>{`Ask an Admin to set up ${name}.`}</>;
-  }
   return (
-    <>
-      {adminText}{" "}
-      <VWLink
-        onClick={() => navigate(`/extensions/${extensionKey}/settings`)}
-        showIcon={false}
-        testId={`${extensionKey}-settings`}
-      >
-        Open settings
-      </VWLink>
-    </>
+    <Alert
+      variant="warning"
+      inline
+      body={canSetUp ? adminText : `Ask an Admin to set up ${name}.`}
+      action={
+        canSetUp
+          ? {
+              label: "Open settings",
+              onClick: () => navigate(`/extensions/${extensionKey}/settings`),
+            }
+          : undefined
+      }
+      sx={{ mb: "16px" }}
+    />
   );
 }

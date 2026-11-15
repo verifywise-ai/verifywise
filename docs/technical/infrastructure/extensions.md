@@ -233,20 +233,20 @@ What a failure tells the user (`Servers/utils/outboundFetch.utils.ts`):
 
 - An error answer is reported by status only, never with its body: MLflow and
   Azure AI Foundry test connection say "The server answered HTTP <status>",
-  the Jira incidents client "Jira returned HTTP <status>", and the Jira Assets
-  test connection "Jira returned HTTP <status>".
+  and the Jira incidents and Jira Assets clients "Jira returned HTTP <status>"
+  (Jira Assets discovery and import 502s and failed sync runs included).
 - Every connect, DNS and TLS failure reads the same, so the text cannot tell
   open ports from closed ones or which names resolve: MLflow and Azure test
   connection show "Could not reach the server", other paths "connection
   failed". The real cause goes to the server log only.
 - A timeout names its limits (per request, and 110 seconds per sync or test);
   a body that is not JSON is reported without quoting it.
-
-One exception remains: for Jira Assets, `jira.client.ts` still puts Jira's
-reply text (up to 500 characters) into "Jira returned <status>: <text>".
-Schema and object-type discovery and import return it in their 502 `error`,
-and a failed sync keeps it in the run's message. Only the test connection
-strips it. See [Known leftovers](#known-leftovers).
+- Only undici's `fetch failed` (and a body cut off mid-read) or an error with a
+  socket, DNS or TLS code counts as a network failure. A status error the
+  extension throws itself (`RemoteStatusError`, e.g. "Failed to fetch runs:
+  HTTP 403") keeps its message. Anything else, such as a bug in reading the
+  answer or a database error while saving it, reads "unexpected error (details
+  in the server log)" and its real message goes to the server log.
 
 ### Catalog routes
 
@@ -1098,9 +1098,6 @@ for live features.
   `GET /api/extensions/jira-assets/projects/:projectId/custom-frameworks-progress`
   (`jiraAssets.service.ts`) still reads them.
 - No scheduler exists for MLflow or Azure AI Foundry sync.
-- Jira Assets discovery and import 502s, and failed sync runs, still include
-  up to 500 characters of Jira's reply (`jira.client.ts`). Every other outbound
-  path reports the status code only. To be fixed in a follow-up.
 - The Frameworks page **Settings** tab
   (`Clients/src/presentation/pages/Framework/Settings`) only lists ISO 27001,
   ISO 42001 and NIST AI RMF. The bundled organizational frameworks are added

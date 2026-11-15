@@ -17,13 +17,18 @@ const mockConfigField = {
   findByExtensionId: jest.fn(),
   toJSON: (row: any) => row,
 };
+// toJSON is the real one: it is where the stored configuration is left out.
+jest.mock("../../../database/db", () => ({ sequelize: { query: jest.fn() } }));
+const realEnablementModel: any = jest.requireActual(
+  "../../../domain.layer/models/extension/extensionEnablement.model",
+);
 const mockEnablement = {
   findByExtensionId: jest.fn(),
   findAllForOrg: jest.fn(),
   enable: jest.fn(),
   disable: jest.fn(),
   updateConfiguration: jest.fn(),
-  toJSON: (row: any) => row,
+  toJSON: (row: any) => realEnablementModel.ExtensionEnablementModel.toJSON(row),
 };
 
 jest.mock("../../../domain.layer/models/extension/extension.model", () => ({
@@ -444,6 +449,22 @@ describe("ExtensionService never keeps a stored secret for a changed address", (
       auth_method: "none",
     });
     expect(saved()).not.toHaveProperty("api_token");
+  });
+
+  it("re-enables Jira Assets over an old enablement row that still holds a token", async () => {
+    // Jira Assets has no config fields (its connection lives in
+    // jira_assets_config); rows from August 2026 can still hold these keys.
+    setUp("jira-assets", [], {
+      enabled: false,
+      configuration: {
+        jira_base_url: "https://old-jira.example.com",
+        api_token: "enc(legacy-token)",
+      },
+    });
+    const result = await ExtensionService.enable("jira-assets", 1, 1, {});
+    expect(result.enabled).toBe(true);
+    const stored = mockEnablement.enable.mock.calls[0][3] as Record<string, unknown>;
+    expect(stored).toEqual({});
   });
 
   it("refuses a changed Azure endpoint without a key", async () => {

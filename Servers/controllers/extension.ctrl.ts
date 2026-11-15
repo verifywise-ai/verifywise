@@ -109,7 +109,7 @@ const TEST_CONNECTION_DISPATCH: Record<string, TestConnectionRunner> = {
       success: result.success,
       message: result.success
         ? "Successfully connected to JIRA Assets"
-        : `Connection failed: ${withoutRemoteBody(result.error ?? "unknown error")}`,
+        : `Connection failed: ${result.error ?? "unknown error"}`,
       testedAt: new Date().toISOString(),
     };
   },
@@ -118,16 +118,6 @@ const TEST_CONNECTION_DISPATCH: Record<string, TestConnectionRunner> = {
   "jira-incidents": (submitted, organizationId) =>
     jiraIncidentsTestConnection(organizationId, submitted),
 };
-
-/**
- * The Jira Assets client words a non-2xx answer as "Jira returned <status>:
- * <body>". The base URL is admin-supplied, so a connection test shows the
- * status only, never what the server sent back.
- */
-export function withoutRemoteBody(error: string): string {
-  const status = /^Jira returned (\d{3}):/.exec(error);
-  return status ? `Jira returned HTTP ${status[1]}` : error;
-}
 
 function extractKey(req: Request): string {
   const raw = req.params.key;

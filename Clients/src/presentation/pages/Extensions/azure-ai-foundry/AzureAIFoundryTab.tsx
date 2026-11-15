@@ -145,11 +145,13 @@ export default function AzureAIFoundryTab() {
     setWarning(null);
     try {
       await apiServices.post("/extensions/azure-ai-foundry/sync", {});
+      await fetchModels();
     } catch (error: any) {
+      // Refresh first: fetchModels clears the warning when it starts.
+      await fetchModels();
       const reason = getApiErrorReason(error);
       setWarning(reason ? `Sync failed: ${reason}` : "Sync failed. Showing cached data.");
     }
-    await fetchModels();
   };
 
   const handleChangePage = useCallback((_: unknown, newPage: number) => setPage(newPage), []);
@@ -183,15 +185,11 @@ export default function AzureAIFoundryTab() {
   return (
     <Box sx={{ maxWidth: "100%" }}>
       {notConfigured && (
-        <Box sx={warningBoxSx}>
-          <Typography sx={warningTextSx}>
-            <ExtensionSetupNotice
-              extensionKey="azure-ai-foundry"
-              name="Azure AI Foundry"
-              adminText="Configure the Azure AI Foundry extension to start syncing model deployments."
-            />
-          </Typography>
-        </Box>
+        <ExtensionSetupNotice
+          extensionKey="azure-ai-foundry"
+          name="Azure AI Foundry"
+          adminText="Configure the Azure AI Foundry extension to start syncing model deployments."
+        />
       )}
       {warning && (
         <Box sx={warningBoxSx}>

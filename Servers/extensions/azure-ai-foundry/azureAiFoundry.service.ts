@@ -4,6 +4,7 @@ import { ExtensionService } from "../../services/extension/extensionService";
 import { safeFetchWithBase } from "../../utils/safeOutboundUrl";
 import {
   EXTERNAL_SYNC_DEADLINE_MS,
+  RemoteStatusError,
   describeConnectionTestError,
   describeFetchError,
   requestSignal,
@@ -213,7 +214,7 @@ export async function syncModels(
       },
     );
     if (!response.ok) {
-      throw new Error(`Failed to fetch deployments: HTTP ${response.status}`);
+      throw new RemoteStatusError(`Failed to fetch deployments: HTTP ${response.status}`);
     }
     const data: any = await response.json();
     const deployments: AzureProjectDeployment[] = data.value || [];
@@ -267,7 +268,7 @@ export async function discoverAgents(
     );
     if (!response.ok) {
       await response.body?.cancel().catch(() => undefined);
-      throw new Error(`Azure AI Foundry answered HTTP ${response.status}`);
+      throw new RemoteStatusError(`Azure AI Foundry answered HTTP ${response.status}`);
     }
     const result: any = await response.json();
     const assistants = result.data || [];

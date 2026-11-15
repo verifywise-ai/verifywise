@@ -23,13 +23,66 @@ export const CONNECTION_FAILED_REASON = "connection failed";
 /** The whole message a connection test shows for those failures. */
 export const UNREACHABLE_MESSAGE = "Could not reach the server";
 
-type FetchErrorKind = "timeout" | "policy" | "network" | "invalid-json" | "other";
+/** Reason given for an error that is neither a network failure nor one the caller described. */
+export const UNEXPECTED_ERROR_REASON = "unexpected error (details in the server log)";
+
+/**
+ * An error a caller throws to describe a remote answer (e.g. "Failed to fetch
+ * runs: HTTP 403"). Its message is shown as is; any other error that is not a
+ * fetch failure is shown as UNEXPECTED_ERROR_REASON.
+ */
+export class RemoteStatusError extends Error {
+  constructor(message: string) {
+    super(message);
+    this.name = "RemoteStatusError";
+  }
+}
+
+type FetchErrorKind = "timeout" | "policy" | "network" | "invalid-json" | "remote" | "other";
 
 type FetchErrorShape = {
   name?: string;
   message?: string;
+  code?: string;
   cause?: { code?: string; message?: string };
 };
+
+/** Socket, DNS and TLS error codes from Node and undici. */
+const NETWORK_ERROR_CODES = new Set([
+  "ECONNREFUSED",
+  "ECONNRESET",
+  "ECONNABORTED",
+  "ENOTFOUND",
+  "ETIMEDOUT",
+  "EAI_AGAIN",
+  "EHOSTUNREACH",
+  "ENETUNREACH",
+  "EHOSTDOWN",
+  "ENETDOWN",
+  "EPIPE",
+  "EPROTO",
+  "CERT_HAS_EXPIRED",
+  "CERT_NOT_YET_VALID",
+  "CERT_REVOKED",
+  "CERT_UNTRUSTED",
+  "CERT_REJECTED",
+  "DEPTH_ZERO_SELF_SIGNED_CERT",
+  "SELF_SIGNED_CERT_IN_CHAIN",
+  "UNABLE_TO_GET_ISSUER_CERT",
+  "UNABLE_TO_GET_ISSUER_CERT_LOCALLY",
+  "UNABLE_TO_VERIFY_LEAF_SIGNATURE",
+  "ERR_TLS_CERT_ALTNAME_INVALID",
+]);
+
+function isNetworkCode(code: unknown): boolean {
+  if (typeof code !== "string") return false;
+  return (
+    NETWORK_ERROR_CODES.has(code) ||
+    code.startsWith("UND_ERR_") ||
+    code.startsWith("ERR_TLS_") ||
+    code.startsWith("ERR_SSL_")
+  );
+}
 
 function classifyFetchError(err: unknown): FetchErrorKind {
   const e = err as FetchErrorShape;
@@ -37,10 +90,14 @@ function classifyFetchError(err: unknown): FetchErrorKind {
   // Checked by name: a test may mock safeOutboundUrl, and errors from
   // another realm fail `instanceof`.
   if (e?.name === "UnsafeOutboundUrlError") return "policy";
+  if (e?.name === "RemoteStatusError") return "remote";
   if (e?.name === "SyntaxError") return "invalid-json";
-  // fetch reports connect, DNS and TLS failures (and a body cut off
-  // mid-read) as a TypeError with the real reason on `cause`.
-  if (e?.name === "TypeError" || e?.cause !== undefined) return "network";
+  // undici reports every connect, DNS and TLS failure as
+  // `TypeError: fetch failed` (the reason on `cause`, sometimes without a
+  // code), and a body cut off mid-read as `TypeError: terminated` with an
+  // UND_ERR_* cause. Any other TypeError is a bug in the caller's code.
+  if (e?.name === "TypeError" && e?.message === "fetch failed") return "network";
+  if (isNetworkCode(e?.code) || isNetworkCode(e?.cause?.code)) return "network";
   return "other";
 }
 
@@ -54,7 +111,9 @@ function classifyFetchError(err: unknown): FetchErrorKind {
  *    names resolve; the detail goes to the server log only;
  *  - a body that is not JSON says so without quoting it (the parser's own
  *    message quotes the start of the body);
- *  - anything else (errors the caller threw itself) keeps its message.
+ *  - a `RemoteStatusError` the caller threw keeps its message;
+ *  - anything else (a bug, a database error) is UNEXPECTED_ERROR_REASON, with
+ *    the real message in the server log.
  */
 export function describeFetchError(err: unknown, timeoutSeconds: number): string {
   const e = err as FetchErrorShape;
@@ -62,14 +121,18 @@ export function describeFetchError(err: unknown, timeoutSeconds: number): string
     case "timeout":
       return `request timed out (limit ${timeoutSeconds}s per request, ${EXTERNAL_SYNC_DEADLINE_MS / 1000}s per sync)`;
     case "network": {
-      const detail = e?.cause?.code ?? e?.cause?.message ?? e?.message ?? "unknown";
+      const detail = e?.cause?.code ?? e?.code ?? e?.cause?.message ?? e?.message ?? "unknown";
       logger.warn(`Outbound request to a configured server failed: ${detail}`);
       return CONNECTION_FAILED_REASON;
     }
     case "invalid-json":
       return "the answer was not valid JSON";
-    default:
+    case "policy":
+    case "remote":
       return e?.message ?? String(err);
+    default:
+      logger.error(`Outbound request handling failed unexpectedly: ${e?.message ?? String(err)}`);
+      return UNEXPECTED_ERROR_REASON;
   }
 }
 

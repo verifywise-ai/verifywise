@@ -1,7 +1,14 @@
-jest.mock("../logger/fileLogger", () => ({ __esModule: true, default: { warn: jest.fn() } }));
+jest.mock("../logger/fileLogger", () => ({
+  __esModule: true,
+  default: { warn: jest.fn(), error: jest.fn() },
+}));
 
 import logger from "../logger/fileLogger";
-import { describeConnectionTestError, describeFetchError } from "../outboundFetch.utils";
+import {
+  RemoteStatusError,
+  describeConnectionTestError,
+  describeFetchError,
+} from "../outboundFetch.utils";
 import { UnsafeOutboundUrlError } from "../safeOutboundUrl";
 
 const networkError = (code: string) =>
@@ -43,10 +50,46 @@ describe("describeFetchError", () => {
     expect(describeFetchError(err, 30)).toBe("the answer was not valid JSON");
   });
 
-  it("returns the message unchanged for an error the caller threw", () => {
-    expect(describeFetchError(new Error("Failed to fetch runs: HTTP 403"), 30)).toBe(
+  it("keeps the message of a RemoteStatusError the caller threw", () => {
+    expect(describeFetchError(new RemoteStatusError("Failed to fetch runs: HTTP 403"), 30)).toBe(
       "Failed to fetch runs: HTTP 403",
     );
+  });
+
+  it("counts undici's fetch failure as a network failure even without a code", () => {
+    const err = Object.assign(new TypeError("fetch failed"), { cause: new Error("bad port") });
+    expect(describeFetchError(err, 30)).toBe("connection failed");
+  });
+
+  it("counts a body cut off mid-read as a network failure", () => {
+    const err = Object.assign(new TypeError("terminated"), {
+      cause: { code: "UND_ERR_SOCKET", message: "other side closed" },
+    });
+    expect(describeFetchError(err, 30)).toBe("connection failed");
+  });
+
+  it("counts a network code on the error itself as a network failure", () => {
+    const err = Object.assign(new Error("getaddrinfo EAI_AGAIN example.com"), {
+      code: "EAI_AGAIN",
+    });
+    expect(describeFetchError(err, 30)).toBe("connection failed");
+  });
+
+  it("does not count a TypeError from the caller's own code as a network failure", () => {
+    const err = new TypeError("Cannot read properties of undefined (reading 'map')");
+    expect(describeFetchError(err, 30)).toBe("unexpected error (details in the server log)");
+    expect(logger.error).toHaveBeenLastCalledWith(
+      expect.stringContaining("Cannot read properties of undefined"),
+    );
+  });
+
+  it("does not count a database error with a cause as a network failure", () => {
+    const err = Object.assign(new Error('relation "mlflow_model_records" does not exist'), {
+      name: "SequelizeDatabaseError",
+      cause: { code: "42P01", message: "relation does not exist" },
+    });
+    expect(describeFetchError(err, 30)).toBe("unexpected error (details in the server log)");
+    expect(logger.error).toHaveBeenLastCalledWith(expect.stringContaining("mlflow_model_records"));
   });
 });
 
@@ -66,6 +109,12 @@ describe("describeConnectionTestError", () => {
     );
     expect(describeConnectionTestError(err, 30)).toBe(
       "The server answered with a redirect (HTTP 302), which is not followed",
+    );
+  });
+
+  it("prefixes an unexpected error with 'Connection failed' without its message", () => {
+    expect(describeConnectionTestError(new TypeError("x is not a function"), 30)).toBe(
+      "Connection failed: unexpected error (details in the server log)",
     );
   });
 

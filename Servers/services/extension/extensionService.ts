@@ -72,7 +72,12 @@ export class ExtensionService {
     // fields the caller didn't repeat in the enable payload (matches the
     // update-configuration semantics).
     const previous = existing
-      ? this.reusableConfiguration(key, inputConfiguration, existing.configuration ?? {})
+      ? this.reusableConfiguration(
+          key,
+          inputConfiguration,
+          existing.configuration ?? {},
+          configFields,
+        )
       : null;
     const merged = this.mergeAndEncrypt(inputConfiguration, previous ?? {}, configFields);
     this.validate(merged, configFields, previous);
@@ -126,6 +131,7 @@ export class ExtensionService {
       key,
       inputConfiguration,
       existing.configuration ?? {},
+      configFields,
     );
     const merged = this.mergeAndEncrypt(inputConfiguration, previous, configFields);
     this.validate(merged, configFields, previous);
@@ -191,19 +197,11 @@ export class ExtensionService {
       configFields: configFields.map((f) => ExtensionConfigFieldModel.toJSON(f)),
       enabled: enablement?.enabled ?? false,
       configuration: this.redactSecrets(configuration, configFields),
-      enablement: enablement ? this.publicEnablement(enablement) : null,
+      // toJSON leaves out the stored configuration (it holds the secrets as
+      // ciphertext); the redacted top-level `configuration` is the only copy
+      // clients get.
+      enablement: enablement ? ExtensionEnablementModel.toJSON(enablement) : null,
     };
-  }
-
-  /**
-   * The enablement row as sent to clients. The stored `configuration` holds
-   * secret values (encrypted, but still ciphertext a reader could take away),
-   * so it is left out; the redacted top-level `configuration` is the only
-   * copy clients get.
-   */
-  private static publicEnablement(enablement: IExtensionEnablement): Record<string, unknown> {
-    const { configuration: _stored, ...rest } = ExtensionEnablementModel.toJSON(enablement);
-    return rest;
   }
 
   /**
@@ -230,13 +228,21 @@ export class ExtensionService {
    * storedSecretGuard.ts): the save is refused with "Enter the <secret> again:
    * the <field> changed." when the new configuration would send it, and the
    * stale secret is dropped when it would not.
+   *
+   * Only the extension's current config fields are checked. Jira Assets keeps
+   * its connection in `jira_assets_config` (guarded by its own `saveConfig`)
+   * and has no config fields here, so an old enablement row still holding
+   * `api_token` / `jira_base_url` does not block re-enabling it; those keys
+   * are not carried over by mergeAndEncrypt either.
    */
   private static reusableConfiguration(
     key: string,
     input: Record<string, unknown>,
     stored: Record<string, unknown>,
+    configFields: IExtensionConfigField[],
   ): Record<string, unknown> {
-    const check = checkStoredSecrets(key, stored, input ?? {}, input ?? {});
+    const fieldKeys = new Set(configFields.map((f) => f.field_key));
+    const check = checkStoredSecrets(key, stored, input ?? {}, input ?? {}, fieldKeys);
     if (check.blocked) throw new ValidationException(STORED_SECRET_MESSAGES[check.blocked]);
     return withoutKeys(stored, check.drop);
   }

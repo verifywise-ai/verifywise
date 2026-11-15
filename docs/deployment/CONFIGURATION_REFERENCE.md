@@ -460,6 +460,9 @@ REFRESH_TOKEN_SECRET=dev_refresh_secret_not_for_production
 
 EMAIL_PROVIDER=resend
 EMAIL_ID=dev@example.com
+
+# Local development only: lets extensions reach MLflow or Jira on localhost
+OUTBOUND_ALLOW_LOOPBACK=true
 ```
 
 ### Production

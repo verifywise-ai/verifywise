@@ -22,7 +22,7 @@ jest.mock("../../utils/logger/fileLogger", () => ({
 }));
 
 import { Request, Response } from "express";
-import { testExtensionConnection, withoutRemoteBody } from "../extension.ctrl";
+import { testExtensionConnection } from "../extension.ctrl";
 import { clientFromConfig, loadFullConfig } from "../../extensions/jira-assets/jiraAssets.service";
 import { ExtensionService } from "../../services/extension/extensionService";
 import { testConnection as mlflowTest } from "../../extensions/mlflow/mlflow.service";
@@ -58,28 +58,14 @@ const config = {
   deployment_type: "datacenter",
 };
 
-describe("withoutRemoteBody", () => {
-  it("keeps the status of a Jira error answer and drops its body", () => {
-    expect(withoutRemoteBody("Jira returned 401: <html>internal page</html>")).toBe(
-      "Jira returned HTTP 401",
-    );
-  });
-
-  it("leaves other reasons alone", () => {
-    expect(withoutRemoteBody("Could not reach Jira: connection failed")).toBe(
-      "Could not reach Jira: connection failed",
-    );
-  });
-});
-
 describe("POST /api/extensions/jira-assets/test-connection", () => {
   afterEach(() => jest.clearAllMocks());
 
-  it("does not show what the server answered", async () => {
+  it("shows the status the client reports", async () => {
     mockClientFromConfig.mockReturnValue({
       testConnection: jest.fn().mockResolvedValue({
         success: false,
-        error: "Jira returned 500: stack trace from an internal service",
+        error: "Jira returned HTTP 500",
       }),
     });
     const { status, body } = await call(config);

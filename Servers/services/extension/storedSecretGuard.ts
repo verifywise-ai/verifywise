@@ -161,19 +161,25 @@ export interface StoredSecretCheck {
  *                   secret is present is read, so encrypted values are fine
  * @param next       the configuration that would be used (non-secret values)
  * @param submitted  what the caller sent; a filled secret here is a new secret
+ * @param fieldKeys  when given, only secrets and trigger fields among these
+ *                   keys are checked (the generic enablement path passes the
+ *                   extension's current config fields)
  */
 export function checkStoredSecrets(
   key: string,
   stored: Record<string, unknown> | null | undefined,
   next: Record<string, unknown>,
   submitted: Record<string, unknown>,
+  fieldKeys?: ReadonlySet<string>,
 ): StoredSecretCheck {
   const result: StoredSecretCheck = { blocked: null, drop: [] };
   if (!stored) return result;
+  const known = (k: string) => !fieldKeys || fieldKeys.has(k);
   for (const secret of STORED_SECRET_FIELDS[key] ?? []) {
+    if (!known(secret.key)) continue;
     if (!isFilled(stored[secret.key]) || isFilled(submitted[secret.key])) continue;
     const changed = secret.triggers.find(
-      (t) => normalize(stored[t.key], t) !== normalize(next[t.key], t),
+      (t) => known(t.key) && normalize(stored[t.key], t) !== normalize(next[t.key], t),
     );
     if (!changed) continue;
     if (secret.inUse && !secret.inUse(next)) {

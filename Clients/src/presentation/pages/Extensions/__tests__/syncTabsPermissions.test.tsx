@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import MLFlowTab from "../mlflow/MLFlowTab";
 import AzureAIFoundryTab from "../azure-ai-foundry/AzureAIFoundryTab";
@@ -10,10 +10,11 @@ vi.mock("../../../../application/hooks/useCan", () => ({
 }));
 
 const mockGet = vi.fn();
+const mockPost = vi.fn();
 vi.mock("../../../../infrastructure/api/networkServices", () => ({
   apiServices: {
     get: (...args: unknown[]) => mockGet(...args),
-    post: vi.fn().mockResolvedValue({ data: {} }),
+    post: (...args: unknown[]) => mockPost(...args),
   },
 }));
 
@@ -33,6 +34,8 @@ describe.each(tabs)("%s tab", (_name, Tab, askText) => {
     granted.clear();
     mockGet.mockReset();
     mockGet.mockResolvedValue(notConfigured);
+    mockPost.mockReset();
+    mockPost.mockResolvedValue({ data: {} });
   });
 
   it("hides Sync and the settings link from a read-only role", async () => {
@@ -60,5 +63,16 @@ describe.each(tabs)("%s tab", (_name, Tab, askText) => {
     expect(await screen.findByText("Open settings")).toBeInTheDocument();
     expect(screen.queryByText(askText)).not.toBeInTheDocument();
     expect(screen.getByRole("button", { name: /sync/i })).toBeInTheDocument();
+  });
+
+  it("keeps the sync failure reason after reloading the list", async () => {
+    granted.add("model.edit");
+    mockPost.mockRejectedValue({ response: { error: "connection failed" } });
+    renderWithProviders(<Tab />);
+
+    fireEvent.click(await screen.findByRole("button", { name: /sync/i }));
+
+    expect(await screen.findByText("Sync failed: connection failed")).toBeInTheDocument();
+    expect(mockGet.mock.calls.length).toBeGreaterThanOrEqual(2);
   });
 });

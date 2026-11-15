@@ -180,10 +180,10 @@ export class JiraAssetsClient {
       );
     }
     if (!response.ok) {
-      const errorText = await response.text().catch(() => "");
-      throw new JiraUpstreamError(
-        `Jira returned ${response.status}: ${errorText.slice(0, 500) || "no details"}`,
-      );
+      // Status only: the base URL is admin-supplied, so its body is not
+      // shown back.
+      await response.body?.cancel().catch(() => undefined);
+      throw new JiraUpstreamError(`Jira returned HTTP ${response.status}`);
     }
     try {
       return (await response.json()) as T;

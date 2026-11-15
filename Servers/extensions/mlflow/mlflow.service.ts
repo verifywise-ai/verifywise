@@ -4,6 +4,7 @@ import { ExtensionService } from "../../services/extension/extensionService";
 import { safeFetchWithBase } from "../../utils/safeOutboundUrl";
 import {
   EXTERNAL_SYNC_DEADLINE_MS,
+  RemoteStatusError,
   describeConnectionTestError,
   describeFetchError,
   requestSignal,
@@ -300,7 +301,9 @@ export async function syncModels(
       },
     );
     if (!experimentsResponse.ok) {
-      throw new Error(`Failed to fetch experiments: HTTP ${experimentsResponse.status}`);
+      throw new RemoteStatusError(
+        `Failed to fetch experiments: HTTP ${experimentsResponse.status}`,
+      );
     }
     const experimentsData: any = await experimentsResponse.json();
     const experiments = experimentsData.experiments || [];
@@ -327,7 +330,7 @@ export async function syncModels(
         signal: requestSignal(requestTimeoutSeconds(config), deadline),
       });
       if (!runsResponse.ok) {
-        throw new Error(`Failed to fetch runs: HTTP ${runsResponse.status}`);
+        throw new RemoteStatusError(`Failed to fetch runs: HTTP ${runsResponse.status}`);
       }
       const runsData: any = await runsResponse.json();
       if (runsData.runs?.length) allRuns.push(...runsData.runs);

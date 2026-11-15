@@ -411,12 +411,20 @@ describe("import picker page", () => {
 });
 
 describe("errors", () => {
-  it("turns a non-2xx response into a JiraUpstreamError with the status", async () => {
-    mockFetch.mockResolvedValueOnce({ ok: false, status: 401, text: async () => "bad creds" });
+  it("turns a non-2xx response into a JiraUpstreamError with the status only", async () => {
+    const cancel = jest.fn().mockResolvedValue(undefined);
+    const text = jest.fn(async () => "<html>internal page</html>");
+    const answer = () => ({ ok: false, status: 401, text, body: { cancel } });
 
+    mockFetch.mockResolvedValueOnce(answer());
     await expect(cloud().getSchemas()).rejects.toThrow(JiraUpstreamError);
-    mockFetch.mockResolvedValueOnce({ ok: false, status: 401, text: async () => "bad creds" });
-    await expect(cloud().getSchemas()).rejects.toThrow("Jira returned 401: bad creds");
+    mockFetch.mockResolvedValueOnce(answer());
+    const err = await cloud()
+      .getSchemas()
+      .catch((e: Error) => e);
+    expect((err as Error).message).toBe("Jira returned HTTP 401");
+    expect(text).not.toHaveBeenCalled();
+    expect(cancel).toHaveBeenCalled();
   });
 
   it("turns an unreadable response body into a JiraUpstreamError", async () => {

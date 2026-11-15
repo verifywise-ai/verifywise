@@ -5,7 +5,6 @@ import {
   Typography,
   IconButton,
   Tooltip,
-  Alert,
   CircularProgress,
   Button,
   Grid,
@@ -40,6 +39,7 @@ import { pageOfLabel } from "../../../components/Table/pageOfLabel";
 import { palette, radiusPx } from "../../../themes/palette";
 import { useCan } from "../../../../application/hooks/useCan";
 import ExtensionSetupNotice from "../ExtensionSetupNotice";
+import Alert from "../../../components/Alert";
 
 const SelectorVertical = (props: any) => <ChevronsUpDown size={16} {...props} />;
 
@@ -182,19 +182,13 @@ export default function MLFlowTab() {
   return (
     <Box sx={{ p: 3, maxWidth: "100%", overflowX: "hidden" }}>
       {notConfigured && (
-        <Alert severity="warning" sx={{ mb: 8 }}>
-          <ExtensionSetupNotice
-            extensionKey="mlflow"
-            name="MLflow"
-            adminText="Configure the MLflow extension to start syncing live data."
-          />
-        </Alert>
+        <ExtensionSetupNotice
+          extensionKey="mlflow"
+          name="MLflow"
+          adminText="Configure the MLflow extension to start syncing live data."
+        />
       )}
-      {warning && (
-        <Alert severity="warning" sx={{ mb: 8 }}>
-          {warning}
-        </Alert>
-      )}
+      {warning && <Alert variant="warning" inline body={warning} sx={{ mb: "16px" }} />}
 
       {canSync && (
         <Box
