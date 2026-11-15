@@ -333,6 +333,8 @@ export const de: Record<string, string> = {
   "GPT models": "GPT-Modelle",
   "Import & Sync": "Import & Synchronisierung",
   "Import Risks from Excel": "Risiken aus Excel importieren",
+  "This file has more than 5000 rows. Split it into smaller files and import each one.":
+    "Diese Datei hat mehr als 5000 Zeilen. Teilen Sie sie in kleinere Dateien auf und importieren Sie jede einzeln.",
   "Import from Excel": "Aus Excel importieren",
   "Import risks from Excel": "Risiken aus Excel importieren",
   "Imported Use Cases": "Importierte Anwendungsfälle",
@@ -934,6 +936,8 @@ export const fr: Record<string, string> = {
   "GPT models": "Modèles GPT",
   "Import & Sync": "Importation et synchronisation",
   "Import Risks from Excel": "Importer les risques depuis Excel",
+  "This file has more than 5000 rows. Split it into smaller files and import each one.":
+    "Ce fichier contient plus de 5000 lignes. Divisez-le en fichiers plus petits et importez-les un par un.",
   "Import from Excel": "Importer depuis Excel",
   "Import risks from Excel": "Importer les risques depuis Excel",
   "Imported Use Cases": "Cas d'utilisation importés",
@@ -1534,6 +1538,8 @@ export const es: Record<string, string> = {
   "GPT models": "Modelos GPT",
   "Import & Sync": "Importar y sincronizar",
   "Import Risks from Excel": "Importar riesgos desde Excel",
+  "This file has more than 5000 rows. Split it into smaller files and import each one.":
+    "Este archivo tiene más de 5000 filas. Divídalo en archivos más pequeños e importe cada uno.",
   "Import from Excel": "Importar desde Excel",
   "Import risks from Excel": "Importar riesgos desde Excel",
   "Imported Use Cases": "Casos de uso importados",

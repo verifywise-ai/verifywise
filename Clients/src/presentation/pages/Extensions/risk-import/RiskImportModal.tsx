@@ -24,6 +24,18 @@ import { Download, Upload, CheckCircle, XCircle, X } from "lucide-react";
 import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { brand, icon, radiusPx } from "../../../themes/palette";
 
+/**
+ * Most rows one import may hold. Mirrors MAX_IMPORT_ROWS in
+ * Servers/extensions/importLimits.ts, which stays the backstop; a larger file
+ * is refused here without a request.
+ */
+export const MAX_RISK_IMPORT_ROWS = 5000;
+
+// A full static sentence for the DOM translator; the number matches
+// MAX_RISK_IMPORT_ROWS (a test checks it).
+export const TOO_MANY_ROWS_MESSAGE =
+  "This file has more than 5000 rows. Split it into smaller files and import each one.";
+
 interface RiskImportModalProps {
   open: boolean;
   onClose: () => void;
@@ -45,6 +57,12 @@ interface ImportResult {
  * the `{ message, data }` envelope, so the result is `response.data`; a raw
  * axios error has it one level deeper, under `response.data.data`.
  */
+/**
+ * A server error about the whole file (the row cap) comes as row 0, field
+ * "file". It is a message for the file, not a row in the error table.
+ */
+const isFileError = (e: { row: number; field: string }) => e.row === 0 && e.field === "file";
+
 function importResultFromError(err: any): ImportResult | null {
   const candidates = [err?.response?.data, err?.response?.data?.data];
   for (const candidate of candidates) {
@@ -162,6 +180,11 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
       setError("No data to import. Please upload a valid Excel file.");
       return;
     }
+    if (excelData.length > MAX_RISK_IMPORT_ROWS) {
+      setImportResult(null);
+      setError(TOO_MANY_ROWS_MESSAGE);
+      return;
+    }
 
     try {
       setLoading(true);
@@ -189,7 +212,10 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
       }
     } catch (err: any) {
       const rowResult = importResultFromError(err);
-      if (rowResult) {
+      const fileErrors = rowResult?.errors.filter(isFileError) ?? [];
+      if (fileErrors.length > 0) {
+        setError(fileErrors.map((e) => e.message).join(" "));
+      } else if (rowResult) {
         setImportResult(rowResult);
       } else {
         setError(err?.message || "Failed to import risks");

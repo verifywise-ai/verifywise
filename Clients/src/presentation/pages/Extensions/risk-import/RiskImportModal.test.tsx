@@ -1,12 +1,14 @@
 import { fireEvent, screen, waitFor } from "@testing-library/react";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import CustomException from "../../../../infrastructure/exceptions/customeException";
-import RiskImportModal from "./RiskImportModal";
+import RiskImportModal, { MAX_RISK_IMPORT_ROWS, TOO_MANY_ROWS_MESSAGE } from "./RiskImportModal";
 
 const api = vi.hoisted(() => ({ get: vi.fn(), post: vi.fn() }));
 vi.mock("../../../../infrastructure/api/networkServices", () => ({ apiServices: api }));
 
-// Parsing a real workbook is not under test: hand back one data row.
+// Parsing a real workbook is not under test: hand back the header and
+// `sheet.dataRows` data rows (one by default).
+const sheet = vi.hoisted(() => ({ dataRows: 1 }));
 vi.mock("exceljs", () => {
   class Workbook {
     xlsx = { load: async () => undefined };
@@ -18,7 +20,9 @@ vi.mock("exceljs", () => {
               values.forEach((value, i) => fn({ value }, i + 1)),
           });
           cb(cells(["Risk name", "Risk owner"]), 1);
-          cb(cells(["Data drift", "someone@example.com"]), 2);
+          for (let i = 0; i < sheet.dataRows; i++) {
+            cb(cells([i === 0 ? "Data drift" : `Risk ${i}`, "someone@example.com"]), i + 2);
+          }
         },
       };
     }
@@ -41,6 +45,7 @@ async function uploadAndImport() {
 beforeEach(() => {
   api.get.mockReset();
   api.post.mockReset();
+  sheet.dataRows = 1;
 });
 
 describe("RiskImportModal import errors", () => {
@@ -83,5 +88,41 @@ describe("RiskImportModal import errors", () => {
 
     expect(await screen.findByText("No rows to import")).toBeInTheDocument();
     expect(screen.queryByText("Error Details:")).not.toBeInTheDocument();
+  });
+
+  it("shows a server file-level error as a message, not as a table row", async () => {
+    api.post.mockRejectedValue(
+      new CustomException("Bad Request", 400, {
+        message: "Bad Request",
+        data: {
+          success: false,
+          imported: 0,
+          failed: 6000,
+          errors: [{ row: 0, field: "file", message: "Too many rows in this file." }],
+          importedAt: "2026-11-15T00:00:00.000Z",
+        },
+      }),
+    );
+
+    await uploadAndImport();
+
+    expect(await screen.findByText("Too many rows in this file.")).toBeInTheDocument();
+    expect(screen.queryByText("Error Details:")).not.toBeInTheDocument();
+    expect(screen.queryByText(/Failed:/)).not.toBeInTheDocument();
+  });
+});
+
+describe("RiskImportModal row cap", () => {
+  it("states the same number as the cap", () => {
+    expect(TOO_MANY_ROWS_MESSAGE).toContain(String(MAX_RISK_IMPORT_ROWS));
+  });
+
+  it("refuses a file over the cap without sending it", async () => {
+    sheet.dataRows = MAX_RISK_IMPORT_ROWS + 1;
+
+    await uploadAndImport();
+
+    expect(await screen.findByText(TOO_MANY_ROWS_MESSAGE)).toBeInTheDocument();
+    expect(api.post).not.toHaveBeenCalled();
   });
 });
