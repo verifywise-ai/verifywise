@@ -2,6 +2,22 @@
 // Spread into ../translations.ts. Other areas stay in that file for now.
 
 export const de: Record<string, string> = {
+  "Link policies to risks and evidence": "Richtlinien mit Risiken und Nachweisen verknüpfen",
+  "Link a policy to the risks it mitigates and the evidence that supports it, so reviewers can see what each policy covers.":
+    "Verknüpfen Sie eine Richtlinie mit den Risiken, die sie mindert, und den Nachweisen, die sie belegen, damit Prüfer sehen, was jede Richtlinie abdeckt.",
+  "Archived policies stay in the list with the Archived status. Filter by that status to see only them.":
+    "Archivierte Richtlinien bleiben mit dem Status „Archiviert“ in der Liste. Filtern Sie nach diesem Status, um nur diese zu sehen.",
+  "Linked risks and evidence": "Verknüpfte Risiken und Nachweise",
+  "Link evidence": "Nachweise verknüpfen",
+  "Link new risks": "Neue Risiken verknüpfen",
+  "Risk linked": "Risiko verknüpft",
+  "Evidence linked": "Nachweis verknüpft",
+  "Risk unlinked": "Risiko getrennt",
+  "Evidence unlinked": "Nachweis getrennt",
+  "Couldn't load risks. Close this window and try again.":
+    "Die Risiken konnten nicht geladen werden. Schließen Sie dieses Fenster und versuchen Sie es erneut.",
+  "Couldn't load evidence. Close this window and try again.":
+    "Die Nachweise konnten nicht geladen werden. Schließen Sie dieses Fenster und versuchen Sie es erneut.",
   "Linked, but the list couldn't be refreshed. Reopen this window to see it.":
     "Verknüpft, aber die Liste konnte nicht aktualisiert werden. Öffnen Sie dieses Fenster erneut, um sie zu sehen.",
   "Couldn't link the selected risks. Try again.":
@@ -53,8 +69,6 @@ export const de: Record<string, string> = {
     "KI-Ethikrichtlinie, Data-Governance-Richtlinie, KI-Risikomanagement-Richtlinie, Vorfallsreaktions-Richtlinie und Drittanbieter-KI-Richtlinie.",
   "Create and manage AI governance policies using pre-built templates or custom documentation to stay compliant and consistent.":
     "KI-Governance-Richtlinien mit vorgefertigten Vorlagen oder eigener Dokumentation erstellen und verwalten, um konform und konsistent zu bleiben.",
-  "Each policy can be mapped to specific compliance controls, creating an audit trail showing which policies address which requirements.":
-    "Jede Richtlinie kann bestimmten Compliance-Kontrollen zugeordnet werden, wodurch ein Prüfpfad entsteht, der zeigt, welche Richtlinien welche Anforderungen abdecken.",
   "Pre-built policy documents covering common AI governance topics. Copy a template, customize it for your organization, and publish.":
     "Vorgefertigte Richtliniendokumente zu gängigen KI-Governance-Themen. Kopieren Sie eine Vorlage, passen Sie sie für Ihre Organisation an und veröffentlichen Sie sie.",
   "Start with a blank policy or use one of the built-in templates. Fill in the details for your organization and publish when ready.":
@@ -128,6 +142,22 @@ export const de: Record<string, string> = {
 };
 
 export const fr: Record<string, string> = {
+  "Link policies to risks and evidence": "Relier les politiques aux risques et aux preuves",
+  "Link a policy to the risks it mitigates and the evidence that supports it, so reviewers can see what each policy covers.":
+    "Reliez une politique aux risques qu'elle atténue et aux preuves qui l'appuient, afin que les réviseurs voient ce que chaque politique couvre.",
+  "Archived policies stay in the list with the Archived status. Filter by that status to see only them.":
+    "Les politiques archivées restent dans la liste avec le statut Archivé. Filtrez par ce statut pour n'afficher qu'elles.",
+  "Linked risks and evidence": "Risques et preuves liés",
+  "Link evidence": "Relier des preuves",
+  "Link new risks": "Relier de nouveaux risques",
+  "Risk linked": "Risque relié",
+  "Evidence linked": "Preuve reliée",
+  "Risk unlinked": "Risque dissocié",
+  "Evidence unlinked": "Preuve dissociée",
+  "Couldn't load risks. Close this window and try again.":
+    "Impossible de charger les risques. Fermez cette fenêtre et réessayez.",
+  "Couldn't load evidence. Close this window and try again.":
+    "Impossible de charger les preuves. Fermez cette fenêtre et réessayez.",
   "Linked, but the list couldn't be refreshed. Reopen this window to see it.":
     "Lié, mais la liste n'a pas pu être actualisée. Rouvrez cette fenêtre pour la voir.",
   "Couldn't link the selected risks. Try again.":
@@ -178,8 +208,6 @@ export const fr: Record<string, string> = {
     "Politique d'éthique de l'IA, Politique de gouvernance des données, Politique de gestion des risques IA, Politique de réponse aux incidents et Politique relative aux fournisseurs IA tiers.",
   "Create and manage AI governance policies using pre-built templates or custom documentation to stay compliant and consistent.":
     "Créez et gérez les politiques de gouvernance IA à l'aide de modèles prêts à l'emploi ou d'une documentation personnalisée pour rester conforme et cohérent.",
-  "Each policy can be mapped to specific compliance controls, creating an audit trail showing which policies address which requirements.":
-    "Chaque politique peut être reliée à des contrôles de conformité spécifiques, créant une piste d'audit montrant quelles politiques couvrent quelles exigences.",
   "Pre-built policy documents covering common AI governance topics. Copy a template, customize it for your organization, and publish.":
     "Documents de politique prêts à l'emploi couvrant les thèmes courants de gouvernance IA. Copiez un modèle, personnalisez-le pour votre organisation et publiez-le.",
   "Start with a blank policy or use one of the built-in templates. Fill in the details for your organization and publish when ready.":
@@ -254,6 +282,22 @@ export const fr: Record<string, string> = {
 };
 
 export const es: Record<string, string> = {
+  "Link policies to risks and evidence": "Vincular políticas a riesgos y evidencia",
+  "Link a policy to the risks it mitigates and the evidence that supports it, so reviewers can see what each policy covers.":
+    "Vincule una política con los riesgos que mitiga y la evidencia que la respalda, para que los revisores vean qué cubre cada política.",
+  "Archived policies stay in the list with the Archived status. Filter by that status to see only them.":
+    "Las políticas archivadas permanecen en la lista con el estado Archivado. Filtre por ese estado para ver solo esas.",
+  "Linked risks and evidence": "Riesgos y evidencia vinculados",
+  "Link evidence": "Vincular evidencia",
+  "Link new risks": "Vincular nuevos riesgos",
+  "Risk linked": "Riesgo vinculado",
+  "Evidence linked": "Evidencia vinculada",
+  "Risk unlinked": "Riesgo desvinculado",
+  "Evidence unlinked": "Evidencia desvinculada",
+  "Couldn't load risks. Close this window and try again.":
+    "No se pudieron cargar los riesgos. Cierre esta ventana e inténtelo de nuevo.",
+  "Couldn't load evidence. Close this window and try again.":
+    "No se pudo cargar la evidencia. Cierre esta ventana e inténtelo de nuevo.",
   "Linked, but the list couldn't be refreshed. Reopen this window to see it.":
     "Vinculado, pero no se pudo actualizar la lista. Vuelva a abrir esta ventana para verla.",
   "Couldn't link the selected risks. Try again.":
@@ -305,8 +349,6 @@ export const es: Record<string, string> = {
     "Política de ética de la IA, Política de gobernanza de datos, Política de gestión de riesgos de la IA, Política de respuesta a incidentes y Política de proveedores externos de IA.",
   "Create and manage AI governance policies using pre-built templates or custom documentation to stay compliant and consistent.":
     "Cree y gestione políticas de gobernanza de la IA mediante plantillas predefinidas o documentación personalizada para mantener el cumplimiento y la coherencia.",
-  "Each policy can be mapped to specific compliance controls, creating an audit trail showing which policies address which requirements.":
-    "Cada política puede asignarse a controles de cumplimiento específicos, creando un rastro de auditoría que muestra qué políticas abordan qué requisitos.",
   "Pre-built policy documents covering common AI governance topics. Copy a template, customize it for your organization, and publish.":
     "Documentos de política predefinidos que abarcan temas habituales de gobernanza de la IA. Copie una plantilla, personalícela para su organización y publíquela.",
   "Start with a blank policy or use one of the built-in templates. Fill in the details for your organization and publish when ready.":

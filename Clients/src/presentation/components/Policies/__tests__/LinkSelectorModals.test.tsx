@@ -68,6 +68,45 @@ describe.each([
     fireEvent.click(await screen.findByText("submit-link"));
     await waitFor(() => expect(onSubmit).toHaveBeenCalled());
     expect(onClose).not.toHaveBeenCalled();
-    expect(screen.queryByText(/linked successfully/)).not.toBeInTheDocument();
+    expect(screen.queryByText(/^(Risk|Evidence) linked$/)).not.toBeInTheDocument();
+  });
+});
+
+describe("selector modals when loading fails", () => {
+  it("shows an inline error in the risk selector", async () => {
+    const { getAllProjectRisks } =
+      await import("../../../../application/repository/projectRisk.repository");
+    vi.mocked(getAllProjectRisks).mockRejectedValueOnce(new Error("boom"));
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    renderWithProviders(
+      <LinkRiskSelectorModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+        linkedRiskIds={[]}
+        policyId={1}
+      />,
+    );
+    expect(
+      await screen.findByText("Couldn't load risks. Close this window and try again."),
+    ).toBeInTheDocument();
+  });
+
+  it("shows an inline error in the evidence selector", async () => {
+    const { getUserFilesMetaData } =
+      await import("../../../../application/repository/file.repository");
+    vi.mocked(getUserFilesMetaData).mockRejectedValueOnce(new Error("boom"));
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    renderWithProviders(
+      <LinkEvidenceSelectorModal
+        isOpen={true}
+        onClose={vi.fn()}
+        onSubmit={vi.fn()}
+        linkedEvidenceIds={[]}
+      />,
+    );
+    expect(
+      await screen.findByText("Couldn't load evidence. Close this window and try again."),
+    ).toBeInTheDocument();
   });
 });

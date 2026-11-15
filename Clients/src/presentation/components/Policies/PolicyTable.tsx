@@ -26,11 +26,11 @@ import { filenameFromContentDisposition } from "../../utils/browserDownload.util
 const tableHeaders = [
   { id: "title", name: "Title" },
   { id: "status", name: "Status" },
-  { id: "next_review", name: "Next Review" },
+  { id: "next_review", name: "Next review" },
   { id: "author", name: "Author" },
   // { id: "reviewers", name: "Reviewers" },
-  { id: "last_updated", name: "Last Updated" },
-  { id: "updated_by", name: "Updated By" },
+  { id: "last_updated", name: "Last updated" },
+  { id: "updated_by", name: "Updated by" },
   { id: "actions", name: "Actions" },
 ];
 
@@ -146,7 +146,7 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
         disabled: bulkMutation.isPending,
         confirm: {
           title: `Archive ${selectionCount} polic${selectionCount === 1 ? "y" : "ies"}?`,
-          body: "Archived policies will be moved out of the active list. You can still find them via the Archived status filter.",
+          body: "Archived policies stay in the list with the Archived status. Filter by that status to see only them.",
           confirmLabel: "Archive",
           danger: true,
         },

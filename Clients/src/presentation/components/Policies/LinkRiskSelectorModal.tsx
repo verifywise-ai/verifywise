@@ -20,7 +20,6 @@ import { ChevronsUpDown, ChevronUp, ChevronDown, ShieldAlert } from "lucide-reac
 import StandardModal from "../Modals/StandardModal";
 
 import { getAllProjectRisks } from "../../../application/repository/projectRisk.repository";
-import { handleAlert } from "../../../application/tools/alertUtils";
 import { singleTheme } from "../../themes";
 import { useUserMap } from "../../../presentation/hooks/userMap";
 import {
@@ -35,6 +34,7 @@ import { EmptyState } from "../EmptyState";
 import TablePaginationActions from "../TablePagination";
 import { paginationStyle } from "../Table/styles";
 import CustomizableToast from "../../components/Toast";
+import Alert from "../Alert";
 import { text } from "../../themes/palette";
 import { getEffectiveRiskLevel, riskLevelRank } from "../../../application/utils/riskLevel";
 import { pageOfLabel } from "../Table/pageOfLabel";
@@ -190,23 +190,19 @@ const LinkRiskSelectorModal: React.FC<LinkRiskSelectorModalProps> = ({
   const [rowsPerPage, setRowsPerPage] = useState(10);
 
   // Toast helper
-  const [, setAlert] = useState<any>(null);
-
-  const toast = (variant: any, msg: string) => {
-    handleAlert({ variant, body: msg, setAlert });
-    setTimeout(() => setAlert(null), 2500);
-  };
+  const [loadError, setLoadError] = useState(false);
 
   // -----------------------------
   // Fetch All Risks
   // -----------------------------
   const fetchRisks = useCallback(async () => {
     try {
+      setLoadError(false);
       const res = await getAllProjectRisks({ filter: "active" });
       setRisks(res.data || []);
     } catch (e) {
       console.error("error", e);
-      toast("error", "Failed to load risks.");
+      setLoadError(true);
     }
   }, []);
 
@@ -385,11 +381,20 @@ const LinkRiskSelectorModal: React.FC<LinkRiskSelectorModalProps> = ({
     <StandardModal
       isOpen={isOpen}
       onClose={onClose}
-      title="Link New Risks"
+      title="Link new risks"
       description="Select risks to link with this policy."
       onSubmit={selected.length > 0 ? handleSubmit : undefined}
       showCancelButton={false}
     >
+      {loadError && (
+        <Box sx={{ mb: "16px" }}>
+          <Alert
+            variant="error"
+            body={"Couldn't load risks. Close this window and try again."}
+            inline
+          />
+        </Box>
+      )}
       <TableContainer sx={{ maxHeight: 450, overflow: "auto" }}>
         <Table
           sx={{
