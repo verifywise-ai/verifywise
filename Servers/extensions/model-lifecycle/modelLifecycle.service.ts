@@ -1,5 +1,7 @@
-import { QueryTypes } from "sequelize";
+import { QueryTypes, Transaction } from "sequelize";
 import { sequelize } from "../../database/db";
+import { isExtensionEnabledForOrganization } from "../../middleware/requireExtensionEnabled.middleware";
+import logger from "../../utils/logger/fileLogger";
 import { appendToAuditLedger } from "../../utils/auditLedger.utils";
 import { GENERIC_FORMATTERS } from "../../config/changeHistory.config";
 import { findUsersNotInOrganization, parseReferencedIds } from "../../utils/user.utils";
@@ -450,6 +452,84 @@ async function assertMemberOfOrganization(
       ? [userId]
       : await findUsersNotInOrganization(ids, organizationId);
   if (outside.length > 0) throw new ValidationException(message, "userId", userId);
+}
+
+// ---------------------------------------------------------------------------
+// Starting a model's lifecycle from another feature
+// ---------------------------------------------------------------------------
+
+/**
+ * Give a new model an empty answer row for every active lifecycle item, inside
+ * the caller's transaction (Shadow AI "start governance"). Does nothing and
+ * returns false when the organization has not enabled model-lifecycle, so a
+ * disabled extension never gets rows written behind its gate.
+ *
+ * Best effort: the writes run under a savepoint, and any failure (the
+ * enablement lookup included) is logged, rolled back to the savepoint and
+ * reported as false, so the caller's transaction carries on without it.
+ * Returns true only when rows were inserted (existing rows are left alone).
+ */
+export async function startLifecycleForModel(
+  organizationId: number,
+  modelId: number,
+  userId: number,
+  transaction: Transaction,
+): Promise<boolean> {
+  try {
+    if (!(await isExtensionEnabledForOrganization("model-lifecycle", organizationId))) {
+      return false;
+    }
+  } catch (err) {
+    logger.error(
+      `Model lifecycle: enablement lookup failed for model ${modelId}, not starting it:`,
+      err,
+    );
+    return false;
+  }
+
+  try {
+    await sequelize.query("SAVEPOINT lifecycle_init", { transaction });
+
+    const activeItems = (await sequelize.query(
+      `SELECT i.id
+         FROM model_lifecycle_items i
+         INNER JOIN model_lifecycle_phases p ON i.phase_id = p.id
+        WHERE i.organization_id = :organizationId
+          AND p.organization_id = :organizationId
+          AND i.is_active = true AND p.is_active = true`,
+      { type: QueryTypes.SELECT, transaction, replacements: { organizationId } },
+    )) as { id: number }[];
+
+    let initialized = false;
+    if (activeItems.length > 0) {
+      const valueTuples = activeItems
+        .map((_, idx) => `(:organizationId, :modelId, :itemId${idx}, :userId)`)
+        .join(", ");
+      const replacements: Record<string, unknown> = { organizationId, modelId, userId };
+      activeItems.forEach((item, idx) => {
+        replacements[`itemId${idx}`] = item.id;
+      });
+
+      await sequelize.query(
+        `INSERT INTO model_lifecycle_values
+           (organization_id, model_inventory_id, item_id, updated_by)
+         VALUES ${valueTuples}
+         ON CONFLICT (organization_id, model_inventory_id, item_id) DO NOTHING`,
+        { replacements, transaction },
+      );
+      initialized = true;
+    }
+
+    await sequelize.query("RELEASE SAVEPOINT lifecycle_init", { transaction });
+    return initialized;
+  } catch (err) {
+    await sequelize.query("ROLLBACK TO SAVEPOINT lifecycle_init", { transaction }).catch(() => {});
+    logger.error(
+      `Model lifecycle: initialization failed for model ${modelId}, continuing without it:`,
+      err,
+    );
+    return false;
+  }
 }
 
 // ---------------------------------------------------------------------------

@@ -82,6 +82,9 @@ jest.mock("../../utils/logger/fileLogger", () => ({
   __esModule: true,
   default: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
 }));
+jest.mock("../../extensions/model-lifecycle/modelLifecycle.service", () => ({
+  startLifecycleForModel: jest.fn<any>().mockResolvedValue(true),
+}));
 jest.mock("../../database/db", () => ({
   sequelize: {
     transaction: jest.fn<any>().mockResolvedValue({ commit: jest.fn(), rollback: jest.fn() }),
@@ -90,6 +93,7 @@ jest.mock("../../database/db", () => ({
 }));
 
 import { sequelize } from "../../database/db";
+import { startLifecycleForModel } from "../../extensions/model-lifecycle/modelLifecycle.service";
 import { createNewModelRiskQuery } from "../../utils/modelRisk.utils";
 import { getUserByIdQuery } from "../../utils/user.utils";
 import { recordEntityCreation } from "../../utils/changeHistory.base.utils";
@@ -758,27 +762,59 @@ describe("shadowAi.ctrl", () => {
       expect(res.status).toHaveBeenCalledWith(201);
     });
 
-    it("should return 201 with lifecycle initialization", async () => {
+    it.each([
+      [true, true],
+      [false, false],
+    ])(
+      "starts the lifecycle through the service when asked (service returns %p)",
+      async (started, expected) => {
+        const mockStart = startLifecycleForModel as jest.MockedFunction<any>;
+        mockStart.mockResolvedValueOnce(started);
+        mockGetToolById.mockResolvedValue({ id: 1, name: "ChatGPT" });
+        mockLinkTool.mockResolvedValue(undefined);
+        mockSequelizeQuery
+          .mockResolvedValueOnce([[{ id: 10 }]]) // INSERT INTO model_inventories RETURNING id
+          .mockResolvedValueOnce(undefined); // UPDATE shadow_ai_tools
+        const req = createReq({
+          params: { id: "1" },
+          body: {
+            model_inventory: { provider: "OpenAI", model: "GPT-4" },
+            governance_owner_id: "2",
+            start_lifecycle: true,
+          },
+        });
+        const res = createRes();
+        await startGovernance(req, res);
+        expect(mockStart).toHaveBeenCalledWith(1, 10, expect.any(Number), expect.anything());
+        expect(res.status).toHaveBeenCalledWith(201);
+        expect(res.json).toHaveBeenCalledWith(
+          expect.objectContaining({
+            data: expect.objectContaining({ lifecycle_initialized: expected }),
+          }),
+        );
+      },
+    );
+
+    it("does not touch the lifecycle when it was not asked for", async () => {
+      const mockStart = startLifecycleForModel as jest.MockedFunction<any>;
       mockGetToolById.mockResolvedValue({ id: 1, name: "ChatGPT" });
       mockLinkTool.mockResolvedValue(undefined);
-      mockSequelizeQuery
-        .mockResolvedValueOnce([[{ id: 10 }]]) // INSERT INTO model_inventories RETURNING id
-        .mockResolvedValueOnce(undefined) // UPDATE shadow_ai_tools
-        .mockResolvedValueOnce(undefined) // SAVEPOINT lifecycle_init
-        .mockResolvedValueOnce([{ id: 1 }, { id: 2 }]) // SELECT active lifecycle items
-        .mockResolvedValueOnce(undefined) // INSERT INTO model_lifecycle_values
-        .mockResolvedValueOnce(undefined); // RELEASE SAVEPOINT lifecycle_init
+      mockSequelizeQuery.mockResolvedValueOnce([[{ id: 10 }]]).mockResolvedValueOnce(undefined);
       const req = createReq({
         params: { id: "1" },
         body: {
           model_inventory: { provider: "OpenAI", model: "GPT-4" },
           governance_owner_id: "2",
-          start_lifecycle: true,
         },
       });
       const res = createRes();
       await startGovernance(req, res);
-      expect(res.status).toHaveBeenCalledWith(201);
+      expect(mockStart).not.toHaveBeenCalled();
+      expect(res.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          data: expect.objectContaining({ lifecycle_initialized: false }),
+        }),
+      );
     });
 
     it("should return 500 on error", async () => {
