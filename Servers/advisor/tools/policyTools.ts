@@ -180,8 +180,9 @@ export const toolsDefinition: any[] = [
           },
           status: {
             type: "string",
-            enum: ["Draft", "Under Review", "Approved", "Published", "Archived", "Deprecated"],
-            description: "Initial status. Defaults to 'Draft'.",
+            enum: ["Draft", "Archived", "Deprecated"],
+            description:
+              "Initial status. Defaults to 'Draft'. A policy reaches Under Review, Approved and Published only through the approval flow.",
           },
           tags: {
             type: "array",
@@ -247,8 +248,9 @@ export const toolsDefinition: any[] = [
           },
           status: {
             type: "string",
-            enum: ["Draft", "Under Review", "Approved", "Published", "Archived", "Deprecated"],
-            description: "New status for the policy.",
+            enum: ["Draft", "Published", "Archived", "Deprecated"],
+            description:
+              "New status for the policy. Published only from Approved. Use agent_submit_policy_for_review to put a policy under review; Approved comes only from the approval workflow or an Admin's direct approval. The status cannot change while an approval request is pending.",
           },
           tags: {
             type: "array",
@@ -271,13 +273,18 @@ export const toolsDefinition: any[] = [
     function: {
       name: "agent_submit_policy_for_review",
       description:
-        "Submit a policy for review by changing its status to 'Under Review'. Requires human confirmation before execution.",
+        "Submit a Draft or Under Review policy for approval: opens an approval request on the organization's policy approval workflow and sets the policy to 'Under Review'. The workflow's approvers then approve or reject it. Fails when a request is already pending or the organization has no policy approval workflow (then an Admin approves directly with agent_approve_policy_review). Requires human confirmation before execution.",
       parameters: {
         type: "object",
         properties: {
           policy_id: {
             type: "number",
-            description: "The ID of the policy to submit for review.",
+            description: "The ID of the policy to submit for approval.",
+          },
+          workflow_id: {
+            type: "number",
+            description:
+              "The policy approval workflow to use. Required only when the organization has more than one; omit it otherwise.",
           },
         },
         required: ["policy_id"],
@@ -289,7 +296,7 @@ export const toolsDefinition: any[] = [
     function: {
       name: "agent_approve_policy_review",
       description:
-        "Approve a policy review by changing its status to 'Approved'. Requires human confirmation before execution.",
+        "An Admin approves a Draft or Under Review policy directly, setting it to 'Approved'. Allowed only when the organization has no policy approval workflow; otherwise the policy is decided through its approval request (agent_approve_approval_step). Requires human confirmation before execution.",
       parameters: {
         type: "object",
         properties: {

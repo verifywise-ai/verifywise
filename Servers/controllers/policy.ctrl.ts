@@ -50,6 +50,11 @@ import { sanitizeUserHtml } from "../utils/sanitization.utils";
 import { POLICY_STATUS_ENUM } from "../utils/validations/policiesValidation.utils";
 import { isReviewDateString } from "../utils/policyReviewDate.utils";
 import { rejectPendingPolicyRequestOnDelete } from "../services/policies/policyApproval.service";
+import {
+  assertPoliciesCanBeArchived,
+  assertPolicyStatusChange,
+  assertPolicyStatusUpdateAllowed,
+} from "../utils/policyStatus.utils";
 
 /**
  * Only a reviewer assigned to the policy, or an Admin, may approve or reject
@@ -198,6 +203,8 @@ export class PolicyController {
         await transaction.rollback();
         return res.status(400).json(policyValidationResponse(fieldErrors));
       }
+      // Under Review, Approved and Published come only from the approval flow.
+      assertPolicyStatusChange({ currentStatus: null, nextStatus: policyData.status });
 
       const policy = await createPolicyQuery(policyData, req.organizationId!, userId, transaction);
 
@@ -253,6 +260,13 @@ export class PolicyController {
         await transaction.rollback();
         return res.status(400).json(policyValidationResponse(fieldErrors));
       }
+      // Status moves by hand only within the rules (pending request, workflow-only statuses).
+      await assertPolicyStatusUpdateAllowed({
+        organizationId: req.organizationId!,
+        policyId,
+        nextStatus: policyData.status,
+        transaction,
+      });
 
       const policy = await updatePolicyByIdQuery(
         policyId,
@@ -781,6 +795,7 @@ export class PolicyController {
           });
 
           if (action === "archive") {
+            await assertPoliciesCanBeArchived(req.organizationId!, ids, transaction);
             await bulkArchivePoliciesQuery(req.organizationId!, ids, req.userId!, transaction);
           } else if (action === "set_reviewer") {
             await bulkSetPoliciesReviewerQuery(req.organizationId!, ids, reviewerId!, transaction);
@@ -793,7 +808,7 @@ export class PolicyController {
       return res.status(200).json(STATUS_CODE[200]({ updated: ids.length, action }));
     } catch (error) {
       if (error instanceof ValidationException) {
-        return res.status(400).json(STATUS_CODE[400](error.message));
+        return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
       }
       if (error instanceof ForbiddenException) {
         return res.status(403).json(STATUS_CODE[403](error.message));

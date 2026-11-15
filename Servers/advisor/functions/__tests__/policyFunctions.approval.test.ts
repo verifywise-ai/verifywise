@@ -1,0 +1,208 @@
+const mockTx = { commit: jest.fn(), rollback: jest.fn() };
+jest.mock("../../../database/db", () => ({
+  sequelize: { query: jest.fn(), transaction: jest.fn(async () => mockTx) },
+}));
+jest.mock("../../../utils/policyManager.utils", () => ({ getAllPoliciesQuery: jest.fn() }));
+jest.mock("../../../utils/policyTemplate.utils", () => ({ getPolicyTemplatesQuery: jest.fn() }));
+jest.mock("../../approval/approvalGateway", () => ({ submitForApproval: jest.fn() }));
+jest.mock("../../../utils/logger/fileLogger", () => ({
+  __esModule: true,
+  default: { info: jest.fn(), warn: jest.fn(), error: jest.fn(), debug: jest.fn() },
+}));
+jest.mock("../../../services/policies/policyApproval.service", () => ({
+  approvePolicyDirectly: jest.fn(),
+  rejectPendingPolicyRequestOnDelete: jest.fn(),
+  submitPolicyForApproval: jest.fn(),
+}));
+jest.mock("../../../utils/policyApprovalDecision.utils", () => ({
+  recordPolicyStatusChange: jest.fn(),
+}));
+jest.mock("../../../utils/organizationMember.utils", () => ({
+  getUserOrganizationsQuery: jest.fn(),
+}));
+
+import { sequelize } from "../../../database/db";
+import { writeToolExecutors } from "../../confirmation/createWriteTool";
+import {
+  approvePolicyDirectly,
+  rejectPendingPolicyRequestOnDelete,
+  submitPolicyForApproval,
+} from "../../../services/policies/policyApproval.service";
+import { recordPolicyStatusChange } from "../../../utils/policyApprovalDecision.utils";
+import { getUserOrganizationsQuery } from "../../../utils/organizationMember.utils";
+import { ConflictException } from "../../../domain.layer/exceptions/custom.exception";
+import { POLICY_STATUS_MESSAGES } from "../../../utils/policyStatus.utils";
+import "../policyFunctions";
+
+const q = sequelize.query as jest.Mock;
+const exec = (name: string) => writeToolExecutors.get(name)!;
+
+beforeEach(() => {
+  jest.clearAllMocks();
+  q.mockReset();
+});
+
+describe("agent_create_policy status", () => {
+  it.each(["Under Review", "Approved", "Published"])(
+    "refuses to create a policy as %s",
+    async (status) => {
+      await expect(
+        exec("agent_create_policy")({ policy_name: "P", status, _userId: 9 }, 42),
+      ).rejects.toThrow(POLICY_STATUS_MESSAGES.createStatus);
+      expect(q).not.toHaveBeenCalled();
+    },
+  );
+
+  it("creates a Draft by default", async () => {
+    q.mockResolvedValueOnce([{ id: 1 }]);
+    await exec("agent_create_policy")({ policy_name: "P", _userId: 9 }, 42);
+    expect(q.mock.calls[0][1].replacements.status).toBe("Draft");
+  });
+});
+
+describe("agent_update_policy status", () => {
+  it("refuses a status change while a request is pending, and rolls back", async () => {
+    q.mockResolvedValueOnce([{ id: 1, title: "P", status: "Under Review", has_pending: true }]);
+    await expect(
+      exec("agent_update_policy")({ policy_id: 1, status: "Draft", _userId: 9 }, 42),
+    ).rejects.toThrow(POLICY_STATUS_MESSAGES.pendingRequest);
+    expect(q).toHaveBeenCalledTimes(1);
+    expect(mockTx.rollback).toHaveBeenCalled();
+    expect(mockTx.commit).not.toHaveBeenCalled();
+  });
+
+  it("refuses to approve by hand", async () => {
+    q.mockResolvedValueOnce([{ id: 1, title: "P", status: "Draft", has_pending: false }]);
+    await expect(
+      exec("agent_update_policy")({ policy_id: 1, status: "Approved", _userId: 9 }, 42),
+    ).rejects.toThrow(POLICY_STATUS_MESSAGES.approvedByHand);
+  });
+
+  it("publishes an approved policy and records the status change", async () => {
+    q.mockResolvedValueOnce([{ id: 1, title: "P", status: "Approved", has_pending: false }]);
+    q.mockResolvedValueOnce([{ id: 1, status: "Published" }]);
+    const result = await exec("agent_update_policy")(
+      { policy_id: 1, status: "Published", _userId: 9 },
+      42,
+    );
+    expect(result).toEqual({ id: 1, status: "Published" });
+    expect(q.mock.calls[0][0]).toContain("FOR UPDATE");
+    expect(q.mock.calls[1][1].transaction).toBe(mockTx);
+    expect(recordPolicyStatusChange).toHaveBeenCalledWith(
+      42,
+      1,
+      9,
+      "Approved",
+      "Published",
+      mockTx,
+    );
+    expect(mockTx.commit).toHaveBeenCalled();
+  });
+
+  it("does not check or record status when none is sent", async () => {
+    q.mockResolvedValueOnce([{ id: 1 }]);
+    await exec("agent_update_policy")({ policy_id: 1, policy_name: "New", _userId: 9 }, 42);
+    expect(q).toHaveBeenCalledTimes(1);
+    expect(recordPolicyStatusChange).not.toHaveBeenCalled();
+  });
+});
+
+describe("agent_submit_policy_for_review", () => {
+  it("submits through the approval service with the optional workflow", async () => {
+    (submitPolicyForApproval as jest.Mock).mockResolvedValue({
+      request_id: 3,
+      policy: { id: 1, status: "Under Review" },
+    });
+    const result = await exec("agent_submit_policy_for_review")(
+      { policy_id: 1, workflow_id: 6, _userId: 9 },
+      42,
+    );
+    expect(submitPolicyForApproval).toHaveBeenCalledWith({
+      orgId: 42,
+      policyId: 1,
+      userId: 9,
+      workflowId: 6,
+    });
+    expect(result).toEqual({ id: 1, status: "Under Review" });
+    expect(q).not.toHaveBeenCalled();
+  });
+
+  it("surfaces the service's error", async () => {
+    (submitPolicyForApproval as jest.Mock).mockRejectedValue(
+      new ConflictException("This policy already has a pending approval request"),
+    );
+    await expect(
+      exec("agent_submit_policy_for_review")({ policy_id: 1, _userId: 9 }, 42),
+    ).rejects.toThrow("This policy already has a pending approval request");
+    expect((submitPolicyForApproval as jest.Mock).mock.calls[0][0].workflowId).toBeUndefined();
+  });
+});
+
+describe("agent_approve_policy_review", () => {
+  it("approves directly with the acting user's role in this organization", async () => {
+    (getUserOrganizationsQuery as jest.Mock).mockResolvedValue([
+      { organization_id: 7, role_name: "Editor" },
+      { organization_id: 42, role_name: "Admin" },
+    ]);
+    (approvePolicyDirectly as jest.Mock).mockResolvedValue({ id: 1, status: "Approved" });
+    const result = await exec("agent_approve_policy_review")(
+      { policy_id: 1, approval_notes: "ok", _userId: 9 },
+      42,
+    );
+    expect(approvePolicyDirectly).toHaveBeenCalledWith({
+      orgId: 42,
+      policyId: 1,
+      userId: 9,
+      role: "Admin",
+      comment: "ok",
+    });
+    expect(result).toEqual({ id: 1, status: "Approved" });
+  });
+
+  it("passes no role when the user is not a member, so the service refuses", async () => {
+    (getUserOrganizationsQuery as jest.Mock).mockResolvedValue([
+      { organization_id: 7, role_name: "Admin" },
+    ]);
+    (approvePolicyDirectly as jest.Mock).mockRejectedValue(
+      new Error("Only an Admin can approve a policy directly"),
+    );
+    await expect(
+      exec("agent_approve_policy_review")({ policy_id: 1, _userId: 9 }, 42),
+    ).rejects.toThrow("Only an Admin can approve a policy directly");
+    expect((approvePolicyDirectly as jest.Mock).mock.calls[0][0]).toEqual(
+      expect.objectContaining({ role: undefined, comment: null }),
+    );
+  });
+
+  it("surfaces 'use the approval workflow' when the organization has one", async () => {
+    (getUserOrganizationsQuery as jest.Mock).mockResolvedValue([
+      { organization_id: 42, role_name: "Admin" },
+    ]);
+    (approvePolicyDirectly as jest.Mock).mockRejectedValue(
+      new ConflictException("Use the approval workflow"),
+    );
+    await expect(
+      exec("agent_approve_policy_review")({ policy_id: 1, _userId: 9 }, 42),
+    ).rejects.toThrow("Use the approval workflow");
+  });
+});
+
+describe("agent_delete_policy", () => {
+  it("rejects the pending request inside the delete transaction", async () => {
+    q.mockResolvedValueOnce(undefined).mockResolvedValueOnce([{ id: 1 }]);
+    const result = await exec("agent_delete_policy")({ policy_id: 1, _userId: 9 }, 42);
+    expect(rejectPendingPolicyRequestOnDelete).toHaveBeenCalledWith(42, 1, mockTx);
+    for (const call of q.mock.calls) expect(call[1].transaction).toBe(mockTx);
+    expect(mockTx.commit).toHaveBeenCalled();
+    expect(result).toEqual({ policy_id: 1, deleted: true });
+  });
+
+  it("rolls back when the policy is not found", async () => {
+    q.mockResolvedValueOnce(undefined).mockResolvedValueOnce([]);
+    await expect(exec("agent_delete_policy")({ policy_id: 1, _userId: 9 }, 42)).rejects.toThrow(
+      "Policy #1 not found",
+    );
+    expect(mockTx.rollback).toHaveBeenCalled();
+    expect(mockTx.commit).not.toHaveBeenCalled();
+  });
+});

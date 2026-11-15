@@ -663,10 +663,12 @@ export const bulkArchivePoliciesQuery = async (
 };
 
 /**
- * Bulk-replace assigned reviewers for the given policies with a single reviewer.
- * Existing assignments for these (policy_id) rows are removed and one row per
- * policy is inserted, so every selected policy ends up with exactly one
- * assigned reviewer (the supplied `reviewerId`).
+ * Bulk-replace the team members (assigned reviewers) of the given policies
+ * with a single user. Existing assignments for these policies are removed and
+ * the user is added to each one, except a policy the user owns: create and
+ * update never keep the owner among the reviewers, so that policy is left
+ * with no team members. review_status is not touched: approval runs through
+ * the approval workflow, not through team membership.
  */
 export const bulkSetPoliciesReviewerQuery = async (
   organizationId: number,
@@ -684,34 +686,15 @@ export const bulkSetPoliciesReviewerQuery = async (
     { replacements: { organizationId, ids }, transaction },
   );
 
-  // Build a multi-row VALUES list, one per policy id, using indexed bindings.
-  const values = ids.map((_, i) => `(:organizationId, :pid_${i}, :reviewerId)`).join(", ");
-  const replacements: Record<string, unknown> = { organizationId, reviewerId };
-  ids.forEach((id, i) => {
-    replacements[`pid_${i}`] = id;
-  });
-
   await sequelize.query(
     `INSERT INTO policy_manager__assigned_reviewer_ids (organization_id, policy_manager_id, user_id)
-     VALUES ${values}
+     SELECT pm.organization_id, pm.id, :reviewerId
+     FROM policy_manager pm
+     WHERE pm.organization_id = :organizationId
+       AND pm.id IN (:ids)
+       AND pm.policy_owner_id IS DISTINCT FROM :reviewerId
      ON CONFLICT (policy_manager_id, user_id) DO NOTHING`,
-    { replacements, transaction },
-  );
-
-  // Move each policy into "pending_review" so the new reviewer sees it on their queue.
-  await sequelize.query(
-    `UPDATE policy_manager
-       SET review_status = :reviewStatus
-     WHERE organization_id = :organizationId
-       AND id IN (:ids)`,
-    {
-      replacements: {
-        organizationId,
-        ids,
-        reviewStatus: "pending_review",
-      },
-      transaction,
-    },
+    { replacements: { organizationId, ids, reviewerId }, transaction },
   );
 };
 

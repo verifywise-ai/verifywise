@@ -249,7 +249,7 @@ describe("policy.ctrl", () => {
     });
     it("keeps accepting what the legacy endpoint accepted: a short title, no status", async () => {
       mockCreate.mockResolvedValue({ id: 1, title: "P" } as any);
-      for (const body of [{ title: "P" }, { title: "P", status: "Published" }]) {
+      for (const body of [{ title: "P" }, { title: "P", status: "Archived" }]) {
         const res = createRes();
         await PolicyController.createPolicy(createReq({ body }), res);
         expect(res.status).toHaveBeenCalledWith(201);
@@ -315,6 +315,128 @@ describe("policy.ctrl", () => {
           message: "Reviewers must be members of this organization",
         },
       ]);
+    });
+  });
+
+  describe("status gate (S2)", () => {
+    const { sequelize } = require("../../database/db");
+    const lockRow = (status: string, has_pending = false) =>
+      (sequelize.query as jest.Mock<any>).mockResolvedValueOnce([
+        { id: 1, title: "P1", status, has_pending },
+      ]);
+
+    it.each(["Under Review", "Approved", "Published"])(
+      "rejects creating a policy as %s with a status field error",
+      async (status) => {
+        const res = createRes();
+        await PolicyController.createPolicy(createReq({ body: { title: "Policy", status } }), res);
+        expect(res.status).toHaveBeenCalledWith(400);
+        expect(res.json.mock.calls[0][0].data.errors).toEqual([
+          { field: "status", message: "A new policy can be draft, archived or deprecated" },
+        ]);
+        expect(mockCreate).not.toHaveBeenCalled();
+      },
+    );
+
+    it.each(["Draft", "Archived", "Deprecated"])("creates a policy as %s", async (status) => {
+      mockCreate.mockResolvedValue({ id: 1, title: "Policy" } as any);
+      const res = createRes();
+      await PolicyController.createPolicy(createReq({ body: { title: "Policy", status } }), res);
+      expect(res.status).toHaveBeenCalledWith(201);
+    });
+
+    it.each([
+      ["Draft", "Under Review", "Submit the policy for approval to put it under review"],
+      ["Draft", "Approved", "A policy is approved through its approval workflow or by an Admin"],
+      ["Draft", "Published", "Only an approved policy can be published"],
+      ["Published", "Draft", "Cannot move published policy back to draft"],
+      ["Archived", "Draft", "Cannot restore archived policy to draft"],
+    ])("rejects an update from %s to %s", async (current, next, message) => {
+      mockGetById.mockResolvedValue([{ id: 1, title: "P1", status: current }] as any);
+      lockRow(current);
+      const res = createRes();
+      await PolicyController.updatePolicy(
+        createReq({ params: { id: "1" }, body: { status: next } }),
+        res,
+      );
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json.mock.calls[0][0].data.errors).toEqual([{ field: "status", message }]);
+      expect(mockUpdate).not.toHaveBeenCalled();
+    });
+
+    it("rejects a status change while an approval request is pending", async () => {
+      mockGetById.mockResolvedValue([{ id: 1, title: "P1", status: "Under Review" }] as any);
+      lockRow("Under Review", true);
+      const res = createRes();
+      await PolicyController.updatePolicy(
+        createReq({ params: { id: "1" }, body: { status: "Draft" } }),
+        res,
+      );
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json.mock.calls[0][0].data.errors).toEqual([
+        { field: "status", message: "Withdraw the approval request before changing the status" },
+      ]);
+      expect(mockUpdate).not.toHaveBeenCalled();
+    });
+
+    it("accepts the unchanged status on save while a request is pending", async () => {
+      mockGetById.mockResolvedValue([{ id: 1, title: "P1", status: "Under Review" }] as any);
+      lockRow("Under Review", true);
+      mockUpdate.mockResolvedValue({ id: 1, title: "P2" } as any);
+      const res = createRes();
+      await PolicyController.updatePolicy(
+        createReq({ params: { id: "1" }, body: { title: "P2", status: "Under Review" } }),
+        res,
+      );
+      expect(res.status).toHaveBeenCalledWith(202);
+    });
+
+    it("publishes an approved policy and locks the row in the update transaction", async () => {
+      mockGetById.mockResolvedValue([{ id: 1, title: "P1", status: "Approved" }] as any);
+      lockRow("Approved");
+      mockUpdate.mockResolvedValue({ id: 1, status: "Published" } as any);
+      const res = createRes();
+      await PolicyController.updatePolicy(
+        createReq({ params: { id: "1" }, body: { status: "Published" } }),
+        res,
+      );
+      expect(res.status).toHaveBeenCalledWith(202);
+      const [sql, options] = (sequelize.query as jest.Mock<any>).mock.calls[0];
+      expect(sql).toContain("FOR UPDATE");
+      expect(options.replacements).toEqual(
+        expect.objectContaining({ organizationId: 1, policyIds: [1] }),
+      );
+      expect(options.transaction).toBeDefined();
+    });
+
+    it("does not look up the status when the update sends none", async () => {
+      mockGetById.mockResolvedValue([{ id: 1, title: "P1", status: "Draft" }] as any);
+      mockUpdate.mockResolvedValue({ id: 1, title: "P2" } as any);
+      const res = createRes();
+      await PolicyController.updatePolicy(
+        createReq({ params: { id: "1" }, body: { title: "P2" } }),
+        res,
+      );
+      expect(res.status).toHaveBeenCalledWith(202);
+      expect(sequelize.query).not.toHaveBeenCalled();
+    });
+
+    it("bulk archive returns 400 naming the policies with a pending request and archives none", async () => {
+      const { bulkArchivePoliciesQuery } = require("../../utils/policyManager.utils");
+      (sequelize.query as jest.Mock<any>).mockResolvedValueOnce([
+        { id: 1, title: "Alpha", status: "Under Review", has_pending: true },
+        { id: 2, title: "Beta", status: "Draft", has_pending: false },
+      ]);
+      const res = createRes();
+      await PolicyController.bulkUpdatePolicies(
+        createReq({ body: { ids: [1, 2], action: "archive" } }),
+        res,
+      );
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json.mock.calls[0][0].data).toBe(
+        'Withdraw the approval request before archiving these policies: "Alpha"',
+      );
+      expect(bulkArchivePoliciesQuery).not.toHaveBeenCalled();
     });
   });
 

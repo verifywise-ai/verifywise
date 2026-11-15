@@ -598,6 +598,24 @@ import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { sequelize } from "../../database/db";
 import { QueryTypes } from "sequelize";
 import { sanitizeUserHtml } from "../../utils/sanitization.utils";
+import {
+  assertPolicyStatusChange,
+  assertPolicyStatusUpdateAllowed,
+} from "../../utils/policyStatus.utils";
+import { recordPolicyStatusChange } from "../../utils/policyApprovalDecision.utils";
+import {
+  approvePolicyDirectly,
+  rejectPendingPolicyRequestOnDelete,
+  submitPolicyForApproval,
+} from "../../services/policies/policyApproval.service";
+import { getUserOrganizationsQuery } from "../../utils/organizationMember.utils";
+
+/** The acting user's role name in the organization, or undefined when not a member. */
+const getActingRole = async (userId: number, organizationId: number) => {
+  if (!userId) return undefined;
+  const memberships = await getUserOrganizationsQuery(userId);
+  return memberships.find((m) => Number(m.organization_id) === organizationId)?.role_name;
+};
 
 const agentCreatePolicy = createWriteToolFn({
   toolName: "agent_create_policy",
@@ -607,6 +625,8 @@ const agentCreatePolicy = createWriteToolFn({
   executeFn: async (params, organizationId) => {
     const userId = (params._userId as number) || 0;
     const tags = (params.tags as string[]) || [];
+    const status = (params.status as string) || "Draft";
+    assertPolicyStatusChange({ currentStatus: null, nextStatus: status });
 
     const [result] = await sequelize.query(
       `INSERT INTO policy_manager AS pm (
@@ -620,7 +640,7 @@ const agentCreatePolicy = createWriteToolFn({
           title: params.policy_name as string,
           // Same sanitizer policy.ctrl.ts applies: model output is user HTML.
           content_html: sanitizeUserHtml((params.description as string) || "") ?? "",
-          status: (params.status as string) || "Draft",
+          status,
           tags,
           // A calendar day, stored at midnight (P-M1).
           next_review_date: toReviewDateValue(params.review_date),
@@ -681,49 +701,66 @@ const agentUpdatePolicy = createWriteToolFn({
       replacements.next_review_date = toReviewDateValue(params.review_date);
     }
 
-    const [result] = await sequelize.query(
-      `UPDATE policy_manager AS pm SET ${updateFields.join(", ")} WHERE organization_id = :organizationId AND id = :id RETURNING *, ${POLICY_REVIEW_DATE_SQL}`,
-      {
-        replacements,
-        type: QueryTypes.SELECT,
-      },
-    );
+    const transaction = await sequelize.transaction();
+    try {
+      // Same status rules as the policy editor (utils/policyStatus.utils.ts).
+      const previousStatus = await assertPolicyStatusUpdateAllowed({
+        organizationId,
+        policyId,
+        nextStatus: params.status as string | undefined,
+        transaction,
+      });
 
-    if (!result) {
-      throw new Error(`Policy #${policyId} not found`);
+      const [result] = await sequelize.query(
+        `UPDATE policy_manager AS pm SET ${updateFields.join(", ")} WHERE organization_id = :organizationId AND id = :id RETURNING *, ${POLICY_REVIEW_DATE_SQL}`,
+        {
+          replacements,
+          type: QueryTypes.SELECT,
+          transaction,
+        },
+      );
+
+      if (!result) {
+        throw new Error(`Policy #${policyId} not found`);
+      }
+
+      if (previousStatus !== null && params.status !== undefined) {
+        await recordPolicyStatusChange(
+          organizationId,
+          policyId,
+          userId || null,
+          previousStatus,
+          params.status as string,
+          transaction,
+        );
+      }
+
+      await transaction.commit();
+      return result;
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
     }
-
-    return result;
   },
 });
 
 const agentSubmitPolicyForReview = createWriteToolFn({
   toolName: "agent_submit_policy_for_review",
   warningLevel: "warning",
-  descriptionFn: (params) => `Submit policy #${params.policy_id} for review`,
+  descriptionFn: (params) =>
+    `Submit policy #${params.policy_id} for approval${params.workflow_id ? ` with workflow #${params.workflow_id}` : ""}`,
   executeFn: async (params, organizationId) => {
-    const policyId = params.policy_id as number;
-    const userId = (params._userId as number) || 0;
-
-    const [result] = await sequelize.query(
-      `UPDATE policy_manager AS pm SET status = 'Under Review', last_updated_by = :userId, last_updated_at = :now
-       WHERE organization_id = :organizationId AND id = :id RETURNING *, ${POLICY_REVIEW_DATE_SQL}`,
-      {
-        replacements: {
-          organizationId,
-          id: policyId,
-          userId,
-          now: new Date(),
-        },
-        type: QueryTypes.SELECT,
-      },
-    );
-
-    if (!result) {
-      throw new Error(`Policy #${policyId} not found`);
-    }
-
-    return result;
+    // Opens an approval request on a usable policy workflow; its approvers decide.
+    const { policy } = await submitPolicyForApproval({
+      orgId: organizationId,
+      policyId: Number(params.policy_id),
+      userId: (params._userId as number) || 0,
+      workflowId:
+        params.workflow_id === undefined || params.workflow_id === null
+          ? undefined
+          : Number(params.workflow_id),
+    });
+    return policy;
   },
 });
 
@@ -731,31 +768,18 @@ const agentApprovePolicyReview = createWriteToolFn({
   toolName: "agent_approve_policy_review",
   warningLevel: "warning",
   descriptionFn: (params) =>
-    `Approve policy #${params.policy_id} review${params.approval_notes ? ` with notes` : ""}`,
+    `Approve policy #${params.policy_id}${params.approval_notes ? ` with notes` : ""}`,
   executeFn: async (params, organizationId) => {
-    const policyId = params.policy_id as number;
+    // Admin direct approval, allowed only when the organization has no usable
+    // policy workflow; otherwise the approval request decides.
     const userId = (params._userId as number) || 0;
-
-    const [result] = await sequelize.query(
-      `UPDATE policy_manager AS pm SET status = 'Approved', review_status = 'approved', reviewed_by = :userId, reviewed_at = :now, review_comment = :comment, last_updated_by = :userId, last_updated_at = :now
-       WHERE organization_id = :organizationId AND id = :id RETURNING *, ${POLICY_REVIEW_DATE_SQL}`,
-      {
-        replacements: {
-          organizationId,
-          id: policyId,
-          userId,
-          now: new Date(),
-          comment: (params.approval_notes as string) || null,
-        },
-        type: QueryTypes.SELECT,
-      },
-    );
-
-    if (!result) {
-      throw new Error(`Policy #${policyId} not found`);
-    }
-
-    return result;
+    return approvePolicyDirectly({
+      orgId: organizationId,
+      policyId: Number(params.policy_id),
+      userId,
+      role: await getActingRole(userId, organizationId),
+      comment: (params.approval_notes as string | undefined) ?? null,
+    });
   },
 });
 
@@ -765,27 +789,38 @@ const agentDeletePolicy = createWriteToolFn({
   descriptionFn: (params) => `Delete policy #${params.policy_id}`,
   executeFn: async (params, organizationId) => {
     const policyId = params.policy_id as number;
+    const transaction = await sequelize.transaction();
+    try {
+      // A pending approval request is rejected with the delete; the requester
+      // is notified once the transaction commits.
+      await rejectPendingPolicyRequestOnDelete(organizationId, policyId, transaction);
 
-    // Delete reviewer mappings first
-    await sequelize.query(
-      `DELETE FROM policy_manager__assigned_reviewer_ids WHERE organization_id = :organizationId AND policy_manager_id = :policyId`,
-      { replacements: { organizationId, policyId } },
-    );
+      // Delete reviewer mappings first
+      await sequelize.query(
+        `DELETE FROM policy_manager__assigned_reviewer_ids WHERE organization_id = :organizationId AND policy_manager_id = :policyId`,
+        { replacements: { organizationId, policyId }, transaction },
+      );
 
-    // Delete the policy
-    const result = await sequelize.query(
-      `DELETE FROM policy_manager WHERE organization_id = :organizationId AND id = :policyId RETURNING id`,
-      {
-        replacements: { organizationId, policyId },
-        type: QueryTypes.SELECT,
-      },
-    );
+      // Delete the policy
+      const result = await sequelize.query(
+        `DELETE FROM policy_manager WHERE organization_id = :organizationId AND id = :policyId RETURNING id`,
+        {
+          replacements: { organizationId, policyId },
+          type: QueryTypes.SELECT,
+          transaction,
+        },
+      );
 
-    if (!result || result.length === 0) {
-      throw new Error(`Policy #${policyId} not found`);
+      if (!result || result.length === 0) {
+        throw new Error(`Policy #${policyId} not found`);
+      }
+
+      await transaction.commit();
+      return { policy_id: policyId, deleted: true };
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
     }
-
-    return { policy_id: policyId, deleted: true };
   },
 });
 

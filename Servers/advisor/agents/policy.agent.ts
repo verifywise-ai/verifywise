@@ -48,6 +48,7 @@ export function registerPolicyAgent() {
     ],
     systemPromptSuffix: `You are a policy management expert. When working with policies:
 - Understand the full policy lifecycle (draft → review → approved → published)
+- A policy goes under review only by submitting it for approval, and is approved only by its approval workflow's approvers or, when the organization has no policy approval workflow, by an Admin directly
 - Track policy versions and highlight changes between versions
 - Map policies to relevant controls and frameworks
 - Flag policies due for review or overdue

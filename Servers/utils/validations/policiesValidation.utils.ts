@@ -38,6 +38,35 @@ export const POLICY_STATUS_ENUM = [
 ] as const;
 
 /**
+ * Status changes a policy may never make, whoever makes them. Shared by the
+ * status gate (utils/policyStatus.utils.ts) and validatePolicyUpdateBusinessRules.
+ */
+export const POLICY_INVALID_STATUS_TRANSITIONS: ReadonlyArray<{
+  from: (typeof POLICY_STATUS_ENUM)[number];
+  to: (typeof POLICY_STATUS_ENUM)[number];
+  message: string;
+}> = [
+  { from: "Published", to: "Draft", message: "Cannot move published policy back to draft" },
+  {
+    from: "Published",
+    to: "Under Review",
+    message: "Published policies require formal revision process",
+  },
+  { from: "Archived", to: "Draft", message: "Cannot restore archived policy to draft" },
+  {
+    from: "Archived",
+    to: "Under Review",
+    message: "Cannot restore archived policy to under review",
+  },
+  { from: "Archived", to: "Approved", message: "Cannot restore archived policy to approved" },
+  { from: "Deprecated", to: "Published", message: "Cannot republish deprecated policy" },
+];
+
+/** The forbidden transition from `from` to `to`, or undefined when it is allowed. */
+export const findInvalidPolicyStatusTransition = (from: unknown, to: unknown) =>
+  POLICY_INVALID_STATUS_TRANSITIONS.find((t) => t.from === from && t.to === to);
+
+/**
  * review_status values written by updatePolicyReviewStatusQuery.
  * NULL means no review has been recorded. Must match
  * policy_manager_review_status_check.
@@ -441,26 +470,7 @@ export const validatePolicyUpdateBusinessRules = (
 
   // Validate status transitions
   if (data.status && existingData?.status) {
-    const invalidTransitions = [
-      { from: "Published", to: "Draft", message: "Cannot move published policy back to draft" },
-      {
-        from: "Published",
-        to: "Under Review",
-        message: "Published policies require formal revision process",
-      },
-      { from: "Archived", to: "Draft", message: "Cannot restore archived policy to draft" },
-      {
-        from: "Archived",
-        to: "Under Review",
-        message: "Cannot restore archived policy to under review",
-      },
-      { from: "Archived", to: "Approved", message: "Cannot restore archived policy to approved" },
-      { from: "Deprecated", to: "Published", message: "Cannot republish deprecated policy" },
-    ];
-
-    const invalidTransition = invalidTransitions.find(
-      (t) => t.from === existingData.status && t.to === data.status,
-    );
+    const invalidTransition = findInvalidPolicyStatusTransition(existingData.status, data.status);
 
     if (invalidTransition) {
       errors.push({

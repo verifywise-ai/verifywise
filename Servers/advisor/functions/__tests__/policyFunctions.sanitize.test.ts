@@ -1,4 +1,14 @@
-jest.mock("../../../database/db", () => ({ sequelize: { query: jest.fn() } }));
+jest.mock("../../../database/db", () => ({
+  sequelize: {
+    query: jest.fn(),
+    transaction: jest.fn(async () => ({ commit: jest.fn(), rollback: jest.fn() })),
+  },
+}));
+jest.mock("../../../services/policies/policyApproval.service", () => ({
+  approvePolicyDirectly: jest.fn(),
+  rejectPendingPolicyRequestOnDelete: jest.fn(),
+  submitPolicyForApproval: jest.fn(),
+}));
 jest.mock("../../../utils/policyManager.utils", () => ({ getAllPoliciesQuery: jest.fn() }));
 jest.mock("../../../utils/policyTemplate.utils", () => ({ getPolicyTemplatesQuery: jest.fn() }));
 jest.mock("../../approval/approvalGateway", () => ({ submitForApproval: jest.fn() }));
