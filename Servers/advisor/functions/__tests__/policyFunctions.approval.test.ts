@@ -335,6 +335,13 @@ describe("agent_delete_policy", () => {
     expect(result).toEqual({ policy_id: 1, deleted: true });
   });
 
+  it("deletes without a history user when _userId is missing", async () => {
+    mockDeleteQuery.mockResolvedValueOnce(true);
+    await exec("agent_delete_policy")({ policy_id: 1 }, 42);
+    expect(mockDeleteQuery).toHaveBeenCalledWith(42, 1, null, mockTx);
+    expect(mockTx.commit).toHaveBeenCalled();
+  });
+
   it("rolls back when the policy is not found", async () => {
     mockDeleteQuery.mockResolvedValueOnce(false);
     await expect(exec("agent_delete_policy")({ policy_id: 1, _userId: 9 }, 42)).rejects.toThrow(

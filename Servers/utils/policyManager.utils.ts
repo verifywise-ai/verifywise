@@ -15,6 +15,8 @@ import {
 } from "./customField.utils";
 import { findUsersNotInOrganization, parseReferencedIds } from "./user.utils";
 import { POLICY_REVIEW_DATE_SQL, toReviewDateValue } from "./policyReviewDate.utils";
+import { runInSavepoint } from "../config/changeHistory.config";
+import logger from "./logger/fileLogger";
 import { recordEntityDeletion } from "./changeHistory.base.utils";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 
@@ -544,7 +546,7 @@ export const updatePolicyByIdQuery = async (
 export const deletePolicyByIdQuery = async (
   organizationId: number,
   id: number,
-  userId: number,
+  userId: number | null,
   transaction: Transaction,
 ) => {
   // Get policy data with reviewer IDs BEFORE deleting (CASCADE will delete mappings)
@@ -580,7 +582,18 @@ export const deletePolicyByIdQuery = async (
     },
   );
 
-  await recordEntityDeletion("policy", id, userId, organizationId, transaction);
+  // Best-effort and savepointed: a failed history write never fails the delete.
+  // No acting user means no entry (changed_by_user_id must reference a user).
+  if (userId) {
+    try {
+      await runInSavepoint(
+        () => recordEntityDeletion("policy", id, userId, organizationId, transaction),
+        transaction,
+      );
+    } catch (error) {
+      logger.error(`Error recording policy deletion history: ${error}`);
+    }
+  }
 
   const automations = (await sequelize.query(
     `SELECT

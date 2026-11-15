@@ -829,7 +829,9 @@ const agentDeletePolicy = createWriteToolFn({
       const deleted = await deletePolicyByIdQuery(
         organizationId,
         policyId,
-        (params._userId as number) || 0,
+        // _userId is injected only when the caller is known; without it the
+        // delete still runs and no history entry is written.
+        (params._userId as number) || null,
         transaction,
       );
 
