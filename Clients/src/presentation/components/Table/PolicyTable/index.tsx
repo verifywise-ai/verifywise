@@ -132,14 +132,14 @@ const CustomizablePolicyTable = ({
 
       // Handle different column types for policies
       if (sortKey.includes("title")) {
-        aValue = a.title?.toLowerCase() || "";
-        bValue = b.title?.toLowerCase() || "";
+        aValue = a.title || "";
+        bValue = b.title || "";
       } else if (sortKey.includes("status")) {
-        aValue = a.status?.toLowerCase() || "";
-        bValue = b.status?.toLowerCase() || "";
+        aValue = a.status || "";
+        bValue = b.status || "";
       } else if (sortKey.includes("tags")) {
-        aValue = a.tags?.join(", ")?.toLowerCase() || "";
-        bValue = b.tags?.join(", ")?.toLowerCase() || "";
+        aValue = a.tags?.join(", ") || "";
+        bValue = b.tags?.join(", ") || "";
       } else if (sortKey.includes("next") || sortKey.includes("review")) {
         aValue = a.next_review_date ? new Date(a.next_review_date).getTime() : 0;
         bValue = b.next_review_date ? new Date(b.next_review_date).getTime() : 0;
@@ -161,8 +161,8 @@ const CustomizablePolicyTable = ({
         if (sortKey && sortKey in a && sortKey in b) {
           const aVal = (a as Record<string, unknown>)[sortKey];
           const bVal = (b as Record<string, unknown>)[sortKey];
-          aValue = String(aVal).toLowerCase();
-          bValue = String(bVal).toLowerCase();
+          aValue = String(aVal);
+          bValue = String(bVal);
           const comparison = compareNames(aValue, bValue);
           return sortConfig.direction === "asc" ? comparison : -comparison;
         }

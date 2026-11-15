@@ -32,7 +32,7 @@ import EmptyStateTip from "../../EmptyState/EmptyStateTip";
 import { TableEmptyStateLayout } from "../TableEmptyStateLayout";
 import { IVWProjectRisksTable } from "../../../types/interfaces/i.risk";
 import { RiskModel } from "../../../../domain/models/Common/risks/risk.model";
-import { compareRisks } from "./riskSort";
+import { compareRisks, parseSavedRiskSort } from "./riskSort";
 import { buildUserSortNames, userSortName } from "../../../../application/utils/userSort";
 import { text, border } from "../../../themes/palette";
 import Checkbox from "../../Inputs/Checkbox";
@@ -237,15 +237,14 @@ const VWProjectRisksTable = ({
 
   // Initialize sorting state from localStorage or default to no sorting
   const [sortConfig, setSortConfig] = useState<SortConfig>(() => {
-    const saved = localStorage.getItem(RISKS_SORTING_KEY);
-    if (saved) {
-      try {
-        return JSON.parse(saved);
-      } catch {
-        return { key: "", direction: null };
-      }
+    try {
+      return parseSavedRiskSort(
+        localStorage.getItem(RISKS_SORTING_KEY),
+        columns.filter((c) => c.sortable).map((c) => c.id),
+      );
+    } catch {
+      return { key: "", direction: null };
     }
-    return { key: "", direction: null };
   });
 
   // Save rowsPerPage to localStorage whenever it changes

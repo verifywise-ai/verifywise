@@ -29,14 +29,15 @@ const sortValue = (
   ownerName: OwnerNameLookup,
 ): string | number | null => {
   switch (key) {
+    // Strings go to compareNames as they are: it owns the case folding.
     case "risk_name":
-      return lower(risk.risk_name);
+      return risk.risk_name ?? "";
     case "risk_owner":
-      return lower(ownerName(risk));
+      return ownerName(risk);
     case "severity":
       return getSeverityValue(risk.severity);
     case "mitigation_status":
-      return lower(risk.mitigation_status);
+      return risk.mitigation_status ?? "";
     case "risk_level_autocalculated":
       // The column shows the effective level, so it sorts by it.
       return riskLevelRank(getEffectiveRiskLevel(risk));
@@ -71,4 +72,36 @@ export const compareRisks = (
   if (aValue < bValue) return -sign;
   if (aValue > bValue) return sign;
   return 0;
+};
+
+export interface RiskSortState {
+  key: string;
+  direction: RiskSortDirection | null;
+}
+
+const NO_SORT: RiskSortState = { key: "", direction: null };
+
+/**
+ * Reads a sort saved in localStorage. Anything unreadable, or on a column that
+ * is not sortable (any more), means no sort.
+ */
+export const parseSavedRiskSort = (
+  raw: string | null,
+  sortableKeys: readonly string[],
+): RiskSortState => {
+  if (!raw) return NO_SORT;
+  try {
+    const saved = JSON.parse(raw);
+    const direction = saved?.direction;
+    if (
+      typeof saved?.key === "string" &&
+      sortableKeys.includes(saved.key) &&
+      (direction === "asc" || direction === "desc")
+    ) {
+      return { key: saved.key, direction };
+    }
+  } catch {
+    // fall through
+  }
+  return NO_SORT;
 };

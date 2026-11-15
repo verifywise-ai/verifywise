@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { compareRisks } from "../riskSort";
+import { compareRisks, parseSavedRiskSort } from "../riskSort";
 import { RiskModel } from "../../../../../domain/models/Common/risks/risk.model";
 
 const risk = (fields: Record<string, unknown>) => fields as unknown as RiskModel;
@@ -112,5 +112,32 @@ describe("compareRisks owner column", () => {
 
   it("reverses for descending", () => {
     expect(ids("desc")).toEqual([1, 2, 3, 4]);
+  });
+});
+
+describe("parseSavedRiskSort", () => {
+  const sortable = ["risk_name", "severity"];
+  const raw = (key: string, direction: unknown) => JSON.stringify({ key, direction });
+
+  it("keeps a saved sort on a sortable column", () => {
+    expect(parseSavedRiskSort(raw("severity", "desc"), sortable)).toEqual({
+      key: "severity",
+      direction: "desc",
+    });
+  });
+
+  it("ignores a saved sort on a column that is no longer sortable", () => {
+    expect(parseSavedRiskSort(raw("controls_mapping", "asc"), sortable)).toEqual({
+      key: "",
+      direction: null,
+    });
+  });
+
+  it("ignores unreadable or malformed values", () => {
+    const none = { key: "", direction: null };
+    expect(parseSavedRiskSort(null, sortable)).toEqual(none);
+    expect(parseSavedRiskSort("{oops", sortable)).toEqual(none);
+    expect(parseSavedRiskSort("null", sortable)).toEqual(none);
+    expect(parseSavedRiskSort(raw("severity", "sideways"), sortable)).toEqual(none);
   });
 });

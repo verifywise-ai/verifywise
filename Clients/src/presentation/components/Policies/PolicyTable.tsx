@@ -6,6 +6,7 @@ import CustomizableMultiSelect from "../Inputs/Select/Multi";
 import { Archive, BookmarkPlus, UserCheck, Tag as TagIcon } from "lucide-react";
 import singleTheme from "../../themes/v1SingleTheme";
 import CustomIconButton from "../../components/IconButton";
+import { buildUserSortNames, userSortName } from "../../../application/utils/userSort";
 import useUsers from "../../../application/hooks/useUsers";
 import { PolicyTableProps } from "../../types/interfaces/i.policy";
 import Chip from "../Chip";
@@ -81,11 +82,10 @@ const PolicyTable: React.FC<PolicyTableProps> = ({
 
   const { users } = useUsers();
 
-  // Helper function to get user name by ID
-  const getUserNameById = (id: string | null | undefined | number) => {
-    const user = users.find((u) => u.id === id);
-    return user ? user.name + " " + user.surname : "-";
-  };
+  // One name source for display and sort, so a missing surname never prints "null".
+  const userNames = useMemo(() => buildUserSortNames(users), [users]);
+  const getUserNameById = (id: string | null | undefined | number) =>
+    userSortName(userNames, id) || "-";
 
   // ----- Bulk actions -----
   const getRowId = useCallback((p: any) => Number(p.id), []);
