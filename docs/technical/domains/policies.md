@@ -195,11 +195,11 @@ enum LinkedObjectType {
 |--------|----------|-------------|
 | GET | `/policies/` | List all policies |
 | GET | `/policies/:id` | Get policy by ID. 404 when the policy does not exist or belongs to another organization (`getPolicyById` in `controllers/policy.ctrl.ts`) |
-
-The change history (`GET /policy-change-history/:id`) and linked-objects (`GET /policy-linked/:policyId/linked-objects`) reads do not check that the policy exists. For a policy outside the organization they answer 200 with empty data. That legacy contract is frozen.
 | POST | `/policies/` | Create policy |
 | PUT | `/policies/:id` | Update policy |
 | DELETE | `/policies/:id` | Delete policy |
+
+The change history (`GET /policy-change-history/:id`) and linked-objects (`GET /policy-linked/:policyId/linked-objects`) reads do not check that the policy exists. For a policy outside the organization they answer 200 with empty data. That legacy contract is frozen.
 
 Deleting a policy rejects its pending approval request in the same transaction ("The policy was deleted."), and the requester is notified after the commit. The advisor's `agent_delete_policy` does the same. Both go through `rejectPendingPolicyRequestOnDelete`, which locks the policy row (`FOR UPDATE`, by organization) before it reads the pending request, as submit does, so a submit racing the delete cannot leave a pending request on a deleted policy.
 
