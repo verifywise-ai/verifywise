@@ -26,6 +26,13 @@ import { useAuth } from "../hooks/useAuth";
 interface ExtensionsContextValue {
   extensions: Extension[];
   loading: boolean;
+  /**
+   * True once the first fetch for the signed-in organization has settled,
+   * whether it succeeded or failed. `loading` starts false with an empty
+   * list, so "not enabled" cannot be told apart from "not fetched yet"
+   * without this.
+   */
+  loaded: boolean;
   error: string | null;
   refetch: () => Promise<void>;
   enable: (key: string, configuration?: Record<string, unknown>) => Promise<Extension>;
@@ -42,6 +49,7 @@ export function ExtensionsProvider({ children }: { children: ReactNode }) {
   const [extensions, setExtensions] = useState<Extension[]>([]);
   const [loading, setLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [loaded, setLoaded] = useState<boolean>(false);
 
   const load = useCallback(async () => {
     setLoading(true);
@@ -53,6 +61,7 @@ export function ExtensionsProvider({ children }: { children: ReactNode }) {
       setError(err?.message ?? "Failed to load extensions");
     } finally {
       setLoading(false);
+      setLoaded(true);
     }
   }, []);
 
@@ -63,6 +72,8 @@ export function ExtensionsProvider({ children }: { children: ReactNode }) {
   // would 401. Clear the local cache on logout too so a subsequent user
   // doesn't see the previous session's data.
   useEffect(() => {
+    // A new organization's list is not known until its fetch settles.
+    setLoaded(false);
     if (isAuthenticated && organizationId) {
       load();
     } else {
@@ -106,6 +117,7 @@ export function ExtensionsProvider({ children }: { children: ReactNode }) {
     () => ({
       extensions,
       loading,
+      loaded,
       error,
       refetch: load,
       enable,
@@ -114,7 +126,7 @@ export function ExtensionsProvider({ children }: { children: ReactNode }) {
       isEnabled: (key: string) => extensions.some((e) => e.key === key && e.enabled),
       getByKey: (key: string) => extensions.find((e) => e.key === key),
     }),
-    [extensions, loading, error, load, enable, disable, updateConfiguration],
+    [extensions, loading, loaded, error, load, enable, disable, updateConfiguration],
   );
 
   return <ExtensionsContext.Provider value={value}>{children}</ExtensionsContext.Provider>;
