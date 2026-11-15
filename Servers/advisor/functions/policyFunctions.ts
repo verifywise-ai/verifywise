@@ -1,8 +1,16 @@
-import { deletePolicyByIdQuery, getAllPoliciesQuery } from "../../utils/policyManager.utils";
-import { POLICY_REVIEW_DATE_SQL, toReviewDateValue } from "../../utils/policyReviewDate.utils";
+import {
+  createPolicyQuery,
+  deletePolicyByIdQuery,
+  getAllPoliciesQuery,
+  getPolicyByIdQuery,
+  updatePolicyByIdQuery,
+} from "../../utils/policyManager.utils";
 import { getPolicyTemplatesQuery } from "../../utils/policyTemplate.utils";
-import { POLICY_TAGS } from "../../domain.layer/interfaces/i.policy";
-import { POLICY_STATUS_ENUM } from "../../utils/validations/policiesValidation.utils";
+import { IPolicy, POLICY_TAGS } from "../../domain.layer/interfaces/i.policy";
+import {
+  getPolicyFieldErrors,
+  POLICY_STATUS_ENUM,
+} from "../../utils/validations/policiesValidation.utils";
 import logger from "../../utils/logger/fileLogger";
 
 // Policy templates now come from the policy_templates table (VW-CQ-09): the
@@ -596,17 +604,20 @@ const getTemplateRecommendations = async (
 
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { sequelize } from "../../database/db";
-import { QueryTypes } from "sequelize";
 import { sanitizeUserHtml } from "../../utils/sanitization.utils";
 import {
   assertPolicyStatusChange,
   assertPolicyUpdateAllowed,
+  policyFieldsWritten,
 } from "../../utils/policyStatus.utils";
-import { recordPolicyStatusChange } from "../../utils/policyApprovalDecision.utils";
+import { recordPolicyCreation } from "../../utils/policyChangeHistory.utils";
+import { recordUpdateChanges } from "../../utils/changeHistory.base.utils";
+import { runInSavepoint } from "../../config/changeHistory.config";
 import { ValidationException } from "../../domain.layer/exceptions/custom.exception";
 import {
   approvePolicyDirectly,
   assertPolicyDirectApprovalPossible,
+  getPolicyApprovalState,
   rejectPendingPolicyRequestOnDelete,
   submitPolicyForApproval,
 } from "../../services/policies/policyApproval.service";
@@ -619,6 +630,44 @@ const getActingRole = async (userId: number, organizationId: number) => {
   return memberships.find((m) => Number(m.organization_id) === organizationId)?.role_name;
 };
 
+/**
+ * The REST editor's field checks (getPolicyFieldErrors), untranslated: the
+ * model reads the message. Throws the first error as a 400 ValidationException.
+ */
+const assertPolicyFields = (data: Partial<IPolicy>, isCreate: boolean) => {
+  const [error] = getPolicyFieldErrors(data, isCreate, (message) => message);
+  if (error) {
+    throw new ValidationException(
+      error.message,
+      error.field,
+      (data as Record<string, unknown>)[error.field],
+    );
+  }
+};
+
+/**
+ * Approval state of one policy, the same read that serves
+ * GET /api/v1/policies/:id/approval: the pending request, the last decision,
+ * the usable workflows and what the acting user may do next.
+ */
+const getPolicyReviewStatus = async (
+  params: Record<string, unknown>,
+  organizationId: number,
+  userId?: number,
+) => {
+  const policyId = Number(params.policy_id);
+  if (!Number.isSafeInteger(policyId) || policyId <= 0) {
+    throw new ValidationException("Invalid policy ID", "policy_id", params.policy_id);
+  }
+  const actingUserId = (params._userId as number) || userId || 0;
+  return getPolicyApprovalState({
+    orgId: organizationId,
+    policyId,
+    userId: actingUserId,
+    role: await getActingRole(actingUserId, organizationId),
+  });
+};
+
 const agentCreatePolicy = createWriteToolFn({
   toolName: "agent_create_policy",
   warningLevel: "warning",
@@ -626,35 +675,46 @@ const agentCreatePolicy = createWriteToolFn({
     `Create policy "${params.policy_name}"${params.tags ? ` with tags: ${(params.tags as string[]).join(", ")}` : ""}`,
   executeFn: async (params, organizationId) => {
     const userId = (params._userId as number) || 0;
-    const tags = (params.tags as string[]) || [];
-    const status = (params.status as string) || "Draft";
-    assertPolicyStatusChange({ currentStatus: null, nextStatus: status });
+    const policyData = {
+      title: params.policy_name as string,
+      // Same sanitizer policy.ctrl.ts applies: model output is user HTML.
+      content_html: sanitizeUserHtml((params.description as string) || "") ?? "",
+      status: (params.status as string) || "Draft",
+      tags: params.tags as IPolicy["tags"] | undefined,
+      next_review_date: params.review_date as IPolicy["next_review_date"],
+      author_id: userId,
+      last_updated_by: userId,
+    } as IPolicy;
 
-    const [result] = await sequelize.query(
-      `INSERT INTO policy_manager AS pm (
-        organization_id, title, content_html, status, tags, next_review_date, author_id, last_updated_by, last_updated_at, is_demo
-      ) VALUES (
-        :organization_id, :title, :content_html, :status, ARRAY[:tags], :next_review_date, :author_id, :last_updated_by, :last_updated_at, false
-      ) RETURNING *, ${POLICY_REVIEW_DATE_SQL}`,
-      {
-        replacements: {
-          organization_id: organizationId,
-          title: params.policy_name as string,
-          // Same sanitizer policy.ctrl.ts applies: model output is user HTML.
-          content_html: sanitizeUserHtml((params.description as string) || "") ?? "",
-          status,
-          tags,
-          // A calendar day, stored at midnight (P-M1).
-          next_review_date: toReviewDateValue(params.review_date),
-          author_id: userId,
-          last_updated_by: userId,
-          last_updated_at: new Date(),
-        },
-        type: QueryTypes.SELECT,
-      },
-    );
+    // Same checks and write as the REST create (policy.ctrl.ts createPolicy):
+    // field checks, the create status rules, then createPolicyQuery (tags,
+    // owner and reviewers, the policy_added automation) and the history.
+    assertPolicyFields(policyData, true);
+    assertPolicyStatusChange({ currentStatus: null, nextStatus: policyData.status });
 
-    return result;
+    const transaction = await sequelize.transaction();
+    try {
+      const policy = await createPolicyQuery(policyData, organizationId, userId, transaction);
+
+      // Best-effort and savepointed: a failed history write never fails the
+      // create. No acting user means no entry, as for the advisor delete.
+      if (policy?.id && userId) {
+        try {
+          await runInSavepoint(
+            () => recordPolicyCreation(policy.id, userId, organizationId, policyData, transaction),
+            transaction,
+          );
+        } catch (error) {
+          logger.error(`Error recording policy creation history: ${error}`);
+        }
+      }
+
+      await transaction.commit();
+      return policy;
+    } catch (error) {
+      await transaction.rollback();
+      throw error;
+    }
   },
 });
 
@@ -670,84 +730,65 @@ const agentUpdatePolicy = createWriteToolFn({
   executeFn: async (params, organizationId) => {
     const policyId = params.policy_id as number;
     const userId = (params._userId as number) || 0;
-    const updateFields: string[] = [];
-    const replacements: Record<string, unknown> = {
-      organizationId,
-      id: policyId,
-      last_updated_by: userId,
-      last_updated_at: new Date(),
-    };
-
-    // Always update audit fields
-    updateFields.push("last_updated_by = :last_updated_by");
-    updateFields.push("last_updated_at = :last_updated_at");
-
-    if (params.policy_name !== undefined) {
-      updateFields.push("title = :title");
-      replacements.title = params.policy_name;
-    }
+    const policyData: Partial<IPolicy> = { last_updated_by: userId };
+    if (params.policy_name !== undefined) policyData.title = params.policy_name as string;
     if (params.description !== undefined) {
-      updateFields.push("content_html = :content_html");
-      replacements.content_html = sanitizeUserHtml(String(params.description ?? "")) ?? "";
+      policyData.content_html = sanitizeUserHtml(String(params.description ?? "")) ?? "";
     }
     // null is treated as "not sent", like undefined: never written, no history.
-    const status =
-      params.status === undefined || params.status === null ? undefined : params.status;
-    if (status !== undefined) {
-      if (!POLICY_STATUS_ENUM.includes(status as (typeof POLICY_STATUS_ENUM)[number])) {
-        throw new ValidationException("Choose a valid status", "status", status);
-      }
-      updateFields.push("status = :status");
-      replacements.status = status;
+    if (params.status !== undefined && params.status !== null) {
+      policyData.status = params.status as IPolicy["status"];
     }
-    if (params.tags !== undefined) {
-      updateFields.push("tags = ARRAY[:tags]");
-      replacements.tags = params.tags as string[];
-    }
+    if (params.tags !== undefined) policyData.tags = params.tags as IPolicy["tags"];
     if (params.review_date !== undefined) {
-      updateFields.push("next_review_date = :next_review_date");
-      replacements.next_review_date = toReviewDateValue(params.review_date);
+      policyData.next_review_date = params.review_date as IPolicy["next_review_date"];
     }
 
+    assertPolicyFields(policyData, false);
+
+    // Same sequence as the REST update (policy.ctrl.ts updatePolicy).
+    const written = policyFieldsWritten(policyData);
     const transaction = await sequelize.transaction();
     try {
-      // Same status rules and pending-approval text lock as the policy editor
-      // (utils/policyStatus.utils.ts).
-      const previousStatus = await assertPolicyUpdateAllowed({
+      // Status rules and the pending-approval text lock; locks the row first.
+      await assertPolicyUpdateAllowed({
         organizationId,
         policyId,
-        nextStatus: status as string | undefined,
-        nextTitle: replacements.title as string | null | undefined,
-        nextContentHtml: replacements.content_html as string | undefined,
+        nextStatus: written.status,
+        nextTitle: written.title,
+        nextContentHtml: written.content_html,
         transaction,
       });
 
-      const [result] = await sequelize.query(
-        `UPDATE policy_manager AS pm SET ${updateFields.join(", ")} WHERE organization_id = :organizationId AND id = :id RETURNING *, ${POLICY_REVIEW_DATE_SQL}`,
-        {
-          replacements,
-          type: QueryTypes.SELECT,
-          transaction,
-        },
-      );
-
-      if (!result) {
+      const [existing] = await getPolicyByIdQuery(organizationId, policyId, transaction);
+      if (!existing) {
         throw new Error(`Policy #${policyId} not found`);
       }
 
-      if (previousStatus !== null && status !== undefined) {
-        await recordPolicyStatusChange(
-          organizationId,
+      // Tags, owner and reviewers, the policy_updated automation.
+      const policy = await updatePolicyByIdQuery(
+        policyId,
+        policyData,
+        organizationId,
+        userId,
+        transaction,
+      );
+
+      // Field history of what was written, as the acting user; savepointed.
+      if (userId) {
+        await recordUpdateChanges(
+          "policy",
           policyId,
-          userId || null,
-          previousStatus,
-          status as string,
+          existing,
+          written as Record<string, unknown>,
+          userId,
+          organizationId,
           transaction,
         );
       }
 
       await transaction.commit();
-      return result;
+      return policy;
     } catch (error) {
       await transaction.rollback();
       throw error;
@@ -854,6 +895,7 @@ const availablePolicyTools: Record<string, Function> = {
   get_policy_executive_summary: getPolicyExecutiveSummary,
   search_policy_templates: searchPolicyTemplates,
   get_template_recommendations: getTemplateRecommendations,
+  get_policy_review_status: getPolicyReviewStatus,
   agent_create_policy: agentCreatePolicy,
   agent_update_policy: agentUpdatePolicy,
   agent_submit_policy_for_review: agentSubmitPolicyForReview,

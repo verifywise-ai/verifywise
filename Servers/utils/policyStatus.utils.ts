@@ -183,6 +183,20 @@ const lockPolicyStatusRows = async (
 };
 
 /**
+ * The fields of a policy update that are actually written: updatePolicyByIdQuery
+ * skips an empty title or content, so neither is a change, for the pending
+ * text lock or for the history. Shared by the REST editor and the advisor.
+ */
+export const policyFieldsWritten = <T extends { title?: unknown; content_html?: unknown }>(
+  data: T,
+): T => {
+  const written = { ...data };
+  if (!written.title) delete written.title;
+  if (!written.content_html) delete written.content_html;
+  return written;
+};
+
+/**
  * Checks an update against the stored row and the pending request: the status
  * by the status rules, the title and content by the pending lock. Pass what
  * would be written (undefined = not sent). Locks the row FOR UPDATE, filtered
