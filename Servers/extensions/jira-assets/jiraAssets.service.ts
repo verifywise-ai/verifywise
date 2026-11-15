@@ -13,7 +13,11 @@ import {
   WORKER_SYNC_DEADLINE_MS,
   WORKSPACE_ID_PATTERN,
 } from "./jira.client";
-import { assertSafeOutboundUrl, UnsafeOutboundUrlError } from "../../utils/safeOutboundUrl";
+import {
+  assertSafeOutboundUrl,
+  UnsafeOutboundUrlError,
+  type UnsafeOutboundUrlCode,
+} from "../../utils/safeOutboundUrl";
 import { isEmail } from "../../utils/validations/email.utils";
 import { transformAttributes } from "./jira.constants";
 import { logStructured } from "../../utils/logger/fileLogger";
@@ -222,31 +226,25 @@ function connectionText(value: unknown): string | undefined {
   return trimmed === "" ? undefined : trimmed;
 }
 
+/** The save message for each reason the outbound URL policy refuses a URL. */
+const BASE_URL_MESSAGES: Record<UnsafeOutboundUrlCode, JiraConnectionMessage> = {
+  "invalid-url": "JIRA Base URL must be a valid http or https URL",
+  credentials: "JIRA Base URL must not include a user name or password",
+  "blocked-address": "JIRA Base URL points to an address that is not allowed",
+  redirect: "JIRA Base URL points to an address that is not allowed",
+};
+
 /**
- * Syntax and address policy of a base URL, with no DNS lookup: an http(s) URL
- * with a host and no embedded credentials, whose host is not one the outbound
- * policy always refuses (`assertSafeOutboundUrl`, the check the Jira client
- * runs before it connects).
+ * Syntax and address policy of a base URL, with no DNS lookup: the check the
+ * Jira client runs before it connects (`assertSafeOutboundUrl`: an http(s) URL
+ * with a host, no embedded credentials, and no host the policy always refuses),
+ * with its reason worded as a save message.
  */
 function checkJiraBaseUrl(url: string): void {
-  let parsed: URL;
-  try {
-    parsed = new URL(url);
-  } catch {
-    throw invalidConnection("JIRA Base URL must be a valid http or https URL");
-  }
-  if ((parsed.protocol !== "http:" && parsed.protocol !== "https:") || !parsed.hostname) {
-    throw invalidConnection("JIRA Base URL must be a valid http or https URL");
-  }
-  if (parsed.username !== "" || parsed.password !== "") {
-    throw invalidConnection("JIRA Base URL must not include a user name or password");
-  }
   try {
     assertSafeOutboundUrl(url);
   } catch (err) {
-    if (err instanceof UnsafeOutboundUrlError) {
-      throw invalidConnection("JIRA Base URL points to an address that is not allowed");
-    }
+    if (err instanceof UnsafeOutboundUrlError) throw invalidConnection(BASE_URL_MESSAGES[err.code]);
     throw err;
   }
 }

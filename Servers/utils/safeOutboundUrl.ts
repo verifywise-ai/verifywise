@@ -88,8 +88,20 @@ import dns from "node:dns";
 import { BlockList, isIP, type LookupFunction } from "node:net";
 import { Agent, fetch as undiciFetch, type RequestInit as UndiciRequestInit } from "undici";
 
+/**
+ * Why a URL was refused, for callers that word their own message:
+ * `invalid-url` (missing, unparseable, not http(s), or no host), `credentials`
+ * (user name or password in the URL), `blocked-address` (the host or an
+ * address it resolves to is refused by the policy), `redirect` (the server
+ * answered with a redirect).
+ */
+export type UnsafeOutboundUrlCode = "invalid-url" | "credentials" | "blocked-address" | "redirect";
+
 export class UnsafeOutboundUrlError extends Error {
-  constructor(message: string) {
+  constructor(
+    message: string,
+    readonly code: UnsafeOutboundUrlCode,
+  ) {
     super(message);
     this.name = "UnsafeOutboundUrlError";
   }
@@ -183,7 +195,10 @@ export function blockedAddressReason(
 
 function unsafeTarget(reason: BlockReason): UnsafeOutboundUrlError {
   const suffix = reason === "private" ? "which this deployment blocks" : "which is not allowed";
-  return new UnsafeOutboundUrlError(`The URL resolves to ${REASON_LABEL[reason]}, ${suffix}`);
+  return new UnsafeOutboundUrlError(
+    `The URL resolves to ${REASON_LABEL[reason]}, ${suffix}`,
+    "blocked-address",
+  );
 }
 
 /** Static check of a URL host name: blocked names and IP literals. */
@@ -211,7 +226,7 @@ function blockedHostReason(hostname: string, env: NodeJS.ProcessEnv): BlockReaso
  */
 export function assertSafeOutboundUrl(raw: string): string {
   if (typeof raw !== "string" || raw.length === 0) {
-    throw new UnsafeOutboundUrlError("URL is required");
+    throw new UnsafeOutboundUrlError("URL is required", "invalid-url");
   }
   // Bounded trim (max 32 trailing slashes) — sidesteps ReDoS while covering
   // any realistic input.
@@ -221,23 +236,25 @@ export function assertSafeOutboundUrl(raw: string): string {
   try {
     parsed = new URL(trimmed);
   } catch {
-    throw new UnsafeOutboundUrlError(`URL is not parseable: ${raw}`);
+    throw new UnsafeOutboundUrlError(`URL is not parseable: ${raw}`, "invalid-url");
   }
 
   if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
     throw new UnsafeOutboundUrlError(
       `URL protocol '${parsed.protocol}' is not allowed (only http/https)`,
+      "invalid-url",
     );
   }
 
   if (parsed.username !== "" || parsed.password !== "") {
     throw new UnsafeOutboundUrlError(
       "URL must not embed credentials (use the extension's dedicated auth fields)",
+      "credentials",
     );
   }
 
   if (!parsed.hostname) {
-    throw new UnsafeOutboundUrlError("URL has no hostname");
+    throw new UnsafeOutboundUrlError("URL has no hostname", "invalid-url");
   }
   const reason = blockedHostReason(parsed.hostname, process.env);
   if (reason) throw unsafeTarget(reason);
@@ -334,6 +351,7 @@ export async function safeFetch(rawUrl: string, init?: RequestInit): Promise<Res
     await response.body?.cancel().catch(() => undefined);
     throw new UnsafeOutboundUrlError(
       `The server answered with a redirect (HTTP ${response.status}), which is not followed`,
+      "redirect",
     );
   }
   // undici's Response implements the same Fetch API the callers use.

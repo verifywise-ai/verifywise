@@ -36,9 +36,11 @@ describe("describeFetchError", () => {
   it("keeps the message of a refused address or redirect", () => {
     const err = new UnsafeOutboundUrlError(
       "The URL resolves to a loopback address, which is not allowed",
+      "blocked-address",
     );
     expect(describeFetchError(err, 30)).toBe(
       "The URL resolves to a loopback address, which is not allowed",
+      "blocked-address",
     );
   });
 
@@ -108,9 +110,11 @@ describe("describeConnectionTestError", () => {
   it("shows a refused address or redirect as is", () => {
     const err = new UnsafeOutboundUrlError(
       "The server answered with a redirect (HTTP 302), which is not followed",
+      "redirect",
     );
     expect(describeConnectionTestError(err, 30)).toBe(
       "The server answered with a redirect (HTTP 302), which is not followed",
+      "redirect",
     );
   });
 
