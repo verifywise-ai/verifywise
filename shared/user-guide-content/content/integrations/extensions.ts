@@ -155,7 +155,7 @@ export const extensionsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: '**Older connections:** a connection added before Slack connections belonged to the organization keeps sending what it sent before, which is only the events of the person who added it. Saving **Notification Routing** applies to every connection, and from then on each one posts the organization\'s events.',
+      text: '**Older connections:** a connection added before this change only posts events of the person who added it. Once an Admin saves **Notification Routing**, every connection posts the organization\'s events.',
     },
     {
       type: 'callout',

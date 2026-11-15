@@ -588,7 +588,6 @@ export function deriveTag(basePath: string): string {
     "/api/assessments": "Assessments",
     "/api/questions": "Assessments",
     "/api/webhooks": "Webhooks",
-    "/api/slackWebhooks": "Integrations",
     "/api/integrations/github": "Integrations",
     "/api/tokens": "Authentication",
     "/api/llm-keys": "LLM Keys",

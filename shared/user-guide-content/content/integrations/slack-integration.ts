@@ -88,14 +88,14 @@ export const slackIntegrationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'After connecting Slack, manage your connections from the Slack settings page:',
+      text: 'Slack connections belong to the organization. Only Admins manage them, and every Admin sees the same list on the Slack settings page:',
     },
     {
       type: 'ordered-list',
       items: [
         { text: 'Click the **Extensions** button in the top header' },
         { text: 'Click **Configure** on the Slack card' },
-        { text: 'View your connected workspaces and their status in the table' },
+        { text: 'View the organization\'s connected workspaces and their status in the table' },
       ],
     },
     {
@@ -126,7 +126,7 @@ export const slackIntegrationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Routing decides which notification types VerifyWise sends to Slack. Each connection posts to the channel you chose when you added it.',
+      text: 'Routing decides which notification types VerifyWise sends to Slack. Each connection posts to the channel you chose when you added it. A connection added before connections belonged to the organization only posts events of the person who added it, until you save routing.',
     },
     {
       type: 'paragraph',
