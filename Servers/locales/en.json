@@ -1480,5 +1480,8 @@
   "You have already responded to this step": "You have already responded to this step",
   "You have been invited to an organization": "You have been invited to an organization",
   "You've been assigned as {roleType}: {entityName}": "You've been assigned as {roleType}: {entityName}",
-  "Your role changed to project admin on {projectName}": "Your role changed to project admin on {projectName}"
+  "Your role changed to project admin on {projectName}": "Your role changed to project admin on {projectName}",
+  "This link lists your organization's 100 most recently created policies, whatever their status: drafts, policies under review, deprecated and archived policies included.": "This link lists your organization's 100 most recently created policies, whatever their status: drafts, policies under review, deprecated and archived policies included.",
+  "Share all fields is on: anyone with this link can read every column of the policies it shows, the full policy text included.": "Share all fields is on: anyone with this link can read every column of the policies it shows, the full policy text included.",
+  "Data export is on: anyone with this link can download what it shows.": "Data export is on: anyone with this link can download what it shows."
 }

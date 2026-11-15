@@ -1480,5 +1480,8 @@
   "You have already responded to this step": "Sie haben auf diesen Schritt bereits geantwortet",
   "You have been invited to an organization": "Sie wurden in eine Organisation eingeladen",
   "You've been assigned as {roleType}: {entityName}": "Sie wurden als {roleType} zugewiesen: {entityName}",
-  "Your role changed to project admin on {projectName}": "Ihre Rolle für {projectName} wurde auf Projektadministrator geändert"
+  "Your role changed to project admin on {projectName}": "Ihre Rolle für {projectName} wurde auf Projektadministrator geändert",
+  "This link lists your organization's 100 most recently created policies, whatever their status: drafts, policies under review, deprecated and archived policies included.": "Dieser Link listet die 100 zuletzt erstellten Richtlinien Ihrer Organisation auf, unabhängig von ihrem Status: Entwürfe, Richtlinien in Prüfung, veraltete und archivierte Richtlinien eingeschlossen.",
+  "Share all fields is on: anyone with this link can read every column of the policies it shows, the full policy text included.": "Alle Felder teilen ist aktiviert: Jeder mit diesem Link kann alle Spalten der angezeigten Richtlinien lesen, einschließlich des vollständigen Richtlinientexts.",
+  "Data export is on: anyone with this link can download what it shows.": "Der Datenexport ist aktiviert: Jeder mit diesem Link kann herunterladen, was er anzeigt."
 }
