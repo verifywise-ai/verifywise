@@ -443,7 +443,7 @@
   "Failed to get default gap rules": "Standard-Lückenregeln konnten nicht abgerufen werden",
   "Failed to get events": "Ereignisse konnten nicht abgerufen werden",
   "Failed to get logs": "Protokolle konnten nicht abgerufen werden",
-  "Failed to import: {reason}": "Import fehlgeschlagen: {reason}",
+  "This row could not be saved. Check its values and try again.": "Diese Zeile konnte nicht gespeichert werden. Prüfen Sie die Werte und versuchen Sie es erneut.",
   "Failed to load FRIA": "FRIA konnte nicht geladen werden",
   "Failed to load the RACI matrix": "Die RACI-Matrix konnte nicht geladen werden",
   "Failed to load training assignments": "Schulungszuweisungen konnten nicht geladen werden",

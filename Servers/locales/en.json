@@ -443,7 +443,7 @@
   "Failed to get default gap rules": "Failed to get default gap rules",
   "Failed to get events": "Failed to get events",
   "Failed to get logs": "Failed to get logs",
-  "Failed to import: {reason}": "Failed to import: {reason}",
+  "This row could not be saved. Check its values and try again.": "This row could not be saved. Check its values and try again.",
   "Failed to load FRIA": "Failed to load FRIA",
   "Failed to load the RACI matrix": "Failed to load the RACI matrix",
   "Failed to load training assignments": "Failed to load training assignments",

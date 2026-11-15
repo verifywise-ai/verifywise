@@ -13,6 +13,15 @@ jest.mock("../../../utils/user.utils", () => ({
   findUsersNotInOrganization: (...args: unknown[]) => mockNotInOrg(...args),
 }));
 const mockRecordCreation = jest.fn();
+const mockLogError = jest.fn();
+jest.mock("../../../utils/logger/fileLogger", () => ({
+  __esModule: true,
+  default: {
+    error: (...args: unknown[]) => mockLogError(...args),
+    info: jest.fn(),
+    warn: jest.fn(),
+  },
+}));
 jest.mock("../../../utils/changeHistory.base.utils", () => ({
   recordEntityCreation: (...args: unknown[]) => mockRecordCreation(...args),
 }));
@@ -198,8 +207,14 @@ describe("importRisks", () => {
       expect(result.success).toBe(false);
       expect(result.imported).toBe(0);
       expect(result.errors).toMatchObject([
-        { row: 2, field: "general", message: "Failed to import: value too long" },
+        {
+          row: 2,
+          field: "general",
+          message: "This row could not be saved. Check its values and try again.",
+        },
       ]);
+      expect(JSON.stringify(result)).not.toContain("value too long");
+      expect(mockLogError.mock.calls.flat().join(" ")).toContain("value too long");
       // Rows 2 and 3 were attempted after the failure instead of tripping on an aborted transaction.
       expect(inserts).toBe(3);
       const sqls = mockQuery.mock.calls.map((c) => sqlOf(c));
@@ -329,6 +344,29 @@ describe("importRisks", () => {
   });
 
   describe("legacy (strict: false)", () => {
+    it("takes no advisory lock, since it checks no existing names", async () => {
+      await legacyImport([{ risk_name: "A", risk_owner: 7, risk_description: "d" }], 1, 5);
+      const sqls = mockQuery.mock.calls.map((c) => sqlOf(c));
+      expect(sqls.some((q) => q.includes("pg_advisory_xact_lock"))).toBe(false);
+      expect(sqls.some((q) => q.includes("INSERT INTO risks"))).toBe(true);
+    });
+
+    it("returns the generic row message on a failed insert too", async () => {
+      mockQuery.mockImplementation(async (sql: string) => {
+        if (sql.includes("INSERT INTO risks")) throw new Error('relation "risks" violates x');
+        return [];
+      });
+      const result = await legacyImport(
+        [{ risk_name: "A", risk_owner: 7, risk_description: "d" }],
+        1,
+        5,
+      );
+      expect(result.errors[0].message).toBe(
+        "This row could not be saved. Check its values and try again.",
+      );
+      expect(JSON.stringify(result)).not.toContain("violates");
+    });
+
     const sparse = (overrides: Partial<RiskImportRow> = {}): RiskImportRow => ({
       risk_name: "Model drift",
       risk_owner: 7,

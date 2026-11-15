@@ -159,18 +159,19 @@ describe("POST /api/v1/risk-import/import", () => {
       expect(first).not.toHaveProperty("i18nKey");
     });
 
-    it("keeps the legacy shape: translated message, no key or params", async () => {
+    it("keeps the legacy contract: English message, no key or params", async () => {
       (importRisks as jest.Mock).mockResolvedValue(keyed);
       const res = await request(app)
         .post(LEGACY)
         .set("Authorization", "Bearer t")
-        .set("Accept-Language", "fr")
+        .set("Accept-Language", "de")
         .send({ csvData: [{}] });
       expect(res.status).toBe(400);
       for (const error of res.body.data.errors) {
         expect(Object.keys(error).sort()).toEqual(["field", "message", "row"]);
       }
-      expect(res.body.data.errors[0].message).not.toBe("Likelihood is required");
+      expect(res.body.data.errors[0].message).toBe("Likelihood is required");
+      expect(res.body.data.errors[1].message).toBe('A risk named "A" already exists');
     });
   });
 });

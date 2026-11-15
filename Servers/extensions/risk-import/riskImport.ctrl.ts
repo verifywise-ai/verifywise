@@ -34,6 +34,9 @@ export async function downloadExcelTemplate(req: Request, res: Response): Promis
 }
 
 /**
+ * Row errors. The legacy route is a frozen contract and keeps the English
+ * `message` the service builds. Only /api/v1 translates.
+ *
  * Row errors in the caller's language. The service keys each message
  * (`i18nKey`, found by `npm run i18n:check-en` where it is written), so the
  * text is translated here from that key. `message` stays a string on both
@@ -41,11 +44,17 @@ export async function downloadExcelTemplate(req: Request, res: Response): Promis
  * legacy response keeps its shape.
  */
 function translateRowErrors(req: Request, result: RiskImportResult, strict: boolean) {
+  if (!strict) {
+    return {
+      ...result,
+      errors: result.errors.map(({ i18nKey: _key, i18nVars: _vars, ...error }) => error),
+    };
+  }
   return {
     ...result,
     errors: result.errors.map(({ i18nKey, i18nVars, ...error }) => {
       const message = i18nKey ? req.t!(i18nKey, i18nVars) : error.message;
-      return strict && i18nKey
+      return i18nKey
         ? { ...error, message, key: i18nKey, ...(i18nVars ? { params: i18nVars } : {}) }
         : { ...error, message };
     }),

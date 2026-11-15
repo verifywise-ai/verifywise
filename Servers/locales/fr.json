@@ -443,7 +443,7 @@
   "Failed to get default gap rules": "Échec de la récupération des règles d'écart par défaut",
   "Failed to get events": "Échec de la récupération des événements",
   "Failed to get logs": "Échec de la récupération des journaux",
-  "Failed to import: {reason}": "Échec de l'importation : {reason}",
+  "This row could not be saved. Check its values and try again.": "Cette ligne n'a pas pu être enregistrée. Vérifiez ses valeurs et réessayez.",
   "Failed to load FRIA": "Échec du chargement de la FRIA",
   "Failed to load the RACI matrix": "Impossible de charger la matrice RACI",
   "Failed to load training assignments": "Impossible de charger les affectations de formation",

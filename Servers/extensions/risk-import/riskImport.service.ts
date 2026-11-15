@@ -4,6 +4,7 @@ import { sequelize } from "../../database/db";
 import { recordEntityCreation } from "../../utils/changeHistory.base.utils";
 import { findUsersNotInOrganization } from "../../utils/user.utils";
 import { translate } from "../../utils/i18n.utils";
+import logger from "../../utils/logger/fileLogger";
 import {
   AI_LIFECYCLE_PHASES,
   CURRENT_RISK_LEVEL_VALUES,
@@ -651,11 +652,14 @@ export async function importRisks(
   const transaction = await sequelize.transaction();
 
   try {
-    await sequelize.query(`SELECT pg_advisory_xact_lock(:lockClass, :organizationId)`, {
-      replacements: { lockClass: RISK_IMPORT_LOCK_CLASS, organizationId },
-      type: QueryTypes.SELECT,
-      transaction,
-    });
+    // Only the strict path checks existing names, so only it needs the lock.
+    if (strict) {
+      await sequelize.query(`SELECT pg_advisory_xact_lock(:lockClass, :organizationId)`, {
+        replacements: { lockClass: RISK_IMPORT_LOCK_CLASS, organizationId },
+        type: QueryTypes.SELECT,
+        transaction,
+      });
+    }
     const nameErrors = strict
       ? await existingNameErrors(rows, rowNumbers, organizationId, transaction)
       : [];
@@ -722,10 +726,12 @@ export async function importRisks(
         imported++;
       } catch (err: any) {
         await sequelize.query(`ROLLBACK TO SAVEPOINT ${savepoint}`, { transaction });
+        // The database's own text can name tables and columns: keep it in the
+        // log and give the caller a fixed message.
+        logger.error(`Risk import row ${rowIndex} could not be saved: ${err?.message ?? err}`);
         insertErrors.push(
           rowError(rowIndex, "general", {
-            i18nKey: "Failed to import: {reason}",
-            i18nVars: { reason: err.message },
+            i18nKey: "This row could not be saved. Check its values and try again.",
           }),
         );
       }
