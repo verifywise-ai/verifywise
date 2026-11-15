@@ -2,35 +2,47 @@ import { sequelize } from "../database/db";
 import { QueryTypes, Transaction } from "sequelize";
 import { ISlackWebhook } from "../domain.layer/interfaces/i.slackWebhook";
 import { SlackWebhookModel } from "../domain.layer/models/slackNotification/slackWebhook.model";
-import { SlackDeliveryScope } from "../domain.layer/enums/slack.enum";
+import { SlackDeliveryScope, SlackNotificationRoutingType } from "../domain.layer/enums/slack.enum";
 
-export const getAllSlackWebhooksQuery = async (
-  userId: string | number,
-): Promise<ISlackWebhook[]> => {
-  const slackWebhooks = await sequelize.query(
-    `SELECT * FROM slack_webhooks WHERE user_id = :userId ORDER BY created_at DESC, id ASC`,
+/*
+ * Management reads and writes below filter by the caller's organization in
+ * SQL. A connection with organization_id NULL (a legacy row whose owner had no
+ * single organization when organizations were backfilled) never equals an
+ * organization id, so it is invisible to every management route: list, get,
+ * update, delete and send treat it as missing (404). It also never sends.
+ */
+
+/** The organization's connections, newest first, optionally one channel only. */
+export const getSlackWebhooksByOrganizationQuery = async (
+  organizationId: number,
+  channel?: string,
+): Promise<SlackWebhookModel[]> =>
+  sequelize.query(
+    `SELECT * FROM slack_webhooks
+      WHERE organization_id = :organizationId
+        AND (CAST(:channel AS TEXT) IS NULL OR channel = :channel)
+      ORDER BY created_at DESC, id ASC`,
     {
-      replacements: { userId },
+      replacements: { organizationId, channel: channel ?? null },
       mapToModel: true,
       model: SlackWebhookModel,
     },
   );
-  return slackWebhooks;
-};
 
-export const getSlackWebhookByIdAndChannelQuery = async (
+/** One connection of the organization, or null (missing or another organization's). */
+export const getSlackWebhookByIdAndOrganizationQuery = async (
   id: number,
-  channel: string,
-): Promise<ISlackWebhook[]> => {
+  organizationId: number,
+): Promise<SlackWebhookModel | null> => {
   const result = await sequelize.query(
-    `SELECT * FROM slack_webhooks WHERE user_id = :id AND channel = :channel`,
+    `SELECT * FROM slack_webhooks WHERE id = :id AND organization_id = :organizationId`,
     {
-      replacements: { id, channel: `${channel}` },
+      replacements: { id, organizationId },
       mapToModel: true,
       model: SlackWebhookModel,
     },
   );
-  return result;
+  return result[0] ?? null;
 };
 
 /**
@@ -118,11 +130,11 @@ export const createNewSlackWebhookQuery = async (
 ): Promise<SlackWebhookModel> => {
   const result = await sequelize.query(
     `INSERT INTO slack_webhooks (
-      access_token, access_token_iv, scope, user_id, team_name, team_id, channel, channel_id,
-      configuration_url, url, url_iv, is_active
+      access_token, access_token_iv, scope, user_id, organization_id, team_name, team_id,
+      channel, channel_id, configuration_url, url, url_iv, is_active
     ) VALUES (
-      :access_token, :access_token_iv, :scope, :user_id, :team_name, :team_id, :channel, 
-      :channel_id, :configuration_url, :url, :url_iv, :is_active
+      :access_token, :access_token_iv, :scope, :user_id, :organization_id, :team_name, :team_id,
+      :channel, :channel_id, :configuration_url, :url, :url_iv, :is_active
     ) RETURNING *`,
     {
       replacements: {
@@ -130,6 +142,7 @@ export const createNewSlackWebhookQuery = async (
         access_token_iv: data.access_token_iv,
         scope: data.scope,
         user_id: data.user_id,
+        organization_id: data.organization_id,
         team_name: data.team_name,
         team_id: data.team_id,
         channel: data.channel,
@@ -148,58 +161,65 @@ export const createNewSlackWebhookQuery = async (
   return result[0];
 };
 
+/**
+ * Update a connection's routing and/or active flag, in the organization only.
+ * Saving routing also makes the connection organization-wide: that is how an
+ * Admin opts a legacy user-scope connection in. Toggling is_active alone
+ * leaves delivery_scope as it is. Returns null when no row of the
+ * organization has that id.
+ */
 export const updateSlackWebhookByIdQuery = async (
   id: number,
-  updateData: Partial<SlackWebhookModel>,
+  organizationId: number,
+  updateData: { routing_type?: SlackNotificationRoutingType[]; is_active?: boolean },
   transaction: Transaction,
 ): Promise<SlackWebhookModel | null> => {
-  const updateSlackWebhookData: Partial<Record<keyof SlackWebhookModel, any>> = {};
-  const setClause = ["routing_type", "is_active"]
-    .filter((f) => {
-      if (f == "routing_type" && updateData.routing_type) {
-        // Mapping this as Postgres takes the array of string as {a, b, c }
-        updateSlackWebhookData["routing_type"] =
-          updateData.routing_type?.length > 0
-            ? `{${updateData.routing_type.map((item) => `"${item}"`).join(",")}}`
-            : `{}`;
-        return true;
-      }
-      if (updateData[f as keyof SlackWebhookModel] !== undefined) {
-        updateSlackWebhookData[f as keyof SlackWebhookModel] =
-          updateData[f as keyof SlackWebhookModel];
-        return true;
-      }
-      return false;
-    })
-    .map((f) => {
-      return `${f} = :${f}`;
-    })
-    .join(", ");
+  const sets: string[] = [];
+  const replacements: Record<string, unknown> = { id, organizationId };
 
-  const query = `UPDATE slack_webhooks SET ${setClause} WHERE id = :id RETURNING *;`;
+  if (updateData.routing_type !== undefined) {
+    sets.push("routing_type = :routing_type", "delivery_scope = :organizationScope");
+    // Postgres array literal: {"a","b"}. Values are known enum strings, and the
+    // literal is bound as a replacement, never interpolated into the SQL.
+    replacements.routing_type = `{${updateData.routing_type.map((item) => `"${item}"`).join(",")}}`;
+    replacements.organizationScope = SlackDeliveryScope.ORGANIZATION;
+  }
+  if (updateData.is_active !== undefined) {
+    sets.push("is_active = :is_active");
+    replacements.is_active = updateData.is_active;
+  }
+  if (sets.length === 0) return null;
 
-  updateSlackWebhookData.id = id;
+  const result = await sequelize.query(
+    `UPDATE slack_webhooks SET ${sets.join(", ")}, updated_at = NOW()
+      WHERE id = :id AND organization_id = :organizationId
+      RETURNING *;`,
+    {
+      replacements,
+      mapToModel: true,
+      model: SlackWebhookModel,
+      transaction,
+    },
+  );
 
-  const result = await sequelize.query(query, {
-    replacements: updateSlackWebhookData,
-    mapToModel: true,
-    model: SlackWebhookModel,
-    transaction,
-  });
-
-  return result[0];
+  return result[0] ?? null;
 };
 
+/** Delete a connection of the organization. False when it has no row with that id. */
 export const deleteSlackWebhookByIdQuery = async (
   id: number,
+  organizationId: number,
   transaction: Transaction,
 ): Promise<boolean> => {
-  const result = await sequelize.query(`DELETE FROM slack_webhooks WHERE id = :id RETURNING *`, {
-    replacements: { id },
-    mapToModel: true,
-    model: SlackWebhookModel,
-    type: QueryTypes.DELETE,
-    transaction,
-  });
+  const result = await sequelize.query(
+    `DELETE FROM slack_webhooks WHERE id = :id AND organization_id = :organizationId RETURNING *`,
+    {
+      replacements: { id, organizationId },
+      mapToModel: true,
+      model: SlackWebhookModel,
+      type: QueryTypes.DELETE,
+      transaction,
+    },
+  );
   return result.length > 0;
 };

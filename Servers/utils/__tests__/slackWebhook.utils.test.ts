@@ -16,9 +16,15 @@ jest.mock("../../domain.layer/models/slackNotification/slackWebhook.model", () =
 
 import { sequelize } from "../../database/db";
 import {
+  createNewSlackWebhookQuery,
   deactivateSlackWebhookQuery,
+  deleteSlackWebhookByIdQuery,
   getDeliverableSlackWebhooksQuery,
+  getSlackWebhookByIdAndOrganizationQuery,
+  getSlackWebhooksByOrganizationQuery,
+  updateSlackWebhookByIdQuery,
 } from "../slackWebhook.utils";
+import { SlackNotificationRoutingType } from "../../domain.layer/enums/slack.enum";
 
 const mockQuery = sequelize.query as jest.Mock;
 const mockTransaction = sequelize.transaction as unknown as jest.Mock;
@@ -119,5 +125,96 @@ describe("deactivateSlackWebhookQuery", () => {
   it("reports false when no row matched", async () => {
     mockQuery.mockResolvedValueOnce([]).mockResolvedValueOnce([undefined, 0]);
     await expect(deactivateSlackWebhookQuery(4, 8)).resolves.toBe(false);
+  });
+});
+
+describe("management queries filter by organization", () => {
+  const txn = { id: "mgmt" } as any;
+
+  it("lists the organization's connections, all owners", async () => {
+    await getSlackWebhooksByOrganizationQuery(7);
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(squash(sql)).toContain("WHERE organization_id = :organizationId");
+    expect(sql).not.toContain("user_id");
+    expect(options.replacements).toEqual({ organizationId: 7, channel: null });
+  });
+
+  it("filters the list by channel when given", async () => {
+    await getSlackWebhooksByOrganizationQuery(7, "#general");
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(squash(sql)).toContain("AND (CAST(:channel AS TEXT) IS NULL OR channel = :channel)");
+    expect(options.replacements.channel).toBe("#general");
+  });
+
+  it("reads one connection by id and organization, null when absent", async () => {
+    await expect(getSlackWebhookByIdAndOrganizationQuery(4, 7)).resolves.toBeNull();
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(squash(sql)).toBe(
+      "SELECT * FROM slack_webhooks WHERE id = :id AND organization_id = :organizationId",
+    );
+    expect(options.replacements).toEqual({ id: 4, organizationId: 7 });
+  });
+
+  it("stores the organization on create", async () => {
+    mockQuery.mockResolvedValueOnce([{ id: 1 }]);
+    await createNewSlackWebhookQuery({ user_id: 3, organization_id: 7 } as any, txn);
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(sql).toContain(":organization_id");
+    expect(sql).not.toContain("delivery_scope");
+    expect(options.replacements).toMatchObject({ user_id: 3, organization_id: 7 });
+  });
+
+  it("saving routing makes the connection organization-wide, in the organization only", async () => {
+    mockQuery.mockResolvedValueOnce([{ id: 4 }]);
+    const routing = [SlackNotificationRoutingType.MEMBERSHIP_AND_ROLES];
+
+    await expect(
+      updateSlackWebhookByIdQuery(4, 7, { routing_type: routing }, txn),
+    ).resolves.toEqual({ id: 4 });
+
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(squash(sql)).toContain(
+      "SET routing_type = :routing_type, delivery_scope = :organizationScope",
+    );
+    expect(squash(sql)).toContain("WHERE id = :id AND organization_id = :organizationId");
+    expect(options.replacements).toMatchObject({
+      id: 4,
+      organizationId: 7,
+      routing_type: '{"Membership and roles"}',
+      organizationScope: "organization",
+    });
+    expect(options.transaction).toBe(txn);
+  });
+
+  it("toggling is_active alone leaves delivery_scope as it is", async () => {
+    await updateSlackWebhookByIdQuery(4, 7, { is_active: false }, txn);
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(squash(sql)).toContain("SET is_active = :is_active");
+    expect(sql).not.toContain("delivery_scope");
+    expect(sql).not.toContain("routing_type");
+    expect(options.replacements).toMatchObject({ is_active: false, organizationId: 7 });
+  });
+
+  it("an empty routing list clears routing", async () => {
+    await updateSlackWebhookByIdQuery(4, 7, { routing_type: [] }, txn);
+    expect(mockQuery.mock.calls[0][1].replacements.routing_type).toBe("{}");
+  });
+
+  it("update returns null when no row of the organization matched", async () => {
+    await expect(updateSlackWebhookByIdQuery(4, 8, { is_active: true }, txn)).resolves.toBeNull();
+  });
+
+  it("update with nothing to set runs no query", async () => {
+    await expect(updateSlackWebhookByIdQuery(4, 7, {}, txn)).resolves.toBeNull();
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it("deletes only within the organization", async () => {
+    await expect(deleteSlackWebhookByIdQuery(4, 8, txn)).resolves.toBe(false);
+    const [sql, options] = mockQuery.mock.calls[0];
+    expect(squash(sql)).toBe(
+      "DELETE FROM slack_webhooks WHERE id = :id AND organization_id = :organizationId RETURNING *",
+    );
+    expect(options.replacements).toEqual({ id: 4, organizationId: 8 });
   });
 });
