@@ -6,6 +6,15 @@ import type { LifecycleItem } from "../useModelLifecycle";
 
 const api = vi.hoisted(() => ({ delete: vi.fn(), get: vi.fn(), post: vi.fn(), put: vi.fn() }));
 vi.mock("../../../../../infrastructure/api/networkServices", () => ({ apiServices: api }));
+// These tests exercise the editing controls, so the user holds model.edit.
+vi.mock("../../../../../application/hooks/useCan", () => ({
+  useCan: () => true,
+  useCanCheck: () => () => true,
+  usePermissionsSettled: () => true,
+}));
+vi.mock("../../../../../application/hooks/useAuth", () => ({
+  useAuth: () => ({ userId: 1 }),
+}));
 
 const documentsItem: LifecycleItem = {
   id: 20,
