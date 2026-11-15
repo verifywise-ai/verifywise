@@ -47,6 +47,24 @@ describe("notifyFirstStepApprovers", () => {
       { id: 7, name: "Acceptable use", workflowName: "Legal review", stepNumber: 1, totalSteps: 2 },
       "Ada Lovelace",
       "https://app.test",
+      undefined,
+    );
+  });
+
+  it("passes the policy entity on to each approver notification", async () => {
+    await notifyFirstStepApprovers({
+      ...base,
+      workflowSteps: [{ step_number: 1, approvers: [{ approver_id: 9 }] }],
+      entity: { type: "policy", id: 55 },
+    });
+
+    expect(mockNotify).toHaveBeenCalledWith(
+      1,
+      9,
+      expect.objectContaining({ id: 7 }),
+      "Ada Lovelace",
+      "https://app.test",
+      { type: "policy", id: 55 },
     );
   });
 
@@ -76,6 +94,7 @@ describe("notifyFirstStepApprovers", () => {
       expect.objectContaining({ workflowName: "Fallback" }),
       "Someone",
       "https://app.test",
+      undefined,
     );
   });
 

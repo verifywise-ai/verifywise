@@ -228,6 +228,7 @@ describe("submitPolicyForApproval", () => {
         requestName: "Acceptable use",
         requesterId: 3,
         workflow: { workflow_title: "Legal review" },
+        entity: { type: "policy", id: 55 },
       }),
     );
     expect(tx.commit.mock.invocationCallOrder[0]).toBeLessThan(

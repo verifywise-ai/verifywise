@@ -9,7 +9,10 @@
  * - rejected (any step): back to Draft, review_status 'changes_requested'
  * - withdrawn: back to Draft, review_status cleared
  *
- * Each UPDATE matches the organization and status 'Under Review'. When no row
+ * Each UPDATE matches the organization and status 'Under Review', and only
+ * applies when the request is a policy request on this policy whose workflow
+ * is a policy workflow in the same organization (a request opened elsewhere
+ * on another workflow must never approve a policy). When no row
  * matches (the policy was edited or deleted meanwhile) it logs a warning and
  * returns false: the policy must never block the decision itself.
  */
@@ -83,13 +86,15 @@ const DECISION_SQL: Record<PolicyApprovalDecision, { status: string; set: string
 export const applyPolicyApprovalDecision = async (params: {
   organizationId: number;
   policyId: number;
+  /** The approval request that was decided or withdrawn. */
+  requestId: number;
   decision: PolicyApprovalDecision;
   /** The decider, or the withdrawer; null when the system acted. */
   actorId: number | null;
   comment?: string | null;
   transaction: Transaction;
 }): Promise<boolean> => {
-  const { organizationId, policyId, decision, actorId, transaction } = params;
+  const { organizationId, policyId, requestId, decision, actorId, transaction } = params;
   const { status, set } = DECISION_SQL[decision];
   const comment = params.comment?.trim() ? params.comment.trim() : null;
 
@@ -99,11 +104,23 @@ export const applyPolicyApprovalDecision = async (params: {
      WHERE organization_id = :organizationId
        AND id = :policyId
        AND status = :underReview
+       AND EXISTS (
+         SELECT 1
+         FROM approval_requests ar
+         JOIN approval_workflows w
+           ON w.id = ar.workflow_id AND w.organization_id = ar.organization_id
+         WHERE ar.organization_id = :organizationId
+           AND ar.id = :requestId
+           AND ar.entity_type = 'policy'
+           AND ar.entity_id = :policyId
+           AND w.entity_type = 'policy'
+       )
      RETURNING id`,
     {
       replacements: {
         organizationId,
         policyId,
+        requestId,
         actorId,
         comment,
         underReview: POLICY_UNDER_REVIEW,
@@ -115,7 +132,7 @@ export const applyPolicyApprovalDecision = async (params: {
 
   if (rows.length === 0) {
     logger.warn(
-      `policy approval ${decision}: policy ${policyId} in organization ${organizationId} is not under review; left unchanged`,
+      `policy approval ${decision}: policy ${policyId} in organization ${organizationId} is not under review on policy workflow request ${requestId}; left unchanged`,
     );
     return false;
   }

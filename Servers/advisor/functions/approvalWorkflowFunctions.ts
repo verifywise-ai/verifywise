@@ -13,6 +13,7 @@ import {
   withdrawApprovalRequestQuery,
 } from "../../utils/approvalRequest.utils";
 import { ApprovalResult, EntityType } from "../../domain.layer/enums/approval-workflow.enum";
+import { POLICY_REQUEST_ELSEWHERE_MESSAGE } from "../../constants/policyApproval";
 import { createWriteToolFn } from "../confirmation/createWriteTool";
 import { sequelize } from "../../database/db";
 import logger from "../../utils/logger/fileLogger";
@@ -338,6 +339,11 @@ const agentCreateApprovalRequest = createWriteToolFn({
   descriptionFn: (params) =>
     `Create approval request for ${params.entity_type} #${params.entity_id} using workflow #${params.workflow_id}`,
   executeFn: async (params, organizationId) => {
+    // Policy requests come only from submit for approval (policy status,
+    // usable workflow and pending checks live there).
+    if (params.entity_type === EntityType.POLICY) {
+      throw new Error(POLICY_REQUEST_ELSEWHERE_MESSAGE);
+    }
     const transaction = await sequelize.transaction();
     try {
       const workflow = await getApprovalWorkflowByIdQuery(

@@ -104,6 +104,7 @@ describe("processApprovalQuery policy branches", () => {
     expect(mockApply).toHaveBeenCalledWith({
       organizationId: 1,
       policyId: 55,
+      requestId: 7,
       decision: "approved",
       actorId: 5,
       comment: "Looks right",
@@ -135,6 +136,8 @@ describe("processApprovalQuery policy branches", () => {
     );
 
     expect(info?.type).toBe("step_approvers");
+    // The next step's approvers learn which policy it is.
+    expect(info).toMatchObject({ entityType: "policy", entityId: 55 });
     expect(mockApply).not.toHaveBeenCalled();
   });
 
@@ -158,6 +161,7 @@ describe("processApprovalQuery policy branches", () => {
     expect(mockApply).toHaveBeenCalledWith({
       organizationId: 1,
       policyId: 55,
+      requestId: 7,
       decision: "rejected",
       actorId: 5,
       comment: "Fix section 2",
@@ -217,6 +221,7 @@ describe("withdrawApprovalRequestQuery", () => {
     expect(mockApply).toHaveBeenCalledWith({
       organizationId: 1,
       policyId: 55,
+      requestId: 7,
       decision: "withdrawn",
       actorId: 3,
       transaction,

@@ -943,6 +943,7 @@ export const processApprovalQuery = async (
       await applyPolicyApprovalDecision({
         organizationId,
         policyId: entityId,
+        requestId,
         decision: "rejected",
         actorId: userId,
         comment: comments,
@@ -1049,6 +1050,8 @@ export const processApprovalQuery = async (
         requestName: (request as any).request_name,
         completedStep: currentStep,
         totalSteps: stepCount,
+        entityType: (request as any).entity_type ?? null,
+        entityId: (request as any).entity_id ?? null,
       };
     } else {
       // All steps completed - mark as approved
@@ -1096,6 +1099,7 @@ export const processApprovalQuery = async (
         await applyPolicyApprovalDecision({
           organizationId,
           policyId: entityId,
+          requestId,
           decision: "approved",
           actorId: userId,
           comment: comments,
@@ -1199,6 +1203,7 @@ export const withdrawApprovalRequestQuery = async (
     await applyPolicyApprovalDecision({
       organizationId,
       policyId: withdrawn.entity_id,
+      requestId,
       decision: "withdrawn",
       actorId: options.changedBy ?? null,
       transaction,

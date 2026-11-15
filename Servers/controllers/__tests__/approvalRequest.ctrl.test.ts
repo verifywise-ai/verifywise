@@ -425,6 +425,7 @@ describe("approvalRequest.ctrl", () => {
           expect.objectContaining({ stepNumber: 1 }),
           expect.any(String),
           expect.any(String),
+          undefined,
         );
       });
 
@@ -442,6 +443,7 @@ describe("approvalRequest.ctrl", () => {
           expect.objectContaining({ workflowName: "Fallback Workflow" }),
           expect.any(String),
           expect.any(String),
+          undefined,
         );
       });
 
@@ -458,8 +460,37 @@ describe("approvalRequest.ctrl", () => {
           expect.anything(),
           "Someone",
           expect.any(String),
+          undefined,
         );
       });
+    });
+
+    it("refuses a policy request with 400: policies are submitted from the policy", async () => {
+      const mockTransaction = { commit: jest.fn(), rollback: jest.fn() };
+      (sequelize.transaction as any).mockResolvedValue(mockTransaction);
+      const req = createReq({
+        body: { request_name: "P", workflow_id: 1, entity_id: 55, entity_type: "policy" },
+      });
+      const res = createRes();
+
+      await createApprovalRequest(req as Request, res as Response);
+
+      expect(res.status).toHaveBeenCalledWith(400);
+      expect(res.json).toHaveBeenCalledWith({
+        message: "Bad Request",
+        data: {
+          errors: [
+            {
+              field: "entity_type",
+              message: "Submit the policy for approval from the policy",
+              location: "body",
+            },
+          ],
+        },
+      });
+      expect(mockTransaction.rollback).toHaveBeenCalled();
+      expect(mockGetApprovalWorkflowByIdQuery).not.toHaveBeenCalled();
+      expect(mockCreateApprovalRequestQuery).not.toHaveBeenCalled();
     });
 
     it("returns 400 when the create fails validation", async () => {
@@ -854,6 +885,43 @@ describe("approvalRequest.ctrl", () => {
         message: "OK",
         data: { message: "Request approved successfully" },
       });
+    });
+
+    it("tells next-step approvers of a policy request which policy, linking to the request", async () => {
+      const mockTransaction = { commit: jest.fn(), rollback: jest.fn() };
+      (sequelize.transaction as any).mockResolvedValue(mockTransaction);
+      (sequelize.query as jest.Mock<any>).mockImplementation((sql: any) => {
+        if (typeof sql === "string" && sql.includes("DISTINCT arsa.approver_id")) {
+          return Promise.resolve([{ user_id: 8 }]);
+        }
+        if (typeof sql === "string" && sql.includes("COUNT(*)")) {
+          return Promise.resolve([{ count: "2" }]);
+        }
+        return Promise.resolve([{ name: "Jane", surname: "Roe", workflow_id: 11 }]);
+      });
+      mockProcessApprovalQuery.mockResolvedValue({
+        type: "step_approvers",
+        stepNumber: 2,
+        requestName: "Acceptable use",
+        requesterId: 3,
+        completedStep: 1,
+        entityType: "policy",
+        entityId: 55,
+      } as any);
+
+      const req = createReq({ params: { id: "7" }, body: {} });
+      const res = createRes();
+      await approveRequest(req as Request, res as Response);
+      await new Promise((resolve) => setImmediate(resolve));
+
+      expect(mockNotifyApprovalRequested).toHaveBeenCalledWith(
+        1,
+        8,
+        expect.objectContaining({ id: 7, name: "Acceptable use", stepNumber: 2 }),
+        "Jane Roe",
+        expect.any(String),
+        { type: "policy", id: 55 },
+      );
     });
 
     it("should return 409 on TransientApprovalError", async () => {

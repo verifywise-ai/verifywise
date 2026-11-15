@@ -23,9 +23,19 @@ export const notifyFirstStepApprovers = async (params: {
   workflow: { workflow_title?: string; name?: string };
   workflowSteps: any[];
   baseUrl: string;
+  /** The request's entity, so the notification can name and link it (policy). */
+  entity?: { type: string; id: number };
 }): Promise<void> => {
-  const { organizationId, requestId, requestName, requesterId, workflow, workflowSteps, baseUrl } =
-    params;
+  const {
+    organizationId,
+    requestId,
+    requestName,
+    requesterId,
+    workflow,
+    workflowSteps,
+    baseUrl,
+    entity,
+  } = params;
 
   const requesterResult = await sequelize.query<{ name: string; surname: string }>(
     `SELECT name, surname FROM users WHERE id = :userId`,
@@ -56,6 +66,7 @@ export const notifyFirstStepApprovers = async (params: {
       },
       requesterName,
       baseUrl,
+      entity,
     );
   }
 };

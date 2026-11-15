@@ -45,6 +45,7 @@ describe("applyPolicyApprovalDecision", () => {
     const updated = await applyPolicyApprovalDecision({
       organizationId: 1,
       policyId: 55,
+      requestId: 7,
       decision: "approved",
       actorId: 5,
       comment: "  Looks right  ",
@@ -64,6 +65,7 @@ describe("applyPolicyApprovalDecision", () => {
     expect(options.replacements).toEqual({
       organizationId: 1,
       policyId: 55,
+      requestId: 7,
       actorId: 5,
       comment: "Looks right",
       underReview: "Under Review",
@@ -85,6 +87,7 @@ describe("applyPolicyApprovalDecision", () => {
     await applyPolicyApprovalDecision({
       organizationId: 1,
       policyId: 55,
+      requestId: 7,
       decision: "approved",
       actorId: 5,
       comment: "   ",
@@ -100,6 +103,7 @@ describe("applyPolicyApprovalDecision", () => {
     await applyPolicyApprovalDecision({
       organizationId: 1,
       policyId: 55,
+      requestId: 7,
       decision: "rejected",
       actorId: 5,
       comment: "Fix section 2",
@@ -128,6 +132,7 @@ describe("applyPolicyApprovalDecision", () => {
     await applyPolicyApprovalDecision({
       organizationId: 1,
       policyId: 55,
+      requestId: 7,
       decision: "withdrawn",
       actorId: 3,
       transaction,
@@ -147,6 +152,7 @@ describe("applyPolicyApprovalDecision", () => {
     const updated = await applyPolicyApprovalDecision({
       organizationId: 1,
       policyId: 55,
+      requestId: 7,
       decision: "approved",
       actorId: 5,
       transaction,
@@ -154,6 +160,53 @@ describe("applyPolicyApprovalDecision", () => {
 
     expect(updated).toBe(false);
     expect(logger.warn).toHaveBeenCalledWith(expect.stringContaining("policy 55"));
+    expect(mockRecord).not.toHaveBeenCalled();
+  });
+});
+
+describe("applyPolicyApprovalDecision workflow check", () => {
+  it.each(["approved", "rejected", "withdrawn"] as const)(
+    "%s only applies to a policy request on a policy workflow in the same organization",
+    async (decision) => {
+      mockQuery.mockResolvedValue([{ id: 55 }]);
+
+      await applyPolicyApprovalDecision({
+        organizationId: 1,
+        policyId: 55,
+        requestId: 7,
+        decision,
+        actorId: 5,
+        transaction,
+      });
+
+      const [sql, options] = mockQuery.mock.calls[0];
+      expect(sql).toMatch(/AND EXISTS \(/);
+      expect(sql).toMatch(
+        /JOIN approval_workflows w\s+ON w\.id = ar\.workflow_id AND w\.organization_id = ar\.organization_id/,
+      );
+      expect(sql).toMatch(/ar\.organization_id = :organizationId/);
+      expect(sql).toMatch(/ar\.id = :requestId/);
+      expect(sql).toMatch(/ar\.entity_type = 'policy'/);
+      expect(sql).toMatch(/ar\.entity_id = :policyId/);
+      expect(sql).toMatch(/w\.entity_type = 'policy'/);
+      expect(options.replacements.requestId).toBe(7);
+    },
+  );
+
+  it("leaves the policy alone when the request's workflow is not a policy workflow", async () => {
+    // The EXISTS fails, so the UPDATE matches no row.
+    mockQuery.mockResolvedValue([]);
+
+    const updated = await applyPolicyApprovalDecision({
+      organizationId: 1,
+      policyId: 55,
+      requestId: 8,
+      decision: "approved",
+      actorId: 5,
+      transaction,
+    });
+
+    expect(updated).toBe(false);
     expect(mockRecord).not.toHaveBeenCalled();
   });
 });

@@ -353,6 +353,7 @@ export const submitPolicyForApproval = async (params: {
     workflow: { workflow_title: workflow.workflow_title },
     workflowSteps,
     baseUrl: process.env.FRONTEND_URL || "http://localhost:3000",
+    entity: { type: "policy", id: policyId },
   }).catch((notifyError) =>
     logger.error(
       `policy approval: failed to notify approvers of request ${requestId}: ${notifyError}`,

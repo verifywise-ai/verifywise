@@ -33,6 +33,7 @@ import {
   tryAutoApproveRequestQuery,
   ApprovalOverride,
 } from "../utils/approvalRequest.utils";
+import { POLICY_REQUEST_ELSEWHERE_MESSAGE } from "../constants/policyApproval";
 import { roleHasPermission } from "../utils/rolePermissions.utils";
 import { TransientApprovalError } from "../advisor/approval/approvalGateway";
 import {
@@ -42,6 +43,7 @@ import {
 import {
   ApprovalResult,
   ApprovalRequestStatus,
+  EntityType,
 } from "../domain.layer/enums/approval-workflow.enum";
 import {
   notifyApprovalRequested,
@@ -118,6 +120,24 @@ export async function createApprovalRequest(req: Request, res: Response): Promis
     if (!userId || !organizationId) {
       await transaction.rollback();
       return res.status(401).json(STATUS_CODE[401](req.t!("Unauthorized")));
+    }
+
+    // Policy requests come only from submit for approval, which checks the
+    // policy's status, the usable workflow and that nothing is pending. A
+    // request made here could approve a policy on any workflow.
+    if (entity_type === EntityType.POLICY) {
+      await transaction.rollback();
+      return res.status(400).json(
+        STATUS_CODE[400]({
+          errors: [
+            {
+              field: "entity_type",
+              message: req.t!(POLICY_REQUEST_ELSEWHERE_MESSAGE),
+              location: "body",
+            },
+          ],
+        }),
+      );
     }
 
     // Get workflow and steps
@@ -484,6 +504,9 @@ export async function approveRequest(req: Request, res: Response): Promise<any> 
                 },
                 approverName,
                 baseUrl,
+                notificationInfo.entityType && notificationInfo.entityId
+                  ? { type: notificationInfo.entityType, id: notificationInfo.entityId }
+                  : undefined,
               );
             }
 

@@ -1,6 +1,8 @@
 /**
  * notifyApprovalComplete: the requester's "fully approved" notification links
  * to the approved artifact. A policy links to its editor by entity id.
+ * notifyApprovalRequested: an approver of a policy request is told which
+ * policy and linked to the approval request, where they decide.
  */
 const mockQuery = jest.fn();
 const mockCreate = jest.fn();
@@ -26,7 +28,8 @@ jest.mock("../notificationService", () => ({
   },
 }));
 
-import { notifyApprovalComplete } from "../inAppNotification.service";
+import { notifyApprovalComplete, notifyApprovalRequested } from "../inAppNotification.service";
+import { EMAIL_TEMPLATES } from "../../constants/emailTemplates";
 import { NotificationEntityType } from "../../domain.layer/interfaces/i.notification";
 
 beforeEach(() => {
@@ -93,6 +96,54 @@ describe("notifyApprovalComplete", () => {
         title: "Use case fully approved",
         entity_type: NotificationEntityType.USE_CASE,
         entity_id: 7,
+      }),
+      2,
+    );
+  });
+});
+
+describe("notifyApprovalRequested", () => {
+  const request = {
+    id: 7,
+    name: "Acceptable use",
+    workflowName: "Legal review",
+    stepNumber: 1,
+    totalSteps: 2,
+  };
+
+  it("names the policy and links the approver to the approval request", async () => {
+    await notifyApprovalRequested(2, 9, request, "Ada L", "https://app.test", {
+      type: "policy",
+      id: 55,
+    });
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        user_id: 9,
+        entity_type: NotificationEntityType.POLICY,
+        entity_id: 55,
+        entity_name: "Acceptable use",
+        action_url: "/approval-requests/7",
+      }),
+      2,
+    );
+    await new Promise((resolve) => setImmediate(resolve));
+    expect(mockSendTemplate).toHaveBeenCalledWith(
+      "ada@x.io",
+      expect.any(String),
+      EMAIL_TEMPLATES.APPROVAL_REQUESTED,
+      expect.objectContaining({ approval_url: "https://app.test/approval-requests/7" }),
+    );
+  });
+
+  it("keeps the use case entity and link without an entity", async () => {
+    await notifyApprovalRequested(2, 9, request, "Ada L", "https://app.test");
+
+    expect(mockCreate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        entity_type: NotificationEntityType.USE_CASE,
+        entity_id: 7,
+        action_url: "/project-view?projectId=7",
       }),
       2,
     );
