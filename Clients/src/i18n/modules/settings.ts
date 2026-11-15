@@ -562,6 +562,34 @@ export const de: Record<string, string> = {
   "Policy reminders and status": "Richtlinienerinnerungen und -status",
   "Evidence and task alerts": "Nachweis- und Aufgabenwarnungen",
   "Control or policy changes": "Kontroll- oder Richtlinienänderungen",
+  // Extension settings: secrets, status and the disable confirmation.
+  "Disabled": "Deaktiviert",
+  "Disable this extension?": "Diese Erweiterung deaktivieren?",
+  "This applies to everyone in this organization.": "Dies gilt für alle in dieser Organisation.",
+  "Stored. Leave blank to keep it.": "Gespeichert. Leer lassen, um den Wert zu behalten.",
+  "Will be removed when you save.": "Wird beim Speichern entfernt.",
+  "Password and token fields are stored encrypted.":
+    "Passwort- und Token-Felder werden verschlüsselt gespeichert.",
+  "Slack notifications stop for this organization. Connections and routing are kept.":
+    "Slack-Benachrichtigungen werden für diese Organisation beendet. Verbindungen und Weiterleitungen bleiben erhalten.",
+  "The MLflow tab and sync are hidden in Model inventory. Synced models and settings are kept.":
+    "Der MLflow-Tab und die Synchronisierung werden im Modellinventar ausgeblendet. Synchronisierte Modelle und Einstellungen bleiben erhalten.",
+  "The Azure AI Foundry tab and sync are hidden in Model inventory, and agent discovery stops pulling Azure agents. Synced records and settings are kept.":
+    "Der Azure AI Foundry-Tab und die Synchronisierung werden im Modellinventar ausgeblendet, und die Agentenerkennung ruft keine Azure-Agenten mehr ab. Synchronisierte Datensätze und Einstellungen bleiben erhalten.",
+  "Model lifecycle pages are hidden. Phases, answers and approvals are kept.":
+    "Die Seiten zum Modelllebenszyklus werden ausgeblendet. Phasen, Antworten und Genehmigungen bleiben erhalten.",
+  "Import from Excel is hidden in Risk management. Imported risks are kept.":
+    "Der Import aus Excel wird im Risikomanagement ausgeblendet. Importierte Risiken bleiben erhalten.",
+  "Sync with Jira Assets stops. Imported use cases and settings are kept.":
+    "Die Synchronisierung mit Jira Assets wird beendet. Importierte Anwendungsfälle und Einstellungen bleiben erhalten.",
+  "Import and status sync with Jira stop, and Jira links are hidden on incidents. Imported incidents and settings are kept.":
+    "Import und Statussynchronisierung mit Jira werden beendet, und Jira-Links werden bei Vorfällen ausgeblendet. Importierte Vorfälle und Einstellungen bleiben erhalten.",
+  "Bulk upload is hidden in Datasets. Uploaded datasets are kept.":
+    "Der Massen-Upload wird bei den Datensätzen ausgeblendet. Hochgeladene Datensätze bleiben erhalten.",
+  "Import from Excel is hidden in Frameworks, and imported frameworks can no longer be added to use cases. Imported frameworks already added to a use case can still be assessed.":
+    "Der Import aus Excel wird bei den Frameworks ausgeblendet, und importierte Frameworks können keinen Anwendungsfällen mehr hinzugefügt werden. Importierte Frameworks, die bereits einem Anwendungsfall hinzugefügt wurden, können weiterhin bewertet werden.",
+  "Its features are hidden for this organization. Settings and data are kept.":
+    "Ihre Funktionen werden für diese Organisation ausgeblendet. Einstellungen und Daten bleiben erhalten.",
 };
 
 export const fr: Record<string, string> = {
@@ -1125,6 +1153,35 @@ export const fr: Record<string, string> = {
   "Policy reminders and status": "Rappels et statut des politiques",
   "Evidence and task alerts": "Alertes de preuves et de tâches",
   "Control or policy changes": "Modifications de contrôles ou de politiques",
+  // Extension settings: secrets, status and the disable confirmation.
+  "Disabled": "Désactivé",
+  "Disable this extension?": "Désactiver cette extension ?",
+  "This applies to everyone in this organization.":
+    "Cela s'applique à tous les membres de cette organisation.",
+  "Stored. Leave blank to keep it.": "Enregistré. Laissez vide pour le conserver.",
+  "Will be removed when you save.": "Sera supprimé lors de l'enregistrement.",
+  "Password and token fields are stored encrypted.":
+    "Les champs de mot de passe et de jeton sont stockés de manière chiffrée.",
+  "Slack notifications stop for this organization. Connections and routing are kept.":
+    "Les notifications Slack s'arrêtent pour cette organisation. Les connexions et le routage sont conservés.",
+  "The MLflow tab and sync are hidden in Model inventory. Synced models and settings are kept.":
+    "L'onglet MLflow et la synchronisation sont masqués dans l'inventaire des modèles. Les modèles synchronisés et les paramètres sont conservés.",
+  "The Azure AI Foundry tab and sync are hidden in Model inventory, and agent discovery stops pulling Azure agents. Synced records and settings are kept.":
+    "L'onglet Azure AI Foundry et la synchronisation sont masqués dans l'inventaire des modèles, et la découverte d'agents ne récupère plus les agents Azure. Les enregistrements synchronisés et les paramètres sont conservés.",
+  "Model lifecycle pages are hidden. Phases, answers and approvals are kept.":
+    "Les pages du cycle de vie des modèles sont masquées. Les phases, les réponses et les approbations sont conservées.",
+  "Import from Excel is hidden in Risk management. Imported risks are kept.":
+    "L'import depuis Excel est masqué dans la gestion des risques. Les risques importés sont conservés.",
+  "Sync with Jira Assets stops. Imported use cases and settings are kept.":
+    "La synchronisation avec Jira Assets s'arrête. Les cas d'usage importés et les paramètres sont conservés.",
+  "Import and status sync with Jira stop, and Jira links are hidden on incidents. Imported incidents and settings are kept.":
+    "L'import et la synchronisation des statuts avec Jira s'arrêtent, et les liens Jira sont masqués sur les incidents. Les incidents importés et les paramètres sont conservés.",
+  "Bulk upload is hidden in Datasets. Uploaded datasets are kept.":
+    "L'import en masse est masqué dans les jeux de données. Les jeux de données importés sont conservés.",
+  "Import from Excel is hidden in Frameworks, and imported frameworks can no longer be added to use cases. Imported frameworks already added to a use case can still be assessed.":
+    "L'import depuis Excel est masqué dans les référentiels, et les référentiels importés ne peuvent plus être ajoutés aux cas d'usage. Les référentiels importés déjà ajoutés à un cas d'usage peuvent toujours être évalués.",
+  "Its features are hidden for this organization. Settings and data are kept.":
+    "Ses fonctionnalités sont masquées pour cette organisation. Les paramètres et les données sont conservés.",
 };
 
 export const es: Record<string, string> = {
@@ -1683,4 +1740,32 @@ export const es: Record<string, string> = {
   "Policy reminders and status": "Recordatorios y estado de políticas",
   "Evidence and task alerts": "Alertas de evidencias y tareas",
   "Control or policy changes": "Cambios en controles o políticas",
+  // Extension settings: secrets, status and the disable confirmation.
+  "Disabled": "Deshabilitado",
+  "Disable this extension?": "¿Deshabilitar esta extensión?",
+  "This applies to everyone in this organization.": "Esto se aplica a todos en esta organización.",
+  "Stored. Leave blank to keep it.": "Guardado. Déjelo en blanco para conservarlo.",
+  "Will be removed when you save.": "Se eliminará al guardar.",
+  "Password and token fields are stored encrypted.":
+    "Los campos de contraseña y token se almacenan cifrados.",
+  "Slack notifications stop for this organization. Connections and routing are kept.":
+    "Las notificaciones de Slack se detienen para esta organización. Las conexiones y el enrutamiento se conservan.",
+  "The MLflow tab and sync are hidden in Model inventory. Synced models and settings are kept.":
+    "La pestaña de MLflow y la sincronización se ocultan en el inventario de modelos. Los modelos sincronizados y la configuración se conservan.",
+  "The Azure AI Foundry tab and sync are hidden in Model inventory, and agent discovery stops pulling Azure agents. Synced records and settings are kept.":
+    "La pestaña de Azure AI Foundry y la sincronización se ocultan en el inventario de modelos, y el descubrimiento de agentes deja de obtener agentes de Azure. Los registros sincronizados y la configuración se conservan.",
+  "Model lifecycle pages are hidden. Phases, answers and approvals are kept.":
+    "Las páginas del ciclo de vida del modelo se ocultan. Las fases, respuestas y aprobaciones se conservan.",
+  "Import from Excel is hidden in Risk management. Imported risks are kept.":
+    "La importación desde Excel se oculta en la gestión de riesgos. Los riesgos importados se conservan.",
+  "Sync with Jira Assets stops. Imported use cases and settings are kept.":
+    "La sincronización con Jira Assets se detiene. Los casos de uso importados y la configuración se conservan.",
+  "Import and status sync with Jira stop, and Jira links are hidden on incidents. Imported incidents and settings are kept.":
+    "La importación y la sincronización de estados con Jira se detienen, y los enlaces de Jira se ocultan en los incidentes. Los incidentes importados y la configuración se conservan.",
+  "Bulk upload is hidden in Datasets. Uploaded datasets are kept.":
+    "La carga masiva se oculta en los conjuntos de datos. Los conjuntos de datos cargados se conservan.",
+  "Import from Excel is hidden in Frameworks, and imported frameworks can no longer be added to use cases. Imported frameworks already added to a use case can still be assessed.":
+    "La importación desde Excel se oculta en los marcos, y los marcos importados ya no se pueden añadir a los casos de uso. Los marcos importados que ya se añadieron a un caso de uso se pueden seguir evaluando.",
+  "Its features are hidden for this organization. Settings and data are kept.":
+    "Sus funciones se ocultan para esta organización. La configuración y los datos se conservan.",
 };
