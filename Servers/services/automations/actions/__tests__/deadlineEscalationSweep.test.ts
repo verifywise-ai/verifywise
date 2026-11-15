@@ -105,6 +105,8 @@ describe("runDeadlineEscalationSweep", () => {
     const summary = await runDeadlineEscalationSweep(1);
 
     expect(mockSlack).toHaveBeenCalledTimes(2); // owner + admin
+    // Each send names the swept organization, never the recipient's other ones.
+    for (const call of mockSlack.mock.calls) expect(call[0]).toBe(1);
     // The 7-day leg fired too (1 day out is within 7), under its own dedup row.
     expect(mockDedup).toHaveBeenCalledWith(
       1,

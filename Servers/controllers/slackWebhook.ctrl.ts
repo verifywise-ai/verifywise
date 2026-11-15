@@ -432,24 +432,6 @@ export async function sendSlackMessage(req: Request, res: Response): Promise<any
   }
 }
 
-export async function disableSlackActivity(id: number): Promise<any> {
-  const slackWebhook = await SlackWebhookModel.findByIdWithValidation(id);
-  const transaction = await sequelize.transaction();
-  await slackWebhook.updateSlackWebhook({
-    is_active: false,
-  });
-
-  const updated = await updateSlackWebhookByIdQuery(id, slackWebhook, transaction);
-
-  if (updated) {
-    await transaction.commit();
-    return;
-  } else {
-    await transaction.rollback();
-    return;
-  }
-}
-
 export async function deleteSlackWebhookById(req: Request, res: Response): Promise<any> {
   const id = Array.isArray(req.params.id) ? req.params.id[0] : req.params.id;
   const userId = req.userId!;

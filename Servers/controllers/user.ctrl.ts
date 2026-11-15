@@ -1627,6 +1627,7 @@ async function updateUserById(req: Request, res: Response) {
 
       await sendSlackNotification(
         {
+          organizationId: req.organizationId!,
           userId: actor.id!,
           routingType: SlackNotificationRoutingType.MEMBERSHIP_AND_ROLES,
         },

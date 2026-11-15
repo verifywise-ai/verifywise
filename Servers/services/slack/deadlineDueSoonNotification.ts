@@ -23,11 +23,13 @@ export interface DeadlineSlackNotice {
  * level, and it does not.
  */
 export const sendDeadlineDueSoonSlackNotification = async (
+  organizationId: number,
   userId: number,
   notice: DeadlineSlackNotice,
 ): Promise<SlackSendResult> => {
   return sendSlackNotification(
     {
+      organizationId,
       userId,
       routingType: SlackNotificationRoutingType.EVIDENCE_AND_TASK_ALERTS,
     },

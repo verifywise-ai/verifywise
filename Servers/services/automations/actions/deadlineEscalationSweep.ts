@@ -137,7 +137,7 @@ async function sendSlackLeg(
   );
   if (already) return 0;
   const entityKind = kind === "risk" ? "Risk" : "Model risk";
-  const slack = await sendDeadlineDueSoonSlackNotification(recipientId, {
+  const slack = await sendDeadlineDueSoonSlackNotification(organizationId, recipientId, {
     entityKind,
     entityName: row.entity_name,
     distanceText: distanceText(row.deadline),

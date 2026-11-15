@@ -1,4 +1,5 @@
 import { describe, it, expect, jest, beforeEach, afterEach } from "@jest/globals";
+import { sendSlackNotification } from "../../services/slack/slackNotificationService";
 import { Request, Response } from "express";
 
 jest.mock("../../utils/user.utils", () => ({
@@ -749,6 +750,20 @@ describe("user.ctrl", () => {
       const res = createRes();
       await updateUserById(req, res);
       expect(res.status).toHaveBeenCalledWith(202);
+    });
+    it("sends the Slack notice for the request's organization", async () => {
+      const u = mockUser(buildUser({ name: "A", surname: "B" }));
+      mockGetById.mockResolvedValue(u as any);
+      mockUpdate.mockResolvedValue(mockUser(buildUser()) as any);
+      const req = createReq({ params: { id: "1" }, body: { name: "X" } });
+      await updateUserById(req, createRes());
+      expect(sendSlackNotification).toHaveBeenCalledWith(
+        expect.objectContaining({
+          organizationId: req.organizationId,
+          routingType: "Membership and roles",
+        }),
+        expect.objectContaining({ title: "Membership update" }),
+      );
     });
     it("should return 500 on error", async () => {
       mockGetById.mockRejectedValue(new Error("DB error"));

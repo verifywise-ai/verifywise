@@ -67,6 +67,7 @@ export const sendPolicyDueSoonNotification = async (): Promise<number> => {
                 try {
                   await sendSlackNotification(
                     {
+                      organizationId,
                       userId: userToNotify,
                       routingType: SlackNotificationRoutingType.POLICY_REMINDERS_AND_STATUS,
                     },
