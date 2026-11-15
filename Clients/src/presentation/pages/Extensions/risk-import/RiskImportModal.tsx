@@ -38,6 +38,23 @@ interface ImportResult {
   importedAt: string;
 }
 
+/**
+ * The import result the server sends with a 400 when rows fail validation or
+ * insert (`riskImport.ctrl.ts`: STATUS_CODE[400](result)), or with the
+ * row-cap error. `apiServices` throws a CustomException whose `response` is
+ * the `{ message, data }` envelope, so the result is `response.data`; a raw
+ * axios error has it one level deeper, under `response.data.data`.
+ */
+function importResultFromError(err: any): ImportResult | null {
+  const candidates = [err?.response?.data, err?.response?.data?.data];
+  for (const candidate of candidates) {
+    if (candidate && typeof candidate === "object" && Array.isArray(candidate.errors)) {
+      return candidate as ImportResult;
+    }
+  }
+  return null;
+}
+
 export default function RiskImportModal({ open, onClose, onImportComplete }: RiskImportModalProps) {
   const [loading, setLoading] = useState(false);
   const [uploadedFile, setUploadedFile] = useState<File | null>(null);
@@ -151,9 +168,13 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
       setError(null);
       setImportResult(null);
 
-      const response = await apiServices.post("/extensions/risk-import/import", {
-        csvData: excelData,
-      });
+      // This modal shows the server's answer itself (row errors or message),
+      // so the global error toast would repeat it.
+      const response = await apiServices.post(
+        "/extensions/risk-import/import",
+        { csvData: excelData },
+        { suppressGlobalErrorToast: true },
+      );
 
       const payload = (response.data as any)?.data as ImportResult | undefined;
       if (payload) {
@@ -167,7 +188,12 @@ export default function RiskImportModal({ open, onClose, onImportComplete }: Ris
         }
       }
     } catch (err: any) {
-      setError(err?.response?.data?.message || err?.message || "Failed to import risks");
+      const rowResult = importResultFromError(err);
+      if (rowResult) {
+        setImportResult(rowResult);
+      } else {
+        setError(err?.message || "Failed to import risks");
+      }
     } finally {
       setLoading(false);
     }

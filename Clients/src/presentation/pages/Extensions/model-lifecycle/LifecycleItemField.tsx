@@ -79,6 +79,9 @@ function useUsers(enabled = true) {
         const usersArray = data?.data || data || [];
         if (!cancelled) setUsers(Array.isArray(usersArray) ? usersArray : []);
       } catch (err) {
+        // A read, not a write: nothing the user entered is lost. The picker
+        // falls back to an empty list and the global error toast reports the
+        // failed request.
         console.error("Failed to fetch users:", err);
         if (!cancelled) setUsers([]);
       } finally {
@@ -136,6 +139,19 @@ function ReadOnlyValue({ children }: { children?: React.ReactNode }) {
       }}
     >
       {empty ? "Not set" : children}
+    </Typography>
+  );
+}
+
+/**
+ * Shown under a field whose last write failed. The field keeps what the user
+ * entered, so trying again (blur, click, select) resends it. The global error
+ * toast already carries the server's reason.
+ */
+function NotSavedMessage() {
+  return (
+    <Typography role="alert" sx={{ ...textStyles.body, color: VW_COLORS.error }}>
+      Not saved. Try again.
     </Typography>
   );
 }
@@ -262,11 +278,13 @@ function TextFieldRenderer({
   const config = item.config as { placeholder?: string; maxLength?: number };
   const [text, setText] = useState(value?.value_text ?? "");
   const [saving, setSaving] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
   const savedRef = useRef(value?.value_text ?? "");
 
   const handleBlur = useCallback(async () => {
     if (text === savedRef.current) return;
     setSaving(true);
+    setSaveFailed(false);
     try {
       await apiServices.put(
         `/extensions/model-lifecycle/models/${modelId}/lifecycle/items/${item.id}`,
@@ -275,7 +293,8 @@ function TextFieldRenderer({
       savedRef.current = text;
       onValueChanged?.();
     } catch {
-      /* keep current text */
+      // Keep the typed text; the next blur sends it again.
+      setSaveFailed(true);
     } finally {
       setSaving(false);
     }
@@ -284,22 +303,25 @@ function TextFieldRenderer({
   if (readOnly) return <ReadOnlyValue>{value?.value_text}</ReadOnlyValue>;
 
   return (
-    <Field
-      placeholder={config?.placeholder || `Enter ${item.name.toLowerCase()}`}
-      value={text}
-      onChange={(e) => {
-        if (config?.maxLength && e.target.value.length > config.maxLength) return;
-        setText(e.target.value);
-      }}
-      onBlur={handleBlur}
-      rows={multiline ? 3 : undefined}
-      width="100%"
-      InputProps={{
-        endAdornment: saving ? (
-          <CircularProgress size={14} sx={{ color: icon.brand }} />
-        ) : undefined,
-      }}
-    />
+    <Stack sx={{ gap: 2 }}>
+      <Field
+        placeholder={config?.placeholder || `Enter ${item.name.toLowerCase()}`}
+        value={text}
+        onChange={(e) => {
+          if (config?.maxLength && e.target.value.length > config.maxLength) return;
+          setText(e.target.value);
+        }}
+        onBlur={handleBlur}
+        rows={multiline ? 3 : undefined}
+        width="100%"
+        InputProps={{
+          endAdornment: saving ? (
+            <CircularProgress size={14} sx={{ color: icon.brand }} />
+          ) : undefined,
+        }}
+      />
+      {saveFailed && <NotSavedMessage />}
+    </Stack>
   );
 }
 
@@ -538,6 +560,7 @@ function PeopleFieldRenderer({
     : [];
   const [selectedUserId, setSelectedUserId] = useState<number | "">("");
   const [saving, setSaving] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
 
   // Filter out already-added users from the dropdown
   const availableUsers = users.filter((u) => !currentPeople.some((p) => p.user_id === u.id));
@@ -551,6 +574,7 @@ function PeopleFieldRenderer({
   const handleAdd = useCallback(async () => {
     if (!selectedUserId) return;
     setSaving(true);
+    setSaveFailed(false);
     try {
       await apiServices.post(
         `/extensions/model-lifecycle/models/${modelId}/lifecycle/items/${item.id}/people`,
@@ -559,7 +583,8 @@ function PeopleFieldRenderer({
       setSelectedUserId("");
       onValueChanged?.();
     } catch {
-      /* retry */
+      // Keep the picked user selected so Add can be pressed again.
+      setSaveFailed(true);
     } finally {
       setSaving(false);
     }
@@ -568,13 +593,14 @@ function PeopleFieldRenderer({
   const handleRemove = useCallback(
     async (userId: number) => {
       setSaving(true);
+      setSaveFailed(false);
       try {
         await apiServices.delete(
           `/extensions/model-lifecycle/models/${modelId}/lifecycle/items/${item.id}/people/${userId}`,
         );
         onValueChanged?.();
       } catch {
-        /* retry */
+        setSaveFailed(true);
       } finally {
         setSaving(false);
       }
@@ -631,6 +657,7 @@ function PeopleFieldRenderer({
         </Stack>
       )}
       {saving && <CircularProgress size={14} sx={{ color: VW_COLORS.primary }} />}
+      {!readOnly && saveFailed && <NotSavedMessage />}
     </Stack>
   );
 }
@@ -657,11 +684,13 @@ function ClassificationFieldRenderer({
   const currentValue = (value?.value_json as { level?: string })?.level ?? "";
   const [selected, setSelected] = useState(currentValue);
   const [saving, setSaving] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
 
   const handleChange = useCallback(
     async (level: string) => {
       setSelected(level);
       setSaving(true);
+      setSaveFailed(false);
       try {
         await apiServices.put(
           `/extensions/model-lifecycle/models/${modelId}/lifecycle/items/${item.id}`,
@@ -669,7 +698,8 @@ function ClassificationFieldRenderer({
         );
         onValueChanged?.();
       } catch {
-        /* keep selection */
+        // Keep the picked level shown; picking it again resends it.
+        setSaveFailed(true);
       } finally {
         setSaving(false);
       }
@@ -710,6 +740,7 @@ function ClassificationFieldRenderer({
         ))}
       </RadioGroup>
       {saving && <CircularProgress size={14} sx={{ color: icon.brand }} />}
+      {saveFailed && <NotSavedMessage />}
     </Stack>
   );
 }
@@ -746,11 +777,13 @@ function ChecklistFieldRenderer({
     savedItems.length > 0 ? savedItems : defaultItems,
   );
   const [saving, setSaving] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
   const [newItemText, setNewItemText] = useState("");
 
   const saveItems = useCallback(
     async (updatedItems: ChecklistValue[]) => {
       setSaving(true);
+      setSaveFailed(false);
       try {
         await apiServices.put(
           `/extensions/model-lifecycle/models/${modelId}/lifecycle/items/${item.id}`,
@@ -758,7 +791,8 @@ function ChecklistFieldRenderer({
         );
         onValueChanged?.();
       } catch {
-        /* keep state */
+        // Keep the list as edited; the next change sends the whole list.
+        setSaveFailed(true);
       } finally {
         setSaving(false);
       }
@@ -857,6 +891,7 @@ function ChecklistFieldRenderer({
           </CustomizableButton>
         </Stack>
       )}
+      {!readOnly && saveFailed && <NotSavedMessage />}
     </Stack>
   );
 }
@@ -896,6 +931,7 @@ function ApprovalFieldRenderer({
     ? (value as any).approvals
     : [];
   const [saving, setSaving] = useState(false);
+  const [saveFailed, setSaveFailed] = useState(false);
   const [selectedUserId, setSelectedUserId] = useState<number | "">("");
 
   // Filter out already-added approvers from the dropdown
@@ -910,6 +946,7 @@ function ApprovalFieldRenderer({
   const handleStatusChange = useCallback(
     async (userId: number, status: "approved" | "rejected") => {
       setSaving(true);
+      setSaveFailed(false);
       try {
         await apiServices.put(
           `/extensions/model-lifecycle/models/${modelId}/lifecycle/items/${item.id}/approvals/${userId}`,
@@ -917,7 +954,7 @@ function ApprovalFieldRenderer({
         );
         onValueChanged?.();
       } catch {
-        /* retry */
+        setSaveFailed(true);
       } finally {
         setSaving(false);
       }
@@ -928,6 +965,7 @@ function ApprovalFieldRenderer({
   const addApprover = useCallback(async () => {
     if (!selectedUserId) return;
     setSaving(true);
+    setSaveFailed(false);
     try {
       await apiServices.post(
         `/extensions/model-lifecycle/models/${modelId}/lifecycle/items/${item.id}/approvals`,
@@ -936,7 +974,8 @@ function ApprovalFieldRenderer({
       setSelectedUserId("");
       onValueChanged?.();
     } catch {
-      /* retry */
+      // Keep the picked approver selected so Add Approver can be pressed again.
+      setSaveFailed(true);
     } finally {
       setSaving(false);
     }
@@ -945,13 +984,14 @@ function ApprovalFieldRenderer({
   const removeApprover = useCallback(
     async (userId: number) => {
       setSaving(true);
+      setSaveFailed(false);
       try {
         await apiServices.delete(
           `/extensions/model-lifecycle/models/${modelId}/lifecycle/items/${item.id}/approvals/${userId}`,
         );
         onValueChanged?.();
       } catch {
-        /* retry */
+        setSaveFailed(true);
       } finally {
         setSaving(false);
       }
@@ -1084,6 +1124,7 @@ function ApprovalFieldRenderer({
           </CustomizableButton>
         </Stack>
       )}
+      {saveFailed && <NotSavedMessage />}
     </Stack>
   );
 }

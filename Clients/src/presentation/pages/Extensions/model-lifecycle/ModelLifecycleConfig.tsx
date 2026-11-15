@@ -163,6 +163,10 @@ export default function ModelLifecycleConfig() {
   // Phase and item setup is an extension.admin action on the server.
   const canConfigure = useCan("extension.admin");
   const [saving, setSaving] = useState(false);
+  // Set when a phase or item write fails, shown at the top of the dialog
+  // until the next write starts. The global error toast carries the reason;
+  // the forms keep what was typed and optimistic edits are rolled back.
+  const [saveFailed, setSaveFailed] = useState(false);
   const [configOpen, setConfigOpen] = useState(false);
 
   // New phase form
@@ -199,6 +203,7 @@ export default function ModelLifecycleConfig() {
   const handleCreatePhase = useCallback(async () => {
     if (!newPhaseName.trim()) return;
     setSaving(true);
+    setSaveFailed(false);
     try {
       await apiServices.post("/extensions/model-lifecycle/phases", {
         name: newPhaseName.trim(),
@@ -208,7 +213,8 @@ export default function ModelLifecycleConfig() {
       setNewPhaseDesc("");
       refresh();
     } catch {
-      /* error */
+      // The name and description stay in the form for another try.
+      setSaveFailed(true);
     } finally {
       setSaving(false);
     }
@@ -217,11 +223,12 @@ export default function ModelLifecycleConfig() {
   const confirmDeletePhase = useCallback(async () => {
     if (deletePhaseId === null) return;
     setSaving(true);
+    setSaveFailed(false);
     try {
       await apiServices.delete(`/extensions/model-lifecycle/phases/${deletePhaseId}`);
       refresh();
     } catch {
-      /* error */
+      setSaveFailed(true);
     } finally {
       setSaving(false);
       setDeletePhaseId(null);
@@ -242,11 +249,13 @@ export default function ModelLifecycleConfig() {
       setPhases(newPhases);
 
       const orderedIds = newPhases.map((p) => p.id);
+      setSaveFailed(false);
       try {
         await apiServices.put("/extensions/model-lifecycle/phases/reorder", { orderedIds });
       } catch {
         // Revert on error
         setPhases(oldPhases);
+        setSaveFailed(true);
       }
     },
     [phases, setPhases],
@@ -267,10 +276,12 @@ export default function ModelLifecycleConfig() {
 
       setPhases((prev) => prev.map((p) => (p.id === phaseId ? { ...p, name: trimmed } : p)));
       setEditingPhaseId(null);
+      setSaveFailed(false);
       try {
         await apiServices.put(`/extensions/model-lifecycle/phases/${phaseId}`, { name: trimmed });
       } catch {
         setPhases((prev) => prev.map((p) => (p.id === phaseId ? { ...p, name: oldName } : p)));
+        setSaveFailed(true);
       }
     },
     [phases, setPhases],
@@ -279,6 +290,7 @@ export default function ModelLifecycleConfig() {
   const handleTogglePhaseActive = useCallback(
     async (phaseId: number, isActive: boolean) => {
       setPhases((prev) => prev.map((p) => (p.id === phaseId ? { ...p, is_active: isActive } : p)));
+      setSaveFailed(false);
       try {
         await apiServices.put(`/extensions/model-lifecycle/phases/${phaseId}`, {
           is_active: isActive,
@@ -287,6 +299,7 @@ export default function ModelLifecycleConfig() {
         setPhases((prev) =>
           prev.map((p) => (p.id === phaseId ? { ...p, is_active: !isActive } : p)),
         );
+        setSaveFailed(true);
       }
     },
     [setPhases],
@@ -297,6 +310,7 @@ export default function ModelLifecycleConfig() {
     async (phaseId: number) => {
       if (!newItemName.trim()) return;
       setSaving(true);
+      setSaveFailed(false);
       try {
         await apiServices.post(`/extensions/model-lifecycle/phases/${phaseId}/items`, {
           name: newItemName.trim(),
@@ -309,7 +323,8 @@ export default function ModelLifecycleConfig() {
         setAddingItemForPhase(null);
         refresh();
       } catch {
-        /* error */
+        // The new item form stays open with what was entered.
+        setSaveFailed(true);
       } finally {
         setSaving(false);
       }
@@ -320,11 +335,12 @@ export default function ModelLifecycleConfig() {
   const confirmDeleteItem = useCallback(async () => {
     if (deleteItemId === null) return;
     setSaving(true);
+    setSaveFailed(false);
     try {
       await apiServices.delete(`/extensions/model-lifecycle/items/${deleteItemId}`);
       refresh();
     } catch {
-      /* error */
+      setSaveFailed(true);
     } finally {
       setSaving(false);
       setDeleteItemId(null);
@@ -339,6 +355,7 @@ export default function ModelLifecycleConfig() {
           items: p.items?.map((i) => (i.id === itemId ? { ...i, is_required: isRequired } : i)),
         })),
       );
+      setSaveFailed(false);
       try {
         await apiServices.put(`/extensions/model-lifecycle/items/${itemId}`, {
           is_required: isRequired,
@@ -350,6 +367,7 @@ export default function ModelLifecycleConfig() {
             items: p.items?.map((i) => (i.id === itemId ? { ...i, is_required: !isRequired } : i)),
           })),
         );
+        setSaveFailed(true);
       }
     },
     [setPhases],
@@ -369,6 +387,7 @@ export default function ModelLifecycleConfig() {
       setPhases((prev) => prev.map((p) => (p.id === phaseId ? { ...p, items: newItems } : p)));
 
       const orderedIds = newItems.map((i) => i.id);
+      setSaveFailed(false);
       try {
         await apiServices.put(`/extensions/model-lifecycle/phases/${phaseId}/items/reorder`, {
           orderedIds,
@@ -376,6 +395,7 @@ export default function ModelLifecycleConfig() {
       } catch {
         // Revert on error
         setPhases((prev) => prev.map((p) => (p.id === phaseId ? { ...p, items } : p)));
+        setSaveFailed(true);
       }
     },
     [setPhases],
@@ -483,7 +503,10 @@ export default function ModelLifecycleConfig() {
             variant="outlined"
             color="secondary"
             startIcon={<Settings size={16} />}
-            onClick={() => setConfigOpen(true)}
+            onClick={() => {
+              setSaveFailed(false);
+              setConfigOpen(true);
+            }}
             sx={{ alignSelf: "flex-start" }}
           >
             Configure Phases
@@ -531,6 +554,11 @@ export default function ModelLifecycleConfig() {
         </DialogTitle>
 
         <DialogContent sx={{ p: 10 }}>
+          {saveFailed && (
+            <Typography role="alert" sx={{ ...textStyles.body, color: status.error.text, mb: 6 }}>
+              Not saved. Try again.
+            </Typography>
+          )}
           {loading && phases.length === 0 ? (
             <Stack alignItems="center" sx={{ py: 4 }}>
               <CircularProgress sx={{ color: VW_COLORS.primary }} />
