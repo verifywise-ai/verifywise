@@ -214,13 +214,49 @@ describe("LifecycleItemField: failed writes", () => {
     expect(onValueChanged).toHaveBeenCalledTimes(1);
   });
 
-  it("keeps the picked level and says it was not saved when the classification write fails", async () => {
+  it("clears the message when the text is put back to the saved value", async () => {
+    api.put.mockRejectedValueOnce(new CustomException("Internal server error", 500, {}));
+    renderWithProviders(<LifecycleItemField modelId={10} item={textItem} />);
+
+    const input = screen.getByPlaceholderText("Enter purpose");
+    fireEvent.change(input, { target: { value: "Fraud scoring" } });
+    fireEvent.blur(input);
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+
+    fireEvent.change(input, { target: { value: "" } });
+    fireEvent.blur(input);
+
+    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+    expect(api.put).toHaveBeenCalledTimes(1);
+  });
+
+  it("shows the saved level again and says it was not saved when the classification write fails", async () => {
     api.put.mockRejectedValueOnce(new CustomException("Internal server error", 500, {}));
     render(<LifecycleItemField modelId={10} item={classificationItem} />);
 
     fireEvent.click(screen.getByRole("radio", { name: "High" }));
 
     expect(await screen.findByRole("alert")).toHaveTextContent("Not saved. Try again.");
+    expect(screen.getByRole("radio", { name: "High" })).not.toBeChecked();
+  });
+
+  it("lets the user pick the failed level again to retry", async () => {
+    api.put
+      .mockRejectedValueOnce(new CustomException("Internal server error", 500, {}))
+      .mockResolvedValueOnce({ status: 200 });
+    const onValueChanged = vi.fn();
+    render(
+      <LifecycleItemField modelId={10} item={classificationItem} onValueChanged={onValueChanged} />,
+    );
+
+    fireEvent.click(screen.getByRole("radio", { name: "High" }));
+    expect(await screen.findByRole("alert")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("radio", { name: "High" }));
+
+    await waitFor(() => expect(screen.queryByRole("alert")).not.toBeInTheDocument());
+    expect(api.put).toHaveBeenCalledTimes(2);
     expect(screen.getByRole("radio", { name: "High" })).toBeChecked();
+    expect(onValueChanged).toHaveBeenCalledTimes(1);
   });
 });

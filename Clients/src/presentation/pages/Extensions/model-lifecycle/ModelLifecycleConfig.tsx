@@ -555,7 +555,10 @@ export default function ModelLifecycleConfig() {
 
         <DialogContent sx={{ p: 10 }}>
           {saveFailed && (
-            <Typography role="alert" sx={{ ...textStyles.body, color: status.error.text, mb: 6 }}>
+            <Typography
+              role="alert"
+              sx={{ ...textStyles.body, color: status.error.text, mb: "12px" }}
+            >
               Not saved. Try again.
             </Typography>
           )}

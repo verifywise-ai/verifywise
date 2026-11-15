@@ -282,7 +282,11 @@ function TextFieldRenderer({
   const savedRef = useRef(value?.value_text ?? "");
 
   const handleBlur = useCallback(async () => {
-    if (text === savedRef.current) return;
+    if (text === savedRef.current) {
+      // Back to the saved text (e.g. the user undid a failed edit): nothing is unsaved.
+      setSaveFailed(false);
+      return;
+    }
     setSaving(true);
     setSaveFailed(false);
     try {
@@ -303,7 +307,7 @@ function TextFieldRenderer({
   if (readOnly) return <ReadOnlyValue>{value?.value_text}</ReadOnlyValue>;
 
   return (
-    <Stack sx={{ gap: 2 }}>
+    <Stack sx={{ gap: "4px" }}>
       <Field
         placeholder={config?.placeholder || `Enter ${item.name.toLowerCase()}`}
         value={text}
@@ -685,6 +689,7 @@ function ClassificationFieldRenderer({
   const [selected, setSelected] = useState(currentValue);
   const [saving, setSaving] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
+  const savedRef = useRef(currentValue);
 
   const handleChange = useCallback(
     async (level: string) => {
@@ -696,9 +701,13 @@ function ClassificationFieldRenderer({
           `/extensions/model-lifecycle/models/${modelId}/lifecycle/items/${item.id}`,
           { value_json: { level } },
         );
+        savedRef.current = level;
         onValueChanged?.();
       } catch {
-        // Keep the picked level shown; picking it again resends it.
+        // Show the last saved level again. A radio fires no change event when
+        // its checked option is clicked, so leaving the failed pick checked
+        // would make it impossible to retry; picking it again now resends it.
+        setSelected(savedRef.current);
         setSaveFailed(true);
       } finally {
         setSaving(false);
