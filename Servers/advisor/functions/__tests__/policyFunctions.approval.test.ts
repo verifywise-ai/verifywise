@@ -11,6 +11,7 @@ jest.mock("../../../utils/logger/fileLogger", () => ({
 }));
 jest.mock("../../../services/policies/policyApproval.service", () => ({
   approvePolicyDirectly: jest.fn(),
+  assertPolicyDirectApprovalPossible: jest.fn(),
   rejectPendingPolicyRequestOnDelete: jest.fn(),
   submitPolicyForApproval: jest.fn(),
 }));
@@ -25,9 +26,11 @@ import { sequelize } from "../../../database/db";
 import { writeToolExecutors } from "../../confirmation/createWriteTool";
 import {
   approvePolicyDirectly,
+  assertPolicyDirectApprovalPossible,
   rejectPendingPolicyRequestOnDelete,
   submitPolicyForApproval,
 } from "../../../services/policies/policyApproval.service";
+import { submitForApproval } from "../../approval/approvalGateway";
 import { recordPolicyStatusChange } from "../../../utils/policyApprovalDecision.utils";
 import { getUserOrganizationsQuery } from "../../../utils/organizationMember.utils";
 import {
@@ -35,7 +38,7 @@ import {
   ValidationException,
 } from "../../../domain.layer/exceptions/custom.exception";
 import { POLICY_STATUS_MESSAGES } from "../../../utils/policyStatus.utils";
-import "../policyFunctions";
+import { availablePolicyTools } from "../policyFunctions";
 
 const q = sequelize.query as jest.Mock;
 const exec = (name: string) => writeToolExecutors.get(name)!;
@@ -217,6 +220,45 @@ describe("agent_approve_policy_review", () => {
     await expect(
       exec("agent_approve_policy_review")({ policy_id: 1, _userId: 9 }, 42),
     ).rejects.toThrow("Use the approval workflow");
+  });
+});
+
+describe("agent_approve_policy_review before the approval gate", () => {
+  const callTool = (params: Record<string, unknown>) =>
+    availablePolicyTools.agent_approve_policy_review(params, 42);
+
+  it("refuses a non-Admin before anything is queued for sign-off", async () => {
+    (getUserOrganizationsQuery as jest.Mock).mockResolvedValue([
+      { organization_id: 42, role_name: "Editor" },
+    ]);
+    (assertPolicyDirectApprovalPossible as jest.Mock).mockRejectedValue(
+      new Error("Only an Admin can approve a policy directly"),
+    );
+
+    await expect(callTool({ policy_id: 1, _userId: 9 })).rejects.toThrow(
+      "Only an Admin can approve a policy directly",
+    );
+    expect(assertPolicyDirectApprovalPossible).toHaveBeenCalledWith(42, "Editor");
+    expect(submitForApproval).not.toHaveBeenCalled();
+  });
+
+  it("queues an Admin's direct approval through the gate", async () => {
+    (getUserOrganizationsQuery as jest.Mock).mockResolvedValue([
+      { organization_id: 42, role_name: "Admin" },
+    ]);
+    (assertPolicyDirectApprovalPossible as jest.Mock).mockResolvedValue(undefined);
+    const pending = { confirmation_required: true, confirmation_id: "a1" };
+    (submitForApproval as jest.Mock).mockResolvedValue({
+      outcome: "pending",
+      approvalId: "a1",
+      confirmationResult: pending,
+    });
+
+    await expect(callTool({ policy_id: 1, _userId: 9 })).resolves.toBe(pending);
+    expect(assertPolicyDirectApprovalPossible).toHaveBeenCalledWith(42, "Admin");
+    expect(submitForApproval).toHaveBeenCalledWith(
+      expect.objectContaining({ toolName: "agent_approve_policy_review", userId: 9 }),
+    );
   });
 });
 

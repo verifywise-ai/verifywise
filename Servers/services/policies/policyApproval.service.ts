@@ -45,6 +45,12 @@ import logger from "../../utils/logger/fileLogger";
 
 /** Statuses from which a policy may be submitted or approved directly. */
 const SUBMITTABLE_STATUSES = ["Draft", POLICY_UNDER_REVIEW];
+/**
+ * Statuses in which a past approval still stands. A policy moved by hand from
+ * Approved to another status (e.g. back to Draft) keeps its review columns,
+ * but the approval is no longer its current decision, so the state hides it.
+ */
+const APPROVAL_STANDING_STATUSES = ["Approved", "Published"];
 
 export const POLICY_APPROVAL_COMMENT_MAX = 2000;
 
@@ -59,6 +65,7 @@ export const POLICY_APPROVAL_MESSAGES = {
   useWorkflow: "Use the approval workflow",
   adminOnly: "Only an Admin can approve a policy directly",
   commentTooLong: "Comment must be 2000 characters or fewer",
+  commentNotText: "Comment must be text",
   deletedReason: "The policy was deleted.",
 } as const;
 
@@ -190,12 +197,12 @@ export const getPendingPolicyRequest = async (
   };
 };
 
-/** Locks the policy row for the rest of the transaction, or throws 404. */
-const lockPolicy = async (
+/** Locks the policy row for the rest of the transaction; undefined when there is none. */
+const lockPolicyRow = async (
   organizationId: number,
   policyId: number,
   transaction: Transaction,
-): Promise<LockedPolicy> => {
+): Promise<LockedPolicy | undefined> => {
   const rows = (await sequelize.query(
     `SELECT id, title, status, tags, next_review_date, policy_owner_id
      FROM policy_manager
@@ -207,10 +214,20 @@ const lockPolicy = async (
       transaction,
     },
   )) as LockedPolicy[];
-  if (!rows[0]) {
+  return rows[0];
+};
+
+/** Locks the policy row for the rest of the transaction, or throws 404. */
+const lockPolicy = async (
+  organizationId: number,
+  policyId: number,
+  transaction: Transaction,
+): Promise<LockedPolicy> => {
+  const policy = await lockPolicyRow(organizationId, policyId, transaction);
+  if (!policy) {
     throw new NotFoundException(POLICY_APPROVAL_MESSAGES.notFound, "policy", policyId);
   }
-  return rows[0];
+  return policy;
 };
 
 /** 409 when a request is pending or the status cannot be sent for approval. */
@@ -364,6 +381,31 @@ export const submitPolicyForApproval = async (params: {
   return { request_id: requestId, policy: updated?.[0] ?? null };
 };
 
+/** 403 unless the role holds organization.admin; only an Admin approves a policy directly. */
+const assertDirectApprover = async (orgId: number, role: string | undefined): Promise<void> => {
+  const isAdmin = !!role && (await roleHasPermission(orgId, role, "organization.admin"));
+  if (!isAdmin) {
+    throw new ForbiddenException(POLICY_APPROVAL_MESSAGES.adminOnly, "policy", "approve");
+  }
+};
+
+/**
+ * Read-only check that a direct approval could go ahead, for a caller that
+ * queues the approval behind someone else's sign-off (the advisor). Refuses a
+ * non-Admin (403) and an organization with a usable workflow (409) before
+ * anyone signs off, since the approval would refuse both afterwards.
+ * approvePolicyDirectly checks both again, the workflow under the row lock.
+ */
+export const assertPolicyDirectApprovalPossible = async (
+  orgId: number,
+  role: string | undefined,
+): Promise<void> => {
+  await assertDirectApprover(orgId, role);
+  if ((await getUsablePolicyWorkflows(orgId)).length > 0) {
+    throw new ConflictException(POLICY_APPROVAL_MESSAGES.useWorkflow, "approval_workflow");
+  }
+};
+
 /**
  * An Admin approves the policy without a workflow. Allowed only when the
  * organization has no usable policy workflow and no request is pending.
@@ -377,13 +419,10 @@ export const approvePolicyDirectly = async (params: {
 }): Promise<any> => {
   const { orgId, policyId, userId, role } = params;
 
-  const isAdmin = !!role && (await roleHasPermission(orgId, role, "organization.admin"));
-  if (!isAdmin) {
-    throw new ForbiddenException(POLICY_APPROVAL_MESSAGES.adminOnly, "policy", "approve");
-  }
+  await assertDirectApprover(orgId, role);
   if (params.comment !== undefined && params.comment !== null) {
     if (typeof params.comment !== "string") {
-      throw new ValidationException(POLICY_APPROVAL_MESSAGES.commentTooLong, "comment");
+      throw new ValidationException(POLICY_APPROVAL_MESSAGES.commentNotText, "comment");
     }
     if (params.comment.length > POLICY_APPROVAL_COMMENT_MAX) {
       throw new ValidationException(POLICY_APPROVAL_MESSAGES.commentTooLong, "comment");
@@ -406,7 +445,9 @@ export const approvePolicyDirectly = async (params: {
            review_status = 'approved',
            reviewed_by = :userId,
            reviewed_at = NOW(),
-           review_comment = :comment
+           review_comment = :comment,
+           last_updated_by = :userId,
+           last_updated_at = NOW()
        WHERE organization_id = :organizationId AND id = :policyId`,
       {
         replacements: { organizationId: orgId, policyId, userId, comment },
@@ -470,15 +511,22 @@ export const getPolicyApprovalState = async (params: {
   ]);
 
   const submittable = SUBMITTABLE_STATUSES.includes(policy.status) && !pending;
+  // A rejection ("changes requested") keeps showing on the Draft it produced;
+  // an approval shows only while the policy is still Approved or Published.
+  const decisionStands =
+    policy.review_status !== "approved" || APPROVAL_STANDING_STATUSES.includes(policy.status);
 
   return {
     usable_workflows: usable,
     pending_request: pending,
-    review_status: policy.review_status ?? null,
-    review_comment: policy.review_comment ?? null,
-    reviewed_by: policy.reviewed_by === null ? null : Number(policy.reviewed_by),
-    reviewed_by_name: policy.reviewed_by_name ?? null,
-    reviewed_at: policy.reviewed_at ?? null,
+    review_status: decisionStands ? (policy.review_status ?? null) : null,
+    review_comment: decisionStands ? (policy.review_comment ?? null) : null,
+    reviewed_by:
+      decisionStands && policy.reviewed_by !== null && policy.reviewed_by !== undefined
+        ? Number(policy.reviewed_by)
+        : null,
+    reviewed_by_name: decisionStands ? (policy.reviewed_by_name ?? null) : null,
+    reviewed_at: decisionStands ? (policy.reviewed_at ?? null) : null,
     can_submit: canEdit && usable.length > 0 && submittable,
     can_approve_directly: isAdmin && usable.length === 0 && submittable,
     can_withdraw: !!pending && pending.requested_by === userId,
@@ -488,13 +536,19 @@ export const getPolicyApprovalState = async (params: {
 /**
  * Rejects the policy's pending approval request inside the policy delete's
  * transaction, and notifies the requester once that transaction commits.
- * Returns the notification info, or null when nothing was pending.
+ * Returns the notification info, or null when nothing was pending (or the
+ * policy does not exist; the delete then reports 404).
+ *
+ * The policy row is locked first, as submit locks it before opening a
+ * request: a submit racing the delete either commits before this read (and
+ * its request is rejected here) or waits for the delete and finds no policy.
  */
 export const rejectPendingPolicyRequestOnDelete = async (
   orgId: number,
   policyId: number,
   transaction: Transaction,
 ): Promise<NotificationInfo | null> => {
+  if (!(await lockPolicyRow(orgId, policyId, transaction))) return null;
   const pending = await getPendingPolicyRequest(orgId, policyId, transaction);
   if (!pending) return null;
 

@@ -123,7 +123,7 @@ describe("notifyApprovalRequested", () => {
         entity_type: NotificationEntityType.POLICY,
         entity_id: 55,
         entity_name: "Acceptable use",
-        action_url: "/approval-requests/7",
+        action_url: "/approval-workflows?request=7",
       }),
       2,
     );
@@ -132,7 +132,7 @@ describe("notifyApprovalRequested", () => {
       "ada@x.io",
       expect.any(String),
       EMAIL_TEMPLATES.APPROVAL_REQUESTED,
-      expect.objectContaining({ approval_url: "https://app.test/approval-requests/7" }),
+      expect.objectContaining({ approval_url: "https://app.test/approval-workflows?request=7" }),
     );
   });
 

@@ -119,11 +119,13 @@ What each decision does to the policy:
 | Final approval of the request | Approved | `approved` | `reviewed_by`, `reviewed_at`, `review_comment` (approver's comment or NULL) |
 | Rejection at any step | Draft | `changes_requested` | `reviewed_by`, `reviewed_at`, `review_comment` |
 | Withdraw by the requester | Draft | NULL | |
-| Admin direct approval | Approved | `approved` | `reviewed_by`, `reviewed_at`, `review_comment` |
+| Admin direct approval | Approved | `approved` | `reviewed_by`, `reviewed_at`, `review_comment`, `last_updated_by/at` |
 
-Every row is recorded in policy change history with the user who acted (none when the advisor withdraws). The requester gets an in-app and email notification on approval or rejection that links to the policy editor (`/policies/:id/edit`).
+Every row is recorded in policy change history with the user who acted (none for a system withdrawal). The requester gets an in-app and email notification on approval or rejection that links to the policy editor (`/policies/:id/edit`).
 
 A policy request can only come from submit for approval. The generic `POST /approval-requests` and the advisor's `agent_create_approval_request` refuse `entity_type 'policy'` with a `400` ("Submit the policy for approval from the policy").
+
+In the advisor, `agent_submit_policy_for_review` submits and `agent_approve_policy_review` approves directly. The approval gate queues a direct approval for an Admin's sign-off (rule `policy-review-requires-reviewer`) and then runs it as the user who asked, so the tool refuses a non-Admin and an organization with a usable workflow before anything is queued (`assertPolicyDirectApprovalPossible`); the service checks both again when it runs. `agent_withdraw_approval_request` follows the REST withdraw rules (requester only, pending only; see [Approvals](./approvals.md)).
 
 If the requester is also an approver on the workflow, they can decide their own request. That is a workflow configuration choice; the notification skips them, but the decision is not blocked.
 
@@ -175,7 +177,7 @@ enum LinkedObjectType {
 | PUT | `/policies/:id` | Update policy |
 | DELETE | `/policies/:id` | Delete policy |
 
-Deleting a policy rejects its pending approval request in the same transaction ("The policy was deleted."), and the requester is notified after the commit. The advisor's `agent_delete_policy` does the same.
+Deleting a policy rejects its pending approval request in the same transaction ("The policy was deleted."), and the requester is notified after the commit. The advisor's `agent_delete_policy` does the same. Both go through `rejectPendingPolicyRequestOnDelete`, which locks the policy row (`FOR UPDATE`, by organization) before it reads the pending request, as submit does, so a submit racing the delete cannot leave a pending request on a deleted policy.
 
 ### Policy approval (v1)
 
@@ -196,12 +198,14 @@ All three are under `/api/v1/policies` (`routes/v1/policies.route.ts`, `controll
     id, workflow_id, workflow_title, current_step, total_steps,
     requested_by, requested_by_name, created_at
   } | null,
-  review_status, review_comment, reviewed_by, reviewed_by_name, reviewed_at,
+  review_status, review_comment, reviewed_by, reviewed_by_name, reviewed_at, // the last decision; see below
   can_submit,           // policy.edit && a usable workflow && Draft/Under Review && nothing pending
   can_approve_directly, // organization.admin && no usable workflow && Draft/Under Review && nothing pending
   can_withdraw          // a pending request made by the caller
 }
 ```
+
+The last decision is the policy's review columns, with one exception: an approval (`review_status = 'approved'`) is returned only while the policy is Approved or Published. A policy moved by hand from Approved to another status (for example back to Draft) keeps its review columns, but the five fields come back `null`, so the editor does not show "Approved by" next to "Submit for approval". A rejection (`changes_requested`) is always returned, so a Draft shows "Changes requested by". The deprecated review endpoints below do not apply this rule.
 
 `POST /submit-for-approval` returns `201` with `{ request_id, policy }`. When `workflow_id` is sent it must be a JSON number naming a usable workflow; a numeric string is a `400`. When it is omitted the server uses the only usable workflow.
 
@@ -212,17 +216,17 @@ All three are under `/api/v1/policies` (`routes/v1/policies.route.ts`, `controll
 | 400 | all | `:id` is not a positive integer ("Invalid policy ID") |
 | 400 | submit | `workflow_id` malformed or not usable: field `workflow_id`, "Choose an approval workflow with an approver on every step" |
 | 400 | submit | More than one usable workflow and none sent: field `workflow_id`, "Choose an approval workflow" |
-| 400 | approve | Comment over 2000 characters: field `comment` |
+| 400 | approve | Comment over 2000 characters ("Comment must be 2000 characters or fewer") or not a string ("Comment must be text"): field `comment` |
 | 401 | all | No valid token |
 | 403 | submit, approve | Role lacks `policy.edit` ("Access denied") |
-| 403 | approve | Role lacks `organization.admin` ("Only an Admin can approve a policy directly"). Checked before anything else. |
+| 403 | approve | Role lacks `organization.admin` ("Only an Admin can approve a policy directly"). The first check in the service, after the route's `policy.edit` check and the id check. |
 | 404 | all | The policy does not exist or belongs to another organization ("Policy not found") |
 | 409 | submit, approve | "This policy already has a pending approval request" |
 | 409 | submit, approve | "Only a draft or under review policy can be submitted or approved" |
 | 409 | submit | "This organization has no policy approval workflow. An Admin can approve the policy directly." |
 | 409 | approve | "Use the approval workflow" (the organization has a usable workflow) |
 
-400 field errors use `{ message, errors: [{ field, message }] }` in `data`; other errors put the translated message string in `data`. Check order: submit is 404, then pending, then status, then workflow; approve is 403, then comment, then 404, then usable workflow, then pending, then status. Submit and approve lock the policy row (`FOR UPDATE`), so concurrent submits cannot open two requests.
+400 field errors use `{ message, errors: [{ field, message }] }` in `data`; other errors put the translated message string in `data`. Every route first checks the token (401), then `authorize("policy.edit")` on submit and approve (403), then the id (400). After that, submit checks 404, then pending, then status, then workflow; approve checks `organization.admin` (403), then the comment (400), then 404, then usable workflow, then pending, then status. Submit and approve lock the policy row (`FOR UPDATE`), so concurrent submits cannot open two requests.
 
 ### Deprecated review endpoints
 

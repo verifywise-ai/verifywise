@@ -1166,9 +1166,10 @@ export const withdrawApprovalRequestQuery = async (
      */
     releaseUseCase?: boolean;
   } = {},
-): Promise<void> => {
+): Promise<boolean> => {
   // Only a pending request can be withdrawn: a decided one keeps its outcome,
-  // and its entity (a use case, a policy) is not moved back.
+  // and its entity (a use case, a policy) is not moved back. Returns whether
+  // a pending request was withdrawn.
   const rows = (await sequelize.query(
     `UPDATE approval_requests
      SET status = :status, updated_at = NOW()
@@ -1209,6 +1210,7 @@ export const withdrawApprovalRequestQuery = async (
       transaction,
     });
   }
+  return Boolean(withdrawn);
 };
 
 /**

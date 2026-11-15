@@ -248,6 +248,7 @@
   "client_id, client_secret, and tenant_id are required": "client_id, client_secret und tenant_id sind erforderlich",
   "comment is required when requesting changes": "Bei der Anforderung von Änderungen ist ein Kommentar erforderlich",
   "Comment must be 2000 characters or fewer": "Der Kommentar darf höchstens 2000 Zeichen lang sein",
+  "Comment must be text": "Der Kommentar muss ein Text sein",
   "Company logo deleted successfully": "Firmenlogo erfolgreich gelöscht",
   "Company logo not found": "Firmenlogo nicht gefunden",
   "Company logo retrieved successfully": "Firmenlogo erfolgreich abgerufen",

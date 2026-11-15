@@ -240,8 +240,14 @@ Withdraw is checked in `withdrawRequest`:
 A decided request keeps its outcome. Without the 409, withdrawing an approved
 request would move its entity (a use case, a policy) back as if it had never
 been decided. `withdrawApprovalRequestQuery` also matches `status = 'Pending'`
-in its UPDATE and moves no entity when nothing was withdrawn, which covers the
-advisor's withdraw tool too.
+in its UPDATE, moves no entity when nothing was withdrawn, and returns whether
+it withdrew the request.
+
+The advisor's `agent_withdraw_approval_request` applies the same rules: only
+the requester (the advisor user) may withdraw, a request that is not `Pending`
+is refused ("Only a pending request can be withdrawn"), and a request decided
+between the check and the UPDATE is reported as a failure, not as withdrawn.
+The withdrawer is recorded as the actor.
 
 `POST /approval-requests` refuses `entity_type: "policy"` with a `400` (field
 `entity_type`, "Submit the policy for approval from the policy"), before any
@@ -410,7 +416,7 @@ decider or withdrawer as the actor.
 
 Notifications for policy requests carry `entity_type` POLICY and the policy id:
 
-- Step approvers (step 1 and later steps) get a link to `/approval-requests/:requestId`.
+- Step approvers (step 1 and later steps) get a link to `/approval-workflows?request=:requestId`, which opens the approval requests modal on that request (the same link the Home queue uses). The notification bell rewrites links stored before this change (`/approval-requests/:id`) to the same address.
 - The requester's approved and rejected notifications link to the policy editor, `/policies/:id/edit`.
 
 ## Deleting an entity with a pending request
@@ -427,7 +433,8 @@ pending.
 - **Policies**: `deletePolicyById` and the advisor's `agent_delete_policy` call
   it through `rejectPendingPolicyRequestOnDelete`, inside the delete's
   transaction (the optional fourth argument), with the reason "The policy was
-  deleted."
+  deleted." The policy row is locked first, so a concurrent submit cannot slip
+  a new pending request in after the read.
 
 The requester is notified after the commit. Up to v2.6.8 the third UPDATE
 wrote `status` and `date_responded`, which are not columns of

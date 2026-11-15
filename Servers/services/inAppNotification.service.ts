@@ -792,7 +792,9 @@ export const notifyApprovalRequested = async (
   /**
    * The request's entity, when it is not a use case. For a policy, `useCase.id`
    * is the approval request id: the notification names the policy and links
-   * to the approval request, where the approver decides.
+   * to the approval workflows page opened on that request (the same
+   * `/approval-workflows?request=<id>` link the Home queue uses), where the
+   * approver decides.
    */
   entity?: { type: string; id: number },
 ): Promise<void> => {
@@ -800,7 +802,7 @@ export const notifyApprovalRequested = async (
 
   const isPolicy = entity?.type === "policy";
   const actionUrl = isPolicy
-    ? `/approval-requests/${useCase.id}`
+    ? `/approval-workflows?request=${useCase.id}`
     : buildEntityUrl(NotificationEntityType.USE_CASE, useCase.id);
 
   await sendInAppNotification(

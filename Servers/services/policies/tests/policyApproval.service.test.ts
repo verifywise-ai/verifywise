@@ -58,6 +58,7 @@ import {
   getPolicyApprovalState,
   getUsablePolicyWorkflows,
   POLICY_APPROVAL_MESSAGES,
+  assertPolicyDirectApprovalPossible,
   rejectPendingPolicyRequestOnDelete,
   submitPolicyForApproval,
 } from "../policyApproval.service";
@@ -385,6 +386,9 @@ describe("approvePolicyDirectly", () => {
     const [update] = updateCalls();
     expect(String(update[0])).toMatch(/status = 'Approved'/);
     expect(String(update[0])).toMatch(/review_status = 'approved'/);
+    // Stamped like any other change to the policy.
+    expect(String(update[0])).toMatch(/last_updated_by = :userId/);
+    expect(String(update[0])).toMatch(/last_updated_at = NOW\(\)/);
     expect(update[1].replacements).toEqual({
       organizationId: 1,
       policyId: 55,
@@ -430,6 +434,21 @@ describe("approvePolicyDirectly", () => {
       comment: "x".repeat(2001),
     }).catch((e) => e);
     expect(error).toBeInstanceOf(ValidationException);
+    expect(error.metadata.field).toBe("comment");
+    expect(mockTransactionFactory).not.toHaveBeenCalled();
+  });
+
+  it("400 on comment with its own message when it is not text", async () => {
+    asAdmin();
+    const error = await approvePolicyDirectly({
+      orgId: 1,
+      policyId: 55,
+      userId: 2,
+      role: "Admin",
+      comment: 42 as unknown as string,
+    }).catch((e) => e);
+    expect(error).toBeInstanceOf(ValidationException);
+    expect(error.message).toBe(POLICY_APPROVAL_MESSAGES.commentNotText);
     expect(error.metadata.field).toBe("comment");
     expect(mockTransactionFactory).not.toHaveBeenCalled();
   });
@@ -537,6 +556,60 @@ describe("getPolicyApprovalState", () => {
       can_withdraw: false,
     });
   });
+
+  it("hides an approval once the policy was moved by hand away from Approved", async () => {
+    grant("policy.edit");
+    routeDb({
+      stateRow: { ...stateRow, status: "Draft", review_status: "approved", review_comment: "OK" },
+      usable: [workflowA],
+    });
+
+    const state = await getPolicyApprovalState({
+      orgId: 1,
+      policyId: 55,
+      userId: 3,
+      role: "Editor",
+    });
+
+    expect(state).toEqual(
+      expect.objectContaining({
+        review_status: null,
+        review_comment: null,
+        reviewed_by: null,
+        reviewed_by_name: null,
+        reviewed_at: null,
+        can_submit: true,
+      }),
+    );
+  });
+
+  it.each(["Approved", "Published"])(
+    "keeps showing the approval on a %s policy",
+    async (status) => {
+      grant("policy.edit");
+      routeDb({
+        stateRow: { ...stateRow, status, review_status: "approved", review_comment: "OK" },
+        usable: [workflowA],
+      });
+
+      const state = await getPolicyApprovalState({
+        orgId: 1,
+        policyId: 55,
+        userId: 3,
+        role: "Editor",
+      });
+
+      expect(state).toEqual(
+        expect.objectContaining({
+          review_status: "approved",
+          review_comment: "OK",
+          reviewed_by: 5,
+          reviewed_by_name: "Grace Hopper",
+          reviewed_at: stateRow.reviewed_at,
+        }),
+      );
+    },
+  );
 
   it("lets an Admin approve directly only when no workflow is usable", async () => {
     grant("policy.edit", "organization.admin");
@@ -653,15 +726,44 @@ describe("getPolicyApprovalState", () => {
   });
 });
 
+describe("assertPolicyDirectApprovalPossible", () => {
+  it("passes for an Admin when no workflow is usable", async () => {
+    mockRole.mockImplementation(
+      async (_o: number, _r: string, key: string) => key === "organization.admin",
+    );
+    routeDb({ usable: [] });
+    await expect(assertPolicyDirectApprovalPossible(1, "Admin")).resolves.toBeUndefined();
+  });
+
+  it("403 for a non-Admin, without reading workflows", async () => {
+    routeDb({ usable: [] });
+    await expect(assertPolicyDirectApprovalPossible(1, "Editor")).rejects.toBeInstanceOf(
+      ForbiddenException,
+    );
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
+  it("409 when the organization has a usable workflow", async () => {
+    mockRole.mockImplementation(
+      async (_o: number, _r: string, key: string) => key === "organization.admin",
+    );
+    routeDb({ usable: [workflowA] });
+    await expect(assertPolicyDirectApprovalPossible(1, "Admin")).rejects.toBeInstanceOf(
+      ConflictException,
+    );
+    expect(mockTransactionFactory).not.toHaveBeenCalled();
+  });
+});
+
 describe("rejectPendingPolicyRequestOnDelete", () => {
   it("does nothing when no request is pending", async () => {
-    routeDb({ pending: null });
+    routeDb({ policy: draftPolicy, pending: null });
     expect(await rejectPendingPolicyRequestOnDelete(1, 55, tx as any)).toBeNull();
     expect(rejectApprovalRequestOnEntityDelete).not.toHaveBeenCalled();
   });
 
   it("rejects the pending request in the delete transaction and notifies after commit", async () => {
-    routeDb({ pending: pendingRow });
+    routeDb({ policy: draftPolicy, pending: pendingRow });
     const info = {
       type: "requester_rejected",
       organizationId: 1,
@@ -680,9 +782,21 @@ describe("rejectPendingPolicyRequestOnDelete", () => {
       POLICY_APPROVAL_MESSAGES.deletedReason,
       tx,
     );
-    // The pending lookup ran in the same transaction.
-    const lookup = mockQuery.mock.calls.find((c) => /FROM approval_requests ar/.test(String(c[0])));
-    expect(lookup![1].transaction).toBe(tx);
+    // The policy row is locked first, then the pending lookup runs, both in
+    // the delete's transaction and scoped to the organization.
+    const sqls = mockQuery.mock.calls.map((c) => String(c[0]));
+    const lockAt = sqls.findIndex((q) => /FROM policy_manager[\s\S]*FOR UPDATE/.test(q));
+    const lookupAt = sqls.findIndex((q) => /FROM approval_requests ar/.test(q));
+    expect(lockAt).toBeGreaterThanOrEqual(0);
+    expect(lockAt).toBeLessThan(lookupAt);
+    expect(sqls[lockAt]).toMatch(/organization_id = :organizationId/);
+    expect(mockQuery.mock.calls[lockAt][1]).toEqual(
+      expect.objectContaining({
+        transaction: tx,
+        replacements: expect.objectContaining({ organizationId: 1, policyId: 55 }),
+      }),
+    );
+    expect(mockQuery.mock.calls[lookupAt][1].transaction).toBe(tx);
     // Notification waits for the commit.
     expect(notifyRequesterRejected).not.toHaveBeenCalled();
     expect(tx.afterCommit).toHaveBeenCalledTimes(1);
@@ -691,5 +805,14 @@ describe("rejectPendingPolicyRequestOnDelete", () => {
       rejector_name: "System",
       rejection_reason: POLICY_APPROVAL_MESSAGES.deletedReason,
     });
+  });
+
+  it("does nothing when the policy does not exist, without reading requests", async () => {
+    routeDb({ policy: null, pending: pendingRow });
+    expect(await rejectPendingPolicyRequestOnDelete(1, 55, tx as any)).toBeNull();
+    expect(mockQuery.mock.calls.some((c) => /FROM approval_requests ar/.test(String(c[0])))).toBe(
+      false,
+    );
+    expect(rejectApprovalRequestOnEntityDelete).not.toHaveBeenCalled();
   });
 });

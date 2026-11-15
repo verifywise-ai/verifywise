@@ -198,7 +198,8 @@ describe("withdrawApprovalRequestQuery", () => {
   it("withdraws only a pending request", async () => {
     mockQuery.mockResolvedValue([]);
 
-    await withdrawApprovalRequestQuery(7, 1, transaction, { changedBy: 3 });
+    // Nothing pending matched: reported as not withdrawn.
+    expect(await withdrawApprovalRequestQuery(7, 1, transaction, { changedBy: 3 })).toBe(false);
 
     const [sql, options] = mockQuery.mock.calls[0];
     expect(sql).toMatch(/AND status = :pending/);
@@ -216,7 +217,7 @@ describe("withdrawApprovalRequestQuery", () => {
   it("sends a withdrawn policy back to draft with the withdrawer as actor", async () => {
     mockQuery.mockResolvedValue([{ entity_type: "policy", entity_id: 55 }]);
 
-    await withdrawApprovalRequestQuery(7, 1, transaction, { changedBy: 3 });
+    expect(await withdrawApprovalRequestQuery(7, 1, transaction, { changedBy: 3 })).toBe(true);
 
     expect(mockApply).toHaveBeenCalledWith({
       organizationId: 1,

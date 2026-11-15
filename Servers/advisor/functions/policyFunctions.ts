@@ -606,6 +606,7 @@ import { recordPolicyStatusChange } from "../../utils/policyApprovalDecision.uti
 import { ValidationException } from "../../domain.layer/exceptions/custom.exception";
 import {
   approvePolicyDirectly,
+  assertPolicyDirectApprovalPossible,
   rejectPendingPolicyRequestOnDelete,
   submitPolicyForApproval,
 } from "../../services/policies/policyApproval.service";
@@ -771,7 +772,7 @@ const agentSubmitPolicyForReview = createWriteToolFn({
   },
 });
 
-const agentApprovePolicyReview = createWriteToolFn({
+const approvePolicyReviewTool = createWriteToolFn({
   toolName: "agent_approve_policy_review",
   warningLevel: "warning",
   descriptionFn: (params) =>
@@ -789,6 +790,25 @@ const agentApprovePolicyReview = createWriteToolFn({
     });
   },
 });
+
+/**
+ * The approval gate queues this tool for an Admin's sign-off
+ * (rule `policy-review-requires-reviewer`) and then runs it as the user who
+ * asked. A non-Admin, or an organization with a usable workflow, would be
+ * refused only after that sign-off, so both are refused here, before
+ * anything is queued. The executor still checks both when it runs.
+ */
+const agentApprovePolicyReview = async (
+  params: Record<string, unknown>,
+  organizationId: number,
+) => {
+  const userId = (params._userId as number) || 0;
+  await assertPolicyDirectApprovalPossible(
+    organizationId,
+    await getActingRole(userId, organizationId),
+  );
+  return approvePolicyReviewTool(params, organizationId);
+};
 
 const agentDeletePolicy = createWriteToolFn({
   toolName: "agent_delete_policy",

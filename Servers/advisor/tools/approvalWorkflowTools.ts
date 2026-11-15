@@ -240,7 +240,7 @@ export const toolsDefinition: any[] = [
     function: {
       name: "agent_withdraw_approval_request",
       description:
-        "Withdraw a pending approval request. This cancels the request so it no longer requires approval. Only the original requester should withdraw their own requests. Requires user confirmation before executing.",
+        "Withdraw a pending approval request. This cancels the request so it no longer requires approval. Only the user who made the request can withdraw it, and only while it is pending. Requires user confirmation before executing.",
       parameters: {
         type: "object",
         properties: {

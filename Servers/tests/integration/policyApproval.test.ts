@@ -463,6 +463,14 @@ describe("Policy approval through approval workflows", () => {
         .patch("/api/policies/bulk")
         .send({ ids: [policyId], action: "archive" });
       expect(bulk.status).toBe(400);
+      // The message names the policy that blocked the archive.
+      const [{ title }] = await sequelize.query<{ title: string }>(
+        "SELECT title FROM policy_manager WHERE id = :policyId",
+        { replacements: { policyId }, type: QueryTypes.SELECT },
+      );
+      expect(bulk.body.data).toBe(
+        `Withdraw the approval request before archiving these policies: "${title}"`,
+      );
 
       expect((await readPolicy(policyId)).status).toBe("Under Review");
       expect(await pendingRequests("policy", policyId)).toBe(1);
