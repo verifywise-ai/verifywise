@@ -342,6 +342,7 @@ const RiskManagement = () => {
       { id: "mitigation_status", label: "Mitigation status" },
       { id: "risk_level", label: "Risk level" },
       { id: "deadline", label: "Target date" },
+      { id: "controls_mapping", label: "Controls" },
     ];
   }, []);
 
@@ -359,6 +360,7 @@ const RiskManagement = () => {
         mitigation_status: risk.mitigation_status || "-",
         risk_level: getEffectiveRiskLevel(risk) || "-",
         deadline: toLocalDateOnly(riskCalendarDay(risk.deadline)) || "-",
+        controls_mapping: risk.controls_mapping || "-",
       };
     });
   }, [filteredRisks, users]);
