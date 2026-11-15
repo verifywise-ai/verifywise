@@ -3,6 +3,7 @@ import { STATUS_CODE } from "../utils/statusCode.utils";
 import { ExtensionModel } from "../domain.layer/models/extension/extension.model";
 import { ExtensionEnablementModel } from "../domain.layer/models/extension/extensionEnablement.model";
 import { sanitizeForLog } from "../utils/validations/validation.utils";
+import logger from "../utils/logger/fileLogger";
 
 /**
  * Per-extension route gate. Fails with 403 when the caller's organization
@@ -76,7 +77,12 @@ async function checkEnabled(
 
     next();
   } catch (err) {
-    res.status(500).json(STATUS_CODE[500]((err as Error).message));
+    // The cause goes to the log only: a database error message is not for the client.
+    logger.error(
+      `Extension gate: enablement check failed for '${sanitizeForLog(extensionKey)}' (org ${organizationId}):`,
+      err,
+    );
+    res.status(500).json(STATUS_CODE[500](req.t!("Internal server error")));
   }
 }
 
