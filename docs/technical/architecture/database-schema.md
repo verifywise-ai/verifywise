@@ -282,9 +282,19 @@ CREATE TABLE vendors (
   -- The other names the vendor is known by, separated by commas ("Facebook" for "Meta Platforms");
   -- a legal form after a comma is part of the name before it ("Acme Analytics, Inc.").
   -- The vendor research names the vendor by them as well.
-  other_names TEXT
+  other_names TEXT,
+  -- Identifiers the vendor can give. A vendor risk database list that carries the same
+  -- identifier matches the vendor strongly, not by its name alone. All are optional.
+  country CHAR(2) CHECK (country ~ '^[A-Z]{2}$'),            -- ISO 3166-1 alpha-2
+  registration_number VARCHAR(64),                            -- company registration number
+  lei CHAR(20) CHECK (lei ~ '^[A-Z0-9]{18}[0-9]{2}$'),       -- ISO 17442
+  sec_cik CHAR(10) CHECK (sec_cik ~ '^[0-9]{10}$')           -- SEC CIK, ten digits
 );
 ```
+
+The vendor research and vendor risk database tables (`vendor_research_*`,
+`vendor_vrdb_matches`, `vendor_risk_findings` and the shared `vrdb_*` lists) are
+described in [vendors.md](../domains/vendors.md).
 
 **Review Status Values:**
 - Not started

@@ -218,7 +218,7 @@ The user-guide audit (`docs/user-guide-audit/_summary.md`) found 89 findings acr
 | Reporting | `/reporting` | ✅ | ✅ | ✅ | No | E2E + API |
 | AI Trust Center | `/ai-trust-center/*` | ✅ | ✅ | ✅ | No | E2E + API |
 | **Governance** |
-| Vendors | `/vendors`, `/vendors/risks` | ✅ | ✅ | ✅ | No | E2E + API |
+| Vendors | `/vendors`, `/vendors/risks`, `/vendors/research-findings`, `/vendors/insights` | ✅ | ✅ | ✅ | No | E2E + API |
 | Policy manager | `/policies/*` | ✅ | ✅ | ✅ | No | E2E + API |
 | Incident management | `/ai-incident-managements` | ✅ | ❌ | ✅ | No | API + E2E |
 | Frameworks | `/framework/*`, `/projects/:projectId/framework/:frameworkId` | ✅ | ✅ | ✅ | No | E2E + API |
