@@ -1,5 +1,9 @@
-import { getAllPoliciesQuery } from "../../utils/policyManager.utils";
-import { POLICY_REVIEW_DATE_SQL, toReviewDateValue } from "../../utils/policyReviewDate.utils";
+import { getAllPoliciesQuery, omitReminderStamps } from "../../utils/policyManager.utils";
+import {
+  CLEAR_REVIEW_REMINDERS_ON_DATE_CHANGE_SQL,
+  POLICY_REVIEW_DATE_SQL,
+  toReviewDateValue,
+} from "../../utils/policyReviewDate.utils";
 import { getPolicyTemplatesQuery } from "../../utils/policyTemplate.utils";
 import { POLICY_TAGS } from "../../domain.layer/interfaces/i.policy";
 import { POLICY_STATUS_ENUM } from "../../utils/validations/policiesValidation.utils";
@@ -632,7 +636,7 @@ const agentCreatePolicy = createWriteToolFn({
       },
     );
 
-    return result;
+    return omitReminderStamps(result as Record<string, any>);
   },
 });
 
@@ -677,7 +681,9 @@ const agentUpdatePolicy = createWriteToolFn({
       replacements.tags = params.tags as string[];
     }
     if (params.review_date !== undefined) {
-      updateFields.push("next_review_date = :next_review_date");
+      updateFields.push(
+        `next_review_date = :next_review_date, ${CLEAR_REVIEW_REMINDERS_ON_DATE_CHANGE_SQL}`,
+      );
       replacements.next_review_date = toReviewDateValue(params.review_date);
     }
 
@@ -693,7 +699,7 @@ const agentUpdatePolicy = createWriteToolFn({
       throw new Error(`Policy #${policyId} not found`);
     }
 
-    return result;
+    return omitReminderStamps(result as Record<string, any>);
   },
 });
 
@@ -723,7 +729,7 @@ const agentSubmitPolicyForReview = createWriteToolFn({
       throw new Error(`Policy #${policyId} not found`);
     }
 
-    return result;
+    return omitReminderStamps(result as Record<string, any>);
   },
 });
 
@@ -755,7 +761,7 @@ const agentApprovePolicyReview = createWriteToolFn({
       throw new Error(`Policy #${policyId} not found`);
     }
 
-    return result;
+    return omitReminderStamps(result as Record<string, any>);
   },
 });
 

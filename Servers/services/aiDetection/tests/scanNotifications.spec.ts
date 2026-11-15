@@ -17,7 +17,6 @@ import {
 import { getScanByIdQuery } from "../../../utils/aiDetection.utils";
 import {
   claimScanNotificationQuery,
-  getActiveAutomationActionsQuery,
   getCountedScanFindingsQuery,
   getPreviousCompletedScanQuery,
   getPreviousScanFindingsQuery,
@@ -25,6 +24,7 @@ import {
   IScanFindingKey,
   IScanRecipient,
 } from "../../../utils/aiDetectionNotification.utils";
+import { getActiveAutomationActionsQuery } from "../../../utils/automation/automationActions.utils";
 import { sendInAppNotification } from "../../inAppNotification.service";
 import { enqueueAutomationAction } from "../../automations/automationProducer";
 import {
@@ -33,16 +33,20 @@ import {
 } from "../../../utils/automation/aiDetection.automation.utils";
 import { IScan, IRiskScoreDetails } from "../../../domain.layer/interfaces/i.aiDetection";
 import { getUserLanguage } from "../../../utils/userPreference.utils";
+import logger from "../../../utils/logger/fileLogger";
 import { translate } from "../../../utils/i18n.utils";
 
 jest.mock("../../../utils/aiDetection.utils", () => ({ getScanByIdQuery: jest.fn() }));
 jest.mock("../../../utils/aiDetectionNotification.utils", () => ({
   claimScanNotificationQuery: jest.fn(),
-  getActiveAutomationActionsQuery: jest.fn(),
   getCountedScanFindingsQuery: jest.fn(),
   getPreviousCompletedScanQuery: jest.fn(),
   getPreviousScanFindingsQuery: jest.fn(),
   getScanRecipientsQuery: jest.fn(),
+}));
+jest.mock("../../../utils/automation/automationActions.utils", () => ({
+  ...jest.requireActual("../../../utils/automation/automationActions.utils"),
+  getActiveAutomationActionsQuery: jest.fn(),
 }));
 jest.mock("../../inAppNotification.service", () => ({
   sendInAppNotification: jest.fn(),
@@ -472,6 +476,64 @@ describe("notifyAiDetectionScanFinished", () => {
     ]);
     const highRiskJob = mockEnqueue.mock.calls.find(([, data]) => data.automation_id === 2)![1];
     expect(highRiskJob.body).toMatch(/^1 new: eval http.*\/ai-detection\/scans\/42$/);
+  });
+
+  it("runs every action even of automations flagged legacy_first_action_only", async () => {
+    mockAutomations.mockImplementation(async (_org: number, key: string) =>
+      key === "ai_detection_scan_completed"
+        ? [
+            {
+              automation_id: 1,
+              action_key: "send_email",
+              params: {},
+              order: 1,
+              legacy_first_action_only: true,
+            },
+            {
+              automation_id: 1,
+              action_key: "send_slack",
+              params: {},
+              order: 2,
+              legacy_first_action_only: true,
+            },
+            {
+              automation_id: 2,
+              action_key: "send_email",
+              params: {},
+              order: 1,
+              legacy_first_action_only: true,
+            },
+          ]
+        : [],
+    );
+
+    await notifyAiDetectionScanFinished(42, ORG);
+
+    expect(mockEnqueue.mock.calls.map(([key, data]) => `${key}:${data.automation_id}`)).toEqual([
+      "send_email:1",
+      "send_slack:1",
+      "send_email:2",
+    ]);
+  });
+
+  it("logs a failed enqueue with the scan id and still enqueues the other actions", async () => {
+    mockAutomations.mockImplementation(async (_org: number, key: string) =>
+      key === "ai_detection_scan_completed"
+        ? [
+            { automation_id: 1, action_key: "send_email", params: { subject: "a" } },
+            { automation_id: 1, action_key: "send_slack", params: { subject: "b" } },
+          ]
+        : [],
+    );
+    mockEnqueue.mockRejectedValueOnce(new Error("redis down"));
+
+    await notifyAiDetectionScanFinished(42, ORG);
+
+    expect(mockEnqueue).toHaveBeenCalledTimes(2);
+    const errors = (logger.error as jest.Mock).mock.calls.map(([msg]) => String(msg));
+    expect(errors.filter((msg) => msg.includes("enqueue failed"))).toEqual([
+      expect.stringContaining("scan 42"),
+    ]);
   });
 });
 

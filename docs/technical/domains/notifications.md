@@ -229,7 +229,7 @@ const rateLimitConfig = {
 | `PROJECT_CREATED_ADMIN` | Project creation |
 | `USER_ADDED_PROJECT_*` | Member addition (by role) |
 | `MEMBER_ROLE_CHANGED_*` | Role changes |
-| `POLICY_DUE_SOON` | Policy review reminders |
+| `POLICY_REVIEW_REMINDER` | Policy review due soon or overdue (daily sweep) |
 | `AI_DETECTION_SCAN_ALERT` | AI Detection scan needs attention, or a scheduled/webhook scan failed |
 
 ### Queue Processing
@@ -303,8 +303,8 @@ sendUserAddedToProjectNotification(userId, projectId, role)
 sendMemberRoleChangedEditorToAdminNotification(userId, projectId)
 sendProjectCreatedNotification(adminId, projectId)
 
-// Policy notifications
-sendPolicyDueSoonNotification(policyId, dueDate)
+// Policy notifications (daily review reminder sweep)
+notifyPolicyReviewReminder(organizationId, userId, policy, kind, baseUrl)
 ```
 
 ## Post-Market Monitoring Notifications

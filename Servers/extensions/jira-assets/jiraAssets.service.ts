@@ -5,6 +5,7 @@ import {
   JiraAssetsClient,
   JiraObject,
   JiraUpstreamError,
+  jiraId,
   MAX_PAGES,
   PAGE_SIZE,
   WORKER_SYNC_DEADLINE_MS,
@@ -23,6 +24,7 @@ import {
 import { parseIntervalHours, saveSchedule } from "../sync-engine/schedule";
 import { sqlLastFinishedRun } from "../sync-engine/sql";
 import { legacyHighRiskRole, normalizeHighRiskRoles } from "../../utils/highRiskRoles.utils";
+import { projectVisibilitySql } from "../../utils/projectVisibility.utils";
 import { getRunStatus, listRuns, type RunListRow, type RunView } from "../sync-engine/status";
 import { ABANDONED_RUN_MESSAGE, SKIPPED_RUN_MESSAGE } from "../sync-engine/types";
 import type { Readiness, RunContext, RunResult, RunStatus } from "../sync-engine/types";
@@ -307,8 +309,8 @@ export async function saveConfig(
     workspaceId: body.workspace_id,
     email: body.email,
     deploymentType: body.deployment_type ?? "cloud",
-    selectedSchemaId: body.selected_schema_id ?? null,
-    selectedObjectTypeId: body.selected_object_type_id ?? null,
+    selectedSchemaId: parseSelectionId(body.selected_schema_id, "selected_schema_id"),
+    selectedObjectTypeId: parseSelectionId(body.selected_object_type_id, "selected_object_type_id"),
     userId,
   };
 
@@ -414,15 +416,15 @@ export async function updateSyncSettings(
   return { sync_enabled: saved.enabled, sync_interval_hours: saved.interval_hours };
 }
 
-const JIRA_ID_PATTERN = /^[A-Za-z0-9:_-]{1,100}$/;
-
+/**
+ * A selected schema or object type id as stored: null for a cleared or
+ * missing selection (undefined, null or ""), otherwise the numeric Jira id
+ * the client accepts (jiraId). Anything else is JiraInvalidIdError (400),
+ * so no id the client would refuse is ever saved.
+ */
 function parseSelectionId(raw: unknown, field: string): string | null {
-  if (raw === null || raw === "") return null;
-  const value = typeof raw === "number" ? String(raw) : raw;
-  if (typeof value !== "string" || !JIRA_ID_PATTERN.test(value)) {
-    throw new JiraConfigValidationError(`${field} must be a Jira id or empty`);
-  }
-  return value;
+  if (raw === undefined || raw === null || raw === "") return null;
+  return jiraId(raw, field);
 }
 
 /**
@@ -1364,14 +1366,54 @@ export async function runJiraSync(ctx: RunContext): Promise<RunResult> {
 // Use-case reads / delete
 // ---------------------------------------------------------------------------
 
-export async function listUseCases(organizationId: number): Promise<any[]> {
+/**
+ * Whether members may read this object type's attribute schema: it is the
+ * organization's configured object type, or the type of one of its imported
+ * use cases (`data->'objectType'->>'id'`, the id the use case Settings tab
+ * passes). Any other id would let a member make arbitrary live Jira calls
+ * with the organization's stored credentials.
+ */
+export async function isObjectTypeInUse(
+  organizationId: number,
+  objectTypeId: string,
+): Promise<boolean> {
+  const rows = (await sequelize.query(
+    `SELECT 1
+       FROM jira_assets_config c
+      WHERE c.organization_id = :organizationId
+        AND c.selected_object_type_id = :objectTypeId
+     UNION ALL
+     SELECT 1
+       FROM jira_assets_use_cases j
+      WHERE j.organization_id = :organizationId
+        AND j.data->'objectType'->>'id' = :objectTypeId
+      LIMIT 1;`,
+    { replacements: { organizationId, objectTypeId }, type: QueryTypes.SELECT },
+  )) as unknown[];
+  return rows.length > 0;
+}
+
+/**
+ * The organization's Jira-linked use cases the viewer can see, by the rule
+ * that scopes the core use case list (projectVisibilitySql): Admins every
+ * one, everyone else those they own, are a member of or reach through a
+ * group. A link whose project is gone is visible to Admins only.
+ */
+export async function listUseCases(
+  organizationId: number,
+  viewer: { userId: number; role: string },
+): Promise<any[]> {
+  const visibility = projectVisibilitySql("p", viewer);
   return (await sequelize.query(
     `SELECT j.*, p.uc_id, p.project_title AS name
        FROM jira_assets_use_cases j
   LEFT JOIN projects p ON j.project_id = p.id AND p.organization_id = :organizationId
-      WHERE j.organization_id = :organizationId
+      WHERE j.organization_id = :organizationId${visibility.sql}
       ORDER BY j.created_at DESC;`,
-    { replacements: { organizationId }, type: QueryTypes.SELECT },
+    {
+      replacements: { organizationId, ...visibility.replacements },
+      type: QueryTypes.SELECT,
+    },
   )) as any[];
 }
 

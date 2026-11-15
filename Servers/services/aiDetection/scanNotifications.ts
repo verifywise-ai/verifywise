@@ -50,7 +50,6 @@ import logger from "../../utils/logger/fileLogger";
 import { getScanByIdQuery } from "../../utils/aiDetection.utils";
 import {
   claimScanNotificationQuery,
-  getActiveAutomationActionsQuery,
   getCountedScanFindingsQuery,
   getPreviousCompletedScanQuery,
   getPreviousScanFindingsQuery,
@@ -64,11 +63,13 @@ import {
   IAiDetectionScanSummary,
   listFindingNames,
 } from "../../utils/automation/aiDetection.automation.utils";
-import { replaceTemplateVariables } from "../../utils/automation/automation.utils";
+import {
+  enqueueAutomationActions,
+  getActiveAutomationActionsQuery,
+} from "../../utils/automation/automationActions.utils";
 import { escapeHtml } from "../../utils/sanitization.utils";
 import { translate } from "../../utils/i18n.utils";
 import { getUserLanguage } from "../../utils/userPreference.utils";
-import { enqueueAutomationAction } from "../automations/automationProducer";
 import { sendInAppNotification, buildEntityUrl } from "../inAppNotification.service";
 import { EMAIL_TEMPLATES } from "../../constants/emailTemplates";
 import {
@@ -274,31 +275,20 @@ const repositoryOf = (scan: IScan) => `${scan.repository_owner}/${scan.repositor
 const scanActionUrl = (scanId: number) =>
   buildEntityUrl(NotificationEntityType.AI_DETECTION_SCAN, scanId);
 
-/** Enqueue every active automation of `triggerKey`; one failure does not stop the rest. */
+/** Enqueue every action of every active automation of `triggerKey`; one failure does not stop the rest. */
 async function runAutomations(
   organizationId: number,
   triggerKey: string,
   summary: IAiDetectionScanSummary,
 ): Promise<void> {
-  const rows = await getActiveAutomationActionsQuery(organizationId, triggerKey);
-  if (rows.length === 0) return;
-  const replacements = buildAiDetectionScanReplacements(summary);
-  for (const row of rows) {
-    try {
-      const params = row.params || {};
-      await enqueueAutomationAction(row.action_key, {
-        ...params,
-        subject: replaceTemplateVariables(params.subject || "", replacements),
-        body: replaceTemplateVariables(params.body || "", replacements),
-        automation_id: row.automation_id,
-        organizationId,
-      });
-    } catch (error) {
-      logger.error(
-        `[ai-detection] ${triggerKey} automation ${row.automation_id} enqueue failed for scan ${summary.scanId}: ${String(error)}`,
-      );
-    }
-  }
+  const actions = await getActiveAutomationActionsQuery(organizationId, triggerKey);
+  await enqueueAutomationActions(
+    actions,
+    buildAiDetectionScanReplacements(summary),
+    organizationId,
+    undefined,
+    `ai-detection ${triggerKey}, scan ${summary.scanId}`,
+  );
 }
 
 /** Each recipient's saved language, read once per recipient. */

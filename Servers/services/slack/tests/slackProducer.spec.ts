@@ -9,12 +9,14 @@
 const mockObliterate = jest.fn().mockResolvedValue(undefined);
 const mockAdd = jest.fn().mockResolvedValue({ id: "job-1" });
 const mockUpsertJobScheduler = jest.fn().mockResolvedValue({ id: "job-1" });
+const mockRemoveJobScheduler = jest.fn().mockResolvedValue(true);
 
 jest.mock("bullmq", () => ({
   Queue: jest.fn().mockImplementation(() => ({
     obliterate: mockObliterate,
     add: mockAdd,
     upsertJobScheduler: mockUpsertJobScheduler,
+    removeJobScheduler: mockRemoveJobScheduler,
   })),
 }));
 
@@ -28,35 +30,22 @@ jest.mock("../../../database/redis", () => ({
 }));
 
 import { Queue } from "bullmq";
-import { scheduleDailyNotification } from "../slackProducer";
+import { removeRetiredSlackPolicyScheduler } from "../slackProducer";
 
 describe("slackProducer", () => {
   beforeEach(() => {
     mockObliterate.mockClear();
     mockAdd.mockClear();
     mockUpsertJobScheduler.mockClear();
+    mockRemoveJobScheduler.mockClear();
   });
 
-  describe("scheduleDailyNotification", () => {
-    it("should obliterate existing jobs before adding new ones", async () => {
-      await scheduleDailyNotification();
-      expect(mockObliterate).toHaveBeenCalledWith({ force: true });
-    });
-
-    it("should schedule policy notification job with cron pattern", async () => {
-      await scheduleDailyNotification();
-      expect(mockUpsertJobScheduler).toHaveBeenCalledWith(
-        "slack-notification-policy",
-        { pattern: "0 9 * * *" },
-        expect.objectContaining({
-          name: "slack-notification-policy",
-          data: { type: "policies" },
-          opts: expect.objectContaining({
-            removeOnComplete: true,
-            removeOnFail: false,
-          }),
-        }),
-      );
+  describe("removeRetiredSlackPolicyScheduler", () => {
+    it("removes the retired policy Slack scheduler and schedules nothing", async () => {
+      await removeRetiredSlackPolicyScheduler();
+      expect(mockRemoveJobScheduler).toHaveBeenCalledWith("slack-notification-policy");
+      expect(mockUpsertJobScheduler).not.toHaveBeenCalled();
+      expect(mockObliterate).not.toHaveBeenCalled();
     });
   });
 

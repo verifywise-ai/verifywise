@@ -1,7 +1,11 @@
-import { Request, Response } from "express";
+import { NextFunction, Request, Response } from "express";
 import { STATUS_CODE } from "../../utils/statusCode.utils";
 import logger, { logStructured } from "../../utils/logger/fileLogger";
 import { translateError } from "../../utils/i18n.utils";
+import {
+  ForbiddenException,
+  ValidationException,
+} from "../../domain.layer/exceptions/custom.exception";
 import * as svc from "./modelLifecycle.service";
 
 const fileName = "modelLifecycle.ctrl.ts";
@@ -42,9 +46,55 @@ function invalidOrderedIds(req: Request, res: Response) {
 }
 
 function fail(res: Response, error: unknown, req: Request, where: string) {
+  // Rejected input, such as a person or approver outside the organization.
+  if (error instanceof ValidationException) {
+    return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+  }
+  // A decision on another approver's row.
+  if (error instanceof ForbiddenException) {
+    return res.status(403).json(STATUS_CODE[403](translateError(req, error)));
+  }
   logStructured("error", `model-lifecycle ${where} failed`, where, fileName);
   logger.error(`❌ Error in ${where}:`, error);
   return res.status(500).json(STATUS_CODE[500](translateError(req, error)));
+}
+
+// ---- Organization scope ------------------------------------------------
+
+/**
+ * Mounted on every /models/:id/lifecycle route: 404 when the model is not in
+ * the caller's organization, before any read or write. The same answer for a
+ * model of another organization and an unknown id reveals nothing.
+ */
+export async function requireModelInOrganization(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<any> {
+  try {
+    if (!(await svc.modelInOrganization(orgId(req), intParam(req, "id")))) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("Model not found")));
+    }
+    return next();
+  } catch (err) {
+    return fail(res, err, req, "requireModelInOrganization");
+  }
+}
+
+/** Mounted on every per-model item route: 404 for an item outside the organization. */
+export async function requireItemInOrganization(
+  req: Request,
+  res: Response,
+  next: NextFunction,
+): Promise<any> {
+  try {
+    if (!(await svc.itemInOrganization(orgId(req), intParam(req, "itemId")))) {
+      return res.status(404).json(STATUS_CODE[404](req.t!("Lifecycle item not found")));
+    }
+    return next();
+  } catch (err) {
+    return fail(res, err, req, "requireItemInOrganization");
+  }
 }
 
 // ---- Phases + items config ---------------------------------------------
@@ -296,6 +346,14 @@ export async function removeApproverCtrl(req: Request, res: Response): Promise<a
 }
 
 export async function updateApprovalStatusCtrl(req: Request, res: Response): Promise<any> {
+  // Only the named approver decides their own row. There is no Admin
+  // override: an Admin who needs another outcome removes or replaces the
+  // approver, which the change history records.
+  if (intParam(req, "userId") !== uid(req)) {
+    return res
+      .status(403)
+      .json(STATUS_CODE[403](req.t!("Only the assigned approver can record this decision")));
+  }
   const status = req.body?.status;
   if (!status || !["pending", "approved", "rejected"].includes(status)) {
     return res

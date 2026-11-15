@@ -33,13 +33,6 @@ const PATHS_SQL = `CASE WHEN finding_type IN (:pathTrackedTypes) AND jsonb_typeo
                         WHERE e->>'path' IS NOT NULL)
           END AS paths`;
 
-/** One action row of an active automation, as the other triggers read it. */
-export interface IAutomationActionRow {
-  automation_id: number;
-  action_key: string;
-  params: Record<string, any> | null;
-}
-
 /**
  * The most recent completed scan of the same repository before `scan`, or
  * null when `scan` is the first. Any scan mode counts: the question is what
@@ -191,24 +184,4 @@ export async function claimScanNotificationQuery(
     { replacements: { organizationId, scanId, status }, type: QueryTypes.SELECT },
   );
   return rows.length > 0;
-}
-
-/**
- * Every action row of every active automation of the organization that uses
- * `triggerKey`, in action order. Same join the vendor and incident triggers use.
- */
-export async function getActiveAutomationActionsQuery(
-  organizationId: number,
-  triggerKey: string,
-): Promise<IAutomationActionRow[]> {
-  return sequelize.query<IAutomationActionRow>(
-    `SELECT a.id AS automation_id, paa.key AS action_key, aa.params
-       FROM automation_triggers pat
-       JOIN automations a ON a.trigger_id = pat.id AND a.organization_id = :organizationId
-       JOIN automation_actions_data aa ON a.id = aa.automation_id AND aa.organization_id = :organizationId
-       JOIN automation_actions paa ON aa.action_type_id = paa.id
-      WHERE pat.key = :triggerKey AND a.is_active
-      ORDER BY a.id ASC, aa."order" ASC`,
-    { replacements: { organizationId, triggerKey }, type: QueryTypes.SELECT },
-  );
 }

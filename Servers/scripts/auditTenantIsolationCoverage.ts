@@ -153,41 +153,6 @@ const deferredScopedTables: SharedTableEntry[] = [
       "Extension-owned table (jira-assets). Every query in Servers/extensions/jira-assets/jiraAssets.service.ts filters by organization_id. UNIQUE(organization_id, jira_object_id). project_id references projects through a composite FK (project_id, organization_id), so a link cannot point at another organization's project. Deferred pending matrix coverage.",
   },
   {
-    name: "model_lifecycle_change_history",
-    justification:
-      "Extension-owned table (model-lifecycle). Every INSERT/SELECT in Servers/extensions/model-lifecycle/modelLifecycle.service.ts filters by organization_id. Deferred pending matrix coverage.",
-  },
-  {
-    name: "model_lifecycle_item_approvals",
-    justification:
-      "Extension-owned table (model-lifecycle). Access is org-scoped via the parent lifecycle_values row and enforced in Servers/extensions/model-lifecycle/modelLifecycle.service.ts. Deferred pending matrix coverage.",
-  },
-  {
-    name: "model_lifecycle_item_files",
-    justification:
-      "Extension-owned table (model-lifecycle). Access is org-scoped via the parent lifecycle_values row and enforced in Servers/extensions/model-lifecycle/modelLifecycle.service.ts. Deferred pending matrix coverage.",
-  },
-  {
-    name: "model_lifecycle_item_people",
-    justification:
-      "Extension-owned table (model-lifecycle). Access is org-scoped via the parent lifecycle_values row and enforced in Servers/extensions/model-lifecycle/modelLifecycle.service.ts. Deferred pending matrix coverage.",
-  },
-  {
-    name: "model_lifecycle_items",
-    justification:
-      "Extension-owned table (model-lifecycle). Every query in Servers/extensions/model-lifecycle/modelLifecycle.service.ts filters by organization_id. Deferred pending matrix coverage.",
-  },
-  {
-    name: "model_lifecycle_phases",
-    justification:
-      "Extension-owned table (model-lifecycle). Every query in Servers/extensions/model-lifecycle/modelLifecycle.service.ts filters by organization_id. Deferred pending matrix coverage.",
-  },
-  {
-    name: "model_lifecycle_values",
-    justification:
-      "Extension-owned table (model-lifecycle). Every query in Servers/extensions/model-lifecycle/modelLifecycle.service.ts filters by organization_id. UNIQUE(organization_id, model_inventory_id, item_id). Deferred pending matrix coverage.",
-  },
-  {
     name: "ai_action_audit_log",
     justification:
       "Deferred to a future isolation wave; not covered by the first-pass matrix. See runbook section 2.4.",

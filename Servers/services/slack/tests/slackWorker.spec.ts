@@ -18,17 +18,13 @@ jest.mock("../../../database/redis", () => ({
   REDIS_URL: "redis://localhost:6379",
 }));
 
-jest.mock("../policyDueSoonNotification", () => ({
-  sendPolicyDueSoonNotification: jest.fn(),
+jest.mock("../../../utils/logger/fileLogger", () => ({
+  default: { info: jest.fn(), warn: jest.fn(), error: jest.fn() },
+  __esModule: true,
 }));
 
 import { Worker, Job } from "bullmq";
-import { sendPolicyDueSoonNotification } from "../policyDueSoonNotification";
 import { createNotificationWorker } from "../slackWorker";
-
-const mockSendPolicyDueSoonNotification = sendPolicyDueSoonNotification as jest.MockedFunction<
-  typeof sendPolicyDueSoonNotification
->;
 
 describe("slackWorker", () => {
   beforeEach(() => {
@@ -53,8 +49,7 @@ describe("slackWorker", () => {
       expect(worker.on).toBe(mockWorkerOn);
     });
 
-    it("should process policies job and return success", async () => {
-      mockSendPolicyDueSoonNotification.mockResolvedValue(42);
+    it("completes a retired policies job without sending anything", async () => {
       createNotificationWorker();
 
       const processor = (Worker as jest.MockedFunction<typeof Worker>).mock.calls[0][1] as (
@@ -62,10 +57,7 @@ describe("slackWorker", () => {
       ) => Promise<any>;
       const result = await processor({ data: { type: "policies" } } as Job);
 
-      expect(mockSendPolicyDueSoonNotification).toHaveBeenCalled();
-      expect(result.success).toBe(true);
-      expect(result.policiesNotified).toBe(42);
-      expect(result.sentAt).toMatch(/^\d{4}-/);
+      expect(result).toEqual({ success: true, skipped: true });
     });
 
     it("should throw for unknown job type", async () => {

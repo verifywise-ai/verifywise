@@ -285,57 +285,18 @@ const notificationQueue = new Queue("slack-notifications", {
 
 ---
 
-### scheduleDailyNotification
+### removeRetiredSlackPolicyScheduler
 
-Schedules recurring notification jobs.
-
-**Signature:**
-
-```typescript
-async function scheduleDailyNotification(): Promise<void>;
-```
-
-**Behavior:**
-
-1. Obliterates existing jobs (clears queue)
-2. Schedules new jobs with cron patterns
-
-**Scheduled Jobs:**
-
-#### Policy Due Soon Notification
-
-**Job Name:** `slack-notification-policy`
-
-**Schedule:** Every day at 9:00 AM UTC
-
-- Cron: `0 9 * * *`
-
-**Job Data:**
+Removes the retired `slack-notification-policy` job scheduler (daily 9 AM policy
+reminder) from Redis. Called at startup from `jobs/producer.ts`.
 
 ```typescript
-{
-  type: "policies";
-}
+async function removeRetiredSlackPolicyScheduler(): Promise<void>;
 ```
 
-**Configuration:**
-
-- `repeat`: Cron pattern
-- `removeOnComplete`: true
-- `removeOnFail`: false
-
-**Purpose:**
-Sends daily reminders about policies approaching review dates.
-
-**Example:**
-
-```typescript
-await scheduleDailyNotification();
-// Schedules daily policy reminders at 9 AM UTC
-```
-
-**Usage:**
-Called during application startup to initialize scheduled jobs.
+Policy review reminders on Slack are now sent by the daily policy review
+reminder sweep (`services/automations/actions/policyReviewReminderSweep.ts`),
+through `sendSlackNotification` with routing type `POLICY_REMINDERS_AND_STATUS`.
 
 ---
 
@@ -397,8 +358,9 @@ const connection = new IORedis({
 ```typescript
 async (job: Job) => {
   if (job.data.type === "policies") {
-    const userId = await sendPolicyDueSoonNotification();
-    return { success: true, sentAt: new Date().toISOString(), userId };
+    // Retired: completes without sending.
+    logger.info("Skipping retired Slack job slack-notification-policy");
+    return { success: true, skipped: true };
   } else {
     throw new Error(`Unknown job type: ${job.data.type}`);
   }
@@ -407,15 +369,14 @@ async (job: Job) => {
 
 **Supported Job Types:**
 
-1. **policies**: Sends policy due soon notifications
+1. **policies**: Retired. A job queued before the deploy completes without sending; the policy review reminder sweep sends these messages now.
 
 **Return Value:**
 
 ```typescript
 {
   success: true,
-  sentAt: "2025-10-09T09:00:00.000Z",
-  userId: 1
+  skipped: true
 }
 ```
 
@@ -486,7 +447,6 @@ worker.on("failed", (job, err) => {
 
 **Internal:**
 
-- `services/slack/policyDueSoonNotification`: Notification logic
 - `utils/logger/logHelper`: Logging utilities
 
 **Environment Variables:**
