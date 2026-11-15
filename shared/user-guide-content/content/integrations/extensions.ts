@@ -14,7 +14,7 @@ export const extensionsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'All eight extensions ship with VerifyWise, so there is nothing to download or install. Each one stays off until an Admin enables it for the organization.',
+      text: 'All nine extensions ship with VerifyWise, so there is nothing to download or install. Each one stays off until an Admin enables it for the organization.',
     },
     {
       type: 'callout',
@@ -47,7 +47,7 @@ export const extensionsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The page lists one card per extension. Each card shows the extension name, its category and version (for example "ML Ops · v1.0.0"), and " · Configuration required" when you need to fill in settings before you can enable it. Enabled extensions carry an **Enabled** badge.',
+      text: 'The page lists one card per extension. Each card shows the extension name, its category and version (for example "ML Ops · v1.0.0"), and " · Configuration required" when you need to fill in settings before you can enable it. Enabled extensions carry an **Enabled** badge and disabled ones a **Disabled** badge.',
     },
     {
       type: 'heading',
@@ -69,7 +69,7 @@ export const extensionsContent: ArticleContent = {
         { button: 'Enable', meaning: 'Turns the extension on straight away. Shown when the extension needs no settings up front.' },
         { button: 'Configure to enable', meaning: 'Opens the settings page so you can fill in the required settings, then enable. Shown for MLflow and Azure AI Foundry.' },
         { button: 'Configure', meaning: 'Opens the settings page of an enabled extension that has settings.' },
-        { button: 'Disable', meaning: 'Turns the extension off. Shown once the extension is enabled.' },
+        { button: 'Disable', meaning: 'Asks you to confirm, then turns the extension off. Shown once the extension is enabled.' },
       ],
     },
     {
@@ -79,16 +79,16 @@ export const extensionsContent: ArticleContent = {
     {
       type: 'bullet-list',
       items: [
-        { bold: 'Configuration', text: 'A form with the extension\'s connection settings. Password and token fields are stored encrypted. Leave a secret field blank to keep the existing value. If you change the server URL or endpoint, enter the token, key or password again; if you change the username, enter the password again. A saved secret is never sent to a changed address.' },
+        { bold: 'Configuration', text: 'A form with the extension\'s connection settings. Password and token fields are stored encrypted. A secret that is already saved shows "Stored. Leave blank to keep it." Leave the field blank to keep it, or click **Clear** to remove it (**Undo** takes that back until you save). Other fields start with their saved values, and emptying one clears it when you save. If you change the server URL or endpoint, enter the token, key or password again; if you change the username, enter the password again. A saved secret is never sent to a changed address.' },
         { bold: 'Extension panel', text: 'Slack, Model Lifecycle, Jira Assets and Jira incidents show their own setup panel here once enabled.' },
         { bold: 'Enable / Disable', text: 'Turns the extension on or off.' },
         { bold: 'Save configuration', text: 'Saves changes to the Configuration form after the extension is enabled. You see "Configuration saved." when it works.' },
-        { bold: 'Test connection', text: 'Checks the saved settings against the external service. Available for MLflow, Azure AI Foundry and Jira incidents. Jira Assets has its own **Test Connection** button in its panel, and Jira incidents also has a **Test connection** button in its panel that checks the values you have typed before you save them. If the service answers with an error, the result shows only its HTTP status code, not the reply.' },
+        { bold: 'Test connection', text: 'Checks the settings against the external service. The settings page has this button for MLflow and Azure AI Foundry only, and it works before you enable the extension as well as after. The result appears under the buttons and clears when you edit a field. Jira Assets and Jira incidents have their own **Test connection** button in their panels. If the service answers with an error, the result shows only its HTTP status code, not the reply.' },
       ],
     },
     {
       type: 'paragraph',
-      text: 'If something goes wrong, the page shows the error returned by the server, or a short message such as "Enable failed", "Save failed" or "Test failed".',
+      text: 'If something goes wrong, the page shows the error returned by the server, or a short message such as "Enable failed", "Save failed" or "Test failed". On the Extensions page, a failed enable or disable shows the reason under the card\'s buttons, and a failed load has a **Try again** button.',
     },
     {
       type: 'heading',
@@ -98,7 +98,7 @@ export const extensionsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Click **Disable** on the card or on the settings page. The extension turns off immediately, without a confirmation step, and its tabs, buttons and menu items disappear from the app.',
+      text: 'Click **Disable** on the card or on the settings page. A dialog titled **Disable this extension?** asks you to confirm. It says the change applies to everyone in the organization and states what stops, for example that the Import from Excel menu item is hidden or that Slack notifications stop. Click **Disable** to confirm or **Cancel** to leave it on. Once confirmed, the extension turns off and its tabs, buttons and menu items disappear from the app.',
     },
     {
       type: 'callout',
@@ -128,6 +128,7 @@ export const extensionsContent: ArticleContent = {
         { name: 'Jira Assets Integration', category: 'Data management', summary: 'Imports "AI System" objects from Jira Service Management Assets as use cases' },
         { name: 'Jira incidents', category: 'Data management', summary: 'Imports new Jira issues as incidents and keeps their status in sync both ways' },
         { name: 'Dataset Bulk Upload', category: 'Data management', summary: 'Uploads many dataset files at once, with PII detection' },
+        { name: 'Framework Import', category: 'Data management', summary: 'Imports a compliance framework from an Excel file' },
       ],
     },
     {
@@ -262,7 +263,7 @@ export const extensionsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: '**Where it shows up:** a **View lifecycle** button on each row in **Model inventory** opens the model\'s lifecycle page.',
+      text: '**Where it shows up:** a **View lifecycle** button on each row in **Model inventory** opens the model\'s lifecycle page. While the extension is disabled, the link opens the model in **Model inventory** instead. If a change to a phase, item or answer does not save, the page says "Not saved. Try again." and keeps what you typed.',
     },
     {
       type: 'paragraph',
@@ -292,7 +293,7 @@ export const extensionsContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Columns marked with * in the template are required: Risk Name, Risk Owner, AI Lifecycle Phase, Likelihood and Severity. Each row also needs a Risk Description, or the import rejects that row. Admins and Editors can import risks.',
+      text: 'Columns marked with * in the template are required: Risk Name, Risk Owner, AI Lifecycle Phase, Risk Description, Likelihood and Severity. The import is all or nothing. If any row has a problem, such as a missing required value, a value that is not in the allowed list or a date that is not valid, nothing is imported and the dialog lists the error for every row. Fix the file and upload it again. A file can have up to 5,000 rows. The template keeps the list of users for the owner and approval dropdowns on a hidden sheet, so you do not need to touch it.  Admins and Editors can import risks.',
     },
     {
       type: 'heading',
@@ -421,6 +422,20 @@ export const extensionsContent: ArticleContent = {
     },
     {
       type: 'heading',
+      id: 'framework-import',
+      level: 3,
+      text: 'Framework Import',
+    },
+    {
+      type: 'paragraph',
+      text: 'Brings in a compliance framework from an Excel file. Click **Enable** on the card; there is nothing to configure.',
+    },
+    {
+      type: 'paragraph',
+      text: '**Where it shows up:** in **Frameworks**, click **Manage frameworks** and choose **Import framework from Excel**. That menu appears once your organization has an organizational project. You can also use **Import from Excel** under **Frameworks** > **Settings**. See **Importing your own framework** for the file format.',
+    },
+    {
+      type: 'heading',
       id: 'roles',
       level: 2,
       text: 'Who can do what',
@@ -459,6 +474,12 @@ export const extensionsContent: ArticleContent = {
           articleId: 'adding-frameworks',
           title: 'Adding frameworks',
           description: 'Add built-in compliance frameworks to your organization or use cases',
+        },
+        {
+          collectionId: 'compliance',
+          articleId: 'framework-import',
+          title: 'Importing your own framework',
+          description: 'Import a framework from Excel and assess it',
         },
         {
           collectionId: 'ai-governance',

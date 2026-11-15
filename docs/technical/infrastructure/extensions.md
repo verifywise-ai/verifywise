@@ -150,7 +150,7 @@ top-level `configuration` is the only copy a client gets.
   | Value in the payload | Non-secret field | Secret field |
   |----------------------|------------------|--------------|
   | absent | stored value kept | stored ciphertext kept |
-  | `""` | cleared | stored ciphertext kept ("Leave blank to keep the existing value") |
+  | `""` | cleared | stored ciphertext kept (the form shows "Stored. Leave blank to keep it.") |
   | `null` | cleared | cleared |
   | anything else | replaced | replaced, encrypted |
 
@@ -351,21 +351,38 @@ Both pages redirect non-Admins to `/` (`userRoleName !== "Admin"`). The old
 
 **Catalog card buttons** (`Extensions/index.tsx`): **Enable** when there are no
 pre-enable fields; **Configure to enable** when there are; **Configure** when
-enabled and the extension has a settings surface; **Disable** when enabled. A
-settings surface is either config fields or membership in
-`KEYS_WITH_POST_ENABLE_UI` (`slack`, `model-lifecycle`, `jira-assets`,
-`jira-incidents`).
+enabled and the extension has a settings surface; **Disable** when enabled
+(it opens the confirmation). A settings surface is either config fields or
+membership in `KEYS_WITH_POST_ENABLE_UI` (`slack`, `model-lifecycle`,
+`jira-assets`, `jira-incidents`). A disabled card carries a **Disabled** pill.
+An enabled card with no settings surface (Risk Import, Dataset Bulk Upload,
+Framework Import) shows "Where it shows up" with a menu path. If an enable or
+disable fails, the server's message appears under the buttons; a failed catalog
+load has a **Try again** button.
+
+When Model Lifecycle is off, a model's lifecycle link
+(`ModelInventory/ModelLifecycleDetail`) opens the model in Model inventory
+(`/model-inventory?modelId=<id>`) instead of the lifecycle page.
 
 **Settings page** (`Extensions/Settings/index.tsx`): a **Configuration** card
 when `configFields.length > 0`. Then the extension's own panel for `slack`
 (`SlackConfiguration`), `model-lifecycle` (`ModelLifecycleConfig`),
 `jira-assets` (`JiraAssetsConfiguration`) or `jira-incidents`
 (`JiraIncidentsConfiguration`). Then the **Enable**/**Disable**,
-**Save configuration** and **Test connection** actions. **Test connection**
-appears for any enabled extension with `requires_configuration = true`. For
-Slack and Model Lifecycle it therefore shows the "not available" message. For
-Jira incidents it tests the saved connection (the panel has its own **Test
-connection** for unsaved values).
+**Save configuration** and **Test connection** actions, under a status label
+that always reads **Enabled** or **Disabled**.
+
+- The form is seeded from the stored values (`initialFormValues`). On submit
+  (`prepareSubmitValues`) a non-secret field emptied by the user goes as
+  `null`, a secret field left blank is left out (kept), and a secret cleared
+  with **Clear** goes as `null`. A secret with a stored value (`secretsSet`)
+  shows "Stored. Leave blank to keep it." with **Clear** and **Undo**.
+  Disabling does not reseed the form, so unsaved edits survive it.
+- **Test connection** is a page button only for extensions that have config
+  fields: MLflow and Azure AI Foundry. It shows before and after **Enable**,
+  and its result is a status line under the buttons. Editing any field clears
+  the last result. Slack, Model Lifecycle and both Jira extensions have no page
+  button (Jira Assets and Jira incidents test from their own panels).
 
 ---
 
@@ -433,11 +450,20 @@ and ignores it.
 
 - **Enable** upserts the enablement row with `enabled = true`, `enabled_at`
   and `enabled_by`. Any submitted `configuration` is merged into the stored
-  config and validated. Re-enabling keeps earlier config values.
+  config and validated. Re-enabling keeps earlier config values: the settings
+  page seeds its form from the stored values and sends only what was changed,
+  and a field left out of the payload keeps its stored value (see
+  [Secrets and validation](#secrets-and-validation)).
 - **Disable** sets `enabled = false`. Configuration, secrets and all
   extension-owned data (synced models, lifecycle phases, Jira use cases, Slack
-  webhooks) are **kept**. Re-enabling restores access to them. The UI shows no
-  confirmation dialog. While Slack is disabled, no Slack notification is sent
+  webhooks) are **kept**. Re-enabling restores access to them. Both the catalog
+  and the settings page ask for confirmation first (`ConfirmDisableModal`),
+  with one sentence per extension on what stops
+  (`Extensions/disableCopy.ts`, falling back to a generic sentence for a key
+  with no entry). The sentences are checked against the code: the gate on the
+  extension's routes, the `isEnabled(key)` checks that hide its UI, and the jobs
+  that skip organizations where it is off. Cancel, the close button and Escape
+  do nothing while the disable request is in flight. While Slack is disabled, no Slack notification is sent
   for that organization.
 - **There is no uninstall** and no way to purge an extension's data from the
   UI or API.
