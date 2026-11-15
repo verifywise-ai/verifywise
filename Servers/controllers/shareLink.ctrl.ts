@@ -1,4 +1,9 @@
 import { Request, Response } from "express";
+import {
+  isTableViewLink,
+  shareLinkWarnings,
+  ShareLinkWarning,
+} from "../utils/shareLinkWarnings.utils";
 import { sequelize } from "../database/db";
 import { QueryTypes } from "sequelize";
 import logger, { logStructured } from "../utils/logger/fileLogger";
@@ -16,6 +21,29 @@ import { logProcessing, logSuccess } from "../utils/logger/logHelper";
 
 import { withLegacyHighRiskRole } from "../utils/highRiskRoles.utils";
 import { translateError } from "../utils/i18n.utils";
+/**
+ * The share link's warnings as translated messages. Each key is a literal so
+ * the i18n key scanner sees it.
+ */
+const shareLinkWarningMessages = (
+  req: Request,
+  link: Parameters<typeof shareLinkWarnings>[0],
+): string[] =>
+  shareLinkWarnings(link).map((warning: ShareLinkWarning) => {
+    switch (warning) {
+      case "policyList":
+        return req.t!(
+          "This link lists your organization's 100 most recently created policies, whatever their status: drafts, policies under review, deprecated and archived policies included.",
+        );
+      case "policyAllFields":
+        return req.t!(
+          "Share all fields is on: anyone with this link can read every column of the policies it shows, the full policy text included.",
+        );
+      case "policyExport":
+        return req.t!("Data export is on: anyone with this link can download what it shows.");
+    }
+  });
+
 /**
  * Create a new share link
  * POST /api/shares
@@ -111,6 +139,7 @@ export const createShareLink = async (req: Request, res: Response) => {
       created_at: shareLink.created_at,
       updated_at: shareLink.updated_at,
       shareable_url,
+      warnings: shareLinkWarningMessages(req, shareLink),
     };
 
     return res.status(201).json(STATUS_CODE[201](response));
@@ -220,6 +249,7 @@ export const getShareLinksForResource = async (req: Request, res: Response) => {
         created_at: link.created_at,
         updated_at: link.updated_at,
         shareable_url,
+        warnings: shareLinkWarningMessages(req, link),
         is_valid,
       };
     });
@@ -493,6 +523,7 @@ export const updateShareLink = async (req: Request, res: Response) => {
       updated_at: updatedLink.updated_at,
       shareable_url,
       is_valid,
+      warnings: shareLinkWarningMessages(req, updatedLink),
     };
 
     return res.status(200).json(STATUS_CODE[200](response));
@@ -777,7 +808,7 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
 
     // If resource_id is 0, fetch all records (table view)
     // Otherwise, fetch specific record
-    if (resourceId === 0) {
+    if (isTableViewLink(resourceId)) {
       resourceQuery = queries.tableView;
 
       // resourceQuery is selected from a static, parameterized map above and is
