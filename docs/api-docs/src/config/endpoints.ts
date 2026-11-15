@@ -3694,6 +3694,7 @@ export const extensionEndpoints: Endpoint[] = [
     requiresAuth: true,
     responses: [
       { status: 200, description: "Success" },
+      { status: 400, description: "code is missing, not a string, blank or over 512 characters, or Slack did not accept it" },
       { status: 403, description: "Extension not enabled for this organization, or role not allowed" },
       { status: 500, description: "Internal server error" },
     ],
@@ -4451,6 +4452,37 @@ export const extensionEndpoints: Endpoint[] = [
     responses: [
       { status: 200, description: "Success" },
       { status: 403, description: "Extension not enabled for this organization, or role not allowed" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'GET',
+    path: '/extensions/slack/oauth/unlinked',
+    summary: "Get Unlinked Slack Connections",
+    description: "Requires the slack extension to be enabled for the organization (403 otherwise). Lists the caller's own Slack connections that belong to no organization (created before connections belonged to an organization). They send nothing; they can only be removed.",
+    requiresAuth: true,
+    responses: [
+      { status: 200, description: "The caller's own connections with no organization: id, team_name, channel, created_at. No token or webhook URL." },
+      { status: 403, description: "Extension not enabled for this organization, or role not allowed" },
+      { status: 500, description: "Internal server error" },
+    ],
+    tag: "Extensions",
+  },
+  {
+    method: 'DELETE',
+    path: '/extensions/slack/oauth/unlinked/{id}',
+    summary: "Delete Unlinked Slack Connection",
+    description: "Requires the slack extension to be enabled for the organization (403 otherwise). Removes one of the caller's own Slack connections that belong to no organization. Another user's connection and an organization's connection answer 404.",
+    requiresAuth: true,
+    parameters: [
+      { name: 'id', in: 'path', type: 'integer', required: true, description: "The connection id" },
+    ],
+    responses: [
+      { status: 204, description: "Deleted" },
+      { status: 400, description: "Invalid id" },
+      { status: 403, description: "Extension not enabled for this organization, or role not allowed" },
+      { status: 404, description: "No connection with this id that belongs to no organization and to the caller" },
       { status: 500, description: "Internal server error" },
     ],
     tag: "Extensions",
