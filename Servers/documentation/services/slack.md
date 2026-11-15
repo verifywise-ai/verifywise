@@ -106,28 +106,40 @@ function getClient(accessToken: string, iv: string): WebClient;
 
 #### sendSlackNotification
 
-Sends notifications to multiple Slack channels based on routing type.
+Posts one event to every Slack connection of the event's organization that should receive it.
 
 **Signature:**
 
 ```typescript
 async function sendSlackNotification(
-  params: { userId: number; routingType: string },
+  params: {
+    organizationId: number;
+    userId?: number | null;
+    ownConnectionsOnly?: boolean;
+    routingType: string;
+  },
   message: any,
-): Promise<void>;
+): Promise<{ attempted: boolean; delivered: boolean }>;
 ```
 
 **Parameters:**
 
-- `params.userId`: User ID owning the integrations
+- `params.organizationId`: Organization the event happened in (required)
+- `params.userId`: User who triggered the event. User-scope connections (`delivery_scope = 'user'`) post only their owner's events; without a user only organization-wide connections match
+- `params.ownConnectionsOnly`: Only the user's own user-scope connections (used by senders that notify several recipients about one event, such as the deadline sweep)
 - `params.routingType`: Type of notification to route
 - `message`: Message object with title and message fields
 
 **Behavior:**
 
-1. Queries database for integrations with matching routing type
-2. Sends message to all matching channels in parallel
-3. Logs any errors but doesn't throw
+1. Drops the event (warning) when `organizationId` is not a positive integer
+2. Skips routing types outside `SlackNotificationRoutingType`
+3. Skips when the Slack extension is not enabled for the organization (`isExtensionEnabledForOrganization`)
+4. Reads connections with `getDeliverableSlackWebhooksQuery`: same organization, active, routed for the type, and organization-wide or owned by the user
+5. Sends to all matching channels in parallel
+6. Logs any errors but doesn't throw; `attempted` is true when a connection matched, `delivered` when at least one post succeeded
+
+See `docs/technical/infrastructure/extensions.md` (Slack connections and delivery).
 
 ---
 
@@ -173,8 +185,8 @@ async function sendImmediateMessage(
 
 **Error Handling:**
 
-- `channel_not_found`: Deactivates webhook
-- `is_archived`: Deactivates webhook
+- `channel_not_found`: Deactivates the connection (`deactivateSlackWebhookQuery`, by id and organization)
+- `is_archived`: Deactivates the connection (same)
 - Other errors: Throws exception
 
 ---
@@ -241,8 +253,8 @@ Slack message object with Block Kit formatting:
 
 - `tools/createSecureValue`: Encryption utilities
 - `utils/logger/fileLogger`: Logging
-- `utils/slackWebhook.utils`: Database queries
-- `controllers/slackWebhook.ctrl`: Webhook deactivation
+- `utils/slackWebhook.utils`: Database queries (delivery read and deactivation)
+- `middleware/requireExtensionEnabled.middleware`: `isExtensionEnabledForOrganization`
 
 ---
 

@@ -21,7 +21,7 @@ value; email, Slack, file, scan and risk-suggestion limits never are.
 | `webhookLimiter` | 1 min | 100 | Inbound signed webhooks |
 | `virtualKeyProxyLimiter` | 1 min | 3000 | `/v1` virtual key proxy, mounted ahead of `generalApiLimiter` (the gateway enforces per-key RPM and budget) |
 | `passwordResetEmailLimiter`, `inviteEmailLimiter`, `invitationResendLimiter` | 1 min | 5 each | Outbound email |
-| `slackWebhookCreateLimiter`, `slackWorkspaceCreateLimiter` | 60 min | 10 each | Slack setup |
+| `slackWorkspaceCreateLimiter` | 60 min | 10 | Slack connection create (`POST /api/extensions/slack/oauth/workspaces`) |
 | `healthCheckLimiter` | 1 min | 1000 | Health probe |
 
 Build new limiters with `createRateLimiter(RATE_LIMIT_CONFIGS.<name>)`, never

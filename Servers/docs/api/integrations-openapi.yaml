@@ -8,7 +8,12 @@ info:
 
 tags:
   - name: Slack Webhooks
-    description: Manage Slack OAuth integrations and send messages
+    description: |
+      Manage the organization's Slack connections and send test messages.
+      Every route needs the Slack extension enabled for the caller's
+      organization (403 otherwise) and the extension.admin permission (Admin).
+      Connections belong to the organization: another organization's id
+      answers 404. The legacy /slackWebhooks mount was removed.
   - name: GitHub Integration
     description: Manage GitHub Personal Access Token for private repository access (Admin only)
   - name: Webhooks
@@ -16,24 +21,19 @@ tags:
 
 paths:
   # ===========================================================================
-  # Slack Webhooks — /slackWebhooks
+  # Slack Webhooks — /extensions/slack/oauth/workspaces
   # ===========================================================================
-  /slackWebhooks:
+  /extensions/slack/oauth/workspaces:
     get:
       tags: [Slack Webhooks]
-      summary: List Slack webhooks for a user
+      summary: List the organization's Slack connections
       description: |
-        Returns all Slack webhook integrations for the given user.
-        Optionally filters by channel name.
+        Returns the Slack connections of the caller's organization (the same
+        list for every Admin). Optionally filters by channel name. A userId
+        query parameter is ignored.
       security:
         - bearerAuth: []
       parameters:
-        - name: userId
-          in: query
-          required: true
-          description: Numeric user ID whose webhooks to retrieve
-          schema:
-            type: string
         - name: channel
           in: query
           required: false
@@ -47,12 +47,6 @@ paths:
             application/json:
               schema:
                 $ref: "#/components/schemas/SuccessResponse_SlackWebhookArray"
-        "400":
-          description: Missing userId query parameter
-          content:
-            application/json:
-              schema:
-                $ref: "#/components/schemas/ErrorResponse400"
         "500":
           description: Internal server error
           content:
@@ -62,11 +56,13 @@ paths:
 
     post:
       tags: [Slack Webhooks]
-      summary: Create a new Slack webhook via OAuth
+      summary: Create a Slack connection via OAuth
       description: |
         Exchanges a Slack OAuth authorization code for tokens, creates the
-        webhook record, and invites the bot to the channel.
-        Rate-limited to 10 requests per hour per IP.
+        connection for the caller's organization (owner and organization come
+        from the token), and invites the bot to the channel. New connections
+        post the organization's events.
+        Rate-limited to 10 requests per hour per IP (slackWorkspaceCreateLimiter).
       security:
         - bearerAuth: []
       requestBody:
@@ -103,7 +99,7 @@ paths:
                 properties:
                   error:
                     type: string
-                    example: "Too many webhook creation requests from this IP, please try again after an hour."
+                    example: "Too many Slack workspace creation requests from this IP, please try again after an hour"
         "500":
           description: Internal server error
           content:
@@ -111,7 +107,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse500"
 
-  /slackWebhooks/{id}:
+  /extensions/slack/oauth/workspaces/{id}:
     get:
       tags: [Slack Webhooks]
       summary: Get a Slack webhook by ID
@@ -147,10 +143,13 @@ paths:
 
     patch:
       tags: [Slack Webhooks]
-      summary: Update a Slack webhook
+      summary: Update a Slack connection
       description: |
-        Updates the routing_type and/or is_active fields of an existing
-        Slack webhook.
+        Updates routing_type and/or is_active. Any other field, a non-boolean
+        is_active or an unknown routing type answers 400. Saving routing_type
+        also makes the connection organization-wide: a connection that
+        predates organization ownership then posts the organization's events
+        instead of only its owner's.
       security:
         - bearerAuth: []
       parameters:
@@ -195,10 +194,9 @@ paths:
 
     delete:
       tags: [Slack Webhooks]
-      summary: Delete a Slack webhook
+      summary: Delete a Slack connection
       description: |
-        Deletes a Slack webhook. Only the user who created it (user_id match)
-        can delete it.
+        Deletes a connection of the caller's organization.
       security:
         - bearerAuth: []
       parameters:
@@ -206,12 +204,12 @@ paths:
       responses:
         "204":
           description: Webhook deleted (no content)
-        "403":
-          description: Unauthorized (user_id mismatch)
+        "400":
+          description: Invalid ID
           content:
             application/json:
               schema:
-                $ref: "#/components/schemas/ErrorResponse403"
+                $ref: "#/components/schemas/ErrorResponse400"
         "404":
           description: Webhook not found
           content:
@@ -225,13 +223,13 @@ paths:
               schema:
                 $ref: "#/components/schemas/ErrorResponse500"
 
-  /slackWebhooks/{id}/send:
+  /extensions/slack/oauth/workspaces/{id}/send:
     post:
       tags: [Slack Webhooks]
       summary: Send a Slack message via a webhook
       description: |
-        Sends a message to the Slack channel associated with the webhook.
-        The webhook must be active (is_active = true).
+        Sends a message to the Slack channel of this connection. An inactive
+        connection (is_active = false) answers 400.
       security:
         - bearerAuth: []
       parameters:
@@ -250,7 +248,7 @@ paths:
               schema:
                 $ref: "#/components/schemas/SuccessResponse_SlackMessageSent"
         "400":
-          description: Validation error (invalid ID)
+          description: Invalid ID, or the connection is not active
           content:
             application/json:
               schema:
@@ -665,20 +663,16 @@ components:
       type: object
       required:
         - code
-        - userId
       properties:
         code:
           type: string
           description: Slack OAuth authorization code (exchanged for tokens server-side)
           example: "1234567890.abcdef"
-        userId:
-          type: integer
-          description: ID of the user creating this integration
-          example: 5
 
     UpdateSlackWebhookRequest:
       type: object
-      description: At least one field should be provided
+      description: At least one field is required; no other field is accepted
+      additionalProperties: false
       properties:
         is_active:
           type: boolean

@@ -169,12 +169,12 @@ The backend mounts **116 route modules** (including 7 extension routers). Each s
 
 | Method | Pattern | Middleware / Auth | Controller |
 |---|---|---|---|
-| GET | `/oauth/workspaces` | JWT, extension:slack | `getAllSlackWebhooks` |
-| GET | `/oauth/workspaces/:id` | JWT, extension:slack | `getSlackWebhookById` |
-| POST | `/oauth/workspaces` | JWT, extension:slack | `createNewSlackWebhook` |
-| PATCH | `/oauth/workspaces/:id` | JWT, extension:slack | `updateSlackWebhookById` |
-| DELETE | `/oauth/workspaces/:id` | JWT, extension:slack | `deleteSlackWebhookById` |
-| POST | `/oauth/workspaces/:id/send` | JWT, extension:slack | `sendSlackMessage` |
+| GET | `/oauth/workspaces` | JWT, extension:slack, authorize('extension.admin') | `getAllSlackWebhooks` |
+| GET | `/oauth/workspaces/:id` | JWT, extension:slack, authorize('extension.admin') | `getSlackWebhookById` |
+| POST | `/oauth/workspaces` | JWT, extension:slack, authorize('extension.admin') | `createNewSlackWebhook` |
+| PATCH | `/oauth/workspaces/:id` | JWT, extension:slack, authorize('extension.admin') | `updateSlackWebhookById` |
+| DELETE | `/oauth/workspaces/:id` | JWT, extension:slack, authorize('extension.admin') | `deleteSlackWebhookById` |
+| POST | `/oauth/workspaces/:id/send` | JWT, extension:slack, authorize('extension.admin') | `sendSlackMessage` |
 
 ## `routes/advisor.route.ts`
 - **Base path(s):** `/api/advisor`
@@ -1534,19 +1534,6 @@ The backend mounts **116 route modules** (including 7 extension routers). Each s
 | PATCH | `/:id` | JWT | `updateShareLink` |
 | DELETE | `/:id` | JWT | `deleteShareLink` |
 
-## `routes/slackWebhook.route.ts`
-- **Base path(s):** `/api/slackWebhooks`
-- **Controller:** `controllers/slackWebhook.ctrl.ts`
-
-| Method | Pattern | Middleware / Auth | Controller |
-|---|---|---|---|
-| GET | `/` | JWT | `getAllSlackWebhooks` |
-| GET | `/:id` | JWT | `getSlackWebhookById` |
-| POST | `/` | JWT | `createNewSlackWebhook` |
-| PATCH | `/:id` | JWT | `updateSlackWebhookById` |
-| DELETE | `/:id` | JWT | `deleteSlackWebhookById` |
-| POST | `/:id/send` | JWT | `sendSlackMessage` |
-
 ## `routes/ssoConfig.route.ts`
 - **Base path(s):** `/api/ssoConfig`
 - **Controller:** `controllers/ssoConfig.ctrl.ts`
@@ -2564,7 +2551,6 @@ The backend mounts **116 route modules** (including 7 extension routers). Each s
 | `/api/organizations` | `routes/organization.route.ts` | `controllers/organization.ctrl.ts` | 6 | JWT, super-admin; JWT, super-admin, authorize(['Admin']); super-admin |
 | `/api/pmm` | `routes/postMarketMonitoring.route.ts` | `controllers/postMarketMonitoring.ctrl.ts` | 20 | JWT |
 | `/api/search` | `routes/search.route.ts` | `controllers/search.ctrl.ts` | 1 | JWT |
-| `/api/slackWebhooks` | `routes/slackWebhook.route.ts` | `controllers/slackWebhook.ctrl.ts` | 6 | JWT |
 | `/api/subscriptions` | `routes/subscription.route.ts` | `../controllers/subscriptions.ctrl` | 3 | JWT |
 | `/api/telemetry` | `routes/telemetry.route.ts` | `controllers/telemetry.ctrl.ts` | 1 | public/special |
 | `/api/tiers` | `routes/tiers.route.ts` | `controllers/tiers.ctrl.ts` | 1 | JWT |
