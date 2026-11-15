@@ -8,6 +8,7 @@ import {
   describeFetchError,
   requestSignal,
 } from "../../utils/outboundFetch.utils";
+import logger from "../../utils/logger/fileLogger";
 
 /** Azure AI Foundry has no timeout setting; each request gets this limit. */
 const REQUEST_TIMEOUT_SECONDS = 30;
@@ -258,6 +259,10 @@ export async function discoverAgents(
       {
         method: "GET",
         headers: { "api-key": config.api_key, "Content-Type": "application/json" },
+        signal: requestSignal(
+          REQUEST_TIMEOUT_SECONDS,
+          AbortSignal.timeout(EXTERNAL_SYNC_DEADLINE_MS),
+        ),
       },
     );
     if (!response.ok) {
@@ -291,8 +296,12 @@ export async function discoverAgents(
     });
   } catch (err: any) {
     // Discovery is opportunistic — swallow so the sync doesn't fail hard for
-    // other extensions when Azure is unreachable.
-    console.warn(`[azure-ai-foundry] Agent discovery failed: ${err.message}`);
+    // other extensions when Azure is unreachable. The reason is described the
+    // same way as a sync failure (a timeout names its limits, a network
+    // failure is "connection failed" with the detail in the log only).
+    logger.warn(
+      `[azure-ai-foundry] Agent discovery failed: ${describeFetchError(err, REQUEST_TIMEOUT_SECONDS)}`,
+    );
     return [];
   }
 }

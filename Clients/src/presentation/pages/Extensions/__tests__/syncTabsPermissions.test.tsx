@@ -1,0 +1,64 @@
+import { screen } from "@testing-library/react";
+import { renderWithProviders } from "../../../../test/renderWithProviders";
+import MLFlowTab from "../mlflow/MLFlowTab";
+import AzureAIFoundryTab from "../azure-ai-foundry/AzureAIFoundryTab";
+
+const granted = new Set<string>();
+vi.mock("../../../../application/hooks/useCan", () => ({
+  useCan: (key: string) => granted.has(key),
+  useCanCheck: () => (key: string) => granted.has(key),
+}));
+
+const mockGet = vi.fn();
+vi.mock("../../../../infrastructure/api/networkServices", () => ({
+  apiServices: {
+    get: (...args: unknown[]) => mockGet(...args),
+    post: vi.fn().mockResolvedValue({ data: {} }),
+  },
+}));
+
+vi.mock("../../../../application/hooks/useFormattedDate", () => ({
+  default: () => (d: Date) => d.toISOString(),
+}));
+
+const notConfigured = { data: { data: { configured: false, models: [] } } };
+
+const tabs = [
+  ["MLflow", MLFlowTab, "Ask an Admin to set up MLflow."],
+  ["Azure AI Foundry", AzureAIFoundryTab, "Ask an Admin to set up Azure AI Foundry."],
+] as const;
+
+describe.each(tabs)("%s tab", (_name, Tab, askText) => {
+  beforeEach(() => {
+    granted.clear();
+    mockGet.mockReset();
+    mockGet.mockResolvedValue(notConfigured);
+  });
+
+  it("hides Sync and the settings link from a read-only role", async () => {
+    renderWithProviders(<Tab />);
+
+    expect(await screen.findByText(askText)).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /sync/i })).not.toBeInTheDocument();
+    expect(screen.queryByText("Open settings")).not.toBeInTheDocument();
+  });
+
+  it("shows Sync to a role with model.edit, without the settings link", async () => {
+    granted.add("model.edit");
+    renderWithProviders(<Tab />);
+
+    expect(await screen.findByText(askText)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /sync/i })).toBeInTheDocument();
+    expect(screen.queryByText("Open settings")).not.toBeInTheDocument();
+  });
+
+  it("gives an Admin Sync and the settings link", async () => {
+    granted.add("model.edit");
+    granted.add("extension.admin");
+    renderWithProviders(<Tab />);
+
+    expect(await screen.findByText("Open settings")).toBeInTheDocument();
+    expect(screen.queryByText(askText)).not.toBeInTheDocument();
+    expect(screen.getByRole("button", { name: /sync/i })).toBeInTheDocument();
+  });
+});

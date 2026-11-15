@@ -24,6 +24,8 @@ import { apiServices } from "../../../../infrastructure/api/networkServices";
 import { getApiErrorReason } from "../../../../application/utils/apiErrorReason";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { palette } from "../../../themes/palette";
+import { useCan } from "../../../../application/hooks/useCan";
+import ExtensionSetupNotice from "../ExtensionSetupNotice";
 
 const SelectorVertical = (props: any) => <ChevronsUpDown size={16} {...props} />;
 
@@ -46,6 +48,16 @@ interface AzureModel {
   created_at: string;
   updated_at: string;
 }
+
+const warningBoxSx = {
+  p: "12px 16px",
+  mb: "16px",
+  borderRadius: borderRadius.sm,
+  backgroundColor: palette.status.warning.bg,
+  border: `1px solid ${palette.status.warning.border}`,
+};
+
+const warningTextSx = { fontSize: 13, color: palette.status.warning.text };
 
 const DetailRow = ({ label, value }: { label: string; value: string }) => (
   <Box>
@@ -76,8 +88,11 @@ const StatCard = ({ label, value, color }: { label: string; value: number; color
 
 export default function AzureAIFoundryTab() {
   const formatDate = useFormattedDate();
+  // Sync writes model records, so the server requires model.edit for it.
+  const canSync = useCan("model.edit");
   const [loading, setLoading] = useState(false);
   const [warning, setWarning] = useState<string | null>(null);
+  const [notConfigured, setNotConfigured] = useState(false);
   const [selectedModel, setSelectedModel] = useState<AzureModel | null>(null);
   const [models, setModels] = useState<AzureModel[]>([]);
   const [page, setPage] = useState(0);
@@ -99,6 +114,7 @@ export default function AzureAIFoundryTab() {
   const fetchModels = async () => {
     setLoading(true);
     setWarning(null);
+    setNotConfigured(false);
     try {
       const response = await apiServices.get("/extensions/azure-ai-foundry/models");
       const payload = (response.data as any)?.data as
@@ -106,9 +122,7 @@ export default function AzureAIFoundryTab() {
       if (payload?.models) {
         setModels(payload.models);
         if (!payload.configured) {
-          setWarning(
-            "Configure the Azure AI Foundry extension to start syncing model deployments.",
-          );
+          setNotConfigured(true);
         }
       } else {
         setModels([]);
@@ -168,44 +182,47 @@ export default function AzureAIFoundryTab() {
 
   return (
     <Box sx={{ maxWidth: "100%" }}>
-      {warning && (
-        <Box
-          sx={{
-            p: "12px 16px",
-            mb: "16px",
-            borderRadius: borderRadius.sm,
-            backgroundColor: palette.status.warning.bg,
-            border: `1px solid ${palette.status.warning.border}`,
-          }}
-        >
-          <Typography sx={{ fontSize: 13, color: palette.status.warning.text }}>
-            {warning}
+      {notConfigured && (
+        <Box sx={warningBoxSx}>
+          <Typography sx={warningTextSx}>
+            <ExtensionSetupNotice
+              extensionKey="azure-ai-foundry"
+              name="Azure AI Foundry"
+              adminText="Configure the Azure AI Foundry extension to start syncing model deployments."
+            />
           </Typography>
         </Box>
       )}
+      {warning && (
+        <Box sx={warningBoxSx}>
+          <Typography sx={warningTextSx}>{warning}</Typography>
+        </Box>
+      )}
 
-      <Box sx={{ display: "flex", justifyContent: "flex-end", mb: "16px" }}>
-        <button
-          onClick={handleRefresh}
-          disabled={loading}
-          style={{
-            ...buttonStyles.base,
-            ...buttonStyles.sizes.medium,
-            ...buttonStyles.primary.outlined,
-            border: `1px solid ${colors.border}`,
-            color: colors.textSecondary,
-            backgroundColor: "transparent",
-            cursor: loading ? "not-allowed" : "pointer",
-            opacity: loading ? 0.6 : 1,
-          }}
-        >
-          <RefreshCw
-            size={14}
-            style={loading ? { animation: "spin 1s linear infinite" } : undefined}
-          />
-          {loading ? "Syncing..." : "Sync"}
-        </button>
-      </Box>
+      {canSync && (
+        <Box sx={{ display: "flex", justifyContent: "flex-end", mb: "16px" }}>
+          <button
+            onClick={handleRefresh}
+            disabled={loading}
+            style={{
+              ...buttonStyles.base,
+              ...buttonStyles.sizes.medium,
+              ...buttonStyles.primary.outlined,
+              border: `1px solid ${colors.border}`,
+              color: colors.textSecondary,
+              backgroundColor: "transparent",
+              cursor: loading ? "not-allowed" : "pointer",
+              opacity: loading ? 0.6 : 1,
+            }}
+          >
+            <RefreshCw
+              size={14}
+              style={loading ? { animation: "spin 1s linear infinite" } : undefined}
+            />
+            {loading ? "Syncing..." : "Sync"}
+          </button>
+        </Box>
+      )}
 
       <Box sx={{ display: "flex", gap: "8px", mb: "16px" }}>
         <StatCard label="Total deployments" value={stats.total} />
@@ -217,7 +234,9 @@ export default function AzureAIFoundryTab() {
       {models.length === 0 && !loading ? (
         <Box sx={{ textAlign: "center", py: "48px", color: colors.textTertiary }}>
           <Typography sx={{ fontSize: 13 }}>
-            No deployments synced yet. Click Sync to pull model deployments from Azure AI Foundry.
+            {canSync
+              ? "No deployments synced yet. Click Sync to pull model deployments from Azure AI Foundry."
+              : "No deployments synced yet."}
           </Typography>
         </Box>
       ) : (
