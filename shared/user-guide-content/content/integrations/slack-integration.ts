@@ -10,7 +10,7 @@ export const slackIntegrationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'The Slack integration posts VerifyWise notifications to channels in your Slack workspace, such as membership changes, new use cases and deadline and policy review reminders. Your team sees them without opening VerifyWise.',
+      text: 'The Slack integration posts VerifyWise notifications to channels in your Slack workspace, such as membership changes, new use cases, deadline reminders and policy review reminders. Your team sees them without opening VerifyWise.',
     },
     {
       type: 'heading',
@@ -193,7 +193,7 @@ export const slackIntegrationContent: ArticleContent = {
       items: [
         { text: 'Go to the Slack settings page' },
         { text: 'Click **Add to Slack**' },
-        { text: 'Pick the workspace and channel in Slack and click **Allow**' },
+        { text: 'Pick the workspace and channel in Slack, then click **Allow**' },
         { text: 'Set the new connection\'s routing' },
       ],
     },
@@ -243,11 +243,11 @@ export const slackIntegrationContent: ArticleContent = {
     },
     {
       type: 'paragraph',
-      text: 'Some connections were created before Slack connections belonged to an organization, and VerifyWise could not tell which organization they belong to. This happens when the person who added them was a member of several organizations, or of none. These connections send nothing.',
+      text: 'Some connections were created before Slack connections belonged to an organization. VerifyWise could not tell which organization they belong to. This happens when the person who added them was a member of several organizations, or of none. These connections send nothing.',
     },
     {
       type: 'paragraph',
-      text: 'If you added any of them, the Slack settings page lists them under **Unlinked connections**, below the main table. Only you see your own. You can\'t link one to an organization: click **Remove**, confirm, and then add the channel again with **Add to Slack** if you still need it.',
+      text: 'If you added any of them, the Slack settings page lists them under **Unlinked connections**, below the main table. Only you see your own. You can\'t link one to an organization: click **Remove**, confirm, and then add the channel again with **Add to Slack** if you need it again.',
     },
     {
       type: 'paragraph',
