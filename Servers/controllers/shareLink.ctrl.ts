@@ -731,13 +731,13 @@ export const getSharedDataByToken = async (req: Request, res: Response) => {
       },
       policy: {
         tableView: `
-          SELECT * FROM policies
+          SELECT * FROM policy_manager
           WHERE organization_id = $1
           ORDER BY id DESC
           LIMIT 100;
         `,
         singleRecord: `
-          SELECT * FROM policies
+          SELECT * FROM policy_manager
           WHERE id = $1 AND organization_id = $2
           LIMIT 1;
         `,
