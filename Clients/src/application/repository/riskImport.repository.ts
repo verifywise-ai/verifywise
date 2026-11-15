@@ -34,9 +34,13 @@ function rejectedResultOf(error: unknown): RiskImportResult | null {
 
 export async function importRisks(rows: unknown[]): Promise<RiskImportResult | undefined> {
   try {
-    const response = await apiServices.post<{ data?: RiskImportResult }>(IMPORT_URL, {
-      csvData: rows,
-    });
+    // The modal lists the row errors of a rejected import and shows any other
+    // failure itself, so the global error toast would be a duplicate.
+    const response = await apiServices.post<{ data?: RiskImportResult }>(
+      IMPORT_URL,
+      { csvData: rows },
+      { suppressGlobalErrorToast: true },
+    );
     return response.data?.data;
   } catch (error) {
     const result = rejectedResultOf(error);

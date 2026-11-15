@@ -85,7 +85,7 @@ const columns = [
   { id: "mitigation_status", label: "MITIGATION STATUS", sortable: true }, // mitigation status
   { id: "risk_level_autocalculated", label: "RISK LEVEL", sortable: true }, // risk auto calculated value from risk tab
   { id: "deadline", label: "TARGET DATE", sortable: true }, // start date (deadline) value from mitigation tab
-  { id: "controls_mapping", label: "CONTROLS", sortable: true }, // controls mapping value from risk tab
+  { id: "controls_mapping", label: "CONTROLS", sortable: false }, // opens the linked controls, so it has no sort value
   { id: "actions", label: "", sortable: false },
 ];
 

@@ -342,11 +342,7 @@ const VWProjectRisksTableBody = ({
                     sx={{
                       ...getCellStyle(row),
                       backgroundColor:
-                        flashRow === row.id
-                          ? singleTheme.flashColors.background
-                          : sortConfig.key === "controls_mapping"
-                            ? "background.surface"
-                            : "",
+                        flashRow === row.id ? singleTheme.flashColors.background : "",
                     }}
                   >
                     <VWLink

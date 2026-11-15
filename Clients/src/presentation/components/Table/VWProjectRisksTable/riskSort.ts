@@ -44,8 +44,6 @@ const sortValue = (
       return riskCalendarDay(risk.deadline)?.getTime() ?? 0;
     case "ale_estimate":
       return risk.ale_estimate ?? 0;
-    case "controls_mapping":
-      return lower(risk.controls_mapping);
     default:
       return null;
   }

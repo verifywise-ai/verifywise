@@ -21,7 +21,13 @@ describe("importRisks", () => {
   it("posts to the versioned path", async () => {
     post.mockResolvedValue({ data: { data: { ...result, success: true, errors: [] } } });
     const out = await importRisks([{ risk_name: "A" }]);
-    expect(post).toHaveBeenCalledWith("/v1/risk-import/import", { csvData: [{ risk_name: "A" }] });
+    expect(post).toHaveBeenCalledWith(
+      "/v1/risk-import/import",
+      { csvData: [{ risk_name: "A" }] },
+      {
+        suppressGlobalErrorToast: true,
+      },
+    );
     expect(out?.success).toBe(true);
   });
 

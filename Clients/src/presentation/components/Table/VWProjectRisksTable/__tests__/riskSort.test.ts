@@ -33,7 +33,7 @@ describe("compareRisks", () => {
     }),
   ];
 
-  it.each(["controls_mapping", "mitigation_status", "severity", "risk_level_autocalculated"])(
+  it.each(["mitigation_status", "severity", "risk_level_autocalculated"])(
     "sorts %s without throwing when a value is null",
     (key) => {
       expect(() => sortIds(withNulls, key, "asc")).not.toThrow();
@@ -42,8 +42,8 @@ describe("compareRisks", () => {
   );
 
   it("puts null text first ascending and last descending", () => {
-    expect(sortIds(withNulls, "controls_mapping", "asc")).toEqual([2, 3, 1]);
-    expect(sortIds(withNulls, "controls_mapping", "desc")).toEqual([1, 3, 2]);
+    expect(sortIds(withNulls, "mitigation_status", "asc")).toEqual([2, 3, 1]);
+    expect(sortIds(withNulls, "mitigation_status", "desc")).toEqual([1, 3, 2]);
   });
 
   it("orders severity by rank, not alphabetically", () => {

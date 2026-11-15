@@ -312,7 +312,7 @@ Result: High risk
 
 ## Risk-Control Linking
 
-The real control links are the junction tables below. `controls_mapping` on the risk row is a free-text legacy field that the risk form does not set, and the risk register export keeps a "Controls" column built from it, labelled like the table column so the export matches the screen (`exportColumns` in `Clients/src/presentation/pages/RiskManagement/index.tsx`).
+The real control links are the junction tables below. `controls_mapping` on the risk row is a free-text legacy field that the risk form does not set. The risk table's Controls column does not show it: its "View controls" link opens the linked controls, so the column is not sortable, and the risk register export has no controls column.
 
 ### Relationship Structure
 
