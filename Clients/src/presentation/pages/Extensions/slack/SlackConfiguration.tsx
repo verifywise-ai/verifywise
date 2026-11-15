@@ -1,4 +1,4 @@
-import React, { useCallback, useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import { useLocation, useNavigate } from "react-router";
 import {
   Alert,
@@ -21,16 +21,18 @@ import { ENV_VARs } from "../../../../../env.vars";
 import useFormattedDate from "../../../../application/hooks/useFormattedDate";
 import { useTranslation } from "../../../../application/hooks/useTranslation";
 import { getApiErrorReason } from "../../../../application/utils/apiErrorReason";
-import {
-  connectSlackWorkspace,
-  deleteSlackConnection,
-  deleteUnlinkedSlackConnection,
-  getSlackConnections,
-  getUnlinkedSlackConnections,
-  updateSlackConnection,
-  type SlackConnection,
-  type UnlinkedSlackConnection,
+import type {
+  SlackConnection,
+  UnlinkedSlackConnection,
 } from "../../../../application/repository/slack.repository";
+import {
+  useConnectSlackWorkspace,
+  useRemoveSlackConnection,
+  useRemoveUnlinkedSlackConnection,
+  useSlackConnections,
+  useUnlinkedSlackConnections,
+  useUpdateSlackConnection,
+} from "../../../../application/hooks/useSlackConnections";
 import { CustomizableButton } from "../../../components/button/customizable-button";
 import StandardModal from "../../../components/Modals/StandardModal";
 import { palette, radiusPx } from "../../../themes/palette";
@@ -122,44 +124,37 @@ export default function SlackConfiguration() {
   const location = useLocation();
   const navigate = useNavigate();
 
-  const [connections, setConnections] = useState<SlackConnection[]>([]);
-  const [unlinked, setUnlinked] = useState<UnlinkedSlackConnection[]>([]);
-  const [loading, setLoading] = useState(true);
-  const [connecting, setConnecting] = useState(false);
+  const { connections, loading, error: loadError } = useSlackConnections();
+  const { unlinked, loading: unlinkedLoading } = useUnlinkedSlackConnections();
+  const connectMutation = useConnectSlackWorkspace();
+  const toggleMutation = useUpdateSlackConnection();
+  const routingMutation = useUpdateSlackConnection();
+  const removeMutation = useRemoveSlackConnection();
+  const removeUnlinkedMutation = useRemoveUnlinkedSlackConnection();
+  const connectWorkspace = connectMutation.mutateAsync;
+
   const [feedback, setFeedback] = useState<Feedback | null>(null);
   const [page, setPage] = useState(0);
   const [rowsPerPage, setRowsPerPage] = useState(ROWS_PER_PAGE_OPTIONS[0]);
-  const [togglingId, setTogglingId] = useState<number | null>(null);
   const [routingConnection, setRoutingConnection] = useState<SlackConnection | null>(null);
   const [pendingRemoval, setPendingRemoval] = useState<PendingRemoval | null>(null);
-  const [removing, setRemoving] = useState(false);
   const [removeError, setRemoveError] = useState<string | null>(null);
   // Set once the OAuth return in the URL has been handled, so React's
   // StrictMode double effect cannot POST the same code twice.
   const handledReturn = useRef(false);
 
-  const load = useCallback(async () => {
-    setLoading(true);
-    const [linkedResult, unlinkedResult] = await Promise.allSettled([
-      getSlackConnections(),
-      getUnlinkedSlackConnections(),
-    ]);
-    if (linkedResult.status === "fulfilled") {
-      setConnections(linkedResult.value);
-    } else {
-      setFeedback({
-        severity: "error",
-        message: errorText(linkedResult.reason, "Could not load the Slack connections."),
-      });
-    }
-    // The unlinked list is only a cleanup aid: when it fails, show nothing.
-    setUnlinked(unlinkedResult.status === "fulfilled" ? unlinkedResult.value : []);
-    setLoading(false);
-  }, []);
+  const connecting = connectMutation.isPending;
+  const togglingId = toggleMutation.isPending ? toggleMutation.variables?.id : undefined;
+  const removing = removeMutation.isPending || removeUnlinkedMutation.isPending;
 
-  useEffect(() => {
-    load();
-  }, [load]);
+  // After the list shrinks (e.g. the only row on the last page is removed),
+  // move back to the last page that has rows, so the table never shows an
+  // empty page without a pager.
+  const lastPage = Math.max(0, Math.ceil(connections.length / rowsPerPage) - 1);
+  if (page > lastPage) {
+    setPage(lastPage);
+  }
+  const currentPage = Math.min(page, lastPage);
 
   // Slack sends the browser back here with ?code=&state= or ?error=.
   useEffect(() => {
@@ -192,20 +187,18 @@ export default function SlackConfiguration() {
       return;
     }
 
-    setConnecting(true);
-    connectSlackWorkspace(result.code)
+    // The mutation refetches the connection list before it settles.
+    connectWorkspace(result.code)
       .then(() => {
         setFeedback({ severity: "success", message: "Slack connected." });
-        return load();
       })
       .catch((error) => {
         setFeedback({
           severity: "error",
           message: errorText(error, "Could not connect Slack. Select Add to Slack to try again."),
         });
-      })
-      .finally(() => setConnecting(false));
-  }, [location.pathname, location.search, navigate, load]);
+      });
+  }, [location.pathname, location.search, navigate, connectWorkspace]);
 
   const handleAddToSlack = () => {
     const clientId = ENV_VARs.CLIENT_ID;
@@ -232,34 +225,32 @@ export default function SlackConfiguration() {
   };
 
   const handleToggle = async (connection: SlackConnection) => {
-    setTogglingId(connection.id);
     try {
-      await updateSlackConnection(connection.id, { is_active: !connection.is_active });
+      await toggleMutation.mutateAsync({
+        id: connection.id,
+        changes: { is_active: !connection.is_active },
+      });
       setFeedback({
         severity: "success",
         message: connection.is_active ? "Connection turned off." : "Connection turned on.",
       });
-      await load();
     } catch (error) {
       setFeedback({
         severity: "error",
         message: errorText(error, "Could not update the connection."),
       });
-    } finally {
-      setTogglingId(null);
     }
   };
 
   // Rejects with the message the routing dialog shows; the dialog stays open.
   const handleSaveRouting = async (connection: SlackConnection, routing: string[]) => {
     try {
-      await updateSlackConnection(connection.id, { routing_type: routing });
+      await routingMutation.mutateAsync({ id: connection.id, changes: { routing_type: routing } });
     } catch (error) {
       throw new Error(errorText(error, t("Could not save the notification routing.")));
     }
     setRoutingConnection(null);
     setFeedback({ severity: "success", message: "Notification routing saved." });
-    await load();
   };
 
   const closeRemoval = () => {
@@ -269,22 +260,18 @@ export default function SlackConfiguration() {
   };
 
   const handleRemove = async () => {
-    if (!pendingRemoval) return;
-    setRemoving(true);
+    if (!pendingRemoval || removing) return;
     setRemoveError(null);
     try {
       if (pendingRemoval.kind === "linked") {
-        await deleteSlackConnection(pendingRemoval.connection.id);
+        await removeMutation.mutateAsync(pendingRemoval.connection.id);
       } else {
-        await deleteUnlinkedSlackConnection(pendingRemoval.connection.id);
+        await removeUnlinkedMutation.mutateAsync(pendingRemoval.connection.id);
       }
       setPendingRemoval(null);
       setFeedback({ severity: "success", message: "Connection removed." });
-      setRemoving(false);
-      await load();
     } catch (error) {
       setRemoveError(errorText(error, "Could not remove the connection."));
-      setRemoving(false);
     }
   };
 
@@ -307,7 +294,10 @@ export default function SlackConfiguration() {
       )
     : "";
 
-  const visibleConnections = connections.slice(page * rowsPerPage, (page + 1) * rowsPerPage);
+  const visibleConnections = connections.slice(
+    currentPage * rowsPerPage,
+    (currentPage + 1) * rowsPerPage,
+  );
 
   return (
     <Box>
@@ -348,6 +338,10 @@ export default function SlackConfiguration() {
             {connecting ? "Connecting Slack..." : "Loading Slack connections..."}
           </Typography>
         </Box>
+      ) : loadError ? (
+        <Alert severity="error" sx={{ fontSize: "13px" }}>
+          {errorText(loadError, "Could not load the Slack connections.")}
+        </Alert>
       ) : (
         <TableContainer sx={tableContainerSx}>
           <Table>
@@ -457,7 +451,7 @@ export default function SlackConfiguration() {
                 <TableRow>
                   <TablePagination
                     count={connections.length}
-                    page={page}
+                    page={currentPage}
                     onPageChange={(_, next) => setPage(next)}
                     rowsPerPage={rowsPerPage}
                     rowsPerPageOptions={ROWS_PER_PAGE_OPTIONS}
@@ -472,7 +466,7 @@ export default function SlackConfiguration() {
         </TableContainer>
       )}
 
-      {!loading && unlinked.length > 0 && (
+      {!unlinkedLoading && unlinked.length > 0 && (
         <Box component="section" aria-labelledby="slack-unlinked-heading" sx={{ mt: "32px" }}>
           <Typography
             id="slack-unlinked-heading"

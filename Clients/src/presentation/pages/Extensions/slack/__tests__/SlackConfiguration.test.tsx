@@ -2,12 +2,16 @@ import { StrictMode } from "react";
 import { beforeEach, describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen, waitFor, within } from "@testing-library/react";
 import { ThemeProvider } from "@mui/material";
+import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import { MemoryRouter, useLocation } from "react-router";
 import { light } from "../../../../themes";
 import { SLACK_OAUTH_STATE_KEY } from "../slackOAuthState";
 
 vi.mock("../../../../../application/hooks/useFormattedDate", () => ({
   default: () => () => "14-11-2026",
+}));
+vi.mock("../../../../../application/hooks/useAuth", () => ({
+  useAuth: () => ({ organizationId: 42, userId: 9 }),
 }));
 
 const repo = vi.hoisted(() => ({
@@ -49,17 +53,38 @@ function LocationDisplay() {
   return <div data-testid="location">{location.pathname + location.search}</div>;
 }
 
-const renderPage = (route = "/extensions/slack/settings") =>
-  render(
+const renderPage = (route = "/extensions/slack/settings") => {
+  const queryClient = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  return render(
     <StrictMode>
-      <MemoryRouter initialEntries={[route]}>
-        <ThemeProvider theme={light}>
-          <SlackConfiguration />
-          <LocationDisplay />
-        </ThemeProvider>
-      </MemoryRouter>
+      <QueryClientProvider client={queryClient}>
+        <MemoryRouter initialEntries={[route]}>
+          <ThemeProvider theme={light}>
+            <SlackConfiguration />
+            <LocationDisplay />
+          </ThemeProvider>
+        </MemoryRouter>
+      </QueryClientProvider>
     </StrictMode>,
   );
+};
+
+/** A promise and its resolve, to finish a request at a chosen moment. */
+function deferred<T>() {
+  let resolve!: (value: T) => void;
+  const promise = new Promise<T>((r) => {
+    resolve = r;
+  });
+  return { promise, resolve };
+}
+
+const connectionNamed = (id: number) => ({
+  ...GENERAL,
+  id,
+  channel: `#c${id}`,
+});
 
 /** An apiServices error with the server's reason in the response body. */
 const apiError = (reason: string) =>
@@ -123,6 +148,21 @@ describe("OAuth return", () => {
     expect(repo.connectSlackWorkspace).not.toHaveBeenCalled();
     expect(screen.getByTestId("location")).toHaveTextContent(/^\/extensions\/slack\/settings$/);
     expect(sessionStorage.getItem(SLACK_OAUTH_STATE_KEY)).toBeNull();
+  });
+
+  it("keeps the new connection when the first load answers after the connect", async () => {
+    sessionStorage.setItem(SLACK_OAUTH_STATE_KEY, "state-1");
+    const firstLoad = deferred<(typeof GENERAL)[]>();
+    repo.getSlackConnections
+      .mockReturnValueOnce(firstLoad.promise)
+      .mockResolvedValue([GENERAL, ALERTS]);
+    renderPage("/extensions/slack/settings?code=code-1&state=state-1");
+
+    expect(await screen.findByText("Slack connected.")).toBeInTheDocument();
+    // The first load, started before the connect, answers last with the old list.
+    firstLoad.resolve([GENERAL]);
+
+    expect(await screen.findByText("#alerts")).toBeInTheDocument();
   });
 
   it("shows the server's reason when Slack refuses the code", async () => {
@@ -215,6 +255,45 @@ describe("connections", () => {
       expect(repo.updateSlackConnection).toHaveBeenCalledWith(1, { is_active: false }),
     );
     expect(await screen.findByText("Connection turned off.")).toBeInTheDocument();
+  });
+
+  it("keeps the table on screen while it refetches after a change", async () => {
+    renderPage();
+    await screen.findByText("#general");
+    repo.getSlackConnections.mockReturnValue(new Promise(() => {}));
+
+    fireEvent.click(screen.getByRole("button", { name: "Turn off #general" }));
+
+    await waitFor(() => expect(repo.getSlackConnections).toHaveBeenCalledTimes(2));
+    expect(screen.queryByText("Loading Slack connections...")).not.toBeInTheDocument();
+    expect(screen.getByText("#general")).toBeInTheDocument();
+    expect(screen.getByText("#alerts")).toBeInTheDocument();
+  });
+
+  it("shows the load error instead of an empty table", async () => {
+    repo.getSlackConnections.mockRejectedValue(apiError("Extension not enabled"));
+    renderPage();
+
+    expect(await screen.findByText("Extension not enabled")).toBeInTheDocument();
+    expect(screen.queryByText("No Slack connections yet")).not.toBeInTheDocument();
+  });
+
+  it("moves back a page when the last page's only row is removed", async () => {
+    const six = [1, 2, 3, 4, 5, 6].map(connectionNamed);
+    repo.getSlackConnections.mockResolvedValueOnce(six).mockResolvedValue(six.slice(0, 5));
+    renderPage();
+    await screen.findByText("#c1");
+
+    fireEvent.click(screen.getByRole("button", { name: /next page/i }));
+    fireEvent.click(await screen.findByRole("button", { name: "Remove #c6" }));
+    fireEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", { name: "Remove" }),
+    );
+
+    await waitFor(() => expect(repo.deleteSlackConnection).toHaveBeenCalledWith(6));
+    expect(await screen.findByText("#c1")).toBeInTheDocument();
+    expect(screen.getByText("#c5")).toBeInTheDocument();
+    expect(screen.queryByText("No Slack connections yet")).not.toBeInTheDocument();
   });
 
   it("notes that a legacy connection only posts its owner's events", async () => {
