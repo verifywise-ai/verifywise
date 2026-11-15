@@ -20,6 +20,7 @@ import {
 import { testConnection as mlflowTestConnection } from "../extensions/mlflow/mlflow.service";
 import { testConnection as azureTestConnection } from "../extensions/azure-ai-foundry/azureAiFoundry.service";
 import {
+  JiraNotConfiguredError,
   clientFromConfig as jiraClientFromConfig,
   loadFullConfig as jiraLoadFullConfig,
 } from "../extensions/jira-assets/jiraAssets.service";
@@ -41,6 +42,9 @@ type TestConnectionRunner = (
   submitted: Record<string, unknown>,
   organizationId: number,
 ) => Promise<TestConnectionResult>;
+
+/** Jira Assets test with fields missing and none stored to fill them. */
+export const JIRA_ASSETS_NOT_SAVED_MESSAGE = "Save the Jira Assets connection first.";
 
 const failedTest = (message: string): TestConnectionResult => ({
   success: false,
@@ -99,9 +103,11 @@ const TEST_CONNECTION_DISPATCH: Record<string, TestConnectionRunner> = {
     try {
       client = jiraClientFromConfig(candidate);
     } catch (err) {
-      // A refused base URL (loopback, link-local, metadata, ...) is a failed
-      // test, not a server error.
+      // A refused base URL (loopback, link-local, metadata, ...) or a missing
+      // field (nothing submitted and nothing stored) is a failed test, not a
+      // server error. The missing-field text names no field and no raw error.
       if (err instanceof UnsafeOutboundUrlError) return failedTest(err.message);
+      if (err instanceof JiraNotConfiguredError) return failedTest(JIRA_ASSETS_NOT_SAVED_MESSAGE);
       throw err;
     }
     const result = await client.testConnection();
@@ -279,7 +285,8 @@ export async function disableExtension(req: Request, res: Response): Promise<any
 /**
  * PATCH /api/extensions/:key/configuration
  * Update the stored configuration. Body: { configuration: {...} }.
- * Secret fields absent from the body preserve their existing encrypted value.
+ * Fields absent from the body keep their stored value; `null` clears one (see
+ * ExtensionService.mergeAndEncrypt).
  */
 export async function updateExtensionConfiguration(req: Request, res: Response): Promise<any> {
   const functionName = "updateExtensionConfiguration";
