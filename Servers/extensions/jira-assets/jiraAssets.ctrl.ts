@@ -115,9 +115,8 @@ function sendError(req: Request, res: Response, err: unknown, functionName: stri
     return res.status(400).json(STATUS_CODE[400](translateError(req, err)));
   }
   if (err instanceof JiraConfigValidationError) {
-    // Translated when it carries an i18nKey; other messages go out as they are.
-    const message = err.i18nKey ? translateError(req, err) : err.message;
-    return res.status(400).json(STATUS_CODE[400](message));
+    // The i18nKey when it has one; otherwise the message, unchanged unless it is a key.
+    return res.status(400).json(STATUS_CODE[400](translateError(req, err)));
   }
   if (err instanceof JiraNotConfiguredError || err instanceof JiraUseCaseNotFoundError) {
     return res.status(404).json(STATUS_CODE[404](err.message));

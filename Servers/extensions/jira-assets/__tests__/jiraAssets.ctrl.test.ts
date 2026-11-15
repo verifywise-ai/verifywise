@@ -551,14 +551,18 @@ describe("POST /config", () => {
   });
 
   it("sends a validation error without a key as it is", async () => {
-    (saveConfig as jest.Mock).mockRejectedValueOnce(
-      new JiraConfigValidationError("sync_enabled must be true or false"),
+    const invalid = new JiraConfigValidationError("sync_enabled must be true or false");
+    (saveConfig as jest.Mock).mockRejectedValueOnce(invalid);
+    // The real translateError: with no i18nKey it passes the message through the translator.
+    const actual = jest.requireActual<typeof import("../../../utils/i18n.utils")>(
+      "../../../utils/i18n.utils",
     );
+    (translateError as jest.Mock).mockImplementationOnce(actual.translateError as any);
     const res = mockRes();
 
     await postConfig(req, res);
 
-    expect(translateError).not.toHaveBeenCalled();
+    expect(translateError).toHaveBeenCalledWith(req, invalid);
     expect(res.status).toHaveBeenCalledWith(400);
     expect(res.json).toHaveBeenCalledWith({
       message: "Bad Request",
