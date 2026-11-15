@@ -16,7 +16,6 @@ import azureAiFoundryExtensionRoutes from "../../extensions/azure-ai-foundry/azu
 import jiraAssetsExtensionRoutes from "../../extensions/jira-assets/jiraAssets.route";
 import jiraIncidentsExtensionRoutes from "../../extensions/jira-incidents/jiraIncidents.route";
 import modelLifecycleExtensionRoutes from "../../extensions/model-lifecycle/modelLifecycle.route";
-import slackWebhookRoutes from "../slackWebhook.route";
 import llmKeyRouter from "../llmKey.route";
 import aiContentRoutes from "../aiContent.route";
 import aiConfirmationRoutes from "../aiConfirmation.route";
@@ -59,7 +58,6 @@ export function registerAiPlatformRoutes(app: express.Application): void {
   app.use("/api/extensions/jira-assets", jiraAssetsExtensionRoutes);
   app.use("/api/extensions/jira-incidents", jiraIncidentsExtensionRoutes);
   app.use("/api/extensions/model-lifecycle", modelLifecycleExtensionRoutes);
-  app.use("/api/slackWebhooks", slackWebhookRoutes);
   app.use("/api/llm-keys", llmKeyRouter);
   app.use("/api/ai-content", aiContentRoutes);
   app.use("/api/ai-confirmation", aiConfirmationRoutes);

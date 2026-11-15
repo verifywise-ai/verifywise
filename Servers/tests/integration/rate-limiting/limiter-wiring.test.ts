@@ -151,12 +151,6 @@ const PROTECTED_ROUTES = [
     limiter: "invitationResendLimiter",
   },
   {
-    mount: "/api/slackWebhooks",
-    method: "post",
-    path: "/",
-    limiter: "slackWebhookCreateLimiter",
-  },
-  {
     mount: "/api/extensions/slack",
     method: "post",
     path: "/oauth/workspaces",

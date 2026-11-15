@@ -30,7 +30,7 @@
  *   of generalApiLimiter; the gateway enforces per-key RPM and budget
  * - passwordResetEmailLimiter / inviteEmailLimiter / invitationResendLimiter:
  *   5/min each — outbound email
- * - slackWebhookCreateLimiter / slackWorkspaceCreateLimiter: 10/hour each
+ * - slackWorkspaceCreateLimiter: 10/hour — connecting a Slack workspace
  * - healthCheckLimiter: 1000/min — probe endpoint
  * - intakeLiveChecksVisitorLimiter: 10/min, intakePrefillVisitorLimiter: 3/10min —
  *   public intake AI calls, keyed by IP plus resolved form id
@@ -225,11 +225,6 @@ export const buildRateLimitConfigs = (relaxed: boolean): Record<string, RateLimi
     maxRequests: 5,
     message: "Too many resend requests from this IP, please try again later",
   },
-  slackWebhookCreate: {
-    windowMinutes: 60,
-    maxRequests: 10,
-    message: "Too many webhook creation requests from this IP, please try again after an hour",
-  },
   slackWorkspaceCreate: {
     windowMinutes: 60,
     maxRequests: 10,
@@ -369,9 +364,6 @@ export const inviteEmailLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.inviteEma
 
 /** Limiter for re-sending an invitation (POST /invitations/:id/resend). */
 export const invitationResendLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.invitationResend);
-
-/** Limiter for creating a Slack webhook (POST /slack-webhooks). */
-export const slackWebhookCreateLimiter = createRateLimiter(RATE_LIMIT_CONFIGS.slackWebhookCreate);
 
 /** Limiter for connecting a Slack workspace (POST /extensions/slack/oauth/workspaces). */
 export const slackWorkspaceCreateLimiter = createRateLimiter(

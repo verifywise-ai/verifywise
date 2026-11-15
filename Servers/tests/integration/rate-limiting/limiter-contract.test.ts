@@ -71,7 +71,6 @@ const LIMITERS = [
   { name: "passwordResetEmailLimiter", key: "passwordResetEmail", limit: 5, windowMinutes: 1 },
   { name: "inviteEmailLimiter", key: "inviteEmail", limit: 5, windowMinutes: 1 },
   { name: "invitationResendLimiter", key: "invitationResend", limit: 5, windowMinutes: 1 },
-  { name: "slackWebhookCreateLimiter", key: "slackWebhookCreate", limit: 10, windowMinutes: 60 },
   {
     name: "slackWorkspaceCreateLimiter",
     key: "slackWorkspaceCreate",
