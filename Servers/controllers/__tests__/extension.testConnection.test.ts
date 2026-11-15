@@ -12,6 +12,8 @@ jest.mock("../../extensions/jira-incidents/jiraIncidents.config", () => ({
   testConnection: jest.fn(),
 }));
 jest.mock("../../extensions/jira-assets/jiraAssets.service", () => ({
+  // The real field checks (parseJiraConnection) and error class.
+  ...jest.requireActual("../../extensions/jira-assets/jiraAssets.service"),
   clientFromConfig: jest.fn(),
   loadFullConfig: jest.fn(),
 }));
@@ -27,7 +29,6 @@ import { clientFromConfig, loadFullConfig } from "../../extensions/jira-assets/j
 import { ExtensionService } from "../../services/extension/extensionService";
 import { testConnection as mlflowTest } from "../../extensions/mlflow/mlflow.service";
 import { testConnection as azureTest } from "../../extensions/azure-ai-foundry/azureAiFoundry.service";
-import { assertSafeOutboundUrl } from "../../utils/safeOutboundUrl";
 
 const mockClientFromConfig = clientFromConfig as jest.Mock;
 const mockLoadFullConfig = loadFullConfig as jest.Mock;
@@ -77,16 +78,67 @@ describe("POST /api/extensions/jira-assets/test-connection", () => {
   });
 
   it("answers a refused base URL as a failed test, not a server error", async () => {
-    mockClientFromConfig.mockImplementation((c: { jira_base_url: string }) => {
-      assertSafeOutboundUrl(c.jira_base_url);
-      return {};
-    });
     const { status, body } = await call({ ...config, jira_base_url: "http://169.254.169.254" });
     expect(status).toBe(200);
     expect(body.data).toMatchObject({
       success: false,
-      message: "The URL resolves to a link-local address, which is not allowed",
+      message: "JIRA Base URL points to an address that is not allowed",
     });
+    expect(mockClientFromConfig).not.toHaveBeenCalled();
+  });
+
+  it.each([
+    [{ jira_base_url: "jira.example.com" }, "JIRA Base URL must be a valid http or https URL"],
+    [
+      { jira_base_url: "https://u:p@jira.example.com" },
+      "JIRA Base URL must not include a user name or password",
+    ],
+    [
+      { workspace_id: "a/b" },
+      "Workspace ID may only contain letters, numbers and hyphens, up to 64 characters",
+    ],
+    [{ workspace_id: "  " }, "Workspace ID is required"],
+    [{ deployment_type: "server" }, "Deployment type must be cloud or datacenter"],
+    [{ deployment_type: "cloud", email: "not-an-email" }, "Email must be a valid email address"],
+    [{ email: 42 }, "Jira connection fields must be text"],
+  ])(
+    "answers invalid fields %p as a failed test with the save message",
+    async (change, message) => {
+      const { status, body } = await call({ ...config, ...change });
+      expect(status).toBe(200);
+      expect(body.data).toMatchObject({ success: false, message });
+      expect(mockClientFromConfig).not.toHaveBeenCalled();
+    },
+  );
+
+  it("answers a missing token with none stored as a failed test, not a server error", async () => {
+    mockLoadFullConfig.mockResolvedValue(null);
+    const { status, body } = await call({ ...config, api_token: "" });
+    expect(status).toBe(200);
+    expect(body.data).toMatchObject({ success: false, message: "API Token is required" });
+    expect(mockClientFromConfig).not.toHaveBeenCalled();
+  });
+
+  it("tests the trimmed fields, as a save stores them", async () => {
+    mockClientFromConfig.mockReturnValue({
+      testConnection: jest.fn().mockResolvedValue({ success: true }),
+    });
+    await call({
+      ...config,
+      jira_base_url: "  https://jira.example.com ",
+      workspace_id: " w ",
+      email: " a@example.com ",
+      api_token: " t ",
+    });
+    expect(mockClientFromConfig).toHaveBeenCalledWith(
+      expect.objectContaining({
+        jira_base_url: "https://jira.example.com",
+        workspace_id: "w",
+        email: "a@example.com",
+        api_token: "t",
+        deployment_type: "datacenter",
+      }),
+    );
   });
 });
 
