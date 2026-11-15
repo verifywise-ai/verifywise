@@ -639,7 +639,7 @@ describe("policy.ctrl", () => {
       const reject = rejectPendingPolicyRequestOnDelete as jest.Mock;
       expect(reject).toHaveBeenCalledWith(1, 7, expect.anything());
       // Same transaction object as the delete.
-      expect(reject.mock.calls[0][2]).toBe(mockDelete.mock.calls[0][2]);
+      expect(reject.mock.calls[0][2]).toBe(mockDelete.mock.calls[0][3]);
       expect(res.status).toHaveBeenCalledWith(202);
     });
     it("should return 404 when policy is not found", async () => {

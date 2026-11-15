@@ -1,4 +1,4 @@
-import { getAllPoliciesQuery } from "../../utils/policyManager.utils";
+import { deletePolicyByIdQuery, getAllPoliciesQuery } from "../../utils/policyManager.utils";
 import { POLICY_REVIEW_DATE_SQL, toReviewDateValue } from "../../utils/policyReviewDate.utils";
 import { getPolicyTemplatesQuery } from "../../utils/policyTemplate.utils";
 import { POLICY_TAGS } from "../../domain.layer/interfaces/i.policy";
@@ -825,23 +825,15 @@ const agentDeletePolicy = createWriteToolFn({
       // is notified once the transaction commits.
       await rejectPendingPolicyRequestOnDelete(organizationId, policyId, transaction);
 
-      // Delete reviewer mappings first
-      await sequelize.query(
-        `DELETE FROM policy_manager__assigned_reviewer_ids WHERE organization_id = :organizationId AND policy_manager_id = :policyId`,
-        { replacements: { organizationId, policyId }, transaction },
+      // Same path as the REST delete: cleanup, custom fields, automation, history.
+      const deleted = await deletePolicyByIdQuery(
+        organizationId,
+        policyId,
+        (params._userId as number) || 0,
+        transaction,
       );
 
-      // Delete the policy
-      const result = await sequelize.query(
-        `DELETE FROM policy_manager WHERE organization_id = :organizationId AND id = :policyId RETURNING id`,
-        {
-          replacements: { organizationId, policyId },
-          type: QueryTypes.SELECT,
-          transaction,
-        },
-      );
-
-      if (!result || result.length === 0) {
+      if (!deleted) {
         throw new Error(`Policy #${policyId} not found`);
       }
 

@@ -2,7 +2,10 @@ const mockTx = { commit: jest.fn(), rollback: jest.fn() };
 jest.mock("../../../database/db", () => ({
   sequelize: { query: jest.fn(), transaction: jest.fn(async () => mockTx) },
 }));
-jest.mock("../../../utils/policyManager.utils", () => ({ getAllPoliciesQuery: jest.fn() }));
+jest.mock("../../../utils/policyManager.utils", () => ({
+  getAllPoliciesQuery: jest.fn(),
+  deletePolicyByIdQuery: jest.fn(),
+}));
 jest.mock("../../../utils/policyTemplate.utils", () => ({ getPolicyTemplatesQuery: jest.fn() }));
 jest.mock("../../approval/approvalGateway", () => ({ submitForApproval: jest.fn() }));
 jest.mock("../../../utils/logger/fileLogger", () => ({
@@ -38,6 +41,7 @@ import {
   ValidationException,
 } from "../../../domain.layer/exceptions/custom.exception";
 import { POLICY_STATUS_MESSAGES } from "../../../utils/policyStatus.utils";
+import { deletePolicyByIdQuery } from "../../../utils/policyManager.utils";
 import { availablePolicyTools } from "../policyFunctions";
 
 const q = sequelize.query as jest.Mock;
@@ -319,17 +323,20 @@ describe("agent_approve_policy_review before the approval gate", () => {
 });
 
 describe("agent_delete_policy", () => {
-  it("rejects the pending request inside the delete transaction", async () => {
-    q.mockResolvedValueOnce(undefined).mockResolvedValueOnce([{ id: 1 }]);
+  const mockDeleteQuery = deletePolicyByIdQuery as jest.Mock;
+
+  it("rejects the pending request, then deletes through the shared query on one transaction", async () => {
+    mockDeleteQuery.mockResolvedValueOnce(true);
     const result = await exec("agent_delete_policy")({ policy_id: 1, _userId: 9 }, 42);
     expect(rejectPendingPolicyRequestOnDelete).toHaveBeenCalledWith(42, 1, mockTx);
-    for (const call of q.mock.calls) expect(call[1].transaction).toBe(mockTx);
+    expect(mockDeleteQuery).toHaveBeenCalledWith(42, 1, 9, mockTx);
+    expect(q).not.toHaveBeenCalled();
     expect(mockTx.commit).toHaveBeenCalled();
     expect(result).toEqual({ policy_id: 1, deleted: true });
   });
 
   it("rolls back when the policy is not found", async () => {
-    q.mockResolvedValueOnce(undefined).mockResolvedValueOnce([]);
+    mockDeleteQuery.mockResolvedValueOnce(false);
     await expect(exec("agent_delete_policy")({ policy_id: 1, _userId: 9 }, 42)).rejects.toThrow(
       "Policy #1 not found",
     );

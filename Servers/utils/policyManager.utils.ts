@@ -15,6 +15,7 @@ import {
 } from "./customField.utils";
 import { findUsersNotInOrganization, parseReferencedIds } from "./user.utils";
 import { POLICY_REVIEW_DATE_SQL, toReviewDateValue } from "./policyReviewDate.utils";
+import { recordEntityDeletion } from "./changeHistory.base.utils";
 import { ValidationException } from "../domain.layer/exceptions/custom.exception";
 
 /**
@@ -543,6 +544,7 @@ export const updatePolicyByIdQuery = async (
 export const deletePolicyByIdQuery = async (
   organizationId: number,
   id: number,
+  userId: number,
   transaction: Transaction,
 ) => {
   // Get policy data with reviewer IDs BEFORE deleting (CASCADE will delete mappings)
@@ -556,6 +558,18 @@ export const deletePolicyByIdQuery = async (
 
   await deleteAllCustomFieldValuesForEntityQuery("policy", id, organizationId, transaction);
 
+  // Rows that point at the policy without a foreign key survive the delete, so
+  // they go in the same transaction. policy_change_history is kept on purpose.
+  const leftovers = [
+    `DELETE FROM policy_folder_mappings WHERE organization_id = :organizationId AND policy_id = :id`,
+    `DELETE FROM ce_marking_policies WHERE organization_id = :organizationId AND policy_id = :id`,
+    `DELETE FROM task_entity_links WHERE organization_id = :organizationId AND entity_type = 'policy' AND entity_id = :id`,
+    `DELETE FROM share_links WHERE organization_id = :organizationId AND resource_type = 'policy' AND resource_id = :id`,
+  ];
+  for (const sql of leftovers) {
+    await sequelize.query(sql, { replacements: { organizationId, id }, transaction });
+  }
+
   // Delete the policy (CASCADE will handle mapping table deletion)
   await sequelize.query(
     `DELETE FROM policy_manager WHERE organization_id = :organizationId AND id = :id RETURNING *`,
@@ -565,6 +579,8 @@ export const deletePolicyByIdQuery = async (
       type: QueryTypes.DELETE,
     },
   );
+
+  await recordEntityDeletion("policy", id, userId, organizationId, transaction);
 
   const automations = (await sequelize.query(
     `SELECT

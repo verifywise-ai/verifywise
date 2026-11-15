@@ -327,7 +327,12 @@ export class PolicyController {
       // A pending approval request on the policy is rejected with the delete.
       await rejectPendingPolicyRequestOnDelete(req.organizationId!, policyId, transaction);
 
-      const deleted = await deletePolicyByIdQuery(req.organizationId!, policyId, transaction);
+      const deleted = await deletePolicyByIdQuery(
+        req.organizationId!,
+        policyId,
+        req.userId!,
+        transaction,
+      );
 
       if (deleted) {
         await transaction.commit();
