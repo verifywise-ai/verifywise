@@ -376,6 +376,11 @@ export async function updateSlackWebhookById(req: Request, res: Response): Promi
     );
     return res.status(202).json(STATUS_CODE[202](updatedSlackWebhook));
   } catch (error) {
+    // The query re-checks routing_type itself; its refusal is bad input, not a 500.
+    if (error instanceof ValidationException) {
+      logStructured("error", `validation failed: ${error.message}`, functionName, fileName);
+      return res.status(400).json(STATUS_CODE[400](translateError(req, error)));
+    }
     logStructured(
       "error",
       `unexpected error for slackWebhook ID ${slackWebhookId}`,
