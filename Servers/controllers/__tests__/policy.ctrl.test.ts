@@ -320,10 +320,11 @@ describe("policy.ctrl", () => {
 
   describe("status gate (S2)", () => {
     const { sequelize } = require("../../database/db");
-    const lockRow = (status: string, has_pending = false) =>
-      (sequelize.query as jest.Mock<any>).mockResolvedValueOnce([
-        { id: 1, title: "P1", status, has_pending },
-      ]);
+    // The gate locks the row, then reads pending requests in a second statement.
+    const lockRow = (status: string, hasPending = false) =>
+      (sequelize.query as jest.Mock<any>)
+        .mockResolvedValueOnce([{ id: 1, title: "P1", status }])
+        .mockResolvedValueOnce(hasPending ? [{ entity_id: 1 }] : []);
 
     it.each(["Under Review", "Approved", "Published"])(
       "rejects creating a policy as %s with a status field error",
@@ -423,10 +424,12 @@ describe("policy.ctrl", () => {
 
     it("bulk archive returns 400 naming the policies with a pending request and archives none", async () => {
       const { bulkArchivePoliciesQuery } = require("../../utils/policyManager.utils");
-      (sequelize.query as jest.Mock<any>).mockResolvedValueOnce([
-        { id: 1, title: "Alpha", status: "Under Review", has_pending: true },
-        { id: 2, title: "Beta", status: "Draft", has_pending: false },
-      ]);
+      (sequelize.query as jest.Mock<any>)
+        .mockResolvedValueOnce([
+          { id: 1, title: "Alpha", status: "Under Review" },
+          { id: 2, title: "Beta", status: "Draft" },
+        ])
+        .mockResolvedValueOnce([{ entity_id: 1 }]);
       const res = createRes();
       await PolicyController.bulkUpdatePolicies(
         createReq({ body: { ids: [1, 2], action: "archive" } }),
@@ -939,6 +942,13 @@ describe("policy.ctrl", () => {
 
   describe("bulkUpdatePolicies", () => {
     it("should return 200 for archive action", async () => {
+      const { sequelize } = require("../../database/db");
+      (sequelize.query as jest.Mock<any>)
+        .mockResolvedValueOnce([
+          { id: 1, title: "A", status: "Draft" },
+          { id: 2, title: "B", status: "Published" },
+        ])
+        .mockResolvedValueOnce([]);
       const req = createReq({ body: { ids: [1, 2], action: "archive" } });
       const res = createRes();
       await PolicyController.bulkUpdatePolicies(req, res);

@@ -86,8 +86,12 @@ interface PolicyStatusRow {
 
 /**
  * The policies' current status and whether each has a Pending approval
- * request. Locks the rows for the transaction, so a concurrent submit for
- * approval (which locks the same row) cannot slip in between check and write.
+ * request. Two statements on purpose: the first locks the rows (a concurrent
+ * submit for approval locks the same row, so we wait for it to commit); the
+ * second reads approval_requests with a fresh snapshot taken after the lock,
+ * so it sees a request that submit has just committed. Reading both in one
+ * statement would re-check the locked row at its new version but keep the
+ * statement's old snapshot for the request, and miss it.
  */
 const lockPolicyStatusRows = async (
   organizationId: number,
@@ -96,32 +100,47 @@ const lockPolicyStatusRows = async (
 ): Promise<PolicyStatusRow[]> => {
   if (policyIds.length === 0) return [];
   const rows = (await sequelize.query(
-    `SELECT pm.id, pm.title, pm.status,
-            EXISTS (
-              SELECT 1 FROM approval_requests ar
-              WHERE ar.organization_id = pm.organization_id
-                AND ar.entity_type = 'policy'
-                AND ar.entity_id = pm.id
-                AND ar.status = :pending
-            ) AS has_pending
+    `SELECT pm.id, pm.title, pm.status
      FROM policy_manager pm
      WHERE pm.organization_id = :organizationId AND pm.id IN (:policyIds)
      ORDER BY pm.id
-     FOR UPDATE OF pm`,
+     FOR UPDATE`,
     {
-      replacements: { organizationId, policyIds, pending: ApprovalRequestStatus.PENDING },
+      replacements: { organizationId, policyIds },
       type: QueryTypes.SELECT,
       transaction,
     },
-  )) as PolicyStatusRow[];
-  return rows.map((r) => ({ ...r, id: Number(r.id), has_pending: !!r.has_pending }));
+  )) as Array<Omit<PolicyStatusRow, "has_pending">>;
+  if (rows.length === 0) return [];
+
+  const lockedIds = rows.map((r) => Number(r.id));
+  const pendingRows = (await sequelize.query(
+    `SELECT DISTINCT ar.entity_id
+     FROM approval_requests ar
+     WHERE ar.organization_id = :organizationId
+       AND ar.entity_type = 'policy'
+       AND ar.entity_id IN (:policyIds)
+       AND ar.status = :pending`,
+    {
+      replacements: {
+        organizationId,
+        policyIds: lockedIds,
+        pending: ApprovalRequestStatus.PENDING,
+      },
+      type: QueryTypes.SELECT,
+      transaction,
+    },
+  )) as Array<{ entity_id: number }>;
+  const pending = new Set(pendingRows.map((r) => Number(r.entity_id)));
+
+  return rows.map((r) => ({ ...r, id: Number(r.id), has_pending: pending.has(Number(r.id)) }));
 };
 
 /**
  * Checks a status sent on update against the stored status and the pending
  * request. Returns the stored status (null when the policy is not in the
  * organization, which the caller reports as 404). Does nothing when no status
- * was sent.
+ * was sent (undefined or null).
  */
 export const assertPolicyStatusUpdateAllowed = async (params: {
   organizationId: number;
@@ -130,7 +149,7 @@ export const assertPolicyStatusUpdateAllowed = async (params: {
   transaction: Transaction;
 }): Promise<string | null> => {
   const { organizationId, policyId, nextStatus, transaction } = params;
-  if (nextStatus === undefined) return null;
+  if (nextStatus === undefined || nextStatus === null) return null;
   const [row] = await lockPolicyStatusRows(organizationId, [policyId], transaction);
   if (!row) return null;
   assertPolicyStatusChange({

@@ -603,6 +603,7 @@ import {
   assertPolicyStatusUpdateAllowed,
 } from "../../utils/policyStatus.utils";
 import { recordPolicyStatusChange } from "../../utils/policyApprovalDecision.utils";
+import { ValidationException } from "../../domain.layer/exceptions/custom.exception";
 import {
   approvePolicyDirectly,
   rejectPendingPolicyRequestOnDelete,
@@ -688,9 +689,15 @@ const agentUpdatePolicy = createWriteToolFn({
       updateFields.push("content_html = :content_html");
       replacements.content_html = sanitizeUserHtml(String(params.description ?? "")) ?? "";
     }
-    if (params.status !== undefined) {
+    // null is treated as "not sent", like undefined: never written, no history.
+    const status =
+      params.status === undefined || params.status === null ? undefined : params.status;
+    if (status !== undefined) {
+      if (!POLICY_STATUS_ENUM.includes(status as (typeof POLICY_STATUS_ENUM)[number])) {
+        throw new ValidationException("Choose a valid status", "status", status);
+      }
       updateFields.push("status = :status");
-      replacements.status = params.status;
+      replacements.status = status;
     }
     if (params.tags !== undefined) {
       updateFields.push("tags = ARRAY[:tags]");
@@ -707,7 +714,7 @@ const agentUpdatePolicy = createWriteToolFn({
       const previousStatus = await assertPolicyStatusUpdateAllowed({
         organizationId,
         policyId,
-        nextStatus: params.status as string | undefined,
+        nextStatus: status as string | undefined,
         transaction,
       });
 
@@ -724,13 +731,13 @@ const agentUpdatePolicy = createWriteToolFn({
         throw new Error(`Policy #${policyId} not found`);
       }
 
-      if (previousStatus !== null && params.status !== undefined) {
+      if (previousStatus !== null && status !== undefined) {
         await recordPolicyStatusChange(
           organizationId,
           policyId,
           userId || null,
           previousStatus,
-          params.status as string,
+          status as string,
           transaction,
         );
       }

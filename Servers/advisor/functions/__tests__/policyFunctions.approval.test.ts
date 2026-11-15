@@ -30,7 +30,10 @@ import {
 } from "../../../services/policies/policyApproval.service";
 import { recordPolicyStatusChange } from "../../../utils/policyApprovalDecision.utils";
 import { getUserOrganizationsQuery } from "../../../utils/organizationMember.utils";
-import { ConflictException } from "../../../domain.layer/exceptions/custom.exception";
+import {
+  ConflictException,
+  ValidationException,
+} from "../../../domain.layer/exceptions/custom.exception";
 import { POLICY_STATUS_MESSAGES } from "../../../utils/policyStatus.utils";
 import "../policyFunctions";
 
@@ -62,24 +65,27 @@ describe("agent_create_policy status", () => {
 
 describe("agent_update_policy status", () => {
   it("refuses a status change while a request is pending, and rolls back", async () => {
-    q.mockResolvedValueOnce([{ id: 1, title: "P", status: "Under Review", has_pending: true }]);
+    q.mockResolvedValueOnce([{ id: 1, title: "P", status: "Under Review" }]);
+    q.mockResolvedValueOnce([{ entity_id: 1 }]);
     await expect(
       exec("agent_update_policy")({ policy_id: 1, status: "Draft", _userId: 9 }, 42),
     ).rejects.toThrow(POLICY_STATUS_MESSAGES.pendingRequest);
-    expect(q).toHaveBeenCalledTimes(1);
+    expect(q).toHaveBeenCalledTimes(2);
     expect(mockTx.rollback).toHaveBeenCalled();
     expect(mockTx.commit).not.toHaveBeenCalled();
   });
 
   it("refuses to approve by hand", async () => {
-    q.mockResolvedValueOnce([{ id: 1, title: "P", status: "Draft", has_pending: false }]);
+    q.mockResolvedValueOnce([{ id: 1, title: "P", status: "Draft" }]);
+    q.mockResolvedValueOnce([]);
     await expect(
       exec("agent_update_policy")({ policy_id: 1, status: "Approved", _userId: 9 }, 42),
     ).rejects.toThrow(POLICY_STATUS_MESSAGES.approvedByHand);
   });
 
   it("publishes an approved policy and records the status change", async () => {
-    q.mockResolvedValueOnce([{ id: 1, title: "P", status: "Approved", has_pending: false }]);
+    q.mockResolvedValueOnce([{ id: 1, title: "P", status: "Approved" }]);
+    q.mockResolvedValueOnce([]);
     q.mockResolvedValueOnce([{ id: 1, status: "Published" }]);
     const result = await exec("agent_update_policy")(
       { policy_id: 1, status: "Published", _userId: 9 },
@@ -87,7 +93,8 @@ describe("agent_update_policy status", () => {
     );
     expect(result).toEqual({ id: 1, status: "Published" });
     expect(q.mock.calls[0][0]).toContain("FOR UPDATE");
-    expect(q.mock.calls[1][1].transaction).toBe(mockTx);
+    expect(q.mock.calls[1][0]).toContain("FROM approval_requests");
+    expect(q.mock.calls[2][1].transaction).toBe(mockTx);
     expect(recordPolicyStatusChange).toHaveBeenCalledWith(
       42,
       1,
@@ -97,6 +104,32 @@ describe("agent_update_policy status", () => {
       mockTx,
     );
     expect(mockTx.commit).toHaveBeenCalled();
+  });
+
+  it("treats a null status as not sent: not written, not checked, no history", async () => {
+    q.mockResolvedValueOnce([{ id: 1 }]);
+    await exec("agent_update_policy")(
+      { policy_id: 1, policy_name: "New", status: null, _userId: 9 },
+      42,
+    );
+    expect(q).toHaveBeenCalledTimes(1);
+    const [sql, options] = q.mock.calls[0];
+    expect(sql).not.toContain("status = :status");
+    expect(options.replacements).not.toHaveProperty("status");
+    expect(recordPolicyStatusChange).not.toHaveBeenCalled();
+    expect(mockTx.commit).toHaveBeenCalled();
+  });
+
+  it("rejects a status outside the policy statuses before opening a transaction", async () => {
+    expect.assertions(4);
+    try {
+      await exec("agent_update_policy")({ policy_id: 1, status: "Bogus", _userId: 9 }, 42);
+    } catch (error) {
+      expect(error).toBeInstanceOf(ValidationException);
+      expect((error as Error).message).toBe("Choose a valid status");
+      expect((error as ValidationException).metadata.field).toBe("status");
+      expect(q).not.toHaveBeenCalled();
+    }
   });
 
   it("does not check or record status when none is sent", async () => {

@@ -166,9 +166,9 @@ describe("assertPolicyStatusUpdateAllowed", () => {
   });
 
   it("locks the row in the organization and returns the stored status", async () => {
-    mockQuery.mockResolvedValueOnce([
-      { id: "5", title: "P", status: "Approved", has_pending: false },
-    ] as any);
+    mockQuery
+      .mockResolvedValueOnce([{ id: "5", title: "P", status: "Approved" }] as any)
+      .mockResolvedValueOnce([] as any);
     await expect(
       assertPolicyStatusUpdateAllowed({
         organizationId: 1,
@@ -179,16 +179,58 @@ describe("assertPolicyStatusUpdateAllowed", () => {
     ).resolves.toBe("Approved");
     const [sql, options] = mockQuery.mock.calls[0] as [string, any];
     expect(sql).toContain("pm.organization_id = :organizationId");
-    expect(sql).toContain("ar.entity_type = 'policy'");
-    expect(sql).toContain("FOR UPDATE OF pm");
-    expect(options.replacements).toEqual({ organizationId: 1, policyIds: [5], pending: "Pending" });
+    expect(sql).toContain("FOR UPDATE");
+    expect(sql).not.toContain("approval_requests");
+    expect(options.replacements).toEqual({ organizationId: 1, policyIds: [5] });
     expect(options.transaction).toBe(tx);
   });
 
+  it("checks the pending request in a second statement, after the row lock", async () => {
+    // One statement would keep its pre-lock snapshot for approval_requests and
+    // miss a request a concurrent submit has just committed.
+    mockQuery
+      .mockResolvedValueOnce([{ id: 5, title: "P", status: "Under Review" }] as any)
+      .mockResolvedValueOnce([{ entity_id: "5" }] as any);
+    await expect(
+      assertPolicyStatusUpdateAllowed({
+        organizationId: 1,
+        policyId: 5,
+        nextStatus: "Draft",
+        transaction: tx,
+      }),
+    ).rejects.toThrow(POLICY_STATUS_MESSAGES.pendingRequest);
+    expect(mockQuery).toHaveBeenCalledTimes(2);
+    const [lockSql] = mockQuery.mock.calls[0] as [string, any];
+    const [pendingSql, pendingOptions] = mockQuery.mock.calls[1] as [string, any];
+    expect(lockSql).toContain("FOR UPDATE");
+    expect(pendingSql).toContain("FROM approval_requests");
+    expect(pendingSql).toContain("ar.organization_id = :organizationId");
+    expect(pendingSql).toContain("ar.entity_type = 'policy'");
+    expect(pendingSql).not.toContain("FOR UPDATE");
+    expect(pendingOptions.replacements).toEqual({
+      organizationId: 1,
+      policyIds: [5],
+      pending: "Pending",
+    });
+    expect(pendingOptions.transaction).toBe(tx);
+  });
+
+  it("treats a null status as not sent", async () => {
+    await expect(
+      assertPolicyStatusUpdateAllowed({
+        organizationId: 1,
+        policyId: 5,
+        nextStatus: null,
+        transaction: tx,
+      }),
+    ).resolves.toBeNull();
+    expect(mockQuery).not.toHaveBeenCalled();
+  });
+
   it("rejects a change while a request is pending", async () => {
-    mockQuery.mockResolvedValueOnce([
-      { id: 5, title: "P", status: "Under Review", has_pending: true },
-    ] as any);
+    mockQuery
+      .mockResolvedValueOnce([{ id: 5, title: "P", status: "Under Review" }] as any)
+      .mockResolvedValueOnce([{ entity_id: 5 }] as any);
     await expect(
       assertPolicyStatusUpdateAllowed({
         organizationId: 1,
@@ -218,19 +260,23 @@ describe("assertPoliciesCanBeArchived", () => {
   });
 
   it("passes when nothing is pending", async () => {
-    mockQuery.mockResolvedValueOnce([
-      { id: 1, title: "A", status: "Draft", has_pending: false },
-      { id: 2, title: "B", status: "Published", has_pending: false },
-    ] as any);
+    mockQuery
+      .mockResolvedValueOnce([
+        { id: 1, title: "A", status: "Draft" },
+        { id: 2, title: "B", status: "Published" },
+      ] as any)
+      .mockResolvedValueOnce([] as any);
     await expect(assertPoliciesCanBeArchived(1, [1, 2], tx)).resolves.toBeUndefined();
   });
 
   it("names every blocked policy, with a translatable key", async () => {
-    mockQuery.mockResolvedValueOnce([
-      { id: 1, title: "Alpha", status: "Under Review", has_pending: true },
-      { id: 2, title: "Beta", status: "Draft", has_pending: false },
-      { id: 3, title: "Gamma", status: "Under Review", has_pending: true },
-    ] as any);
+    mockQuery
+      .mockResolvedValueOnce([
+        { id: 1, title: "Alpha", status: "Under Review" },
+        { id: 2, title: "Beta", status: "Draft" },
+        { id: 3, title: "Gamma", status: "Under Review" },
+      ] as any)
+      .mockResolvedValueOnce([{ entity_id: 1 }, { entity_id: 3 }] as any);
     expect.assertions(4);
     try {
       await assertPoliciesCanBeArchived(1, [1, 2, 3], tx);
@@ -246,10 +292,29 @@ describe("assertPoliciesCanBeArchived", () => {
   });
 
   it("accepts a policy that is already archived even with a pending request", async () => {
-    mockQuery.mockResolvedValueOnce([
-      { id: 1, title: "A", status: "Archived", has_pending: true },
-    ] as any);
+    mockQuery
+      .mockResolvedValueOnce([{ id: 1, title: "A", status: "Archived" }] as any)
+      .mockResolvedValueOnce([{ entity_id: 1 }] as any);
     await expect(assertPoliciesCanBeArchived(1, [1], tx)).resolves.toBeUndefined();
+  });
+
+  it("locks the batch in id order before reading pending requests", async () => {
+    mockQuery
+      .mockResolvedValueOnce([
+        { id: 1, title: "A", status: "Draft" },
+        { id: 2, title: "B", status: "Draft" },
+      ] as any)
+      .mockResolvedValueOnce([] as any);
+    await assertPoliciesCanBeArchived(1, [2, 1], tx);
+    const [lockSql] = mockQuery.mock.calls[0] as [string, any];
+    expect(lockSql).toMatch(/ORDER BY pm\.id\s+FOR UPDATE/);
+    expect(String(mockQuery.mock.calls[1][0])).toContain("FROM approval_requests");
+  });
+
+  it("does not read pending requests when no policy row is found", async () => {
+    mockQuery.mockResolvedValueOnce([] as any);
+    await expect(assertPoliciesCanBeArchived(1, [9], tx)).resolves.toBeUndefined();
+    expect(mockQuery).toHaveBeenCalledTimes(1);
   });
 
   it("does not query for an empty list", async () => {
