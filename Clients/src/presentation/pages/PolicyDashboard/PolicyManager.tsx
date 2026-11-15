@@ -43,11 +43,6 @@ import {
 import { usePolicyApprovalChangedListener } from "../../../application/hooks/usePolicyApproval";
 import PolicyStatusCard from "./PolicyStatusCard";
 import { ExportMenu } from "../../components/Table/ExportMenu";
-import {
-  buildUserSortNames,
-  compareNames,
-  userSortName,
-} from "../../../application/utils/userSort";
 import useUsers from "../../../application/hooks/useUsers";
 import { useCanCheck, useCan } from "../../../application/hooks/useCan";
 import { FilterColumn } from "../../components/Table/FilterBy";
@@ -513,8 +508,6 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
     [visibleColumns],
   );
 
-  const userSortNames = useMemo(() => buildUserSortNames(users), [users]);
-
   const policySortComparator = useCallback(
     (a: PolicyManagerModel, b: PolicyManagerModel, key: string): number => {
       switch (key) {
@@ -528,25 +521,21 @@ const PolicyManager: React.FC<PolicyManagerProps> = ({ tags: _tags }) => {
           return aVal - bVal;
         }
         case "author":
-          return compareNames(
-            userSortName(userSortNames, a.author_id),
-            userSortName(userSortNames, b.author_id),
-          );
+          return (a.author_id?.toString() || "").localeCompare(b.author_id?.toString() || "");
         case "last_updated": {
           const aVal = a.last_updated_at ? new Date(a.last_updated_at).getTime() : 0;
           const bVal = b.last_updated_at ? new Date(b.last_updated_at).getTime() : 0;
           return aVal - bVal;
         }
         case "updated_by":
-          return compareNames(
-            userSortName(userSortNames, a.last_updated_by),
-            userSortName(userSortNames, b.last_updated_by),
+          return (a.last_updated_by?.toString() || "").localeCompare(
+            b.last_updated_by?.toString() || "",
           );
         default:
           return 0;
       }
     },
-    [userSortNames],
+    [],
   );
 
   const { sortConfig, handleSort } = useStandardTable<PolicyManagerModel>({

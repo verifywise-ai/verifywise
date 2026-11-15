@@ -25,6 +25,8 @@ import {
 } from "../../../../application/utils/paginationStorage";
 import { ITableProps } from "../../../types/interfaces/i.table";
 import { text, border, radiusPx } from "../../../themes/palette";
+import useUsers from "../../../../application/hooks/useUsers";
+import { buildUserSortNames, userSortName } from "../../../../application/utils/userSort";
 
 const POLICY_TABLE_SORTING_KEY = "verifywise_policy_table_sorting";
 
@@ -55,6 +57,8 @@ const CustomizablePolicyTable = ({
     getPaginationRowCount("policyManager", DEFAULT_ROWS_PER_PAGE),
   );
   const { setInputValues } = useContext(VerifyWiseContext);
+  const { users } = useUsers();
+  const userSortNames = useMemo(() => buildUserSortNames(users), [users]);
 
   // Initialize sorting state from localStorage or default to no sorting
   const [sortConfig, setSortConfig] = useState<SortConfig>(() => {
@@ -136,13 +140,14 @@ const CustomizablePolicyTable = ({
         aValue = a.next_review_date ? new Date(a.next_review_date).getTime() : 0;
         bValue = b.next_review_date ? new Date(b.next_review_date).getTime() : 0;
       } else if (sortKey.includes("author")) {
-        aValue = a.author_id?.toString() || "";
-        bValue = b.author_id?.toString() || "";
+        // The column shows names, so sort by name rather than by user id.
+        aValue = userSortName(userSortNames, a.author_id).toLowerCase();
+        bValue = userSortName(userSortNames, b.author_id).toLowerCase();
       } else if (sortKey.includes("last") || sortKey.includes("updated")) {
         // Handle both "last updated" and "updated by" columns
         if (sortKey.includes("by")) {
-          aValue = a.last_updated_by?.toString() || "";
-          bValue = b.last_updated_by?.toString() || "";
+          aValue = userSortName(userSortNames, a.last_updated_by).toLowerCase();
+          bValue = userSortName(userSortNames, b.last_updated_by).toLowerCase();
         } else {
           aValue = a.last_updated_at ? new Date(a.last_updated_at).getTime() : 0;
           bValue = b.last_updated_at ? new Date(b.last_updated_at).getTime() : 0;
@@ -171,7 +176,7 @@ const CustomizablePolicyTable = ({
       if (aValue > bValue) return sortConfig.direction === "asc" ? 1 : -1;
       return 0;
     });
-  }, [data.rows, sortConfig]);
+  }, [data.rows, sortConfig, userSortNames]);
 
   const tableHeader = (
     <TableHead
