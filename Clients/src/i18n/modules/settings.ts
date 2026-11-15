@@ -250,7 +250,6 @@ export const de: Record<string, string> = {
   "Add checklist item...": "Checklistenpunkt hinzufügen...",
   "Add new phase": "Neue Phase hinzufügen",
   "Add to Slack": "Zu Slack hinzufügen",
-  "Apply to all workspaces:": "Auf alle Workspaces anwenden:",
   "Artifact Location:": "Artefakt-Speicherort:",
   "Assign frameworks in the Frameworks/regulations tab.":
     "Weisen Sie Rahmenwerke im Tab Rahmenwerke/Regulierungen zu.",
@@ -266,8 +265,6 @@ export const de: Record<string, string> = {
   "Capacity": "Kapazität",
   "Channel": "Kanal",
   "Choose File": "Datei auswählen",
-  'Click "Add to Slack" above to connect your first workspace.':
-    'Klicken Sie oben auf "Zu Slack hinzufügen", um Ihren ersten Workspace zu verbinden.',
   "Click to upload documents": "Zum Hochladen von Dokumenten klicken",
   "Could not remove the file. Try again.":
     "Die Datei konnte nicht entfernt werden. Versuchen Sie es erneut.",
@@ -276,16 +273,11 @@ export const de: Record<string, string> = {
   "Configuration saved.": "Konfiguration gespeichert.",
   "Configure Model Lifecycle": "Modelllebenszyklus konfigurieren",
   "Configure Phases": "Phasen konfigurieren",
-  "Configure which notification types go to which Slack channels.":
-    "Konfigurieren Sie, welche Benachrichtigungstypen an welche Slack-Kanäle gesendet werden.",
   "Connect to your Jira Service Management Assets to import AI Systems as use-cases.":
     "Verbinden Sie sich mit Ihren Jira Service Management Assets, um KI-Systeme als Anwendungsfälle zu importieren.",
-  "Connect your Slack workspace and route VerifyWise notifications to specific channels.":
-    "Verbinden Sie Ihren Slack-Workspace und leiten Sie VerifyWise-Benachrichtigungen an bestimmte Kanäle weiter.",
   "Create phase": "Phase erstellen",
   "Created in JIRA": "In JIRA erstellt",
   "Created:": "Erstellt:",
-  "Creation Date": "Erstellungsdatum",
   "Delete item": "Element löschen",
   "Delete phase": "Phase löschen",
   "Delete this item? This cannot be undone.":
@@ -349,7 +341,6 @@ export const de: Record<string, string> = {
   "Lifecycle Progress": "Lebenszyklusfortschritt",
   "Lifecycle stage": "Lebenszyklusstadium",
   "Loading MLFlow data...": "MLFlow-Daten werden geladen...",
-  "Loading workspaces...": "Workspaces werden geladen...",
   "Model not found": "Modell nicht gefunden",
   "Move item down": "Element nach unten verschieben",
   "Move item up": "Element nach oben verschieben",
@@ -377,8 +368,6 @@ export const de: Record<string, string> = {
   "No lifecycle phases yet. An Admin can add them.":
     "Noch keine Lebenszyklusphasen. Ein Admin kann sie hinzufügen.",
   "No use case found": "Kein Anwendungsfall gefunden",
-  "No workspaces connected": "Keine Workspaces verbunden",
-  "Notification Routing": "Benachrichtigungsweiterleitung",
   "Object Type": "Objekttyp",
   "Object Type (AI Systems)": "Objekttyp (KI-Systeme)",
   "Phase name": "Phasenname",
@@ -395,7 +384,6 @@ export const de: Record<string, string> = {
   "Save phase name": "Phasennamen speichern",
   "Schema": "Schema",
   "Select a phase from the sidebar": "Wählen Sie eine Phase aus der Seitenleiste",
-  "Slack Client ID not configured.": "Slack-Client-ID nicht konfiguriert.",
   "Staging": "Staging",
   "Step 1: Connection Settings": "Schritt 1: Verbindungseinstellungen",
   "Step 1: Download Excel Template": "Schritt 1: Excel-Vorlage herunterladen",
@@ -408,7 +396,6 @@ export const de: Record<string, string> = {
   "Succeeded": "Erfolgreich",
   "Sync": "Synchronisieren",
   "Sync Status": "Synchronisierungsstatus",
-  "Team Name": "Teamname",
   "Test connection": "Verbindung testen",
   "Testing...": "Wird getestet...",
   "Text Area": "Textbereich",
@@ -419,8 +406,6 @@ export const de: Record<string, string> = {
   "Upload your Excel file with risk data.": "Laden Sie Ihre Excel-Datei mit Risikodaten hoch.",
   "Version:": "Version:",
   "View lifecycle": "Lebenszyklus anzeigen",
-  "Workspace disconnected successfully!": "Workspace erfolgreich getrennt!",
-  "Workspace status updated successfully!": "Workspace-Status erfolgreich aktualisiert!",
   "Default retention policy": "Standard-Aufbewahrungsrichtlinie",
   "File retention": "Dateiaufbewahrung",
   "Audit records": "Auditdatensätze",
@@ -521,6 +506,62 @@ export const de: Record<string, string> = {
   "New role": "Neue Rolle",
   "No custom roles yet": "Noch keine benutzerdefinierten Rollen",
   "What this role is for": "Wofür diese Rolle gedacht ist",
+  "Connect a Slack channel and choose which VerifyWise notifications it receives.":
+    "Verbinden Sie einen Slack-Kanal und wählen Sie, welche VerifyWise-Benachrichtigungen er erhält.",
+  "Connection removed.": "Verbindung entfernt.",
+  "Edit routing": "Weiterleitung bearbeiten",
+  "No Slack connections yet": "Noch keine Slack-Verbindungen",
+  "Notification routing": "Benachrichtigungsweiterleitung",
+  "Notification routing saved.": "Benachrichtigungsweiterleitung gespeichert.",
+  "Posts only its owner's events until you save its routing.":
+    "Sendet nur die Ereignisse seines Eigentümers, bis Sie die Weiterleitung speichern.",
+  "Remove Slack connection?": "Slack-Verbindung entfernen?",
+  "Select Add to Slack to connect a channel.":
+    'Wählen Sie "Add to Slack", um einen Kanal zu verbinden.',
+  "Slack connected.": "Slack verbunden.",
+  "Slack did not connect. Select Add to Slack to try again.":
+    'Slack wurde nicht verbunden. Wählen Sie "Add to Slack", um es erneut zu versuchen.',
+  "Slack sign-in needs session storage, which this browser blocks.":
+    "Die Slack-Anmeldung benötigt den Sitzungsspeicher, den dieser Browser blockiert.",
+  "Slack was not connected: the request was cancelled.":
+    "Slack wurde nicht verbunden: Die Anfrage wurde abgebrochen.",
+  "Team name": "Teamname",
+  "The Slack client ID is not configured.": "Die Slack-Client-ID ist nicht konfiguriert.",
+  "This Slack sign-in could not be verified. Select Add to Slack to try again.":
+    'Diese Slack-Anmeldung konnte nicht bestätigt werden. Wählen Sie "Add to Slack", um es erneut zu versuchen.',
+  "Unlinked connections": "Nicht verknüpfte Verbindungen",
+  "Connecting Slack...": "Slack wird verbunden...",
+  "Loading Slack connections...": "Slack-Verbindungen werden geladen...",
+  "Turn off": "Ausschalten",
+  "Turn on": "Einschalten",
+  "Could not load the Slack connections.": "Die Slack-Verbindungen konnten nicht geladen werden.",
+  "Could not connect Slack. Select Add to Slack to try again.":
+    'Slack konnte nicht verbunden werden. Wählen Sie "Add to Slack", um es erneut zu versuchen.',
+  "Connection turned off.": "Verbindung ausgeschaltet.",
+  "Connection turned on.": "Verbindung eingeschaltet.",
+  "Could not update the connection.": "Die Verbindung konnte nicht aktualisiert werden.",
+  "Could not save the notification routing.":
+    "Die Benachrichtigungsweiterleitung konnte nicht gespeichert werden.",
+  "Could not remove the connection.": "Die Verbindung konnte nicht entfernt werden.",
+  "{channel} in {team} stops receiving VerifyWise notifications.":
+    "{channel} in {team} erhält keine VerifyWise-Benachrichtigungen mehr.",
+  "This removes {channel} in {team}. It sends nothing now.":
+    "Dadurch wird {channel} in {team} entfernt. Die Verbindung sendet derzeit nichts.",
+  "Edit routing for {channel}": "Weiterleitung für {channel} bearbeiten",
+  "Turn off {channel}": "{channel} ausschalten",
+  "Turn on {channel}": "{channel} einschalten",
+  "Remove {channel}": "{channel} entfernen",
+  "Choose which notifications {channel} in {team} receives.":
+    "Wählen Sie, welche Benachrichtigungen {channel} in {team} erhält.",
+  "Saving makes this connection post events for the whole organization, not only its owner's.":
+    "Nach dem Speichern sendet diese Verbindung Ereignisse der gesamten Organisation, nicht nur die ihres Eigentümers.",
+  "These connections were created before connections belonged to an organization. They send nothing. Remove them, then add Slack again if you still need it.":
+    "Diese Verbindungen wurden erstellt, bevor Verbindungen zu einer Organisation gehörten. Sie senden nichts. Entfernen Sie sie und fügen Sie Slack erneut hinzu, wenn Sie es noch benötigen.",
+  "Membership and roles": "Mitgliedschaft und Rollen",
+  "Projects and organizations": "Projekte und Organisationen",
+  "Policy reminders and status": "Richtlinienerinnerungen und -status",
+  "Evidence and task alerts": "Nachweis- und Aufgabenwarnungen",
+  "Control or policy changes": "Kontroll- oder Richtlinienänderungen",
 };
 
 export const fr: Record<string, string> = {
@@ -774,7 +815,6 @@ export const fr: Record<string, string> = {
   "Add checklist item...": "Ajouter un élément de liste de contrôle...",
   "Add new phase": "Ajouter une nouvelle phase",
   "Add to Slack": "Ajouter à Slack",
-  "Apply to all workspaces:": "Appliquer à tous les espaces de travail :",
   "Artifact Location:": "Emplacement de l'artefact :",
   "Assign frameworks in the Frameworks/regulations tab.":
     "Attribuez des référentiels dans l'onglet Référentiels/réglementations.",
@@ -790,24 +830,17 @@ export const fr: Record<string, string> = {
   "Capacity": "Capacité",
   "Channel": "Canal",
   "Choose File": "Choisir un fichier",
-  'Click "Add to Slack" above to connect your first workspace.':
-    "Cliquez sur « Ajouter à Slack » ci-dessus pour connecter votre premier espace de travail.",
   "Click to upload documents": "Cliquez pour téléverser des documents",
   "Could not remove the file. Try again.": "Impossible de supprimer le fichier. Réessayez.",
   "Could not upload the file. Try again.": "Impossible de téléverser le fichier. Réessayez.",
   "Configuration saved.": "Configuration enregistrée.",
   "Configure Model Lifecycle": "Configurer le cycle de vie du modèle",
   "Configure Phases": "Configurer les phases",
-  "Configure which notification types go to which Slack channels.":
-    "Configurez quels types de notifications sont envoyés vers quels canaux Slack.",
   "Connect to your Jira Service Management Assets to import AI Systems as use-cases.":
     "Connectez-vous à vos Jira Service Management Assets pour importer des systèmes IA en tant que cas d'utilisation.",
-  "Connect your Slack workspace and route VerifyWise notifications to specific channels.":
-    "Connectez votre espace de travail Slack et acheminez les notifications VerifyWise vers des canaux spécifiques.",
   "Create phase": "Créer une phase",
   "Created in JIRA": "Créé dans JIRA",
   "Created:": "Créé :",
-  "Creation Date": "Date de création",
   "Delete item": "Supprimer l'élément",
   "Delete phase": "Supprimer la phase",
   "Delete this item? This cannot be undone.":
@@ -871,7 +904,6 @@ export const fr: Record<string, string> = {
   "Lifecycle Progress": "Progression du cycle de vie",
   "Lifecycle stage": "Étape du cycle de vie",
   "Loading MLFlow data...": "Chargement des données MLFlow...",
-  "Loading workspaces...": "Chargement des espaces de travail...",
   "Model not found": "Modèle introuvable",
   "Move item down": "Déplacer l'élément vers le bas",
   "Move item up": "Déplacer l'élément vers le haut",
@@ -899,8 +931,6 @@ export const fr: Record<string, string> = {
   "No lifecycle phases yet. An Admin can add them.":
     "Aucune phase de cycle de vie pour le moment. Un Admin peut en ajouter.",
   "No use case found": "Aucun cas d'utilisation trouvé",
-  "No workspaces connected": "Aucun espace de travail connecté",
-  "Notification Routing": "Routage des notifications",
   "Object Type": "Type d'objet",
   "Object Type (AI Systems)": "Type d'objet (systèmes IA)",
   "Phase name": "Nom de la phase",
@@ -917,7 +947,6 @@ export const fr: Record<string, string> = {
   "Save phase name": "Enregistrer le nom de la phase",
   "Schema": "Schéma",
   "Select a phase from the sidebar": "Sélectionnez une phase dans la barre latérale",
-  "Slack Client ID not configured.": "ID client Slack non configuré.",
   "Staging": "Préproduction",
   "Step 1: Connection Settings": "Étape 1 : Paramètres de connexion",
   "Step 1: Download Excel Template": "Étape 1 : Télécharger le modèle Excel",
@@ -930,7 +959,6 @@ export const fr: Record<string, string> = {
   "Succeeded": "Réussi",
   "Sync": "Synchroniser",
   "Sync Status": "Statut de synchronisation",
-  "Team Name": "Nom de l'équipe",
   "Test connection": "Tester la connexion",
   "Testing...": "Test en cours...",
   "Text Area": "Zone de texte",
@@ -942,9 +970,6 @@ export const fr: Record<string, string> = {
     "Téléversez votre fichier Excel contenant les données de risque.",
   "Version:": "Version :",
   "View lifecycle": "Voir le cycle de vie",
-  "Workspace disconnected successfully!": "Espace de travail déconnecté avec succès !",
-  "Workspace status updated successfully!":
-    "Statut de l'espace de travail mis à jour avec succès !",
   "Default retention policy": "Politique de rétention par défaut",
   "File retention": "Rétention des fichiers",
   "Audit records": "Enregistrements d'audit",
@@ -1044,6 +1069,62 @@ export const fr: Record<string, string> = {
   "New role": "Nouveau rôle",
   "No custom roles yet": "Aucun rôle personnalisé pour le moment",
   "What this role is for": "À quoi sert ce rôle",
+  "Connect a Slack channel and choose which VerifyWise notifications it receives.":
+    "Connectez un canal Slack et choisissez les notifications VerifyWise qu'il reçoit.",
+  "Connection removed.": "Connexion supprimée.",
+  "Edit routing": "Modifier le routage",
+  "No Slack connections yet": "Aucune connexion Slack pour l'instant",
+  "Notification routing": "Routage des notifications",
+  "Notification routing saved.": "Routage des notifications enregistré.",
+  "Posts only its owner's events until you save its routing.":
+    "Publie uniquement les événements de son propriétaire jusqu'à ce que vous enregistriez son routage.",
+  "Remove Slack connection?": "Supprimer la connexion Slack ?",
+  "Select Add to Slack to connect a channel.":
+    "Sélectionnez « Add to Slack » pour connecter un canal.",
+  "Slack connected.": "Slack connecté.",
+  "Slack did not connect. Select Add to Slack to try again.":
+    "Slack n'a pas été connecté. Sélectionnez « Add to Slack » pour réessayer.",
+  "Slack sign-in needs session storage, which this browser blocks.":
+    "La connexion à Slack nécessite le stockage de session, que ce navigateur bloque.",
+  "Slack was not connected: the request was cancelled.":
+    "Slack n'a pas été connecté : la demande a été annulée.",
+  "Team name": "Nom de l'équipe",
+  "The Slack client ID is not configured.": "L'ID client Slack n'est pas configuré.",
+  "This Slack sign-in could not be verified. Select Add to Slack to try again.":
+    "Cette connexion à Slack n'a pas pu être vérifiée. Sélectionnez « Add to Slack » pour réessayer.",
+  "Unlinked connections": "Connexions non liées",
+  "Connecting Slack...": "Connexion de Slack...",
+  "Loading Slack connections...": "Chargement des connexions Slack...",
+  "Turn off": "Désactiver",
+  "Turn on": "Activer",
+  "Could not load the Slack connections.": "Impossible de charger les connexions Slack.",
+  "Could not connect Slack. Select Add to Slack to try again.":
+    "Impossible de connecter Slack. Sélectionnez « Add to Slack » pour réessayer.",
+  "Connection turned off.": "Connexion désactivée.",
+  "Connection turned on.": "Connexion activée.",
+  "Could not update the connection.": "Impossible de mettre à jour la connexion.",
+  "Could not save the notification routing.":
+    "Impossible d'enregistrer le routage des notifications.",
+  "Could not remove the connection.": "Impossible de supprimer la connexion.",
+  "{channel} in {team} stops receiving VerifyWise notifications.":
+    "{channel} dans {team} ne recevra plus de notifications VerifyWise.",
+  "This removes {channel} in {team}. It sends nothing now.":
+    "Cela supprime {channel} dans {team}. Elle n'envoie rien actuellement.",
+  "Edit routing for {channel}": "Modifier le routage de {channel}",
+  "Turn off {channel}": "Désactiver {channel}",
+  "Turn on {channel}": "Activer {channel}",
+  "Remove {channel}": "Supprimer {channel}",
+  "Choose which notifications {channel} in {team} receives.":
+    "Choisissez les notifications que reçoit {channel} dans {team}.",
+  "Saving makes this connection post events for the whole organization, not only its owner's.":
+    "Après l'enregistrement, cette connexion publie les événements de toute l'organisation, pas seulement ceux de son propriétaire.",
+  "These connections were created before connections belonged to an organization. They send nothing. Remove them, then add Slack again if you still need it.":
+    "Ces connexions ont été créées avant que les connexions n'appartiennent à une organisation. Elles n'envoient rien. Supprimez-les, puis ajoutez à nouveau Slack si vous en avez encore besoin.",
+  "Membership and roles": "Adhésion et rôles",
+  "Projects and organizations": "Projets et organisations",
+  "Policy reminders and status": "Rappels et statut des politiques",
+  "Evidence and task alerts": "Alertes de preuves et de tâches",
+  "Control or policy changes": "Modifications de contrôles ou de politiques",
 };
 
 export const es: Record<string, string> = {
@@ -1295,7 +1376,6 @@ export const es: Record<string, string> = {
   "Add checklist item...": "Añadir elemento de lista de verificación...",
   "Add new phase": "Añadir nueva fase",
   "Add to Slack": "Añadir a Slack",
-  "Apply to all workspaces:": "Aplicar a todos los espacios de trabajo:",
   "Artifact Location:": "Ubicación del artefacto:",
   "Assign frameworks in the Frameworks/regulations tab.":
     "Asigne marcos en la pestaña Marcos/regulaciones.",
@@ -1311,24 +1391,17 @@ export const es: Record<string, string> = {
   "Capacity": "Capacidad",
   "Channel": "Canal",
   "Choose File": "Elegir archivo",
-  'Click "Add to Slack" above to connect your first workspace.':
-    'Haga clic en "Añadir a Slack" arriba para conectar su primer espacio de trabajo.',
   "Click to upload documents": "Haga clic para cargar documentos",
   "Could not remove the file. Try again.": "No se pudo quitar el archivo. Inténtelo de nuevo.",
   "Could not upload the file. Try again.": "No se pudo cargar el archivo. Inténtelo de nuevo.",
   "Configuration saved.": "Configuración guardada.",
   "Configure Model Lifecycle": "Configurar el ciclo de vida del modelo",
   "Configure Phases": "Configurar fases",
-  "Configure which notification types go to which Slack channels.":
-    "Configure qué tipos de notificaciones se envían a qué canales de Slack.",
   "Connect to your Jira Service Management Assets to import AI Systems as use-cases.":
     "Conéctese a sus Jira Service Management Assets para importar sistemas de IA como casos de uso.",
-  "Connect your Slack workspace and route VerifyWise notifications to specific channels.":
-    "Conecte su espacio de trabajo de Slack y enrute las notificaciones de VerifyWise a canales específicos.",
   "Create phase": "Crear fase",
   "Created in JIRA": "Creado en JIRA",
   "Created:": "Creado:",
-  "Creation Date": "Fecha de creación",
   "Delete item": "Eliminar elemento",
   "Delete phase": "Eliminar fase",
   "Delete this item? This cannot be undone.":
@@ -1392,7 +1465,6 @@ export const es: Record<string, string> = {
   "Lifecycle Progress": "Progreso del ciclo de vida",
   "Lifecycle stage": "Etapa del ciclo de vida",
   "Loading MLFlow data...": "Cargando datos de MLFlow...",
-  "Loading workspaces...": "Cargando espacios de trabajo...",
   "Model not found": "Modelo no encontrado",
   "Move item down": "Mover elemento hacia abajo",
   "Move item up": "Mover elemento hacia arriba",
@@ -1420,8 +1492,6 @@ export const es: Record<string, string> = {
   "No lifecycle phases yet. An Admin can add them.":
     "Aún no hay fases del ciclo de vida. Un Admin puede añadirlas.",
   "No use case found": "No se encontró ningún caso de uso",
-  "No workspaces connected": "No hay espacios de trabajo conectados",
-  "Notification Routing": "Enrutamiento de notificaciones",
   "Object Type": "Tipo de objeto",
   "Object Type (AI Systems)": "Tipo de objeto (sistemas de IA)",
   "Phase name": "Nombre de la fase",
@@ -1438,7 +1508,6 @@ export const es: Record<string, string> = {
   "Save phase name": "Guardar nombre de la fase",
   "Schema": "Esquema",
   "Select a phase from the sidebar": "Seleccione una fase de la barra lateral",
-  "Slack Client ID not configured.": "ID de cliente de Slack no configurado.",
   "Staging": "Preproducción",
   "Step 1: Connection Settings": "Paso 1: Configuración de conexión",
   "Step 1: Download Excel Template": "Paso 1: Descargar plantilla de Excel",
@@ -1451,7 +1520,6 @@ export const es: Record<string, string> = {
   "Succeeded": "Correcto",
   "Sync": "Sincronizar",
   "Sync Status": "Estado de sincronización",
-  "Team Name": "Nombre del equipo",
   "Test connection": "Probar conexión",
   "Testing...": "Probando...",
   "Text Area": "Área de texto",
@@ -1462,9 +1530,6 @@ export const es: Record<string, string> = {
   "Upload your Excel file with risk data.": "Suba su archivo Excel con los datos de riesgo.",
   "Version:": "Versión:",
   "View lifecycle": "Ver ciclo de vida",
-  "Workspace disconnected successfully!": "¡Espacio de trabajo desconectado correctamente!",
-  "Workspace status updated successfully!":
-    "¡Estado del espacio de trabajo actualizado correctamente!",
   "Default retention policy": "Política de retención predeterminada",
   "File retention": "Retención de archivos",
   "Audit records": "Registros de auditoría",
@@ -1563,4 +1628,59 @@ export const es: Record<string, string> = {
   "New role": "Nuevo rol",
   "No custom roles yet": "Aún no hay roles personalizados",
   "What this role is for": "Para qué sirve este rol",
+  "Connect a Slack channel and choose which VerifyWise notifications it receives.":
+    "Conecte un canal de Slack y elija qué notificaciones de VerifyWise recibe.",
+  "Connection removed.": "Conexión eliminada.",
+  "Edit routing": "Editar enrutamiento",
+  "No Slack connections yet": "Aún no hay conexiones de Slack",
+  "Notification routing": "Enrutamiento de notificaciones",
+  "Notification routing saved.": "Enrutamiento de notificaciones guardado.",
+  "Posts only its owner's events until you save its routing.":
+    "Solo publica los eventos de su propietario hasta que guarde su enrutamiento.",
+  "Remove Slack connection?": "¿Eliminar la conexión de Slack?",
+  "Select Add to Slack to connect a channel.": 'Seleccione "Add to Slack" para conectar un canal.',
+  "Slack connected.": "Slack conectado.",
+  "Slack did not connect. Select Add to Slack to try again.":
+    'Slack no se conectó. Seleccione "Add to Slack" para volver a intentarlo.',
+  "Slack sign-in needs session storage, which this browser blocks.":
+    "El inicio de sesión de Slack necesita el almacenamiento de sesión, que este navegador bloquea.",
+  "Slack was not connected: the request was cancelled.":
+    "Slack no se conectó: la solicitud se canceló.",
+  "Team name": "Nombre del equipo",
+  "The Slack client ID is not configured.": "El ID de cliente de Slack no está configurado.",
+  "This Slack sign-in could not be verified. Select Add to Slack to try again.":
+    'No se pudo verificar este inicio de sesión de Slack. Seleccione "Add to Slack" para volver a intentarlo.',
+  "Unlinked connections": "Conexiones no vinculadas",
+  "Connecting Slack...": "Conectando Slack...",
+  "Loading Slack connections...": "Cargando conexiones de Slack...",
+  "Turn off": "Desactivar",
+  "Turn on": "Activar",
+  "Could not load the Slack connections.": "No se pudieron cargar las conexiones de Slack.",
+  "Could not connect Slack. Select Add to Slack to try again.":
+    'No se pudo conectar Slack. Seleccione "Add to Slack" para volver a intentarlo.',
+  "Connection turned off.": "Conexión desactivada.",
+  "Connection turned on.": "Conexión activada.",
+  "Could not update the connection.": "No se pudo actualizar la conexión.",
+  "Could not save the notification routing.":
+    "No se pudo guardar el enrutamiento de notificaciones.",
+  "Could not remove the connection.": "No se pudo eliminar la conexión.",
+  "{channel} in {team} stops receiving VerifyWise notifications.":
+    "{channel} en {team} dejará de recibir notificaciones de VerifyWise.",
+  "This removes {channel} in {team}. It sends nothing now.":
+    "Esto elimina {channel} en {team}. Ahora no envía nada.",
+  "Edit routing for {channel}": "Editar el enrutamiento de {channel}",
+  "Turn off {channel}": "Desactivar {channel}",
+  "Turn on {channel}": "Activar {channel}",
+  "Remove {channel}": "Eliminar {channel}",
+  "Choose which notifications {channel} in {team} receives.":
+    "Elija qué notificaciones recibe {channel} en {team}.",
+  "Saving makes this connection post events for the whole organization, not only its owner's.":
+    "Al guardar, esta conexión publica los eventos de toda la organización, no solo los de su propietario.",
+  "These connections were created before connections belonged to an organization. They send nothing. Remove them, then add Slack again if you still need it.":
+    "Estas conexiones se crearon antes de que las conexiones pertenecieran a una organización. No envían nada. Elimínelas y vuelva a añadir Slack si aún lo necesita.",
+  "Membership and roles": "Membresía y roles",
+  "Projects and organizations": "Proyectos y organizaciones",
+  "Policy reminders and status": "Recordatorios y estado de políticas",
+  "Evidence and task alerts": "Alertas de evidencias y tareas",
+  "Control or policy changes": "Cambios en controles o políticas",
 };
