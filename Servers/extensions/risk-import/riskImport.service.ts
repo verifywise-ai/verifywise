@@ -1,6 +1,7 @@
 import ExcelJS from "exceljs";
 import { QueryTypes } from "sequelize";
 import { sequelize } from "../../database/db";
+import { recordEntityCreation } from "../../utils/changeHistory.base.utils";
 import { findUsersNotInOrganization } from "../../utils/user.utils";
 import {
   AI_LIFECYCLE_PHASES,
@@ -63,7 +64,7 @@ export async function buildExcelTemplate(
     { key: "risk_name", header: "Risk Name *", width: 30 },
     { key: "risk_owner", header: "Risk Owner *", width: 30 },
     { key: "ai_lifecycle_phase", header: "AI Lifecycle Phase *", width: 30 },
-    { key: "risk_description", header: "Risk Description", width: 40 },
+    { key: "risk_description", header: "Risk Description *", width: 40 },
     { key: "risk_category", header: "Risk Category (comma-separated)", width: 40 },
     { key: "impact", header: "Impact", width: 30 },
     { key: "likelihood", header: "Likelihood *", width: 20 },
@@ -248,6 +249,25 @@ function inEnum(value: string | undefined, allowed: readonly string[]): boolean 
   return !!value && allowed.indexOf(value) !== -1;
 }
 
+/** Split the comma-separated category cell into known and unknown values. */
+function splitCategories(cell: string | undefined): { valid: string[]; invalid: string[] } {
+  const items = cell
+    ? cell
+        .split(",")
+        .map((c) => c.trim())
+        .filter((c) => c.length > 0)
+    : [];
+  return {
+    valid: items.filter((c) => inEnum(c, RISK_CATEGORY_VALUES)),
+    invalid: items.filter((c) => !inEnum(c, RISK_CATEGORY_VALUES)),
+  };
+}
+
+/** Case-insensitive key two risk names are compared by. */
+function nameKey(name: string | undefined): string {
+  return (name ?? "").trim().toLowerCase();
+}
+
 function validateRow(row: RiskImportRow, rowIndex: number): RiskImportError[] {
   const errors: RiskImportError[] = [];
 
@@ -268,25 +288,45 @@ function validateRow(row: RiskImportRow, rowIndex: number): RiskImportError[] {
       message: "Risk description is required",
     });
   }
-  if (row.ai_lifecycle_phase && !inEnum(row.ai_lifecycle_phase, AI_LIFECYCLE_PHASES)) {
+  // Required like the normal risk form (createRiskSchema): the template marks
+  // these with * and likelihood + severity drive the calculated risk level.
+  if (!row.ai_lifecycle_phase) {
+    errors.push({
+      row: rowIndex,
+      field: "ai_lifecycle_phase",
+      message: "AI lifecycle phase is required",
+    });
+  } else if (!inEnum(row.ai_lifecycle_phase, AI_LIFECYCLE_PHASES)) {
     errors.push({
       row: rowIndex,
       field: "ai_lifecycle_phase",
       message: `Invalid AI lifecycle phase. Must be one of: ${AI_LIFECYCLE_PHASES.join(", ")}`,
     });
   }
-  if (row.likelihood && !inEnum(row.likelihood, LIKELIHOOD_VALUES)) {
+  if (!row.likelihood) {
+    errors.push({ row: rowIndex, field: "likelihood", message: "Likelihood is required" });
+  } else if (!inEnum(row.likelihood, LIKELIHOOD_VALUES)) {
     errors.push({
       row: rowIndex,
       field: "likelihood",
       message: `Invalid likelihood. Must be one of: ${LIKELIHOOD_VALUES.join(", ")}`,
     });
   }
-  if (row.severity && !inEnum(row.severity, SEVERITY_VALUES)) {
+  if (!row.severity) {
+    errors.push({ row: rowIndex, field: "severity", message: "Severity is required" });
+  } else if (!inEnum(row.severity, SEVERITY_VALUES)) {
     errors.push({
       row: rowIndex,
       field: "severity",
       message: `Invalid severity. Must be one of: ${SEVERITY_VALUES.join(", ")}`,
+    });
+  }
+  const categories = splitCategories(row.risk_category);
+  if (categories.invalid.length > 0) {
+    errors.push({
+      row: rowIndex,
+      field: "risk_category",
+      message: `Invalid risk category: ${categories.invalid.join(", ")}. Must be one of: ${RISK_CATEGORY_VALUES.join(", ")}`,
     });
   }
   if (row.mitigation_status && !inEnum(row.mitigation_status, MITIGATION_STATUS_VALUES)) {
@@ -338,12 +378,8 @@ function validateRow(row: RiskImportRow, rowIndex: number): RiskImportError[] {
 }
 
 export function parseRow(row: RiskImportRow): Record<string, unknown> {
-  const riskCategory = row.risk_category
-    ? row.risk_category
-        .split(",")
-        .map((c) => c.trim())
-        .filter((c) => c.length > 0 && inEnum(c, RISK_CATEGORY_VALUES))
-    : null;
+  // Unknown values are rejected by validateRow before a row is parsed.
+  const riskCategory = row.risk_category ? splitCategories(row.risk_category).valid : null;
 
   // The stored residual likelihood defaults to Rare; derive the level from it.
   const likelihoodMitigation = row.likelihood_mitigation ?? "Rare";
@@ -380,6 +416,7 @@ export function parseRow(row: RiskImportRow): Record<string, unknown> {
 export async function importRisks(
   rows: RiskImportRow[],
   organizationId: number,
+  userId: number,
 ): Promise<RiskImportResult> {
   const errors: RiskImportError[] = [];
 
@@ -413,7 +450,49 @@ export async function importRisks(
     }
   });
 
+  // A re-uploaded sheet must not create the same risks twice: reject names
+  // that already exist in this organization or repeat earlier in the file.
+  const firstRowByName = new Map<string, number>();
+  rows.forEach((row, i) => {
+    const key = nameKey(row.risk_name);
+    if (!key) return;
+    const firstRow = firstRowByName.get(key);
+    if (firstRow === undefined) {
+      firstRowByName.set(key, i + 2);
+    } else {
+      errors.push({
+        row: i + 2,
+        field: "risk_name",
+        message: `A risk named "${row.risk_name!.trim()}" already appears on row ${firstRow} of this file`,
+      });
+    }
+  });
+  if (firstRowByName.size > 0) {
+    const existing = (await sequelize.query(
+      `SELECT DISTINCT lower(btrim(risk_name)) AS name
+         FROM risks
+        WHERE organization_id = :organizationId
+          AND (is_deleted = false OR is_deleted IS NULL)
+          AND lower(btrim(risk_name)) IN (:names)`,
+      {
+        replacements: { organizationId, names: [...firstRowByName.keys()] },
+        type: QueryTypes.SELECT,
+      },
+    )) as { name: string }[];
+    const existingNames = new Set(existing.map((r) => r.name));
+    rows.forEach((row, i) => {
+      if (existingNames.has(nameKey(row.risk_name))) {
+        errors.push({
+          row: i + 2,
+          field: "risk_name",
+          message: `A risk named "${row.risk_name!.trim()}" already exists`,
+        });
+      }
+    });
+  }
+
   if (errors.length > 0) {
+    errors.sort((a, b) => a.row - b.row);
     return {
       success: false,
       imported: 0,
@@ -431,8 +510,12 @@ export async function importRisks(
     for (let i = 0; i < rows.length; i++) {
       const data = parseRow(rows[i]);
       const rowIndex = i + 2;
+      // One savepoint per row: a failed INSERT aborts only that row's work, so
+      // every later row still runs and reports its own error.
+      const savepoint = `risk_import_row_${i}`;
+      await sequelize.query(`SAVEPOINT ${savepoint}`, { transaction });
       try {
-        await sequelize.query(
+        const inserted = (await sequelize.query(
           `INSERT INTO risks (
              organization_id, risk_name, risk_owner, ai_lifecycle_phase, risk_description,
              risk_category, impact, assessment_mapping, controls_mapping,
@@ -452,7 +535,7 @@ export async function importRisks(
              :likelihood_mitigation, :risk_severity, :final_risk_level,
              :risk_approval, :approval_status, :date_of_assessment,
              false, NOW(), NOW()
-           );`,
+           ) RETURNING id;`,
           {
             replacements: {
               organization_id: organizationId,
@@ -461,11 +544,23 @@ export async function importRisks(
                 ? `{${(data.risk_category as string[]).map((c) => `"${c.replace(/"/g, '\\"')}"`).join(",")}}`
                 : null,
             },
+            type: QueryTypes.SELECT,
             transaction,
           },
+        )) as { id: number }[];
+        // Same creation entries the risk form writes, on the same transaction.
+        await recordEntityCreation(
+          "risk",
+          inserted[0].id,
+          userId,
+          organizationId,
+          data,
+          transaction,
         );
+        await sequelize.query(`RELEASE SAVEPOINT ${savepoint}`, { transaction });
         imported++;
       } catch (err: any) {
+        await sequelize.query(`ROLLBACK TO SAVEPOINT ${savepoint}`, { transaction });
         insertErrors.push({
           row: rowIndex,
           field: "general",
