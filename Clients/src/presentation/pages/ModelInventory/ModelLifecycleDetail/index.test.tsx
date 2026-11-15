@@ -1,4 +1,4 @@
-import { screen } from "@testing-library/react";
+import { fireEvent, screen } from "@testing-library/react";
 import { Routes, Route, useLocation } from "react-router";
 import { renderWithProviders } from "../../../../test/renderWithProviders";
 import ModelLifecycleDetail from "./index";
@@ -10,11 +10,16 @@ const extensionsState = {
   loaded: true,
   error: null as string | null,
   enabled: true,
+  // Whether a list is held (the catalog always has rows once a fetch succeeded).
+  hasList: true,
 };
+const refetch = vi.fn();
 vi.mock("../../../../application/contexts/Extensions.context", () => ({
   useExtensions: () => ({
+    extensions: extensionsState.hasList ? [{ key: "model-lifecycle" }] : [],
     loaded: extensionsState.loaded,
     error: extensionsState.error,
+    refetch,
     isEnabled: (key: string) => key === "model-lifecycle" && extensionsState.enabled,
   }),
   ExtensionsProvider: ({ children }: { children: React.ReactNode }) => children,
@@ -47,6 +52,8 @@ describe("ModelLifecycleDetail page", () => {
     extensionsState.loaded = true;
     extensionsState.error = null;
     extensionsState.enabled = true;
+    extensionsState.hasList = true;
+    refetch.mockClear();
   });
 
   it("renders the model-lifecycle detail with the parsed numeric model id when enabled", () => {
@@ -64,8 +71,29 @@ describe("ModelLifecycleDetail page", () => {
     expect(screen.getByTestId("location")).toHaveTextContent("/model-inventory?modelId=42");
   });
 
-  it("redirects to the model in the inventory when the extensions list failed to load", () => {
+  it("shows an error with Try again, not a redirect, when the first load failed", () => {
     extensionsState.error = "Failed to load extensions";
+    extensionsState.hasList = false;
+    extensionsState.enabled = false;
+    renderAt("/model-inventory/models/42");
+
+    expect(screen.getByRole("alert")).toHaveTextContent("Could not load the model lifecycle.");
+    expect(screen.queryByTestId("location")).not.toBeInTheDocument();
+    fireEvent.click(screen.getByRole("button", { name: "Try again" }));
+    expect(refetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps showing the lifecycle when a later refetch fails", () => {
+    extensionsState.error = "Failed to load extensions";
+    renderAt("/model-inventory/models/42");
+
+    expect(screen.getByTestId("lifecycle-detail")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+
+  it("still redirects when the held list says Model Lifecycle is off and a refetch failed", () => {
+    extensionsState.error = "Failed to load extensions";
+    extensionsState.enabled = false;
     renderAt("/model-inventory/models/42");
 
     expect(screen.getByTestId("location")).toHaveTextContent("/model-inventory?modelId=42");
