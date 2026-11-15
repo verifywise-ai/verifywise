@@ -3,7 +3,7 @@ import { useNavigate } from "react-router";
 import type { Editor } from "@tiptap/react";
 import { useCreatePolicy, useUpdatePolicy } from "../../../../application/hooks/usePolicyMutations";
 import { PolicyManagerModel } from "../../../../domain/models/Common/policy/policyManager.model";
-import { PolicyFormData, PolicyFormErrors, PolicyInput } from "../../../types/interfaces/i.policy";
+import { PolicyFormData, PolicyFormErrors } from "../../../types/interfaces/i.policy";
 import { type CustomFieldsSectionHandle } from "../../../components/CustomFieldsSection";
 import { policyOwnerIdToSave } from "./policyFormDirty";
 
@@ -22,6 +22,8 @@ export interface UsePolicySaveParams {
   resetErrors: () => void;
   setEditedTitle: Dispatch<SetStateAction<string>>;
   setIsEditingTitle: Dispatch<SetStateAction<boolean>>;
+  /** The content last loaded or saved; content equal to it is not sent on update. */
+  savedContent: string;
   /** Called after a successful save with the form content that was saved. */
   onSaved?: (savedFormContent: string) => void;
   /**
@@ -56,6 +58,7 @@ export function usePolicySave({
   resetErrors,
   setEditedTitle,
   setIsEditingTitle,
+  savedContent,
   onSaved,
   textLocked = false,
 }: UsePolicySaveParams) {
@@ -87,12 +90,18 @@ export function usePolicySave({
     setIsSaving(true);
 
     const html = editor?.getHTML() || "";
-    const sendText = isNew || !textLocked;
-    const payload: PolicyInput = {
-      title: formData.title,
+    // On update, the title and content go out only when the user changed them:
+    // TipTap re-serializes stored HTML, so sending it back unchanged could
+    // differ from the stored text, which the server refuses while an approval
+    // request is pending (also when the approval state has not loaded). While
+    // locked they are never sent. A left-out key is unchanged on the server.
+    const titleChanged = formData.title !== (policy?.title ?? "");
+    const contentChanged = formData.content !== savedContent;
+    const sendTitle = !isNew && titleChanged && !textLocked;
+    const sendContent = !isNew && contentChanged && !textLocked;
+    const fields = {
       status: formData.status,
       tags: formData.tags,
-      content_html: html,
       // Sent as "YYYY-MM-DD" so the stored date is the one the user picked.
       next_review_date: formData.nextReviewDate || undefined,
       policy_owner_id: policyOwnerIdToSave({
@@ -104,22 +113,26 @@ export function usePolicySave({
         .map((u) => u.id)
         .filter((id) => id !== formData.policyOwner?.id),
     };
-    // Locked: leave the keys out rather than sending undefined, which the
-    // list cache update would spread over the stored title and content.
-    if (!sendText) {
-      delete (payload as Partial<PolicyInput>).title;
-      delete (payload as Partial<PolicyInput>).content_html;
-    }
 
     try {
       let savedPolicy: PolicyManagerModel;
 
       if (isNew) {
-        savedPolicy = await createPolicyMutation.mutateAsync(payload);
+        savedPolicy = await createPolicyMutation.mutateAsync({
+          ...fields,
+          title: formData.title,
+          content_html: html,
+        });
       } else {
         savedPolicy = await updatePolicyMutation.mutateAsync({
           id: policy!.id,
-          input: payload,
+          // Spread, never undefined: the list cache update spreads the input
+          // over the cached row.
+          input: {
+            ...fields,
+            ...(sendTitle ? { title: formData.title } : {}),
+            ...(sendContent ? { content_html: html } : {}),
+          },
         });
       }
 
@@ -137,8 +150,8 @@ export function usePolicySave({
           ? ({ ...savedPolicy, content_html: prev.content_html } as PolicyManagerModel)
           : savedPolicy,
       );
-      // Content left out of a locked save was not saved.
-      if (sendText) onSaved?.(formData.content);
+      // Changed content left out of a locked save was not saved: it stays unsaved.
+      if (isNew || sendContent || !contentChanged) onSaved?.(formData.content);
 
       // Flush any locally-staged custom field changes (create OR update).
       let cfFlushFailed = false;

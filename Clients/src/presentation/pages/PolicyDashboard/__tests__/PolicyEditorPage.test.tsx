@@ -86,6 +86,12 @@ vi.mock("../../../components/Policies/PolicyForm", () => ({
       >
         fill valid form
       </button>
+      <button
+        data-testid="set-tags"
+        onClick={() => setFormData((prev: any) => ({ ...prev, tags: ["Security"] }))}
+      >
+        set tags
+      </button>
     </div>
   ),
 }));
@@ -267,6 +273,10 @@ describe("PolicyEditorPage", () => {
     expect(mockCreatePolicy.mock.calls[0][0]).toEqual(
       expect.objectContaining({ next_review_date: "2026-01-01" }),
     );
+    // A new policy always sends its title and content.
+    expect(mockCreatePolicy.mock.calls[0][0]).toEqual(
+      expect.objectContaining({ title: "AI Ethics Policy", content_html: "" }),
+    );
     await waitFor(() => {
       expect(mockNavigate).toHaveBeenCalledWith("/policies/42/edit", { replace: true });
     });
@@ -436,6 +446,56 @@ describe("PolicyEditorPage", () => {
       expect(screen.getByTestId("policy-toolbar")).toBeInTheDocument();
       expect(screen.getByTestId("policy-import-docx")).toBeEnabled();
       expect(screen.getByTestId("form-title")).toHaveTextContent("AI Ethics Policy");
+    });
+
+    it("sends no title or content on a sidebar-only save before the approval state loads", async () => {
+      // The approval state never arrives (still loading, or the request failed),
+      // so the editor is not locked; TipTap re-serializes the stored HTML.
+      mockGetPolicyApproval.mockReturnValue(new Promise(() => {}));
+      mockUpdatePolicy.mockResolvedValue({ ...saved, tags: ["Security"] });
+      const editor = await renderSaved();
+      editor.getHTML = () => "<p>c</p>\n";
+
+      fireEvent.click(screen.getByTestId("set-tags"));
+      fireEvent.click(screen.getByText("Save"));
+
+      await waitFor(() => expect(mockUpdatePolicy).toHaveBeenCalled());
+      const [, input] = mockUpdatePolicy.mock.calls[0];
+      expect(input).not.toHaveProperty("title");
+      expect(input).not.toHaveProperty("content_html");
+      expect(input).toEqual(expect.objectContaining({ tags: ["Security"] }));
+    });
+
+    it("sends content_html when the content was edited", async () => {
+      mockUpdatePolicy.mockResolvedValue(saved);
+      const editor = await renderSaved();
+      editor.getHTML = () => "<p>edited</p>";
+      const editorCalls = vi.mocked(useEditor).mock.calls;
+      const options = editorCalls[editorCalls.length - 1][0] as any;
+      act(() => options.onUpdate({ editor: { getHTML: () => "<p>edited</p>" } }));
+
+      fireEvent.click(screen.getByText("Save"));
+
+      await waitFor(() => expect(mockUpdatePolicy).toHaveBeenCalled());
+      const [, input] = mockUpdatePolicy.mock.calls[0];
+      expect(input).toEqual(expect.objectContaining({ content_html: "<p>edited</p>" }));
+      expect(input).not.toHaveProperty("title");
+    });
+
+    it("sends the title when it was changed", async () => {
+      mockUpdatePolicy.mockResolvedValue({ ...saved, title: "AI Ethics Policy" });
+      await renderSaved();
+      fireEvent.click(screen.getByTestId("fill-valid-form"));
+      await waitFor(() =>
+        expect(screen.getByTestId("form-title")).toHaveTextContent("AI Ethics Policy"),
+      );
+
+      fireEvent.click(screen.getByText("Save"));
+
+      await waitFor(() => expect(mockUpdatePolicy).toHaveBeenCalled());
+      const [, input] = mockUpdatePolicy.mock.calls[0];
+      expect(input).toEqual(expect.objectContaining({ title: "AI Ethics Policy" }));
+      expect(input).not.toHaveProperty("content_html");
     });
 
     it("keeps the title and content editable with no pending request", async () => {

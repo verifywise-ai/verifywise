@@ -23,7 +23,8 @@ export function useUpdatePolicy() {
     PolicyManagerModel,
     PolicyManagerModel,
     Error,
-    { id: number; input: PolicyInput }
+    // A field left out is unchanged, on the server and in the cached list.
+    { id: number; input: Partial<PolicyInput> }
   >({
     mutationFn: ({ id, input }) => updatePolicy(id, input),
     queryKey: () => policyQueryKeys.list(),

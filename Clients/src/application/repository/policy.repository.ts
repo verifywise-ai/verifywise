@@ -60,7 +60,11 @@ export async function createPolicy(input: PolicyInput): Promise<PolicyManagerMod
   }
 }
 
-export async function updatePolicy(id: number, input: PolicyInput): Promise<PolicyManagerModel> {
+/** A field left out of `input` is left unchanged on the server. */
+export async function updatePolicy(
+  id: number,
+  input: Partial<PolicyInput>,
+): Promise<PolicyManagerModel> {
   try {
     const response = await apiServices.put<{ message: string; data: PolicyManagerModel }>(
       `/policies/${id}`,

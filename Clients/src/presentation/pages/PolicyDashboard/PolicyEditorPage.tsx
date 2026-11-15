@@ -23,7 +23,7 @@ import useUsers from "../../../application/hooks/useUsers";
 import { useCanCheck } from "../../../application/hooks/useCan";
 import { useTranslation } from "../../../application/hooks/useTranslation";
 import { User } from "../../../domain/types/User";
-import { PolicyFormData, PolicyInput } from "../../types/interfaces/i.policy";
+import { PolicyFormData } from "../../types/interfaces/i.policy";
 import { PolicyManagerModel } from "../../../domain/models/Common/policy/policyManager.model";
 import { checkStringValidation } from "../../../application/validations/stringValidation";
 import { useFormValidation } from "../../../application/hooks/useFormValidation";
@@ -169,7 +169,7 @@ export default function PolicyEditorPage() {
     try {
       const updated = await updatePolicyMutation.mutateAsync({
         id: policy.id,
-        input: { title: trimmed } as PolicyInput,
+        input: { title: trimmed },
       });
       setFormData((prev) => ({ ...prev, title: trimmed }));
       setPolicy((prev) => (prev ? { ...prev, ...updated, title: trimmed } : updated));
@@ -358,6 +358,7 @@ export default function PolicyEditorPage() {
     resetErrors,
     setEditedTitle,
     setIsEditingTitle,
+    savedContent,
     onSaved: setSavedContent,
     textLocked,
   });
